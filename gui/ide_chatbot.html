@@ -5,10 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:;">
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:;">
   <title>RawrXD IDE // AGENTIC INTERFACE</title>
   <!-- DOMPurify: XSS sanitization for all backend/assistant HTML output -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" crossorigin="anonymous"></script>
+  <!-- highlight.js: Syntax highlighting for code blocks in chat responses -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
+    crossorigin="anonymous">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
+    crossorigin="anonymous"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -72,8 +77,8 @@
     /* Main Grid Layout */
     .ide-container {
       display: grid;
-      grid-template-columns: 280px 1fr 320px;
-      grid-template-rows: 48px 1fr 200px;
+      grid-template-columns: minmax(0, 280px) 1fr minmax(0, 320px);
+      grid-template-rows: 48px 1fr minmax(140px, 200px);
       grid-template-areas:
         "header header header"
         "sidebar main rightbar"
@@ -81,6 +86,7 @@
       height: 100vh;
       gap: 1px;
       background: var(--bg-primary);
+      overflow: hidden;
     }
 
     /* Header Bar */
@@ -91,19 +97,26 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 0 12px;
       position: relative;
       z-index: 100;
+      min-width: 0;
+      gap: 8px;
+      flex-wrap: wrap;
+      overflow: hidden;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       font-family: var(--font-mono);
       font-weight: 800;
       font-size: 16px;
       letter-spacing: -0.5px;
+      min-width: 0;
+      flex-shrink: 1;
+      overflow: hidden;
     }
 
     .brand-icon {
@@ -128,7 +141,8 @@
     .header-controls {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
     .status-pill {
@@ -229,6 +243,8 @@
       flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
+      min-width: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
 
     .sidebar-section {
@@ -432,7 +448,9 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
+      min-width: 0;
       position: relative;
+      overflow: hidden;
     }
 
     .chat-header {
@@ -747,6 +765,52 @@
       cursor: not-allowed;
     }
 
+    .input-btn.stop {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+      color: var(--bg-primary);
+      animation: stopPulse 1s infinite;
+    }
+
+    .input-btn.stop:hover {
+      background: #ff1a4a;
+      box-shadow: 0 0 15px rgba(255, 51, 102, 0.5);
+    }
+
+    @keyframes stopPulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .stream-rate-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+      padding: 2px 8px;
+      background: rgba(0, 217, 255, 0.08);
+      border-radius: 4px;
+      transition: opacity 0.2s;
+    }
+
+    .stream-rate-indicator .rate-value {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .stream-rate-indicator .eta-value {
+      color: var(--text-muted);
+    }
+
     .input-toolbar {
       display: flex;
       gap: 12px;
@@ -777,6 +841,8 @@
       flex-direction: column;
       overflow-y: auto;
       overflow-x: hidden;
+      min-width: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
     }
 
     .file-drop-zone {
@@ -991,6 +1057,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      min-width: 0;
       transition: grid-template-rows 0.2s ease;
     }
 
@@ -1431,13 +1498,109 @@
       word-break: break-word;
     }
 
-    /* Responsive */
-    @media (max-width: 1400px) {
+    /* ── Responsive Layout ── */
+
+    /* Sidebar toggle buttons (hidden by default, shown at breakpoints) */
+    .sidebar-toggle,
+    .rightbar-toggle {
+      display: none;
+      position: fixed;
+      z-index: 200;
+      width: 36px;
+      height: 36px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      color: var(--accent-cyan);
+      cursor: pointer;
+      font-size: 16px;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      transition: all 0.15s;
+    }
+
+    .sidebar-toggle {
+      left: 8px;
+      top: 56px;
+    }
+
+    .rightbar-toggle {
+      right: 8px;
+      top: 56px;
+    }
+
+    .sidebar-toggle:hover,
+    .rightbar-toggle:hover {
+      background: var(--accent-primary);
+      color: var(--bg-primary);
+      transform: scale(1.05);
+    }
+
+    /* Overlay backdrop for mobile sidebars */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 149;
+      backdrop-filter: blur(2px);
+    }
+
+    .sidebar-overlay.active {
+      display: block;
+    }
+
+    /* Sidebar slide-in state for mobile */
+    .sidebar.slide-in {
+      position: fixed !important;
+      top: 48px;
+      left: 0;
+      bottom: 0;
+      width: 280px;
+      z-index: 150;
+      display: flex !important;
+      transform: translateX(0) !important;
+      opacity: 1 !important;
+      box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .rightbar.slide-in {
+      position: fixed !important;
+      top: 48px;
+      right: 0;
+      bottom: 0;
+      width: 320px;
+      z-index: 150;
+      display: flex !important;
+      transform: translateX(0) !important;
+      opacity: 1 !important;
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 1600px – slightly narrow: shrink rightbar */
+    @media (max-width: 1600px) {
       .ide-container {
-        grid-template-columns: 240px 1fr 280px;
+        grid-template-columns: 260px 1fr 280px;
       }
     }
 
+    /* 1400px – compact: shrink both sidebars */
+    @media (max-width: 1400px) {
+      .ide-container {
+        grid-template-columns: 220px 1fr 260px;
+      }
+
+      .sidebar-section {
+        padding: 12px;
+      }
+
+      .tool-grid {
+        gap: 6px;
+      }
+    }
+
+    /* 1200px – hide right sidebar, show toggle */
     @media (max-width: 1200px) {
       .ide-container {
         grid-template-columns: 200px 1fr 0;
@@ -1446,17 +1609,193 @@
       .rightbar {
         display: none;
       }
+
+      .rightbar-toggle {
+        display: flex;
+      }
     }
 
+    /* 1000px – narrow both, prepare for mobile */
+    @media (max-width: 1000px) {
+      .ide-container {
+        grid-template-columns: 180px 1fr 0;
+        grid-template-rows: 48px 1fr 160px;
+      }
+
+      .rightbar {
+        display: none;
+      }
+
+      .rightbar-toggle {
+        display: flex;
+      }
+
+      .brand-text {
+        font-size: 14px;
+      }
+
+      .header-bar>.brand>span:last-child {
+        display: none;
+      }
+
+      .chat-header {
+        padding: 8px 12px;
+      }
+
+      .chat-messages {
+        padding: 12px;
+      }
+    }
+
+    /* 900px – hide left sidebar too, show both toggles */
     @media (max-width: 900px) {
       .ide-container {
         grid-template-columns: 0 1fr 0;
-        grid-template-rows: 48px 1fr 160px;
+        grid-template-rows: 48px 1fr 140px;
       }
 
       .sidebar,
       .rightbar {
         display: none;
+      }
+
+      .sidebar-toggle,
+      .rightbar-toggle {
+        display: flex;
+      }
+
+      .brand-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 15px;
+      }
+
+      .brand-text {
+        font-size: 13px;
+      }
+
+      .icon-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+      }
+
+      .status-pill {
+        padding: 4px 10px;
+        font-size: 11px;
+      }
+    }
+
+    /* 700px – very narrow mobile */
+    @media (max-width: 700px) {
+      .ide-container {
+        grid-template-columns: 0 1fr 0;
+        grid-template-rows: 44px 1fr 120px;
+      }
+
+      .sidebar,
+      .rightbar {
+        display: none;
+      }
+
+      .sidebar-toggle,
+      .rightbar-toggle {
+        display: flex;
+      }
+
+      .header-bar {
+        padding: 0 8px;
+      }
+
+      .brand-text {
+        display: none;
+      }
+
+      .header-bar>.brand>span:last-child {
+        display: none;
+      }
+
+      .status-pill span:not(.status-dot) {
+        display: none;
+      }
+
+      .status-pill {
+        padding: 4px 8px;
+        min-width: 24px;
+        justify-content: center;
+      }
+
+      .chat-messages {
+        padding: 8px;
+      }
+
+      .msg {
+        max-width: 95%;
+      }
+
+      .chat-input-area {
+        padding: 8px;
+      }
+
+      .terminal-tab {
+        padding: 4px 10px;
+        font-size: 11px;
+      }
+
+      .input-row {
+        gap: 6px;
+      }
+
+      /* Overlay panels go full-screen on mobile */
+      .debug-panel,
+      .failure-panel,
+      .agents-panel,
+      .perf-panel,
+      .security-panel {
+        position: fixed !important;
+        inset: 48px 0 0 0 !important;
+        z-index: 120 !important;
+        border-radius: 0 !important;
+      }
+    }
+
+    /* 500px – ultra narrow */
+    @media (max-width: 500px) {
+      .ide-container {
+        grid-template-rows: 40px 1fr 100px;
+      }
+
+      .header-bar {
+        padding: 0 6px;
+        gap: 4px;
+      }
+
+      .header-actions {
+        gap: 4px;
+      }
+
+      .icon-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 11px;
+      }
+
+      .brand-icon {
+        width: 24px;
+        height: 24px;
+        font-size: 13px;
+      }
+
+      .chat-messages {
+        padding: 6px;
+      }
+
+      .msg {
+        font-size: 13px;
+      }
+
+      .terminal-header {
+        padding: 6px 10px;
       }
     }
 
@@ -1789,6 +2128,57 @@
       font-size: 10px;
       color: var(--text-muted);
       margin-top: 2px;
+    }
+
+    .hotpatch-toggle {
+      display: inline-block;
+      position: relative;
+      width: 32px;
+      height: 16px;
+      margin-top: 6px;
+    }
+
+    .hotpatch-toggle input {
+      display: none;
+    }
+
+    .hotpatch-toggle-slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .hotpatch-toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      left: 1px;
+      bottom: 1px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .hotpatch-toggle input:checked+.hotpatch-toggle-slider {
+      background: rgba(0, 255, 136, 0.15);
+      border-color: var(--accent-green);
+    }
+
+    .hotpatch-toggle input:checked+.hotpatch-toggle-slider::before {
+      transform: translateX(16px);
+      background: var(--accent-green);
+    }
+
+    .hotpatch-layer.disabled {
+      opacity: 0.4;
     }
 
     /* Agent Event Timeline */
@@ -2752,17 +3142,363 @@
         transform: rotate(360deg);
       }
     }
+
+    /* =================================================================== */
+    /* SECURITY & HARDENING PANEL (Phase 4)                                */
+    /* =================================================================== */
+    .security-panel {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: var(--bg-primary);
+      z-index: 60;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+
+    .security-panel.open {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .security-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .security-title {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .security-body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .security-main {
+      padding: 20px 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .security-sidebar {
+      padding: 20px 16px;
+      overflow-y: auto;
+      border-left: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sec-card-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .sec-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .sec-card-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .sec-card-value {
+      font-size: 22px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+    }
+
+    .sec-card-value.secure {
+      color: var(--accent-green);
+    }
+
+    .sec-card-value.warning {
+      color: var(--accent-secondary);
+    }
+
+    .sec-card-value.danger {
+      color: var(--accent-red);
+    }
+
+    .sec-card-unit {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sec-audit-section {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .sec-audit-header {
+      padding: 12px 16px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sec-audit-body {
+      padding: 12px 16px;
+    }
+
+    .sec-directive {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      border-bottom: 1px solid rgba(42, 42, 53, 0.3);
+    }
+
+    .sec-directive:last-child {
+      border-bottom: none;
+    }
+
+    .sec-directive-name {
+      min-width: 140px;
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .sec-directive-value {
+      color: var(--text-secondary);
+      word-break: break-all;
+      flex: 1;
+    }
+
+    .sec-directive-status {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .sec-directive-status.pass {
+      background: rgba(0, 255, 136, 0.12);
+      color: var(--accent-green);
+    }
+
+    .sec-directive-status.warn {
+      background: rgba(255, 122, 0, 0.12);
+      color: var(--accent-secondary);
+    }
+
+    .sec-directive-status.fail {
+      background: rgba(255, 69, 69, 0.12);
+      color: var(--accent-red);
+    }
+
+    .sec-rate-meter {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .sec-rate-bar-bg {
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .sec-rate-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease, background 0.3s ease;
+      background: var(--accent-green);
+    }
+
+    .sec-rate-bar-fill.warning {
+      background: var(--accent-secondary);
+    }
+
+    .sec-rate-bar-fill.danger {
+      background: var(--accent-red);
+    }
+
+    .sec-rate-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-top: 6px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .sec-log-section {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .sec-log-header {
+      padding: 10px 16px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sec-log-body {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    .sec-log-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 4px 16px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      border-bottom: 1px solid rgba(42, 42, 53, 0.2);
+    }
+
+    .sec-log-entry .sec-log-ts {
+      color: var(--text-muted);
+      min-width: 72px;
+      flex-shrink: 0;
+    }
+
+    .sec-log-entry .sec-log-level {
+      min-width: 48px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .sec-log-entry .sec-log-level.BLOCK {
+      color: var(--accent-red);
+    }
+
+    .sec-log-entry .sec-log-level.ALLOW {
+      color: var(--accent-green);
+    }
+
+    .sec-log-entry .sec-log-level.WARN {
+      color: var(--accent-secondary);
+    }
+
+    .sec-log-entry .sec-log-level.AUDIT {
+      color: var(--accent-cyan);
+    }
+
+    .sec-log-entry .sec-log-detail {
+      color: var(--text-secondary);
+      word-break: break-word;
+    }
+
+    .sec-side-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .sec-side-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .sec-side-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+
+    .sec-side-row .sec-side-key {
+      color: var(--text-muted);
+    }
+
+    .sec-side-row .sec-side-val {
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .sec-side-row .sec-side-val.secure {
+      color: var(--accent-green);
+    }
+
+    .sec-side-row .sec-side-val.warning {
+      color: var(--accent-secondary);
+    }
+
+    .sec-side-row .sec-side-val.danger {
+      color: var(--accent-red);
+    }
   </style>
 </head>
 
 <body>
+  <!-- Sidebar toggle buttons (visible at narrow viewports) -->
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarMobile('left')"
+    title="Toggle Tools Panel">&#x2630;</button>
+  <button class="rightbar-toggle" id="rightbarToggle" onclick="toggleSidebarMobile('right')"
+    title="Toggle Files Panel">&#x2261;</button>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebars()"></div>
+
   <div class="ide-container">
     <!-- Header -->
     <header class="header-bar">
       <div class="brand">
         <div class="brand-icon">&#x1F996;</div>
         <span class="brand-text">RAWRXD IDE</span>
-        <span style="color: var(--text-muted); font-size: 12px; font-weight: 400;">// AGENTIC INTERFACE v3.2</span>
+        <span style="color: var(--text-muted); font-size: 12px; font-weight: 400;">// AGENTIC INTERFACE v3.3</span>
       </div>
 
       <div class="header-controls">
@@ -2807,6 +3543,10 @@
           <button class="tool-btn" onclick="showPerfPanel()">
             <span class="icon">&#x1F4CA;</span>
             <span>Perf</span>
+          </button>
+          <button class="tool-btn" onclick="showSecurityPanel()">
+            <span class="icon">&#x1F6E1;</span>
+            <span>Security</span>
           </button>
           <button class="tool-btn" onclick="clearChat()">
             <span class="icon">&#x1F5D1;</span>
@@ -2854,6 +3594,179 @@
             <input type="checkbox" id="streamToggle" checked
               onchange="State.gen.stream=this.checked; Conversation.persist();">
             <label for="streamToggle" style="font-size: 11px;">Stream responses</label>
+          </div>
+
+          <!-- Top-P -->
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Top-P</span>
+              <span class="setting-value" id="topPVal">0.9</span>
+            </div>
+            <input type="range" class="setting-slider" min="0" max="100" value="90" step="5" id="topPSlider"
+              oninput="State.gen.top_p=parseInt(this.value)/100; document.getElementById('topPVal').textContent=(parseInt(this.value)/100).toFixed(2); Conversation.persist();">
+          </div>
+
+          <!-- Top-K -->
+          <div>
+            <div class="setting-row">
+              <span class="setting-label">Top-K</span>
+              <span class="setting-value" id="topKVal">40</span>
+            </div>
+            <input type="range" class="setting-slider" min="1" max="200" value="40" step="1" id="topKSlider"
+              oninput="State.gen.top_k=parseInt(this.value); document.getElementById('topKVal').textContent=this.value; Conversation.persist();">
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Tensor Bunny Hop ═══ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title"
+          onclick="document.getElementById('tensorHopBody').style.display=document.getElementById('tensorHopBody').style.display==='none'?'block':'none'"
+          style="cursor:pointer;">
+          // 🐇 Tensor Bunny Hop
+          <span style="float:right;font-size:10px;color:var(--text-muted);">[click to toggle]</span>
+        </div>
+        <div id="tensorHopBody" style="display:none; padding: 8px 0;">
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+            Skip unneeded tensor layers during inference — lets bigger models run in smaller runtimes.
+            The model "hops" through layers, keeping only the ones it needs for the answer.
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="tensorHopToggle"
+              onchange="State.gen.tensorHop.enabled=this.checked; updateTensorHopUI(); Conversation.persist();">
+            <label for="tensorHopToggle" style="font-size: 11px;">Enable Tensor Bunny Hop</label>
+          </div>
+
+          <div id="tensorHopSettings" style="display:none;">
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Strategy</span>
+                <span class="setting-value" id="hopStratVal">auto</span>
+              </div>
+              <select id="hopStrategySelect"
+                style="width:100%; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; padding:4px; font-size:11px; font-family:var(--font-mono);"
+                onchange="State.gen.tensorHop.strategy=this.value; document.getElementById('hopStratVal').textContent=this.value; document.getElementById('customSkipGroup').style.display=this.value==='custom'?'block':'none'; Conversation.persist();">
+                <option value="auto">Auto (smart skip based on query)</option>
+                <option value="even">Even (skip every Nth layer)</option>
+                <option value="front">Front-heavy (skip early layers)</option>
+                <option value="back">Back-heavy (skip late layers)</option>
+                <option value="custom">Custom (manual layer selection)</option>
+              </select>
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Skip Ratio</span>
+                <span class="setting-value" id="skipRatioVal">25%</span>
+              </div>
+              <input type="range" class="setting-slider" min="0" max="50" value="25" step="5" id="skipRatioSlider"
+                oninput="State.gen.tensorHop.skipRatio=parseInt(this.value)/100; document.getElementById('skipRatioVal').textContent=this.value+'%'; Conversation.persist();">
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Keep First N Layers</span>
+                <span class="setting-value" id="keepFirstVal">2</span>
+              </div>
+              <input type="range" class="setting-slider" min="0" max="16" value="2" step="1" id="keepFirstSlider"
+                oninput="State.gen.tensorHop.keepFirst=parseInt(this.value); document.getElementById('keepFirstVal').textContent=this.value; Conversation.persist();">
+            </div>
+
+            <div style="margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Keep Last N Layers</span>
+                <span class="setting-value" id="keepLastVal">2</span>
+              </div>
+              <input type="range" class="setting-slider" min="0" max="16" value="2" step="1" id="keepLastSlider"
+                oninput="State.gen.tensorHop.keepLast=parseInt(this.value); document.getElementById('keepLastVal').textContent=this.value; Conversation.persist();">
+            </div>
+
+            <div id="customSkipGroup" style="display:none; margin-top:6px;">
+              <div class="setting-row">
+                <span class="setting-label">Custom Skip Layers</span>
+              </div>
+              <input type="text" id="customSkipInput" placeholder="e.g. 3,7,11,15"
+                style="width:100%; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; padding:4px; font-size:11px; font-family:var(--font-mono);"
+                oninput="State.gen.tensorHop.customSkip=this.value.split(',').map(Number).filter(function(n){return !isNaN(n);}); Conversation.persist();">
+            </div>
+
+            <div
+              style="margin-top:8px; padding:6px; background:var(--bg-tertiary); border-radius:4px; font-size:10px; color:var(--text-muted); line-height:1.4;">
+              <strong style="color:var(--accent-cyan);">How it works:</strong><br>
+              When enabled, the inference request includes <code>tensor_hop</code> metadata.
+              Layers not needed for the specific query are skipped, reducing VRAM/RAM usage
+              and decode time. Auto mode analyzes the prompt to pick optimal skip patterns.
+              <br><br>
+              <strong>⚠️ Skip too many layers = quality drops.</strong> Start with 25% skip ratio.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Safe Decode Profile ═══ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title"
+          onclick="document.getElementById('safeDecodeBody').style.display=document.getElementById('safeDecodeBody').style.display==='none'?'block':'none'"
+          style="cursor:pointer;">
+          // 🔒 Safe Decode Profile
+          <span style="float:right;font-size:10px;color:var(--text-muted);">[click to toggle]</span>
+        </div>
+        <div id="safeDecodeBody" style="display:none; padding: 8px 0;">
+          <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">
+            Auto-clamp settings for large models (≥27B) to prevent HTTP 500 decode failures
+            in Ollama Direct mode. Forces conservative token budgets and disables streaming.
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="safeDecodeToggle" checked
+              onchange="State.gen.safeDecodeProfile.enabled=this.checked; Conversation.persist();">
+            <label for="safeDecodeToggle" style="font-size: 11px;">Enable Safe Decode</label>
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="autoClampToggle" checked
+              onchange="State.gen.safeDecodeProfile.autoClamp=this.checked; Conversation.persist();">
+            <label for="autoClampToggle" style="font-size: 11px;">Auto-clamp for models ≥27B</label>
+          </div>
+
+          <div class="debug-option" style="padding: 4px 0;">
+            <input type="checkbox" id="probeFirstToggle" checked
+              onchange="State.gen.safeDecodeProfile.probeFirst=this.checked; Conversation.persist();">
+            <label for="probeFirstToggle" style="font-size: 11px;">First-token probe before real request</label>
+          </div>
+
+          <div style="margin-top:6px;">
+            <div class="setting-row">
+              <span class="setting-label">Model Size Threshold</span>
+              <span class="setting-value" id="thresholdBVal">27B</span>
+            </div>
+            <input type="range" class="setting-slider" min="7" max="120" value="27" step="1" id="thresholdBSlider"
+              oninput="State.gen.safeDecodeProfile.thresholdB=parseInt(this.value); document.getElementById('thresholdBVal').textContent=this.value+'B'; Conversation.persist();">
+          </div>
+
+          <div style="margin-top:6px;">
+            <div class="setting-row">
+              <span class="setting-label">Safe Context</span>
+              <span class="setting-value" id="safeCtxVal">3,072</span>
+            </div>
+            <input type="range" class="setting-slider" min="512" max="8192" value="3072" step="256" id="safeCtxSlider"
+              oninput="State.gen.safeDecodeProfile.safeContext=parseInt(this.value); document.getElementById('safeCtxVal').textContent=parseInt(this.value).toLocaleString(); Conversation.persist();">
+          </div>
+
+          <div style="margin-top:6px;">
+            <div class="setting-row">
+              <span class="setting-label">Safe Max Tokens</span>
+              <span class="setting-value" id="safeTokVal">128</span>
+            </div>
+            <input type="range" class="setting-slider" min="32" max="1024" value="128" step="32" id="safeTokSlider"
+              oninput="State.gen.safeDecodeProfile.safeMaxTokens=parseInt(this.value); document.getElementById('safeTokVal').textContent=this.value; Conversation.persist();">
+          </div>
+
+          <div
+            style="margin-top:8px; padding:6px; background:var(--bg-tertiary); border-radius:4px; font-size:10px; color:var(--text-muted); line-height:1.4;"
+            id="safeDecodeStatus">
+            <strong style="color:var(--accent-green);">Status:</strong> Monitoring model selection...
           </div>
         </div>
       </div>
@@ -2926,6 +3839,8 @@
             rows="1" onkeydown="handleInput(event)"></textarea>
           <div class="input-actions">
             <button class="input-btn" onclick="attachFile()" title="Attach File">&#x1F4CE;</button>
+            <button class="input-btn stop" id="stopBtn" onclick="stopGeneration()" title="Stop Generation (Ctrl+C)"
+              style="display:none;">&#x23F9;</button>
             <button class="input-btn send" id="sendBtn" onclick="sendMessage()" title="Send">&#x27A4;</button>
           </div>
         </div>
@@ -2992,6 +3907,66 @@
                 onchange="State.backend.url=this.value; logDebug('Backend URL changed to '+this.value,'info')">
             </div>
           </div>
+          <script>
+            // Wire debug checkboxes to localStorage persistence and live toggling
+            document.addEventListener('DOMContentLoaded', function () {
+              // Restore persisted debug settings
+              try {
+                var dbgSettings = JSON.parse(localStorage.getItem('rawrxd_debug_settings') || '{}');
+                if (dbgSettings.autoReconnect !== undefined) {
+                  var arEl = document.getElementById('dbgAutoReconnect');
+                  if (arEl) arEl.checked = dbgSettings.autoReconnect;
+                }
+                if (dbgSettings.showTiming !== undefined) {
+                  var stEl = document.getElementById('dbgShowTiming');
+                  if (stEl) stEl.checked = dbgSettings.showTiming;
+                }
+                if (dbgSettings.logRequests !== undefined) {
+                  var lrEl = document.getElementById('dbgLogRequests');
+                  if (lrEl) lrEl.checked = dbgSettings.logRequests;
+                }
+                if (dbgSettings.logResponses !== undefined) {
+                  var lpEl = document.getElementById('dbgLogResponses');
+                  if (lpEl) lpEl.checked = dbgSettings.logResponses;
+                }
+              } catch (e) { /* ignore */ }
+
+              function persistDebugSettings() {
+                try {
+                  localStorage.setItem('rawrxd_debug_settings', JSON.stringify({
+                    autoReconnect: document.getElementById('dbgAutoReconnect') ? document.getElementById('dbgAutoReconnect').checked : true,
+                    showTiming: document.getElementById('dbgShowTiming') ? document.getElementById('dbgShowTiming').checked : true,
+                    logRequests: document.getElementById('dbgLogRequests') ? document.getElementById('dbgLogRequests').checked : true,
+                    logResponses: document.getElementById('dbgLogResponses') ? document.getElementById('dbgLogResponses').checked : false
+                  }));
+                } catch (e) { /* localStorage full */ }
+              }
+
+              // dbgShowTiming: toggle all message-meta elements visibility
+              var showTimingEl = document.getElementById('dbgShowTiming');
+              if (showTimingEl) {
+                showTimingEl.addEventListener('change', function () {
+                  var display = this.checked ? '' : 'none';
+                  document.querySelectorAll('.message-meta').forEach(function (el) {
+                    el.style.display = display;
+                  });
+                  persistDebugSettings();
+                });
+                // Apply initial state
+                if (!showTimingEl.checked) {
+                  document.querySelectorAll('.message-meta').forEach(function (el) {
+                    el.style.display = 'none';
+                  });
+                }
+              }
+
+              // Persist all debug checkbox changes
+              ['dbgAutoReconnect', 'dbgLogRequests', 'dbgLogResponses'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', persistDebugSettings);
+              });
+            });
+          </script>
           <div class="debug-main" id="debugLog">
             <div class="debug-log">
               <span class="timestamp">[--:--:--]</span> <span class="level-info">[INFO]</span> Debug panel ready. Click
@@ -3114,24 +4089,61 @@
             <!-- Hotpatch Control Panel -->
             <div class="hotpatch-section">
               <div class="hotpatch-header">
-                <span class="hotpatch-title">&#x1F527; Three-Layer Hotpatch Status</span>
-                <button class="code-btn" onclick="fetchAgentStatus()" style="font-size:10px;">Refresh</button>
+                <span class="hotpatch-title">&#x1F527; Three-Layer Hotpatch Control</span>
+                <div style="display:flex;gap:6px;">
+                  <button class="code-btn" onclick="toggleAllHotpatchLayers()" style="font-size:10px;"
+                    id="hpToggleAllBtn">Toggle All</button>
+                  <button class="code-btn" onclick="fetchAgentStatus()" style="font-size:10px;">Refresh</button>
+                </div>
               </div>
               <div class="hotpatch-layer-grid">
-                <div class="hotpatch-layer">
+                <div class="hotpatch-layer" id="hpMemoryLayer">
                   <div class="hotpatch-layer-name">Memory</div>
                   <div class="hotpatch-layer-count" id="hpMemoryCount">0</div>
                   <div class="hotpatch-layer-label">patches</div>
+                  <label class="hotpatch-toggle" title="Enable/disable memory hotpatching">
+                    <input type="checkbox" id="hpMemoryToggle" checked
+                      onchange="toggleHotpatchLayer('memory', this.checked)">
+                    <span class="hotpatch-toggle-slider"></span>
+                  </label>
+                  <div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">
+                    <button class="code-btn" onclick="applyHotpatch('memory')"
+                      style="font-size:9px;padding:2px 6px;">Apply</button>
+                    <button class="code-btn" onclick="revertHotpatch('memory')"
+                      style="font-size:9px;padding:2px 6px;">Revert</button>
+                  </div>
                 </div>
-                <div class="hotpatch-layer">
+                <div class="hotpatch-layer" id="hpByteLayer">
                   <div class="hotpatch-layer-name">Byte-Level</div>
                   <div class="hotpatch-layer-count" id="hpByteCount">0</div>
                   <div class="hotpatch-layer-label">patches</div>
+                  <label class="hotpatch-toggle" title="Enable/disable byte-level hotpatching">
+                    <input type="checkbox" id="hpByteToggle" checked
+                      onchange="toggleHotpatchLayer('byte', this.checked)">
+                    <span class="hotpatch-toggle-slider"></span>
+                  </label>
+                  <div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">
+                    <button class="code-btn" onclick="applyHotpatch('byte')"
+                      style="font-size:9px;padding:2px 6px;">Apply</button>
+                    <button class="code-btn" onclick="revertHotpatch('byte')"
+                      style="font-size:9px;padding:2px 6px;">Revert</button>
+                  </div>
                 </div>
-                <div class="hotpatch-layer">
+                <div class="hotpatch-layer" id="hpServerLayer">
                   <div class="hotpatch-layer-name">Server</div>
                   <div class="hotpatch-layer-count" id="hpServerCount">0</div>
                   <div class="hotpatch-layer-label">patches</div>
+                  <label class="hotpatch-toggle" title="Enable/disable server hotpatching">
+                    <input type="checkbox" id="hpServerToggle" checked
+                      onchange="toggleHotpatchLayer('server', this.checked)">
+                    <span class="hotpatch-toggle-slider"></span>
+                  </label>
+                  <div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">
+                    <button class="code-btn" onclick="applyHotpatch('server')"
+                      style="font-size:9px;padding:2px 6px;">Apply</button>
+                    <button class="code-btn" onclick="revertHotpatch('server')"
+                      style="font-size:9px;padding:2px 6px;">Revert</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3335,6 +4347,172 @@
           </div>
         </div>
       </div>
+
+      <!-- Security & Hardening Panel (Phase 4) -->
+      <div class="security-panel" id="securityPanel">
+        <div class="security-header">
+          <span class="security-title">&#x1F6E1;&#xFE0F; Security &amp; Hardening</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="renderSecurityPanel()">Refresh</button>
+            <button class="code-btn" onclick="exportSecurityAudit()">Export</button>
+            <button class="code-btn" onclick="closeSecurityPanel()">Close</button>
+          </div>
+        </div>
+        <div class="security-body">
+          <div class="security-main">
+            <!-- Status Cards -->
+            <div class="sec-card-row">
+              <div class="sec-card">
+                <div class="sec-card-label">CSP Directives</div>
+                <div class="sec-card-value secure" id="secCspCount">0</div>
+                <div class="sec-card-unit">active policies</div>
+              </div>
+              <div class="sec-card">
+                <div class="sec-card-label">Blocked Inputs</div>
+                <div class="sec-card-value" id="secBlockedCount">0</div>
+                <div class="sec-card-unit">sanitized</div>
+              </div>
+              <div class="sec-card">
+                <div class="sec-card-label">Rate Limit</div>
+                <div class="sec-card-value secure" id="secRateStatus">OK</div>
+                <div class="sec-card-unit" id="secRateUnit">0 / 30 per min</div>
+              </div>
+              <div class="sec-card">
+                <div class="sec-card-label">URL Validation</div>
+                <div class="sec-card-value secure" id="secUrlStatus">&#x2713;</div>
+                <div class="sec-card-unit">backend verified</div>
+              </div>
+            </div>
+
+            <!-- CSP Audit -->
+            <div class="sec-audit-section">
+              <div class="sec-audit-header">
+                <span>&#x1F512; Content Security Policy Audit</span>
+                <button class="code-btn" onclick="auditCSP()" style="font-size:10px;">Re-Audit</button>
+              </div>
+              <div class="sec-audit-body" id="secCspAuditBody">
+                <div style="text-align:center; color:var(--text-muted); padding:20px;">Click Refresh to audit CSP</div>
+              </div>
+            </div>
+
+            <!-- Rate Limit Meter -->
+            <div class="sec-rate-meter">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12px; font-weight:700; color:var(--text-secondary);">&#x23F1; Client Rate
+                  Limiter</span>
+                <span style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);"
+                  id="secRateLimitLabel">30 req/min</span>
+              </div>
+              <div class="sec-rate-bar-bg">
+                <div class="sec-rate-bar-fill" id="secRateBar" style="width: 0%;"></div>
+              </div>
+              <div class="sec-rate-info">
+                <span id="secRateUsed">0 used</span>
+                <span id="secRateRemaining">30 remaining</span>
+              </div>
+            </div>
+
+            <!-- Input Validation Audit -->
+            <div class="sec-audit-section">
+              <div class="sec-audit-header">
+                <span>&#x1F9F9; Input Validation &amp; Sanitization</span>
+              </div>
+              <div class="sec-audit-body" id="secInputAuditBody">
+                <div class="sec-directive">
+                  <span class="sec-directive-name">DOMPurify</span>
+                  <span class="sec-directive-value" id="secDomPurifyStatus">Checking...</span>
+                  <span class="sec-directive-status pass" id="secDomPurifyBadge">—</span>
+                </div>
+                <div class="sec-directive">
+                  <span class="sec-directive-name">Max Input Length</span>
+                  <span class="sec-directive-value" id="secMaxInputVal">50,000 chars</span>
+                  <span class="sec-directive-status pass">ENFORCED</span>
+                </div>
+                <div class="sec-directive">
+                  <span class="sec-directive-name">Script Tag Filter</span>
+                  <span class="sec-directive-value">Blocks &lt;script&gt;, onerror=, onload=, javascript:</span>
+                  <span class="sec-directive-status pass">ACTIVE</span>
+                </div>
+                <div class="sec-directive">
+                  <span class="sec-directive-name">URL Allowlist</span>
+                  <span class="sec-directive-value" id="secUrlAllowlist">localhost, 127.0.0.1</span>
+                  <span class="sec-directive-status pass">ENFORCED</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Event Log -->
+            <div class="sec-log-section">
+              <div class="sec-log-header">
+                <span>Security Event Log</span>
+                <span id="secLogCount" style="color:var(--accent-cyan); font-weight:400;">0</span>
+              </div>
+              <div class="sec-log-body" id="secLogBody">
+                <div class="sec-log-entry">
+                  <span class="sec-log-ts">&mdash;</span>
+                  <span class="sec-log-level AUDIT">AUDIT</span>
+                  <span class="sec-log-detail">Security panel initialized — Phase 4 active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security Sidebar -->
+          <div class="security-sidebar">
+            <div class="sec-side-card">
+              <div class="sec-side-title">Security Summary</div>
+              <div class="sec-side-row"><span class="sec-side-key">CSP</span><span class="sec-side-val secure"
+                  id="secSumCsp">Active</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">DOMPurify</span><span class="sec-side-val secure"
+                  id="secSumPurify">Loaded</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Rate Limit</span><span class="sec-side-val secure"
+                  id="secSumRate">OK</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">URL Guard</span><span class="sec-side-val secure"
+                  id="secSumUrl">Enforced</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Input Filter</span><span class="sec-side-val secure"
+                  id="secSumInput">Active</span></div>
+            </div>
+
+            <div class="sec-side-card">
+              <div class="sec-side-title">Blocked Events</div>
+              <div class="sec-side-row"><span class="sec-side-key">XSS Attempts</span><span class="sec-side-val"
+                  id="secBlkXss">0</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Over-Length</span><span class="sec-side-val"
+                  id="secBlkLength">0</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Rate Limited</span><span class="sec-side-val"
+                  id="secBlkRate">0</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Bad URL</span><span class="sec-side-val"
+                  id="secBlkUrl">0</span></div>
+            </div>
+
+            <div class="sec-side-card">
+              <div class="sec-side-title">Backend Hardening</div>
+              <div class="sec-side-row"><span class="sec-side-key">Max Body</span><span class="sec-side-val"
+                  id="secBackendBody">10 MB</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Rate Limit</span><span class="sec-side-val"
+                  id="secBackendRate">60/min</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">CORS</span><span class="sec-side-val"
+                  id="secBackendCors">Restricted</span></div>
+              <div class="sec-side-row"><span class="sec-side-key">Sec Headers</span><span class="sec-side-val secure"
+                  id="secBackendHeaders">Active</span></div>
+            </div>
+
+            <div class="sec-side-card" style="flex:1;">
+              <div class="sec-side-title">Quick Actions</div>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+                <button class="code-btn" onclick="auditCSP();" style="width:100%; text-align:left;">&#x1F512; Re-Audit
+                  CSP</button>
+                <button class="code-btn" onclick="validateBackendUrl();" style="width:100%; text-align:left;">&#x1F310;
+                  Validate URL</button>
+                <button class="code-btn" onclick="resetRateLimit();" style="width:100%; text-align:left;">&#x23F1; Reset
+                  Rate Limit</button>
+                <button class="code-btn" onclick="exportSecurityAudit();" style="width:100%; text-align:left;">&#x1F4BE;
+                  Export Audit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- Right Sidebar -->
@@ -3434,11 +4612,38 @@
       backend: {
         online: false,
         url: 'http://localhost:11435',
+        ollamaDirectUrl: 'http://localhost:11434',  // Fallback: talk to Ollama directly
+        directMode: false,                           // true = bypassing serve.py, talking to Ollama
         lastPing: 0,
-        serverType: null,         // 'rawrxd-win32ide' or 'RawrXD-serve.py'
+        serverType: null,         // 'rawrxd-win32ide' or 'RawrXD-serve.py' or 'ollama-direct'
       },
       model: { current: null, list: [] },
-      gen: { context: 4096, maxTokens: 512, temperature: 0.7, stream: true },
+      gen: {
+        context: 4096, maxTokens: 512, temperature: 0.7, stream: true,
+        top_p: 0.9, top_k: 40,
+        // Tensor Bunny Hop: skip unneeded tensor layers during inference for faster large-model runs
+        tensorHop: {
+          enabled: false,
+          strategy: 'auto',     // 'auto' | 'even' | 'front' | 'back' | 'custom'
+          skipRatio: 0.25,      // fraction of layers to skip (0.0–0.5)
+          keepFirst: 2,         // always keep first N layers
+          keepLast: 2,          // always keep last N layers
+          customSkip: [],       // manual layer indices to skip
+        },
+        // Safe Decode Profile: auto-clamp for large models to prevent HTTP 500
+        safeDecodeProfile: {
+          enabled: true,
+          autoClamp: true,      // auto-detect model size and clamp
+          thresholdB: 27,       // models >= this size (in B) trigger safe profile
+          safeContext: 3072,
+          safeMaxTokens: 128,
+          safeTemperature: 0.3,
+          safeTopP: 0.9,
+          safeTopK: 40,
+          probeFirst: true,     // send first-token probe before real request
+          disableStreamOnSafe: true,
+        },
+      },
       files: [],                // attached File objects
       fileContents: {},           // name -> text content (read via FileReader)
       debug: { open: false },
@@ -3458,6 +4663,24 @@
         // Structured log ring buffer (last 500 entries)
         structuredLog: [],
         maxLog: 500,
+      },
+      // Phase 4: Security & Hardening
+      security: {
+        rateLimit: {
+          maxPerMinute: 30,
+          windowMs: 60000,
+          timestamps: [],      // ring buffer of request timestamps
+          blocked: 0,
+        },
+        inputGuard: {
+          maxLength: 50000,
+          blockedXss: 0,
+          blockedLength: 0,
+          blockedUrl: 0,
+        },
+        urlAllowlist: [/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?/i],
+        eventLog: [],          // ring buffer of security events
+        maxLog: 200,
       },
     };
 
@@ -3669,6 +4892,30 @@
             if (data.maxTokens) State.gen.maxTokens = data.maxTokens;
             if (data.temperature != null) State.gen.temperature = data.temperature;
             if (data.stream != null) State.gen.stream = data.stream;
+            if (data.top_p != null) State.gen.top_p = data.top_p;
+            if (data.top_k != null) State.gen.top_k = data.top_k;
+            // Restore tensor bunny hop settings
+            if (data.tensorHop) {
+              if (data.tensorHop.enabled != null) State.gen.tensorHop.enabled = data.tensorHop.enabled;
+              if (data.tensorHop.strategy) State.gen.tensorHop.strategy = data.tensorHop.strategy;
+              if (data.tensorHop.skipRatio != null) State.gen.tensorHop.skipRatio = data.tensorHop.skipRatio;
+              if (data.tensorHop.keepFirst != null) State.gen.tensorHop.keepFirst = data.tensorHop.keepFirst;
+              if (data.tensorHop.keepLast != null) State.gen.tensorHop.keepLast = data.tensorHop.keepLast;
+              if (data.tensorHop.customSkip) State.gen.tensorHop.customSkip = data.tensorHop.customSkip;
+            }
+            // Restore safe decode profile
+            if (data.safeDecodeProfile) {
+              if (data.safeDecodeProfile.enabled != null) State.gen.safeDecodeProfile.enabled = data.safeDecodeProfile.enabled;
+              if (data.safeDecodeProfile.autoClamp != null) State.gen.safeDecodeProfile.autoClamp = data.safeDecodeProfile.autoClamp;
+              if (data.safeDecodeProfile.thresholdB != null) State.gen.safeDecodeProfile.thresholdB = data.safeDecodeProfile.thresholdB;
+              if (data.safeDecodeProfile.safeContext != null) State.gen.safeDecodeProfile.safeContext = data.safeDecodeProfile.safeContext;
+              if (data.safeDecodeProfile.safeMaxTokens != null) State.gen.safeDecodeProfile.safeMaxTokens = data.safeDecodeProfile.safeMaxTokens;
+              if (data.safeDecodeProfile.safeTemperature != null) State.gen.safeDecodeProfile.safeTemperature = data.safeDecodeProfile.safeTemperature;
+              if (data.safeDecodeProfile.safeTopP != null) State.gen.safeDecodeProfile.safeTopP = data.safeDecodeProfile.safeTopP;
+              if (data.safeDecodeProfile.safeTopK != null) State.gen.safeDecodeProfile.safeTopK = data.safeDecodeProfile.safeTopK;
+              if (data.safeDecodeProfile.probeFirst != null) State.gen.safeDecodeProfile.probeFirst = data.safeDecodeProfile.probeFirst;
+              if (data.safeDecodeProfile.disableStreamOnSafe != null) State.gen.safeDecodeProfile.disableStreamOnSafe = data.safeDecodeProfile.disableStreamOnSafe;
+            }
             return true;
           }
         } catch (e) { /* ignore */ }
@@ -3747,6 +4994,39 @@
         if (maxTokSlider) { maxTokSlider.value = State.gen.maxTokens; document.getElementById('maxTokVal').textContent = State.gen.maxTokens; }
         if (tempSlider) { tempSlider.value = Math.round(State.gen.temperature * 100); document.getElementById('tempVal').textContent = State.gen.temperature.toFixed(1); }
         if (streamToggle) { streamToggle.checked = State.gen.stream; }
+        // Restore Top-P / Top-K
+        var topPSlider = document.getElementById('topPSlider');
+        var topKSlider = document.getElementById('topKSlider');
+        if (topPSlider) { topPSlider.value = Math.round(State.gen.top_p * 100); document.getElementById('topPVal').textContent = State.gen.top_p.toFixed(2); }
+        if (topKSlider) { topKSlider.value = State.gen.top_k; document.getElementById('topKVal').textContent = State.gen.top_k; }
+        // Restore Tensor Bunny Hop
+        var thToggle = document.getElementById('tensorHopToggle');
+        if (thToggle) { thToggle.checked = State.gen.tensorHop.enabled; }
+        var hopStrat = document.getElementById('hopStrategySelect');
+        if (hopStrat) { hopStrat.value = State.gen.tensorHop.strategy; document.getElementById('hopStratVal').textContent = State.gen.tensorHop.strategy; }
+        var skipSlider = document.getElementById('skipRatioSlider');
+        if (skipSlider) { skipSlider.value = Math.round(State.gen.tensorHop.skipRatio * 100); document.getElementById('skipRatioVal').textContent = Math.round(State.gen.tensorHop.skipRatio * 100) + '%'; }
+        var kfSlider = document.getElementById('keepFirstSlider');
+        if (kfSlider) { kfSlider.value = State.gen.tensorHop.keepFirst; document.getElementById('keepFirstVal').textContent = State.gen.tensorHop.keepFirst; }
+        var klSlider = document.getElementById('keepLastSlider');
+        if (klSlider) { klSlider.value = State.gen.tensorHop.keepLast; document.getElementById('keepLastVal').textContent = State.gen.tensorHop.keepLast; }
+        var custInput = document.getElementById('customSkipInput');
+        if (custInput && State.gen.tensorHop.customSkip.length) { custInput.value = State.gen.tensorHop.customSkip.join(','); }
+        if (State.gen.tensorHop.strategy === 'custom') { var csg = document.getElementById('customSkipGroup'); if (csg) csg.style.display = 'block'; }
+        updateTensorHopUI();
+        // Restore Safe Decode Profile
+        var sdToggle = document.getElementById('safeDecodeToggle');
+        if (sdToggle) { sdToggle.checked = State.gen.safeDecodeProfile.enabled; }
+        var acToggle = document.getElementById('autoClampToggle');
+        if (acToggle) { acToggle.checked = State.gen.safeDecodeProfile.autoClamp; }
+        var pfToggle = document.getElementById('probeFirstToggle');
+        if (pfToggle) { pfToggle.checked = State.gen.safeDecodeProfile.probeFirst; }
+        var thBSlider = document.getElementById('thresholdBSlider');
+        if (thBSlider) { thBSlider.value = State.gen.safeDecodeProfile.thresholdB; document.getElementById('thresholdBVal').textContent = State.gen.safeDecodeProfile.thresholdB + 'B'; }
+        var sCtxSlider = document.getElementById('safeCtxSlider');
+        if (sCtxSlider) { sCtxSlider.value = State.gen.safeDecodeProfile.safeContext; document.getElementById('safeCtxVal').textContent = State.gen.safeDecodeProfile.safeContext.toLocaleString(); }
+        var sTokSlider = document.getElementById('safeTokSlider');
+        if (sTokSlider) { sTokSlider.value = State.gen.safeDecodeProfile.safeMaxTokens; document.getElementById('safeTokVal').textContent = State.gen.safeDecodeProfile.safeMaxTokens; }
       }
 
       if (hasSession) {
@@ -3780,20 +5060,22 @@
 
     function addWelcomeMessage() {
       addMessage('system',
-        '**RawrXD Agentic Interface v3.2** — Phase 3: Performance & Observability\n\n' +
-        'This interface connects to the RawrXD backend on `localhost:11435`.\n\n' +
-        '**What\'s new in v3.2:**\n' +
-        '\u2022 **Performance Dashboard** — latency sparklines, token/s graphs, model benchmarks\n' +
-        '\u2022 **Request Latency Tracking** — per-request metrics with ring buffer history\n' +
-        '\u2022 **Model Benchmark Comparison** — side-by-side avg/best t/s across models\n' +
-        '\u2022 **Latency Percentiles** — p50/p90/p99 computed in real time\n' +
-        '\u2022 **Structured Logging** — JSON log entries with level/event/data for every operation\n' +
-        '\u2022 **Endpoint Breakdown** — success/error tracking per API endpoint\n' +
-        '\u2022 **Terminal `perf` command** — quick performance summary in terminal\n\n' +
+        '**RawrXD Agentic Interface v3.3** — Phase 4: Security & Hardening\n\n' +
+        'This interface connects to the RawrXD backend on `localhost:11435`. ' +
+        'If the Python server isn\u2019t running, it will automatically fall back to Ollama directly on `localhost:11434`.\n\n' +
+        '**What\'s new in v3.3:**\n' +
+        '\u2022 **Security Dashboard** — CSP audit, input validation status, rate limit meter\n' +
+        '\u2022 **Input Sanitization Guard** — XSS pattern detection, max-length enforcement, defense-in-depth\n' +
+        '\u2022 **Client Rate Limiter** — configurable 30 req/min with visual meter & auto-block\n' +
+        '\u2022 **Backend URL Validation** — allowlist-enforced (localhost/127.0.0.1 only)\n' +
+        '\u2022 **CSP Audit Tool** — live analysis of Content Security Policy directives\n' +
+        '\u2022 **Security Event Log** — BLOCK/ALLOW/WARN/AUDIT entries with timestamps\n' +
+        '\u2022 **Backend Hardening** — request size limits, rate limiting, security headers\n' +
+        '\u2022 **Terminal `security` command** — quick security status in terminal\n\n' +
         '**Quick start:**\n' +
         '1. Run `launch_rawrxd.bat` or click **\u26A1** to connect\n' +
         '2. Select a model from the sidebar dropdown\n' +
-        '3. Click **\uD83D\uDCCA Perf** to open the Performance Dashboard\n' +
+        '3. Click **\uD83D\uDEE1 Security** to open the Security Dashboard\n' +
         '4. Type your message and press Enter\n\n' +
         '**Backend options:**\n' +
         '\u2022 `launch_rawrxd.bat` (starts everything automatically)\n' +
@@ -3802,21 +5084,196 @@
     }
 
     // ======================================================================
+    // ======================================================================
+    // TENSOR BUNNY HOP + SAFE DECODE HELPERS
+    // ======================================================================
+
+    // Toggle tensor hop settings visibility
+    function updateTensorHopUI() {
+      var settings = document.getElementById('tensorHopSettings');
+      if (settings) settings.style.display = State.gen.tensorHop.enabled ? 'block' : 'none';
+    }
+
+    // Extract model size in billions from model name (e.g. "gemma3:27b" -> 27, "gpt-oss:120b" -> 120)
+    function estimateModelSizeB(modelName) {
+      if (!modelName) return 0;
+      var match = modelName.match(/(\d+\.?\d*)\s*[bB]/);
+      if (match) return parseFloat(match[1]);
+      // Common model size heuristics
+      var lower = modelName.toLowerCase();
+      if (lower.indexOf('70b') >= 0 || lower.indexOf('65b') >= 0) return 70;
+      if (lower.indexOf('34b') >= 0 || lower.indexOf('33b') >= 0) return 34;
+      if (lower.indexOf('27b') >= 0) return 27;
+      if (lower.indexOf('13b') >= 0 || lower.indexOf('14b') >= 0) return 13;
+      if (lower.indexOf('7b') >= 0 || lower.indexOf('8b') >= 0) return 7;
+      if (lower.indexOf('3b') >= 0) return 3;
+      if (lower.indexOf('1b') >= 0 || lower.indexOf('1.5b') >= 0) return 1.5;
+      return 0; // unknown — don't clamp
+    }
+
+    // Check if current model triggers safe decode profile
+    function isSafeDecodeActive() {
+      if (!State.gen.safeDecodeProfile.enabled) return false;
+      if (!State.gen.safeDecodeProfile.autoClamp) return false;
+      var sizeB = estimateModelSizeB(State.model.current);
+      return sizeB >= State.gen.safeDecodeProfile.thresholdB;
+    }
+
+    // Get effective generation params (after safe decode clamping if active)
+    function getEffectiveGenParams() {
+      var p = {
+        context: State.gen.context,
+        maxTokens: State.gen.maxTokens,
+        temperature: State.gen.temperature,
+        top_p: State.gen.top_p,
+        top_k: State.gen.top_k,
+        stream: State.gen.stream,
+      };
+
+      // Apply safe decode clamping for large models
+      if (isSafeDecodeActive()) {
+        var sdp = State.gen.safeDecodeProfile;
+        p.context = Math.min(p.context, sdp.safeContext);
+        p.maxTokens = Math.min(p.maxTokens, sdp.safeMaxTokens);
+        p.temperature = sdp.safeTemperature;
+        p.top_p = sdp.safeTopP;
+        p.top_k = sdp.safeTopK;
+        if (sdp.disableStreamOnSafe) p.stream = false;
+        logDebug('[SafeDecode] Clamped for ' + State.model.current + ': ctx=' + p.context + ' tok=' + p.maxTokens + ' temp=' + p.temperature, 'warn');
+      }
+
+      return p;
+    }
+
+    // Build tensor hop metadata for API requests
+    function buildTensorHopOptions() {
+      if (!State.gen.tensorHop.enabled) return null;
+      var th = State.gen.tensorHop;
+      return {
+        enabled: true,
+        strategy: th.strategy,
+        skip_ratio: th.skipRatio,
+        keep_first: th.keepFirst,
+        keep_last: th.keepLast,
+        custom_skip: th.strategy === 'custom' ? th.customSkip : [],
+      };
+    }
+
+    // Build full options payload for OpenAI-compatible endpoints
+    function buildOpenAIPayloadExtras() {
+      var p = getEffectiveGenParams();
+      var extras = {
+        max_tokens: p.maxTokens,
+        temperature: p.temperature,
+        top_p: p.top_p,
+      };
+      // top_k not standard OpenAI but supported by many backends
+      if (p.top_k > 0) extras.top_k = p.top_k;
+      // Tensor hop metadata (custom extension)
+      var th = buildTensorHopOptions();
+      if (th) extras.tensor_hop = th;
+      return extras;
+    }
+
+    // Build Ollama options object
+    function buildOllamaOptions() {
+      var p = getEffectiveGenParams();
+      var opts = {
+        temperature: p.temperature,
+        top_p: p.top_p,
+        top_k: p.top_k,
+        num_ctx: p.context,
+      };
+      var th = buildTensorHopOptions();
+      if (th) opts.tensor_hop = th;
+      return opts;
+    }
+
+    // First-token probe: lightweight request to verify model is responsive
+    async function firstTokenProbe(model, url) {
+      if (!State.gen.safeDecodeProfile.probeFirst || !isSafeDecodeActive()) return true;
+      logDebug('[SafeDecode] Running first-token probe for ' + model, 'info');
+      try {
+        var res = await fetch(url + '/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            prompt: 'Reply with the word: OK',
+            stream: false,
+            options: { temperature: 0.1, num_ctx: 512, top_p: 0.9, top_k: 40 },
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!res.ok) {
+          logDebug('[SafeDecode] Probe failed: HTTP ' + res.status, 'error');
+          updateSafeDecodeStatus('probe-failed', res.status);
+          return false;
+        }
+        var data = await res.json();
+        logDebug('[SafeDecode] Probe OK: ' + (data.response || '').substring(0, 40), 'info');
+        updateSafeDecodeStatus('probe-ok');
+        return true;
+      } catch (e) {
+        logDebug('[SafeDecode] Probe exception: ' + e.message, 'error');
+        updateSafeDecodeStatus('probe-failed', e.message);
+        return false;
+      }
+    }
+
+    // Update Safe Decode status panel
+    function updateSafeDecodeStatus(status, detail) {
+      var el = document.getElementById('safeDecodeStatus');
+      if (!el) return;
+      var model = State.model.current || 'none';
+      var sizeB = estimateModelSizeB(model);
+      var active = isSafeDecodeActive();
+      var html = '<strong style=\"color:' + (active ? 'var(--accent-orange)' : 'var(--accent-green)') + ';\">';
+      if (status === 'probe-ok') {
+        html += '\u2705 Probe OK</strong> - Model responsive, safe decode active.';
+      } else if (status === 'probe-failed') {
+        html += '\u274c Probe Failed</strong> - ' + (detail || 'Model not responding.') + ' Consider restarting Ollama.';
+      } else if (active) {
+        html += '\u26a0\ufe0f Safe Decode Active</strong> for <code>' + model + '</code> (' + sizeB + 'B).<br>';
+        var p = getEffectiveGenParams();
+        html += 'Clamped: ctx=' + p.context + ', tok=' + p.maxTokens + ', temp=' + p.temperature + ', stream=' + p.stream;
+      } else {
+        html += '\u2705 Normal Mode</strong> - Model: <code>' + model + '</code>' + (sizeB > 0 ? ' (' + sizeB + 'B)' : '') + '. No clamping needed.';
+      }
+      el.innerHTML = html;
+    }
+
+    // ======================================================================
     // BACKEND CONNECTION
     // ======================================================================
+    // Helper: returns the URL to send requests to (proxy or direct Ollama)
+    function getActiveUrl() {
+      return State.backend.directMode ? State.backend.ollamaDirectUrl : State.backend.url;
+    }
+
     async function connectBackend() {
       const status = document.getElementById('backendStatus');
       const text = document.getElementById('statusText');
 
+      // Phase 4: Validate backend URL before connecting
+      if (!isUrlAllowed(State.backend.url)) {
+        secLog('BLOCK', 'Connection blocked — URL not on allowlist: ' + State.backend.url);
+        State.security.inputGuard.blockedUrl++;
+        status.className = 'status-pill offline';
+        text.textContent = 'URL BLOCKED';
+        logDebug('Backend URL blocked by security policy: ' + State.backend.url, 'error');
+        return;
+      }
+
       status.className = 'status-pill connecting';
       text.textContent = 'CONNECTING...';
 
+      // ---- Try 1: Primary backend (serve.py / Win32IDE on :11435) ----
       try {
         const t0 = performance.now();
         const ctrl = new AbortController();
         setTimeout(() => ctrl.abort(), 3000);
 
-        // Try /status first — gives us richer info from the Win32IDE C++ server
         let statusData = null;
         try {
           const res = await fetch(State.backend.url + '/status', { signal: ctrl.signal });
@@ -3832,6 +5289,7 @@
 
         if (statusData) {
           State.backend.online = true;
+          State.backend.directMode = false;
           State.backend.lastPing = Date.now();
           State.backend.serverType = statusData.backend || statusData.server || 'unknown';
 
@@ -3846,11 +5304,46 @@
           return;
         }
       } catch (e) {
-        logDebug('Connection failed: ' + e.message, 'error');
+        logDebug('Primary backend (' + State.backend.url + ') failed: ' + e.message, 'warn');
       }
 
-      // Offline
+      // ---- Try 2: Direct Ollama fallback (default :11434) ----
+      if (State.backend.ollamaDirectUrl && State.backend.ollamaDirectUrl !== State.backend.url) {
+        try {
+          logDebug('Trying direct Ollama at ' + State.backend.ollamaDirectUrl + '...', 'info');
+          const t0 = performance.now();
+
+          // Ollama exposes GET / that returns "Ollama is running"
+          const res = await fetch(State.backend.ollamaDirectUrl + '/', { signal: AbortSignal.timeout(3000) });
+          if (res.ok) {
+            const body = await res.text();
+            if (body.toLowerCase().includes('ollama')) {
+              const latency = Math.round(performance.now() - t0);
+
+              State.backend.online = true;
+              State.backend.directMode = true;
+              State.backend.lastPing = Date.now();
+              State.backend.serverType = 'ollama-direct';
+
+              status.className = 'status-pill online';
+              text.textContent = 'OLLAMA DIRECT';
+
+              updateBackendInfo({ backend: 'ollama-direct', model_loaded: true }, latency);
+              updateModeBadge(true);
+              logDebug('\u2705 Connected directly to Ollama (bypassing serve.py) (' + latency + 'ms)', 'info');
+
+              await fetchModels();
+              return;
+            }
+          }
+        } catch (e) {
+          logDebug('Direct Ollama (' + State.backend.ollamaDirectUrl + ') also failed: ' + e.message, 'warn');
+        }
+      }
+
+      // ---- Both failed: Offline ----
       State.backend.online = false;
+      State.backend.directMode = false;
       status.className = 'status-pill offline';
       text.textContent = 'OFFLINE';
       updateModeBadge(false);
@@ -3893,8 +5386,9 @@
       var sEl = document.getElementById('chatStatus');
       if (online) {
         badge.classList.add('active');
-        txt.textContent = 'Backend Connected';
-        sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> Ready';
+        txt.textContent = State.backend.directMode ? 'Ollama Direct' : 'Backend Connected';
+        sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> ' +
+          (State.backend.directMode ? 'Ollama Direct' : 'Ready');
       } else {
         badge.classList.remove('active');
         txt.textContent = 'Disconnected';
@@ -3907,19 +5401,50 @@
     // ======================================================================
     async function fetchModels() {
       if (!State.backend.online) return;
-      try {
-        var res = await fetch(State.backend.url + '/models', { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var data = await res.json();
-        if (data.models && Array.isArray(data.models)) {
-          State.model.list = data.models;
-          populateModelSelect(data.models);
-          logDebug('Loaded ' + data.models.length + ' models from /models', 'info');
+
+      var activeUrl = getActiveUrl();
+
+      // Try proxy /models endpoint first (serve.py enriches with GGUF info)
+      if (!State.backend.directMode) {
+        try {
+          var res = await fetch(activeUrl + '/models', { signal: AbortSignal.timeout(5000) });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+          if (data.models && Array.isArray(data.models)) {
+            State.model.list = data.models;
+            populateModelSelect(data.models);
+            logDebug('Loaded ' + data.models.length + ' models from /models', 'info');
+            return;
+          }
+        } catch (e) {
+          logDebug('Proxy /models failed: ' + e.message + ', trying Ollama /api/tags', 'warn');
         }
-      } catch (e) {
-        logDebug('Fetch models failed: ' + e.message, 'error');
-        populateModelsFallback();
       }
+
+      // Fallback / direct mode: Ollama native /api/tags
+      try {
+        var ollamaUrl = State.backend.directMode ? State.backend.ollamaDirectUrl : State.backend.url;
+        var res2 = await fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(5000) });
+        if (!res2.ok) throw new Error('HTTP ' + res2.status);
+        var tagsData = await res2.json();
+        if (tagsData.models && Array.isArray(tagsData.models)) {
+          var mapped = tagsData.models.map(function (m) {
+            return {
+              name: m.name || m.model,
+              type: 'ollama',
+              size: m.size ? ((m.size / (1024 * 1024 * 1024)).toFixed(1) + ' GB') : '?',
+            };
+          });
+          State.model.list = mapped;
+          populateModelSelect(mapped);
+          logDebug('Loaded ' + mapped.length + ' models from Ollama /api/tags' + (State.backend.directMode ? ' (direct)' : ''), 'info');
+          return;
+        }
+      } catch (e2) {
+        logDebug('Fetch models from /api/tags failed: ' + e2.message, 'error');
+      }
+
+      populateModelsFallback();
     }
 
     function populateModelSelect(models) {
@@ -3988,9 +5513,17 @@
         badgeText.textContent = name.length > 25 ? name.substring(0, 22) + '...' : name;
         rightModel.textContent = name.length > 20 ? name.substring(0, 17) + '...' : name;
         logDebug('Model selected: ' + name, 'info');
+
+        // Update safe decode status for new model
+        updateSafeDecodeStatus();
+        var sizeB = estimateModelSizeB(name);
+        if (isSafeDecodeActive()) {
+          logDebug('[SafeDecode] Large model detected (' + sizeB + 'B >= ' + State.gen.safeDecodeProfile.thresholdB + 'B) — safe decode active', 'warn');
+        }
       } else {
         badge.style.display = 'none';
         rightModel.textContent = '\u2014';
+        updateSafeDecodeStatus();
       }
     }
 
@@ -4017,12 +5550,29 @@
       var text = el.value.trim();
       if (!text) return;
 
+      // Phase 4: Input sanitization guard
+      var validation = validateInput(text);
+      if (!validation.valid) {
+        addMessage('system', '\u26A0\uFE0F **Security:** ' + validation.reason, { skipMemory: true });
+        return;
+      }
+      if (validation.sanitized !== undefined && validation.sanitized !== text) {
+        text = validation.sanitized;
+      }
+
+      // Phase 4: Rate limiter
+      if (!checkRateLimit()) {
+        addMessage('system', '\u26A0\uFE0F **Rate Limited:** Please wait before sending another message. (' + State.security.rateLimit.maxPerMinute + ' requests per minute max)', { skipMemory: true });
+        return;
+      }
+
       addMessage('user', text, { skipMemory: true });
       el.value = '';
       el.style.height = 'auto';
 
       State.chat.sending = true;
       document.getElementById('sendBtn').disabled = true;
+      showStopHideSend();
 
       if (State.backend.online) {
         await sendToBackend(text);
@@ -4039,11 +5589,277 @@
 
       State.chat.sending = false;
       document.getElementById('sendBtn').disabled = false;
+      showSendHideStop();
     }
+
+    // ======================================================================
+    // RawrXD Streaming Bridge — Production-grade NDJSON/SSE stream client
+    // Connects to MASM serve.exe (localhost:11435) or direct Ollama (11434)
+    // Implements: AbortController, cross-chunk NDJSON buffer, token rate
+    // ======================================================================
+    class RawrXDStream {
+      constructor(baseUrl) {
+        this.base = baseUrl || getActiveUrl();
+        this.abortCtrl = null;
+        this.tokenCount = 0;
+        this.startTime = 0;
+        this.lastTokenTime = 0;
+      }
+
+      // Async generator: yields tokens one by one from Ollama NDJSON /api/generate
+      async *chatGenerate(model, prompt, options) {
+        this.abortCtrl = new AbortController();
+        this.tokenCount = 0;
+        this.startTime = performance.now();
+        this.lastTokenTime = this.startTime;
+
+        var res = await fetch(this.base + '/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: this.abortCtrl.signal,
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            stream: true,
+            options: options || {},
+          }),
+        });
+
+        if (!res.ok || !res.body) {
+          throw new Error('HTTP ' + res.status);
+        }
+
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder('utf-8');
+        var buffer = '';
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+
+          buffer += decoder.decode(result.value, { stream: true });
+
+          // Cross-chunk safe NDJSON parsing
+          var newline;
+          while ((newline = buffer.indexOf('\n')) !== -1) {
+            var line = buffer.slice(0, newline).trim();
+            buffer = buffer.slice(newline + 1);
+
+            if (!line) continue;
+
+            try {
+              var msg = JSON.parse(line);
+              if (msg.response) {
+                this.tokenCount++;
+                this.lastTokenTime = performance.now();
+                yield msg.response;
+              }
+              if (msg.done) return;
+            } catch (e) {
+              // Skip malformed JSON lines
+              logDebug('[RawrXDStream] Parse error: ' + line.substring(0, 80), 'warn');
+            }
+          }
+        }
+      }
+
+      // Async generator: yields tokens from OpenAI SSE /v1/chat/completions
+      async *chatCompletions(model, messages, options) {
+        this.abortCtrl = new AbortController();
+        this.tokenCount = 0;
+        this.startTime = performance.now();
+        this.lastTokenTime = this.startTime;
+
+        var res = await fetch(this.base + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: this.abortCtrl.signal,
+          body: JSON.stringify({
+            model: model,
+            messages: messages,
+            stream: true,
+            max_tokens: (options && options.max_tokens) || State.gen.maxTokens,
+            temperature: (options && options.temperature) || State.gen.temperature,
+          }),
+        });
+
+        if (!res.ok || !res.body) {
+          throw new Error('HTTP ' + res.status);
+        }
+
+        var reader = res.body.getReader();
+        var decoder = new TextDecoder('utf-8');
+        var buffer = '';
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+
+          buffer += decoder.decode(result.value, { stream: true });
+
+          // Cross-chunk safe SSE + NDJSON parsing
+          var newline;
+          while ((newline = buffer.indexOf('\n')) !== -1) {
+            var line = buffer.slice(0, newline).trim();
+            buffer = buffer.slice(newline + 1);
+
+            if (!line) continue;
+
+            // Strip SSE "data: " prefix
+            if (line.startsWith('data: ')) line = line.slice(6);
+            if (line === '[DONE]') return;
+
+            try {
+              var obj = JSON.parse(line);
+
+              // OpenAI SSE format: choices[0].delta.content
+              var delta = '';
+              if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
+                delta = obj.choices[0].delta.content || '';
+              } else if (obj.response) {
+                // Ollama NDJSON fallback within same parser
+                delta = obj.response;
+              }
+
+              if (delta) {
+                this.tokenCount++;
+                this.lastTokenTime = performance.now();
+                yield delta;
+              }
+              if (obj.done) return;
+            } catch (e) {
+              // Skip non-JSON lines (SSE comments, empty lines)
+            }
+          }
+        }
+      }
+
+      // Abort current stream (Ctrl+C equivalent)
+      abort() {
+        if (this.abortCtrl) {
+          this.abortCtrl.abort();
+          this.abortCtrl = null;
+        }
+      }
+
+      // Get live token rate (tokens/sec)
+      getTokenRate() {
+        if (this.tokenCount === 0) return 0;
+        var elapsed = (performance.now() - this.startTime) / 1000;
+        return elapsed > 0 ? (this.tokenCount / elapsed) : 0;
+      }
+
+      // Get models (GGUF + Ollama + Blobs) from MASM backend
+      async getModels() {
+        var r = await fetch(this.base + '/models', { signal: AbortSignal.timeout(5000) });
+        return r.json();
+      }
+
+      // Legacy non-streaming ask
+      async ask(model, prompt) {
+        var r = await fetch(this.base + '/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: prompt, model: model }),
+        });
+        var j = await r.json();
+        return j.answer;
+      }
+
+      // Agent failure replay
+      async replayFailure(failureId, action) {
+        var r = await fetch(this.base + '/api/agents/replay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ failure_id: failureId, action: action || 'retry' }),
+        });
+        return r.json();
+      }
+    }
+
+    // Global stream instance — tracks active stream for abort
+    var _activeStream = null;
+
+    // Show/hide Stop/Send buttons
+    function showStopHideSend() {
+      document.getElementById('sendBtn').style.display = 'none';
+      document.getElementById('stopBtn').style.display = 'flex';
+    }
+    function showSendHideStop() {
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('sendBtn').style.display = 'flex';
+    }
+
+    // Stop Generation — cleanly cancels Ollama mid-generation
+    function stopGeneration() {
+      if (_activeStream) {
+        _activeStream.abort();
+        _activeStream = null;
+        logDebug('Generation stopped by user (Ctrl+C)', 'info');
+        logStructured('INFO', 'stream_aborted', { reason: 'user_cancel' });
+      }
+      // Also cancel CoT chain if running
+      if (typeof CoT !== 'undefined' && CoT.running && CoT.abortController) {
+        CoT.cancel();
+        logDebug('CoT chain cancelled by user', 'info');
+      }
+      showSendHideStop();
+    }
+
+    // Keyboard shortcut: Ctrl+C or Escape to stop generation
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey && e.key === 'c' && State.chat.sending) || (e.key === 'Escape' && State.chat.sending)) {
+        e.preventDefault();
+        stopGeneration();
+      }
+    });
+
+    // ======================================================================
+    // STREAM RATE INDICATOR (token/s + ETA during streaming)
+    // ======================================================================
+    var _rateIndicatorEl = null;
+    var _rateUpdateInterval = null;
+
+    function showStreamRate() {
+      if (!_rateIndicatorEl) {
+        _rateIndicatorEl = document.createElement('div');
+        _rateIndicatorEl.className = 'stream-rate-indicator';
+        _rateIndicatorEl.id = 'streamRateIndicator';
+        var toolbar = document.querySelector('.input-toolbar');
+        if (toolbar) toolbar.appendChild(_rateIndicatorEl);
+      }
+      _rateIndicatorEl.style.display = 'flex';
+      _rateIndicatorEl.innerHTML = '<span class="rate-value">0.0 t/s</span>';
+
+      _rateUpdateInterval = setInterval(function () {
+        if (_activeStream && _activeStream.tokenCount > 0) {
+          var rate = _activeStream.getTokenRate().toFixed(1);
+          var tokens = _activeStream.tokenCount;
+          _rateIndicatorEl.innerHTML =
+            '<span class="rate-value">' + rate + ' t/s</span>' +
+            '<span class="eta-value">' + tokens + ' tokens</span>';
+        }
+      }, 250);
+    }
+
+    function hideStreamRate() {
+      if (_rateUpdateInterval) {
+        clearInterval(_rateUpdateInterval);
+        _rateUpdateInterval = null;
+      }
+      if (_rateIndicatorEl) {
+        _rateIndicatorEl.style.display = 'none';
+      }
+    }
+
+    // ======================================================================
+    // CHAT — SEND TO BACKEND
+    // ======================================================================
 
     async function sendToBackend(query) {
       var model = State.model.current;
       var t0 = performance.now();
+      var activeUrl = getActiveUrl();  // respects directMode fallback
 
       // Record user message to conversation memory
       Conversation.addMessage('user', query);
@@ -4069,7 +5885,7 @@
           temperature: State.gen.temperature,
         };
 
-        var res = await fetch(State.backend.url + '/v1/chat/completions', {
+        var res = await fetch(getActiveUrl() + '/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -4100,6 +5916,9 @@
         if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
           logDebug('/v1/chat/completions \u2192 ' + answer.length + ' chars in ' + latency + 'ms', 'info');
         }
+        if (el('dbgLogResponses') && el('dbgLogResponses').checked) {
+          logDebug('Response body: ' + (answer.length > 2000 ? answer.substring(0, 2000) + '... [truncated]' : answer), 'info');
+        }
 
         // Phase 3: Record performance metric
         recordMetric({ latency: latency, tokens: 0, model: model, endpoint: '/v1/chat/completions', success: true });
@@ -4115,68 +5934,24 @@
       var msgDiv = addMessage('assistant', '', { streaming: true, skipMemory: true });
       var textEl = msgDiv.querySelector('.message-text');
 
+      // Create RawrXDStream bridge instance with AbortController
+      var stream = new RawrXDStream(getActiveUrl());
+      _activeStream = stream;
+      showStopHideSend();
+      showStreamRate();
+
       try {
-        var payload = {
-          model: model || 'rawrxd',
-          messages: Conversation.getContextForAPI(),
-          stream: true,
-          max_tokens: State.gen.maxTokens,
-          temperature: State.gen.temperature,
-        };
-
-        var res = await fetch(State.backend.url + '/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          // Fall back to Ollama-compatible streaming, then to /ask
-          msgDiv.remove();
-          State.chat.messageCount--;
-          logDebug('/v1/chat/completions streaming returned ' + res.status + ', trying /api/generate', 'warn');
-          await sendStreamingOllama(query, model, t0);
-          return;
-        }
-
-        var reader = res.body.getReader();
-        var decoder = new TextDecoder();
         var fullText = '';
-        var tokenCount = 0;
-
         textEl.classList.add('streaming-cursor');
 
-        while (true) {
-          var result = await reader.read();
-          if (result.done) break;
-
-          var chunk = decoder.decode(result.value, { stream: true });
-          var lines = chunk.split('\n').filter(function (l) { return l.trim(); });
-
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            // Handle SSE format: data: {...}
-            if (line.startsWith('data: ')) line = line.slice(6);
-            if (line === '[DONE]') continue;
-
-            try {
-              var obj = JSON.parse(line);
-              // OpenAI SSE format: choices[0].delta.content
-              var delta = '';
-              if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
-                delta = obj.choices[0].delta.content || '';
-              } else if (obj.response) {
-                // Ollama format fallback
-                delta = obj.response;
-              }
-              if (delta) {
-                fullText += delta;
-                tokenCount++;
-                textEl.innerHTML = formatMessage(fullText);
-              }
-              if (obj.done) break;
-            } catch (_) { /* skip non-JSON lines */ }
-          }
+        // Use async generator for cross-chunk-safe SSE/NDJSON parsing
+        for await (var token of stream.chatCompletions(
+          model || 'rawrxd',
+          Conversation.getContextForAPI(),
+          { max_tokens: State.gen.maxTokens, temperature: State.gen.temperature }
+        )) {
+          fullText += token;
+          textEl.innerHTML = formatMessage(fullText);
 
           // Auto-scroll during streaming
           var container = document.getElementById('chatMessages');
@@ -4190,6 +5965,7 @@
         if (fullText) Conversation.addMessage('assistant', fullText);
 
         var latency = Math.round(performance.now() - t0);
+        var tokenCount = stream.tokenCount;
         var tps = tokenCount > 0 && latency > 0 ? (tokenCount / (latency / 1000)).toFixed(1) : '\u2014';
 
         var metaEl = msgDiv.querySelector('.message-meta');
@@ -4200,24 +5976,41 @@
         if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
           logDebug('OpenAI Stream: ' + tokenCount + ' tokens in ' + latency + 'ms (' + tps + ' t/s)', 'info');
         }
+        if (el('dbgLogResponses') && el('dbgLogResponses').checked) {
+          logDebug('Stream response: ' + (fullText.length > 2000 ? fullText.substring(0, 2000) + '... [truncated]' : fullText), 'info');
+        }
 
         // Phase 3: Record performance metric
         recordMetric({ latency: latency, tokens: tokenCount, model: model, endpoint: '/v1/chat/completions (stream)', success: true });
       } catch (e) {
         textEl.classList.remove('streaming-cursor');
-        if (!textEl.textContent) {
+        if (e.name === 'AbortError') {
+          // User cancelled — save partial response
+          var partialText = textEl.textContent || '';
+          if (partialText) Conversation.addMessage('assistant', partialText + '\n\n*[Generation stopped by user]*');
+          logDebug('Stream aborted by user after ' + stream.tokenCount + ' tokens', 'info');
+          recordMetric({ latency: Math.round(performance.now() - t0), tokens: stream.tokenCount, model: model, endpoint: '/v1/chat/completions (stream)', success: true, errorMsg: 'user_abort' });
+        } else if (!textEl.textContent) {
           // OpenAI streaming not available — try Ollama, then /ask
           msgDiv.remove();
           State.chat.messageCount--;
           logDebug('OpenAI streaming failed: ' + e.message + ', trying /api/generate', 'warn');
           recordMetric({ latency: Math.round(performance.now() - t0), tokens: 0, model: model, endpoint: '/v1/chat/completions (stream)', success: false, errorMsg: e.message });
+          hideStreamRate();
+          _activeStream = null;
           await sendStreamingOllama(query, model, t0);
+          return;
         } else {
           // Partial response received — save what we got
-          if (fullText) Conversation.addMessage('assistant', fullText);
+          var partial = textEl.textContent || '';
+          if (partial) Conversation.addMessage('assistant', partial);
           logDebug('OpenAI stream interrupted: ' + e.message, 'error');
-          recordMetric({ latency: Math.round(performance.now() - t0), tokens: tokenCount, model: model, endpoint: '/v1/chat/completions (stream)', success: false, errorMsg: e.message });
+          recordMetric({ latency: Math.round(performance.now() - t0), tokens: stream.tokenCount, model: model, endpoint: '/v1/chat/completions (stream)', success: false, errorMsg: e.message });
         }
+      } finally {
+        hideStreamRate();
+        _activeStream = null;
+        showSendHideStop();
       }
     }
 
@@ -4228,52 +6021,26 @@
       var msgDiv = addMessage('assistant', '', { streaming: true, skipMemory: true });
       var textEl = msgDiv.querySelector('.message-text');
 
+      // Create RawrXDStream bridge instance with AbortController
+      var stream = new RawrXDStream(getActiveUrl());
+      _activeStream = stream;
+      showStopHideSend();
+      showStreamRate();
+
       try {
-        var res = await fetch(State.backend.url + '/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: model || 'rawrxd',
-            prompt: legacyPrompt,
-            stream: true,
-            num_predict: State.gen.maxTokens,
-            options: { temperature: State.gen.temperature },
-          }),
-        });
-
-        if (!res.ok) {
-          msgDiv.remove();
-          State.chat.messageCount--;
-          await sendNonStreamingLegacy(query, model, t0);
-          return;
-        }
-
-        var reader = res.body.getReader();
-        var decoder = new TextDecoder();
         var fullText = '';
-        var tokenCount = 0;
-
         textEl.classList.add('streaming-cursor');
 
-        while (true) {
-          var result = await reader.read();
-          if (result.done) break;
+        // Use async generator for cross-chunk-safe NDJSON parsing
+        for await (var token of stream.chatGenerate(
+          model || 'rawrxd',
+          legacyPrompt,
+          { temperature: State.gen.temperature, num_ctx: State.gen.context }
+        )) {
+          fullText += token;
+          textEl.innerHTML = formatMessage(fullText);
 
-          var chunk = decoder.decode(result.value, { stream: true });
-          var lines = chunk.split('\n').filter(function (l) { return l.trim(); });
-
-          for (var i = 0; i < lines.length; i++) {
-            try {
-              var obj = JSON.parse(lines[i]);
-              if (obj.response) {
-                fullText += obj.response;
-                tokenCount++;
-                textEl.innerHTML = formatMessage(fullText);
-              }
-              if (obj.done) break;
-            } catch (_) { /* skip non-JSON */ }
-          }
-
+          // Auto-scroll during streaming
           var container = document.getElementById('chatMessages');
           container.scrollTop = container.scrollHeight;
         }
@@ -4285,6 +6052,7 @@
         if (fullText) Conversation.addMessage('assistant', fullText);
 
         var latency = Math.round(performance.now() - t0);
+        var tokenCount = stream.tokenCount;
         var tps = tokenCount > 0 && latency > 0 ? (tokenCount / (latency / 1000)).toFixed(1) : '\u2014';
 
         var metaEl = msgDiv.querySelector('.message-meta');
@@ -4300,26 +6068,80 @@
         recordMetric({ latency: latency, tokens: tokenCount, model: model, endpoint: '/api/generate (stream)', success: true });
       } catch (e) {
         textEl.classList.remove('streaming-cursor');
-        if (!textEl.textContent) {
+        if (e.name === 'AbortError') {
+          // User cancelled — save partial response
+          var partialText = textEl.textContent || '';
+          if (partialText) Conversation.addMessage('assistant', partialText + '\n\n*[Generation stopped by user]*');
+          logDebug('Ollama stream aborted by user after ' + stream.tokenCount + ' tokens', 'info');
+          recordMetric({ latency: Math.round(performance.now() - t0), tokens: stream.tokenCount, model: model, endpoint: '/api/generate (stream)', success: true, errorMsg: 'user_abort' });
+        } else if (!textEl.textContent) {
           msgDiv.remove();
           State.chat.messageCount--;
           recordMetric({ latency: Math.round(performance.now() - t0), tokens: 0, model: model, endpoint: '/api/generate (stream)', success: false, errorMsg: e.message });
+          hideStreamRate();
+          _activeStream = null;
           await sendNonStreamingLegacy(query, model, t0);
+          return;
         } else {
-          if (fullText) Conversation.addMessage('assistant', fullText);
+          var partial = textEl.textContent || '';
+          if (partial) Conversation.addMessage('assistant', partial);
           logDebug('Ollama stream interrupted: ' + e.message, 'error');
-          recordMetric({ latency: Math.round(performance.now() - t0), tokens: tokenCount, model: model, endpoint: '/api/generate (stream)', success: false, errorMsg: e.message });
+          recordMetric({ latency: Math.round(performance.now() - t0), tokens: stream.tokenCount, model: model, endpoint: '/api/generate (stream)', success: false, errorMsg: e.message });
         }
+      } finally {
+        hideStreamRate();
+        _activeStream = null;
+        showSendHideStop();
       }
     }
 
-    // ---- LAST RESORT: Legacy /ask (single-turn) ----
+    // ---- LAST RESORT: Legacy /ask (single-turn) or Ollama /api/generate non-streaming ----
 
     async function sendNonStreamingLegacy(query, model, t0) {
       showTyping();
       try {
         var legacyPrompt = Conversation.getLegacyPrompt(query);
-        var res = await fetch(State.backend.url + '/ask', {
+        var activeUrl = getActiveUrl();
+
+        // In direct Ollama mode, skip /ask (doesn't exist) — use /api/generate directly
+        if (State.backend.directMode) {
+          var res = await fetch(activeUrl + '/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: model || 'rawrxd',
+              prompt: legacyPrompt,
+              stream: false,
+              options: { temperature: State.gen.temperature },
+            }),
+          });
+
+          hideTyping();
+          var latency = Math.round(performance.now() - t0);
+
+          if (!res.ok) {
+            addMessage('system', 'All endpoints failed. Ollama returned HTTP ' + res.status);
+            logDebug('/api/generate (non-streaming) failed: HTTP ' + res.status, 'error');
+            recordMetric({ latency: latency, tokens: 0, model: model, endpoint: '/api/generate (non-stream)', success: false, errorMsg: 'HTTP ' + res.status });
+            return;
+          }
+
+          var data = await res.json();
+          var answer = data.response || '[No response]';
+
+          Conversation.addMessage('assistant', answer);
+          addMessage('assistant', answer, { latency: latency, model: model, skipMemory: true });
+
+          if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
+            logDebug('/api/generate (non-stream, direct) \u2192 ' + answer.length + ' chars in ' + latency + 'ms', 'info');
+          }
+
+          recordMetric({ latency: latency, tokens: 0, model: model, endpoint: '/api/generate (non-stream)', success: true });
+          return;
+        }
+
+        // Proxy mode: try /ask
+        var res = await fetch(activeUrl + '/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -4349,6 +6171,9 @@
         if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
           logDebug('/ask (legacy) \u2192 ' + answer.length + ' chars in ' + latency + 'ms', 'info');
         }
+        if (el('dbgLogResponses') && el('dbgLogResponses').checked) {
+          logDebug('Response body: ' + (answer.length > 2000 ? answer.substring(0, 2000) + '... [truncated]' : answer), 'info');
+        }
 
         // Phase 3: Record performance metric
         recordMetric({ latency: latency, tokens: 0, model: model, endpoint: '/ask', success: true });
@@ -4365,10 +6190,12 @@
       var lower = q.toLowerCase();
       if (lower.indexOf('help') >= 0 || lower === '?') {
         return '**Offline Mode \u2014 Help**\n\nThe backend is not running. To use AI:\n\n' +
-          '1. **Start the Win32 IDE** \u2014 it has a built-in server on port 11435\n' +
-          '2. **Or run the Python server:**\n' +
+          '1. **Start Ollama** \u2014 the chatbot will connect directly on port 11434\n' +
+          '2. **Or start the Win32 IDE** \u2014 it has a built-in server on port 11435\n' +
+          '3. **Or run the Python server:**\n' +
           '```powershell\ncd D:\\rawrxd\npython gui/serve.py\n```\n\n' +
-          'Then click the \u26A1 button to connect.';
+          'Then click the \u26A1 button to connect.\n\n' +
+          '*Note: If Ollama is running, the chatbot will automatically detect it even without the Python server.*';
       }
       if (lower.indexOf('endpoint') >= 0 || lower.indexOf('api') >= 0) {
         return '**API Endpoints** (when backend is online):\n\n' +
@@ -4386,6 +6213,7 @@
 
     function markOffline() {
       State.backend.online = false;
+      State.backend.directMode = false;
       updateModeBadge(false);
       document.getElementById('backendStatus').className = 'status-pill offline';
       document.getElementById('statusText').textContent = 'OFFLINE';
@@ -4406,13 +6234,16 @@
       var label = role === 'user' ? 'You' : (role === 'system' ? 'System' : 'RawrXD');
 
       var metaHtml = '';
+      var showTiming = el('dbgShowTiming') ? el('dbgShowTiming').checked : true;
       if (opts.latency || opts.model) {
         var parts = [];
         if (opts.latency) parts.push(opts.latency + 'ms');
         if (opts.model) parts.push(esc(opts.model));
-        metaHtml = '<div class="message-meta">' + parts.map(function (p) { return '<span>' + p + '</span>'; }).join('') + '</div>';
+        var metaStyle = showTiming ? '' : ' style="display:none"';
+        metaHtml = '<div class="message-meta"' + metaStyle + '>' + parts.map(function (p) { return '<span>' + p + '</span>'; }).join('') + '</div>';
       } else if (role === 'assistant') {
-        metaHtml = '<div class="message-meta"></div>';
+        var metaStyle2 = showTiming ? '' : ' style="display:none"';
+        metaHtml = '<div class="message-meta"' + metaStyle2 + '></div>';
       }
 
       // Inline failure badge
@@ -4458,14 +6289,31 @@
       // Step 2: Escape ALL remaining text to prevent injection
       text = escHtml(text);
 
-      // Step 3: Re-insert code blocks with safe escaped content
+      // Step 3: Re-insert code blocks with safe escaped content + syntax highlighting
       codeBlocks.forEach(function (block, i) {
+        var highlightedCode = escHtml(block.code);
+        // Apply highlight.js syntax highlighting if available
+        if (typeof hljs !== 'undefined') {
+          try {
+            var langAliases = { 'js': 'javascript', 'ts': 'typescript', 'py': 'python', 'rb': 'ruby', 'sh': 'bash', 'yml': 'yaml', 'md': 'markdown' };
+            var lang = langAliases[block.lang] || block.lang;
+            if (lang !== 'text' && hljs.getLanguage(lang)) {
+              highlightedCode = hljs.highlight(block.code, { language: lang, ignoreIllegals: true }).value;
+            } else if (lang === 'text') {
+              highlightedCode = escHtml(block.code);
+            } else {
+              highlightedCode = hljs.highlightAuto(block.code).value;
+            }
+          } catch (_) {
+            highlightedCode = escHtml(block.code);
+          }
+        }
         var safe = '<div class="code-block">' +
           '<div class="code-header">' +
           '<span class="code-lang">' + escHtml(block.lang) + '</span>' +
           '<div class="code-actions"><button class="code-btn" onclick="copyCode(this)">Copy</button></div>' +
           '</div>' +
-          '<div class="code-content"><pre>' + escHtml(block.code) + '</pre></div>' +
+          '<div class="code-content"><pre><code class="hljs language-' + escHtml(block.lang) + '">' + highlightedCode + '</code></pre></div>' +
           '</div>';
         text = text.replace('\x00CB' + i + '\x00', safe);
       });
@@ -4489,8 +6337,8 @@
       if (typeof DOMPurify !== 'undefined') {
         return DOMPurify.sanitize(text, {
           ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li',
-            'code', 'pre', 'span', 'div', 'button'],
-          ALLOWED_ATTR: ['class', 'style', 'onclick', 'title'],
+            'code', 'pre', 'span', 'div', 'button', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+          ALLOWED_ATTR: ['class', 'style', 'onclick', 'title', 'data-lang'],
           ALLOW_DATA_ATTR: false,
           KEEP_CONTENT: true
         });
@@ -4702,6 +6550,7 @@
     }
 
     async function testAllEndpoints() {
+      var activeUrl = getActiveUrl();
       var eps = [
         { method: 'GET', path: '/health' },
         { method: 'GET', path: '/status' },
@@ -4710,7 +6559,7 @@
         { method: 'POST', path: '/ask', body: { question: 'ping', model: '' } },
       ];
 
-      logDebug('=== Testing All Endpoints ===', 'info');
+      logDebug('=== Testing All Endpoints (via ' + activeUrl + (State.backend.directMode ? ' [DIRECT]' : '') + ') ===', 'info');
 
       for (var i = 0; i < eps.length; i++) {
         var ep = eps[i];
@@ -4721,13 +6570,36 @@
             opts.headers = { 'Content-Type': 'application/json' };
             opts.body = JSON.stringify(ep.body);
           }
-          var res = await fetch(State.backend.url + ep.path, opts);
+          var res = await fetch(activeUrl + ep.path, opts);
           var latency = Math.round(performance.now() - t0);
           var text = await res.text();
           var preview = text.length > 80 ? text.substring(0, 80) + '...' : text;
           logDebug(ep.method + ' ' + ep.path + ' \u2192 ' + res.status + ' (' + latency + 'ms) ' + preview, res.ok ? 'info' : 'warn');
         } catch (e) {
           logDebug(ep.method + ' ' + ep.path + ' \u2192 FAILED: ' + e.message, 'error');
+        }
+      }
+
+      // Also test direct Ollama if we're currently going through the proxy
+      if (!State.backend.directMode && State.backend.ollamaDirectUrl !== State.backend.url) {
+        logDebug('--- Also testing direct Ollama at ' + State.backend.ollamaDirectUrl + ' ---', 'info');
+        var ollamaEps = [
+          { method: 'GET', path: '/' },
+          { method: 'GET', path: '/api/tags' },
+          { method: 'GET', path: '/v1/models' },
+        ];
+        for (var j = 0; j < ollamaEps.length; j++) {
+          var oep = ollamaEps[j];
+          try {
+            var t1 = performance.now();
+            var ores = await fetch(State.backend.ollamaDirectUrl + oep.path, { signal: AbortSignal.timeout(5000) });
+            var olat = Math.round(performance.now() - t1);
+            var otxt = await ores.text();
+            var oprev = otxt.length > 80 ? otxt.substring(0, 80) + '...' : otxt;
+            logDebug('[Ollama Direct] ' + oep.method + ' ' + oep.path + ' \u2192 ' + ores.status + ' (' + olat + 'ms) ' + oprev, ores.ok ? 'info' : 'warn');
+          } catch (oe) {
+            logDebug('[Ollama Direct] ' + oep.method + ' ' + oep.path + ' \u2192 FAILED: ' + oe.message, 'error');
+          }
         }
       }
 
@@ -4816,9 +6688,14 @@
           addTerminalLine('  sysprompt        \u2014 Show current system prompt', 'output');
           addTerminalLine('  agents           \u2014 Show agent subsystem status', 'output');
           addTerminalLine('  perf             \u2014 Show performance metrics summary', 'output');
+          addTerminalLine('  security         \u2014 Show security & hardening status', 'output');
           addTerminalLine('  endpoints        \u2014 List API endpoints', 'output');
           addTerminalLine('  curl <path>      \u2014 GET an endpoint', 'output');
           addTerminalLine('  failures         \u2014 Show failure summary', 'output');
+          addTerminalLine('  hotpatch         \u2014 Show hotpatch layer status', 'output');
+          addTerminalLine('  hotpatch toggle <layer> \u2014 Toggle memory/byte/server', 'output');
+          addTerminalLine('  hotpatch apply <layer>  \u2014 Apply pending patches', 'output');
+          addTerminalLine('  hotpatch revert <layer> \u2014 Revert active patches', 'output');
           addTerminalLine('  clear            \u2014 Clear terminal', 'output');
           break;
 
@@ -5031,6 +6908,56 @@
           addTerminalLine('  Structured Log:  ' + p.structuredLog.length + ' entries', 'output');
           addTerminalLine('  Tip: Click \uD83D\uDCCA Perf in sidebar for full dashboard', 'system');
           addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+          break;
+
+        case 'security':
+          var sec = State.security;
+          var rl = sec.rateLimit;
+          var ig = sec.inputGuard;
+          var secNow = Date.now();
+          var activeReqs = rl.timestamps.filter(function (ts) { return (secNow - ts) < rl.windowMs; }).length;
+          addTerminalLine('\u2500\u2500\u2500 Security & Hardening \u2500\u2500\u2500', 'output');
+          addTerminalLine('  CSP:             ' + (document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? 'Active' : 'MISSING'), document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? 'success' : 'error');
+          addTerminalLine('  DOMPurify:       ' + (typeof DOMPurify !== 'undefined' ? 'Loaded (v' + (DOMPurify.version || '?') + ')' : 'MISSING'), typeof DOMPurify !== 'undefined' ? 'success' : 'error');
+          addTerminalLine('  Rate Limit:      ' + activeReqs + '/' + rl.maxPerMinute + ' per min', activeReqs > rl.maxPerMinute * 0.8 ? 'error' : 'success');
+          addTerminalLine('  URL Guard:       ' + (isUrlAllowed(State.backend.url) ? 'OK (' + State.backend.url + ')' : 'BLOCKED'), isUrlAllowed(State.backend.url) ? 'success' : 'error');
+          addTerminalLine('  Input Max:       ' + ig.maxLength.toLocaleString() + ' chars', 'output');
+          addTerminalLine('  Blocked XSS:     ' + ig.blockedXss, ig.blockedXss > 0 ? 'error' : 'success');
+          addTerminalLine('  Blocked Length:   ' + ig.blockedLength, ig.blockedLength > 0 ? 'error' : 'success');
+          addTerminalLine('  Blocked Rate:    ' + rl.blocked, rl.blocked > 0 ? 'error' : 'success');
+          addTerminalLine('  Security Events: ' + sec.eventLog.length, 'output');
+          addTerminalLine('  Tip: Click \uD83D\uDEE1 Security in sidebar for full dashboard', 'system');
+          addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+          break;
+
+        case 'hotpatch':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 Hotpatch Layer Status \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Memory:     ' + (_hotpatchLayerStates.memory ? 'ENABLED' : 'DISABLED') + ' (' + (document.getElementById('hpMemoryCount') ? document.getElementById('hpMemoryCount').textContent : '0') + ' patches)', _hotpatchLayerStates.memory ? 'success' : 'error');
+            addTerminalLine('  Byte-Level: ' + (_hotpatchLayerStates.byte ? 'ENABLED' : 'DISABLED') + ' (' + (document.getElementById('hpByteCount') ? document.getElementById('hpByteCount').textContent : '0') + ' patches)', _hotpatchLayerStates.byte ? 'success' : 'error');
+            addTerminalLine('  Server:     ' + (_hotpatchLayerStates.server ? 'ENABLED' : 'DISABLED') + ' (' + (document.getElementById('hpServerCount') ? document.getElementById('hpServerCount').textContent : '0') + ' patches)', _hotpatchLayerStates.server ? 'success' : 'error');
+            addTerminalLine('  Usage: hotpatch toggle|apply|revert <memory|byte|server>', 'system');
+            addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+          } else if (args[1] === 'toggle' && args[2]) {
+            var layer = args[2];
+            if (layer === 'memory' || layer === 'byte' || layer === 'server') {
+              var newState = !_hotpatchLayerStates[layer];
+              var toggleEl = document.getElementById('hp' + layer.charAt(0).toUpperCase() + layer.slice(1) + 'Toggle');
+              if (toggleEl) toggleEl.checked = newState;
+              toggleHotpatchLayer(layer, newState);
+              addTerminalLine('Hotpatch ' + layer + ' layer ' + (newState ? 'ENABLED' : 'DISABLED'), newState ? 'success' : 'error');
+            } else {
+              addTerminalLine('Unknown layer: ' + layer + '. Use memory, byte, or server.', 'error');
+            }
+          } else if (args[1] === 'apply' && args[2]) {
+            applyHotpatch(args[2]);
+            addTerminalLine('Applying ' + args[2] + ' hotpatch...', 'system');
+          } else if (args[1] === 'revert' && args[2]) {
+            revertHotpatch(args[2]);
+            addTerminalLine('Reverting ' + args[2] + ' hotpatch...', 'system');
+          } else {
+            addTerminalLine('Usage: hotpatch [toggle|apply|revert] <memory|byte|server>', 'error');
+          }
           break;
 
         default:
@@ -5706,6 +7633,125 @@
 
       var agentEvts = document.getElementById('agentTotalEvents');
       if (agentEvts) agentEvts.textContent = data.total_events || 0;
+
+      // Sync toggle switches with server-reported layer states
+      var layerStates = agents.unified_manager || {};
+      var memToggle = document.getElementById('hpMemoryToggle');
+      var byteToggle = document.getElementById('hpByteToggle');
+      var serverToggle = document.getElementById('hpServerToggle');
+      if (memToggle && layerStates.memory_enabled !== undefined) memToggle.checked = layerStates.memory_enabled;
+      if (byteToggle && layerStates.byte_enabled !== undefined) byteToggle.checked = layerStates.byte_enabled;
+      if (serverToggle && layerStates.server_enabled !== undefined) serverToggle.checked = layerStates.server_enabled;
+      // Update layer visual disabled state
+      updateHotpatchLayerVisuals();
+    }
+
+    // ======================================================================
+    // HOTPATCH CONTROL ACTIONS
+    // ======================================================================
+    var _hotpatchLayerStates = { memory: true, byte: true, server: true };
+
+    function toggleHotpatchLayer(layer, enabled) {
+      _hotpatchLayerStates[layer] = enabled;
+      updateHotpatchLayerVisuals();
+
+      if (!State.backend.online) {
+        logDebug('Hotpatch toggle queued (offline): ' + layer + ' → ' + (enabled ? 'ON' : 'OFF'), 'warn');
+        return;
+      }
+
+      fetch(State.backend.url + '/api/hotpatch/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layer: layer, enabled: enabled }),
+        signal: AbortSignal.timeout(5000)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          logDebug('Hotpatch layer ' + layer + ' ' + (enabled ? 'enabled' : 'disabled') + (data.status ? ' — ' + data.status : ''), 'info');
+          fetchAgentStatus();
+        })
+        .catch(function (e) {
+          logDebug('Hotpatch toggle failed: ' + e.message, 'error');
+        });
+    }
+
+    function toggleAllHotpatchLayers() {
+      var anyEnabled = _hotpatchLayerStates.memory || _hotpatchLayerStates.byte || _hotpatchLayerStates.server;
+      var newState = !anyEnabled;
+
+      document.getElementById('hpMemoryToggle').checked = newState;
+      document.getElementById('hpByteToggle').checked = newState;
+      document.getElementById('hpServerToggle').checked = newState;
+
+      toggleHotpatchLayer('memory', newState);
+      toggleHotpatchLayer('byte', newState);
+      toggleHotpatchLayer('server', newState);
+    }
+
+    function updateHotpatchLayerVisuals() {
+      var layers = ['Memory', 'Byte', 'Server'];
+      var keys = ['memory', 'byte', 'server'];
+      for (var i = 0; i < layers.length; i++) {
+        var el = document.getElementById('hp' + layers[i] + 'Layer');
+        if (el) {
+          if (_hotpatchLayerStates[keys[i]]) {
+            el.classList.remove('disabled');
+          } else {
+            el.classList.add('disabled');
+          }
+        }
+      }
+    }
+
+    function applyHotpatch(layer) {
+      if (!State.backend.online) {
+        addTerminalLine('Cannot apply hotpatch: backend offline', 'error');
+        return;
+      }
+
+      logDebug('Applying hotpatch: ' + layer + ' layer...', 'info');
+
+      fetch(State.backend.url + '/api/hotpatch/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layer: layer }),
+        signal: AbortSignal.timeout(10000)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var msg = 'Hotpatch ' + layer + ': ' + (data.status || 'applied') + (data.patches_applied ? ' (' + data.patches_applied + ' patches)' : '');
+          logDebug(msg, data.success !== false ? 'info' : 'error');
+          fetchAgentStatus();
+        })
+        .catch(function (e) {
+          logDebug('Hotpatch apply failed: ' + e.message, 'error');
+        });
+    }
+
+    function revertHotpatch(layer) {
+      if (!State.backend.online) {
+        addTerminalLine('Cannot revert hotpatch: backend offline', 'error');
+        return;
+      }
+
+      logDebug('Reverting hotpatch: ' + layer + ' layer...', 'info');
+
+      fetch(State.backend.url + '/api/hotpatch/revert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layer: layer }),
+        signal: AbortSignal.timeout(10000)
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var msg = 'Hotpatch ' + layer + ' reverted: ' + (data.status || 'done') + (data.patches_reverted ? ' (' + data.patches_reverted + ' reverted)' : '');
+          logDebug(msg, data.success !== false ? 'info' : 'error');
+          fetchAgentStatus();
+        })
+        .catch(function (e) {
+          logDebug('Hotpatch revert failed: ' + e.message, 'error');
+        });
     }
 
     async function fetchAgentHistory() {
@@ -5821,6 +7867,272 @@
       a.href = url; a.download = 'rawrxd-agents-' + Date.now() + '.json'; a.click();
       URL.revokeObjectURL(url);
       logDebug('Agent data exported', 'info');
+    }
+
+    // ======================================================================
+    // SECURITY & HARDENING (Phase 4)
+    // ======================================================================
+
+    function secLog(level, detail) {
+      var entry = {
+        timestamp: Date.now(),
+        level: level,
+        detail: detail,
+      };
+      State.security.eventLog.push(entry);
+      if (State.security.eventLog.length > State.security.maxLog) {
+        State.security.eventLog.shift();
+      }
+      logStructured(level, 'security_event', { detail: detail });
+    }
+
+    // --- Input Sanitization Guard ---
+    function validateInput(text) {
+      if (!text || typeof text !== 'string') {
+        return { valid: true, sanitized: '' };
+      }
+
+      // Length check
+      if (text.length > State.security.inputGuard.maxLength) {
+        State.security.inputGuard.blockedLength++;
+        secLog('BLOCK', 'Input exceeds max length (' + text.length + ' > ' + State.security.inputGuard.maxLength + ')');
+        return {
+          valid: false,
+          reason: 'Input too long (' + text.length + ' chars, max ' + State.security.inputGuard.maxLength + ')',
+        };
+      }
+
+      // XSS pattern detection (before it reaches DOMPurify — defense in depth)
+      var xssPatterns = [
+        /<script[\s>]/i,
+        /javascript\s*:/i,
+        /on(error|load|click|mouseover|focus|blur|submit|change|input)\s*=/i,
+        /eval\s*\(/i,
+        /document\.(cookie|domain|write)/i,
+        /<iframe[\s>]/i,
+        /<object[\s>]/i,
+        /<embed[\s>]/i,
+      ];
+
+      for (var i = 0; i < xssPatterns.length; i++) {
+        if (xssPatterns[i].test(text)) {
+          State.security.inputGuard.blockedXss++;
+          secLog('BLOCK', 'XSS pattern detected: ' + xssPatterns[i].toString().substring(0, 40));
+          // Strip the pattern rather than rejecting — DOMPurify will handle the rest
+          text = text.replace(xssPatterns[i], '[filtered]');
+        }
+      }
+
+      return { valid: true, sanitized: text };
+    }
+
+    // --- Client-Side Rate Limiter ---
+    function checkRateLimit() {
+      var rl = State.security.rateLimit;
+      var now = Date.now();
+
+      // Prune old timestamps outside window
+      rl.timestamps = rl.timestamps.filter(function (ts) {
+        return (now - ts) < rl.windowMs;
+      });
+
+      if (rl.timestamps.length >= rl.maxPerMinute) {
+        rl.blocked++;
+        secLog('BLOCK', 'Rate limit exceeded: ' + rl.timestamps.length + '/' + rl.maxPerMinute + ' per minute');
+        return false;
+      }
+
+      rl.timestamps.push(now);
+      return true;
+    }
+
+    function resetRateLimit() {
+      State.security.rateLimit.timestamps = [];
+      State.security.rateLimit.blocked = 0;
+      secLog('AUDIT', 'Rate limiter reset by user');
+      renderSecurityPanel();
+    }
+
+    // --- Backend URL Validation ---
+    function isUrlAllowed(urlStr) {
+      for (var i = 0; i < State.security.urlAllowlist.length; i++) {
+        if (State.security.urlAllowlist[i].test(urlStr)) return true;
+      }
+      return false;
+    }
+
+    function validateBackendUrl() {
+      var url = State.backend.url;
+      var allowed = isUrlAllowed(url);
+      if (allowed) {
+        secLog('ALLOW', 'Backend URL validated: ' + url);
+      } else {
+        secLog('WARN', 'Backend URL NOT on allowlist: ' + url);
+        State.security.inputGuard.blockedUrl++;
+      }
+      renderSecurityPanel();
+      return allowed;
+    }
+
+    // --- CSP Audit ---
+    function auditCSP() {
+      var cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+      var directives = [];
+
+      if (!cspMeta) {
+        secLog('WARN', 'No CSP meta tag found!');
+        el('secCspAuditBody').innerHTML = '<div style="color:var(--accent-red); padding:12px;">No CSP meta tag detected</div>';
+        el('secCspCount').textContent = '0';
+        el('secCspCount').className = 'sec-card-value danger';
+        return;
+      }
+
+      var cspContent = cspMeta.getAttribute('content') || '';
+      var parts = cspContent.split(';').map(function (s) { return s.trim(); }).filter(Boolean);
+
+      parts.forEach(function (part) {
+        var tokens = part.split(/\s+/);
+        var name = tokens[0];
+        var values = tokens.slice(1).join(' ');
+
+        // Grade the directive
+        var grade = 'pass';
+        if (values.indexOf("'unsafe-inline'") >= 0) grade = 'warn';
+        if (values.indexOf("'unsafe-eval'") >= 0) grade = 'fail';
+        if (values === '*') grade = 'fail';
+
+        directives.push({ name: name, value: values, grade: grade });
+      });
+
+      // Render
+      var html = '';
+      directives.forEach(function (d) {
+        html += '<div class="sec-directive">';
+        html += '<span class="sec-directive-name">' + esc(d.name) + '</span>';
+        html += '<span class="sec-directive-value">' + esc(d.value) + '</span>';
+        var label = d.grade === 'pass' ? 'SECURE' : d.grade === 'warn' ? 'CAUTION' : 'RISK';
+        html += '<span class="sec-directive-status ' + d.grade + '">' + label + '</span>';
+        html += '</div>';
+      });
+
+      el('secCspAuditBody').innerHTML = html;
+      el('secCspCount').textContent = directives.length;
+      el('secCspCount').className = 'sec-card-value secure';
+
+      secLog('AUDIT', 'CSP audit completed: ' + directives.length + ' directives');
+    }
+
+    // --- Security Panel Show/Close/Render ---
+    function showSecurityPanel() {
+      var panel = document.getElementById('securityPanel');
+      panel.classList.add('open');
+      renderSecurityPanel();
+      secLog('AUDIT', 'Security panel opened');
+    }
+
+    function closeSecurityPanel() {
+      var panel = document.getElementById('securityPanel');
+      panel.classList.remove('open');
+    }
+
+    function renderSecurityPanel() {
+      // CSP audit
+      auditCSP();
+
+      // DOMPurify check
+      var dpLoaded = typeof DOMPurify !== 'undefined';
+      el('secDomPurifyStatus').textContent = dpLoaded ? 'v' + (DOMPurify.version || '3.x') + ' loaded' : 'NOT LOADED';
+      el('secDomPurifyBadge').textContent = dpLoaded ? 'ACTIVE' : 'MISSING';
+      el('secDomPurifyBadge').className = 'sec-directive-status ' + (dpLoaded ? 'pass' : 'fail');
+      el('secSumPurify').textContent = dpLoaded ? 'Active' : 'Missing';
+      el('secSumPurify').className = 'sec-side-val ' + (dpLoaded ? 'secure' : 'danger');
+
+      // Rate limit meter
+      var rl = State.security.rateLimit;
+      var now = Date.now();
+      var activeCount = rl.timestamps.filter(function (ts) { return (now - ts) < rl.windowMs; }).length;
+      var pct = Math.min(100, Math.round((activeCount / rl.maxPerMinute) * 100));
+      var bar = el('secRateBar');
+      bar.style.width = pct + '%';
+      bar.className = 'sec-rate-bar-fill' + (pct > 80 ? ' danger' : pct > 50 ? ' warning' : '');
+      el('secRateUsed').textContent = activeCount + ' used';
+      el('secRateRemaining').textContent = (rl.maxPerMinute - activeCount) + ' remaining';
+      el('secRateUnit').textContent = activeCount + ' / ' + rl.maxPerMinute + ' per min';
+      el('secRateStatus').textContent = pct > 80 ? '!' : 'OK';
+      el('secRateStatus').className = 'sec-card-value ' + (pct > 80 ? 'danger' : pct > 50 ? 'warning' : 'secure');
+      el('secSumRate').textContent = pct > 80 ? 'Critical' : pct > 50 ? 'Elevated' : 'OK';
+      el('secSumRate').className = 'sec-side-val ' + (pct > 80 ? 'danger' : pct > 50 ? 'warning' : 'secure');
+
+      // Blocked counts
+      var ig = State.security.inputGuard;
+      el('secBlockedCount').textContent = ig.blockedXss + ig.blockedLength + rl.blocked + ig.blockedUrl;
+      el('secBlkXss').textContent = ig.blockedXss;
+      el('secBlkLength').textContent = ig.blockedLength;
+      el('secBlkRate').textContent = rl.blocked;
+      el('secBlkUrl').textContent = ig.blockedUrl;
+
+      // URL validation status
+      var urlOk = isUrlAllowed(State.backend.url);
+      el('secUrlStatus').textContent = urlOk ? '\u2713' : '\u2717';
+      el('secUrlStatus').className = 'sec-card-value ' + (urlOk ? 'secure' : 'danger');
+      el('secSumUrl').textContent = urlOk ? 'Enforced' : 'BLOCKED';
+      el('secSumUrl').className = 'sec-side-val ' + (urlOk ? 'secure' : 'danger');
+
+      // Render event log
+      renderSecurityLog();
+    }
+
+    function renderSecurityLog() {
+      var log = State.security.eventLog;
+      el('secLogCount').textContent = log.length;
+
+      if (log.length === 0) {
+        el('secLogBody').innerHTML = '<div class="sec-log-entry"><span class="sec-log-ts">\u2014</span><span class="sec-log-level AUDIT">AUDIT</span><span class="sec-log-detail">No security events yet</span></div>';
+        return;
+      }
+
+      var html = '';
+      var show = log.slice(-50).reverse();
+      show.forEach(function (entry) {
+        var time = new Date(entry.timestamp).toLocaleTimeString([], { hour12: false });
+        html += '<div class="sec-log-entry">';
+        html += '<span class="sec-log-ts">' + time + '</span>';
+        html += '<span class="sec-log-level ' + esc(entry.level) + '">' + esc(entry.level) + '</span>';
+        html += '<span class="sec-log-detail">' + esc(entry.detail) + '</span>';
+        html += '</div>';
+      });
+      el('secLogBody').innerHTML = html;
+    }
+
+    function exportSecurityAudit() {
+      var data = {
+        timestamp: new Date().toISOString(),
+        version: 'v3.3',
+        phase: 'Phase 4: Security & Hardening',
+        backendUrl: State.backend.url,
+        urlAllowed: isUrlAllowed(State.backend.url),
+        cspPresent: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]'),
+        domPurifyLoaded: typeof DOMPurify !== 'undefined',
+        rateLimit: {
+          maxPerMinute: State.security.rateLimit.maxPerMinute,
+          currentUsage: State.security.rateLimit.timestamps.length,
+          totalBlocked: State.security.rateLimit.blocked,
+        },
+        inputGuard: {
+          maxLength: State.security.inputGuard.maxLength,
+          blockedXss: State.security.inputGuard.blockedXss,
+          blockedLength: State.security.inputGuard.blockedLength,
+          blockedUrl: State.security.inputGuard.blockedUrl,
+        },
+        eventLog: State.security.eventLog,
+      };
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'rawrxd-security-audit-' + Date.now() + '.json'; a.click();
+      URL.revokeObjectURL(url);
+      logDebug('Security audit exported', 'info');
+      secLog('AUDIT', 'Security audit data exported');
     }
 
     function el(id) { return document.getElementById(id); }
@@ -6353,6 +8665,43 @@
     window.addEventListener('DOMContentLoaded', function () {
       // Delay slightly to let models load first
       setTimeout(function () { CoT.init(); }, 500);
+    });
+
+    /* ── Mobile Sidebar Toggle ── */
+    function toggleSidebarMobile(side) {
+      const sidebar = document.querySelector(side === 'left' ? '.sidebar' : '.rightbar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!sidebar) return;
+
+      const isOpen = sidebar.classList.contains('slide-in');
+      // Close any open sidebar first
+      closeMobileSidebars();
+
+      if (!isOpen) {
+        sidebar.classList.add('slide-in');
+        overlay.classList.add('active');
+      }
+    }
+
+    function closeMobileSidebars() {
+      var sb = document.querySelector('.sidebar');
+      var rb = document.querySelector('.rightbar');
+      var ov = document.getElementById('sidebarOverlay');
+      if (sb) sb.classList.remove('slide-in');
+      if (rb) rb.classList.remove('slide-in');
+      if (ov) ov.classList.remove('active');
+    }
+
+    // Close mobile sidebars on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeMobileSidebars();
+    });
+
+    // Close mobile sidebars on window resize above breakpoint
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 1200) {
+        closeMobileSidebars();
+      }
     });
   </script>
 </body>
