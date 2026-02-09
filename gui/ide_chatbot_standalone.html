@@ -2155,6 +2155,24 @@
       }
     }
 
+    /* Rightbar hidden state (toggled via JS) */
+    .rightbar.collapsed {
+      display: none !important;
+    }
+
+    .ide-container.rightbar-hidden {
+      grid-template-columns: minmax(0, 280px) 1fr 0 !important;
+    }
+
+    /* Terminal hidden state (toggled via JS) */
+    .ide-container.terminal-hidden {
+      grid-template-rows: 48px 1fr 0 !important;
+    }
+
+    .terminal.hidden {
+      display: none !important;
+    }
+
     /* 1200px – hide right sidebar, show toggle */
     @media (max-width: 1200px) {
       .ide-container {
@@ -3416,6 +3434,70 @@
 
     .agent-panel.active {
       display: flex;
+    }
+
+    /* ================================================================
+       Overlay Panels (Confidence, Governor, LSP, Hybrid, Replay, Phase)
+       ================================================================ */
+    .overlay-panel {
+      display: none;
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(90%, 640px);
+      max-height: calc(100% - 80px);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      z-index: 1050;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .overlay-panel[style*="display:flex"],
+    .overlay-panel[style*="display: flex"] {
+      display: flex !important;
+    }
+
+    .overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-panel);
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      font-family: var(--font-mono);
+    }
+
+    .overlay-close {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .overlay-close:hover {
+      background: rgba(255, 80, 80, 0.2);
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+    }
+
+    .overlay-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 12px;
     }
 
     .agent-header {
@@ -5111,18 +5193,33 @@
     /* ═══════════════════════════════════════════════════════════════ */
     .browser-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 9998;
       background: var(--bg-primary);
       display: none;
       flex-direction: column;
       animation: browserSlideIn 0.22s ease;
     }
-    .browser-overlay.active { display: flex; }
-    @keyframes browserSlideIn {
-      from { transform: translateY(12px); opacity: 0; }
-      to   { transform: translateY(0); opacity: 1; }
+
+    .browser-overlay.active {
+      display: flex;
     }
+
+    @keyframes browserSlideIn {
+      from {
+        transform: translateY(12px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
     .browser-toolbar {
       display: flex;
       align-items: center;
@@ -5133,11 +5230,13 @@
       height: 40px;
       flex-shrink: 0;
     }
+
     .browser-toolbar .browser-nav-btn {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border);
       color: var(--text-secondary);
-      width: 28px; height: 28px;
+      width: 28px;
+      height: 28px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
@@ -5147,25 +5246,29 @@
       transition: all 0.12s;
       flex-shrink: 0;
     }
+
     .browser-toolbar .browser-nav-btn:hover {
-      background: rgba(0,217,255,0.12);
+      background: rgba(0, 217, 255, 0.12);
       color: var(--accent-cyan);
       border-color: var(--accent-cyan);
     }
+
     .browser-toolbar .browser-nav-btn:disabled {
       opacity: 0.3;
       cursor: default;
     }
+
     .browser-toolbar .browser-nav-btn:disabled:hover {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       color: var(--text-secondary);
       border-color: var(--border);
     }
+
     .browser-address-bar {
       flex: 1;
       display: flex;
       align-items: center;
-      background: rgba(0,0,0,0.35);
+      background: rgba(0, 0, 0, 0.35);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 0 12px;
@@ -5173,17 +5276,23 @@
       margin: 0 4px;
       transition: border-color 0.15s;
     }
+
     .browser-address-bar:focus-within {
       border-color: var(--accent-cyan);
-      box-shadow: 0 0 0 1px rgba(0,217,255,0.15);
+      box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.15);
     }
+
     .browser-address-bar .browser-lock {
       font-size: 11px;
       margin-right: 6px;
       color: var(--accent-green);
       flex-shrink: 0;
     }
-    .browser-address-bar .browser-lock.insecure { color: var(--accent-red); }
+
+    .browser-address-bar .browser-lock.insecure {
+      color: var(--accent-red);
+    }
+
     .browser-address-bar input {
       flex: 1;
       background: transparent;
@@ -5194,22 +5303,34 @@
       font-size: 12px;
       padding: 0;
     }
-    .browser-address-bar input::placeholder { color: var(--text-muted); }
+
+    .browser-address-bar input::placeholder {
+      color: var(--text-muted);
+    }
+
     .browser-bookmarks-bar {
       display: flex;
       align-items: center;
       gap: 2px;
       padding: 2px 8px;
-      background: rgba(0,0,0,0.15);
+      background: rgba(0, 0, 0, 0.15);
       border-bottom: 1px solid var(--border);
       height: 26px;
       flex-shrink: 0;
       overflow-x: auto;
     }
-    .browser-bookmarks-bar::-webkit-scrollbar { height: 3px; }
-    .browser-bookmarks-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .browser-bookmarks-bar::-webkit-scrollbar {
+      height: 3px;
+    }
+
+    .browser-bookmarks-bar::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
     .browser-bookmark-btn {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid transparent;
       color: var(--text-secondary);
       padding: 2px 8px;
@@ -5221,11 +5342,13 @@
       transition: all 0.12s;
       flex-shrink: 0;
     }
+
     .browser-bookmark-btn:hover {
-      background: rgba(0,217,255,0.1);
+      background: rgba(0, 217, 255, 0.1);
       color: var(--accent-cyan);
       border-color: var(--border);
     }
+
     .browser-bookmark-btn.separator {
       width: 1px;
       height: 14px;
@@ -5235,20 +5358,27 @@
       border: none;
       cursor: default;
     }
+
     .browser-viewport {
       flex: 1;
       position: relative;
       overflow: hidden;
       background: #1a1a2e;
     }
+
     .browser-viewport iframe {
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100%;
       border: none;
       background: #fff;
     }
+
     .browser-viewport .browser-home {
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -5257,11 +5387,16 @@
       padding: 40px;
       background: linear-gradient(180deg, var(--bg-primary) 0%, #0a0a1a 100%);
     }
-    .browser-home .browser-logo { font-size: 48px; opacity: 0.8; }
+
+    .browser-home .browser-logo {
+      font-size: 48px;
+      opacity: 0.8;
+    }
+
     .browser-home .browser-search-box {
       display: flex;
       align-items: center;
-      background: rgba(0,0,0,0.35);
+      background: rgba(0, 0, 0, 0.35);
       border: 1px solid var(--border);
       border-radius: 24px;
       padding: 0 16px;
@@ -5270,7 +5405,11 @@
       max-width: 500px;
       transition: border-color 0.15s;
     }
-    .browser-home .browser-search-box:focus-within { border-color: var(--accent-cyan); }
+
+    .browser-home .browser-search-box:focus-within {
+      border-color: var(--accent-cyan);
+    }
+
     .browser-home .browser-search-box input {
       flex: 1;
       background: transparent;
@@ -5280,6 +5419,7 @@
       font-family: var(--font-mono);
       font-size: 13px;
     }
+
     .browser-quicklinks {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -5287,31 +5427,38 @@
       width: 100%;
       max-width: 600px;
     }
+
     .browser-quicklink {
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 6px;
       padding: 12px 8px;
-      background: rgba(255,255,255,0.03);
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.15s;
       text-decoration: none;
     }
+
     .browser-quicklink:hover {
-      background: rgba(0,217,255,0.08);
+      background: rgba(0, 217, 255, 0.08);
       border-color: var(--accent-cyan);
       transform: translateY(-2px);
     }
-    .browser-quicklink .ql-icon { font-size: 24px; }
+
+    .browser-quicklink .ql-icon {
+      font-size: 24px;
+    }
+
     .browser-quicklink .ql-label {
       font-family: var(--font-mono);
       font-size: 10px;
       color: var(--text-secondary);
       text-align: center;
     }
+
     .browser-status-bar {
       display: flex;
       align-items: center;
@@ -5325,6 +5472,7 @@
       font-size: 10px;
       color: var(--text-muted);
     }
+
     .browser-tab-bar {
       display: flex;
       align-items: center;
@@ -5336,13 +5484,17 @@
       flex-shrink: 0;
       overflow-x: auto;
     }
-    .browser-tab-bar::-webkit-scrollbar { height: 2px; }
+
+    .browser-tab-bar::-webkit-scrollbar {
+      height: 2px;
+    }
+
     .browser-tab {
       display: flex;
       align-items: center;
       gap: 6px;
       padding: 4px 10px;
-      background: rgba(255,255,255,0.03);
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid transparent;
       border-bottom: none;
       border-radius: 4px 4px 0 0;
@@ -5357,13 +5509,19 @@
       transition: all 0.1s;
       flex-shrink: 0;
     }
-    .browser-tab:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+    .browser-tab:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+    }
+
     .browser-tab.active {
       background: var(--bg-primary);
       color: var(--accent-cyan);
       border-color: var(--border);
       border-bottom: 1px solid var(--bg-primary);
     }
+
     .browser-tab .tab-close {
       font-size: 12px;
       cursor: pointer;
@@ -5371,10 +5529,19 @@
       transition: opacity 0.1s;
       margin-left: 4px;
     }
-    .browser-tab:hover .tab-close { opacity: 0.6; }
-    .browser-tab .tab-close:hover { opacity: 1; color: var(--accent-red); }
+
+    .browser-tab:hover .tab-close {
+      opacity: 0.6;
+    }
+
+    .browser-tab .tab-close:hover {
+      opacity: 1;
+      color: var(--accent-red);
+    }
+
     .browser-tab-new {
-      width: 24px; height: 24px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -5386,10 +5553,16 @@
       border-radius: 4px;
       flex-shrink: 0;
     }
-    .browser-tab-new:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+
+    .browser-tab-new:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+    }
+
     /* Proxy content rendered as sanitized HTML */
     .browser-proxy-content {
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100%;
       overflow: auto;
       padding: 16px 24px;
       background: #fff;
@@ -5398,17 +5571,38 @@
       font-size: 15px;
       line-height: 1.6;
     }
-    .browser-proxy-content a { color: #0066cc; text-decoration: underline; cursor: pointer; }
-    .browser-proxy-content img { max-width: 100%; height: auto; }
+
+    .browser-proxy-content a {
+      color: #0066cc;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .browser-proxy-content img {
+      max-width: 100%;
+      height: auto;
+    }
+
     .browser-proxy-content pre,
     .browser-proxy-content code {
-      background: #f0f2f5; padding: 2px 6px; border-radius: 3px;
-      font-family: var(--font-mono); font-size: 13px;
+      background: #f0f2f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 13px;
     }
-    .browser-proxy-content pre { padding: 12px; overflow-x: auto; }
+
+    .browser-proxy-content pre {
+      padding: 12px;
+      overflow-x: auto;
+    }
+
     .browser-proxy-content h1,
     .browser-proxy-content h2,
-    .browser-proxy-content h3 { color: #0a0a1a; margin-top: 1.2em; }
+    .browser-proxy-content h3 {
+      color: #0a0a1a;
+      margin-top: 1.2em;
+    }
   </style>
 </head>
 
@@ -5441,6 +5635,8 @@
       </span>
     </div>
     <div class="titlebar-controls">
+      <button onclick="showBrowserPanel()" title="WebView2 Browser"
+        style="-webkit-app-region:no-drag;">&#x1F310;</button>
       <button onclick="refreshBackendBeacon()" title="Re-probe all beacons"
         style="-webkit-app-region:no-drag;">&#x26A1;</button>
       <button class="tb-fullscreen" onclick="toggleStandaloneFullscreen()" title="Fullscreen">F11</button>
@@ -5503,6 +5699,10 @@
           <button class="icon-btn" onclick="ghostIntoIDE()" title="Ghost into Win32 IDE (RDP beacon)">&#x1F47B;</button>
           <button class="icon-btn" onclick="refreshModels()" title="Refresh Models">&#x21BB;</button>
           <button class="icon-btn" onclick="showDebug()" title="Debug Panel">&#x1F527;</button>
+          <button class="icon-btn" id="headerTermToggle" onclick="toggleTerminalFull()"
+            title="Toggle Terminal (Ctrl+`)">&#x1F4BB;</button>
+          <button class="icon-btn" id="headerRightbarToggle" onclick="toggleRightbar()"
+            title="Toggle Right Panel">&#x2261;</button>
         </div>
       </div>
     </header>
@@ -5620,7 +5820,8 @@
             <span class="icon">&#x1F310;</span>
             <span>Browse</span>
           </button>
-          <button class="tool-btn" onclick="showBrowserPanel()" title="WebView2 Browser — browse model sites, docs & repos">
+          <button class="tool-btn" onclick="showBrowserPanel()"
+            title="WebView2 Browser — browse model sites, docs & repos">
             <span class="icon">&#x1F310;</span>
             <span>Browser</span>
           </button>
@@ -7554,6 +7755,13 @@
             <option value="read_file">read_file</option>
             <option value="write_file">write_file</option>
             <option value="list_directory">list_directory</option>
+            <option value="delete_file">delete_file</option>
+            <option value="rename_file">rename_file</option>
+            <option value="copy_file">copy_file</option>
+            <option value="move_file">move_file</option>
+            <option value="mkdir">mkdir</option>
+            <option value="stat_file">stat_file</option>
+            <option value="search_files">search_files</option>
             <option value="execute_command">execute_command</option>
             <option value="git_status">git_status</option>
           </select>
@@ -8057,9 +8265,12 @@
     </div>
     <!-- Navigation toolbar -->
     <div class="browser-toolbar">
-      <button class="browser-nav-btn" id="browserBtnBack" onclick="browserBack()" disabled title="Back">&#x2190;</button>
-      <button class="browser-nav-btn" id="browserBtnFwd" onclick="browserForward()" disabled title="Forward">&#x2192;</button>
-      <button class="browser-nav-btn" id="browserBtnRefresh" onclick="browserRefreshPage()" title="Refresh">&#x21BB;</button>
+      <button class="browser-nav-btn" id="browserBtnBack" onclick="browserBack()" disabled
+        title="Back">&#x2190;</button>
+      <button class="browser-nav-btn" id="browserBtnFwd" onclick="browserForward()" disabled
+        title="Forward">&#x2192;</button>
+      <button class="browser-nav-btn" id="browserBtnRefresh" onclick="browserRefreshPage()"
+        title="Refresh">&#x21BB;</button>
       <button class="browser-nav-btn" id="browserBtnHome" onclick="browserGoHome()" title="Home">&#x1F3E0;</button>
       <div class="browser-address-bar">
         <span class="browser-lock" id="browserLock">&#x1F512;</span>
@@ -8070,37 +8281,54 @@
       <button class="browser-nav-btn" onclick="browserShowBookmarks()" title="Bookmarks">&#x1F516;</button>
       <button class="browser-nav-btn" onclick="browserDetach()" title="Pop out to new window">&#x2197;</button>
       <button class="browser-nav-btn" onclick="browserToggleDevtools()" title="DevTools">&#x1F527;</button>
-      <button class="browser-nav-btn" onclick="closeBrowserPanel()" title="Close Browser" style="color:var(--accent-red);">&#x2715;</button>
+      <button class="browser-nav-btn" onclick="closeBrowserPanel()" title="Close Browser"
+        style="color:var(--accent-red);">&#x2715;</button>
     </div>
     <!-- Bookmarks bar -->
     <div class="browser-bookmarks-bar" id="browserBookmarksBar">
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/models?sort=trending&search=gguf')">&#x1F917; HuggingFace GGUF</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://ollama.com/library')">&#x1F999; Ollama Library</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/TheBloke')">&#x1F4E6; TheBloke</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/bartowski')">&#x1F4E6; Bartowski</button>
+      <button class="browser-bookmark-btn"
+        onclick="browserNavigateTo('https://huggingface.co/models?sort=trending&search=gguf')">&#x1F917; HuggingFace
+        GGUF</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://ollama.com/library')">&#x1F999; Ollama
+        Library</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/TheBloke')">&#x1F4E6;
+        TheBloke</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/bartowski')">&#x1F4E6;
+        Bartowski</button>
       <span class="browser-bookmark-btn separator"></span>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://github.com/ggerganov/llama.cpp')">&#x1F4BB; llama.cpp</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://github.com/ggerganov/ggml')">&#x2699; GGML</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://docs.ollama.com')">&#x1F4D6; Ollama Docs</button>
+      <button class="browser-bookmark-btn"
+        onclick="browserNavigateTo('https://github.com/ggerganov/llama.cpp')">&#x1F4BB; llama.cpp</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://github.com/ggerganov/ggml')">&#x2699;
+        GGML</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://docs.ollama.com')">&#x1F4D6; Ollama
+        Docs</button>
       <span class="browser-bookmark-btn separator"></span>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://openrouter.ai/models')">&#x1F310; OpenRouter</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://lmsys.org/blog/2023-06-22-leaderboard/')">&#x1F3C6; LMSys Arena</button>
-      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://artificialanalysis.ai/leaderboards/models')">&#x1F4CA; AI Analysis</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://openrouter.ai/models')">&#x1F310;
+        OpenRouter</button>
+      <button class="browser-bookmark-btn"
+        onclick="browserNavigateTo('https://lmsys.org/blog/2023-06-22-leaderboard/')">&#x1F3C6; LMSys Arena</button>
+      <button class="browser-bookmark-btn"
+        onclick="browserNavigateTo('https://artificialanalysis.ai/leaderboards/models')">&#x1F4CA; AI Analysis</button>
     </div>
     <!-- Viewport -->
     <div class="browser-viewport" id="browserViewport">
       <!-- Home page shown when no URL loaded -->
       <div class="browser-home" id="browserHomePage">
         <div class="browser-logo">&#x1F310;</div>
-        <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent-cyan);letter-spacing:1px;">RawrXD WebView2 Browser</div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);text-align:center;">Browse model repositories, documentation, and AI resources<br>Integrated WebView2-style browser with multi-tab support</div>
+        <div
+          style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent-cyan);letter-spacing:1px;">
+          RawrXD WebView2 Browser</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);text-align:center;">Browse model
+          repositories, documentation, and AI resources<br>Integrated WebView2-style browser with multi-tab support
+        </div>
         <div class="browser-search-box">
           <span style="margin-right:8px;font-size:14px;">&#x1F50D;</span>
           <input type="text" id="browserHomeSearch" placeholder="Search the web or enter a URL..."
             onkeydown="if(event.key==='Enter')browserNavigateFromHome()">
         </div>
         <div class="browser-quicklinks">
-          <a class="browser-quicklink" onclick="browserNavigateTo('https://huggingface.co/models?sort=trending&search=gguf')">
+          <a class="browser-quicklink"
+            onclick="browserNavigateTo('https://huggingface.co/models?sort=trending&search=gguf')">
             <span class="ql-icon">&#x1F917;</span>
             <span class="ql-label">HuggingFace<br>GGUF Models</span>
           </a>
@@ -8116,7 +8344,8 @@
             <span class="ql-icon">&#x1F310;</span>
             <span class="ql-label">OpenRouter<br>Models</span>
           </a>
-          <a class="browser-quicklink" onclick="browserNavigateTo('https://huggingface.co/spaces/lmsys/chatbot-arena-leaderboard')">
+          <a class="browser-quicklink"
+            onclick="browserNavigateTo('https://huggingface.co/spaces/lmsys/chatbot-arena-leaderboard')">
             <span class="ql-icon">&#x1F3C6;</span>
             <span class="ql-label">LMSys<br>Leaderboard</span>
           </a>
@@ -8125,14 +8354,16 @@
             <span class="ql-label">Ollama<br>Docs</span>
           </a>
         </div>
-        <div style="margin-top:12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Tip: Use <span style="color:var(--accent-cyan);">/browse &lt;url&gt;</span> in the terminal to open any URL</div>
+        <div style="margin-top:12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Tip: Use <span
+            style="color:var(--accent-cyan);">/browse &lt;url&gt;</span> in the terminal to open any URL</div>
       </div>
       <!-- iframe injected dynamically by browserNavigateTo() -->
     </div>
     <!-- Status bar -->
     <div class="browser-status-bar">
       <span id="browserStatusText">Ready</span>
-      <span id="browserStatusUrl" style="max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <span id="browserStatusUrl"
+        style="max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
       <span id="browserZoomLevel">100%</span>
     </div>
   </div>
@@ -8156,7 +8387,8 @@
     </div>
     <div class="agent-body" style="flex-direction:row;height:calc(100% - 80px);overflow:hidden;">
       <!-- LEFT: File Tree Browser -->
-      <div id="feTreePane" style="width:240px;min-width:180px;max-width:360px;border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:0;background:rgba(0,0,0,0.15);font-family:var(--font-mono);font-size:11px;">
+      <div id="feTreePane"
+        style="width:240px;min-width:180px;max-width:360px;border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:0;background:rgba(0,0,0,0.15);font-family:var(--font-mono);font-size:11px;">
         <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;">
           <input id="feTreePath" type="text" placeholder="Root path..." value="."
             style="flex:1;padding:3px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:10px;"
@@ -8164,37 +8396,52 @@
           <button class="code-btn" onclick="feRefreshTree()" style="padding:2px 6px;font-size:10px;">Go</button>
         </div>
         <div id="feTreeContent" style="padding:4px 0;">
-          <div style="padding:12px;color:var(--text-muted);font-size:10px;">Click &#x1F504; Refresh to load file tree</div>
+          <div style="padding:12px;color:var(--text-muted);font-size:10px;">Click &#x1F504; Refresh to load file tree
+          </div>
         </div>
       </div>
 
       <!-- RIGHT: Editor Area -->
       <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
         <!-- Tab Bar -->
-        <div id="feTabBar" style="display:flex;gap:0;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);overflow-x:auto;min-height:28px;flex-shrink:0;">
-          <div style="padding:6px 12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">No files open</div>
+        <div id="feTabBar"
+          style="display:flex;gap:0;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);overflow-x:auto;min-height:28px;flex-shrink:0;">
+          <div style="padding:6px 12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">No files
+            open</div>
         </div>
 
         <!-- Toolbar -->
-        <div id="feToolbar" style="display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.08);flex-wrap:wrap;align-items:center;">
-          <button class="code-btn" onclick="feSaveFile()" style="font-size:10px;padding:2px 8px;" title="Save (Ctrl+S)">&#x1F4BE; Save</button>
-          <button class="code-btn" onclick="feRevertFile()" style="font-size:10px;padding:2px 8px;" title="Revert to saved">&#x21A9; Revert</button>
+        <div id="feToolbar"
+          style="display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.08);flex-wrap:wrap;align-items:center;">
+          <button class="code-btn" onclick="feSaveFile()" style="font-size:10px;padding:2px 8px;"
+            title="Save (Ctrl+S)">&#x1F4BE; Save</button>
+          <button class="code-btn" onclick="feRevertFile()" style="font-size:10px;padding:2px 8px;"
+            title="Revert to saved">&#x21A9; Revert</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
-          <button class="code-btn" onclick="feUndo()" style="font-size:10px;padding:2px 8px;" title="Undo">&#x21B6; Undo</button>
-          <button class="code-btn" onclick="feRedo()" style="font-size:10px;padding:2px 8px;" title="Redo">&#x21B7; Redo</button>
+          <button class="code-btn" onclick="feUndo()" style="font-size:10px;padding:2px 8px;" title="Undo">&#x21B6;
+            Undo</button>
+          <button class="code-btn" onclick="feRedo()" style="font-size:10px;padding:2px 8px;" title="Redo">&#x21B7;
+            Redo</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
-          <button class="code-btn" onclick="feFindReplace()" style="font-size:10px;padding:2px 8px;" title="Find & Replace">&#x1F50D; Find/Replace</button>
-          <button class="code-btn" onclick="feGoToLine()" style="font-size:10px;padding:2px 8px;" title="Go to Line">&#x21E5; Goto</button>
-          <button class="code-btn" onclick="feToggleWordWrap()" style="font-size:10px;padding:2px 8px;" title="Toggle word wrap">&#x21C4; Wrap</button>
+          <button class="code-btn" onclick="feFindReplace()" style="font-size:10px;padding:2px 8px;"
+            title="Find & Replace">&#x1F50D; Find/Replace</button>
+          <button class="code-btn" onclick="feGoToLine()" style="font-size:10px;padding:2px 8px;"
+            title="Go to Line">&#x21E5; Goto</button>
+          <button class="code-btn" onclick="feToggleWordWrap()" style="font-size:10px;padding:2px 8px;"
+            title="Toggle word wrap">&#x21C4; Wrap</button>
           <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
-          <button class="code-btn" onclick="feRenameActive()" style="font-size:10px;padding:2px 8px;" title="Rename file">&#x270F; Rename</button>
-          <button class="code-btn" onclick="feDeleteActive()" style="font-size:10px;padding:2px 8px;color:#ff6b6b;" title="Delete file">&#x1F5D1; Delete</button>
+          <button class="code-btn" onclick="feRenameActive()" style="font-size:10px;padding:2px 8px;"
+            title="Rename file">&#x270F; Rename</button>
+          <button class="code-btn" onclick="feDeleteActive()" style="font-size:10px;padding:2px 8px;color:#ff6b6b;"
+            title="Delete file">&#x1F5D1; Delete</button>
           <span style="flex:1;"></span>
-          <span id="feStatusInfo" style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Ready</span>
+          <span id="feStatusInfo"
+            style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Ready</span>
         </div>
 
         <!-- Find/Replace Bar (hidden by default) -->
-        <div id="feFindBar" style="display:none;padding:6px 8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);gap:6px;align-items:center;">
+        <div id="feFindBar"
+          style="display:none;padding:6px 8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);gap:6px;align-items:center;">
           <input id="feFindInput" type="text" placeholder="Find..."
             style="flex:1;padding:3px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:11px;"
             onkeydown="if(event.key==='Enter')feDoFind()">
@@ -8211,12 +8458,15 @@
           <button class="code-btn" onclick="feDoReplace()" style="font-size:10px;padding:2px 6px;">Replace</button>
           <button class="code-btn" onclick="feDoReplaceAll()" style="font-size:10px;padding:2px 6px;">All</button>
           <span id="feFindCount" style="font-size:10px;color:var(--accent-cyan);font-family:var(--font-mono);"></span>
-          <button class="code-btn" onclick="document.getElementById('feFindBar').style.display='none'" style="font-size:10px;padding:2px 6px;">&times;</button>
+          <button class="code-btn" onclick="document.getElementById('feFindBar').style.display='none'"
+            style="font-size:10px;padding:2px 6px;">&times;</button>
         </div>
 
         <!-- Editor Textarea with Line Numbers -->
         <div style="flex:1;display:flex;overflow:hidden;position:relative;">
-          <div id="feLineNumbers" style="width:48px;background:rgba(0,0,0,0.2);border-right:1px solid var(--border);overflow:hidden;padding:8px 4px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);text-align:right;line-height:1.5;user-select:none;white-space:pre;"></div>
+          <div id="feLineNumbers"
+            style="width:48px;background:rgba(0,0,0,0.2);border-right:1px solid var(--border);overflow:hidden;padding:8px 4px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);text-align:right;line-height:1.5;user-select:none;white-space:pre;">
+          </div>
           <textarea id="feEditorArea" spellcheck="false" wrap="off"
             style="flex:1;resize:none;padding:8px;background:transparent;border:none;color:var(--text-primary);font-family:var(--font-mono);font-size:12px;line-height:1.5;tab-size:4;outline:none;overflow:auto;white-space:pre;"
             oninput="feOnEditorInput()" onscroll="feOnEditorScroll()" onkeydown="feOnEditorKeydown(event)"
@@ -8224,11 +8474,13 @@
         </div>
 
         <!-- Diff Viewer (hidden by default) -->
-        <div id="feDiffPane" style="display:none;flex:1;overflow:auto;padding:8px;font-family:var(--font-mono);font-size:11px;line-height:1.5;white-space:pre-wrap;background:rgba(0,0,0,0.1);">
+        <div id="feDiffPane"
+          style="display:none;flex:1;overflow:auto;padding:8px;font-family:var(--font-mono);font-size:11px;line-height:1.5;white-space:pre-wrap;background:rgba(0,0,0,0.1);">
         </div>
 
         <!-- Status Bar -->
-        <div style="display:flex;justify-content:space-between;padding:3px 8px;border-top:1px solid var(--border);background:rgba(0,0,0,0.1);font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+        <div
+          style="display:flex;justify-content:space-between;padding:3px 8px;border-top:1px solid var(--border);background:rgba(0,0,0,0.1);font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
           <span id="feFilePath">No file</span>
           <span>
             <span id="feLineCol">Ln 1, Col 1</span>
@@ -8244,19 +8496,23 @@
     </div>
 
     <!-- File Operation History Drawer -->
-    <div id="feHistoryDrawer" style="display:none;position:absolute;right:0;top:36px;bottom:0;width:280px;background:var(--surface);border-left:1px solid var(--border);z-index:10;overflow-y:auto;padding:8px;">
+    <div id="feHistoryDrawer"
+      style="display:none;position:absolute;right:0;top:36px;bottom:0;width:280px;background:var(--surface);border-left:1px solid var(--border);z-index:10;overflow-y:auto;padding:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <strong style="font-size:11px;color:var(--accent-cyan);">&#x1F4CB; Operation History</strong>
-        <button class="code-btn" onclick="document.getElementById('feHistoryDrawer').style.display='none'" style="font-size:10px;padding:2px 6px;">&times;</button>
+        <button class="code-btn" onclick="document.getElementById('feHistoryDrawer').style.display='none'"
+          style="font-size:10px;padding:2px 6px;">&times;</button>
       </div>
       <div id="feHistoryList" style="font-family:var(--font-mono);font-size:10px;"></div>
     </div>
 
     <!-- Search-in-Files Drawer -->
-    <div id="feSearchDrawer" style="display:none;position:absolute;right:0;top:36px;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);z-index:10;overflow-y:auto;padding:8px;">
+    <div id="feSearchDrawer"
+      style="display:none;position:absolute;right:0;top:36px;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);z-index:10;overflow-y:auto;padding:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <strong style="font-size:11px;color:var(--accent-cyan);">&#x1F50E; Search in Files</strong>
-        <button class="code-btn" onclick="document.getElementById('feSearchDrawer').style.display='none'" style="font-size:10px;padding:2px 6px;">&times;</button>
+        <button class="code-btn" onclick="document.getElementById('feSearchDrawer').style.display='none'"
+          style="font-size:10px;padding:2px 6px;">&times;</button>
       </div>
       <div style="display:flex;gap:4px;margin-bottom:8px;">
         <input id="feGlobalSearch" type="text" placeholder="Search pattern..."
@@ -9202,6 +9458,7 @@
       activeTab: 0,
       nextTabId: 1,
       history: [],
+      bookmarks: [],
       maxHistory: 200,
       isWebView2: !!(window.chrome && window.chrome.webview),
       proxyMode: 'auto', // 'auto' | 'proxy' | 'direct' | 'webview2'
@@ -9657,6 +9914,156 @@
       _browserRebuildTabBar();
       browserSwitchTab(BrowserState.activeTab);
       _browserUpdateTabCount();
+    }
+
+    // ── Missing Browser Functions (aliases + new features) ──
+
+    function showBrowserPanel() {
+      showBrowser();
+    }
+
+    function closeBrowserPanel() {
+      browserClose();
+    }
+
+    function browserNavigateTo(url) {
+      // Direct navigation to a specific URL — used by bookmarks and quicklinks
+      document.getElementById('browserUrlInput').value = url;
+      showBrowser();
+      browserNavigate();
+    }
+
+    function browserNavigateFromHome() {
+      var input = document.getElementById('browserHomeSearch');
+      if (!input) return;
+      var val = (input.value || '').trim();
+      if (!val) return;
+      document.getElementById('browserUrlInput').value = val;
+      browserNavigate();
+    }
+
+    function browserRefreshPage() {
+      browserReload();
+    }
+
+    function browserToggleDevtools() {
+      // In WebView2 native mode, send devtools message to host
+      if (BrowserState.isWebView2 && window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ type: 'browser-devtools' });
+        return;
+      }
+      // Fallback: show page source info
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (!tab || !tab.url) {
+        document.getElementById('browserStatusInfo').textContent = 'No page loaded';
+        return;
+      }
+      var vp = document.getElementById('browserViewport');
+      var iframe = vp ? vp.querySelector('iframe') : null;
+      var proxyDiv = vp ? vp.querySelector('.browser-proxy-content') : null;
+      var info = 'DevTools — URL: ' + tab.url;
+      if (iframe) {
+        info += ' | Type: iframe';
+        try { info += ' | Title: ' + (iframe.contentDocument.title || '?'); } catch (e) { info += ' | Cross-origin'; }
+      } else if (proxyDiv) {
+        info += ' | Type: proxy | Size: ' + (proxyDiv.innerHTML.length) + ' bytes';
+      }
+      info += ' | Tabs: ' + BrowserState.tabs.length;
+      info += ' | History: ' + BrowserState.history.length + ' entries';
+      document.getElementById('browserStatusInfo').textContent = info;
+      // Also log to console
+      console.log('[Browser DevTools]', {
+        url: tab.url,
+        tabs: BrowserState.tabs.length,
+        history: BrowserState.history,
+        bookmarks: BrowserState.bookmarks,
+        proxyMode: BrowserState.proxyMode,
+        isWebView2: BrowserState.isWebView2
+      });
+    }
+
+    function browserAddBookmark() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (!tab || !tab.url) {
+        document.getElementById('browserStatusInfo').textContent = 'No page to bookmark';
+        return;
+      }
+      // Check if already bookmarked
+      var exists = BrowserState.bookmarks && BrowserState.bookmarks.some(function (b) { return b.url === tab.url; });
+      if (exists) {
+        document.getElementById('browserStatusInfo').textContent = 'Already bookmarked: ' + tab.url;
+        return;
+      }
+      if (!BrowserState.bookmarks) BrowserState.bookmarks = [];
+      BrowserState.bookmarks.push({
+        url: tab.url,
+        title: tab.title || _browserTitleFromUrl(tab.url),
+        timestamp: Date.now()
+      });
+      document.getElementById('browserStatusInfo').textContent = '\u2606 Bookmarked: ' + (tab.title || tab.url);
+      // Add to bookmarks bar dynamically
+      var bar = document.getElementById('browserBookmarksBar');
+      if (bar) {
+        var btn = document.createElement('button');
+        btn.className = 'browser-bookmark-btn';
+        btn.textContent = (tab.title || _browserTitleFromUrl(tab.url)).substring(0, 20);
+        btn.onclick = function () { browserNavigateTo(tab.url); };
+        bar.appendChild(btn);
+      }
+    }
+
+    function browserShowBookmarks() {
+      var vp = document.getElementById('browserViewport');
+      var home = document.getElementById('browserHomePage');
+      if (!vp) return;
+      // Hide existing content
+      var oldIframe = vp.querySelector('iframe');
+      if (oldIframe) oldIframe.remove();
+      var oldProxy = vp.querySelector('.browser-proxy-content');
+      if (oldProxy) oldProxy.remove();
+      if (home) home.style.display = 'none';
+
+      var bmarks = BrowserState.bookmarks || [];
+      var html = '<div style="padding:40px 20px;font-family:var(--font-mono);">';
+      html += '<h2 style="color:var(--accent-cyan);margin-bottom:20px;">\u1F516 Bookmarks (' + bmarks.length + ')</h2>';
+      if (bmarks.length === 0) {
+        html += '<p style="color:var(--text-muted);">No bookmarks yet. Click \u2606 to bookmark the current page.</p>';
+      } else {
+        bmarks.forEach(function (b, idx) {
+          html += '<div style="padding:8px 12px;margin:4px 0;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;cursor:pointer;" onclick="browserNavigateTo(\'' + b.url.replace(/'/g, "\\'") + '\')">';
+          html += '<div style="color:var(--text-primary);font-weight:600;">' + (b.title || 'Untitled') + '</div>';
+          html += '<div style="font-size:10px;color:var(--accent-cyan);">' + b.url + '</div>';
+          html += '<div style="font-size:9px;color:var(--text-muted);">' + new Date(b.timestamp).toLocaleString() + '</div>';
+          html += '</div>';
+        });
+      }
+      // Also show built-in bookmarks
+      html += '<h3 style="color:var(--text-secondary);margin-top:24px;">Built-in Model Sites</h3>';
+      var builtins = [
+        { title: 'HuggingFace GGUF Models', url: 'https://huggingface.co/models?sort=trending&search=gguf', icon: '\uD83E\uDD17' },
+        { title: 'Ollama Library', url: 'https://ollama.com/library', icon: '\uD83E\uDD99' },
+        { title: 'TheBloke', url: 'https://huggingface.co/TheBloke', icon: '\uD83D\uDCE6' },
+        { title: 'Bartowski', url: 'https://huggingface.co/bartowski', icon: '\uD83D\uDCE6' },
+        { title: 'llama.cpp', url: 'https://github.com/ggerganov/llama.cpp', icon: '\uD83D\uDCBB' },
+        { title: 'OpenRouter Models', url: 'https://openrouter.ai/models', icon: '\uD83C\uDF10' },
+        { title: 'LMSys Leaderboard', url: 'https://lmsys.org/blog/2023-06-22-leaderboard/', icon: '\uD83C\uDFC6' },
+        { title: 'Ollama Docs', url: 'https://docs.ollama.com', icon: '\uD83D\uDCD6' },
+      ];
+      builtins.forEach(function (b) {
+        html += '<div style="padding:6px 12px;margin:4px 0;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="browserNavigateTo(\'' + b.url + '\')">';
+        html += '<span style="font-size:18px;">' + b.icon + '</span>';
+        html += '<div><div style="color:var(--text-primary);">' + b.title + '</div><div style="font-size:10px;color:var(--text-muted);">' + b.url + '</div></div>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      var div = document.createElement('div');
+      div.className = 'browser-proxy-content';
+      div.innerHTML = html;
+      vp.appendChild(div);
+
+      document.getElementById('browserUrlInput').value = 'about:bookmarks';
+      document.getElementById('browserStatusInfo').textContent = bmarks.length + ' user bookmarks';
     }
 
     function _browserRebuildTabBar() {
@@ -10568,7 +10975,15 @@
         return res.json();
       },
       _cli: async function (command) {
-        return this._post('/api/cli', { command: command }, 30000);
+        // /api/cli only exists on tool_server/Win32IDE — never on Ollama direct
+        var res = await fetch(getCliUrl() + '/api/cli', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: command }),
+          signal: AbortSignal.timeout(30000)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' on POST /api/cli');
+        return res.json();
       },
 
       // ---- Inference (tool_server + complete_server) ----
@@ -10658,48 +11073,80 @@
         return this.executeTool('git_status', {});
       },
 
-      // ---- Agentic File Operations ----
+      // ---- Agentic File Operations (use native endpoints for 50K file support) ----
       createFile: function (path, content) {
-        return this.executeTool('write_file', { path: path, content: content || '' });
+        return this._post('/api/write-file', { path: path, content: content || '', createDirs: true });
       },
       appendFile: function (path, content) {
         var self = this;
-        return self.executeTool('read_file', { path: path }).then(function (data) {
+        return self._post('/api/read-file', { path: path }).then(function (data) {
           var existing = data.content || data.output || data.result || '';
-          return self.executeTool('write_file', { path: path, content: existing + content });
+          return self._post('/api/write-file', { path: path, content: existing + content });
         });
       },
-      deleteFile: function (path) {
-        return this.executeTool('execute_command', { command: 'del /f /q "' + path.replace(/\//g, '\\') + '"' });
+      deleteFile: function (path, force) {
+        return this._post('/api/delete-file', { path: path, force: !!force });
       },
       renameFile: function (oldPath, newPath) {
-        return this.executeTool('execute_command', { command: 'move /y "' + oldPath.replace(/\//g, '\\') + '" "' + newPath.replace(/\//g, '\\') + '"' });
+        return this._post('/api/rename-file', { path: oldPath, newPath: newPath });
       },
-      copyFile: function (src, dst) {
-        return this.executeTool('execute_command', { command: 'copy /y "' + src.replace(/\//g, '\\') + '" "' + dst.replace(/\//g, '\\') + '"' });
+      copyFile: function (src, dst, overwrite) {
+        return this._post('/api/copy-file', { path: src, destPath: dst, overwrite: !!overwrite });
       },
-      moveFile: function (src, dst) {
-        return this.executeTool('execute_command', { command: 'move /y "' + src.replace(/\//g, '\\') + '" "' + dst.replace(/\//g, '\\') + '"' });
+      moveFile: function (src, dst, overwrite) {
+        return this._post('/api/move-file', { path: src, destPath: dst, overwrite: !!overwrite });
       },
       mkDir: function (path) {
-        return this.executeTool('execute_command', { command: 'mkdir "' + path.replace(/\//g, '\\') + '"' });
+        return this._post('/api/mkdir', { path: path });
       },
       removeDir: function (path) {
-        return this.executeTool('execute_command', { command: 'rmdir /s /q "' + path.replace(/\//g, '\\') + '"' });
+        return this._post('/api/delete-file', { path: path });
       },
       fileInfo: function (path) {
-        return this.executeTool('execute_command', { command: 'dir "' + path.replace(/\//g, '\\') + '"' });
+        return this._post('/api/stat-file', { path: path });
       },
-      searchFiles: function (pattern, dir) {
-        var d = dir || '.';
-        return this.executeTool('execute_command', { command: 'dir /s /b "' + d.replace(/\//g, '\\') + '\\' + pattern + '"' });
+      statFile: function (path) {
+        return this._post('/api/stat-file', { path: path });
       },
-      grepInFiles: function (pattern, path) {
-        var p = path || '*.*';
-        return this.executeTool('execute_command', { command: 'findstr /s /n /i "' + pattern + '" "' + p.replace(/\//g, '\\') + '"' });
+      searchFiles: function (pattern, dir, query, maxResults) {
+        return this._post('/api/search-files', {
+          path: dir || '.', pattern: pattern || '*', query: query || '',
+          maxResults: maxResults || 500, searchContent: !!query
+        });
+      },
+      listDir: function (path, depth, maxEntries) {
+        return this._post('/api/list-directory', {
+          path: path || '.', depth: depth || 0, maxEntries: maxEntries || 50000
+        });
+      },
+      writeFileDirect: function (path, content, createDirs) {
+        return this._post('/api/write-file', { path: path, content: content, createDirs: !!createDirs });
+      },
+      grepInFiles: function (pattern, path, maxResults) {
+        return this._post('/api/search-files', {
+          path: path || '.', pattern: '*', query: pattern,
+          searchContent: true, maxResults: maxResults || 500
+        });
       },
       diffFiles: function (pathA, pathB) {
-        return this.executeTool('execute_command', { command: 'fc "' + pathA.replace(/\//g, '\\') + '" "' + pathB.replace(/\//g, '\\') + '"' });
+        var self = this;
+        return Promise.all([
+          self._post('/api/read-file', { path: pathA }),
+          self._post('/api/read-file', { path: pathB })
+        ]).then(function (results) {
+          var contentA = (results[0].content || '').split('\n');
+          var contentB = (results[1].content || '').split('\n');
+          var diffs = [];
+          var maxLen = Math.max(contentA.length, contentB.length);
+          for (var i = 0; i < maxLen; i++) {
+            var lineA = contentA[i] || '';
+            var lineB = contentB[i] || '';
+            if (lineA !== lineB) {
+              diffs.push({ line: i + 1, a: lineA, b: lineB });
+            }
+          }
+          return { differences: diffs, totalDiffs: diffs.length, linesA: contentA.length, linesB: contentB.length };
+        });
       },
       headFile: function (path, n) {
         var self = this;
@@ -10894,10 +11341,10 @@
             var html = data.content || data.body || '';
             // Client-side HTML strip: remove scripts, styles, then tags
             var text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-                          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                          .replace(/<[^>]+>/g, ' ')
-                          .replace(/\s{2,}/g, ' ')
-                          .trim();
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s{2,}/g, ' ')
+              .trim();
             return { text: text, url: url, chars: text.length, method: 'client-strip' };
           });
         });
@@ -13011,6 +13458,7 @@
     function showEndpoints() {
       addMessage('assistant',
         '**API Endpoints** \u2014 `' + State.backend.url + '`\n\n' +
+        '**Inference:**\n' +
         '`GET  /health` \u2014 Health check\n' +
         '`GET  /status` \u2014 Server status + stats\n' +
         '`GET  /models` \u2014 List all models (GGUF + Ollama + blobs)\n' +
@@ -13018,6 +13466,18 @@
         '`POST /api/generate` \u2014 Ollama-compatible (streaming)\n' +
         '`POST /v1/chat/completions` \u2014 OpenAI-compatible chat\n' +
         '`GET  /gui` \u2014 Serve this HTML interface\n\n' +
+        '**File Operations (50K file support):**\n' +
+        '`POST /api/read-file` \u2014 Read file content\n' +
+        '`POST /api/write-file` \u2014 Write/create file (up to 50MB)\n' +
+        '`POST /api/delete-file` \u2014 Delete file or empty dir\n' +
+        '`POST /api/rename-file` \u2014 Rename/move file\n' +
+        '`POST /api/copy-file` \u2014 Copy file to destination\n' +
+        '`POST /api/move-file` \u2014 Move file to destination\n' +
+        '`POST /api/mkdir` \u2014 Create directories recursively\n' +
+        '`POST /api/stat-file` \u2014 File metadata (size, dates, attrs)\n' +
+        '`POST /api/list-directory` \u2014 List dir contents (up to 50K entries)\n' +
+        '`POST /api/search-files` \u2014 Recursive text/pattern search\n' +
+        '`POST /api/tool` \u2014 Unified tool dispatcher\n\n' +
         '**curl example:**\n' +
         '```bash\ncurl -X POST ' + State.backend.url + '/ask \\\n' +
         '  -H "Content-Type: application/json" \\\n' +
@@ -13037,10 +13497,15 @@
     function handleFiles(fileList) {
       Array.from(fileList).forEach(function (file) {
         if (State.files.find(function (f) { return f.name === file.name; })) return;
+        // Enforce 50,000 file limit
+        if (State.files.length >= 50000) {
+          logDebug('\u26a0\ufe0f File limit reached (50,000 files). Remove files to attach more.', 'warn');
+          return;
+        }
         State.files.push(file);
         renderFile(file);
-        // Read text content for context
-        if (file.size < 1024 * 1024) {
+        // Read text content for context — raised limit to 10MB for full file editing support
+        if (file.size < 10 * 1024 * 1024) {
           State.filePendingReads++;
           var reader = new FileReader();
           reader.onload = function (e) {
@@ -13059,7 +13524,7 @@
           };
           reader.readAsText(file);
         } else {
-          logDebug('\u26a0\ufe0f ' + file.name + ' (' + formatBytes(file.size) + ') exceeds 1MB limit \u2014 content not loaded. Only filename will be sent as context.', 'warn');
+          logDebug('\u26a0\ufe0f ' + file.name + ' (' + formatBytes(file.size) + ') exceeds 10MB limit \u2014 content not loaded. Only filename will be sent as context.', 'warn');
         }
       });
       updateFileBadge();
@@ -13128,10 +13593,20 @@
       var badge = document.getElementById('fileBadge');
       var count = document.getElementById('fileCount');
       var ac = document.getElementById('attachCount');
-      ac.textContent = State.files.length;
-      if (State.files.length > 0) {
+      var n = State.files.length;
+      ac.textContent = n > 9999 ? Math.floor(n / 1000) + 'K' : n;
+      if (n > 0) {
         badge.style.display = 'flex';
-        count.textContent = State.files.length + ' file' + (State.files.length > 1 ? 's' : '');
+        var totalSize = 0;
+        Object.keys(State.fileContents).forEach(function (k) { totalSize += (State.fileContents[k] || '').length; });
+        var sizeStr = totalSize > 0 ? ' (' + formatBytes(totalSize) + ')' : '';
+        count.textContent = n.toLocaleString() + ' file' + (n > 1 ? 's' : '') + sizeStr;
+        if (n >= 50000) {
+          count.textContent += ' [LIMIT]';
+          count.style.color = 'var(--accent-warning, #f0ad4e)';
+        } else {
+          count.style.color = '';
+        }
       } else {
         badge.style.display = 'none';
       }
@@ -13328,14 +13803,18 @@
     }
 
     // --- Determine which URL to send CLI commands to ---
+    // /api/cli only exists on tool_server / Win32IDE (port 11435), NEVER on Ollama (11434)
     function getCliUrl() {
       // If beacon found a /api/cli endpoint, use that exact URL
       if (State.backend.hasCliEndpoint && State.backend._cliEndpointUrl) {
         return State.backend._cliEndpointUrl;
       }
-      // Otherwise use the active URL (respects directMode)
-      if (State.backend.online) return getActiveUrl();
-      return _ideServerUrl || 'http://localhost:11434';
+      // Prefer the IDE server URL (tool_server at 11435) — Ollama doesn't have /api/cli
+      if (_ideServerUrl) return _ideServerUrl;
+      if (_win32IdeUrl) return _win32IdeUrl;
+      // Last resort: proxy URL (never Ollama direct)
+      if (!State.backend.directMode && State.backend.online) return State.backend.url;
+      return 'http://localhost:11435';
     }
 
     // --- Render CLI output lines with color coding ---
@@ -13426,6 +13905,7 @@
           '  /bookmarks           \u2014 List browser bookmarks\n' +
           '  /bookmark <name> <u> \u2014 Add a bookmark\n' +
           '  /browser-close       \u2014 Close the browser panel\n' +
+          '  /model-sites         \u2014 Quick links to model websites\n' +
           '\u2500 Ghost & Beacon \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
           '  /ghost               \u2014 Ghost into Win32 IDE (RDP-style overlay)\n' +
           '  /ide                 \u2014 Open Win32 IDE in new window\n' +
@@ -14031,10 +14511,10 @@
             var buildCmd = CodexOps.buildCmd(buildTarget);
             addTerminalLine('\u2699 Codex Build: ' + buildTarget, 'system');
             addTerminalLine('  > ' + buildCmd, 'output');
-            // Attempt API build trigger if backend is online
-            if (State.backend.online && !State.backend.directMode) {
+            // Attempt API build trigger if CLI endpoint is available
+            if (State.backend.online && State.backend.hasCliEndpoint) {
               addTerminalLine('  Triggering remote build...', 'system');
-              fetch(getActiveUrl() + '/api/cli', {
+              fetch(getCliUrl() + '/api/cli', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ command: '!engine compile ' + buildTarget }),
                 signal: AbortSignal.timeout(30000)
@@ -14173,6 +14653,109 @@
           addTerminalLine('\u2718 No Win32 IDE found. Start RawrXD-Win32IDE.exe or use /ghost-wait.', 'error');
         }
         addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+        return;
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // WebView2 Browser Commands
+      // ══════════════════════════════════════════════════════════════
+
+      // /browse [url] — Open built-in browser (optional URL)
+      if (lower === '/browse' || lower === 'browse' || lower.indexOf('/browse ') === 0) {
+        var browseUrl = cmd.replace(/^\/?browse\s*/i, '').trim();
+        if (browseUrl) {
+          addTerminalLine('\uD83C\uDF10 Opening browser: ' + browseUrl, 'system');
+          showBrowserPanel(browseUrl);
+        } else {
+          addTerminalLine('\uD83C\uDF10 Opening browser home page...', 'system');
+          showBrowserPanel();
+        }
+        return;
+      }
+
+      // /web <query> — Web search from terminal
+      if (lower.indexOf('/web ') === 0 || lower.indexOf('web ') === 0) {
+        var query = cmd.replace(/^\/?web\s+/i, '').trim();
+        if (query) {
+          var searchUrl = State.browser.searchEngine + encodeURIComponent(query);
+          addTerminalLine('\uD83D\uDD0D Searching: ' + query, 'system');
+          showBrowserPanel(searchUrl);
+        } else {
+          addTerminalLine('\u26A0 Usage: /web <search query>', 'error');
+        }
+        return;
+      }
+
+      // /url <url> — Navigate browser to URL
+      if (lower.indexOf('/url ') === 0) {
+        var navUrl = cmd.replace(/^\/url\s+/i, '').trim();
+        if (navUrl) {
+          if (!/^https?:\/\//i.test(navUrl)) navUrl = 'https://' + navUrl;
+          addTerminalLine('\uD83C\uDF10 Navigating to: ' + navUrl, 'system');
+          if (!State.browser.active) showBrowserPanel(navUrl);
+          else browserNavigateTo(navUrl);
+        } else {
+          addTerminalLine('\u26A0 Usage: /url <url>', 'error');
+        }
+        return;
+      }
+
+      // /bookmarks — List browser bookmarks
+      if (lower === '/bookmarks' || lower === 'bookmarks') {
+        var bms = State.browser.bookmarks;
+        addTerminalLine('\u2500\u2500\u2500 Browser Bookmarks (' + bms.length + ') \u2500\u2500\u2500', 'output');
+        if (bms.length === 0) {
+          addTerminalLine('  No bookmarks. Use the \u2606 button in the browser to add bookmarks.', 'system');
+        } else {
+          bms.forEach(function (bm, i) {
+            addTerminalLine('  ' + (bm.icon || '\u2B50') + ' ' + bm.name, 'output');
+            addTerminalLine('    ' + bm.url, 'system');
+          });
+        }
+        addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+        return;
+      }
+
+      // /bookmark <name> <url> — Add a bookmark
+      if (lower.indexOf('/bookmark ') === 0) {
+        var bmParts = cmd.replace(/^\/bookmark\s+/i, '').trim().split(/\s+/);
+        if (bmParts.length >= 2) {
+          var bmUrl = bmParts[bmParts.length - 1];
+          var bmName = bmParts.slice(0, -1).join(' ');
+          if (!/^https?:\/\//i.test(bmUrl)) bmUrl = 'https://' + bmUrl;
+          State.browser.bookmarks.push({ name: bmName, url: bmUrl, icon: '\u2B50' });
+          _browserRenderBookmarks();
+          addTerminalLine('\u2B50 Bookmark added: ' + bmName + ' \u2192 ' + bmUrl, 'success');
+        } else {
+          addTerminalLine('\u26A0 Usage: /bookmark <name> <url>', 'error');
+        }
+        return;
+      }
+
+      // /browser-close — Close browser panel
+      if (lower === '/browser-close' || lower === '/browserclose') {
+        if (State.browser.active) {
+          closeBrowserPanel();
+          addTerminalLine('\uD83C\uDF10 Browser closed.', 'success');
+        } else {
+          addTerminalLine('Browser is not open.', 'system');
+        }
+        return;
+      }
+
+      // /models — Quick model website links
+      if (lower === '/model-sites' || lower === 'model-sites' || lower === '/modelsites') {
+        addTerminalLine('\u2500\u2500\u2500 Model Website Quick Links \u2500\u2500\u2500', 'output');
+        addTerminalLine('  \uD83E\uDD17 HuggingFace GGUF    /browse https://huggingface.co/models?sort=trending&search=gguf', 'output');
+        addTerminalLine('  \uD83E\uDD99 Ollama Library       /browse https://ollama.com/library', 'output');
+        addTerminalLine('  \uD83D\uDCE6 TheBloke Models      /browse https://huggingface.co/TheBloke', 'output');
+        addTerminalLine('  \uD83D\uDCE6 bartowski Models     /browse https://huggingface.co/bartowski', 'output');
+        addTerminalLine('  \uD83C\uDF10 OpenRouter           /browse https://openrouter.ai/models', 'output');
+        addTerminalLine('  \uD83C\uDFC6 LMSys Leaderboard    /browse https://huggingface.co/spaces/lmsys/chatbot-arena-leaderboard', 'output');
+        addTerminalLine('  \uD83D\uDCBB llama.cpp GitHub     /browse https://github.com/ggerganov/llama.cpp', 'output');
+        addTerminalLine('  \uD83D\uDCD6 Ollama Docs          /browse https://docs.ollama.com', 'output');
+        addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+        addTerminalLine('  Tip: Use /browse <url> or click a link above to open in the built-in browser.', 'system');
         return;
       }
 
@@ -15029,6 +15612,33 @@
           addTerminalLine('  write-file <p> <c> \u2014 Write file via tool API', 'system');
           addTerminalLine('  exec <command>   \u2014 Execute system command via tool', 'system');
           addTerminalLine('  git              \u2014 Git status via tool API', 'system');
+          addTerminalLine('', 'output');
+          addTerminalLine('Agentic File Editing Commands:', 'system');
+          addTerminalLine('  ls [dir]         \u2014 List directory (dir alias)', 'system');
+          addTerminalLine('  cat <file>       \u2014 Display full file with line numbers', 'system');
+          addTerminalLine('  head [n] <file>  \u2014 Show first N lines (default 20)', 'system');
+          addTerminalLine('  tail [n] <file>  \u2014 Show last N lines (default 20)', 'system');
+          addTerminalLine('  create <f> [txt] \u2014 Create new file (touch alias)', 'system');
+          addTerminalLine('  mkdir <path>     \u2014 Create directory', 'system');
+          addTerminalLine('  rm <file>        \u2014 Delete file (delete alias)', 'system');
+          addTerminalLine('  rmdir <path>     \u2014 Remove directory recursively', 'system');
+          addTerminalLine('  mv <src> <dst>   \u2014 Move/rename file', 'system');
+          addTerminalLine('  cp <src> <dst>   \u2014 Copy file', 'system');
+          addTerminalLine('  find <pat> [dir] \u2014 Search for files by pattern', 'system');
+          addTerminalLine('  grep <pat> [path]\u2014 Search text in files', 'system');
+          addTerminalLine('  diff <a> <b>     \u2014 Compare two files', 'system');
+          addTerminalLine('  patch <f> <s> <r>\u2014 Search & replace in file', 'system');
+          addTerminalLine('  write <f> <txt>  \u2014 Write content to file', 'system');
+          addTerminalLine('  append <f> <txt> \u2014 Append text to file', 'system');
+          addTerminalLine('  wc <file>        \u2014 Line/word/char/byte count', 'system');
+          addTerminalLine('  stat <file>      \u2014 File info (info alias)', 'system');
+          addTerminalLine('  tree [dir]       \u2014 Tree view of directory', 'system');
+          addTerminalLine('  edit <file>      \u2014 Open in File Editor panel', 'system');
+          addTerminalLine('  insert-line <f> <n> <txt> \u2014 Insert text at line N', 'system');
+          addTerminalLine('  delete-lines <f> <start> [end] \u2014 Delete lines', 'system');
+          addTerminalLine('  replace-lines <f> <s> <e> <txt> \u2014 Replace lines', 'system');
+          addTerminalLine('', 'output');
+          addTerminalLine('CLI/API Commands:', 'system');
           addTerminalLine('  analyze <file>   \u2014 CLI analyze command', 'system');
           addTerminalLine('  audit <file>     \u2014 Security audit via CLI', 'system');
           addTerminalLine('  optimize <file>  \u2014 Optimize via CLI', 'system');
@@ -16026,9 +16636,9 @@
               var buildCmd = CodexOps.buildCmd(buildTgt);
               addTerminalLine('\u2699 Codex Build: ' + buildTgt, 'system');
               addTerminalLine('  > ' + buildCmd, 'output');
-              if (State.backend.online && !State.backend.directMode) {
+              if (State.backend.online && State.backend.hasCliEndpoint) {
                 addTerminalLine('  Triggering remote build...', 'system');
-                fetch(getActiveUrl() + '/api/cli', {
+                fetch(getCliUrl() + '/api/cli', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ command: '!engine compile ' + buildTgt }),
                   signal: AbortSignal.timeout(30000)
@@ -16119,9 +16729,9 @@
               var peFile = args[2] || 'RawrXD-Win32IDE.exe';
               addTerminalLine('\u2500\u2500\u2500 PE Analysis: ' + peFile + ' \u2500\u2500\u2500', 'output');
               REState.history.push({ action: 'pe', target: peFile, time: Date.now() });
-              if (State.backend.online && !State.backend.directMode) {
+              if (State.backend.online && State.backend.hasCliEndpoint) {
                 addTerminalLine('  Querying backend...', 'system');
-                fetch(getActiveUrl() + '/api/cli', {
+                fetch(getCliUrl() + '/api/cli', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ command: '!engine dumpbin ' + peFile }),
                   signal: AbortSignal.timeout(15000)
@@ -16183,8 +16793,8 @@
               addTerminalLine('  Memory Scan:          queued', 'output');
               addTerminalLine('  GGUF Inspection:      queued', 'output');
               addTerminalLine('  Running full analysis suite...', 'system');
-              if (State.backend.online && !State.backend.directMode) {
-                fetch(getActiveUrl() + '/api/cli', {
+              if (State.backend.online && State.backend.hasCliEndpoint) {
+                fetch(getCliUrl() + '/api/cli', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ command: '!engine analyze ' + omegaFile }),
                   signal: AbortSignal.timeout(30000)
@@ -16233,8 +16843,8 @@
                 REState.history.push({ action: 'gguf', target: ggufModel, time: Date.now() });
                 addTerminalLine('\u2500\u2500\u2500 GGUF Inspector: ' + ggufModel + ' \u2500\u2500\u2500', 'output');
                 addTerminalLine('  Querying GGUF metadata...', 'system');
-                if (State.backend.online && !State.backend.directMode) {
-                  fetch(getActiveUrl() + '/api/cli', {
+                if (State.backend.online && State.backend.hasCliEndpoint) {
+                  fetch(getCliUrl() + '/api/cli', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command: '!engine analyze ' + ggufModel }),
                     signal: AbortSignal.timeout(15000)
@@ -16438,7 +17048,8 @@
             var toolArgs = {};
             if (!toolName) {
               addTerminalLine('  Usage: tool <name> [json-args]', 'error');
-              addTerminalLine('  Tools: read_file, write_file, list_directory, execute_command, git_status', 'system');
+              addTerminalLine('  Tools: read_file, write_file, list_directory, delete_file, rename_file,', 'system');
+              addTerminalLine('         copy_file, move_file, mkdir, stat_file, search_files, execute_command, git_status', 'system');
               return;
             }
             if (args[2]) {
@@ -16729,6 +17340,282 @@
               output.split('\n').slice(0, 30).forEach(function (line) {
                 addTerminalLine('  ' + line, 'output');
               });
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        // ── File Management Terminal Commands (50K file support) ──────────────
+        case 'ls': case 'dir':
+          (async function () {
+            var dirPath = rest || '.';
+            addTerminalLine('  Listing: ' + dirPath, 'system');
+            try {
+              var data = await EngineAPI.listDir(dirPath, 0, 500);
+              var entries = data.entries || [];
+              entries.forEach(function (entry) {
+                var icon = entry.type === 'dir' ? '\uD83D\uDCC1 ' : '\uD83D\uDCC4 ';
+                var sizeStr = entry.type === 'dir' ? '<DIR>' : (entry.size || 0) + 'B';
+                addTerminalLine('  ' + icon + entry.name.padEnd(40) + ' ' + sizeStr, 'output');
+              });
+              addTerminalLine('  Total: ' + (data.total || entries.length) + ' entries', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'cat': case 'type':
+          (async function () {
+            var filePath = rest || '';
+            if (!filePath) { addTerminalLine('  Usage: cat <filepath>', 'error'); return; }
+            addTerminalLine('  \u2500 ' + filePath + ':', 'system');
+            try {
+              var data = await EngineAPI.readFileViaApi(filePath);
+              var content = data.content || '';
+              var lines = content.split('\n');
+              lines.forEach(function (line, idx) {
+                addTerminalLine('  ' + String(idx + 1).padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500 ' + lines.length + ' lines, ' + (data.size || content.length) + ' bytes', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'mkdir':
+          (async function () {
+            var dirPath = rest || '';
+            if (!dirPath) { addTerminalLine('  Usage: mkdir <path>', 'error'); return; }
+            try {
+              var data = await EngineAPI.mkDir(dirPath);
+              addTerminalLine('  \u2705 Directory created: ' + (data.path || dirPath), 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'touch': case 'create':
+          (async function () {
+            var filePath = rest || '';
+            if (!filePath) { addTerminalLine('  Usage: touch <filepath>', 'error'); return; }
+            try {
+              var data = await EngineAPI.createFile(filePath, '');
+              addTerminalLine('  \u2705 Created: ' + (data.path || filePath), 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'rm': case 'del': case 'delete':
+          (async function () {
+            var filePath = rest || '';
+            if (!filePath) { addTerminalLine('  Usage: rm <filepath>', 'error'); return; }
+            addTerminalLine('  Deleting: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.deleteFile(filePath, true);
+              addTerminalLine('  \u2705 ' + (data.message || 'Deleted'), 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'mv': case 'move': case 'rename':
+          (async function () {
+            var src = args[1] || '';
+            var dst = args[2] || '';
+            if (!src || !dst) { addTerminalLine('  Usage: mv <source> <destination>', 'error'); return; }
+            addTerminalLine('  Moving: ' + src + ' \u2192 ' + dst, 'system');
+            try {
+              var data = await EngineAPI.moveFile(src, dst);
+              addTerminalLine('  \u2705 ' + (data.message || 'Moved'), 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'cp': case 'copy':
+          (async function () {
+            var src = args[1] || '';
+            var dst = args[2] || '';
+            if (!src || !dst) { addTerminalLine('  Usage: cp <source> <destination>', 'error'); return; }
+            addTerminalLine('  Copying: ' + src + ' \u2192 ' + dst, 'system');
+            try {
+              var data = await EngineAPI.copyFile(src, dst);
+              addTerminalLine('  \u2705 ' + (data.message || 'Copied') + ' (' + (data.size || 0) + ' bytes)', 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'find': case 'search':
+          (async function () {
+            var pattern = args[1] || '*';
+            var searchDir = args[2] || '.';
+            addTerminalLine('  Searching: ' + pattern + ' in ' + searchDir, 'system');
+            try {
+              var data = await EngineAPI.searchFiles(pattern, searchDir, '', 200);
+              var results = data.results || [];
+              results.forEach(function (r) {
+                addTerminalLine('  \uD83D\uDCC4 ' + r.path, 'output');
+              });
+              addTerminalLine('  Found: ' + (data.total || results.length) + ' matches', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'grep': case 'findstr':
+          (async function () {
+            var query = args[1] || '';
+            var searchDir = args[2] || '.';
+            if (!query) { addTerminalLine('  Usage: grep <text> [directory]', 'error'); return; }
+            addTerminalLine('  Searching for: "' + query + '" in ' + searchDir, 'system');
+            try {
+              var data = await EngineAPI.grepInFiles(query, searchDir, 200);
+              var results = data.results || [];
+              results.forEach(function (r) {
+                var loc = r.path + (r.line ? ':' + r.line : '');
+                addTerminalLine('  ' + loc + (r.text ? '  ' + r.text.trim() : ''), 'output');
+              });
+              addTerminalLine('  Found: ' + (data.total || results.length) + ' matches', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'head':
+          (async function () {
+            var filePath = args[1] || '';
+            var n = parseInt(args[2]) || 20;
+            if (!filePath) { addTerminalLine('  Usage: head <filepath> [lines]', 'error'); return; }
+            try {
+              var data = await EngineAPI.headFile(filePath, n);
+              var output = data.output || '';
+              output.split('\n').forEach(function (line, idx) {
+                addTerminalLine('  ' + String(idx + 1).padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500 First ' + (data.lineCount || n) + ' lines', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'tail':
+          (async function () {
+            var filePath = args[1] || '';
+            var n = parseInt(args[2]) || 20;
+            if (!filePath) { addTerminalLine('  Usage: tail <filepath> [lines]', 'error'); return; }
+            try {
+              var data = await EngineAPI.tailFile(filePath, n);
+              var output = data.output || '';
+              var startLine = (data.totalLines || 0) - (data.lineCount || 0) + 1;
+              output.split('\n').forEach(function (line, idx) {
+                addTerminalLine('  ' + String(startLine + idx).padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500 Last ' + (data.lineCount || n) + ' of ' + (data.totalLines || '?') + ' lines', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'wc': case 'wordcount':
+          (async function () {
+            var filePath = rest || '';
+            if (!filePath) { addTerminalLine('  Usage: wc <filepath>', 'error'); return; }
+            try {
+              var data = await EngineAPI.wordCount(filePath);
+              addTerminalLine('  Lines:  ' + data.lines, 'output');
+              addTerminalLine('  Words:  ' + data.words, 'output');
+              addTerminalLine('  Chars:  ' + data.chars, 'output');
+              addTerminalLine('  Bytes:  ' + data.bytes, 'output');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'diff':
+          (async function () {
+            var pathA = args[1] || '';
+            var pathB = args[2] || '';
+            if (!pathA || !pathB) { addTerminalLine('  Usage: diff <fileA> <fileB>', 'error'); return; }
+            addTerminalLine('  Comparing: ' + pathA + ' vs ' + pathB, 'system');
+            try {
+              var data = await EngineAPI.diffFiles(pathA, pathB);
+              var diffs = data.differences || [];
+              if (diffs.length === 0) {
+                addTerminalLine('  \u2705 Files are identical', 'success');
+              } else {
+                diffs.slice(0, 50).forEach(function (d) {
+                  addTerminalLine('  L' + d.line + ':', 'system');
+                  addTerminalLine('  - ' + d.a, 'error');
+                  addTerminalLine('  + ' + d.b, 'success');
+                });
+                if (diffs.length > 50) addTerminalLine('  ... ' + (diffs.length - 50) + ' more differences', 'system');
+                addTerminalLine('  Total: ' + data.totalDiffs + ' differences', 'system');
+              }
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'tree':
+          (async function () {
+            var dirPath = rest || '.';
+            addTerminalLine('  Tree: ' + dirPath, 'system');
+            try {
+              var data = await EngineAPI.listDir(dirPath, 3, 1000);
+              var entries = data.entries || [];
+              var fileCount = 0;
+              var dirCount = 0;
+              entries.forEach(function (entry) {
+                var relPath = entry.path.replace(dirPath, '').replace(/^[\\/]/, '');
+                var depth = relPath.split(/[\\/]/).length - 1;
+                var indent = '  ' + '\u2502 '.repeat(depth);
+                var prefix = entry.type === 'dir' ? '\uD83D\uDCC1 ' : '\uD83D\uDCC4 ';
+                addTerminalLine(indent + prefix + entry.name, 'output');
+                if (entry.type === 'dir') dirCount++; else fileCount++;
+              });
+              addTerminalLine('  \u2500 ' + dirCount + ' directories, ' + fileCount + ' files', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'stat': case 'info':
+          (async function () {
+            var filePath = rest || '';
+            if (!filePath) { addTerminalLine('  Usage: stat <filepath>', 'error'); return; }
+            try {
+              var data = await EngineAPI.statFile(filePath);
+              if (!data.exists) {
+                addTerminalLine('  \u274C Path does not exist: ' + filePath, 'error');
+              } else {
+                addTerminalLine('  Name:       ' + (data.name || 'N/A'), 'output');
+                addTerminalLine('  Path:       ' + (data.path || filePath), 'output');
+                addTerminalLine('  Type:       ' + (data.isDir ? 'Directory' : 'File'), 'output');
+                addTerminalLine('  Size:       ' + (data.size || 0) + ' bytes', 'output');
+                addTerminalLine('  Read-Only:  ' + (data.readOnly ? 'Yes' : 'No'), 'output');
+                addTerminalLine('  Hidden:     ' + (data.hidden ? 'Yes' : 'No'), 'output');
+                if (data.modifiedMs) addTerminalLine('  Modified:   ' + new Date(data.modifiedMs).toLocaleString(), 'output');
+                if (data.createdMs) addTerminalLine('  Created:    ' + new Date(data.createdMs).toLocaleString(), 'output');
+              }
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'write': case 'echo':
+          (async function () {
+            var filePath = args[1] || '';
+            var content = args.slice(2).join(' ') || '';
+            if (!filePath) { addTerminalLine('  Usage: write <filepath> <content>', 'error'); return; }
+            addTerminalLine('  Writing: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.writeFileDirect(filePath, content, true);
+              addTerminalLine('  \u2705 ' + (data.message || 'Written') + ' (' + (data.size || 0) + ' bytes)', 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'patch':
+          (async function () {
+            // patch <file> <search> <replace>
+            var filePath = args[1] || '';
+            var searchStr = args[2] || '';
+            var replaceStr = args.slice(3).join(' ') || '';
+            if (!filePath || !searchStr) { addTerminalLine('  Usage: patch <filepath> <search> <replace>', 'error'); return; }
+            addTerminalLine('  Patching: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.patchFile(filePath, searchStr, replaceStr);
+              if (data.success) {
+                addTerminalLine('  \u2705 ' + data.message, 'success');
+              } else {
+                addTerminalLine('  \u274C ' + (data.error || 'Pattern not found'), 'error');
+              }
             } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
           })();
           break;
@@ -17110,6 +17997,10 @@
                 }
               }
               refreshExtensionsList();
+            } catch (e) { addTerminalLine('  \u274c Error: ' + e.message, 'error'); }
+          })();
+          break;
+
         case 'browse': case 'web': case 'browser':
           (function () {
             var sub = args[1] || '';
@@ -17517,8 +18408,39 @@
 
     function toggleTerminal() {
       State.terminal.minimized = !State.terminal.minimized;
-      document.getElementById('terminalPanel').classList.toggle('minimized', State.terminal.minimized);
-      document.getElementById('termToggleBtn').textContent = State.terminal.minimized ? '\u2B06' : '\u2B07';
+      var panel = document.getElementById('terminalPanel');
+      var container = document.querySelector('.ide-container');
+      if (panel) panel.classList.toggle('minimized', State.terminal.minimized);
+      // Also support full hide via header button
+      if (panel) panel.classList.toggle('hidden', State.terminal.hidden || false);
+      if (container) container.classList.toggle('terminal-hidden', State.terminal.hidden || false);
+      var btn = document.getElementById('termToggleBtn');
+      if (btn) btn.textContent = State.terminal.minimized ? '\u2B06' : '\u2B07';
+      var headerBtn = document.getElementById('headerTermToggle');
+      if (headerBtn) headerBtn.style.color = State.terminal.minimized ? 'var(--accent-red)' : '';
+    }
+
+    function toggleTerminalFull() {
+      // Full hide/show toggle from header
+      if (!State.terminal.hidden) State.terminal.hidden = false;
+      State.terminal.hidden = !State.terminal.hidden;
+      var panel = document.getElementById('terminalPanel');
+      var container = document.querySelector('.ide-container');
+      if (panel) panel.classList.toggle('hidden', State.terminal.hidden);
+      if (container) container.classList.toggle('terminal-hidden', State.terminal.hidden);
+      var headerBtn = document.getElementById('headerTermToggle');
+      if (headerBtn) headerBtn.style.color = State.terminal.hidden ? 'var(--accent-red)' : '';
+    }
+
+    function toggleRightbar() {
+      var rb = document.querySelector('.rightbar');
+      var container = document.querySelector('.ide-container');
+      if (!rb || !container) return;
+      var isHidden = rb.classList.contains('collapsed');
+      rb.classList.toggle('collapsed', !isHidden);
+      container.classList.toggle('rightbar-hidden', !isHidden);
+      var headerBtn = document.getElementById('headerRightbarToggle');
+      if (headerBtn) headerBtn.style.color = !isHidden ? 'var(--accent-red)' : '';
     }
 
     // ======================================================================
@@ -18171,9 +19093,9 @@
       var target = file.value.trim() || 'build\\bin\\RawrXD-Win32IDE.exe';
       REState.history.push({ action: 'pe', target: target, time: Date.now() });
 
-      if (State.backend.online && !State.backend.directMode) {
+      if (State.backend.online && State.backend.hasCliEndpoint) {
         output.textContent = 'Querying backend for PE analysis of ' + target + '...';
-        fetch(getActiveUrl() + '/api/cli', {
+        fetch(getCliUrl() + '/api/cli', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: '!engine dumpbin ' + target }),
           signal: AbortSignal.timeout(15000)
@@ -18210,9 +19132,9 @@
       var len = (lenEl && lenEl.value.trim()) || '256';
       REState.history.push({ action: 'disasm', target: addr, time: Date.now() });
 
-      if (State.backend.online && !State.backend.directMode) {
+      if (State.backend.online && State.backend.hasCliEndpoint) {
         output.textContent = 'Querying disassembly at ' + addr + ' (len=' + len + ')...';
-        fetch(getActiveUrl() + '/api/cli', {
+        fetch(getCliUrl() + '/api/cli', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: '!engine disasm ' + addr + ' ' + len }),
           signal: AbortSignal.timeout(15000)
@@ -18238,9 +19160,9 @@
       if (!output) return;
       REState.history.push({ action: 'asm-load', target: asmFile, time: Date.now() });
 
-      if (State.backend.online && !State.backend.directMode) {
+      if (State.backend.online && State.backend.hasCliEndpoint) {
         output.textContent = 'Loading ' + asmFile + '...';
-        fetch(getActiveUrl() + '/api/cli', {
+        fetch(getCliUrl() + '/api/cli', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: '!engine analyze src/asm/' + asmFile }),
           signal: AbortSignal.timeout(15000)
@@ -18275,9 +19197,9 @@
       }
       REState.history.push({ action: 'gguf', target: model, time: Date.now() });
 
-      if (State.backend.online && !State.backend.directMode) {
+      if (State.backend.online && State.backend.hasCliEndpoint) {
         output.textContent = 'Inspecting GGUF model: ' + model + '...';
-        fetch(getActiveUrl() + '/api/cli', {
+        fetch(getCliUrl() + '/api/cli', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: '!engine analyze ' + model }),
           signal: AbortSignal.timeout(15000)
@@ -18385,9 +19307,9 @@
       }
       REState.history.push({ action: 'symbols', target: pdbFile, time: Date.now() });
 
-      if (State.backend.online && !State.backend.directMode) {
+      if (State.backend.online && State.backend.hasCliEndpoint) {
         output.textContent = 'Resolving symbols from ' + pdbFile + '...';
-        fetch(getActiveUrl() + '/api/cli', {
+        fetch(getCliUrl() + '/api/cli', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: '!engine analyze ' + pdbFile }),
           signal: AbortSignal.timeout(15000)
@@ -18451,8 +19373,8 @@
                 output.textContent += '  All ' + steps.length + ' modules passed.\n';
 
                 // Fire backend analysis if available
-                if (State.backend.online && !State.backend.directMode) {
-                  fetch(getActiveUrl() + '/api/cli', {
+                if (State.backend.online && State.backend.hasCliEndpoint) {
+                  fetch(getCliUrl() + '/api/cli', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command: '!engine analyze ' + target }),
                     signal: AbortSignal.timeout(30000)
@@ -20319,6 +21241,640 @@
     // enable/disable, extension host lifecycle, and local VSIX loading.
     // All operations route through EngineAPI to the Ollama-direct backend.
     // ======================================================================
+    // ═══════════════════════════════════════════════════════════════
+    // AGENTIC FILE EDITOR — Full JS Functions (Phase 40)
+    // ═══════════════════════════════════════════════════════════════
+
+    // --- File Editor State ---
+    var FileEditor = {
+      openTabs: [],       // [{path, content, originalContent, modified, cursor}]
+      activeIdx: -1,
+      history: [],        // [{op, path, detail, time}]
+      maxHistory: 200,
+      undoStack: [],      // [{path, content}]
+      redoStack: [],
+      wordWrap: false,
+      findVisible: false
+    };
+
+    function showFileEditorPanel() {
+      document.getElementById('fileEditorPanel').style.display = 'flex';
+    }
+
+    function closeFileEditorPanel() {
+      document.getElementById('fileEditorPanel').style.display = 'none';
+    }
+
+    // --- Log file operation to history ---
+    function feLogHistory(op, detail) {
+      FileEditor.history.unshift({
+        op: op,
+        detail: detail,
+        time: new Date().toLocaleTimeString()
+      });
+      if (FileEditor.history.length > FileEditor.maxHistory) {
+        FileEditor.history.length = FileEditor.maxHistory;
+      }
+    }
+
+    // --- Refresh file tree ---
+    async function feRefreshTree() {
+      var rootPath = document.getElementById('feTreePath').value || '.';
+      var container = document.getElementById('feTreeContent');
+      container.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:10px;">Loading...</div>';
+      try {
+        var data = await EngineAPI.toolListDir(rootPath);
+        var output = data.content || data.output || data.result || '';
+        var entries = output.split('\n').filter(function (e) { return e.trim(); }).sort();
+        if (entries.length === 0) {
+          container.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:10px;">Empty directory</div>';
+          return;
+        }
+        var html = '';
+        entries.forEach(function (entry) {
+          var name = entry.trim();
+          var isDir = name.endsWith('/') || name.endsWith('\\');
+          var fullPath = rootPath === '.' ? name : rootPath.replace(/[\\/]$/, '') + '/' + name;
+          if (isDir) {
+            html += '<div class="fe-tree-item fe-tree-dir" onclick="feTreeExpandDir(this, \'' + _feEsc(fullPath) + '\')" style="padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+              '<span style="color:var(--accent-yellow);font-size:10px;">&#x1F4C1;</span>' +
+              '<span style="color:var(--text-primary);font-size:11px;">' + _feHtml(name) + '</span>' +
+              '</div>' +
+              '<div class="fe-tree-children" style="display:none;padding-left:12px;"></div>';
+          } else {
+            html += '<div class="fe-tree-item fe-tree-file" onclick="feOpenFile(\'' + _feEsc(fullPath) + '\')" style="padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+              '<span style="color:var(--text-muted);font-size:10px;">' + _feFileIcon(name) + '</span>' +
+              '<span style="color:var(--text-primary);font-size:11px;">' + _feHtml(name) + '</span>' +
+              '</div>';
+          }
+        });
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = '<div style="padding:8px;color:#ff6b6b;font-size:10px;">Error: ' + _feHtml(e.message) + '</div>';
+      }
+    }
+
+    // --- Expand directory in tree ---
+    async function feTreeExpandDir(el, path) {
+      var childrenDiv = el.nextElementSibling;
+      if (!childrenDiv) return;
+      if (childrenDiv.style.display !== 'none') {
+        childrenDiv.style.display = 'none';
+        el.querySelector('span').textContent = '\uD83D\uDCC1';
+        return;
+      }
+      childrenDiv.style.display = 'block';
+      el.querySelector('span').textContent = '\uD83D\uDCC2';
+      childrenDiv.innerHTML = '<div style="padding:3px 8px;color:var(--text-muted);font-size:10px;">Loading...</div>';
+      try {
+        var data = await EngineAPI.toolListDir(path);
+        var output = data.content || data.output || data.result || '';
+        var entries = output.split('\n').filter(function (e) { return e.trim(); }).sort();
+        if (entries.length === 0) {
+          childrenDiv.innerHTML = '<div style="padding:3px 8px;color:var(--text-muted);font-size:10px;">(empty)</div>';
+          return;
+        }
+        var html = '';
+        entries.forEach(function (entry) {
+          var name = entry.trim();
+          var isDir = name.endsWith('/') || name.endsWith('\\');
+          var fullPath = path.replace(/[\\/]$/, '') + '/' + name;
+          if (isDir) {
+            html += '<div class="fe-tree-item fe-tree-dir" onclick="feTreeExpandDir(this, \'' + _feEsc(fullPath) + '\')" style="padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+              '<span style="color:var(--accent-yellow);font-size:10px;">&#x1F4C1;</span>' +
+              '<span style="color:var(--text-primary);font-size:11px;">' + _feHtml(name) + '</span>' +
+              '</div>' +
+              '<div class="fe-tree-children" style="display:none;padding-left:12px;"></div>';
+          } else {
+            html += '<div class="fe-tree-item fe-tree-file" onclick="feOpenFile(\'' + _feEsc(fullPath) + '\')" style="padding:3px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+              '<span style="color:var(--text-muted);font-size:10px;">' + _feFileIcon(name) + '</span>' +
+              '<span style="color:var(--text-primary);font-size:11px;">' + _feHtml(name) + '</span>' +
+              '</div>';
+          }
+        });
+        childrenDiv.innerHTML = html;
+      } catch (e) {
+        childrenDiv.innerHTML = '<div style="padding:3px 8px;color:#ff6b6b;font-size:10px;">Error: ' + _feHtml(e.message) + '</div>';
+      }
+    }
+
+    // --- Open file in editor ---
+    async function feOpenFile(path) {
+      // Check if already open
+      var idx = FileEditor.openTabs.findIndex(function (t) { return t.path === path; });
+      if (idx >= 0) {
+        feActivateTab(idx);
+        return;
+      }
+      // Read the file
+      try {
+        var data = await EngineAPI.toolReadFile(path);
+        var content = data.content || data.output || data.result || '';
+        FileEditor.openTabs.push({
+          path: path,
+          content: content,
+          originalContent: content,
+          modified: false,
+          cursor: { line: 1, col: 1 }
+        });
+        feActivateTab(FileEditor.openTabs.length - 1);
+        feLogHistory('open', path);
+      } catch (e) {
+        var statusEl = document.getElementById('feStatusInfo');
+        if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    // --- Activate tab ---
+    function feActivateTab(idx) {
+      if (idx < 0 || idx >= FileEditor.openTabs.length) return;
+      // Save current editor content to previous tab
+      if (FileEditor.activeIdx >= 0 && FileEditor.activeIdx < FileEditor.openTabs.length) {
+        var area = document.getElementById('feEditorArea');
+        if (area) FileEditor.openTabs[FileEditor.activeIdx].content = area.value;
+      }
+      FileEditor.activeIdx = idx;
+      var tab = FileEditor.openTabs[idx];
+      var area = document.getElementById('feEditorArea');
+      if (area) area.value = tab.content;
+      feUpdateLineNumbers();
+      feUpdateTabBar();
+      feUpdateStatusBar();
+      // Hide diff pane, show editor
+      document.getElementById('feDiffPane').style.display = 'none';
+      area.parentElement.style.display = 'flex';
+    }
+
+    // --- Update tab bar ---
+    function feUpdateTabBar() {
+      var bar = document.getElementById('feTabBar');
+      if (!bar) return;
+      if (FileEditor.openTabs.length === 0) {
+        bar.innerHTML = '<div style="padding:6px 12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">No files open</div>';
+        return;
+      }
+      var html = '';
+      FileEditor.openTabs.forEach(function (tab, i) {
+        var name = tab.path.split('/').pop().split('\\').pop();
+        var active = i === FileEditor.activeIdx;
+        var mod = tab.modified ? ' \u25CF' : '';
+        html += '<div onclick="feActivateTab(' + i + ')" style="padding:4px 10px;font-size:10px;font-family:var(--font-mono);cursor:pointer;display:flex;align-items:center;gap:4px;border-right:1px solid var(--border);' +
+          (active ? 'background:rgba(var(--accent-rgb,78,201,176),0.15);color:var(--accent);' : 'color:var(--text-muted);') + '">' +
+          '<span>' + _feHtml(name) + mod + '</span>' +
+          '<span onclick="event.stopPropagation();feCloseTab(' + i + ')" style="cursor:pointer;opacity:0.6;font-size:12px;margin-left:4px;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">&times;</span>' +
+          '</div>';
+      });
+      bar.innerHTML = html;
+    }
+
+    // --- Close tab ---
+    function feCloseTab(idx) {
+      if (idx < 0 || idx >= FileEditor.openTabs.length) return;
+      var tab = FileEditor.openTabs[idx];
+      if (tab.modified) {
+        if (!confirm('File "' + tab.path + '" has unsaved changes. Close anyway?')) return;
+      }
+      FileEditor.openTabs.splice(idx, 1);
+      if (FileEditor.activeIdx >= FileEditor.openTabs.length) {
+        FileEditor.activeIdx = FileEditor.openTabs.length - 1;
+      }
+      if (FileEditor.activeIdx >= 0) {
+        feActivateTab(FileEditor.activeIdx);
+      } else {
+        document.getElementById('feEditorArea').value = '';
+        document.getElementById('feLineNumbers').textContent = '';
+        feUpdateTabBar();
+        feUpdateStatusBar();
+      }
+    }
+
+    // --- Save file ---
+    async function feSaveFile() {
+      if (FileEditor.activeIdx < 0) return;
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      var area = document.getElementById('feEditorArea');
+      tab.content = area.value;
+      try {
+        await EngineAPI.toolWriteFile(tab.path, tab.content);
+        tab.originalContent = tab.content;
+        tab.modified = false;
+        feUpdateTabBar();
+        feUpdateStatusBar();
+        document.getElementById('feStatusInfo').textContent = '\u2705 Saved: ' + tab.path;
+        feLogHistory('save', tab.path);
+      } catch (e) {
+        document.getElementById('feStatusInfo').textContent = '\u274C Save failed: ' + e.message;
+      }
+    }
+
+    // --- Revert file ---
+    async function feRevertFile() {
+      if (FileEditor.activeIdx < 0) return;
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      try {
+        var data = await EngineAPI.toolReadFile(tab.path);
+        var content = data.content || data.output || data.result || '';
+        tab.content = content;
+        tab.originalContent = content;
+        tab.modified = false;
+        document.getElementById('feEditorArea').value = content;
+        feUpdateLineNumbers();
+        feUpdateTabBar();
+        feUpdateStatusBar();
+        document.getElementById('feStatusInfo').textContent = '\u21A9 Reverted: ' + tab.path;
+        feLogHistory('revert', tab.path);
+      } catch (e) {
+        document.getElementById('feStatusInfo').textContent = '\u274C Revert failed: ' + e.message;
+      }
+    }
+
+    // --- Undo/Redo ---
+    function feUndo() {
+      if (FileEditor.activeIdx < 0) return;
+      var area = document.getElementById('feEditorArea');
+      FileEditor.redoStack.push(area.value);
+      document.execCommand('undo');
+    }
+
+    function feRedo() {
+      if (FileEditor.activeIdx < 0) return;
+      document.execCommand('redo');
+    }
+
+    // --- Editor input handler ---
+    function feOnEditorInput() {
+      if (FileEditor.activeIdx < 0) return;
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      var area = document.getElementById('feEditorArea');
+      tab.content = area.value;
+      tab.modified = tab.content !== tab.originalContent;
+      feUpdateLineNumbers();
+      feUpdateStatusBar();
+      feUpdateTabBar();
+    }
+
+    // --- Editor scroll sync ---
+    function feOnEditorScroll() {
+      var area = document.getElementById('feEditorArea');
+      var lineNums = document.getElementById('feLineNumbers');
+      lineNums.scrollTop = area.scrollTop;
+    }
+
+    // --- Editor keydown handler (Tab support, Ctrl+S) ---
+    function feOnEditorKeydown(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var area = document.getElementById('feEditorArea');
+        var start = area.selectionStart;
+        var end = area.selectionEnd;
+        area.value = area.value.substring(0, start) + '    ' + area.value.substring(end);
+        area.selectionStart = area.selectionEnd = start + 4;
+        feOnEditorInput();
+      }
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        feSaveFile();
+      }
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        feFindReplace();
+      }
+      if (e.ctrlKey && e.key === 'g') {
+        e.preventDefault();
+        feGoToLine();
+      }
+    }
+
+    // --- Update line numbers ---
+    function feUpdateLineNumbers() {
+      var area = document.getElementById('feEditorArea');
+      var lineNums = document.getElementById('feLineNumbers');
+      var lines = (area.value || '').split('\n');
+      var nums = '';
+      for (var i = 1; i <= lines.length; i++) {
+        nums += i + '\n';
+      }
+      lineNums.textContent = nums;
+    }
+
+    // --- Update status bar ---
+    function feUpdateStatusBar() {
+      if (FileEditor.activeIdx < 0) {
+        document.getElementById('feFilePath').textContent = 'No file';
+        document.getElementById('feLineCol').textContent = 'Ln 1, Col 1';
+        document.getElementById('feLineCount').textContent = '0 lines';
+        document.getElementById('feModified').textContent = 'Saved';
+        document.getElementById('feModified').style.color = 'var(--accent-green)';
+        return;
+      }
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      var area = document.getElementById('feEditorArea');
+      var pos = area.selectionStart || 0;
+      var textBefore = area.value.substring(0, pos);
+      var line = textBefore.split('\n').length;
+      var col = pos - textBefore.lastIndexOf('\n');
+      var totalLines = area.value.split('\n').length;
+      document.getElementById('feFilePath').textContent = tab.path;
+      document.getElementById('feLineCol').textContent = 'Ln ' + line + ', Col ' + col;
+      document.getElementById('feLineCount').textContent = totalLines + ' lines';
+      document.getElementById('feModified').textContent = tab.modified ? '\u25CF Modified' : 'Saved';
+      document.getElementById('feModified').style.color = tab.modified ? 'var(--accent-yellow)' : 'var(--accent-green)';
+    }
+
+    // --- New file dialog ---
+    function feNewFile() {
+      var path = prompt('Enter new file path:');
+      if (!path) return;
+      (async function () {
+        try {
+          await EngineAPI.createFile(path, '');
+          await feOpenFile(path);
+          feLogHistory('create', path);
+          document.getElementById('feStatusInfo').textContent = '\u2705 Created: ' + path;
+        } catch (e) {
+          document.getElementById('feStatusInfo').textContent = '\u274C Create failed: ' + e.message;
+        }
+      })();
+    }
+
+    // --- Rename active file ---
+    function feRenameActive() {
+      if (FileEditor.activeIdx < 0) return;
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      var newPath = prompt('Rename to:', tab.path);
+      if (!newPath || newPath === tab.path) return;
+      (async function () {
+        try {
+          if (tab.modified) await EngineAPI.toolWriteFile(tab.path, tab.content);
+          await EngineAPI.renameFile(tab.path, newPath);
+          feLogHistory('rename', tab.path + ' → ' + newPath);
+          tab.path = newPath;
+          feUpdateTabBar();
+          feUpdateStatusBar();
+          document.getElementById('feStatusInfo').textContent = '\u2705 Renamed to: ' + newPath;
+        } catch (e) {
+          document.getElementById('feStatusInfo').textContent = '\u274C Rename failed: ' + e.message;
+        }
+      })();
+    }
+
+    // --- Delete active file ---
+    function feDeleteActive() {
+      if (FileEditor.activeIdx < 0) return;
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      if (!confirm('Delete "' + tab.path + '"? This cannot be undone.')) return;
+      (async function () {
+        try {
+          await EngineAPI.deleteFile(tab.path);
+          feLogHistory('delete', tab.path);
+          feCloseTab(FileEditor.activeIdx);
+          document.getElementById('feStatusInfo').textContent = '\u2705 Deleted: ' + tab.path;
+        } catch (e) {
+          document.getElementById('feStatusInfo').textContent = '\u274C Delete failed: ' + e.message;
+        }
+      })();
+    }
+
+    // --- Find/Replace bar ---
+    function feFindReplace() {
+      var bar = document.getElementById('feFindBar');
+      var visible = bar.style.display !== 'none';
+      bar.style.display = visible ? 'none' : 'flex';
+      if (!visible) document.getElementById('feFindInput').focus();
+    }
+
+    function feDoFind() {
+      var area = document.getElementById('feEditorArea');
+      var pattern = document.getElementById('feFindInput').value;
+      var useRegex = document.getElementById('feFindRegex').checked;
+      var matchCase = document.getElementById('feFindCase').checked;
+      if (!pattern) return;
+      var text = area.value;
+      var flags = matchCase ? 'g' : 'gi';
+      var regex;
+      try {
+        regex = useRegex ? new RegExp(pattern, flags) : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+      } catch (e) {
+        document.getElementById('feFindCount').textContent = 'Invalid regex';
+        return;
+      }
+      var matches = text.match(regex);
+      var count = matches ? matches.length : 0;
+      document.getElementById('feFindCount').textContent = count + ' match' + (count !== 1 ? 'es' : '');
+      // Highlight first match
+      if (count > 0) {
+        var idx = useRegex ? text.search(regex) : (matchCase ? text.indexOf(pattern) : text.toLowerCase().indexOf(pattern.toLowerCase()));
+        if (idx >= 0) {
+          area.focus();
+          area.setSelectionRange(idx, idx + (matches ? matches[0].length : pattern.length));
+        }
+      }
+    }
+
+    function feDoReplace() {
+      var area = document.getElementById('feEditorArea');
+      var find = document.getElementById('feFindInput').value;
+      var replace = document.getElementById('feReplaceInput').value;
+      if (!find) return;
+      var start = area.selectionStart;
+      var end = area.selectionEnd;
+      var selected = area.value.substring(start, end);
+      var matchCase = document.getElementById('feFindCase').checked;
+      var matches = matchCase ? selected === find : selected.toLowerCase() === find.toLowerCase();
+      if (matches) {
+        area.value = area.value.substring(0, start) + replace + area.value.substring(end);
+        area.setSelectionRange(start, start + replace.length);
+        feOnEditorInput();
+        feDoFind(); // Find next
+      } else {
+        feDoFind(); // Find first
+      }
+    }
+
+    function feDoReplaceAll() {
+      var area = document.getElementById('feEditorArea');
+      var find = document.getElementById('feFindInput').value;
+      var replace = document.getElementById('feReplaceInput').value;
+      var useRegex = document.getElementById('feFindRegex').checked;
+      var matchCase = document.getElementById('feFindCase').checked;
+      if (!find) return;
+      var flags = matchCase ? 'g' : 'gi';
+      var regex;
+      try {
+        regex = useRegex ? new RegExp(find, flags) : new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+      } catch (e) {
+        document.getElementById('feFindCount').textContent = 'Invalid regex';
+        return;
+      }
+      var oldText = area.value;
+      area.value = oldText.replace(regex, replace);
+      var count = (oldText.match(regex) || []).length;
+      document.getElementById('feFindCount').textContent = count + ' replaced';
+      feOnEditorInput();
+    }
+
+    // --- Go to line ---
+    function feGoToLine() {
+      var area = document.getElementById('feEditorArea');
+      var lineNum = parseInt(prompt('Go to line number:'));
+      if (isNaN(lineNum) || lineNum < 1) return;
+      var lines = area.value.split('\n');
+      var idx = 0;
+      for (var i = 0; i < Math.min(lineNum - 1, lines.length); i++) {
+        idx += lines[i].length + 1;
+      }
+      area.focus();
+      area.setSelectionRange(idx, idx);
+      // Scroll to line
+      var lineHeight = 18; // approximate
+      area.scrollTop = (lineNum - 1) * lineHeight - area.clientHeight / 3;
+      feUpdateStatusBar();
+    }
+
+    // --- Toggle word wrap ---
+    function feToggleWordWrap() {
+      FileEditor.wordWrap = !FileEditor.wordWrap;
+      var area = document.getElementById('feEditorArea');
+      area.style.whiteSpace = FileEditor.wordWrap ? 'pre-wrap' : 'pre';
+      area.wrap = FileEditor.wordWrap ? 'soft' : 'off';
+    }
+
+    // --- Show diff viewer ---
+    function feShowDiff() {
+      if (FileEditor.activeIdx < 0) {
+        document.getElementById('feStatusInfo').textContent = 'No file open for diff';
+        return;
+      }
+      var tab = FileEditor.openTabs[FileEditor.activeIdx];
+      var area = document.getElementById('feEditorArea');
+      tab.content = area.value;
+      var diffPane = document.getElementById('feDiffPane');
+      var editorParent = area.parentElement;
+      if (diffPane.style.display !== 'none') {
+        diffPane.style.display = 'none';
+        editorParent.style.display = 'flex';
+        return;
+      }
+      editorParent.style.display = 'none';
+      diffPane.style.display = 'block';
+      var origLines = tab.originalContent.split('\n');
+      var currLines = tab.content.split('\n');
+      var html = '<div style="margin-bottom:8px;color:var(--accent-cyan);font-size:11px;font-weight:600;">Diff: ' + _feHtml(tab.path) + '</div>';
+      var maxLen = Math.max(origLines.length, currLines.length);
+      for (var i = 0; i < maxLen; i++) {
+        var orig = origLines[i];
+        var curr = currLines[i];
+        var lineNum = (i + 1).toString().padStart(4, ' ');
+        if (orig === undefined) {
+          html += '<div style="color:#50fa7b;background:rgba(80,250,123,0.1);">' + lineNum + ' + ' + _feHtml(curr) + '</div>';
+        } else if (curr === undefined) {
+          html += '<div style="color:#ff5555;background:rgba(255,85,85,0.1);">' + lineNum + ' - ' + _feHtml(orig) + '</div>';
+        } else if (orig !== curr) {
+          html += '<div style="color:#ff5555;background:rgba(255,85,85,0.06);">' + lineNum + ' - ' + _feHtml(orig) + '</div>';
+          html += '<div style="color:#50fa7b;background:rgba(80,250,123,0.06);">' + lineNum + ' + ' + _feHtml(curr) + '</div>';
+        } else {
+          html += '<div style="color:var(--text-muted);">' + lineNum + '   ' + _feHtml(orig) + '</div>';
+        }
+      }
+      diffPane.innerHTML = html;
+    }
+
+    // --- Show history drawer ---
+    function feShowHistory() {
+      var drawer = document.getElementById('feHistoryDrawer');
+      drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+      if (drawer.style.display === 'block') {
+        var list = document.getElementById('feHistoryList');
+        if (FileEditor.history.length === 0) {
+          list.innerHTML = '<div style="color:var(--text-muted);padding:4px;">No operations yet</div>';
+          return;
+        }
+        var html = '';
+        FileEditor.history.forEach(function (h) {
+          var icon = { open: '\uD83D\uDCC4', save: '\uD83D\uDCBE', create: '\u2795', delete: '\uD83D\uDDD1', rename: '\u270F', revert: '\u21A9', patch: '\uD83E\uDE79', move: '\u27A1', copy: '\uD83D\uDCCB', mkdir: '\uD83D\uDCC1', append: '\u2795', 'insert-line': '\u2795', 'delete-lines': '\uD83D\uDDD1', 'replace-lines': '\u270F' }[h.op] || '\u2022';
+          html += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);">' +
+            '<span style="color:var(--accent-cyan);">' + icon + ' ' + h.op + '</span> ' +
+            '<span style="color:var(--text-muted);">' + h.time + '</span><br>' +
+            '<span style="color:var(--text-primary);word-break:break-all;">' + _feHtml(h.detail) + '</span>' +
+            '</div>';
+        });
+        list.innerHTML = html;
+      }
+    }
+
+    // --- Show search-in-files drawer ---
+    function feShowSearch() {
+      var drawer = document.getElementById('feSearchDrawer');
+      drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+      if (drawer.style.display === 'block') {
+        document.getElementById('feGlobalSearch').focus();
+      }
+    }
+
+    // --- Execute global search ---
+    async function feDoGlobalSearch() {
+      var pattern = document.getElementById('feGlobalSearch').value;
+      var filePath = document.getElementById('feSearchPath').value || '*.*';
+      var results = document.getElementById('feSearchResults');
+      if (!pattern) { results.innerHTML = '<div style="color:var(--text-muted);">Enter a search pattern</div>'; return; }
+      results.innerHTML = '<div style="color:var(--text-muted);">Searching...</div>';
+      try {
+        var data = await EngineAPI.grepInFiles(pattern, filePath);
+        var output = data.output || data.result || data.stdout || '';
+        var lines = output.split('\n').filter(function (l) { return l.trim(); });
+        if (lines.length === 0) {
+          results.innerHTML = '<div style="color:var(--text-muted);">No matches found</div>';
+          return;
+        }
+        var html = '<div style="color:var(--accent-green);margin-bottom:4px;">' + lines.length + ' match(es)</div>';
+        lines.slice(0, 100).forEach(function (line) {
+          // Parse findstr output: filename:linenum:content
+          var parts = line.match(/^(.+?):(\d+):(.*)$/);
+          if (parts) {
+            html += '<div style="padding:2px 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.03);" onclick="feOpenFile(\'' + _feEsc(parts[1]) + '\')" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+              '<span style="color:var(--accent-cyan);">' + _feHtml(parts[1]) + '</span>' +
+              '<span style="color:var(--accent-yellow);">:' + parts[2] + '</span><br>' +
+              '<span style="color:var(--text-primary);">' + _feHtml(parts[3].substring(0, 80)) + '</span>' +
+              '</div>';
+          } else {
+            html += '<div style="padding:2px 0;color:var(--text-primary);">' + _feHtml(line.substring(0, 100)) + '</div>';
+          }
+        });
+        if (lines.length > 100) {
+          html += '<div style="color:var(--text-muted);padding:4px;">... and ' + (lines.length - 100) + ' more matches</div>';
+        }
+        results.innerHTML = html;
+      } catch (e) {
+        results.innerHTML = '<div style="color:#ff6b6b;">Error: ' + _feHtml(e.message) + '</div>';
+      }
+    }
+
+    // --- Utility: escape for JS string in onclick ---
+    function _feEsc(str) {
+      return str.replace(/\\/g, '/').replace(/'/g, "\\'");
+    }
+
+    // --- Utility: HTML escape ---
+    function _feHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // --- Utility: file icon by extension ---
+    function _feFileIcon(name) {
+      var ext = (name.split('.').pop() || '').toLowerCase();
+      var icons = {
+        cpp: '&#x1F1E8;', hpp: '&#x1F1ED;', h: '&#x1F1ED;', c: '&#x1F1E8;',
+        js: '&#x1F7E1;', ts: '&#x1F535;', html: '&#x1F7E0;', css: '&#x1F7E3;',
+        py: '&#x1F40D;', json: '&#x1F4CB;', md: '&#x1F4D6;', txt: '&#x1F4C4;',
+        asm: '&#x1F527;', cmake: '&#x2699;', xml: '&#x1F4C3;', yml: '&#x1F4C3;',
+        yaml: '&#x1F4C3;', sh: '&#x1F4BB;', bat: '&#x1F4BB;', ps1: '&#x1F4BB;',
+        exe: '&#x1F3AE;', dll: '&#x1F4E6;', lib: '&#x1F4E6;', obj: '&#x1F4E6;'
+      };
+      return icons[ext] || '&#x1F4C4;';
+    }
+
+    // ======================================================================
 
     function showExtensionsPanel() {
       document.getElementById('extensionsPanel').style.display = 'flex';
@@ -20653,6 +22209,454 @@
         }
       });
     })();
+
+    // ======================================================================
+    // WEBVIEW2 BUILT-IN BROWSER — Panel Functions
+    // Full-screen embedded browser with multi-tab, address bar, navigation,
+    // bookmarks, history, model site quick-links, proxy content extraction.
+    // WebView2-style browsing integrated into the IDE chatbot interface.
+    // ======================================================================
+
+    function showBrowserPanel(url) {
+      var overlay = document.getElementById('browserOverlay');
+      if (!overlay) return;
+      overlay.classList.add('active');
+      State.browser.active = true;
+      logDebug('\uD83C\uDF10 Browser panel opened' + (url ? ' → ' + url : ''), 'info');
+      if (url) {
+        browserNavigateTo(url);
+      } else {
+        // Show home page if no URL
+        _browserShowHome();
+      }
+    }
+
+    function closeBrowserPanel() {
+      var overlay = document.getElementById('browserOverlay');
+      if (!overlay) return;
+      overlay.classList.remove('active');
+      State.browser.active = false;
+      logDebug('\uD83C\uDF10 Browser panel closed', 'info');
+    }
+
+    function _browserGetActiveTab() {
+      var tabs = State.browser.tabs;
+      for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].id === State.browser.activeTab) return tabs[i];
+      }
+      return tabs[0] || null;
+    }
+
+    function _browserShowHome() {
+      var viewport = document.getElementById('browserViewport');
+      if (!viewport) return;
+      var homePage = document.getElementById('browserHomePage');
+      // Remove any existing iframe
+      var iframes = viewport.querySelectorAll('iframe');
+      iframes.forEach(function (f) { f.remove(); });
+      if (homePage) homePage.style.display = '';
+      // Update URL bar
+      var urlInput = document.getElementById('browserUrlInput');
+      if (urlInput) urlInput.value = '';
+      _browserUpdateLock('');
+      _browserUpdateStatusBar('Ready', '');
+      var tab = _browserGetActiveTab();
+      if (tab) { tab.url = ''; tab.iframeRef = null; }
+      _browserUpdateTabTitle('New Tab');
+    }
+
+    function _browserUpdateLock(url) {
+      var lock = document.getElementById('browserLock');
+      if (!lock) return;
+      if (!url || url === '') {
+        lock.innerHTML = '&#x1F512;';
+        lock.className = 'browser-lock';
+      } else if (url.indexOf('https://') === 0) {
+        lock.innerHTML = '&#x1F512;';
+        lock.className = 'browser-lock';
+      } else {
+        lock.innerHTML = '&#x26A0;';
+        lock.className = 'browser-lock insecure';
+      }
+    }
+
+    function _browserUpdateStatusBar(status, url) {
+      var statusEl = document.getElementById('browserStatusText');
+      var urlEl = document.getElementById('browserStatusUrl');
+      var zoomEl = document.getElementById('browserZoomLevel');
+      if (statusEl) statusEl.textContent = status || 'Ready';
+      if (urlEl) urlEl.textContent = url || '';
+      if (zoomEl) zoomEl.textContent = State.browser.zoom + '%';
+    }
+
+    function _browserUpdateTabTitle(title) {
+      var tabId = State.browser.activeTab;
+      var tabEl = document.getElementById('browserTab' + tabId);
+      if (tabEl) {
+        var titleSpan = tabEl.querySelector('.tab-title');
+        if (titleSpan) titleSpan.textContent = (title || 'New Tab').substring(0, 30);
+      }
+      var tab = _browserGetActiveTab();
+      if (tab) tab.title = title || 'New Tab';
+    }
+
+    function _browserRenderTabs() {
+      var bar = document.getElementById('browserTabBar');
+      if (!bar) return;
+      var html = '';
+      State.browser.tabs.forEach(function (tab) {
+        var isActive = tab.id === State.browser.activeTab;
+        html += '<div class="browser-tab' + (isActive ? ' active' : '') + '" id="browserTab' + tab.id + '" onclick="browserSwitchTab(' + tab.id + ')">';
+        html += '<span class="tab-title">' + escHtml((tab.title || 'New Tab').substring(0, 30)) + '</span>';
+        html += '<span class="tab-close" onclick="event.stopPropagation();browserCloseTab(' + tab.id + ')">&times;</span>';
+        html += '</div>';
+      });
+      html += '<button class="browser-tab-new" onclick="browserNewTab()" title="New Tab">+</button>';
+      bar.innerHTML = html;
+    }
+
+    function browserNavigate() {
+      var urlInput = document.getElementById('browserUrlInput');
+      if (!urlInput) return;
+      var raw = urlInput.value.trim();
+      if (!raw) return;
+      // Auto-prepend https:// if no protocol
+      var url = raw;
+      if (!/^https?:\/\//i.test(url)) {
+        // If it looks like a domain (contains a dot), treat as URL
+        if (/^[a-zA-Z0-9].*\.[a-zA-Z]{2,}/.test(url)) {
+          url = 'https://' + url;
+        } else {
+          // Treat as search query
+          url = State.browser.searchEngine + encodeURIComponent(raw);
+        }
+      }
+      browserNavigateTo(url);
+    }
+
+    function browserNavigateFromHome() {
+      var homeSearch = document.getElementById('browserHomeSearch');
+      if (!homeSearch) return;
+      var raw = homeSearch.value.trim();
+      if (!raw) return;
+      var urlInput = document.getElementById('browserUrlInput');
+      if (urlInput) urlInput.value = raw;
+      browserNavigate();
+    }
+
+    function browserNavigateTo(url) {
+      if (!url) return;
+      var viewport = document.getElementById('browserViewport');
+      var homePage = document.getElementById('browserHomePage');
+      var urlInput = document.getElementById('browserUrlInput');
+      if (!viewport) return;
+
+      // Hide home page
+      if (homePage) homePage.style.display = 'none';
+
+      // Remove existing iframe
+      var oldIframes = viewport.querySelectorAll('iframe');
+      oldIframes.forEach(function (f) { f.remove(); });
+
+      // Create new iframe
+      var iframe = document.createElement('iframe');
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+      iframe.allow = 'clipboard-read; clipboard-write';
+      iframe.referrerPolicy = 'no-referrer';
+      iframe.src = url;
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      iframe.style.border = 'none';
+      iframe.style.background = '#fff';
+      viewport.appendChild(iframe);
+
+      // Update state
+      var tab = _browserGetActiveTab();
+      if (tab) {
+        // Push to history
+        if (tab.url && tab.url !== url) {
+          tab.history = tab.history.slice(0, tab.historyIdx + 1);
+          tab.history.push(tab.url);
+          tab.historyIdx = tab.history.length - 1;
+        }
+        tab.url = url;
+        tab.iframeRef = iframe;
+      }
+
+      // Update UI
+      if (urlInput) urlInput.value = url;
+      _browserUpdateLock(url);
+      _browserUpdateStatusBar('Loading...', url);
+      State.browser.totalNavigations++;
+
+      // Try to detect page title from URL
+      var domain = '';
+      try { domain = new URL(url).hostname; } catch (_) { domain = url.substring(0, 40); }
+      _browserUpdateTabTitle(domain);
+
+      // Update nav buttons
+      _browserUpdateNavButtons();
+
+      // iframe load event
+      iframe.onload = function () {
+        _browserUpdateStatusBar('Done', url);
+        // Try to get title
+        try {
+          var iframeTitle = iframe.contentDocument ? iframe.contentDocument.title : '';
+          if (iframeTitle) _browserUpdateTabTitle(iframeTitle);
+        } catch (_) {
+          // Cross-origin — use domain
+        }
+      };
+      iframe.onerror = function () {
+        _browserUpdateStatusBar('Error loading page', url);
+      };
+
+      logDebug('\uD83C\uDF10 Browser navigated to: ' + url, 'info');
+    }
+
+    function _browserUpdateNavButtons() {
+      var tab = _browserGetActiveTab();
+      var backBtn = document.getElementById('browserBtnBack');
+      var fwdBtn = document.getElementById('browserBtnFwd');
+      if (tab && backBtn) backBtn.disabled = !(tab.history.length > 0 && tab.historyIdx >= 0);
+      if (tab && fwdBtn) fwdBtn.disabled = !(tab.historyIdx < tab.history.length - 1);
+    }
+
+    function browserBack() {
+      var tab = _browserGetActiveTab();
+      if (!tab || tab.historyIdx < 0) return;
+      var prevUrl = tab.history[tab.historyIdx];
+      tab.historyIdx--;
+      tab.url = prevUrl;
+      // Navigate without pushing to history
+      var viewport = document.getElementById('browserViewport');
+      var homePage = document.getElementById('browserHomePage');
+      if (!viewport) return;
+      if (homePage) homePage.style.display = 'none';
+      var oldIframes = viewport.querySelectorAll('iframe');
+      oldIframes.forEach(function (f) { f.remove(); });
+      var iframe = document.createElement('iframe');
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+      iframe.src = prevUrl;
+      iframe.style.cssText = 'width:100%;height:100%;border:none;background:#fff;';
+      viewport.appendChild(iframe);
+      tab.iframeRef = iframe;
+      var urlInput = document.getElementById('browserUrlInput');
+      if (urlInput) urlInput.value = prevUrl;
+      _browserUpdateLock(prevUrl);
+      _browserUpdateStatusBar('Loading...', prevUrl);
+      _browserUpdateNavButtons();
+      iframe.onload = function () { _browserUpdateStatusBar('Done', prevUrl); };
+    }
+
+    function browserForward() {
+      var tab = _browserGetActiveTab();
+      if (!tab || tab.historyIdx >= tab.history.length - 1) return;
+      tab.historyIdx++;
+      var nextUrl = tab.history[tab.historyIdx + 1] || tab.url;
+      // If we have a forward entry beyond current
+      if (tab.historyIdx < tab.history.length) {
+        nextUrl = tab.history[tab.historyIdx];
+      }
+      browserNavigateTo(nextUrl);
+    }
+
+    function browserRefreshPage() {
+      var tab = _browserGetActiveTab();
+      if (!tab || !tab.url) return;
+      _browserUpdateStatusBar('Refreshing...', tab.url);
+      if (tab.iframeRef) {
+        try { tab.iframeRef.src = tab.url; } catch (_) { }
+      } else {
+        browserNavigateTo(tab.url);
+      }
+    }
+
+    function browserGoHome() {
+      var tab = _browserGetActiveTab();
+      if (tab && tab.url) {
+        tab.history = tab.history.slice(0, tab.historyIdx + 1);
+        tab.history.push(tab.url);
+        tab.historyIdx = tab.history.length - 1;
+      }
+      _browserShowHome();
+      _browserUpdateNavButtons();
+    }
+
+    function browserNewTab() {
+      var newId = State.browser.nextTabId++;
+      var newTab = { id: newId, title: 'New Tab', url: '', history: [], historyIdx: -1, iframeRef: null };
+      State.browser.tabs.push(newTab);
+      State.browser.activeTab = newId;
+      _browserRenderTabs();
+      _browserShowHome();
+      _browserUpdateNavButtons();
+      var urlInput = document.getElementById('browserUrlInput');
+      if (urlInput) { urlInput.value = ''; urlInput.focus(); }
+    }
+
+    function browserSwitchTab(tabId) {
+      if (State.browser.activeTab === tabId) return;
+      State.browser.activeTab = tabId;
+      var tab = _browserGetActiveTab();
+      _browserRenderTabs();
+      if (tab && tab.url) {
+        browserNavigateTo(tab.url);
+      } else {
+        _browserShowHome();
+      }
+      _browserUpdateNavButtons();
+    }
+
+    function browserCloseTab(tabId) {
+      var tabs = State.browser.tabs;
+      if (tabs.length <= 1) {
+        // Last tab — just go home
+        _browserShowHome();
+        return;
+      }
+      var idx = -1;
+      for (var i = 0; i < tabs.length; i++) {
+        if (tabs[i].id === tabId) { idx = i; break; }
+      }
+      if (idx < 0) return;
+      // Remove iframe if it exists
+      if (tabs[idx].iframeRef) {
+        try { tabs[idx].iframeRef.remove(); } catch (_) { }
+      }
+      tabs.splice(idx, 1);
+      // If we closed the active tab, switch to nearest
+      if (State.browser.activeTab === tabId) {
+        var newActive = tabs[Math.min(idx, tabs.length - 1)];
+        State.browser.activeTab = newActive.id;
+        if (newActive.url) {
+          browserNavigateTo(newActive.url);
+        } else {
+          _browserShowHome();
+        }
+      }
+      _browserRenderTabs();
+      _browserUpdateNavButtons();
+    }
+
+    function browserAddBookmark() {
+      var tab = _browserGetActiveTab();
+      if (!tab || !tab.url) {
+        addMessage('system', '\u26A0 No page loaded to bookmark.');
+        return;
+      }
+      // Check for duplicate
+      for (var i = 0; i < State.browser.bookmarks.length; i++) {
+        if (State.browser.bookmarks[i].url === tab.url) {
+          addMessage('system', '\u2714 Already bookmarked: ' + tab.title);
+          return;
+        }
+      }
+      var bm = { name: tab.title || tab.url, url: tab.url, icon: '\u2B50' };
+      State.browser.bookmarks.push(bm);
+      _browserRenderBookmarks();
+      addMessage('system', '\u2B50 Bookmarked: ' + bm.name);
+      logDebug('\uD83D\uDD16 Bookmark added: ' + bm.url, 'info');
+    }
+
+    function _browserRenderBookmarks() {
+      var bar = document.getElementById('browserBookmarksBar');
+      if (!bar) return;
+      var html = '';
+      State.browser.bookmarks.forEach(function (bm) {
+        html += '<button class="browser-bookmark-btn" onclick="browserNavigateTo(\'' + escHtml(bm.url).replace(/'/g, "\\'") + '\')">' + (bm.icon || '\u2B50') + ' ' + escHtml(bm.name) + '</button>';
+      });
+      bar.innerHTML = html;
+    }
+
+    function browserShowBookmarks() {
+      var bookmarks = State.browser.bookmarks;
+      if (bookmarks.length === 0) {
+        addMessage('system', 'No bookmarks saved. Use the \u2606 button to bookmark pages.');
+        return;
+      }
+      var html = '<div style="font-weight:600;color:var(--accent-cyan);margin-bottom:8px;">\uD83D\uDD16 Browser Bookmarks (' + bookmarks.length + ')</div>';
+      html += '<div style="font-family:var(--font-mono);font-size:11px;">';
+      bookmarks.forEach(function (bm, i) {
+        html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:8px;">';
+        html += '<span>' + (bm.icon || '\u2B50') + '</span>';
+        html += '<span style="flex:1;cursor:pointer;color:var(--accent-cyan);text-decoration:underline;" onclick="browserNavigateTo(\'' + escHtml(bm.url).replace(/'/g, "\\'") + '\')">' + escHtml(bm.name) + '</span>';
+        html += '<span style="font-size:10px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(bm.url) + '</span>';
+        html += '<button onclick="browserRemoveBookmark(' + i + ')" style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:12px;" title="Remove">\u2715</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+      addMessage('system', html);
+    }
+
+    function browserRemoveBookmark(idx) {
+      if (idx >= 0 && idx < State.browser.bookmarks.length) {
+        var removed = State.browser.bookmarks.splice(idx, 1)[0];
+        _browserRenderBookmarks();
+        addMessage('system', '\uD83D\uDDD1 Removed bookmark: ' + removed.name);
+      }
+    }
+
+    function browserDetach() {
+      var tab = _browserGetActiveTab();
+      if (!tab || !tab.url) {
+        addMessage('system', '\u26A0 No page loaded to detach.');
+        return;
+      }
+      var w = window.open(tab.url, '_blank', 'width=1200,height=800,menubar=no,toolbar=yes,location=yes');
+      if (w) {
+        addMessage('system', '\u2197 Detached browser tab to popup: ' + tab.url);
+      }
+    }
+
+    function browserToggleDevtools() {
+      State.browser.devtoolsOpen = !State.browser.devtoolsOpen;
+      var tab = _browserGetActiveTab();
+      if (State.browser.devtoolsOpen) {
+        addMessage('system', '\uD83D\uDD27 DevTools: Page URL = ' + (tab ? tab.url : 'none') + '\\nHistory: ' + (tab ? tab.history.length : 0) + ' entries\\nTabs: ' + State.browser.tabs.length + '\\nTotal navigations: ' + State.browser.totalNavigations + '\\nZoom: ' + State.browser.zoom + '%\\nBookmarks: ' + State.browser.bookmarks.length);
+      } else {
+        addMessage('system', '\uD83D\uDD27 DevTools closed.');
+      }
+    }
+
+    function browserExtractContent() {
+      var tab = _browserGetActiveTab();
+      if (!tab || !tab.iframeRef) {
+        addMessage('system', '\u26A0 No page loaded to extract content from.');
+        return;
+      }
+      try {
+        var doc = tab.iframeRef.contentDocument;
+        if (!doc) throw new Error('Cross-origin: cannot access document');
+        var text = doc.body ? doc.body.innerText : '';
+        if (text.length > 10000) text = text.substring(0, 10000) + '\\n... (truncated to 10K chars)';
+        addMessage('system', '\uD83D\uDCCB Extracted content from ' + tab.url + ':\\n\\n' + text);
+        logDebug('\uD83D\uDCCB Extracted ' + text.length + ' chars from ' + tab.url, 'info');
+      } catch (e) {
+        addMessage('system', '\u26A0 Cannot extract content (cross-origin restriction): ' + e.message + '\\nTip: Use the proxy fetch method or /browse-extract with the backend server.');
+      }
+    }
+
+    function browserSendToModel() {
+      var tab = _browserGetActiveTab();
+      if (!tab || !tab.iframeRef) {
+        addMessage('system', '\u26A0 No page loaded. Navigate to a page first.');
+        return;
+      }
+      try {
+        var doc = tab.iframeRef.contentDocument;
+        if (!doc) throw new Error('Cross-origin');
+        var text = doc.body ? doc.body.innerText : '';
+        if (text.length > 8000) text = text.substring(0, 8000) + '\\n... (truncated)';
+        // Inject as context in the chat
+        var contextMsg = 'The following is web page content from ' + tab.url + ':\\n\\n' + text;
+        addMessage('user', '/ask Based on this web page content, provide a summary:\\n' + contextMsg);
+        sendMessage('/ask Based on this web page content from ' + tab.url + ', provide a summary:\\n\\n' + text.substring(0, 4000));
+      } catch (e) {
+        addMessage('system', '\u26A0 Cross-origin restriction. Cannot read page content for model context.');
+      }
+    }
 
     // ======================================================================
     // EXTENSION PANEL (Phase 39) — Functions for ext-panel UI
@@ -21157,8 +23161,8 @@
 
       outputEl.textContent = 'Running: ' + cmd + '\n\nWaiting for response...';
 
-      if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
-        EngineAPI._post('/api/cli', { command: cmd }, 30000).then(function (data) {
+      if (typeof EngineAPI !== 'undefined' && EngineAPI._cli) {
+        EngineAPI._cli(cmd).then(function (data) {
           outputEl.textContent = data.output || data.result || JSON.stringify(data, null, 2);
         }).catch(function (err) {
           outputEl.textContent = 'Backend unavailable. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
@@ -21180,8 +23184,8 @@
       var cmd = 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; New-Extension -Name "' + name + '" -Type ' + type + ' -AutoInstall';
       outputEl.textContent = 'Creating extension: ' + name + ' (type: ' + type + ')...\n\n  ' + cmd;
 
-      if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
-        EngineAPI._post('/api/cli', { command: cmd }, 30000).then(function (data) {
+      if (typeof EngineAPI !== 'undefined' && EngineAPI._cli) {
+        EngineAPI._cli(cmd).then(function (data) {
           outputEl.textContent = data.output || data.result || ('\u2705 Created extension: ' + name);
           ExtensionState.install({ id: name.toLowerCase(), name: name, enabled: true, type: type.toLowerCase(), version: '1.0.0', path: 'd:\\RawrXD\\extensions\\' + name.toLowerCase() });
           refreshExtPanel();
@@ -21836,6 +23840,939 @@
     });
 
     /* ── Mobile Sidebar Toggle ── */
+    // ======================================================================
+    // AGENTIC FILE EDITOR — Production Implementation
+    // ======================================================================
+    // Full-featured file editor: tree browser, tabbed editing, find/replace,
+    // undo/redo, diff view, search-in-files, create/delete/rename operations.
+    // Uses /api/read-file, /api/write-file, /api/list-dir, /api/delete-file,
+    // /api/rename-file, /api/mkdir, /api/search-files backend endpoints.
+    // ======================================================================
+
+    var FE = {
+      tabs: [],         // [{path, name, content, savedContent, undoStack, redoStack, scrollTop, cursorPos}]
+      activeIdx: -1,
+      wordWrap: false,
+      findVisible: false,
+      findMatches: [],
+      findIdx: -1,
+      history: [],      // [{op, path, time, detail}]
+      treeCache: {},    // {path: entries}
+      treeExpanded: {}  // {path: true}
+    };
+
+    function showFileEditorPanel() {
+      var el = document.getElementById('fileEditorPanel');
+      if (el) { el.style.display = 'flex'; }
+      logDebug('[FileEditor] Panel opened', 'info');
+      // Auto-load tree if empty
+      var tc = document.getElementById('feTreeContent');
+      if (tc && tc.children.length <= 1) feRefreshTree();
+    }
+
+    function closeFileEditorPanel() {
+      var el = document.getElementById('fileEditorPanel');
+      if (el) el.style.display = 'none';
+    }
+
+    // ---- API helpers ----
+    function feApiUrl() {
+      return getActiveUrl();
+    }
+
+    async function feApiPost(endpoint, body) {
+      var urls = [feApiUrl()];
+      if (_ideServerUrl && urls.indexOf(_ideServerUrl) === -1) urls.push(_ideServerUrl);
+      if (urls.indexOf('http://localhost:11435') === -1) urls.push('http://localhost:11435');
+
+      for (var i = 0; i < urls.length; i++) {
+        try {
+          var res = await fetch(urls[i] + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(10000)
+          });
+          if (res.ok) return await res.json();
+        } catch (_) { }
+      }
+      return null;
+    }
+
+    // ---- Tree Browser ----
+    async function feRefreshTree() {
+      var rootInput = document.getElementById('feTreePath');
+      var root = rootInput ? rootInput.value.trim() : '.';
+      if (!root) root = '.';
+
+      feSetStatus('Loading tree...');
+      var data = await feApiPost('/api/list-dir', { path: root });
+      if (!data || !data.entries) {
+        feSetStatus('Failed to load tree');
+        var tc = document.getElementById('feTreeContent');
+        if (tc) tc.innerHTML = '<div style="padding:12px;color:#ff6b6b;font-size:10px;">Could not load directory. Check path and backend connection.</div>';
+        return;
+      }
+
+      // Sort: dirs first, then files, alphabetical
+      data.entries.sort(function (a, b) {
+        if (a.type === 'dir' && b.type !== 'dir') return -1;
+        if (a.type !== 'dir' && b.type === 'dir') return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      FE.treeCache[root] = data.entries;
+      feRenderTree(root, data.entries);
+      feSetStatus('Tree loaded: ' + data.entries.length + ' items');
+    }
+
+    function feRenderTree(root, entries) {
+      var tc = document.getElementById('feTreeContent');
+      if (!tc) return;
+      var html = '';
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var fullPath = root.replace(/\\/g, '/').replace(/\/$/, '') + '/' + e.name;
+        if (e.type === 'dir') {
+          var isExpanded = FE.treeExpanded[fullPath];
+          html += '<div class="fe-tree-node" data-path="' + escHtml(fullPath) + '">';
+          html += '<div class="fe-tree-item fe-tree-dir" onclick="feToggleDir(\'' + escHtml(fullPath) + '\', this)" style="padding:2px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--accent-cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" oncontextmenu="feTreeContextMenu(event, \'' + escHtml(fullPath) + '\', \'dir\')">';
+          html += '<span style="font-size:8px;">' + (isExpanded ? '\u25BC' : '\u25B6') + '</span>';
+          html += '<span>\uD83D\uDCC1</span> ' + escHtml(e.name);
+          html += '</div>';
+          html += '<div class="fe-tree-children" id="feDir_' + escHtml(fullPath.replace(/[\/\\.:]/g, '_')) + '" style="padding-left:12px;display:' + (isExpanded ? 'block' : 'none') + ';">';
+          // Children loaded on expand
+          html += '</div></div>';
+        } else {
+          var icon = feFileIcon(e.name);
+          html += '<div class="fe-tree-item fe-tree-file" onclick="feOpenFile(\'' + escHtml(fullPath) + '\')" style="padding:2px 8px 2px 20px;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary);" oncontextmenu="feTreeContextMenu(event, \'' + escHtml(fullPath) + '\', \'file\')" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">';
+          html += '<span>' + icon + '</span> ' + escHtml(e.name);
+          if (e.size > 0) html += '<span style="margin-left:auto;font-size:9px;color:var(--text-muted);">' + feFormatSize(e.size) + '</span>';
+          html += '</div>';
+        }
+      }
+      if (entries.length === 0) {
+        html = '<div style="padding:12px;color:var(--text-muted);font-size:10px;">(empty directory)</div>';
+      }
+      tc.innerHTML = html;
+    }
+
+    async function feToggleDir(path, el) {
+      var childId = 'feDir_' + path.replace(/[\/\\.:]/g, '_');
+      var childEl = document.getElementById(childId);
+      if (!childEl) return;
+
+      if (FE.treeExpanded[path]) {
+        FE.treeExpanded[path] = false;
+        childEl.style.display = 'none';
+        // Update arrow
+        var arrow = el.querySelector('span:first-child');
+        if (arrow) arrow.textContent = '\u25B6';
+        return;
+      }
+
+      FE.treeExpanded[path] = true;
+      childEl.style.display = 'block';
+      var arrow = el.querySelector('span:first-child');
+      if (arrow) arrow.textContent = '\u25BC';
+
+      // Load children if not cached
+      if (!FE.treeCache[path]) {
+        childEl.innerHTML = '<div style="padding:4px 8px;color:var(--text-muted);font-size:9px;">Loading...</div>';
+        var data = await feApiPost('/api/list-dir', { path: path });
+        if (!data || !data.entries) {
+          childEl.innerHTML = '<div style="padding:4px 8px;color:#ff6b6b;font-size:9px;">Error loading</div>';
+          return;
+        }
+        data.entries.sort(function (a, b) {
+          if (a.type === 'dir' && b.type !== 'dir') return -1;
+          if (a.type !== 'dir' && b.type === 'dir') return 1;
+          return a.name.localeCompare(b.name);
+        });
+        FE.treeCache[path] = data.entries;
+      }
+
+      var entries = FE.treeCache[path];
+      var html = '';
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        var fullPath = path.replace(/\\/g, '/').replace(/\/$/, '') + '/' + e.name;
+        if (e.type === 'dir') {
+          var isExp = FE.treeExpanded[fullPath];
+          html += '<div class="fe-tree-node" data-path="' + escHtml(fullPath) + '">';
+          html += '<div class="fe-tree-item fe-tree-dir" onclick="feToggleDir(\'' + escHtml(fullPath) + '\', this)" style="padding:2px 4px;cursor:pointer;display:flex;align-items:center;gap:4px;color:var(--accent-cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" oncontextmenu="feTreeContextMenu(event, \'' + escHtml(fullPath) + '\', \'dir\')">';
+          html += '<span style="font-size:8px;">' + (isExp ? '\u25BC' : '\u25B6') + '</span>';
+          html += '<span>\uD83D\uDCC1</span> ' + escHtml(e.name);
+          html += '</div>';
+          html += '<div class="fe-tree-children" id="feDir_' + escHtml(fullPath.replace(/[\/\\.:]/g, '_')) + '" style="padding-left:12px;display:' + (isExp ? 'block' : 'none') + ';"></div></div>';
+        } else {
+          var icon = feFileIcon(e.name);
+          html += '<div class="fe-tree-item fe-tree-file" onclick="feOpenFile(\'' + escHtml(fullPath) + '\')" style="padding:2px 4px 2px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary);" oncontextmenu="feTreeContextMenu(event, \'' + escHtml(fullPath) + '\', \'file\')" onmouseover="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseout="this.style.background=\'transparent\'">';
+          html += '<span>' + icon + '</span> ' + escHtml(e.name);
+          if (e.size > 0) html += '<span style="margin-left:auto;font-size:9px;color:var(--text-muted);">' + feFormatSize(e.size) + '</span>';
+          html += '</div>';
+        }
+      }
+      if (entries.length === 0) html = '<div style="padding:4px 8px;color:var(--text-muted);font-size:9px;">(empty)</div>';
+      childEl.innerHTML = html;
+    }
+
+    function feFileIcon(name) {
+      var ext = name.lastIndexOf('.') >= 0 ? name.substring(name.lastIndexOf('.')).toLowerCase() : '';
+      var icons = {
+        '.cpp': '\uD83D\uDCC4', '.h': '\uD83D\uDCC4', '.hpp': '\uD83D\uDCC4', '.c': '\uD83D\uDCC4',
+        '.js': '\uD83D\uDFE8', '.ts': '\uD83D\uDD35', '.html': '\uD83C\uDF10', '.css': '\uD83C\uDFA8',
+        '.json': '\u2699\uFE0F', '.md': '\uD83D\uDCDD', '.txt': '\uD83D\uDCC3', '.py': '\uD83D\uDC0D',
+        '.asm': '\u2699\uFE0F', '.bat': '\u26A1', '.ps1': '\u26A1', '.sh': '\u26A1',
+        '.yaml': '\u2699\uFE0F', '.yml': '\u2699\uFE0F', '.toml': '\u2699\uFE0F',
+        '.exe': '\u25B6\uFE0F', '.dll': '\uD83D\uDD27', '.obj': '\uD83D\uDD27', '.lib': '\uD83D\uDD27',
+        '.png': '\uD83D\uDDBC', '.jpg': '\uD83D\uDDBC', '.gif': '\uD83D\uDDBC', '.svg': '\uD83D\uDDBC',
+        '.gguf': '\uD83E\uDDE0', '.bin': '\uD83D\uDCE6'
+      };
+      return icons[ext] || '\uD83D\uDCC4';
+    }
+
+    function feFormatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function feTreeContextMenu(event, path, type) {
+      event.preventDefault();
+      var action = prompt((type === 'dir' ? 'Directory' : 'File') + ': ' + path + '\n\nActions: rename, delete, ' + (type === 'dir' ? 'new-file, new-folder' : 'duplicate'));
+      if (!action) return;
+      action = action.toLowerCase().trim();
+      if (action === 'delete') feDeletePath(path);
+      else if (action === 'rename') feRenamePath(path);
+      else if (action === 'new-file') feNewFileInDir(path);
+      else if (action === 'new-folder') feNewFolderInDir(path);
+      else if (action === 'duplicate') feDuplicateFile(path);
+    }
+
+    // ---- File Operations ----
+    async function feOpenFile(path) {
+      // Check if already open in a tab
+      for (var i = 0; i < FE.tabs.length; i++) {
+        if (FE.tabs[i].path === path) {
+          feActivateTab(i);
+          return;
+        }
+      }
+
+      feSetStatus('Opening: ' + path.split('/').pop());
+      var data = await feApiPost('/api/read-file', { path: path });
+      if (!data || data.content === undefined) {
+        feSetStatus('Failed to open file');
+        return;
+      }
+
+      var tab = {
+        path: path,
+        name: data.name || path.split('/').pop(),
+        content: data.content,
+        savedContent: data.content,
+        undoStack: [],
+        redoStack: [],
+        scrollTop: 0,
+        cursorPos: 0
+      };
+      FE.tabs.push(tab);
+      feActivateTab(FE.tabs.length - 1);
+      feAddHistory('open', path);
+      feSetStatus('Opened: ' + tab.name + ' (' + feFormatSize(data.content.length) + ')');
+    }
+
+    function feActivateTab(idx) {
+      if (idx < 0 || idx >= FE.tabs.length) return;
+
+      // Save current state of active tab
+      if (FE.activeIdx >= 0 && FE.activeIdx < FE.tabs.length) {
+        var area = document.getElementById('feEditorArea');
+        if (area) {
+          FE.tabs[FE.activeIdx].content = area.value;
+          FE.tabs[FE.activeIdx].scrollTop = area.scrollTop;
+          FE.tabs[FE.activeIdx].cursorPos = area.selectionStart;
+        }
+      }
+
+      FE.activeIdx = idx;
+      var tab = FE.tabs[idx];
+
+      // Update editor
+      var area = document.getElementById('feEditorArea');
+      if (area) {
+        area.value = tab.content;
+        area.scrollTop = tab.scrollTop;
+        area.setSelectionRange(tab.cursorPos, tab.cursorPos);
+        area.focus();
+      }
+
+      feUpdateLineNumbers();
+      feUpdateTabBar();
+      feUpdateStatusBar();
+    }
+
+    function feUpdateTabBar() {
+      var bar = document.getElementById('feTabBar');
+      if (!bar) return;
+      if (FE.tabs.length === 0) {
+        bar.innerHTML = '<div style="padding:6px 12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">No files open</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < FE.tabs.length; i++) {
+        var t = FE.tabs[i];
+        var isActive = (i === FE.activeIdx);
+        var isModified = (t.content !== t.savedContent);
+        html += '<div onclick="feActivateTab(' + i + ')" style="padding:4px 10px;font-size:10px;font-family:var(--font-mono);cursor:pointer;border-right:1px solid var(--border);display:flex;align-items:center;gap:4px;white-space:nowrap;' +
+          (isActive ? 'background:rgba(255,255,255,0.08);color:var(--accent-cyan);border-bottom:2px solid var(--accent-cyan);' : 'color:var(--text-muted);') + '">';
+        html += (isModified ? '\u25CF ' : '') + escHtml(t.name);
+        html += '<span onclick="event.stopPropagation();feCloseTab(' + i + ')" style="margin-left:6px;cursor:pointer;opacity:0.5;font-size:12px;" onmouseover="this.style.opacity=1;this.style.color=\'#ff6b6b\'" onmouseout="this.style.opacity=0.5;this.style.color=\'\'">&times;</span>';
+        html += '</div>';
+      }
+      bar.innerHTML = html;
+    }
+
+    function feCloseTab(idx) {
+      if (idx < 0 || idx >= FE.tabs.length) return;
+      var tab = FE.tabs[idx];
+      if (tab.content !== tab.savedContent) {
+        if (!confirm('Unsaved changes in ' + tab.name + '. Close anyway?')) return;
+      }
+      FE.tabs.splice(idx, 1);
+      if (FE.activeIdx >= FE.tabs.length) FE.activeIdx = FE.tabs.length - 1;
+      if (FE.tabs.length === 0) {
+        FE.activeIdx = -1;
+        var area = document.getElementById('feEditorArea');
+        if (area) area.value = '';
+        feUpdateLineNumbers();
+      } else {
+        feActivateTab(FE.activeIdx);
+      }
+      feUpdateTabBar();
+      feUpdateStatusBar();
+    }
+
+    async function feSaveFile() {
+      if (FE.activeIdx < 0) return;
+      var tab = FE.tabs[FE.activeIdx];
+      var area = document.getElementById('feEditorArea');
+      if (area) tab.content = area.value;
+
+      feSetStatus('Saving: ' + tab.name + '...');
+      var data = await feApiPost('/api/write-file', { path: tab.path, content: tab.content });
+      if (!data || !data.success) {
+        feSetStatus('Save failed!');
+        return;
+      }
+      tab.savedContent = tab.content;
+      feUpdateTabBar();
+      feUpdateStatusBar();
+      feAddHistory('save', tab.path, tab.content.length + ' bytes');
+      feSetStatus('Saved: ' + tab.name + ' (' + feFormatSize(tab.content.length) + ')');
+    }
+
+    function feRevertFile() {
+      if (FE.activeIdx < 0) return;
+      var tab = FE.tabs[FE.activeIdx];
+      if (tab.content === tab.savedContent) { feSetStatus('No changes to revert'); return; }
+      if (!confirm('Revert ' + tab.name + ' to last saved version?')) return;
+      tab.undoStack.push(tab.content);
+      tab.content = tab.savedContent;
+      var area = document.getElementById('feEditorArea');
+      if (area) area.value = tab.content;
+      feUpdateLineNumbers();
+      feUpdateTabBar();
+      feUpdateStatusBar();
+      feAddHistory('revert', tab.path);
+      feSetStatus('Reverted: ' + tab.name);
+    }
+
+    // ---- Undo / Redo ----
+    function feUndo() {
+      if (FE.activeIdx < 0) return;
+      var tab = FE.tabs[FE.activeIdx];
+      if (tab.undoStack.length === 0) { feSetStatus('Nothing to undo'); return; }
+      var area = document.getElementById('feEditorArea');
+      if (area) tab.content = area.value;
+      tab.redoStack.push(tab.content);
+      tab.content = tab.undoStack.pop();
+      if (area) { area.value = tab.content; }
+      feUpdateLineNumbers();
+      feUpdateStatusBar();
+    }
+
+    function feRedo() {
+      if (FE.activeIdx < 0) return;
+      var tab = FE.tabs[FE.activeIdx];
+      if (tab.redoStack.length === 0) { feSetStatus('Nothing to redo'); return; }
+      var area = document.getElementById('feEditorArea');
+      if (area) tab.content = area.value;
+      tab.undoStack.push(tab.content);
+      tab.content = tab.redoStack.pop();
+      if (area) { area.value = tab.content; }
+      feUpdateLineNumbers();
+      feUpdateStatusBar();
+    }
+
+    // ---- Editor Input Handling ----
+    function feOnEditorInput() {
+      if (FE.activeIdx < 0) return;
+      var tab = FE.tabs[FE.activeIdx];
+      var area = document.getElementById('feEditorArea');
+      if (!area) return;
+
+      // Push to undo stack (debounced — every 30 chars or so)
+      var newContent = area.value;
+      if (tab.undoStack.length === 0 || Math.abs(newContent.length - (tab.undoStack[tab.undoStack.length - 1] || '').length) > 30) {
+        tab.undoStack.push(tab.content);
+        if (tab.undoStack.length > 200) tab.undoStack.shift();
+      }
+      tab.content = newContent;
+      tab.redoStack = []; // clear redo on new input
+      feUpdateLineNumbers();
+      feUpdateTabBar();
+      feUpdateStatusBar();
+    }
+
+    function feOnEditorScroll() {
+      var area = document.getElementById('feEditorArea');
+      var lineNums = document.getElementById('feLineNumbers');
+      if (area && lineNums) lineNums.scrollTop = area.scrollTop;
+    }
+
+    function feOnEditorKeydown(e) {
+      // Tab key — insert spaces instead of moving focus
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var area = e.target;
+        var start = area.selectionStart;
+        var end = area.selectionEnd;
+        if (e.shiftKey) {
+          // Outdent: remove leading spaces on current line
+          var before = area.value.substring(0, start);
+          var lineStart = before.lastIndexOf('\n') + 1;
+          var lineText = area.value.substring(lineStart);
+          if (lineText.startsWith('    ')) {
+            area.value = area.value.substring(0, lineStart) + lineText.substring(4);
+            area.selectionStart = area.selectionEnd = Math.max(lineStart, start - 4);
+          } else if (lineText.startsWith('  ')) {
+            area.value = area.value.substring(0, lineStart) + lineText.substring(2);
+            area.selectionStart = area.selectionEnd = Math.max(lineStart, start - 2);
+          }
+        } else {
+          area.value = area.value.substring(0, start) + '    ' + area.value.substring(end);
+          area.selectionStart = area.selectionEnd = start + 4;
+        }
+        feOnEditorInput();
+        return;
+      }
+      // Ctrl+S — save
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); feSaveFile(); return; }
+      // Ctrl+Z — undo
+      if (e.ctrlKey && !e.shiftKey && e.key === 'z') { e.preventDefault(); feUndo(); return; }
+      // Ctrl+Shift+Z or Ctrl+Y — redo
+      if ((e.ctrlKey && e.shiftKey && e.key === 'Z') || (e.ctrlKey && e.key === 'y')) { e.preventDefault(); feRedo(); return; }
+      // Ctrl+F — find
+      if (e.ctrlKey && e.key === 'f') { e.preventDefault(); feFindReplace(); return; }
+      // Ctrl+G — go to line
+      if (e.ctrlKey && e.key === 'g') { e.preventDefault(); feGoToLine(); return; }
+      // Ctrl+H — find and replace (focus replace)
+      if (e.ctrlKey && e.key === 'h') { e.preventDefault(); feFindReplace(); setTimeout(function () { var ri = document.getElementById('feReplaceInput'); if (ri) ri.focus(); }, 100); return; }
+      // Enter — auto-indent
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var area = e.target;
+        var start = area.selectionStart;
+        var before = area.value.substring(0, start);
+        var currentLine = before.substring(before.lastIndexOf('\n') + 1);
+        var indent = currentLine.match(/^(\s*)/)[1] || '';
+        // Extra indent after { or (
+        var lastChar = before.trimEnd().slice(-1);
+        if (lastChar === '{' || lastChar === '(' || lastChar === '[') indent += '    ';
+        area.value = before + '\n' + indent + area.value.substring(area.selectionEnd);
+        area.selectionStart = area.selectionEnd = start + 1 + indent.length;
+        feOnEditorInput();
+      }
+    }
+
+    function feUpdateLineNumbers() {
+      var area = document.getElementById('feEditorArea');
+      var lineNums = document.getElementById('feLineNumbers');
+      if (!area || !lineNums) return;
+      var lines = area.value.split('\n');
+      var html = '';
+      for (var i = 1; i <= lines.length; i++) {
+        html += i + '\n';
+      }
+      lineNums.textContent = html;
+      lineNums.scrollTop = area.scrollTop;
+    }
+
+    function feUpdateStatusBar() {
+      var area = document.getElementById('feEditorArea');
+      if (FE.activeIdx < 0 || !area) {
+        feSetEl('feFilePath', 'No file');
+        feSetEl('feLineCol', 'Ln 1, Col 1');
+        feSetEl('feLineCount', '0 lines');
+        feSetEl('feModified', 'Saved');
+        return;
+      }
+      var tab = FE.tabs[FE.activeIdx];
+      var pos = area.selectionStart;
+      var textBefore = area.value.substring(0, pos);
+      var line = (textBefore.match(/\n/g) || []).length + 1;
+      var col = pos - textBefore.lastIndexOf('\n');
+      var totalLines = area.value.split('\n').length;
+      var modified = (tab.content !== tab.savedContent);
+
+      feSetEl('feFilePath', tab.path);
+      feSetEl('feLineCol', 'Ln ' + line + ', Col ' + col);
+      feSetEl('feLineCount', totalLines + ' lines');
+      var modEl = document.getElementById('feModified');
+      if (modEl) {
+        modEl.textContent = modified ? 'Modified' : 'Saved';
+        modEl.style.color = modified ? 'var(--accent-orange)' : 'var(--accent-green)';
+      }
+    }
+
+    function feSetEl(id, text) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    function feSetStatus(text) {
+      feSetEl('feStatusInfo', text);
+    }
+
+    // ---- Find / Replace ----
+    function feFindReplace() {
+      var bar = document.getElementById('feFindBar');
+      if (!bar) return;
+      bar.style.display = bar.style.display === 'none' ? 'flex' : 'none';
+      if (bar.style.display === 'flex') {
+        var fi = document.getElementById('feFindInput');
+        if (fi) fi.focus();
+        // Pre-populate with selection
+        var area = document.getElementById('feEditorArea');
+        if (area && area.selectionStart !== area.selectionEnd) {
+          fi.value = area.value.substring(area.selectionStart, area.selectionEnd);
+        }
+      }
+    }
+
+    function feDoFind() {
+      var area = document.getElementById('feEditorArea');
+      var input = document.getElementById('feFindInput');
+      if (!area || !input) return;
+      var query = input.value;
+      if (!query) { feSetEl('feFindCount', ''); return; }
+
+      var useRegex = document.getElementById('feFindRegex') && document.getElementById('feFindRegex').checked;
+      var matchCase = document.getElementById('feFindCase') && document.getElementById('feFindCase').checked;
+      var text = area.value;
+
+      FE.findMatches = [];
+      if (useRegex) {
+        try {
+          var flags = matchCase ? 'g' : 'gi';
+          var re = new RegExp(query, flags);
+          var m;
+          while ((m = re.exec(text)) !== null) {
+            FE.findMatches.push({ start: m.index, end: m.index + m[0].length });
+            if (FE.findMatches.length >= 5000) break;
+          }
+        } catch (e) { feSetEl('feFindCount', 'Invalid regex'); return; }
+      } else {
+        var searchText = matchCase ? text : text.toLowerCase();
+        var searchQuery = matchCase ? query : query.toLowerCase();
+        var pos = 0;
+        while ((pos = searchText.indexOf(searchQuery, pos)) !== -1) {
+          FE.findMatches.push({ start: pos, end: pos + query.length });
+          pos += query.length;
+          if (FE.findMatches.length >= 5000) break;
+        }
+      }
+
+      feSetEl('feFindCount', FE.findMatches.length + ' matches');
+
+      // Navigate to first match after cursor
+      if (FE.findMatches.length > 0) {
+        var cursor = area.selectionEnd;
+        FE.findIdx = 0;
+        for (var i = 0; i < FE.findMatches.length; i++) {
+          if (FE.findMatches[i].start >= cursor) { FE.findIdx = i; break; }
+        }
+        var match = FE.findMatches[FE.findIdx];
+        area.setSelectionRange(match.start, match.end);
+        area.focus();
+        // Scroll to match
+        var linesBefore = text.substring(0, match.start).split('\n').length;
+        area.scrollTop = Math.max(0, (linesBefore - 5) * 18); // ~18px per line
+        feSetEl('feFindCount', (FE.findIdx + 1) + '/' + FE.findMatches.length);
+      }
+    }
+
+    function feDoReplace() {
+      var area = document.getElementById('feEditorArea');
+      var replaceInput = document.getElementById('feReplaceInput');
+      if (!area || !replaceInput || FE.findMatches.length === 0) return;
+
+      if (FE.activeIdx >= 0) {
+        var tab = FE.tabs[FE.activeIdx];
+        tab.undoStack.push(area.value);
+      }
+
+      var match = FE.findMatches[FE.findIdx];
+      var replacement = replaceInput.value;
+      area.value = area.value.substring(0, match.start) + replacement + area.value.substring(match.end);
+      area.selectionStart = area.selectionEnd = match.start + replacement.length;
+
+      feOnEditorInput();
+      // Re-run find to update matches
+      feDoFind();
+    }
+
+    function feDoReplaceAll() {
+      var area = document.getElementById('feEditorArea');
+      var findInput = document.getElementById('feFindInput');
+      var replaceInput = document.getElementById('feReplaceInput');
+      if (!area || !findInput || !replaceInput) return;
+      var query = findInput.value;
+      var replacement = replaceInput.value;
+      if (!query) return;
+
+      if (FE.activeIdx >= 0) {
+        var tab = FE.tabs[FE.activeIdx];
+        tab.undoStack.push(area.value);
+      }
+
+      var useRegex = document.getElementById('feFindRegex') && document.getElementById('feFindRegex').checked;
+      var matchCase = document.getElementById('feFindCase') && document.getElementById('feFindCase').checked;
+
+      if (useRegex) {
+        try {
+          var flags = matchCase ? 'g' : 'gi';
+          area.value = area.value.replace(new RegExp(query, flags), replacement);
+        } catch (e) { feSetStatus('Invalid regex'); return; }
+      } else {
+        // Replace all occurrences
+        var result = area.value;
+        if (matchCase) {
+          while (result.indexOf(query) !== -1) result = result.replace(query, replacement);
+        } else {
+          var re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+          result = result.replace(re, replacement);
+        }
+        area.value = result;
+      }
+
+      feOnEditorInput();
+      feDoFind();
+      feSetStatus('Replaced all occurrences');
+    }
+
+    // ---- Go to Line ----
+    function feGoToLine() {
+      var area = document.getElementById('feEditorArea');
+      if (!area) return;
+      var lineNum = prompt('Go to line:');
+      if (!lineNum) return;
+      var target = parseInt(lineNum, 10);
+      if (isNaN(target) || target < 1) return;
+
+      var lines = area.value.split('\n');
+      if (target > lines.length) target = lines.length;
+      var pos = 0;
+      for (var i = 0; i < target - 1; i++) pos += lines[i].length + 1;
+      area.setSelectionRange(pos, pos);
+      area.focus();
+      area.scrollTop = Math.max(0, (target - 5) * 18);
+      feUpdateStatusBar();
+    }
+
+    function feToggleWordWrap() {
+      FE.wordWrap = !FE.wordWrap;
+      var area = document.getElementById('feEditorArea');
+      if (area) area.style.whiteSpace = FE.wordWrap ? 'pre-wrap' : 'pre';
+      feSetStatus('Word wrap: ' + (FE.wordWrap ? 'ON' : 'OFF'));
+    }
+
+    // ---- New File / Folder / Delete / Rename ----
+    async function feNewFile() {
+      var path = prompt('New file path (absolute or relative to tree root):');
+      if (!path) return;
+      // If relative, prepend tree root
+      if (path.indexOf(':') === -1 && !path.startsWith('/')) {
+        var root = document.getElementById('feTreePath');
+        path = (root ? root.value.trim() : '.') + '/' + path;
+      }
+
+      var data = await feApiPost('/api/write-file', { path: path, content: '' });
+      if (!data || !data.success) { feSetStatus('Failed to create file'); return; }
+      feAddHistory('create', path);
+      feSetStatus('Created: ' + path);
+      feOpenFile(path);
+      // Invalidate tree cache for parent
+      var parentDir = path.substring(0, path.lastIndexOf('/'));
+      delete FE.treeCache[parentDir];
+    }
+
+    async function feNewFileInDir(dirPath) {
+      var name = prompt('New file name in ' + dirPath + ':');
+      if (!name) return;
+      var fullPath = dirPath + '/' + name;
+      var data = await feApiPost('/api/write-file', { path: fullPath, content: '' });
+      if (!data || !data.success) { feSetStatus('Failed to create file'); return; }
+      feAddHistory('create', fullPath);
+      delete FE.treeCache[dirPath];
+      feToggleDir(dirPath, null); // force re-expand
+      feOpenFile(fullPath);
+    }
+
+    async function feNewFolderInDir(dirPath) {
+      var name = prompt('New folder name in ' + dirPath + ':');
+      if (!name) return;
+      var fullPath = dirPath + '/' + name;
+      var data = await feApiPost('/api/mkdir', { path: fullPath });
+      if (!data || !data.success) { feSetStatus('Failed to create folder'); return; }
+      feAddHistory('mkdir', fullPath);
+      delete FE.treeCache[dirPath];
+      FE.treeExpanded[dirPath] = false;
+      feToggleDir(dirPath, null);
+    }
+
+    async function feDeletePath(path) {
+      if (!confirm('Delete ' + path + '?')) return;
+      var data = await feApiPost('/api/delete-file', { path: path });
+      if (!data || !data.success) { feSetStatus('Delete failed'); return; }
+      feAddHistory('delete', path);
+      // Close tab if open
+      for (var i = FE.tabs.length - 1; i >= 0; i--) {
+        if (FE.tabs[i].path === path) { FE.tabs.splice(i, 1); }
+      }
+      if (FE.activeIdx >= FE.tabs.length) FE.activeIdx = FE.tabs.length - 1;
+      feUpdateTabBar();
+      if (FE.activeIdx >= 0) feActivateTab(FE.activeIdx);
+
+      // Invalidate parent cache
+      var parent = path.substring(0, path.lastIndexOf('/'));
+      delete FE.treeCache[parent];
+      feSetStatus('Deleted: ' + path);
+    }
+
+    async function feRenamePath(path) {
+      var newName = prompt('New name for ' + path.split('/').pop() + ':');
+      if (!newName) return;
+      var parentDir = path.substring(0, path.lastIndexOf('/'));
+      var newPath = parentDir + '/' + newName;
+      var data = await feApiPost('/api/rename-file', { old_path: path, new_path: newPath });
+      if (!data || !data.success) { feSetStatus('Rename failed'); return; }
+      feAddHistory('rename', path, '-> ' + newPath);
+      // Update tab if open
+      for (var i = 0; i < FE.tabs.length; i++) {
+        if (FE.tabs[i].path === path) {
+          FE.tabs[i].path = newPath;
+          FE.tabs[i].name = newName;
+        }
+      }
+      feUpdateTabBar();
+      delete FE.treeCache[parentDir];
+      feSetStatus('Renamed: ' + path.split('/').pop() + ' -> ' + newName);
+    }
+
+    function feRenameActive() {
+      if (FE.activeIdx < 0) return;
+      feRenamePath(FE.tabs[FE.activeIdx].path);
+    }
+
+    function feDeleteActive() {
+      if (FE.activeIdx < 0) return;
+      feDeletePath(FE.tabs[FE.activeIdx].path);
+    }
+
+    async function feDuplicateFile(path) {
+      var ext = path.lastIndexOf('.') >= 0 ? path.substring(path.lastIndexOf('.')) : '';
+      var base = path.substring(0, path.length - ext.length);
+      var newPath = base + '_copy' + ext;
+      var data = await feApiPost('/api/read-file', { path: path });
+      if (!data || data.content === undefined) { feSetStatus('Cannot read source'); return; }
+      var wr = await feApiPost('/api/write-file', { path: newPath, content: data.content });
+      if (!wr || !wr.success) { feSetStatus('Duplicate failed'); return; }
+      feAddHistory('duplicate', path, '-> ' + newPath);
+      var parent = path.substring(0, path.lastIndexOf('/'));
+      delete FE.treeCache[parent];
+      feOpenFile(newPath);
+    }
+
+    // ---- Diff View ----
+    function feShowDiff() {
+      var diffPane = document.getElementById('feDiffPane');
+      var editorArea = document.getElementById('feEditorArea');
+      var lineNums = document.getElementById('feLineNumbers');
+      if (!diffPane) return;
+
+      if (diffPane.style.display !== 'none') {
+        // Hide diff, show editor
+        diffPane.style.display = 'none';
+        if (editorArea) editorArea.parentElement.style.display = 'flex';
+        return;
+      }
+
+      if (FE.activeIdx < 0) { feSetStatus('No file open'); return; }
+      var tab = FE.tabs[FE.activeIdx];
+      if (tab.content === tab.savedContent) { feSetStatus('No changes to diff'); return; }
+
+      // Simple line-by-line diff
+      var savedLines = tab.savedContent.split('\n');
+      var currentLines = tab.content.split('\n');
+      var maxLen = Math.max(savedLines.length, currentLines.length);
+      var html = '<div style="margin-bottom:8px;font-weight:bold;color:var(--accent-cyan);">Diff: ' + escHtml(tab.name) + '</div>';
+
+      for (var i = 0; i < maxLen; i++) {
+        var lineNum = (i + 1).toString().padStart(4, ' ');
+        var savedLine = i < savedLines.length ? savedLines[i] : undefined;
+        var currentLine = i < currentLines.length ? currentLines[i] : undefined;
+
+        if (savedLine === currentLine) {
+          html += '<div style="color:var(--text-muted);">' + lineNum + '  ' + escHtml(savedLine || '') + '</div>';
+        } else {
+          if (savedLine !== undefined) {
+            html += '<div style="color:#ff6b6b;background:rgba(255,100,100,0.1);">' + lineNum + '- ' + escHtml(savedLine) + '</div>';
+          }
+          if (currentLine !== undefined) {
+            html += '<div style="color:#69ff94;background:rgba(100,255,100,0.1);">' + lineNum + '+ ' + escHtml(currentLine) + '</div>';
+          }
+        }
+      }
+
+      diffPane.innerHTML = html;
+      diffPane.style.display = 'block';
+      if (editorArea) editorArea.parentElement.style.display = 'none';
+    }
+
+    // ---- Search in Files ----
+    function feShowSearch() {
+      var drawer = document.getElementById('feSearchDrawer');
+      if (!drawer) return;
+      drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+      if (drawer.style.display === 'block') {
+        var si = document.getElementById('feGlobalSearch');
+        if (si) si.focus();
+      }
+    }
+
+    async function feDoGlobalSearch() {
+      var patternInput = document.getElementById('feGlobalSearch');
+      var filePatternInput = document.getElementById('feSearchPath');
+      var resultsEl = document.getElementById('feSearchResults');
+      if (!patternInput || !resultsEl) return;
+      var pattern = patternInput.value.trim();
+      if (!pattern) return;
+
+      var rootInput = document.getElementById('feTreePath');
+      var root = rootInput ? rootInput.value.trim() : '.';
+      var filePattern = filePatternInput ? filePatternInput.value.trim() : '*.*';
+
+      resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:8px;">Searching...</div>';
+
+      var data = await feApiPost('/api/search-files', {
+        pattern: pattern,
+        path: root,
+        file_pattern: filePattern,
+        max_results: 200
+      });
+
+      if (!data || !data.results) {
+        resultsEl.innerHTML = '<div style="color:#ff6b6b;padding:8px;">Search failed. Check backend connection.</div>';
+        return;
+      }
+
+      if (data.results.length === 0) {
+        resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:8px;">No matches found for "' + escHtml(pattern) + '"</div>';
+        return;
+      }
+
+      var html = '<div style="color:var(--accent-green);padding:4px 0;margin-bottom:8px;">' + data.count + ' match' + (data.count !== 1 ? 'es' : '') + '</div>';
+      var lastFile = '';
+      for (var i = 0; i < data.results.length; i++) {
+        var r = data.results[i];
+        var file = r.file.replace(/\\/g, '/');
+        if (file !== lastFile) {
+          lastFile = file;
+          html += '<div style="color:var(--accent-cyan);margin-top:6px;font-weight:bold;cursor:pointer;" onclick="feOpenFile(\'' + escHtml(file) + '\')">' + escHtml(file.split('/').pop()) + '</div>';
+          html += '<div style="color:var(--text-muted);font-size:9px;margin-bottom:2px;">' + escHtml(file) + '</div>';
+        }
+        html += '<div style="cursor:pointer;padding:1px 0;display:flex;gap:6px;" onclick="feOpenFileAtLine(\'' + escHtml(file) + '\',' + r.line + ')">';
+        html += '<span style="color:var(--accent-orange);min-width:32px;text-align:right;">' + r.line + '</span>';
+        html += '<span style="color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(r.text) + '</span>';
+        html += '</div>';
+      }
+      resultsEl.innerHTML = html;
+    }
+
+    async function feOpenFileAtLine(path, lineNum) {
+      await feOpenFile(path);
+      // After opening, go to line
+      setTimeout(function () {
+        var area = document.getElementById('feEditorArea');
+        if (!area) return;
+        var lines = area.value.split('\n');
+        var pos = 0;
+        for (var i = 0; i < Math.min(lineNum - 1, lines.length); i++) pos += lines[i].length + 1;
+        area.setSelectionRange(pos, pos + (lines[lineNum - 1] || '').length);
+        area.focus();
+        area.scrollTop = Math.max(0, (lineNum - 5) * 18);
+        feUpdateStatusBar();
+      }, 200);
+    }
+
+    // ---- History ----
+    function feShowHistory() {
+      var drawer = document.getElementById('feHistoryDrawer');
+      if (!drawer) return;
+      drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+      feRenderHistory();
+    }
+
+    function feAddHistory(op, path, detail) {
+      FE.history.unshift({ op: op, path: path, time: new Date().toLocaleTimeString(), detail: detail || '' });
+      if (FE.history.length > 100) FE.history.pop();
+    }
+
+    function feRenderHistory() {
+      var el = document.getElementById('feHistoryList');
+      if (!el) return;
+      if (FE.history.length === 0) {
+        el.innerHTML = '<div style="color:var(--text-muted);">No operations yet</div>';
+        return;
+      }
+      var html = '';
+      var opColors = { open: 'var(--accent-cyan)', save: 'var(--accent-green)', create: '#69ff94', delete: '#ff6b6b', rename: 'var(--accent-orange)', revert: 'var(--accent-purple)', mkdir: '#69ff94', duplicate: 'var(--accent-cyan)' };
+      for (var i = 0; i < FE.history.length; i++) {
+        var h = FE.history[i];
+        var color = opColors[h.op] || 'var(--text-muted)';
+        html += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+        html += '<span style="color:' + color + ';font-weight:bold;">[' + h.op.toUpperCase() + ']</span> ';
+        html += '<span style="color:var(--text-primary);">' + escHtml(h.path.split('/').pop()) + '</span>';
+        if (h.detail) html += ' <span style="color:var(--text-muted);">' + escHtml(h.detail) + '</span>';
+        html += '<br><span style="color:var(--text-muted);font-size:9px;">' + h.time + ' &mdash; ' + escHtml(h.path) + '</span>';
+        html += '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    // ---- Keyboard shortcut: Ctrl+S from anywhere to save active file editor tab ----
+    document.addEventListener('keydown', function (e) {
+      if (e.ctrlKey && e.key === 's' && FE.activeIdx >= 0 &&
+        document.getElementById('fileEditorPanel') &&
+        document.getElementById('fileEditorPanel').style.display !== 'none') {
+        e.preventDefault();
+        feSaveFile();
+      }
+    });
+
     function toggleSidebarMobile(side) {
       const sidebar = document.querySelector(side === 'left' ? '.sidebar' : '.rightbar');
       const overlay = document.getElementById('sidebarOverlay');
@@ -21860,9 +24797,34 @@
       if (ov) ov.classList.remove('active');
     }
 
-    // Close mobile sidebars on Escape key
+    // Close mobile sidebars on Escape key + keyboard shortcuts
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeMobileSidebars();
+      if (e.key === 'Escape') {
+        // Close browser overlay if open
+        var browserEl = document.getElementById('browserOverlay');
+        if (browserEl && browserEl.classList.contains('active')) {
+          closeBrowserPanel();
+          return;
+        }
+        closeMobileSidebars();
+      }
+      // Ctrl+` — toggle terminal
+      if (e.ctrlKey && e.key === '`') {
+        e.preventDefault();
+        toggleTerminalFull();
+      }
+      // Ctrl+B — toggle right sidebar
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        toggleRightbar();
+      }
+      // Ctrl+Shift+B — toggle browser
+      if (e.ctrlKey && e.shiftKey && e.key === 'B') {
+        e.preventDefault();
+        var bel = document.getElementById('browserOverlay');
+        if (bel && bel.classList.contains('active')) closeBrowserPanel();
+        else showBrowserPanel();
+      }
     });
 
     // Close mobile sidebars on window resize above breakpoint
