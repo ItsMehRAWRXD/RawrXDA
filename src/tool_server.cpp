@@ -401,6 +401,24 @@ private:
         else if (method == "POST" && path == "/api/read-file") {
             response = HandleReadFileRequest(ExtractBody(request));
         }
+        else if (method == "POST" && path == "/api/write-file") {
+            response = HandleWriteFileRequest(ExtractBody(request));
+        }
+        else if (method == "POST" && path == "/api/list-dir") {
+            response = HandleListDirRequest(ExtractBody(request));
+        }
+        else if (method == "POST" && path == "/api/delete-file") {
+            response = HandleDeleteFileRequest(ExtractBody(request));
+        }
+        else if (method == "POST" && path == "/api/rename-file") {
+            response = HandleRenameFileRequest(ExtractBody(request));
+        }
+        else if (method == "POST" && path == "/api/mkdir") {
+            response = HandleMkdirRequest(ExtractBody(request));
+        }
+        else if (method == "POST" && path == "/api/search-files") {
+            response = HandleSearchFilesRequest(ExtractBody(request));
+        }
         else if (method == "POST" && path == "/api/cli") {
             response = HandleCliRequest(ExtractBody(request));
         }
@@ -715,7 +733,17 @@ private:
         }
         else if (tool == "execute_command" || tool == "git_status") {
             std::string cmd = (tool == "git_status") ? "git status" : path;
-            if (cmd.find("git") != 0 && cmd.find("dir") != 0 && cmd.find("echo") != 0) {
+            // Whitelist: allow common file operations + git + dir + echo
+            bool allowed = false;
+            const char* whitelist[] = {
+                "git", "dir", "echo", "del", "move", "copy", "mkdir",
+                "rmdir", "findstr", "fc", "type", "ren", "xcopy",
+                "where", "attrib", "more", "sort", "find"
+            };
+            for (const auto& prefix : whitelist) {
+                if (cmd.find(prefix) == 0) { allowed = true; break; }
+            }
+            if (!allowed) {
                 result = ToolResult::Error("Command not allowed: " + cmd);
             } else {
                 FILE* pipe = _popen(cmd.c_str(), "r");
@@ -1956,6 +1984,202 @@ private:
 
         } catch (const std::exception& e) {
             return MakeErrorResponse(500, std::string("File read error: ") + e.what());
+        }
+    }
+
+    // ============================================================
+    // POST /api/write-file — Write/save a file from the editor
+    // ============================================================
+    std::string HandleWriteFileRequest(const std::string& body) {
+        std::string filePath = ExtractJsonValue(body, "path");
+        if (filePath.empty()) return MakeErrorResponse(400, "Missing 'path' field");
+
+        std::string content = ExtractJsonValue(body, "content");
+
+        try {
+            fs::path canonical = fs::weakly_canonical(filePath);
+            std::ofstream out(canonical, std::ios::binary);
+            if (!out.is_open()) return MakeErrorResponse(500, "Cannot write: " + filePath);
+            out.write(content.c_str(), (std::streamsize)content.size());
+            out.close();
+
+            nlohmann::json resp;
+            resp["success"] = true;
+            resp["path"] = canonical.string();
+            resp["size"] = content.size();
+            std::string json_body = resp.dump();
+            return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                   std::to_string(json_body.size()) + "\r\n\r\n" + json_body;
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(500, std::string("Write error: ") + e.what());
+        }
+    }
+
+    // ============================================================
+    // POST /api/list-dir — List directory contents
+    // ============================================================
+    std::string HandleListDirRequest(const std::string& body) {
+        std::string dirPath = ExtractJsonValue(body, "path");
+        if (dirPath.empty()) dirPath = ".";
+
+        try {
+            fs::path canonical = fs::weakly_canonical(dirPath);
+            if (!fs::exists(canonical) || !fs::is_directory(canonical)) {
+                return MakeErrorResponse(404, "Directory not found: " + dirPath);
+            }
+
+            nlohmann::json entries = nlohmann::json::array();
+            for (const auto& entry : fs::directory_iterator(canonical)) {
+                nlohmann::json e;
+                e["name"] = entry.path().filename().string();
+                e["type"] = entry.is_directory() ? "dir" : "file";
+                e["size"] = entry.is_directory() ? 0 : (int64_t)entry.file_size();
+                entries.push_back(e);
+            }
+
+            nlohmann::json resp;
+            resp["entries"] = entries;
+            resp["path"] = canonical.string();
+            std::string json_body = resp.dump();
+            return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                   std::to_string(json_body.size()) + "\r\n\r\n" + json_body;
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(500, std::string("List dir error: ") + e.what());
+        }
+    }
+
+    // ============================================================
+    // POST /api/delete-file — Delete a file or empty directory
+    // ============================================================
+    std::string HandleDeleteFileRequest(const std::string& body) {
+        std::string filePath = ExtractJsonValue(body, "path");
+        if (filePath.empty()) return MakeErrorResponse(400, "Missing 'path'");
+
+        try {
+            fs::path canonical = fs::weakly_canonical(filePath);
+            if (!fs::exists(canonical)) return MakeErrorResponse(404, "Not found: " + filePath);
+            bool removed = fs::remove(canonical);
+            nlohmann::json resp;
+            resp["success"] = removed;
+            resp["deleted"] = canonical.string();
+            std::string json_body = resp.dump();
+            return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                   std::to_string(json_body.size()) + "\r\n\r\n" + json_body;
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(500, std::string("Delete error: ") + e.what());
+        }
+    }
+
+    // ============================================================
+    // POST /api/rename-file — Rename/move file
+    // ============================================================
+    std::string HandleRenameFileRequest(const std::string& body) {
+        std::string oldPath = ExtractJsonValue(body, "old_path");
+        std::string newPath = ExtractJsonValue(body, "new_path");
+        if (oldPath.empty() || newPath.empty()) return MakeErrorResponse(400, "Need 'old_path' and 'new_path'");
+
+        try {
+            fs::rename(fs::weakly_canonical(oldPath), fs::weakly_canonical(newPath));
+            nlohmann::json resp;
+            resp["success"] = true;
+            resp["old_path"] = oldPath;
+            resp["new_path"] = newPath;
+            std::string json_body = resp.dump();
+            return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                   std::to_string(json_body.size()) + "\r\n\r\n" + json_body;
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(500, std::string("Rename error: ") + e.what());
+        }
+    }
+
+    // ============================================================
+    // POST /api/mkdir — Create directory (recursive)
+    // ============================================================
+    std::string HandleMkdirRequest(const std::string& body) {
+        std::string dirPath = ExtractJsonValue(body, "path");
+        if (dirPath.empty()) return MakeErrorResponse(400, "Missing 'path'");
+
+        try {
+            fs::create_directories(fs::weakly_canonical(dirPath));
+            nlohmann::json resp;
+            resp["success"] = true;
+            resp["path"] = dirPath;
+            std::string json_body = resp.dump();
+            return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                   std::to_string(json_body.size()) + "\r\n\r\n" + json_body;
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(500, std::string("Mkdir error: ") + e.what());
+        }
+    }
+
+    // ============================================================
+    // POST /api/search-files — Search text in files
+    // ============================================================
+    std::string HandleSearchFilesRequest(const std::string& body) {
+        std::string pattern = ExtractJsonValue(body, "pattern");
+        std::string basePath = ExtractJsonValue(body, "path");
+        std::string filePattern = ExtractJsonValue(body, "file_pattern");
+        if (pattern.empty()) return MakeErrorResponse(400, "Missing 'pattern'");
+        if (basePath.empty()) basePath = "D:\\rawrxd\\src";
+        if (filePattern.empty()) filePattern = "*.*";
+
+        try {
+            nlohmann::json results = nlohmann::json::array();
+            int count = 0;
+            const int maxResults = 200;
+
+            for (const auto& entry : fs::recursive_directory_iterator(
+                     fs::weakly_canonical(basePath),
+                     fs::directory_options::skip_permission_denied)) {
+                if (count >= maxResults) break;
+                if (!entry.is_regular_file()) continue;
+                if (entry.file_size() > 2 * 1024 * 1024) continue; // skip files > 2MB
+
+                std::string fname = entry.path().filename().string();
+                // Simple extension filter
+                if (filePattern != "*.*" && filePattern != "*") {
+                    auto dotPos = filePattern.find('.');
+                    if (dotPos != std::string::npos) {
+                        std::string ext = filePattern.substr(dotPos);
+                        if (fname.size() < ext.size() || fname.substr(fname.size() - ext.size()) != ext)
+                            continue;
+                    }
+                }
+
+                // Skip binary-looking dirs
+                std::string pathStr = entry.path().string();
+                if (pathStr.find(".git") != std::string::npos ||
+                    pathStr.find("build") != std::string::npos ||
+                    pathStr.find("node_modules") != std::string::npos)
+                    continue;
+
+                std::ifstream file(entry.path(), std::ios::binary);
+                if (!file.is_open()) continue;
+                std::string line;
+                int lineNum = 0;
+                while (std::getline(file, line) && count < maxResults) {
+                    lineNum++;
+                    if (line.find(pattern) != std::string::npos) {
+                        nlohmann::json r;
+                        r["file"] = entry.path().string();
+                        r["line"] = lineNum;
+                        r["text"] = line.size() > 200 ? line.substr(0, 200) + "..." : line;
+                        results.push_back(r);
+                        count++;
+                    }
+                }
+            }
+
+            nlohmann::json resp;
+            resp["results"] = results;
+            resp["count"] = count;
+            resp["pattern"] = pattern;
+            resp["path"] = basePath;
+            std::string json_body = resp.dump();
+            return "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " +
+                   std::to_string(json_body.size()) + "\r\n\r\n" + json_body;
+        } catch (const std::exception& e) {
+            return MakeErrorResponse(500, std::string("Search error: ") + e.what());
         }
     }
 
