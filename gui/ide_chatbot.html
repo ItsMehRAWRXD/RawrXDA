@@ -5,15 +5,80 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:;">
+    content="default-src 'self' file: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:;">
   <title>RawrXD IDE // AGENTIC INTERFACE</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦖</text></svg>">
   <!-- DOMPurify: XSS sanitization for all backend/assistant HTML output -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" crossorigin="anonymous"
+    onerror="console.warn('[RawrXD] DOMPurify CDN blocked — shim will activate')"></script>
   <!-- highlight.js: Syntax highlighting for code blocks in chat responses -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css"
     crossorigin="anonymous">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
-    crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous"
+    onerror="console.warn('[RawrXD] highlight.js CDN blocked — syntax highlighting disabled')"></script>
+  <!-- CDN Fallback: stubs for offline / file:// usage -->
+  <script>
+    // DOMPurify fallback — safe tag-stripping shim if CDN failed (offline / file:// mode)
+    if (typeof DOMPurify === 'undefined') {
+      console.warn('[RawrXD] DOMPurify CDN unavailable — using inline tag-stripping sanitizer');
+      (function () {
+        var SAFE_TAGS = {
+          'b': 1, 'i': 1, 'em': 1, 'strong': 1, 'code': 1, 'pre': 1, 'p': 1, 'br': 1,
+          'ul': 1, 'ol': 1, 'li': 1, 'h1': 1, 'h2': 1, 'h3': 1, 'h4': 1, 'h5': 1, 'h6': 1,
+          'a': 1, 'span': 1, 'div': 1, 'blockquote': 1, 'table': 1, 'thead': 1, 'tbody': 1,
+          'tr': 1, 'td': 1, 'th': 1, 'img': 1, 'hr': 1, 'details': 1, 'summary': 1, 'sub': 1, 'sup': 1
+        };
+        var SAFE_ATTRS = {
+          'href': 1, 'src': 1, 'alt': 1, 'title': 1, 'class': 1, 'id': 1,
+          'style': 1, 'target': 1, 'rel': 1, 'colspan': 1, 'rowspan': 1, 'width': 1, 'height': 1
+        };
+
+        window.DOMPurify = {
+          version: '0.0.0-shim',
+          sanitize: function (dirty) {
+            if (!dirty || typeof dirty !== 'string') return '';
+            var doc = new DOMParser().parseFromString('<div>' + dirty + '</div>', 'text/html');
+            function walk(node) {
+              var out = '';
+              for (var c = node.firstChild; c; c = c.nextSibling) {
+                if (c.nodeType === 3) { out += c.textContent; continue; }
+                if (c.nodeType !== 1) continue;
+                var tag = c.tagName.toLowerCase();
+                if (!SAFE_TAGS[tag]) { out += walk(c); continue; }
+                out += '<' + tag;
+                for (var j = 0; j < c.attributes.length; j++) {
+                  var attr = c.attributes[j];
+                  if (SAFE_ATTRS[attr.name.toLowerCase()]) {
+                    var val = attr.value;
+                    if (attr.name === 'href' && /^\s*javascript:/i.test(val)) continue;
+                    if (attr.name === 'src' && /^\s*javascript:/i.test(val)) continue;
+                    out += ' ' + attr.name + '="' + val.replace(/"/g, '&quot;') + '"';
+                  }
+                }
+                if (tag === 'br' || tag === 'hr' || tag === 'img') { out += '/>'; }
+                else { out += '>' + walk(c) + '</' + tag + '>'; }
+              }
+              return out;
+            }
+            return walk(doc.body.firstChild);
+          },
+          isSupported: true
+        };
+      })();
+    }
+    // highlight.js fallback — no-op if CDN failed
+    if (typeof hljs === 'undefined') {
+      console.warn('[RawrXD] highlight.js CDN unavailable — syntax highlighting disabled');
+      window.hljs = {
+        highlightElement: function () { },
+        highlightAll: function () { },
+        highlight: function (code) { return { value: code }; },
+        getLanguage: function () { return null; },
+        listLanguages: function () { return []; }
+      };
+    }
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -37,6 +102,156 @@
       --shadow-glow: 0 0 20px rgba(255, 107, 53, 0.15);
       --font-mono: 'JetBrains Mono', 'Consolas', monospace;
       --font-sans: 'Inter', -apple-system, sans-serif;
+      --titlebar-height: 0px;
+      /* overridden in standalone mode */
+    }
+
+    /* ================================================================
+       STANDALONE WINDOW CHROME (visible only when opened from file://)
+       Provides a native-feeling title bar with window controls,
+       version info, and backend status — acts like a desktop app.
+       Hidden when embedded inside Win32IDE WebView2.
+       ================================================================ */
+    .standalone-titlebar {
+      display: none;
+      /* hidden by default; shown via JS when standalone */
+      height: 36px;
+      background: linear-gradient(180deg, #1a1a25 0%, #12121a 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      -webkit-app-region: drag;
+      /* allows window drag in Electron/WebView2 */
+      user-select: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10001;
+      font-family: var(--font-sans);
+      font-size: 12px;
+    }
+
+    .standalone-titlebar.active {
+      display: flex;
+    }
+
+    .titlebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+    }
+
+    .titlebar-brand .tb-icon {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .titlebar-brand .tb-name {
+      font-weight: 600;
+      color: var(--accent-primary);
+      letter-spacing: 1px;
+      font-size: 11px;
+    }
+
+    .titlebar-brand .tb-version {
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+
+    .titlebar-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .titlebar-center .tb-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .titlebar-center .tb-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      transition: background 0.3s;
+    }
+
+    .titlebar-center .tb-dot.online {
+      background: var(--accent-green);
+      box-shadow: 0 0 6px var(--accent-green);
+    }
+
+    .titlebar-center .tb-mode {
+      padding: 1px 6px;
+      background: rgba(255, 107, 53, 0.15);
+      border-radius: 3px;
+      color: var(--accent-primary);
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .titlebar-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-controls button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      width: 32px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 4px;
+      transition: background 0.15s, color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .titlebar-controls button:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    .titlebar-controls .tb-close:hover {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .titlebar-controls .tb-fullscreen {
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+
+    /* Push main content down when titlebar is visible */
+    body.standalone-mode {
+      --titlebar-height: 36px;
+    }
+
+    body.standalone-mode .ide-container {
+      margin-top: var(--titlebar-height);
+      height: calc(100vh - var(--titlebar-height));
+    }
+
+    /* Fullscreen mode hides titlebar */
+    body.standalone-fullscreen .standalone-titlebar {
+      display: none !important;
+    }
+
+    body.standalone-fullscreen .ide-container {
+      margin-top: 0;
+      height: 100vh;
     }
 
     * {
@@ -3485,6 +3700,35 @@
 </head>
 
 <body>
+  <!-- ================================================================
+       STANDALONE TITLEBAR — Visible when opened via file:// or standalone
+       Provides window chrome: drag area, version, backend status, IDE launcher
+       ================================================================ -->
+  <div class="standalone-titlebar" id="standaloneTitlebar">
+    <div class="titlebar-brand">
+      <span class="tb-icon">&#x1F996;</span>
+      <span class="tb-name">RAWRXD</span>
+      <span class="tb-version">v3.4 // STANDALONE</span>
+    </div>
+    <div class="titlebar-center">
+      <div class="tb-status">
+        <span class="tb-dot" id="tbDot"></span>
+        <span id="tbStatusText">DISCONNECTED</span>
+      </div>
+      <span class="tb-mode" id="tbMode">STANDALONE</span>
+      <span id="tbIdeBridge" style="display:none;">
+        <button onclick="launchWin32IDE()" style="background:rgba(0,217,255,0.15);border:1px solid var(--accent-cyan);color:var(--accent-cyan);
+                 padding:1px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;
+                 font-family:var(--font-mono);-webkit-app-region:no-drag;"
+          title="Win32 IDE detected — click to switch">&#x1F5A5; OPEN IDE</button>
+      </span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="tb-fullscreen" onclick="toggleStandaloneFullscreen()" title="Fullscreen">F11</button>
+      <button onclick="window.location.reload()" title="Reload">&#x21BB;</button>
+    </div>
+  </div>
+
   <!-- Sidebar toggle buttons (visible at narrow viewports) -->
   <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebarMobile('left')"
     title="Toggle Tools Panel">&#x2630;</button>
@@ -3498,7 +3742,7 @@
       <div class="brand">
         <div class="brand-icon">&#x1F996;</div>
         <span class="brand-text">RAWRXD IDE</span>
-        <span style="color: var(--text-muted); font-size: 12px; font-weight: 400;">// AGENTIC INTERFACE v3.3</span>
+        <span style="color: var(--text-muted); font-size: 12px; font-weight: 400;">// AGENTIC INTERFACE v3.4</span>
       </div>
 
       <div class="header-controls">
@@ -3547,6 +3791,30 @@
           <button class="tool-btn" onclick="showSecurityPanel()">
             <span class="icon">&#x1F6E1;</span>
             <span>Security</span>
+          </button>
+          <button class="tool-btn" onclick="showBackendSwitcher()">
+            <span class="icon">&#x1F504;</span>
+            <span>Backends</span>
+          </button>
+          <button class="tool-btn" onclick="showRouterPanel()">
+            <span class="icon">&#x1F6A6;</span>
+            <span>Router</span>
+          </button>
+          <button class="tool-btn" onclick="showSwarmPanel()">
+            <span class="icon">&#x1F41D;</span>
+            <span>Swarm</span>
+          </button>
+          <button class="tool-btn" onclick="showMultiResponsePanel()">
+            <span class="icon">&#x1F4DD;</span>
+            <span>Multi-Resp</span>
+          </button>
+          <button class="tool-btn" onclick="showAsmDebugPanel()">
+            <span class="icon">&#x1F50D;</span>
+            <span>ASM Debug</span>
+          </button>
+          <button class="tool-btn" onclick="showSafetyPanel()">
+            <span class="icon">&#x1F6A8;</span>
+            <span>Safety</span>
           </button>
           <button class="tool-btn" onclick="clearChat()">
             <span class="icon">&#x1F5D1;</span>
@@ -4513,6 +4781,290 @@
           </div>
         </div>
       </div>
+
+      <!-- ================================================================
+           Backend Switcher Panel (Win32IDE: /api/backends, /api/backend/*)
+           ================================================================ -->
+      <div class="agent-panel" id="backendSwitcherPanel" style="z-index:1020;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F504; Backend Switcher</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchBackends()">Refresh</button>
+            <button class="code-btn" onclick="closeBackendSwitcher()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body" style="flex-direction:column;">
+          <div style="padding:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+              Switch between configured inference backends (Ollama, llama.cpp, remote APIs).
+              The active backend handles all <code>/api/generate</code> and <code>/v1/chat/completions</code> requests.
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-cyan);font-size:11px;">Active Backend:</strong>
+              <span id="bsActiveBackend"
+                style="color:var(--accent-green);font-family:var(--font-mono);font-size:12px;margin-left:6px;">&mdash;</span>
+            </div>
+            <div id="bsBackendList" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="text-align:center;color:var(--text-muted);padding:30px;font-size:12px;">Click Refresh to load
+                backends</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           LLM Router Panel (Win32IDE: /api/router/*)
+           ================================================================ -->
+      <div class="agent-panel" id="routerPanel" style="z-index:1021;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F6A6; LLM Router</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchRouterStatus()">Refresh</button>
+            <button class="code-btn" onclick="closeRouterPanel()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body" style="flex-direction:column;">
+          <div style="padding:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+              Intelligent prompt routing across backends. The router selects the optimal backend based on prompt
+              analysis,
+              model capabilities, latency history, and user preferences.
+            </div>
+            <div class="perf-metric-row" style="margin-bottom:16px;">
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Router Status</div>
+                <div class="perf-metric-value green" id="routerStatus">&mdash;</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Last Decision</div>
+                <div class="perf-metric-value cyan" id="routerLastDecision">&mdash;</div>
+              </div>
+            </div>
+            <div id="routerCapabilities" style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Backend Capabilities:</strong>
+              <div id="routerCapList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                <div style="color:var(--text-muted);font-size:11px;">No data yet</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Routing Heatmap:</strong>
+              <div id="routerHeatmap"
+                style="margin-top:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+                No heatmap data
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Pinned Routes:</strong>
+              <div id="routerPins"
+                style="margin-top:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+                No pins
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           Swarm Dashboard Panel (Win32IDE: /api/swarm/*)
+           ================================================================ -->
+      <div class="agent-panel" id="swarmPanel" style="z-index:1022;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F41D; Swarm Dashboard</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchSwarmStatus()">Refresh</button>
+            <button class="code-btn" onclick="closeSwarmPanel()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body" style="flex-direction:column;">
+          <div style="padding:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+              Distributed inference across multiple nodes. Monitor swarm health, manage workers,
+              and view task distribution in real time.
+            </div>
+            <div class="perf-metric-row" style="margin-bottom:16px;">
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Swarm Status</div>
+                <div class="perf-metric-value" id="swarmStatus">&mdash;</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Active Nodes</div>
+                <div class="perf-metric-value cyan" id="swarmNodeCount">0</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Running Tasks</div>
+                <div class="perf-metric-value green" id="swarmTaskCount">0</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Nodes:</strong>
+              <div id="swarmNodeList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                <div style="color:var(--text-muted);font-size:11px;">No nodes connected</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Recent Events:</strong>
+              <div id="swarmEventList"
+                style="margin-top:8px;max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:11px;">
+                <div style="color:var(--text-muted);">No events</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="code-btn" onclick="swarmAction('start')" style="flex:1;">&#x25B6; Start</button>
+              <button class="code-btn" onclick="swarmAction('stop')" style="flex:1;">&#x23F9; Stop</button>
+              <button class="code-btn" onclick="swarmAction('cache/clear')" style="flex:1;">&#x1F5D1; Clear
+                Cache</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           Multi-Response Panel (Win32IDE: /api/multi-response/*)
+           ================================================================ -->
+      <div class="agent-panel" id="multiResponsePanel" style="z-index:1023;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F4DD; Multi-Response Engine</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchMultiResponseStatus()">Refresh</button>
+            <button class="code-btn" onclick="closeMultiResponsePanel()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body" style="flex-direction:column;">
+          <div style="padding:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+              Generate multiple response variants (Standard, Guided, Creative, eXpert) from a single prompt.
+              Compare and select preferred responses for quality tuning.
+            </div>
+            <div class="perf-metric-row" style="margin-bottom:16px;">
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Engine Status</div>
+                <div class="perf-metric-value green" id="mrStatus">&mdash;</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Total Generated</div>
+                <div class="perf-metric-value cyan" id="mrGenCount">0</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Templates (S/G/C/X):</strong>
+              <div id="mrTemplateList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+                <div style="color:var(--text-muted);font-size:11px;">No templates loaded</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Preference Stats:</strong>
+              <div id="mrPrefStats"
+                style="margin-top:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);">
+                No preference data
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           ASM Debug Panel (Win32IDE: /api/debug/*)
+           ================================================================ -->
+      <div class="agent-panel" id="asmDebugPanel" style="z-index:1024;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F50D; ASM Debugger</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchAsmDebugStatus()">Refresh</button>
+            <button class="code-btn" onclick="closeAsmDebugPanel()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body" style="flex-direction:column;">
+          <div style="padding:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+              Low-level debugger integration. View breakpoints, registers, memory, stack frames,
+              and disassembly from the running Win32IDE debug session.
+            </div>
+            <div class="perf-metric-row" style="margin-bottom:16px;">
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Debug Status</div>
+                <div class="perf-metric-value" id="asmDebugStatus">&mdash;</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Breakpoints</div>
+                <div class="perf-metric-value cyan" id="asmBpCount">0</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Threads</div>
+                <div class="perf-metric-value green" id="asmThreadCount">0</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Registers:</strong>
+              <div id="asmRegisterList"
+                style="margin-top:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-family:var(--font-mono);font-size:10px;">
+                <div style="color:var(--text-muted);">No register data</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Stack:</strong>
+              <div id="asmStackView"
+                style="margin-top:8px;max-height:150px;overflow-y:auto;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
+                No stack data
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Recent Events:</strong>
+              <div id="asmEventList"
+                style="margin-top:8px;max-height:120px;overflow-y:auto;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);">
+                No events
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="code-btn" onclick="asmDebugAction('go')" style="flex:1;">&#x25B6; Go</button>
+              <button class="code-btn" onclick="asmDebugAction('launch')" style="flex:1;">&#x1F680; Launch</button>
+              <button class="code-btn" onclick="asmDebugAction('attach')" style="flex:1;">&#x1F517; Attach</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           Safety Panel (Win32IDE: /api/safety/*)
+           ================================================================ -->
+      <div class="agent-panel" id="safetyPanel" style="z-index:1025;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F6A8; Safety Monitor</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="fetchSafetyStatus()">Refresh</button>
+            <button class="code-btn" onclick="closeSafetyPanel()">Close</button>
+          </div>
+        </div>
+        <div class="agent-body" style="flex-direction:column;">
+          <div style="padding:12px;">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+              Runtime safety layer. Monitors inference outputs for safety violations,
+              enables rollback, and provides content checking before delivery.
+            </div>
+            <div class="perf-metric-row" style="margin-bottom:16px;">
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Safety Status</div>
+                <div class="perf-metric-value green" id="safetyStatus">&mdash;</div>
+              </div>
+              <div class="perf-metric-card">
+                <div class="perf-metric-label">Violations</div>
+                <div class="perf-metric-value" id="safetyViolationCount">0</div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--accent-secondary);font-size:11px;">Recent Violations:</strong>
+              <div id="safetyViolationList"
+                style="margin-top:8px;max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:11px;">
+                <div style="color:var(--accent-green);">&#x2714; No violations recorded</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="code-btn" onclick="safetyCheck()" style="flex:1;">&#x1F50D; Check Last Output</button>
+              <button class="code-btn" onclick="safetyRollback()" style="flex:1;">&#x21BA; Rollback</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
 
     <!-- Right Sidebar -->
@@ -4608,6 +5160,12 @@
     // ======================================================================
     // STATE
     // ======================================================================
+    // Detect if opened from file:// — if so, we must probe localhost for the backend
+    const _isFileProtocol = (window.location.protocol === 'file:');
+    // Resolved IDE server base URL (set during connectBackend)
+    // Used by readLocalFile() since window.location.origin is null in file:// context
+    var _ideServerUrl = 'http://localhost:11435';
+
     const State = {
       backend: {
         online: false,
@@ -4616,6 +5174,7 @@
         directMode: false,                           // true = bypassing serve.py, talking to Ollama
         lastPing: 0,
         serverType: null,         // 'rawrxd-win32ide' or 'RawrXD-serve.py' or 'ollama-direct'
+        fileProtocol: _isFileProtocol,               // true when opened via file:///
       },
       model: { current: null, list: [] },
       gen: {
@@ -5009,11 +5568,206 @@
     }
 
     // ======================================================================
+    // WIN32IDE BRIDGE — detect running IDE, sync state, launch IDE
+    // Works from both file:// and http:// contexts
+    // ======================================================================
+    var _win32IdeDetected = false;
+    var _win32IdeUrl = 'http://localhost:11435';
+    var _win32IdePollTimer = null;
+
+    async function probeWin32IDE() {
+      // Probe the Win32IDE local server to detect if it's running
+      try {
+        var res = await fetch(_win32IdeUrl + '/status', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          var data = await res.json();
+          if (data.backend === 'rawrxd-win32ide' || (data.server && data.server.indexOf('Win32IDE') >= 0)) {
+            _win32IdeDetected = true;
+            updateIdeBridgeUI(true, data);
+            logDebug('\uD83D\uDDA5 Win32 IDE detected at ' + _win32IdeUrl, 'info');
+            // Sync model info from IDE
+            if (data.model_loaded && data.model_path) {
+              var modelName = data.model_path.split(/[/\\]/).pop();
+              logDebug('IDE has model loaded: ' + modelName, 'info');
+            }
+            return true;
+          }
+        }
+      } catch (_) { /* IDE not running — that's fine */ }
+      _win32IdeDetected = false;
+      updateIdeBridgeUI(false, null);
+      return false;
+    }
+
+    function updateIdeBridgeUI(ideRunning, statusData) {
+      var bridgeEl = document.getElementById('tbIdeBridge');
+      var tbDot = document.getElementById('tbDot');
+      var tbStatusText = document.getElementById('tbStatusText');
+      var tbMode = document.getElementById('tbMode');
+
+      if (ideRunning) {
+        if (bridgeEl) bridgeEl.style.display = 'inline';
+        if (tbDot) tbDot.classList.add('online');
+        if (tbStatusText) tbStatusText.textContent = 'IDE ONLINE';
+        if (tbMode) {
+          tbMode.textContent = _isFileProtocol ? 'FILE → IDE' : 'HTTP';
+          tbMode.style.background = 'rgba(0,255,136,0.15)';
+          tbMode.style.color = 'var(--accent-green)';
+        }
+      } else {
+        if (bridgeEl) bridgeEl.style.display = 'none';
+        if (tbDot) tbDot.classList.remove('online');
+        if (tbStatusText) tbStatusText.textContent = State.backend.online ? 'CONNECTED' : 'DISCONNECTED';
+        if (tbMode) {
+          tbMode.textContent = _isFileProtocol ? 'STANDALONE' : 'HTTP';
+          tbMode.style.background = '';
+          tbMode.style.color = '';
+        }
+      }
+    }
+
+    function launchWin32IDE() {
+      // Open the Win32IDE's served GUI (this is identical but served from the IDE's HTTP server)
+      // When the IDE is running, navigating to /gui gives the same page but served via HTTP
+      if (_win32IdeDetected) {
+        window.open(_win32IdeUrl + '/gui', '_blank');
+        logDebug('Opened Win32 IDE GUI at ' + _win32IdeUrl + '/gui', 'info');
+      } else {
+        addMessage('system', '\u26A0\uFE0F **Win32 IDE not detected.** Start RawrXD-Win32IDE.exe first, then click \u26A1 to connect.', { skipMemory: true });
+      }
+    }
+
+    function toggleStandaloneFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(function () {
+          document.body.classList.add('standalone-fullscreen');
+        }).catch(function () { /* denied */ });
+      } else {
+        document.exitFullscreen().then(function () {
+          document.body.classList.remove('standalone-fullscreen');
+        }).catch(function () { /* denied */ });
+      }
+    }
+
+    // Start periodic IDE probe (every 30s) so the bridge badge appears when IDE starts
+    function startIdePoll() {
+      if (_win32IdePollTimer) return;
+      _win32IdePollTimer = setInterval(function () {
+        probeWin32IDE();
+      }, 30000);
+    }
+
+    function stopIdePoll() {
+      if (_win32IdePollTimer) {
+        clearInterval(_win32IdePollTimer);
+        _win32IdePollTimer = null;
+      }
+    }
+
+    // Sync titlebar status indicators with current backend state
+    function syncTitlebarStatus() {
+      var tbDot = document.getElementById('tbDot');
+      var tbStatusText = document.getElementById('tbStatusText');
+      var tbMode = document.getElementById('tbMode');
+
+      if (!tbDot || !tbStatusText || !tbMode) return;
+
+      if (State.backend.online) {
+        tbDot.classList.add('online');
+        if (State.backend.directMode) {
+          tbStatusText.textContent = 'OLLAMA DIRECT';
+          tbMode.textContent = 'DIRECT';
+          tbMode.style.background = 'rgba(0,217,255,0.15)';
+          tbMode.style.color = 'var(--accent-cyan)';
+        } else if (_win32IdeDetected) {
+          tbStatusText.textContent = 'IDE ONLINE';
+          tbMode.textContent = _isFileProtocol ? 'FILE \u2192 IDE' : 'IDE';
+          tbMode.style.background = 'rgba(0,255,136,0.15)';
+          tbMode.style.color = 'var(--accent-green)';
+        } else {
+          tbStatusText.textContent = 'CONNECTED';
+          tbMode.textContent = _isFileProtocol ? 'STANDALONE' : 'HTTP';
+          tbMode.style.background = '';
+          tbMode.style.color = '';
+        }
+      } else {
+        tbDot.classList.remove('online');
+        tbStatusText.textContent = 'DISCONNECTED';
+        tbMode.textContent = _isFileProtocol ? 'OFFLINE' : 'HTTP';
+        tbMode.style.background = 'rgba(255,51,102,0.15)';
+        tbMode.style.color = 'var(--accent-red)';
+      }
+    }
+
+    // IDE Bridge: read a file via the Win32IDE /api/read-file endpoint
+    async function readFileViaIDE(filePath) {
+      if (!_win32IdeDetected) return null;
+      try {
+        var res = await fetch(_win32IdeUrl + '/api/read-file', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: filePath }),
+          signal: AbortSignal.timeout(5000)
+        });
+        if (res.ok) return await res.json();
+      } catch (_) { /* IDE not reachable for file read */ }
+      return null;
+    }
+
+    // IDE Bridge: get IDE status snapshot (model, backends, router, etc.)
+    async function getIDEStatus() {
+      if (!_win32IdeDetected) return null;
+      try {
+        var endpoints = ['/status', '/api/router/status', '/api/backends', '/api/hotpatch/status'];
+        var results = {};
+        for (var i = 0; i < endpoints.length; i++) {
+          try {
+            var res = await fetch(_win32IdeUrl + endpoints[i], { signal: AbortSignal.timeout(3000) });
+            if (res.ok) results[endpoints[i]] = await res.json();
+          } catch (_) { /* skip failed endpoints */ }
+        }
+        return results;
+      } catch (_) { return null; }
+    }
+
+    // IDE Bridge: send a hotpatch command to the running IDE
+    async function sendHotpatchToIDE(action, layer, data) {
+      if (!_win32IdeDetected) return null;
+      var endpoint = '/api/hotpatch/' + action;
+      try {
+        var res = await fetch(_win32IdeUrl + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ layer: layer, data: data || {} }),
+          signal: AbortSignal.timeout(5000)
+        });
+        if (res.ok) return await res.json();
+      } catch (e) {
+        logDebug('Hotpatch via IDE failed: ' + e.message, 'error');
+      }
+      return null;
+    }
+
+    // ======================================================================
     // INIT
     // ======================================================================
     document.addEventListener('DOMContentLoaded', async () => {
       setupDragDrop();
       autoResizeInput();
+
+      // Detect file:// mode and update UI hints
+      if (_isFileProtocol) {
+        document.title = 'RawrXD IDE // STANDALONE';
+        document.body.classList.add('standalone-mode');
+        var titlebar = document.getElementById('standaloneTitlebar');
+        if (titlebar) titlebar.classList.add('active');
+        var brandSpan = document.querySelector('.header-bar .brand span:last-child');
+        if (brandSpan) brandSpan.textContent = '// STANDALONE v3.4';
+        logDebug('\uD83D\uDCC2 Opened from file:// — standalone mode active. Backend at localhost:11435/11434.', 'info');
+      }
+
+      // Probe for Win32IDE server (works from file:// or http://)
+      probeWin32IDE();
 
       // Restore session from localStorage
       var hasSession = Conversation.load();
@@ -5090,6 +5844,9 @@
       }
 
       await connectBackend();
+
+      // Start periodic IDE probe (updates titlebar bridge badge)
+      startIdePoll();
     });
 
     function dismissRestored() {
@@ -5098,28 +5855,32 @@
     }
 
     function addWelcomeMessage() {
+      var modeNote = _isFileProtocol
+        ? '\n\n\u{1F4C2} **Standalone Mode** — Opened directly from file system. ' +
+        'Connecting to `localhost:11435` (Win32 IDE) or `localhost:11434` (Ollama).\n' +
+        'Drag & drop files to attach them, or paste file paths in your message.' +
+        (_win32IdeDetected ? '\n\u{1F5A5} **Win32 IDE detected** — use the `OPEN IDE` button in the titlebar to switch.' : '')
+        : '';
       addMessage('system',
-        '**RawrXD Agentic Interface v3.3** — Phase 4: Security & Hardening\n\n' +
+        '**RawrXD Agentic Interface v3.4** — Standalone + Win32IDE Bridge\n\n' +
         'This interface connects to the RawrXD backend on `localhost:11435`. ' +
-        'If the Python server isn\u2019t running, it will automatically fall back to Ollama directly on `localhost:11434`.\n\n' +
-        '**What\'s new in v3.3:**\n' +
-        '\u2022 **Security Dashboard** — CSP audit, input validation status, rate limit meter\n' +
-        '\u2022 **Input Sanitization Guard** — XSS pattern detection, max-length enforcement, defense-in-depth\n' +
-        '\u2022 **Client Rate Limiter** — configurable 30 req/min with visual meter & auto-block\n' +
-        '\u2022 **Backend URL Validation** — allowlist-enforced (localhost/127.0.0.1 only)\n' +
-        '\u2022 **CSP Audit Tool** — live analysis of Content Security Policy directives\n' +
-        '\u2022 **Security Event Log** — BLOCK/ALLOW/WARN/AUDIT entries with timestamps\n' +
-        '\u2022 **Backend Hardening** — request size limits, rate limiting, security headers\n' +
-        '\u2022 **Terminal `security` command** — quick security status in terminal\n\n' +
+        'If the Python server isn\u2019t running, it will automatically fall back to Ollama directly on `localhost:11434`.' + modeNote + '\n\n' +
+        '**What\'s new in v3.4:**\n' +
+        '\u2022 **Standalone Mode** — Works fully from `file:///` with no server needed for UI\n' +
+        '\u2022 **Win32 IDE Bridge** — Auto-detects running IDE, syncs state, hotpatch control\n' +
+        '\u2022 **Native Titlebar** — Window chrome with status, mode badge, and IDE launcher\n' +
+        '\u2022 **IDE File Bridge** — Read local files via IDE\'s `/api/read-file` endpoint\n' +
+        '\u2022 **Fullscreen Mode** — F11 key or titlebar button for distraction-free chat\n' +
+        '\u2022 **Security Dashboard** — CSP audit, input validation, rate limit meter\n' +
+        '\u2022 **Hotpatch Control** — Toggle/apply/revert hotpatches from the browser\n\n' +
         '**Quick start:**\n' +
         '1. Run `launch_rawrxd.bat` or click **\u26A1** to connect\n' +
         '2. Select a model from the sidebar dropdown\n' +
-        '3. Click **\uD83D\uDEE1 Security** to open the Security Dashboard\n' +
-        '4. Type your message and press Enter\n\n' +
-        '**Backend options:**\n' +
-        '\u2022 `launch_rawrxd.bat` (starts everything automatically)\n' +
-        '\u2022 Win32 IDE built-in server (start from IDE menu)\n' +
-        '\u2022 `python gui/serve.py` (standalone, proxies to Ollama)');
+        '3. Type your message and press Enter\n\n' +
+        '**Usage modes:**\n' +
+        '\u2022 **File mode** — Double-click `gui/ide_chatbot.html` (standalone, no server required for UI)\n' +
+        '\u2022 **Served mode** — Navigate to `http://localhost:11435/gui` (served by Win32 IDE)\n' +
+        '\u2022 **Both** — Same HTML works in either context, auto-detects environment');
     }
 
     // ======================================================================
@@ -5336,12 +6097,14 @@
           State.backend.directMode = false;
           State.backend.lastPing = Date.now();
           State.backend.serverType = statusData.backend || statusData.server || 'unknown';
+          _ideServerUrl = State.backend.url; // Cache IDE server URL for file reads
 
           status.className = 'status-pill online';
           text.textContent = 'ONLINE';
 
           updateBackendInfo(statusData, latency);
           updateModeBadge(true);
+          syncTitlebarStatus();
           logDebug('Connected to ' + State.backend.serverType + ' (' + latency + 'ms)', 'info');
 
           await fetchModels();
@@ -5368,12 +6131,15 @@
               State.backend.directMode = true;
               State.backend.lastPing = Date.now();
               State.backend.serverType = 'ollama-direct';
+              // Even in direct mode, the Win32IDE may be running for /api/read-file
+              _ideServerUrl = State.backend.url; // Keep :11435 as IDE server for file reads
 
               status.className = 'status-pill online';
               text.textContent = 'OLLAMA DIRECT';
 
               updateBackendInfo({ backend: 'ollama-direct', model_loaded: true }, latency);
               updateModeBadge(true);
+              syncTitlebarStatus();
               logDebug('\u2705 Connected directly to Ollama (bypassing serve.py) (' + latency + 'ms)', 'info');
 
               await fetchModels();
@@ -5392,6 +6158,7 @@
       text.textContent = 'OFFLINE';
       updateModeBadge(false);
       updateBackendInfo(null, 0);
+      syncTitlebarStatus();
       populateModelsFallback();
 
       if (document.getElementById('dbgAutoReconnect') && document.getElementById('dbgAutoReconnect').checked) {
@@ -5621,15 +6388,18 @@
         } catch (_) { /* fall through */ }
       }
 
-      // Strategy 2: Try Win32IDE /api/read-file via the page's own origin
-      // When served from Win32IDE (http://localhost:11435/gui), window.location.origin
-      // points to the IDE's embedded server which has the /api/read-file endpoint.
-      // This works in BOTH direct mode and normal mode as a universal fallback.
+      // Strategy 2: Try Win32IDE /api/read-file via known IDE server URLs
+      // Uses _ideServerUrl (resolved during connectBackend) + window.location.origin as fallbacks.
+      // Critical for file:// opens where window.location.origin is null.
       {
-        var ideServerUrl = window.location.origin;
-        // Also try State.backend.url if it differs from origin (e.g. serve.py on different port)
+        var ideServerUrl = _ideServerUrl || 'http://localhost:11435';
         var urlsToTry = [ideServerUrl];
-        if (State.backend.url && State.backend.url !== ideServerUrl) {
+        // Also try page origin if we're served from a server (not file://)
+        if (!_isFileProtocol && window.location.origin && window.location.origin !== 'null' && window.location.origin !== ideServerUrl) {
+          urlsToTry.unshift(window.location.origin);
+        }
+        // Also try State.backend.url if it differs
+        if (State.backend.url && urlsToTry.indexOf(State.backend.url) === -1) {
           urlsToTry.push(State.backend.url);
         }
         for (var ui = 0; ui < urlsToTry.length; ui++) {
@@ -5969,6 +6739,21 @@
       if ((e.ctrlKey && e.key === 'c' && State.chat.sending) || (e.key === 'Escape' && State.chat.sending)) {
         e.preventDefault();
         stopGeneration();
+      }
+    });
+
+    // Keyboard shortcut: F11 toggles standalone fullscreen (only in standalone mode)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'F11' && _isFileProtocol) {
+        e.preventDefault();
+        toggleStandaloneFullscreen();
+      }
+    });
+
+    // Sync standalone-fullscreen class when user exits fullscreen via Escape or browser chrome
+    document.addEventListener('fullscreenchange', function () {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove('standalone-fullscreen');
       }
     });
 
@@ -6914,6 +7699,10 @@
           addTerminalLine('  hotpatch toggle <layer> \u2014 Toggle memory/byte/server', 'output');
           addTerminalLine('  hotpatch apply <layer>  \u2014 Apply pending patches', 'output');
           addTerminalLine('  hotpatch revert <layer> \u2014 Revert active patches', 'output');
+          addTerminalLine('  ide              \u2014 Win32 IDE bridge status & controls', 'output');
+          addTerminalLine('  ide launch       \u2014 Launch Win32 IDE (if standalone)', 'output');
+          addTerminalLine('  ide probe        \u2014 Re-probe for running IDE instance', 'output');
+          addTerminalLine('  ide read <path>  \u2014 Read file via IDE bridge', 'output');
           addTerminalLine('  clear            \u2014 Clear terminal', 'output');
           break;
 
@@ -7175,6 +7964,55 @@
             addTerminalLine('Reverting ' + args[2] + ' hotpatch...', 'system');
           } else {
             addTerminalLine('Usage: hotpatch [toggle|apply|revert] <memory|byte|server>', 'error');
+          }
+          break;
+
+        case 'ide':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 Win32 IDE Bridge \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Mode:          ' + (_isFileProtocol ? 'STANDALONE (file://)' : 'SERVED (' + location.protocol + '//' + location.host + ')'), 'output');
+            addTerminalLine('  IDE Detected:  ' + (_win32IdeDetected ? 'YES' : 'NO'), _win32IdeDetected ? 'success' : 'output');
+            addTerminalLine('  IDE URL:       ' + (_ideServerUrl || 'not set'), 'output');
+            addTerminalLine('  Backend URL:   ' + State.backend.url, 'output');
+            addTerminalLine('  Backend Online:' + (State.backend.online ? ' YES' : ' NO'), State.backend.online ? 'success' : 'error');
+            addTerminalLine('  Polling:       ' + (_idePollInterval ? 'ACTIVE (30s)' : 'INACTIVE'), _idePollInterval ? 'success' : 'output');
+            addTerminalLine('  Fullscreen:    ' + (document.body.classList.contains('standalone-fullscreen') ? 'YES' : 'NO'), 'output');
+            if (_isFileProtocol) {
+              addTerminalLine('  Subcommands: ide launch | ide probe | ide read <path>', 'system');
+            }
+            addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+          } else if (args[1] === 'launch') {
+            if (!_isFileProtocol) {
+              addTerminalLine('Already running inside IDE server.', 'system');
+            } else {
+              addTerminalLine('Launching Win32 IDE...', 'system');
+              launchWin32IDE();
+              addTerminalLine('Launch command sent. Check your taskbar.', 'success');
+            }
+          } else if (args[1] === 'probe') {
+            addTerminalLine('Probing for Win32 IDE...', 'system');
+            probeWin32IDE().then(function () {
+              addTerminalLine('IDE Detected: ' + (_win32IdeDetected ? 'YES at ' + _ideServerUrl : 'NO'), _win32IdeDetected ? 'success' : 'error');
+            });
+          } else if (args[1] === 'read' && args.length >= 3) {
+            var filePath = cmd.substring(cmd.indexOf(args[2]));
+            addTerminalLine('Reading: ' + filePath, 'system');
+            readFileViaIDE(filePath).then(function (content) {
+              if (content) {
+                var lines = content.split('\n');
+                var maxLines = Math.min(lines.length, 30);
+                for (var li = 0; li < maxLines; li++) {
+                  addTerminalLine(lines[li], 'output');
+                }
+                if (lines.length > 30) {
+                  addTerminalLine('... (' + (lines.length - 30) + ' more lines)', 'system');
+                }
+              } else {
+                addTerminalLine('Failed to read file (IDE offline or path not found).', 'error');
+              }
+            });
+          } else {
+            addTerminalLine('Usage: ide [launch|probe|read <path>]', 'error');
           }
           break;
 
@@ -8300,32 +9138,494 @@
       renderSecurityLog();
     }
 
-    function renderSecurityLog() {
-      var log = State.security.eventLog;
-      el('secLogCount').textContent = log.length;
-
-      if (log.length === 0) {
-        el('secLogBody').innerHTML = '<div class="sec-log-entry"><span class="sec-log-ts">\u2014</span><span class="sec-log-level AUDIT">AUDIT</span><span class="sec-log-detail">No security events yet</span></div>';
+    // ======================================================================
+    // WIN32IDE BACKEND SWITCHER (Phase 8B: /api/backends, /api/backend/*)
+    // ======================================================================
+    function showBackendSwitcher() {
+      document.getElementById('backendSwitcherPanel').classList.add('active');
+      fetchBackends();
+    }
+    function closeBackendSwitcher() {
+      document.getElementById('backendSwitcherPanel').classList.remove('active');
+    }
+    async function fetchBackends() {
+      if (!State.backend.online) {
+        document.getElementById('bsBackendList').innerHTML = '<div style="color:var(--accent-red);padding:12px;">Backend offline</div>';
         return;
       }
+      try {
+        // Fetch active backend
+        var activeRes = await fetch(getActiveUrl() + '/api/backend/active', { signal: AbortSignal.timeout(5000) });
+        var activeData = activeRes.ok ? await activeRes.json() : {};
+        document.getElementById('bsActiveBackend').textContent = activeData.name || activeData.backend || activeData.type || '\u2014';
 
-      var html = '';
-      var show = log.slice(-50).reverse();
-      show.forEach(function (entry) {
-        var time = new Date(entry.timestamp).toLocaleTimeString([], { hour12: false });
-        html += '<div class="sec-log-entry">';
-        html += '<span class="sec-log-ts">' + time + '</span>';
-        html += '<span class="sec-log-level ' + esc(entry.level) + '">' + esc(entry.level) + '</span>';
-        html += '<span class="sec-log-detail">' + esc(entry.detail) + '</span>';
-        html += '</div>';
-      });
-      el('secLogBody').innerHTML = html;
+        // Fetch all backends
+        var res = await fetch(getActiveUrl() + '/api/backends', { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+        var backends = data.backends || data.list || [];
+        if (!Array.isArray(backends) || backends.length === 0) {
+          document.getElementById('bsBackendList').innerHTML = '<div style="color:var(--text-muted);padding:12px;">No backends configured</div>';
+          return;
+        }
+        var html = '';
+        backends.forEach(function (b) {
+          var name = b.name || b.type || 'unknown';
+          var url = b.url || b.endpoint || '';
+          var isActive = (activeData.name === name || activeData.backend === name);
+          var statusColor = b.online !== false ? 'var(--accent-green)' : 'var(--accent-red)';
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-tertiary);border-radius:6px;border:1px solid ' + (isActive ? 'var(--accent-green)' : 'var(--border-subtle)') + ';">';
+          html += '<div><strong style="color:var(--text-primary);font-size:12px;">' + esc(name) + '</strong>';
+          if (url) html += '<div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">' + esc(url) + '</div>';
+          html += '</div>';
+          html += '<div style="display:flex;gap:6px;align-items:center;">';
+          html += '<span style="color:' + statusColor + ';font-size:18px;">&#x25CF;</span>';
+          if (!isActive) {
+            html += '<button class="code-btn" onclick="switchBackend(\'' + esc(name) + '\')" style="font-size:10px;">Switch</button>';
+          } else {
+            html += '<span style="color:var(--accent-green);font-size:10px;font-weight:700;">ACTIVE</span>';
+          }
+          html += '</div></div>';
+        });
+        document.getElementById('bsBackendList').innerHTML = html;
+      } catch (e) {
+        document.getElementById('bsBackendList').innerHTML = '<div style="color:var(--accent-red);padding:12px;">Failed: ' + esc(e.message) + '</div>';
+        logDebug('Fetch backends failed: ' + e.message, 'error');
+      }
+    }
+    async function switchBackend(name) {
+      try {
+        var res = await fetch(getActiveUrl() + '/api/backend/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backend: name, name: name }),
+          signal: AbortSignal.timeout(10000)
+        });
+        var data = res.ok ? await res.json() : {};
+        logDebug('Backend switched to ' + name + ': ' + (data.status || 'ok'), 'info');
+        addMessage('system', '\u2705 Backend switched to **' + name + '**', { skipMemory: true });
+        fetchBackends();
+        fetchModels();
+      } catch (e) {
+        logDebug('Backend switch failed: ' + e.message, 'error');
+        addMessage('system', '\u274c Backend switch failed: ' + e.message, { skipMemory: true });
+      }
+    }
+
+    // ======================================================================
+    // WIN32IDE LLM ROUTER (Phase 9: /api/router/*)
+    // ======================================================================
+    function showRouterPanel() {
+      document.getElementById('routerPanel').classList.add('active');
+      fetchRouterStatus();
+    }
+    function closeRouterPanel() {
+      document.getElementById('routerPanel').classList.remove('active');
+    }
+    async function fetchRouterStatus() {
+      if (!State.backend.online) return;
+      try {
+        // Status
+        var sRes = await fetch(getActiveUrl() + '/api/router/status', { signal: AbortSignal.timeout(5000) });
+        if (sRes.ok) {
+          var sData = await sRes.json();
+          document.getElementById('routerStatus').textContent = sData.status || sData.state || 'active';
+          document.getElementById('routerStatus').style.color = 'var(--accent-green)';
+        }
+        // Last decision
+        var dRes = await fetch(getActiveUrl() + '/api/router/decision', { signal: AbortSignal.timeout(5000) });
+        if (dRes.ok) {
+          var dData = await dRes.json();
+          var decision = dData.backend || dData.selected || dData.decision || '\u2014';
+          document.getElementById('routerLastDecision').textContent = typeof decision === 'object' ? JSON.stringify(decision).substring(0, 40) : decision;
+        }
+        // Capabilities
+        var cRes = await fetch(getActiveUrl() + '/api/router/capabilities', { signal: AbortSignal.timeout(5000) });
+        if (cRes.ok) {
+          var cData = await cRes.json();
+          var caps = cData.capabilities || cData.backends || cData;
+          var capHtml = '';
+          if (Array.isArray(caps)) {
+            caps.forEach(function (c) {
+              capHtml += '<div style="padding:6px 10px;background:var(--bg-tertiary);border-radius:4px;font-size:11px;">';
+              capHtml += '<strong style="color:var(--text-primary);">' + esc(c.name || c.backend || 'unknown') + '</strong>';
+              if (c.models) capHtml += ' &mdash; <span style="color:var(--accent-cyan);">' + c.models + ' models</span>';
+              if (c.latency) capHtml += ' &mdash; <span style="color:var(--accent-secondary);">' + c.latency + 'ms avg</span>';
+              capHtml += '</div>';
+            });
+          } else if (typeof caps === 'object') {
+            Object.keys(caps).forEach(function (k) {
+              capHtml += '<div style="padding:4px 10px;font-size:11px;"><span style="color:var(--accent-cyan);">' + esc(k) + '</span>: <span style="color:var(--text-secondary);">' + esc(JSON.stringify(caps[k]).substring(0, 60)) + '</span></div>';
+            });
+          }
+          document.getElementById('routerCapList').innerHTML = capHtml || '<div style="color:var(--text-muted);font-size:11px;">No capabilities data</div>';
+        }
+        // Heatmap
+        var hRes = await fetch(getActiveUrl() + '/api/router/heatmap', { signal: AbortSignal.timeout(5000) });
+        if (hRes.ok) {
+          var hData = await hRes.json();
+          document.getElementById('routerHeatmap').textContent = JSON.stringify(hData, null, 2).substring(0, 300);
+          document.getElementById('routerHeatmap').style.color = 'var(--text-secondary)';
+        }
+        // Pins
+        var pRes = await fetch(getActiveUrl() + '/api/router/pins', { signal: AbortSignal.timeout(5000) });
+        if (pRes.ok) {
+          var pData = await pRes.json();
+          var pins = pData.pins || pData;
+          document.getElementById('routerPins').textContent = Array.isArray(pins) && pins.length > 0 ? pins.map(function (p) { return (p.pattern || p.model || '') + ' \u2192 ' + (p.backend || ''); }).join('\n') : 'No pins';
+          document.getElementById('routerPins').style.color = 'var(--text-secondary)';
+        }
+        logDebug('Router status loaded', 'info');
+      } catch (e) {
+        logDebug('Router status failed: ' + e.message, 'error');
+      }
+    }
+
+    // ======================================================================
+    // WIN32IDE SWARM DASHBOARD (Phase 11: /api/swarm/*)
+    // ======================================================================
+    function showSwarmPanel() {
+      document.getElementById('swarmPanel').classList.add('active');
+      fetchSwarmStatus();
+    }
+    function closeSwarmPanel() {
+      document.getElementById('swarmPanel').classList.remove('active');
+    }
+    async function fetchSwarmStatus() {
+      if (!State.backend.online) return;
+      try {
+        var sRes = await fetch(getActiveUrl() + '/api/swarm/status', { signal: AbortSignal.timeout(5000) });
+        if (sRes.ok) {
+          var sData = await sRes.json();
+          var status = sData.status || sData.state || 'idle';
+          document.getElementById('swarmStatus').textContent = status;
+          document.getElementById('swarmStatus').style.color = status === 'running' ? 'var(--accent-green)' : 'var(--text-muted)';
+        }
+        // Nodes
+        var nRes = await fetch(getActiveUrl() + '/api/swarm/nodes', { signal: AbortSignal.timeout(5000) });
+        if (nRes.ok) {
+          var nData = await nRes.json();
+          var nodes = nData.nodes || nData;
+          document.getElementById('swarmNodeCount').textContent = Array.isArray(nodes) ? nodes.length : 0;
+          var nodeHtml = '';
+          if (Array.isArray(nodes) && nodes.length > 0) {
+            nodes.forEach(function (n) {
+              var nStatus = n.status || n.state || 'unknown';
+              var col = nStatus === 'active' || nStatus === 'online' ? 'var(--accent-green)' : 'var(--accent-red)';
+              nodeHtml += '<div style="padding:6px 10px;background:var(--bg-tertiary);border-radius:4px;font-size:11px;display:flex;justify-content:space-between;">';
+              nodeHtml += '<span style="color:var(--text-primary);">' + esc(n.name || n.id || n.host || 'node') + '</span>';
+              nodeHtml += '<span style="color:' + col + ';">' + esc(nStatus) + '</span>';
+              nodeHtml += '</div>';
+            });
+          }
+          document.getElementById('swarmNodeList').innerHTML = nodeHtml || '<div style="color:var(--text-muted);font-size:11px;">No nodes connected</div>';
+        }
+        // Tasks
+        var tRes = await fetch(getActiveUrl() + '/api/swarm/tasks', { signal: AbortSignal.timeout(5000) });
+        if (tRes.ok) {
+          var tData = await tRes.json();
+          var tasks = tData.tasks || tData;
+          document.getElementById('swarmTaskCount').textContent = Array.isArray(tasks) ? tasks.length : 0;
+        }
+        // Events
+        var eRes = await fetch(getActiveUrl() + '/api/swarm/events', { signal: AbortSignal.timeout(5000) });
+        if (eRes.ok) {
+          var eData = await eRes.json();
+          var events = eData.events || eData;
+          var eventHtml = '';
+          if (Array.isArray(events) && events.length > 0) {
+            events.slice(-20).reverse().forEach(function (ev) {
+              var time = ev.timestamp || ev.time || '';
+              if (typeof time === 'number') time = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              eventHtml += '<div style="margin-bottom:2px;"><span style="color:var(--text-muted);">[' + esc(time) + ']</span> <span style="color:var(--accent-cyan);">' + esc(ev.type || ev.event || 'event') + '</span> ' + esc(ev.detail || ev.message || '') + '</div>';
+            });
+          }
+          document.getElementById('swarmEventList').innerHTML = eventHtml || '<div style="color:var(--text-muted);">No events</div>';
+        }
+        logDebug('Swarm status loaded', 'info');
+      } catch (e) {
+        logDebug('Swarm status failed: ' + e.message, 'error');
+      }
+    }
+    async function swarmAction(action) {
+      if (!State.backend.online) { addMessage('system', 'Backend offline', { skipMemory: true }); return; }
+      try {
+        var res = await fetch(getActiveUrl() + '/api/swarm/' + action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+          signal: AbortSignal.timeout(10000)
+        });
+        var data = res.ok ? await res.json() : {};
+        logDebug('Swarm ' + action + ': ' + (data.status || 'ok'), 'info');
+        addMessage('system', '\u2705 Swarm **' + action + '**: ' + (data.status || data.message || 'done'), { skipMemory: true });
+        fetchSwarmStatus();
+      } catch (e) {
+        logDebug('Swarm ' + action + ' failed: ' + e.message, 'error');
+      }
+    }
+
+    // ======================================================================
+    // WIN32IDE MULTI-RESPONSE ENGINE (Phase 10: /api/multi-response/*)
+    // ======================================================================
+    function showMultiResponsePanel() {
+      document.getElementById('multiResponsePanel').classList.add('active');
+      fetchMultiResponseStatus();
+    }
+    function closeMultiResponsePanel() {
+      document.getElementById('multiResponsePanel').classList.remove('active');
+    }
+    async function fetchMultiResponseStatus() {
+      if (!State.backend.online) return;
+      try {
+        var sRes = await fetch(getActiveUrl() + '/api/multi-response/status', { signal: AbortSignal.timeout(5000) });
+        if (sRes.ok) {
+          var sData = await sRes.json();
+          document.getElementById('mrStatus').textContent = sData.status || sData.state || 'ready';
+          document.getElementById('mrGenCount').textContent = sData.total_generated || sData.generations || 0;
+        }
+        // Templates
+        var tRes = await fetch(getActiveUrl() + '/api/multi-response/templates', { signal: AbortSignal.timeout(5000) });
+        if (tRes.ok) {
+          var tData = await tRes.json();
+          var templates = tData.templates || tData;
+          var tHtml = '';
+          if (Array.isArray(templates) && templates.length > 0) {
+            templates.forEach(function (t) {
+              var label = t.name || t.type || t.id || 'template';
+              var desc = t.description || t.label || '';
+              tHtml += '<div style="padding:6px 10px;background:var(--bg-tertiary);border-radius:4px;font-size:11px;">';
+              tHtml += '<strong style="color:var(--accent-cyan);">' + esc(label) + '</strong>';
+              if (desc) tHtml += ' &mdash; <span style="color:var(--text-secondary);">' + esc(desc.substring(0, 60)) + '</span>';
+              tHtml += '</div>';
+            });
+          }
+          document.getElementById('mrTemplateList').innerHTML = tHtml || '<div style="color:var(--text-muted);font-size:11px;">No templates loaded</div>';
+        }
+        // Preference stats
+        var pRes = await fetch(getActiveUrl() + '/api/multi-response/stats', { signal: AbortSignal.timeout(5000) });
+        if (pRes.ok) {
+          var pData = await pRes.json();
+          document.getElementById('mrPrefStats').textContent = JSON.stringify(pData, null, 2).substring(0, 200);
+          document.getElementById('mrPrefStats').style.color = 'var(--text-secondary)';
+        }
+        logDebug('Multi-response status loaded', 'info');
+      } catch (e) {
+        logDebug('Multi-response status failed: ' + e.message, 'error');
+      }
+    }
+
+    // ======================================================================
+    // WIN32IDE ASM DEBUGGER (Phase 12: /api/debug/*)
+    // ======================================================================
+    function showAsmDebugPanel() {
+      document.getElementById('asmDebugPanel').classList.add('active');
+      fetchAsmDebugStatus();
+    }
+    function closeAsmDebugPanel() {
+      document.getElementById('asmDebugPanel').classList.remove('active');
+    }
+    async function fetchAsmDebugStatus() {
+      if (!State.backend.online) return;
+      try {
+        // Status
+        var sRes = await fetch(getActiveUrl() + '/api/debug/status', { signal: AbortSignal.timeout(5000) });
+        if (sRes.ok) {
+          var sData = await sRes.json();
+          var status = sData.status || sData.state || 'idle';
+          document.getElementById('asmDebugStatus').textContent = status;
+          document.getElementById('asmDebugStatus').style.color = status === 'running' || status === 'active' ? 'var(--accent-green)' : 'var(--text-muted)';
+        }
+        // Breakpoints
+        var bRes = await fetch(getActiveUrl() + '/api/debug/breakpoints', { signal: AbortSignal.timeout(5000) });
+        if (bRes.ok) {
+          var bData = await bRes.json();
+          var bps = bData.breakpoints || bData;
+          document.getElementById('asmBpCount').textContent = Array.isArray(bps) ? bps.length : 0;
+        }
+        // Registers
+        var rRes = await fetch(getActiveUrl() + '/api/debug/registers', { signal: AbortSignal.timeout(5000) });
+        if (rRes.ok) {
+          var rData = await rRes.json();
+          var regs = rData.registers || rData;
+          var regHtml = '';
+          if (typeof regs === 'object' && regs !== null) {
+            Object.keys(regs).forEach(function (k) {
+              var val = typeof regs[k] === 'number' ? '0x' + regs[k].toString(16).toUpperCase().padStart(16, '0') : String(regs[k]);
+              regHtml += '<div style="padding:2px 4px;background:var(--bg-primary);border-radius:2px;overflow:hidden;">';
+              regHtml += '<span style="color:var(--accent-cyan);">' + esc(k) + '</span> ';
+              regHtml += '<span style="color:var(--text-secondary);">' + esc(val.substring(0, 18)) + '</span>';
+              regHtml += '</div>';
+            });
+          }
+          document.getElementById('asmRegisterList').innerHTML = regHtml || '<div style="color:var(--text-muted);">No register data</div>';
+        }
+        // Stack
+        var stRes = await fetch(getActiveUrl() + '/api/debug/stack', { signal: AbortSignal.timeout(5000) });
+        if (stRes.ok) {
+          var stData = await stRes.json();
+          var frames = stData.frames || stData.stack || stData;
+          var stackHtml = '';
+          if (Array.isArray(frames) && frames.length > 0) {
+            frames.forEach(function (f, i) {
+              stackHtml += '<div style="margin-bottom:2px;"><span style="color:var(--accent-secondary);">#' + i + '</span> ';
+              stackHtml += '<span style="color:var(--text-primary);">' + esc(f.function || f.name || f.symbol || '??') + '</span>';
+              if (f.address) stackHtml += ' <span style="color:var(--text-muted);">@ ' + esc(f.address) + '</span>';
+              if (f.module) stackHtml += ' <span style="color:var(--accent-cyan);">(' + esc(f.module) + ')</span>';
+              stackHtml += '</div>';
+            });
+          }
+          document.getElementById('asmStackView').innerHTML = stackHtml || '<div style="color:var(--text-muted);">No stack data</div>';
+        }
+        // Threads
+        var thRes = await fetch(getActiveUrl() + '/api/debug/threads', { signal: AbortSignal.timeout(5000) });
+        if (thRes.ok) {
+          var thData = await thRes.json();
+          var threads = thData.threads || thData;
+          document.getElementById('asmThreadCount').textContent = Array.isArray(threads) ? threads.length : 0;
+        }
+        // Events
+        var evRes = await fetch(getActiveUrl() + '/api/debug/events', { signal: AbortSignal.timeout(5000) });
+        if (evRes.ok) {
+          var evData = await evRes.json();
+          var events = evData.events || evData;
+          var evHtml = '';
+          if (Array.isArray(events) && events.length > 0) {
+            events.slice(-10).reverse().forEach(function (ev) {
+              evHtml += '<div style="margin-bottom:2px;"><span style="color:var(--accent-cyan);">' + esc(ev.type || ev.event || 'event') + '</span> ' + esc(ev.detail || ev.message || '') + '</div>';
+            });
+          }
+          document.getElementById('asmEventList').innerHTML = evHtml || '<div style="color:var(--text-muted);">No events</div>';
+        }
+        logDebug('ASM debug status loaded', 'info');
+      } catch (e) {
+        logDebug('ASM debug status failed: ' + e.message, 'error');
+      }
+    }
+    async function asmDebugAction(action) {
+      if (!State.backend.online) { addMessage('system', 'Backend offline', { skipMemory: true }); return; }
+      try {
+        var res = await fetch(getActiveUrl() + '/api/debug/' + action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+          signal: AbortSignal.timeout(10000)
+        });
+        var data = res.ok ? await res.json() : {};
+        logDebug('Debug ' + action + ': ' + (data.status || 'ok'), 'info');
+        fetchAsmDebugStatus();
+      } catch (e) {
+        logDebug('Debug ' + action + ' failed: ' + e.message, 'error');
+      }
+    }
+
+    // ======================================================================
+    // WIN32IDE SAFETY MONITOR (Phase 14: /api/safety/*)
+    // ======================================================================
+    function showSafetyPanel() {
+      document.getElementById('safetyPanel').classList.add('active');
+      fetchSafetyStatus();
+    }
+    function closeSafetyPanel() {
+      document.getElementById('safetyPanel').classList.remove('active');
+    }
+    async function fetchSafetyStatus() {
+      if (!State.backend.online) return;
+      try {
+        var sRes = await fetch(getActiveUrl() + '/api/safety/status', { signal: AbortSignal.timeout(5000) });
+        if (sRes.ok) {
+          var sData = await sRes.json();
+          document.getElementById('safetyStatus').textContent = sData.status || sData.state || 'active';
+          document.getElementById('safetyStatus').style.color = 'var(--accent-green)';
+        }
+        // Violations
+        var vRes = await fetch(getActiveUrl() + '/api/safety/violations', { signal: AbortSignal.timeout(5000) });
+        if (vRes.ok) {
+          var vData = await vRes.json();
+          var violations = vData.violations || vData;
+          document.getElementById('safetyViolationCount').textContent = Array.isArray(violations) ? violations.length : 0;
+          document.getElementById('safetyViolationCount').style.color = (Array.isArray(violations) && violations.length > 0) ? 'var(--accent-red)' : 'var(--text-muted)';
+          var vHtml = '';
+          if (Array.isArray(violations) && violations.length > 0) {
+            violations.slice(-20).reverse().forEach(function (v) {
+              var time = v.timestamp || v.time || '';
+              if (typeof time === 'number') time = new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              vHtml += '<div style="margin-bottom:4px;padding:4px 8px;background:rgba(255,51,102,0.1);border-radius:3px;">';
+              vHtml += '<span style="color:var(--text-muted);font-size:10px;">[' + esc(time) + ']</span> ';
+              vHtml += '<span style="color:var(--accent-red);">' + esc(v.type || v.category || 'violation') + '</span> ';
+              vHtml += '<span style="color:var(--text-secondary);">' + esc((v.detail || v.message || '').substring(0, 80)) + '</span>';
+              vHtml += '</div>';
+            });
+          }
+          document.getElementById('safetyViolationList').innerHTML = vHtml || '<div style="color:var(--accent-green);">&#x2714; No violations recorded</div>';
+        }
+        logDebug('Safety status loaded', 'info');
+      } catch (e) {
+        logDebug('Safety status failed: ' + e.message, 'error');
+      }
+    }
+    async function safetyCheck() {
+      if (!State.backend.online) { addMessage('system', 'Backend offline', { skipMemory: true }); return; }
+      try {
+        var lastMsg = Conversation.messages.length > 0 ? Conversation.messages[Conversation.messages.length - 1] : null;
+        var content = lastMsg ? lastMsg.content : '';
+        var res = await fetch(getActiveUrl() + '/api/safety/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: content, role: lastMsg ? lastMsg.role : 'unknown' }),
+          signal: AbortSignal.timeout(10000)
+        });
+        var data = res.ok ? await res.json() : {};
+        var safe = data.safe !== false;
+        addMessage('system', safe ? '\u2705 **Safety Check:** Output passed all safety checks.' : '\u26A0\uFE0F **Safety Check:** ' + (data.reason || data.detail || 'Violation detected'), { skipMemory: true });
+        logDebug('Safety check: ' + (safe ? 'PASS' : 'FAIL — ' + (data.reason || '')), safe ? 'info' : 'warn');
+      } catch (e) {
+        logDebug('Safety check failed: ' + e.message, 'error');
+      }
+    }
+    async function safetyRollback() {
+      if (!State.backend.online) { addMessage('system', 'Backend offline', { skipMemory: true }); return; }
+      try {
+        var res = await fetch(getActiveUrl() + '/api/safety/rollback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+          signal: AbortSignal.timeout(10000)
+        });
+        var data = res.ok ? await res.json() : {};
+        addMessage('system', '\u21BA **Safety Rollback:** ' + (data.status || data.message || 'done'), { skipMemory: true });
+        logDebug('Safety rollback: ' + (data.status || 'ok'), 'info');
+      } catch (e) {
+        logDebug('Safety rollback failed: ' + e.message, 'error');
+      }
+    }
+
+    function el(id) { return document.getElementById(id); }
+    var log = State.security.eventLog;
+    el('secLogCount').textContent = log.length;
+
+    if (log.length === 0) {
+      el('secLogBody').innerHTML = '<div class="sec-log-entry"><span class="sec-log-ts">\u2014</span><span class="sec-log-level AUDIT">AUDIT</span><span class="sec-log-detail">No security events yet</span></div>';
+      return;
+    }
+
+    var html = '';
+    var show = log.slice(-50).reverse();
+    show.forEach(function (entry) {
+      var time = new Date(entry.timestamp).toLocaleTimeString([], { hour12: false });
+      html += '<div class="sec-log-entry">';
+      html += '<span class="sec-log-ts">' + time + '</span>';
+      html += '<span class="sec-log-level ' + esc(entry.level) + '">' + esc(entry.level) + '</span>';
+      html += '<span class="sec-log-detail">' + esc(entry.detail) + '</span>';
+      html += '</div>';
+    });
+    el('secLogBody').innerHTML = html;
     }
 
     function exportSecurityAudit() {
       var data = {
         timestamp: new Date().toISOString(),
-        version: 'v3.3',
+        version: 'v3.4',
         phase: 'Phase 4: Security & Hardening',
         backendUrl: State.backend.url,
         urlAllowed: isUrlAllowed(State.backend.url),
