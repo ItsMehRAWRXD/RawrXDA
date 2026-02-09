@@ -3002,6 +3002,16 @@ private:
     void handleAskEndpoint(SOCKET client, const std::string& body);
     void handleServeGui(SOCKET client);
     void handleReadFileEndpoint(SOCKET client, const std::string& body);
+    void handleWriteFileEndpoint(SOCKET client, const std::string& body);
+    void handleListDirEndpoint(SOCKET client, const std::string& body);
+    void handleDeleteFileEndpoint(SOCKET client, const std::string& body);
+    void handleRenameFileEndpoint(SOCKET client, const std::string& body);
+    void handleMkdirEndpoint(SOCKET client, const std::string& body);
+    void handleSearchFilesEndpoint(SOCKET client, const std::string& body);
+    void handleStatFileEndpoint(SOCKET client, const std::string& body);
+    void handleCopyFileEndpoint(SOCKET client, const std::string& body);
+    void handleMoveFileEndpoint(SOCKET client, const std::string& body);
+    void handleToolDispatchEndpoint(SOCKET client, const std::string& body);
     void handleCliEndpoint(SOCKET client, const std::string& body);
     void handleHotpatchEndpoint(SOCKET client, const std::string& path, const std::string& body);
 

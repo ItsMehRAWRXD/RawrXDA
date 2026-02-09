@@ -139,9 +139,13 @@ static std::string buildHttpResponse(int status, const std::string& body,
     std::ostringstream oss;
     switch (status) {
         case 200: oss << "HTTP/1.1 200 OK\r\n"; break;
+        case 201: oss << "HTTP/1.1 201 Created\r\n"; break;
         case 204: oss << "HTTP/1.1 204 No Content\r\n"; break;
         case 400: oss << "HTTP/1.1 400 Bad Request\r\n"; break;
+        case 403: oss << "HTTP/1.1 403 Forbidden\r\n"; break;
         case 404: oss << "HTTP/1.1 404 Not Found\r\n"; break;
+        case 409: oss << "HTTP/1.1 409 Conflict\r\n"; break;
+        case 413: oss << "HTTP/1.1 413 Payload Too Large\r\n"; break;
         default:  oss << "HTTP/1.1 500 Internal Server Error\r\n"; break;
     }
     oss << "Content-Type: " << contentType << "\r\n";
@@ -165,6 +169,13 @@ static void sendSSEHeaders(LocalServerSocket client) {
         "Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
         "\r\n";
     send(client, headers.c_str(), (int)headers.size(), 0);
+}
+
+// Convenience wrapper: returns extracted string directly (empty if not found)
+static std::string extractJsonStringValue(const std::string& body, const std::string& key) {
+    std::string result;
+    extractJsonString(body, key, result);
+    return result;
 }
 
 } // namespace LocalServerUtil
@@ -830,6 +841,102 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
     // ========== File Reading: /api/read-file — read local file for chatbot attachments ==========
     else if (method == "POST" && path == "/api/read-file") {
         handleReadFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== File Writing: /api/write-file — write/overwrite local file ==========
+    else if (method == "POST" && path == "/api/write-file") {
+        handleWriteFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== List Directory: /api/list-directory — enumerate directory contents ==========
+    else if (method == "POST" && path == "/api/list-directory") {
+        handleListDirEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Delete File: /api/delete-file — remove a file from disk ==========
+    else if (method == "POST" && path == "/api/delete-file") {
+        handleDeleteFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Rename File: /api/rename-file — rename/move a file ==========
+    else if (method == "POST" && path == "/api/rename-file") {
+        handleRenameFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Create Directory: /api/mkdir — create directories recursively ==========
+    else if (method == "POST" && path == "/api/mkdir") {
+        handleMkdirEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Search Files: /api/search-files — recursive text/pattern search ==========
+    else if (method == "POST" && path == "/api/search-files") {
+        handleSearchFilesEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Stat File: /api/stat-file — file metadata (size, dates, attributes) ==========
+    else if (method == "POST" && path == "/api/stat-file") {
+        handleStatFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Copy File: /api/copy-file — copy file to destination ==========
+    else if (method == "POST" && path == "/api/copy-file") {
+        handleCopyFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Move File: /api/move-file — move file to destination ==========
+    else if (method == "POST" && path == "/api/move-file") {
+        handleMoveFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Tool Dispatcher: /api/tool — unified tool call interface ==========
+    else if (method == "POST" && path == "/api/tool") {
+        handleToolDispatchEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== File Writing: /api/write-file — save file from editor ==========
+    else if (method == "POST" && path == "/api/write-file") {
+        handleWriteFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Directory Listing: /api/list-dir — file tree browser ==========
+    else if (method == "POST" && path == "/api/list-dir") {
+        handleListDirEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== File Delete: /api/delete-file ==========
+    else if (method == "POST" && path == "/api/delete-file") {
+        handleDeleteFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== File Rename/Move: /api/rename-file ==========
+    else if (method == "POST" && path == "/api/rename-file") {
+        handleRenameFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Create Directory: /api/mkdir ==========
+    else if (method == "POST" && path == "/api/mkdir") {
+        handleMkdirEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Search in Files: /api/search-files ==========
+    else if (method == "POST" && path == "/api/search-files") {
+        handleSearchFilesEndpoint(client, body);
         closesocket(client);
         return;
     }
@@ -1542,7 +1649,7 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body) {
     else if (cmdLower == "/status" || cmdLower == "status") {
         output << "Server: Win32IDE LocalServer v20.0.0\\n";
         output << "Port: 11435\\n";
-        output << "Engine: " << (localServer_ ? "running" : "stopped") << "\\n";
+        output << "Engine: " << (m_localServerRunning.load() ? "running" : "stopped") << "\\n";
     }
     else if (cmdLower == "/plan") {
         if (cmdArgs.empty()) {
@@ -2499,4 +2606,912 @@ void Win32IDE::handleCoTCancelEndpoint(SOCKET client) {
     std::string resp = LocalServerUtil::buildHttpResponse(200,
         "{\"success\":true,\"message\":\"Cancel requested\"}");
     send(client, resp.c_str(), (int)resp.size(), 0);
+}
+
+// ============================================================================
+// FILE OPERATIONS — Comprehensive file management endpoints for IDE chatbot
+// ============================================================================
+// Security rules applied to ALL file operation endpoints:
+//   1. Path traversal ("..") is REJECTED
+//   2. Only absolute paths (drive-letter prefixed on Windows) are accepted
+//   3. All paths are normalized (forward slashes → backslashes on Windows)
+//   4. Size limits enforced per endpoint
+//   5. All operations logged
+// ============================================================================
+
+namespace {
+// --- Shared path validation for all file operation endpoints ---
+struct ValidatedPath {
+    std::string path;
+    std::string error;
+    int errorCode;
+    bool ok;
+};
+
+static ValidatedPath validateFilePath(const std::string& body, const std::string& fieldName = "path") {
+    ValidatedPath vp;
+    vp.ok = false;
+    vp.errorCode = 400;
+
+    if (!LocalServerUtil::extractJsonString(body, fieldName, vp.path) || vp.path.empty()) {
+        vp.error = "{\"error\":\"missing_" + fieldName + "\",\"message\":\"Request body must contain '" + fieldName + "' field\"}";
+        return vp;
+    }
+
+    // Normalize forward slashes to backslashes for Windows
+    for (auto& ch : vp.path) {
+        if (ch == '/') ch = '\\';
+    }
+
+    // Security: reject directory traversal
+    if (vp.path.find("..") != std::string::npos) {
+        vp.error = "{\"error\":\"forbidden\",\"message\":\"Directory traversal not allowed\"}";
+        vp.errorCode = 403;
+        return vp;
+    }
+
+    // Security: must be an absolute path (drive letter)
+    if (vp.path.size() < 3 || vp.path[1] != ':' || vp.path[2] != '\\') {
+        vp.error = "{\"error\":\"invalid_path\",\"message\":\"Only absolute paths are accepted (e.g., C:\\\\path\\\\to\\\\file)\"}";
+        return vp;
+    }
+
+    vp.ok = true;
+    return vp;
+}
+
+// Extract filename from a full path
+static std::string extractFileName(const std::string& fullPath) {
+    auto lastSlash = fullPath.rfind('\\');
+    if (lastSlash != std::string::npos && lastSlash + 1 < fullPath.size()) {
+        return fullPath.substr(lastSlash + 1);
+    }
+    return fullPath;
+}
+
+// Extract parent directory from a full path
+static std::string extractParentDir(const std::string& fullPath) {
+    auto lastSlash = fullPath.rfind('\\');
+    if (lastSlash != std::string::npos) {
+        return fullPath.substr(0, lastSlash);
+    }
+    return fullPath;
+}
+
+// Recursive directory creation (like mkdir -p)
+static bool createDirectoriesRecursive(const std::string& path) {
+    DWORD attr = GetFileAttributesA(path.c_str());
+    if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) {
+        return true; // Already exists
+    }
+
+    // Try to create parent first
+    std::string parent = extractParentDir(path);
+    if (parent.size() > 3 && parent != path) { // Don't go above drive root
+        if (!createDirectoriesRecursive(parent)) {
+            return false;
+        }
+    }
+
+    return CreateDirectoryA(path.c_str(), NULL) || GetLastError() == ERROR_ALREADY_EXISTS;
+}
+
+// Recursive directory listing for search
+struct FileSearchResult {
+    std::string path;
+    int line;
+    std::string lineText;
+};
+
+static void searchFilesRecursive(const std::string& dir, const std::string& pattern,
+                                  const std::string& textQuery, bool searchContent,
+                                  int maxResults, std::vector<FileSearchResult>& results) {
+    if ((int)results.size() >= maxResults) return;
+
+    WIN32_FIND_DATAA fd;
+    std::string searchPath = dir + "\\*";
+    HANDLE hFind = FindFirstFileA(searchPath.c_str(), &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    do {
+        if ((int)results.size() >= maxResults) break;
+        std::string name = fd.cFileName;
+        if (name == "." || name == "..") continue;
+
+        std::string fullPath = dir + "\\" + name;
+
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            // Skip hidden/system directories and common ignored dirs
+            if (name[0] == '.' || name == "node_modules" || name == ".git" ||
+                name == "__pycache__" || name == ".vs" || name == "Debug" || name == "Release") {
+                continue;
+            }
+            searchFilesRecursive(fullPath, pattern, textQuery, searchContent, maxResults, results);
+        } else {
+            // Check filename pattern match (simple glob: *.ext or *query*)
+            bool nameMatch = false;
+            if (pattern.empty() || pattern == "*") {
+                nameMatch = true;
+            } else if (pattern[0] == '*' && pattern[pattern.size() - 1] == '*') {
+                // *query* — contains search
+                std::string sub = pattern.substr(1, pattern.size() - 2);
+                std::string lowerName = name;
+                std::string lowerSub = sub;
+                for (auto& c : lowerName) c = (char)std::tolower((unsigned char)c);
+                for (auto& c : lowerSub) c = (char)std::tolower((unsigned char)c);
+                nameMatch = lowerName.find(lowerSub) != std::string::npos;
+            } else if (pattern[0] == '*') {
+                // *.ext — extension match
+                std::string ext = pattern.substr(1);
+                std::string lowerName = name;
+                std::string lowerExt = ext;
+                for (auto& c : lowerName) c = (char)std::tolower((unsigned char)c);
+                for (auto& c : lowerExt) c = (char)std::tolower((unsigned char)c);
+                nameMatch = (lowerName.size() >= lowerExt.size() &&
+                             lowerName.substr(lowerName.size() - lowerExt.size()) == lowerExt);
+            } else {
+                std::string lowerName = name;
+                std::string lowerPattern = pattern;
+                for (auto& c : lowerName) c = (char)std::tolower((unsigned char)c);
+                for (auto& c : lowerPattern) c = (char)std::tolower((unsigned char)c);
+                nameMatch = (lowerName.find(lowerPattern) != std::string::npos);
+            }
+
+            if (nameMatch && !searchContent) {
+                FileSearchResult r;
+                r.path = fullPath;
+                r.line = 0;
+                results.push_back(r);
+            } else if (nameMatch && searchContent && !textQuery.empty()) {
+                // Search file content for text (only text files under 2MB)
+                if (fd.nFileSizeLow < 2 * 1024 * 1024 && fd.nFileSizeHigh == 0) {
+                    HANDLE hFile = CreateFileA(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                    if (hFile != INVALID_HANDLE_VALUE) {
+                        DWORD fileSize = fd.nFileSizeLow;
+                        std::string content(fileSize, '\0');
+                        DWORD bytesRead = 0;
+                        ReadFile(hFile, &content[0], fileSize, &bytesRead, NULL);
+                        CloseHandle(hFile);
+                        content.resize(bytesRead);
+
+                        // Case-insensitive search
+                        std::string lowerContent = content;
+                        std::string lowerQuery = textQuery;
+                        for (auto& c : lowerContent) c = (char)std::tolower((unsigned char)c);
+                        for (auto& c : lowerQuery) c = (char)std::tolower((unsigned char)c);
+
+                        size_t pos = 0;
+                        int lineNum = 1;
+                        size_t lineStart = 0;
+                        while (pos < lowerContent.size() && (int)results.size() < maxResults) {
+                            size_t found = lowerContent.find(lowerQuery, pos);
+                            if (found == std::string::npos) break;
+
+                            // Count lines up to found position
+                            while (lineStart < found) {
+                                if (content[lineStart] == '\n') lineNum++;
+                                lineStart++;
+                            }
+
+                            // Extract the line text
+                            size_t lineEnd = content.find('\n', found);
+                            size_t prevNewline = content.rfind('\n', found);
+                            size_t ls = (prevNewline == std::string::npos) ? 0 : prevNewline + 1;
+                            size_t le = (lineEnd == std::string::npos) ? content.size() : lineEnd;
+                            std::string lineText = content.substr(ls, std::min(le - ls, (size_t)200));
+
+                            FileSearchResult r;
+                            r.path = fullPath;
+                            r.line = lineNum;
+                            r.lineText = lineText;
+                            results.push_back(r);
+
+                            pos = found + lowerQuery.size();
+                        }
+                    }
+                }
+            }
+        }
+    } while (FindNextFileA(hFind, &fd));
+
+    FindClose(hFind);
+}
+
+// Recursive directory listing for list-directory with depth control
+struct DirEntry {
+    std::string name;
+    std::string path;
+    bool isDir;
+    DWORD size;
+    FILETIME lastWrite;
+};
+
+static void listDirectoryEntries(const std::string& dir, int depth, int maxDepth,
+                                  int maxEntries, std::vector<DirEntry>& entries) {
+    if ((int)entries.size() >= maxEntries || depth > maxDepth) return;
+
+    WIN32_FIND_DATAA fd;
+    std::string searchPath = dir + "\\*";
+    HANDLE hFind = FindFirstFileA(searchPath.c_str(), &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    do {
+        if ((int)entries.size() >= maxEntries) break;
+        std::string name = fd.cFileName;
+        if (name == "." || name == "..") continue;
+
+        DirEntry entry;
+        entry.name = name;
+        entry.path = dir + "\\" + name;
+        entry.isDir = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        entry.size = fd.nFileSizeLow;
+        entry.lastWrite = fd.ftLastWriteTime;
+        entries.push_back(entry);
+
+        if (entry.isDir && depth < maxDepth) {
+            listDirectoryEntries(entry.path, depth + 1, maxDepth, maxEntries, entries);
+        }
+    } while (FindNextFileA(hFind, &fd));
+
+    FindClose(hFind);
+}
+
+} // anonymous namespace
+
+// ============================================================================
+// POST /api/write-file — Write/overwrite a file on disk
+// ============================================================================
+// Request body: {"path":"C:/some/file.cpp","content":"...file text..."}
+// Optional: {"createDirs":true} to auto-create parent directories
+// Response: {"success":true,"path":"...","size":12345}
+// Security: Rejects ".." traversal, requires absolute paths, max 50MB content
+// ============================================================================
+
+void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
+    auto vp = validateFilePath(body);
+    if (!vp.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string content;
+    if (!LocalServerUtil::extractJsonString(body, "content", content)) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"missing_content\",\"message\":\"Request body must contain 'content' field\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Size limit: 50MB for writes
+    const size_t maxWriteSize = 50 * 1024 * 1024;
+    if (content.size() > maxWriteSize) {
+        std::string resp = LocalServerUtil::buildHttpResponse(413,
+            "{\"error\":\"content_too_large\",\"message\":\"Content exceeds 50MB write limit\",\"size\":" +
+            std::to_string(content.size()) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Auto-create parent directories if requested
+    bool createDirs = false;
+    LocalServerUtil::extractJsonBool(body, "createDirs", createDirs);
+    if (createDirs) {
+        std::string parentDir = extractParentDir(vp.path);
+        if (!createDirectoriesRecursive(parentDir)) {
+            DWORD err = GetLastError();
+            std::string resp = LocalServerUtil::buildHttpResponse(500,
+                "{\"error\":\"mkdir_failed\",\"message\":\"Failed to create parent directories\",\"win32_error\":" +
+                std::to_string(err) + "}");
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+    }
+
+    // Write the file
+    HANDLE hFile = CreateFileA(vp.path.c_str(), GENERIC_WRITE, 0,
+                               NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"write_failed\",\"message\":\"Cannot create/open file for writing: " +
+            LocalServerUtil::escapeJson(vp.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    DWORD bytesWritten = 0;
+    BOOL writeOk = WriteFile(hFile, content.c_str(), (DWORD)content.size(), &bytesWritten, NULL);
+    CloseHandle(hFile);
+
+    if (!writeOk) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"write_failed\",\"message\":\"Failed to write file content\",\"win32_error\":" +
+            std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::ostringstream json;
+    json << "{\"success\":true"
+         << ",\"path\":\"" << LocalServerUtil::escapeJson(vp.path) << "\""
+         << ",\"name\":\"" << LocalServerUtil::escapeJson(extractFileName(vp.path)) << "\""
+         << ",\"size\":" << bytesWritten
+         << ",\"message\":\"File written successfully\""
+         << "}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("write-file: " + vp.path + " (" + std::to_string(bytesWritten) + " bytes)");
+}
+
+// ============================================================================
+// POST /api/list-directory — List directory contents with optional recursion
+// ============================================================================
+// Request body: {"path":"C:/some/dir"}
+// Optional: {"depth":1,"maxEntries":10000}
+// Response: {"entries":[{"name":"...","path":"...","type":"file|dir","size":123}],"total":42}
+// ============================================================================
+
+void Win32IDE::handleListDirEndpoint(SOCKET client, const std::string& body) {
+    auto vp = validateFilePath(body);
+    if (!vp.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Check that path is a directory
+    DWORD attr = GetFileAttributesA(vp.path.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"not_found\",\"message\":\"Directory not found: " +
+            LocalServerUtil::escapeJson(vp.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+    if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"not_directory\",\"message\":\"Path is not a directory: " +
+            LocalServerUtil::escapeJson(vp.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    int depth = 0;
+    int maxEntries = 50000;
+    LocalServerUtil::extractJsonInt(body, "depth", depth);
+    LocalServerUtil::extractJsonInt(body, "maxEntries", maxEntries);
+    if (maxEntries > 50000) maxEntries = 50000;
+    if (depth < 0) depth = 0;
+    if (depth > 10) depth = 10;
+
+    std::vector<DirEntry> entries;
+    entries.reserve(std::min(maxEntries, 10000));
+    listDirectoryEntries(vp.path, 0, depth, maxEntries, entries);
+
+    // Build JSON response
+    std::ostringstream json;
+    json << "{\"entries\":[";
+    for (size_t i = 0; i < entries.size(); i++) {
+        if (i > 0) json << ",";
+        json << "{\"name\":\"" << LocalServerUtil::escapeJson(entries[i].name) << "\""
+             << ",\"path\":\"" << LocalServerUtil::escapeJson(entries[i].path) << "\""
+             << ",\"type\":\"" << (entries[i].isDir ? "dir" : "file") << "\""
+             << ",\"size\":" << entries[i].size
+             << "}";
+    }
+    json << "],\"total\":" << entries.size()
+         << ",\"path\":\"" << LocalServerUtil::escapeJson(vp.path) << "\""
+         << "}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("list-directory: " + vp.path + " (" + std::to_string(entries.size()) + " entries)");
+}
+
+// ============================================================================
+// POST /api/delete-file — Delete a file or empty directory
+// ============================================================================
+// Request body: {"path":"C:/some/file.cpp"}
+// Optional: {"force":true} to delete read-only files
+// Response: {"success":true,"path":"...","message":"Deleted"}
+// ============================================================================
+
+void Win32IDE::handleDeleteFileEndpoint(SOCKET client, const std::string& body) {
+    auto vp = validateFilePath(body);
+    if (!vp.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    DWORD attr = GetFileAttributesA(vp.path.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"not_found\",\"message\":\"File not found: " +
+            LocalServerUtil::escapeJson(vp.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    bool force = false;
+    LocalServerUtil::extractJsonBool(body, "force", force);
+
+    // If read-only and force requested, clear read-only attribute
+    if (force && (attr & FILE_ATTRIBUTE_READONLY)) {
+        SetFileAttributesA(vp.path.c_str(), attr & ~FILE_ATTRIBUTE_READONLY);
+    }
+
+    BOOL deleteOk;
+    if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+        deleteOk = RemoveDirectoryA(vp.path.c_str());
+    } else {
+        deleteOk = DeleteFileA(vp.path.c_str());
+    }
+
+    if (!deleteOk) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"delete_failed\",\"message\":\"Failed to delete: " +
+            LocalServerUtil::escapeJson(vp.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string json = "{\"success\":true,\"path\":\"" + LocalServerUtil::escapeJson(vp.path) +
+                       "\",\"message\":\"Deleted successfully\"}";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("delete-file: " + vp.path);
+}
+
+// ============================================================================
+// POST /api/rename-file — Rename or move a file/directory
+// ============================================================================
+// Request body: {"path":"C:/old/path.cpp","newPath":"C:/new/path.cpp"}
+// Response: {"success":true,"oldPath":"...","newPath":"..."}
+// ============================================================================
+
+void Win32IDE::handleRenameFileEndpoint(SOCKET client, const std::string& body) {
+    auto vpOld = validateFilePath(body, "path");
+    if (!vpOld.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vpOld.errorCode, vpOld.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    auto vpNew = validateFilePath(body, "newPath");
+    if (!vpNew.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vpNew.errorCode, vpNew.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Check source exists
+    DWORD attr = GetFileAttributesA(vpOld.path.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"not_found\",\"message\":\"Source not found: " +
+            LocalServerUtil::escapeJson(vpOld.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Check destination doesn't already exist
+    DWORD destAttr = GetFileAttributesA(vpNew.path.c_str());
+    if (destAttr != INVALID_FILE_ATTRIBUTES) {
+        std::string resp = LocalServerUtil::buildHttpResponse(409,
+            "{\"error\":\"already_exists\",\"message\":\"Destination already exists: " +
+            LocalServerUtil::escapeJson(vpNew.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Create parent directories for destination
+    std::string destParent = extractParentDir(vpNew.path);
+    createDirectoriesRecursive(destParent);
+
+    if (!MoveFileA(vpOld.path.c_str(), vpNew.path.c_str())) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"rename_failed\",\"message\":\"Failed to rename: " +
+            LocalServerUtil::escapeJson(vpOld.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string json = "{\"success\":true,\"oldPath\":\"" + LocalServerUtil::escapeJson(vpOld.path) +
+                       "\",\"newPath\":\"" + LocalServerUtil::escapeJson(vpNew.path) +
+                       "\",\"message\":\"Renamed successfully\"}";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("rename-file: " + vpOld.path + " -> " + vpNew.path);
+}
+
+// ============================================================================
+// POST /api/mkdir — Create directories recursively
+// ============================================================================
+// Request body: {"path":"C:/some/new/directory/tree"}
+// Response: {"success":true,"path":"..."}
+// ============================================================================
+
+void Win32IDE::handleMkdirEndpoint(SOCKET client, const std::string& body) {
+    auto vp = validateFilePath(body);
+    if (!vp.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    if (!createDirectoriesRecursive(vp.path)) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"mkdir_failed\",\"message\":\"Failed to create directory: " +
+            LocalServerUtil::escapeJson(vp.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string json = "{\"success\":true,\"path\":\"" + LocalServerUtil::escapeJson(vp.path) +
+                       "\",\"message\":\"Directory created\"}";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("mkdir: " + vp.path);
+}
+
+// ============================================================================
+// POST /api/search-files — Recursive file/content search
+// ============================================================================
+// Request body: {"path":"C:/some/dir","pattern":"*.cpp","query":"searchText"}
+// Optional: {"maxResults":500,"searchContent":true}
+// Response: {"results":[{"path":"...","line":42,"text":"..."}],"total":15}
+// ============================================================================
+
+void Win32IDE::handleSearchFilesEndpoint(SOCKET client, const std::string& body) {
+    auto vp = validateFilePath(body);
+    if (!vp.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string pattern = LocalServerUtil::extractJsonStringValue(body, "pattern");
+    std::string textQuery = LocalServerUtil::extractJsonStringValue(body, "query");
+    int maxResults = 500;
+    LocalServerUtil::extractJsonInt(body, "maxResults", maxResults);
+    if (maxResults > 10000) maxResults = 10000;
+    if (maxResults < 1) maxResults = 1;
+
+    bool searchContent = false;
+    LocalServerUtil::extractJsonBool(body, "searchContent", searchContent);
+    // If a text query is provided but searchContent not explicitly set, enable content search
+    if (!textQuery.empty() && !searchContent) {
+        searchContent = true;
+    }
+
+    std::vector<FileSearchResult> results;
+    results.reserve(std::min(maxResults, 1000));
+    searchFilesRecursive(vp.path, pattern, textQuery, searchContent, maxResults, results);
+
+    // Build JSON
+    std::ostringstream json;
+    json << "{\"results\":[";
+    for (size_t i = 0; i < results.size(); i++) {
+        if (i > 0) json << ",";
+        json << "{\"path\":\"" << LocalServerUtil::escapeJson(results[i].path) << "\"";
+        if (results[i].line > 0) {
+            json << ",\"line\":" << results[i].line;
+            json << ",\"text\":\"" << LocalServerUtil::escapeJson(results[i].lineText) << "\"";
+        }
+        json << "}";
+    }
+    json << "],\"total\":" << results.size()
+         << ",\"pattern\":\"" << LocalServerUtil::escapeJson(pattern) << "\""
+         << ",\"query\":\"" << LocalServerUtil::escapeJson(textQuery) << "\""
+         << ",\"searchPath\":\"" << LocalServerUtil::escapeJson(vp.path) << "\""
+         << "}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("search-files: " + vp.path + " pattern=" + pattern + " query=" + textQuery +
+             " (" + std::to_string(results.size()) + " results)");
+}
+
+// ============================================================================
+// POST /api/stat-file — Get file/directory metadata
+// ============================================================================
+// Request body: {"path":"C:/some/file.cpp"}
+// Response: {"name":"file.cpp","path":"...","size":1234,"isDir":false,"exists":true,
+//            "readOnly":false,"hidden":false,"created":"...","modified":"...","accessed":"..."}
+// ============================================================================
+
+void Win32IDE::handleStatFileEndpoint(SOCKET client, const std::string& body) {
+    auto vp = validateFilePath(body);
+    if (!vp.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    WIN32_FILE_ATTRIBUTE_DATA fad;
+    if (!GetFileAttributesExA(vp.path.c_str(), GetFileExInfoStandard, &fad)) {
+        // File doesn't exist — return exists:false rather than error
+        std::string json = "{\"exists\":false,\"path\":\"" + LocalServerUtil::escapeJson(vp.path) + "\"}";
+        std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    ULARGE_INTEGER fileSize;
+    fileSize.LowPart = fad.nFileSizeLow;
+    fileSize.HighPart = fad.nFileSizeHigh;
+
+    // Convert FILETIME to milliseconds since epoch
+    auto filetimeToMs = [](const FILETIME& ft) -> uint64_t {
+        ULARGE_INTEGER ul;
+        ul.LowPart = ft.dwLowDateTime;
+        ul.HighPart = ft.dwHighDateTime;
+        // Windows FILETIME epoch: 1601-01-01; Unix epoch: 1970-01-01
+        // Difference: 11644473600 seconds = 116444736000000000 in 100ns units
+        static const uint64_t epochDiff = 116444736000000000ULL;
+        return (ul.QuadPart - epochDiff) / 10000; // Convert 100ns to ms
+    };
+
+    bool isDir = (fad.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    bool readOnly = (fad.dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0;
+    bool hidden = (fad.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0;
+
+    std::ostringstream json;
+    json << "{\"exists\":true"
+         << ",\"name\":\"" << LocalServerUtil::escapeJson(extractFileName(vp.path)) << "\""
+         << ",\"path\":\"" << LocalServerUtil::escapeJson(vp.path) << "\""
+         << ",\"size\":" << fileSize.QuadPart
+         << ",\"isDir\":" << (isDir ? "true" : "false")
+         << ",\"readOnly\":" << (readOnly ? "true" : "false")
+         << ",\"hidden\":" << (hidden ? "true" : "false")
+         << ",\"createdMs\":" << filetimeToMs(fad.ftCreationTime)
+         << ",\"modifiedMs\":" << filetimeToMs(fad.ftLastWriteTime)
+         << ",\"accessedMs\":" << filetimeToMs(fad.ftLastAccessTime)
+         << ",\"attributes\":" << fad.dwFileAttributes
+         << "}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("stat-file: " + vp.path);
+}
+
+// ============================================================================
+// POST /api/copy-file — Copy a file to a new destination
+// ============================================================================
+// Request body: {"path":"C:/source.cpp","destPath":"C:/dest.cpp"}
+// Optional: {"overwrite":false}
+// Response: {"success":true,"source":"...","dest":"...","size":1234}
+// ============================================================================
+
+void Win32IDE::handleCopyFileEndpoint(SOCKET client, const std::string& body) {
+    auto vpSrc = validateFilePath(body, "path");
+    if (!vpSrc.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vpSrc.errorCode, vpSrc.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    auto vpDest = validateFilePath(body, "destPath");
+    if (!vpDest.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vpDest.errorCode, vpDest.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Check source exists
+    DWORD srcAttr = GetFileAttributesA(vpSrc.path.c_str());
+    if (srcAttr == INVALID_FILE_ATTRIBUTES) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"not_found\",\"message\":\"Source file not found: " +
+            LocalServerUtil::escapeJson(vpSrc.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    bool overwrite = false;
+    LocalServerUtil::extractJsonBool(body, "overwrite", overwrite);
+
+    // Create parent directories for destination
+    std::string destParent = extractParentDir(vpDest.path);
+    createDirectoriesRecursive(destParent);
+
+    BOOL failIfExists = overwrite ? FALSE : TRUE;
+    if (!CopyFileA(vpSrc.path.c_str(), vpDest.path.c_str(), failIfExists)) {
+        DWORD err = GetLastError();
+        std::string errMsg = (err == ERROR_FILE_EXISTS) ? "already_exists" : "copy_failed";
+        int httpCode = (err == ERROR_FILE_EXISTS) ? 409 : 500;
+        std::string resp = LocalServerUtil::buildHttpResponse(httpCode,
+            "{\"error\":\"" + errMsg + "\",\"message\":\"Failed to copy file\",\"win32_error\":" +
+            std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Get copied file size
+    DWORD destSize = 0;
+    HANDLE hDest = CreateFileA(vpDest.path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hDest != INVALID_HANDLE_VALUE) {
+        destSize = GetFileSize(hDest, NULL);
+        CloseHandle(hDest);
+    }
+
+    std::ostringstream json;
+    json << "{\"success\":true"
+         << ",\"source\":\"" << LocalServerUtil::escapeJson(vpSrc.path) << "\""
+         << ",\"dest\":\"" << LocalServerUtil::escapeJson(vpDest.path) << "\""
+         << ",\"size\":" << destSize
+         << ",\"message\":\"File copied successfully\""
+         << "}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("copy-file: " + vpSrc.path + " -> " + vpDest.path);
+}
+
+// ============================================================================
+// POST /api/move-file — Move a file to a new destination
+// ============================================================================
+// Request body: {"path":"C:/source.cpp","destPath":"C:/dest.cpp"}
+// Optional: {"overwrite":false}
+// Response: {"success":true,"source":"...","dest":"..."}
+// ============================================================================
+
+void Win32IDE::handleMoveFileEndpoint(SOCKET client, const std::string& body) {
+    auto vpSrc = validateFilePath(body, "path");
+    if (!vpSrc.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vpSrc.errorCode, vpSrc.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    auto vpDest = validateFilePath(body, "destPath");
+    if (!vpDest.ok) {
+        std::string resp = LocalServerUtil::buildHttpResponse(vpDest.errorCode, vpDest.error);
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Check source exists
+    DWORD srcAttr = GetFileAttributesA(vpSrc.path.c_str());
+    if (srcAttr == INVALID_FILE_ATTRIBUTES) {
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"not_found\",\"message\":\"Source not found: " +
+            LocalServerUtil::escapeJson(vpSrc.path) + "\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    bool overwrite = false;
+    LocalServerUtil::extractJsonBool(body, "overwrite", overwrite);
+
+    // Create parent directories for destination
+    std::string destParent = extractParentDir(vpDest.path);
+    createDirectoriesRecursive(destParent);
+
+    DWORD moveFlags = MOVEFILE_COPY_ALLOWED;
+    if (overwrite) moveFlags |= MOVEFILE_REPLACE_EXISTING;
+
+    if (!MoveFileExA(vpSrc.path.c_str(), vpDest.path.c_str(), moveFlags)) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"move_failed\",\"message\":\"Failed to move file\",\"win32_error\":" +
+            std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    std::string json = "{\"success\":true"
+                       ",\"source\":\"" + LocalServerUtil::escapeJson(vpSrc.path) + "\""
+                       ",\"dest\":\"" + LocalServerUtil::escapeJson(vpDest.path) + "\""
+                       ",\"message\":\"File moved successfully\"}";
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json);
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("move-file: " + vpSrc.path + " -> " + vpDest.path);
+}
+
+// ============================================================================
+// POST /api/tool — Unified tool call dispatcher
+// ============================================================================
+// Request body: {"tool":"read_file","args":{"path":"C:/file.cpp"}}
+// Dispatches to the appropriate file operation endpoint handler.
+// This is the endpoint the frontend EngineAPI.executeTool() calls.
+// ============================================================================
+
+void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body) {
+    std::string tool = LocalServerUtil::extractJsonStringValue(body, "tool");
+    if (tool.empty()) {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"missing_tool\",\"message\":\"Request body must contain 'tool' field\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Extract the args object as a sub-JSON string.
+    // Since we don't have a full JSON parser, we find the "args" key and extract the object.
+    std::string argsBody;
+    {
+        auto argsKey = body.find("\"args\"");
+        if (argsKey != std::string::npos) {
+            auto colonPos = body.find(':', argsKey + 6);
+            if (colonPos != std::string::npos) {
+                colonPos++;
+                while (colonPos < body.size() && std::isspace((unsigned char)body[colonPos])) colonPos++;
+                if (colonPos < body.size() && body[colonPos] == '{') {
+                    // Find matching closing brace
+                    int depth = 0;
+                    bool inStr = false;
+                    size_t end = colonPos;
+                    for (size_t i = colonPos; i < body.size(); i++) {
+                        if (inStr) {
+                            if (body[i] == '\\') { i++; continue; }
+                            if (body[i] == '"') inStr = false;
+                            continue;
+                        }
+                        if (body[i] == '"') { inStr = true; continue; }
+                        if (body[i] == '{') depth++;
+                        if (body[i] == '}') { depth--; if (depth == 0) { end = i + 1; break; } }
+                    }
+                    argsBody = body.substr(colonPos, end - colonPos);
+                }
+            }
+        }
+    }
+    if (argsBody.empty()) argsBody = "{}";
+
+    // Dispatch to the appropriate handler
+    if (tool == "read_file") {
+        handleReadFileEndpoint(client, argsBody);
+    } else if (tool == "write_file") {
+        handleWriteFileEndpoint(client, argsBody);
+    } else if (tool == "list_directory") {
+        handleListDirEndpoint(client, argsBody);
+    } else if (tool == "delete_file") {
+        handleDeleteFileEndpoint(client, argsBody);
+    } else if (tool == "rename_file") {
+        handleRenameFileEndpoint(client, argsBody);
+    } else if (tool == "mkdir") {
+        handleMkdirEndpoint(client, argsBody);
+    } else if (tool == "search_files") {
+        handleSearchFilesEndpoint(client, argsBody);
+    } else if (tool == "stat_file") {
+        handleStatFileEndpoint(client, argsBody);
+    } else if (tool == "copy_file") {
+        handleCopyFileEndpoint(client, argsBody);
+    } else if (tool == "move_file") {
+        handleMoveFileEndpoint(client, argsBody);
+    } else if (tool == "execute_command") {
+        handleCliEndpoint(client, argsBody);
+    } else if (tool == "git_status") {
+        // Execute git status command via CLI handler
+        std::string gitBody = "{\"command\":\"git status\"}";
+        handleCliEndpoint(client, gitBody);
+    } else {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"unknown_tool\",\"message\":\"Unknown tool: " +
+            LocalServerUtil::escapeJson(tool) +
+            "\",\"available\":[\"read_file\",\"write_file\",\"list_directory\",\"delete_file\","
+            "\"rename_file\",\"mkdir\",\"search_files\",\"stat_file\",\"copy_file\",\"move_file\","
+            "\"execute_command\",\"git_status\"]}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+    }
+
+    LOG_INFO("tool-dispatch: " + tool);
 }
