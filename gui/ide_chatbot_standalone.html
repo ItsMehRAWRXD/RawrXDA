@@ -698,6 +698,230 @@
       padding: 4px;
     }
 
+    /* ── Model Bridge (MASM x64) Panel ── */
+    .model-bridge-panel {
+      margin-top: 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      overflow: hidden;
+    }
+
+    .model-bridge-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: rgba(0, 255, 136, 0.04);
+      cursor: pointer;
+      user-select: none;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-green, #00ff88);
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .model-bridge-header:hover {
+      background: rgba(0, 255, 136, 0.08);
+    }
+
+    .model-bridge-header .bridge-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--accent-green, #00ff88);
+    }
+
+    .model-bridge-body {
+      padding: 8px 10px;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .bridge-tier-group {
+      margin-bottom: 8px;
+    }
+
+    .bridge-tier-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 4px;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .bridge-tier-label.tier-small {
+      color: #66ccff;
+    }
+
+    .bridge-tier-label.tier-medium {
+      color: #ffcc00;
+    }
+
+    .bridge-tier-label.tier-large {
+      color: #ff8844;
+    }
+
+    .bridge-tier-label.tier-ultra {
+      color: #ff4466;
+    }
+
+    .bridge-tier-label.tier-800b {
+      color: #ff00ff;
+    }
+
+    .bridge-model-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      margin: 2px 0;
+      border-radius: 4px;
+      background: var(--bg-primary);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.12s;
+      font-size: 11px;
+    }
+
+    .bridge-model-card:hover {
+      border-color: var(--accent-primary);
+      background: rgba(0, 120, 255, 0.06);
+    }
+
+    .bridge-model-card.active {
+      border-color: var(--accent-green, #00ff88);
+      background: rgba(0, 255, 136, 0.08);
+    }
+
+    .bridge-model-card .model-name {
+      flex: 1;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bridge-model-card .model-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .bridge-model-card .model-meta .param-badge {
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(102, 204, 255, 0.12);
+      color: #66ccff;
+      font-weight: 600;
+    }
+
+    .bridge-model-card .model-meta .quant-badge {
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(255, 204, 0, 0.12);
+      color: #ffcc00;
+    }
+
+    .bridge-model-card .model-meta .ram-badge {
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(255, 136, 68, 0.12);
+      color: #ff8844;
+    }
+
+    .bridge-controls {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .bridge-controls button {
+      flex: 1;
+      padding: 6px 0;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .bridge-controls button:hover {
+      border-color: var(--accent-primary);
+      background: rgba(0, 120, 255, 0.08);
+    }
+
+    .bridge-controls button.btn-load {
+      border-color: rgba(0, 255, 136, 0.3);
+      color: var(--accent-green, #00ff88);
+    }
+
+    .bridge-controls button.btn-load:hover {
+      background: rgba(0, 255, 136, 0.1);
+      border-color: var(--accent-green, #00ff88);
+    }
+
+    .bridge-controls button.btn-unload {
+      border-color: rgba(255, 68, 102, 0.3);
+      color: #ff4466;
+    }
+
+    .bridge-controls button.btn-unload:hover {
+      background: rgba(255, 68, 102, 0.1);
+      border-color: #ff4466;
+    }
+
+    .bridge-quant-select {
+      width: 100%;
+      padding: 5px 8px;
+      margin-top: 6px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .bridge-status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      background: var(--bg-primary);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .bridge-status-bar .status-chip {
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .bridge-status-bar .status-chip.active {
+      background: rgba(0, 255, 136, 0.12);
+      color: var(--accent-green, #00ff88);
+    }
+
     /* Generation Settings */
     .gen-settings {
       margin-top: 12px;
@@ -4743,6 +4967,64 @@
             </div>
             <input type="range" class="setting-slider" min="1" max="200" value="40" step="1" id="topKSlider"
               oninput="State.gen.top_k=parseInt(this.value); document.getElementById('topKVal').textContent=this.value; Conversation.persist();">
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Model Bridge (MASM x64) ═══ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title"
+          onclick="document.getElementById('modelBridgeBody').style.display=document.getElementById('modelBridgeBody').style.display==='none'?'block':'none'"
+          style="cursor:pointer;">
+          // &#x1F9E9; Model Bridge (x64 MASM)
+          <span style="float:right;font-size:10px;color:var(--text-muted);">[click to toggle]</span>
+        </div>
+        <div id="modelBridgeBody" style="display:none; padding: 0;">
+          <div class="model-bridge-panel">
+            <div class="model-bridge-header" onclick="fetchBridgeProfiles()">
+              <span>&#x26A1; MASM Bridge</span>
+              <span class="bridge-badge" id="bridgeBadge">offline</span>
+            </div>
+            <div class="model-bridge-body" id="bridgeProfileList">
+              <div style="font-size:11px;color:var(--text-muted);padding:12px;text-align:center;">
+                Click header to load 24 model profiles (1.5B &#x2192; 800B)
+              </div>
+            </div>
+
+            <!-- Quantization Selector -->
+            <div style="padding:0 10px;">
+              <select class="bridge-quant-select" id="bridgeQuantSelect" onchange="bridgeQuantChanged()">
+                <option value="5">Q4_K_M (4.5 bpw) &#x2014; recommended</option>
+                <option value="0">F32 (32-bit float)</option>
+                <option value="1">F16 (16-bit float)</option>
+                <option value="2">Q8_0 (8-bit)</option>
+                <option value="3">Q6_K (6.5 bpw)</option>
+                <option value="4">Q5_K_M (5.5 bpw)</option>
+                <option value="6">Q4_0 (4-bit)</option>
+                <option value="7">Q3_K_M (3.5 bpw)</option>
+                <option value="8">Q2_K (2-bit) &#x2014; 800B only</option>
+              </select>
+            </div>
+
+            <!-- Load / Unload Controls -->
+            <div class="bridge-controls" style="padding:0 10px 8px 10px;">
+              <button class="btn-load" onclick="bridgeLoadModel()" title="Load selected model via MASM bridge">
+                &#x25B6; Load
+              </button>
+              <button class="btn-unload" onclick="bridgeUnloadModel()" title="Unload current model">
+                &#x23F9; Unload
+              </button>
+              <button onclick="fetchBridgeCapabilities()" title="Query CPU/engine capabilities">
+                &#x1F50D; Caps
+              </button>
+            </div>
+
+            <!-- Bridge Status -->
+            <div class="bridge-status-bar" id="bridgeStatusBar">
+              <span class="status-chip">CPU: &#x2014;</span>
+              <span class="status-chip">RAM: &#x2014;</span>
+              <span class="status-chip">Active: none</span>
+            </div>
           </div>
         </div>
       </div>
@@ -8870,6 +9152,433 @@
         badge.style.display = 'none';
         rightModel.textContent = '\u2014';
         updateSafeDecodeStatus();
+      }
+    }
+
+    // ======================================================================
+    // MODEL BRIDGE — MASM x64 Pure Assembly Bridge (24 profiles, 1.5B-800B)
+    // ======================================================================
+
+    // Bridge state tracking
+    var BridgeState = {
+      profiles: [],
+      hardware: null,
+      selectedProfileId: -1,
+      activeProfileId: -1,
+      loaded: false,
+      bridge: 'unknown',
+      fetched: false
+    };
+
+    // Tier display config
+    var BRIDGE_TIERS = {
+      'small':    { label: '\u26A1 Small (1\u20138B)',     css: 'tier-small',  color: '#66ccff', range: '1-8B' },
+      'medium':   { label: '\uD83D\uDD27 Medium (9\u201327B)',  css: 'tier-medium', color: '#ffcc00', range: '9-27B' },
+      'large':    { label: '\uD83D\uDD25 Large (28\u201370B)',  css: 'tier-large',  color: '#ff8844', range: '28-70B' },
+      'ultra':    { label: '\uD83D\uDE80 Ultra (71\u2013141B)', css: 'tier-ultra',  color: '#ff4466', range: '71-141B' },
+      '800b-dual':{ label: '\uD83E\uDDE0 800B Dual Engine',     css: 'tier-800b',   color: '#ff00ff', range: '671-800B' }
+    };
+
+    // Model name lookup (mirrors model_bridge_x64.asm g_ModelNames)
+    var BRIDGE_MODEL_NAMES = [
+      'qwen2.5:1.5b', 'qwen2.5:3b', 'llama3.2:3b', 'phi-4:3.8b',
+      'gemma2:7b', 'llama3.1:8b', 'qwen2.5:7b', 'mistral:7b', 'deepseek-r1:8b',
+      'llama3.1:13b', 'qwen2.5:14b', 'gemma2:27b',
+      'qwen2.5:32b', 'codellama:34b', 'llama3.1:70b', 'qwen2.5:72b', 'deepseek-r1:70b',
+      'llama3.1:100b-swarm', 'qwen2.5:100b-swarm',
+      'BigDaddyG-Q4_K_M', 'RawrXD-800B-DualEngine', 'deepseek-v3:671b-swarm',
+      'mixtral-8x22b:141b', 'commandr-plus:104b-swarm'
+    ];
+
+    // Fetch all 24 profiles from MASM bridge endpoint
+    async function fetchBridgeProfiles() {
+      var badge = document.getElementById('bridgeBadge');
+      badge.textContent = 'loading...';
+      badge.style.background = 'rgba(255,204,0,0.15)';
+      badge.style.color = '#ffcc00';
+
+      try {
+        var activeUrl = getActiveUrl();
+        var res = await fetch(activeUrl + '/api/model/profiles', { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+
+        BridgeState.profiles = data.profiles || [];
+        BridgeState.hardware = data.hardware || null;
+        BridgeState.bridge = data.bridge || 'unknown';
+        BridgeState.fetched = true;
+
+        badge.textContent = data.bridge || 'connected';
+        badge.style.background = 'rgba(0,255,136,0.15)';
+        badge.style.color = '#00ff88';
+
+        renderBridgeProfiles();
+        updateBridgeStatusBar();
+        logDebug('[ModelBridge] Loaded ' + BridgeState.profiles.length + ' profiles via ' + BridgeState.bridge, 'info');
+
+        // Also merge bridge profiles into model select dropdown
+        mergeBridgeIntoModelSelect();
+      } catch (e) {
+        badge.textContent = 'error';
+        badge.style.background = 'rgba(255,68,102,0.15)';
+        badge.style.color = '#ff4466';
+        logDebug('[ModelBridge] Fetch failed: ' + e.message, 'error');
+
+        // Render fallback with static names
+        renderBridgeProfilesFallback();
+      }
+    }
+
+    // Render profile cards grouped by tier
+    function renderBridgeProfiles() {
+      var container = document.getElementById('bridgeProfileList');
+      container.innerHTML = '';
+
+      // Group by tier
+      var tierGroups = {};
+      BridgeState.profiles.forEach(function(p) {
+        var tier = p.tier || 'unknown';
+        if (!tierGroups[tier]) tierGroups[tier] = [];
+        tierGroups[tier].push(p);
+      });
+
+      var tierOrder = ['small', 'medium', 'large', 'ultra', '800b-dual'];
+      tierOrder.forEach(function(tier) {
+        var profiles = tierGroups[tier];
+        if (!profiles || profiles.length === 0) return;
+
+        var tierCfg = BRIDGE_TIERS[tier] || { label: tier, css: '', range: '' };
+
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'bridge-tier-group';
+
+        var labelDiv = document.createElement('div');
+        labelDiv.className = 'bridge-tier-label ' + tierCfg.css;
+        labelDiv.textContent = tierCfg.label + ' (' + profiles.length + ')';
+        groupDiv.appendChild(labelDiv);
+
+        profiles.forEach(function(p) {
+          var card = document.createElement('div');
+          card.className = 'bridge-model-card' + (p.id === BridgeState.activeProfileId ? ' active' : '');
+          card.setAttribute('data-profile-id', p.id);
+          card.onclick = function() { selectBridgeProfile(p.id); };
+
+          var nameStr = BRIDGE_MODEL_NAMES[p.id] || ('profile-' + p.id);
+          var paramStr = p.params_b || '?';
+          var quantStr = p.quant || 'Q4_K_M';
+          var ramStr = p.ram_mb ? (p.ram_mb >= 1024 ? (p.ram_mb / 1024).toFixed(1) + 'G' : p.ram_mb + 'M') : '?';
+
+          card.innerHTML =
+            '<span class="model-name" title="' + nameStr + '">' + nameStr + '</span>' +
+            '<span class="model-meta">' +
+              '<span class="param-badge">' + paramStr + 'B</span>' +
+              '<span class="quant-badge">' + quantStr + '</span>' +
+              '<span class="ram-badge">' + ramStr + '</span>' +
+              (p.requires_swarm ? '<span style="color:#ff4466;" title="Requires swarm cluster">\u26A0</span>' : '') +
+              (p.requires_avx512 ? '<span style="color:#ffcc00;" title="Requires AVX-512">512</span>' : '') +
+            '</span>';
+
+          groupDiv.appendChild(card);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // Fallback renderer with static model names when backend unavailable
+    function renderBridgeProfilesFallback() {
+      var container = document.getElementById('bridgeProfileList');
+      container.innerHTML = '';
+
+      var tierDefs = [
+        { tier: 'small', ids: [0,1,2,3,4,5,6,7,8] },
+        { tier: 'medium', ids: [9,10,11] },
+        { tier: 'large', ids: [12,13,14,15,16,19] },
+        { tier: 'ultra', ids: [17,18,22,23] },
+        { tier: '800b-dual', ids: [20,21] }
+      ];
+
+      tierDefs.forEach(function(td) {
+        var tierCfg = BRIDGE_TIERS[td.tier];
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'bridge-tier-group';
+
+        var labelDiv = document.createElement('div');
+        labelDiv.className = 'bridge-tier-label ' + tierCfg.css;
+        labelDiv.textContent = tierCfg.label + ' (' + td.ids.length + ')';
+        groupDiv.appendChild(labelDiv);
+
+        td.ids.forEach(function(id) {
+          var card = document.createElement('div');
+          card.className = 'bridge-model-card';
+          card.setAttribute('data-profile-id', id);
+          card.onclick = function() { selectBridgeProfile(id); };
+
+          var nameStr = BRIDGE_MODEL_NAMES[id] || ('profile-' + id);
+          card.innerHTML =
+            '<span class="model-name">' + nameStr + '</span>' +
+            '<span class="model-meta">' +
+              '<span class="param-badge">#' + id + '</span>' +
+            '</span>';
+
+          groupDiv.appendChild(card);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // Select a bridge profile (highlight card)
+    function selectBridgeProfile(profileId) {
+      BridgeState.selectedProfileId = profileId;
+
+      // Update card highlights
+      var cards = document.querySelectorAll('.bridge-model-card');
+      cards.forEach(function(card) {
+        var cardId = parseInt(card.getAttribute('data-profile-id'), 10);
+        card.classList.toggle('active', cardId === profileId);
+      });
+
+      var nameStr = BRIDGE_MODEL_NAMES[profileId] || ('profile-' + profileId);
+      logDebug('[ModelBridge] Selected: ' + nameStr + ' (ID ' + profileId + ')', 'info');
+    }
+
+    // Load model via MASM bridge POST /api/model/load
+    async function bridgeLoadModel() {
+      if (BridgeState.selectedProfileId < 0) {
+        addMessage('system', '\u26A0\uFE0F Select a model profile from the bridge list first.');
+        return;
+      }
+
+      var profileId = BridgeState.selectedProfileId;
+      var nameStr = BRIDGE_MODEL_NAMES[profileId] || ('profile-' + profileId);
+      addMessage('system', '\u26A1 Loading model via MASM x64 bridge: **' + nameStr + '** (ID ' + profileId + ')...');
+
+      try {
+        var activeUrl = getActiveUrl();
+        var payload = JSON.stringify({ index: profileId, name: nameStr });
+        var res = await fetch(activeUrl + '/api/model/load', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          signal: AbortSignal.timeout(30000)
+        });
+
+        var data = await res.json();
+        if (!res.ok) {
+          addMessage('system', '\u274C Model load failed: ' + (data.error || data.message || 'Unknown error'));
+          logDebug('[ModelBridge] Load failed: ' + JSON.stringify(data), 'error');
+          return;
+        }
+
+        BridgeState.activeProfileId = profileId;
+        BridgeState.loaded = true;
+
+        // Also set in main model state
+        State.model.current = nameStr;
+        var sel = document.getElementById('modelSelect');
+        if (sel) {
+          // Try to select matching option, or add one
+          var found = false;
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === nameStr) {
+              sel.selectedIndex = i;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            var opt = document.createElement('option');
+            opt.value = nameStr;
+            opt.textContent = '\uD83E\uDDE9 ' + nameStr + ' (MASM)';
+            sel.appendChild(opt);
+            sel.value = nameStr;
+          }
+        }
+        changeModel();
+
+        // Update card highlights
+        var cards = document.querySelectorAll('.bridge-model-card');
+        cards.forEach(function(card) {
+          var cardId = parseInt(card.getAttribute('data-profile-id'), 10);
+          card.classList.toggle('active', cardId === profileId);
+        });
+
+        addMessage('system', '\u2705 Model loaded via ' + (data.bridge || 'MASM') + ': **' + nameStr + '** | Tier: ' + (data.tier || '?') + ' | RAM: ' + (data.ram_mb || '?') + 'MB | Engine: ' + (data.engine_mode || '?'));
+        logDebug('[ModelBridge] Loaded: ' + nameStr + ' via ' + (data.bridge || '?'), 'info');
+
+        updateBridgeStatusBar();
+      } catch (e) {
+        addMessage('system', '\u274C Bridge load error: ' + e.message);
+        logDebug('[ModelBridge] Load exception: ' + e.message, 'error');
+      }
+    }
+
+    // Unload model via MASM bridge POST /api/model/unload
+    async function bridgeUnloadModel() {
+      try {
+        var activeUrl = getActiveUrl();
+        var res = await fetch(activeUrl + '/api/model/unload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+          signal: AbortSignal.timeout(10000)
+        });
+
+        var data = await res.json();
+        if (!res.ok) {
+          addMessage('system', '\u26A0\uFE0F Unload: ' + (data.error || data.message || 'no model loaded'));
+          return;
+        }
+
+        BridgeState.activeProfileId = -1;
+        BridgeState.loaded = false;
+
+        // Clear card highlights
+        var cards = document.querySelectorAll('.bridge-model-card');
+        cards.forEach(function(card) { card.classList.remove('active'); });
+
+        addMessage('system', '\u23F9\uFE0F Model unloaded from MASM bridge.');
+        logDebug('[ModelBridge] Model unloaded', 'info');
+
+        updateBridgeStatusBar();
+      } catch (e) {
+        addMessage('system', '\u274C Bridge unload error: ' + e.message);
+        logDebug('[ModelBridge] Unload exception: ' + e.message, 'error');
+      }
+    }
+
+    // Fetch engine capabilities GET /api/engine/capabilities
+    async function fetchBridgeCapabilities() {
+      try {
+        var activeUrl = getActiveUrl();
+        var res = await fetch(activeUrl + '/api/engine/capabilities', { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var caps = await res.json();
+
+        BridgeState.hardware = caps;
+
+        var lines = [];
+        lines.push('**\uD83D\uDD0D Engine Capabilities (' + (caps.bridge || '?') + ')**');
+        if (caps.cpu) {
+          lines.push('CPU: AVX2=' + (caps.cpu.avx2 ? '\u2705' : '\u274C') +
+            ' FMA3=' + (caps.cpu.fma3 ? '\u2705' : '\u274C') +
+            ' AVX-512F=' + (caps.cpu.avx512f ? '\u2705' : '\u274C') +
+            ' AVX-512BW=' + (caps.cpu.avx512bw ? '\u2705' : '\u274C'));
+        }
+        if (caps.memory) {
+          lines.push('RAM: ' + (caps.memory.total_ram_gb || '?') + 'GB total, ' + (caps.memory.free_ram_gb || '?') + 'GB free');
+        }
+        if (caps.engine) {
+          lines.push('Engine: swarm=' + (caps.engine.swarm ? '\u2705' : '\u274C') +
+            ' dual=' + (caps.engine.dual_engine ? '\u2705' : '\u274C') +
+            ' 5drive=' + (caps.engine.five_drive ? '\u2705' : '\u274C') +
+            ' tensorhop=' + (caps.engine.tensor_hop ? '\u2705' : '\u274C') +
+            ' flashattn=' + (caps.engine.flash_attention ? '\u2705' : '\u274C') +
+            ' safedecode=' + (caps.engine.safe_decode ? '\u2705' : '\u274C'));
+        }
+        if (caps.model_range) lines.push('Range: ' + caps.model_range);
+        if (caps.raw_caps) lines.push('Raw: `' + caps.raw_caps + '`');
+        if (caps.supported_tiers) lines.push('Tiers: ' + caps.supported_tiers.join(', '));
+        if (caps.profile_count) lines.push('Profiles: ' + caps.profile_count);
+
+        addMessage('system', lines.join('\n'));
+        logDebug('[ModelBridge] Capabilities fetched: ' + (caps.bridge || '?'), 'info');
+
+        updateBridgeStatusBar();
+      } catch (e) {
+        addMessage('system', '\u274C Capabilities fetch failed: ' + e.message);
+        logDebug('[ModelBridge] Caps error: ' + e.message, 'error');
+      }
+    }
+
+    // Quantization dropdown change handler
+    function bridgeQuantChanged() {
+      var quantVal = parseInt(document.getElementById('bridgeQuantSelect').value, 10);
+      logDebug('[ModelBridge] Quantization set to type ' + quantVal, 'info');
+    }
+
+    // Update the status bar at bottom of bridge panel
+    function updateBridgeStatusBar() {
+      var bar = document.getElementById('bridgeStatusBar');
+      if (!bar) return;
+
+      var chips = [];
+
+      // CPU chip
+      if (BridgeState.hardware) {
+        var hw = BridgeState.hardware;
+        var cpuStr = 'CPU:';
+        if (hw.cpu || hw.avx2 !== undefined) {
+          var cpu = hw.cpu || hw;
+          cpuStr += (cpu.avx2 ? ' AVX2' : '') + (cpu.fma3 ? ' FMA3' : '') + (cpu.avx512f ? ' 512' : '');
+          if (!cpu.avx2 && !cpu.fma3 && !cpu.avx512f) cpuStr += ' basic';
+        }
+        chips.push('<span class="status-chip">' + cpuStr + '</span>');
+
+        // RAM chip
+        var mem = hw.memory || hw;
+        if (mem.total_ram_gb || mem.total_ram_mb) {
+          var totalG = mem.total_ram_gb || Math.round((mem.total_ram_mb || 0) / 1024);
+          var freeG = mem.free_ram_gb || Math.round((mem.free_ram_mb || 0) / 1024);
+          chips.push('<span class="status-chip">RAM: ' + freeG + '/' + totalG + 'G</span>');
+        }
+      } else {
+        chips.push('<span class="status-chip">CPU: \u2014</span>');
+        chips.push('<span class="status-chip">RAM: \u2014</span>');
+      }
+
+      // Active model chip
+      if (BridgeState.activeProfileId >= 0) {
+        var activeName = BRIDGE_MODEL_NAMES[BridgeState.activeProfileId] || ('profile-' + BridgeState.activeProfileId);
+        chips.push('<span class="status-chip active">\u25B6 ' + activeName + '</span>');
+      } else {
+        chips.push('<span class="status-chip">Active: none</span>');
+      }
+
+      // Bridge type
+      chips.push('<span class="status-chip">' + (BridgeState.bridge || '?') + '</span>');
+
+      bar.innerHTML = chips.join('');
+    }
+
+    // Merge bridge profiles into the main model-select dropdown
+    function mergeBridgeIntoModelSelect() {
+      var sel = document.getElementById('modelSelect');
+      if (!sel || BridgeState.profiles.length === 0) return;
+
+      // Check if MASM group already exists
+      var existing = sel.querySelector('optgroup[label*="MASM"]');
+      if (existing) existing.remove();
+
+      var grp = document.createElement('optgroup');
+      grp.label = '\uD83E\uDDE9 MASM Bridge (x64)';
+
+      // Group by tier within the optgroup
+      var tierOrder = ['small', 'medium', 'large', 'ultra', '800b-dual'];
+      tierOrder.forEach(function(tier) {
+        BridgeState.profiles.forEach(function(p) {
+          if (p.tier !== tier) return;
+          var nameStr = BRIDGE_MODEL_NAMES[p.id] || ('profile-' + p.id);
+          var paramStr = p.params_b || '?';
+          var opt = document.createElement('option');
+          opt.value = nameStr;
+          opt.textContent = nameStr + ' (' + paramStr + 'B)';
+
+          // Check if already in dropdown
+          var alreadyExists = false;
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === nameStr) { alreadyExists = true; break; }
+          }
+          if (!alreadyExists) {
+            grp.appendChild(opt);
+          }
+        });
+      });
+
+      if (grp.children.length > 0) {
+        sel.appendChild(grp);
+        logDebug('[ModelBridge] Merged ' + grp.children.length + ' bridge profiles into model select', 'info');
       }
     }
 

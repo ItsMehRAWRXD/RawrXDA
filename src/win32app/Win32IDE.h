@@ -3002,6 +3002,8 @@ private:
     void handleAskEndpoint(SOCKET client, const std::string& body);
     void handleServeGui(SOCKET client);
     void handleReadFileEndpoint(SOCKET client, const std::string& body);
+    void handleCliEndpoint(SOCKET client, const std::string& body);
+    void handleHotpatchEndpoint(SOCKET client, const std::string& path, const std::string& body);
 
     // Phase 6B: Agentic + Failure visibility endpoints (read-only)
     void handleAgentHistoryEndpoint(SOCKET client, const std::string& path);

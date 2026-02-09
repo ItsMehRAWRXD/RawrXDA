@@ -2983,6 +2983,422 @@
     }
 
     /* ================================================================
+       Phase 39: Extension / VSIX Plugin Manager Panel
+       ================================================================ */
+    .ext-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-primary);
+      z-index: 560;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .ext-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .ext-title {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-primary);
+    }
+
+    .ext-header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ext-count-badge {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .ext-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--bg-secondary);
+      border-bottom: 2px solid var(--border);
+      overflow-x: auto;
+      flex-shrink: 0;
+      padding: 0 8px;
+    }
+
+    .ext-tab {
+      padding: 8px 14px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: all 0.15s;
+      margin-bottom: -2px;
+    }
+
+    .ext-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+    }
+
+    .ext-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .ext-tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .ext-tab-pane {
+      display: none;
+      padding: 16px;
+    }
+
+    .ext-tab-pane.active {
+      display: block;
+    }
+
+    .ext-search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ext-search-input {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .ext-search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .ext-search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .ext-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ext-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color 0.15s;
+    }
+
+    .ext-card:hover {
+      border-color: var(--accent);
+    }
+
+    .ext-card.disabled-card {
+      opacity: 0.6;
+    }
+
+    .ext-card-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      width: 36px;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .ext-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ext-card-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .ext-card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ext-card-version {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 1px 5px;
+      border-radius: 6px;
+    }
+
+    .ext-card-publisher {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .ext-card-desc {
+      font-size: 12px;
+      color: var(--text-secondary, var(--text-muted));
+      line-height: 1.4;
+    }
+
+    .ext-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .ext-card-type-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .ext-card-type-badge.builtin-badge {
+      background: rgba(76, 175, 80, 0.15);
+      color: #4caf50;
+    }
+
+    .ext-card-type-badge.vsix-badge {
+      background: rgba(0, 120, 212, 0.15);
+      color: #0078d4;
+    }
+
+    .ext-card-type-badge.psm1-badge {
+      background: rgba(1, 36, 86, 0.15);
+      color: #5391d4;
+    }
+
+    .ext-card-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .ext-card-actions .code-btn {
+      font-size: 11px;
+      padding: 3px 10px;
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .ext-status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+
+    .ext-status-dot.enabled {
+      background: #4caf50;
+    }
+
+    .ext-status-dot.disabled {
+      background: #666;
+    }
+
+    .ext-overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .ext-stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .ext-stat-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .ext-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .ext-type-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .ext-type-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .ext-type-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      width: 28px;
+      text-align: center;
+    }
+
+    .ext-type-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .ext-type-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .ext-type-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .ext-install-area {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .ext-install-area h4 {
+      font-size: 14px;
+      color: var(--text-primary);
+      margin: 0 0 8px 0;
+    }
+
+    .ext-install-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .ext-install-input {
+      flex: 1;
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: 'Consolas', 'Fira Code', monospace;
+    }
+
+    .ext-install-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .ext-history-section {
+      margin-top: 16px;
+    }
+
+    .ext-history-section h4 {
+      font-size: 13px;
+      color: var(--text-primary);
+      margin: 0 0 8px 0;
+    }
+
+    .ext-history-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .ext-history-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ext-history-action {
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 70px;
+    }
+
+    .ext-history-target {
+      flex: 1;
+      color: var(--text-primary);
+    }
+
+    .ext-history-time {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .ext-marketplace-output {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 120px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Consolas', 'Fira Code', monospace;
+      font-size: 12px;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+    }
+
+    /* ================================================================
        Phase 2: Agent Dashboard Panel
        ================================================================ */
     .agent-panel {
@@ -4901,6 +5317,11 @@
             <span class="icon">&#x26A1;</span>
             <span>Re-Beacon</span>
           </button>
+          <button class="tool-btn" onclick="showExtensionsPanel()"
+            title="VSIX Extension Manager — install, load & manage plugins">
+            <span class="icon">&#x1F9E9;</span>
+            <span>Extensions</span>
+          </button>
           <button class="tool-btn" onclick="clearChat()">
             <span class="icon">&#x1F5D1;</span>
             <span>Clear</span>
@@ -5670,6 +6091,217 @@
         </div>
         <div class="re-output-area" id="reOmegaOutput">
           <div class="re-placeholder">Click Full Scan to run all 7 RE modules against the target.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Extension / VSIX Plugin Manager Panel (Phase 39) -->
+  <div class="ext-panel" id="extPanel" style="display:none;">
+    <div class="ext-header">
+      <span class="ext-title">&#x1F9E9; Extension &amp; Plugin Manager</span>
+      <div class="ext-header-controls">
+        <span class="ext-count-badge" id="extCountBadge">0 extensions</span>
+        <button class="code-btn" onclick="refreshExtPanel()">Refresh</button>
+        <button class="code-btn" onclick="toggleExtPanel()">Close</button>
+      </div>
+    </div>
+    <div class="ext-tabs" id="extTabs">
+      <button class="ext-tab active" data-ext-tab="installed" onclick="switchExtTab('installed')">Installed</button>
+      <button class="ext-tab" data-ext-tab="builtin" onclick="switchExtTab('builtin')">Built-in</button>
+      <button class="ext-tab" data-ext-tab="marketplace" onclick="switchExtTab('marketplace')">Marketplace</button>
+      <button class="ext-tab" data-ext-tab="vsix" onclick="switchExtTab('vsix')">Install VSIX</button>
+      <button class="ext-tab" data-ext-tab="types" onclick="switchExtTab('types')">Supported Types</button>
+      <button class="ext-tab" data-ext-tab="powershell" onclick="switchExtTab('powershell')">PowerShell</button>
+      <button class="ext-tab" data-ext-tab="history" onclick="switchExtTab('history')">History</button>
+    </div>
+    <div class="ext-tab-content" id="extTabContent">
+      <!-- Installed Extensions Tab -->
+      <div class="ext-tab-pane active" id="extTabInstalled" data-ext-pane="installed">
+        <div class="ext-search-bar">
+          <input type="text" class="ext-search-input" id="extSearchInstalled"
+            placeholder="Filter installed extensions..." oninput="filterExtList('installed')">
+        </div>
+        <div class="ext-overview-grid">
+          <div class="ext-stat-card">
+            <div class="ext-stat-title">Total</div>
+            <div class="ext-stat-value" id="extStatTotal">0</div>
+          </div>
+          <div class="ext-stat-card">
+            <div class="ext-stat-title">Enabled</div>
+            <div class="ext-stat-value" id="extStatEnabled">0</div>
+          </div>
+          <div class="ext-stat-card">
+            <div class="ext-stat-title">Built-in</div>
+            <div class="ext-stat-value" id="extStatBuiltin">0</div>
+          </div>
+          <div class="ext-stat-card">
+            <div class="ext-stat-title">User</div>
+            <div class="ext-stat-value" id="extStatUser">0</div>
+          </div>
+        </div>
+        <div class="ext-list" id="extListInstalled">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <!-- Built-in Extensions Tab -->
+      <div class="ext-tab-pane" id="extTabBuiltin" data-ext-pane="builtin">
+        <div class="ext-search-bar">
+          <input type="text" class="ext-search-input" id="extSearchBuiltin" placeholder="Filter built-in extensions..."
+            oninput="filterExtList('builtin')">
+        </div>
+        <div class="ext-list" id="extListBuiltin">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <!-- Marketplace Tab -->
+      <div class="ext-tab-pane" id="extTabMarketplace" data-ext-pane="marketplace">
+        <div class="ext-search-bar">
+          <input type="text" class="ext-search-input" id="extMarketplaceSearch"
+            placeholder="Search extensions (e.g. 'python', 'c++', 'theme')...">
+          <button class="code-btn" onclick="searchMarketplace()">Search</button>
+          <button class="code-btn" onclick="searchOpenVSX()">Open VSX</button>
+        </div>
+        <div class="ext-list" id="extMarketplaceResults">
+          <div style="color:var(--text-muted); font-style:italic; padding:12px;">
+            Search the VS Code Marketplace or Open VSX registry for extensions.<br>
+            Compatible VSIX packages can be installed directly.
+          </div>
+        </div>
+      </div>
+      <!-- Install VSIX Tab -->
+      <div class="ext-tab-pane" id="extTabVsix" data-ext-pane="vsix">
+        <div class="ext-install-area">
+          <h4>Install from VSIX File</h4>
+          <div class="ext-install-row">
+            <input type="text" class="ext-install-input" id="extVsixPath"
+              placeholder="Path to .vsix file (e.g. d:\extensions\my-extension-1.0.0.vsix)">
+            <button class="code-btn" onclick="installVsixFromPath()">Install</button>
+          </div>
+          <div class="ext-install-row">
+            <input type="file" id="extVsixFile" accept=".vsix" style="font-size:12px; color:var(--text-primary);">
+            <button class="code-btn" onclick="installVsixFromFile()">Load</button>
+          </div>
+        </div>
+        <div class="ext-install-area" style="margin-top:12px;">
+          <h4>Install from Marketplace ID</h4>
+          <div class="ext-install-row">
+            <input type="text" class="ext-install-input" id="extMarketplaceId"
+              placeholder="publisher.extension-name (e.g. ms-python.python)">
+            <button class="code-btn" onclick="installFromMarketplaceId()">Install</button>
+          </div>
+        </div>
+        <div class="ext-install-area" style="margin-top:12px;">
+          <h4>Install Native DLL Extension</h4>
+          <div class="ext-install-row">
+            <input type="text" class="ext-install-input" id="extNativePath"
+              placeholder="Path to extension directory with native_manifest.json">
+            <button class="code-btn" onclick="installNativeExt()">Load</button>
+          </div>
+        </div>
+        <div class="ext-install-area" style="margin-top:12px;">
+          <h4>Install PowerShell Module</h4>
+          <div class="ext-install-row">
+            <input type="text" class="ext-install-input" id="extPsm1Path"
+              placeholder="Path to .psm1 file (e.g. d:\rawrxd\scripts\modules\MyModule.psm1)">
+            <button class="code-btn" onclick="installPsm1Ext()">Import</button>
+          </div>
+        </div>
+        <div class="ext-marketplace-output" id="extInstallOutput" style="margin-top:12px;">
+          Ready to install extensions. Supported formats: .vsix, native DLL, .psm1, .js
+        </div>
+      </div>
+      <!-- Supported Types Tab -->
+      <div class="ext-tab-pane" id="extTabTypes" data-ext-pane="types">
+        <h4 style="margin:0 0 12px 0; color:var(--text-primary);">Supported Extension Types</h4>
+        <div class="ext-type-grid" id="extTypeGrid">
+          <!-- Populated by JS -->
+        </div>
+        <div class="ext-install-area">
+          <h4>Extension Host Architecture</h4>
+          <div class="ext-marketplace-output">
+            RawrXD Extension Host Architecture
+            ═══════════════════════════════════════════════
+
+            ┌─────────────────────────────────────────┐
+            │ Win32IDE (WebView2) │
+            │ ┌───────────┐ ┌──────────────────┐ │
+            │ │ Monaco │ │ Chatbot HTML │ │
+            │ │ Editor │ │ (this panel) │ │
+            │ └─────┬─────┘ └────────┬─────────┘ │
+            │ │ │ │
+            │ ┌─────┴──────────────────┴─────────┐ │
+            │ │ VS Code API Compatibility │ │
+            │ │ (vscode_extension_api.h) │ │
+            │ └───────────────┬─────────────────┘ │
+            └───────────────────┼─────────────────────┘
+            │
+            ┌───────────────────┼─────────────────────┐
+            │ Extension Loader Pipeline │
+            │ ┌───────────┐ ┌────────┐ ┌─────────┐ │
+            │ │ VSIX │ │ Native │ │ QuickJS │ │
+            │ │ Unpacker │ │ DLL │ │ Host │ │
+            │ └───────────┘ └────────┘ └─────────┘ │
+            │ ┌───────────┐ ┌────────┐ ┌─────────┐ │
+            │ │ PowerShell│ │ Theme │ │ LSP │ │
+            │ │ Module │ │ Loader │ │ Bridge │ │
+            │ └───────────┘ └────────┘ └─────────┘ │
+            └─────────────────────────────────────────┘
+
+            Paths:
+            Extensions: d:\RawrXD\extensions\
+            Modules: d:\RawrXD\scripts\modules\
+            Craft Room: d:\RawrXD\craft_room\
+            Registry: d:\RawrXD\extensions\registry.json
+          </div>
+        </div>
+      </div>
+      <!-- PowerShell Tab -->
+      <div class="ext-tab-pane" id="extTabPowershell" data-ext-pane="powershell">
+        <div class="ext-install-area">
+          <h4>PowerShell Extension Manager</h4>
+          <p style="font-size:12px; color:var(--text-muted); margin:0 0 8px 0;">
+            Use the PowerShell-based extension manager for advanced lifecycle management, craft room, and module
+            operations.
+          </p>
+          <div class="ext-install-row">
+            <button class="code-btn" onclick="extPsAction('list')">List Extensions</button>
+            <button class="code-btn" onclick="extPsAction('menu')">Interactive Menu</button>
+            <button class="code-btn" onclick="extPsAction('craft')">Craft Room</button>
+            <button class="code-btn" onclick="extPsAction('scan')">Scan Directory</button>
+          </div>
+        </div>
+        <div class="ext-install-area" style="margin-top:12px;">
+          <h4>Create New Extension (PowerShell)</h4>
+          <div class="ext-install-row">
+            <input type="text" class="ext-install-input" id="extPsNewName" placeholder="Extension name">
+            <select id="extPsNewType" class="ext-install-input" style="max-width:160px;">
+              <option value="Custom">Custom</option>
+              <option value="Translator">Translator</option>
+              <option value="Analyzer">Analyzer</option>
+              <option value="Connector">Connector</option>
+              <option value="Generator">Generator</option>
+              <option value="Processor">Processor</option>
+            </select>
+            <button class="code-btn" onclick="extPsCreate()">Create</button>
+          </div>
+        </div>
+        <div class="ext-marketplace-output" id="extPsOutput" style="margin-top:12px;">
+          PowerShell Extension Commands:
+          Import-Module .\scripts\ExtensionManager.psm1
+          New-Extension -Name "MyExt" -Type Custom -AutoInstall
+          Install-Extension -Name "MyExt"
+          Enable-Extension -Name "MyExt"
+          Disable-Extension -Name "MyExt"
+          Get-Extension | Format-Table
+          Show-ExtensionMenu (interactive)
+        </div>
+      </div>
+      <!-- History Tab -->
+      <div class="ext-tab-pane" id="extTabHistory" data-ext-pane="history">
+        <h4 style="margin:0 0 12px 0; color:var(--text-primary);">Extension Activity History</h4>
+        <div class="ext-history-list" id="extHistoryList">
+          <div style="color:var(--text-muted); font-style:italic;">No activity yet.</div>
         </div>
       </div>
     </div>
@@ -6975,6 +7607,121 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- VSIX EXTENSION MANAGER PANEL                                   -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="agent-panel" id="extensionsPanel" style="z-index:1035;display:none;">
+    <div class="agent-header">
+      <span class="agent-title">&#x1F9E9; VSIX Extension Manager</span>
+      <div class="debug-controls">
+        <button class="code-btn" onclick="refreshExtensionsList()">&#x1F504; Refresh</button>
+        <button class="code-btn" onclick="closeExtensionsPanel()">&times; Close</button>
+      </div>
+    </div>
+    <div class="agent-body" style="flex-direction:column;">
+      <div style="padding:12px;">
+        <!-- Extension tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+          <button class="code-btn" id="extTabInstalled" onclick="switchExtTab('installed')"
+            style="font-size:10px;padding:4px 8px;background:var(--accent);color:#000;">&#x1F4E6; Installed</button>
+          <button class="code-btn" id="extTabMarketplace" onclick="switchExtTab('marketplace')"
+            style="font-size:10px;padding:4px 8px;">&#x1F50D; Marketplace</button>
+          <button class="code-btn" id="extTabLoad" onclick="switchExtTab('load')"
+            style="font-size:10px;padding:4px 8px;">&#x1F4C2; Load VSIX</button>
+          <button class="code-btn" id="extTabRunning" onclick="switchExtTab('running')"
+            style="font-size:10px;padding:4px 8px;">&#x26A1; Running</button>
+        </div>
+
+        <!-- Search bar -->
+        <div style="margin-bottom:10px;">
+          <input id="extSearchInput" type="text" placeholder="Search extensions..."
+            oninput="filterExtensions(this.value)"
+            style="width:100%;padding:6px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font-mono);font-size:11px;box-sizing:border-box;">
+        </div>
+
+        <!-- Installed tab -->
+        <div id="extViewInstalled">
+          <div style="font-size:11px;font-weight:600;color:var(--accent-secondary);margin-bottom:8px;">Installed
+            Extensions</div>
+          <div id="extInstalledList"
+            style="font-family:var(--font-mono);font-size:11px;max-height:350px;overflow-y:auto;">
+            <div style="color:var(--text-muted);">No extensions installed. Use Marketplace or Load VSIX to add
+              extensions.</div>
+          </div>
+        </div>
+
+        <!-- Marketplace tab -->
+        <div id="extViewMarketplace" style="display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--accent-secondary);margin-bottom:8px;">Marketplace
+            Search</div>
+          <div style="display:flex;gap:6px;margin-bottom:8px;">
+            <input id="extMarketplaceQuery" type="text" placeholder="Search marketplace (e.g. python, rust, theme)"
+              onkeydown="if(event.key==='Enter')searchExtMarketplace()"
+              style="flex:1;padding:6px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font-mono);font-size:11px;">
+            <button class="code-btn" onclick="searchExtMarketplace()" style="font-size:10px;padding:4px 10px;">&#x1F50D;
+              Search</button>
+          </div>
+          <div id="extMarketplaceResults"
+            style="font-family:var(--font-mono);font-size:11px;max-height:350px;overflow-y:auto;">
+            <div style="color:var(--text-muted);">Enter a search query to find extensions from the marketplace.</div>
+          </div>
+        </div>
+
+        <!-- Load VSIX tab -->
+        <div id="extViewLoad" style="display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--accent-secondary);margin-bottom:8px;">Load VSIX Package
+          </div>
+          <div
+            style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;margin-bottom:10px;cursor:pointer;"
+            onclick="document.getElementById('vsixFileInput').click()" id="vsixDropZone">
+            <div style="font-size:24px;margin-bottom:6px;">&#x1F4E6;</div>
+            <div style="font-size:12px;color:var(--text-secondary);">Drop .vsix file here or click to browse</div>
+            <div style="font-size:10px;margin-top:4px;color:var(--text-muted);">Supports VS Code .vsix extension
+              packages</div>
+            <input type="file" id="vsixFileInput" accept=".vsix" style="display:none;"
+              onchange="handleVsixFile(this.files)">
+          </div>
+          <div style="margin-bottom:8px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Or install from URL:</div>
+            <div style="display:flex;gap:6px;">
+              <input id="extVsixUrl" type="text" placeholder="https://marketplace.visualstudio.com/..."
+                style="flex:1;padding:6px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:var(--font-mono);font-size:11px;">
+              <button class="code-btn" onclick="installVsixFromUrl()"
+                style="font-size:10px;padding:4px 10px;">Install</button>
+            </div>
+          </div>
+          <div id="extLoadStatus" style="font-family:var(--font-mono);font-size:11px;margin-top:8px;"></div>
+        </div>
+
+        <!-- Running tab -->
+        <div id="extViewRunning" style="display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--accent-secondary);margin-bottom:8px;">Running Extension
+            Hosts</div>
+          <div id="extRunningList"
+            style="font-family:var(--font-mono);font-size:11px;max-height:350px;overflow-y:auto;">
+            <div style="color:var(--text-muted);">No extension hosts active.</div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="code-btn" onclick="restartExtensionHost()" style="font-size:10px;padding:4px 10px;">&#x1F504;
+              Restart Host</button>
+            <button class="code-btn" onclick="killExtensionHost()" style="font-size:10px;padding:4px 10px;">&#x1F6D1;
+              Kill Host</button>
+            <button class="code-btn" onclick="showExtHostLogs()" style="font-size:10px;padding:4px 10px;">&#x1F4DC; Host
+              Logs</button>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div
+          style="margin-top:12px;padding:8px;background:rgba(0,0,0,0.2);border-radius:6px;font-size:10px;color:var(--text-muted);">
+          <span id="extStatusText">Extensions: 0 installed, 0 active</span>
+          <span style="float:right;">Host: <span id="extHostStatus"
+              style="color:var(--accent-green);">Ready</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   </main>
 
   <!-- Right Sidebar -->
@@ -7175,6 +7922,27 @@
         scanPorts: [11435, 8080, 3000, 5000, 11434], // ports to scan for IDE
         lastScanResults: [],    // [{port, status, backend}] from last scan
       },
+      // VSIX Extension Manager state
+      extensions: {
+        installed: [],           // [{id, name, version, publisher, enabled, activationEvents, contributes, size, installedAt}]
+        running: [],             // [{id, pid, hostType, uptime, memoryMB, status}]
+        marketplace: {           // cached marketplace search results
+          query: '',
+          results: [],
+          lastSearch: 0,
+        },
+        hostStatus: 'idle',      // 'idle' | 'starting' | 'running' | 'error'
+        hostPid: null,
+        totalActivated: 0,
+        logs: [],                // extension host log ring buffer (max 200)
+        maxLogs: 200,
+        pendingInstalls: [],     // VSIX files currently being processed
+        scanPaths: [             // paths to scan for locally installed extensions
+          'extensions/',
+          'plugins/',
+          '.vscode/extensions/',
+        ],
+      },
     };
 
     // ======================================================================
@@ -7210,6 +7978,10 @@
         'multi-response': { name: 'MultiResponseEngine', module: 'phase10', status: 'standby', desc: 'S/G/C/X multi-response generation' },
         'flight-recorder': { name: 'FlightRecorder', module: 'core', status: 'standby', desc: 'MASM64 ring-buffer flight recorder' },
         'cot': { name: 'ChainOfThoughtEngine', module: 'core', status: 'standby', desc: 'Chain-of-Thought multi-model reasoning' },
+        'vsix-host': { name: 'VSIXExtensionHost', module: 'ext', status: 'standby', desc: 'VSIX extension host — loads .vsix packages, manages activation events' },
+        'ext-manager': { name: 'ExtensionManager', module: 'ext', status: 'standby', desc: 'Extension lifecycle manager — install, enable, disable, uninstall' },
+        'marketplace': { name: 'MarketplaceClient', module: 'ext', status: 'standby', desc: 'VS Code Marketplace API client — search, download, version resolve' },
+        'ext-sandbox': { name: 'ExtensionSandbox', module: 'ext', status: 'standby', desc: 'Sandboxed extension execution environment (QuickJS + polyfills)' },
       },
       getActive: function () { return this.engines[this.active] || null; },
       swap: function (name) {
@@ -7270,6 +8042,104 @@
       ],
       history: [],
       maxHistory: 50,
+    };
+
+    // ======================================================================
+    // EXTENSION / VSIX PLUGIN STATE (Phase 39)
+    // ======================================================================
+    var ExtensionState = {
+      // Extension types: vsix, native-dll, psm1, js, theme, language
+      extensions: {},
+      installed: [],
+      enabled: [],
+      registryPath: 'd:\\RawrXD\\extensions\\registry.json',
+      extensionRoot: 'd:\\RawrXD\\extensions',
+      moduleStore: 'd:\\RawrXD\\scripts\\modules',
+      craftRoom: 'd:\\RawrXD\\craft_room',
+      marketplace: {
+        url: 'https://marketplace.visualstudio.com/_apis/public/gallery',
+        openVsxUrl: 'https://open-vsx.org/api',
+        enabled: true,
+        cache: [],
+        lastSearch: '',
+      },
+      // Built-in extension types the system supports
+      supportedTypes: [
+        { type: 'vsix', desc: 'VS Code Extension Package (.vsix)', icon: '\uD83D\uDCE6', canLoad: true },
+        { type: 'native-dll', desc: 'Native C++ DLL Extension', icon: '\u2699', canLoad: true },
+        { type: 'psm1', desc: 'PowerShell Module Extension', icon: '\uD83D\uDCDC', canLoad: true },
+        { type: 'js', desc: 'QuickJS JavaScript Extension', icon: '\uD83D\uDFE8', canLoad: true },
+        { type: 'theme', desc: 'Color Theme / Icon Theme', icon: '\uD83C\uDFA8', canLoad: true },
+        { type: 'language', desc: 'Language Grammar / Snippets', icon: '\uD83D\uDCDD', canLoad: true },
+        { type: 'lsp', desc: 'Language Server Protocol Provider', icon: '\uD83D\uDD17', canLoad: true },
+        { type: 'debugger', desc: 'Debug Adapter Protocol Provider', icon: '\uD83D\uDC1B', canLoad: true },
+      ],
+      activeTab: 'installed',
+      history: [],
+      maxHistory: 100,
+      // Built-in/bundled extensions that ship with RawrXD
+      bundled: [
+        { id: 'rawrxd.masm-language', name: 'MASM Language Support', type: 'language', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'MASM64 syntax highlighting, snippets, and diagnostics' },
+        { id: 'rawrxd.gguf-inspector', name: 'GGUF Model Inspector', type: 'native-dll', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'GGUF binary inspection, tensor viewer, metadata browser' },
+        { id: 'rawrxd.hotpatch-tools', name: 'Hotpatch Tools', type: 'native-dll', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'Three-layer hotpatching: memory, byte-level, server' },
+        { id: 'rawrxd.agentic-framework', name: 'Agentic Framework', type: 'native-dll', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'Failure detection, puppeteer correction, agentic loop' },
+        { id: 'rawrxd.reverse-engineering', name: 'Reverse Engineering Suite', type: 'native-dll', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'PE analyzer, disassembler, deobfuscator, omega suite' },
+        { id: 'rawrxd.quickjs-host', name: 'QuickJS Extension Host', type: 'js', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'QuickJS-based JavaScript extension runtime' },
+        { id: 'rawrxd.powershell-bridge', name: 'PowerShell Bridge', type: 'psm1', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'PowerShell module lifecycle, craft room, extension manager' },
+        { id: 'rawrxd.vscode-compat', name: 'VS Code API Compatibility', type: 'native-dll', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'vscode.* API shim: commands, window, workspace, languages, debug' },
+        { id: 'rawrxd.theme-dark-plus', name: 'Dark+ (default theme)', type: 'theme', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'VS Code Dark+ compatible color theme' },
+        { id: 'rawrxd.lsp-bridge', name: 'LSP Bridge', type: 'lsp', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'Language Server Protocol routing to Win32IDE LSP server' },
+        { id: 'rawrxd.dap-handler', name: 'DAP Debug Handler', type: 'debugger', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'Debug Adapter Protocol integration for native debugging' },
+        { id: 'rawrxd.polyfill-engine', name: 'Extension Polyfill Engine', type: 'js', version: '1.0.0', publisher: 'RawrXD', enabled: true, builtin: true, desc: 'JS compat layer for VS Code extension APIs' },
+      ],
+      // User-installed extensions (loaded from registry)
+      userExtensions: [],
+
+      getAll: function () {
+        return this.bundled.concat(this.userExtensions);
+      },
+      getEnabled: function () {
+        return this.getAll().filter(function (e) { return e.enabled; });
+      },
+      getByType: function (type) {
+        return this.getAll().filter(function (e) { return e.type === type; });
+      },
+      findById: function (id) {
+        return this.getAll().find(function (e) { return e.id === id; }) || null;
+      },
+      install: function (ext) {
+        if (this.findById(ext.id)) return { success: false, msg: 'Extension already installed: ' + ext.id };
+        ext.enabled = false;
+        ext.builtin = false;
+        this.userExtensions.push(ext);
+        this.history.push({ action: 'install', id: ext.id, time: Date.now() });
+        return { success: true, msg: 'Installed: ' + ext.name + ' (' + ext.id + ')' };
+      },
+      uninstall: function (id) {
+        var idx = -1;
+        for (var i = 0; i < this.userExtensions.length; i++) {
+          if (this.userExtensions[i].id === id) { idx = i; break; }
+        }
+        if (idx === -1) return { success: false, msg: 'Extension not found or is built-in: ' + id };
+        var removed = this.userExtensions.splice(idx, 1)[0];
+        this.history.push({ action: 'uninstall', id: id, time: Date.now() });
+        return { success: true, msg: 'Uninstalled: ' + removed.name };
+      },
+      enable: function (id) {
+        var ext = this.findById(id);
+        if (!ext) return { success: false, msg: 'Extension not found: ' + id };
+        ext.enabled = true;
+        this.history.push({ action: 'enable', id: id, time: Date.now() });
+        return { success: true, msg: 'Enabled: ' + ext.name };
+      },
+      disable: function (id) {
+        var ext = this.findById(id);
+        if (!ext) return { success: false, msg: 'Extension not found: ' + id };
+        if (ext.builtin) return { success: false, msg: 'Cannot disable built-in extension: ' + ext.name };
+        ext.enabled = false;
+        this.history.push({ action: 'disable', id: id, time: Date.now() });
+        return { success: true, msg: 'Disabled: ' + ext.name };
+      },
     };
 
     // ======================================================================
@@ -7607,24 +8477,69 @@
     var _win32IdePollTimer = null;
 
     async function probeWin32IDE() {
-      // Probe the Win32IDE local server to detect if it's running
+      // Probe the Win32IDE / RawrXD-ToolServer local server to detect if it's running
+      // Tries multiple endpoints: /status, /api/status, /health (for old and new binaries)
+      var data = null;
+      var detectedVia = '';
+
+      // Try 1: /status (new binary with full capabilities)
       try {
         var res = await fetch(_win32IdeUrl + '/status', { signal: AbortSignal.timeout(2000) });
         if (res.ok) {
-          var data = await res.json();
-          if (data.backend === 'rawrxd-win32ide' || (data.server && data.server.indexOf('Win32IDE') >= 0)) {
-            _win32IdeDetected = true;
-            updateIdeBridgeUI(true, data);
-            logDebug('\uD83D\uDDA5 Win32 IDE detected at ' + _win32IdeUrl, 'info');
-            // Sync model info from IDE
-            if (data.model_loaded && data.model_path) {
-              var modelName = data.model_path.split(/[/\\]/).pop();
-              logDebug('IDE has model loaded: ' + modelName, 'info');
-            }
-            return true;
-          }
+          data = await res.json();
+          detectedVia = '/status';
         }
-      } catch (_) { /* IDE not running — that's fine */ }
+      } catch (_) { /* not available */ }
+
+      // Try 2: /api/status (old binary, returns {running, pid, uptime_seconds})
+      if (!data) {
+        try {
+          var res2 = await fetch(_win32IdeUrl + '/api/status', { signal: AbortSignal.timeout(2000) });
+          if (res2.ok) {
+            data = await res2.json();
+            detectedVia = '/api/status';
+          }
+        } catch (_) { /* not available */ }
+      }
+
+      // Try 3: /health (old binary, returns {status, version, models_loaded})
+      if (!data) {
+        try {
+          var res3 = await fetch(_win32IdeUrl + '/health', { signal: AbortSignal.timeout(2000) });
+          if (res3.ok) {
+            data = await res3.json();
+            detectedVia = '/health';
+          }
+        } catch (_) { /* not available */ }
+      }
+
+      if (data) {
+        // Identify as RawrXD backend by any of these signals:
+        // - Explicit backend/server fields matching known names
+        // - /api/status returning {running: true} (only tool_server does this)
+        // - /health returning {status: "ok", version: ...} on :11435 (not Ollama's port)
+        var isRawrXD = false;
+        if (data.backend === 'rawrxd-win32ide' || data.backend === 'rawrxd-tool-server') isRawrXD = true;
+        else if (data.server && (data.server.indexOf('Win32IDE') >= 0 || data.server.indexOf('RawrXD') >= 0 || data.server.indexOf('ToolServer') >= 0)) isRawrXD = true;
+        else if (data.running === true && data.pid) isRawrXD = true; // /api/status signature
+        else if (detectedVia === '/health' && data.status === 'ok' && data.version) isRawrXD = true; // tool_server /health on :11435
+
+        if (isRawrXD) {
+          _win32IdeDetected = true;
+          // Normalize the data for updateIdeBridgeUI
+          if (!data.backend) data.backend = 'rawrxd-tool-server';
+          if (!data.server) data.server = 'RawrXD-ToolServer';
+          updateIdeBridgeUI(true, data);
+          logDebug('\uD83D\uDDA5 Win32 IDE / RawrXD-ToolServer detected at ' + _win32IdeUrl + ' via ' + detectedVia, 'info');
+          // Sync model info from IDE
+          if (data.model_loaded && data.model_path) {
+            var modelName = data.model_path.split(/[/\\]/).pop();
+            logDebug('IDE has model loaded: ' + modelName, 'info');
+          }
+          return true;
+        }
+      }
+
       _win32IdeDetected = false;
       updateIdeBridgeUI(false, null);
       return false;
@@ -8635,6 +9550,56 @@
       cliFailures: function () { return this._cli('/failures'); },
       engineCmd: function (sub) { return this._cli('!engine ' + sub); },
 
+      // ---- VSIX Extension Management (tool_server: /api/extensions/*) ----
+      fetchExtensions: function () { return this._get('/api/extensions'); },
+      fetchExtensionById: function (extId) { return this._get('/api/extensions/' + encodeURIComponent(extId)); },
+      installExtension: function (extId, source) {
+        return this._post('/api/extensions/install', { extension_id: extId, source: source || 'marketplace' }, 60000);
+      },
+      uninstallExtension: function (extId) {
+        return this._post('/api/extensions/uninstall', { extension_id: extId });
+      },
+      enableExtension: function (extId) {
+        return this._post('/api/extensions/enable', { extension_id: extId });
+      },
+      disableExtension: function (extId) {
+        return this._post('/api/extensions/disable', { extension_id: extId });
+      },
+      searchMarketplace: function (query, page, pageSize) {
+        return this._post('/api/extensions/marketplace/search', {
+          query: query, page: page || 1, pageSize: pageSize || 20
+        }, 15000);
+      },
+      fetchMarketplaceInfo: function (extId) {
+        return this._get('/api/extensions/marketplace/' + encodeURIComponent(extId));
+      },
+      loadVsixFromPath: function (path) {
+        return this._post('/api/extensions/load-vsix', { path: path }, 60000);
+      },
+      loadVsixFromUrl: function (url) {
+        return this._post('/api/extensions/load-vsix', { url: url }, 120000);
+      },
+      extensionHostStatus: function () { return this._get('/api/extensions/host/status'); },
+      restartExtensionHost: function () { return this._post('/api/extensions/host/restart', {}); },
+      killExtensionHost: function () { return this._post('/api/extensions/host/kill', {}); },
+      fetchExtensionHostLogs: function () { return this._get('/api/extensions/host/logs'); },
+      fetchExtensionContributes: function (extId) {
+        return this._get('/api/extensions/' + encodeURIComponent(extId) + '/contributes');
+      },
+      activateExtension: function (extId) {
+        return this._post('/api/extensions/activate', { extension_id: extId });
+      },
+      deactivateExtension: function (extId) {
+        return this._post('/api/extensions/deactivate', { extension_id: extId });
+      },
+      scanLocalExtensions: function (paths) {
+        return this._post('/api/extensions/scan', { paths: paths || State.extensions.scanPaths });
+      },
+      exportExtensionList: function () { return this._get('/api/extensions/export'); },
+      importExtensionList: function (data) {
+        return this._post('/api/extensions/import', data, 120000);
+      },
+
       // ---- OpenAI-compatible (tool_server: /v1/chat/completions) ----
       v1ChatCompletions: function (messages, model, options) {
         return this._post('/v1/chat/completions', Object.assign({
@@ -8785,6 +9750,31 @@
           files: ['win32_ide.cpp', 'win32_ide.hpp', 'react_ide_generator.cpp'],
           endpoints: ['/gui'],
           desc: 'Win32 native IDE shell, React-based IDE generator'
+        },
+        'Ext / VSIX Extension Host': {
+          files: ['vsix_extension_host.hpp', 'vsix_extension_host.cpp', 'extension_sandbox.hpp', 'extension_sandbox.cpp'],
+          endpoints: ['/api/extensions', '/api/extensions/install', '/api/extensions/uninstall', '/api/extensions/enable', '/api/extensions/disable', '/api/extensions/activate', '/api/extensions/deactivate', '/api/extensions/host/status', '/api/extensions/host/restart', '/api/extensions/host/kill', '/api/extensions/host/logs'],
+          desc: 'VSIX extension host — loads .vsix packages, manages activation events, sandboxed QuickJS execution'
+        },
+        'Ext / Extension Manager': {
+          files: ['extension_manager.hpp', 'extension_manager.cpp', 'extension_manifest.hpp'],
+          endpoints: ['/api/extensions/scan', '/api/extensions/export', '/api/extensions/import'],
+          desc: 'Extension lifecycle manager — install, update, enable/disable, dependency resolution'
+        },
+        'Ext / Marketplace Client': {
+          files: ['marketplace_client.hpp', 'marketplace_client.cpp'],
+          endpoints: ['/api/extensions/marketplace/search', '/api/extensions/marketplace/*'],
+          desc: 'VS Code Marketplace API client — search, download, version resolution, compatibility check'
+        },
+        'Ext / Polyfill Engine': {
+          files: ['extension_polyfill.hpp', 'extension_polyfill.cpp', 'vscode_api_shim.js'],
+          endpoints: [],
+          desc: 'VS Code API polyfill layer — provides vscode.* namespace, commands, workspace, languages APIs'
+        },
+        'Ext / VSIX Loader': {
+          files: ['vsix_loader.hpp', 'vsix_loader.cpp', 'vsix_parser.hpp'],
+          endpoints: ['/api/extensions/load-vsix'],
+          desc: 'VSIX package parser — extracts manifest, contributions, activation events from .vsix ZIP'
         }
       },
 
@@ -8845,10 +9835,19 @@
     // Sets State.backend.hasCliEndpoint = true if found on ANY reachable URL
     async function beaconProbeCliEndpoint() {
       State.backend.hasCliEndpoint = false;
+
+      // Build list of URLs to probe — always include the IDE server URL (:11435)
       var urlsToProbe = [State.backend.url];
-      if (State.backend.ollamaDirectUrl && State.backend.ollamaDirectUrl !== State.backend.url) {
+      if (_ideServerUrl && urlsToProbe.indexOf(_ideServerUrl) === -1) {
+        urlsToProbe.push(_ideServerUrl);
+      }
+      if (_win32IdeUrl && urlsToProbe.indexOf(_win32IdeUrl) === -1) {
+        urlsToProbe.push(_win32IdeUrl);
+      }
+      if (State.backend.ollamaDirectUrl && urlsToProbe.indexOf(State.backend.ollamaDirectUrl) === -1) {
         urlsToProbe.push(State.backend.ollamaDirectUrl);
       }
+
       for (var i = 0; i < urlsToProbe.length; i++) {
         try {
           var res = await fetch(urlsToProbe[i] + '/api/cli', {
@@ -8868,7 +9867,15 @@
           }
         } catch (_) { /* endpoint not available, continue */ }
       }
-      logDebug('Beacon: /api/cli not found on any backend — using client-side CLI', 'info');
+
+      // If CLI endpoint not found but tool_server is detected, set a partial flag
+      // so file reads still work via /api/read-file even without /api/cli
+      if (_win32IdeDetected || (State.backend.serverType && State.backend.serverType.indexOf('rawrxd') !== -1)) {
+        State.backend._cliEndpointUrl = _ideServerUrl || _win32IdeUrl || State.backend.url;
+        logDebug('Beacon: /api/cli not found but RawrXD tool_server detected — file reads via /api/read-file available', 'info');
+      } else {
+        logDebug('Beacon: /api/cli not found on any backend — using client-side CLI', 'info');
+      }
     }
 
     async function connectBackend() {
@@ -8888,21 +9895,70 @@
       status.className = 'status-pill connecting';
       text.textContent = 'CONNECTING...';
 
-      // ---- Try 1: Primary backend (serve.py / Win32IDE on :11435) ----
+      // ---- Try 1: Primary backend (tool_server / serve.py / Win32IDE on :11435) ----
       try {
         const t0 = performance.now();
-        const ctrl = new AbortController();
-        setTimeout(() => ctrl.abort(), 3000);
 
         let statusData = null;
+        let detectedVia = '';
+
+        // Try /status first (new binary with full capabilities)
         try {
+          const ctrl = new AbortController();
+          setTimeout(() => ctrl.abort(), 3000);
           const res = await fetch(State.backend.url + '/status', { signal: ctrl.signal });
-          if (res.ok) statusData = await res.json();
+          if (res.ok) { statusData = await res.json(); detectedVia = '/status'; }
         } catch (_) { /* fall through */ }
 
+        // Try /api/status (old binary — returns {running, pid, uptime_seconds})
         if (!statusData) {
-          const res = await fetch(State.backend.url + '/health', { signal: AbortSignal.timeout(3000) });
-          if (res.ok) statusData = await res.json();
+          try {
+            const res = await fetch(State.backend.url + '/api/status', { signal: AbortSignal.timeout(3000) });
+            if (res.ok) {
+              const d = await res.json();
+              if (d.running === true && d.pid) {
+                // This is definitely the tool_server. Enrich the status data.
+                statusData = {
+                  backend: 'rawrxd-tool-server',
+                  server: 'RawrXD-ToolServer',
+                  running: true,
+                  pid: d.pid,
+                  uptime_seconds: d.uptime_seconds,
+                  status: 'ok',
+                  license: 'unlicensed-open',
+                  model_range: '8B-100B swarm + 800B dual engine',
+                  capabilities: {
+                    kernel_engines: true,
+                    model_swarm: true,
+                    dual_engine_800b: true,
+                    hotpatching: true,
+                    file_read: true,
+                    cli: true,
+                  },
+                };
+                detectedVia = '/api/status';
+              }
+            }
+          } catch (_) { /* fall through */ }
+        }
+
+        // Try /health (old binary — returns {status, version, models_loaded})
+        if (!statusData) {
+          try {
+            const res = await fetch(State.backend.url + '/health', { signal: AbortSignal.timeout(3000) });
+            if (res.ok) {
+              const d = await res.json();
+              if (d.status === 'ok') {
+                statusData = Object.assign({}, d, {
+                  backend: 'rawrxd-tool-server',
+                  server: 'RawrXD-ToolServer',
+                  license: 'unlicensed-open',
+                  model_range: '8B-100B swarm + 800B dual engine',
+                });
+                detectedVia = '/health';
+              }
+            }
+          } catch (_) { /* fall through */ }
         }
 
         const latency = Math.round(performance.now() - t0);
@@ -8911,8 +9967,13 @@
           State.backend.online = true;
           State.backend.directMode = false;
           State.backend.lastPing = Date.now();
-          State.backend.serverType = statusData.backend || statusData.server || 'unknown';
+          State.backend.serverType = statusData.backend || statusData.server || 'rawrxd-tool-server';
           _ideServerUrl = State.backend.url; // Cache IDE server URL for file reads
+
+          // Store full capabilities if available
+          if (statusData.capabilities) {
+            State.backend.capabilities = statusData.capabilities;
+          }
 
           status.className = 'status-pill online';
           text.textContent = 'ONLINE';
@@ -8920,7 +9981,7 @@
           updateBackendInfo(statusData, latency);
           updateModeBadge(true);
           syncTitlebarStatus();
-          logDebug('Connected to ' + State.backend.serverType + ' (' + latency + 'ms)', 'info');
+          logDebug('Connected to ' + State.backend.serverType + ' via ' + detectedVia + ' (' + latency + 'ms)', 'info');
 
           await fetchModels();
           await beaconProbeCliEndpoint();
@@ -9152,6 +10213,433 @@
         badge.style.display = 'none';
         rightModel.textContent = '\u2014';
         updateSafeDecodeStatus();
+      }
+    }
+
+    // ======================================================================
+    // MODEL BRIDGE — MASM x64 Pure Assembly Bridge (24 profiles, 1.5B-800B)
+    // ======================================================================
+
+    // Bridge state tracking
+    var BridgeState = {
+      profiles: [],
+      hardware: null,
+      selectedProfileId: -1,
+      activeProfileId: -1,
+      loaded: false,
+      bridge: 'unknown',
+      fetched: false
+    };
+
+    // Tier display config
+    var BRIDGE_TIERS = {
+      'small': { label: '\u26A1 Small (1\u20138B)', css: 'tier-small', color: '#66ccff', range: '1-8B' },
+      'medium': { label: '\uD83D\uDD27 Medium (9\u201327B)', css: 'tier-medium', color: '#ffcc00', range: '9-27B' },
+      'large': { label: '\uD83D\uDD25 Large (28\u201370B)', css: 'tier-large', color: '#ff8844', range: '28-70B' },
+      'ultra': { label: '\uD83D\uDE80 Ultra (71\u2013141B)', css: 'tier-ultra', color: '#ff4466', range: '71-141B' },
+      '800b-dual': { label: '\uD83E\uDDE0 800B Dual Engine', css: 'tier-800b', color: '#ff00ff', range: '671-800B' }
+    };
+
+    // Model name lookup (mirrors model_bridge_x64.asm g_ModelNames)
+    var BRIDGE_MODEL_NAMES = [
+      'qwen2.5:1.5b', 'qwen2.5:3b', 'llama3.2:3b', 'phi-4:3.8b',
+      'gemma2:7b', 'llama3.1:8b', 'qwen2.5:7b', 'mistral:7b', 'deepseek-r1:8b',
+      'llama3.1:13b', 'qwen2.5:14b', 'gemma2:27b',
+      'qwen2.5:32b', 'codellama:34b', 'llama3.1:70b', 'qwen2.5:72b', 'deepseek-r1:70b',
+      'llama3.1:100b-swarm', 'qwen2.5:100b-swarm',
+      'BigDaddyG-Q4_K_M', 'RawrXD-800B-DualEngine', 'deepseek-v3:671b-swarm',
+      'mixtral-8x22b:141b', 'commandr-plus:104b-swarm'
+    ];
+
+    // Fetch all 24 profiles from MASM bridge endpoint
+    async function fetchBridgeProfiles() {
+      var badge = document.getElementById('bridgeBadge');
+      badge.textContent = 'loading...';
+      badge.style.background = 'rgba(255,204,0,0.15)';
+      badge.style.color = '#ffcc00';
+
+      try {
+        var activeUrl = getActiveUrl();
+        var res = await fetch(activeUrl + '/api/model/profiles', { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var data = await res.json();
+
+        BridgeState.profiles = data.profiles || [];
+        BridgeState.hardware = data.hardware || null;
+        BridgeState.bridge = data.bridge || 'unknown';
+        BridgeState.fetched = true;
+
+        badge.textContent = data.bridge || 'connected';
+        badge.style.background = 'rgba(0,255,136,0.15)';
+        badge.style.color = '#00ff88';
+
+        renderBridgeProfiles();
+        updateBridgeStatusBar();
+        logDebug('[ModelBridge] Loaded ' + BridgeState.profiles.length + ' profiles via ' + BridgeState.bridge, 'info');
+
+        // Also merge bridge profiles into model select dropdown
+        mergeBridgeIntoModelSelect();
+      } catch (e) {
+        badge.textContent = 'error';
+        badge.style.background = 'rgba(255,68,102,0.15)';
+        badge.style.color = '#ff4466';
+        logDebug('[ModelBridge] Fetch failed: ' + e.message, 'error');
+
+        // Render fallback with static names
+        renderBridgeProfilesFallback();
+      }
+    }
+
+    // Render profile cards grouped by tier
+    function renderBridgeProfiles() {
+      var container = document.getElementById('bridgeProfileList');
+      container.innerHTML = '';
+
+      // Group by tier
+      var tierGroups = {};
+      BridgeState.profiles.forEach(function (p) {
+        var tier = p.tier || 'unknown';
+        if (!tierGroups[tier]) tierGroups[tier] = [];
+        tierGroups[tier].push(p);
+      });
+
+      var tierOrder = ['small', 'medium', 'large', 'ultra', '800b-dual'];
+      tierOrder.forEach(function (tier) {
+        var profiles = tierGroups[tier];
+        if (!profiles || profiles.length === 0) return;
+
+        var tierCfg = BRIDGE_TIERS[tier] || { label: tier, css: '', range: '' };
+
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'bridge-tier-group';
+
+        var labelDiv = document.createElement('div');
+        labelDiv.className = 'bridge-tier-label ' + tierCfg.css;
+        labelDiv.textContent = tierCfg.label + ' (' + profiles.length + ')';
+        groupDiv.appendChild(labelDiv);
+
+        profiles.forEach(function (p) {
+          var card = document.createElement('div');
+          card.className = 'bridge-model-card' + (p.id === BridgeState.activeProfileId ? ' active' : '');
+          card.setAttribute('data-profile-id', p.id);
+          card.onclick = function () { selectBridgeProfile(p.id); };
+
+          var nameStr = BRIDGE_MODEL_NAMES[p.id] || ('profile-' + p.id);
+          var paramStr = p.params_b || '?';
+          var quantStr = p.quant || 'Q4_K_M';
+          var ramStr = p.ram_mb ? (p.ram_mb >= 1024 ? (p.ram_mb / 1024).toFixed(1) + 'G' : p.ram_mb + 'M') : '?';
+
+          card.innerHTML =
+            '<span class="model-name" title="' + nameStr + '">' + nameStr + '</span>' +
+            '<span class="model-meta">' +
+            '<span class="param-badge">' + paramStr + 'B</span>' +
+            '<span class="quant-badge">' + quantStr + '</span>' +
+            '<span class="ram-badge">' + ramStr + '</span>' +
+            (p.requires_swarm ? '<span style="color:#ff4466;" title="Requires swarm cluster">\u26A0</span>' : '') +
+            (p.requires_avx512 ? '<span style="color:#ffcc00;" title="Requires AVX-512">512</span>' : '') +
+            '</span>';
+
+          groupDiv.appendChild(card);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // Fallback renderer with static model names when backend unavailable
+    function renderBridgeProfilesFallback() {
+      var container = document.getElementById('bridgeProfileList');
+      container.innerHTML = '';
+
+      var tierDefs = [
+        { tier: 'small', ids: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+        { tier: 'medium', ids: [9, 10, 11] },
+        { tier: 'large', ids: [12, 13, 14, 15, 16, 19] },
+        { tier: 'ultra', ids: [17, 18, 22, 23] },
+        { tier: '800b-dual', ids: [20, 21] }
+      ];
+
+      tierDefs.forEach(function (td) {
+        var tierCfg = BRIDGE_TIERS[td.tier];
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'bridge-tier-group';
+
+        var labelDiv = document.createElement('div');
+        labelDiv.className = 'bridge-tier-label ' + tierCfg.css;
+        labelDiv.textContent = tierCfg.label + ' (' + td.ids.length + ')';
+        groupDiv.appendChild(labelDiv);
+
+        td.ids.forEach(function (id) {
+          var card = document.createElement('div');
+          card.className = 'bridge-model-card';
+          card.setAttribute('data-profile-id', id);
+          card.onclick = function () { selectBridgeProfile(id); };
+
+          var nameStr = BRIDGE_MODEL_NAMES[id] || ('profile-' + id);
+          card.innerHTML =
+            '<span class="model-name">' + nameStr + '</span>' +
+            '<span class="model-meta">' +
+            '<span class="param-badge">#' + id + '</span>' +
+            '</span>';
+
+          groupDiv.appendChild(card);
+        });
+
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // Select a bridge profile (highlight card)
+    function selectBridgeProfile(profileId) {
+      BridgeState.selectedProfileId = profileId;
+
+      // Update card highlights
+      var cards = document.querySelectorAll('.bridge-model-card');
+      cards.forEach(function (card) {
+        var cardId = parseInt(card.getAttribute('data-profile-id'), 10);
+        card.classList.toggle('active', cardId === profileId);
+      });
+
+      var nameStr = BRIDGE_MODEL_NAMES[profileId] || ('profile-' + profileId);
+      logDebug('[ModelBridge] Selected: ' + nameStr + ' (ID ' + profileId + ')', 'info');
+    }
+
+    // Load model via MASM bridge POST /api/model/load
+    async function bridgeLoadModel() {
+      if (BridgeState.selectedProfileId < 0) {
+        addMessage('system', '\u26A0\uFE0F Select a model profile from the bridge list first.');
+        return;
+      }
+
+      var profileId = BridgeState.selectedProfileId;
+      var nameStr = BRIDGE_MODEL_NAMES[profileId] || ('profile-' + profileId);
+      addMessage('system', '\u26A1 Loading model via MASM x64 bridge: **' + nameStr + '** (ID ' + profileId + ')...');
+
+      try {
+        var activeUrl = getActiveUrl();
+        var payload = JSON.stringify({ index: profileId, name: nameStr });
+        var res = await fetch(activeUrl + '/api/model/load', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          signal: AbortSignal.timeout(30000)
+        });
+
+        var data = await res.json();
+        if (!res.ok) {
+          addMessage('system', '\u274C Model load failed: ' + (data.error || data.message || 'Unknown error'));
+          logDebug('[ModelBridge] Load failed: ' + JSON.stringify(data), 'error');
+          return;
+        }
+
+        BridgeState.activeProfileId = profileId;
+        BridgeState.loaded = true;
+
+        // Also set in main model state
+        State.model.current = nameStr;
+        var sel = document.getElementById('modelSelect');
+        if (sel) {
+          // Try to select matching option, or add one
+          var found = false;
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === nameStr) {
+              sel.selectedIndex = i;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            var opt = document.createElement('option');
+            opt.value = nameStr;
+            opt.textContent = '\uD83E\uDDE9 ' + nameStr + ' (MASM)';
+            sel.appendChild(opt);
+            sel.value = nameStr;
+          }
+        }
+        changeModel();
+
+        // Update card highlights
+        var cards = document.querySelectorAll('.bridge-model-card');
+        cards.forEach(function (card) {
+          var cardId = parseInt(card.getAttribute('data-profile-id'), 10);
+          card.classList.toggle('active', cardId === profileId);
+        });
+
+        addMessage('system', '\u2705 Model loaded via ' + (data.bridge || 'MASM') + ': **' + nameStr + '** | Tier: ' + (data.tier || '?') + ' | RAM: ' + (data.ram_mb || '?') + 'MB | Engine: ' + (data.engine_mode || '?'));
+        logDebug('[ModelBridge] Loaded: ' + nameStr + ' via ' + (data.bridge || '?'), 'info');
+
+        updateBridgeStatusBar();
+      } catch (e) {
+        addMessage('system', '\u274C Bridge load error: ' + e.message);
+        logDebug('[ModelBridge] Load exception: ' + e.message, 'error');
+      }
+    }
+
+    // Unload model via MASM bridge POST /api/model/unload
+    async function bridgeUnloadModel() {
+      try {
+        var activeUrl = getActiveUrl();
+        var res = await fetch(activeUrl + '/api/model/unload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+          signal: AbortSignal.timeout(10000)
+        });
+
+        var data = await res.json();
+        if (!res.ok) {
+          addMessage('system', '\u26A0\uFE0F Unload: ' + (data.error || data.message || 'no model loaded'));
+          return;
+        }
+
+        BridgeState.activeProfileId = -1;
+        BridgeState.loaded = false;
+
+        // Clear card highlights
+        var cards = document.querySelectorAll('.bridge-model-card');
+        cards.forEach(function (card) { card.classList.remove('active'); });
+
+        addMessage('system', '\u23F9\uFE0F Model unloaded from MASM bridge.');
+        logDebug('[ModelBridge] Model unloaded', 'info');
+
+        updateBridgeStatusBar();
+      } catch (e) {
+        addMessage('system', '\u274C Bridge unload error: ' + e.message);
+        logDebug('[ModelBridge] Unload exception: ' + e.message, 'error');
+      }
+    }
+
+    // Fetch engine capabilities GET /api/engine/capabilities
+    async function fetchBridgeCapabilities() {
+      try {
+        var activeUrl = getActiveUrl();
+        var res = await fetch(activeUrl + '/api/engine/capabilities', { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var caps = await res.json();
+
+        BridgeState.hardware = caps;
+
+        var lines = [];
+        lines.push('**\uD83D\uDD0D Engine Capabilities (' + (caps.bridge || '?') + ')**');
+        if (caps.cpu) {
+          lines.push('CPU: AVX2=' + (caps.cpu.avx2 ? '\u2705' : '\u274C') +
+            ' FMA3=' + (caps.cpu.fma3 ? '\u2705' : '\u274C') +
+            ' AVX-512F=' + (caps.cpu.avx512f ? '\u2705' : '\u274C') +
+            ' AVX-512BW=' + (caps.cpu.avx512bw ? '\u2705' : '\u274C'));
+        }
+        if (caps.memory) {
+          lines.push('RAM: ' + (caps.memory.total_ram_gb || '?') + 'GB total, ' + (caps.memory.free_ram_gb || '?') + 'GB free');
+        }
+        if (caps.engine) {
+          lines.push('Engine: swarm=' + (caps.engine.swarm ? '\u2705' : '\u274C') +
+            ' dual=' + (caps.engine.dual_engine ? '\u2705' : '\u274C') +
+            ' 5drive=' + (caps.engine.five_drive ? '\u2705' : '\u274C') +
+            ' tensorhop=' + (caps.engine.tensor_hop ? '\u2705' : '\u274C') +
+            ' flashattn=' + (caps.engine.flash_attention ? '\u2705' : '\u274C') +
+            ' safedecode=' + (caps.engine.safe_decode ? '\u2705' : '\u274C'));
+        }
+        if (caps.model_range) lines.push('Range: ' + caps.model_range);
+        if (caps.raw_caps) lines.push('Raw: `' + caps.raw_caps + '`');
+        if (caps.supported_tiers) lines.push('Tiers: ' + caps.supported_tiers.join(', '));
+        if (caps.profile_count) lines.push('Profiles: ' + caps.profile_count);
+
+        addMessage('system', lines.join('\n'));
+        logDebug('[ModelBridge] Capabilities fetched: ' + (caps.bridge || '?'), 'info');
+
+        updateBridgeStatusBar();
+      } catch (e) {
+        addMessage('system', '\u274C Capabilities fetch failed: ' + e.message);
+        logDebug('[ModelBridge] Caps error: ' + e.message, 'error');
+      }
+    }
+
+    // Quantization dropdown change handler
+    function bridgeQuantChanged() {
+      var quantVal = parseInt(document.getElementById('bridgeQuantSelect').value, 10);
+      logDebug('[ModelBridge] Quantization set to type ' + quantVal, 'info');
+    }
+
+    // Update the status bar at bottom of bridge panel
+    function updateBridgeStatusBar() {
+      var bar = document.getElementById('bridgeStatusBar');
+      if (!bar) return;
+
+      var chips = [];
+
+      // CPU chip
+      if (BridgeState.hardware) {
+        var hw = BridgeState.hardware;
+        var cpuStr = 'CPU:';
+        if (hw.cpu || hw.avx2 !== undefined) {
+          var cpu = hw.cpu || hw;
+          cpuStr += (cpu.avx2 ? ' AVX2' : '') + (cpu.fma3 ? ' FMA3' : '') + (cpu.avx512f ? ' 512' : '');
+          if (!cpu.avx2 && !cpu.fma3 && !cpu.avx512f) cpuStr += ' basic';
+        }
+        chips.push('<span class="status-chip">' + cpuStr + '</span>');
+
+        // RAM chip
+        var mem = hw.memory || hw;
+        if (mem.total_ram_gb || mem.total_ram_mb) {
+          var totalG = mem.total_ram_gb || Math.round((mem.total_ram_mb || 0) / 1024);
+          var freeG = mem.free_ram_gb || Math.round((mem.free_ram_mb || 0) / 1024);
+          chips.push('<span class="status-chip">RAM: ' + freeG + '/' + totalG + 'G</span>');
+        }
+      } else {
+        chips.push('<span class="status-chip">CPU: \u2014</span>');
+        chips.push('<span class="status-chip">RAM: \u2014</span>');
+      }
+
+      // Active model chip
+      if (BridgeState.activeProfileId >= 0) {
+        var activeName = BRIDGE_MODEL_NAMES[BridgeState.activeProfileId] || ('profile-' + BridgeState.activeProfileId);
+        chips.push('<span class="status-chip active">\u25B6 ' + activeName + '</span>');
+      } else {
+        chips.push('<span class="status-chip">Active: none</span>');
+      }
+
+      // Bridge type
+      chips.push('<span class="status-chip">' + (BridgeState.bridge || '?') + '</span>');
+
+      bar.innerHTML = chips.join('');
+    }
+
+    // Merge bridge profiles into the main model-select dropdown
+    function mergeBridgeIntoModelSelect() {
+      var sel = document.getElementById('modelSelect');
+      if (!sel || BridgeState.profiles.length === 0) return;
+
+      // Check if MASM group already exists
+      var existing = sel.querySelector('optgroup[label*="MASM"]');
+      if (existing) existing.remove();
+
+      var grp = document.createElement('optgroup');
+      grp.label = '\uD83E\uDDE9 MASM Bridge (x64)';
+
+      // Group by tier within the optgroup
+      var tierOrder = ['small', 'medium', 'large', 'ultra', '800b-dual'];
+      tierOrder.forEach(function (tier) {
+        BridgeState.profiles.forEach(function (p) {
+          if (p.tier !== tier) return;
+          var nameStr = BRIDGE_MODEL_NAMES[p.id] || ('profile-' + p.id);
+          var paramStr = p.params_b || '?';
+          var opt = document.createElement('option');
+          opt.value = nameStr;
+          opt.textContent = nameStr + ' (' + paramStr + 'B)';
+
+          // Check if already in dropdown
+          var alreadyExists = false;
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === nameStr) { alreadyExists = true; break; }
+          }
+          if (!alreadyExists) {
+            grp.appendChild(opt);
+          }
+        });
+      });
+
+      if (grp.children.length > 0) {
+        sel.appendChild(grp);
+        logDebug('[ModelBridge] Merged ' + grp.children.length + ' bridge profiles into model select', 'info');
       }
     }
 
@@ -10585,6 +12073,12 @@
           '  /hybrid              \u2014 Hybrid completion engine\n' +
           '  /replay              \u2014 Replay sessions & records\n' +
           '  /phases              \u2014 Phase 10/11/12 status\n' +
+          '\u2500 VSIX Extensions \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
+          '  /extensions          \u2014 Extension manager panel\n' +
+          '  /ext list            \u2014 List installed extensions\n' +
+          '  /ext search <query>  \u2014 Marketplace search\n' +
+          '  /ext install <id>    \u2014 Install extension by ID\n' +
+          '  /ext host            \u2014 Extension host status\n' +
           '\u2500 Ghost & Beacon \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
           '  /ghost               \u2014 Ghost into Win32 IDE (RDP-style overlay)\n' +
           '  /ide                 \u2014 Open Win32 IDE in new window\n' +
@@ -11809,6 +13303,24 @@
           addTerminalLine('  re gguf <model>  \u2014 GGUF inspector', 'output');
           addTerminalLine('  re symbols <pdb> \u2014 Symbol resolver', 'output');
           addTerminalLine('  re scan <pid>    \u2014 Memory scanner', 'output');
+          addTerminalLine('', 'output');
+          addTerminalLine('Extension Management (VSIX plugin system):', 'system');
+          addTerminalLine('  ext              \u2014 Show extension status & stats', 'system');
+          addTerminalLine('  ext list         \u2014 List installed extensions', 'system');
+          addTerminalLine('  ext search <q>   \u2014 Search marketplace for extensions', 'system');
+          addTerminalLine('  ext install <id> \u2014 Install extension by ID', 'system');
+          addTerminalLine('  ext uninstall <id> \u2014 Uninstall an extension', 'system');
+          addTerminalLine('  ext enable <id>  \u2014 Enable a disabled extension', 'system');
+          addTerminalLine('  ext disable <id> \u2014 Disable an extension', 'system');
+          addTerminalLine('  ext info <id>    \u2014 Show extension details', 'system');
+          addTerminalLine('  ext load <path>  \u2014 Load a .vsix file from disk', 'system');
+          addTerminalLine('  ext host         \u2014 Extension host status', 'system');
+          addTerminalLine('  ext host restart \u2014 Restart the extension host', 'system');
+          addTerminalLine('  ext host kill    \u2014 Kill the extension host', 'system');
+          addTerminalLine('  ext host logs    \u2014 Show extension host logs', 'system');
+          addTerminalLine('  ext scan         \u2014 Scan local dirs for extensions', 'system');
+          addTerminalLine('  ext export       \u2014 Export installed extension list', 'system');
+          addTerminalLine('  vsix <path|url>  \u2014 Quick-load a .vsix package', 'system');
           addTerminalLine('', 'output');
           addTerminalLine('Engine API Commands (via EngineAPI \u2014 150+ source files):', 'system');
           addTerminalLine('  subagent <task>  \u2014 Spawn a subagent for a task', 'system');
@@ -13518,6 +15030,341 @@
                 addTerminalLine('  ' + line, 'output');
               });
             } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'ext': case 'extensions': case 'extension':
+          (async function () {
+            var sub = args[1] || '';
+            var extArg = args.slice(2).join(' ');
+
+            if (!sub) {
+              // ext — show overview
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500 VSIX Extension Manager \u2500\u2500\u2500\u2500\u2500', 'output');
+              addTerminalLine('  Installed:  ' + State.extensions.installed.length + ' extensions', 'output');
+              addTerminalLine('  Enabled:    ' + State.extensions.installed.filter(function (e) { return e.enabled; }).length, 'output');
+              addTerminalLine('  Disabled:   ' + State.extensions.installed.filter(function (e) { return !e.enabled; }).length, 'output');
+              addTerminalLine('  Running:    ' + State.extensions.running.length + ' hosts', 'output');
+              addTerminalLine('  Host:       ' + State.extensions.hostStatus, State.extensions.hostStatus === 'running' ? 'success' : 'output');
+              addTerminalLine('  Activated:  ' + State.extensions.totalActivated + ' total', 'output');
+              addTerminalLine('  Logs:       ' + State.extensions.logs.length + ' / ' + State.extensions.maxLogs, 'output');
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              addTerminalLine("  Type 'ext help' for subcommands", 'system');
+              // Try backend
+              try {
+                var data = await EngineAPI.fetchExtensions();
+                var exts = data.extensions || data.installed || [];
+                if (exts.length > 0) {
+                  State.extensions.installed = exts;
+                  addTerminalLine('  \u2714 Synced ' + exts.length + ' extensions from backend', 'success');
+                }
+              } catch (_) { addTerminalLine('  Backend: offline (using local state)', 'system'); }
+              return;
+            }
+
+            if (sub === 'help') {
+              addTerminalLine('ext subcommands:', 'output');
+              addTerminalLine('  ext              \u2014 Overview & stats', 'output');
+              addTerminalLine('  ext list         \u2014 List installed extensions', 'output');
+              addTerminalLine('  ext search <q>   \u2014 Search marketplace', 'output');
+              addTerminalLine('  ext install <id> \u2014 Install extension', 'output');
+              addTerminalLine('  ext uninstall <id> \u2014 Remove extension', 'output');
+              addTerminalLine('  ext enable <id>  \u2014 Enable extension', 'output');
+              addTerminalLine('  ext disable <id> \u2014 Disable extension', 'output');
+              addTerminalLine('  ext info <id>    \u2014 Extension details + contributes', 'output');
+              addTerminalLine('  ext load <path>  \u2014 Load .vsix from disk path', 'output');
+              addTerminalLine('  ext host         \u2014 Extension host status', 'output');
+              addTerminalLine('  ext host restart \u2014 Restart host process', 'output');
+              addTerminalLine('  ext host kill    \u2014 Kill host process', 'output');
+              addTerminalLine('  ext host logs    \u2014 Show host logs', 'output');
+              addTerminalLine('  ext scan         \u2014 Scan local paths for extensions', 'output');
+              addTerminalLine('  ext export       \u2014 Export installed list as JSON', 'output');
+              return;
+            }
+
+            if (sub === 'list') {
+              addTerminalLine('\u2500\u2500\u2500 Installed Extensions \u2500\u2500\u2500', 'output');
+              try {
+                var data = await EngineAPI.fetchExtensions();
+                var exts = data.extensions || data.installed || State.extensions.installed;
+                State.extensions.installed = exts;
+                if (exts.length === 0) {
+                  addTerminalLine('  (none installed)', 'system');
+                } else {
+                  exts.forEach(function (ext) {
+                    var status = ext.enabled ? '\u2714' : '\u2718';
+                    var color = ext.enabled ? 'success' : 'error';
+                    addTerminalLine('  ' + status + ' ' + (ext.id || ext.name) + ' v' + (ext.version || '?') + ' [' + (ext.publisher || '?') + ']', color);
+                  });
+                  addTerminalLine('  Total: ' + exts.length + ' extensions', 'system');
+                }
+              } catch (e) {
+                // Fallback to local state
+                if (State.extensions.installed.length === 0) {
+                  addTerminalLine('  (none installed)', 'system');
+                } else {
+                  State.extensions.installed.forEach(function (ext) {
+                    var status = ext.enabled ? '\u2714' : '\u2718';
+                    addTerminalLine('  ' + status + ' ' + (ext.id || ext.name) + ' v' + (ext.version || '?'), ext.enabled ? 'success' : 'error');
+                  });
+                }
+              }
+              return;
+            }
+
+            if (sub === 'search') {
+              if (!extArg) { addTerminalLine('  Usage: ext search <query>', 'error'); return; }
+              addTerminalLine('  Searching marketplace for: ' + extArg + '...', 'system');
+              try {
+                var data = await EngineAPI.searchMarketplace(extArg);
+                var results = data.results || data.extensions || [];
+                State.extensions.marketplace.results = results;
+                State.extensions.marketplace.query = extArg;
+                State.extensions.marketplace.lastSearch = Date.now();
+                if (results.length === 0) {
+                  addTerminalLine('  No results found.', 'system');
+                } else {
+                  addTerminalLine('\u2500\u2500\u2500 Marketplace Results (' + results.length + ') \u2500\u2500\u2500', 'output');
+                  results.slice(0, 15).forEach(function (r) {
+                    var installs = r.installs ? ' (' + r.installs.toLocaleString() + ' installs)' : '';
+                    addTerminalLine('  \u2022 ' + (r.id || r.extensionId || r.name) + ' v' + (r.version || '?') + installs, 'output');
+                    if (r.description) addTerminalLine('    ' + r.description.substring(0, 80), 'system');
+                  });
+                  if (results.length > 15) addTerminalLine('  ... and ' + (results.length - 15) + ' more', 'system');
+                  addTerminalLine("  Use 'ext install <id>' to install", 'system');
+                }
+              } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'install') {
+              if (!extArg) { addTerminalLine('  Usage: ext install <extension-id>', 'error'); return; }
+              addTerminalLine('  Installing: ' + extArg + '...', 'system');
+              try {
+                var data = await EngineAPI.installExtension(extArg, 'marketplace');
+                addTerminalLine('  \u2705 ' + (data.message || 'Installed: ' + extArg), 'success');
+                if (data.extension) {
+                  State.extensions.installed.push(data.extension);
+                  addTerminalLine('  Version: ' + (data.extension.version || '?'), 'output');
+                  addTerminalLine('  Publisher: ' + (data.extension.publisher || '?'), 'output');
+                }
+                refreshExtensionsList();
+              } catch (e) { addTerminalLine('  \u274C Install failed: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'uninstall') {
+              if (!extArg) { addTerminalLine('  Usage: ext uninstall <extension-id>', 'error'); return; }
+              addTerminalLine('  Uninstalling: ' + extArg + '...', 'system');
+              try {
+                var data = await EngineAPI.uninstallExtension(extArg);
+                addTerminalLine('  \u2705 ' + (data.message || 'Uninstalled: ' + extArg), 'success');
+                State.extensions.installed = State.extensions.installed.filter(function (e) { return (e.id || e.name) !== extArg; });
+                refreshExtensionsList();
+              } catch (e) { addTerminalLine('  \u274C Uninstall failed: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'enable') {
+              if (!extArg) { addTerminalLine('  Usage: ext enable <extension-id>', 'error'); return; }
+              try {
+                var data = await EngineAPI.enableExtension(extArg);
+                addTerminalLine('  \u2705 Enabled: ' + extArg, 'success');
+                var ext = State.extensions.installed.find(function (e) { return (e.id || e.name) === extArg; });
+                if (ext) ext.enabled = true;
+              } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'disable') {
+              if (!extArg) { addTerminalLine('  Usage: ext disable <extension-id>', 'error'); return; }
+              try {
+                var data = await EngineAPI.disableExtension(extArg);
+                addTerminalLine('  \u2705 Disabled: ' + extArg, 'success');
+                var ext = State.extensions.installed.find(function (e) { return (e.id || e.name) === extArg; });
+                if (ext) ext.enabled = false;
+              } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'info') {
+              if (!extArg) { addTerminalLine('  Usage: ext info <extension-id>', 'error'); return; }
+              addTerminalLine('  Fetching info for: ' + extArg + '...', 'system');
+              try {
+                var data = await EngineAPI.fetchExtensionById(extArg);
+                var ext = data.extension || data;
+                addTerminalLine('\u2500\u2500\u2500 Extension: ' + (ext.displayName || ext.name || extArg) + ' \u2500\u2500\u2500', 'output');
+                addTerminalLine('  ID:          ' + (ext.id || extArg), 'output');
+                addTerminalLine('  Version:     ' + (ext.version || '?'), 'output');
+                addTerminalLine('  Publisher:   ' + (ext.publisher || '?'), 'output');
+                addTerminalLine('  Enabled:     ' + (ext.enabled ? 'Yes' : 'No'), ext.enabled ? 'success' : 'error');
+                addTerminalLine('  Description: ' + (ext.description || '(none)').substring(0, 100), 'output');
+                if (ext.activationEvents) {
+                  addTerminalLine('  Activation:  ' + (Array.isArray(ext.activationEvents) ? ext.activationEvents.join(', ') : ext.activationEvents), 'system');
+                }
+                if (ext.contributes) {
+                  var contribs = Object.keys(ext.contributes);
+                  addTerminalLine('  Contributes: ' + contribs.join(', '), 'system');
+                }
+                if (ext.size) addTerminalLine('  Size:        ' + ext.size, 'output');
+              } catch (e) {
+                // Try marketplace fallback
+                try {
+                  var mdata = await EngineAPI.fetchMarketplaceInfo(extArg);
+                  var mext = mdata.extension || mdata;
+                  addTerminalLine('\u2500\u2500\u2500 Marketplace: ' + (mext.displayName || extArg) + ' \u2500\u2500\u2500', 'output');
+                  addTerminalLine('  ID:          ' + (mext.id || extArg), 'output');
+                  addTerminalLine('  Version:     ' + (mext.version || '?'), 'output');
+                  addTerminalLine('  Publisher:   ' + (mext.publisher || '?'), 'output');
+                  addTerminalLine('  Installs:    ' + ((mext.installs || 0).toLocaleString()), 'output');
+                  addTerminalLine('  Rating:      ' + (mext.rating || '?'), 'output');
+                  addTerminalLine('  Description: ' + (mext.description || '(none)').substring(0, 100), 'output');
+                } catch (e2) { addTerminalLine('  Error: ' + e.message, 'error'); }
+              }
+              return;
+            }
+
+            if (sub === 'load') {
+              if (!extArg) { addTerminalLine('  Usage: ext load <path-to-vsix>', 'error'); return; }
+              addTerminalLine('  Loading VSIX: ' + extArg + '...', 'system');
+              try {
+                var data = await EngineAPI.loadVsixFromPath(extArg);
+                addTerminalLine('  \u2705 ' + (data.message || 'Loaded: ' + extArg), 'success');
+                if (data.extension) {
+                  State.extensions.installed.push(data.extension);
+                  addTerminalLine('  Name: ' + (data.extension.displayName || data.extension.name || '?'), 'output');
+                  addTerminalLine('  Version: ' + (data.extension.version || '?'), 'output');
+                }
+                refreshExtensionsList();
+              } catch (e) { addTerminalLine('  \u274C Load failed: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'host') {
+              var hostSub = args[2] || '';
+              if (!hostSub) {
+                addTerminalLine('\u2500\u2500\u2500 Extension Host \u2500\u2500\u2500', 'output');
+                addTerminalLine('  Status:     ' + State.extensions.hostStatus, State.extensions.hostStatus === 'running' ? 'success' : 'output');
+                addTerminalLine('  PID:        ' + (State.extensions.hostPid || 'N/A'), 'output');
+                addTerminalLine('  Running:    ' + State.extensions.running.length + ' extensions', 'output');
+                addTerminalLine('  Logs:       ' + State.extensions.logs.length + ' entries', 'output');
+                try {
+                  var hdata = await EngineAPI.extensionHostStatus();
+                  addTerminalLine('  \u2714 Backend host: ' + (hdata.status || 'unknown'), hdata.status === 'running' ? 'success' : 'output');
+                  if (hdata.pid) { State.extensions.hostPid = hdata.pid; addTerminalLine('  PID (backend): ' + hdata.pid, 'output'); }
+                  if (hdata.memory) addTerminalLine('  Memory: ' + hdata.memory, 'output');
+                  if (hdata.extensions) addTerminalLine('  Loaded: ' + hdata.extensions + ' extensions', 'output');
+                } catch (_) { addTerminalLine('  Backend: not available', 'system'); }
+              } else if (hostSub === 'restart') {
+                addTerminalLine('  Restarting extension host...', 'system');
+                try {
+                  var data = await EngineAPI.restartExtensionHost();
+                  State.extensions.hostStatus = 'running';
+                  addTerminalLine('  \u2705 ' + (data.message || 'Host restarted'), 'success');
+                } catch (e) { addTerminalLine('  \u274C ' + e.message, 'error'); }
+              } else if (hostSub === 'kill') {
+                addTerminalLine('  Killing extension host...', 'system');
+                try {
+                  var data = await EngineAPI.killExtensionHost();
+                  State.extensions.hostStatus = 'idle';
+                  State.extensions.hostPid = null;
+                  State.extensions.running = [];
+                  addTerminalLine('  \u2705 ' + (data.message || 'Host killed'), 'success');
+                } catch (e) { addTerminalLine('  \u274C ' + e.message, 'error'); }
+              } else if (hostSub === 'logs') {
+                addTerminalLine('\u2500\u2500\u2500 Extension Host Logs \u2500\u2500\u2500', 'output');
+                try {
+                  var data = await EngineAPI.fetchExtensionHostLogs();
+                  var logs = data.logs || data.entries || [];
+                  State.extensions.logs = logs.slice(-State.extensions.maxLogs);
+                  if (logs.length === 0) {
+                    addTerminalLine('  (no logs)', 'system');
+                  } else {
+                    logs.slice(-20).forEach(function (log) {
+                      var level = log.level || 'info';
+                      var type = level === 'error' ? 'error' : level === 'warn' ? 'error' : 'output';
+                      addTerminalLine('  [' + (log.timestamp || '?') + '] [' + level + '] ' + (log.message || JSON.stringify(log)), type);
+                    });
+                    if (logs.length > 20) addTerminalLine('  ... ' + (logs.length - 20) + ' more (showing last 20)', 'system');
+                  }
+                } catch (e) {
+                  if (State.extensions.logs.length > 0) {
+                    State.extensions.logs.slice(-10).forEach(function (log) {
+                      addTerminalLine('  [' + (log.timestamp || '?') + '] ' + (log.message || ''), 'output');
+                    });
+                  } else {
+                    addTerminalLine('  (no logs available)', 'system');
+                  }
+                }
+              } else {
+                addTerminalLine('  Unknown host subcommand: ' + hostSub, 'error');
+                addTerminalLine("  Try: ext host, ext host restart, ext host kill, ext host logs", 'system');
+              }
+              return;
+            }
+
+            if (sub === 'scan') {
+              addTerminalLine('  Scanning local paths for extensions...', 'system');
+              try {
+                var data = await EngineAPI.scanLocalExtensions(State.extensions.scanPaths);
+                var found = data.extensions || data.found || [];
+                addTerminalLine('  Found ' + found.length + ' extension(s)', found.length > 0 ? 'success' : 'system');
+                found.forEach(function (ext) {
+                  addTerminalLine('  \u2022 ' + (ext.id || ext.name) + ' v' + (ext.version || '?') + ' @ ' + (ext.path || '?'), 'output');
+                });
+              } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+              return;
+            }
+
+            if (sub === 'export') {
+              try {
+                var data = await EngineAPI.exportExtensionList();
+                var json = JSON.stringify(data, null, 2);
+                addTerminalLine('  Extension list (' + (data.extensions || data.installed || []).length + ' extensions):', 'output');
+                json.split('\n').slice(0, 30).forEach(function (line) { addTerminalLine('  ' + line, 'output'); });
+              } catch (e) {
+                // Fallback to local state
+                var json = JSON.stringify({ extensions: State.extensions.installed }, null, 2);
+                addTerminalLine('  Local extension list:', 'output');
+                json.split('\n').slice(0, 30).forEach(function (line) { addTerminalLine('  ' + line, 'output'); });
+              }
+              return;
+            }
+
+            addTerminalLine('  Unknown ext subcommand: ' + sub, 'error');
+            addTerminalLine("  Type 'ext help' for available commands", 'system');
+          })();
+          break;
+
+        case 'vsix':
+          (async function () {
+            var vsixPath = rest || '';
+            if (!vsixPath) {
+              addTerminalLine('  Usage: vsix <path-or-url>', 'error');
+              addTerminalLine('  Load a .vsix extension package from local path or URL', 'system');
+              addTerminalLine('  Examples:', 'system');
+              addTerminalLine('    vsix ./extensions/my-extension.vsix', 'system');
+              addTerminalLine('    vsix https://marketplace.visualstudio.com/...', 'system');
+              return;
+            }
+            var isUrl = vsixPath.indexOf('http://') === 0 || vsixPath.indexOf('https://') === 0;
+            addTerminalLine('  Loading VSIX ' + (isUrl ? 'from URL' : 'from disk') + ': ' + vsixPath + '...', 'system');
+            try {
+              var data = isUrl
+                ? await EngineAPI.loadVsixFromUrl(vsixPath)
+                : await EngineAPI.loadVsixFromPath(vsixPath);
+              addTerminalLine('  \u2705 ' + (data.message || 'VSIX loaded successfully'), 'success');
+              if (data.extension) {
+                State.extensions.installed.push(data.extension);
+                addTerminalLine('  Name:      ' + (data.extension.displayName || data.extension.name || '?'), 'output');
+                addTerminalLine('  Version:   ' + (data.extension.version || '?'), 'output');
+                addTerminalLine('  Publisher: ' + (data.extension.publisher || '?'), 'output');
+                if (data.extension.contributes) {
+                  addTerminalLine('  Contributes: ' + Object.keys(data.extension.contributes).join(', '), 'system');
+                }
+              }
+              refreshExtensionsList();
+            } catch (e) { addTerminalLine('  \u274C Load failed: ' + e.message, 'error'); }
           })();
           break;
 
