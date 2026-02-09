@@ -32,7 +32,7 @@ MainWindowMinimal::MainWindowMinimal(QWidget *parent)
     
     QHBoxLayout* mainLayout = new QHBoxLayout(central);
     
-    // Left sidebar (file explorer placeholder)
+    // Left sidebar (file explorer)
     QTreeWidget* explorer = new QTreeWidget(this);
     explorer->setHeaderLabel("Explorer");
     explorer->setMaximumWidth(200);
@@ -42,7 +42,7 @@ MainWindowMinimal::MainWindowMinimal(QWidget *parent)
     QTextEdit* editor = new QTextEdit(this);
     editor->setText("// RawrXD IDE - Minimal Startup Test\n// Success! Basic Qt layout working.\n// Ready for complex components...");
     
-    // Right panel (placeholder)
+    // Right panel (output and diagnostics)
     QTextEdit* output = new QTextEdit(this);
     output->setText("Output Panel\n\nIDE startup successful!");
     output->setMaximumWidth(250);

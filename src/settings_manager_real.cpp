@@ -476,7 +476,40 @@ void SettingsManager::addRecentProject(const std::string& path) {
 bool SettingsManager::validateSetting(const std::string& key, const SettingValue& value) {
     m_validationErrors.clear();
     
-    // TODO: Implement validation rules
+    // Validate known settings with type and range constraints
+    if (key == "editor.fontSize") {
+        if (auto* v = std::get_if<int>(&value)) {
+            if (*v < 6 || *v > 72) {
+                m_validationErrors.push_back("Font size must be between 6 and 72");
+                return false;
+            }
+        } else {
+            m_validationErrors.push_back("Font size must be an integer");
+            return false;
+        }
+    } else if (key == "editor.tabSize") {
+        if (auto* v = std::get_if<int>(&value)) {
+            if (*v < 1 || *v > 16) {
+                m_validationErrors.push_back("Tab size must be between 1 and 16");
+                return false;
+            }
+        }
+    } else if (key == "inference.temperature") {
+        if (auto* v = std::get_if<double>(&value)) {
+            if (*v < 0.0 || *v > 2.0) {
+                m_validationErrors.push_back("Temperature must be between 0.0 and 2.0");
+                return false;
+            }
+        }
+    } else if (key == "inference.maxTokens") {
+        if (auto* v = std::get_if<int>(&value)) {
+            if (*v < 1 || *v > 32768) {
+                m_validationErrors.push_back("Max tokens must be between 1 and 32768");
+                return false;
+            }
+        }
+    }
+    
     return true;
 }
 

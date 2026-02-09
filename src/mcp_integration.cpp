@@ -1160,7 +1160,30 @@ void registerBuiltinTools(MCPServer& server) {
             json << "]}";
             return ToolResult::ok(json.str());
 #else
-            return ToolResult::fail("Not implemented on this platform");
+            // POSIX fallback using opendir/readdir
+            DIR* dp = opendir(path.c_str());
+            if (!dp) return ToolResult::fail("Cannot list: " + path);
+
+            std::ostringstream json;
+            json << "{\"entries\":[";
+            bool first = true;
+            struct dirent* entry;
+            while ((entry = readdir(dp)) != nullptr) {
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+                if (!first) json << ",";
+                first = false;
+                bool isDir = (entry->d_type == DT_DIR);
+                // Get file size via stat
+                struct stat st = {};
+                std::string fullPath = path + "/" + entry->d_name;
+                stat(fullPath.c_str(), &st);
+                json << "{\"name\":\"" << jsonEscape(entry->d_name) << "\","
+                     << "\"type\":\"" << (isDir ? "directory" : "file") << "\","
+                     << "\"size\":" << st.st_size << "}";
+            }
+            closedir(dp);
+            json << "]}";
+            return ToolResult::ok(json.str());
 #endif
         });
     }

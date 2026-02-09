@@ -6,6 +6,9 @@
 #include "../modules/memory_manager.h"
 #include "../modules/engine_manager.h"
 #include "../modules/codex_ultimate.h"
+#include "../core/rawrxd_state_mmf.hpp"
+#include "../core/js_extension_host.hpp"
+#include "../core/model_memory_hotpatch.hpp"
 #include <commctrl.h>
 #include <fstream>
 #include <sstream>
@@ -155,6 +158,48 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     ide.setEngineManager(engine_mgr);
     ide.setCodexUltimate(codex);
 
+    // ========================================================================
+    // CROSS-PROCESS STATE SYNC — Phase 36: MMF Initialization
+    // Register this Win32IDE process in the shared memory region so that
+    // React, CLI, and HTML frontends see our patch/config/model state.
+    // ========================================================================
+    {
+        auto& mmf = RawrXDStateMmf::instance();
+        if (!mmf.isInitialized()) {
+            PatchResult mmfResult = mmf.initialize(0, "RawrXD-Win32IDE"); // processType=0 (Win32)
+            if (mmfResult.success) {
+                OutputDebugStringA("[main_win32] MMF cross-process state sync initialized\n");
+            } else {
+                char err[256];
+                snprintf(err, sizeof(err),
+                         "[main_win32] MMF init warning: %s (non-fatal)\n",
+                         mmfResult.detail ? mmfResult.detail : "unknown");
+                OutputDebugStringA(err);
+            }
+        }
+    }
+
+    // ========================================================================
+    // JS EXTENSION HOST — Phase 37: QuickJS VSIX Runtime Bootstrap
+    // Initialize the embedded JavaScript engine so that .vsix extensions
+    // can be loaded and activated from the VSIX panel or drag-and-drop.
+    // ========================================================================
+    {
+        auto& jsHost = JSExtensionHost::instance();
+        if (!jsHost.isInitialized()) {
+            PatchResult jsResult = jsHost.initialize();
+            if (jsResult.success) {
+                OutputDebugStringA("[main_win32] JS Extension Host initialized (QuickJS + PolyfillEngine)\n");
+            } else {
+                char err[256];
+                snprintf(err, sizeof(err),
+                         "[main_win32] JS Extension Host init warning: %s (non-fatal)\n",
+                         jsResult.detail ? jsResult.detail : "unknown");
+                OutputDebugStringA(err);
+            }
+        }
+    }
+
     // Show window and force layout
     ide.showWindow();
 
@@ -179,5 +224,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     }
     
     // Run message loop
-    return ide.runMessageLoop();
+    int exitCode = ide.runMessageLoop();
+
+    // ========================================================================
+    // CLEANUP — Shutdown cross-process state and JS extension host
+    // ========================================================================
+    {
+        auto& jsHost = JSExtensionHost::instance();
+        if (jsHost.isInitialized()) {
+            jsHost.shutdown();
+            OutputDebugStringA("[main_win32] JS Extension Host shutdown\n");
+        }
+
+        auto& mmf = RawrXDStateMmf::instance();
+        if (mmf.isInitialized()) {
+            mmf.broadcastEvent(0xFF, "Win32IDE shutting down");
+            mmf.shutdown();
+            OutputDebugStringA("[main_win32] MMF cross-process state shutdown\n");
+        }
+    }
+
+    // Cleanup engine resources
+    delete codex;
+    delete engine_mgr;
+
+    return exitCode;
 }

@@ -508,7 +508,11 @@ void MainWindow::handleMenuCommand(WORD cmdId)
         createTerminal();
         break;
     case IDM_TERM_SPLIT:
-        // Split terminal - placeholder
+        // Split terminal: create a second terminal panel alongside the existing one
+        if (m_terminalHwnd) {
+            createTerminal();  // Create additional terminal instance
+            sendToTerminal("# Split terminal created\n");
+        }
         break;
     case IDM_TERM_RUN_TASK:
         sendToTerminal("# Run task...\n");
@@ -836,9 +840,43 @@ void MainWindow::startRemoteSession(const std::string& remoteHost) {
 }
 
 void MainWindow::handleCommand(const std::string& cmd) {
-    // Stub implementation - prints command to console
     std::cout << "Command: " << cmd << std::endl;
-    // TODO: Implement actual command execution
+#ifdef _WIN32
+    // Execute command via CreateProcess for proper process management
+    STARTUPINFOA si = {};
+    PROCESS_INFORMATION pi = {};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    
+    // Create writable copy of command string
+    std::string cmdLine = "cmd.exe /C " + cmd;
+    std::vector<char> cmdBuf(cmdLine.begin(), cmdLine.end());
+    cmdBuf.push_back('\0');
+    
+    if (CreateProcessA(NULL, cmdBuf.data(), NULL, NULL, FALSE,
+            CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        // Wait up to 30 seconds for completion
+        WaitForSingleObject(pi.hProcess, 30000);
+        
+        DWORD exitCode = 0;
+        GetExitCodeProcess(pi.hProcess, &exitCode);
+        if (exitCode != 0 && exitCode != STILL_ACTIVE) {
+            std::cerr << "Command exited with code: " << exitCode << std::endl;
+        }
+        
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    } else {
+        std::cerr << "Failed to execute command: " << cmd
+                  << " (error " << GetLastError() << ")" << std::endl;
+    }
+#else
+    int result = system(cmd.c_str());
+    if (result != 0) {
+        std::cerr << "Command failed with code: " << result << std::endl;
+    }
+#endif
 }
 
 // Editor Settings (10 features)
@@ -2285,10 +2323,77 @@ void MainWindow::executePaletteSelection(int index) {
     if(index < 0 || !m_commandPaletteHwnd) return; char buf[128]=""; SendMessageA(m_commandPaletteHwnd, LB_GETTEXT, index, (LPARAM)buf); std::string cmd(buf);
     if(cmd=="Build Project") handleCommand("cmake --build .");
     else if(cmd=="Run Tests") handleCommand("ctest");
-    else if(cmd=="Toggle Header/Source") {/* stub */}
+    else if(cmd=="Toggle Header/Source") {
+        // Toggle between .h/.hpp and .cpp/.c files
+        if (m_currentTab >= 0 && m_currentTab < (int)m_tabs.size()) {
+            std::string fn = m_tabs[m_currentTab].filename;
+            std::string ext;
+            auto dot = fn.rfind('.');
+            if (dot != std::string::npos) ext = fn.substr(dot);
+            std::string target;
+            if (ext == ".cpp" || ext == ".c") {
+                target = fn.substr(0, dot) + ".h";
+                // Also try .hpp
+                std::ifstream test(target);
+                if (!test) target = fn.substr(0, dot) + ".hpp";
+            } else if (ext == ".h" || ext == ".hpp") {
+                target = fn.substr(0, dot) + ".cpp";
+                std::ifstream test(target);
+                if (!test) target = fn.substr(0, dot) + ".c";
+            }
+            if (!target.empty()) {
+                std::ifstream test(target);
+                if (test) { openFile(target); std::cout << "Switched to: " << target << std::endl; }
+                else std::cout << "Counterpart not found: " << target << std::endl;
+            }
+        }
+    }
     else if(cmd=="Run Script") handleCommand("powershell -File " + m_tabs[m_currentTab].filename);
-    else if(cmd=="Format Script") {/* stub */}
-    else if(cmd=="List Functions") {/* stub */}
+    else if(cmd=="Format Script") {
+        // Format current file using clang-format or equivalent
+        if (m_currentTab >= 0 && m_currentTab < (int)m_tabs.size()) {
+            std::string fn = m_tabs[m_currentTab].filename;
+            std::string ext;
+            auto dot = fn.rfind('.');
+            if (dot != std::string::npos) ext = fn.substr(dot);
+            if (ext == ".cpp" || ext == ".c" || ext == ".h" || ext == ".hpp") {
+                handleCommand("clang-format -i \"" + fn + "\"");
+                std::cout << "Formatted: " << fn << std::endl;
+            } else if (ext == ".py") {
+                handleCommand("python -m black \"" + fn + "\"");
+            } else if (ext == ".js" || ext == ".ts") {
+                handleCommand("npx prettier --write \"" + fn + "\"");
+            } else {
+                std::cout << "No formatter configured for: " << ext << std::endl;
+            }
+        }
+    }
+    else if(cmd=="List Functions") {
+        // Parse current file for function declarations using regex-like scanning
+        if (m_currentTab >= 0 && m_currentTab < (int)m_tabs.size()) {
+            std::string fn = m_tabs[m_currentTab].filename;
+            std::ifstream file(fn);
+            if (file) {
+                std::string line;
+                int lineNum = 0;
+                std::cout << "Functions in " << fn << ":" << std::endl;
+                while (std::getline(file, line)) {
+                    ++lineNum;
+                    // Simple heuristic: line has '(' and '{' or preceding line has return type
+                    if (line.find('(') != std::string::npos &&
+                        (line.find('{') != std::string::npos || line.find(')') != std::string::npos) &&
+                        line.find(';') == std::string::npos &&
+                        line.find("//") != 0 &&
+                        line.find('#') != 0 &&
+                        line.find("if") == std::string::npos &&
+                        line.find("while") == std::string::npos &&
+                        line.find("for") == std::string::npos) {
+                        std::cout << "  L" << lineNum << ": " << line << std::endl;
+                    }
+                }
+            }
+        }
+    }
 #endif
 }
 

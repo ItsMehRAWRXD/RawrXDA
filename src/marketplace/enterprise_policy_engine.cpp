@@ -113,11 +113,42 @@ bool EnterprisePolicyEngine::isJwtValid(const QString& token) {
 }
 
 QString EnterprisePolicyEngine::generateJwtToken(const QString& userId, const QStringList& permissions) {
-    // In a real implementation, this would generate a proper JWT token
-    // For now, we'll just return a placeholder
-    return QString("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.%1.%2")
-            .arg(userId)
-            .arg(QUuid::createUuid().toString());
+    // Generate a real JWT (HS256) using the configured secret
+    // JWT = base64url(header) + "." + base64url(payload) + "." + base64url(signature)
+
+    auto base64url = [](const QByteArray& data) -> QString {
+        return QString::fromLatin1(data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals));
+    };
+
+    // Header: {"alg":"HS256","typ":"JWT"}
+    QJsonObject header;
+    header["alg"] = "HS256";
+    header["typ"] = "JWT";
+    QString headerB64 = base64url(QJsonDocument(header).toJson(QJsonDocument::Compact));
+
+    // Payload
+    QJsonObject payload;
+    payload["sub"] = userId;
+    payload["iat"] = static_cast<qint64>(QDateTime::currentSecsSinceEpoch());
+    payload["exp"] = static_cast<qint64>(QDateTime::currentSecsSinceEpoch() + 3600); // 1 hour
+    payload["jti"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QJsonArray permsArray;
+    for (const QString& perm : permissions) {
+        permsArray.append(perm);
+    }
+    payload["permissions"] = permsArray;
+    QString payloadB64 = base64url(QJsonDocument(payload).toJson(QJsonDocument::Compact));
+
+    // Signature: HMAC-SHA256(header.payload, secret)
+    QString signingInput = headerB64 + "." + payloadB64;
+    QByteArray key = m_settings.jwtSecret.toUtf8();
+    QByteArray data = signingInput.toUtf8();
+
+    // HMAC-SHA256 using QMessageAuthenticationCode (Qt 5.1+)
+    QByteArray signature = QMessageAuthenticationCode::hash(data, key, QCryptographicHash::Sha256);
+    QString signatureB64 = base64url(signature);
+
+    return signingInput + "." + signatureB64;
 }
 
 bool EnterprisePolicyEngine::checkAllowList(const QString& extensionId) {

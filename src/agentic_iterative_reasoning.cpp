@@ -330,10 +330,41 @@ QJsonObject AgenticIterativeReasoning::executeExecutionPhase(
 
     QString plan = callModelForReasoning(prompt);
 
-    // Simulate execution (in production, would actually execute actions)
-    result["success"] = true;
-    result["result"] = "Strategy executed successfully: " + strategy.name;
-    result["confidence"] = strategy.estimatedSuccessProbability;
+    // Execute the plan by parsing action steps and dispatching them
+    bool executionSuccess = true;
+    QStringList actionLog;
+
+    if (!plan.isEmpty()) {
+        // Parse the model's step-by-step plan and attempt execution
+        QStringList steps = plan.split(QRegularExpression("\\n(?=\\d+\\.\\s|Step\\s)"), Qt::SkipEmptyParts);
+        for (const QString& step : steps) {
+            QString trimmedStep = step.trimmed();
+            if (trimmedStep.isEmpty()) continue;
+
+            // Dispatch step to the engine for tool execution
+            if (m_engine) {
+                QString stepResult = m_engine->executeAction(trimmedStep);
+                actionLog.append(QString("[OK] %1 -> %2").arg(trimmedStep.left(80), stepResult.left(200)));
+                if (stepResult.contains("error", Qt::CaseInsensitive) ||
+                    stepResult.contains("failed", Qt::CaseInsensitive)) {
+                    executionSuccess = false;
+                }
+            } else {
+                actionLog.append(QString("[SKIP] %1 (no engine)").arg(trimmedStep.left(80)));
+            }
+        }
+    } else {
+        executionSuccess = false;
+        actionLog.append("[ERROR] Model returned empty plan");
+    }
+
+    result["success"] = executionSuccess;
+    result["result"] = executionSuccess ?
+        "Strategy executed: " + strategy.name + "\n" + actionLog.join("\n") :
+        "Strategy partially failed: " + strategy.name + "\n" + actionLog.join("\n");
+    result["confidence"] = executionSuccess ?
+        strategy.estimatedSuccessProbability :
+        strategy.estimatedSuccessProbability * 0.5;
 
     if (m_state) {
         m_state->recordAppliedStrategy(strategy.name);
@@ -391,13 +422,19 @@ QString AgenticIterativeReasoning::callModelForReasoning(
         return "Model unavailable";
     }
 
-    // Call inference engine for reasoning
-    // This would use the actual model loaded in inference engine
+    // Build full prompt with optional context prefix
     QString fullPrompt = context.isEmpty() ? prompt : context + "\n\n" + prompt;
 
-    // In production, this would call m_inferenceEngine->infer(fullPrompt)
-    // For now, return a placeholder
-    return "Reasoning output from model";
+    // Route through the loaded inference engine
+    try {
+        QString result = m_inferenceEngine->infer(fullPrompt);
+        if (result.isEmpty()) {
+            return "Model returned empty response";
+        }
+        return result;
+    } catch (...) {
+        return "Inference engine error during reasoning call";
+    }
 }
 
 QJsonArray AgenticIterativeReasoning::extractStructuredResponse(const QString& modelResponse)

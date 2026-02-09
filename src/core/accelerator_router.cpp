@@ -685,18 +685,65 @@ RouterResult AcceleratorRouter::dispatchToCPU(const RouterInferenceTask& task) {
             // These operate on float32 matrices in [rows x cols] layout
             // If the extern symbols are linked, call directly:
             //   extern "C" void inference_core_avx512(const float* A, const float* B, float* C, int M, int N, int K);
-            // For now: perform a naive scalar matmul as CPU fallback
-            const float* A = reinterpret_cast<const float*>(task.inputData);
+            
+            // CPU reference matmul: C[M×N] = A[M×K] × B[K×N]
+            // Infer dimensions from buffer sizes:
+            //   inputData  = A concatenated with B → inputSizeBytes = (M*K + K*N) * sizeof(float)
+            //   outputData = C                     → outputSizeBytes = M*N * sizeof(float)
+            // We estimate K = sqrt(inputFloats / 2) for square-ish matrices,
+            // then M = outputFloats / N, adjusting for the actual buffer geometry.
+            
+            const float* inputBuf = reinterpret_cast<const float*>(task.inputData);
             float* C = reinterpret_cast<float*>(task.outputData);
-            uint64_t floatCount = task.outputSizeBytes / sizeof(float);
-            // Zero-init and accumulate (placeholder scalar kernel)
-            for (uint64_t i = 0; i < floatCount; ++i) {
-                float sum = 0.0f;
-                // Simple element-wise copy/transform as demonstration
-                if (i < task.inputSizeBytes / sizeof(float)) {
-                    sum = A[i]; // Identity transform in absence of full matrix dims
+            uint64_t inputFloats = task.inputSizeBytes / sizeof(float);
+            uint64_t outputFloats = task.outputSizeBytes / sizeof(float);
+            
+            if (outputFloats > 0 && inputFloats > 0) {
+                // Heuristic dimension inference:
+                // For matmul: inputData contains A[M×K] followed by B[K×N]
+                // outputData contains C[M×N] with M*N = outputFloats
+                // Try to find K such that M*K + K*N = inputFloats and M*N = outputFloats
+                // For square matrices: M=N=K=sqrt(outputFloats)
+                uint32_t dim = static_cast<uint32_t>(std::sqrt(static_cast<double>(outputFloats)));
+                if (dim == 0) dim = 1;
+                uint32_t M = dim;
+                uint32_t N = static_cast<uint32_t>(outputFloats / M);
+                if (N == 0) N = 1;
+                
+                // Estimate K from remaining input space
+                // A is M×K, B is K×N → total input = M*K + K*N = K*(M+N)
+                uint32_t K = static_cast<uint32_t>(inputFloats / (M + N));
+                if (K == 0) K = 1;
+                // Clamp to available data
+                if (static_cast<uint64_t>(M) * K + static_cast<uint64_t>(K) * N > inputFloats) {
+                    K = static_cast<uint32_t>(inputFloats / (M + N));
+                    if (K == 0) K = 1;
                 }
-                C[i] = sum;
+                
+                const float* A = inputBuf;
+                const float* B = inputBuf + (M * K);
+                
+                // Tiled matmul with cache-friendly blocking
+                constexpr uint32_t TILE = 32;
+                memset(C, 0, outputFloats * sizeof(float));
+                
+                for (uint32_t ii = 0; ii < M; ii += TILE) {
+                    uint32_t iEnd = std::min(ii + TILE, M);
+                    for (uint32_t kk = 0; kk < K; kk += TILE) {
+                        uint32_t kEnd = std::min(kk + TILE, K);
+                        for (uint32_t jj = 0; jj < N; jj += TILE) {
+                            uint32_t jEnd = std::min(jj + TILE, N);
+                            for (uint32_t i = ii; i < iEnd; i++) {
+                                for (uint32_t k = kk; k < kEnd; k++) {
+                                    float aik = A[i * K + k];
+                                    for (uint32_t j = jj; j < jEnd; j++) {
+                                        C[i * N + j] += aik * B[k * N + j];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         else if (kernel == "quantize" || kernel == "requantize") {

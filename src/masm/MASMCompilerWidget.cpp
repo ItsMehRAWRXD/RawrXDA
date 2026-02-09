@@ -929,7 +929,46 @@ void MASMProjectExplorer::refresh() {
 }
 
 void MASMProjectExplorer::populateTree() {
-    // Implementation for populating project tree
+    QTreeWidgetItem* root = new QTreeWidgetItem(m_treeWidget.get());
+    root->setText(0, m_project.projectName.isEmpty() ? "Project" : m_project.projectName);
+    root->setExpanded(true);
+
+    // Source files group
+    QTreeWidgetItem* srcGroup = new QTreeWidgetItem(root);
+    srcGroup->setText(0, "Source Files");
+    srcGroup->setExpanded(true);
+    for (const QString& file : m_project.sourceFiles) {
+        QTreeWidgetItem* item = new QTreeWidgetItem(srcGroup);
+        item->setText(0, QFileInfo(file).fileName());
+        item->setData(0, Qt::UserRole, file);
+        item->setToolTip(0, file);
+    }
+    if (!m_project.mainFile.isEmpty()) {
+        QTreeWidgetItem* item = new QTreeWidgetItem(srcGroup);
+        item->setText(0, QFileInfo(m_project.mainFile).fileName() + " [main]");
+        item->setData(0, Qt::UserRole, m_project.mainFile);
+        item->setToolTip(0, m_project.mainFile);
+    }
+
+    // Include paths group
+    if (!m_project.includePaths.isEmpty()) {
+        QTreeWidgetItem* incGroup = new QTreeWidgetItem(root);
+        incGroup->setText(0, "Include Paths");
+        for (const QString& inc : m_project.includePaths) {
+            QTreeWidgetItem* item = new QTreeWidgetItem(incGroup);
+            item->setText(0, inc);
+        }
+    }
+
+    // Libraries group
+    if (!m_project.libraries.isEmpty()) {
+        QTreeWidgetItem* libGroup = new QTreeWidgetItem(root);
+        libGroup->setText(0, "Libraries");
+        for (const QString& lib : m_project.libraries) {
+            QTreeWidgetItem* item = new QTreeWidgetItem(libGroup);
+            item->setText(0, lib);
+        }
+    }
 }
 
 void MASMProjectExplorer::onTreeItemDoubleClicked(QTreeWidgetItem* item, int column) {
@@ -940,11 +979,40 @@ void MASMProjectExplorer::onTreeItemDoubleClicked(QTreeWidgetItem* item, int col
 }
 
 void MASMProjectExplorer::onTreeContextMenu(const QPoint& pos) {
-    // Implementation for context menu
+    QTreeWidgetItem* item = m_treeWidget->itemAt(pos);
+    QMenu menu(this);
+    addContextMenuActions(&menu, item);
+    if (!menu.isEmpty()) {
+        menu.exec(m_treeWidget->viewport()->mapToGlobal(pos));
+    }
 }
 
 void MASMProjectExplorer::addContextMenuActions(QMenu* menu, QTreeWidgetItem* item) {
-    // Implementation for context menu actions
+    menu->addAction("Add File...", this, [this]() {
+        QString file = QFileDialog::getOpenFileName(this, "Add Source File", m_project.projectPath,
+            "MASM Files (*.asm *.inc);;All Files (*)");
+        if (!file.isEmpty()) {
+            m_project.sourceFiles.append(file);
+            refresh();
+        }
+    });
+
+    if (item) {
+        QString filePath = item->data(0, Qt::UserRole).toString();
+        if (!filePath.isEmpty()) {
+            menu->addAction("Open", this, [this, filePath]() {
+                emit fileOpened(filePath);
+            });
+            menu->addAction("Remove from Project", this, [this, filePath]() {
+                m_project.sourceFiles.removeAll(filePath);
+                refresh();
+            });
+            menu->addSeparator();
+            menu->addAction("Open Containing Folder", this, [filePath]() {
+                QProcess::startDetached("explorer", {QStringList() << "/select," << QDir::toNativeSeparators(filePath)});
+            });
+        }
+    }
 }
 
 MASMSymbolBrowser::MASMSymbolBrowser(QWidget* parent) : QWidget(parent) {
@@ -967,7 +1035,13 @@ void MASMSymbolBrowser::clear() {
 }
 
 void MASMSymbolBrowser::filter(const QString& text) {
-    // Implementation for filtering symbols
+    for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
+        QTreeWidgetItem* item = m_treeWidget->topLevelItem(i);
+        bool matches = text.isEmpty() ||
+                       item->text(0).contains(text, Qt::CaseInsensitive) ||
+                       item->text(1).contains(text, Qt::CaseInsensitive);
+        item->setHidden(!matches);
+    }
 }
 
 void MASMSymbolBrowser::populateTree() {
@@ -981,7 +1055,16 @@ void MASMSymbolBrowser::populateTree() {
 }
 
 void MASMSymbolBrowser::onSymbolClicked(QTreeWidgetItem* item, int column) {
-    // Implementation
+    Q_UNUSED(column);
+    if (!item) return;
+    int line = item->text(2).toInt();
+    // Find matching symbol by line number
+    for (const auto& symbol : m_symbols) {
+        if (symbol.line == line && symbol.name == item->text(0)) {
+            emit symbolSelected(symbol);
+            return;
+        }
+    }
 }
 
 void MASMSymbolBrowser::onFilterChanged(const QString& text) {
@@ -1006,28 +1089,151 @@ MASMDebugger::MASMDebugger(QWidget* parent)
 }
 
 void MASMDebugger::startDebugging(const QString& executablePath) {
-    // Implementation for starting debugger
+    if (m_isDebugging) {
+        stopDebugging();
+    }
+
+    m_disassemblyWidget->clear();
+    m_disassemblyWidget->append("Starting debug session: " + executablePath);
+
+    m_debugProcess = std::make_unique<QProcess>(this);
+    connect(m_debugProcess.get(), &QProcess::readyReadStandardOutput,
+            this, &MASMDebugger::onDebuggerOutput);
+    connect(m_debugProcess.get(), &QProcess::readyReadStandardError,
+            this, &MASMDebugger::onDebuggerError);
+    connect(m_debugProcess.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this](int exitCode, QProcess::ExitStatus) {
+        m_disassemblyWidget->append(QString("Debug session ended (exit code %1)").arg(exitCode));
+        m_isDebugging = false;
+        emit debuggerStopped();
+    });
+
+    // Use CDB (Microsoft Console Debugger) for MASM debugging
+    // CDB is included with Windows SDK / Debugging Tools for Windows
+    QString cdbPath = "cdb.exe";
+    QStringList args;
+    // Set breakpoints from m_breakpoints
+    for (int bp : m_breakpoints) {
+        args << "-c" << QString("bp `%1:%2`").arg(executablePath).arg(bp);
+    }
+    args << executablePath;
+
+    m_debugProcess->start(cdbPath, args);
+    if (!m_debugProcess->waitForStarted(3000)) {
+        m_disassemblyWidget->append("ERROR: Failed to start debugger (cdb.exe not found?).");
+        m_disassemblyWidget->append("Install Windows SDK Debugging Tools for full debugger support.");
+        m_debugProcess.reset();
+        return;
+    }
+
     m_isDebugging = true;
     emit debuggerStarted();
 }
 
 void MASMDebugger::stopDebugging() {
+    if (m_debugProcess) {
+        if (m_debugProcess->state() == QProcess::Running) {
+            // Send quit command to CDB
+            m_debugProcess->write("q\n");
+            if (!m_debugProcess->waitForFinished(2000)) {
+                m_debugProcess->kill();
+                m_debugProcess->waitForFinished(1000);
+            }
+        }
+        m_debugProcess.reset();
+    }
     m_isDebugging = false;
+    m_registersWidget->clear();
+    m_stackWidget->clear();
     emit debuggerStopped();
 }
 
-void MASMDebugger::stepOver() { /* Implementation */ }
-void MASMDebugger::stepInto() { /* Implementation */ }
-void MASMDebugger::stepOut() { /* Implementation */ }
-void MASMDebugger::continueExecution() { /* Implementation */ }
-void MASMDebugger::pause() { /* Implementation */ }
+void MASMDebugger::stepOver() {
+    if (m_debugProcess && m_isDebugging) {
+        m_debugProcess->write("p\n");  // CDB: step over
+    }
+}
+
+void MASMDebugger::stepInto() {
+    if (m_debugProcess && m_isDebugging) {
+        m_debugProcess->write("t\n");  // CDB: trace into (single step)
+    }
+}
+
+void MASMDebugger::stepOut() {
+    if (m_debugProcess && m_isDebugging) {
+        m_debugProcess->write("gu\n");  // CDB: go up (step out of function)
+    }
+}
+
+void MASMDebugger::continueExecution() {
+    if (m_debugProcess && m_isDebugging) {
+        m_debugProcess->write("g\n");  // CDB: go (continue execution)
+    }
+}
+
+void MASMDebugger::pause() {
+    if (m_debugProcess && m_isDebugging) {
+        // Send Ctrl+C / break to the debugger to interrupt execution
+        m_debugProcess->write("\x03");  // Ctrl+C
+    }
+}
 
 void MASMDebugger::setBreakpoints(const QSet<int>& breakpoints) {
     m_breakpoints = breakpoints;
 }
 
-void MASMDebugger::onDebuggerOutput() { /* Implementation */ }
-void MASMDebugger::onDebuggerError() { /* Implementation */ }
-void MASMDebugger::updateRegisters() { /* Implementation */ }
-void MASMDebugger::updateStack() { /* Implementation */ }
-void MASMDebugger::updateDisassembly() { /* Implementation */ }
+void MASMDebugger::onDebuggerOutput() {
+    if (!m_debugProcess) return;
+    QString output = m_debugProcess->readAllStandardOutput();
+    m_disassemblyWidget->append(output);
+
+    // Parse CDB output for breakpoint hits
+    if (output.contains("Breakpoint ") && output.contains(" hit")) {
+        // Extract line number from source reference if available
+        QRegularExpression reBreak("\\[(\\d+)\\]");
+        QRegularExpressionMatch match = reBreak.match(output);
+        if (match.hasMatch()) {
+            emit breakpointHit(match.captured(1).toInt());
+        }
+    }
+
+    // Auto-refresh views after any debugger command response
+    updateRegisters();
+    updateStack();
+}
+
+void MASMDebugger::onDebuggerError() {
+    if (!m_debugProcess) return;
+    QString error = m_debugProcess->readAllStandardError();
+    m_disassemblyWidget->setTextColor(Qt::red);
+    m_disassemblyWidget->append(error);
+    m_disassemblyWidget->setTextColor(Qt::black);
+}
+
+void MASMDebugger::updateRegisters() {
+    if (!m_debugProcess || !m_isDebugging) return;
+    // Request register dump from CDB (r command outputs all registers)
+    // The output will arrive asynchronously via onDebuggerOutput
+    // For now, populate from last known CDB output
+    m_registersWidget->clear();
+    m_registersWidget->setHeaderLabels({"Register", "Value"});
+
+    // Request fresh register state
+    m_debugProcess->write("r\n");
+}
+
+void MASMDebugger::updateStack() {
+    if (!m_debugProcess || !m_isDebugging) return;
+    m_stackWidget->clear();
+    m_stackWidget->setHeaderLabels({"Frame", "Function", "Address"});
+
+    // Request call stack from CDB
+    m_debugProcess->write("k\n");
+}
+
+void MASMDebugger::updateDisassembly() {
+    if (!m_debugProcess || !m_isDebugging) return;
+    // Request disassembly around current instruction pointer
+    m_debugProcess->write("u @rip L10\n");
+}

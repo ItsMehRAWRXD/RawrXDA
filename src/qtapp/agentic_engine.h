@@ -78,6 +78,7 @@ public:
     QString currentModelPath() const { return QString::fromStdString(m_currentModelPath); }
     QString generateResponse(const QString& message);
     void setInferenceEngine(class InferenceEngine* engine) { m_inferenceEngine = engine; }
+    InferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
     
     // CRITICAL: Mark model as loaded after external load (for MainWindow->AgenticEngine sync)
     void markModelAsLoaded(const QString& modelPath) { 

@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <sstream>
 #include <ctime>
+#include <regex>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
@@ -2761,38 +2762,123 @@ bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSe
     if (startPos < 0) startPos = 0;
     if (startPos >= textLen) startPos = textLen - 1;
     
-    // Simple case-insensitive search (regex not implemented in this version)
-    std::string haystack = editorText;
-    std::string needle = searchText;
-    
-    if (!caseSensitive) {
-        std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::tolower);
-        std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
-    }
-    
     size_t foundPos = std::string::npos;
+    size_t foundLen = searchText.length();
     
-    if (forward) {
-        foundPos = haystack.find(needle, startPos);
-        // Wrap around
-        if (foundPos == std::string::npos && startPos > 0) {
-            foundPos = haystack.find(needle, 0);
+    if (useRegex) {
+        // Regex search using std::regex
+        try {
+            auto flags = std::regex_constants::ECMAScript;
+            if (!caseSensitive) flags |= std::regex_constants::icase;
+            std::regex pattern(searchText, flags);
+            std::smatch match;
+            
+            if (forward) {
+                std::string searchArea = editorText.substr(startPos);
+                if (std::regex_search(searchArea, match, pattern)) {
+                    foundPos = startPos + match.position();
+                    foundLen = match.length();
+                } else if (startPos > 0) {
+                    // Wrap around
+                    searchArea = editorText.substr(0, startPos);
+                    if (std::regex_search(searchArea, match, pattern)) {
+                        foundPos = match.position();
+                        foundLen = match.length();
+                    }
+                }
+            } else {
+                // Backwards regex: find all matches before startPos, take last one
+                std::string searchArea = editorText.substr(0, startPos);
+                auto begin = std::sregex_iterator(searchArea.begin(), searchArea.end(), pattern);
+                auto end = std::sregex_iterator();
+                std::smatch lastMatch;
+                bool found = false;
+                for (auto it = begin; it != end; ++it) {
+                    lastMatch = *it;
+                    found = true;
+                }
+                if (found) {
+                    foundPos = lastMatch.position();
+                    foundLen = lastMatch.length();
+                } else {
+                    // Wrap: search from startPos to end
+                    searchArea = editorText.substr(startPos);
+                    begin = std::sregex_iterator(searchArea.begin(), searchArea.end(), pattern);
+                    for (auto it = begin; it != end; ++it) {
+                        lastMatch = *it;
+                        found = true;
+                    }
+                    if (found) {
+                        foundPos = startPos + lastMatch.position();
+                        foundLen = lastMatch.length();
+                    }
+                }
+            }
+        } catch (const std::regex_error& e) {
+            std::string msg = "Invalid regex: ";
+            msg += e.what();
+            MessageBoxA(m_hwndMain, msg.c_str(), "Find", MB_OK | MB_ICONERROR);
+            return false;
         }
     } else {
-        // Search backwards
-        if (startPos > 0) {
-            foundPos = haystack.rfind(needle, startPos);
+        // Plain text search with optional case sensitivity and whole word
+        std::string haystack = editorText;
+        std::string needle = searchText;
+        
+        if (!caseSensitive) {
+            std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::tolower);
+            std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
         }
-        // Wrap around
-        if (foundPos == std::string::npos) {
-            foundPos = haystack.rfind(needle);
+        
+        auto isWordBoundary = [&](size_t pos, size_t len) -> bool {
+            if (!wholeWord) return true;
+            bool leftOk = (pos == 0) || !isalnum((unsigned char)haystack[pos - 1]);
+            bool rightOk = (pos + len >= haystack.size()) || !isalnum((unsigned char)haystack[pos + len]);
+            return leftOk && rightOk;
+        };
+        
+        if (forward) {
+            size_t pos = startPos;
+            while (pos < haystack.size()) {
+                foundPos = haystack.find(needle, pos);
+                if (foundPos == std::string::npos) break;
+                if (isWordBoundary(foundPos, needle.size())) break;
+                pos = foundPos + 1;
+                foundPos = std::string::npos;
+            }
+            // Wrap around
+            if (foundPos == std::string::npos && startPos > 0) {
+                pos = 0;
+                while (pos < (size_t)startPos) {
+                    foundPos = haystack.find(needle, pos);
+                    if (foundPos == std::string::npos || foundPos >= (size_t)startPos) { foundPos = std::string::npos; break; }
+                    if (isWordBoundary(foundPos, needle.size())) break;
+                    pos = foundPos + 1;
+                    foundPos = std::string::npos;
+                }
+            }
+        } else {
+            if (startPos > 0) {
+                foundPos = haystack.rfind(needle, startPos);
+                while (foundPos != std::string::npos && !isWordBoundary(foundPos, needle.size())) {
+                    if (foundPos == 0) { foundPos = std::string::npos; break; }
+                    foundPos = haystack.rfind(needle, foundPos - 1);
+                }
+            }
+            if (foundPos == std::string::npos) {
+                foundPos = haystack.rfind(needle);
+                while (foundPos != std::string::npos && !isWordBoundary(foundPos, needle.size())) {
+                    if (foundPos == 0) { foundPos = std::string::npos; break; }
+                    foundPos = haystack.rfind(needle, foundPos - 1);
+                }
+            }
         }
     }
     
     if (foundPos != std::string::npos) {
         // Select found text
-        selection.cpMin = foundPos;
-        selection.cpMax = foundPos + searchText.length();
+        selection.cpMin = (LONG)foundPos;
+        selection.cpMax = (LONG)(foundPos + foundLen);
         SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&selection);
         SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
         m_lastFoundPos = foundPos;
@@ -5196,8 +5282,8 @@ void Win32IDE::onMaxTokensChanged(int newValue) {
 }
 
 // ============================================================================
-// STUB IMPLEMENTATIONS for functions declared in Win32IDE.h but missing bodies
-// These enable linking. They provide minimal correct behavior.
+// IMPLEMENTATIONS for functions declared in Win32IDE.h
+// Line Number Gutter, Minimap, Breadcrumb, and other UI components.
 // ============================================================================
 
 // --- Line Number Gutter ---
@@ -6512,9 +6598,8 @@ std::string Win32IDE::getCurrentGitBranch() const {
 }
 
 // ============================================================================
-// DEFERRED IMPLEMENTATIONS — Terminal Pane Management
-// These are stubbed with TODO logging. They do not block any current
-// feature path but are declared in Win32IDE.h for future multi-terminal.
+// Terminal Pane Management
+// Multi-terminal support: switch, close, resize, and broadcast to panes.
 // ============================================================================
 
 void Win32IDE::switchTerminalPane(int paneId) {
@@ -6576,9 +6661,8 @@ void Win32IDE::sendToAllTerminals(const std::string& command) {
 }
 
 // ============================================================================
-// DEFERRED IMPLEMENTATIONS — Extension System
-// Stubbed with TODO logging. Extension architecture is roadmapped
-// but not blocking any current feature path.
+// Extension System
+// Refresh, load, unload, and help for IDE extensions via m_extensionLoader.
 // ============================================================================
 
 void Win32IDE::refreshExtensions() {
@@ -6606,8 +6690,17 @@ void Win32IDE::loadExtension(const std::string& name) {
 
 void Win32IDE::unloadExtension(const std::string& name) {
     LOG_INFO("unloadExtension: " + name);
-    // ExtensionLoader does not yet support individual unload — log and no-op
-    appendToOutput("TODO: Extension unload not yet supported (" + name + ")\n", "Output", OutputSeverity::Warning);
+    if (m_extensionLoader) {
+        bool unloaded = m_extensionLoader->UnloadExtension(name);
+        if (unloaded) {
+            appendToOutput("✅ Extension unloaded: " + name + "\n", "Output", OutputSeverity::Info);
+        } else {
+            appendToOutput("⚠️ Failed to unload extension: " + name + " (not found or not loaded)\n",
+                           "Output", OutputSeverity::Warning);
+        }
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
 }
 
 void Win32IDE::showExtensionHelp(const std::string& name) {

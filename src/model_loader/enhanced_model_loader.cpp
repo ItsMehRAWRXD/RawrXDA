@@ -7,10 +7,23 @@
 #include <QDebug>
 #include <QEventLoop>
 #include <QTimer>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QFileInfo>
+#include <QUrl>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <cstring>
+#include "codec/compression.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 EnhancedModelLoader::EnhancedModelLoader(QObject* parent)
     : QObject(parent)
@@ -176,11 +189,148 @@ bool EnhancedModelLoader::loadHFModel(const QString& repoId) {
         qInfo() << "Downloading HF model:" << QString::fromStdString(repo_name) << "revision:" << QString::fromStdString(revision);
         emit loadingProgress(10);
 
-        // TODO: Implement HF download with cache logic
-        // For now, return error to prevent silent failure
-        m_lastError = "HuggingFace downloads not yet implemented";
-        emit error(m_lastError);
-        return false;
+        // Determine cache directory
+        QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/rawrxd/models/hf";
+        QDir().mkpath(cacheDir);
+        
+        // Sanitize repo name for filesystem
+        QString sanitizedRepo = QString::fromStdString(repo_name);
+        sanitizedRepo.replace('/', '_');
+        QString modelDir = cacheDir + "/" + sanitizedRepo;
+        QDir().mkpath(modelDir);
+        
+        emit loadingProgress(20);
+        
+        // Step 1: Query HuggingFace API for model files
+        // Look for .gguf files in the repo
+        QString apiUrl = QString("https://huggingface.co/api/models/%1/tree/%2")
+            .arg(QString::fromStdString(repo_name), QString::fromStdString(revision));
+        
+        QNetworkAccessManager nam;
+        QNetworkRequest request(QUrl(apiUrl));
+        request.setRawHeader("Accept", "application/json");
+        
+        // Check for HF token
+        QString hfToken = qEnvironmentVariable("HF_TOKEN", qEnvironmentVariable("HUGGING_FACE_HUB_TOKEN"));
+        if (!hfToken.isEmpty()) {
+            request.setRawHeader("Authorization", ("Bearer " + hfToken).toUtf8());
+        }
+        
+        QEventLoop loop;
+        QNetworkReply* reply = nam.get(request);
+        connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+        
+        if (reply->error() != QNetworkReply::NoError) {
+            m_lastError = QString("HuggingFace API error: %1").arg(reply->errorString());
+            reply->deleteLater();
+            emit error(m_lastError);
+            return false;
+        }
+        
+        QByteArray responseData = reply->readAll();
+        reply->deleteLater();
+        
+        QJsonDocument doc = QJsonDocument::fromJson(responseData);
+        if (!doc.isArray()) {
+            m_lastError = "Invalid HuggingFace API response (expected array of files)";
+            emit error(m_lastError);
+            return false;
+        }
+        
+        emit loadingProgress(30);
+        
+        // Step 2: Find GGUF files to download
+        QJsonArray files = doc.array();
+        QString ggufFile;
+        qint64 ggufSize = 0;
+        
+        for (const auto& fileVal : files) {
+            QJsonObject fileObj = fileVal.toObject();
+            QString filename = fileObj["path"].toString();
+            if (filename.endsWith(".gguf", Qt::CaseInsensitive)) {
+                // Prefer Q4_K_M or Q5_K_M quantization if multiple exist
+                if (ggufFile.isEmpty() || 
+                    filename.contains("Q4_K_M", Qt::CaseInsensitive) ||
+                    filename.contains("Q5_K_M", Qt::CaseInsensitive)) {
+                    ggufFile = filename;
+                    ggufSize = fileObj["size"].toVariant().toLongLong();
+                }
+            }
+        }
+        
+        if (ggufFile.isEmpty()) {
+            m_lastError = QString("No .gguf files found in HuggingFace repo: %1").arg(QString::fromStdString(repo_name));
+            emit error(m_lastError);
+            return false;
+        }
+        
+        qInfo() << "Found GGUF file:" << ggufFile << "(" << (ggufSize / (1024*1024)) << "MB)";
+        
+        // Step 3: Download the GGUF file
+        QString localPath = modelDir + "/" + QFileInfo(ggufFile).fileName();
+        
+        // Check if already cached
+        if (QFile::exists(localPath) && QFileInfo(localPath).size() == ggufSize) {
+            qInfo() << "Using cached model:" << localPath;
+            emit loadingProgress(90);
+        } else {
+            // Download from HuggingFace
+            QString downloadUrl = QString("https://huggingface.co/%1/resolve/%2/%3")
+                .arg(QString::fromStdString(repo_name), QString::fromStdString(revision), ggufFile);
+            
+            QNetworkRequest dlRequest(QUrl(downloadUrl));
+            if (!hfToken.isEmpty()) {
+                dlRequest.setRawHeader("Authorization", ("Bearer " + hfToken).toUtf8());
+            }
+            
+            QNetworkReply* dlReply = nam.get(dlRequest);
+            
+            QFile outputFile(localPath);
+            if (!outputFile.open(QIODevice::WriteOnly)) {
+                m_lastError = QString("Cannot write to: %1").arg(localPath);
+                dlReply->deleteLater();
+                emit error(m_lastError);
+                return false;
+            }
+            
+            qint64 totalBytes = ggufSize;
+            qint64 receivedBytes = 0;
+            
+            // Stream download to disk
+            connect(dlReply, &QNetworkReply::readyRead, [&]() {
+                QByteArray chunk = dlReply->readAll();
+                outputFile.write(chunk);
+                receivedBytes += chunk.size();
+                
+                if (totalBytes > 0) {
+                    int progress = 30 + static_cast<int>((receivedBytes * 60) / totalBytes);
+                    emit loadingProgress(std::min(progress, 90));
+                }
+            });
+            
+            QEventLoop dlLoop;
+            connect(dlReply, &QNetworkReply::finished, &dlLoop, &QEventLoop::quit);
+            dlLoop.exec();
+            
+            outputFile.close();
+            
+            if (dlReply->error() != QNetworkReply::NoError) {
+                m_lastError = QString("Download failed: %1").arg(dlReply->errorString());
+                QFile::remove(localPath); // Clean up partial download
+                dlReply->deleteLater();
+                emit error(m_lastError);
+                return false;
+            }
+            
+            dlReply->deleteLater();
+            qInfo() << "Downloaded" << (receivedBytes / (1024*1024)) << "MB to" << localPath;
+        }
+        
+        emit loadingProgress(90);
+        
+        // Step 4: Load the downloaded GGUF file using the standard GGUF loader
+        return loadGGUFModel(localPath);
 
     } catch (const std::exception& e) {
         m_lastError = QString("HF download exception: %1").arg(e.what());
@@ -279,17 +429,201 @@ bool EnhancedModelLoader::decompressAndLoad(const QString& compressedPath, Compr
 
         std::vector<uint8_t> decompressed_data;
 
-        // For now, just copy the data (real decompression would use zstd/gzip libraries)
-        // This is a placeholder that prevents silent failure
         if (compression == CompressionType::GZIP) {
-            qWarning() << "GZIP decompression not yet implemented - using stored data as-is";
-            decompressed_data = compressed_data;
+            // GZIP decompression using Qt's zlib (qUncompress expects qCompress format)
+            // For standard gzip files, use the raw inflate path via codec
+            QByteArray compressedQBA(reinterpret_cast<const char*>(compressed_data.data()),
+                                     static_cast<int>(compressed_data.size()));
+            
+            // Try qUncompress first (handles Qt-compressed format with 4-byte size header)
+            QByteArray decompressedQBA = qUncompress(compressedQBA);
+            
+            if (decompressedQBA.isEmpty() && !compressed_data.empty()) {
+                // Fallback: skip gzip header (10 bytes min) and inflate raw deflate stream
+                // GZIP header: 1f 8b 08 ... (RFC 1952)
+                if (compressed_data.size() >= 10 && 
+                    compressed_data[0] == 0x1f && compressed_data[1] == 0x8b) {
+                    // Skip the gzip header, find the start of deflate stream
+                    size_t offset = 10;
+                    uint8_t flags = compressed_data[3];
+                    if (flags & 0x04) { // FEXTRA
+                        if (offset + 2 <= compressed_data.size()) {
+                            uint16_t xlen = compressed_data[offset] | (compressed_data[offset+1] << 8);
+                            offset += 2 + xlen;
+                        }
+                    }
+                    if (flags & 0x08) { // FNAME
+                        while (offset < compressed_data.size() && compressed_data[offset]) offset++;
+                        offset++;
+                    }
+                    if (flags & 0x10) { // FCOMMENT
+                        while (offset < compressed_data.size() && compressed_data[offset]) offset++;
+                        offset++;
+                    }
+                    if (flags & 0x02) offset += 2; // FHCRC
+                    
+                    // Use codec::inflate on the raw deflate data (minus 8 byte trailer)
+                    if (offset < compressed_data.size() - 8) {
+                        std::vector<uint8_t> deflateData(compressed_data.begin() + offset,
+                                                          compressed_data.end() - 8);
+                        bool ok = false;
+                        decompressed_data = codec::inflate(deflateData, &ok);
+                        if (!ok || decompressed_data.empty()) {
+                            m_lastError = "GZIP decompression failed (inflate error)";
+                            return false;
+                        }
+                    } else {
+                        m_lastError = "GZIP file has invalid header structure";
+                        return false;
+                    }
+                } else {
+                    m_lastError = "Invalid GZIP magic bytes";
+                    return false;
+                }
+            } else {
+                decompressed_data.assign(decompressedQBA.constData(),
+                                         decompressedQBA.constData() + decompressedQBA.size());
+            }
+            qInfo() << "GZIP decompression: " << compressed_data.size() 
+                     << " -> " << decompressed_data.size() << " bytes";
+                     
         } else if (compression == CompressionType::ZSTD) {
-            qWarning() << "ZSTD decompression not yet implemented - using stored data as-is";
-            decompressed_data = compressed_data;
+            // ZSTD decompression: ZSTD frame starts with magic 0xFD2FB528
+            // Use dynamic loading of zstd library if available
+            typedef unsigned long long (*ZSTD_getFrameContentSize_t)(const void*, size_t);
+            typedef size_t (*ZSTD_decompress_t)(void*, size_t, const void*, size_t);
+            typedef unsigned (*ZSTD_isError_t)(size_t);
+            
+            HMODULE hZstd = LoadLibraryA("libzstd.dll");
+            if (!hZstd) hZstd = LoadLibraryA("zstd.dll");
+            
+            if (hZstd) {
+                auto fnGetSize = (ZSTD_getFrameContentSize_t)GetProcAddress(hZstd, "ZSTD_getFrameContentSize");
+                auto fnDecompress = (ZSTD_decompress_t)GetProcAddress(hZstd, "ZSTD_decompress");
+                auto fnIsError = (ZSTD_isError_t)GetProcAddress(hZstd, "ZSTD_isError");
+                
+                if (fnGetSize && fnDecompress && fnIsError) {
+                    unsigned long long decompSize = fnGetSize(compressed_data.data(), compressed_data.size());
+                    if (decompSize == 0xFFFFFFFFFFFFFFFFULL || decompSize == 0) {
+                        // Unknown size — estimate 4x expansion
+                        decompSize = compressed_data.size() * 4;
+                    }
+                    
+                    decompressed_data.resize(static_cast<size_t>(decompSize));
+                    size_t result = fnDecompress(decompressed_data.data(), decompressed_data.size(),
+                                                 compressed_data.data(), compressed_data.size());
+                    if (fnIsError(result)) {
+                        FreeLibrary(hZstd);
+                        m_lastError = "ZSTD decompression failed";
+                        return false;
+                    }
+                    decompressed_data.resize(result);
+                    qInfo() << "ZSTD decompression: " << compressed_data.size() 
+                             << " -> " << decompressed_data.size() << " bytes";
+                } else {
+                    FreeLibrary(hZstd);
+                    m_lastError = "ZSTD library found but missing required functions";
+                    return false;
+                }
+                FreeLibrary(hZstd);
+            } else {
+                m_lastError = "ZSTD decompression requires libzstd.dll or zstd.dll in PATH";
+                return false;
+            }
+            
         } else if (compression == CompressionType::LZ4) {
-            qWarning() << "LZ4 decompression not yet implemented - using stored data as-is";
-            decompressed_data = compressed_data;
+            // LZ4 decompression: LZ4 frame starts with magic 0x184D2204
+            typedef int (*LZ4F_getFrameInfo_t)(void*, void*, const void*, size_t*);
+            typedef int (*LZ4_decompress_safe_t)(const char*, char*, int, int);
+            
+            HMODULE hLz4 = LoadLibraryA("liblz4.dll");
+            if (!hLz4) hLz4 = LoadLibraryA("lz4.dll");
+            
+            if (hLz4) {
+                auto fnDecomp = (LZ4_decompress_safe_t)GetProcAddress(hLz4, "LZ4_decompress_safe");
+                
+                if (fnDecomp) {
+                    // LZ4 block format: first 4 bytes (LE) = original size
+                    // LZ4 frame format: magic + descriptor
+                    size_t origSize = compressed_data.size() * 4; // conservative estimate
+                    
+                    // Check for LZ4 frame magic (0x184D2204)
+                    if (compressed_data.size() >= 4 &&
+                        compressed_data[0] == 0x04 && compressed_data[1] == 0x22 &&
+                        compressed_data[2] == 0x4D && compressed_data[3] == 0x18) {
+                        // LZ4 frame format — use frame API
+                        typedef size_t (*LZ4F_createDecompressionContext_t)(void**, unsigned);
+                        typedef size_t (*LZ4F_decompress_t)(void*, void*, size_t*, const void*, size_t*, void*);
+                        typedef size_t (*LZ4F_freeDecompressionContext_t)(void*);
+                        
+                        auto fnCreate = (LZ4F_createDecompressionContext_t)GetProcAddress(hLz4, "LZ4F_createDecompressionContext");
+                        auto fnFrameDecomp = (LZ4F_decompress_t)GetProcAddress(hLz4, "LZ4F_decompress");
+                        auto fnFree = (LZ4F_freeDecompressionContext_t)GetProcAddress(hLz4, "LZ4F_freeDecompressionContext");
+                        
+                        if (fnCreate && fnFrameDecomp && fnFree) {
+                            void* dctx = nullptr;
+                            fnCreate(&dctx, 1 /* LZ4F_VERSION */);
+                            if (dctx) {
+                                decompressed_data.resize(origSize);
+                                size_t dstSize = decompressed_data.size();
+                                size_t srcSize = compressed_data.size();
+                                size_t totalOut = 0;
+                                
+                                const uint8_t* srcPtr = compressed_data.data();
+                                size_t srcRemaining = srcSize;
+                                
+                                while (srcRemaining > 0) {
+                                    size_t dstCap = decompressed_data.size() - totalOut;
+                                    size_t srcConsumed = srcRemaining;
+                                    size_t ret = fnFrameDecomp(dctx, 
+                                        decompressed_data.data() + totalOut, &dstCap,
+                                        srcPtr, &srcConsumed, nullptr);
+                                    
+                                    totalOut += dstCap;
+                                    srcPtr += srcConsumed;
+                                    srcRemaining -= srcConsumed;
+                                    
+                                    if (ret == 0) break; // Done
+                                    
+                                    // Need more output space
+                                    if (totalOut >= decompressed_data.size()) {
+                                        decompressed_data.resize(decompressed_data.size() * 2);
+                                    }
+                                }
+                                
+                                decompressed_data.resize(totalOut);
+                                fnFree(dctx);
+                            }
+                        }
+                    } else {
+                        // LZ4 block format
+                        decompressed_data.resize(origSize);
+                        int decompLen = fnDecomp(
+                            reinterpret_cast<const char*>(compressed_data.data()),
+                            reinterpret_cast<char*>(decompressed_data.data()),
+                            static_cast<int>(compressed_data.size()),
+                            static_cast<int>(decompressed_data.size()));
+                        
+                        if (decompLen <= 0) {
+                            FreeLibrary(hLz4);
+                            m_lastError = "LZ4 block decompression failed";
+                            return false;
+                        }
+                        decompressed_data.resize(decompLen);
+                    }
+                    
+                    qInfo() << "LZ4 decompression: " << compressed_data.size()
+                             << " -> " << decompressed_data.size() << " bytes";
+                } else {
+                    FreeLibrary(hLz4);
+                    m_lastError = "LZ4 library found but missing LZ4_decompress_safe";
+                    return false;
+                }
+                FreeLibrary(hLz4);
+            } else {
+                m_lastError = "LZ4 decompression requires liblz4.dll or lz4.dll in PATH";
+                return false;
+            }
         } else {
             m_lastError = "Unknown compression type";
             return false;

@@ -18,6 +18,7 @@ Endpoints:
   GET  /api/agents/status     — Agent subsystem status
   GET  /api/agents/history    — Agent event history
   POST /api/agents/replay     — Replay a failed agent event
+  POST /api/read-file          — Read a local file by path (IDE auto-attach)
 
 Usage:
   python gui/serve.py                    # Default port 11435
@@ -33,6 +34,7 @@ import time
 import threading
 import urllib.request
 import urllib.error
+import urllib.parse
 import argparse
 import glob
 from pathlib import Path
@@ -493,6 +495,20 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 self._json_response(502, {"error": f"Ollama unreachable: {e}"})
 
+        elif self.path.startswith("/api/read-file"):
+            # Read a local file by path (for IDE file-path auto-attach)
+            # Accept path as query param: /api/read-file?path=D:/rawrxd/src/file.cpp
+            file_path = None
+            if "?" in self.path:
+                qs = self.path.split("?", 1)[1]
+                for part in qs.split("&"):
+                    if part.startswith("path="):
+                        file_path = urllib.parse.unquote(part[5:])
+            if file_path:
+                self._read_local_file(file_path)
+            else:
+                self._json_response(400, {"error": "Missing 'path' query parameter"})
+
         else:
             self._json_response(404, {"error": "not_found", "message": f"Unknown: {self.path}"})
 
@@ -717,8 +733,85 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
             else:
                 self._json_response(400, {"error": f"Unknown action: {action}"})
 
+        elif self.path == "/api/read-file":
+            # Read a local file by path (POST version for IDE file-path auto-attach)
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            file_path = data.get("path")
+            if file_path:
+                self._read_local_file(file_path)
+            else:
+                self._json_response(400, {"error": "Missing 'path' field"})
+
         else:
             self._json_response(404, {"error": "not_found"})
+
+    # ---- Local file reader for IDE file-path auto-attach ----
+    def _read_local_file(self, file_path):
+        """Read a local file and return its content as JSON.
+        Security: Only allows reading from project directories and common code locations.
+        """
+        # Normalize path
+        file_path = file_path.replace("\\", "/")
+        resolved = Path(file_path).resolve()
+
+        # Security: Only allow reading from safe directories
+        allowed_roots = [
+            PROJECT_ROOT,                          # D:/rawrxd/
+            Path("D:/rawrxd").resolve(),
+            Path("C:/RawrXD").resolve(),
+            Path.home(),                            # User home
+        ]
+        # Also allow any path under the drive roots (local-only tool)
+        is_safe = any(
+            str(resolved).startswith(str(root)) for root in allowed_roots
+        )
+        # For local-only use: allow all local paths but block network paths
+        if str(resolved).startswith("\\\\") or str(resolved).startswith("//"):
+            self._json_response(403, {
+                "error": "forbidden",
+                "message": "Network paths are not allowed",
+            })
+            return
+
+        if not resolved.exists():
+            self._json_response(404, {
+                "error": "file_not_found",
+                "message": f"File not found: {file_path}",
+            })
+            return
+
+        if not resolved.is_file():
+            self._json_response(400, {
+                "error": "not_a_file",
+                "message": f"Path is not a file: {file_path}",
+            })
+            return
+
+        # Size limit: 2MB for text files
+        if resolved.stat().st_size > 2 * 1024 * 1024:
+            self._json_response(413, {
+                "error": "file_too_large",
+                "message": f"File too large ({resolved.stat().st_size} bytes). Max: 2MB",
+            })
+            return
+
+        try:
+            content = resolved.read_text(encoding="utf-8", errors="replace")
+            self._json_response(200, {
+                "content": content,
+                "name": resolved.name,
+                "path": str(resolved),
+                "size": len(content),
+            })
+        except Exception as e:
+            self._json_response(500, {
+                "error": "read_failed",
+                "message": f"Failed to read file: {e}",
+            })
 
     def _json_response(self, status, obj):
         body = json.dumps(obj).encode("utf-8")
@@ -775,6 +868,7 @@ def main():
     print(f"  ║  GET  /api/failures         (failure intel)     ║")
     print(f"  ║  GET  /api/agents/status    (agent dashboard)   ║")
     print(f"  ║  POST /api/agents/replay    (replay actions)    ║")
+    print(f"  ║  POST /api/read-file        (local file read)   ║")
     print(f"  ╠══════════════════════════════════════════════════╣")
     print(f"  ║  Phase 4: Security & Hardening                  ║")
     print(f"  ║  Max Body:   {MAX_REQUEST_BODY // (1024*1024):>3} MB                              ║")

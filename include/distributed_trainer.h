@@ -3,10 +3,33 @@
 #include <QString>
 #include <QObject>
 #include <QJsonObject>
+#include <QMap>
+#include <QThread>
 #include <vector>
 #include <map>
 #include <memory>
 #include <cstdint>
+#include <chrono>
+#include <string>
+
+// Inference error codes used by distributed training error reporting
+enum class InferenceErrorCode {
+    SUCCESS = 0,
+    MODEL_LOAD_FAILED = 4001,
+    INVALID_MODEL_PATH = 4002,
+    UNSUPPORTED_MODEL_FORMAT = 4003,
+    TOKENIZER_NOT_INITIALIZED = 4101,
+    TOKENIZATION_FAILED = 4102,
+    EMPTY_REQUEST = 4201,
+    PROMPT_TOO_LONG = 4202,
+    INVALID_GENERATION_PARAMETERS = 4203,
+    REQUEST_TIMEOUT = 4204,
+    INSUFFICIENT_MEMORY = 4301,
+    REQUEST_QUEUE_FULL = 4302,
+    TRANSFORMER_ERROR = 4401,
+    INFERENCE_FAILURE = 4402,
+    OUTPUT_GENERATION_FAILURE = 4403,
+};
 
 /**
  * @class DistributedTrainer
@@ -105,11 +128,23 @@ public:
     ~DistributedTrainer();
 
     /**
-     * @brief Initialize distributed training
+     * @brief Initialize distributed training (uppercase API)
      * @param config Trainer configuration
      * @return true if successful
      */
-    bool initialize(const TrainerConfig& config);
+    bool Initialize(const TrainerConfig& config);
+
+    /**
+     * @brief Shut down distributed training and release resources
+     */
+    void Shutdown();
+
+    /**
+     * @brief Initialize distributed training (lowercase alias)
+     * @param config Trainer configuration
+     * @return true if successful
+     */
+    bool initialize(const TrainerConfig& config) { return Initialize(config); }
 
     /**
      * @brief Check if initialized and ready for training
@@ -377,6 +412,47 @@ public:
      */
     bool loadConfiguration(const QJsonObject& config);
 
+    // ===== Training Operations =====
+    /**
+     * @brief Execute a single training step
+     * @param batchData Batch data as JSON
+     * @param lossOut Optional pointer to receive computed loss
+     * @return true if successful
+     */
+    bool TrainStep(const QJsonObject& batchData, float* lossOut = nullptr);
+
+    /**
+     * @brief Save a training checkpoint
+     * @param path Directory path for checkpoint
+     * @return true if successful
+     */
+    bool Checkpoint(const QString& path);
+
+    /**
+     * @brief Restore training state from a checkpoint
+     * @param path Path to checkpoint directory
+     * @return true if successful
+     */
+    bool RestoreFromCheckpoint(const QString& path);
+
+    /**
+     * @brief Get current training metrics as JSON
+     * @return Metrics object
+     */
+    QJsonObject GetMetrics() const;
+
+    /**
+     * @brief Get all detected devices
+     * @return Vector of DeviceInfo
+     */
+    std::vector<DeviceInfo> GetDevices() const;
+
+    /**
+     * @brief Get performance data for all nodes
+     * @return Vector of NodePerformance
+     */
+    std::vector<NodePerformance> GetNodePerformance() const;
+
 signals:
     /// Emitted when synchronization between processes completes
     void synchronizationCompleted(int worldSize);
@@ -402,28 +478,134 @@ signals:
     /// Emitted when checkpointing completes
     void checkpointCompleted(int stepNumber, const QString& path);
 
+    /// Emitted when status changes (initialization, shutdown, etc.)
+    void statusChanged(const QString& status);
+
+    /// Emitted after each training step
+    void trainingStepCompleted(uint64_t globalStep, float loss);
+
+    /// Emitted after gradient synchronization
+    void gradientsSynchronized(float syncTimeMs);
+
+    /// Emitted when a checkpoint is saved
+    void checkpointSaved(const QString& path);
+
+    /// Emitted when a checkpoint is restored
+    void checkpointRestored(const QString& path);
+
+    /// Emitted when a failed node recovers
+    void nodeRecovered(int rank);
+
+    /// Emitted when per-node metrics are updated
+    void metricsUpdated(const NodePerformance& metrics);
+
+    /// Emitted on error
+    void errorOccurred(const QString& message);
+
 private:
+    // ===== Private Helper Methods =====
+
+    /// Validate configuration before initialization
+    bool validateConfig() const;
+
+    /// Initialize selected communication backend
+    bool initializeBackend();
+    void cleanupBackend();
+
+    /// Backend-specific initialization
+    bool initializeNCCL();
+    bool initializeGloo();
+    bool initializeMPI();
+
+    /// Device detection
+    bool detectDevices();
+    void detectCUDADevices();
+
+    /// Process group management
+    bool setupProcessGroup();
+    void cleanupProcessGroup();
+
+    /// Load balancing internals
+    void initializeLoadBalancer();
+    void balanceLoad();
+    void updateDeviceLoads();
+    void redistributeWork();
+
+    /// Fault tolerance internals
+    void initializeFaultTolerance();
+    void checkNodeHealth();
+    bool isNodeHealthy(const NodePerformance& metrics) const;
+    void handleNodeFailure(int rank);
+
+    /// Training step internals
+    bool forwardPass(const QJsonObject& batchData);
+    bool backwardPass();
+    bool optimizerStep();
+    bool synchronizeGradients();
+    bool allReduceGradients();
+    void compressGradients();
+    void decompressGradients();
+
+    /// Metrics
+    void updateMetrics(float stepTimeMs);
+
+    /// Error logging
+    void logError(const QString& message, InferenceErrorCode code);
+
+    // ===== Member Data =====
+
     TrainerConfig m_config;
-    bool m_initialized;
-    int m_primaryDevice;
-    
+    bool m_initialized = false;
+    int m_primaryDevice = 0;
+
+    // Device management
+    std::vector<DeviceInfo> m_devices;
+    QMap<int, float> m_deviceWorkloads;
+
+    // Node metrics (per-rank performance)
+    QMap<int, NodePerformance> m_nodeMetrics;
+
     // Performance tracking
     std::vector<float> m_communicationLatencies;
     std::vector<float> m_throughputs;
     std::map<int, NodePerformance> m_nodePerformance;
-    
+
+    // Training state
+    uint64_t m_globalStep = 0;
+    float m_currentLoss = 0.0f;
+    std::vector<float> m_recentStepTimes;
+    float m_averageStepTimeMs = 0.0f;
+    float m_lastSyncTimeMs = 0.0f;
+
     // Gradient accumulation state
-    int m_accumStepIndex;
-    int m_accumStepTarget;
+    int m_accumStepIndex = 0;
+    int m_accumStepTarget = 1;
+    int m_currentGradAccumStep = 0;
     std::vector<float> m_accumulatedGradients;
-    
+
     // Checkpointing
     QString m_checkpointDir;
-    int m_checkpointInterval;
-    
+    int m_checkpointInterval = 0;
+    QString m_lastCheckpointPath;
+
     // Load balancing
     std::map<int, float> m_nodeLoads;
     std::map<int, float> m_nodeThroughputs;
+
+    // Backend-specific state
+    bool m_ncclSimulated = false;
+    QString m_glooTransport;
+    std::string m_ncclUniqueId;
+
+    // Fault tolerance
+    bool m_faultDetectionEnabled = false;
+    std::chrono::steady_clock::time_point m_lastHealthCheck;
+
+    // Gradient compression state
+    QByteArray m_compressedGradientData;
+    std::vector<float> m_previousGradients;  // For delta compression
+    float m_quantScale = 1.0f;               // For INT8 quantization
+    float m_lastGradientNorm = 0.0f;         // Gradient norm from backward pass
 
     // Compression utilities
     QByteArray compressTopK(const float* gradients, int numElements, float compressionRatio);

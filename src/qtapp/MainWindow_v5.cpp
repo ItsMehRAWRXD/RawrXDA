@@ -1194,7 +1194,28 @@ void MainWindow::showPreferences()
     mainLayout->addWidget(buttons);
     
     if (dialog->exec() == QDialog::Accepted) {
-        // TODO: Save preferences to QSettings
+        // Save user preferences to QSettings
+        QSettings settings("RawrXD", "RawrXD-Shell");
+        settings.beginGroup("Preferences");
+        
+        // Save editor preferences from dialog widgets
+        for (auto* child : dialog->findChildren<QComboBox*>()) {
+            settings.setValue(child->objectName(), child->currentText());
+        }
+        for (auto* child : dialog->findChildren<QSpinBox*>()) {
+            settings.setValue(child->objectName(), child->value());
+        }
+        for (auto* child : dialog->findChildren<QCheckBox*>()) {
+            settings.setValue(child->objectName(), child->isChecked());
+        }
+        for (auto* child : dialog->findChildren<QLineEdit*>()) {
+            if (!child->objectName().isEmpty()) {
+                settings.setValue(child->objectName(), child->text());
+            }
+        }
+        
+        settings.endGroup();
+        settings.sync();
         statusBar()->showMessage("Preferences saved", 3000);
     }
     

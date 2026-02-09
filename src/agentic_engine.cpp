@@ -7,6 +7,13 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <fstream>
+#include <regex>
+#include <filesystem>
+#include <stack>
+#include <unordered_map>
+#include <unordered_set>
+#include <numeric>
 
 AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
 
@@ -29,8 +36,142 @@ std::string AgenticEngine::detectPatterns(const std::string& code) {
 }
 
 std::string AgenticEngine::calculateMetrics(const std::string& code) {
-    // Stubbed actual calculation
-    return "{ \"complexity\": \"O(n)\", \"lines\": " + std::to_string(std::count(code.begin(), code.end(), '\n')) + " }";
+    // Real code metrics calculation
+    size_t totalLines = 0;
+    size_t codeLines = 0;
+    size_t commentLines = 0;
+    size_t blankLines = 0;
+    size_t functionCount = 0;
+    size_t classCount = 0;
+    int maxNestingDepth = 0;
+    int currentNesting = 0;
+    int cyclomaticComplexity = 1; // Base complexity
+    size_t totalTokens = 0;
+    bool inBlockComment = false;
+
+    std::istringstream stream(code);
+    std::string line;
+
+    while (std::getline(stream, line)) {
+        totalLines++;
+        
+        // Trim whitespace
+        std::string trimmed = line;
+        size_t start = trimmed.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos) {
+            blankLines++;
+            continue;
+        }
+        trimmed = trimmed.substr(start);
+
+        // Handle block comments
+        if (inBlockComment) {
+            commentLines++;
+            if (trimmed.find("*/") != std::string::npos) {
+                inBlockComment = false;
+            }
+            continue;
+        }
+
+        if (trimmed.substr(0, 2) == "/*") {
+            commentLines++;
+            if (trimmed.find("*/") == std::string::npos) {
+                inBlockComment = true;
+            }
+            continue;
+        }
+
+        if (trimmed.substr(0, 2) == "//" || trimmed[0] == '#') {
+            commentLines++;
+            continue;
+        }
+
+        codeLines++;
+
+        // Count tokens (rough: whitespace-separated + operators)
+        for (size_t i = 0; i < trimmed.size(); i++) {
+            if (trimmed[i] == ' ' || trimmed[i] == '\t') totalTokens++;
+        }
+        totalTokens++; // for last token on line
+
+        // Nesting depth tracking
+        for (char c : line) {
+            if (c == '{') {
+                currentNesting++;
+                if (currentNesting > maxNestingDepth) {
+                    maxNestingDepth = currentNesting;
+                }
+            } else if (c == '}') {
+                currentNesting--;
+            }
+        }
+
+        // Cyclomatic complexity: count decision points
+        // if, else if, for, while, case, catch, &&, ||, ?:
+        static const std::regex decisionPattern(
+            R"(\b(if|else\s+if|for|while|case|catch|switch)\b|\&\&|\|\||\?)"
+        );
+        std::sregex_iterator it(trimmed.begin(), trimmed.end(), decisionPattern);
+        std::sregex_iterator end;
+        cyclomaticComplexity += static_cast<int>(std::distance(it, end));
+
+        // Function detection (C/C++/Java/JS patterns)
+        static const std::regex funcPattern(
+            R"(\b\w+\s+\w+\s*\([^)]*\)\s*(\{|$))"
+        );
+        if (std::regex_search(trimmed, funcPattern)) {
+            functionCount++;
+        }
+
+        // Class detection
+        static const std::regex classPattern(
+            R"(\b(class|struct|interface|enum)\s+\w+)"
+        );
+        if (std::regex_search(trimmed, classPattern)) {
+            classCount++;
+        }
+    }
+
+    // Compute Halstead-inspired complexity estimate
+    double maintainabilityIndex = 0.0;
+    if (codeLines > 0 && totalTokens > 0) {
+        double halsteadVolume = static_cast<double>(totalTokens) * std::log2(static_cast<double>(totalTokens));
+        maintainabilityIndex = std::max(0.0,
+            171.0 - 5.2 * std::log(halsteadVolume) - 0.23 * cyclomaticComplexity - 16.2 * std::log(static_cast<double>(codeLines)));
+    }
+
+    // Estimate algorithmic complexity based on nesting depth and patterns
+    std::string estimatedComplexity;
+    if (maxNestingDepth <= 1) estimatedComplexity = "O(n)";
+    else if (maxNestingDepth == 2) estimatedComplexity = "O(n^2)";
+    else if (maxNestingDepth == 3) estimatedComplexity = "O(n^3)";
+    else estimatedComplexity = "O(n^" + std::to_string(maxNestingDepth) + ")";
+
+    // Check for logarithmic patterns (binary search, divide-and-conquer)
+    if (code.find("/= 2") != std::string::npos || code.find(">> 1") != std::string::npos ||
+        code.find("/ 2") != std::string::npos) {
+        if (maxNestingDepth <= 2) estimatedComplexity = "O(n log n)";
+        else if (maxNestingDepth <= 1) estimatedComplexity = "O(log n)";
+    }
+
+    // Build JSON result
+    std::ostringstream json;
+    json << "{\n"
+         << "  \"totalLines\": " << totalLines << ",\n"
+         << "  \"codeLines\": " << codeLines << ",\n"
+         << "  \"commentLines\": " << commentLines << ",\n"
+         << "  \"blankLines\": " << blankLines << ",\n"
+         << "  \"commentRatio\": " << (totalLines > 0 ? static_cast<double>(commentLines) / totalLines : 0.0) << ",\n"
+         << "  \"functionCount\": " << functionCount << ",\n"
+         << "  \"classCount\": " << classCount << ",\n"
+         << "  \"cyclomaticComplexity\": " << cyclomaticComplexity << ",\n"
+         << "  \"maxNestingDepth\": " << maxNestingDepth << ",\n"
+         << "  \"estimatedComplexity\": \"" << estimatedComplexity << "\",\n"
+         << "  \"maintainabilityIndex\": " << static_cast<int>(maintainabilityIndex) << ",\n"
+         << "  \"tokens\": " << totalTokens << "\n"
+         << "}";
+
+    return json.str();
 }
 
 std::string AgenticEngine::suggestImprovements(const std::string& code) {
@@ -102,10 +243,285 @@ bool AgenticEngine::validateInput(const std::string&) { return true; }
 std::string AgenticEngine::sanitizeCode(const std::string& code) { return code; }
 bool AgenticEngine::isCommandSafe(const std::string&) { return true; }
 
-std::string AgenticEngine::grepFiles(const std::string&, const std::string&) { return ""; }
-std::string AgenticEngine::readFile(const std::string&, int, int) { return ""; }
-std::string AgenticEngine::searchFiles(const std::string& query, const std::string& path) { return ""; }
-std::string AgenticEngine::referenceSymbol(const std::string&) { return ""; }
+std::string AgenticEngine::grepFiles(const std::string& pattern, const std::string& path) {
+    std::ostringstream results;
+    int matchCount = 0;
+    const int maxResults = 500;
+
+    try {
+        std::regex searchRegex(pattern, std::regex::ECMAScript | std::regex::icase);
+        std::string searchPath = path.empty() ? "." : path;
+
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(
+                searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+            if (!entry.is_regular_file()) continue;
+            if (matchCount >= maxResults) break;
+
+            // Skip binary and large files
+            auto ext = entry.path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            static const std::unordered_set<std::string> textExts = {
+                ".cpp", ".hpp", ".h", ".c", ".cc", ".cxx", ".hxx",
+                ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".cs",
+                ".go", ".rs", ".rb", ".php", ".swift", ".kt",
+                ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".cfg",
+                ".md", ".txt", ".cmake", ".sh", ".bat", ".ps1",
+                ".html", ".css", ".scss", ".less", ".sql", ".asm"
+            };
+            if (!textExts.count(ext)) continue;
+
+            auto fileSize = entry.file_size();
+            if (fileSize > 10 * 1024 * 1024) continue; // Skip >10MB
+
+            std::ifstream file(entry.path(), std::ios::in);
+            if (!file.is_open()) continue;
+
+            std::string line;
+            int lineNum = 0;
+            while (std::getline(file, line)) {
+                lineNum++;
+                if (matchCount >= maxResults) break;
+
+                if (std::regex_search(line, searchRegex)) {
+                    results << entry.path().string() << ":" << lineNum << ": " << line << "\n";
+                    matchCount++;
+                }
+            }
+        }
+    } catch (const std::regex_error& e) {
+        // Fall back to literal string search
+        std::string searchPath = path.empty() ? "." : path;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(
+                searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+            if (!entry.is_regular_file()) continue;
+            if (matchCount >= maxResults) break;
+
+            std::ifstream file(entry.path(), std::ios::in);
+            if (!file.is_open()) continue;
+
+            std::string line;
+            int lineNum = 0;
+            while (std::getline(file, line)) {
+                lineNum++;
+                if (matchCount >= maxResults) break;
+                if (line.find(pattern) != std::string::npos) {
+                    results << entry.path().string() << ":" << lineNum << ": " << line << "\n";
+                    matchCount++;
+                }
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        results << "[Error: " << e.what() << "]\n";
+    }
+
+    if (matchCount == 0) return "[No matches found for: " + pattern + "]\n";
+    return results.str();
+}
+
+std::string AgenticEngine::readFile(const std::string& filePath, int startLine, int endLine) {
+    std::ifstream file(filePath, std::ios::in);
+    if (!file.is_open()) {
+        return "[Error: Cannot open file: " + filePath + "]";
+    }
+
+    std::ostringstream result;
+    std::string line;
+    int lineNum = 0;
+
+    // Default: read entire file if no range specified
+    if (startLine <= 0 && endLine <= 0) {
+        startLine = 1;
+        endLine = std::numeric_limits<int>::max();
+    }
+    if (startLine <= 0) startLine = 1;
+    if (endLine <= 0) endLine = std::numeric_limits<int>::max();
+
+    // Cap range to prevent excessive reads
+    if (endLine - startLine > 10000) {
+        endLine = startLine + 10000;
+    }
+
+    while (std::getline(file, line)) {
+        lineNum++;
+        if (lineNum < startLine) continue;
+        if (lineNum > endLine) break;
+        result << lineNum << "| " << line << "\n";
+    }
+
+    if (lineNum < startLine) {
+        return "[Error: File has only " + std::to_string(lineNum) + " lines, requested start at " + std::to_string(startLine) + "]";
+    }
+
+    return result.str();
+}
+
+std::string AgenticEngine::searchFiles(const std::string& query, const std::string& path) {
+    std::ostringstream results;
+    int matchCount = 0;
+    const int maxResults = 100;
+
+    try {
+        std::string searchPath = path.empty() ? "." : path;
+
+        // Tokenize query into search terms
+        std::vector<std::string> terms;
+        std::istringstream iss(query);
+        std::string term;
+        while (iss >> term) {
+            std::transform(term.begin(), term.end(), term.begin(), ::tolower);
+            terms.push_back(term);
+        }
+
+        if (terms.empty()) return "[Error: Empty search query]\n";
+
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(
+                searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+            if (!entry.is_regular_file()) continue;
+            if (matchCount >= maxResults) break;
+
+            // Check filename match first
+            std::string filename = entry.path().filename().string();
+            std::string filenameLower = filename;
+            std::transform(filenameLower.begin(), filenameLower.end(), filenameLower.begin(), ::tolower);
+
+            bool filenameMatch = false;
+            for (const auto& t : terms) {
+                if (filenameLower.find(t) != std::string::npos) {
+                    filenameMatch = true;
+                    break;
+                }
+            }
+
+            if (filenameMatch) {
+                results << "[FILE] " << entry.path().string() << " (" << entry.file_size() << " bytes)\n";
+                matchCount++;
+                continue;
+            }
+
+            // Check file contents for text files
+            auto ext = entry.path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            static const std::unordered_set<std::string> textExts = {
+                ".cpp", ".hpp", ".h", ".c", ".py", ".js", ".ts", ".java",
+                ".json", ".xml", ".yaml", ".yml", ".md", ".txt", ".cmake"
+            };
+            if (!textExts.count(ext)) continue;
+            if (entry.file_size() > 5 * 1024 * 1024) continue;
+
+            std::ifstream file(entry.path(), std::ios::in);
+            if (!file.is_open()) continue;
+
+            std::string content((std::istreambuf_iterator<char>(file)),
+                                 std::istreambuf_iterator<char>());
+            std::string contentLower = content;
+            std::transform(contentLower.begin(), contentLower.end(), contentLower.begin(), ::tolower);
+
+            // Score by number of terms found
+            int score = 0;
+            for (const auto& t : terms) {
+                if (contentLower.find(t) != std::string::npos) score++;
+            }
+
+            if (score > 0) {
+                results << "[CONTENT score=" << score << "/" << terms.size() << "] " 
+                        << entry.path().string() << "\n";
+                matchCount++;
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        results << "[Error: " << e.what() << "]\n";
+    }
+
+    if (matchCount == 0) return "[No files found matching: " + query + "]\n";
+    return results.str();
+}
+
+std::string AgenticEngine::referenceSymbol(const std::string& symbol) {
+    // Find all references to a symbol across the codebase
+    // Uses simple text search with word-boundary awareness
+    std::ostringstream results;
+    int defCount = 0;
+    int refCount = 0;
+    const int maxResults = 200;
+
+    try {
+        // Build patterns for different reference types
+        std::regex defPattern(
+            R"(\b(class|struct|enum|void|int|bool|auto|float|double|string|char|unsigned|signed|long|short)\s+)" 
+            + symbol + R"(\b)",
+            std::regex::ECMAScript
+        );
+        std::regex callPattern(
+            symbol + R"(\s*\()",
+            std::regex::ECMAScript
+        );
+        std::regex memberPattern(
+            R"((\.|->|::))" + symbol + R"(\b)",
+            std::regex::ECMAScript
+        );
+
+        std::string searchPath = ".";
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(
+                searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+            if (!entry.is_regular_file()) continue;
+            if (defCount + refCount >= maxResults) break;
+
+            auto ext = entry.path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            static const std::unordered_set<std::string> codeExts = {
+                ".cpp", ".hpp", ".h", ".c", ".cc", ".cxx", ".hxx",
+                ".py", ".js", ".ts", ".java", ".cs", ".go", ".rs"
+            };
+            if (!codeExts.count(ext)) continue;
+            if (entry.file_size() > 5 * 1024 * 1024) continue;
+
+            std::ifstream file(entry.path(), std::ios::in);
+            if (!file.is_open()) continue;
+
+            std::string line;
+            int lineNum = 0;
+            while (std::getline(file, line)) {
+                lineNum++;
+                if (defCount + refCount >= maxResults) break;
+
+                // Check for symbol anywhere in line first (fast path)
+                if (line.find(symbol) == std::string::npos) continue;
+
+                // Classify the reference
+                if (std::regex_search(line, defPattern)) {
+                    results << "[DEF] " << entry.path().string() << ":" << lineNum << ": " << line << "\n";
+                    defCount++;
+                } else if (std::regex_search(line, callPattern)) {
+                    results << "[CALL] " << entry.path().string() << ":" << lineNum << ": " << line << "\n";
+                    refCount++;
+                } else if (std::regex_search(line, memberPattern)) {
+                    results << "[MEMBER] " << entry.path().string() << ":" << lineNum << ": " << line << "\n";
+                    refCount++;
+                } else {
+                    // Generic reference
+                    results << "[REF] " << entry.path().string() << ":" << lineNum << ": " << line << "\n";
+                    refCount++;
+                }
+            }
+        }
+    } catch (const std::regex_error&) {
+        // Fall back to simple string search
+        return grepFiles(symbol, ".");
+    } catch (const std::filesystem::filesystem_error& e) {
+        results << "[Error: " << e.what() << "]\n";
+    }
+
+    std::ostringstream summary;
+    summary << "=== Symbol: " << symbol << " ===\n"
+            << "Definitions: " << defCount << " | References: " << refCount << "\n\n"
+            << results.str();
+
+    if (defCount + refCount == 0) {
+        return "[No references found for symbol: " + symbol + "]\n";
+    }
+
+    return summary.str();
+}
 
 void AgenticEngine::updateConfig(const GenerationConfig& config) {
     m_config = config;

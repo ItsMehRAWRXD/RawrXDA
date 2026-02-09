@@ -598,7 +598,7 @@ std::string CLIAutonomyLoop::getDetailedStatus() const {
 
     // Decision tree info
     auto& tree = AgenticDecisionTree::instance();
-    auto treeStats = tree.getStats();
+    const auto& treeStats = tree.getStats();
     oss << "\n🌳 Decision Tree Stats:\n";
     oss << "  Trees evaluated:   " << treeStats.treesEvaluated.load() << "\n";
     oss << "  Nodes visited:     " << treeStats.nodesVisited.load() << "\n";

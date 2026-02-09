@@ -188,6 +188,9 @@ static void DecompView_BuildAddressMap(DecompViewState* state);
 static void DecompView_ShowRenameDialog(DecompViewState* state, int lineIdx, int varRefIdx);
 static void DecompView_PropagateRename(DecompViewState* state, const std::string& oldName,
                                         const std::string& newName, int ssaId);
+static void DecompView_GotoDefinition(DecompViewState* state, int lineIdx, int varRefIdx);
+static void DecompView_FindAllReferences(DecompViewState* state, HWND hwndParent,
+                                          int lineIdx, int varRefIdx);
 static std::string DecompView_ApplyRenames(DecompViewState* state, const std::string& text,
                                             const std::vector<DecompLine::VarRef>& refs);
 static int DecompView_HitTestLine(int mouseY, int scrollY);
@@ -1087,6 +1090,286 @@ static void DecompView_PropagateRename(DecompViewState* state, const std::string
 }
 
 // ============================================================================
+// GO TO DEFINITION — navigate to the first assignment/definition of a variable
+// ============================================================================
+static void DecompView_GotoDefinition(DecompViewState* state, int lineIdx, int varRefIdx) {
+    if (!state || lineIdx < 0 || lineIdx >= (int)state->decompLines.size()) return;
+    if (varRefIdx < 0 || varRefIdx >= (int)state->decompLines[lineIdx].varRefs.size()) return;
+
+    const auto& vr = state->decompLines[lineIdx].varRefs[varRefIdx];
+    int targetLine = -1;
+
+    // Strategy 1: If SSA-tracked, find the first line where this SSA ID appears
+    // (the defining occurrence — typically the earliest line with an assignment)
+    if (vr.ssaId >= 0) {
+        auto it = state->ssaIdToDecompLines.find(vr.ssaId);
+        if (it != state->ssaIdToDecompLines.end() && !it->second.empty()) {
+            // The earliest line is the definition site (SSA: single assignment)
+            targetLine = it->second.front();
+
+            // Refine: scan for the line that actually contains an assignment operator
+            // with this variable on the left-hand side
+            for (int idx : it->second) {
+                if (idx < 0 || idx >= (int)state->decompLines.size()) continue;
+                const std::string& text = state->decompLines[idx].text;
+                // Look for "varName =" pattern (assignment, not ==)
+                for (const auto& ref : state->decompLines[idx].varRefs) {
+                    if (ref.ssaId == vr.ssaId) {
+                        int afterVar = ref.charStart + ref.charLen;
+                        // Skip whitespace after variable name
+                        while (afterVar < (int)text.size() && text[afterVar] == ' ') afterVar++;
+                        // Check for '=' but not '==' or '!='
+                        if (afterVar < (int)text.size() && text[afterVar] == '=' &&
+                            (afterVar + 1 >= (int)text.size() || text[afterVar + 1] != '=')) {
+                            targetLine = idx;
+                            goto found_def;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Strategy 2: Search by variable name for the first assignment
+    if (targetLine < 0) {
+        const std::string& varName = vr.varName;
+        for (int i = 0; i < (int)state->decompLines.size(); ++i) {
+            for (const auto& ref : state->decompLines[i].varRefs) {
+                if (ref.varName == varName || (vr.ssaId >= 0 && ref.ssaId == vr.ssaId)) {
+                    const std::string& text = state->decompLines[i].text;
+                    int afterVar = ref.charStart + ref.charLen;
+                    while (afterVar < (int)text.size() && text[afterVar] == ' ') afterVar++;
+                    if (afterVar < (int)text.size() && text[afterVar] == '=' &&
+                        (afterVar + 1 >= (int)text.size() || text[afterVar + 1] != '=')) {
+                        targetLine = i;
+                        goto found_def;
+                    }
+                }
+            }
+        }
+        // Fallback: first occurrence of this variable at all
+        for (int i = 0; i < (int)state->decompLines.size(); ++i) {
+            for (const auto& ref : state->decompLines[i].varRefs) {
+                if (ref.varName == varName) {
+                    targetLine = i;
+                    goto found_def;
+                }
+            }
+        }
+    }
+
+found_def:
+    if (targetLine >= 0 && targetLine < (int)state->decompLines.size()) {
+        state->selectedDecompLine = targetLine;
+        DecompView_SyncFromDecomp(state, targetLine);
+
+        // Scroll decompiler pane to the definition line
+        if (state->hwndDecompPane) {
+            RECT rc;
+            GetClientRect(state->hwndDecompPane, &rc);
+            int visibleLines = (int)((rc.bottom - rc.top) / DECOMP_LINE_HEIGHT);
+            int targetY = (int)(targetLine * DECOMP_LINE_HEIGHT);
+            // Center the target line vertically
+            state->decompScrollY = std::max(0, targetY - (int)((visibleLines / 2) * DECOMP_LINE_HEIGHT));
+            state->decompScrollY = std::min(state->decompScrollY, state->decompMaxScroll);
+            InvalidateRect(state->hwndDecompPane, NULL, FALSE);
+        }
+        if (state->hwndDisasmPane) InvalidateRect(state->hwndDisasmPane, NULL, FALSE);
+    }
+}
+
+// ============================================================================
+// FIND ALL REFERENCES — collect and display all lines referencing a variable
+// ============================================================================
+static void DecompView_FindAllReferences(DecompViewState* state, HWND hwndParent,
+                                          int lineIdx, int varRefIdx) {
+    if (!state || lineIdx < 0 || lineIdx >= (int)state->decompLines.size()) return;
+    if (varRefIdx < 0 || varRefIdx >= (int)state->decompLines[lineIdx].varRefs.size()) return;
+
+    const auto& vr = state->decompLines[lineIdx].varRefs[varRefIdx];
+    std::vector<int> refLines;
+
+    // Collect all lines containing this variable by SSA ID or by name
+    if (vr.ssaId >= 0) {
+        auto it = state->ssaIdToDecompLines.find(vr.ssaId);
+        if (it != state->ssaIdToDecompLines.end()) {
+            refLines = it->second;
+        }
+    }
+    // Also collect by name (may catch non-SSA-tracked aliases)
+    for (int i = 0; i < (int)state->decompLines.size(); ++i) {
+        for (const auto& ref : state->decompLines[i].varRefs) {
+            if (ref.varName == vr.varName) {
+                // Avoid duplicates
+                bool already = false;
+                for (int existing : refLines) {
+                    if (existing == i) { already = true; break; }
+                }
+                if (!already) refLines.push_back(i);
+            }
+        }
+    }
+    std::sort(refLines.begin(), refLines.end());
+
+    if (refLines.empty()) return;
+
+    // Build a display string for the results dialog
+    std::string displayName = vr.varName;
+    auto renameIt = state->varRenameMap.find(vr.varName);
+    if (renameIt != state->varRenameMap.end()) displayName = renameIt->second;
+
+    std::string resultsText;
+    resultsText += "References to '" + displayName + "'";
+    if (vr.ssaId >= 0) resultsText += " (SSA v" + std::to_string(vr.ssaId) + ")";
+    resultsText += ":\r\n\r\n";
+    for (int idx : refLines) {
+        char lineLabel[32];
+        snprintf(lineLabel, sizeof(lineLabel), "  Line %d: ", idx + 1);
+        resultsText += lineLabel;
+        if (idx >= 0 && idx < (int)state->decompLines.size()) {
+            std::string text = state->decompLines[idx].text;
+            // Trim leading whitespace for display
+            size_t trimStart = 0;
+            while (trimStart < text.size() && (text[trimStart] == ' ' || text[trimStart] == '\t'))
+                trimStart++;
+            resultsText += text.substr(trimStart);
+        }
+        resultsText += "\r\n";
+    }
+    resultsText += "\r\nTotal: " + std::to_string(refLines.size()) + " reference(s)";
+
+    // Show results in a resizable popup with a listbox for click-to-navigate
+    HWND hwndDlg = CreateWindowExA(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        "#32770",
+        ("Find All References — " + displayName).c_str(),
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_THICKFRAME,
+        CW_USEDEFAULT, CW_USEDEFAULT, 600, 400,
+        hwndParent, NULL, GetModuleHandle(NULL), NULL);
+    if (!hwndDlg) return;
+
+    // Center
+    RECT rcOwner, rcDlg;
+    GetWindowRect(hwndParent, &rcOwner);
+    GetWindowRect(hwndDlg, &rcDlg);
+    int xp = rcOwner.left + ((rcOwner.right - rcOwner.left) - (rcDlg.right - rcDlg.left)) / 2;
+    int yp = rcOwner.top + ((rcOwner.bottom - rcOwner.top) - (rcDlg.bottom - rcDlg.top)) / 2;
+    SetWindowPos(hwndDlg, HWND_TOPMOST, xp, yp, 0, 0, SWP_NOSIZE);
+
+    // Create listbox
+    RECT rcClient;
+    GetClientRect(hwndDlg, &rcClient);
+    HWND hwndList = CreateWindowExA(
+        WS_EX_CLIENTEDGE, "LISTBOX", "",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT,
+        4, 4, rcClient.right - 8, rcClient.bottom - 40,
+        hwndDlg, (HMENU)200, GetModuleHandle(NULL), NULL);
+
+    // Close button
+    HWND hwndClose = CreateWindowExA(
+        0, "BUTTON", "Close",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
+        rcClient.right - 90, rcClient.bottom - 32, 80, 26,
+        hwndDlg, (HMENU)IDCANCEL, GetModuleHandle(NULL), NULL);
+
+    // Font
+    HFONT hFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                               DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, FIXED_PITCH, "Cascadia Code");
+    if (!hFont) {
+        hFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                             DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, FIXED_PITCH, "Consolas");
+    }
+    if (hFont) {
+        SendMessage(hwndList, WM_SETFONT, (WPARAM)hFont, TRUE);
+    }
+
+    // Populate listbox with results
+    for (int idx : refLines) {
+        char entry[512];
+        std::string text;
+        if (idx >= 0 && idx < (int)state->decompLines.size()) {
+            text = state->decompLines[idx].text;
+            size_t trimStart = 0;
+            while (trimStart < text.size() && (text[trimStart] == ' ' || text[trimStart] == '\t'))
+                trimStart++;
+            text = text.substr(trimStart);
+        }
+        snprintf(entry, sizeof(entry), "Line %d: %s", idx + 1, text.c_str());
+        SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)entry);
+        // Store the decompiler line index as item data for navigation
+        int lbIdx = (int)SendMessageA(hwndList, LB_GETCOUNT, 0, 0) - 1;
+        SendMessageA(hwndList, LB_SETITEMDATA, lbIdx, (LPARAM)idx);
+    }
+
+    // Highlight all reference lines in the decompiler pane
+    if (!refLines.empty()) {
+        state->highlightDecompStart = refLines.front();
+        state->highlightDecompEnd = refLines.back();
+        if (state->hwndDecompPane) InvalidateRect(state->hwndDecompPane, NULL, FALSE);
+    }
+
+    // Modal message loop with listbox click-to-navigate
+    EnableWindow(hwndParent, FALSE);
+    MSG msg;
+    bool running = true;
+    while (running && GetMessage(&msg, NULL, 0, 0)) {
+        if (msg.hwnd == hwndDlg || IsChild(hwndDlg, msg.hwnd)) {
+            if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
+                running = false;
+                break;
+            }
+            if (msg.message == WM_COMMAND) {
+                if (LOWORD(msg.wParam) == IDCANCEL) {
+                    running = false;
+                    break;
+                }
+                // Listbox double-click or selection change → navigate
+                if (LOWORD(msg.wParam) == 200 && HIWORD(msg.wParam) == LBN_DBLCLK) {
+                    int sel = (int)SendMessageA(hwndList, LB_GETCURSEL, 0, 0);
+                    if (sel != LB_ERR) {
+                        int targetIdx = (int)SendMessageA(hwndList, LB_GETITEMDATA, sel, 0);
+                        if (targetIdx >= 0 && targetIdx < (int)state->decompLines.size()) {
+                            state->selectedDecompLine = targetIdx;
+                            DecompView_SyncFromDecomp(state, targetIdx);
+                            // Scroll to the line
+                            if (state->hwndDecompPane) {
+                                RECT rc;
+                                GetClientRect(state->hwndDecompPane, &rc);
+                                int visibleLines = (int)((rc.bottom - rc.top) / DECOMP_LINE_HEIGHT);
+                                int targetY = (int)(targetIdx * DECOMP_LINE_HEIGHT);
+                                state->decompScrollY = std::max(0, targetY - (int)((visibleLines / 2) * DECOMP_LINE_HEIGHT));
+                                state->decompScrollY = std::min(state->decompScrollY, state->decompMaxScroll);
+                                InvalidateRect(state->hwndDecompPane, NULL, FALSE);
+                            }
+                            if (state->hwndDisasmPane) InvalidateRect(state->hwndDisasmPane, NULL, FALSE);
+                        }
+                    }
+                }
+            }
+        }
+        // Handle dialog close via window X button
+        if (msg.message == WM_CLOSE && msg.hwnd == hwndDlg) {
+            running = false;
+            break;
+        }
+        if (!IsDialogMessage(hwndDlg, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+
+    // Restore highlight state
+    state->highlightDecompStart = -1;
+    state->highlightDecompEnd = -1;
+    if (state->hwndDecompPane) InvalidateRect(state->hwndDecompPane, NULL, FALSE);
+
+    EnableWindow(hwndParent, TRUE);
+    SetForegroundWindow(hwndParent);
+    if (hFont) DeleteObject(hFont);
+    DestroyWindow(hwndDlg);
+}
+
+// ============================================================================
 // DECOMPILER PANE WINDOW PROC
 // ============================================================================
 static LRESULT CALLBACK DecompPaneProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -1194,6 +1477,16 @@ static LRESULT CALLBACK DecompPaneProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         case IDM_DECOMP_RENAME_VAR:
             if (varIdx >= 0) {
                 DecompView_ShowRenameDialog(state, lineIdx, varIdx);
+            }
+            break;
+        case IDM_DECOMP_GOTO_DEF:
+            if (varIdx >= 0) {
+                DecompView_GotoDefinition(state, lineIdx, varIdx);
+            }
+            break;
+        case IDM_DECOMP_FIND_REFS:
+            if (varIdx >= 0) {
+                DecompView_FindAllReferences(state, hwnd, lineIdx, varIdx);
             }
             break;
         case IDM_DECOMP_COPY_LINE:

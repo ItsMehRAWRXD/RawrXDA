@@ -285,12 +285,20 @@ NavigationResult AgenticNavigator::focusElement(const UIElement& element) {
 }
 
 NavigationResult AgenticNavigator::executeCommand(int commandId) {
-    // This uses IDE command infrastructure directly
+    // Dispatch IDE command via WM_COMMAND to the main window
     auto start = std::chrono::high_resolution_clock::now();
     
-    // Simulate command execution
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = success ? "Command executed successfully" : "Command execution failed";
+    HWND mainWnd = GetForegroundWindow();
+    bool success = false;
+    std::string message;
+    
+    if (mainWnd) {
+        LRESULT lr = SendMessageA(mainWnd, WM_COMMAND, MAKEWPARAM(commandId, 0), 0);
+        success = true;
+        message = "Command " + std::to_string(commandId) + " dispatched (result=" + std::to_string(lr) + ")";
+    } else {
+        message = "No foreground window available for command dispatch";
+    }
     
     auto end = std::chrono::high_resolution_clock::now();
     double executionTime = std::chrono::duration<double, std::milli>(end - start).count();
@@ -378,61 +386,205 @@ NavigationStrategy AgenticNavigator::recommendStrategy(const std::string& operat
 
 // Direct Win32 API implementation
 NavigationResult AgenticNavigator::navigateDirectAPI(const std::string& target) {
-    // Simulate direct API navigation
-    bool success = true; // This would implement actual Win32 API calls
-    std::string message = "Direct API navigation to " + target;
+    // Find target window/control by name or class using Win32 API
+    HWND mainWnd = GetForegroundWindow();
+    if (!mainWnd) {
+        return createResult(false, "No foreground window for navigation");
+    }
     
-    return createResult(success, message);
+    // Search for child window matching target name or class
+    HWND found = FindWindowExA(mainWnd, nullptr, nullptr, target.c_str());
+    if (!found) {
+        // Try by class name
+        found = FindWindowExA(mainWnd, nullptr, target.c_str(), nullptr);
+    }
+    
+    if (found) {
+        SetFocus(found);
+        return createResult(true, "Direct API navigated to " + target, found);
+    }
+    
+    return createResult(false, "Target '" + target + "' not found via direct API");
 }
 
 std::vector<UIElement> AgenticNavigator::detectElementsDirectAPI() {
     std::vector<UIElement> elements;
-    
-    // This would implement actual Win32 API element detection
-    // For now, return empty vector as placeholder
-    
+
+    // Get the foreground window as the root for element detection
+    HWND foreground = GetForegroundWindow();
+    if (!foreground) {
+        return elements;
+    }
+
+    // Enumerate all child windows
+    struct EnumContext {
+        std::vector<UIElement>* elements;
+    };
+    EnumContext ctx{&elements};
+
+    EnumChildWindows(foreground, [](HWND hwnd, LPARAM lParam) -> BOOL {
+        auto* ctx = reinterpret_cast<EnumContext*>(lParam);
+
+        if (!IsWindowVisible(hwnd)) return TRUE; // Skip hidden windows
+
+        UIElement elem;
+        elem.handle = hwnd;
+
+        // Get window class name
+        char className[256] = {};
+        GetClassNameA(hwnd, className, sizeof(className));
+        elem.className = className;
+
+        // Get window text
+        char windowText[512] = {};
+        GetWindowTextA(hwnd, windowText, sizeof(windowText));
+        elem.text = windowText;
+        elem.name = elem.text.empty() ? elem.className : elem.text;
+
+        // Get bounding rectangle
+        RECT rect;
+        if (GetWindowRect(hwnd, &rect)) {
+            elem.x = rect.left;
+            elem.y = rect.top;
+            elem.width = rect.right - rect.left;
+            elem.height = rect.bottom - rect.top;
+        }
+
+        // Determine element type from class name
+        if (elem.className == "Button" || elem.className == "BUTTON") {
+            elem.type = "button";
+        } else if (elem.className == "Edit" || elem.className == "EDIT" ||
+                   elem.className == "Scintilla") {
+            elem.type = "textbox";
+        } else if (elem.className == "SysTreeView32") {
+            elem.type = "treeview";
+        } else if (elem.className == "SysTabControl32") {
+            elem.type = "tabcontrol";
+        } else if (elem.className == "SysListView32") {
+            elem.type = "listview";
+        } else if (elem.className == "Static" || elem.className == "STATIC") {
+            elem.type = "label";
+        } else if (elem.className == "ComboBox" || elem.className == "COMBOBOX") {
+            elem.type = "combobox";
+        } else {
+            elem.type = "generic";
+        }
+
+        // Check if element is enabled
+        elem.enabled = IsWindowEnabled(hwnd) ? true : false;
+        elem.visible = true; // Already filtered above
+
+        ctx->elements->push_back(elem);
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(&ctx));
+
     return elements;
 }
 
 NavigationResult AgenticNavigator::clickElementDirectAPI(const UIElement& element) {
-    // Simulate direct API click
-    bool success = true; // This would implement actual Win32 API click
-    std::string message = "Direct API click on " + element.name;
+    // Click via WM_LBUTTONDOWN/UP at the center of the element
+    if (!element.handle || !IsWindow(element.handle)) {
+        return createResult(false, "Invalid window handle for click", element.handle);
+    }
     
-    return createResult(success, message, element.handle);
+    RECT rect;
+    if (!GetClientRect(element.handle, &rect)) {
+        return createResult(false, "Cannot get client rect for " + element.name, element.handle);
+    }
+    
+    int cx = (rect.right - rect.left) / 2;
+    int cy = (rect.bottom - rect.top) / 2;
+    LPARAM lParam = MAKELPARAM(cx, cy);
+    
+    // Bring to front and focus
+    SetForegroundWindow(GetAncestor(element.handle, GA_ROOT));
+    SetFocus(element.handle);
+    
+    // Send click messages
+    SendMessageA(element.handle, WM_LBUTTONDOWN, MK_LBUTTON, lParam);
+    SendMessageA(element.handle, WM_LBUTTONUP, 0, lParam);
+    
+    return createResult(true, "Clicked " + element.name + " at center (" + std::to_string(cx) + "," + std::to_string(cy) + ")", element.handle);
 }
 
 NavigationResult AgenticNavigator::sendTextDirectAPI(const UIElement& element, const std::string& text) {
-    // Simulate direct API text sending
-    bool success = true; // This would implement actual Win32 API text sending
-    std::string message = "Direct API sent text to " + element.name;
+    // Send text via WM_SETTEXT for edit controls, WM_CHAR for others
+    if (!element.handle || !IsWindow(element.handle)) {
+        return createResult(false, "Invalid window handle for text send", element.handle);
+    }
     
-    return createResult(success, message, element.handle);
+    SetFocus(element.handle);
+    
+    // Try WM_SETTEXT first (works for Edit, RichEdit, ComboBox controls)
+    if (element.type == "textbox" || element.type == "combobox" ||
+        element.className == "Edit" || element.className == "EDIT") {
+        SendMessageA(element.handle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(text.c_str()));
+    } else {
+        // Fallback: send individual WM_CHAR messages
+        for (char c : text) {
+            SendMessageA(element.handle, WM_CHAR, static_cast<WPARAM>(c), 0);
+        }
+    }
+    
+    return createResult(true, "Sent " + std::to_string(text.size()) + " chars to " + element.name, element.handle);
 }
 
 // IDE Command implementation
 NavigationResult AgenticNavigator::navigateIDECommands(const std::string& target) {
-    // Simulate IDE command navigation
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = "IDE command navigation to " + target;
+    // Navigate using IDE command palette dispatch
+    HWND mainWnd = GetForegroundWindow();
+    if (!mainWnd) {
+        return createResult(false, "No foreground window for IDE command navigation");
+    }
     
-    return createResult(success, message);
+    // Post a user-defined message that the IDE message loop handles for command routing
+    // WM_APP + 0x100 = IDE command dispatch, wParam = hash of command name
+    unsigned int cmdHash = 0;
+    for (char c : target) cmdHash = cmdHash * 31 + static_cast<unsigned char>(c);
+    
+    PostMessageA(mainWnd, WM_APP + 0x100, cmdHash, 0);
+    
+    return createResult(true, "IDE command dispatched: " + target);
 }
 
 NavigationResult AgenticNavigator::clickElementIDECommands(const UIElement& element) {
-    // Simulate IDE command click
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = "IDE command click on " + element.name;
+    // Click via BN_CLICKED notification for buttons, BM_CLICK for others
+    if (!element.handle || !IsWindow(element.handle)) {
+        return createResult(false, "Invalid handle for IDE command click", element.handle);
+    }
     
-    return createResult(success, message, element.handle);
+    if (element.type == "button") {
+        // Send BM_CLICK message which triggers WM_COMMAND BN_CLICKED in parent
+        SendMessageA(element.handle, BM_CLICK, 0, 0);
+    } else {
+        // Generic: send WM_LBUTTONDOWN/UP at center
+        RECT rect;
+        GetClientRect(element.handle, &rect);
+        LPARAM center = MAKELPARAM((rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2);
+        SendMessageA(element.handle, WM_LBUTTONDOWN, MK_LBUTTON, center);
+        SendMessageA(element.handle, WM_LBUTTONUP, 0, center);
+    }
+    
+    return createResult(true, "IDE command clicked " + element.name, element.handle);
 }
 
 NavigationResult AgenticNavigator::sendTextIDECommands(const UIElement& element, const std::string& text) {
-    // Simulate IDE command text sending
-    bool success = true; // This would integrate with actual IDE command system
-    std::string message = "IDE command sent text to " + element.name;
+    // Send text via EM_REPLACESEL for edit controls (preserves undo), WM_SETTEXT as fallback
+    if (!element.handle || !IsWindow(element.handle)) {
+        return createResult(false, "Invalid handle for IDE command text", element.handle);
+    }
     
-    return createResult(success, message, element.handle);
+    SetFocus(element.handle);
+    
+    if (element.type == "textbox" || element.className == "Edit" || 
+        element.className == "EDIT" || element.className == "Scintilla") {
+        // Use EM_REPLACESEL to insert at cursor position (supports undo)
+        SendMessageA(element.handle, EM_REPLACESEL, TRUE, reinterpret_cast<LPARAM>(text.c_str()));
+    } else {
+        SendMessageA(element.handle, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(text.c_str()));
+    }
+    
+    return createResult(true, "IDE command sent " + std::to_string(text.size()) + " chars to " + element.name, element.handle);
 }
 
 // Hybrid implementation

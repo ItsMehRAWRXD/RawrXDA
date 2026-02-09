@@ -133,6 +133,53 @@ std::string AdvancedCodingAgentIntegration::buildFeaturePrompt(
 }
 
 bool AdvancedCodingAgentIntegration::validateGeneratedCode(const std::string& code) {
-    // Placeholder: would validate code syntax and logic
-    return true;
+    // Basic syntax validation: check for balanced delimiters and non-empty content
+    if (code.empty()) return false;
+
+    int braces = 0, parens = 0, brackets = 0;
+    bool inString = false;
+    bool inLineComment = false;
+    bool inBlockComment = false;
+    char prev = 0;
+
+    for (size_t i = 0; i < code.size(); ++i) {
+        char c = code[i];
+
+        if (inLineComment) {
+            if (c == '\n') inLineComment = false;
+            prev = c;
+            continue;
+        }
+        if (inBlockComment) {
+            if (c == '/' && prev == '*') inBlockComment = false;
+            prev = c;
+            continue;
+        }
+        if (inString) {
+            if (c == '"' && prev != '\\') inString = false;
+            prev = c;
+            continue;
+        }
+
+        if (c == '/' && i + 1 < code.size()) {
+            if (code[i + 1] == '/') { inLineComment = true; prev = c; continue; }
+            if (code[i + 1] == '*') { inBlockComment = true; prev = c; continue; }
+        }
+        if (c == '"' && prev != '\\') { inString = true; prev = c; continue; }
+
+        switch (c) {
+            case '{': braces++; break;
+            case '}': braces--; break;
+            case '(': parens++; break;
+            case ')': parens--; break;
+            case '[': brackets++; break;
+            case ']': brackets--; break;
+        }
+
+        // Negative count means closing without opening
+        if (braces < 0 || parens < 0 || brackets < 0) return false;
+        prev = c;
+    }
+
+    return braces == 0 && parens == 0 && brackets == 0;
 }

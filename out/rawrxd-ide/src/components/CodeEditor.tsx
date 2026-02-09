@@ -120,8 +120,15 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange, languag
 
   useEffect(() => {
     return () => {
+      // Clean up completion provider on unmount
       if (providerRef.current) {
         providerRef.current.dispose();
+        providerRef.current = null;
+      }
+      // Cancel any in-flight streaming completion request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, []);

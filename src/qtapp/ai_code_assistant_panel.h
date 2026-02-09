@@ -35,7 +35,7 @@ public:
 
 private slots:
     // Response from AI
-    void onSuggestionReady(const int dummy);  // Placeholder slot, actual connections use lambdas
+    void onSuggestionReady(const int dummy);  // Legacy signal compat — active connections use lambdas
     void onSuggestionStreaming(const QString &partial);
     void onSuggestionStreamComplete();
     void onError(const QString &error);

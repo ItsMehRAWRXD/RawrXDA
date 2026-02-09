@@ -26,6 +26,12 @@
 #include <regex>
 #include <algorithm>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+#endif
+
 // Simplified JSON parsing (would use nlohmann/json in production)
 class SimpleJsonParser {
 public:
@@ -354,46 +360,95 @@ private:
     /**
      * Fetch JSON from HuggingFace API
      * 
-     * Uses libcurl for HTTP requests
+     * Uses WinHTTP (Windows) or system curl (POSIX) for HTTP requests
      * Handles:
      * - Authentication (Bearer token in header)
      * - Error responses
      * - Retries on timeout
-     * 
-     * In production, would use:
-     * #include <curl/curl.h>
      */
     std::string fetchJSON(const std::string& url, const std::string& token) {
         try {
-            // TODO: Implement with libcurl
-            // CURL* curl = curl_easy_init();
-            // if (!curl) return "";
-            // 
-            // std::string response;
-            // curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            // 
-            // // Add authentication header if token provided
-            // if (!token.empty()) {
-            //     std::string auth_header = "Authorization: Bearer " + token;
-            //     struct curl_slist* headers = nullptr;
-            //     headers = curl_slist_append(headers, auth_header.c_str());
-            //     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-            // }
-            //
-            // curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-            // curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-            // curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
-            //
-            // CURLcode res = curl_easy_perform(curl);
-            // curl_slist_free_all(headers);
-            // curl_easy_cleanup(curl);
-            //
-            // return response;
-
-            // Placeholder: mock response for testing
-            std::cout << "   [Mock] Fetching from: " << url << std::endl;
-            return R"({"id": "mock/model", "downloads": 1000})";
-
+#ifdef _WIN32
+            // Use WinHTTP for native Windows HTTP requests
+            HINTERNET hSession = WinHttpOpen(L"RawrXD-HFClient/1.0",
+                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+            if (!hSession) return "";
+            
+            // Parse URL
+            URL_COMPONENTS urlComp = {};
+            urlComp.dwStructSize = sizeof(urlComp);
+            wchar_t hostName[256] = {}, urlPath[2048] = {};
+            urlComp.lpszHostName = hostName;
+            urlComp.dwHostNameLength = 256;
+            urlComp.lpszUrlPath = urlPath;
+            urlComp.dwUrlPathLength = 2048;
+            
+            std::wstring wurl(url.begin(), url.end());
+            if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &urlComp)) {
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort, 0);
+            if (!hConnect) {
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL,
+                WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+            if (!hRequest) {
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            // Add authentication header if token provided
+            if (!token.empty()) {
+                std::wstring authHeader = L"Authorization: Bearer " + std::wstring(token.begin(), token.end());
+                WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+            }
+            
+            if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                    WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+                !WinHttpReceiveResponse(hRequest, NULL)) {
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            std::string response;
+            DWORD bytesRead = 0;
+            char buffer[8192];
+            while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+                response.append(buffer, bytesRead);
+            }
+            
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return response;
+#else
+            // POSIX fallback: use system curl command
+            std::string cmd = "curl -s";
+            if (!token.empty()) {
+                cmd += " -H \"Authorization: Bearer " + token + "\"";
+            }
+            cmd += " \"" + url + "\"";
+            
+            FILE* pipe = popen(cmd.c_str(), "r");
+            if (!pipe) return "";
+            
+            std::string response;
+            char buffer[4096];
+            while (fgets(buffer, sizeof(buffer), pipe)) {
+                response += buffer;
+            }
+            pclose(pipe);
+            return response;
+#endif
         } catch (...) {
             return "";
         }
@@ -412,35 +467,110 @@ private:
                      std::function<void(uint64_t, uint64_t)> progressCallback,
                      const std::string& token) {
         try {
-            // TODO: Implement with libcurl
-            // CURL* curl = curl_easy_init();
-            // if (!curl) return false;
-            //
-            // // Check if file already exists (resume)
-            // uint64_t resumeFrom = 0;
-            // std::ifstream existing(outputPath);
-            // if (existing) {
-            //     existing.seekg(0, std::ios::end);
-            //     resumeFrom = existing.tellg();
-            //     existing.close();
-            // }
-            //
-            // // Setup download
-            // std::ofstream outFile(outputPath, std::ios::binary | std::ios::app);
-            // curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            // curl_easy_setopt(curl, CURLOPT_RESUME_FROM_LARGE, resumeFrom);
-            // curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-            // curl_easy_setopt(curl, CURLOPT_WRITEDATA, &outFile);
-            // curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-            // curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressFunc);
-            // curl_easy_setopt(curl, CURLOPT_XFERINFODATA, progressCallback.target<void*>());
-            //
-            // CURLcode res = curl_easy_perform(curl);
-            // curl_easy_cleanup(curl);
-            // return res == CURLE_OK;
-
-            std::cout << "   ✅ Downloaded successfully (mock)" << std::endl;
+#ifdef _WIN32
+            // Use WinHTTP for download with resume support
+            HINTERNET hSession = WinHttpOpen(L"RawrXD-HFClient/1.0",
+                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+            if (!hSession) return false;
+            
+            URL_COMPONENTS urlComp = {};
+            urlComp.dwStructSize = sizeof(urlComp);
+            wchar_t hostName[256] = {}, urlPath[2048] = {};
+            urlComp.lpszHostName = hostName;
+            urlComp.dwHostNameLength = 256;
+            urlComp.lpszUrlPath = urlPath;
+            urlComp.dwUrlPathLength = 2048;
+            
+            std::wstring wurl(url.begin(), url.end());
+            if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &urlComp)) {
+                WinHttpCloseHandle(hSession);
+                return false;
+            }
+            
+            HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort, 0);
+            if (!hConnect) { WinHttpCloseHandle(hSession); return false; }
+            
+            DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL,
+                WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+            if (!hRequest) {
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return false;
+            }
+            
+            // Check for existing partial file (resume support)
+            uint64_t resumeFrom = 0;
+            std::ifstream existingFile(outputPath, std::ios::binary | std::ios::ate);
+            if (existingFile) {
+                resumeFrom = existingFile.tellg();
+                existingFile.close();
+            }
+            
+            if (resumeFrom > 0) {
+                std::wstring rangeHeader = L"Range: bytes=" + std::to_wstring(resumeFrom) + L"-";
+                WinHttpAddRequestHeaders(hRequest, rangeHeader.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+            }
+            
+            // Add auth
+            if (!token.empty()) {
+                std::wstring authHeader = L"Authorization: Bearer " + std::wstring(token.begin(), token.end());
+                WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+            }
+            
+            if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                    WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+                !WinHttpReceiveResponse(hRequest, NULL)) {
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return false;
+            }
+            
+            // Get content length for progress
+            DWORD headerSize = sizeof(DWORD);
+            DWORD contentLength = 0;
+            WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+                WINHTTP_HEADER_NAME_BY_INDEX, &contentLength, &headerSize, WINHTTP_NO_HEADER_INDEX);
+            uint64_t totalSize = resumeFrom + contentLength;
+            
+            // Open output file in append mode
+            std::ofstream outFile(outputPath, std::ios::binary | std::ios::app);
+            if (!outFile) {
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return false;
+            }
+            
+            uint64_t downloaded = resumeFrom;
+            DWORD bytesRead = 0;
+            char buffer[65536];
+            while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+                outFile.write(buffer, bytesRead);
+                downloaded += bytesRead;
+                if (progressCallback) {
+                    progressCallback(downloaded, totalSize);
+                }
+            }
+            
+            outFile.close();
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            
+            std::cout << "   \xe2\x9c\x85 Downloaded successfully (" << formatBytes(downloaded) << ")" << std::endl;
             return true;
+#else
+            // POSIX: use system curl
+            std::string cmd = "curl -L -o \"" + outputPath + "\" -C -";
+            if (!token.empty()) {
+                cmd += " -H \"Authorization: Bearer " + token + "\"";
+            }
+            cmd += " \"" + url + "\"";
+            int result = system(cmd.c_str());
+            return result == 0;
+#endif
 
         } catch (...) {
             return false;

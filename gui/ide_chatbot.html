@@ -3569,9 +3569,9 @@
           <div>
             <div class="setting-row">
               <span class="setting-label">Context Window</span>
-              <span class="setting-value" id="ctxVal">4,096</span>
+              <span class="setting-value" id="ctxVal">8,192</span>
             </div>
-            <input type="range" class="setting-slider" min="512" max="131072" value="4096" step="512" id="ctxSlider"
+            <input type="range" class="setting-slider" min="512" max="131072" value="8192" step="512" id="ctxSlider"
               oninput="State.gen.context=parseInt(this.value); document.getElementById('ctxVal').textContent=parseInt(this.value).toLocaleString(); Conversation.persist();">
           </div>
           <div>
@@ -4619,7 +4619,7 @@
       },
       model: { current: null, list: [] },
       gen: {
-        context: 4096, maxTokens: 512, temperature: 0.7, stream: true,
+        context: 8192, maxTokens: 512, temperature: 0.7, stream: true,
         top_p: 0.9, top_k: 40,
         // Tensor Bunny Hop: skip unneeded tensor layers during inference for faster large-model runs
         tensorHop: {
@@ -4646,6 +4646,7 @@
       },
       files: [],                // attached File objects
       fileContents: {},           // name -> text content (read via FileReader)
+      filePendingReads: 0,        // count of FileReader ops still in progress
       debug: { open: false },
       chat: { sending: false, messageCount: 0 },
       terminal: { history: [], index: -1, minimized: false },
@@ -4795,26 +4796,55 @@
       getContextForAPI: function () {
         var context = [{ role: 'system', content: this.systemPrompt }];
 
-        // Add file context as a system message if files are attached
+        // Build file context block (injected near the end, not at position 2)
+        var fileContextMsg = null;
         if (State.files.length > 0) {
           var fileParts = [];
           State.files.forEach(function (f) {
             var content = State.fileContents[f.name];
-            if (content) fileParts.push('--- ' + f.name + ' ---\n' + content);
-            else fileParts.push('[Attached: ' + f.name + ' (' + formatBytes(f.size) + ')]');
+            if (content) {
+              // Estimate tokens (~4 chars per token) and warn if file is huge
+              var estTokens = Math.ceil(content.length / 4);
+              if (estTokens > State.gen.context * 0.6) {
+                // Truncate to ~60% of context window to leave room for conversation
+                var maxChars = Math.floor(State.gen.context * 0.6 * 4);
+                fileParts.push('--- ' + f.name + ' (truncated to fit context window) ---\n' + content.substring(0, maxChars) + '\n... [truncated, ' + formatBytes(content.length) + ' total]');
+                logDebug('File ' + f.name + ' (~' + estTokens + ' tokens) exceeds context budget, truncated to ~' + Math.floor(maxChars / 4) + ' tokens', 'warn');
+              } else {
+                fileParts.push('--- ' + f.name + ' ---\n' + content);
+              }
+            } else {
+              fileParts.push('[Attached: ' + f.name + ' (' + formatBytes(f.size) + ') — content not yet loaded]');
+            }
           });
           if (fileParts.length > 0) {
-            context.push({
+            fileContextMsg = {
               role: 'system',
-              content: 'The user has attached the following files as context:\n\n' + fileParts.join('\n\n')
-            });
+              content: 'The user has attached the following files as context. Review them carefully when responding:\n\n' + fileParts.join('\n\n')
+            };
           }
         }
 
-        // Add conversation history
-        this.messages.forEach(function (m) {
-          context.push({ role: m.role, content: m.content });
-        });
+        // Add conversation history (all but the last user message)
+        var msgs = this.messages;
+        var insertIdx = msgs.length; // default: append at end
+        // Find the last user message to inject file context right before it
+        for (var i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'user') { insertIdx = i; break; }
+        }
+
+        for (var j = 0; j < msgs.length; j++) {
+          // Inject file context right before the last user message
+          if (j === insertIdx && fileContextMsg) {
+            context.push(fileContextMsg);
+          }
+          context.push({ role: msgs[j].role, content: msgs[j].content });
+        }
+
+        // If no messages yet but we have file context, add it
+        if (msgs.length === 0 && fileContextMsg) {
+          context.push(fileContextMsg);
+        }
 
         return context;
       },
@@ -4833,15 +4863,24 @@
           parts.push('');
         }
 
-        // Add file context
+        // Add file context — placed right before the user question so it's in active context
         if (State.files.length > 0) {
           var fileParts = [];
           State.files.forEach(function (f) {
             var content = State.fileContents[f.name];
-            if (content) fileParts.push('--- ' + f.name + ' ---\n' + content);
-            else fileParts.push('[Attached: ' + f.name + ' (' + formatBytes(f.size) + ')]');
+            if (content) {
+              var estTokens = Math.ceil(content.length / 4);
+              if (estTokens > State.gen.context * 0.6) {
+                var maxChars = Math.floor(State.gen.context * 0.6 * 4);
+                fileParts.push('--- ' + f.name + ' (truncated) ---\n' + content.substring(0, maxChars) + '\n... [truncated]');
+              } else {
+                fileParts.push('--- ' + f.name + ' ---\n' + content);
+              }
+            } else {
+              fileParts.push('[Attached: ' + f.name + ' (' + formatBytes(f.size) + ') — content not loaded]');
+            }
           });
-          parts.push('Context files:\n' + fileParts.join('\n\n'));
+          parts.push('The user has attached the following files. Review them carefully:\n' + fileParts.join('\n\n'));
           parts.push('');
         }
 
@@ -5169,6 +5208,11 @@
       };
       // top_k not standard OpenAI but supported by many backends
       if (p.top_k > 0) extras.top_k = p.top_k;
+      // Ollama supports num_ctx via options field on /v1/chat/completions
+      // Without this, Ollama defaults to 2048 and silently truncates file context
+      if (State.backend.directMode || (State.backend.serverType && State.backend.serverType.indexOf('ollama') !== -1)) {
+        extras.options = { num_ctx: p.context };
+      }
       // Tensor hop metadata (custom extension)
       var th = buildTensorHopOptions();
       if (th) extras.tensor_hop = th;
@@ -5544,11 +5588,127 @@
       el.style.height = Math.min(el.scrollHeight, 120) + 'px';
     }
 
+    // Detect local file paths in user messages (Windows-style)
+    // Matches: D:\path\file.ext, C:/path/file.ext, etc.
+    function detectFilePaths(text) {
+      var pathRegex = /(?:^|\s|["'])([A-Za-z]:[\\\/][^\s"'<>|*?]+\.[a-zA-Z0-9]{1,10})(?:\s|["']|$)/g;
+      var paths = [];
+      var match;
+      while ((match = pathRegex.exec(text)) !== null) {
+        paths.push(match[1].replace(/\\/g, '/'));
+      }
+      return paths;
+    }
+
+    // Try to read a local file by path via backend proxy, Win32IDE, or file:// fetch
+    async function readLocalFile(filePath) {
+      // Normalize to forward slashes
+      var normalized = filePath.replace(/\\/g, '/');
+
+      // Strategy 1: Try serve.py /api/read-file endpoint (when not in direct mode)
+      if (!State.backend.directMode && State.backend.online) {
+        try {
+          var res = await fetch(State.backend.url + '/api/read-file', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: normalized }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (res.ok) {
+            var data = await res.json();
+            if (data.content) return { content: data.content, name: data.name || normalized.split('/').pop() };
+          }
+        } catch (_) { /* fall through */ }
+      }
+
+      // Strategy 2: Try Win32IDE /api/read-file via the page's own origin
+      // When served from Win32IDE (http://localhost:11435/gui), window.location.origin
+      // points to the IDE's embedded server which has the /api/read-file endpoint.
+      // This works in BOTH direct mode and normal mode as a universal fallback.
+      {
+        var ideServerUrl = window.location.origin;
+        // Also try State.backend.url if it differs from origin (e.g. serve.py on different port)
+        var urlsToTry = [ideServerUrl];
+        if (State.backend.url && State.backend.url !== ideServerUrl) {
+          urlsToTry.push(State.backend.url);
+        }
+        for (var ui = 0; ui < urlsToTry.length; ui++) {
+          try {
+            var res1b = await fetch(urlsToTry[ui] + '/api/read-file', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: normalized }),
+              signal: AbortSignal.timeout(5000),
+            });
+            if (res1b.ok) {
+              var data1b = await res1b.json();
+              if (data1b.content) {
+                logDebug('📂 read-file via ' + urlsToTry[ui] + ' succeeded', 'info');
+                return { content: data1b.content, name: data1b.name || normalized.split('/').pop() };
+              }
+            }
+          } catch (_) { /* fall through to next URL */ }
+        }
+      }
+
+      // Strategy 3: Try file:// fetch (works if page opened from file:// or with relaxed security)
+      try {
+        var fileUrl = 'file:///' + normalized.replace(/^\//, '');
+        var res2 = await fetch(fileUrl, { signal: AbortSignal.timeout(3000) });
+        if (res2.ok) {
+          var content = await res2.text();
+          return { content: content, name: normalized.split('/').pop() };
+        }
+      } catch (_) { /* fall through */ }
+
+      return null;
+    }
+
+    // Auto-attach files referenced by path in user's message
+    async function autoAttachFilePaths(text) {
+      var paths = detectFilePaths(text);
+      if (paths.length === 0) return;
+
+      for (var i = 0; i < paths.length; i++) {
+        var fp = paths[i];
+        var fname = fp.split('/').pop();
+        // Skip if already attached
+        if (State.files.find(function (f) { return f.name === fname; })) continue;
+        if (State.fileContents[fname]) continue;
+
+        logDebug('\uD83D\uDCC2 Attempting to read local file: ' + fp, 'info');
+        var result = await readLocalFile(fp);
+        if (result && result.content) {
+          // Inject directly into fileContents (no File object needed for content)
+          State.fileContents[result.name] = result.content;
+          // Create a minimal File-like entry for State.files
+          var pseudoFile = { name: result.name, size: result.content.length };
+          State.files.push(pseudoFile);
+          renderFile(pseudoFile);
+          updateFileBadge();
+          logDebug('\u2705 Auto-attached ' + result.name + ' (' + formatBytes(result.content.length) + ') from local path', 'info');
+          addMessage('system', '\uD83D\uDCC2 Auto-attached **' + result.name + '** (' + formatBytes(result.content.length) + ') from `' + fp + '`', { skipMemory: true });
+        } else {
+          logDebug('\u274c Could not read local file: ' + fp + ' (backend may not support /api/read-file)', 'warn');
+          addMessage('system', '\u26a0\ufe0f Could not read `' + fp + '`. Try dragging the file into the attachment area, or ensure serve.py is running.', { skipMemory: true });
+        }
+      }
+    }
+
     async function sendMessage() {
       if (State.chat.sending) return;
       var el = document.getElementById('chatInput');
       var text = el.value.trim();
       if (!text) return;
+
+      // Wait for any pending file reads from drag-and-drop to complete
+      if (State.filePendingReads > 0) {
+        logDebug('Waiting for ' + State.filePendingReads + ' file(s) to finish loading...', 'info');
+        await waitForPendingFiles(5000);
+      }
+
+      // Auto-detect and attach file paths mentioned in the message
+      await autoAttachFilePaths(text);
 
       // Phase 4: Input sanitization guard
       var validation = validateInput(text);
@@ -5674,13 +5834,11 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: this.abortCtrl.signal,
-          body: JSON.stringify({
+          body: JSON.stringify(Object.assign({
             model: model,
             messages: messages,
             stream: true,
-            max_tokens: (options && options.max_tokens) || State.gen.maxTokens,
-            temperature: (options && options.temperature) || State.gen.temperature,
-          }),
+          }, (options || buildOpenAIPayloadExtras()))),
         });
 
         if (!res.ok || !res.body) {
@@ -5861,11 +6019,38 @@
       var t0 = performance.now();
       var activeUrl = getActiveUrl();  // respects directMode fallback
 
+      // First-token probe for large models (Safe Decode Profile)
+      if (isSafeDecodeActive() && State.gen.safeDecodeProfile.probeFirst) {
+        var probeOk = await firstTokenProbe(model, activeUrl);
+        if (!probeOk) {
+          addMessage('system', '\u26a0\ufe0f First-token probe failed for ' + model + '. Model may be in a bad decode state. Try restarting Ollama or switching to a smaller model.');
+          return;
+        }
+      }
+
+      // Warn user if attached files may overflow context window
+      if (State.files.length > 0) {
+        var totalFileChars = 0;
+        State.files.forEach(function (f) {
+          var c = State.fileContents[f.name];
+          if (c) totalFileChars += c.length;
+        });
+        var estFileTokens = Math.ceil(totalFileChars / 4);
+        var contextBudget = State.gen.context;
+        if (estFileTokens > contextBudget * 0.7) {
+          logDebug('\u26a0\ufe0f File attachments (~' + estFileTokens + ' tokens) may exceed context window (' + contextBudget + ' tokens). Consider increasing the context window slider or the file content will be truncated.', 'warn');
+          addMessage('system', '\u26a0\ufe0f **Context Warning:** Your attached files are ~' + estFileTokens.toLocaleString() + ' tokens but the context window is only ' + contextBudget.toLocaleString() + ' tokens. The model may not see all file content. Consider increasing the context window in settings.', { skipMemory: true });
+        }
+      }
+
       // Record user message to conversation memory
       Conversation.addMessage('user', query);
 
+      // Get effective params (may be clamped by safe decode)
+      var ep = getEffectiveGenParams();
+
       // Try OpenAI-compatible endpoint first (supports multi-turn)
-      if (State.gen.stream) {
+      if (ep.stream) {
         await sendStreamingOpenAI(query, model, t0);
       } else {
         await sendNonStreamingOpenAI(query, model, t0);
@@ -5877,13 +6062,12 @@
     async function sendNonStreamingOpenAI(query, model, t0) {
       showTyping();
       try {
-        var payload = {
+        var extras = buildOpenAIPayloadExtras();
+        var payload = Object.assign({
           model: model || 'rawrxd',
           messages: Conversation.getContextForAPI(),
           stream: false,
-          max_tokens: State.gen.maxTokens,
-          temperature: State.gen.temperature,
-        };
+        }, extras);
 
         var res = await fetch(getActiveUrl() + '/v1/chat/completions', {
           method: 'POST',
@@ -5948,7 +6132,7 @@
         for await (var token of stream.chatCompletions(
           model || 'rawrxd',
           Conversation.getContextForAPI(),
-          { max_tokens: State.gen.maxTokens, temperature: State.gen.temperature }
+          buildOpenAIPayloadExtras()
         )) {
           fullText += token;
           textEl.innerHTML = formatMessage(fullText);
@@ -6035,7 +6219,7 @@
         for await (var token of stream.chatGenerate(
           model || 'rawrxd',
           legacyPrompt,
-          { temperature: State.gen.temperature, num_ctx: State.gen.context }
+          buildOllamaOptions()
         )) {
           fullText += token;
           textEl.innerHTML = formatMessage(fullText);
@@ -6112,7 +6296,7 @@
               model: model || 'rawrxd',
               prompt: legacyPrompt,
               stream: false,
-              options: { temperature: State.gen.temperature },
+              options: buildOllamaOptions(),
             }),
           });
 
@@ -6436,12 +6620,46 @@
         renderFile(file);
         // Read text content for context
         if (file.size < 1024 * 1024) {
+          State.filePendingReads++;
           var reader = new FileReader();
-          reader.onload = function (e) { State.fileContents[file.name] = e.target.result; };
+          reader.onload = function (e) {
+            State.fileContents[file.name] = e.target.result;
+            State.filePendingReads--;
+            logDebug('\u2705 Loaded ' + file.name + ' (' + formatBytes(e.target.result.length) + ')', 'info');
+            // Warn if file content exceeds context budget
+            var estTokens = Math.ceil(e.target.result.length / 4);
+            if (estTokens > State.gen.context * 0.5) {
+              logDebug('\u26a0\ufe0f ' + file.name + ' (~' + estTokens.toLocaleString() + ' tokens) is large relative to context window (' + State.gen.context.toLocaleString() + ' tokens). Consider increasing the context window slider.', 'warn');
+            }
+          };
+          reader.onerror = function () {
+            State.filePendingReads--;
+            logDebug('\u274c Failed to read ' + file.name, 'error');
+          };
           reader.readAsText(file);
+        } else {
+          logDebug('\u26a0\ufe0f ' + file.name + ' (' + formatBytes(file.size) + ') exceeds 1MB limit \u2014 content not loaded. Only filename will be sent as context.', 'warn');
         }
       });
       updateFileBadge();
+    }
+
+    // Wait for all pending FileReader operations to complete (with timeout)
+    function waitForPendingFiles(timeoutMs) {
+      if (State.filePendingReads <= 0) return Promise.resolve();
+      timeoutMs = timeoutMs || 5000;
+      return new Promise(function (resolve) {
+        var start = Date.now();
+        var check = setInterval(function () {
+          if (State.filePendingReads <= 0 || (Date.now() - start) > timeoutMs) {
+            clearInterval(check);
+            if (State.filePendingReads > 0) {
+              logDebug('\u26a0\ufe0f Timed out waiting for ' + State.filePendingReads + ' file(s) to load', 'warn');
+            }
+            resolve();
+          }
+        }, 50);
+      });
     }
 
     function renderFile(file) {
@@ -8480,13 +8698,12 @@
           var stepSuccess = false;
 
           try {
-            var payload = {
+            var chainExtras = buildOpenAIPayloadExtras();
+            var payload = Object.assign({
               model: stepModel,
               messages: messages,
               stream: false,
-              max_tokens: State.gen.maxTokens,
-              temperature: State.gen.temperature,
-            };
+            }, chainExtras);
 
             var res = await fetch(State.backend.url + '/v1/chat/completions', {
               method: 'POST',
@@ -8510,6 +8727,7 @@
                 prompt: stepInstruction + '\n\nUser query: ' + userQuery +
                   (chainResults.length > 0 ? '\n\nPrevious steps:\n' + chainResults.map(function (r, idx) { return 'Step ' + (idx + 1) + ': ' + r.content; }).join('\n') : ''),
                 stream: false,
+                options: buildOllamaOptions(),
               };
               var res2 = await fetch(State.backend.url + '/api/generate', {
                 method: 'POST',

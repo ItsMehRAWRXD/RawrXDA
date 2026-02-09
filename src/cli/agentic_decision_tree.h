@@ -389,5 +389,3 @@ private:
     void*                                           m_approvalUserData;
 };
 
-#endif // Header guard via #pragma once
-

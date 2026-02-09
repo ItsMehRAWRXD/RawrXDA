@@ -177,8 +177,10 @@ void MainWindow::setupSwarmEditing()
         statusBar()->showMessage("Swarm session disconnected", 3000);
     });
     
-    // TODO: Connect code editor textChanged signal to broadcastEdit()
-    // connect(codeView_, &QTextEdit::textChanged, this, &MainWindow::broadcastEdit);
+    // Connect code editor textChanged signal to broadcastEdit for swarm collaboration
+    if (codeView_) {
+        connect(codeView_, &QTextEdit::textChanged, this, &MainWindow::broadcastEdit);
+    }
 }
 
 /**

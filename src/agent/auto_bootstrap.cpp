@@ -230,7 +230,14 @@ void AutoBootstrap::executePlan(const QString& wish, const QJsonArray& plan) {
                 qDebug() << "Benchmark task (handled by build system)";
             }
             else if (type == "self_test") {
-                qDebug() << "Self-test task (TODO: implement test runner)";
+                SelfTest selfTest;
+                connect(&selfTest, &SelfTest::log, this, [](const QString& line) {
+                    qDebug() << "[SelfTest]" << line;
+                });
+                success = selfTest.runAll();
+                if (!success) {
+                    qWarning() << "Self-test failed:" << selfTest.lastError();
+                }
             }
             
             if (!success) {

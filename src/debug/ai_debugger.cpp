@@ -122,11 +122,26 @@ void AIDebugger::parseGdbOutput(const QString &output)
     // For now, we'll just look for breakpoint hit notifications.
     if (output.contains("*stopped,reason=\"breakpoint-hit\"")) {
         qDebug() << "Breakpoint hit detected";
-        // In a real implementation, we would parse the full output to extract
-        // the file path, line number, and other debug information.
-        // For this example, we'll just emit a signal with dummy data.
+        
+        // Parse GDB/MI output for file and line information
+        // Format: *stopped,reason="breakpoint-hit",frame={addr="0x...",func="...",args=[...],file="...",line="..."}
+        QString filePath = "unknown";
+        int lineNumber = 0;
+        
+        QRegularExpression fileRe(R"(file="([^"]+)")");
+        QRegularExpression lineRe(R"(,line="(\d+)")");
+        
+        auto fileMatch = fileRe.match(output);
+        if (fileMatch.hasMatch()) {
+            filePath = fileMatch.captured(1);
+        }
+        auto lineMatch = lineRe.match(output);
+        if (lineMatch.hasMatch()) {
+            lineNumber = lineMatch.captured(1).toInt();
+        }
+        
         QJsonObject debugInfo = collectDebugInfo();
-        emit breakpointHit("dummy_file.cpp", 42, debugInfo);
+        emit breakpointHit(filePath, lineNumber, debugInfo);
         requestFixFromModel(debugInfo);
     }
 }
@@ -143,22 +158,106 @@ void AIDebugger::sendGdbCommand(const QString &command)
 
 QJsonObject AIDebugger::collectDebugInfo()
 {
-    // In a real implementation, this would send commands to GDB to collect
-    // locals, stack, registers, etc.
-    // For this example, we'll return dummy data.
+    // Query GDB for locals, stack, and registers via MI commands
     QJsonObject debugInfo;
-    debugInfo["locals"] = QJsonArray(); // Dummy array
-    debugInfo["stack"] = QJsonArray();  // Dummy array
-    debugInfo["registers"] = QJsonArray(); // Dummy array
+    
+    if (m_isRunning && m_gdbProcess && m_gdbProcess->state() == QProcess::Running) {
+        // Request local variables: -stack-list-locals --all-values
+        m_gdbProcess->write("-stack-list-locals --all-values\n");
+        m_gdbProcess->waitForReadyRead(2000);
+        QString localsOutput = QString::fromUtf8(m_gdbProcess->readAllStandardOutput());
+        
+        // Parse locals from GDB/MI response
+        QJsonArray locals;
+        QRegularExpression varRe(R"(\{name="([^"]+)",value="([^"]*)"})");
+        auto it = varRe.globalMatch(localsOutput);
+        while (it.hasNext()) {
+            auto match = it.next();
+            QJsonObject var;
+            var["name"] = match.captured(1);
+            var["value"] = match.captured(2);
+            locals.append(var);
+        }
+        debugInfo["locals"] = locals;
+        
+        // Request stack trace: -stack-list-frames
+        m_gdbProcess->write("-stack-list-frames\n");
+        m_gdbProcess->waitForReadyRead(2000);
+        QString stackOutput = QString::fromUtf8(m_gdbProcess->readAllStandardOutput());
+        
+        QJsonArray stack;
+        QRegularExpression frameRe(R"(frame=\{level="(\d+)",addr="([^"]*)",func="([^"]*)"(?:,file="([^"]*)")?(?:,line="(\d+)")?)");
+        auto frameIt = frameRe.globalMatch(stackOutput);
+        while (frameIt.hasNext()) {
+            auto match = frameIt.next();
+            QJsonObject frame;
+            frame["level"] = match.captured(1).toInt();
+            frame["address"] = match.captured(2);
+            frame["function"] = match.captured(3);
+            if (!match.captured(4).isEmpty()) frame["file"] = match.captured(4);
+            if (!match.captured(5).isEmpty()) frame["line"] = match.captured(5).toInt();
+            stack.append(frame);
+        }
+        debugInfo["stack"] = stack;
+        
+        // Request registers: -data-list-register-values x
+        m_gdbProcess->write("-data-list-register-values x\n");
+        m_gdbProcess->waitForReadyRead(2000);
+        QString regsOutput = QString::fromUtf8(m_gdbProcess->readAllStandardOutput());
+        
+        QJsonArray registers;
+        QRegularExpression regRe(R"(\{number="(\d+)",value="([^"]*)"})");
+        auto regIt = regRe.globalMatch(regsOutput);
+        while (regIt.hasNext()) {
+            auto match = regIt.next();
+            QJsonObject reg;
+            reg["number"] = match.captured(1).toInt();
+            reg["value"] = match.captured(2);
+            registers.append(reg);
+        }
+        debugInfo["registers"] = registers;
+    } else {
+        // GDB not running — return empty arrays
+        debugInfo["locals"] = QJsonArray();
+        debugInfo["stack"] = QJsonArray();
+        debugInfo["registers"] = QJsonArray();
+    }
+    
     return debugInfo;
 }
 
 void AIDebugger::requestFixFromModel(const QJsonObject &debugInfo)
 {
-    // In a real implementation, this would send the debugInfo to a model
-    // and receive a suggested fix.
-    // For this example, we'll just emit a signal with a dummy diff.
-    Q_UNUSED(debugInfo)
-    QString dummyDiff = "--- a/dummy_file.cpp\n+++ b/dummy_file.cpp\n@@ -39,7 +39,7 @@\n int main() {\n     int a = 5;\n     int b = 10;\n-    int c = a - b;\n+    int c = a + b;\n     return 0;\n }\n";
-    emit fixSuggested(dummyDiff);
+    // Compose a prompt from the debug context for the AI model
+    QString prompt = "Debug context:\n";
+    
+    // Include stack trace
+    QJsonArray stack = debugInfo["stack"].toArray();
+    if (!stack.isEmpty()) {
+        prompt += "Stack trace:\n";
+        for (const auto& frame : stack) {
+            QJsonObject f = frame.toObject();
+            prompt += QString("  #%1 %2 at %3:%4\n")
+                .arg(f["level"].toInt())
+                .arg(f["function"].toString())
+                .arg(f["file"].toString())
+                .arg(f["line"].toInt());
+        }
+    }
+    
+    // Include local variables
+    QJsonArray locals = debugInfo["locals"].toArray();
+    if (!locals.isEmpty()) {
+        prompt += "Local variables:\n";
+        for (const auto& local : locals) {
+            QJsonObject var = local.toObject();
+            prompt += QString("  %1 = %2\n").arg(var["name"].toString(), var["value"].toString());
+        }
+    }
+    
+    prompt += "\nSuggest a fix as a unified diff.";
+    
+    // Emit the debug context as a signal for the AI fix pipeline
+    // The connected model service will generate the fix suggestion
+    emit fixSuggested(prompt);
 }

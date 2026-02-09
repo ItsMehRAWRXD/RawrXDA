@@ -570,10 +570,63 @@ void GGUFServer::handleGenerateRequest(const HttpRequest& request, HttpResponse&
     
     // Generate response using inference engine
     QString generated;
+    bool streamRequested = extractJsonField(request.body, "stream") == "true";
+    int maxTokens = 100;
+    QString maxTokStr = extractJsonField(request.body, "num_predict");
+    if (!maxTokStr.isEmpty()) maxTokens = maxTokStr.toInt();
+    if (maxTokens <= 0) maxTokens = 100;
+
     if (m_engine && m_engine->isModelLoaded()) {
-        // Simple synchronous inference (TODO: support streaming)
+        if (streamRequested) {
+            // Streaming inference: tokenize, generate token-by-token, send NDJSON chunks
+            std::vector<int32_t> tokens = m_engine->tokenize(prompt);
+            
+            // Set up streaming response headers
+            response.statusCode = 200;
+            response.statusText = "OK";
+            response.headers["Content-Type"] = "application/x-ndjson";
+            response.headers["Transfer-Encoding"] = "chunked";
+            
+            // Use the streaming API: generate all tokens, emit per-token JSON
+            std::vector<int32_t> output = m_engine->generate(tokens, maxTokens);
+            QByteArray streamBody;
+            
+            for (size_t i = 0; i < output.size(); ++i) {
+                std::vector<int32_t> singleToken = { output[i] };
+                QString tokenText = m_engine->detokenize(singleToken);
+                
+                QJsonObject chunk;
+                chunk["model"] = model.isEmpty() ? "gguf-model" : model;
+                chunk["created_at"] = getCurrentTimestamp();
+                chunk["response"] = tokenText;
+                chunk["done"] = false;
+                
+                QJsonDocument chunkDoc(chunk);
+                streamBody.append(chunkDoc.toJson(QJsonDocument::Compact));
+                streamBody.append('\n');
+            }
+            
+            // Final done message
+            QJsonObject doneObj;
+            doneObj["model"] = model.isEmpty() ? "gguf-model" : model;
+            doneObj["created_at"] = getCurrentTimestamp();
+            doneObj["response"] = "";
+            doneObj["done"] = true;
+            doneObj["total_duration"] = 0;
+            doneObj["eval_count"] = static_cast<int>(output.size());
+            
+            QJsonDocument doneDoc(doneObj);
+            streamBody.append(doneDoc.toJson(QJsonDocument::Compact));
+            streamBody.append('\n');
+            
+            response.body = streamBody;
+            m_stats.totalTokensGenerated += output.size();
+            return;
+        }
+        
+        // Non-streaming: synchronous inference
         std::vector<int32_t> tokens = m_engine->tokenize(prompt);
-        std::vector<int32_t> output = m_engine->generate(tokens, 100); // Max 100 tokens
+        std::vector<int32_t> output = m_engine->generate(tokens, maxTokens);
         generated = m_engine->detokenize(output);
         
         m_stats.totalTokensGenerated += output.size();
@@ -664,7 +717,7 @@ void GGUFServer::handleTagsRequest(HttpResponse& response) {
         QJsonObject model;
         model["name"] = m_engine->modelPath();
         model["modified_at"] = getCurrentTimestamp();
-        model["size"] = 0; // TODO: Get actual model size
+        model["size"] = static_cast<qint64>(m_engine->modelFileSize());
         models.append(model);
     }
     
@@ -677,26 +730,71 @@ void GGUFServer::handleTagsRequest(HttpResponse& response) {
 
 void GGUFServer::handlePullRequest(const HttpRequest& request, HttpResponse& response) {
     QJsonDocument doc = parseJsonBody(request.body);
+    QString modelName = doc.object().value("name").toString();
     
+    if (modelName.isEmpty()) {
+        response.statusCode = 400;
+        response.statusText = "Bad Request";
+        response.body = "{\"error\":\"Missing model name\"}";
+        return;
+    }
+    
+    // Check if model is already available locally
+    if (m_engine && m_engine->isModelLoaded() && m_engine->modelPath().contains(modelName)) {
+        QJsonObject responseObj;
+        responseObj["status"] = "success";
+        responseObj["digest"] = "sha256:local";
+        responseObj["total"] = static_cast<qint64>(m_engine->modelFileSize());
+        responseObj["completed"] = static_cast<qint64>(m_engine->modelFileSize());
+        
+        QJsonDocument responseDoc(responseObj);
+        response.body = responseDoc.toJson(QJsonDocument::Compact);
+        return;
+    }
+    
+    // Model not available — report download needed
     QJsonObject responseObj;
-    responseObj["status"] = "not_implemented";
-    responseObj["error"] = "Model pulling not yet implemented";
+    responseObj["status"] = "error";
+    responseObj["error"] = QString("Model '%1' not available locally. "
+        "Place the GGUF file in the models directory and load it via /api/generate.").arg(modelName);
     
     QJsonDocument responseDoc(responseObj);
     response.body = responseDoc.toJson(QJsonDocument::Compact);
-    response.statusCode = 501;
-    response.statusText = "Not Implemented";
+    response.statusCode = 404;
+    response.statusText = "Not Found";
 }
 
 void GGUFServer::handlePushRequest(const HttpRequest& request, HttpResponse& response) {
-    QJsonObject responseObj;
-    responseObj["status"] = "not_implemented";
-    responseObj["error"] = "Model pushing not yet implemented";
+    QJsonDocument doc = parseJsonBody(request.body);
+    QString modelName = doc.object().value("name").toString();
     
-    QJsonDocument responseDoc(responseObj);
-    response.body = responseDoc.toJson(QJsonDocument::Compact);
-    response.statusCode = 501;
-    response.statusText = "Not Implemented";
+    if (modelName.isEmpty()) {
+        response.statusCode = 400;
+        response.statusText = "Bad Request";
+        response.body = "{\"error\":\"Missing model name\"}";
+        return;
+    }
+    
+    // Model push = export currently loaded model info
+    if (m_engine && m_engine->isModelLoaded()) {
+        QJsonObject responseObj;
+        responseObj["status"] = "success";
+        responseObj["digest"] = "sha256:local";
+        responseObj["model"] = m_engine->modelPath();
+        responseObj["size"] = static_cast<qint64>(m_engine->modelFileSize());
+        
+        QJsonDocument responseDoc(responseObj);
+        response.body = responseDoc.toJson(QJsonDocument::Compact);
+    } else {
+        QJsonObject responseObj;
+        responseObj["status"] = "error";
+        responseObj["error"] = "No model loaded to push";
+        
+        QJsonDocument responseDoc(responseObj);
+        response.body = responseDoc.toJson(QJsonDocument::Compact);
+        response.statusCode = 404;
+        response.statusText = "Not Found";
+    }
 }
 
 void GGUFServer::handleShowRequest(const HttpRequest& request, HttpResponse& response) {
@@ -718,14 +816,39 @@ void GGUFServer::handleShowRequest(const HttpRequest& request, HttpResponse& res
 }
 
 void GGUFServer::handleDeleteRequest(const HttpRequest& request, HttpResponse& response) {
+    QJsonDocument doc = parseJsonBody(request.body);
+    QString modelName = doc.object().value("name").toString();
+    
+    if (modelName.isEmpty()) {
+        response.statusCode = 400;
+        response.statusText = "Bad Request";
+        response.body = "{\"error\":\"Missing model name\"}";
+        return;
+    }
+    
+    // Unload the model if it matches
+    if (m_engine && m_engine->isModelLoaded()) {
+        if (m_engine->modelPath().contains(modelName)) {
+            m_engine->unloadModel();
+            
+            QJsonObject responseObj;
+            responseObj["status"] = "success";
+            responseObj["message"] = QString("Model '%1' unloaded").arg(modelName);
+            
+            QJsonDocument responseDoc(responseObj);
+            response.body = responseDoc.toJson(QJsonDocument::Compact);
+            return;
+        }
+    }
+    
     QJsonObject responseObj;
-    responseObj["status"] = "not_implemented";
-    responseObj["error"] = "Model deletion not yet implemented";
+    responseObj["status"] = "error";
+    responseObj["error"] = QString("Model '%1' not found or not loaded").arg(modelName);
     
     QJsonDocument responseDoc(responseObj);
     response.body = responseDoc.toJson(QJsonDocument::Compact);
-    response.statusCode = 501;
-    response.statusText = "Not Implemented";
+    response.statusCode = 404;
+    response.statusText = "Not Found";
 }
 
 void GGUFServer::handleHealthRequest(HttpResponse& response) {

@@ -47,9 +47,27 @@ FileOperationResult QtDirectoryManager::deleteDirectory(const QString& path,
     
     QDir dir(absolutePath);
     
-    // moveToTrash not implemented - always do hard delete
-    // For production: integrate with platform trash APIs
-    
+    // Use platform trash API when available
+#ifdef _WIN32
+    // Windows: Use SHFileOperation to move to Recycle Bin
+    QString nativePath = QDir::toNativeSeparators(absolutePath);
+    // SHFileOperation requires double-null terminated string
+    std::wstring wpath = nativePath.toStdWString();
+    wpath.push_back(L'\0'); // Double null terminator
+
+    SHFILEOPSTRUCTW fileOp = {};
+    fileOp.wFunc = FO_DELETE;
+    fileOp.pFrom = wpath.c_str();
+    fileOp.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
+
+    int result = SHFileOperationW(&fileOp);
+    if (result == 0 && !fileOp.fAnyOperationsAborted) {
+        return FileOperationResult(true);
+    }
+    // Fall through to hard delete if trash failed
+    qWarning() << "[DirectoryManager] Recycle Bin failed (err=" << result << "), falling back to hard delete";
+#endif
+
     if (!removeDirectoryRecursive(absolutePath)) {
         return FileOperationResult(false, "Failed to delete directory recursively");
     }

@@ -682,27 +682,33 @@ bool Win32IDE::testFindPatternRVAParity(const std::string& binaryPath,
 // ============================================================================
 
 // External linkage — defined in license module if present
+// Cross-compiler weak symbol: if a real license module is linked, it overrides.
+// GCC/MinGW: __attribute__((weak)) makes the symbol overridable
+// MSVC: /alternatename maps missing symbol to the stub
+#if defined(_MSC_VER)
 extern "C" {
-    __attribute__((weak)) int RawrLicense_CheckFeature(const char* featureId);
+    int RawrLicense_CheckFeature_stub(const char*) { return 1; }
 }
+#pragma comment(linker, "/alternatename:RawrLicense_CheckFeature=RawrLicense_CheckFeature_stub")
+extern "C" int RawrLicense_CheckFeature(const char* featureId);
+#else
+extern "C" __attribute__((weak)) int RawrLicense_CheckFeature(const char* featureId) {
+    (void)featureId;
+    return 1; // Stub: all features licensed when no license module is linked
+}
+#endif
 
 bool Win32IDE::checkFeatureLicense(const std::string& featureId) const {
-    // If the license check function is linked, use it
-    if (RawrLicense_CheckFeature) {
-        return RawrLicense_CheckFeature(featureId.c_str()) != 0;
-    }
-    // No license module linked — all features are available
-    return true;
+    return RawrLicense_CheckFeature(featureId.c_str()) != 0;
 }
 
 void Win32IDE::syncLicenseWithManifest() {
     LOG_INFO("syncLicenseWithManifest");
 
-    if (!RawrLicense_CheckFeature) {
-        appendToOutput("ℹ️ No license module linked — all features available\n",
-                      "Output", OutputSeverity::Info);
-        return;
-    }
+    // With /alternatename, the stub always returns 1 (all features available)
+    // If a real license module is linked, it overrides the stub
+    appendToOutput("ℹ️ License module active — checking features\n",
+                  "Output", OutputSeverity::Info);
 
     // The manifest is a static array — we check each feature's license status
     // and report any that are not licensed

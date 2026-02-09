@@ -426,8 +426,53 @@ void HardwareBackendSelector::onApplyConfiguration()
 
 void HardwareBackendSelector::loadBackendCapabilities()
 {
-    // This would load actual GPU capabilities from the system
-    // For now, we use placeholder values
+    // Query system GPU capabilities using Windows Display Adapters
+#ifdef _WIN32
+    DISPLAY_DEVICEW dd = {};
+    dd.cb = sizeof(dd);
+    for (DWORD i = 0; EnumDisplayDevicesW(nullptr, i, &dd, 0); ++i) {
+        if (!(dd.StateFlags & DISPLAY_DEVICE_ACTIVE)) continue;
+
+        QString adapterName = QString::fromWCharArray(dd.DeviceString);
+        qDebug() << "[HardwareBackend] Detected GPU:" << adapterName;
+
+        // Update backend capabilities based on detected hardware
+        for (auto& backend : m_backends) {
+            if (adapterName.contains("NVIDIA", Qt::CaseInsensitive)) {
+                if (backend.backend == Backend::CUDA) {
+                    backend.available = true;
+                    backend.description = "CUDA on " + adapterName;
+                }
+            } else if (adapterName.contains("AMD", Qt::CaseInsensitive) ||
+                       adapterName.contains("Radeon", Qt::CaseInsensitive)) {
+                if (backend.backend == Backend::ROCm || backend.backend == Backend::Vulkan) {
+                    backend.available = true;
+                    backend.description = backend.name + " on " + adapterName;
+                }
+            } else if (adapterName.contains("Intel", Qt::CaseInsensitive)) {
+                if (backend.backend == Backend::Vulkan || backend.backend == Backend::CPU) {
+                    backend.available = true;
+                    backend.description = backend.name + " on " + adapterName;
+                }
+            }
+        }
+    }
+#endif
+
+    // Query system memory for CPU backend capacity
+    MEMORYSTATUSEX memInfo = {};
+    memInfo.dwLength = sizeof(memInfo);
+    if (GlobalMemoryStatusEx(&memInfo)) {
+        m_memoryPoolMB = static_cast<int>(memInfo.ullTotalPhys / (1024 * 1024));
+        qDebug() << "[HardwareBackend] System RAM:" << m_memoryPoolMB << "MB";
+    }
+
+    // CPU backend is always available
+    for (auto& backend : m_backends) {
+        if (backend.backend == Backend::CPU) {
+            backend.available = true;
+        }
+    }
 }
 
 HardwareBackendSelector::Backend HardwareBackendSelector::getSelectedBackend() const

@@ -50,14 +50,27 @@ void QuantBackend::matmul(
 #ifdef HAVE_GGML
         case QuantMode::Q4_0: {
             // ggml Q4_0 matmul path
-            // NOTE: ggml expects row-major layout
-            // This is a simplified stub - full implementation needs:
-            // 1. Pre-quantized weight buffer
-            // 2. ggml context management
-            // 3. Proper tensor creation
-            
-            // For now, fall through to fallback
-            // TODO: Implement ggml_mul_mat with Q4_0 tensors
+            // Quantize input A on-the-fly, use pre-quantized weights for B
+            // For models with pre-quantized tensors, this provides 4-bit inference
+            if (m_quantizedWeights && m_quantizedWeightSize > 0) {
+                // Use ggml's quantized matmul kernel
+                struct ggml_init_params gparams = { .mem_size = N * M * K * 4 + 1024*1024, .mem_buffer = nullptr, .no_alloc = false };
+                struct ggml_context* ctx = ggml_init(gparams);
+                if (ctx) {
+                    struct ggml_tensor* ta = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, K, N);
+                    struct ggml_tensor* tb = ggml_new_tensor_2d(ctx, GGML_TYPE_Q4_0, K, M);
+                    memcpy(ta->data, A, N * K * sizeof(float));
+                    memcpy(tb->data, m_quantizedWeights, m_quantizedWeightSize);
+                    struct ggml_tensor* tc = ggml_mul_mat(ctx, tb, ta);
+                    struct ggml_cgraph* gf = ggml_new_graph(ctx);
+                    ggml_build_forward_expand(gf, tc);
+                    ggml_graph_compute_with_ctx(ctx, gf, 1);
+                    memcpy(C, tc->data, N * M * sizeof(float));
+                    ggml_free(ctx);
+                    break;
+                }
+            }
+            // Fallback if no pre-quantized weights available
             fallbackMatmul(A, B, C, N, M, K);
             break;
         }
@@ -91,14 +104,20 @@ bool QuantBackend::quantizeWeights(
 #ifdef HAVE_GGML
     switch (mode_) {
         case QuantMode::Q4_0: {
-            // ggml_quantize_q4_0(src, dst, count, ...);
-            // TODO: Implement using ggml quantization API
-            return false;
+            // Quantize float32 weights to Q4_0 format using ggml
+            // Q4_0 block size is 32 elements = 18 bytes (2 bytes scale + 16 bytes data)
+            size_t nBlocks = (count + 31) / 32;
+            int64_t histogramBuf[16] = {};
+            ggml_quantize_q4_0((const float*)src, dst, (int)count, (int)count, histogramBuf);
+            return true;
         }
         
         case QuantMode::Q8_0: {
-            // ggml_quantize_q8_0(src, dst, count, ...);
-            return false;
+            // Quantize float32 weights to Q8_0 format using ggml
+            // Q8_0 block size is 32 elements = 34 bytes (2 bytes scale + 32 bytes data)
+            int64_t histogramBuf[256] = {};
+            ggml_quantize_q8_0((const float*)src, dst, (int)count, (int)count, histogramBuf);
+            return true;
         }
         
         default:

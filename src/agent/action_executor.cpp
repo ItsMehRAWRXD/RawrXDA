@@ -436,9 +436,40 @@ bool ActionExecutor::handleInvokeCommand(Action& action)
  */
 bool ActionExecutor::handleRecursiveAgent(Action& action)
 {
-    // Placeholder for recursive agent call
-    // Would invoke ModelInvoker again with new wish
-    action.result = "Recursive agent invocation not yet implemented";
+    // Recursive agent invocation: spawn a sub-agent with a new wish/goal
+    QString subWish = action.params.value("wish").toString();
+    if (subWish.isEmpty()) {
+        subWish = action.params.value("query").toString();
+    }
+    if (subWish.isEmpty()) {
+        action.result = "No 'wish' or 'query' provided for recursive agent";
+        return false;
+    }
+
+    int maxDepth = action.params.value("maxDepth").toInt(3);
+    int currentDepth = action.params.value("currentDepth").toInt(0);
+
+    if (currentDepth >= maxDepth) {
+        action.result = "Recursive agent depth limit reached (" +
+                        QString::number(maxDepth).toStdString() + ")";
+        return false;
+    }
+
+    // Create sub-context with incremented depth
+    QJsonObject subParams;
+    subParams["wish"] = subWish;
+    subParams["currentDepth"] = currentDepth + 1;
+    subParams["maxDepth"] = maxDepth;
+    subParams["parentAction"] = action.id;
+
+    // Invoke through the model invoker if available
+    if (m_context.modelInvoker) {
+        QJsonObject invokeResult = m_context.modelInvoker->invoke(subWish, subParams);
+        action.result = QJsonDocument(invokeResult).toJson(QJsonDocument::Compact);
+        return invokeResult.value("success").toBool(false);
+    }
+
+    action.result = "ModelInvoker not available for recursive agent call";
     return false;
 }
 

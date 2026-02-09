@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <sstream>
 #include <cmath>
+#include <map>
 
 using namespace RawrXD;
 
@@ -50,8 +51,8 @@ CodeMetrics CodeAnalyzer::CalculateMetrics(const std::string& code) {
     // Calculate maintainability index
     metrics.maintainability_index = CalculateMaintainabilityIndex(metrics);
     
-    // Estimate duplication
-    metrics.duplication_ratio = 0.15f; // Placeholder
+    // Calculate duplication ratio using line-level comparison
+    metrics.duplication_ratio = CalculateDuplicationRatio(code);
     
     return metrics;
 }
@@ -207,14 +208,89 @@ std::vector<CodeIssue> CodeAnalyzer::DetectPerformanceIssues(const std::string& 
 int CodeAnalyzer::CalculateCyclomaticComplexity(const std::string& code) {
     int complexity = 1; // Base complexity
     
-    // Count decision points
-    complexity += std::count(code.begin(), code.end(), 'i') / 2; // if statements (rough estimate)
-    complexity += std::count(code.begin(), code.end(), 'w') / 5; // while loops
-    complexity += std::count(code.begin(), code.end(), '?'); // ternary operators
-    complexity += std::count(code.begin(), code.end(), '&') / 2; // && operators
-    complexity += std::count(code.begin(), code.end(), '|') / 2; // || operators
+    // Count decision points using proper keyword/operator detection
+    // Each keyword adds a branch to the control flow graph
+    auto countKeyword = [&](const std::string& keyword) {
+        int count = 0;
+        size_t pos = 0;
+        while ((pos = code.find(keyword, pos)) != std::string::npos) {
+            // Verify word boundary (not part of a larger identifier)
+            bool leftBound = (pos == 0 || !std::isalnum(code[pos - 1]) && code[pos - 1] != '_');
+            bool rightBound = (pos + keyword.size() >= code.size() || 
+                              (!std::isalnum(code[pos + keyword.size()]) && code[pos + keyword.size()] != '_'));
+            if (leftBound && rightBound) count++;
+            pos += keyword.size();
+        }
+        return count;
+    };
+    
+    complexity += countKeyword("if");
+    complexity += countKeyword("else if");
+    complexity += countKeyword("while");
+    complexity += countKeyword("for");
+    complexity += countKeyword("case");
+    complexity += countKeyword("catch");
+    
+    // Count ternary operators
+    for (size_t i = 0; i < code.size(); ++i) {
+        if (code[i] == '?' && (i == 0 || code[i-1] != '?') && 
+            (i + 1 >= code.size() || code[i+1] != '?')) {
+            complexity++;
+        }
+    }
+    
+    // Count logical operators (each && or || adds a branch)
+    for (size_t i = 0; i + 1 < code.size(); ++i) {
+        if ((code[i] == '&' && code[i+1] == '&') ||
+            (code[i] == '|' && code[i+1] == '|')) {
+            complexity++;
+            i++; // Skip second char
+        }
+    }
     
     return std::max(1, complexity);
+}
+
+float CodeAnalyzer::CalculateDuplicationRatio(const std::string& code) {
+    // Line-level duplication detection using sliding window comparison
+    std::vector<std::string> lines;
+    std::istringstream iss(code);
+    std::string line;
+    while (std::getline(iss, line)) {
+        // Normalize: trim whitespace
+        size_t start = line.find_first_not_of(" \t");
+        if (start == std::string::npos) continue; // skip blank lines
+        std::string trimmed = line.substr(start);
+        if (trimmed.size() < 5) continue; // skip trivial lines (braces, etc)
+        if (trimmed[0] == '/' || trimmed[0] == '*' || trimmed[0] == '#') continue; // skip comments/preprocessor
+        lines.push_back(trimmed);
+    }
+    
+    if (lines.size() < 4) return 0.0f;
+    
+    // Compare 3-line windows for duplication
+    int totalWindows = 0;
+    int duplicateWindows = 0;
+    const int WINDOW = 3;
+    
+    std::map<std::string, int> windowHashes;
+    for (size_t i = 0; i + WINDOW <= lines.size(); ++i) {
+        std::string window;
+        for (int j = 0; j < WINDOW; ++j) {
+            window += lines[i + j] + "\n";
+        }
+        windowHashes[window]++;
+        totalWindows++;
+    }
+    
+    for (const auto& [key, count] : windowHashes) {
+        if (count > 1) {
+            duplicateWindows += (count - 1);
+        }
+    }
+    
+    if (totalWindows == 0) return 0.0f;
+    return std::min(1.0f, static_cast<float>(duplicateWindows) / static_cast<float>(totalWindows));
 }
 
 float CodeAnalyzer::CalculateMaintainabilityIndex(const CodeMetrics& metrics) {

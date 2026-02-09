@@ -79,7 +79,8 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 config.language = "cpp";
                 config.command = "clangd";  // Assumes clangd in PATH
                 config.arguments = QStringList{"--background-index", "--clang-tidy"};
-                config.workspaceRoot = QDir::currentPath();  // TODO: Use actual project root
+                config.workspaceRoot = m_workspaceRoot.isEmpty()
+                    ? QDir::currentPath() : m_workspaceRoot;
                 config.autoStart = false;  // Don't auto-start until explicitly needed
                 
                 m_lspClient = new RawrXD::LSPClient(config, this);
@@ -120,12 +121,15 @@ void AgenticIDE::showEvent(QShowEvent *ev) {
                 
                 // Wire InferenceEngine from AgenticEngine
                 if (m_agenticEngine) {
-                    // Note: InferenceEngine is internal to AgenticEngine
-                    // For now, PlanOrchestrator will use its own inference
-                    // TODO: Expose InferenceEngine getter in AgenticEngine
+                    auto* engine = m_agenticEngine->inferenceEngine();
+                    if (engine) {
+                        m_planOrchestrator->setInferenceEngine(engine);
+                    }
                 }
-                // TODO: Set workspace root from current project
-                // m_planOrchestrator->setWorkspaceRoot(projectRoot);
+                // Set workspace root from active project
+                if (!m_workspaceRoot.isEmpty()) {
+                    m_planOrchestrator->setWorkspaceRoot(m_workspaceRoot);
+                }
             }
 
             // Initialize tool registry and model router for Zero-Day engine

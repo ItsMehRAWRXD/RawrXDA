@@ -348,7 +348,47 @@ void MetricsDashboard::updateRequestCountTable()
 
 void MetricsDashboard::updateErrorLog()
 {
-    // Placeholder for error log updates
+    if (!m_error_log_table) return;
+    
+    m_error_log_table->setRowCount(0);
+    
+    // Collect errors from the stats object
+    QJsonObject stats = m_current_stats;
+    if (!stats.contains("recent_errors")) return;
+    
+    QJsonArray errors = stats["recent_errors"].toArray();
+    for (const QJsonValue& errVal : errors) {
+        QJsonObject err = errVal.toObject();
+        
+        int row = m_error_log_table->rowCount();
+        m_error_log_table->insertRow(row);
+        
+        QString timestamp = err.value("timestamp").toString(
+            QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+        QString severity = err.value("severity").toString("ERROR");
+        QString provider = err.value("provider").toString("unknown");
+        QString message = err.value("message").toString("Unknown error");
+        int statusCode = err.value("status_code").toInt(0);
+        
+        m_error_log_table->setItem(row, 0, new QTableWidgetItem(timestamp));
+        m_error_log_table->setItem(row, 1, new QTableWidgetItem(severity));
+        m_error_log_table->setItem(row, 2, new QTableWidgetItem(provider));
+        m_error_log_table->setItem(row, 3, new QTableWidgetItem(
+            statusCode > 0 ? QString("HTTP %1: %2").arg(statusCode).arg(message) : message));
+        
+        // Color-code severity
+        QColor rowColor;
+        if (severity == "CRITICAL") rowColor = QColor(255, 200, 200);
+        else if (severity == "ERROR") rowColor = QColor(255, 230, 220);
+        else if (severity == "WARN") rowColor = QColor(255, 255, 200);
+        else rowColor = QColor(255, 255, 255);
+        
+        for (int col = 0; col < m_error_log_table->columnCount(); ++col) {
+            if (auto* item = m_error_log_table->item(row, col)) {
+                item->setBackground(rowColor);
+            }
+        }
+    }
 }
 
 void MetricsDashboard::updateProviderStatus()

@@ -775,10 +775,43 @@ bool ModelTrainer::saveModel(const QString& outputPath)
     QFileInfo fileInfo(outputPath);
     QDir().mkpath(fileInfo.absolutePath());
     
-    // In a real implementation, this would save the updated model
-    // For now, we'll just copy the original model as a placeholder
-    QFile::copy(m_originalModelPath, outputPath);
-    
+    // Save the model: copy original structure and overlay updated weights
+    if (!QFile::exists(m_originalModelPath)) {
+        emit logMessage("Error: Original model not found at " + m_originalModelPath);
+        return false;
+    }
+
+    // Copy the base model file as starting point (preserves GGUF header and metadata)
+    if (QFile::exists(outputPath)) {
+        QFile::remove(outputPath);
+    }
+    if (!QFile::copy(m_originalModelPath, outputPath)) {
+        emit logMessage("Error: Failed to copy base model to " + outputPath);
+        return false;
+    }
+
+    // Make the output writable
+    QFile outFile(outputPath);
+    outFile.setPermissions(outFile.permissions() | QFile::WriteOwner);
+
+    // If we have updated weights, overlay them into the copied file
+    // The weight data starts after the GGUF header + metadata + tensor info
+    if (m_modelLoader && m_modelLoader->hasWeightUpdates()) {
+        if (!outFile.open(QIODevice::ReadWrite)) {
+            emit logMessage("Error: Cannot open output model for weight overlay");
+            return false;
+        }
+        QByteArray weightData = m_modelLoader->getUpdatedWeightData();
+        qint64 weightOffset = m_modelLoader->getWeightDataOffset();
+        if (weightOffset > 0 && !weightData.isEmpty()) {
+            outFile.seek(weightOffset);
+            outFile.write(weightData);
+            emit logMessage(QString("Overlayed %1 bytes of updated weights at offset %2")
+                .arg(weightData.size()).arg(weightOffset));
+        }
+        outFile.close();
+    }
+
     emit logMessage("Model saved to: " + outputPath);
     return true;
 }

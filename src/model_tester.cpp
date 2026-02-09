@@ -5,9 +5,11 @@
 #include <iomanip>
 #include <ctime>
 
-// Note: This implementation shows the framework structure.
-// For full HTTP integration, link against libcurl:
-// #include <curl/curl.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+#endif
 
 ModelTester::ModelTester(
     std::shared_ptr<Logger> logger,
@@ -312,33 +314,94 @@ std::string ModelTester::makeOllamaRequest(
     const std::string& endpoint,
     const std::string& payload) {
 
-    // Implementation requires libcurl
-    // For now, return placeholder response
-    // In production, would use curl_easy_perform()
-
     if (m_logger) m_logger->debug("Making Ollama request to {} with {} chars payload", 
                     endpoint, payload.length());
 
-    // Placeholder: Simulate a response
-    // Real implementation would make actual HTTP call to http://localhost:11434{endpoint}
-    
-    std::string response = R"(
-{
-  "model": "llama2",
-  "created_at": "2024-12-12T10:00:00Z",
-  "response": "function add(a, b) {\n  return a + b;\n}",
-  "done": true,
-  "total_duration": 1234567,
-  "load_duration": 123456,
-  "prompt_eval_count": 10,
-  "prompt_eval_duration": 234567,
-  "eval_count": 15,
-  "eval_duration": 876543
-}
-)";
+#ifdef _WIN32
+    // Use WinHTTP to call Ollama at localhost:11434
+    const char* ollamaHostEnv = std::getenv("OLLAMA_HOST");
+    std::string hostStr = ollamaHostEnv ? ollamaHostEnv : "localhost";
+    int port = 11434;
+    const char* portEnv = std::getenv("OLLAMA_PORT");
+    if (portEnv) port = std::stoi(portEnv);
+
+    std::wstring wHost(hostStr.begin(), hostStr.end());
+    std::wstring wEndpoint(endpoint.begin(), endpoint.end());
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-ModelTester/1.0",
+                                      WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                      WINHTTP_NO_PROXY_NAME,
+                                      WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) {
+        if (m_logger) m_logger->error("WinHttpOpen failed: {}", GetLastError());
+        return "";
+    }
+
+    HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(),
+                                         static_cast<INTERNET_PORT>(port), 0);
+    if (!hConnect) {
+        if (m_logger) m_logger->error("WinHttpConnect failed: {}", GetLastError());
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+                                             wEndpoint.c_str(),
+                                             nullptr, WINHTTP_NO_REFERER,
+                                             WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest) {
+        if (m_logger) m_logger->error("WinHttpOpenRequest failed: {}", GetLastError());
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    // Generous timeout for model inference
+    WinHttpSetTimeouts(hRequest, 5000, 10000, 120000, 120000);
+
+    LPCWSTR contentType = L"Content-Type: application/json";
+    BOOL sent = WinHttpSendRequest(hRequest, contentType, -1L,
+                                    (LPVOID)payload.c_str(),
+                                    (DWORD)payload.size(),
+                                    (DWORD)payload.size(), 0);
+    if (!sent) {
+        DWORD err = GetLastError();
+        if (m_logger) m_logger->error("WinHttpSendRequest failed: {} — is Ollama running on {}:{}?",
+                                       err, hostStr, port);
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    if (!WinHttpReceiveResponse(hRequest, nullptr)) {
+        if (m_logger) m_logger->error("WinHttpReceiveResponse failed: {}", GetLastError());
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    // Read response body
+    std::string response;
+    DWORD bytesAvailable = 0;
+    while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+        std::vector<char> buf(bytesAvailable + 1, 0);
+        DWORD bytesRead = 0;
+        WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+        response.append(buf.data(), bytesRead);
+    }
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
 
     if (m_logger) m_logger->debug("Received response: {} chars", response.length());
     return response;
+#else
+    if (m_logger) m_logger->error("makeOllamaRequest: POSIX requires libcurl (not linked)");
+    return "";
+#endif
 }
 
 std::string ModelTester::parseOllamaStreamingResponse(const std::string& streamResponse) {

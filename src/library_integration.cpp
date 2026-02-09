@@ -565,11 +565,30 @@ bool LibraryIntegration::isLibraryAvailable(const std::string& libraryName) {
 
 std::string LibraryIntegration::getLibraryVersion(const std::string& libraryName) {
     if (libraryName == "curl") {
-        return "7.85.0"; // Placeholder
+        // Dynamically query libcurl version if loaded
+        typedef const char* (*PFN_curl_version)();
+        HMODULE hCurl = GetModuleHandleA("libcurl.dll");
+        if (!hCurl) hCurl = GetModuleHandleA("libcurl-x64.dll");
+        if (hCurl) {
+            auto pVersion = (PFN_curl_version)GetProcAddress(hCurl, "curl_version");
+            if (pVersion) return pVersion();
+        }
+        return "7.85.0";  // Fallback if not loaded
     } else if (libraryName == "zstd") {
-        return "1.5.2"; // Placeholder
+        // Dynamically query zstd version
+        typedef unsigned (*PFN_ZSTD_versionNumber)();
+        HMODULE hZstd = GetModuleHandleA("zstd.dll");
+        if (!hZstd) hZstd = GetModuleHandleA("libzstd.dll");
+        if (hZstd) {
+            auto pVer = (PFN_ZSTD_versionNumber)GetProcAddress(hZstd, "ZSTD_versionNumber");
+            if (pVer) {
+                unsigned v = pVer();
+                return std::to_string(v / 10000) + "." + std::to_string((v / 100) % 100) + "." + std::to_string(v % 100);
+            }
+        }
+        return "1.5.2";  // Fallback if not loaded
     } else if (libraryName == "json") {
-        return "3.11.2"; // Placeholder
+        return "3.11.2";  // nlohmann/json is header-only, version known at compile time
     }
     return "unknown";
 }

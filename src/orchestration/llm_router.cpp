@@ -206,8 +206,29 @@ EnsembleResult LLMRouter::routeEnsemble(
              result.selectedModels.join(", "), 
              consensusMethod);
     
-    result.agreementLevel = 0.85f;  // Placeholder: would be calculated from actual responses
-    result.finalConfidence = 0.90f;
+    // Calculate agreement level from model score variance (lower variance = higher agreement)
+    if (!scores.isEmpty()) {
+        float sumScores = 0.0f, sumSqScores = 0.0f;
+        int count = 0;
+        for (auto it = scores.begin(); it != scores.end(); ++it) {
+            if (result.selectedModels.contains(it.key())) {
+                sumScores += it.value();
+                sumSqScores += it.value() * it.value();
+                count++;
+            }
+        }
+        if (count > 1) {
+            float mean = sumScores / count;
+            float variance = (sumSqScores / count) - (mean * mean);
+            // Map variance to agreement: low variance → high agreement
+            result.agreementLevel = std::max(0.0f, std::min(1.0f, 1.0f - std::sqrt(variance)));
+        } else {
+            result.agreementLevel = 1.0f;  // Single model: perfect self-agreement
+        }
+    } else {
+        result.agreementLevel = 0.0f;
+    }
+    result.finalConfidence = result.agreementLevel * 0.95f;
     
     qDebug() << "Ensemble Result:" << result.selectedModels.join(", ");
     

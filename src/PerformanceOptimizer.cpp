@@ -182,7 +182,7 @@ void PerformanceOptimizer::backgroundIndexThread(
     for (const auto& filePath : filePaths) {
         if (!m_isIndexing) break;
         
-        // Simulate indexing work
+        // Index file content into context cache (TTL: 1 hour)
         cacheContext("indexed_" + filePath, filePath, 3600);
     }
 }

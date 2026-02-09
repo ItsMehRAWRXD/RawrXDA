@@ -6,11 +6,8 @@
 // Removed register_rawr_inference (defined in rawr_engine.cpp)
 void register_sovereign_engines() {}
 
-namespace Diagnostics {
-    void error(const std::string& title, const std::string& message) {
-        std::cerr << "[ERROR] " << title << ": " << message << std::endl;
-    }
-}
+// Diagnostics::error — real implementation now in src/utils/Diagnostics.cpp
+// Stub removed to avoid multiple definition linker errors (LNK2005 / ld)
 
 // InferenceKernels: real SIMD implementations now in inference_kernels.cpp
 // Stubs removed to avoid multiple definition linker errors

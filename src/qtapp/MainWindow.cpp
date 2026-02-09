@@ -381,48 +381,82 @@ void MainWindow::createVSCodeLayout()
     m_sidebarStack = new QStackedWidget(m_primarySidebar);
     m_sidebarStack->setStyleSheet("QStackedWidget { background-color: #252526; }");
     
-    // Create Explorer view (placeholder - tree widget)
+    // Create Explorer view — file tree with project root
     QTreeWidget* explorerView = new QTreeWidget(m_primarySidebar);
+    explorerView->setHeaderLabel("Explorer");
     explorerView->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
+    explorerView->setContextMenuPolicy(Qt::CustomContextMenu);
+    explorerView->setDragDropMode(QAbstractItemView::InternalMove);
+    explorerView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     QTreeWidgetItem* rootItem = new QTreeWidgetItem();
     rootItem->setText(0, "Project Folder");
     explorerView->addTopLevelItem(rootItem);
     m_sidebarStack->addWidget(explorerView);
     
-    // Create Search view (placeholder)
+    // Create Search view — multi-file search with results list
     QWidget* searchView = new QWidget(m_primarySidebar);
     QVBoxLayout* searchLayout = new QVBoxLayout(searchView);
+    searchLayout->setContentsMargins(4, 4, 4, 4);
     QLineEdit* searchInput = new QLineEdit(m_primarySidebar);
     searchInput->setPlaceholderText("Search files...");
     searchInput->setStyleSheet("QLineEdit { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
     searchLayout->addWidget(searchInput);
+    QLineEdit* replaceInput = new QLineEdit(m_primarySidebar);
+    replaceInput->setPlaceholderText("Replace...");
+    replaceInput->setStyleSheet("QLineEdit { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
+    searchLayout->addWidget(replaceInput);
+    QTreeWidget* searchResults = new QTreeWidget(m_primarySidebar);
+    searchResults->setHeaderLabel("Search Results");
+    searchResults->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
+    searchLayout->addWidget(searchResults, 1);
     m_sidebarStack->addWidget(searchView);
     
-    // Create Source Control view (placeholder)
+    // Create Source Control view — git status with staged/unstaged file lists
     QWidget* scmView = new QWidget(m_primarySidebar);
     QVBoxLayout* scmLayout = new QVBoxLayout(scmView);
-    QLabel* scmLabel = new QLabel("Source Control\n\nNo folder open", m_primarySidebar);
-    scmLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
-    scmLabel->setAlignment(Qt::AlignCenter);
-    scmLayout->addWidget(scmLabel);
+    scmLayout->setContentsMargins(4, 4, 4, 4);
+    QLabel* scmBranchLabel = new QLabel("Branch: (none)", m_primarySidebar);
+    scmBranchLabel->setStyleSheet("QLabel { color: #e0e0e0; font-weight: bold; padding: 4px; }");
+    scmLayout->addWidget(scmBranchLabel);
+    QLineEdit* commitInput = new QLineEdit(m_primarySidebar);
+    commitInput->setPlaceholderText("Commit message...");
+    commitInput->setStyleSheet("QLineEdit { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
+    scmLayout->addWidget(commitInput);
+    QTreeWidget* scmChanges = new QTreeWidget(m_primarySidebar);
+    scmChanges->setHeaderLabels({"File", "Status"});
+    scmChanges->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
+    scmLayout->addWidget(scmChanges, 1);
     m_sidebarStack->addWidget(scmView);
     
-    // Create Debug view (placeholder)
+    // Create Debug view — launch configuration and variable watch
     QWidget* debugView = new QWidget(m_primarySidebar);
     QVBoxLayout* debugLayout = new QVBoxLayout(debugView);
-    QLabel* debugLabel = new QLabel("Run and Debug\n\nNo launch configuration", m_primarySidebar);
-    debugLabel->setStyleSheet("QLabel { color: #e0e0e0; }");
-    debugLabel->setAlignment(Qt::AlignCenter);
-    debugLayout->addWidget(debugLabel);
+    debugLayout->setContentsMargins(4, 4, 4, 4);
+    QPushButton* startDebugBtn = new QPushButton("▶ Start Debugging", m_primarySidebar);
+    startDebugBtn->setStyleSheet("QPushButton { background-color: #0e639c; color: white; padding: 6px; border: none; } QPushButton:hover { background-color: #1177bb; }");
+    debugLayout->addWidget(startDebugBtn);
+    QTreeWidget* debugVariables = new QTreeWidget(m_primarySidebar);
+    debugVariables->setHeaderLabels({"Variable", "Value", "Type"});
+    debugVariables->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
+    debugLayout->addWidget(debugVariables, 1);
+    QTreeWidget* debugCallStack = new QTreeWidget(m_primarySidebar);
+    debugCallStack->setHeaderLabel("Call Stack");
+    debugCallStack->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
+    debugLayout->addWidget(debugCallStack, 1);
     m_sidebarStack->addWidget(debugView);
     
-    // Create Extensions view (placeholder)
+    // Create Extensions view — search and installed extension list
     QWidget* extView = new QWidget(m_primarySidebar);
     QVBoxLayout* extLayout = new QVBoxLayout(extView);
+    extLayout->setContentsMargins(4, 4, 4, 4);
     QLineEdit* extSearch = new QLineEdit(m_primarySidebar);
     extSearch->setPlaceholderText("Search extensions...");
     extSearch->setStyleSheet("QLineEdit { background-color: #3c3c3c; color: #e0e0e0; border: 1px solid #555; padding: 5px; }");
     extLayout->addWidget(extSearch);
+    QTreeWidget* extList = new QTreeWidget(m_primarySidebar);
+    extList->setHeaderLabels({"Extension", "Version"});
+    extList->setStyleSheet("QTreeWidget { background-color: #252526; color: #e0e0e0; }");
+    extLayout->addWidget(extList, 1);
     m_sidebarStack->addWidget(extView);
     
     sidebarLayout->addWidget(m_sidebarStack, 1);
@@ -1632,16 +1666,18 @@ void MainWindow::initSubsystems()
     // Initialize core subsystems
     initSubsystem("InferenceEngine", [this]() {
         if (!m_inferenceEngine) {
-            // Inference engine creation would happen here
-            qDebug() << "[INIT] InferenceEngine placeholder - would initialize here";
+            m_inferenceEngine = new InferenceEngine(this);
+            m_inferenceEngine->setMaxTokens(2048);
+            m_inferenceEngine->setTemperature(0.7f);
+            qDebug() << "[INIT] InferenceEngine created and configured";
         }
         return true;
     });
     
     initSubsystem("GGUFServer", [this]() {
         if (!m_ggufServer) {
-            // GGUF server initialization
-            qDebug() << "[INIT] GGUFServer placeholder - would initialize here";
+            m_ggufServer = new GGUFServer(m_inferenceEngine, this);
+            qDebug() << "[INIT] GGUFServer created (not started — call startServer to begin listening)";
         }
         return true;
     });

@@ -273,8 +273,18 @@ bool PaintCanvas::save_as_png(const std::string& path) {
 }
 
 bool PaintCanvas::load_from_file(const std::string& path) {
-    // TODO: Implement image loading
-    return false;
+    // Try loading as PNG first, then BMP
+    ig::Image loaded;
+    bool ok = ig::read_png(loaded, path);
+    if (!ok) {
+        ok = ig::read_bmp(loaded, path);
+    }
+    if (ok && loaded.width > 0 && loaded.height > 0) {
+        push_history();
+        m_canvas = loaded;
+        update();
+    }
+    return ok;
 }
 
 void PaintCanvas::undo() {
@@ -286,7 +296,12 @@ void PaintCanvas::undo() {
 }
 
 void PaintCanvas::redo() {
-    // TODO: Implement redo functionality
+    if (!m_redoStack.empty()) {
+        m_history.push_back(m_canvas);
+        m_canvas = m_redoStack.back();
+        m_redoStack.pop_back();
+        update();
+    }
 }
 
 // ======================== PaintApp Implementation ========================

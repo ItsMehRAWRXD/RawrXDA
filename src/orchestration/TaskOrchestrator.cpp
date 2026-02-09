@@ -512,9 +512,22 @@ OrchestrationResult TaskOrchestrator::getTaskResult(const QString& taskId) const
 void TaskOrchestrator::cancelTask(const QString& taskId)
 {
     if (m_activeTasks.contains(taskId)) {
-        // TODO: Implement cancellation logic
+        // Decrement model workload before removing the task entry
+        const TaskDefinition& task = m_activeTasks[taskId];
+        if (m_modelWorkloads.contains(task.model)) {
+            m_modelWorkloads[task.model] = qMax(0, m_modelWorkloads[task.model] - 1);
+        }
+        
+        // Record cancellation result
+        OrchestrationResult result;
+        result.taskId = taskId;
+        result.success = false;
+        result.error = "Cancelled by user";
+        m_completedTasks[taskId] = result;
+        
         m_activeTasks.remove(taskId);
-        m_modelWorkloads[m_activeTasks[taskId].model] = qMax(0, m_modelWorkloads[m_activeTasks[taskId].model] - 1);
+        
+        emit taskCancelled(taskId);
     }
 }
 

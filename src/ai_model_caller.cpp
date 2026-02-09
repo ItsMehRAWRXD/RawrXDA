@@ -31,6 +31,16 @@
 #include <condition_variable>
 #include <iostream>
 #include <chrono>
+#include <sstream>
+#include <regex>
+#include <algorithm>
+#include <cstdlib>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <winhttp.h>
+#pragma comment(lib, "winhttp.lib")
+#endif
 
 /**
  * Production LLM Model Caller
@@ -362,9 +372,29 @@ public:
                 return results;
             }
 
-            // Parse diagnostics from response
-            auto diagnosticLines = response;
-            // TODO: Parse structured diagnostics from model response
+            // Parse diagnostics from model response
+            // Expected format: "Line N: [severity] message"
+            std::istringstream iss(response);
+            std::string line;
+            std::regex diagPattern(R"([Ll]ine\s*(\d+)(?::\s*|,\s*(?:col(?:umn)?\s*(\d+)):?\s*)?\[?(error|warning|info|hint)\]?:?\s*(.+))");
+            while (std::getline(iss, line)) {
+                std::smatch match;
+                if (std::regex_search(line, match, diagPattern)) {
+                    Diagnostic diag;
+                    diag.line = std::stoi(match[1].str());
+                    diag.column = match[2].matched ? std::stoi(match[2].str()) : 0;
+                    diag.severity = match[3].str();
+                    diag.message = match[4].str();
+                    results.push_back(diag);
+                } else if (line.find("error") != std::string::npos || 
+                           line.find("warning") != std::string::npos) {
+                    // Fallback: unstructured diagnostic
+                    Diagnostic diag;
+                    diag.message = line;
+                    diag.severity = (line.find("error") != std::string::npos) ? "error" : "warning";
+                    results.push_back(diag);
+                }
+            }
 
             std::cout << "✅ Found " << results.size() << " diagnostics" << std::endl;
 
@@ -394,32 +424,222 @@ private:
      * 5. Handle errors and retries
      * 6. Log metrics (latency, tokens, cost)
      */
+    /**
+     * Ollama endpoint and model configuration
+     * Read from environment or fall back to defaults.
+     */
+    static std::string getOllamaHost() {
+        const char* env = std::getenv("OLLAMA_HOST");
+        return env ? std::string(env) : "localhost";
+    }
+    static int getOllamaPort() {
+        const char* env = std::getenv("OLLAMA_PORT");
+        return env ? std::stoi(env) : 11434;
+    }
+    static std::string getOllamaModel() {
+        const char* env = std::getenv("OLLAMA_MODEL");
+        return env ? std::string(env) : "llama2";
+    }
+
+    /**
+     * JSON-escape a string for embedding in a JSON payload.
+     */
+    static std::string jsonEscape(const std::string& s) {
+        std::string out;
+        out.reserve(s.size() + 32);
+        for (char c : s) {
+            switch (c) {
+                case '"':  out += "\\\""; break;
+                case '\\': out += "\\\\"; break;
+                case '\n': out += "\\n";  break;
+                case '\r': out += "\\r";  break;
+                case '\t': out += "\\t";  break;
+                default:
+                    if (static_cast<unsigned char>(c) < 0x20) {
+                        char buf[8];
+                        snprintf(buf, sizeof(buf), "\\u%04x", (unsigned char)c);
+                        out += buf;
+                    } else {
+                        out += c;
+                    }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Extract value of a JSON string key from a flat JSON object.
+     * Lightweight parser — no dependency on a JSON library.
+     */
+    static std::string extractJsonString(const std::string& json, const std::string& key) {
+        std::string needle = "\"" + key + "\"";
+        size_t pos = json.find(needle);
+        if (pos == std::string::npos) return "";
+        pos = json.find(':', pos + needle.size());
+        if (pos == std::string::npos) return "";
+        pos = json.find('"', pos + 1);
+        if (pos == std::string::npos) return "";
+        ++pos; // skip opening quote
+        std::string result;
+        while (pos < json.size() && json[pos] != '"') {
+            if (json[pos] == '\\' && pos + 1 < json.size()) {
+                ++pos;
+                switch (json[pos]) {
+                    case 'n': result += '\n'; break;
+                    case 'r': result += '\r'; break;
+                    case 't': result += '\t'; break;
+                    case '"': result += '"';  break;
+                    case '\\': result += '\\'; break;
+                    default: result += json[pos]; break;
+                }
+            } else {
+                result += json[pos];
+            }
+            ++pos;
+        }
+        return result;
+    }
+
+#ifdef _WIN32
+    /**
+     * Core model invocation via WinHTTP → Ollama /api/generate
+     *
+     * Routes to Ollama running on localhost (configurable via env vars).
+     * Falls back to empty string on any network/parse failure so callers
+     * degrade gracefully.
+     */
     static std::string callModel(const std::string& prompt, const GenerationParams& params) {
-        try {
-            // TODO: Implement actual model calls
-            // 
-            // Option 1: Local GGUF (GGML)
-            // std::string response = inferenceEngine.generate(prompt, params);
-            //
-            // Option 2: Ollama API
-            // auto response = ollamaClient.generate("llama2", prompt, params);
-            //
-            // Option 3: OpenAI API
-            // auto response = openaiClient.createCompletion(
-            //     "gpt-3.5-turbo",
-            //     prompt,
-            //     { "temperature": params.temperature, "max_tokens": params.max_tokens }
-            // );
+        auto startTime = std::chrono::steady_clock::now();
+        std::string ollamaHost = getOllamaHost();
+        int ollamaPort = getOllamaPort();
+        std::string model = getOllamaModel();
 
-            // Placeholder: return mock response
-            std::string response = "std::cout << \"Hello, World!\" << std::endl;";
-            return response;
+        std::cout << "🤖 Calling Ollama (" << ollamaHost << ":" << ollamaPort
+                  << " model=" << model << ") ..." << std::endl;
 
-        } catch (const std::exception& e) {
-            std::cerr << "❌ Model call error: " << e.what() << std::endl;
+        // Build JSON payload for /api/generate
+        std::string payload = "{";
+        payload += "\"model\":\"" + jsonEscape(model) + "\",";
+        payload += "\"prompt\":\"" + jsonEscape(prompt) + "\",";
+        payload += "\"stream\":false,";
+        payload += "\"options\":{";
+        payload += "\"temperature\":" + std::to_string(params.temperature) + ",";
+        payload += "\"top_p\":" + std::to_string(params.top_p) + ",";
+        payload += "\"top_k\":" + std::to_string(params.top_k) + ",";
+        payload += "\"num_predict\":" + std::to_string(params.max_tokens) + ",";
+        payload += "\"repeat_penalty\":" + std::to_string(params.repetition_penalty) + ",";
+        payload += "\"num_ctx\":" + std::to_string(params.context_window);
+        payload += "}}";
+
+        // WinHTTP session
+        std::wstring wHost(ollamaHost.begin(), ollamaHost.end());
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-ModelCaller/1.0",
+                                          WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                          WINHTTP_NO_PROXY_NAME,
+                                          WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession) {
+            std::cerr << "❌ WinHttpOpen failed: " << GetLastError() << std::endl;
             return "";
         }
+
+        HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(),
+                                             static_cast<INTERNET_PORT>(ollamaPort), 0);
+        if (!hConnect) {
+            std::cerr << "❌ WinHttpConnect failed: " << GetLastError() << std::endl;
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+                                                 L"/api/generate",
+                                                 nullptr, WINHTTP_NO_REFERER,
+                                                 WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+        if (!hRequest) {
+            std::cerr << "❌ WinHttpOpenRequest failed: " << GetLastError() << std::endl;
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Set timeout: 120 seconds for model inference (can be slow on CPU)
+        WinHttpSetTimeouts(hRequest, 5000, 10000, 120000, 120000);
+
+        // Send request
+        LPCWSTR contentType = L"Content-Type: application/json";
+        BOOL sent = WinHttpSendRequest(hRequest, contentType, -1L,
+                                        (LPVOID)payload.c_str(),
+                                        (DWORD)payload.size(),
+                                        (DWORD)payload.size(), 0);
+        if (!sent) {
+            DWORD err = GetLastError();
+            std::cerr << "❌ WinHttpSendRequest failed: " << err << std::endl;
+            if (err == ERROR_WINHTTP_CANNOT_CONNECT) {
+                std::cerr << "   Is Ollama running on " << ollamaHost << ":" << ollamaPort << "?" << std::endl;
+            }
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        if (!WinHttpReceiveResponse(hRequest, nullptr)) {
+            std::cerr << "❌ WinHttpReceiveResponse failed: " << GetLastError() << std::endl;
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return "";
+        }
+
+        // Check HTTP status
+        DWORD statusCode = 0;
+        DWORD statusSize = sizeof(statusCode);
+        WinHttpQueryHeaders(hRequest,
+                            WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                            WINHTTP_HEADER_NAME_BY_INDEX, &statusCode,
+                            &statusSize, WINHTTP_NO_HEADER_INDEX);
+
+        // Read response body
+        std::string responseBody;
+        DWORD bytesAvailable = 0;
+        while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+            std::vector<char> buf(bytesAvailable + 1, 0);
+            DWORD bytesRead = 0;
+            WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+            responseBody.append(buf.data(), bytesRead);
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        auto elapsed = std::chrono::steady_clock::now() - startTime;
+        double latencyMs = std::chrono::duration<double, std::milli>(elapsed).count();
+
+        if (statusCode != 200) {
+            std::cerr << "❌ Ollama returned HTTP " << statusCode << std::endl;
+            if (!responseBody.empty()) {
+                std::cerr << "   Body: " << responseBody.substr(0, 512) << std::endl;
+            }
+            return "";
+        }
+
+        // Extract the "response" field from Ollama JSON
+        std::string modelResponse = extractJsonString(responseBody, "response");
+
+        std::cout << "✅ Model responded in " << (int)latencyMs << " ms ("
+                  << modelResponse.size() << " chars)" << std::endl;
+
+        return modelResponse;
     }
+#else
+    /**
+     * POSIX fallback: use libcurl if available, otherwise return empty.
+     */
+    static std::string callModel(const std::string& prompt, const GenerationParams& params) {
+        std::cerr << "❌ callModel: POSIX implementation requires libcurl (not yet linked)" << std::endl;
+        return "";
+    }
+#endif
 
     // Prompt builders
     static std::string buildCompletionPrompt(
@@ -475,8 +695,60 @@ Code:
     // Response parsers
     static std::vector<std::string> parseCompletions(const std::string& response) {
         std::vector<std::string> completions;
-        // TODO: Parse multiple completions from response
-        completions.push_back(response);
+        if (response.empty()) return completions;
+
+        // Strategy 1: Look for numbered completions (1. ... 2. ... 3. ...)
+        std::regex numberedPattern(R"(\d+\.\s*(.+?)(?=\d+\.|$))");
+        auto begin = std::sregex_iterator(response.begin(), response.end(), numberedPattern);
+        auto end = std::sregex_iterator();
+        if (std::distance(begin, end) > 1) {
+            for (auto it = begin; it != end; ++it) {
+                std::string match = (*it)[1].str();
+                // Trim whitespace
+                size_t s = match.find_first_not_of(" \t\n\r");
+                size_t e = match.find_last_not_of(" \t\n\r");
+                if (s != std::string::npos) {
+                    completions.push_back(match.substr(s, e - s + 1));
+                }
+            }
+            return completions;
+        }
+
+        // Strategy 2: Look for code blocks separated by blank lines or ```
+        std::regex codeBlockPattern(R"(```\w*\n([\s\S]*?)```)");
+        begin = std::sregex_iterator(response.begin(), response.end(), codeBlockPattern);
+        if (std::distance(begin, end) > 0) {
+            for (auto it = begin; it != end; ++it) {
+                completions.push_back((*it)[1].str());
+            }
+            return completions;
+        }
+
+        // Strategy 3: Split by double newlines for multiple suggestions
+        std::istringstream iss(response);
+        std::string block;
+        std::string currentBlock;
+        std::string line;
+        while (std::getline(iss, line)) {
+            if (line.find_first_not_of(" \t\r") == std::string::npos) {
+                if (!currentBlock.empty()) {
+                    completions.push_back(currentBlock);
+                    currentBlock.clear();
+                }
+            } else {
+                if (!currentBlock.empty()) currentBlock += "\n";
+                currentBlock += line;
+            }
+        }
+        if (!currentBlock.empty()) {
+            completions.push_back(currentBlock);
+        }
+
+        // Fallback: return the whole response as one completion
+        if (completions.empty()) {
+            completions.push_back(response);
+        }
+
         return completions;
     }
 
@@ -500,8 +772,30 @@ Code:
 
     static std::vector<std::string> extractTestCases(const std::string& response) {
         std::vector<std::string> tests;
-        // TODO: Parse test functions from response
-        tests.push_back(response);
+
+        // Find test functions by common patterns
+        // Pattern: TEST(Suite, Name) { ... } or void test_name() { ... } or def test_name(): ...
+        std::regex testPattern(R"((TEST\w*\s*\([^)]+\)\s*\{[\s\S]*?^\})|(void\s+test_\w+\s*\([^)]*\)\s*\{[\s\S]*?^\})|(def\s+test_\w+\s*\([^)]*\):[\s\S]*?(?=\ndef|$)))", std::regex::multiline);
+        auto begin = std::sregex_iterator(response.begin(), response.end(), testPattern);
+        auto end = std::sregex_iterator();
+        for (auto it = begin; it != end; ++it) {
+            tests.push_back((*it)[0].str());
+        }
+
+        // If no structured tests found, try code block extraction
+        if (tests.empty()) {
+            std::regex codeBlock(R"(```\w*\n([\s\S]*?)```)");
+            begin = std::sregex_iterator(response.begin(), response.end(), codeBlock);
+            for (auto it = begin; it != end; ++it) {
+                tests.push_back((*it)[1].str());
+            }
+        }
+
+        // Final fallback
+        if (tests.empty() && !response.empty()) {
+            tests.push_back(response);
+        }
+
         return tests;
     }
 
@@ -516,7 +810,14 @@ Code:
 
     static std::vector<std::string> extractAssertions(const std::string& test) {
         std::vector<std::string> assertions;
-        // TODO: Parse assertions from test code
+        // Match various assertion patterns:
+        // EXPECT_*, ASSERT_*, assert(), self.assert*, expect(...)
+        std::regex assertPattern(R"((EXPECT_\w+|ASSERT_\w+|assert\w*|self\.assert\w*|expect)\s*\([^)]*\))");
+        auto begin = std::sregex_iterator(test.begin(), test.end(), assertPattern);
+        auto end = std::sregex_iterator();
+        for (auto it = begin; it != end; ++it) {
+            assertions.push_back((*it)[0].str());
+        }
         return assertions;
     }
 
@@ -541,9 +842,53 @@ Code:
     }
 
     static bool validateCodeSyntax(const std::string& code) {
-        // TODO: Implement real syntax validation
-        // In production, could use clang/gcc parser
-        return !code.empty();
+        if (code.empty()) return false;
+
+        // Check brace/paren/bracket balance
+        int braces = 0, parens = 0, brackets = 0;
+        bool inString = false;
+        bool inLineComment = false;
+        bool inBlockComment = false;
+        char prevChar = 0;
+
+        for (size_t i = 0; i < code.size(); ++i) {
+            char c = code[i];
+            
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '/' && prevChar == '*') inBlockComment = false;
+                prevChar = c;
+                continue;
+            }
+            if (inString) {
+                if (c == '"' && prevChar != '\\') inString = false;
+                prevChar = c;
+                continue;
+            }
+
+            if (c == '/' && i + 1 < code.size()) {
+                if (code[i+1] == '/') { inLineComment = true; continue; }
+                if (code[i+1] == '*') { inBlockComment = true; prevChar = c; continue; }
+            }
+            if (c == '"' && prevChar != '\\') { inString = true; prevChar = c; continue; }
+
+            switch (c) {
+                case '{': braces++; break;
+                case '}': braces--; break;
+                case '(': parens++; break;
+                case ')': parens--; break;
+                case '[': brackets++; break;
+                case ']': brackets--; break;
+            }
+
+            if (braces < 0 || parens < 0 || brackets < 0) return false;
+            prevChar = c;
+        }
+
+        return braces == 0 && parens == 0 && brackets == 0;
     }
 
     static std::vector<std::string> getRefactoringBenefits(const std::string& type) {

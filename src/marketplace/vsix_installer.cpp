@@ -58,9 +58,119 @@ void VsixInstaller::installFromUrl(const QString& url, const QString& extensionI
 }
 
 void VsixInstaller::installFromFile(const QString& filePath) {
-    // In a real implementation, this would install from a local VSIX file
     qDebug() << "[VsixInstaller] Installing from file:" << filePath;
-    emit installationError("local_file", "Not implemented");
+
+    QFileInfo vsixFile(filePath);
+    if (!vsixFile.exists() || !vsixFile.isReadable()) {
+        emit installationError("local_file", QString("VSIX file not found or not readable: %1").arg(filePath));
+        return;
+    }
+
+    // VSIX files are ZIP archives — extract to a temp directory
+    QString tempExtractDir = QDir::tempPath() + "/rawrxd_vsix_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+    QDir().mkpath(tempExtractDir);
+
+    // Use QProcess to unzip (PowerShell Expand-Archive on Windows, unzip on POSIX)
+    QProcess unzipProc;
+    unzipProc.setWorkingDirectory(tempExtractDir);
+#ifdef _WIN32
+    unzipProc.start("powershell", QStringList() << "-NoProfile" << "-Command"
+                    << QString("Expand-Archive -Path '%1' -DestinationPath '%2' -Force").arg(filePath, tempExtractDir));
+#else
+    unzipProc.start("unzip", QStringList() << "-o" << filePath << "-d" << tempExtractDir);
+#endif
+    if (!unzipProc.waitForFinished(30000) || unzipProc.exitCode() != 0) {
+        QDir(tempExtractDir).removeRecursively();
+        emit installationError("local_file", QString("Failed to extract VSIX: %1").arg(
+            QString::fromUtf8(unzipProc.readAllStandardError())));
+        return;
+    }
+
+    // Parse extension manifest (extension.vsixmanifest or package.json)
+    QString manifestPath = tempExtractDir + "/extension.vsixmanifest";
+    QString packageJsonPath = tempExtractDir + "/extension/package.json";
+    QString extensionId;
+    QString extensionVersion;
+    QString displayName;
+
+    if (QFile::exists(packageJsonPath)) {
+        QFile pjFile(packageJsonPath);
+        if (pjFile.open(QIODevice::ReadOnly)) {
+            QJsonDocument doc = QJsonDocument::fromJson(pjFile.readAll());
+            QJsonObject obj = doc.object();
+            QString publisher = obj.value("publisher").toString();
+            QString name = obj.value("name").toString();
+            extensionId = publisher.isEmpty() ? name : (publisher + "." + name);
+            extensionVersion = obj.value("version").toString("0.0.0");
+            displayName = obj.value("displayName").toString(name);
+            pjFile.close();
+        }
+    } else if (QFile::exists(manifestPath)) {
+        // Parse XML vsixmanifest
+        QFile mfFile(manifestPath);
+        if (mfFile.open(QIODevice::ReadOnly)) {
+            QString content = QString::fromUtf8(mfFile.readAll());
+            // Simple XML tag extraction
+            auto extractTag = [&content](const QString& tag) -> QString {
+                int start = content.indexOf("<" + tag);
+                if (start < 0) return QString();
+                int valStart = content.indexOf(">", start) + 1;
+                int valEnd = content.indexOf("</" + tag, valStart);
+                return (valStart > 0 && valEnd > valStart) ? content.mid(valStart, valEnd - valStart).trimmed() : QString();
+            };
+            displayName = extractTag("DisplayName");
+            // Extract Identity Id attribute
+            int idStart = content.indexOf("<Identity");
+            if (idStart >= 0) {
+                int idEnd = content.indexOf("/>", idStart);
+                QString identityTag = content.mid(idStart, idEnd - idStart);
+                QRegularExpression idRx("Id=\"([^\"]+)\"");
+                QRegularExpression verRx("Version=\"([^\"]+)\"");
+                auto idMatch = idRx.match(identityTag);
+                auto verMatch = verRx.match(identityTag);
+                if (idMatch.hasMatch()) extensionId = idMatch.captured(1);
+                if (verMatch.hasMatch()) extensionVersion = verMatch.captured(1);
+            }
+            mfFile.close();
+        }
+    }
+
+    if (extensionId.isEmpty()) {
+        extensionId = vsixFile.baseName();
+    }
+
+    // Copy extracted extension to the extensions install directory
+    QString installDir = getExtensionInstallPath(extensionId);
+    if (installDir.isEmpty()) {
+        installDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                     + "/extensions/" + extensionId;
+    }
+
+    // Remove old installation if present
+    QDir existingDir(installDir);
+    if (existingDir.exists()) {
+        existingDir.removeRecursively();
+    }
+
+    // Copy the extracted content to the install directory
+    QDir().mkpath(installDir);
+    QString sourceDir = QFile::exists(tempExtractDir + "/extension") 
+                        ? (tempExtractDir + "/extension") : tempExtractDir;
+
+    QProcess copyProc;
+#ifdef _WIN32
+    copyProc.start("cmd.exe", QStringList() << "/C" << "xcopy" << "/E" << "/I" << "/Y"
+                   << QDir::toNativeSeparators(sourceDir) << QDir::toNativeSeparators(installDir));
+#else
+    copyProc.start("cp", QStringList() << "-r" << (sourceDir + "/.") << installDir);
+#endif
+    copyProc.waitForFinished(30000);
+
+    // Clean up temp directory
+    QDir(tempExtractDir).removeRecursively();
+
+    qInfo() << "[VsixInstaller] Installed extension" << extensionId << "v" << extensionVersion << "to" << installDir;
+    emit installationCompleted(extensionId, true);
 }
 
 bool VsixInstaller::uninstallExtension(const QString& extensionId) {

@@ -34,8 +34,7 @@ public:
         
         std::cout << "[VSIX-Converter] Extracting archive..." << std::endl;
         
-        // 2. Parse package.json
-        // Simulating finding a manifest
+        // 2. Parse package.json — derive manifest from archive filename
         ExtensionManifest manifest;
         manifest.id = fs::path(vsixPath).stem().string();
         manifest.name = manifest.id;

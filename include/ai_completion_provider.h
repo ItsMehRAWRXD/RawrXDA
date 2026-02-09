@@ -199,6 +199,7 @@ private:
     QString m_lastPrefix;
     QString m_lastSuffix;
     QString m_lastFileType;
+    QStringList m_lastContextLines;
 };
 
 } // namespace RawrXD

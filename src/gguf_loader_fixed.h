@@ -119,12 +119,94 @@ public:
     std::string GetTypeString(GGMLType type) const override;
     uint64_t GetFileSize() const override;
     
-    // Implementations for IGGUFLoader inline methods
-    bool BuildTensorIndex() override { return true; } // Placeholder: actual index built in ParseMetadata
-    bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override { return false; } 
-    bool UnloadZone(const std::string& zone_name) override { return false; }
-    std::vector<std::string> GetLoadedZones() const override { return {}; }
-    std::vector<std::string> GetAllZones() const override { return {}; }
+    // Implementations for IGGUFLoader zone management
+    bool BuildTensorIndex() override {
+        // Build O(1) lookup index from tensors_ vector
+        tensor_index_.clear();
+        for (auto& t : tensors_) {
+            tensor_index_[t.name] = &t;
+        }
+        return !tensors_.empty() || true; // Success even if no tensors parsed yet
+    }
+
+    bool LoadZone(const std::string& zone_name, uint64_t max_memory_mb = 512) override {
+        if (!is_open_ || !file_.is_open()) return false;
+        if (loaded_zones_.count(zone_name)) return true; // Already loaded
+
+        // Collect tensors matching this zone prefix (e.g., "blk.0" matches "blk.0.attn_q.weight")
+        std::vector<uint8_t> zone_data;
+        uint64_t max_bytes = max_memory_mb * 1024ULL * 1024ULL;
+        bool found = false;
+
+        for (const auto& tensor : tensors_) {
+            // Match zone by prefix or exact name
+            if (tensor.name == zone_name || tensor.name.find(zone_name) == 0) {
+                if (current_memory_usage_ + tensor.size_bytes > max_bytes) {
+                    break; // Memory limit reached
+                }
+                // Read tensor data from file
+                std::vector<uint8_t> tensor_data(tensor.size_bytes);
+                file_.seekg(static_cast<std::streamoff>(tensor.offset));
+                if (file_.read(reinterpret_cast<char*>(tensor_data.data()), tensor.size_bytes)) {
+                    // Decompress if needed
+                    if (IsCompressed()) {
+                        std::vector<uint8_t> decompressed;
+                        if (DecompressData(tensor_data, decompressed)) {
+                            zone_data.insert(zone_data.end(), decompressed.begin(), decompressed.end());
+                        } else {
+                            zone_data.insert(zone_data.end(), tensor_data.begin(), tensor_data.end());
+                        }
+                    } else {
+                        zone_data.insert(zone_data.end(), tensor_data.begin(), tensor_data.end());
+                    }
+                    current_memory_usage_ += tensor.size_bytes;
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) return false;
+        loaded_zones_[zone_name] = std::move(zone_data);
+        return true;
+    }
+
+    bool UnloadZone(const std::string& zone_name) override {
+        auto it = loaded_zones_.find(zone_name);
+        if (it == loaded_zones_.end()) return false;
+        current_memory_usage_ -= it->second.size();
+        loaded_zones_.erase(it);
+        return true;
+    }
+
+    std::vector<std::string> GetLoadedZones() const override {
+        std::vector<std::string> zones;
+        zones.reserve(loaded_zones_.size());
+        for (const auto& kv : loaded_zones_) {
+            zones.push_back(kv.first);
+        }
+        return zones;
+    }
+
+    std::vector<std::string> GetAllZones() const override {
+        // Derive zone names from tensor name prefixes (e.g., "blk.0", "blk.1", "token_embd")
+        std::map<std::string, bool> zone_set;
+        for (const auto& tensor : tensors_) {
+            // Extract zone prefix: everything before the last '.' separator
+            size_t dot = tensor.name.rfind('.');
+            if (dot != std::string::npos && dot > 0) {
+                zone_set[tensor.name.substr(0, dot)] = true;
+            } else {
+                zone_set[tensor.name] = true;
+            }
+        }
+        std::vector<std::string> zones;
+        zones.reserve(zone_set.size());
+        for (const auto& kv : zone_set) {
+            zones.push_back(kv.first);
+        }
+        return zones;
+    }
+
     std::vector<TensorInfo> GetAllTensorInfo() const override { return tensors_; }
     uint64_t GetCurrentMemoryUsage() const override { return current_memory_usage_; }
 

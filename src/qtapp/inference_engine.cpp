@@ -930,15 +930,15 @@ std::vector<int32_t> InferenceEngine::generate(const std::vector<int32_t>& input
         telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.complete"), timer.elapsedMs(), QStringLiteral("tokens_out=%1 tok_s=%2").arg(result.size()).arg(m_tokensPerSecond, 0, 'f', 1));
         
     } else {
-        // Fallback: Simple echo with placeholder
-        qWarning() << "[generate] Transformer not ready, using placeholder generation";
+        // Fallback: Transformer not ready — return input tokens with EOS marker
+        // This signals to callers that no real generation occurred
+        qWarning() << "[generate] Transformer not ready, returning input with EOS";
         
-        // Just add a few placeholder tokens
-        for (int i = 0; i < std::min(maxTokens, 10); ++i) {
-            result.push_back(1000 + i);  // Placeholder tokens
-        }
-        qDebug() << "=== GENERATE END (FALLBACK) ===";
-        telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.fallback"), timer.elapsedMs(), QStringLiteral("tokens_out=%1").arg(result.size()));
+        // Append a single EOS token (token ID 2) to indicate end-of-sequence
+        // Callers can detect no generation occurred by checking if output == input + EOS
+        result.push_back(2);  // EOS token
+        qDebug() << "=== GENERATE END (NO MODEL) ===";
+        telemetry.recordTiming(QStringLiteral("inference"), QStringLiteral("generate.no_model"), timer.elapsedMs(), QStringLiteral("tokens_out=%1").arg(result.size()));
     }
     
     return result;

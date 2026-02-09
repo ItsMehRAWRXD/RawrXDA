@@ -4,6 +4,9 @@
 #include <QJsonArray>
 #include <QNetworkRequest>
 #include <QUrlQuery>
+#include <QElapsedTimer>
+#include <QCryptographicHash>
+#include <QMessageAuthenticationCode>
 #include <iostream>
 
 HybridCloudManager::HybridCloudManager(QObject* parent)
@@ -487,12 +490,108 @@ ExecutionResult HybridCloudManager::executeOnAWS(const ExecutionRequest& request
     result.executionLocation = "aws";
     result.modelUsed = modelId;
     result.success = false;
-    result.errorMessage = "AWS SageMaker integration not yet implemented";
+    
+    // AWS SageMaker Runtime InvokeEndpoint via REST API
+    // Requires: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, endpoint name
+    QString accessKey = qEnvironmentVariable("AWS_ACCESS_KEY_ID");
+    QString secretKey = qEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+    QString region = qEnvironmentVariable("AWS_REGION", "us-east-1");
+    QString endpointName = qEnvironmentVariable("AWS_SAGEMAKER_ENDPOINT", modelId);
+    
+    if (accessKey.isEmpty() || secretKey.isEmpty()) {
+        result.errorMessage = "AWS credentials not configured (set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY)";
+        result.completedAt = QDateTime::currentDateTime();
+        return result;
+    }
+    
+    // Build SageMaker InvokeEndpoint request
+    QJsonObject requestBody;
+    requestBody["inputs"] = request.prompt;
+    QJsonObject parameters;
+    parameters["max_new_tokens"] = request.maxTokens;
+    parameters["temperature"] = request.temperature;
+    requestBody["parameters"] = parameters;
+    
+    QByteArray payload = QJsonDocument(requestBody).toJson(QJsonDocument::Compact);
+    
+    QString host = QString("runtime.sagemaker.%1.amazonaws.com").arg(region);
+    QUrl url(QString("https://%1/endpoints/%2/invocations").arg(host, endpointName));
+    
+    QNetworkRequest netRequest(url);
+    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    netRequest.setRawHeader("Accept", "application/json");
+    
+    // AWS Signature V4 - simplified: use temporary credentials or assume IAM role
+    // For production, implement full SigV4 signing
+    QDateTime now = QDateTime::currentDateTimeUtc();
+    QString dateStamp = now.toString("yyyyMMdd");
+    QString amzDate = now.toString("yyyyMMdd'T'HHmmss'Z'");
+    netRequest.setRawHeader("X-Amz-Date", amzDate.toUtf8());
+    
+    // HMAC-SHA256 signing chain
+    auto hmacSha256 = [](const QByteArray& key, const QByteArray& msg) -> QByteArray {
+        return QMessageAuthenticationCode::hash(msg, key, QCryptographicHash::Sha256);
+    };
+    
+    QString canonicalUri = QString("/endpoints/%1/invocations").arg(endpointName);
+    QString canonicalHeaders = QString("content-type:application/json\nhost:%1\nx-amz-date:%2\n")
+        .arg(host, amzDate);
+    QString signedHeaders = "content-type;host;x-amz-date";
+    QString payloadHash = QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex();
+    
+    QString canonicalRequest = QString("POST\n%1\n\n%2\n%3\n%4")
+        .arg(canonicalUri, canonicalHeaders, signedHeaders, payloadHash);
+    
+    QString credentialScope = QString("%1/%2/sagemaker/aws4_request").arg(dateStamp, region);
+    QString stringToSign = QString("AWS4-HMAC-SHA256\n%1\n%2\n%3")
+        .arg(amzDate, credentialScope,
+             QCryptographicHash::hash(canonicalRequest.toUtf8(), QCryptographicHash::Sha256).toHex());
+    
+    QByteArray signingKey = hmacSha256(
+        hmacSha256(
+            hmacSha256(
+                hmacSha256(("AWS4" + secretKey).toUtf8(), dateStamp.toUtf8()),
+                region.toUtf8()),
+            QByteArray("sagemaker")),
+        QByteArray("aws4_request"));
+    
+    QString signature = hmacSha256(signingKey, stringToSign.toUtf8()).toHex();
+    
+    QString authHeader = QString("AWS4-HMAC-SHA256 Credential=%1/%2, SignedHeaders=%3, Signature=%4")
+        .arg(accessKey, credentialScope, signedHeaders, signature);
+    netRequest.setRawHeader("Authorization", authHeader.toUtf8());
+    
+    QElapsedTimer timer;
+    timer.start();
+    
+    QNetworkAccessManager nam;
+    QNetworkReply* reply = nam.post(netRequest, payload);
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    
+    result.latencyMs = timer.elapsed();
+    
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray responseData = reply->readAll();
+        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+        
+        if (responseDoc.isArray() && !responseDoc.array().isEmpty()) {
+            result.response = responseDoc.array()[0].toObject()["generated_text"].toString();
+        } else if (responseDoc.isObject()) {
+            result.response = responseDoc.object()["generated_text"].toString();
+            if (result.response.isEmpty()) {
+                result.response = responseDoc.object()["Body"].toString();
+            }
+        }
+        result.success = !result.response.isEmpty();
+        result.tokensUsed = request.maxTokens;
+    } else {
+        result.errorMessage = QString("AWS SageMaker error: %1").arg(reply->errorString());
+    }
+    
+    reply->deleteLater();
     result.completedAt = QDateTime::currentDateTime();
-    
-    // TODO: Implement AWS SageMaker Runtime API integration
-    // Requires AWS SDK or manual signing of requests
-    
     return result;
 }
 
@@ -503,11 +602,85 @@ ExecutionResult HybridCloudManager::executeOnAzure(const ExecutionRequest& reque
     result.executionLocation = "azure";
     result.modelUsed = modelId;
     result.success = false;
-    result.errorMessage = "Azure ML integration not yet implemented";
+    
+    // Azure ML Online Endpoint REST API
+    QString azureEndpoint = qEnvironmentVariable("AZURE_ML_ENDPOINT");
+    QString azureKey = qEnvironmentVariable("AZURE_ML_API_KEY");
+    
+    if (azureEndpoint.isEmpty() || azureKey.isEmpty()) {
+        result.errorMessage = "Azure ML credentials not configured (set AZURE_ML_ENDPOINT and AZURE_ML_API_KEY)";
+        result.completedAt = QDateTime::currentDateTime();
+        return result;
+    }
+    
+    // Build Azure ML inference request
+    QJsonObject requestBody;
+    QJsonObject inputData;
+    QJsonArray inputArray;
+    QJsonObject inputItem;
+    inputItem["role"] = "user";
+    inputItem["content"] = request.prompt;
+    inputArray.append(inputItem);
+    inputData["input_data"] = inputArray;
+    
+    QJsonObject parameters;
+    parameters["max_new_tokens"] = request.maxTokens;
+    parameters["temperature"] = request.temperature;
+    parameters["do_sample"] = true;
+    inputData["params"] = parameters;
+    requestBody["input_data"] = inputData;
+    
+    QByteArray payload = QJsonDocument(requestBody).toJson(QJsonDocument::Compact);
+    
+    QUrl url(azureEndpoint + "/score");
+    QNetworkRequest netRequest(url);
+    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    netRequest.setRawHeader("Authorization", ("Bearer " + azureKey).toUtf8());
+    netRequest.setRawHeader("azureml-model-deployment", modelId.toUtf8());
+    
+    QElapsedTimer timer;
+    timer.start();
+    
+    QNetworkAccessManager nam;
+    QNetworkReply* reply = nam.post(netRequest, payload);
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    
+    result.latencyMs = timer.elapsed();
+    
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray responseData = reply->readAll();
+        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+        
+        if (responseDoc.isObject()) {
+            QJsonObject respObj = responseDoc.object();
+            // Azure ML can return various formats
+            if (respObj.contains("output")) {
+                result.response = respObj["output"].toString();
+            } else if (respObj.contains("result")) {
+                result.response = respObj["result"].toString();
+            } else if (respObj.contains("predictions")) {
+                QJsonArray preds = respObj["predictions"].toArray();
+                if (!preds.isEmpty()) {
+                    result.response = preds[0].toString();
+                }
+            } else {
+                // Return raw response
+                result.response = QString::fromUtf8(responseData);
+            }
+        } else if (responseDoc.isArray() && !responseDoc.array().isEmpty()) {
+            result.response = responseDoc.array()[0].toObject()["generated_text"].toString();
+        }
+        
+        result.success = !result.response.isEmpty();
+        result.tokensUsed = request.maxTokens;
+    } else {
+        result.errorMessage = QString("Azure ML error: %1").arg(reply->errorString());
+    }
+    
+    reply->deleteLater();
     result.completedAt = QDateTime::currentDateTime();
-    
-    // TODO: Implement Azure ML REST API integration
-    
     return result;
 }
 
@@ -518,11 +691,99 @@ ExecutionResult HybridCloudManager::executeOnGCP(const ExecutionRequest& request
     result.executionLocation = "gcp";
     result.modelUsed = modelId;
     result.success = false;
-    result.errorMessage = "GCP Vertex AI integration not yet implemented";
+    
+    // GCP Vertex AI Prediction REST API
+    QString projectId = qEnvironmentVariable("GCP_PROJECT_ID");
+    QString location = qEnvironmentVariable("GCP_LOCATION", "us-central1");
+    QString accessToken = qEnvironmentVariable("GCP_ACCESS_TOKEN");
+    QString endpointId = qEnvironmentVariable("GCP_VERTEX_ENDPOINT_ID", modelId);
+    
+    if (projectId.isEmpty() || accessToken.isEmpty()) {
+        result.errorMessage = "GCP credentials not configured (set GCP_PROJECT_ID and GCP_ACCESS_TOKEN)";
+        result.completedAt = QDateTime::currentDateTime();
+        return result;
+    }
+    
+    // Build Vertex AI prediction request
+    QJsonObject requestBody;
+    QJsonArray instances;
+    QJsonObject instance;
+    instance["prompt"] = request.prompt;
+    instance["max_tokens"] = request.maxTokens;
+    instance["temperature"] = request.temperature;
+    instances.append(instance);
+    requestBody["instances"] = instances;
+    
+    QJsonObject parameters;
+    parameters["maxOutputTokens"] = request.maxTokens;
+    parameters["temperature"] = request.temperature;
+    parameters["topP"] = 0.95;
+    requestBody["parameters"] = parameters;
+    
+    QByteArray payload = QJsonDocument(requestBody).toJson(QJsonDocument::Compact);
+    
+    QUrl url(QString("https://%1-aiplatform.googleapis.com/v1/projects/%2/locations/%3/endpoints/%4:predict")
+        .arg(location, projectId, location, endpointId));
+    
+    QNetworkRequest netRequest(url);
+    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    netRequest.setRawHeader("Authorization", ("Bearer " + accessToken).toUtf8());
+    
+    QElapsedTimer timer;
+    timer.start();
+    
+    QNetworkAccessManager nam;
+    QNetworkReply* reply = nam.post(netRequest, payload);
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec();
+    
+    result.latencyMs = timer.elapsed();
+    
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray responseData = reply->readAll();
+        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+        
+        if (responseDoc.isObject()) {
+            QJsonObject respObj = responseDoc.object();
+            QJsonArray predictions = respObj["predictions"].toArray();
+            
+            if (!predictions.isEmpty()) {
+                QJsonObject prediction = predictions[0].toObject();
+                // Vertex AI text generation format
+                if (prediction.contains("content")) {
+                    result.response = prediction["content"].toString();
+                } else if (prediction.contains("text")) {
+                    result.response = prediction["text"].toString();
+                } else if (prediction.contains("candidates")) {
+                    QJsonArray candidates = prediction["candidates"].toArray();
+                    if (!candidates.isEmpty()) {
+                        result.response = candidates[0].toObject()["content"]
+                            .toObject()["parts"].toArray()[0]
+                            .toObject()["text"].toString();
+                    }
+                } else {
+                    // Try direct string value
+                    result.response = predictions[0].toString();
+                }
+            }
+        }
+        
+        result.success = !result.response.isEmpty();
+        result.tokensUsed = request.maxTokens;
+        
+        // Parse usage metadata if available
+        QJsonObject metadata = QJsonDocument::fromJson(responseData).object()["metadata"].toObject();
+        if (metadata.contains("tokenMetadata")) {
+            result.tokensUsed = metadata["tokenMetadata"].toObject()["outputTokenCount"]
+                .toObject()["totalTokens"].toInt(request.maxTokens);
+        }
+    } else {
+        result.errorMessage = QString("GCP Vertex AI error: %1").arg(reply->errorString());
+    }
+    
+    reply->deleteLater();
     result.completedAt = QDateTime::currentDateTime();
-    
-    // TODO: Implement GCP Vertex AI REST API integration
-    
     return result;
 }
 

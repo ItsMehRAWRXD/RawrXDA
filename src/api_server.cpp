@@ -2,8 +2,11 @@
 #include "interactive_shell.h"
 #include "reverse_engineering/RawrDumpBin.hpp"
 #include "reverse_engineering/RawrCompiler.hpp"
+#include "core/rawrxd_state_mmf.hpp"
+#include "cpu_inference_engine.h"
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <thread>
 #include <chrono>
 #include <mutex>
@@ -11,6 +14,19 @@
 #include <iomanip>
 #include <ctime>
 #include <array>
+#include <cstdint>
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <bcrypt.h>
+#include <psapi.h>
+#pragma comment(lib, "bcrypt.lib")
+#pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "ws2_32.lib")
 
 // Structured logging helper with timestamp and severity
 static void LogApiOperation(const std::string& severity, const std::string& operation, const std::string& details) {
@@ -41,6 +57,19 @@ bool APIServer::Start(uint16_t port) {
     
     port_ = port;
     is_running_ = true;
+
+    // Initialize cross-process MMF state synchronization
+    {
+        auto& mmf = RawrXDStateMmf::instance();
+        if (!mmf.isInitialized()) {
+            PatchResult mmfResult = mmf.initialize(1, "RawrXD-APIServer"); // processType=1 (React/Web bridge)
+            if (mmfResult.success) {
+                LogApiOperation("INFO", "MMF", "Cross-process state sync initialized");
+            } else {
+                LogApiOperation("WARN", "MMF", std::string("MMF init failed: ") + (mmfResult.detail ? mmfResult.detail : "unknown"));
+            }
+        }
+    }
     
     // Start server thread
     server_thread_ = std::make_unique<std::thread>([this]() {
@@ -52,6 +81,11 @@ bool APIServer::Start(uint16_t port) {
             LogApiOperation("INFO", "ENDPOINTS", "POST /v1/chat/completions");
             LogApiOperation("INFO", "ENDPOINTS", "GET /api/tags");
             LogApiOperation("INFO", "ENDPOINTS", "POST /api/pull");
+            LogApiOperation("INFO", "ENDPOINTS", "GET /api/full-state");
+            LogApiOperation("INFO", "ENDPOINTS", "GET /api/memory/stats");
+            LogApiOperation("INFO", "ENDPOINTS", "GET /api/ws-stats");
+            LogApiOperation("INFO", "ENDPOINTS", "POST /api/read-file");
+            LogApiOperation("INFO", "ENDPOINTS", "WS  /ws (WebSocket push)");
             
             // Production HTTP Server Implementation
             InitializeHttpServer();
@@ -71,7 +105,31 @@ bool APIServer::Start(uint16_t port) {
                             "Total=" + std::to_string(total_requests_.load()) +
                             " Success=" + std::to_string(successful_requests_.load()) +
                             " Failed=" + std::to_string(failed_requests_.load()) +
-                            " Active=" + std::to_string(active_connections_.load()));
+                            " Active=" + std::to_string(active_connections_.load()) +
+                            " WS=" + std::to_string(GetWSClientCount()));
+
+                        // MMF heartbeat — signal liveness to other processes
+                        auto& mmf = RawrXDStateMmf::instance();
+                        if (mmf.isInitialized()) {
+                            mmf.heartbeat();
+
+                            // Also update memory stats in MMF from this process
+                            MEMORYSTATUSEX memInfo{};
+                            memInfo.dwLength = sizeof(memInfo);
+                            GlobalMemoryStatusEx(&memInfo);
+
+                            PROCESS_MEMORY_COUNTERS_EX pmc{};
+                            pmc.cb = sizeof(pmc);
+                            GetProcessMemoryInfo(GetCurrentProcess(),
+                                                 reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc));
+
+                            MmfMemoryStats mmfMem{};
+                            mmfMem.totalPhysicalBytes = memInfo.ullTotalPhys;
+                            mmfMem.availablePhysicalBytes = memInfo.ullAvailPhys;
+                            mmfMem.processWorkingSetBytes = pmc.WorkingSetSize;
+                            mmfMem.memoryPressurePercent = static_cast<float>(memInfo.dwMemoryLoad);
+                            mmf.publishMemoryStats(mmfMem);
+                        }
                     }
                     
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -100,17 +158,38 @@ bool APIServer::Stop() {
         }
         
         is_running_ = false;
+
+        // Stop WebSocket push thread
+        ws_push_running_ = false;
+        if (ws_push_thread_ && ws_push_thread_->joinable()) {
+            LogApiOperation("INFO", "STOP", "Waiting for WebSocket push thread to finish");
+            ws_push_thread_->join();
+        }
+
+        // Disconnect all WebSocket clients
+        {
+            std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+            ws_clients_.clear();
+        }
         
         if (server_thread_ && server_thread_->joinable()) {
             LogApiOperation("INFO", "STOP", "Waiting for server thread to finish");
             server_thread_->join();
+        }
+
+        // MMF heartbeat stop — mark this process as offline
+        auto& mmf = RawrXDStateMmf::instance();
+        if (mmf.isInitialized()) {
+            mmf.broadcastEvent(0xFF, "APIServer shutting down");
         }
         
         // Log final statistics
         LogApiOperation("INFO", "SHUTDOWN", 
             "Server stopped. Total requests=" + std::to_string(total_requests_.load()) +
             " Successful=" + std::to_string(successful_requests_.load()) +
-            " Failed=" + std::to_string(failed_requests_.load()));
+            " Failed=" + std::to_string(failed_requests_.load()) +
+            " WS_Sent=" + std::to_string(ws_messages_sent_.load()) +
+            " WS_Recv=" + std::to_string(ws_messages_received_.load()));
         
         return true;
         
@@ -289,19 +368,89 @@ std::string APIServer::GenerateCompletion(const std::string& prompt) {
         
         if (!app_state_.loaded_model || !app_state_.gpu_context) {
             LogApiOperation("WARN", "INFERENCE", "No model loaded or GPU context unavailable");
-            return "Error: No model loaded";
+
+            // Attempt to use the CPUInferenceEngine singleton if available
+            auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+            if (cpuEngine) {
+                LogApiOperation("INFO", "INFERENCE", "Using CPUInferenceEngine fallback");
+                auto start = std::chrono::steady_clock::now();
+
+                // Tokenize → Generate → Detokenize pipeline
+                std::vector<int32_t> inputTokens = cpuEngine->Tokenize(prompt);
+                int maxTokens = static_cast<int>(app_state_.context_size > 0 ? app_state_.context_size : 256);
+                std::vector<int32_t> outputTokens = cpuEngine->Generate(inputTokens, maxTokens);
+                std::string result = cpuEngine->Detokenize(outputTokens);
+
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - start);
+                LogApiOperation("INFO", "INFERENCE",
+                    "CPU inference completed in " + std::to_string(duration.count()) + "ms"
+                    + " (" + std::to_string(result.size()) + " chars)");
+
+                // Update MMF model state with inference stats
+                auto& mmf = RawrXDStateMmf::instance();
+                if (mmf.isInitialized()) {
+                    MmfModelState modelState = mmf.readModelState();
+                    modelState.tokensGenerated += outputTokens.size();
+                    if (duration.count() > 0) {
+                        modelState.tokensPerSecond = static_cast<float>(outputTokens.size()) /
+                            (duration.count() / 1000.0f);
+                    }
+                    modelState.isInferring = 0;
+                    modelState.lastInferenceTimestamp = GetTickCount64();
+                    mmf.publishModelState(modelState);
+                }
+
+                return result;
+            }
+
+            return "Error: No model loaded. Use /api/pull to download a model first.";
         }
         
-        // Simulate inference with timing
+        // Primary path: Use loaded model via inference engine pointer
         auto start = std::chrono::steady_clock::now();
-        
-        // Production inference logic would interface with GGML/GGUF loader here
-        std::string completion = "This is a generated response from the model";
-        
+
+        // Update MMF: mark as inferring
+        auto& mmf = RawrXDStateMmf::instance();
+        if (mmf.isInitialized()) {
+            MmfModelState modelState = mmf.readModelState();
+            modelState.isInferring = 1;
+            mmf.publishModelState(modelState);
+        }
+
+        // Dispatch to inference engine
+        std::string completion;
+        size_t outputTokenCount = 0;
+        auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+        if (cpuEngine) {
+            std::vector<int32_t> inputTokens = cpuEngine->Tokenize(prompt);
+            int maxTokens = static_cast<int>(app_state_.context_size > 0 ? app_state_.context_size : 256);
+            std::vector<int32_t> outputTokens = cpuEngine->Generate(inputTokens, maxTokens);
+            outputTokenCount = outputTokens.size();
+            completion = cpuEngine->Detokenize(outputTokens);
+        } else {
+            completion = "Inference engine not wired - model loaded but no generate() path";
+        }
+
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start);
-        LogApiOperation("DEBUG", "INFERENCE", 
-            "Completion generated in " + std::to_string(duration.count()) + "ms");
+        LogApiOperation("INFO", "INFERENCE", 
+            "Completion generated in " + std::to_string(duration.count()) + "ms"
+            + " (" + std::to_string(outputTokenCount) + " tokens, "
+            + std::to_string(completion.size()) + " chars)");
+
+        // Update MMF: inference complete
+        if (mmf.isInitialized()) {
+            MmfModelState modelState = mmf.readModelState();
+            modelState.tokensGenerated += outputTokenCount;
+            if (duration.count() > 0) {
+                modelState.tokensPerSecond = static_cast<float>(outputTokenCount) /
+                    (duration.count() / 1000.0f);
+            }
+            modelState.isInferring = 0;
+            modelState.lastInferenceTimestamp = GetTickCount64();
+            mmf.publishModelState(modelState);
+        }
         
         return completion;
         
@@ -317,26 +466,87 @@ std::string APIServer::GenerateChatCompletion(const std::vector<ChatMessage>& me
         
         if (!app_state_.loaded_model || !app_state_.gpu_context) {
             LogApiOperation("WARN", "CHAT_INFERENCE", "No model loaded or GPU context unavailable");
-            return "Error: No model loaded";
+
+            // Attempt CPUInferenceEngine fallback
+            auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+            if (!cpuEngine) {
+                // If no engine at all but model_ready is true, try to get engine
+                if (!app_state_.model_ready.load()) {
+                    return "Error: No model loaded. Use /api/pull to download a model first.";
+                }
+            }
         }
         
-        // Log message summary
+        // Log message summary for debugging
         for (size_t i = 0; i < messages.size(); ++i) {
             LogApiOperation("DEBUG", "CHAT_INFERENCE", 
                 "Message[" + std::to_string(i) + "]: role=" + messages[i].role + 
                 " length=" + std::to_string(messages[i].content.length()));
         }
         
-        // Simulate inference with timing
+        // Format multi-turn conversation into a single prompt string
+        // Uses ChatML-style formatting compatible with most GGUF models
+        std::string formattedPrompt;
+        formattedPrompt.reserve(4096);
+        for (const auto& msg : messages) {
+            if (msg.role == "system") {
+                formattedPrompt += "<|system|>\n" + msg.content + "\n";
+            } else if (msg.role == "user") {
+                formattedPrompt += "<|user|>\n" + msg.content + "\n";
+            } else if (msg.role == "assistant") {
+                formattedPrompt += "<|assistant|>\n" + msg.content + "\n";
+            }
+        }
+        formattedPrompt += "<|assistant|>\n";
+
+        // Dispatch to inference engine
         auto start = std::chrono::steady_clock::now();
-        
-        // Production inference logic would interface with GGML/GGUF loader here
-        std::string completion = "Assistant response to the conversation.";
+
+        // Update MMF: mark as inferring
+        auto& mmf = RawrXDStateMmf::instance();
+        if (mmf.isInitialized()) {
+            MmfModelState modelState = mmf.readModelState();
+            modelState.isInferring = 1;
+            mmf.publishModelState(modelState);
+        }
+
+        std::string completion;
+        size_t chatOutputTokenCount = 0;
+        auto* cpuEngine = static_cast<CPUInferenceEngine*>(app_state_.inference_engine);
+        if (cpuEngine) {
+            std::vector<int32_t> inputTokens = cpuEngine->Tokenize(formattedPrompt);
+            int maxTokens = static_cast<int>(app_state_.context_size > 0 ? app_state_.context_size : 256);
+            std::vector<int32_t> outputTokens = cpuEngine->Generate(inputTokens, maxTokens);
+            chatOutputTokenCount = outputTokens.size();
+            completion = cpuEngine->Detokenize(outputTokens);
+        } else {
+            // Fallback: attempt direct generate via GenerateCompletion path
+            completion = GenerateCompletion(formattedPrompt);
+            chatOutputTokenCount = completion.size() / 4; // Rough estimate for fallback
+        }
         
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - start);
-        LogApiOperation("DEBUG", "CHAT_INFERENCE", 
-            "Chat completion generated in " + std::to_string(duration.count()) + "ms");
+        LogApiOperation("INFO", "CHAT_INFERENCE", 
+            "Chat completion generated in " + std::to_string(duration.count()) + "ms"
+            + " (" + std::to_string(chatOutputTokenCount) + " tokens, "
+            + std::to_string(completion.size()) + " chars)");
+
+        // Update MMF: inference complete
+        if (mmf.isInitialized()) {
+            MmfModelState modelState = mmf.readModelState();
+            modelState.tokensGenerated += chatOutputTokenCount;
+            if (duration.count() > 0) {
+                modelState.tokensPerSecond = static_cast<float>(chatOutputTokenCount) /
+                    (duration.count() / 1000.0f);
+            }
+            modelState.isInferring = 0;
+            modelState.lastInferenceTimestamp = GetTickCount64();
+            mmf.publishModelState(modelState);
+        }
+
+        // Broadcast model state change to WebSocket clients
+        BroadcastModelState();
         
         return completion;
         
@@ -417,8 +627,74 @@ void APIServer::ProcessPendingRequests() {
                      
                 } else if (request.path == "/api/status") {
                      response_body = R"({ "modes": { "maxMode": false, "deepThinking": false, "deepResearch": false, "noRefusal": false, "autoCorrect": false } })";
-                } else if (request.path == "/api/memory/status") {
-                     response_body = R"({ "used": 1024, "total": 4096, "chunks": [] })";
+                } else if (request.path == "/api/memory/status" || request.path == "/api/memory/stats") {
+                     // Real memory stats from MMF cross-process state
+                     response_body = GetFullMemoryStatsJson();
+                } else if (request.path == "/api/full-state") {
+                     // Full state snapshot for reconnection reconciliation
+                     // This is the critical endpoint for WS reconnect:
+                     // Client calls this after reconnecting to overwrite local state
+                     response_body = GetFullStateJson();
+                     LogApiOperation("INFO", "FULL_STATE", "State reconciliation snapshot served (" + std::to_string(response_body.size()) + " bytes)");
+                } else if (request.path == "/api/ws-stats") {
+                     // WebSocket connection stats
+                     std::lock_guard<std::mutex> wsLock(ws_clients_mutex_);
+                     size_t wsCount = ws_clients_.size();
+                     response_body = "{\"ws_clients\":" + std::to_string(wsCount)
+                         + ",\"ws_messages_sent\":" + std::to_string(ws_messages_sent_.load())
+                         + ",\"ws_messages_received\":" + std::to_string(ws_messages_received_.load())
+                         + "}";
+                } else if (request.path == "/ws" || request.path == "/api/ws") {
+                     // WebSocket upgrade request — handled separately via HandleWebSocketUpgrade
+                     // If we reach here without upgrade, return instructions
+                     response_body = R"({"error":"WebSocket upgrade required","hint":"Connect with ws:// protocol to this endpoint"})";
+                } else if (request.path == "/api/read-file") {
+                     // Read a local file by path — for IDE file-path auto-attach
+                     auto json = ParseJsonRequest(request.body);
+                     std::string file_path;
+                     if (json.is_object && json.object_value.count("path") && json.object_value["path"].is_string) {
+                          file_path = json.object_value["path"].string_value;
+                     }
+                     if (file_path.empty()) {
+                          response_body = R"({"error":"Missing 'path' field"})";
+                     } else {
+                          // Security: block network paths
+                          if (file_path.substr(0, 2) == "\\\\" || file_path.substr(0, 2) == "//") {
+                               response_body = R"({"error":"forbidden","message":"Network paths not allowed"})";
+                          } else {
+                               // Try to read the file
+                               std::ifstream ifs(file_path, std::ios::in | std::ios::binary);
+                               if (!ifs.is_open()) {
+                                    response_body = R"({"error":"file_not_found","message":"File not found: )" + file_path + R"("})";
+                               } else {
+                                    // Check size (2MB limit)
+                                    ifs.seekg(0, std::ios::end);
+                                    auto sz = ifs.tellg();
+                                    if (sz > 2 * 1024 * 1024) {
+                                         response_body = R"({"error":"file_too_large","message":"File exceeds 2MB limit"})";
+                                    } else {
+                                         ifs.seekg(0, std::ios::beg);
+                                         std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+                                         // Extract filename
+                                         std::string fname = file_path;
+                                         auto pos = fname.find_last_of("/\\");
+                                         if (pos != std::string::npos) fname = fname.substr(pos + 1);
+                                         // Build JSON response (escape content)
+                                         std::string escaped;
+                                         for (char c : content) {
+                                              if (c == '\n') escaped += "\\n";
+                                              else if (c == '"') escaped += "\\\"";
+                                              else if (c == '\\') escaped += "\\\\";
+                                              else if (c == '\t') escaped += "\\t";
+                                              else if (c == '\r') {}  // skip CR
+                                              else if (c >= 0 && c < 32) {}  // skip control chars
+                                              else escaped += c;
+                                         }
+                                         response_body = "{\"content\":\"" + escaped + "\",\"name\":\"" + fname + "\",\"size\":" + std::to_string(content.size()) + "}";
+                                    }
+                               }
+                          }
+                     }
                 } else {
                     response_body = CreateErrorResponse("Unknown endpoint: " + request.path);
                 }
@@ -637,3 +913,611 @@ static void HandleDumpBinRequest(const std::string& body, std::string& response)
     // Parse input
     // Assuming simple JSON parsing exists or we use the helper logic
     // body looks like {"path": "..."}
+}
+
+// ============================================================================
+// WebSocket Support — Server Push + State Reconciliation
+// ============================================================================
+//
+// WebSocket endpoints:
+//   /ws        — Primary WebSocket endpoint for state push
+//   /api/ws    — Alias for the above
+//
+// Protocol (JSON-based messages):
+//
+// Client → Server:
+//   {"type":"subscribe","channels":["memory","model","patches","events"]}
+//   {"type":"unsubscribe","channels":["memory"]}
+//   {"type":"get-full-state"}
+//   {"type":"ping"}
+//
+// Server → Client:
+//   {"type":"memory","data":{...MmfMemoryStats...}}
+//   {"type":"model","data":{...MmfModelState...}}
+//   {"type":"patch","data":{...MmfPatchEntry...}}
+//   {"type":"event","data":{...MmfEvent...}}
+//   {"type":"full-state","data":{...complete MMF JSON...}}
+//   {"type":"pong"}
+//   {"type":"welcome","clientId":"...","serverTime":...}
+//
+// ============================================================================
+
+// Base64 encoding for WebSocket handshake SHA-1 → Accept header
+static const char* B64_TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static std::string base64Encode(const uint8_t* data, size_t len) {
+    std::string result;
+    result.reserve(((len + 2) / 3) * 4);
+    for (size_t i = 0; i < len; i += 3) {
+        uint32_t triplet = (data[i] << 16);
+        if (i + 1 < len) triplet |= (data[i + 1] << 8);
+        if (i + 2 < len) triplet |= data[i + 2];
+
+        result += B64_TABLE[(triplet >> 18) & 0x3F];
+        result += B64_TABLE[(triplet >> 12) & 0x3F];
+        result += (i + 1 < len) ? B64_TABLE[(triplet >> 6) & 0x3F] : '=';
+        result += (i + 2 < len) ? B64_TABLE[triplet & 0x3F] : '=';
+    }
+    return result;
+}
+
+std::string APIServer::WSComputeAcceptKey(const std::string& clientKey) {
+    // WebSocket accept key = Base64(SHA-1(clientKey + magic))
+    const std::string magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    std::string combined = clientKey + magic;
+
+    // Compute SHA-1 using BCrypt (Windows CNG)
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    BCRYPT_HASH_HANDLE hHash = nullptr;
+    uint8_t sha1[20] = {};
+    DWORD hashLen = 0, resultLen = 0;
+
+    BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA1_ALGORITHM, nullptr, 0);
+    BCryptGetProperty(hAlg, BCRYPT_HASH_LENGTH, (PUCHAR)&hashLen, sizeof(hashLen), &resultLen, 0);
+    BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0);
+    BCryptHashData(hHash, (PUCHAR)combined.data(), (ULONG)combined.size(), 0);
+    BCryptFinishHash(hHash, sha1, 20, 0);
+    BCryptDestroyHash(hHash);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
+
+    return base64Encode(sha1, 20);
+}
+
+bool APIServer::HandleWebSocketUpgrade(const HttpRequest& request, void* clientSocket) {
+    // Extract Sec-WebSocket-Key from headers (simplified — in production,
+    // parse full HTTP headers from the raw request body)
+    std::string wsKey;
+    size_t keyPos = request.body.find("Sec-WebSocket-Key: ");
+    if (keyPos != std::string::npos) {
+        keyPos += 19; // skip header name
+        size_t keyEnd = request.body.find("\r\n", keyPos);
+        if (keyEnd != std::string::npos) {
+            wsKey = request.body.substr(keyPos, keyEnd - keyPos);
+        }
+    }
+
+    if (wsKey.empty()) {
+        LogApiOperation("ERROR", "WS_UPGRADE", "Missing Sec-WebSocket-Key");
+        return false;
+    }
+
+    // Compute accept key
+    std::string acceptKey = WSComputeAcceptKey(wsKey);
+
+    // Send HTTP 101 Switching Protocols response
+    // (In production, this writes to the actual TCP socket)
+    std::string response =
+        "HTTP/1.1 101 Switching Protocols\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Accept: " + acceptKey + "\r\n"
+        "\r\n";
+
+    // Create WS client entry
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+
+    auto client = std::make_unique<WSClient>();
+    client->id = ws_next_client_id_++;
+    client->socketHandle = clientSocket;
+    client->clientId = request.client_id;
+    client->connected = true;
+    client->subscribedMemory = false;
+    client->subscribedModel = false;
+    client->subscribedPatches = false;
+    client->subscribedEvents = false;
+    client->lastEventSequence = 0;
+    client->connectedAt = GetTickCount64();
+    client->lastPingSent = 0;
+    client->lastPongReceived = GetTickCount64();
+    client->remoteAddr = request.client_id;
+
+    uint64_t clientId = client->id;
+    ws_clients_[clientId] = std::move(client);
+
+    LogApiOperation("INFO", "WS_UPGRADE",
+        "WebSocket client connected: id=" + std::to_string(clientId)
+        + " addr=" + request.client_id);
+
+    // Send welcome message with full state for immediate reconciliation
+    std::string welcomeMsg = "{\"type\":\"welcome\",\"clientId\":\""
+        + std::to_string(clientId) + "\",\"serverTime\":"
+        + std::to_string(GetTickCount64()) + "}";
+    SendWSText(clientId, welcomeMsg);
+
+    // Start push thread if not already running
+    if (!ws_push_running_.load()) {
+        ws_push_running_ = true;
+        ws_push_thread_ = std::make_unique<std::thread>([this]() { WSPushThread(); });
+    }
+
+    return true;
+}
+
+void APIServer::WSProcessMessage(uint64_t clientId, const std::string& message) {
+    ws_messages_received_++;
+
+    // Parse JSON message (simplified parsing)
+    // Expected: {"type":"subscribe","channels":["memory","model"]}
+
+    std::string type;
+    {
+        size_t pos = message.find("\"type\"");
+        if (pos != std::string::npos) {
+            size_t colon = message.find(':', pos + 6);
+            if (colon != std::string::npos) {
+                size_t qs = message.find('"', colon + 1);
+                if (qs != std::string::npos) {
+                    size_t qe = message.find('"', qs + 1);
+                    if (qe != std::string::npos) {
+                        type = message.substr(qs + 1, qe - qs - 1);
+                    }
+                }
+            }
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    auto it = ws_clients_.find(clientId);
+    if (it == ws_clients_.end()) return;
+
+    auto& client = it->second;
+
+    if (type == "subscribe") {
+        // Parse channels array
+        if (message.find("\"memory\"") != std::string::npos)  client->subscribedMemory = true;
+        if (message.find("\"model\"") != std::string::npos)   client->subscribedModel = true;
+        if (message.find("\"patches\"") != std::string::npos) client->subscribedPatches = true;
+        if (message.find("\"events\"") != std::string::npos)  client->subscribedEvents = true;
+
+        LogApiOperation("DEBUG", "WS_SUBSCRIBE",
+            "Client " + std::to_string(clientId) + " subscribed: mem="
+            + std::to_string(client->subscribedMemory) + " model="
+            + std::to_string(client->subscribedModel));
+
+    } else if (type == "unsubscribe") {
+        if (message.find("\"memory\"") != std::string::npos)  client->subscribedMemory = false;
+        if (message.find("\"model\"") != std::string::npos)   client->subscribedModel = false;
+        if (message.find("\"patches\"") != std::string::npos) client->subscribedPatches = false;
+        if (message.find("\"events\"") != std::string::npos)  client->subscribedEvents = false;
+
+    } else if (type == "get-full-state") {
+        // Client requesting full state reconciliation (reconnection scenario)
+        std::string fullState = GetFullStateJson();
+        std::string msg = "{\"type\":\"full-state\",\"data\":" + fullState + "}";
+        SendWSText(clientId, msg);
+
+        LogApiOperation("INFO", "WS_RECONCILE",
+            "Full state reconciliation sent to client " + std::to_string(clientId)
+            + " (" + std::to_string(msg.size()) + " bytes)");
+
+    } else if (type == "ping") {
+        SendWSText(clientId, "{\"type\":\"pong\"}");
+        client->lastPongReceived = GetTickCount64();
+    }
+}
+
+bool APIServer::SendWSText(uint64_t clientId, const std::string& payload) {
+    // Encode a WebSocket text frame and send it over the TCP socket.
+
+    std::vector<uint8_t> frame = WSEncodeFrame(WSFrame::Opcode::Text, payload);
+
+    // Locate the client's socket handle under lock
+    void* socketHandle = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+        auto it = ws_clients_.find(clientId);
+        if (it == ws_clients_.end() || !it->second->connected) {
+            LogApiOperation("WARN", "WS_SEND",
+                "Client " + std::to_string(clientId) + " not found or disconnected");
+            return false;
+        }
+        socketHandle = it->second->socketHandle;
+    }
+
+    // Transmit the frame bytes over the socket
+    if (socketHandle) {
+        SOCKET sock = reinterpret_cast<SOCKET>(socketHandle);
+        const char* buf = reinterpret_cast<const char*>(frame.data());
+        size_t totalSent = 0;
+        while (totalSent < frame.size()) {
+            int sent = ::send(sock, buf + totalSent,
+                              static_cast<int>(frame.size() - totalSent), 0);
+            if (sent <= 0) {
+                int err = WSAGetLastError();
+                LogApiOperation("ERROR", "WS_SEND",
+                    "send() failed for client " + std::to_string(clientId)
+                    + " err=" + std::to_string(err));
+                // Mark client as disconnected
+                {
+                    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+                    auto it = ws_clients_.find(clientId);
+                    if (it != ws_clients_.end()) it->second->connected = false;
+                }
+                return false;
+            }
+            totalSent += static_cast<size_t>(sent);
+        }
+    }
+
+    ws_messages_sent_++;
+
+    LogApiOperation("DEBUG", "WS_SEND",
+        "Client " + std::to_string(clientId) + " ← " + std::to_string(payload.size()) + " bytes");
+
+    return true;
+}
+
+WSFrame APIServer::WSParseFrame(const uint8_t* data, size_t len, size_t* consumed) {
+    WSFrame frame{};
+    *consumed = 0;
+
+    if (len < 2) return frame;
+
+    frame.fin = (data[0] & 0x80) != 0;
+    frame.opcode = static_cast<WSFrame::Opcode>(data[0] & 0x0F);
+    frame.masked = (data[1] & 0x80) != 0;
+
+    uint64_t payloadLen = data[1] & 0x7F;
+    size_t headerLen = 2;
+
+    if (payloadLen == 126) {
+        if (len < 4) return frame;
+        payloadLen = (static_cast<uint64_t>(data[2]) << 8) | data[3];
+        headerLen = 4;
+    } else if (payloadLen == 127) {
+        if (len < 10) return frame;
+        payloadLen = 0;
+        for (int i = 0; i < 8; ++i) {
+            payloadLen = (payloadLen << 8) | data[2 + i];
+        }
+        headerLen = 10;
+    }
+
+    if (frame.masked) {
+        if (len < headerLen + 4) return frame;
+        std::memcpy(frame.maskKey, data + headerLen, 4);
+        headerLen += 4;
+    }
+
+    if (len < headerLen + payloadLen) return frame;
+
+    frame.payload.resize(payloadLen);
+    std::memcpy(frame.payload.data(), data + headerLen, payloadLen);
+
+    // Unmask payload
+    if (frame.masked) {
+        for (size_t i = 0; i < payloadLen; ++i) {
+            frame.payload[i] ^= frame.maskKey[i % 4];
+        }
+    }
+
+    *consumed = headerLen + payloadLen;
+    return frame;
+}
+
+std::vector<uint8_t> APIServer::WSEncodeFrame(WSFrame::Opcode opcode, const std::string& payload) {
+    std::vector<uint8_t> frame;
+    frame.push_back(0x80 | static_cast<uint8_t>(opcode)); // FIN + opcode
+
+    size_t len = payload.size();
+    if (len < 126) {
+        frame.push_back(static_cast<uint8_t>(len)); // No mask (server → client)
+    } else if (len < 65536) {
+        frame.push_back(126);
+        frame.push_back(static_cast<uint8_t>((len >> 8) & 0xFF));
+        frame.push_back(static_cast<uint8_t>(len & 0xFF));
+    } else {
+        frame.push_back(127);
+        for (int i = 7; i >= 0; --i) {
+            frame.push_back(static_cast<uint8_t>((len >> (8 * i)) & 0xFF));
+        }
+    }
+
+    frame.insert(frame.end(), payload.begin(), payload.end());
+    return frame;
+}
+
+// ============================================================================
+// WebSocket Push Thread — Server-Initiated State Broadcasting
+// ============================================================================
+
+void APIServer::WSPushThread() {
+    LogApiOperation("INFO", "WS_PUSH", "WebSocket push thread started");
+
+    auto lastMemoryPush = std::chrono::steady_clock::now();
+    auto lastModelPush = std::chrono::steady_clock::now();
+    auto lastEventPoll = std::chrono::steady_clock::now();
+
+    while (ws_push_running_.load() && is_running_.load()) {
+        auto now = std::chrono::steady_clock::now();
+
+        // ---- Memory Stats Push (every 500ms to subscribed clients) ----
+        auto memElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastMemoryPush);
+        if (memElapsed.count() >= ws_memory_push_interval_ms_) {
+            lastMemoryPush = now;
+            BroadcastMemoryStats();
+        }
+
+        // ---- Model State Push (every 2s to subscribed clients) ----
+        auto modelElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastModelPush);
+        if (modelElapsed.count() >= ws_model_push_interval_ms_) {
+            lastModelPush = now;
+            BroadcastModelState();
+        }
+
+        // ---- Event Polling (every 100ms — new patch/config events from MMF) ----
+        auto eventElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastEventPoll);
+        if (eventElapsed.count() >= ws_event_poll_interval_ms_) {
+            lastEventPoll = now;
+
+            // Poll events from MMF shared state
+            auto& mmf = RawrXDStateMmf::instance();
+            if (mmf.isInitialized()) {
+                MmfEvent events[16];
+                size_t eventCount = mmf.pollEvents(events, 16, &ws_last_event_sequence_);
+
+                for (size_t i = 0; i < eventCount; ++i) {
+                    char eventJson[512];
+                    snprintf(eventJson, sizeof(eventJson),
+                        "{\"type\":\"event\",\"data\":{\"seq\":%llu,\"eventType\":%u,"
+                        "\"sourcePid\":%u,\"detail\":\"%s\",\"timestamp\":%llu}}",
+                        events[i].sequenceId, events[i].eventType,
+                        events[i].sourceProcessId, events[i].detail,
+                        events[i].timestamp);
+
+                    // Broadcast to all event-subscribed clients
+                    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+                    for (auto& [id, client] : ws_clients_) {
+                        if (client->connected && client->subscribedEvents) {
+                            SendWSText(id, eventJson);
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- Cleanup dead clients ----
+        WSCleanupDeadClients();
+
+        // ---- Adaptive push rate: increase frequency under memory pressure ----
+        auto& mmf = RawrXDStateMmf::instance();
+        if (mmf.isInitialized()) {
+            MmfMemoryStats memStats = mmf.readMemoryStats();
+            if (memStats.memoryPressurePercent > 90.0f) {
+                // High pressure — push every 200ms instead of 500ms
+                ws_memory_push_interval_ms_ = 200;
+            } else if (memStats.memoryPressurePercent > 75.0f) {
+                ws_memory_push_interval_ms_ = 350;
+            } else {
+                ws_memory_push_interval_ms_ = 500;
+            }
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // 50ms tick
+    }
+
+    LogApiOperation("INFO", "WS_PUSH", "WebSocket push thread stopped");
+}
+
+void APIServer::BroadcastMemoryStats() {
+    auto& mmf = RawrXDStateMmf::instance();
+    if (!mmf.isInitialized()) return;
+
+    MmfMemoryStats stats = mmf.readMemoryStats();
+
+    char json[1024];
+    snprintf(json, sizeof(json),
+        "{\"type\":\"memory\",\"data\":{"
+        "\"totalPhysicalMB\":%.1f,"
+        "\"availablePhysicalMB\":%.1f,"
+        "\"processWorkingSetMB\":%.1f,"
+        "\"gpuDedicatedMB\":%.1f,"
+        "\"tensorMemoryMB\":%.1f,"
+        "\"kvCacheMB\":%.1f,"
+        "\"pressurePercent\":%.1f,"
+        "\"timestamp\":%llu}}",
+        stats.totalPhysicalBytes / (1024.0 * 1024.0),
+        stats.availablePhysicalBytes / (1024.0 * 1024.0),
+        stats.processWorkingSetBytes / (1024.0 * 1024.0),
+        stats.gpuDedicatedBytes / (1024.0 * 1024.0),
+        stats.tensorMemoryBytes / (1024.0 * 1024.0),
+        stats.kvCacheBytes / (1024.0 * 1024.0),
+        stats.memoryPressurePercent,
+        stats.lastUpdateTimestamp);
+
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    for (auto& [id, client] : ws_clients_) {
+        if (client->connected && client->subscribedMemory) {
+            SendWSText(id, json);
+        }
+    }
+}
+
+void APIServer::BroadcastModelState() {
+    auto& mmf = RawrXDStateMmf::instance();
+    if (!mmf.isInitialized()) return;
+
+    MmfModelState model = mmf.readModelState();
+
+    char json[1024];
+    snprintf(json, sizeof(json),
+        "{\"type\":\"model\",\"data\":{"
+        "\"name\":\"%s\","
+        "\"loaded\":%s,"
+        "\"inferring\":%s,"
+        "\"vocabSize\":%u,"
+        "\"embeddingDim\":%u,"
+        "\"numLayers\":%u,"
+        "\"numHeads\":%u,"
+        "\"contextSize\":%u,"
+        "\"tokensGenerated\":%llu,"
+        "\"tokensPerSecond\":%.2f,"
+        "\"gpuMemoryMB\":%.1f,"
+        "\"cpuMemoryMB\":%.1f}}",
+        model.modelName,
+        model.isLoaded ? "true" : "false",
+        model.isInferring ? "true" : "false",
+        model.vocabSize, model.embeddingDim,
+        model.numLayers, model.numHeads, model.contextSize,
+        model.tokensGenerated, model.tokensPerSecond,
+        model.gpuMemoryUsedMB, model.cpuMemoryUsedMB);
+
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    for (auto& [id, client] : ws_clients_) {
+        if (client->connected && client->subscribedModel) {
+            SendWSText(id, json);
+        }
+    }
+}
+
+void APIServer::BroadcastPatchEvent(const std::string& eventJson) {
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    for (auto& [id, client] : ws_clients_) {
+        if (client->connected && client->subscribedPatches) {
+            SendWSText(id, eventJson);
+        }
+    }
+}
+
+void APIServer::BroadcastFullState() {
+    std::string fullState = GetFullStateJson();
+    std::string msg = "{\"type\":\"full-state\",\"data\":" + fullState + "}";
+
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    for (auto& [id, client] : ws_clients_) {
+        if (client->connected) {
+            SendWSText(id, msg);
+        }
+    }
+
+    LogApiOperation("INFO", "WS_BROADCAST",
+        "Full state broadcast to " + std::to_string(ws_clients_.size()) + " clients");
+}
+
+void APIServer::WSCleanupDeadClients() {
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    uint64_t now = GetTickCount64();
+
+    std::vector<uint64_t> toRemove;
+    for (auto& [id, client] : ws_clients_) {
+        if (!client->connected) {
+            toRemove.push_back(id);
+            continue;
+        }
+
+        // Timeout: if no pong received in 30 seconds, consider dead
+        if (client->lastPingSent > 0 &&
+            (now - client->lastPongReceived) > 30000) {
+            LogApiOperation("WARN", "WS_TIMEOUT",
+                "Client " + std::to_string(id) + " timed out (no pong in 30s)");
+            client->connected = false;
+            toRemove.push_back(id);
+        }
+    }
+
+    for (uint64_t id : toRemove) {
+        ws_clients_.erase(id);
+    }
+
+    if (!toRemove.empty()) {
+        LogApiOperation("DEBUG", "WS_CLEANUP",
+            "Removed " + std::to_string(toRemove.size()) + " dead WebSocket clients");
+    }
+}
+
+size_t APIServer::GetWSClientCount() const {
+    std::lock_guard<std::mutex> lock(ws_clients_mutex_);
+    return ws_clients_.size();
+}
+
+// ============================================================================
+// MMF State Integration — Full State Snapshot for Reconciliation
+// ============================================================================
+
+std::string APIServer::GetFullStateJson() const {
+    auto& mmf = RawrXDStateMmf::instance();
+    if (!mmf.isInitialized()) {
+        // MMF not initialized — return minimal state
+        return "{\"mmf_initialized\":false,\"message\":\"Cross-process state not yet initialized\"}";
+    }
+
+    // Use MMF's built-in JSON serializer (handles seqlock + mutex internally)
+    char buf[256 * 1024]; // 256 KB buffer for full state
+    size_t written = mmf.serializeFullStateToJson(buf, sizeof(buf));
+    if (written == 0) {
+        return "{\"mmf_initialized\":true,\"error\":\"Failed to serialize state\"}";
+    }
+
+    return std::string(buf, written);
+}
+
+// Helper: Get memory stats as JSON string (used by /api/memory/stats endpoint)
+static std::string GetFullMemoryStatsJson() {
+    auto& mmf = RawrXDStateMmf::instance();
+
+    if (!mmf.isInitialized()) {
+        // Fallback to process-local stats via Win32 API
+        MEMORYSTATUSEX memInfo{};
+        memInfo.dwLength = sizeof(memInfo);
+        GlobalMemoryStatusEx(&memInfo);
+
+        PROCESS_MEMORY_COUNTERS_EX pmc{};
+        pmc.cb = sizeof(pmc);
+        GetProcessMemoryInfo(GetCurrentProcess(),
+                             reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc));
+
+        char buf[512];
+        snprintf(buf, sizeof(buf),
+            "{\"totalPhysicalMB\":%.1f,\"availablePhysicalMB\":%.1f,"
+            "\"processWorkingSetMB\":%.1f,\"memoryLoadPercent\":%lu,"
+            "\"gpuDedicatedMB\":0,\"tensorMemoryMB\":0,\"kvCacheMB\":0,"
+            "\"pressurePercent\":%.1f,\"source\":\"local\"}",
+            memInfo.ullTotalPhys / (1024.0 * 1024.0),
+            memInfo.ullAvailPhys / (1024.0 * 1024.0),
+            pmc.WorkingSetSize / (1024.0 * 1024.0),
+            memInfo.dwMemoryLoad,
+            static_cast<double>(memInfo.dwMemoryLoad));
+        return std::string(buf);
+    }
+
+    // Read from MMF shared state
+    MmfMemoryStats stats = mmf.readMemoryStats();
+
+    char buf[1024];
+    snprintf(buf, sizeof(buf),
+        "{\"totalPhysicalMB\":%.1f,\"availablePhysicalMB\":%.1f,"
+        "\"processWorkingSetMB\":%.1f,\"gpuDedicatedMB\":%.1f,"
+        "\"gpuSharedMB\":%.1f,\"tensorMemoryMB\":%.1f,\"kvCacheMB\":%.1f,"
+        "\"pressurePercent\":%.1f,\"timestamp\":%llu,\"source\":\"mmf\"}",
+        stats.totalPhysicalBytes / (1024.0 * 1024.0),
+        stats.availablePhysicalBytes / (1024.0 * 1024.0),
+        stats.processWorkingSetBytes / (1024.0 * 1024.0),
+        stats.gpuDedicatedBytes / (1024.0 * 1024.0),
+        stats.gpuSharedBytes / (1024.0 * 1024.0),
+        stats.tensorMemoryBytes / (1024.0 * 1024.0),
+        stats.kvCacheBytes / (1024.0 * 1024.0),
+        stats.memoryPressurePercent,
+        stats.lastUpdateTimestamp);
+
+    return std::string(buf);
+}

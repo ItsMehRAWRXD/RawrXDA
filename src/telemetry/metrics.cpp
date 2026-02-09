@@ -106,27 +106,23 @@ void Metrics::Counter::increment(qint64 value)
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would update the counter value
-    // For this example, we'll just print a message
-    qDebug() << "Incrementing counter" << m_name << "by" << value;
+    m_value += value;
+    qDebug() << "Counter" << m_name << "incremented by" << value << "-> now" << m_value;
 }
 
 void Metrics::Counter::decrement(qint64 value)
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would update the counter value
-    // For this example, we'll just print a message
-    qDebug() << "Decrementing counter" << m_name << "by" << value;
+    m_value -= value;
+    qDebug() << "Counter" << m_name << "decremented by" << value << "-> now" << m_value;
 }
 
 qint64 Metrics::Counter::value() const
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would return the current counter value
-    // For this example, we'll just return a dummy value
-    return 0;
+    return m_value;
 }
 
 // Gauge implementation
@@ -141,34 +137,29 @@ void Metrics::Gauge::set(qreal value)
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would update the gauge value
-    // For this example, we'll just print a message
-    qDebug() << "Setting gauge" << m_name << "to" << value;
+    m_value = value;
+    qDebug() << "Gauge" << m_name << "set to" << m_value;
 }
 
 void Metrics::Gauge::increment(qreal value)
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would update the gauge value
-    // For this example, we'll just print a message
-    qDebug() << "Incrementing gauge" << m_name << "by" << value;
+    m_value += value;
+    qDebug() << "Gauge" << m_name << "incremented by" << value << "-> now" << m_value;
 }
 
 void Metrics::Gauge::decrement(qreal value)
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would update the gauge value
-    // For this example, we'll just print a message
-    qDebug() << "Decrementing gauge" << m_name << "by" << value;
+    m_value -= value;
+    qDebug() << "Gauge" << m_name << "decremented by" << value << "-> now" << m_value;
 }
 
 qreal Metrics::Gauge::value() const
 {
     QMutexLocker locker(&m_metrics->m_mutex);
     Q_UNUSED(locker)
-    // In a real implementation, this would return the current gauge value
-    // For this example, we'll just return a dummy value
-    return 0.0;
+    return m_value;
 }

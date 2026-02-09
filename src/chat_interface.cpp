@@ -489,9 +489,13 @@ void ChatInterface::executeAgentCommand(const QString& command, const QString& a
         addMessage("System", "Planning multi-file refactor: " + prompt);
         statusLabel_->setText("Planning refactor...");
         
-        // Execute multi-file refactor (synchronous for now)
-        // TODO: Use current workspace root from project manager
-        QString workspaceRoot = QDir::currentPath();
+        // Use project manager's workspace root if available, otherwise fall back to cwd
+        QString workspaceRoot;
+        if (m_planOrchestrator && !m_planOrchestrator->workspaceRoot().isEmpty()) {
+            workspaceRoot = m_planOrchestrator->workspaceRoot();
+        } else {
+            workspaceRoot = QDir::currentPath();
+        }
         RawrXD::ExecutionResult result = m_planOrchestrator->planAndExecute(prompt, workspaceRoot, false);
         
         if (result.success) {

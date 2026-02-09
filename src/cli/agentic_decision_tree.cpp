@@ -867,12 +867,16 @@ bool AgenticDecisionTree::runSSALift(TreeContext& ctx) {
         return false;
     }
 
-    codex.LiftToSSA(addr);
+    auto ssaResult = codex.LiftToSSA(addr);
+    if (!ssaResult.success) {
+        ctx.addTrace("[SSA] LiftToSSA failed for address 0x" + std::to_string(addr));
+        return false;
+    }
 
     // Format SSA IR into readable text
-    auto ssaInstrs = codex.GetSSAInstructions();
-    auto ssaVars   = codex.GetSSAVariables();
-    auto phiNodes  = codex.GetPhiNodes();
+    auto& ssaInstrs = ssaResult.instructions;
+    auto& ssaVars   = ssaResult.variables;
+    auto& phiNodes  = ssaResult.phiNodes;
 
     std::ostringstream oss;
     oss << "=== SSA IR for " << ctx.targetFunctionName << " @ 0x" << std::hex << addr << " ===\n";
@@ -910,9 +914,13 @@ bool AgenticDecisionTree::runSSALiftWithAnomalyDetection(TreeContext& ctx) {
     // Scan for anomalies in the SSA IR
     RawrXD::ReverseEngineering::RawrCodex codex;
     codex.LoadBinary(ctx.targetBinaryPath);
-    codex.LiftToSSA(ctx.targetFunctionAddr);
+    auto ssaResult2 = codex.LiftToSSA(ctx.targetFunctionAddr);
+    if (!ssaResult2.success) {
+        ctx.addTrace("[SSA:ANOMALY] LiftToSSA failed for anomaly scan");
+        return false;
+    }
 
-    auto instrs = codex.GetSSAInstructions();
+    auto& instrs = ssaResult2.instructions;
     int deadCount = 0;
     int totalInstrs = (int)instrs.size();
 
@@ -942,8 +950,8 @@ bool AgenticDecisionTree::runSSALiftWithAnomalyDetection(TreeContext& ctx) {
     }
 
     // Run type recovery and check for inconsistencies
-    codex.RecoverTypes();
-    auto typeInfos = codex.GetRecoveredTypes();
+    auto typeResult = codex.RecoverTypes(ctx.targetFunctionAddr);
+    auto& typeInfos = typeResult.types;
     int lowConfTypes = 0;
     for (const auto& ti : typeInfos) {
         if (ti.confidence == RawrXD::ReverseEngineering::TypeConfidence::None ||

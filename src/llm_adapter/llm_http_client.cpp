@@ -92,8 +92,24 @@ bool LLMHttpClient::initialize(
     {
         std::lock_guard<std::mutex> lock(m_connectionPoolMutex);
         for (int i = 0; i < config.connectionPoolSize; ++i) {
-            // Placeholder: actual connection objects would be created here
-            m_connectionPool.push(nullptr);
+            // Create WinHTTP session handles for the connection pool
+#ifdef _WIN32
+            HINTERNET hSession = WinHttpOpen(
+                L"RawrXD-LLM-Adapter/1.0",
+                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+            if (hSession) {
+                // Set timeouts on the session
+                DWORD timeout = static_cast<DWORD>(config.timeoutMs);
+                WinHttpSetTimeouts(hSession, timeout, timeout, timeout, timeout);
+                m_connectionPool.push(reinterpret_cast<void*>(hSession));
+            } else {
+                m_connectionPool.push(nullptr);
+            }
+#else
+            // POSIX: pool index marker for curl multi handle
+            m_connectionPool.push(reinterpret_cast<void*>(static_cast<uintptr_t>(i + 1)));
+#endif
         }
     }
 
@@ -982,9 +998,123 @@ bool LLMHttpClient::isTokenExpired() const {
 }
 
 bool LLMHttpClient::refreshOAuth2Token() {
-    // Placeholder for OAuth2 token refresh
-    std::cout << "[LLMHttpClient] OAuth2 token refresh not yet implemented" << std::endl;
+    // OAuth2 token refresh via HTTP POST to the token endpoint
+    std::string tokenUrl = m_config.baseUrl;
+    // Derive token endpoint from base URL (strip /v1 or /api, append /oauth/token)
+    size_t apiPos = tokenUrl.rfind("/v1");
+    if (apiPos != std::string::npos) tokenUrl = tokenUrl.substr(0, apiPos);
+    tokenUrl += "/oauth/token";
+
+    std::string postBody = "grant_type=refresh_token"
+                           "&refresh_token=" + m_credentials.refreshToken +
+                           "&client_id=" + m_credentials.clientId;
+    if (!m_credentials.clientSecret.empty()) {
+        postBody += "&client_secret=" + m_credentials.clientSecret;
+    }
+
+#ifdef _WIN32
+    // Use WinHTTP for the refresh request
+    URL_COMPONENTSW urlComp = {};
+    wchar_t hostBuf[256] = {};
+    wchar_t pathBuf[1024] = {};
+    urlComp.dwStructSize = sizeof(urlComp);
+    urlComp.lpszHostName = hostBuf;
+    urlComp.dwHostNameLength = 256;
+    urlComp.lpszUrlPath = pathBuf;
+    urlComp.dwUrlPathLength = 1024;
+
+    std::wstring wUrl(tokenUrl.begin(), tokenUrl.end());
+    if (!WinHttpCrackUrl(wUrl.c_str(), 0, 0, &urlComp)) {
+        std::cerr << "[LLMHttpClient] Failed to parse OAuth2 token URL" << std::endl;
+        return false;
+    }
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-OAuth2/1.0",
+        WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return false;
+
+    bool useSSL = (urlComp.nScheme == INTERNET_SCHEME_HTTPS);
+    INTERNET_PORT port = urlComp.nPort ? urlComp.nPort : (useSSL ? 443 : 80);
+    HINTERNET hConnect = WinHttpConnect(hSession, urlComp.lpszHostName, port, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); return false; }
+
+    DWORD flags = useSSL ? WINHTTP_FLAG_SECURE : 0;
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", urlComp.lpszUrlPath,
+        nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
+
+    std::wstring headers = L"Content-Type: application/x-www-form-urlencoded\r\n";
+    BOOL sent = WinHttpSendRequest(hRequest, headers.c_str(), -1,
+        (LPVOID)postBody.c_str(), (DWORD)postBody.size(), (DWORD)postBody.size(), 0);
+    if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+        std::cerr << "[LLMHttpClient] OAuth2 refresh HTTP request failed" << std::endl;
+        return false;
+    }
+
+    // Read response
+    std::string response;
+    char buf[4096];
+    DWORD bytesRead = 0;
+    while (WinHttpReadData(hRequest, buf, sizeof(buf), &bytesRead) && bytesRead > 0) {
+        response.append(buf, bytesRead);
+    }
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    // Parse JSON response for access_token and expires_in
+    auto findJsonString = [&response](const std::string& key) -> std::string {
+        std::string needle = "\"" + key + "\"";
+        size_t pos = response.find(needle);
+        if (pos == std::string::npos) return "";
+        pos = response.find('"', pos + needle.size() + 1);
+        if (pos == std::string::npos) return "";
+        size_t end = response.find('"', pos + 1);
+        return (end != std::string::npos) ? response.substr(pos + 1, end - pos - 1) : "";
+    };
+
+    std::string newToken = findJsonString("access_token");
+    if (newToken.empty()) {
+        std::cerr << "[LLMHttpClient] OAuth2 response missing access_token" << std::endl;
+        return false;
+    }
+
+    m_credentials.apiKey = newToken;
+    // Update expiry
+    std::string expiresStr = findJsonString("expires_in");
+    if (!expiresStr.empty()) {
+        m_credentials.tokenExpiresAt = getCurrentTimestampMs() + std::stoll(expiresStr) * 1000;
+    }
+    // Rotate refresh token if provided
+    std::string newRefresh = findJsonString("refresh_token");
+    if (!newRefresh.empty()) {
+        m_credentials.refreshToken = newRefresh;
+    }
+
+    std::cout << "[LLMHttpClient] OAuth2 token refreshed successfully" << std::endl;
+    return true;
+#else
+    // POSIX fallback: use system curl
+    std::string cmd = "curl -s -X POST '" + tokenUrl + "' -d '" + postBody + "'";
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) return false;
+    std::string response;
+    char buf[4096];
+    while (fgets(buf, sizeof(buf), pipe)) response += buf;
+    pclose(pipe);
+    // Basic JSON parse for access_token
+    size_t tokPos = response.find("\"access_token\"");
+    if (tokPos == std::string::npos) return false;
+    size_t valStart = response.find('"', tokPos + 15) + 1;
+    size_t valEnd = response.find('"', valStart);
+    if (valStart > 0 && valEnd > valStart) {
+        m_credentials.apiKey = response.substr(valStart, valEnd - valStart);
+        m_credentials.tokenExpiresAt = getCurrentTimestampMs() + 3600 * 1000; // default 1hr
+        return true;
+    }
     return false;
+#endif
 }
 
 std::vector<std::string> LLMHttpClient::splitSSELines(const std::string& data) {

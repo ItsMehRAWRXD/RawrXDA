@@ -705,6 +705,113 @@ static FeatureEntry g_featureManifest[] = {
      FeatureCategory::Modules, 0, "", "react_generator.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, nullptr},
 
+    // ========================== HEADLESS IDE (Phase 19C) ==========================
+    {"headless.mode", "Headless Mode", "Run IDE without GUI via --headless flag",
+     FeatureCategory::Modules, 0, "--headless", "HeadlessIDE.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"headless.server", "Headless HTTP Server", "HTTP API server in headless mode (port 11435)",
+     FeatureCategory::Server, 0, "--headless", "HeadlessIDE.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"headless.repl", "Headless REPL", "Interactive console REPL in headless mode",
+     FeatureCategory::Terminal, 0, "--headless --repl", "HeadlessIDE.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"headless.singleshot", "Headless Single-Shot", "Single prompt → response via --prompt flag",
+     FeatureCategory::Streaming, 0, "--headless --prompt", "HeadlessIDE.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"headless.batch", "Headless Batch Mode", "Batch inference from file via --input/--output",
+     FeatureCategory::Streaming, 0, "--headless --input", "HeadlessIDE.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"headless.outputsink", "IOutputSink Interface", "Polymorphic output callback (Console/Null/Custom)",
+     FeatureCategory::Modules, 0, "", "IOutputSink.h",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"headless.json", "JSON Structured Output", "Structured JSON line output via --json flag",
+     FeatureCategory::Modules, 0, "--headless --json", "HeadlessIDE.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    // ========================================================================
+    // WEBVIEW2 + MONACO EDITOR — Phase 26 (Feature #206+)
+    // ========================================================================
+    {"webview2.container", "WebView2 Container", "Embedded Microsoft Edge WebView2 control with COM lifecycle management",
+     FeatureCategory::View, IDM_VIEW_TOGGLE_MONACO, "Ctrl+Shift+M", "Win32IDE_WebView2.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"webview2.monaco", "Monaco Editor Integration", "VS Code's Monaco editor running inside WebView2 with full IntelliSense",
+     FeatureCategory::Editing, IDM_VIEW_TOGGLE_MONACO, "Ctrl+Shift+M", "Win32IDE_WebView2.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"webview2.themes", "Monaco Theme Bridge", "All 16 Win32 themes exported to Monaco defineTheme format (Cyberpunk Neon default)",
+     FeatureCategory::Themes, IDM_VIEW_MONACO_SYNC_THEME, "", "Win32IDE_MonacoThemes.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"webview2.msgbridge", "C++/JS Message Bridge", "Two-way PostWebMessageAsJson protocol: content, themes, actions, cursor tracking",
+     FeatureCategory::View, 0, "", "Win32IDE_WebView2.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"webview2.devtools", "Monaco DevTools", "Edge DevTools for WebView2 debugging and Monaco inspection",
+     FeatureCategory::Debug, IDM_VIEW_MONACO_DEVTOOLS, "F12", "Win32IDE_WebView2.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"webview2.zoom", "Monaco Zoom Control", "Zoom in/out for Monaco editor via font size scaling",
+     FeatureCategory::Editing, IDM_VIEW_MONACO_ZOOM_IN, "Ctrl+=", "Win32IDE_WebView2.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"webview2.sync", "Editor Content Sync", "Bidirectional content sync between RichEdit and Monaco (toggle seamless)",
+     FeatureCategory::Editing, 0, "", "Win32IDE_Commands.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    // ========================================================================
+    // LSP SERVER — Phase 27 (Feature #214+)
+    // ========================================================================
+    {"lsp.server", "LSP Server", "Embedded JSON-RPC 2.0 language server serving workspace symbols, hover, completion, and semantic tokens",
+     FeatureCategory::LSP, IDM_LSP_SERVER_START, "", "Win32IDE_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.index", "Symbol Indexer", "Regex-based C/C++ symbol extraction with FNV-1a dedup (classes, structs, enums, functions, namespaces, #defines)",
+     FeatureCategory::LSP, IDM_LSP_SERVER_REINDEX, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.hover", "Hover Provider", "Markdown hover with symbol kind, container, line info from indexed database",
+     FeatureCategory::LSP, 0, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.completion", "Completion Provider", "Prefix-matched symbol completion with CompletionItemKind mapping",
+     FeatureCategory::LSP, 0, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.definition", "Go-to-Definition", "Jump to symbol definition from indexed database",
+     FeatureCategory::LSP, 0, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.references", "Find References", "Cross-file reference search: index + open document text scan",
+     FeatureCategory::LSP, 0, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.docSymbol", "Document Symbols", "LSP DocumentSymbol provider with SymbolKind mapping",
+     FeatureCategory::LSP, 0, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.wkspSymbol", "Workspace Symbols", "LSP workspace/symbol search with fuzzy case-insensitive matching",
+     FeatureCategory::LSP, IDM_LSP_SERVER_EXPORT_SYMBOLS, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.semanticTokens", "Semantic Tokens", "Full semantic token encoding (22 token types, 5 modifiers) for syntax highlighting",
+     FeatureCategory::LSP, 0, "", "RawrXD_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.diagnostics", "Diagnostics Bridge", "Publish diagnostics from LSP client (clangd/pyright) through embedded server",
+     FeatureCategory::LSP, IDM_LSP_SERVER_PUBLISH_DIAG, "", "Win32IDE_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
+    {"lsp.server.stdio", "Stdio Subprocess", "Launch LSP server as child process for external editors (VS Code, Sublime, etc.)",
+     FeatureCategory::LSP, IDM_LSP_SERVER_LAUNCH_STDIO, "", "Win32IDE_LSPServer.cpp",
+     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+
     // Sentinel
     {nullptr, nullptr, nullptr, FeatureCategory::FileOps, 0, nullptr, nullptr,
      FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr}

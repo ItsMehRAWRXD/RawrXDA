@@ -691,8 +691,8 @@ void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
     // The actual streaming logic delegates to the engine's streaming interface
     std::string result = runInference(prompt);
 
-    // Emit the result as a stream of characters (simulated for now until
-    // the engine's native streaming API is wired directly)
+    // Emit result in batch mode — delivers entire inference output as a single chunk
+    // When the engine's per-token streaming API is wired, switch to incremental emission
     if (tokenCallback && !result.empty()) {
         tokenCallback(result.c_str(), result.size());
     }

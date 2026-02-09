@@ -827,6 +827,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    // ========== File Reading: /api/read-file — read local file for chatbot attachments ==========
+    else if (method == "POST" && path == "/api/read-file") {
+        handleReadFileEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== 404 ==========
     else {
         response = LocalServerUtil::buildHttpResponse(404,
@@ -1319,6 +1325,163 @@ void Win32IDE::handleServeGui(SOCKET client) {
 }
 
 // ============================================================================
+// POST /api/read-file — Read a local file for chatbot attachment support
+// ============================================================================
+// Request body: {"path":"C:/some/file.cpp"}
+// Response: {"content":"...file text...","name":"file.cpp","size":12345}
+// Security: Only allows reading text files up to 10MB.
+//           Rejects paths containing ".." to prevent directory traversal.
+// ============================================================================
+
+void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
+    // Parse "path" from JSON body (lightweight — no full JSON parser needed)
+    std::string filePath;
+    {
+        auto pathKey = body.find("\"path\"");
+        if (pathKey == std::string::npos) {
+            std::string resp = LocalServerUtil::buildHttpResponse(400,
+                "{\"error\":\"missing_path\",\"message\":\"Request body must contain 'path' field\"}");
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+        // Find the value string after "path": "..."
+        auto colonPos = body.find(':', pathKey + 6);
+        if (colonPos == std::string::npos) {
+            std::string resp = LocalServerUtil::buildHttpResponse(400,
+                "{\"error\":\"malformed_json\",\"message\":\"Could not parse path value\"}");
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+        auto quoteStart = body.find('"', colonPos + 1);
+        if (quoteStart == std::string::npos) {
+            std::string resp = LocalServerUtil::buildHttpResponse(400,
+                "{\"error\":\"malformed_json\",\"message\":\"Could not find path string\"}");
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+        // Find closing quote (handle escaped quotes)
+        size_t quoteEnd = quoteStart + 1;
+        while (quoteEnd < body.size()) {
+            if (body[quoteEnd] == '\\') {
+                quoteEnd += 2; // skip escaped char
+                continue;
+            }
+            if (body[quoteEnd] == '"') break;
+            quoteEnd++;
+        }
+        if (quoteEnd >= body.size()) {
+            std::string resp = LocalServerUtil::buildHttpResponse(400,
+                "{\"error\":\"malformed_json\",\"message\":\"Unterminated path string\"}");
+            send(client, resp.c_str(), (int)resp.size(), 0);
+            return;
+        }
+        filePath = body.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+    }
+
+    // Unescape JSON string basics (forward slashes, backslashes)
+    {
+        std::string unescaped;
+        unescaped.reserve(filePath.size());
+        for (size_t i = 0; i < filePath.size(); i++) {
+            if (filePath[i] == '\\' && i + 1 < filePath.size()) {
+                char next = filePath[i + 1];
+                if (next == '\\') { unescaped += '\\'; i++; continue; }
+                if (next == '/') { unescaped += '/'; i++; continue; }
+                if (next == '"') { unescaped += '"'; i++; continue; }
+                if (next == 'n') { unescaped += '\n'; i++; continue; }
+                if (next == 'r') { unescaped += '\r'; i++; continue; }
+                if (next == 't') { unescaped += '\t'; i++; continue; }
+            }
+            unescaped += filePath[i];
+        }
+        filePath = unescaped;
+    }
+
+    // Normalize forward slashes to backslashes for Windows
+    for (auto& ch : filePath) {
+        if (ch == '/') ch = '\\';
+    }
+
+    // Security: reject directory traversal
+    if (filePath.find("..") != std::string::npos) {
+        std::string resp = LocalServerUtil::buildHttpResponse(403,
+            "{\"error\":\"forbidden\",\"message\":\"Directory traversal not allowed\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Security: must be an absolute path (drive letter)
+    if (filePath.size() < 3 || filePath[1] != ':' || filePath[2] != '\\') {
+        std::string resp = LocalServerUtil::buildHttpResponse(400,
+            "{\"error\":\"invalid_path\",\"message\":\"Only absolute paths are accepted\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Open the file
+    HANDLE hFile = CreateFileA(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        DWORD err = GetLastError();
+        std::string resp = LocalServerUtil::buildHttpResponse(404,
+            "{\"error\":\"file_not_found\",\"message\":\"Cannot open file: " +
+            LocalServerUtil::escapeJson(filePath) + "\",\"win32_error\":" + std::to_string(err) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Get file size — limit to 10MB for safety
+    DWORD fileSize = GetFileSize(hFile, NULL);
+    const DWORD maxFileSize = 10 * 1024 * 1024; // 10MB
+    if (fileSize == INVALID_FILE_SIZE || fileSize > maxFileSize) {
+        CloseHandle(hFile);
+        std::string resp = LocalServerUtil::buildHttpResponse(413,
+            "{\"error\":\"file_too_large\",\"message\":\"File exceeds 10MB limit\",\"size\":" +
+            std::to_string(fileSize == INVALID_FILE_SIZE ? 0 : fileSize) + "}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+
+    // Read file content
+    std::string content(fileSize, '\0');
+    DWORD bytesRead = 0;
+    BOOL readOk = ReadFile(hFile, &content[0], fileSize, &bytesRead, NULL);
+    CloseHandle(hFile);
+
+    if (!readOk || bytesRead == 0) {
+        std::string resp = LocalServerUtil::buildHttpResponse(500,
+            "{\"error\":\"read_failed\",\"message\":\"Failed to read file content\"}");
+        send(client, resp.c_str(), (int)resp.size(), 0);
+        return;
+    }
+    content.resize(bytesRead);
+
+    // Extract filename from path
+    std::string fileName;
+    {
+        auto lastSlash = filePath.rfind('\\');
+        if (lastSlash != std::string::npos) {
+            fileName = filePath.substr(lastSlash + 1);
+        } else {
+            fileName = filePath;
+        }
+    }
+
+    // Build JSON response with escaped content
+    std::ostringstream json;
+    json << "{\"content\":" << "\"" << LocalServerUtil::escapeJson(content) << "\""
+         << ",\"name\":\"" << LocalServerUtil::escapeJson(fileName) << "\""
+         << ",\"size\":" << bytesRead
+         << ",\"path\":\"" << LocalServerUtil::escapeJson(filePath) << "\""
+         << "}";
+
+    std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    send(client, resp.c_str(), (int)resp.size(), 0);
+
+    LOG_INFO("read-file: " + filePath + " (" + std::to_string(bytesRead) + " bytes)");
+}
+
+// ============================================================================
 // Phase 6B: GET /api/agents/history — Agent event history timeline
 // ============================================================================
 // Query params: ?agent_id=X&event_type=Y&limit=N&session_id=Z
@@ -1775,6 +1938,7 @@ std::string Win32IDE::getLocalServerStatus() const {
     oss << "  GET  /models              — List all local GGUF + Ollama models (Frontend)\r\n";
     oss << "  POST /ask                 — Unified chat endpoint (Frontend)\r\n";
     oss << "  GET  /gui                 — Serve agentic chatbot HTML interface\r\n";
+    oss << "  POST /api/read-file       — Read a local file for chatbot attachments\r\n";
     oss << "  GET  /api/agents/history   — Agent event history timeline\r\n";
     oss << "  GET  /api/agents/status    — Agent + failure stats\r\n";
     oss << "  POST /api/agents/replay    — Replay agent session events\r\n";

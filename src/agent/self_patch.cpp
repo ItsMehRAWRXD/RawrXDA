@@ -118,8 +118,87 @@ static VkDevice s_device = VK_NULL_HANDLE;
 static VkShaderModule s_shader = VK_NULL_HANDLE;
 
 void %1::initialize() {
-    // TODO: Initialize Vulkan resources
-    qDebug() << "Initializing %1";
+    // Enumerate physical devices and find a compute-capable queue family
+    VkInstance instance = VK_NULL_HANDLE;
+    VkInstanceCreateInfo instanceInfo{};
+    instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    VkApplicationInfo appInfo{};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "%1";
+    appInfo.apiVersion = VK_API_VERSION_1_2;
+    instanceInfo.pApplicationInfo = &appInfo;
+    
+    if (vkCreateInstance(&instanceInfo, nullptr, &instance) != VK_SUCCESS) {
+        qWarning() << "Failed to create Vulkan instance for %1";
+        return;
+    }
+    
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    if (deviceCount == 0) {
+        qWarning() << "No Vulkan-capable GPU found for %1";
+        vkDestroyInstance(instance, nullptr);
+        return;
+    }
+    
+    std::vector<VkPhysicalDevice> physDevices(deviceCount);
+    vkEnumeratePhysicalDevices(instance, &deviceCount, physDevices.data());
+    
+    // Find compute queue family on first device
+    VkPhysicalDevice physDevice = physDevices[0];
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &queueFamilyCount, nullptr);
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physDevice, &queueFamilyCount, queueFamilies.data());
+    
+    uint32_t computeFamily = UINT32_MAX;
+    for (uint32_t i = 0; i < queueFamilyCount; ++i) {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            computeFamily = i;
+            break;
+        }
+    }
+    
+    if (computeFamily == UINT32_MAX) {
+        qWarning() << "No compute queue family found for %1";
+        vkDestroyInstance(instance, nullptr);
+        return;
+    }
+    
+    // Create logical device with compute queue
+    float queuePriority = 1.0f;
+    VkDeviceQueueCreateInfo queueInfo{};
+    queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueInfo.queueFamilyIndex = computeFamily;
+    queueInfo.queueCount = 1;
+    queueInfo.pQueuePriorities = &queuePriority;
+    
+    VkDeviceCreateInfo deviceInfo{};
+    deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceInfo.queueCreateInfoCount = 1;
+    deviceInfo.pQueueCreateInfos = &queueInfo;
+    
+    if (vkCreateDevice(physDevice, &deviceInfo, nullptr, &s_device) != VK_SUCCESS) {
+        qWarning() << "Failed to create Vulkan device for %1";
+        vkDestroyInstance(instance, nullptr);
+        return;
+    }
+    
+    // Create shader module from compiled SPIR-V
+    VkShaderModuleCreateInfo shaderInfo{};
+    shaderInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shaderInfo.codeSize = %2_comp_spv_len;
+    shaderInfo.pCode = reinterpret_cast<const uint32_t*>(%2_comp_spv);
+    
+    if (vkCreateShaderModule(s_device, &shaderInfo, nullptr, &s_shader) != VK_SUCCESS) {
+        qWarning() << "Failed to create shader module for %1";
+        vkDestroyDevice(s_device, nullptr);
+        s_device = VK_NULL_HANDLE;
+        vkDestroyInstance(instance, nullptr);
+        return;
+    }
+    
+    qDebug() << "Vulkan resources initialized for %1 (device + shader module)";
 }
 
 void %1::cleanup() {

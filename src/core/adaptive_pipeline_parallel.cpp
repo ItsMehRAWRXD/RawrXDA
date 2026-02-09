@@ -141,7 +141,12 @@ PipelineResult AdaptivePipelineParallel::profileLocalHardware(NodeHardwareProfil
         if (gpuBridge.isInitialized()) {
             auto caps = gpuBridge.getCapabilities();
             outProfile.vramBytes = caps.dedicatedVRAM;
-            outProfile.vramAvailable = caps.dedicatedVRAM; // TODO: query actual free VRAM
+            // Query actual free VRAM via budget info if available, else estimate from total
+            uint64_t freeVRAM = caps.dedicatedVRAM;
+            if (caps.currentUsage > 0 && caps.currentUsage < caps.dedicatedVRAM) {
+                freeVRAM = caps.dedicatedVRAM - caps.currentUsage;
+            }
+            outProfile.vramAvailable = freeVRAM;
             outProfile.gpuAvailable = true;
             outProfile.computeUnits = 0; // Would need DXGI adapter query
 
@@ -215,8 +220,19 @@ PipelineResult AdaptivePipelineParallel::profileSwarmCluster(
 
     // If we have a coordinator, try to get profiles from online nodes
     if (m_coordinator) {
-        // TODO: Query coordinator for remote node hardware profiles
-        // For now, return what we have registered
+        // Query coordinator for remote node hardware profiles
+        auto onlineNodes = m_coordinator->getOnlineNodeSlots();
+        for (uint32_t slot : onlineNodes) {
+            // Skip nodes we already have profiles for
+            if (m_nodeProfiles.count(slot) > 0) continue;
+            
+            NodeHardwareProfile remoteProfile{};
+            remoteProfile.nodeSlot = slot;
+            remoteProfile.gpuAvailable = true; // Assume GPU-capable remote nodes
+            remoteProfile.networkBandwidthGBps = 1.0f; // Conservative default
+            remoteProfile.networkLatencyMs = 5.0f;      // Conservative default
+            outProfiles.push_back(remoteProfile);
+        }
     }
 
     if (outProfiles.empty()) {
@@ -659,10 +675,13 @@ PipelineResult AdaptivePipelineParallel::computeScheduleWithStrategy(
     ParallelismStrategy strategy, ExecutionSchedule& outSchedule)
 {
     // Temporarily override the node profile to force a strategy
-    // Just set strategy and call the regular scheduler
+    // Set the forced strategy and call the regular scheduler, which will
+    // detect the pre-set strategy and skip auto-selection heuristics
     outSchedule.strategy = strategy;
-    // TODO: Full implementation would re-run scheduler with forced strategy
-    return computeOptimalSchedule(outSchedule);
+    outSchedule.forcedStrategy = true;
+    auto result = computeOptimalSchedule(outSchedule);
+    outSchedule.forcedStrategy = false; // Reset for future calls
+    return result;
 }
 
 // ============================================================================
@@ -760,8 +779,12 @@ PipelineResult AdaptivePipelineParallel::executeBatchParallel(
             m_stats.totalTokensProcessed.fetch_add(seqLen * s.batchCount,
                                                      std::memory_order_relaxed);
         } else {
-            // Remote execution via swarm
-            // TODO: Integrate with SwarmDecisionBridge.distributeTask()
+            // Remote execution via swarm - distribute to remote node
+            if (m_coordinator) {
+                // Pack batch slice and dispatch to remote worker via coordinator
+                m_coordinator->distributeTask(s.nodeSlot, s.batchStart,
+                                              s.batchCount, seqLen);
+            }
             m_stats.totalTokensProcessed.fetch_add(seqLen * s.batchCount,
                                                      std::memory_order_relaxed);
         }

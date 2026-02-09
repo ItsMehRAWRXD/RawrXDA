@@ -1894,15 +1894,16 @@ namespace vscode {
 } // namespace vscode
 
 // ============================================================================
-// Command IDs for VS Code Extension API (Phase 29, 9400 range)
+// Command IDs for VS Code Extension API (Phase 29, 10000 range)
+// Relocated from 9400 range to avoid PDB 9400-9500 conflict
 // ============================================================================
-#define IDM_VSCEXT_API_STATUS           9400
-#define IDM_VSCEXT_API_RELOAD           9401
-#define IDM_VSCEXT_API_LIST_COMMANDS    9402
-#define IDM_VSCEXT_API_LIST_PROVIDERS   9403
-#define IDM_VSCEXT_API_DIAGNOSTICS      9404
-#define IDM_VSCEXT_API_EXTENSIONS       9405
-#define IDM_VSCEXT_API_STATS            9406
-#define IDM_VSCEXT_API_LOAD_NATIVE      9407
-#define IDM_VSCEXT_API_DEACTIVATE_ALL   9408
-#define IDM_VSCEXT_API_EXPORT_CONFIG    9409
+#define IDM_VSCEXT_API_STATUS           10000
+#define IDM_VSCEXT_API_RELOAD           10001
+#define IDM_VSCEXT_API_LIST_COMMANDS    10002
+#define IDM_VSCEXT_API_LIST_PROVIDERS   10003
+#define IDM_VSCEXT_API_DIAGNOSTICS      10004
+#define IDM_VSCEXT_API_EXTENSIONS       10005
+#define IDM_VSCEXT_API_STATS            10006
+#define IDM_VSCEXT_API_LOAD_NATIVE      10007
+#define IDM_VSCEXT_API_DEACTIVATE_ALL   10008
+#define IDM_VSCEXT_API_EXPORT_CONFIG    10009

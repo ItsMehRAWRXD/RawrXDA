@@ -40,8 +40,17 @@ void ActivityBar::createButtons()
     for (int i = 0; i < ViewCount; ++i) {
         ActivityBarButton* btn = new ActivityBarButton(buttonNames[i], this);
         
-        // Set a simple text icon for now (will be replaced with proper icons later)
-        QString iconText = QString(QChar('A' + i));  // A, B, C, etc. as placeholder
+        // Set Unicode icons matching VS Code's activity bar layout
+        const char* iconUnicode[] = {
+            "\xF0\x9F\x93\x81",  // 📁 Explorer
+            "\xF0\x9F\x94\x8D",  // 🔍 Search
+            "\xE2\x8E\x87",      // ⎇ Source Control (branch symbol)
+            "\xE2\x96\xB6",      // ▶ Run and Debug
+            "\xF0\x9F\xA7\xA9",  // 🧩 Extensions
+            "\xE2\x9A\x99",      // ⚙ Settings
+            "\xF0\x9F\x91\xA4"   // 👤 Accounts
+        };
+        QString iconText = QString::fromUtf8(iconUnicode[i]);
         
         m_buttons.push_back(btn);
         

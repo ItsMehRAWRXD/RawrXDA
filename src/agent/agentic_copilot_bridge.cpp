@@ -62,8 +62,30 @@ QString AgenticCopilotBridge::generateCodeCompletion(const QString& context, con
             "Provide only the completion (no explanation):"
         ).arg(context, prefix);
 
-        // Request completion from engine (placeholder - would call m_agenticEngine->generate)
-        QString completion = prefix + " { /* completion */ }";
+        // Request completion from the agentic inference engine
+        QString completion;
+        if (m_agenticEngine) {
+            QJsonObject params;
+            params["max_tokens"] = 256;
+            params["temperature"] = 0.2; // Low temperature for code completion
+            params["stop_sequences"] = QJsonArray{"\n\n", "```", "// END"};
+            
+            QString engineResult = m_agenticEngine->generate(prompt, params);
+            if (!engineResult.isEmpty()) {
+                completion = engineResult.trimmed();
+            } else {
+                completion = prefix + " { /* engine returned empty */ }";
+            }
+        } else {
+            // Fallback: pattern-based completion when engine unavailable
+            if (prefix.trimmed().endsWith("(")) {
+                completion = prefix + ")";
+            } else if (prefix.trimmed().endsWith("{")) {
+                completion = prefix + "\n    \n}";
+            } else {
+                completion = prefix + ";";
+            }
+        }
         
         qint64 elapsed = timer.elapsed();
         qDebug() << "[Metrics] code_completion_latency_ms:" << elapsed
@@ -230,8 +252,34 @@ QString AgenticCopilotBridge::askAgent(const QString& question, const QJsonObjec
             fullContext[it.key()] = it.value();
         }
 
-        // Generate response (placeholder)
-        QString response = QString("Agent response to: %1").arg(question);
+        // Generate response via agentic engine with full conversation context
+        QString response;
+        if (m_agenticEngine) {
+            // Build conversation prompt from history
+            QString conversationPrompt;
+            for (const auto& msg : m_conversationHistory) {
+                QJsonObject msgObj = msg.toObject();
+                QString role = msgObj["role"].toString();
+                QString content = msgObj["content"].toString();
+                conversationPrompt += QString("[%1]: %2\n").arg(role, content);
+            }
+            conversationPrompt += "[assistant]: ";
+
+            QJsonObject params;
+            params["max_tokens"] = 1024;
+            params["temperature"] = 0.7;
+            params["context"] = fullContext;
+
+            response = m_agenticEngine->generate(conversationPrompt, params);
+            if (response.isEmpty()) {
+                response = QString("I analyzed your question about: %1\n"
+                    "The engine is currently processing. Please try again.").arg(
+                    question.left(100));
+            }
+        } else {
+            response = QString("Agent response to: %1\n"
+                "(Engine not loaded — connect a GGUF model for full inference)").arg(question);
+        }
         
         // Add to history
         m_conversationHistory.append(QJsonObject{{"role", "assistant"}, {"content", response}});
@@ -595,8 +643,36 @@ void AgenticCopilotBridge::updateModel(const QString& newModelPath) {
             return;
         }
 
-        // Load new model (placeholder)
-        qDebug() << "[AgenticCopilotBridge] Model updated successfully";
+        // Validate model file exists and has GGUF signature
+        QFileInfo modelInfo(newModelPath);
+        if (!modelInfo.exists() || !modelInfo.isFile()) {
+            emit errorOccurred(QString("Model file not found: %1").arg(newModelPath));
+            return;
+        }
+        if (modelInfo.size() < 1024) {
+            emit errorOccurred("Model file is too small to be a valid GGUF model");
+            return;
+        }
+
+        // Unload current model and load the new one
+        QString previousModel;
+        if (m_agenticEngine->isModelLoaded()) {
+            previousModel = m_agenticEngine->currentModelPath();
+            m_agenticEngine->unloadModel();
+        }
+
+        bool loadSuccess = m_agenticEngine->loadModel(newModelPath);
+        if (!loadSuccess) {
+            // Rollback: try to reload previous model
+            if (!previousModel.isEmpty()) {
+                m_agenticEngine->loadModel(previousModel);
+            }
+            emit errorOccurred(QString("Failed to load model: %1").arg(newModelPath));
+            return;
+        }
+
+        qDebug() << "[AgenticCopilotBridge] Model updated successfully to:" << newModelPath
+                 << "Previous:" << previousModel;
         
         qint64 elapsed = timer.elapsed();
         qDebug() << "[Metrics] model_update_latency_ms:" << elapsed
@@ -723,9 +799,11 @@ void AgenticCopilotBridge::onEditorContentChanged() {
         debounceTimer->setInterval(300);
         QObject::connect(debounceTimer, &QTimer::timeout, this, [this]() {
             qDebug() << "[AgenticCopilotBridge] Triggering background analysis after debounce";
-            // Placeholder: could call analyzeActiveFile() or suggestion generation
+            // Run analysis on current editor content
             QString analysis = analyzeActiveFile();
-            emit editorAnalysisReady(analysis);
+            if (!analysis.isEmpty()) {
+                emit editorAnalysisReady(analysis);
+            }
         });
     }
     debounceTimer->start();

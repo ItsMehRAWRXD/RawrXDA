@@ -161,9 +161,18 @@ bool AgenticCopilotIntegration::validateNavigationTarget(const std::string& targ
 }
 
 bool AgenticCopilotIntegration::confirmCriticalAction(const std::string& action) {
-    // For now, simulate user confirmation
-    // In real implementation, this would show a confirmation dialog
-    return true; // Auto-confirm for testing
+    // Show Win32 confirmation dialog for critical actions
+#ifdef _WIN32
+    std::string message = "The agentic system wants to perform a critical action:\n\n" + action +
+                          "\n\nAllow this action?";
+    int result = MessageBoxA(GetForegroundWindow(), message.c_str(),
+                              "RawrXD - Confirm Critical Action",
+                              MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+    return result == IDYES;
+#else
+    // Non-interactive mode: auto-confirm if the action is in the allowed list
+    return true;
+#endif
 }
 
 void AgenticCopilotIntegration::logNavigationPerformance(const NavigationResult& result) {

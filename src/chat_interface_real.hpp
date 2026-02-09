@@ -195,6 +195,9 @@ private:
 
     // API helpers
     std::string makeHTTPRequest(const std::string& url, const std::string& method, const std::string& body);
+    std::string makeHTTPStreamingRequest(const std::string& url, const std::string& method,
+                                          const std::string& body, const std::string& authHeader,
+                                          std::function<void(const std::string&)> onChunk);
     std::string buildOpenAIPayload(const std::vector<Message>& context);
     std::string extractTextFromResponse(const std::string& jsonResponse);
 

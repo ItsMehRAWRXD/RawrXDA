@@ -42,13 +42,111 @@ CompletionResponse AIImplementation::complete(const CompletionRequest& request) 
             auto httpResp = m_httpClient->sendRequest(httpReq);
 
             if (httpResp.success) {
-                response.completion = "AI response from Ollama backend";
-                response.totalTokens = 100;
+                // Parse Ollama JSON response: {"response":"...","total_duration":...,"eval_count":N,...}
+                std::string respBody = httpResp.body;
+                std::string completionText;
+                int evalCount = 0;
+
+                // Extract "response" field
+                size_t respPos = respBody.find("\"response\":\"");
+                if (respPos != std::string::npos) {
+                    size_t valStart = respPos + 12;
+                    // Handle escaped quotes in response text
+                    size_t valEnd = valStart;
+                    while (valEnd < respBody.size()) {
+                        if (respBody[valEnd] == '\\') {
+                            valEnd += 2; // skip escaped char
+                            continue;
+                        }
+                        if (respBody[valEnd] == '"') break;
+                        valEnd++;
+                    }
+                    completionText = respBody.substr(valStart, valEnd - valStart);
+                }
+
+                // Extract "eval_count" for token count
+                size_t evalPos = respBody.find("\"eval_count\":");
+                if (evalPos != std::string::npos) {
+                    size_t numStart = evalPos + 13;
+                    while (numStart < respBody.size() && respBody[numStart] == ' ') numStart++;
+                    size_t numEnd = numStart;
+                    while (numEnd < respBody.size() && (respBody[numEnd] >= '0' && respBody[numEnd] <= '9')) numEnd++;
+                    if (numEnd > numStart) {
+                        evalCount = std::stoi(respBody.substr(numStart, numEnd - numStart));
+                    }
+                }
+
+                response.completion = completionText;
+                response.totalTokens = evalCount > 0 ? evalCount : static_cast<int>(completionText.size() / 4);
                 response.success = true;
             } else {
                 response.success = false;
                 response.errorMessage = httpResp.errorMessage;
             }
+        } else if (m_config.backend == "openai" || m_config.backend == "anthropic") {
+            // Build API request for OpenAI/Anthropic (non-streaming)
+            std::string body;
+            if (m_config.backend == "openai") {
+                body = "{\"model\":\"" + m_config.modelName + "\",\"stream\":false,"
+                       "\"messages\":[{\"role\":\"user\",\"content\":\"" + request.prompt + "\"}]}";
+            } else {
+                body = "{\"model\":\"" + m_config.modelName + "\",\"stream\":false,"
+                       "\"max_tokens\":4096,"
+                       "\"messages\":[{\"role\":\"user\",\"content\":\"" + request.prompt + "\"}]}";
+            }
+
+            HTTPRequest httpReq;
+            httpReq.method = "POST";
+            httpReq.url = m_config.endpoint;
+            httpReq.body = body;
+            httpReq.headers.push_back({"Content-Type", "application/json"});
+            httpReq.headers.push_back({"Authorization", "Bearer " + m_config.apiKey});
+
+            auto httpResp = m_httpClient->sendRequest(httpReq);
+
+            if (httpResp.success) {
+                // Parse OpenAI/Anthropic response for content
+                std::string respBody = httpResp.body;
+                std::string completionText;
+                int totalTokens = 0;
+
+                // Extract content from choices[0].message.content or content[0].text
+                size_t contentPos = respBody.find("\"content\":\"");
+                if (contentPos != std::string::npos) {
+                    size_t valStart = contentPos + 11;
+                    size_t valEnd = valStart;
+                    while (valEnd < respBody.size()) {
+                        if (respBody[valEnd] == '\\') { valEnd += 2; continue; }
+                        if (respBody[valEnd] == '"') break;
+                        valEnd++;
+                    }
+                    completionText = respBody.substr(valStart, valEnd - valStart);
+                }
+
+                // Extract total_tokens from usage object
+                size_t tokPos = respBody.find("\"total_tokens\":");
+                if (tokPos != std::string::npos) {
+                    size_t numStart = tokPos + 15;
+                    while (numStart < respBody.size() && respBody[numStart] == ' ') numStart++;
+                    size_t numEnd = numStart;
+                    while (numEnd < respBody.size() && respBody[numEnd] >= '0' && respBody[numEnd] <= '9') numEnd++;
+                    if (numEnd > numStart) {
+                        totalTokens = std::stoi(respBody.substr(numStart, numEnd - numStart));
+                    }
+                }
+
+                response.completion = completionText;
+                response.totalTokens = totalTokens > 0 ? totalTokens : static_cast<int>(completionText.size() / 4);
+                response.success = true;
+            } else {
+                response.success = false;
+                response.errorMessage = httpResp.errorMessage;
+            }
+        } else if (m_config.backend == "local") {
+            // Local GGUF model inference via CPUInferenceEngine
+            // This path is used when a model is loaded directly, not via remote API
+            response.success = false;
+            response.errorMessage = "Local backend: use api_server inference endpoint instead";
         } else {
             response.success = false;
             response.errorMessage = "Unsupported backend: " + m_config.backend;
@@ -90,9 +188,150 @@ CompletionResponse AIImplementation::streamComplete(
     const CompletionRequest& request,
     std::function<void(const ParsedCompletion&)> chunkCallback
 ) {
+    auto startTime = std::chrono::high_resolution_clock::now();
     CompletionResponse response;
-    response.success = false;
-    response.errorMessage = "Streaming not yet implemented";
+
+    try {
+        if (m_config.backend == "ollama") {
+            // Build Ollama streaming request
+            std::string ollamaBody = "{\"model\":\"" + m_config.modelName + 
+                "\",\"prompt\":\"" + request.prompt + "\",\"stream\":true}";
+
+            HTTPRequest httpReq;
+            httpReq.method = "POST";
+            httpReq.url = m_config.endpoint + "/api/generate";
+            httpReq.body = ollamaBody;
+            httpReq.headers.push_back({"Content-Type", "application/json"});
+
+            // Use streaming callback on the HTTP client
+            std::string accumulatedText;
+            int totalTokens = 0;
+
+            auto httpResp = m_httpClient->sendRequest(httpReq, [&](const std::string& chunk) {
+                // Ollama streams JSON lines: {"response":"token","done":false}
+                // Parse each line for the "response" field
+                size_t respPos = chunk.find("\"response\":\"");
+                if (respPos != std::string::npos) {
+                    size_t valStart = respPos + 12;
+                    size_t valEnd = chunk.find("\"", valStart);
+                    if (valEnd != std::string::npos) {
+                        std::string token = chunk.substr(valStart, valEnd - valStart);
+                        accumulatedText += token;
+                        totalTokens++;
+
+                        ParsedCompletion pc;
+                        pc.text = token;
+                        pc.isPartial = true;
+                        pc.tokenIndex = totalTokens;
+                        chunkCallback(pc);
+                    }
+                }
+            });
+
+            if (httpResp.success) {
+                response.completion = accumulatedText;
+                response.totalTokens = totalTokens;
+                response.success = true;
+
+                // Send final completion chunk
+                ParsedCompletion finalChunk;
+                finalChunk.text = "";
+                finalChunk.isPartial = false;
+                finalChunk.tokenIndex = totalTokens;
+                chunkCallback(finalChunk);
+            } else {
+                response.success = false;
+                response.errorMessage = httpResp.errorMessage;
+            }
+        } else if (m_config.backend == "openai" || m_config.backend == "anthropic") {
+            // For OpenAI/Anthropic: use SSE streaming
+            std::string body;
+            if (m_config.backend == "openai") {
+                body = "{\"model\":\"" + m_config.modelName + "\",\"stream\":true,"
+                       "\"messages\":[{\"role\":\"user\",\"content\":\"" + request.prompt + "\"}]}";
+            } else {
+                body = "{\"model\":\"" + m_config.modelName + "\",\"stream\":true,"
+                       "\"max_tokens\":4096,"
+                       "\"messages\":[{\"role\":\"user\",\"content\":\"" + request.prompt + "\"}]}";
+            }
+
+            HTTPRequest httpReq;
+            httpReq.method = "POST";
+            httpReq.url = m_config.endpoint;
+            httpReq.body = body;
+            httpReq.headers.push_back({"Content-Type", "application/json"});
+            httpReq.headers.push_back({"Authorization", "Bearer " + m_config.apiKey});
+
+            std::string accumulatedText;
+            int totalTokens = 0;
+
+            auto httpResp = m_httpClient->sendRequest(httpReq, [&](const std::string& chunk) {
+                // Parse SSE "data: {...}" lines
+                size_t dataPos = chunk.find("data: ");
+                while (dataPos != std::string::npos) {
+                    size_t lineEnd = chunk.find("\n", dataPos);
+                    std::string jsonStr = chunk.substr(dataPos + 6, 
+                        lineEnd == std::string::npos ? std::string::npos : lineEnd - dataPos - 6);
+                    
+                    if (jsonStr == "[DONE]") break;
+                    
+                    // Extract content delta from SSE JSON
+                    size_t contentPos = jsonStr.find("\"content\":\"");
+                    if (contentPos == std::string::npos) contentPos = jsonStr.find("\"text\":\"");
+                    if (contentPos != std::string::npos) {
+                        size_t valStart = jsonStr.find("\"", contentPos + 9) + 1;
+                        if (valStart == std::string::npos + 1) valStart = contentPos + 11;
+                        size_t valEnd = jsonStr.find("\"", valStart);
+                        if (valEnd != std::string::npos) {
+                            std::string token = jsonStr.substr(valStart, valEnd - valStart);
+                            accumulatedText += token;
+                            totalTokens++;
+                            
+                            ParsedCompletion pc;
+                            pc.text = token;
+                            pc.isPartial = true;
+                            pc.tokenIndex = totalTokens;
+                            chunkCallback(pc);
+                        }
+                    }
+                    dataPos = chunk.find("data: ", lineEnd == std::string::npos ? chunk.size() : lineEnd);
+                }
+            });
+
+            response.completion = accumulatedText;
+            response.totalTokens = totalTokens;
+            response.success = httpResp.success;
+            if (!httpResp.success) response.errorMessage = httpResp.errorMessage;
+        } else {
+            response.success = false;
+            response.errorMessage = "Streaming not supported for backend: " + m_config.backend;
+        }
+
+        auto endTime = std::chrono::high_resolution_clock::now();
+        response.latencyMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime - startTime
+        ).count();
+
+        if (m_metrics) {
+            m_metrics->recordHistogram("ai_stream_latency_ms", static_cast<double>(response.latencyMs));
+            m_metrics->incrementCounter("ai_stream_tokens", response.totalTokens);
+            m_metrics->incrementCounter("ai_stream_requests", 1);
+        }
+
+        if (m_logger) {
+            m_logger->info("AIImplementation", 
+                "Stream complete: " + std::to_string(response.latencyMs) + "ms, " +
+                std::to_string(response.totalTokens) + " tokens");
+        }
+
+    } catch (const std::exception& e) {
+        response.success = false;
+        response.errorMessage = std::string("Stream exception: ") + e.what();
+        if (m_logger) {
+            m_logger->error("AIImplementation", "streamComplete failed: " + response.errorMessage);
+        }
+    }
+
     return response;
 }
 

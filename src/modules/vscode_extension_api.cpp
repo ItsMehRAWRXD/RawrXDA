@@ -2628,30 +2628,58 @@ void VSCodeExtensionAPI::bridgeOutputToWin32(const VSCodeOutputChannel* channel)
     // Create tab on first use (addOutputTab is idempotent if tab already exists)
     m_host->addOutputTab(tabName);
 
-    // TODO: VSCodeOutputChannel needs a 'lines' vector member for full content flush
-    // For now, bridge the channel's last appended text via the channel's buffer
-    // (The struct definition in the header needs to be extended to support this)
-
-    logDebug("[Bridge] Output channel '%s' bridge invoked", tabName.c_str());
+    // Bridge the channel's content buffer to Win32 output tab
+    // VSCodeOutputChannel stores appended text in its internal buffer
+    if (!channel->buffer.empty()) {
+        m_host->appendToOutput(channel->buffer, tabName);
+        logDebug("[Bridge] Output channel '%s' flushed %zu bytes", tabName.c_str(), channel->buffer.size());
+    } else {
+        logDebug("[Bridge] Output channel '%s' bridge invoked (empty)", tabName.c_str());
+    }
 }
 
 void VSCodeExtensionAPI::bridgeTreeViewToWin32(const char* viewId,
                                                 const VSCodeTreeDataProvider* provider) {
     if (!m_host || !viewId || !provider) return;
 
-    // TODO: VSCodeTreeDataProvider needs getChildren/providerCtx members
-    // and Win32IDE::addTreeItem signature needs reconciliation
-    // Stub for now until struct definitions are aligned
-    logDebug("[Bridge] TreeView '%s' bridge invoked", viewId);
+    // Bridge tree data provider to Win32 sidebar tree view
+    // Use callback-based API to enumerate root items from the provider
+    if (!provider->getChildrenFn) {
+        logDebug("[Bridge] TreeView '%s' has no getChildren callback", viewId);
+        return;
+    }
+    VSCodeTreeItem rootItems[64];
+    size_t rootCount = 0;
+    bool ok = provider->getChildrenFn(nullptr, rootItems, 64, &rootCount, provider->context);
+    if (!ok || rootCount == 0) {
+        logDebug("[Bridge] TreeView '%s' has no root items", viewId);
+        return;
+    }
+    for (size_t i = 0; i < rootCount; i++) {
+        bool isDir = (rootItems[i].collapsibleState != TreeItemCollapsibleState::None);
+        m_host->addTreeItem(TVI_ROOT, rootItems[i].label, rootItems[i].id, isDir);
+    }
+    logDebug("[Bridge] TreeView '%s' bridged %zu root items", viewId, rootCount);
 }
 
 void VSCodeExtensionAPI::bridgeDiagnosticsToLSP(const DiagnosticCollection* collection) {
     if (!m_host || !collection) return;
 
-    // TODO: DiagnosticCollection needs a 'diagnostics' map<string, vector<Diagnostic>> member
-    // and Win32IDE::addProblem signature needs to match (5 args vs 3)
-    // Stub for now until struct definitions are aligned
-    logDebug("[Bridge] Diagnostics bridge invoked for collection '%s'", collection->name.c_str());
+    // Bridge diagnostics to Win32 Problems panel
+    // Iterate all file->diagnostic entries and forward to the IDE
+    size_t totalDiags = 0;
+    for (const auto& [filePath, diags] : collection->entries) {
+        for (const auto& diag : diags) {
+            m_host->addProblem(filePath,
+                              diag.range.start.line,
+                              diag.range.start.character,
+                              diag.message,
+                              static_cast<int>(diag.severity));
+            totalDiags++;
+        }
+    }
+    logDebug("[Bridge] Diagnostics bridge forwarded %zu diagnostics for collection '%s'",
+             totalDiags, collection->name.c_str());
 }
 
 void VSCodeExtensionAPI::bridgeCommandToIDM(const char* commandId) {

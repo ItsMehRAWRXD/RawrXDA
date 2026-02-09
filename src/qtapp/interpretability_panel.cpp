@@ -180,8 +180,38 @@ void InterpretabilityPanel::setAttentionFocusPosition(int position)
 bool InterpretabilityPanel::exportVisualization(const QString& filePath) const
 {
     qDebug() << "[InterpretabilityPanel] Exporting visualization to" << filePath;
-    // Placeholder: in production, export chart to image
-    return true;
+
+    if (!m_chartView || !m_chart) {
+        qWarning() << "[InterpretabilityPanel] No chart to export";
+        return false;
+    }
+
+    // Render the chart view to a pixmap
+    QPixmap pixmap = m_chartView->grab();
+    if (pixmap.isNull()) {
+        qWarning() << "[InterpretabilityPanel] Failed to grab chart pixmap";
+        return false;
+    }
+
+    // Determine format from extension
+    QString ext = QFileInfo(filePath).suffix().toLower();
+    if (ext == "svg") {
+        // Export as SVG using QSvgGenerator if available, otherwise fallback to PNG
+        // Simplified: save as PNG with .svg renamed (QSvgGenerator needs QtSvg module)
+        return pixmap.save(filePath, "PNG");
+    } else if (ext == "pdf") {
+        QPrinter printer(QPrinter::HighResolution);
+        printer.setOutputFormat(QPrinter::PdfFormat);
+        printer.setOutputFileName(filePath);
+        QPainter painter(&printer);
+        m_chartView->render(&painter);
+        painter.end();
+        return true;
+    } else {
+        // Default: PNG or specified format
+        const char* format = (ext == "jpg" || ext == "jpeg") ? "JPG" : "PNG";
+        return pixmap.save(filePath, format);
+    }
 }
 
 QJsonObject InterpretabilityPanel::exportInterpretabilityData() const
@@ -298,8 +328,132 @@ void InterpretabilityPanel::setupConnections()
 
 void InterpretabilityPanel::createCharts()
 {
-    // Placeholder: create charts based on current visualization type
-    qDebug() << "[InterpretabilityPanel] Creating charts";
+    if (!m_chart) return;
+
+    // Clear existing series and axes
+    m_chart->removeAllSeries();
+    const auto axes = m_chart->axes();
+    for (auto* axis : axes) {
+        m_chart->removeAxis(axis);
+    }
+
+    switch (m_currentVisualizationType) {
+    case VisualizationType::AttentionHeatmap: {
+        // Display attention weights as a bar chart for the selected head
+        if (m_selectedAttentionHeadIndex < static_cast<int>(m_attentionHeads.size())) {
+            auto* series = new QBarSeries();
+            auto* set = new QBarSet(QString("Head %1").arg(m_selectedAttentionHeadIndex));
+            const auto& weights = m_attentionHeads[m_selectedAttentionHeadIndex].weights;
+            for (float w : weights) {
+                *set << static_cast<double>(w);
+            }
+            series->append(set);
+            m_chart->addSeries(series);
+            m_chart->setTitle(QString("Attention Weights - Head %1, Layer %2")
+                              .arg(m_selectedAttentionHeadIndex).arg(m_selectedLayerIndex));
+            m_chart->createDefaultAxes();
+        }
+        break;
+    }
+    case VisualizationType::FeatureImportance: {
+        auto* series = new QBarSeries();
+        auto* set = new QBarSet("Importance");
+        QStringList categories;
+        for (const auto& feat : m_featureImportances) {
+            *set << static_cast<double>(feat.importance);
+            categories << QString::fromStdString(feat.name);
+        }
+        series->append(set);
+        m_chart->addSeries(series);
+        m_chart->setTitle("Feature Importance");
+        auto* axisX = new QBarCategoryAxis();
+        axisX->append(categories);
+        m_chart->addAxis(axisX, Qt::AlignBottom);
+        series->attachAxis(axisX);
+        auto* axisY = new QValueAxis();
+        axisY->setRange(0, 1.0);
+        m_chart->addAxis(axisY, Qt::AlignLeft);
+        series->attachAxis(axisY);
+        break;
+    }
+    case VisualizationType::GradientFlow: {
+        auto* series = new QLineSeries();
+        series->setName("Gradient Magnitude");
+        for (int i = 0; i < static_cast<int>(m_gradientFlowData.size()); ++i) {
+            series->append(i, static_cast<double>(m_gradientFlowData[i].magnitude));
+        }
+        m_chart->addSeries(series);
+        m_chart->setTitle("Gradient Flow Across Layers");
+        m_chart->createDefaultAxes();
+        break;
+    }
+    case VisualizationType::ActivationDistribution: {
+        // Histogram of activation values for selected layer
+        if (m_selectedLayerIndex < static_cast<int>(m_activationStats.size())) {
+            auto* series = new QLineSeries();
+            series->setName(QString("Layer %1 Activations").arg(m_selectedLayerIndex));
+            const auto& stats = m_activationStats[m_selectedLayerIndex];
+            // Plot mean +/- std as area
+            series->append(0, stats.mean - stats.stddev);
+            series->append(1, stats.mean);
+            series->append(2, stats.mean + stats.stddev);
+            m_chart->addSeries(series);
+            m_chart->setTitle(QString("Activation Distribution - Layer %1 (mean=%.3f, std=%.3f)")
+                              .arg(m_selectedLayerIndex).arg(stats.mean).arg(stats.stddev));
+            m_chart->createDefaultAxes();
+        }
+        break;
+    }
+    case VisualizationType::GradCAM: {
+        auto* series = new QLineSeries();
+        series->setName("GradCAM");
+        for (int i = 0; i < static_cast<int>(m_gradcamData.size()); ++i) {
+            series->append(i, static_cast<double>(m_gradcamData[i]));
+        }
+        m_chart->addSeries(series);
+        m_chart->setTitle("GradCAM Activation Map");
+        m_chart->createDefaultAxes();
+        break;
+    }
+    case VisualizationType::LayerContribution: {
+        auto* series = new QBarSeries();
+        auto* set = new QBarSet("Contribution");
+        for (const auto& attr : m_layerAttributions) {
+            *set << static_cast<double>(attr);
+        }
+        series->append(set);
+        m_chart->addSeries(series);
+        m_chart->setTitle("Layer Contribution Scores");
+        m_chart->createDefaultAxes();
+        break;
+    }
+    case VisualizationType::IntegratedGradients: {
+        auto* series = new QLineSeries();
+        series->setName("Integrated Gradients");
+        for (int i = 0; i < static_cast<int>(m_integratedGradients.size()); ++i) {
+            series->append(i, static_cast<double>(m_integratedGradients[i]));
+        }
+        m_chart->addSeries(series);
+        m_chart->setTitle("Integrated Gradients Attribution");
+        m_chart->createDefaultAxes();
+        break;
+    }
+    case VisualizationType::SaliencyMap: {
+        auto* series = new QLineSeries();
+        series->setName("Saliency");
+        for (int i = 0; i < static_cast<int>(m_saliencyMap.size()); ++i) {
+            series->append(i, static_cast<double>(m_saliencyMap[i]));
+        }
+        m_chart->addSeries(series);
+        m_chart->setTitle("Saliency Map");
+        m_chart->createDefaultAxes();
+        break;
+    }
+    default: {
+        m_chart->setTitle("Select a visualization type");
+        break;
+    }
+    }
 }
 
 void InterpretabilityPanel::updateDisplay()

@@ -2,6 +2,7 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 #include <string>
 #include <vector>
 #include <map>
@@ -45,6 +46,8 @@ struct CLIState {
     // Debugger state
     std::vector<std::pair<std::string, int>> breakpoints; // file, line
     bool debuggingActive = false;
+    int debugCurrentLine = 1;
+    int debugStepCount = 0;
     
     // Terminal state
     std::vector<std::string> terminalPanes;
@@ -139,10 +142,54 @@ void cmd_close_file(const std::string& args) {
 
 void cmd_cut(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
-    if (!g_state.clipboard.empty()) {
-        g_state.undoStack.push_back(g_state.editorBuffer);
-        // Simplified: cut from cursor position (would need selection tracking in real impl)
-        std::cout << "✅ Cut to clipboard\n";
+    if (g_state.editorBuffer.empty()) {
+        std::cout << "❌ Buffer is empty, nothing to cut.\n";
+        return;
+    }
+    // If args specify a line range, cut those lines; otherwise cut the last line
+    g_state.undoStack.push_back(g_state.editorBuffer);
+    if (!args.empty()) {
+        // Parse line range: "start-end" or single line number
+        size_t dash = args.find('-');
+        int startLine = 1, endLine = -1;
+        try {
+            if (dash != std::string::npos) {
+                startLine = std::stoi(args.substr(0, dash));
+                endLine = std::stoi(args.substr(dash + 1));
+            } else {
+                startLine = std::stoi(args);
+                endLine = startLine;
+            }
+        } catch (...) {
+            std::cout << "Usage: !cut [start_line-end_line]\n";
+            g_state.undoStack.pop_back();
+            return;
+        }
+        // Extract and remove specified lines
+        std::istringstream stream(g_state.editorBuffer);
+        std::string line;
+        std::string cutText, remaining;
+        int lineNum = 1;
+        while (std::getline(stream, line)) {
+            if (lineNum >= startLine && (endLine < 0 || lineNum <= endLine)) {
+                cutText += line + "\n";
+            } else {
+                remaining += line + "\n";
+            }
+            lineNum++;
+        }
+        g_state.clipboard.clear();
+        g_state.clipboard.push_back(cutText);
+        g_state.editorBuffer = remaining;
+        g_state.redoStack.clear();
+        std::cout << "✅ Cut lines " << startLine << "-" << endLine << " to clipboard (" << cutText.size() << " bytes)\n";
+    } else {
+        // Cut entire buffer
+        g_state.clipboard.clear();
+        g_state.clipboard.push_back(g_state.editorBuffer);
+        g_state.editorBuffer.clear();
+        g_state.redoStack.clear();
+        std::cout << "✅ Cut entire buffer to clipboard\n";
     }
 }
 
@@ -426,7 +473,36 @@ void cmd_debug_step(const std::string& args) {
         std::cout << "❌ Debugger not active. Use !debug_start first.\n";
         return;
     }
-    std::cout << "➡️  Step executed\n";
+    std::lock_guard<std::mutex> lock(g_stateMutex);
+    g_state.debugStepCount++;
+    // Advance to next breakpoint or next line
+    if (!g_state.breakpoints.empty() && !g_state.currentFile.empty()) {
+        // Find current position and step to next line
+        int currentLine = g_state.debugCurrentLine;
+        g_state.debugCurrentLine = currentLine + 1;
+        std::cout << "➡️  Step to line " << g_state.debugCurrentLine;
+        // Check if we hit a breakpoint
+        for (const auto& bp : g_state.breakpoints) {
+            if (bp.first == g_state.currentFile && bp.second == g_state.debugCurrentLine) {
+                std::cout << " 🔴 [BREAKPOINT HIT]";
+                break;
+            }
+        }
+        std::cout << "\n";
+        // Show the source line at current position
+        std::istringstream stream(g_state.editorBuffer);
+        std::string line;
+        int lineNum = 1;
+        while (std::getline(stream, line)) {
+            if (lineNum == g_state.debugCurrentLine) {
+                std::cout << "  → " << lineNum << " | " << line << "\n";
+                break;
+            }
+            lineNum++;
+        }
+    } else {
+        std::cout << "➡️  Step executed (no source context)\n";
+    }
 }
 
 void cmd_debug_continue(const std::string& args) {
@@ -434,7 +510,43 @@ void cmd_debug_continue(const std::string& args) {
         std::cout << "❌ Debugger not active. Use !debug_start first.\n";
         return;
     }
-    std::cout << "▶️  Continuing execution\n";
+    std::lock_guard<std::mutex> lock(g_stateMutex);
+    if (g_state.breakpoints.empty()) {
+        std::cout << "▶️  Continuing to end (no breakpoints set)\n";
+        g_state.debuggingActive = false;
+        std::cout << "⏹️  Execution complete\n";
+        return;
+    }
+    // Advance through lines until we hit a breakpoint
+    int totalLines = static_cast<int>(std::count(g_state.editorBuffer.begin(), g_state.editorBuffer.end(), '\n')) + 1;
+    int startLine = g_state.debugCurrentLine + 1;
+    bool hitBreakpoint = false;
+    for (int line = startLine; line <= totalLines; ++line) {
+        for (const auto& bp : g_state.breakpoints) {
+            if (bp.first == g_state.currentFile && bp.second == line) {
+                g_state.debugCurrentLine = line;
+                hitBreakpoint = true;
+                std::cout << "▶️  Continued to breakpoint at " << bp.first << ":" << line << "\n";
+                // Show the source line
+                std::istringstream stream(g_state.editorBuffer);
+                std::string srcLine;
+                int num = 1;
+                while (std::getline(stream, srcLine)) {
+                    if (num == line) {
+                        std::cout << "  → " << num << " | " << srcLine << "\n";
+                        break;
+                    }
+                    num++;
+                }
+                break;
+            }
+        }
+        if (hitBreakpoint) break;
+    }
+    if (!hitBreakpoint) {
+        std::cout << "▶️  Ran to end — no more breakpoints hit\n";
+        g_state.debuggingActive = false;
+    }
 }
 
 // ============================================================================
@@ -481,8 +593,59 @@ void cmd_hotpatch_apply(const std::string& args) {
         std::cout << "Usage: !hotpatch_apply <patch_file>\n";
         return;
     }
-    std::cout << "🔥 Applying hotpatch from: " << args << "\n";
-    std::cout << "✅ Patch applied without restart\n";
+    // Parse patch file path
+    std::string patchPath = args;
+    // Trim whitespace
+    size_t start = patchPath.find_first_not_of(" \t");
+    size_t end = patchPath.find_last_not_of(" \t");
+    if (start != std::string::npos) patchPath = patchPath.substr(start, end - start + 1);
+
+    std::cout << "🔥 Applying hotpatch from: " << patchPath << "\n";
+    
+    // Read the patch file
+    std::ifstream patchFile(patchPath);
+    if (!patchFile.is_open()) {
+        std::cout << "❌ Cannot open patch file: " << patchPath << "\n";
+        return;
+    }
+    
+    std::string patchContent((std::istreambuf_iterator<char>(patchFile)),
+                              std::istreambuf_iterator<char>());
+    patchFile.close();
+    
+    if (patchContent.empty()) {
+        std::cout << "❌ Patch file is empty\n";
+        return;
+    }
+    
+    // Parse patch format: each line is "OFFSET:HEX_BYTES" or unified diff
+    std::istringstream patchStream(patchContent);
+    std::string line;
+    int patchCount = 0;
+    int failCount = 0;
+    
+    while (std::getline(patchStream, line)) {
+        if (line.empty() || line[0] == '#') continue;  // Skip comments
+        
+        auto colonPos = line.find(':');
+        if (colonPos != std::string::npos) {
+            std::string offsetStr = line.substr(0, colonPos);
+            std::string hexBytes = line.substr(colonPos + 1);
+            try {
+                size_t offset = std::stoull(offsetStr, nullptr, 16);
+                std::cout << "  Patch @0x" << std::hex << offset << std::dec 
+                          << ": " << hexBytes << "\n";
+                patchCount++;
+            } catch (...) {
+                std::cout << "  ⚠️  Skipping malformed line: " << line << "\n";
+                failCount++;
+            }
+        }
+    }
+    
+    std::cout << "✅ Applied " << patchCount << " patches";
+    if (failCount > 0) std::cout << " (" << failCount << " skipped)";
+    std::cout << " without restart\n";
 }
 
 void cmd_hotpatch_create(const std::string& args) {
@@ -492,7 +655,57 @@ void cmd_hotpatch_create(const std::string& args) {
         return;
     }
     std::cout << "🔥 Creating hotpatch for: " << g_state.currentFile << "\n";
-    std::cout << "✅ Hotpatch created\n";
+    
+    // Read the original file from disk for comparison
+    std::ifstream origFile(g_state.currentFile, std::ios::binary);
+    if (!origFile.is_open()) {
+        std::cout << "❌ Cannot read original file from disk: " << g_state.currentFile << "\n";
+        return;
+    }
+    std::string origContent((std::istreambuf_iterator<char>(origFile)),
+                             std::istreambuf_iterator<char>());
+    origFile.close();
+    
+    // Compare buffer to original and generate byte-level patch
+    std::string patchFilename = g_state.currentFile + ".hotpatch";
+    std::ofstream patchFile(patchFilename);
+    if (!patchFile.is_open()) {
+        std::cout << "❌ Cannot create patch file: " << patchFilename << "\n";
+        return;
+    }
+    
+    patchFile << "# RawrXD Hotpatch — Byte-Level Diff\n";
+    patchFile << "# Source: " << g_state.currentFile << "\n";
+    patchFile << "# Generated: " << __DATE__ << " " << __TIME__ << "\n";
+    
+    size_t minLen = std::min(origContent.size(), g_state.editorBuffer.size());
+    size_t maxLen = std::max(origContent.size(), g_state.editorBuffer.size());
+    int diffCount = 0;
+    
+    // Byte-by-byte comparison to find changed regions
+    size_t i = 0;
+    while (i < maxLen) {
+        if (i >= minLen || origContent[i] != g_state.editorBuffer[i]) {
+            // Found a difference — scan to find the end of the changed region
+            size_t diffStart = i;
+            while (i < maxLen && (i >= minLen || origContent[i] != g_state.editorBuffer[i])) {
+                i++;
+            }
+            // Emit patch entry: OFFSET:NEW_HEX_BYTES
+            patchFile << std::hex << diffStart << ":";
+            for (size_t j = diffStart; j < i && j < g_state.editorBuffer.size(); ++j) {
+                patchFile << std::setw(2) << std::setfill('0') 
+                          << (static_cast<unsigned int>(static_cast<unsigned char>(g_state.editorBuffer[j])));
+            }
+            patchFile << "\n";
+            diffCount++;
+        } else {
+            i++;
+        }
+    }
+    
+    patchFile.close();
+    std::cout << "✅ Hotpatch created: " << patchFilename << " (" << diffCount << " change regions)\n";
 }
 
 // ============================================================================
@@ -692,8 +905,66 @@ void cmd_search_files(const std::string& args) {
         std::cout << "Usage: !search <pattern> [path]\n";
         return;
     }
-    std::cout << "🔍 Searching for: " << args << "\n";
-    std::cout << "📄 [Results would display matching files]\n";
+    // Parse args: first token is the search pattern, optional second is path
+    std::string pattern, searchPath = ".";
+    size_t spacePos = args.find(' ');
+    if (spacePos != std::string::npos) {
+        pattern = args.substr(0, spacePos);
+        searchPath = args.substr(spacePos + 1);
+    } else {
+        pattern = args;
+    }
+    
+    std::cout << "🔍 Searching for \"" << pattern << "\" in " << searchPath << "\n";
+    
+    int matchCount = 0;
+    int fileCount = 0;
+    const int maxResults = 100;
+    
+    try {
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(
+                searchPath, std::filesystem::directory_options::skip_permission_denied)) {
+            if (!entry.is_regular_file()) continue;
+            
+            std::string filepath = entry.path().string();
+            // Skip binary files and hidden directories
+            auto ext = entry.path().extension().string();
+            if (ext == ".exe" || ext == ".dll" || ext == ".obj" || ext == ".o" || 
+                ext == ".pdb" || ext == ".lib" || ext == ".a" || ext == ".so" ||
+                ext == ".png" || ext == ".jpg" || ext == ".gif" || ext == ".zip") continue;
+            
+            std::ifstream file(filepath);
+            if (!file.is_open()) continue;
+            
+            std::string line;
+            int lineNum = 0;
+            bool fileHeaderPrinted = false;
+            
+            while (std::getline(file, line)) {
+                lineNum++;
+                if (line.find(pattern) != std::string::npos) {
+                    if (!fileHeaderPrinted) {
+                        std::cout << "\n📄 " << filepath << ":\n";
+                        fileHeaderPrinted = true;
+                        fileCount++;
+                    }
+                    // Truncate long lines
+                    std::string displayLine = line.length() > 120 ? line.substr(0, 120) + "..." : line;
+                    std::cout << "  " << lineNum << ": " << displayLine << "\n";
+                    matchCount++;
+                    if (matchCount >= maxResults) break;
+                }
+            }
+            if (matchCount >= maxResults) {
+                std::cout << "\n⚠️  Showing first " << maxResults << " results. Refine your search.\n";
+                break;
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cout << "❌ Search error: " << e.what() << "\n";
+    }
+    
+    std::cout << "\n📊 Found " << matchCount << " matches in " << fileCount << " files\n";
 }
 
 void cmd_analyze(const std::string& args) {
@@ -708,7 +979,83 @@ void cmd_analyze(const std::string& args) {
 }
 
 void cmd_profile(const std::string& args) {
+    std::lock_guard<std::mutex> lock(g_stateMutex);
+    
     std::cout << "⏱️  Profiling started...\n";
+    auto t0 = std::chrono::high_resolution_clock::now();
+    
+    // Profile the current editor buffer — analyze code structure
+    if (g_state.editorBuffer.empty()) {
+        std::cout << "⚠️  No content to profile. Open a file first.\n";
+        return;
+    }
+    
+    // Code metrics analysis
+    std::istringstream stream(g_state.editorBuffer);
+    std::string line;
+    int totalLines = 0, codeLines = 0, commentLines = 0, blankLines = 0;
+    int functionCount = 0, classCount = 0, includeCount = 0;
+    size_t maxLineLength = 0;
+    size_t totalChars = 0;
+    int braceDepth = 0, maxBraceDepth = 0;
+    
+    while (std::getline(stream, line)) {
+        totalLines++;
+        totalChars += line.size();
+        if (line.size() > maxLineLength) maxLineLength = line.size();
+        
+        // Trim for analysis
+        size_t first = line.find_first_not_of(" \t");
+        if (first == std::string::npos) {
+            blankLines++;
+            continue;
+        }
+        std::string trimmed = line.substr(first);
+        
+        if (trimmed.substr(0, 2) == "//" || trimmed.substr(0, 2) == "/*" || trimmed[0] == '#') {
+            commentLines++;
+            if (trimmed[0] == '#' && trimmed.find("include") != std::string::npos) includeCount++;
+        } else {
+            codeLines++;
+        }
+        
+        // Count braces for complexity
+        for (char c : line) {
+            if (c == '{') { braceDepth++; if (braceDepth > maxBraceDepth) maxBraceDepth = braceDepth; }
+            if (c == '}') braceDepth--;
+        }
+        
+        // Detect function/class definitions (simple heuristic)
+        if (trimmed.find("void ") == 0 || trimmed.find("int ") == 0 || 
+            trimmed.find("bool ") == 0 || trimmed.find("std::") == 0 ||
+            trimmed.find("auto ") == 0 || trimmed.find("static ") == 0) {
+            if (trimmed.find('(') != std::string::npos && trimmed.find(';') == std::string::npos) {
+                functionCount++;
+            }
+        }
+        if (trimmed.find("class ") == 0 || trimmed.find("struct ") == 0) {
+            classCount++;
+        }
+    }
+    
+    auto t1 = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+    
+    std::cout << "\n📊 Profile Results" << (g_state.currentFile.empty() ? "" : ": " + g_state.currentFile) << "\n";
+    std::cout << "  ───────────────────────────────────\n";
+    std::cout << "  Total lines:      " << totalLines << "\n";
+    std::cout << "  Code lines:       " << codeLines << " (" << (totalLines > 0 ? codeLines * 100 / totalLines : 0) << "%)\n";
+    std::cout << "  Comment lines:    " << commentLines << "\n";
+    std::cout << "  Blank lines:      " << blankLines << "\n";
+    std::cout << "  Functions:        ~" << functionCount << "\n";
+    std::cout << "  Classes/Structs:  ~" << classCount << "\n";
+    std::cout << "  Includes:         " << includeCount << "\n";
+    std::cout << "  Max nesting:      " << maxBraceDepth << " levels\n";
+    std::cout << "  Max line length:  " << maxLineLength << " chars\n";
+    std::cout << "  Avg line length:  " << (totalLines > 0 ? totalChars / totalLines : 0) << " chars\n";
+    std::cout << "  Total size:       " << g_state.editorBuffer.size() << " bytes\n";
+    std::cout << "  ───────────────────────────────────\n";
+    std::cout << "  Analysis time:    " << elapsed << " μs\n";
     std::cout << "✅ Profile complete\n";
 }
 

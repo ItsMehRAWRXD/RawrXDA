@@ -216,7 +216,30 @@ void ModelRouterConsole::updateLogDisplay()
 
 void ModelRouterConsole::applyFilters()
 {
-    // Placeholder for filter implementation
+    // Get current filter settings
+    QString searchText = m_search_input ? m_search_input->text().trimmed() : QString();
+    QString levelFilter = m_filter_level_combo ? m_filter_level_combo->currentText() : "All";
+
+    // Clear and rebuild display with filtered entries
+    m_log_display->clear();
+    m_log_table->setRowCount(0);
+
+    for (const auto& entry : m_log_entries) {
+        // Level filter: skip entries that don't match the selected level
+        if (levelFilter != "All" && entry.level != levelFilter) {
+            continue;
+        }
+
+        // Text search filter: check message, model, and details fields
+        if (!searchText.isEmpty()) {
+            bool match = entry.message.contains(searchText, Qt::CaseInsensitive)
+                      || entry.model.contains(searchText, Qt::CaseInsensitive)
+                      || entry.details.contains(searchText, Qt::CaseInsensitive);
+            if (!match) continue;
+        }
+
+        addLogToDisplay(entry);
+    }
 }
 
 // === Slot Implementations ===

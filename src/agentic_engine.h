@@ -73,6 +73,7 @@ public:
 
     // Core Inference Integration
     void setInferenceEngine(RawrXD::CPUInferenceEngine* engine) { m_inferenceEngine = engine; }
+    RawrXD::CPUInferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
 
 
     bool isModelLoaded() const { return m_inferenceEngine && m_inferenceEngine->IsModelLoaded(); }

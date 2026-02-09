@@ -1,143 +1,136 @@
+// ============================================================================
+// ModelConversionDialog.h — Pure Win32 Native Model Conversion Dialog
+// ============================================================================
+// Dialog for model quantization conversion. Detects unsupported quantization
+// types and orchestrates conversion via external script. Shows real-time
+// progress, terminal output monitoring, ETA, and auto-verification.
+//
+// Pattern: C-style extern "C" API + OOP internal
+// Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
+// ============================================================================
 #pragma once
 
-#include <QDialog>
-#include <QString>
-#include <QStringList>
-#include <QLabel>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QProgressBar>
-#include <memory>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <string>
 
-class TerminalManager;
-class QTimer;
+// ============================================================================
+// Result codes
+// ============================================================================
+enum class ConversionResult {
+    Cancelled,
+    ConversionSucceeded,
+    ConversionFailed
+};
 
-/**
- * @brief Dialog for prompting model quantization conversion
- * 
- * When a model with unsupported quantization types is detected (e.g., IQ4_NL),
- * this dialog appears to:
- * 1. Inform the user of the incompatibility
- * 2. Propose conversion to a supported type (e.g., Q5_K)
- * 3. Run the conversion script via IDE terminal
- * 4. Monitor progress and auto-reload the model after success
- */
-class ModelConversionDialog : public QDialog {
-    Q_OBJECT
-    
+// ============================================================================
+// ConversionConfig — passed into the dialog
+// ============================================================================
+struct ConversionConfig {
+    const wchar_t* unsupportedTypes[16];   // Null-terminated array of type names
+    int             unsupportedCount;
+    wchar_t         recommendedType[64];
+    wchar_t         modelPath[MAX_PATH];
+};
+
+// ============================================================================
+// Class: ModelConversionDialog
+// ============================================================================
+class ModelConversionDialog {
 public:
-    enum ConversionResult {
-        Cancelled = 0,
-        ConversionFailed = 1,
-        ConversionSucceeded = 2
-    };
-    
-    /**
-     * @brief Create conversion dialog
-     * @param unsupportedTypes List of unsupported quantization info strings
-     * @param recommendedType Recommended conversion type (e.g., "Q5_K")
-     * @param modelPath Path to the model file
-     * @param parent Parent widget
-     */
-    explicit ModelConversionDialog(const QStringList& unsupportedTypes,
-                                  const QString& recommendedType,
-                                  const QString& modelPath,
-                                  QWidget* parent = nullptr);
-    
-    ~ModelConversionDialog() override;
-    
-    /**
-     * @brief Get the result of the conversion attempt
-     */
-    ConversionResult conversionResult() const { return m_result; }
-    
-    /**
-     * @brief Get the path to the converted model (if successful)
-     */
-    QString convertedModelPath() const { return m_convertedPath; }
+    explicit ModelConversionDialog(HWND parent, const ConversionConfig& cfg);
+    ~ModelConversionDialog();
 
-protected:
-    void closeEvent(QCloseEvent* event) override;
+    // Show modal — returns ConversionResult
+    ConversionResult showModal();
 
-private slots:
-    /**
-     * @brief User clicked "Cancel" button
-     */
-    void onCancel();
-    
-    /**
-     * @brief User clicked "Cancel Conversion" button during active conversion
-     */
-    void onCancelConversion();
-    
-    /**
-     * @brief User clicked "Yes, Convert" button
-     */
-    void onConvertClicked();
-    
-    /**
-     * @brief User clicked "More Info" button
-     */
-    void onMoreInfoClicked();
-    
-    /**
-     * @brief Terminal output from quantization process (stdout)
-     */
-    void onTerminalOutput(const QByteArray& output);
-    
-    /**
-     * @brief Terminal error output from quantization process (stderr)
-     */
-    void onTerminalError(const QByteArray& output);
-    
-    /**
-     * @brief Quantization process finished
-     */
-    void onTerminalFinished(int exitCode);
-    
-    /**
-     * @brief Verify converted model exists and reload it
-     */
-    void onVerifyAndReload();
+    // Public getters
+    const wchar_t* convertedPath() const { return m_convertedPath; }
 
 private:
-    void setupUI();
+    // Window management
+    static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+    void registerClass(HINSTANCE hInst);
+    void createControls(HWND hwnd);
+
+    // Paint
+    void paint(HDC hdc, const RECT& rc);
+    void paintHeader(HDC hdc, int x, int y, int w);
+    void paintProgressBar(HDC hdc, int x, int y, int w, int h);
+    void paintOutputLog(HDC hdc, int x, int y, int w, int h);
+
+    // Conversion logic
     void startConversion();
-    void updateProgress(const QString& message);
-    void updateProgressPercentage(int current, int total);
-    void showInfoPanel();
-    void hideInfoPanel();
-    void parseProgressFromOutput(const QString& output);
-    bool verifyConvertedModelExists();
-    void logConversionHistory(bool success, qint64 durationMs);
-    
-    // UI elements
-    QLabel* m_titleLabel;
-    QLabel* m_messageLabel;
-    QTextEdit* m_detailsText;
-    QProgressBar* m_progressBar;
-    QLabel* m_statusLabel;
-    QPushButton* m_convertButton;
-    QPushButton* m_cancelButton;
-    QPushButton* m_cancelConversionButton;
-    QPushButton* m_moreInfoButton;
-    QWidget* m_infoPanel;
-    
+    void cancelConversion();
+    void pollProcess();
+    void parseOutputLine(const char* line);
+    void updateProgressFromChunks(int current, int total);
+    bool verifyConvertedModel();
+    void logConversionHistory(bool success, DWORD durationMs);
+
+    // Append to output log
+    void appendOutput(const wchar_t* text, COLORREF color = 0);
+
+    // Timer callback
+    static void CALLBACK timerProc(HWND hwnd, UINT, UINT_PTR, DWORD);
+
+    // Instance data
+    HWND        m_hwnd            = nullptr;
+    HWND        m_parent          = nullptr;
+    HINSTANCE   m_hInst           = nullptr;
+    HFONT       m_fontTitle       = nullptr;
+    HFONT       m_fontBody        = nullptr;
+    HFONT       m_fontMono        = nullptr;
+    HDC         m_backDC          = nullptr;
+    HBITMAP     m_backBuf         = nullptr;
+    int         m_bufW = 0, m_bufH = 0;
+    UINT_PTR    m_timerId         = 0;
+
+    // Buttons
+    HWND m_btnConvert       = nullptr;
+    HWND m_btnCancel        = nullptr;
+    HWND m_btnCancelConvert = nullptr;
+    HWND m_btnMoreInfo      = nullptr;
+
+    // Process
+    HANDLE m_hProcess    = nullptr;
+    HANDLE m_hThread     = nullptr;
+    HANDLE m_hReadPipe   = nullptr;
+    HANDLE m_hWritePipe  = nullptr;
+
     // State
-    QStringList m_unsupportedTypes;
-    QString m_recommendedType;
-    QString m_modelPath;
-    ConversionResult m_result = Cancelled;
-    QString m_convertedPath;
-    bool m_conversionInProgress = false;
-    
-    // Terminal management
-    std::unique_ptr<TerminalManager> m_terminalManager;
-    QTimer* m_verifyTimer;
-    int m_conversionStage = 0;  // Track which stage: 0=setup, 1=clone, 2=build, 3=convert
-    
-    // Progress tracking
-    qint64 m_conversionStartTime = 0;  // Timestamp when conversion started
-    int m_chunksProcessed = 0;  // Current chunk count from quantization output
-    int m_totalChunks = 0;      // Total chunks to process
+    ConversionConfig  m_config     = {};
+    ConversionResult  m_result     = ConversionResult::Cancelled;
+    bool              m_converting = false;
+    bool              m_infoShown  = false;
+    int               m_progress   = 0;         // 0..100
+    int               m_stage      = 0;
+    int               m_chunksProcessed = 0;
+    int               m_totalChunks     = 0;
+    DWORD             m_startTick       = 0;
+    wchar_t           m_convertedPath[MAX_PATH] = {};
+    wchar_t           m_statusText[256]         = L"Ready";
+
+    // Output log ring buffer
+    struct LogEntry {
+        wchar_t  text[512];
+        COLORREF color;
+    };
+    static constexpr int MAX_LOG_LINES = 200;
+    LogEntry m_log[MAX_LOG_LINES] = {};
+    int      m_logCount = 0;
+    int      m_logScroll = 0;
+
+    // Class registration
+    static bool s_classRegistered;
 };
+
+// ============================================================================
+// C API for Win32IDE integration
+// ============================================================================
+extern "C" {
+    int  ModelConversionDialog_ShowModal(HWND parent, const ConversionConfig* cfg);
+    const wchar_t* ModelConversionDialog_GetConvertedPath();
+}

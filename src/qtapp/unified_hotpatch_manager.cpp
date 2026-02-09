@@ -213,10 +213,115 @@ UnifiedResult UnifiedHotpatchManager::savePatchedModel(const QString& outputPath
 
 UnifiedResult UnifiedHotpatchManager::patchGGUFMetadata(const QString& key, const QVariant& value)
 {
-    // Stub - would patch GGUF metadata in byte-level hotpatcher
-    Q_UNUSED(key);
-    Q_UNUSED(value);
-    return UnifiedResult::failureResult("patchGGUFMetadata", "Not implemented", PatchLayer::Byte);
+    if (!m_byteEnabled || !m_byteHotpatch) {
+        return UnifiedResult::failureResult("patchGGUFMetadata", "Byte hotpatching disabled", PatchLayer::Byte);
+    }
+    if (!m_byteHotpatch->isModelLoaded()) {
+        return UnifiedResult::failureResult("patchGGUFMetadata", "No model loaded in byte hotpatcher", PatchLayer::Byte);
+    }
+
+    // GGUF metadata keys are stored as length-prefixed UTF-8 strings in the file.
+    // Strategy: locate the key in the loaded model data, then overwrite the value
+    // in-place if the new value fits, or report error if size differs (no reparse).
+    QByteArray keyBytes = key.toUtf8();
+    const QByteArray& modelData = m_byteHotpatch->getModelData();
+
+    // Search for the key string in the raw GGUF bytes
+    qint64 keyPos = m_byteHotpatch->directSearch(0, keyBytes);
+    if (keyPos < 0) {
+        return UnifiedResult::failureResult("patchGGUFMetadata",
+            QString("Key '%1' not found in GGUF metadata").arg(key), PatchLayer::Byte);
+    }
+
+    // The value immediately follows the key + type tag in GGUF format.
+    // For string values: [uint64_t len][utf8 bytes]
+    // For numeric values: direct in-place overwrite
+    size_t valueOffset = static_cast<size_t>(keyPos) + keyBytes.size();
+
+    // Skip past the GGUF value type tag (uint32_t) to reach the actual value data
+    // GGUF type tags: 0=uint8, 1=int8, 2=uint16, 3=int16, 4=uint32, 5=int32,
+    //                 6=float32, 7=bool, 8=string, 9=array, 10=uint64, 11=int64, 12=float64
+    // We need to find the type tag after the key's length-prefix
+    // The key is preceded by its length (uint64_t), so back up and skip forward:
+    // [uint64_t keyLen][key bytes][uint32_t valueType][value data...]
+    size_t typeOffset = valueOffset; // Right after key bytes
+    if (typeOffset + 4 > static_cast<size_t>(modelData.size())) {
+        return UnifiedResult::failureResult("patchGGUFMetadata",
+            "Metadata key found but value type tag out of bounds", PatchLayer::Byte);
+    }
+
+    QByteArray typeBytes = m_byteHotpatch->directRead(typeOffset, 4);
+    uint32_t valueType = *reinterpret_cast<const uint32_t*>(typeBytes.constData());
+    size_t dataOffset = typeOffset + 4;
+
+    PatchResult writeResult;
+
+    switch (valueType) {
+    case 4: // uint32
+    case 5: { // int32
+        uint32_t v = value.toUInt();
+        QByteArray vBytes(reinterpret_cast<const char*>(&v), sizeof(v));
+        writeResult = m_byteHotpatch->directWrite(dataOffset, vBytes);
+        break;
+    }
+    case 6: { // float32
+        float v = value.toFloat();
+        QByteArray vBytes(reinterpret_cast<const char*>(&v), sizeof(v));
+        writeResult = m_byteHotpatch->directWrite(dataOffset, vBytes);
+        break;
+    }
+    case 7: { // bool
+        uint8_t v = value.toBool() ? 1 : 0;
+        QByteArray vBytes(reinterpret_cast<const char*>(&v), sizeof(v));
+        writeResult = m_byteHotpatch->directWrite(dataOffset, vBytes);
+        break;
+    }
+    case 8: { // string — length-prefixed, can only overwrite if same length or shorter
+        QByteArray oldLenBytes = m_byteHotpatch->directRead(dataOffset, 8);
+        uint64_t oldLen = *reinterpret_cast<const uint64_t*>(oldLenBytes.constData());
+        QByteArray newStr = value.toString().toUtf8();
+        if (static_cast<uint64_t>(newStr.size()) > oldLen) {
+            return UnifiedResult::failureResult("patchGGUFMetadata",
+                QString("New string value (%1 bytes) exceeds original slot (%2 bytes) — no reparse")
+                    .arg(newStr.size()).arg(oldLen), PatchLayer::Byte);
+        }
+        // Pad with null bytes to fill original slot
+        newStr.append(QByteArray(static_cast<int>(oldLen) - newStr.size(), '\0'));
+        // Write new length
+        uint64_t newLen = static_cast<uint64_t>(value.toString().toUtf8().size());
+        QByteArray lenBytes(reinterpret_cast<const char*>(&newLen), sizeof(newLen));
+        writeResult = m_byteHotpatch->directWrite(dataOffset, lenBytes);
+        if (!writeResult.success) break;
+        // Write new string data
+        writeResult = m_byteHotpatch->directWrite(dataOffset + 8, newStr);
+        break;
+    }
+    case 10: // uint64
+    case 11: { // int64
+        uint64_t v = value.toULongLong();
+        QByteArray vBytes(reinterpret_cast<const char*>(&v), sizeof(v));
+        writeResult = m_byteHotpatch->directWrite(dataOffset, vBytes);
+        break;
+    }
+    case 12: { // float64
+        double v = value.toDouble();
+        QByteArray vBytes(reinterpret_cast<const char*>(&v), sizeof(v));
+        writeResult = m_byteHotpatch->directWrite(dataOffset, vBytes);
+        break;
+    }
+    default:
+        return UnifiedResult::failureResult("patchGGUFMetadata",
+            QString("Unsupported GGUF value type %1 for key '%2'").arg(valueType).arg(key),
+            PatchLayer::Byte);
+    }
+
+    if (!writeResult.success) {
+        return UnifiedResult::failureResult("patchGGUFMetadata",
+            QString("Write failed: %1").arg(writeResult.detail), PatchLayer::Byte);
+    }
+
+    return UnifiedResult::successResult("patchGGUFMetadata", PatchLayer::Byte,
+        QString("Patched GGUF key '%1' (type %2)").arg(key).arg(valueType));
 }
 
 UnifiedResult UnifiedHotpatchManager::addServerHotpatch(const QString& name, const ServerHotpatch& patch)

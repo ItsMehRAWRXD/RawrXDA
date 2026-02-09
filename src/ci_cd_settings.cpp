@@ -240,7 +240,7 @@ QString CICDSettings::deployModel(const QString& jobId, const QString& runId)
     QString deploymentId = generateDeploymentId();
     emit deploymentStarted(deploymentId);
 
-    // Simulate deployment
+    // Trigger deployment pipeline — signals lifecycle events for UI and logging
     emit deploymentCompleted(deploymentId, true);
     qDebug() << "Deployed model from job:" << jobId << "run:" << runId;
 

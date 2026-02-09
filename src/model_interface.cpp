@@ -8,6 +8,12 @@
 #include <QFile>
 #include <QDebug>
 #include <QTimer>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QEventLoop>
+#include <QElapsedTimer>
+#include <QUrl>
 #include <algorithm>
 
 ModelInterface::ModelInterface(QObject* parent)
@@ -443,24 +449,124 @@ GenerationResult ModelInterface::generateInternal(const QString& prompt,
     result.model_name = model_name;
     
     auto config = getModelConfigOrThrow(model_name);
+    QElapsedTimer timer;
+    timer.start();
     
     if (isLocalModel(model_name)) {
-        // Use local engine
-        result.content = "Local model generation not yet fully implemented";
+        // Route through Ollama HTTP API on localhost:11434
         result.backend = "LOCAL";
+        
+        QString ollamaModel = config.model_id;
+        if (ollamaModel.isEmpty()) {
+            ollamaModel = model_name;
+        }
+        
+        // Build Ollama /api/generate request
+        QJsonObject requestBody;
+        requestBody["model"] = ollamaModel;
+        requestBody["prompt"] = prompt;
+        requestBody["stream"] = false;
+        
+        // Apply generation options
+        QJsonObject optionsObj;
+        if (options.temperature > 0.0) {
+            optionsObj["temperature"] = options.temperature;
+        }
+        if (options.max_tokens > 0) {
+            optionsObj["num_predict"] = options.max_tokens;
+        }
+        if (options.top_p > 0.0) {
+            optionsObj["top_p"] = options.top_p;
+        }
+        if (options.top_k > 0) {
+            optionsObj["top_k"] = options.top_k;
+        }
+        if (options.repeat_penalty > 0.0) {
+            optionsObj["repeat_penalty"] = options.repeat_penalty;
+        }
+        if (!optionsObj.isEmpty()) {
+            requestBody["options"] = optionsObj;
+        }
+        
+        // Stop sequences
+        if (!options.stop_sequences.isEmpty()) {
+            QJsonArray stopArr;
+            for (const auto& s : options.stop_sequences) {
+                stopArr.append(s);
+            }
+            requestBody["stop"] = stopArr;
+        }
+        
+        // System prompt
+        if (!options.system_prompt.isEmpty()) {
+            requestBody["system"] = options.system_prompt;
+        }
+        
+        QByteArray payload = QJsonDocument(requestBody).toJson(QJsonDocument::Compact);
+        
+        // Synchronous HTTP POST to Ollama
+        QUrl url(QString("http://localhost:%1/api/generate").arg(config.port > 0 ? config.port : 11434));
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setTransferTimeout(options.timeout_ms > 0 ? options.timeout_ms : 120000);
+        
+        QNetworkAccessManager nam;
+        QEventLoop loop;
+        QNetworkReply* reply = nam.post(request, payload);
+        
+        QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+        
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray responseData = reply->readAll();
+            QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+            QJsonObject responseObj = responseDoc.object();
+            
+            result.content = responseObj.value("response").toString();
+            result.success = !result.content.isEmpty();
+            
+            // Extract usage metadata if available
+            if (responseObj.contains("total_duration")) {
+                result.total_duration_ns = responseObj.value("total_duration").toDouble();
+            }
+            if (responseObj.contains("eval_count")) {
+                result.token_count = responseObj.value("eval_count").toInt();
+            }
+            if (responseObj.contains("prompt_eval_count")) {
+                result.prompt_tokens = responseObj.value("prompt_eval_count").toInt();
+            }
+            
+            qDebug() << "[ModelInterface] Ollama response:" << result.content.left(200);
+        } else {
+            result.success = false;
+            result.error = QString("Ollama HTTP error: %1 (%2)")
+                .arg(reply->errorString())
+                .arg(static_cast<int>(reply->error()));
+            qWarning() << "[ModelInterface]" << result.error;
+            
+            if (error_callback) {
+                error_callback(result.error);
+            }
+        }
+        
+        reply->deleteLater();
     } else {
         // Use cloud client
         result.content = cloud_client->generate(prompt, config);
         result.backend = "CLOUD";
+        result.success = !result.content.isEmpty();
     }
     
-    result.success = !result.content.isEmpty();
+    // Record latency
+    double latency_ms = timer.elapsed();
     
     // Update statistics
     if (stats_map.contains(model_name)) {
         stats_map[model_name].call_count++;
+        stats_map[model_name].total_latency_ms += latency_ms;
         if (result.success) {
             stats_map[model_name].success_count++;
+            stats_map[model_name].total_tokens += result.token_count;
         } else {
             stats_map[model_name].failure_count++;
         }
@@ -469,6 +575,8 @@ GenerationResult ModelInterface::generateInternal(const QString& prompt,
         new_stats.call_count = 1;
         new_stats.success_count = result.success ? 1 : 0;
         new_stats.failure_count = result.success ? 0 : 1;
+        new_stats.total_latency_ms = latency_ms;
+        new_stats.total_tokens = result.token_count;
         stats_map[model_name] = new_stats;
     }
     
@@ -484,8 +592,68 @@ void ModelInterface::generateStreamInternal(const QString& prompt,
     auto config = getModelConfigOrThrow(model_name);
     
     if (isLocalModel(model_name)) {
-        // Use local engine streaming
-        on_chunk("Local streaming not yet implemented");
+        // Stream from Ollama HTTP API on localhost:11434
+        QString ollamaModel = config.model_id;
+        if (ollamaModel.isEmpty()) {
+            ollamaModel = model_name;
+        }
+        
+        // Build Ollama /api/generate request with streaming enabled
+        QJsonObject requestBody;
+        requestBody["model"] = ollamaModel;
+        requestBody["prompt"] = prompt;
+        requestBody["stream"] = true;
+        
+        QJsonObject optionsObj;
+        if (options.temperature > 0.0) optionsObj["temperature"] = options.temperature;
+        if (options.max_tokens > 0) optionsObj["num_predict"] = options.max_tokens;
+        if (options.top_p > 0.0) optionsObj["top_p"] = options.top_p;
+        if (!optionsObj.isEmpty()) requestBody["options"] = optionsObj;
+        if (!options.system_prompt.isEmpty()) requestBody["system"] = options.system_prompt;
+        
+        QByteArray payload = QJsonDocument(requestBody).toJson(QJsonDocument::Compact);
+        
+        QUrl url(QString("http://localhost:%1/api/generate").arg(config.port > 0 ? config.port : 11434));
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setTransferTimeout(options.timeout_ms > 0 ? options.timeout_ms : 300000);
+        
+        QNetworkAccessManager* nam = new QNetworkAccessManager(this);
+        QNetworkReply* reply = nam->post(request, payload);
+        
+        // Process streaming NDJSON chunks as they arrive
+        QObject::connect(reply, &QNetworkReply::readyRead, this, [reply, on_chunk]() {
+            while (reply->canReadLine()) {
+                QByteArray line = reply->readLine().trimmed();
+                if (line.isEmpty()) continue;
+                
+                QJsonDocument chunkDoc = QJsonDocument::fromJson(line);
+                if (chunkDoc.isNull()) continue;
+                
+                QJsonObject chunkObj = chunkDoc.object();
+                QString response = chunkObj.value("response").toString();
+                
+                if (!response.isEmpty() && on_chunk) {
+                    on_chunk(response);
+                }
+                
+                // Check if generation is done
+                if (chunkObj.value("done").toBool(false)) {
+                    return;
+                }
+            }
+        });
+        
+        QObject::connect(reply, &QNetworkReply::finished, this, [reply, on_error, nam]() {
+            if (reply->error() != QNetworkReply::NoError) {
+                if (on_error) {
+                    on_error(QString("Ollama stream error: %1").arg(reply->errorString()));
+                }
+            }
+            reply->deleteLater();
+            nam->deleteLater();
+        });
+        
     } else {
         // Use cloud client streaming
         cloud_client->generateStream(prompt, config, on_chunk, on_error);

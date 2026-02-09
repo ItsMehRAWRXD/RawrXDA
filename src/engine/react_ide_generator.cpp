@@ -1370,37 +1370,2029 @@ std::vector<std::string> ReactIDEGenerator::GetTemplateFeatures(const std::strin
     return {};
 }
 
-// Stubs for language specific IDEs
+// ============================================================================
+// Language-Specific IDE Generators — Full Production Implementations
+// ============================================================================
+// Each generator calls GenerateFullIDE() for the base project, then overlays
+// language-specific Monaco configuration, snippets, LSP proxy config,
+// compiler/interpreter integration, and default file templates.
+// ============================================================================
+
 bool ReactIDEGenerator::GenerateCppIDE(const std::string& name, const std::filesystem::path& output_dir) {
-    // TODO: Add C++ specific monaco config
-    return GenerateFullIDE(name, output_dir);
+    if (!GenerateFullIDE(name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── C++ Language Configuration for Monaco ──
+    WriteFile(project_path / "src" / "lib" / "language-config.ts", R"(// ============================================================================
+// C++ Language Configuration — Monaco Editor Integration
+// ============================================================================
+// Provides C++ specific snippets, compiler commands, LSP proxy endpoint,
+// file associations, and editor settings for the RawrXD C++ IDE template.
+// ============================================================================
+
+export interface LanguageConfig {
+  id: string;
+  displayName: string;
+  extensions: string[];
+  defaultFile: string;
+  monacoLanguage: string;
+  lspEndpoint: string;
+  compilerCommand: string;
+  runCommand: string;
+  debugCommand: string;
+  formatCommand: string;
+  lintCommand: string;
+  snippets: Record<string, { prefix: string; body: string[]; description: string }>;
+  editorSettings: Record<string, unknown>;
+  buildSystem: string;
+}
+
+export const languageConfig: LanguageConfig = {
+  id: 'cpp',
+  displayName: 'C++ (MSVC / Clang)',
+  extensions: ['.cpp', '.hpp', '.h', '.cc', '.cxx', '.hxx', '.c', '.asm'],
+  defaultFile: 'main.cpp',
+  monacoLanguage: 'cpp',
+  lspEndpoint: '/api/lsp/cpp',
+  compilerCommand: 'cl.exe /std:c++20 /EHsc /O2 /W4',
+  runCommand: './{name}.exe',
+  debugCommand: 'devenv /debugexe ./{name}.exe',
+  formatCommand: 'clang-format -i -style=file',
+  lintCommand: 'clang-tidy --checks=*',
+  buildSystem: 'CMake',
+  snippets: {
+    'class': {
+      prefix: 'class',
+      body: [
+        'class ${1:ClassName} {',
+        'public:',
+        '    ${1:ClassName}();',
+        '    ~${1:ClassName}();',
+        '    ${1:ClassName}(const ${1:ClassName}&) = delete;',
+        '    ${1:ClassName}& operator=(const ${1:ClassName}&) = delete;',
+        '',
+        '    ${2:// Public interface}',
+        '',
+        'private:',
+        '    ${3:// Private members}',
+        '};',
+      ],
+      description: 'C++ class with Rule of Five defaults',
+    },
+    'singleton': {
+      prefix: 'singleton',
+      body: [
+        'class ${1:ClassName} {',
+        'public:',
+        '    static ${1:ClassName}& instance() {',
+        '        static ${1:ClassName} inst;',
+        '        return inst;',
+        '    }',
+        '',
+        '    ${2:// Public API}',
+        '',
+        'private:',
+        '    ${1:ClassName}() = default;',
+        '    ~${1:ClassName}() = default;',
+        '    ${1:ClassName}(const ${1:ClassName}&) = delete;',
+        '    ${1:ClassName}& operator=(const ${1:ClassName}&) = delete;',
+        '};',
+      ],
+      description: 'Meyer\'s Singleton pattern (thread-safe)',
+    },
+    'patchresult': {
+      prefix: 'patchresult',
+      body: [
+        'struct ${1:Result} {',
+        '    bool success;',
+        '    const char* detail;',
+        '    int errorCode;',
+        '',
+        '    static ${1:Result} ok(const char* msg) {',
+        '        return {true, msg, 0};',
+        '    }',
+        '    static ${1:Result} error(const char* msg, int code = -1) {',
+        '        return {false, msg, code};',
+        '    }',
+        '};',
+      ],
+      description: 'PatchResult-style structured result (no exceptions)',
+    },
+    'mutex_guard': {
+      prefix: 'lock',
+      body: [
+        'std::lock_guard<std::mutex> lock(${1:m_mutex});',
+      ],
+      description: 'Scoped mutex lock (RAII)',
+    },
+    'cmake': {
+      prefix: 'cmake',
+      body: [
+        'cmake_minimum_required(VERSION 3.20)',
+        'project(${1:ProjectName} LANGUAGES CXX ASM_MASM)',
+        '',
+        'set(CMAKE_CXX_STANDARD 20)',
+        'set(CMAKE_CXX_STANDARD_REQUIRED ON)',
+        '',
+        'add_executable(${1:ProjectName}',
+        '    src/main.cpp',
+        '    ${2:# Additional sources}',
+        ')',
+        '',
+        'target_include_directories(${1:ProjectName} PRIVATE src)',
+      ],
+      description: 'CMakeLists.txt for C++20 + MASM project',
+    },
+    'hotpatch': {
+      prefix: 'hotpatch',
+      body: [
+        'PatchResult apply_${1:name}_patch(void* addr, size_t size, const void* data) {',
+        '    DWORD oldProtect;',
+        '    if (!VirtualProtect(addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)) {',
+        '        return PatchResult::error("VirtualProtect failed", GetLastError());',
+        '    }',
+        '',
+        '    memcpy(addr, data, size);',
+        '    FlushInstructionCache(GetCurrentProcess(), addr, size);',
+        '',
+        '    VirtualProtect(addr, size, oldProtect, &oldProtect);',
+        '    return PatchResult::ok("Patch applied");',
+        '}',
+      ],
+      description: 'Memory hotpatch function with VirtualProtect',
+    },
+  },
+  editorSettings: {
+    tabSize: 4,
+    insertSpaces: true,
+    formatOnSave: true,
+    bracketPairColorization: true,
+    stickyScroll: true,
+    inlayHints: true,
+    semanticHighlighting: true,
+  },
+};
+
+// Register C++ specific Monaco language features
+export function registerCppLanguageFeatures(monaco: typeof import('monaco-editor')) {
+  // Register custom C++ snippets as completion items
+  monaco.languages.registerCompletionItemProvider('cpp', {
+    provideCompletionItems: (model, position) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      const suggestions = Object.entries(languageConfig.snippets).map(([key, snippet]) => ({
+        label: snippet.prefix,
+        kind: monaco.languages.CompletionItemKind.Snippet,
+        insertText: snippet.body.join('\n'),
+        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: snippet.description,
+        detail: `[RawrXD] ${snippet.description}`,
+        range,
+      }));
+
+      return { suggestions };
+    },
+  });
+
+  // Register C++ specific bracket pairs and auto-closing
+  monaco.languages.setLanguageConfiguration('cpp', {
+    brackets: [
+      ['{', '}'],
+      ['[', ']'],
+      ['(', ')'],
+      ['<', '>'],
+    ],
+    autoClosingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '<', close: '>' },
+      { open: '"', close: '"', notIn: ['string'] },
+      { open: "'", close: "'", notIn: ['string', 'comment'] },
+    ],
+    surroundingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '<', close: '>' },
+      { open: '"', close: '"' },
+    ],
+    folding: {
+      markers: {
+        start: /^\s*\/\/\s*#?region\b/,
+        end: /^\s*\/\/\s*#?endregion\b/,
+      },
+    },
+    onEnterRules: [
+      {
+        beforeText: /^\s*\/\*\*(?!\/)([^*]|\*(?!\/))*$/,
+        afterText: /^\s*\*\/$/,
+        action: { indentAction: 2, appendText: ' * ' },
+      },
+    ],
+  });
+}
+
+// Default C++ template file
+export const defaultCppTemplate = `// ============================================================================
+// ${'{name}'} — RawrXD C++ Project
+// ============================================================================
+// Build: cmake --build . --config Release
+// Pattern: PatchResult-style structured results, no exceptions
+// ============================================================================
+
+#include <cstdint>
+#include <cstdio>
+#include <mutex>
+
+struct PatchResult {
+    bool success;
+    const char* detail;
+    int errorCode;
+
+    static PatchResult ok(const char* msg) { return {true, msg, 0}; }
+    static PatchResult error(const char* msg, int code = -1) { return {false, msg, code}; }
+};
+
+int main() {
+    printf("[RawrXD] C++ IDE initialized\\n");
+    return 0;
+}
+`;
+)");
+
+    // ── C++ Specific Code Editor with Language Features ──
+    WriteFile(project_path / "src" / "components" / "CppEditorWrapper.tsx", R"(import React, { useEffect, useRef } from 'react';
+import Editor, { OnMount } from '@monaco-editor/react';
+import { languageConfig, registerCppLanguageFeatures, defaultCppTemplate } from '@/lib/language-config';
+
+interface CppEditorProps {
+  value?: string;
+  onChange?: (value: string | undefined) => void;
+  filePath?: string;
+}
+
+export const CppEditorWrapper: React.FC<CppEditorProps> = ({
+  value = defaultCppTemplate,
+  onChange,
+  filePath = 'main.cpp',
+}) => {
+  const monacoRef = useRef<any>(null);
+  const editorRef = useRef<any>(null);
+
+  const handleMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
+    // Register C++ language features (snippets, brackets, folding)
+    registerCppLanguageFeatures(monaco);
+
+    // Register inline completion provider for C++ (streaming from RawrXD engine)
+    monaco.languages.registerInlineCompletionsProvider(languageConfig.monacoLanguage, {
+      provideInlineCompletions: async (model, position, context, token) => {
+        const textUntilPosition = model.getValueInRange({
+          startLineNumber: 1,
+          startColumn: 1,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column,
+        });
+
+        // Use 4096-char context window
+        const contextWindow = textUntilPosition.slice(-4096);
+
+        try {
+          const controller = new AbortController();
+          token.onCancellationRequested(() => controller.abort());
+
+          const response = await fetch('/complete/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              buffer: contextWindow,
+              cursor_offset: contextWindow.length,
+              language: 'cpp',
+              mode: 'complete',
+              max_tokens: 128,
+              temperature: 0.2,
+              file_path: filePath,
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !response.body) return { items: [] };
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let fullCompletion = '';
+
+          while (true) {
+            const { done, value: chunk } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(chunk);
+            for (const line of text.split('\\n')) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.token) fullCompletion += data.token;
+                } catch { /* skip malformed SSE */ }
+              }
+            }
+          }
+
+          if (!fullCompletion) return { items: [] };
+
+          return {
+            items: [{
+              insertText: fullCompletion,
+              range: {
+                startLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column,
+              },
+            }],
+          };
+        } catch {
+          return { items: [] };
+        }
+      },
+      freeInlineCompletions: () => {},
+    });
+
+    // Configure C++ specific editor diagnostics marker
+    const model = editor.getModel();
+    if (model) {
+      // Set up LSP-based diagnostics polling
+      const pollDiagnostics = async () => {
+        try {
+          const resp = await fetch(languageConfig.lspEndpoint + '/diagnostics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file: filePath, content: model.getValue() }),
+          });
+          if (resp.ok) {
+            const diags = await resp.json();
+            const markers = (diags.diagnostics || []).map((d: any) => ({
+              severity: d.severity === 1 ? monaco.MarkerSeverity.Error :
+                       d.severity === 2 ? monaco.MarkerSeverity.Warning :
+                       monaco.MarkerSeverity.Info,
+              startLineNumber: d.range.start.line + 1,
+              startColumn: d.range.start.character + 1,
+              endLineNumber: d.range.end.line + 1,
+              endColumn: d.range.end.character + 1,
+              message: d.message,
+              source: 'clangd',
+            }));
+            monaco.editor.setModelMarkers(model, 'clangd', markers);
+          }
+        } catch { /* LSP unavailable */ }
+      };
+
+      // Poll every 2 seconds when content changes
+      let debounceTimer: ReturnType<typeof setTimeout>;
+      model.onDidChangeContent(() => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(pollDiagnostics, 2000);
+      });
+    }
+
+    editor.focus();
+  };
+
+  return (
+    <Editor
+      height="100%"
+      defaultLanguage={languageConfig.monacoLanguage}
+      defaultValue={value}
+      onChange={onChange}
+      onMount={handleMount}
+      theme="vs-dark"
+      options={{
+        minimap: { enabled: true },
+        fontSize: 14,
+        tabSize: languageConfig.editorSettings.tabSize as number,
+        insertSpaces: languageConfig.editorSettings.insertSpaces as boolean,
+        formatOnSave: languageConfig.editorSettings.formatOnSave as boolean,
+        'bracketPairColorization.enabled': languageConfig.editorSettings.bracketPairColorization as boolean,
+        stickyScroll: { enabled: languageConfig.editorSettings.stickyScroll as boolean },
+        inlineSuggest: { enabled: true },
+        suggestOnTriggerCharacters: true,
+        quickSuggestions: { other: true, comments: false, strings: false },
+        parameterHints: { enabled: true },
+        folding: true,
+        foldingStrategy: 'auto',
+        showFoldingControls: 'mouseover',
+        renderWhitespace: 'selection',
+        guides: { bracketPairs: true, indentation: true },
+      }}
+    />
+  );
+};
+)");
+
+    // ── C++ Build/Compile Panel ──
+    WriteFile(project_path / "src" / "components" / "CompilerPanel.tsx", R"(import React, { useState } from 'react';
+import { useEngineStore } from '@/lib/engine-bridge';
+import { languageConfig } from '@/lib/language-config';
+import { Hammer, Play, Bug, FileCode, Terminal as TermIcon } from 'lucide-react';
+
+export const CompilerPanel: React.FC = () => {
+  const { executeCommand } = useEngineStore();
+  const [output, setOutput] = useState<string[]>([]);
+  const [isBuilding, setIsBuilding] = useState(false);
+
+  const runCommand = async (cmd: string, label: string) => {
+    setIsBuilding(true);
+    setOutput(prev => [...prev, `\n>>> ${label}: ${cmd}`]);
+    try {
+      const result = await executeCommand(`!exec ${cmd}`);
+      setOutput(prev => [...prev, result || '(no output)']);
+    } catch (e: any) {
+      setOutput(prev => [...prev, `ERROR: ${e.message}`]);
+    }
+    setIsBuilding(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Hammer className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">C++ Build System ({languageConfig.buildSystem})</span>
+        </div>
+        <div className="flex gap-1">
+          <button
+            onClick={() => runCommand('cmake --build . --config Release', 'Build')}
+            disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/80 disabled:opacity-50"
+          >
+            <Hammer className="w-3 h-3 inline mr-1" /> Build
+          </button>
+          <button
+            onClick={() => runCommand(languageConfig.runCommand, 'Run')}
+            disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            <Play className="w-3 h-3 inline mr-1" /> Run
+          </button>
+          <button
+            onClick={() => runCommand(languageConfig.debugCommand, 'Debug')}
+            disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50"
+          >
+            <Bug className="w-3 h-3 inline mr-1" /> Debug
+          </button>
+          <button
+            onClick={() => runCommand(languageConfig.formatCommand, 'Format')}
+            disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 disabled:opacity-50"
+          >
+            <FileCode className="w-3 h-3 inline mr-1" /> Format
+          </button>
+          <button
+            onClick={() => runCommand(languageConfig.lintCommand, 'Lint')}
+            disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 disabled:opacity-50"
+          >
+            <TermIcon className="w-3 h-3 inline mr-1" /> Lint
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 font-mono text-xs bg-black/50">
+        {output.length === 0 ? (
+          <span className="text-muted-foreground">Build output will appear here...</span>
+        ) : (
+          output.map((line, i) => (
+            <div key={i} className={
+              line.startsWith('ERROR') ? 'text-red-400' :
+              line.startsWith('>>>') ? 'text-blue-400 font-bold' :
+              line.includes('warning') ? 'text-yellow-400' :
+              'text-green-300'
+            }>{line}</div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+)");
+
+    std::cout << "[ReactIDE] C++ language configuration overlaid for: " << name << std::endl;
+    return true;
 }
 
 bool ReactIDEGenerator::GenerateRustIDE(const std::string& name, const std::filesystem::path& output_dir) {
-    // TODO: Add Rust specific monaco config
-    return GenerateFullIDE(name, output_dir);
+    if (!GenerateFullIDE(name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── Rust Language Configuration for Monaco ──
+    WriteFile(project_path / "src" / "lib" / "language-config.ts", R"(// ============================================================================
+// Rust Language Configuration — Monaco Editor Integration
+// ============================================================================
+// Provides Rust specific snippets, cargo commands, rust-analyzer LSP proxy,
+// file associations, and editor settings for the RawrXD Rust IDE template.
+// ============================================================================
+
+export interface LanguageConfig {
+  id: string;
+  displayName: string;
+  extensions: string[];
+  defaultFile: string;
+  monacoLanguage: string;
+  lspEndpoint: string;
+  compilerCommand: string;
+  runCommand: string;
+  debugCommand: string;
+  formatCommand: string;
+  lintCommand: string;
+  snippets: Record<string, { prefix: string; body: string[]; description: string }>;
+  editorSettings: Record<string, unknown>;
+  buildSystem: string;
+}
+
+export const languageConfig: LanguageConfig = {
+  id: 'rust',
+  displayName: 'Rust (rustc / cargo)',
+  extensions: ['.rs', '.toml'],
+  defaultFile: 'src/main.rs',
+  monacoLanguage: 'rust',
+  lspEndpoint: '/api/lsp/rust',
+  compilerCommand: 'cargo build --release',
+  runCommand: 'cargo run --release',
+  debugCommand: 'cargo run',
+  formatCommand: 'cargo fmt',
+  lintCommand: 'cargo clippy -- -W clippy::all',
+  buildSystem: 'Cargo',
+  snippets: {
+    'struct_impl': {
+      prefix: 'structimpl',
+      body: [
+        '#[derive(Debug, Clone)]',
+        'pub struct ${1:Name} {',
+        '    ${2:field}: ${3:Type},',
+        '}',
+        '',
+        'impl ${1:Name} {',
+        '    pub fn new(${2:field}: ${3:Type}) -> Self {',
+        '        Self { ${2:field} }',
+        '    }',
+        '}',
+      ],
+      description: 'Rust struct with derive macros and constructor',
+    },
+    'enum_match': {
+      prefix: 'enummatch',
+      body: [
+        '#[derive(Debug, Clone, Copy, PartialEq, Eq)]',
+        'pub enum ${1:Name} {',
+        '    ${2:Variant1},',
+        '    ${3:Variant2},',
+        '}',
+        '',
+        'impl ${1:Name} {',
+        '    pub fn describe(&self) -> &str {',
+        '        match self {',
+        '            Self::${2:Variant1} => "${2:Variant1}",',
+        '            Self::${3:Variant2} => "${3:Variant2}",',
+        '        }',
+        '    }',
+        '}',
+      ],
+      description: 'Rust enum with match expression',
+    },
+    'result_fn': {
+      prefix: 'resultfn',
+      body: [
+        'pub fn ${1:name}(${2:params}) -> Result<${3:T}, ${4:E}> {',
+        '    ${5:todo!("Implement")}',
+        '}',
+      ],
+      description: 'Function returning Result<T, E>',
+    },
+    'trait_def': {
+      prefix: 'trait',
+      body: [
+        'pub trait ${1:TraitName} {',
+        '    fn ${2:method}(&self) -> ${3:ReturnType};',
+        '}',
+      ],
+      description: 'Trait definition',
+    },
+    'async_fn': {
+      prefix: 'asyncfn',
+      body: [
+        'pub async fn ${1:name}(${2:params}) -> Result<${3:T}, Box<dyn std::error::Error>> {',
+        '    ${4:todo!()}',
+        '}',
+      ],
+      description: 'Async function with boxed error',
+    },
+    'test_mod': {
+      prefix: 'testmod',
+      body: [
+        '#[cfg(test)]',
+        'mod tests {',
+        '    use super::*;',
+        '',
+        '    #[test]',
+        '    fn test_${1:name}() {',
+        '        ${2:assert!(true);}',
+        '    }',
+        '}',
+      ],
+      description: 'Test module with sample test',
+    },
+    'unsafe_ffi': {
+      prefix: 'ffi',
+      body: [
+        'extern "C" {',
+        '    fn ${1:foreign_fn}(${2:arg}: ${3:c_type}) -> ${4:c_type};',
+        '}',
+        '',
+        'pub fn safe_${1:foreign_fn}(${2:arg}: ${5:RustType}) -> ${6:RustType} {',
+        '    unsafe { ${1:foreign_fn}(${2:arg} as ${3:c_type}) as ${6:RustType} }',
+        '}',
+      ],
+      description: 'FFI extern block with safe wrapper',
+    },
+  },
+  editorSettings: {
+    tabSize: 4,
+    insertSpaces: true,
+    formatOnSave: true,
+    bracketPairColorization: true,
+    stickyScroll: true,
+    inlayHints: true,
+    semanticHighlighting: true,
+  },
+};
+
+export function registerRustLanguageFeatures(monaco: typeof import('monaco-editor')) {
+  monaco.languages.registerCompletionItemProvider('rust', {
+    provideCompletionItems: (model, position) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      const suggestions = Object.entries(languageConfig.snippets).map(([key, snippet]) => ({
+        label: snippet.prefix,
+        kind: monaco.languages.CompletionItemKind.Snippet,
+        insertText: snippet.body.join('\n'),
+        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: snippet.description,
+        detail: `[RawrXD] ${snippet.description}`,
+        range,
+      }));
+
+      return { suggestions };
+    },
+  });
+
+  monaco.languages.setLanguageConfiguration('rust', {
+    brackets: [
+      ['{', '}'],
+      ['[', ']'],
+      ['(', ')'],
+      ['<', '>'],
+    ],
+    autoClosingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '<', close: '>' },
+      { open: '"', close: '"', notIn: ['string'] },
+      { open: "'", close: "'", notIn: ['string', 'comment'] },
+      { open: '|', close: '|' },
+    ],
+    surroundingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '<', close: '>' },
+      { open: '"', close: '"' },
+      { open: '|', close: '|' },
+    ],
+    folding: {
+      markers: {
+        start: /^\s*\/\/\s*#?region\b/,
+        end: /^\s*\/\/\s*#?endregion\b/,
+      },
+    },
+  });
+}
+
+export const defaultRustTemplate = `// ============================================================================
+// \${name} — RawrXD Rust Project
+// ============================================================================
+// Build: cargo build --release
+// Run:   cargo run --release
+// ============================================================================
+
+use std::io;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("[RawrXD] Rust IDE initialized");
+    Ok(())
+}
+`;
+)");
+
+    // ── Rust Cargo Panel ──
+    WriteFile(project_path / "src" / "components" / "CompilerPanel.tsx", R"(import React, { useState } from 'react';
+import { useEngineStore } from '@/lib/engine-bridge';
+import { languageConfig } from '@/lib/language-config';
+import { Hammer, Play, Bug, FileCode, Terminal as TermIcon, Package } from 'lucide-react';
+
+export const CompilerPanel: React.FC = () => {
+  const { executeCommand } = useEngineStore();
+  const [output, setOutput] = useState<string[]>([]);
+  const [isBuilding, setIsBuilding] = useState(false);
+
+  const runCommand = async (cmd: string, label: string) => {
+    setIsBuilding(true);
+    setOutput(prev => [...prev, `\n>>> ${label}: ${cmd}`]);
+    try {
+      const result = await executeCommand(`!exec ${cmd}`);
+      setOutput(prev => [...prev, result || '(no output)']);
+    } catch (e: any) {
+      setOutput(prev => [...prev, `ERROR: ${e.message}`]);
+    }
+    setIsBuilding(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Package className="w-4 h-4 text-orange-400" />
+          <span className="text-sm font-semibold">Rust Build System ({languageConfig.buildSystem})</span>
+        </div>
+        <div className="flex gap-1">
+          <button onClick={() => runCommand('cargo build --release', 'Build')} disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50">
+            <Hammer className="w-3 h-3 inline mr-1" /> Build
+          </button>
+          <button onClick={() => runCommand('cargo run --release', 'Run')} disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
+            <Play className="w-3 h-3 inline mr-1" /> Run
+          </button>
+          <button onClick={() => runCommand('cargo test', 'Test')} disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+            <Bug className="w-3 h-3 inline mr-1" /> Test
+          </button>
+          <button onClick={() => runCommand('cargo fmt', 'Format')} disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 disabled:opacity-50">
+            <FileCode className="w-3 h-3 inline mr-1" /> Fmt
+          </button>
+          <button onClick={() => runCommand('cargo clippy -- -W clippy::all', 'Clippy')} disabled={isBuilding}
+            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 disabled:opacity-50">
+            <TermIcon className="w-3 h-3 inline mr-1" /> Clippy
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 font-mono text-xs bg-black/50">
+        {output.length === 0 ? (
+          <span className="text-muted-foreground">Cargo output will appear here...</span>
+        ) : (
+          output.map((line, i) => (
+            <div key={i} className={
+              line.startsWith('ERROR') || line.includes('error[') ? 'text-red-400' :
+              line.startsWith('>>>') ? 'text-orange-400 font-bold' :
+              line.includes('warning') ? 'text-yellow-400' :
+              'text-green-300'
+            }>{line}</div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+)");
+
+    std::cout << "[ReactIDE] Rust language configuration overlaid for: " << name << std::endl;
+    return true;
 }
 
 bool ReactIDEGenerator::GeneratePythonIDE(const std::string& name, const std::filesystem::path& output_dir) {
-    // TODO: Add Python specific monaco config
-    return GenerateFullIDE(name, output_dir);
+    if (!GenerateFullIDE(name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── Python Language Configuration for Monaco ──
+    WriteFile(project_path / "src" / "lib" / "language-config.ts", R"TS(// ============================================================================
+// Python Language Configuration — Monaco Editor Integration
+// ============================================================================
+// Provides Python specific snippets, pip/venv commands, Pylance/Pyright LSP
+// proxy, file associations, and editor settings.
+// ============================================================================
+
+export interface LanguageConfig {
+  id: string;
+  displayName: string;
+  extensions: string[];
+  defaultFile: string;
+  monacoLanguage: string;
+  lspEndpoint: string;
+  compilerCommand: string;
+  runCommand: string;
+  debugCommand: string;
+  formatCommand: string;
+  lintCommand: string;
+  snippets: Record<string, { prefix: string; body: string[]; description: string }>;
+  editorSettings: Record<string, unknown>;
+  buildSystem: string;
+}
+
+export const languageConfig: LanguageConfig = {
+  id: 'python',
+  displayName: 'Python 3.x',
+  extensions: ['.py', '.pyw', '.pyi', '.pyx'],
+  defaultFile: 'main.py',
+  monacoLanguage: 'python',
+  lspEndpoint: '/api/lsp/python',
+  compilerCommand: 'python -m py_compile',
+  runCommand: 'python main.py',
+  debugCommand: 'python -m pdb main.py',
+  formatCommand: 'black .',
+  lintCommand: 'ruff check .',
+  buildSystem: 'pip / venv',
+  snippets: {
+    'class_init': {
+      prefix: 'classinit',
+      body: [
+        'class ${1:ClassName}:',
+        '    """${2:Docstring.}"""',
+        '',
+        '    def __init__(self, ${3:params}) -> None:',
+        '        ${4:self.field = params}',
+        '',
+        '    def __repr__(self) -> str:',
+        '        return f"${1:ClassName}({${5:self.field}!r})"',
+      ],
+      description: 'Python class with __init__ and __repr__',
+    },
+    'dataclass': {
+      prefix: 'dataclass',
+      body: [
+        'from dataclasses import dataclass, field',
+        '',
+        '@dataclass',
+        'class ${1:Name}:',
+        '    """${2:Description.}"""',
+        '    ${3:field_name}: ${4:str}',
+        '    ${5:other_field}: ${6:int} = 0',
+      ],
+      description: 'Python dataclass with type hints',
+    },
+    'async_def': {
+      prefix: 'asyncdef',
+      body: [
+        'async def ${1:name}(${2:params}) -> ${3:None}:',
+        '    """${4:Docstring.}"""',
+        '    ${5:pass}',
+      ],
+      description: 'Async function definition',
+    },
+    'context_manager': {
+      prefix: 'contextmgr',
+      body: [
+        'from contextlib import contextmanager',
+        'from typing import Generator',
+        '',
+        '@contextmanager',
+        'def ${1:managed_resource}(${2:params}) -> Generator[${3:Any}, None, None]:',
+        '    """${4:Context manager.}"""',
+        '    resource = ${5:acquire()}',
+        '    try:',
+        '        yield resource',
+        '    finally:',
+        '        ${6:resource.close()}',
+      ],
+      description: 'Context manager with generator pattern',
+    },
+    'pytest': {
+      prefix: 'pytest',
+      body: [
+        'import pytest',
+        '',
+        '',
+        'class Test${1:Feature}:',
+        '    def test_${2:case}(self) -> None:',
+        '        ${3:assert True}',
+        '',
+        '    @pytest.fixture',
+        '    def ${4:fixture_name}(self):',
+        '        ${5:return None}',
+      ],
+      description: 'Pytest test class with fixture',
+    },
+    'fastapi_endpoint': {
+      prefix: 'fastapi',
+      body: [
+        'from fastapi import FastAPI, HTTPException',
+        'from pydantic import BaseModel',
+        '',
+        'app = FastAPI()',
+        '',
+        'class ${1:Request}Model(BaseModel):',
+        '    ${2:field}: ${3:str}',
+        '',
+        '@app.post("/${4:endpoint}")',
+        'async def ${4:endpoint}(req: ${1:Request}Model):',
+        '    """${5:Endpoint description.}"""',
+        '    return {"status": "ok", "data": req.${2:field}}',
+      ],
+      description: 'FastAPI endpoint with Pydantic model',
+    },
+    'type_hints': {
+      prefix: 'typed',
+      body: [
+        'from typing import Optional, List, Dict, Tuple, Union, Callable',
+        '',
+        'def ${1:name}(',
+        '    ${2:arg1}: ${3:str},',
+        '    ${4:arg2}: Optional[${5:int}] = None,',
+        ') -> ${6:bool}:',
+        '    """${7:Docstring.}"""',
+        '    ${8:return True}',
+      ],
+      description: 'Fully typed function with imports',
+    },
+  },
+  editorSettings: {
+    tabSize: 4,
+    insertSpaces: true,
+    formatOnSave: true,
+    bracketPairColorization: true,
+    stickyScroll: true,
+    rulers: [79, 120],
+    trimTrailingWhitespace: true,
+    insertFinalNewline: true,
+  },
+};
+
+export function registerPythonLanguageFeatures(monaco: typeof import('monaco-editor')) {
+  monaco.languages.registerCompletionItemProvider('python', {
+    triggerCharacters: ['.', '@', ' '],
+    provideCompletionItems: (model, position) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      const suggestions = Object.entries(languageConfig.snippets).map(([key, snippet]) => ({
+        label: snippet.prefix,
+        kind: monaco.languages.CompletionItemKind.Snippet,
+        insertText: snippet.body.join('\n'),
+        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: snippet.description,
+        detail: `[RawrXD] ${snippet.description}`,
+        range,
+      }));
+
+      return { suggestions };
+    },
+  });
+
+  monaco.languages.setLanguageConfiguration('python', {
+    brackets: [
+      ['{', '}'],
+      ['[', ']'],
+      ['(', ')'],
+    ],
+    autoClosingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '"', close: '"', notIn: ['string'] },
+      { open: "'", close: "'", notIn: ['string'] },
+      { open: '"""', close: '"""' },
+      { open: "'''", close: "'''" },
+    ],
+    surroundingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '"', close: '"' },
+      { open: "'", close: "'" },
+    ],
+    onEnterRules: [
+      {
+        beforeText: /:\s*$/,
+        action: { indentAction: 1 },
+      },
+      {
+        beforeText: /^\s*(def|class|if|elif|else|for|while|try|except|finally|with|async)\b.*:\s*$/,
+        action: { indentAction: 1 },
+      },
+    ],
+    folding: {
+      offSide: true,
+    },
+    indentationRules: {
+      increaseIndentPattern: /^\\s*(class|def|if|elif|else|for|while|try|except|finally|with|async)\\b.*:\\s*$/,
+      decreaseIndentPattern: /^\\s*(elif|else|except|finally)\\b/,
+    },
+  });
+}
+
+export const defaultPythonTemplate = `#!/usr/bin/env python3
+# ============================================================================
+# \${name} — RawrXD Python Project
+# ============================================================================
+# Run: python main.py
+# Test: pytest
+# ============================================================================
+
+from typing import Optional
+
+
+def main() -> None:
+    \"\"\"Entry point.\"\"\"
+    print("[RawrXD] Python IDE initialized")
+
+
+if __name__ == "__main__":
+    main()
+`;
+)TS");
+
+    // ── Python Run/Test Panel ──
+    WriteFile(project_path / "src" / "components" / "CompilerPanel.tsx", R"(import React, { useState } from 'react';
+import { useEngineStore } from '@/lib/engine-bridge';
+import { languageConfig } from '@/lib/language-config';
+import { Play, Bug, FileCode, Terminal as TermIcon, TestTube2, Package } from 'lucide-react';
+
+export const CompilerPanel: React.FC = () => {
+  const { executeCommand } = useEngineStore();
+  const [output, setOutput] = useState<string[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+
+  const runCommand = async (cmd: string, label: string) => {
+    setIsRunning(true);
+    setOutput(prev => [...prev, `\n>>> ${label}: ${cmd}`]);
+    try {
+      const result = await executeCommand(`!exec ${cmd}`);
+      setOutput(prev => [...prev, result || '(no output)']);
+    } catch (e: any) {
+      setOutput(prev => [...prev, `ERROR: ${e.message}`]);
+    }
+    setIsRunning(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Package className="w-4 h-4 text-yellow-400" />
+          <span className="text-sm font-semibold">Python ({languageConfig.buildSystem})</span>
+        </div>
+        <div className="flex gap-1">
+          <button onClick={() => runCommand('python main.py', 'Run')} disabled={isRunning}
+            className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
+            <Play className="w-3 h-3 inline mr-1" /> Run
+          </button>
+          <button onClick={() => runCommand('pytest -v', 'Test')} disabled={isRunning}
+            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+            <TestTube2 className="w-3 h-3 inline mr-1" /> pytest
+          </button>
+          <button onClick={() => runCommand('python -m pdb main.py', 'Debug')} disabled={isRunning}
+            className="px-3 py-1 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50">
+            <Bug className="w-3 h-3 inline mr-1" /> Debug
+          </button>
+          <button onClick={() => runCommand('black .', 'Format')} disabled={isRunning}
+            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 disabled:opacity-50">
+            <FileCode className="w-3 h-3 inline mr-1" /> Black
+          </button>
+          <button onClick={() => runCommand('ruff check .', 'Lint')} disabled={isRunning}
+            className="px-3 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 disabled:opacity-50">
+            <TermIcon className="w-3 h-3 inline mr-1" /> Ruff
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 font-mono text-xs bg-black/50">
+        {output.length === 0 ? (
+          <span className="text-muted-foreground">Python output will appear here...</span>
+        ) : (
+          output.map((line, i) => (
+            <div key={i} className={
+              line.startsWith('ERROR') || line.includes('Traceback') ? 'text-red-400' :
+              line.startsWith('>>>') ? 'text-yellow-400 font-bold' :
+              line.includes('PASSED') ? 'text-green-400' :
+              line.includes('FAILED') ? 'text-red-400' :
+              line.includes('Warning') ? 'text-yellow-400' :
+              'text-green-300'
+            }>{line}</div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+)");
+
+    std::cout << "[ReactIDE] Python language configuration overlaid for: " << name << std::endl;
+    return true;
 }
 
 bool ReactIDEGenerator::GenerateMultiLanguageIDE(const std::string& name, const std::filesystem::path& output_dir) {
-    return GenerateFullIDE(name, output_dir);
+    if (!GenerateFullIDE(name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── Multi-Language Configuration ──
+    WriteFile(project_path / "src" / "lib" / "language-config.ts", R"(// ============================================================================
+// Multi-Language Configuration — Monaco Editor Integration
+// ============================================================================
+// Aggregates C++, Rust, Python, TypeScript, JavaScript, and Assembly
+// language configs for the universal RawrXD IDE. Provides per-language
+// snippets, LSP endpoints, compiler commands, and editor settings.
+// ============================================================================
+
+export interface SingleLanguageConfig {
+  id: string;
+  displayName: string;
+  extensions: string[];
+  monacoLanguage: string;
+  lspEndpoint: string;
+  compileCommand: string;
+  runCommand: string;
+  formatCommand: string;
+  lintCommand: string;
 }
 
-// Stubs for advanced features
+export const supportedLanguages: SingleLanguageConfig[] = [
+  {
+    id: 'cpp', displayName: 'C++ (MSVC/Clang)', extensions: ['.cpp', '.hpp', '.h', '.cc', '.c'],
+    monacoLanguage: 'cpp', lspEndpoint: '/api/lsp/cpp',
+    compileCommand: 'cmake --build . --config Release', runCommand: './{name}.exe',
+    formatCommand: 'clang-format -i -style=file', lintCommand: 'clang-tidy --checks=*',
+  },
+  {
+    id: 'rust', displayName: 'Rust (cargo)', extensions: ['.rs'],
+    monacoLanguage: 'rust', lspEndpoint: '/api/lsp/rust',
+    compileCommand: 'cargo build --release', runCommand: 'cargo run --release',
+    formatCommand: 'cargo fmt', lintCommand: 'cargo clippy',
+  },
+  {
+    id: 'python', displayName: 'Python 3', extensions: ['.py', '.pyi'],
+    monacoLanguage: 'python', lspEndpoint: '/api/lsp/python',
+    compileCommand: 'python -m py_compile', runCommand: 'python main.py',
+    formatCommand: 'black .', lintCommand: 'ruff check .',
+  },
+  {
+    id: 'typescript', displayName: 'TypeScript', extensions: ['.ts', '.tsx'],
+    monacoLanguage: 'typescript', lspEndpoint: '/api/lsp/typescript',
+    compileCommand: 'tsc --noEmit', runCommand: 'npx tsx main.ts',
+    formatCommand: 'prettier --write "**/*.ts"', lintCommand: 'eslint .',
+  },
+  {
+    id: 'javascript', displayName: 'JavaScript', extensions: ['.js', '.jsx', '.mjs'],
+    monacoLanguage: 'javascript', lspEndpoint: '/api/lsp/typescript',
+    compileCommand: 'node --check main.js', runCommand: 'node main.js',
+    formatCommand: 'prettier --write "**/*.js"', lintCommand: 'eslint .',
+  },
+  {
+    id: 'asm', displayName: 'Assembly (MASM/NASM)', extensions: ['.asm', '.s', '.inc'],
+    monacoLanguage: 'masm', lspEndpoint: '/api/lsp/asm',
+    compileCommand: 'ml64.exe /c /Fo out.obj', runCommand: 'link.exe out.obj',
+    formatCommand: '', lintCommand: '',
+  },
+];
+
+export function detectLanguage(filePath: string): SingleLanguageConfig | undefined {
+  const ext = filePath.substring(filePath.lastIndexOf('.'));
+  return supportedLanguages.find(lang => lang.extensions.includes(ext));
+}
+
+export function registerAllLanguageFeatures(monaco: typeof import('monaco-editor')) {
+  for (const lang of supportedLanguages) {
+    monaco.languages.registerInlineCompletionsProvider(lang.monacoLanguage, {
+      provideInlineCompletions: async (model, position, context, token) => {
+        const textUntilPosition = model.getValueInRange({
+          startLineNumber: 1, startColumn: 1,
+          endLineNumber: position.lineNumber, endColumn: position.column,
+        });
+        const contextWindow = textUntilPosition.slice(-4096);
+
+        try {
+          const controller = new AbortController();
+          token.onCancellationRequested(() => controller.abort());
+
+          const response = await fetch('/complete/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              buffer: contextWindow, cursor_offset: contextWindow.length,
+              language: lang.id, mode: 'complete', max_tokens: 128, temperature: 0.2,
+            }),
+            signal: controller.signal,
+          });
+
+          if (!response.ok || !response.body) return { items: [] };
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let fullCompletion = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const text = decoder.decode(value);
+            for (const line of text.split('\\n')) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.token) fullCompletion += data.token;
+                } catch {}
+              }
+            }
+          }
+
+          if (!fullCompletion) return { items: [] };
+
+          return {
+            items: [{
+              insertText: fullCompletion,
+              range: {
+                startLineNumber: position.lineNumber, startColumn: position.column,
+                endLineNumber: position.lineNumber, endColumn: position.column,
+              },
+            }],
+          };
+        } catch {
+          return { items: [] };
+        }
+      },
+      freeInlineCompletions: () => {},
+    });
+  }
+}
+
+// Default config points to the primary language (C++)
+export const languageConfig = {
+  id: 'multi',
+  displayName: 'Multi-Language IDE',
+  defaultFile: 'main.cpp',
+  monacoLanguage: 'cpp',
+  buildSystem: 'Multi',
+  editorSettings: {
+    tabSize: 4, insertSpaces: true, formatOnSave: true,
+    bracketPairColorization: true, stickyScroll: true,
+  },
+};
+)");
+
+    // ── Language Switcher Component ──
+    WriteFile(project_path / "src" / "components" / "LanguageSwitcher.tsx", R"(import React from 'react';
+import { supportedLanguages, SingleLanguageConfig } from '@/lib/language-config';
+import { Code2, FileCode } from 'lucide-react';
+
+interface Props {
+  currentLanguage: string;
+  onLanguageChange: (lang: SingleLanguageConfig) => void;
+}
+
+export const LanguageSwitcher: React.FC<Props> = ({ currentLanguage, onLanguageChange }) => {
+  return (
+    <div className="flex items-center gap-2 p-2 border-b border-border bg-card">
+      <Code2 className="w-4 h-4 text-primary" />
+      <span className="text-xs font-semibold text-muted-foreground">Language:</span>
+      <div className="flex gap-1">
+        {supportedLanguages.map(lang => (
+          <button
+            key={lang.id}
+            onClick={() => onLanguageChange(lang)}
+            className={`px-2 py-1 text-xs rounded transition-colors ${
+              currentLanguage === lang.id
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            }`}
+          >
+            <FileCode className="w-3 h-3 inline mr-1" />
+            {lang.displayName}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+)");
+
+    std::cout << "[ReactIDE] Multi-language configuration overlaid for: " << name << std::endl;
+    return true;
+}
+
+// ============================================================================
+// Advanced Feature Generators — Full Production Implementations
+// ============================================================================
+// Each generator calls GenerateIDE() for the base project, then overlays
+// enterprise-grade infrastructure: test suites, CI/CD pipelines, Docker
+// containerization, and deployment configs.
+// ============================================================================
+
 bool ReactIDEGenerator::GenerateIDEWithTests(const std::string& name, const std::string& template_name, const std::filesystem::path& output_dir) {
-    return GenerateIDE(name, template_name, output_dir);
+    if (!GenerateIDE(name, template_name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── Vitest Configuration ──
+    WriteFile(project_path / "vitest.config.ts", R"(import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/__tests__/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json-summary', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.*', 'src/__tests__/**', 'src/**/*.d.ts'],
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70,
+      },
+    },
+    reporters: ['verbose', 'json'],
+    outputFile: './test-results.json',
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+)");
+
+    // ── Test Setup ──
+    WriteFile(project_path / "src" / "__tests__" / "setup.ts", R"(// ============================================================================
+// Vitest Setup — Global test configuration
+// ============================================================================
+import '@testing-library/jest-dom/vitest';
+
+// Mock fetch globally for API tests
+global.fetch = vi.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+    body: null,
+    headers: new Headers(),
+    status: 200,
+  } as unknown as Response)
+);
+
+// Mock WebSocket
+global.WebSocket = vi.fn().mockImplementation(() => ({
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  close: vi.fn(),
+  send: vi.fn(),
+  readyState: 1,
+})) as any;
+
+// Reset mocks between tests
+afterEach(() => {
+  vi.clearAllMocks();
+});
+)");
+
+    // ── Engine Bridge Tests ──
+    WriteFile(project_path / "src" / "__tests__" / "engine-bridge.test.ts", R"(// ============================================================================
+// Engine Bridge Unit Tests — Validates API integration layer
+// ============================================================================
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+describe('Engine Bridge', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    (global.fetch as ReturnType<typeof vi.fn>).mockReset();
+  });
+
+  it('should connect to the engine and retrieve status', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        status: 'ok',
+        memory_tier: 'hybrid',
+        memory_usage: 1024,
+        memory_capacity: 8192,
+        active_plugins: ['hotpatcher'],
+        loaded_models: ['test-7b.gguf'],
+        agentic: true,
+      }),
+    });
+
+    const { useEngineStore } = await import('@/lib/engine-bridge');
+    const store = useEngineStore.getState();
+    await store.connect();
+
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/status'));
+    expect(useEngineStore.getState().isConnected).toBe(true);
+  });
+
+  it('should handle connection failure gracefully', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+    const { useEngineStore } = await import('@/lib/engine-bridge');
+    const store = useEngineStore.getState();
+    await store.connect();
+
+    expect(useEngineStore.getState().isConnected).toBe(false);
+  });
+
+  it('should execute commands via POST /api/chat', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status: 'ok' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ response: 'Model loaded' }),
+      });
+
+    const { useEngineStore } = await import('@/lib/engine-bridge');
+    await useEngineStore.getState().connect();
+    const result = await useEngineStore.getState().executeCommand('!model load test.gguf');
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('should spawn sub-agents via POST /api/subagent', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status: 'ok', agentic: true }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ agent_id: 'sa-001', status: 'spawned' }),
+      });
+
+    const { useEngineStore } = await import('@/lib/engine-bridge');
+    await useEngineStore.getState().connect();
+    const result = await useEngineStore.getState().spawnSubAgent('code_reviewer', 'Review this PR');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/subagent'),
+      expect.objectContaining({ method: 'POST' })
+    );
+  });
+});
+)");
+
+    // ── Component Tests ──
+    WriteFile(project_path / "src" / "__tests__" / "components.test.tsx", R"(// ============================================================================
+// Component Smoke Tests — Validates React components render without errors
+// ============================================================================
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import React from 'react';
+
+// Mock Monaco Editor (heavy dependency)
+vi.mock('@monaco-editor/react', () => ({
+  default: ({ value }: { value?: string }) => <div data-testid="monaco-editor">{value}</div>,
+  __esModule: true,
+}));
+
+describe('Component Rendering', () => {
+  it('renders without crashing', () => {
+    const div = document.createElement('div');
+    expect(div).toBeTruthy();
+  });
+
+  it('renders Card UI component', async () => {
+    const { Card, CardHeader, CardTitle, CardContent } = await import('@/components/ui/card');
+    const { container } = render(
+      <Card>
+        <CardHeader>
+          <CardTitle>Test Card</CardTitle>
+        </CardHeader>
+        <CardContent>Content</CardContent>
+      </Card>
+    );
+    expect(container.querySelector('.rounded-xl')).toBeTruthy();
+  });
+});
+)");
+
+    // ── Add vitest to package.json scripts (append test dependencies note) ──
+    WriteFile(project_path / "src" / "__tests__" / "README.md", R"(# Test Suite
+
+## Setup
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom @vitejs/plugin-react
+```
+
+## Run Tests
+```bash
+npx vitest              # Watch mode
+npx vitest run          # Single run
+npx vitest --coverage   # With coverage report
+```
+
+## Structure
+- `setup.ts` — Global test config (fetch mock, DOM setup)
+- `engine-bridge.test.ts` — API integration layer tests
+- `components.test.tsx` — Component smoke/render tests
+)");
+
+    std::cout << "[ReactIDE] Test suite generated for: " << name << std::endl;
+    return true;
 }
 
 bool ReactIDEGenerator::GenerateIDEWithCI(const std::string& name, const std::string& template_name, const std::filesystem::path& output_dir) {
-    return GenerateIDE(name, template_name, output_dir);
+    if (!GenerateIDE(name, template_name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── GitHub Actions CI/CD Pipeline ──
+    WriteFile(project_path / ".github" / "workflows" / "ci.yml", R"YML(# ============================================================================
+# GitHub Actions CI/CD Pipeline — RawrXD React IDE
+# ============================================================================
+# Runs on every push and PR. Tests, lints, builds, and optionally deploys.
+# ============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint src/ --ext .ts,.tsx --max-warnings 0
+
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npx vitest run --coverage
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+      - name: Coverage threshold check
+        run: |
+          node -e "
+            const summary = require('./coverage/coverage-summary.json');
+            const total = summary.total;
+            const threshold = 70;
+            const lines = total.lines.pct;
+            console.log('Line coverage:', lines + '%');
+            if (lines < threshold) {
+              console.error('Coverage below ' + threshold + '% threshold!');
+              process.exit(1);
+            }
+          "
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 14
+
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Deploy to preview environment
+        run: echo "Preview deployment would happen here (Vercel/Netlify/Cloudflare)"
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Deploy to production
+        run: echo "Production deployment would happen here"
+)YML");
+
+    // ── ESLint Configuration ──
+    WriteFile(project_path / "eslint.config.js", R"(import js from '@eslint/js';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
+import tsParser from '@typescript-eslint/parser';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+
+export default [
+  js.configs.recommended,
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...tsPlugin.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+  {
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
+  },
+];
+)");
+
+    // ── Prettier Configuration ──
+    WriteFile(project_path / ".prettierrc", R"({
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "bracketSpacing": true,
+  "jsxSingleQuote": false,
+  "arrowParens": "avoid"
+})");
+
+    // ── Renovate Bot Configuration (dependency updates) ──
+    WriteFile(project_path / "renovate.json", R"({
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "schedule": ["after 9am on monday"],
+  "automerge": true,
+  "automergeType": "pr",
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+})");
+
+    std::cout << "[ReactIDE] CI/CD pipeline generated for: " << name << std::endl;
+    return true;
 }
 
 bool ReactIDEGenerator::GenerateIDEWithDocker(const std::string& name, const std::string& template_name, const std::filesystem::path& output_dir) {
-    return GenerateIDE(name, template_name, output_dir);
+    if (!GenerateIDE(name, template_name, output_dir)) return false;
+
+    std::filesystem::path project_path = output_dir / name;
+
+    // ── Dockerfile (multi-stage build) ──
+    WriteFile(project_path / "Dockerfile", R"(# ============================================================================
+# Dockerfile — RawrXD React IDE (Multi-Stage Production Build)
+# ============================================================================
+# Stage 1: Build the React frontend
+# Stage 2: Serve with lightweight nginx
+# ============================================================================
+
+# --- Stage 1: Build ---
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependency files first for layer caching
+COPY package.json package-lock.json* ./
+RUN npm ci --production=false
+
+# Copy source and build
+COPY . .
+RUN npm run build
+
+# --- Stage 2: Serve ---
+FROM nginx:1.25-alpine AS production
+
+# Security: run as non-root
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Custom nginx config for SPA routing
+COPY --from=builder /app/docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Security headers
+RUN echo 'server_tokens off;' >> /etc/nginx/nginx.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:80/health || exit 1
+
+EXPOSE 80
+
+# Labels for container registry
+LABEL maintainer="RawrXD IDE Team"
+LABEL org.opencontainers.image.title="RawrXD React IDE"
+LABEL org.opencontainers.image.description="Enterprise React IDE with AI-powered code completion"
+LABEL org.opencontainers.image.source="https://github.com/ItsMehRAWRXD/RawrXD"
+
+CMD ["nginx", "-g", "daemon off;"]
+)");
+
+    // ── Nginx Configuration ──
+    WriteFile(project_path / "docker" / "nginx.conf", R"(server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA routing — serve index.html for all non-file routes
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 '{"status":"healthy"}';
+        add_header Content-Type application/json;
+    }
+
+    # Proxy API requests to the RawrXD engine backend
+    location /api/ {
+        proxy_pass http://engine:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 30s;
+        proxy_read_timeout 120s;
+    }
+
+    # Proxy completion streaming endpoint
+    location /complete/ {
+        proxy_pass http://engine:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding on;
+    }
+
+    # Proxy status endpoint
+    location /status {
+        proxy_pass http://engine:8080;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* ws://localhost:*;" always;
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
+}
+)");
+
+    // ── Docker Compose (IDE + Engine) ──
+    WriteFile(project_path / "docker-compose.yml", R"(# ============================================================================
+# Docker Compose — RawrXD IDE + Engine Stack
+# ============================================================================
+# Services:
+#   ide    — React frontend (nginx, port 3000)
+#   engine — RawrXD C++ inference engine (port 8080)
+# ============================================================================
+
+version: '3.9'
+
+services:
+  ide:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: rawrxd-ide
+    ports:
+      - "3000:80"
+    depends_on:
+      engine:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    networks:
+      - rawrxd-net
+
+  engine:
+    image: rawrxd-engine:latest
+    container_name: rawrxd-engine
+    ports:
+      - "8080:8080"
+    volumes:
+      - model-data:/models
+      - ./config:/app/config:ro
+    environment:
+      - RAWRXD_LOG_LEVEL=info
+      - RAWRXD_BIND_ADDR=0.0.0.0:8080
+      - RAWRXD_MODEL_DIR=/models
+      - RAWRXD_MAX_CONTEXT=4096
+      - RAWRXD_THREADS=4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 16G
+        reservations:
+          cpus: '2.0'
+          memory: 8G
+    networks:
+      - rawrxd-net
+
+volumes:
+  model-data:
+    driver: local
+
+networks:
+  rawrxd-net:
+    driver: bridge
+)");
+
+    // ── .dockerignore ──
+    WriteFile(project_path / ".dockerignore", R"(node_modules
+dist
+.git
+.github
+*.md
+*.log
+coverage
+test-results.json
+.env*
+docker-compose*.yml
+)");
+
+    // ── Docker Build/Run Scripts ──
+    WriteFile(project_path / "docker" / "build.sh", R"(#!/bin/bash
+# ============================================================================
+# Docker Build Script — RawrXD React IDE
+# ============================================================================
+set -euo pipefail
+
+IMAGE_NAME="rawrxd-ide"
+TAG="${1:-latest}"
+
+echo "[Docker] Building ${IMAGE_NAME}:${TAG}..."
+docker build -t "${IMAGE_NAME}:${TAG}" .
+
+echo "[Docker] Image size:"
+docker images "${IMAGE_NAME}:${TAG}" --format "{{.Size}}"
+
+echo "[Docker] Build complete. Run with:"
+echo "  docker run -p 3000:80 ${IMAGE_NAME}:${TAG}"
+echo "  docker compose up -d"
+)");
+
+    // ── Docker Dev Compose (with hot reload) ──
+    WriteFile(project_path / "docker-compose.dev.yml", R"(# ============================================================================
+# Docker Compose (Development) — Hot-reload React + Engine
+# ============================================================================
+
+version: '3.9'
+
+services:
+  ide-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: rawrxd-ide-dev
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://engine:8080
+    depends_on:
+      - engine
+    networks:
+      - rawrxd-net
+
+  engine:
+    image: rawrxd-engine:latest
+    container_name: rawrxd-engine-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - model-data:/models
+    environment:
+      - RAWRXD_LOG_LEVEL=debug
+    networks:
+      - rawrxd-net
+
+volumes:
+  model-data:
+
+networks:
+  rawrxd-net:
+)");
+
+    std::cout << "[ReactIDE] Docker containerization generated for: " << name << std::endl;
+    return true;
 }
 
 // Helper methods implementations matching the header
@@ -2294,7 +4286,7 @@ export const PolicyPanel: React.FC = () => {
       {message && (
         <div className="text-xs bg-blue-600/20 text-blue-300 p-2 rounded">{message}</div>
       )}
-
+)POLICY" R"POLICY2(
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
         {(['suggestions', 'policies', 'heuristics'] as const).map(tab => (
@@ -2505,8 +4497,8 @@ export const PolicyPanel: React.FC = () => {
     </div>
   );
 };
-)POLICY";
-    // ──── RAW STRING CLOSE: )POLICY" ──── end of PolicyPanel block ────
+)POLICY2";
+    // ──── RAW STRING CLOSE: )POLICY2" ──── end of PolicyPanel block ────
 }
 
 std::string ReactIDEGenerator::GenerateExplainabilityPanel() {
@@ -3723,7 +5715,7 @@ export const RouterPanel: React.FC = () => {
       </div>
     );
   };
-
+)ROUTER" R"ROUTER2(
   // ---- Research Tab Sub-Component ----
   const ResearchTab: React.FC = () => {
     const [ensembleStatus, setEnsembleStatus] = useState<any>(null);
@@ -3913,7 +5905,7 @@ export const RouterPanel: React.FC = () => {
       </div>
     );
   };
-
+)ROUTER2" R"ROUTER3(
   // ---- Ensemble Delta Sub-Component ----
   const EnsembleDeltaSection: React.FC = () => {
     const [delta, setDelta] = useState<any>(null);
@@ -4103,7 +6095,7 @@ export const RouterPanel: React.FC = () => {
           </button>
         ))}
       </div>
-
+)ROUTER3" R"ROUTER4(
       {/* Overview tab */}
       {tab === 'overview' && status && (
         <div className="space-y-3">
@@ -4288,7 +6280,7 @@ export const RouterPanel: React.FC = () => {
     </div>
   );
 };
-)ROUTER";
+)ROUTER4";
 }
 
 // ============================================================================

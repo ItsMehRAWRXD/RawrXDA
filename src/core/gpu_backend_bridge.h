@@ -64,6 +64,7 @@ enum class ComputeAPI : uint32_t {
 struct GPUCapabilities {
     uint64_t    dedicatedVRAM       = 0;    // Bytes
     uint64_t    sharedSystemRAM     = 0;    // Bytes
+    uint64_t    currentUsage        = 0;    // Bytes currently in use
     uint32_t    vendorId            = 0;    // PCI vendor (0x10DE=NV, 0x1002=AMD, 0x8086=Intel)
     uint32_t    deviceId            = 0;    // PCI device
     uint32_t    shaderModelMajor    = 0;    // e.g., 6

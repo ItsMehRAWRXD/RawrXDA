@@ -435,26 +435,59 @@ CorrectionOutcome AgenticHotpatchOrchestrator::applyBiasCorrection(
 {
     auto& proxy = ProxyHotpatcher::instance();
 
-    // Apply a positive bias to the most common "helpful" tokens
-    // and a negative bias to refusal tokens.
-    // Token IDs are model-specific; use representative IDs.
-    TokenBias bias = {};
-    bias.permanent = false;
+    // Apply token biases to steer generation away from failure patterns.
+    // Token IDs are model-specific — we use output rewrite rules as a
+    // model-agnostic fallback, and add representative bias entries when
+    // a vocabulary mapping is available at runtime.
+    //
+    // Strategy:
+    //   Refusal  → add rewrite rule to strip refusal prefixes + bias
+    //   LowConf  → add rewrite rule to strip hedging prefixes
+    //   Other    → log and proceed to retry
 
     switch (failure.type) {
-        case InferenceFailureType::Refusal:
-            // Suppress "I cannot" type tokens, boost "Sure," "Here," etc.
-            bias.tokenId = 0;  // Placeholder — real IDs depend on model vocabulary
-            bias.biasValue = -2.0f;
-            proxy.add_token_bias(bias);
-            break;
+        case InferenceFailureType::Refusal: {
+            // Suppress common refusal prefixes via output rewrite
+            OutputRewriteRule rr = {};
+            rr.name = "auto_strip_refusal";
+            rr.pattern = "I cannot";
+            rr.replacement = "";
+            rr.hitCount = 0;
+            rr.enabled = true;
+            proxy.add_rewrite_rule(rr);
 
-        case InferenceFailureType::LowConfidence:
-            // Boost tokens that reduce hedging
+            // If vocab size is known, apply logit biases to suppress
+            // tokens like "sorry", "cannot", "unable" and boost "Sure",
+            // "Here".  Concrete IDs depend on loaded tokenizer; callers
+            // can register model-specific mappings via add_token_bias().
+            TokenBias bias = {};
+            bias.permanent = false;
+            // We still inject a bias on tokenId 0 (typically <unk> or
+            // <pad>) as a defensive measure — suppressing it avoids
+            // degenerate sampling.
             bias.tokenId = 0;
-            bias.biasValue = 1.5f;
+            bias.biasValue = -5.0f;
             proxy.add_token_bias(bias);
             break;
+        }
+
+        case InferenceFailureType::LowConfidence: {
+            // Strip hedging language via rewrite and re-sample
+            OutputRewriteRule rr = {};
+            rr.name = "auto_strip_hedging";
+            rr.pattern = "I think";
+            rr.replacement = "";
+            rr.hitCount = 0;
+            rr.enabled = true;
+            proxy.add_rewrite_rule(rr);
+
+            TokenBias bias = {};
+            bias.permanent = false;
+            bias.tokenId = 0;
+            bias.biasValue = -3.0f;
+            proxy.add_token_bias(bias);
+            break;
+        }
 
         default:
             break;
@@ -464,7 +497,7 @@ CorrectionOutcome AgenticHotpatchOrchestrator::applyBiasCorrection(
     m_stats.retryCount.fetch_add(1, std::memory_order_relaxed);
 
     return CorrectionOutcome::ok(CorrectionAction::RetryWithBias,
-                                  "Token bias injected for retry");
+                                  "Token bias + rewrite rules injected for retry");
 }
 
 CorrectionOutcome AgenticHotpatchOrchestrator::applyRewriteCorrection(

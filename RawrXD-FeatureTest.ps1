@@ -81,6 +81,7 @@ $script:Paths = @{
     Win32VsCode   = "D:\rawrxd\src\win32app\Win32IDE_VSCodeUI.cpp"
     Win32Terminal = "D:\rawrxd\src\win32app\Win32TerminalManager.cpp"
     Win32D2D      = "D:\rawrxd\src\win32app\TransparentRenderer.cpp"
+    Win32Main     = "D:\rawrxd\src\win32app\main_win32.cpp"
     
     # CLI Shell
     CLIShell      = "D:\rawrxd\src\cli_shell.cpp"
@@ -90,6 +91,11 @@ $script:Paths = @{
     ReactGen      = "D:\rawrxd\src\modules\react_generator.cpp"
     ReactIDE      = "D:\rawrxd\src\modules\react_ide_generator.cpp"
     ReactGenH     = "D:\rawrxd\src\modules\react_generator.h"
+    
+    # Headless IDE (Phase 19C)
+    HeadlessH     = "D:\rawrxd\src\win32app\HeadlessIDE.h"
+    HeadlessCpp   = "D:\rawrxd\src\win32app\HeadlessIDE.cpp"
+    OutputSinkH   = "D:\rawrxd\src\win32app\IOutputSink.h"
     
     # PowerShell IDE (the REAL 28K-line version)
     PSIDE         = "D:\rawrxd\RawrXD2.ps1"
@@ -530,6 +536,25 @@ Introspect-PSFeature "PS-Only" "Performance Profiler"      "Start-PerformancePro
 Introspect-PSFeature "PS-Only" "Security Settings"         "Show-SecuritySettings|Initialize-SecurityConfig"
 Introspect-PSFeature "PS-Only" "Encryption Test"           "Show-EncryptionTest"
 Introspect-PSFeature "PS-Only" "AI Debug Metrics"          "Get-AIDebugMetrics|Measure-AIQueryPerformance"
+
+# ──────────────────────────────────────────────────────────────────────────
+# HEADLESS IDE (Phase 19C) — Win32-only, no GUI dependency
+# ──────────────────────────────────────────────────────────────────────────
+Write-Host "  🖥️  Headless IDE (Phase 19C)..." -ForegroundColor Gray
+Introspect-CppFeature "Headless" "Headless Mode"        $script:Paths.HeadlessCpp "HeadlessIDE::initialize"  10
+Introspect-CppFeature "Headless" "Headless CLI Flag"    $script:Paths.Win32Main   "hasHeadlessFlag|--headless" 5
+Introspect-CppFeature "Headless" "Headless HTTP Server" $script:Paths.HeadlessCpp "startServer|serverLoop"  10
+Introspect-CppFeature "Headless" "Headless REPL"        $script:Paths.HeadlessCpp "runReplMode|processReplCommand" 10
+Introspect-CppFeature "Headless" "Single-Shot Inference" $script:Paths.HeadlessCpp "runSingleShotMode"       5
+Introspect-CppFeature "Headless" "Batch Inference"      $script:Paths.HeadlessCpp "runBatchMode"            5
+Introspect-CppFeature "Headless" "IOutputSink Interface" $script:Paths.OutputSinkH "class IOutputSink"      5
+Introspect-CppFeature "Headless" "ConsoleOutputSink"    $script:Paths.OutputSinkH "class ConsoleOutputSink" 5
+Introspect-CppFeature "Headless" "NullOutputSink"       $script:Paths.OutputSinkH "class NullOutputSink"    5
+Introspect-CppFeature "Headless" "JSON Output Mode"     $script:Paths.HeadlessCpp "m_jsonMode|--json"       5
+Introspect-CppFeature "Headless" "Signal Handler"       $script:Paths.HeadlessCpp "headlessSignalHandler|SIGINT" 5
+Introspect-CppFeature "Headless" "HeadlessConfig"       $script:Paths.HeadlessH   "struct HeadlessConfig"   5
+Introspect-CppFeature "Headless" "HeadlessResult"       $script:Paths.HeadlessH   "struct HeadlessResult"   5
+Introspect-CppFeature "Headless" "HeadlessRunMode"      $script:Paths.HeadlessH   "enum class HeadlessRunMode" 5
 
 Write-Host ""
 

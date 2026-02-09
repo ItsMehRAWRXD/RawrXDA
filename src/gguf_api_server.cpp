@@ -18,9 +18,11 @@
 #include <memory>
 #include <winsock2.h>
 #include <windows.h>
+#include <winhttp.h>
 #include <random>
 
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "winhttp.lib")
 #pragma warning(disable : 4996)
 
 namespace fs = std::filesystem;
@@ -190,78 +192,136 @@ private:
         return response;
     }
     
+    // Proxy /api/generate to Ollama backend via WinHTTP
     std::string HandleGenerateRequest(const std::string& body) {
-        // Extract prompt from JSON body (simple parsing)
-        std::string prompt = "Test prompt";
-        size_t prompt_pos = body.find("\"prompt\":");
-        if (prompt_pos != std::string::npos) {
-            size_t start = body.find('"', prompt_pos + 10);
-            size_t end = body.find('"', start + 1);
-            if (start != std::string::npos && end != std::string::npos) {
-                prompt = body.substr(start + 1, end - start - 1);
-            }
-        }
-        
         auto start_time = std::chrono::high_resolution_clock::now();
-        
-        // Estimate tokens generated: roughly 4 chars per token
-        int tokens_generated = std::max(1, (int)(body.length() / 4));
-        
-        // No model loaded — placeholder server for API compatibility testing.
-        // When a real engine is connected, this path is replaced by actual
-        // inference dispatch (see InferenceEngine / cpu_inference_engine).
-        // Placeholder latency: ~5ms per token to simulate round-trip overhead.
-        double latency_per_token = 5.0; // ms placeholder (not real inference)
-        double total_latency = latency_per_token * tokens_generated;
-        
-        std::chrono::milliseconds sleep_duration((int)total_latency);
-        std::this_thread::sleep_for(sleep_duration);
-        
+
+        // Resolve Ollama backend from environment or defaults
+        std::string ollamaHost = "localhost";
+        int ollamaPort = 11434;
+        if (const char* env = std::getenv("OLLAMA_HOST")) ollamaHost = env;
+        if (const char* env = std::getenv("OLLAMA_PORT")) ollamaPort = std::stoi(env);
+
+        // Avoid proxy loop: if we listen on the same port, use alternative
+        if (ollamaPort == port_) {
+            ollamaPort = 11434;
+            if (ollamaPort == port_) ollamaPort = 11435;
+        }
+
+        std::wstring wHost(ollamaHost.begin(), ollamaHost.end());
+
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-GGUF-API/1.0",
+                                          WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                          WINHTTP_NO_PROXY_NAME,
+                                          WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession) {
+            return MakeErrorResponse(502, "WinHttpOpen failed");
+        }
+
+        HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(),
+                                             static_cast<INTERNET_PORT>(ollamaPort), 0);
+        if (!hConnect) {
+            WinHttpCloseHandle(hSession);
+            return MakeErrorResponse(502, "Cannot connect to Ollama at " + ollamaHost + ":" + std::to_string(ollamaPort));
+        }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+                                                 L"/api/generate",
+                                                 nullptr, WINHTTP_NO_REFERER,
+                                                 WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+        if (!hRequest) {
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return MakeErrorResponse(502, "WinHttpOpenRequest failed");
+        }
+
+        WinHttpSetTimeouts(hRequest, 5000, 10000, 120000, 120000);
+
+        LPCWSTR contentType = L"Content-Type: application/json";
+        BOOL sent = WinHttpSendRequest(hRequest, contentType, -1L,
+                                        (LPVOID)body.c_str(),
+                                        (DWORD)body.size(),
+                                        (DWORD)body.size(), 0);
+        if (!sent) {
+            DWORD err = GetLastError();
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return MakeErrorResponse(502, "Ollama unreachable (err=" + std::to_string(err) + ")");
+        }
+
+        if (!WinHttpReceiveResponse(hRequest, nullptr)) {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return MakeErrorResponse(502, "No response from Ollama");
+        }
+
+        DWORD statusCode = 0;
+        DWORD statusSize = sizeof(statusCode);
+        WinHttpQueryHeaders(hRequest,
+                            WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                            WINHTTP_HEADER_NAME_BY_INDEX, &statusCode,
+                            &statusSize, WINHTTP_NO_HEADER_INDEX);
+
+        std::string responseBody;
+        DWORD bytesAvailable = 0;
+        while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+            std::vector<char> buf(bytesAvailable + 1, 0);
+            DWORD bytesRead = 0;
+            WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+            responseBody.append(buf.data(), bytesRead);
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
         auto end_time = std::chrono::high_resolution_clock::now();
-        double actual_latency = std::chrono::duration<double, std::milli>(end_time - start_time).count();
-        
+        double latencyMs = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+
         // Record metrics
         RequestMetrics metric;
         metric.request_id = std::time(nullptr) * 1000;
-        metric.model_name = "BigDaddyG-Q4_K_M";
-        metric.tokens_requested = tokens_generated;
-        metric.tokens_generated = tokens_generated;
-        metric.latency_ms = actual_latency;
-        metric.success = true;
-        
-        // Get timestamp
+        metric.model_name = "ollama-proxy";
+        metric.tokens_requested = 0;
+        metric.tokens_generated = 0;
+        metric.latency_ms = latencyMs;
+        metric.success = (statusCode == 200);
         auto now = std::time(nullptr);
         auto tm = *std::gmtime(&now);
         char timestamp[30];
         strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
         metric.timestamp = timestamp;
-        
         RecordMetric(metric);
-        
-        // Generate response
-        std::string generated_text = "[Placeholder — no model loaded] ";
-        generated_text += "API server processed " + std::to_string(tokens_generated);
-        generated_text += " simulated tokens in " + std::to_string(actual_latency) + "ms. ";
-        generated_text += "Connect a real GGUF model for actual inference throughput.";
-        
-        std::string json_body = R"({
-  "response": ")" + generated_text + R"(",
-  "created_at": ")" + std::string(timestamp) + R"(",
-  "done": true,
-  "total_duration": )" + std::to_string((int64_t)actual_latency * 1000000) + R"(,
-  "load_duration": 1000000,
-  "prompt_eval_duration": 5000000,
-  "eval_duration": )" + std::to_string((int64_t)(actual_latency * 1000000 - 6000000)) + R"(,
-  "context": [)" + std::to_string(tokens_generated) + R"(],
-  "eval_count": )" + std::to_string(tokens_generated) + R"(
-})";
-        
-        std::string response = "HTTP/1.1 200 OK\r\n";
+
+        std::printf("[Generate] Ollama HTTP %lu in %.0f ms (%zu bytes)\n",
+                    statusCode, latencyMs, responseBody.size());
+
+        // Forward response
+        std::string response = "HTTP/1.1 " + std::to_string(statusCode) + " OK\r\n";
         response += "Content-Type: application/json\r\n";
-        response += "Content-Length: " + std::to_string(json_body.length()) + "\r\n";
+        response += "Access-Control-Allow-Origin: *\r\n";
+        response += "Content-Length: " + std::to_string(responseBody.length()) + "\r\n";
         response += "\r\n";
-        response += json_body;
-        
+        response += responseBody;
+        return response;
+    }
+
+    static std::string MakeErrorResponse(int httpCode, const std::string& message) {
+        std::string escaped;
+        for (char c : message) {
+            if (c == '"') escaped += "\\\"";
+            else if (c == '\\') escaped += "\\\\";
+            else if (c == '\n') escaped += "\\n";
+            else escaped += c;
+        }
+        std::string json = R"({"error":")"+escaped+R"("})";
+        std::string response = "HTTP/1.1 " + std::to_string(httpCode) + " Error\r\n";
+        response += "Content-Type: application/json\r\n";
+        response += "Content-Length: " + std::to_string(json.length()) + "\r\n";
+        response += "\r\n";
+        response += json;
         return response;
     }
     

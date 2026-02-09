@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iostream>
 #include <cstdlib>
+#include <algorithm>
 #include <windows.h>
 
 // ============================================================================

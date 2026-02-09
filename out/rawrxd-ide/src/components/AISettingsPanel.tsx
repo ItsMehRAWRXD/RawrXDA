@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, Settings, Zap, Brain, Search, Layers } from 'lucide-react';
+import { Upload, Settings, Zap, Brain, Search, Layers, AlertCircle } from 'lucide-react';
+import { useEngineStore } from '@/lib/engine-bridge';
 
 interface AIConfig {
   mode: string;
@@ -11,6 +12,7 @@ interface AIConfig {
 }
 
 export const AISettingsPanel: React.FC = () => {
+  const { addLog } = useEngineStore();
   const [config, setConfig] = useState<AIConfig>({
     mode: 'ask',
     engine: 'default',
@@ -21,6 +23,7 @@ export const AISettingsPanel: React.FC = () => {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
+  const [configError, setConfigError] = useState('');
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -101,13 +104,24 @@ export const AISettingsPanel: React.FC = () => {
       }
 
       if (endpoint) {
-        await fetch(endpoint, {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
+        if (!res.ok) {
+          const errText = `Config push failed: ${res.status} ${res.statusText}`;
+          setConfigError(errText);
+          addLog(`[AISettings] ${errText}`);
+        } else {
+          setConfigError('');
+          addLog(`[AISettings] Updated ${key} = ${JSON.stringify(value)}`);
+        }
       }
     } catch (err) {
+      const errText = `Config push error: ${err}`;
+      setConfigError(errText);
+      addLog(`[AISettings] ${errText}`);
       console.error('Failed to update config:', err);
     }
   };
@@ -317,6 +331,12 @@ export const AISettingsPanel: React.FC = () => {
       </div>
 
       {/* Status Display */}
+      {configError && (
+        <div className="flex items-center gap-2 p-2 bg-red-900/30 border border-red-700 rounded text-xs text-red-300">
+          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+          {configError}
+        </div>
+      )}
       <div className="text-xs font-mono bg-black/50 rounded p-2 space-y-1">
         <div className="text-gray-500">// Current Configuration</div>
         <div className="text-purple-400">mode: "{config.mode}"</div>

@@ -581,7 +581,37 @@ bool MultiFileSearchWidget::shouldSkipFile(const QString& filePath) const {
             return true;
         }
         
-        // TODO: Actually parse .gitignore (for now, basic check)
+        // Attempt to load .gitignore patterns for more thorough filtering
+        static QStringList gitignorePatterns;
+        static bool gitignoreLoaded = false;
+        if (!gitignoreLoaded) {
+            gitignoreLoaded = true;
+            QFile gitignore(QDir(m_searchRoot).filePath(".gitignore"));
+            if (gitignore.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                while (!gitignore.atEnd()) {
+                    QString line = QString::fromUtf8(gitignore.readLine()).trimmed();
+                    if (!line.isEmpty() && !line.startsWith('#')) {
+                        gitignorePatterns.append(line);
+                    }
+                }
+            }
+        }
+        for (const QString& pattern : gitignorePatterns) {
+            // Simple substring match for directory patterns (e.g. "logs/", "*.o")
+            if (pattern.endsWith('/')) {
+                if (relativePath.contains('/' + pattern) || relativePath.startsWith(pattern)) {
+                    return true;
+                }
+            } else if (pattern.startsWith('*')) {
+                // Wildcard extension match (e.g. "*.pyc", "*.o")
+                QString ext = pattern.mid(1); // e.g. ".pyc"
+                if (relativePath.endsWith(ext)) {
+                    return true;
+                }
+            } else if (relativePath.contains(pattern)) {
+                return true;
+            }
+        }
     }
     
     // Skip very large files (>10MB)

@@ -126,6 +126,9 @@ set(SOURCES
     # Phase 29.2: GSI Hash Table + TPI Type Parser
     src/core/pdb_gsi_hash.cpp
     
+    # Phase 29: Native PDB Parser (required by pdb_reference_provider)
+    src/core/pdb_native.cpp
+    
     # Phase 29.2: Multi-Reference Provider + Tools/Instructions Hook
     src/core/pdb_reference_provider.cpp
     
@@ -150,6 +153,17 @@ set(SOURCES
 
     # Phase 32A: Chain-of-Thought Multi-Model Review Engine
     src/core/chain_of_thought_engine.cpp
+
+    # Phase 36: Cross-Process MMF State Synchronization (shared with Win32IDE)
+    src/core/rawrxd_state_mmf.cpp
+
+    # Phase 37: Iterative Partial Inference with Adaptive Tensor Traversal
+    src/core/traversal_strategy.cpp
+    src/core/layer_contribution_scorer.cpp
+    src/core/semantic_delta_tracker.cpp
+    src/core/cross_run_tensor_cache.cpp
+    src/core/convergence_controller.cpp
+    src/core/iterative_tensor_traversal.cpp
 )
 
 # =============================================================================
@@ -590,6 +604,13 @@ if(WIN32)
         src/modules/quickjs_extension_host.cpp
         src/modules/quickjs_node_shims.cpp
         src/modules/quickjs_vscode_bindings.cpp
+
+        # Phase 36: Cross-Process MMF State Synchronization
+        src/core/rawrxd_state_mmf.cpp
+
+        # Phase 37: JS Extension Host + Auto-Polyfill Engine
+        src/core/js_extension_host.cpp
+        src/core/extension_polyfill_engine.cpp
     )
     
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES})

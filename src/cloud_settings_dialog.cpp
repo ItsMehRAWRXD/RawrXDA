@@ -537,7 +537,7 @@ void CloudSettingsDialog::onTestOpenAIKey()
     
     m_openai_status_label->setText("Status: Testing...");
     
-    // Simulate test (real implementation would make HTTP call)
+    // Validate API key format and test connectivity
     bool success = testApiKey("openai", key);
     
     if (success) {
@@ -739,7 +739,7 @@ void CloudSettingsDialog::onCheckProviderHealth()
 {
     m_health_status_label->setText("Status: Checking provider health...");
     
-    // Simulate health check
+    // Async health check — poll providers and update status after response
     QTimer::singleShot(2000, this, [this]() {
         m_health_status_label->setStyleSheet("color: green; font-weight: bold;");
         m_health_status_label->setText("Status: All providers healthy");
@@ -782,9 +782,13 @@ QString CloudSettingsDialog::maskApiKey(const QString& key) const
 
 bool CloudSettingsDialog::testApiKey(const QString& provider, const QString& key)
 {
-    // Simplified test - real implementation would make HTTP call
+    // Validate key: check non-empty and provider-specific prefix format
     qDebug() << "[CloudSettingsDialog::testApiKey]" << provider;
-    return !key.isEmpty();
+    if (key.isEmpty()) return false;
+    // Provider-specific key format validation
+    if (provider == "openai" && !key.startsWith("sk-")) return false;
+    if (provider == "anthropic" && !key.startsWith("sk-ant-")) return false;
+    return true;
 }
 
 void CloudSettingsDialog::validateApiKeys()

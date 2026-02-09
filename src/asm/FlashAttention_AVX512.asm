@@ -57,6 +57,8 @@ PUBLIC FlashAttention_Forward
 PUBLIC FlashAttention_CheckAVX512
 PUBLIC FlashAttention_Init
 PUBLIC FlashAttention_GetTileConfig
+PUBLIC g_FlashAttnCalls
+PUBLIC g_FlashAttnTiles
 
 ; =============================================================================
 ;                        CONFIGURATION STRUCT
@@ -887,28 +889,22 @@ FlashAttention_Forward PROC FRAME
 
     ; ---- Update running sum ----
     ; l_new = exp(m_old - m_new) * l_old + row_sum_P
-    ; We already have m_old in xmm10, m_new in xmm11 (from earlier)
-    ; But we need to recompute exp(m_old - m_new) scalar
-    vmovss  xmm10, dword ptr [rdi + rcx*4 - 4]  ; Hmm, we already overwrote
-    ; Actually m_new is stored back. We need the correction factor.
-    ; Let's compute it: correction = exp(m_old - m_new)
-    ; We stored m_new already, so use xmm12 which had (m_old - m_new)
-    ; xmm12 was set before the vectorized exp section
+    ; xmm12 still holds (m_old - m_new) from before the vectorized exp.
+    ; It was NOT clobbered: vectorized exp used zmm0-9, zmm16-29 only.
+    ; Compute scalar exp(xmm12) via Schraudolph integer reinterpret trick.
 
-    ; Fast scalar exp of xmm12 using the same trick
-    vmulss  xmm13, xmm12, dword ptr [rax]  ; Hmm, rax may be clobbered
-    ; Use the log2e constant directly
-    mov     eax, 03FB8AA3Bh                  ; 1.44269504f
-    vmovd   xmm14, eax
-    vmulss  xmm13, xmm12, xmm14            ; t = (m_old - m_new) * log2e
-    ; For scalar, use cvt trick: exp(x) ≈ as_float(int(x * 2^23/ln2) + 127*2^23)
-    mov     eax, 04B00007Fh                  ; magic constant
-    vmovd   xmm14, eax
-    mov     eax, 04B00F8B1h                  ; 2^23 / ln2
+    ; exp(x) ≈ as_float(int(x * 2^23/ln2) + 127*2^23)
+    ; Constant: 2^23 / ln(2) = 12102203.17 ≈ 0x4B00F8B1 as float
+    mov     eax, 04B00F8B1h                  ; 12102203.0f
     vmovd   xmm15, eax
-    vmulss  xmm13, xmm12, xmm15
-    vcvtss2si eax, xmm13
-    add     eax, 03F800000h                  ; + 127 << 23
+    vmulss  xmm13, xmm12, xmm15             ; x * (2^23 / ln2)
+    vcvtss2si eax, xmm13                    ; truncate to int
+    add     eax, 03F800000h                  ; + 127 << 23 (exponent bias)
+    ; Clamp to prevent negative or overflow float reinterpret
+    cmp     eax, 0
+    jge     @@fa_corr_clamp_ok
+    xor     eax, eax                        ; underflow → 0.0
+@@fa_corr_clamp_ok:
     vmovd   xmm13, eax                      ; xmm13 ≈ exp(m_old - m_new)
 
     ; l_new = correction * l_old + row_sum
@@ -1054,12 +1050,15 @@ FlashAttention_Forward PROC FRAME
     lea     rdi, [r13 + rax]
 
     ; O[i][:] *= 1/l_i
+    ; Use non-temporal stores (vmovntps) for final output — write-only,
+    ; avoids polluting L2 cache for large sequence lengths.
+    ; Requires 64-byte aligned destination (guaranteed by our O layout).
     movsxd  rbx, headDim
     shr     rbx, 4
 @@fa_norm_d:
     vmovaps zmm1, zmmword ptr [rdi]
     vmulps  zmm1, zmm1, zmm0
-    vmovaps zmmword ptr [rdi], zmm1
+    vmovntps zmmword ptr [rdi], zmm1        ; Non-temporal store
     add     rdi, 64
     dec     rbx
     jnz     @@fa_norm_d
@@ -1068,6 +1067,8 @@ FlashAttention_Forward PROC FRAME
     jmp     @@fa_norm_row
 
 @@fa_next_tilerow:
+    ; Fence: ensure all non-temporal stores from normalize pass are visible
+    sfence
     inc     tileRow
     jmp     @@fa_tilerow_loop
 

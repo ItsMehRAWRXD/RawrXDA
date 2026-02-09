@@ -194,12 +194,65 @@ QString SecurityManager::refreshToken(const QString& username, const QString& re
         return QString();
     }
     
-    // Placeholder: would call auth server with refresh token
-    QString newToken = "new_token_" + QString::number(QDateTime::currentMSecsSinceEpoch());
+    // Call the configured auth server's token endpoint with the refresh token
+    QString authEndpoint = m_authServerUrl + "/oauth2/token";
+    QNetworkAccessManager nam;
+    QNetworkRequest request(QUrl(authEndpoint));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+
+    QByteArray postData;
+    postData.append("grant_type=refresh_token");
+    postData.append("&refresh_token=" + QUrl::toPercentEncoding(refreshToken));
+    postData.append("&client_id=" + QUrl::toPercentEncoding(m_clientId));
+    if (!m_clientSecret.isEmpty()) {
+        postData.append("&client_secret=" + QUrl::toPercentEncoding(m_clientSecret));
+    }
+
+    QNetworkReply* reply = nam.post(request, postData);
+
+    // Synchronous wait with timeout (5 seconds)
+    QEventLoop loop;
+    QTimer timeoutTimer;
+    timeoutTimer.setSingleShot(true);
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QObject::connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeoutTimer.start(5000);
+    loop.exec();
+
+    if (!reply->isFinished() || reply->error() != QNetworkReply::NoError) {
+        QString errorMsg = reply->isFinished() ? reply->errorString() : "Token refresh timeout";
+        qWarning() << "[SecurityManager] Token refresh failed:" << errorMsg;
+        reply->deleteLater();
+        emit tokenRefreshFailed(username);
+        logSecurityEvent("token_refresh_http_failed", "system", username, false);
+        return QString();
+    }
+
+    QByteArray responseData = reply->readAll();
+    reply->deleteLater();
+
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    QJsonObject obj = doc.object();
+
+    if (!obj.contains("access_token")) {
+        qWarning() << "[SecurityManager] Token response missing access_token";
+        emit tokenRefreshFailed(username);
+        logSecurityEvent("token_refresh_invalid_response", "system", username, false);
+        return QString();
+    }
+
+    QString newToken = obj.value("access_token").toString();
+    qint64 expiresIn = obj.value("expires_in").toInteger(3600); // default 1 hour
+
     it->second.token = encryptData(newToken.toUtf8());
     it->second.issuedAt = QDateTime::currentMSecsSinceEpoch();
-    it->second.expiresAt = it->second.issuedAt + 3600 * 1000;
-    
+    it->second.expiresAt = it->second.issuedAt + expiresIn * 1000;
+
+    // Store new refresh token if rotated
+    if (obj.contains("refresh_token")) {
+        it->second.refreshToken = obj.value("refresh_token").toString();
+    }
+
     logSecurityEvent("token_refreshed", "system", username, true);
     return newToken;
 }

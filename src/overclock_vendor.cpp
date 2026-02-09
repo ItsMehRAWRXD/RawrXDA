@@ -105,12 +105,64 @@ bool ApplyGpuClockOffsetMhz(int offset) {
     }
     // If AMD SMI is present, a limited command may be possible; nvidia-smi can also set clocks on NVIDIA GPUs.
     if (ExistsOne({"C:/Windows/System32/nvidia-smi.exe", "nvidia-smi"})) {
-        // We don't apply a direct offset using nvidia-smi here; it's a noop for now with a log.
-        std::cout << "[vendor] NVIDIA SMI present - clock offset application not implemented" << std::endl;
+        // Apply GPU clock offset via nvidia-smi
+        // nvidia-smi supports: -lgc (lock graphics clocks), -ac (application clocks)
+        std::string cmd = "nvidia-smi -lgc " + std::to_string(std::max(0, 210 + offset)) + 
+                          "," + std::to_string(std::max(0, 2100 + offset)) + " 2>&1";
+        FILE* pipe = _popen(cmd.c_str(), "r");
+        if (!pipe) {
+            g_lastError = "failed_to_execute_nvidia_smi";
+            std::cerr << "[vendor] Failed to execute nvidia-smi" << std::endl;
+            return false;
+        }
+        std::array<char, 256> buf{};
+        std::string out;
+        while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
+        int rc = _pclose(pipe);
+        if (rc != 0) {
+            g_lastError = "nvidia_smi_lgc_failed:" + std::to_string(rc);
+            std::cerr << "[vendor] nvidia-smi lock graphics clocks failed: " << out << std::endl;
+            return false;
+        }
+        std::cout << "[vendor] NVIDIA GPU clock offset applied: +" << offset << " MHz" << std::endl;
+        g_lastError.clear();
         return true;
     }
     if (ExistsOne({"C:/Windows/System32/amd-smi.exe", "C:/Program Files/AMD/amd-smi.exe", "amd-smi"})) {
-        std::cout << "[vendor] AMD SMI present - clock offset application not implemented (sysctl varies)" << std::endl;
+        // Apply GPU clock offset via rocm-smi or amd-smi
+        // rocm-smi: --setsclk / --setfan / --setperflevel
+        std::string toolPath;
+        if (ExistsOne({"C:/Windows/System32/amd-smi.exe"})) toolPath = "amd-smi";
+        else toolPath = "C:/Program Files/AMD/amd-smi.exe";
+        
+        // Set performance level to manual first, then apply overclock
+        std::string cmdPerf = "\"" + toolPath + "\" set --perf-level manual 2>&1";
+        FILE* pipe = _popen(cmdPerf.c_str(), "r");
+        if (pipe) {
+            std::array<char, 256> buf{};
+            while (fgets(buf.data(), (int)buf.size(), pipe)) {}
+            _pclose(pipe);
+        }
+        
+        // Apply overclock level (map offset to OD percentage)
+        int odPercent = std::clamp(offset / 10, -15, 15); // Map MHz to OD%
+        std::string cmdOD = "\"" + toolPath + "\" set --overdrive " + std::to_string(odPercent) + " 2>&1";
+        pipe = _popen(cmdOD.c_str(), "r");
+        if (!pipe) {
+            g_lastError = "failed_to_execute_amd_smi";
+            return false;
+        }
+        std::array<char, 256> buf{};
+        std::string out;
+        while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
+        int rc = _pclose(pipe);
+        if (rc != 0) {
+            g_lastError = "amd_smi_overdrive_failed:" + std::to_string(rc);
+            std::cerr << "[vendor] AMD overdrive set failed: " << out << std::endl;
+            return false;
+        }
+        std::cout << "[vendor] AMD GPU overdrive set to " << odPercent << "%" << std::endl;
+        g_lastError.clear();
         return true;
     }
     // No real tool; simulation.

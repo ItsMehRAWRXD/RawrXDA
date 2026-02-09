@@ -92,6 +92,13 @@ public:
     // Get number of online nodes.
     uint32_t getOnlineNodeCount() const;
 
+    // Get slot indices of all online nodes.
+    std::vector<uint32_t> getOnlineNodeSlots() const;
+
+    // Distribute a batch slice task to a remote node.
+    void distributeTask(uint32_t nodeSlot, uint32_t batchStart,
+                        uint32_t batchCount, uint32_t seqLen);
+
     // Manually add a node by IP:port (bypasses discovery).
     bool addNodeManual(const char* ipAddress, uint16_t port);
 
@@ -332,6 +339,9 @@ private:
 
     // Sequence counter
     std::atomic<uint32_t>       m_sequenceCounter;
+
+    // Ring buffer overflow counter (incremented by MASM ring or C++ fallback)
+    std::atomic<uint64_t>       m_ringOverflowCount;
 
     // Network handles
     SOCKET                      m_listenSocket;

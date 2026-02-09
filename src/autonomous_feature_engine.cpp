@@ -743,8 +743,36 @@ QString AutonomousFeatureEngine::generateDocumentation(const QString& symbolCode
     doc += " *\n";
     
     if (symbolType == "function") {
-        doc += " * @param TODO: Add parameter descriptions\n";
-        doc += " * @return TODO: Add return value description\n";
+        // Extract parameters from function signature
+        QRegularExpression paramRegex(R"(\(([^)]*)\))");
+        QRegularExpressionMatch paramMatch = paramRegex.match(symbolCode);
+        if (paramMatch.hasMatch()) {
+            QString paramList = paramMatch.captured(1).trimmed();
+            if (!paramList.isEmpty() && paramList != "void") {
+                QStringList params = paramList.split(',');
+                for (const QString& param : params) {
+                    QString p = param.trimmed();
+                    // Extract parameter name (last token after type)
+                    QStringList tokens = p.split(QRegularExpression(R"(\s+)"));
+                    QString paramName = tokens.isEmpty() ? "param" : tokens.last();
+                    // Strip pointer/reference decorators
+                    paramName.remove('*').remove('&');
+                    if (paramName.isEmpty()) paramName = "param";
+                    doc += QString(" * @param %1 Description of %1\n").arg(paramName);
+                }
+            }
+        }
+        // Extract return type (first token before function name)
+        QRegularExpression retRegex(R"(^\s*(\w[\w:*&<> ]*?)\s+\w+\s*\()");
+        QRegularExpressionMatch retMatch = retRegex.match(symbolCode);
+        if (retMatch.hasMatch()) {
+            QString retType = retMatch.captured(1).trimmed();
+            if (retType != "void") {
+                doc += QString(" * @return %1 value\n").arg(retType);
+            }
+        } else {
+            doc += " * @return Return value\n";
+        }
     }
     
     doc += " */\n";

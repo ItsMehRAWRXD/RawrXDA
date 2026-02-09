@@ -109,8 +109,96 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getContextualCompletions(
 void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
     m_logger->info("Pre-warming cache for: {}", filePath);
 
-    // Pre-populate cache with likely completions for this file
-    // Placeholder implementation
+    // Read file content for symbol extraction
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        m_logger->warn("Cannot open file for cache prewarm: {}", filePath);
+        return;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    file.close();
+
+    // Determine language from extension
+    std::string ext;
+    auto dotPos = filePath.rfind('.');
+    if (dotPos != std::string::npos) {
+        ext = filePath.substr(dotPos + 1);
+    }
+
+    // Extract identifiers and keywords for completion candidates
+    std::unordered_set<std::string> symbols;
+    std::string currentToken;
+    for (char c : content) {
+        if (std::isalnum(c) || c == '_') {
+            currentToken += c;
+        } else {
+            if (currentToken.size() >= 3) {
+                symbols.insert(currentToken);
+            }
+            currentToken.clear();
+        }
+    }
+    if (currentToken.size() >= 3) symbols.insert(currentToken);
+
+    // Pre-populate cache with extracted symbols as likely completions
+    std::lock_guard<std::mutex> lock(m_cacheMutex);
+    for (const auto& symbol : symbols) {
+        // Create prefix entries for each symbol (first 2-3 chars as key)
+        if (symbol.size() >= 2) {
+            std::string prefix2 = symbol.substr(0, 2);
+            std::string prefix3 = symbol.size() >= 3 ? symbol.substr(0, 3) : prefix2;
+            
+            // Cache the symbol under its prefixes for fast lookup
+            std::string cacheKey = filePath + ":" + prefix2;
+            m_completionCache[cacheKey].push_back(symbol);
+            if (prefix3 != prefix2) {
+                std::string cacheKey3 = filePath + ":" + prefix3;
+                m_completionCache[cacheKey3].push_back(symbol);
+            }
+        }
+    }
+
+    // Also generate common pattern completions based on language
+    if (ext == "cpp" || ext == "hpp" || ext == "h" || ext == "cc") {
+        std::vector<std::string> cppKeywords = {
+            "namespace", "template", "typename", "virtual", "override",
+            "constexpr", "noexcept", "nullptr", "static_cast", "dynamic_cast",
+            "std::vector", "std::string", "std::map", "std::shared_ptr", "std::unique_ptr",
+            "std::mutex", "std::lock_guard", "std::atomic"
+        };
+        for (const auto& kw : cppKeywords) {
+            if (kw.size() >= 2) {
+                std::string key = filePath + ":" + kw.substr(0, 2);
+                m_completionCache[key].push_back(kw);
+            }
+        }
+    } else if (ext == "py") {
+        std::vector<std::string> pyKeywords = {
+            "import", "from", "class", "def", "return", "yield",
+            "async", "await", "lambda", "self", "__init__", "__main__"
+        };
+        for (const auto& kw : pyKeywords) {
+            if (kw.size() >= 2) {
+                std::string key = filePath + ":" + kw.substr(0, 2);
+                m_completionCache[key].push_back(kw);
+            }
+        }
+    } else if (ext == "js" || ext == "ts" || ext == "tsx" || ext == "jsx") {
+        std::vector<std::string> jsKeywords = {
+            "const", "function", "return", "async", "await", "export",
+            "import", "interface", "Promise", "console.log", "useState", "useEffect"
+        };
+        for (const auto& kw : jsKeywords) {
+            if (kw.size() >= 2) {
+                std::string key = filePath + ":" + kw.substr(0, 2);
+                m_completionCache[key].push_back(kw);
+            }
+        }
+    }
+
+    m_logger->info("Cache prewarmed for {}: {} unique symbols extracted", filePath, symbols.size());
 }
 
 void RealTimeCompletionEngine::clearCache() {

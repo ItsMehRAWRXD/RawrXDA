@@ -87,15 +87,45 @@ src/
 │   ├── agentic_failure_detector.hpp/cpp  # Detects refusal/hallucination/timeout
 │   └── agentic_puppeteer.hpp/cpp         # Auto-correct failed responses
 │
-├── asm/                              # MASM64 assembly kernels
+├── asm/                              # MASM64 assembly kernels (ml64.exe)
+│   ├── RawrXD_Common.inc             # Shared constants, macros, Win32 API decls (372 lines)
+│   ├── inference_core.asm            # SGEMM/SGEMV AVX2 6×16 + AVX-512 6×32 micro-kernels
+│   ├── FlashAttention_AVX512.asm     # Flash Attention v2, tiled, online softmax (1103 lines)
+│   ├── quant_avx2.asm               # Q4_0/Q8_0 dequant + fused vec_dot (vpmaddubsw)
+│   ├── RawrXD_KQuant_Dequant.asm    # K-quant dequant: Q4_K, Q6_K, F16 (Q2/3/5_K stubs)
+│   ├── inference_kernels.asm         # Scalar reference matmul + rmsnorm
 │   ├── memory_patch.asm              # VirtualProtect-wrapped memory patching
 │   ├── byte_search.asm               # SIMD Boyer-Moore pattern search
 │   ├── request_patch.asm             # Server request/response interception
-│   ├── inference_core.asm            # AVX2/FMA matrix multiply kernels
-│   ├── flash_attn_avx512.asm         # AVX-512 flash attention
-│   ├── quant_avx2.asm               # Quantization dequant routines
-│   ├── simd_primitives.asm           # SSE/AVX utility primitives
-│   └── tokenizer_fast.asm            # Fast BPE merge kernel
+│   └── RawrCodex.asm                # Master disassembler (288KB, 9700+ lines)
+│
+├── reverse_engineering/              # Reverse Engineering Suite (70 files, 1.3MB)
+│   ├── CMakeLists.txt                # RE sub-module build system
+│   ├── RE_ARCHITECTURE.md            # Comprehensive RE documentation
+│   ├── RawrCodex.hpp                 # Binary analysis (2,960 lines, SSA/CFG)
+│   ├── RawrCompiler.hpp              # JIT compiler (675 lines)
+│   ├── RawrDumpBin.hpp               # Custom dumpbin (316 lines)
+│   ├── RawrReverseEngine.hpp         # Unified RE engine (1,011 lines)
+│   ├── omega_suite/                  # OMEGA-POLYGLOT PE Analyzer (v3→v7)
+│   │   ├── v3/                       #   MASM32 PE analyzer + 50-lang detection
+│   │   ├── v4/                       #   Multi-language polyglot
+│   │   ├── v5/                       #   Anti-RE protection ("Unreverseable")
+│   │   └── v7/                       #   AI-enhanced Codex Reverse Engine
+│   ├── deobfuscator/                 # Anti-obfuscation engine (AVX-512)
+│   │   ├── RawrXD_OmegaDeobfuscator.asm  # 1,297 lines
+│   │   └── RawrXD_MetaReverse.asm         # Authenticity detection
+│   ├── reverser_compiler/            # Self-hosting compiler in ASM (17 files)
+│   │   ├── reverser_lexer.asm        #   Tokenizer
+│   │   ├── reverser_parser.asm       #   Recursive descent parser
+│   │   ├── reverser_ast.asm          #   AST nodes
+│   │   ├── reverser_bytecode_gen.asm #   Bytecode generation
+│   │   ├── reverser_compiler.asm     #   Compiler driver
+│   │   ├── reverser_runtime.asm      #   Runtime library
+│   │   └── tests/                    #   6 test suites
+│   ├── pe_tools/                     # C++ PE analysis utilities
+│   ├── model_reverse/                # LLM model reverse pipeline
+│   ├── security_toolkit/             # Offensive security research
+│   └── re_modules/                   # GPU DMA reverse engineering
 │
 ├── config/
 │   └── IDEConfig.cpp                 # IDE configuration management
@@ -340,6 +370,7 @@ by ID range, each range calling its category handler.
 | 17 | v14.1 | Type recovery, data flow, license gates |
 | 14.1-stable | v14.1.0 | ASM fixes, hotpatch core file creation |
 | **14.2** | **v14.2.0** | **Hotpatch UI integration, docs consolidation** |
+| **18** | **v15.0.0** | **Distributed inference scheduler, Swarm Coalescence Protocol (SCP)** |
 
 ---
 
@@ -364,7 +395,104 @@ by ID range, each range calling its category handler.
 
 ---
 
-## 11. Archived Documentation
+## 11. Windows x64 ABI — Register Constraints for ASM Kernels
+
+All MASM64 kernels in `src/asm/` **must** comply with the Windows x64 calling convention:
+
+### Volatile Registers (free to clobber)
+
+| Register Class | Registers |
+|----------------|----------|
+| General-purpose | RAX, RCX, RDX, R8, R9, R10, R11 |
+| SSE/AVX (128-bit) | XMM0 – XMM5 |
+| AVX-512 (extended) | ZMM16 – ZMM31, K1 – K7 |
+
+### Non-Volatile Registers (MUST save/restore)
+
+| Register Class | Registers |
+|----------------|----------|
+| General-purpose | RBX, RBP, RSI, RDI, R12, R13, R14, R15 |
+| SSE/AVX (128-bit) | **XMM6 – XMM15** (upper YMM/ZMM bits auto-zeroed on restore) |
+
+### Stack Requirements
+
+- RSP must be **16-byte aligned** before any `CALL` instruction
+- **32-byte shadow space** reserved above the return address for callee use
+- `VZEROUPPER` required before returning to C++ code (avoids AVX↔SSE transition penalty)
+
+### Macro Usage (from RawrXD_Common.inc)
+
+```asm
+SAVE_NONVOL          ; pushes RBX, RBP, RSI, RDI, R12-R15
+RESTORE_NONVOL       ; pops them in reverse
+SHADOW_ALLOC 176     ; allocates shadow + XMM save area
+; XMM6-XMM15 saved via movaps to [rsp+offset]
+```
+
+### ASM Kernel Inventory
+
+| Kernel File | Key Exports | ISA Tier |
+|------------|-------------|----------|
+| `inference_core.asm` | `InferenceCore_Init`, `InferenceCore_SGEMM`, `InferenceCore_SGEMV` | AVX2/FMA3 + AVX-512 |
+| `FlashAttention_AVX512.asm` | `FlashAttention_Forward`, `FlashAttention_Init` | AVX-512F/BW |
+| `quant_avx2.asm` | `Quant_DequantQ4_0`, `Quant_DequantQ8_0`, `Quant_VecDotQ4_0_Q8_0`, `Quant_VecDotQ8_0_F32` | AVX2 |
+| `RawrXD_KQuant_Dequant.asm` | `KQuant_DequantizeQ4_K`, `KQuant_DequantizeQ6_K`, `KQuant_DequantizeF16`, `KQuant_Dispatch` | AVX2 |
+| `inference_kernels.asm` | `matmul_f16_avx512_masm`, `rmsnorm_avx512_masm` | Scalar (reference) |
+| `memory_patch.asm` | `asm_safe_memcpy`, `asm_verify_patch` | GPR only |
+| `byte_search.asm` | `asm_simd_search`, `asm_pattern_match` | SSE4.2 |
+| `request_patch.asm` | `asm_intercept_request`, `asm_transform_response` | GPR only |
+
+---
+
+## 12. Reverse Engineering Suite
+
+A comprehensive collection of 70 files (~1.3MB) organized under `src/reverse_engineering/`.
+Full documentation: `src/reverse_engineering/RE_ARCHITECTURE.md`.
+
+### Module Inventory
+
+| Module | Files | Size | Toolchain | Description |
+|--------|------:|-----:|-----------|-------------|
+| **Omega Suite** (v3–v7) | 19 | 425KB | MASM32 | PE analyzer, 50-lang detection, packer signatures |
+| **Codex Disassembler** | 1 | 288KB | MASM64 | x86/x64 decoder, PE/ELF/Mach-O, SSA, CFG |
+| **C++ Headers** | 4 | 200KB | C++20 | `RawrCodex`, `RawrCompiler`, `RawrDumpBin`, `RawrReverseEngine` |
+| **Deobfuscator** | 5 | 62KB | MASM64 | AVX-512 anti-obfuscation, meta-reverse, authenticity |
+| **Reverser Compiler** | 17 | 185KB | NASM | Self-hosting compiler: lexer→parser→AST→bytecode→runtime |
+| **src_variants** | 14 | 230KB | MASM32/64 | Development iterations of omega/codex |
+| **PE Tools** | 2 | 4KB | C++20 | `dump_pe()`, `run_compiler()` |
+| **Security Toolkit** | 1 | 24KB | MASM64 | Polymorphic builder, encryption, injection (research) |
+| **GPU DMA RE** | 1 | 33KB | MASM64 | GPU DMA reverse engineering |
+| **Model Reverse** | 1 | 4KB | MASM64 | LLM dead-weight generator |
+
+### Build Targets
+
+```bash
+# C++ RE library (auto-linked into RawrEngine + Win32IDE)
+cmake --build build --config Release  # builds RawrXD-RE-Library automatically
+
+# Standalone omega PE analyzer (MASM32)
+cmake --build build --config Release --target re_omega_v3
+
+# Deobfuscator MASM64 objects
+cmake --build build --config Release --target re_deobfuscator
+
+# Reverser compiler (NASM)
+cmake --build build --config Release --target re_reverser_compiler
+```
+
+### Phase History
+
+| Phase | Addition |
+|-------|----------|
+| 14 | Initial RE integration (RawrCodex, Win32IDE_ReverseEngineering) |
+| 16 | SSA lifting + recursive descent decompilation |
+| 17 | Type recovery, data flow analysis |
+| **27** | **Full RE suite consolidation (70 files, organized sub-modules)** |
+
+---
+
+## 13. Archived Documentation
 
 344 legacy `.md` files from phases 1–17 have been moved to `docs/archive/`.
 This single `ARCHITECTURE.md` is the canonical reference.
+Phase 18 design: see `PHASE_18_ROADMAP.md` in the project root.

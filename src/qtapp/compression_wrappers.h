@@ -19,23 +19,26 @@ public:
     // Compress data using brutal gzip (optimized)
     bool compress(const QByteArray& input, QByteArray& output)
     {
-        // For now, return input unchanged (placeholder)
-        // Real implementation would use gzip compression
-        output = input;
-        return true;
+        if (input.isEmpty()) { output.clear(); return true; }
+        // Use Qt's built-in zlib compression (qCompress adds a 4-byte length header)
+        output = qCompress(input, 9); // level 9 = best compression
+        m_lastRatio = input.isEmpty() ? 1.0f : static_cast<float>(output.size()) / input.size();
+        return !output.isEmpty();
     }
     
     // Decompress gzip data
     bool decompress(const QByteArray& input, QByteArray& output)
     {
-        // For now, return input unchanged (placeholder)
-        // Real implementation would use gzip decompression
-        output = input;
-        return true;
+        if (input.isEmpty()) { output.clear(); return true; }
+        output = qUncompress(input);
+        return !output.isEmpty();
     }
     
     // Get compression ratio
-    float getCompressionRatio() const { return 1.0f; }
+    float getCompressionRatio() const { return m_lastRatio; }
+
+private:
+    float m_lastRatio = 1.0f;
 };
 
 /**
@@ -51,23 +54,24 @@ public:
     // Compress data using deflate (optimized)
     bool compress(const QByteArray& input, QByteArray& output)
     {
-        // For now, return input unchanged (placeholder)
-        // Real implementation would use deflate compression
-        output = input;
-        return true;
+        if (input.isEmpty()) { output.clear(); return true; }
+        output = qCompress(input, m_level);
+        m_lastRatio = input.isEmpty() ? 1.0f : static_cast<float>(output.size()) / input.size();
+        return !output.isEmpty();
     }
     
     // Decompress deflate data
     bool decompress(const QByteArray& input, QByteArray& output)
     {
-        // For now, return input unchanged (placeholder)
-        // Real implementation would use deflate decompression
-        output = input;
-        return true;
+        if (input.isEmpty()) { output.clear(); return true; }
+        output = qUncompress(input);
+        return !output.isEmpty();
     }
     
     // Get compression ratio
-    float getCompressionRatio() const { return 1.0f; }
+    float getCompressionRatio() const { return m_lastRatio; }
+
+    float m_lastRatio = 1.0f;
     
     // Initialize with algorithm level
     bool initialize(int level)

@@ -116,14 +116,51 @@ void SettingsDialog::applyVisualSettings()
     }
     
     if (mainWindow) {
-        // Apply transparency
+        // Apply transparency via window opacity API
         mainWindow->setWindowOpacity(transparency / 100.0);
         
-        // Apply brightness/contrast/hue would require custom styling
-        // This is a placeholder for the actual implementation
+        // Apply brightness, contrast, and hue rotation via CSS filter-equivalent styling
+        // Qt doesn't support CSS filters directly, so we compute adjusted color values
+        // Brightness: scale the base colors (100 = normal, <100 = darker, >100 = brighter)
+        // Contrast: adjust the spread from midpoint gray (100 = normal)
+        // Hue rotation: rotate base hue wheel (0 = no rotation, 180 = complementary)
+        
+        float brightFactor = brightness / 100.0f;
+        float contrastFactor = contrast / 100.0f;
+        
+        // Compute adjusted base colors for the dark theme
+        auto adjustColor = [&](int base) -> int {
+            // Apply brightness
+            float val = base * brightFactor;
+            // Apply contrast: stretch from midpoint (128)
+            val = 128.0f + (val - 128.0f) * contrastFactor;
+            return qBound(0, (int)val, 255);
+        };
+        
+        // Base dark theme colors (VS Code dark)
+        int bg1 = adjustColor(30);   // Main background (#1e1e1e)
+        int bg2 = adjustColor(37);   // Sidebar (#252526)
+        int bg3 = adjustColor(45);   // Active tab (#2d2d30)
+        int fg1 = adjustColor(212);  // Primary text (#d4d4d4)
+        int fg2 = adjustColor(160);  // Dimmed text
+        
+        // Hue rotation: shift accent color on HSV wheel
+        QColor accent(0, 122, 204); // Default blue accent
+        int h, s, v;
+        accent.getHsv(&h, &s, &v);
+        h = (h + hueRotation) % 360;
+        v = qBound(0, (int)(v * brightFactor), 255);
+        accent.setHsv(h, s, v);
+        
         QString styleSheet = QString(
-            "QMainWindow { background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(255,255,255,%1), stop:1 rgba(240,240,240,%1)); }"
-        ).arg(transparency);
+            "QMainWindow { background-color: rgb(%1,%1,%1); color: rgb(%2,%2,%2); }"
+            "QDockWidget { background-color: rgb(%3,%3,%3); color: rgb(%2,%2,%2); }"
+            "QMenuBar { background-color: rgb(%4,%4,%4); color: rgb(%2,%2,%2); }"
+            "QStatusBar { background-color: rgb(%5,%5,%5); color: rgb(%6,%6,%6); }"
+            "QPushButton { background-color: %7; color: white; border: none; padding: 4px 12px; }"
+            "QTabWidget::pane { border-top: 2px solid %7; }"
+        ).arg(bg1).arg(fg1).arg(bg2).arg(bg3).arg(bg1).arg(fg2)
+         .arg(accent.name());
         
         mainWindow->setStyleSheet(styleSheet);
     }

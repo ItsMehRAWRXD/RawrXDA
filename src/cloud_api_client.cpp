@@ -406,8 +406,90 @@ ApiResponse CloudApiClient::executeRequest(const QString& endpoint,
     ApiResponse response;
     response.success = false;
     response.status_code = 0;
-    response.error_message = "Not implemented in blocking mode";
+
+    QNetworkRequest request(QUrl(endpoint));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     
+    if (!api_key.isEmpty()) {
+        request.setRawHeader("Authorization", ("Bearer " + api_key).toUtf8());
+    }
+    
+    // Apply custom headers
+    for (auto it = headers.constBegin(); it != headers.constEnd(); ++it) {
+        request.setRawHeader(it.key().toUtf8(), it.value().toUtf8());
+    }
+    
+    // Set timeouts
+    request.setTransferTimeout(30000); // 30 second timeout
+    
+    QJsonDocument doc(body);
+    QByteArray jsonData = doc.toJson(QJsonDocument::Compact);
+    
+    // Execute synchronous request using QEventLoop
+    QNetworkReply* reply = nullptr;
+    if (method.toUpper() == "POST") {
+        reply = network_manager->post(request, jsonData);
+    } else if (method.toUpper() == "GET") {
+        reply = network_manager->get(request);
+    } else if (method.toUpper() == "PUT") {
+        reply = network_manager->put(request, jsonData);
+    } else if (method.toUpper() == "DELETE") {
+        reply = network_manager->deleteResource(request);
+    } else {
+        response.error_message = "Unsupported HTTP method: " + method;
+        return response;
+    }
+    
+    // Block until response arrives
+    QEventLoop loop;
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    
+    // Timeout guard
+    QTimer timeoutTimer;
+    timeoutTimer.setSingleShot(true);
+    QObject::connect(&timeoutTimer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timeoutTimer.start(30000);
+    
+    loop.exec();
+    
+    if (!reply->isFinished()) {
+        reply->abort();
+        response.error_message = "Request timed out after 30 seconds";
+        response.status_code = 408;
+        reply->deleteLater();
+        return response;
+    }
+    
+    response.status_code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    QByteArray responseData = reply->readAll();
+    
+    if (reply->error() == QNetworkReply::NoError) {
+        response.success = true;
+        
+        // Parse JSON response
+        QJsonParseError parseError;
+        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData, &parseError);
+        if (parseError.error == QJsonParseError::NoError) {
+            response.body = responseDoc.object();
+        } else {
+            response.raw_body = QString::fromUtf8(responseData);
+        }
+    } else {
+        response.success = false;
+        response.error_message = formatErrorResponse(response.status_code, QString::fromUtf8(responseData));
+    }
+    
+    // Log the API call
+    ApiCallLog log;
+    log.timestamp = QDateTime::currentDateTime();
+    log.endpoint = endpoint;
+    log.method = method;
+    log.status_code = response.status_code;
+    log.success = response.success;
+    log.latency_ms = reply->property("downloadTime").toInt();
+    logApiCall(log);
+    
+    reply->deleteLater();
     return response;
 }
 

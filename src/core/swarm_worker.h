@@ -115,6 +115,7 @@ private:
     WSADATA                  m_wsaData;
     bool                     m_wsaInitialized;
     std::atomic<uint32_t>    m_sequenceCounter;
+    std::atomic<uint32_t>    m_lastCompileTimeMs;   // Last compile task wall-time in ms
 
     // Threads
     HANDLE                   m_hReceiverThread;

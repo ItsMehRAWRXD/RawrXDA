@@ -291,8 +291,7 @@ void ExtensionMarketplaceManager::parseExtensionDetails(QNetworkReply* reply) {
 }
 
 QString ExtensionMarketplaceManager::getExtensionDownloadUrl(const QString& extensionId, const QString& version) {
-    // In a real implementation, this would fetch the actual download URL
-    // For now, we'll return a placeholder
+    // Construct VS Marketplace VSIX download URL from publisher.extension format
     return QString("https://marketplace.visualstudio.com/_apis/public/gallery/publishers/%1/extensions/%2/%3/vspackage")
             .arg(extensionId.section('.', 0, 0))
             .arg(extensionId.section('.', 1))

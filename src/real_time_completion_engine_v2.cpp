@@ -1,9 +1,14 @@
 #include "real_time_completion_engine.h"
 #include <algorithm>
 #include <chrono>
+#include <fstream>
+#include <sstream>
+#include <regex>
+#include <map>
+#include <windows.h>
+#include <winhttp.h>
 
-// Forward declaration - would be replaced with actual InferenceEngine integration
-// extern InferenceEngine* g_inferenceEngine;
+#pragma comment(lib, "winhttp.lib")
 
 RealTimeCompletionEngine::RealTimeCompletionEngine(
     std::shared_ptr<Logger> logger,
@@ -115,8 +120,56 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::getContextualCompletions(
 void RealTimeCompletionEngine::prewarmCache(const std::string& filePath) {
     m_logger->info("Pre-warming cache for: {}", filePath);
 
-    // Pre-populate cache with likely completions for this file
-    // Placeholder implementation
+    // Read file and extract common patterns for prewarming
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        m_logger->warn("Cannot open file for cache prewarming: {}", filePath);
+        return;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    file.close();
+
+    // Extract identifiers that appear frequently (likely to be completed)
+    std::map<std::string, int> identifiers;
+    std::regex idPattern(R"(\b([a-zA-Z_]\w{2,})\b)");
+    auto begin = std::sregex_iterator(content.begin(), content.end(), idPattern);
+    auto end = std::sregex_iterator();
+    for (auto it = begin; it != end; ++it) {
+        identifiers[(*it)[1].str()]++;
+    }
+
+    // Pre-populate cache with completions for common prefixes
+    std::vector<std::pair<std::string, int>> sorted(identifiers.begin(), identifiers.end());
+    std::sort(sorted.begin(), sorted.end(),
+             [](const auto& a, const auto& b) { return a.second > b.second; });
+
+    int prewarmed = 0;
+    for (const auto& [id, count] : sorted) {
+        if (count < 3 || id.length() < 3) continue;
+        if (prewarmed >= 50) break; // Limit prewarming
+
+        // Create cache entries for partial prefixes
+        for (size_t len = 2; len <= std::min(id.length(), (size_t)5); ++len) {
+            std::string prefix = id.substr(0, len);
+            std::string cacheKey = generateCacheKey(prefix, "");
+            
+            std::lock_guard<std::mutex> lock(m_cacheMutex);
+            if (m_completionCache.find(cacheKey) == m_completionCache.end()) {
+                CodeCompletion comp;
+                comp.text = id;
+                comp.detail = "Identifier from project";
+                comp.confidence = 0.7 + (count / 100.0);
+                comp.kind = "identifier";
+                comp.insertTextLength = static_cast<int>(id.length());
+                m_completionCache[cacheKey] = {comp};
+            }
+        }
+        prewarmed++;
+    }
+
+    m_logger->info("Pre-warmed {} identifiers into cache", prewarmed);
 }
 
 void RealTimeCompletionEngine::clearCache() {
@@ -167,143 +220,164 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::generateCompletionsWithMod
         m_logger->info("Generating completions with model (max_tokens={})", maxTokens);
         m_metrics->incrementCounter("model_calls");
 
-        // PHASE 1 IMPLEMENTATION: Real model calling
-        // Integration point with InferenceEngine
-        //
-        // Step 1: Access model from global context or AIIntegrationHub
-        // =========================================================
-        // TODO: Uncomment when InferenceEngine is available:
-        //
-        // InferenceEngine& engine = AIIntegrationHub::getInstance().getInferenceEngine();
-        // if (!engine.IsModelLoaded()) {
-        //     m_logger->error("Model not loaded");
-        //     return {};
-        // }
-        //
-        // Step 2: Tokenize the prompt
-        // ===========================
-        // std::vector<uint32_t> inputTokens = engine.TokenizeText(prompt);
-        //
-        // Trim to context window (typically 512-2048 tokens)
-        // const size_t CONTEXT_WINDOW = 512;
-        // if (inputTokens.size() > CONTEXT_WINDOW) {
-        //     inputTokens.erase(inputTokens.begin(), 
-        //                      inputTokens.end() - CONTEXT_WINDOW);
-        // }
-        //
-        // Step 3: Generate tokens one at a time
-        // =====================================
-        // std::string generatedCompletion;
-        // const int MIN_LENGTH = 5;  // Minimum characters before stopping
-        // const std::vector<std::string> STOP_SEQUENCES = {"\n\n", "EOF", "};", "}\n"};
-        //
-        // for (int i = 0; i < maxTokens; i++) {
-        //     // Get next token from model
-        //     // This would call the transformer to generate logits
-        //     uint32_t nextToken = engine.SampleNextToken(
-        //         inputTokens,
-        //         temperature=0.3f,  // Low temperature for focused suggestions
-        //         top_p=0.9f         // Nucleus sampling for diversity
-        //     );
-        //
-        //     // Check for end-of-sequence
-        //     if (nextToken == engine.GetVocabSize() - 1) {
-        //         m_logger->debug("Model reached EOS token");
-        //         break;
-        //     }
-        //
-        //     // Add to sequence and decode
-        //     inputTokens.push_back(nextToken);
-        //     std::string token = engine.DetokenizeIds({nextToken});
-        //     generatedCompletion += token;
-        //
-        //     // Check for stop sequences
-        //     for (const auto& stopSeq : STOP_SEQUENCES) {
-        //         if (generatedCompletion.find(stopSeq) != std::string::npos) {
-        //             m_logger->debug("Hit stop sequence: {}", stopSeq);
-        //             goto generation_done;
-        //         }
-        //     }
-        //
-        //     // Early exit if we have a good completion
-        //     if (generatedCompletion.length() >= MIN_LENGTH &&
-        //         (token == ";" || token == ")" || token == "}\n")) {
-        //         m_logger->debug("Early exit: got complete statement");
-        //         break;
-        //     }
-        //
-        //     // Safety: limit length to prevent runaway generation
-        //     if (generatedCompletion.length() > 256) {
-        //         m_logger->debug("Hit maximum length");
-        //         break;
-        //     }
-        // }
-        //
-        // generation_done:
-        // Step 4: Parse and score completions
-        // ===================================
-        // auto parsedCompletions = parseCompletionsFromText(generatedCompletion);
-        // for (auto& comp : parsedCompletions) {
-        //     comp.confidence = scoreCompletion(comp.text, prompt);
-        //     completions.push_back(comp);
-        // }
-        //
-        // Step 5: Rank by confidence
-        // =========================
-        // std::sort(completions.begin(), completions.end(),
-        //          [](const CodeCompletion& a, const CodeCompletion& b) {
-        //              return a.confidence > b.confidence;
-        //          });
-        //
-        // m_logger->info("Generated {} completions", completions.size());
-        // m_metrics->recordHistogram("completions_per_call", completions.size());
-
-        // TEMPORARY: Until InferenceEngine is wired, return realistic mock data
-        // This demonstrates the structure and flow of real completions
+        // Build Ollama /api/generate JSON request
+        const std::string modelName = "codellama";  // Default completion model
+        const int ollamaPort = 11434;               // Default Ollama port
         
-        m_logger->warn("Using mock completions - InferenceEngine not yet integrated");
+        std::string jsonBody = "{\"model\":\"" + modelName + "\","
+            "\"prompt\":" + [&]() -> std::string {
+                // JSON-escape the prompt
+                std::string escaped;
+                escaped += '"';
+                for (char c : prompt) {
+                    switch (c) {
+                        case '"':  escaped += "\\\""; break;
+                        case '\\': escaped += "\\\\"; break;
+                        case '\n': escaped += "\\n"; break;
+                        case '\r': escaped += "\\r"; break;
+                        case '\t': escaped += "\\t"; break;
+                        default:   escaped += c;
+                    }
+                }
+                escaped += '"';
+                return escaped;
+            }() + ","
+            "\"stream\":false,"
+            "\"options\":{\"temperature\":0.2,\"num_predict\":" + std::to_string(maxTokens) + ","
+            "\"top_p\":0.9,\"stop\":[\"\\n\\n\",\"```\"]}}";
 
-        // These would be REAL completions from the model
-        CodeCompletion completion1;
-        completion1.text = "push_back(item);";
-        completion1.detail = "Add element to vector";
-        completion1.confidence = 0.94;
-        completion1.kind = "method";
-        completion1.insertTextLength = 16;
-        completion1.cursorOffset = 10;
-        completions.push_back(completion1);
+        // WinHTTP request to Ollama on localhost:11434
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-CompletionEngine/1.0",
+            WINHTTP_ACCESS_TYPE_NO_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+        
+        if (!hSession) {
+            m_logger->error("WinHttpOpen failed: {}", GetLastError());
+            m_metrics->incrementCounter("model_call_errors");
+            return {};
+        }
 
-        CodeCompletion completion2;
-        completion2.text = "size()";
-        completion2.detail = "Get vector size";
-        completion2.confidence = 0.91;
-        completion2.kind = "method";
-        completion2.insertTextLength = 6;
-        completion2.cursorOffset = 5;
-        completions.push_back(completion2);
+        HINTERNET hConnect = WinHttpConnect(hSession, L"localhost",
+            static_cast<INTERNET_PORT>(ollamaPort), 0);
+        
+        if (!hConnect) {
+            m_logger->error("WinHttpConnect failed: {}", GetLastError());
+            WinHttpCloseHandle(hSession);
+            m_metrics->incrementCounter("model_call_errors");
+            return {};
+        }
 
-        CodeCompletion completion3;
-        completion3.text = "empty()";
-        completion3.detail = "Check if vector is empty";
-        completion3.confidence = 0.88;
-        completion3.kind = "method";
-        completion3.insertTextLength = 7;
-        completion3.cursorOffset = 6;
-        completions.push_back(completion3);
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+            L"/api/generate", NULL, WINHTTP_NO_REFERER,
+            WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+        
+        if (!hRequest) {
+            m_logger->error("WinHttpOpenRequest failed: {}", GetLastError());
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            m_metrics->incrementCounter("model_call_errors");
+            return {};
+        }
 
-        CodeCompletion completion4;
-        completion4.text = "clear();";
-        completion4.detail = "Remove all elements from vector";
-        completion4.confidence = 0.85;
-        completion4.kind = "method";
-        completion4.insertTextLength = 8;
-        completion4.cursorOffset = 5;
-        completions.push_back(completion4);
+        // Set timeout (completion should be fast - 30 seconds max)
+        DWORD timeout = 30000;
+        WinHttpSetOption(hRequest, WINHTTP_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+        WinHttpSetOption(hRequest, WINHTTP_OPTION_SEND_TIMEOUT, &timeout, sizeof(timeout));
 
-        m_logger->info("Generated {} completions", completions.size());
+        // Send request
+        const wchar_t* contentType = L"Content-Type: application/json";
+        BOOL bResults = WinHttpSendRequest(hRequest,
+            contentType, -1L,
+            (LPVOID)jsonBody.c_str(), (DWORD)jsonBody.size(),
+            (DWORD)jsonBody.size(), 0);
+
+        if (!bResults) {
+            m_logger->error("WinHttpSendRequest failed: {}", GetLastError());
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            m_metrics->incrementCounter("model_call_errors");
+            return {};
+        }
+
+        bResults = WinHttpReceiveResponse(hRequest, NULL);
+        if (!bResults) {
+            m_logger->error("WinHttpReceiveResponse failed: {}", GetLastError());
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            m_metrics->incrementCounter("model_call_errors");
+            return {};
+        }
+
+        // Read response body
+        std::string responseBody;
+        DWORD dwSize = 0;
+        DWORD dwDownloaded = 0;
+        
+        do {
+            dwSize = 0;
+            WinHttpQueryDataAvailable(hRequest, &dwSize);
+            if (dwSize == 0) break;
+            
+            std::vector<char> buffer(dwSize + 1, 0);
+            WinHttpReadData(hRequest, buffer.data(), dwSize, &dwDownloaded);
+            responseBody.append(buffer.data(), dwDownloaded);
+        } while (dwSize > 0);
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        // Parse JSON response to extract "response" field
+        std::string generatedText;
+        size_t respPos = responseBody.find("\"response\":\"");
+        if (respPos != std::string::npos) {
+            size_t start = respPos + 12; // length of "response":"
+            size_t end = start;
+            while (end < responseBody.size()) {
+                if (responseBody[end] == '"' && responseBody[end - 1] != '\\') break;
+                end++;
+            }
+            generatedText = responseBody.substr(start, end - start);
+            
+            // Unescape JSON string
+            std::string unescaped;
+            for (size_t i = 0; i < generatedText.size(); ++i) {
+                if (generatedText[i] == '\\' && i + 1 < generatedText.size()) {
+                    switch (generatedText[i + 1]) {
+                        case 'n': unescaped += '\n'; ++i; break;
+                        case 't': unescaped += '\t'; ++i; break;
+                        case 'r': unescaped += '\r'; ++i; break;
+                        case '"': unescaped += '"'; ++i; break;
+                        case '\\': unescaped += '\\'; ++i; break;
+                        default: unescaped += generatedText[i];
+                    }
+                } else {
+                    unescaped += generatedText[i];
+                }
+            }
+            generatedText = unescaped;
+        }
+
+        if (generatedText.empty()) {
+            m_logger->warn("Empty response from model, response body: {}",
+                responseBody.substr(0, 200));
+            m_metrics->incrementCounter("model_empty_responses");
+            return {};
+        }
+
+        m_logger->info("Model generated {} chars of completion text", generatedText.size());
+
+        // Post-process into structured completions
+        completions = postProcessCompletions(generatedText, prompt);
+
+        m_logger->info("Generated {} completions from model output", completions.size());
         m_metrics->recordHistogram("completions_per_call", completions.size());
-        m_metrics->recordHistogram("completion_confidence", 
-                                  completions[0].confidence * 100);
+        
+        if (!completions.empty()) {
+            m_metrics->recordHistogram("completion_confidence", 
+                                      completions[0].confidence * 100);
+        }
 
         return completions;
 
@@ -344,16 +418,71 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::postProcessCompletions(
 
     std::vector<CodeCompletion> processed;
 
-    // Filter and rank completions based on:
-    // - Syntax validity
-    // - Relevance to context
-    // - Popularity patterns
-    // - Confidence score
+    if (modelOutput.empty()) return processed;
 
-    // Keep only completions above minimum confidence threshold
-    for (const auto& completion : processed) {
-        if (completion.confidence >= (m_minConfidence / 100.0)) {
-            processed.push_back(completion);
+    // Parse model output into individual completion candidates
+    // Split by newlines, semicolons, or code blocks
+    std::vector<std::string> candidates;
+    std::istringstream iss(modelOutput);
+    std::string line;
+    std::string currentCandidate;
+    
+    while (std::getline(iss, line)) {
+        // Skip empty lines and comments
+        size_t first = line.find_first_not_of(" \t");
+        if (first == std::string::npos) {
+            if (!currentCandidate.empty()) {
+                candidates.push_back(currentCandidate);
+                currentCandidate.clear();
+            }
+            continue;
+        }
+        
+        std::string trimmed = line.substr(first);
+        if (trimmed.substr(0, 2) == "//" || trimmed.substr(0, 2) == "/*") continue;
+        if (trimmed.substr(0, 3) == "```") continue;
+        
+        if (!currentCandidate.empty()) currentCandidate += "\n";
+        currentCandidate += line;
+        
+        // Complete statement ends with ; or { or }
+        if (trimmed.back() == ';' || trimmed.back() == '{' || trimmed.back() == '}') {
+            candidates.push_back(currentCandidate);
+            currentCandidate.clear();
+        }
+    }
+    if (!currentCandidate.empty()) {
+        candidates.push_back(currentCandidate);
+    }
+
+    // Score and create CodeCompletion objects
+    for (const auto& candidate : candidates) {
+        if (candidate.empty()) continue;
+        
+        CodeCompletion comp;
+        comp.text = candidate;
+        comp.confidence = calculateConfidence(candidate, prefix);
+        comp.insertTextLength = static_cast<int>(candidate.size());
+        
+        // Determine completion kind
+        if (candidate.find('(') != std::string::npos) {
+            comp.kind = "function";
+            comp.detail = "Function call";
+        } else if (candidate.find('=') != std::string::npos) {
+            comp.kind = "variable";
+            comp.detail = "Assignment";
+        } else if (candidate.find("class ") != std::string::npos || 
+                   candidate.find("struct ") != std::string::npos) {
+            comp.kind = "class";
+            comp.detail = "Type definition";
+        } else {
+            comp.kind = "snippet";
+            comp.detail = "Code snippet";
+        }
+        
+        // Filter by minimum confidence
+        if (comp.confidence >= (m_minConfidence / 100.0)) {
+            processed.push_back(comp);
         }
     }
 
@@ -362,6 +491,11 @@ std::vector<CodeCompletion> RealTimeCompletionEngine::postProcessCompletions(
              [](const CodeCompletion& a, const CodeCompletion& b) {
                  return a.confidence > b.confidence;
              });
+
+    // Limit to top 10
+    if (processed.size() > 10) {
+        processed.resize(10);
+    }
 
     return processed;
 }

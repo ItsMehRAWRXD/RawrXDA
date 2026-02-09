@@ -427,9 +427,73 @@ void IDEWindow::CreateTabControl()
 
 void IDEWindow::CreateWebBrowser()
 {
-    // Web browser functionality disabled for now (requires ATL)
-    // TODO: Implement using WebView2 or other non-ATL method
+    // Initialize WebView2-based browser panel (no ATL dependency)
+    // WebView2 is available on Windows 10 1803+ with Evergreen runtime
+    
     hWebBrowser_ = nullptr;
+    
+#ifdef WEBVIEW2_AVAILABLE
+    // Check for WebView2 runtime availability
+    LPWSTR versionInfo = nullptr;
+    HRESULT hr = GetAvailableCoreWebView2BrowserVersionString(nullptr, &versionInfo);
+    
+    if (hr != S_OK || versionInfo == nullptr) {
+        OutputDebugStringW(L"[IDEWindow] WebView2 runtime not installed - browser panel disabled\n");
+        OutputDebugStringW(L"[IDEWindow] Install from: https://developer.microsoft.com/en-us/microsoft-edge/webview2/\n");
+        return;
+    }
+    
+    OutputDebugStringW((std::wstring(L"[IDEWindow] WebView2 runtime detected: ") + versionInfo + L"\n").c_str());
+    CoTaskMemFree(versionInfo);
+    
+    // Create a host window for the WebView2 control
+    RECT rcClient;
+    GetClientRect(hMainWindow_, &rcClient);
+    
+    hWebBrowser_ = CreateWindowExW(0, L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+        rcClient.right - 400, rcClient.bottom - 300, 400, 300,
+        hMainWindow_, nullptr, GetModuleHandle(nullptr), nullptr);
+    
+    if (!hWebBrowser_) {
+        OutputDebugStringW(L"[IDEWindow] Failed to create WebView2 host window\n");
+        return;
+    }
+    
+    // Initialize WebView2 environment asynchronously
+    CreateCoreWebView2EnvironmentWithOptions(nullptr, nullptr, nullptr,
+        Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
+            [this](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
+                if (FAILED(result) || !env) {
+                    OutputDebugStringW(L"[IDEWindow] WebView2 environment creation failed\n");
+                    return S_OK;
+                }
+                env->CreateCoreWebView2Controller(hWebBrowser_,
+                    Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+                        [this](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
+                            if (FAILED(result) || !controller) return S_OK;
+                            // Navigate to built-in documentation or localhost dev server
+                            ICoreWebView2* webview = nullptr;
+                            controller->get_CoreWebView2(&webview);
+                            if (webview) {
+                                webview->Navigate(L"about:blank");
+                            }
+                            OutputDebugStringW(L"[IDEWindow] WebView2 browser panel initialized\n");
+                            return S_OK;
+                        }).Get());
+                return S_OK;
+            }).Get());
+#else
+    // WebView2 SDK not linked - create a static placeholder panel
+    RECT rcClient;
+    GetClientRect(hMainWindow_, &rcClient);
+    hWebBrowser_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"STATIC",
+        L"Browser panel requires WebView2 SDK. Build with -DWEBVIEW2_AVAILABLE to enable.",
+        WS_CHILD | SS_CENTER | SS_CENTERIMAGE,
+        rcClient.right - 400, rcClient.bottom - 300, 400, 300,
+        hMainWindow_, nullptr, GetModuleHandle(nullptr), nullptr);
+    OutputDebugStringW(L"[IDEWindow] WebView2 SDK not available at compile time - browser panel shows info text\n");
+#endif
 }
 
 void IDEWindow::PopulateFileTree(const std::wstring& rootPath)

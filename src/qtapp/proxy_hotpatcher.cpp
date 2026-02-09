@@ -371,7 +371,18 @@ AgentValidation ProxyHotpatcher::validateAgentOutput(const QByteArray& output)
         // Custom validator function pointer support removed to avoid template issues
         // Can be re-enabled with proper function pointer casting if needed
         if (rule.customValidator) {
-            // TODO: Support custom validator callbacks if needed
+            // Cast and invoke the custom validator function pointer
+            // Signature: bool (*validator)(const QByteArray& output, QStringList& violations)
+            typedef bool (*ValidatorFn)(const QByteArray&, QStringList&);
+            auto validatorFn = reinterpret_cast<ValidatorFn>(rule.customValidator);
+            QStringList customViolations;
+            bool valid = validatorFn(output, customViolations);
+            if (!valid) {
+                result.isValid = false;
+                result.violations.append(customViolations);
+                result.errorMessage = "Custom validator rejected output";
+                return result;
+            }
             continue;
         }
         
@@ -680,9 +691,43 @@ QByteArray ProxyHotpatcher::directMemoryExtract(size_t offset, size_t size) cons
 {
     QMutexLocker locker(&m_mutex);
     qInfo() << "[ProxyHotpatcher] Extracting" << size << "bytes from offset" << offset;
-    
-    // Placeholder - actual implementation would extract from buffers
-    return QByteArray();
+
+    // Extract from the combined request+response buffer
+    // First check request buffer, then response buffer for the requested range
+    const QByteArray& reqBuf = m_requestBuffer;
+    const QByteArray& resBuf = m_responseBuffer;
+    size_t reqSize = static_cast<size_t>(reqBuf.size());
+    size_t resSize = static_cast<size_t>(resBuf.size());
+    size_t totalSize = reqSize + resSize;
+
+    if (offset >= totalSize || size == 0) {
+        qWarning() << "[ProxyHotpatcher] Extract out of bounds: offset=" << offset
+                   << " size=" << size << " total=" << totalSize;
+        return QByteArray();
+    }
+
+    // Clamp to available data
+    size_t available = totalSize - offset;
+    size_t extractSize = std::min(size, available);
+    QByteArray result;
+    result.reserve(static_cast<int>(extractSize));
+
+    // Copy from request buffer portion
+    if (offset < reqSize) {
+        size_t fromReq = std::min(extractSize, reqSize - offset);
+        result.append(reqBuf.constData() + offset, static_cast<int>(fromReq));
+        offset += fromReq;
+        extractSize -= fromReq;
+    }
+
+    // Copy from response buffer portion (if still need more)
+    if (extractSize > 0 && offset >= reqSize) {
+        size_t resOffset = offset - reqSize;
+        size_t fromRes = std::min(extractSize, resSize - resOffset);
+        result.append(resBuf.constData() + resOffset, static_cast<int>(fromRes));
+    }
+
+    return result;
 }
 
 PatchResult ProxyHotpatcher::replaceInRequestBuffer(const QByteArray& pattern, const QByteArray& replacement)

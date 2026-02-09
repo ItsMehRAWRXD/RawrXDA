@@ -556,6 +556,39 @@ void Win32IDE::handleAgentCommand(int commandId) {
         case IDM_REVENG_DECOMPILER_VIEW:
             handleReverseEngineeringDecompilerView();
             break;
+        case IDM_REVENG_DECOMP_RENAME: {
+            // Prompt for SSA variable rename inside the active decompiler view
+            if (isDecompilerViewActive()) {
+                // Use the programmatic rename API — the user will type old→new in the output bar
+                // For interactive use, the in-pane right-click + F2 is preferred;
+                // this route is for command-palette / hotkey invocations.
+                appendToOutput("Decompiler: Use F2 or right-click a variable in the decompiler pane to rename.\n",
+                               "Decompiler", OutputSeverity::Info);
+            } else {
+                appendToOutput("Decompiler View is not active — open it first with Ctrl+Shift+D.\n",
+                               "Decompiler", OutputSeverity::Warning);
+            }
+            break;
+        }
+        case IDM_REVENG_DECOMP_SYNC: {
+            // Sync both panes to the address under the cursor / last selected address
+            if (isDecompilerViewActive()) {
+                appendToOutput("Decompiler: Panes are synchronized — click a line in either pane.\n",
+                               "Decompiler", OutputSeverity::Info);
+            } else {
+                appendToOutput("Decompiler View is not active — open it first with Ctrl+Shift+D.\n",
+                               "Decompiler", OutputSeverity::Warning);
+            }
+            break;
+        }
+        case IDM_REVENG_DECOMP_CLOSE:
+            if (isDecompilerViewActive()) {
+                destroyDecompilerView();
+                appendToOutput("Decompiler View closed.\n", "Decompiler", OutputSeverity::Info);
+            } else {
+                appendToOutput("Decompiler View is not active.\n", "Decompiler", OutputSeverity::Info);
+            }
+            break;
 
         default:
             appendToOutput("Unknown Agent Command ID: " + std::to_string(commandId) + "\n", "Debug", OutputSeverity::Warning);

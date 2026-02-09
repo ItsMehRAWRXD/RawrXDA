@@ -63,9 +63,8 @@ uint64_t g_EnterpriseFeatures = 0;
 // --- FlashAttention_AVX512.asm stubs ---
 // When the AVX-512 ASM kernel is not linked, these stubs provide safe
 // fallback implementations that report AVX-512 as unavailable.
-// NOTE: extern "C" means parameter types don't affect symbol mangling,
-// so void* is fine here even though the header declares typed pointers.
-
+// With MSVC, the real ASM objects are linked so stubs are excluded.
+#ifndef _MSC_VER
 int32_t FlashAttention_CheckAVX512()                                 { return 0; }  // Not available
 int32_t FlashAttention_Init()                                        { return 0; }  // Not available
 int32_t FlashAttention_Forward(void* /*cfg*/)                        { return -1; } // Error
@@ -78,5 +77,6 @@ int32_t FlashAttention_GetTileConfig(void* out) {
 }
 uint64_t g_FlashAttnCalls = 0;
 uint64_t g_FlashAttnTiles = 0;
+#endif // !_MSC_VER
 
 } // extern "C"

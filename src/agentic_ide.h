@@ -1,5 +1,6 @@
 #pragma once
 #include <QMainWindow>
+#include <QString>
 
 class QShowEvent;
 class MultiTabEditor;
@@ -44,4 +45,7 @@ private:
     // Multi-file orchestration
     RawrXD::PlanOrchestrator *m_planOrchestrator = nullptr;
     RawrXD::LSPClient *m_lspClient = nullptr;
+    
+    // Workspace root path (set from project settings or command line)
+    QString m_workspaceRoot;
 };

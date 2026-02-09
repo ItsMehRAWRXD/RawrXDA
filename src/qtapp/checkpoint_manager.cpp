@@ -310,8 +310,30 @@ std::map<QString, bool> CheckpointManager::validateAllCheckpoints() const
 bool CheckpointManager::repairCheckpoint(const QString& checkpointId)
 {
     qDebug() << "[CheckpointManager] Repairing checkpoint:" << checkpointId;
-    // Placeholder for repair logic
-    return validateCheckpoint(checkpointId);
+
+    // Step 1: Validate — if already valid, nothing to repair
+    if (validateCheckpoint(checkpointId)) {
+        qDebug() << "[CheckpointManager] Checkpoint" << checkpointId << "is already valid";
+        return true;
+    }
+
+    // Step 2: Try to load the raw file and re-serialize it properly
+    CheckpointState state;
+    if (!readCheckpointFromDisk(checkpointId, state)) {
+        qWarning() << "[CheckpointManager] Cannot read checkpoint" << checkpointId << "for repair";
+        return false;
+    }
+
+    // Step 3: Re-write using proper serialization
+    if (!writeCheckpointToDisk(checkpointId, state, CompressionLevel::Medium)) {
+        qWarning() << "[CheckpointManager] Failed to re-write repaired checkpoint" << checkpointId;
+        return false;
+    }
+
+    // Step 4: Verify the repaired checkpoint
+    bool valid = validateCheckpoint(checkpointId);
+    qDebug() << "[CheckpointManager] Repair" << (valid ? "succeeded" : "failed") << "for" << checkpointId;
+    return valid;
 }
 
 uint64_t CheckpointManager::getTotalCheckpointSize() const
@@ -392,9 +414,59 @@ void CheckpointManager::setDistributedInfo(int rank, int worldSize)
 
 bool CheckpointManager::synchronizeDistributedCheckpoints()
 {
-    qDebug() << "[CheckpointManager] Synchronizing distributed checkpoints";
-    // Placeholder for distributed sync logic
-    return true;
+    qDebug() << "[CheckpointManager] Synchronizing distributed checkpoints"
+             << "rank" << m_rank << "of" << m_worldSize;
+    
+    if (m_worldSize <= 1) {
+        // Single-node: no sync needed
+        return true;
+    }
+    
+    // Distributed sync strategy:
+    // 1. Rank 0 writes the authoritative checkpoint
+    // 2. All other ranks wait for rank 0's checkpoint file
+    // 3. Non-rank-0 nodes copy/validate from shared storage
+    
+    if (m_checkpointIndex.empty()) {
+        qWarning() << "[CheckpointManager] No checkpoints to synchronize";
+        return false;
+    }
+    
+    const auto& latest = m_checkpointIndex.back();
+    QString sharedPath = m_checkpointDir + "/shared_" + latest.checkpointId + ".ckpt";
+    QString localPath = m_checkpointDir + "/" + latest.checkpointId + ".ckpt";
+    
+    if (m_rank == 0) {
+        // Rank 0: copy checkpoint to shared path for other ranks
+        if (QFile::exists(localPath)) {
+            QFile::remove(sharedPath); // remove stale
+            bool copied = QFile::copy(localPath, sharedPath);
+            qDebug() << "[CheckpointManager] Rank 0 published checkpoint:"
+                     << (copied ? "success" : "failed");
+            return copied;
+        }
+        return false;
+    } else {
+        // Non-rank-0: wait for shared checkpoint (with timeout)
+        int retries = 0;
+        const int maxRetries = 30; // 30 seconds max
+        while (!QFile::exists(sharedPath) && retries < maxRetries) {
+            QThread::sleep(1);
+            ++retries;
+        }
+        
+        if (QFile::exists(sharedPath)) {
+            QFile::remove(localPath); // replace local with authoritative
+            bool copied = QFile::copy(sharedPath, localPath);
+            qDebug() << "[CheckpointManager] Rank" << m_rank
+                     << "synchronized checkpoint:" << (copied ? "success" : "failed");
+            return copied;
+        }
+        
+        qWarning() << "[CheckpointManager] Rank" << m_rank
+                   << "timed out waiting for shared checkpoint";
+        return false;
+    }
 }
 
 QJsonObject CheckpointManager::exportConfiguration() const
@@ -458,16 +530,36 @@ QByteArray CheckpointManager::compressState(const QByteArray& data, CompressionL
     if (level == CompressionLevel::None || data.isEmpty()) {
         return data;
     }
-    
-    // Placeholder for zlib compression
-    // In production, use zlib or similar
-    return data;
+
+    // Map compression level to qCompress level (1-9)
+    int zlibLevel;
+    switch (level) {
+        case CompressionLevel::Low:     zlibLevel = 1; break;
+        case CompressionLevel::Medium:  zlibLevel = 5; break;
+        case CompressionLevel::High:    zlibLevel = 7; break;
+        case CompressionLevel::Maximum: zlibLevel = 9; break;
+        default:                        zlibLevel = 5; break;
+    }
+
+    QByteArray compressed = qCompress(data, zlibLevel);
+    if (compressed.isEmpty()) {
+        qWarning() << "[CheckpointManager] Compression failed, returning uncompressed data";
+        return data;
+    }
+    qDebug() << "[CheckpointManager] Compressed" << data.size() << "->" << compressed.size()
+             << "bytes (" << (compressed.size() * 100.0 / data.size()) << "%)";
+    return compressed;
 }
 
 QByteArray CheckpointManager::decompressState(const QByteArray& data)
 {
-    // Placeholder for decompression
-    return data;
+    if (data.isEmpty()) return data;
+    QByteArray decompressed = qUncompress(data);
+    if (decompressed.isEmpty()) {
+        qWarning() << "[CheckpointManager] Decompression failed, returning raw data";
+        return data; // Might be uncompressed already
+    }
+    return decompressed;
 }
 
 bool CheckpointManager::writeCheckpointToDisk(const QString& checkpointId,
@@ -507,9 +599,32 @@ bool CheckpointManager::readCheckpointFromDisk(const QString& checkpointId,
     
     QByteArray data = file.readAll();
     file.close();
-    
-    // Placeholder: in production, properly deserialize
-    state.modelWeights = data;
+
+    // Deserialize: each field was written sequentially, reconstruct using QDataStream
+    QDataStream stream(data);
+    stream.setVersion(QDataStream::Qt_6_5);
+
+    QByteArray configJson;
+    stream >> state.modelWeights;
+    stream >> state.optimizerState;
+    stream >> state.schedulerState;
+    stream >> state.trainingState;
+    stream >> configJson;
+
+    if (!configJson.isEmpty()) {
+        QJsonDocument doc = QJsonDocument::fromJson(configJson);
+        state.config = doc.object();
+    }
+
+    // If QDataStream failed (old format), fall back to raw data as weights
+    if (stream.status() != QDataStream::Ok) {
+        qDebug() << "[CheckpointManager] Legacy checkpoint format — loading as raw model weights";
+        state.modelWeights = data;
+        state.optimizerState.clear();
+        state.schedulerState.clear();
+        state.trainingState.clear();
+    }
+
     return true;
 }
 

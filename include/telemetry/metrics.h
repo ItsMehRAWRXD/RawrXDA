@@ -28,6 +28,7 @@ public:
         Metrics *m_metrics;
         QString m_name;
         QMap<QString, QString> m_labels;
+        qint64 m_value = 0;
     };
 
     // Gauge metric
@@ -43,6 +44,7 @@ public:
         Metrics *m_metrics;
         QString m_name;
         QMap<QString, QString> m_labels;
+        qreal m_value = 0.0;
     };
 
     // Get or create a counter

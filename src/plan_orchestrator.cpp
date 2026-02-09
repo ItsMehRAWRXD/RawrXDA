@@ -15,6 +15,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QDebug>
+#include <QRegularExpression>
+#include <QFileInfo>
 
 namespace RawrXD {
 
@@ -69,24 +71,12 @@ PlanningResult PlanOrchestrator::generatePlan(const QString& prompt,
     qDebug() << "[PlanOrchestrator] Generating plan for:" << prompt;
     qDebug() << "[PlanOrchestrator] Context files:" << filesToAnalyze.size();
     
-    // TODO: Call inference engine to generate plan
-    // For now, return a stub result
+    // Initialize result defaults (overwritten by inference engine below)
     result.success = true;
     result.planDescription = "Generated plan for: " + prompt;
-    result.affectedFiles = filesToAnalyze.mid(0, 3);  // Stub: first 3 files
+    result.affectedFiles = filesToAnalyze.mid(0, 3);
     result.estimatedChanges = 5;
     
-    // Create stub tasks
-    EditTask stubTask;
-    stubTask.filePath = workspaceRoot + "/test.cpp";
-    stubTask.startLine = 0;
-    stubTask.endLine = 0;
-    stubTask.operation = "insert";
-    stubTask.newText = "// Refactored by AI\n";
-    stubTask.description = "Add AI refactoring comment";
-    stubTask.priority = 1;
-    
-    result.tasks.append(stubTask);
         // === REAL IMPLEMENTATION: Call inference engine for plan generation ===
     
         qInfo() << "[PlanOrchestrator] Calling InferenceEngine for plan generation";
@@ -421,8 +411,38 @@ bool PlanOrchestrator::applyReplace(const EditTask& task, bool dryRun) {
     QString content = readFileContent(task.filePath);
     if (content.isNull()) return false;
     
-    // Simple replace (TODO: use line-based replacement)
-    QString newContent = content.replace(task.oldText, task.newText);
+    // Line-range-based replacement for precise editing
+    if (task.startLine > 0 && task.endLine >= task.startLine) {
+        QStringList lines = content.split('\n');
+        int startIdx = task.startLine - 1; // Convert to 0-based
+        int endIdx = task.endLine - 1;
+        
+        if (startIdx >= 0 && endIdx < lines.size()) {
+            // Replace the specified line range with new text
+            QStringList newLines = task.newText.split('\n');
+            
+            // Remove old lines
+            for (int i = endIdx; i >= startIdx; --i) {
+                lines.removeAt(i);
+            }
+            
+            // Insert new lines at the start position
+            for (int i = newLines.size() - 1; i >= 0; --i) {
+                lines.insert(startIdx, newLines[i]);
+            }
+            
+            QString newContent = lines.join('\n');
+            return writeFileContent(task.filePath, newContent);
+        }
+    }
+    
+    // Fallback: text-based replacement when line range is not specified
+    QString newContent = content;
+    if (!task.oldText.isEmpty()) {
+        newContent.replace(task.oldText, task.newText);
+    } else {
+        newContent.replace(task.oldText, task.newText);
+    }
     
     return writeFileContent(task.filePath, newContent);
 }
@@ -483,23 +503,68 @@ bool PlanOrchestrator::applyRename(const EditTask& task, bool dryRun) {
     qDebug() << "[PlanOrchestrator] Rename" << task.symbolName 
              << "to" << task.newSymbolName;
     
+    if (task.symbolName.isEmpty() || task.newSymbolName.isEmpty()) {
+        qWarning() << "[PlanOrchestrator] Rename requires both symbolName and newSymbolName";
+        return false;
+    }
+    
     if (dryRun) {
         qDebug() << "[PlanOrchestrator] DRY RUN: Would rename" 
                  << task.symbolName << "to" << task.newSymbolName;
         return true;
     }
     
-    // TODO: Use LSP rename request for intelligent symbol renaming
+    // Attempt LSP-powered rename first (semantically aware)
     if (m_lspClient && m_lspClient->isRunning()) {
-        qDebug() << "[PlanOrchestrator] LSP rename not yet implemented";
-        // m_lspClient->requestRename(task.filePath, task.startLine, task.symbolName, task.newSymbolName);
+        qDebug() << "[PlanOrchestrator] Attempting LSP rename for" << task.symbolName;
+        
+        bool lspSuccess = m_lspClient->requestRename(
+            task.filePath, task.startLine, 0, task.newSymbolName);
+        
+        if (lspSuccess) {
+            qInfo() << "[PlanOrchestrator] LSP rename succeeded for" << task.symbolName;
+            return true;
+        }
+        
+        qWarning() << "[PlanOrchestrator] LSP rename failed, falling back to text-based rename";
     }
     
-    // Fallback: simple text replacement
+    // Fallback: Word-boundary-aware text replacement
+    // Ensures we don't rename substrings (e.g., "foo" inside "fooBar")
     QString content = readFileContent(task.filePath);
     if (content.isNull()) return false;
     
-    QString newContent = content.replace(task.symbolName, task.newSymbolName);
+    // Build a regex that matches the symbol at word boundaries
+    QString escapedSymbol = QRegularExpression::escape(task.symbolName);
+    QRegularExpression wordBoundaryRegex(
+        QString("\\b%1\\b").arg(escapedSymbol));
+    
+    QString newContent = content;
+    int replacements = 0;
+    
+    // Iterate matches in reverse to preserve positions
+    QRegularExpressionMatchIterator it = wordBoundaryRegex.globalMatch(content);
+    QVector<QPair<int, int>> matches; // offset, length
+    while (it.hasNext()) {
+        QRegularExpressionMatch match = it.next();
+        matches.append({match.capturedStart(), match.capturedLength()});
+    }
+    
+    // Apply replacements from end to start (preserves offsets)
+    for (int i = matches.size() - 1; i >= 0; --i) {
+        int offset = matches[i].first;
+        int length = matches[i].second;
+        newContent.replace(offset, length, task.newSymbolName);
+        replacements++;
+    }
+    
+    if (replacements == 0) {
+        qWarning() << "[PlanOrchestrator] Symbol not found:" << task.symbolName;
+        return false;
+    }
+    
+    qInfo() << "[PlanOrchestrator] Renamed" << replacements << "occurrences of" 
+            << task.symbolName << "to" << task.newSymbolName;
     
     return writeFileContent(task.filePath, newContent);
 }

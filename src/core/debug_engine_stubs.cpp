@@ -17,6 +17,10 @@
 #include <windows.h>
 #endif
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -533,7 +537,9 @@ uint32_t Dbg_MemoryCRC32(uint64_t processHandle, uint64_t address,
 // ── RDTSC ────────────────────────────────────────────────────────────────────
 
 uint64_t Dbg_RDTSC(void) {
-#if defined(_MSC_VER) || defined(__GNUC__)
+#if defined(_MSC_VER)
+    return __rdtsc();
+#elif defined(__GNUC__)
     uint32_t lo, hi;
     __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;

@@ -1186,8 +1186,38 @@ bool VulkanCompute::ExecuteAttention(const float* queries, const float* keys, co
 }
 
 bool VulkanCompute::ExecuteRoPE(float* embeddings, uint32_t dim, uint32_t seq_pos, uint32_t rotation_dim) {
-    // Placeholder for RoPE implementation
-    std::cout << "Executing RoPE: Dim=" << dim << ", SeqPos=" << seq_pos << std::endl;
+    // Rotary Positional Embedding (RoPE) — CPU fallback implementation
+    // Applies rotation to pairs of embedding dimensions using sinusoidal frequencies
+    // Based on: https://arxiv.org/abs/2104.09864
+    
+    if (!embeddings || dim == 0 || rotation_dim == 0) {
+        return false;
+    }
+    
+    const float freq_base = 10000.0f;
+    const uint32_t half_rot = rotation_dim / 2;
+    
+    for (uint32_t i = 0; i < half_rot; ++i) {
+        // Compute frequency for this dimension pair
+        float freq = 1.0f / std::pow(freq_base, (float)(2 * i) / (float)rotation_dim);
+        float theta = (float)seq_pos * freq;
+        float cos_theta = std::cos(theta);
+        float sin_theta = std::sin(theta);
+        
+        // Rotate the pair (embeddings[2*i], embeddings[2*i+1])
+        uint32_t idx0 = 2 * i;
+        uint32_t idx1 = 2 * i + 1;
+        
+        if (idx1 < dim) {
+            float x0 = embeddings[idx0];
+            float x1 = embeddings[idx1];
+            
+            embeddings[idx0] = x0 * cos_theta - x1 * sin_theta;
+            embeddings[idx1] = x0 * sin_theta + x1 * cos_theta;
+        }
+    }
+    
+    // Dimensions beyond rotation_dim are left unchanged (pass-through)
     return true;
 }
 

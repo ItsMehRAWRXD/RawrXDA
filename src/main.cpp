@@ -14,6 +14,24 @@
 #include "agent_explainability.h"
 #include "ai_backend.h"
 
+// Phase 20-25: New subsystem headers
+#include "swarm_decision_bridge.h"
+#include "universal_model_hotpatcher.h"
+#include "production_release.h"
+#include "webrtc_signaling.h"
+#include "gpu_kernel_autotuner.h"
+#include "sandbox_integration.h"
+#include "amd_gpu_accelerator.h"
+
+// Phase 21: Distributed Swarm Inference Orchestrator
+#include "swarm_orchestrator.h"
+
+// Phase 20: CLI headless systems (for ! commands dispatch)
+#include "cli_headless_systems.h"
+
+// Phase 33: Voice Chat Engine
+#include "core/voice_chat.hpp"
+
 void SignalHandler(int signal) {
     std::cout << "\n[ENGINE] Exiting...\n";
     exit(0);
@@ -23,9 +41,10 @@ int main(int argc, char** argv) {
     std::signal(SIGINT, SignalHandler);
     std::cout << R"(
 ╔══════════════════════════════════════════════════════════════╗
-║              RawrXD Engine v7.4 — Agentic Core               ║
+║              RawrXD Engine v7.5 — Agentic Core               ║
 ║  Subagents • Chaining • HexMag Swarm • History & Replay     ║
-║  Phase 8B: AI Backend Switcher + Explainability              ║
+║  Phase 25: AMD GPU • Sandbox • 800B Streaming Quant          ║
+║  Phase 21: Distributed Swarm Inference • AVX-512 Requant     ║
 ╚══════════════════════════════════════════════════════════════╝
 )" << std::endl;
 
@@ -84,6 +103,18 @@ HTTP API Endpoints:
   GET  /api/backends          List all backends (Phase 8B)
   GET  /api/backends/status   Active backend status (Phase 8B)
   POST /api/backends/use      Switch active backend (Phase 8B)
+  GET  /api/gpu/status          GPU acceleration status (Phase 25)
+  POST /api/gpu/toggle          Toggle GPU on/off (Phase 25)
+  GET  /api/gpu/features        AMD GPU features (Phase 25)
+  GET  /api/gpu/memory          GPU memory usage (Phase 25)
+  GET  /api/tuner/status        Kernel auto-tuner status (Phase 23)
+  POST /api/tuner/run           Run kernel auto-tuner (Phase 23)
+  GET  /api/swarm/bridge        Swarm decision bridge status (Phase 21)
+  GET  /api/hotpatch/model      Universal model hotpatcher (Phase 21)
+  GET  /api/webrtc/status       WebRTC signaling status (Phase 20)
+  GET  /api/sandbox/list        List sandboxes (Phase 24)
+  POST /api/sandbox/create      Create sandbox (Phase 24)
+  GET  /api/release/status      Production release status (Phase 22)
 
 REPL Commands:
   /subagent <prompt>        Spawn a sub-agent
@@ -107,6 +138,16 @@ REPL Commands:
   /backend list             List all backends (Phase 8B)
   /backend use <id>         Switch active backend (Phase 8B)
   /backend status           Show active backend status (Phase 8B)
+  /gpu                     GPU acceleration status (Phase 25)
+  /gpu on|off|toggle       Enable/disable GPU (Phase 25)
+  /gpu features            AMD GPU features (Phase 25)
+  /gpu memory              GPU memory usage (Phase 25)
+  /tune                    Run GPU kernel auto-tuner (Phase 23)
+  /swarm bridge            Swarm decision bridge status (Phase 21)
+  /hotpatch status         Model hotpatcher status (Phase 21)
+  /webrtc                  WebRTC signaling status (Phase 20)
+  /sandbox list|create     Manage sandboxes (Phase 24)
+  /release                 Production release status (Phase 22)
   exit                      Quit
 )" << std::endl;
             return 0;
@@ -197,6 +238,79 @@ REPL Commands:
     std::cout << "[SYSTEM] Backend manager: " << backendMgr.backendCount()
               << " backends, active=" << backendMgr.getActiveBackendName() << " (Phase 8B)\n";
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 25: AMD/ATI GPU Acceleration (initialize FIRST — others depend on it)
+    // ═══════════════════════════════════════════════════════════════════
+    auto& gpuAccel = AMDGPUAccelerator::instance();
+    {
+        auto r = gpuAccel.initialize(GPUBackend::Auto);
+        std::cout << "[SYSTEM] AMD GPU Accelerator: " << r.detail
+                  << " GPU=" << (gpuAccel.isGPUEnabled() ? "ON" : "OFF")
+                  << " backend=" << gpuAccel.getBackendName() << "\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 23: GPU Kernel Auto-Tuner
+    // ═══════════════════════════════════════════════════════════════════
+    auto& kernelTuner = GPUKernelAutoTuner::instance();
+    {
+        auto r = kernelTuner.initialize();
+        std::cout << "[SYSTEM] GPU Kernel Auto-Tuner: " << r.detail
+                  << " cache=" << kernelTuner.getCacheSize() << " entries\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 21: Swarm Decision Bridge (wires AgenticDecisionTree → Swarm)
+    // ═══════════════════════════════════════════════════════════════════
+    auto& swarmBridge = SwarmDecisionBridge::instance();
+    {
+        bool ok = swarmBridge.initialize();
+        std::cout << "[SYSTEM] Swarm Decision Bridge: " << (ok ? "Initialized" : "Failed") << "\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 21: Universal Model Hotpatcher (120B-800B streaming quant)
+    // ═══════════════════════════════════════════════════════════════════
+    auto& modelHotpatcher = UniversalModelHotpatcher::instance();
+    {
+        bool ok = modelHotpatcher.initialize();
+        std::cout << "[SYSTEM] Universal Model Hotpatcher: " << (ok ? "Initialized" : "Failed") << "\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 22: Production Release Engine
+    // ═══════════════════════════════════════════════════════════════════
+    auto& releaseEngine = ProductionReleaseEngine::instance();
+    {
+        std::cout << "[SYSTEM] Production Release Engine: Loaded"
+                  << " version=" << releaseEngine.getCurrentVersion() << "\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 20: WebRTC P2P Signaling
+    // ═══════════════════════════════════════════════════════════════════
+    auto& webrtc = WebRTCSignaling::instance();
+    {
+        auto r = webrtc.initialize("wss://signal.rawrxd.local:8443");
+        std::cout << "[SYSTEM] WebRTC P2P Signaling: " << r.detail
+                  << " peers=" << webrtc.getConnectedPeerCount() << "\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 24: Windows Sandbox Manager
+    // ═══════════════════════════════════════════════════════════════════
+    auto& sandboxMgr = SandboxManager::instance();
+    {
+        auto r = sandboxMgr.initialize();
+        std::cout << "[SYSTEM] Windows Sandbox Manager: " << r.detail << "\n";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 21: Distributed Swarm Inference Orchestrator
+    // ═══════════════════════════════════════════════════════════════════
+    auto& swarmOrchestrator = RawrXD::Swarm::SwarmOrchestrator::instance();
+    std::cout << "[SYSTEM] Swarm Orchestrator: ready (use !swarm_join to start)\n";
+
     // Start HTTP server with agentic support
     RawrXD::CompletionServer server;
     if (enable_http) {
@@ -243,6 +357,46 @@ REPL Commands:
                           << "  /backend list           List all backends (Phase 8B)\n"
                           << "  /backend use <id>       Switch active backend (Phase 8B)\n"
                           << "  /backend status         Show active backend status (Phase 8B)\n"
+                          << "  /gpu                    GPU acceleration status (Phase 25)\n"
+                          << "  /gpu on                 Enable GPU acceleration (Phase 25)\n"
+                          << "  /gpu off                Disable GPU acceleration (Phase 25)\n"
+                          << "  /gpu toggle             Toggle GPU on/off (Phase 25)\n"
+                          << "  /gpu features           Show AMD GPU features (Phase 25)\n"
+                          << "  /gpu memory             Show GPU memory usage (Phase 25)\n"
+                          << "  /tune                   Run GPU kernel auto-tuner (Phase 23)\n"
+                          << "  /tune cache             Show tuning cache (Phase 23)\n"
+                          << "  /swarm bridge           Swarm decision bridge status (Phase 21)\n"
+                          << "  /hotpatch status        Universal model hotpatcher (Phase 21)\n"
+                          << "  /webrtc                 WebRTC signaling status (Phase 20)\n"
+                          << "  /sandbox list           List active sandboxes (Phase 24)\n"
+                          << "  /sandbox create         Create a new sandbox (Phase 24)\n"
+                          << "  /release                 Production release status (Phase 22)\n"
+                          << "\n  Phase 20 — Model Surgery:\n"
+                          << "  !model_load <path>       Analyze GGUF model (Phase 20)\n"
+                          << "  !model_plan              Compute optimal quant plan (Phase 20)\n"
+                          << "  !model_surgery           Apply streaming requantization (Phase 20)\n"
+                          << "  !pressure_auto           Enable auto VRAM pressure response (Phase 20)\n"
+                          << "  !model_status            Show model hotpatcher status (Phase 20)\n"
+                          << "  !model_layers            List loaded model layers (Phase 20)\n"
+                          << "\n  Phase 21 — Distributed Swarm Inference:\n"
+                          << "  !swarm_join [ip]         Join swarm or become coordinator (Phase 21)\n"
+                          << "  !swarm_status            Show swarm topology (Phase 21)\n"
+                          << "  !swarm_distribute <m> <n> Distribute model layers (Phase 21)\n"
+                          << "  !swarm_rebalance         Rebalance by VRAM pressure (Phase 21)\n"
+                          << "  !swarm_nodes             List swarm nodes (Phase 21)\n"
+                          << "  !swarm_shards            List layer shards (Phase 21)\n"
+                          << "  !swarm_leave             Leave the swarm (Phase 21)\n"
+                          << "  !swarm_stats             Show swarm network stats (Phase 21)\n"
+                          << "\n  Phase 33 — Voice Chat:\n"
+                          << "  /voice record            Start/stop audio recording (Phase 33)\n"
+                          << "  /voice play              Play last recording (Phase 33)\n"
+                          << "  /voice transcribe        Transcribe last recording (Phase 33)\n"
+                          << "  /voice speak <text>      Text-to-speech (Phase 33)\n"
+                          << "  /voice devices           List audio devices (Phase 33)\n"
+                          << "  /voice mode <ptt|vad|off> Set voice mode (Phase 33)\n"
+                          << "  /voice room <name>       Join/leave voice room (Phase 33)\n"
+                          << "  /voice status            Voice chat status (Phase 33)\n"
+                          << "  /voice metrics           Voice chat metrics (Phase 33)\n"
                           << "  exit                    Quit\n\n";
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
@@ -611,6 +765,228 @@ REPL Commands:
                 std::cout << "  MaxTokens: " << active.maxTokens
                           << "  Temperature: " << active.temperature
                           << "  Timeout: " << active.timeoutMs << "ms\n";
+            }
+            // ── Phase 25: AMD GPU Acceleration Commands ──
+            else if (input == "/gpu") {
+                std::cout << "[GPU] " << gpuAccel.toJson() << "\n";
+            }
+            else if (input == "/gpu on") {
+                auto r = gpuAccel.enableGPU();
+                std::cout << "[GPU] " << r.detail << "\n";
+            }
+            else if (input == "/gpu off") {
+                auto r = gpuAccel.disableGPU();
+                std::cout << "[GPU] " << r.detail << "\n";
+            }
+            else if (input == "/gpu toggle") {
+                auto r = gpuAccel.toggleGPU();
+                std::cout << "[GPU] " << r.detail << " — now "
+                          << (gpuAccel.isGPUEnabled() ? "ENABLED" : "DISABLED") << "\n";
+            }
+            else if (input == "/gpu features") {
+                std::cout << "[GPU Features] " << gpuAccel.featuresToJson() << "\n";
+            }
+            else if (input == "/gpu memory") {
+                std::cout << "[GPU Memory] " << gpuAccel.memoryToJson() << "\n";
+            }
+            // ── Phase 23: GPU Kernel Auto-Tuner Commands ──
+            else if (input == "/tune") {
+                std::cout << "[Tuner] Running kernel auto-tuner...\n";
+                auto r = kernelTuner.tuneAllKernels();
+                std::cout << "[Tuner] " << r.detail << " configs=" << r.configsTested << "\n";
+                std::cout << "[Tuner] " << kernelTuner.toJson() << "\n";
+            }
+            else if (input == "/tune cache") {
+                std::cout << "[Tuner Cache] " << kernelTuner.tuneCacheToJson() << "\n";
+            }
+            // ── Phase 21: Swarm Decision Bridge Commands ──
+            else if (input == "/swarm bridge") {
+                std::cout << "[Swarm Bridge] " << swarmBridge.toJson() << "\n";
+            }
+            // ── Phase 21: Universal Model Hotpatcher Commands ──
+            else if (input == "/hotpatch status") {
+                std::cout << "[Model Hotpatcher] " << modelHotpatcher.toJson() << "\n";
+            }
+            // ── Phase 20: WebRTC Commands ──
+            else if (input == "/webrtc") {
+                std::cout << "[WebRTC] " << webrtc.toJson() << "\n";
+                std::cout << "[WebRTC Peers] " << webrtc.peersToJson() << "\n";
+            }
+            // ── Phase 24: Sandbox Commands ──
+            else if (input == "/sandbox list") {
+                auto sandboxes = sandboxMgr.listSandboxes();
+                if (sandboxes.empty()) {
+                    std::cout << "[Sandbox] No active sandboxes.\n";
+                } else {
+                    for (const auto& id : sandboxes) {
+                        std::cout << "  " << sandboxMgr.sandboxToJson(id) << "\n";
+                    }
+                }
+            }
+            else if (input == "/sandbox create") {
+                SandboxConfig cfg;
+                cfg.type = SandboxType::JobObject;
+                std::string id;
+                auto r = sandboxMgr.createSandbox(cfg, id);
+                std::cout << "[Sandbox] " << r.detail << " id=" << id << "\n";
+            }
+            // ── Phase 22: Production Release Commands ──
+            else if (input == "/release") {
+                std::cout << "[Release] " << releaseEngine.toJson() << "\n";
+            }
+            // ── Phase 20: Model Hotpatcher ! Commands ──
+            else if (input.substr(0, 12) == "!model_load ") {
+                cmd_model("load " + input.substr(12));
+            }
+            else if (input == "!model_plan") {
+                cmd_model("plan");
+            }
+            else if (input == "!model_surgery") {
+                cmd_model("surgery");
+            }
+            else if (input == "!pressure_auto") {
+                cmd_model("pressure");
+            }
+            else if (input == "!model_status") {
+                cmd_model("status");
+            }
+            else if (input == "!model_layers") {
+                cmd_model("layers");
+            }
+            else if (input.substr(0, 7) == "!model " && input.size() > 7) {
+                cmd_model(input.substr(7));
+            }
+            // ── Phase 21: Swarm Orchestrator ! Commands ──
+            else if (input == "!swarm_join" || input.substr(0, 12) == "!swarm_join ") {
+                std::string arg = input.size() > 12 ? input.substr(12) : "";
+                cmd_swarm_orchestrator("join " + arg);
+            }
+            else if (input == "!swarm_status") {
+                cmd_swarm_orchestrator("status");
+            }
+            else if (input.substr(0, 17) == "!swarm_distribute") {
+                std::string arg = input.size() > 18 ? input.substr(18) : "";
+                cmd_swarm_orchestrator("distribute " + arg);
+            }
+            else if (input == "!swarm_rebalance") {
+                cmd_swarm_orchestrator("rebalance");
+            }
+            else if (input == "!swarm_nodes") {
+                cmd_swarm_orchestrator("nodes");
+            }
+            else if (input == "!swarm_shards") {
+                cmd_swarm_orchestrator("shards");
+            }
+            else if (input == "!swarm_leave") {
+                cmd_swarm_orchestrator("leave");
+            }
+            else if (input == "!swarm_stats") {
+                cmd_swarm_orchestrator("stats");
+            }
+            // ── Phase 33: Voice Chat Commands ──
+            else if (input == "/voice record") {
+                static VoiceChat cliVoiceChat;
+                static bool cliVoiceInit = false;
+                if (!cliVoiceInit) {
+                    VoiceChatConfig vcfg;
+                    vcfg.sampleRate = 16000;
+                    vcfg.channels = 1;
+                    vcfg.bitsPerSample = 16;
+                    vcfg.enableVAD = true;
+                    cliVoiceChat.configure(vcfg);
+                    cliVoiceInit = true;
+                }
+                if (cliVoiceChat.isRecording()) {
+                    auto r = cliVoiceChat.stopRecording();
+                    std::cout << "[Voice] Recording stopped: " << r.detail
+                              << " (" << cliVoiceChat.getRecordedSampleCount() << " samples)\n";
+                } else {
+                    auto r = cliVoiceChat.startRecording();
+                    std::cout << "[Voice] " << r.detail << "\n";
+                    std::cout << "[Voice] Type '/voice record' again to stop.\n";
+                }
+            }
+            else if (input == "/voice play") {
+                static VoiceChat cliVoiceChat;
+                auto& rec = cliVoiceChat.getLastRecording();
+                if (rec.empty()) {
+                    std::cout << "[Voice] No recording to play. Use '/voice record' first.\n";
+                } else {
+                    std::cout << "[Voice] Playing " << rec.size() << " samples...\n";
+                    auto r = cliVoiceChat.playAudio(rec);
+                    std::cout << "[Voice] " << r.detail << "\n";
+                }
+            }
+            else if (input == "/voice transcribe") {
+                static VoiceChat cliVoiceChat;
+                std::string transcript;
+                auto r = cliVoiceChat.transcribeLastRecording(transcript);
+                if (r.success) {
+                    std::cout << "[Voice STT] " << transcript << "\n";
+                } else {
+                    std::cout << "[Voice] Transcription failed: " << r.detail << "\n";
+                }
+            }
+            else if (input.substr(0, 13) == "/voice speak ") {
+                static VoiceChat cliVoiceChat;
+                std::string text = input.substr(13);
+                auto r = cliVoiceChat.speak(text);
+                std::cout << "[Voice TTS] " << r.detail << "\n";
+            }
+            else if (input == "/voice devices") {
+                auto inputs = VoiceChat::enumerateInputDevices();
+                auto outputs = VoiceChat::enumerateOutputDevices();
+                std::cout << "=== Input Devices ===\n";
+                for (auto& d : inputs) {
+                    std::cout << "  [" << d.id << "] " << d.name;
+                    if (d.isDefault) std::cout << " (default)";
+                    std::cout << "\n";
+                }
+                std::cout << "=== Output Devices ===\n";
+                for (auto& d : outputs) {
+                    std::cout << "  [" << d.id << "] " << d.name;
+                    if (d.isDefault) std::cout << " (default)";
+                    std::cout << "\n";
+                }
+            }
+            else if (input.substr(0, 12) == "/voice mode ") {
+                static VoiceChat cliVoiceChat;
+                std::string mode = input.substr(12);
+                VoiceChatMode m = VoiceChatMode::PushToTalk;
+                if (mode == "vad" || mode == "continuous") m = VoiceChatMode::Continuous;
+                else if (mode == "off" || mode == "disabled") m = VoiceChatMode::Disabled;
+                cliVoiceChat.setMode(m);
+                std::cout << "[Voice] Mode set to: " << mode << "\n";
+            }
+            else if (input.substr(0, 12) == "/voice room ") {
+                static VoiceChat cliVoiceChat;
+                std::string room = input.substr(12);
+                if (cliVoiceChat.isInRoom()) {
+                    cliVoiceChat.leaveRoom();
+                    std::cout << "[Voice] Left room\n";
+                }
+                auto r = cliVoiceChat.joinRoom(room);
+                std::cout << "[Voice] " << r.detail << " (" << room << ")\n";
+            }
+            else if (input == "/voice status") {
+                static VoiceChat cliVoiceChat;
+                std::cout << "[Voice] Recording: " << (cliVoiceChat.isRecording() ? "YES" : "no")
+                          << "  Playing: " << (cliVoiceChat.isPlaying() ? "YES" : "no")
+                          << "  Room: " << (cliVoiceChat.isInRoom() ? cliVoiceChat.getRoomName() : "(none)")
+                          << "  RMS: " << cliVoiceChat.getCurrentRMS()
+                          << "  Samples: " << cliVoiceChat.getRecordedSampleCount() << "\n";
+            }
+            else if (input == "/voice metrics") {
+                static VoiceChat cliVoiceChat;
+                auto m = cliVoiceChat.getMetrics();
+                std::cout << "[Voice Metrics]\n"
+                          << "  Recordings:    " << m.recordingCount << "\n"
+                          << "  Playbacks:     " << m.playbackCount << "\n"
+                          << "  Transcriptions:" << m.transcriptionCount << "\n"
+                          << "  TTS Calls:     " << m.ttsCount << "\n"
+                          << "  Errors:        " << m.errorCount << "\n"
+                          << "  Bytes Recorded:" << m.bytesRecorded << "\n"
+                          << "  VAD Events:    " << m.vadSpeechEvents << "\n";
             }
             else {
                 std::cout << "Unknown command. Type /help for commands.\n";

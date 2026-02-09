@@ -77,6 +77,7 @@ void AICompletionProvider::requestCompletions(
     m_lastPrefix = prefix;
     m_lastSuffix = suffix;
     m_lastFileType = fileType;
+    m_lastContextLines = contextLines;
 
     Logger::instance()->log(
         Logger::DEBUG,
@@ -171,9 +172,8 @@ void AICompletionProvider::onCompletionRequest()
     timer.start();
 
     try {
-        // Format the prompt for the model
-        QStringList contextLines; // TODO: Pass from caller
-        QString prompt = formatPrompt(m_lastPrefix, m_lastSuffix, m_lastFileType, contextLines);
+        // Format the prompt for the model with surrounding context
+        QString prompt = formatPrompt(m_lastPrefix, m_lastSuffix, m_lastFileType, m_lastContextLines);
 
         Logger::instance()->log(
             Logger::DEBUG,
@@ -274,7 +274,28 @@ QVector<AICompletion> AICompletionProvider::parseCompletions(const QString& resp
         
         AICompletion completion;
         completion.text = line.trimmed();
-        completion.type = "keyword"; // TODO: Detect type
+        // Detect completion type from content analysis
+        QString trimmedText = completion.text.trimmed();
+        if (trimmedText.startsWith("class ") || trimmedText.startsWith("struct ")) {
+            completion.type = "class";
+        } else if (trimmedText.contains("(") && (trimmedText.startsWith("void ") ||
+                   trimmedText.startsWith("int ") || trimmedText.startsWith("bool ") ||
+                   trimmedText.startsWith("auto ") || trimmedText.startsWith("QString "))) {
+            completion.type = "function";
+        } else if (trimmedText.startsWith("#include") || trimmedText.startsWith("import ") ||
+                   trimmedText.startsWith("using ")) {
+            completion.type = "module";
+        } else if (trimmedText.startsWith("//") || trimmedText.startsWith("/*") ||
+                   trimmedText.startsWith("///") || trimmedText.startsWith("/**")) {
+            completion.type = "comment";
+        } else if (trimmedText.contains(" = ") || trimmedText.contains("const ") ||
+                   trimmedText.startsWith("let ") || trimmedText.startsWith("var ")) {
+            completion.type = "variable";
+        } else if (trimmedText.endsWith(";") || trimmedText.endsWith("}")) {
+            completion.type = "statement";
+        } else {
+            completion.type = "keyword";
+        }
         completion.confidence = extractConfidence(line);
         completion.ranking = ranking++;
         
@@ -290,16 +311,48 @@ QVector<AICompletion> AICompletionProvider::parseCompletions(const QString& resp
 
 float AICompletionProvider::extractConfidence(const QString& suggestion)
 {
-    // TODO: Extract confidence from model output if available
-    // For now, use a simple heuristic based on suggestion characteristics
+    // Multi-factor confidence scoring based on suggestion characteristics
+    float confidence = 0.5f; // Base confidence
     
-    if (suggestion.length() < 3) {
-        return 0.4f;
-    } else if (suggestion.length() < 10) {
-        return 0.7f;
-    } else {
-        return 0.5f;
+    // Length factor: very short = less confident, moderate = more confident
+    int len = suggestion.length();
+    if (len < 3) {
+        confidence -= 0.2f;
+    } else if (len >= 5 && len <= 80) {
+        confidence += 0.15f; // Moderate-length suggestions are often better
+    } else if (len > 200) {
+        confidence -= 0.1f; // Very long suggestions may be noisy
     }
+    
+    // Structural completeness: balanced braces/parens boost confidence
+    int braceBalance = suggestion.count('{') - suggestion.count('}');
+    int parenBalance = suggestion.count('(') - suggestion.count(')');
+    if (braceBalance == 0 && parenBalance == 0) {
+        confidence += 0.1f; // Balanced delimiters
+    } else {
+        confidence -= 0.05f;
+    }
+    
+    // Code-like content boost
+    if (suggestion.contains('(') || suggestion.contains(';') ||
+        suggestion.contains('{') || suggestion.contains("return")) {
+        confidence += 0.1f;
+    }
+    
+    // Penalty for placeholder-like content
+    if (suggestion.contains("TODO") || suggestion.contains("FIXME") ||
+        suggestion.contains("...") || suggestion.contains("placeholder")) {
+        confidence -= 0.2f;
+    }
+    
+    // Check if model output had an explicit confidence marker (e.g., "[0.85]")
+    QRegularExpression confRegex("\\[(0\\.\\d+)\\]");
+    auto match = confRegex.match(suggestion);
+    if (match.hasMatch()) {
+        confidence = match.captured(1).toFloat();
+    }
+    
+    return qBound(0.1f, confidence, 1.0f);
 }
 
 QString AICompletionProvider::callModel(const QString& prompt)
