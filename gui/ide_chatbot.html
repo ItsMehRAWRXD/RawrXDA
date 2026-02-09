@@ -9,6 +9,11 @@
   <title>RawrXD IDE // AGENTIC INTERFACE</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦖</text></svg>">
+  <!-- ================================================================
+       STANDALONE-SAFE EXTERNAL RESOURCES
+       All CDN resources have inline fallbacks below. When opened via file://
+       or offline, the CDN loads will fail gracefully and the stubs activate.
+       ================================================================ -->
   <!-- DOMPurify: XSS sanitization for all backend/assistant HTML output -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" crossorigin="anonymous"
     onerror="console.warn('[RawrXD] DOMPurify CDN blocked — shim will activate')"></script>
@@ -17,6 +22,16 @@
     crossorigin="anonymous">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous"
     onerror="console.warn('[RawrXD] highlight.js CDN blocked — syntax highlighting disabled')"></script>
+  <!-- Google Fonts: Non-blocking preload — falls back to system fonts in offline/file:// mode -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap"
+    media="print" onload="this.media='all'" onerror="this.remove()">
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap">
+  </noscript>
   <!-- CDN Fallback: stubs for offline / file:// usage -->
   <script>
     // DOMPurify fallback — safe tag-stripping shim if CDN failed (offline / file:// mode)
@@ -79,8 +94,109 @@
       };
     }
   </script>
+  <!-- Inline fallback stylesheet for code blocks when highlight.js CDN CSS is unavailable
+       Provides basic dark theme code styling for standalone/offline file:// mode -->
+  <style id="hljs-fallback-css">
+    .hljs {
+      display: block;
+      overflow-x: auto;
+      padding: 1em;
+      color: #abb2bf;
+      background: #282c34
+    }
+
+    .hljs-comment,
+    .hljs-quote {
+      color: #5c6370;
+      font-style: italic
+    }
+
+    .hljs-doctag,
+    .hljs-keyword,
+    .hljs-formula {
+      color: #c678dd
+    }
+
+    .hljs-section,
+    .hljs-name,
+    .hljs-selector-tag,
+    .hljs-deletion,
+    .hljs-subst {
+      color: #e06c75
+    }
+
+    .hljs-literal {
+      color: #56b6c2
+    }
+
+    .hljs-string,
+    .hljs-regexp,
+    .hljs-addition,
+    .hljs-attribute,
+    .hljs-meta-string {
+      color: #98c379
+    }
+
+    .hljs-built_in,
+    .hljs-class .hljs-title {
+      color: #e6c07b
+    }
+
+    .hljs-attr,
+    .hljs-variable,
+    .hljs-template-variable,
+    .hljs-type,
+    .hljs-selector-class,
+    .hljs-selector-attr,
+    .hljs-selector-pseudo,
+    .hljs-number {
+      color: #d19a66
+    }
+
+    .hljs-symbol,
+    .hljs-bullet,
+    .hljs-link,
+    .hljs-meta,
+    .hljs-selector-id {
+      color: #61aeee
+    }
+
+    .hljs-title,
+    .hljs-title.function_ {
+      color: #61aeee
+    }
+
+    .hljs-emphasis {
+      font-style: italic
+    }
+
+    .hljs-strong {
+      font-weight: bold
+    }
+
+    .hljs-link {
+      text-decoration: underline
+    }
+  </style>
+  <script>
+    // Remove inline hljs fallback CSS if CDN stylesheet loaded successfully
+    // This prevents double-styling when online
+    (function () {
+      var sheets = document.styleSheets;
+      for (var i = 0; i < sheets.length; i++) {
+        try {
+          if (sheets[i].href && sheets[i].href.indexOf('atom-one-dark') >= 0 && sheets[i].cssRules && sheets[i].cssRules.length > 0) {
+            var fallback = document.getElementById('hljs-fallback-css');
+            if (fallback) fallback.remove();
+            break;
+          }
+        } catch (_) { /* cross-origin or not loaded — keep fallback */ }
+      }
+    })();
+  </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;600;700&display=swap');
+    /* Fonts loaded via non-blocking <link> in <head> — JetBrains Mono + Inter
+       Falls back to system monospace / sans-serif in offline/file:// mode */
 
     :root {
       --bg-primary: #0a0a0f;
@@ -5136,22 +5252,30 @@
     <div class="terminal" id="terminalPanel">
       <div class="terminal-header">
         <div class="terminal-tabs">
-          <div class="terminal-tab active">
+          <div class="terminal-tab active" id="termTabLocal" onclick="switchTerminalMode('local')"
+            title="Local commands (help, status, models, curl...)">
             <span>&#x26A1;</span> Terminal
+          </div>
+          <div class="terminal-tab" id="termTabCli" onclick="switchTerminalMode('cli')"
+            title="Remote CLI — sends /commands to backend /api/cli">
+            <span>&#x1F4BB;</span> CLI
           </div>
         </div>
         <div class="terminal-actions">
+          <span id="termModeIndicator"
+            style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-right:8px;">LOCAL</span>
           <button class="icon-btn" onclick="clearTerminal()" title="Clear">&#x1F5D1;</button>
           <button class="icon-btn" onclick="toggleTerminal()" title="Toggle" id="termToggleBtn">&#x2B07;</button>
         </div>
       </div>
       <div class="terminal-content" id="terminalOutput">
-        <div class="terminal-line system">RawrXD IDE Terminal v3.0 &mdash; Type 'help' for commands</div>
+        <div class="terminal-line system">RawrXD IDE Terminal v4.0 &mdash; Type 'help' for commands | Switch to CLI tab
+          for remote /commands</div>
       </div>
       <div class="terminal-input-line">
-        <span class="terminal-prompt">rawrxd&gt;</span>
+        <span class="terminal-prompt" id="termPrompt">rawrxd&gt;</span>
         <input type="text" class="terminal-input" id="terminalInput" onkeydown="handleTerminal(event)"
-          autocomplete="off" spellcheck="false" placeholder="help">
+          autocomplete="off" spellcheck="false" placeholder="help | /help for CLI commands">
       </div>
     </div>
   </div>
@@ -5208,7 +5332,7 @@
       filePendingReads: 0,        // count of FileReader ops still in progress
       debug: { open: false },
       chat: { sending: false, messageCount: 0 },
-      terminal: { history: [], index: -1, minimized: false },
+      terminal: { history: [], index: -1, minimized: false, mode: 'local' },
       reconnectTimer: null,
       failureData: [],
       perf: {
@@ -5448,6 +5572,7 @@
       },
 
       persist: function () {
+        if (!_localStorageAvailable) return; // Bail early if localStorage blocked (file:// in some browsers)
         try {
           localStorage.setItem('rawrxd_conversation', JSON.stringify({
             messages: this.messages,
@@ -5463,6 +5588,7 @@
       },
 
       load: function () {
+        if (!_localStorageAvailable) return false;
         try {
           var saved = localStorage.getItem('rawrxd_conversation');
           if (saved) {
@@ -5482,6 +5608,7 @@
       },
 
       loadGenSettings: function () {
+        if (!_localStorageAvailable) return false;
         try {
           var saved = localStorage.getItem('rawrxd_gen_settings');
           if (saved) {
@@ -5751,6 +5878,19 @@
     // ======================================================================
     // INIT
     // ======================================================================
+    // Guard: detect if localStorage is available (some browsers block it in file:// or private mode)
+    var _localStorageAvailable = (function () {
+      try {
+        var key = '__rawrxd_ls_test__';
+        localStorage.setItem(key, '1');
+        localStorage.removeItem(key);
+        return true;
+      } catch (e) {
+        console.warn('[RawrXD] localStorage unavailable — session persistence disabled');
+        return false;
+      }
+    })();
+
     document.addEventListener('DOMContentLoaded', async () => {
       setupDragDrop();
       autoResizeInput();
@@ -5764,6 +5904,10 @@
         var brandSpan = document.querySelector('.header-bar .brand span:last-child');
         if (brandSpan) brandSpan.textContent = '// STANDALONE v3.4';
         logDebug('\uD83D\uDCC2 Opened from file:// — standalone mode active. Backend at localhost:11435/11434.', 'info');
+        // Warn if localStorage is blocked in file:// mode
+        if (!_localStorageAvailable) {
+          logDebug('\u26A0\uFE0F localStorage blocked by browser in file:// mode — conversations won\u2019t persist across reloads', 'warn');
+        }
       }
 
       // Probe for Win32IDE server (works from file:// or http://)
@@ -7657,8 +7801,111 @@
     }
 
     // ======================================================================
-    // TERMINAL
+    // TERMINAL — Dual-mode: Local (client-side) + CLI (remote /api/cli)
     // ======================================================================
+
+    // --- Terminal Mode Switching ---
+    function switchTerminalMode(mode) {
+      State.terminal.mode = mode;
+      var localTab = document.getElementById('termTabLocal');
+      var cliTab = document.getElementById('termTabCli');
+      var prompt = document.getElementById('termPrompt');
+      var indicator = document.getElementById('termModeIndicator');
+      var inputEl = document.getElementById('terminalInput');
+
+      if (mode === 'cli') {
+        localTab.classList.remove('active');
+        cliTab.classList.add('active');
+        prompt.innerHTML = 'cli&gt;';
+        indicator.textContent = 'CLI';
+        indicator.style.color = 'var(--accent-cyan)';
+        inputEl.placeholder = '/help | /plan | /analyze | !engine';
+        addTerminalLine('\u2500 Switched to CLI mode \u2500 Commands sent to backend /api/cli', 'system');
+        addTerminalLine('  Backend: ' + (State.backend.online ? State.backend.url : 'OFFLINE') + ' (' + (State.backend.serverType || 'unknown') + ')', State.backend.online ? 'output' : 'error');
+        addTerminalLine('  Type /help for available CLI commands', 'system');
+      } else {
+        cliTab.classList.remove('active');
+        localTab.classList.add('active');
+        prompt.innerHTML = 'rawrxd&gt;';
+        indicator.textContent = 'LOCAL';
+        indicator.style.color = 'var(--text-muted)';
+        inputEl.placeholder = 'help | /help for CLI commands';
+        addTerminalLine('\u2500 Switched to Local mode \u2500 Type help for local commands', 'system');
+      }
+      inputEl.focus();
+    }
+
+    // --- Determine which URL to send CLI commands to ---
+    function getCliUrl() {
+      if (State.backend.online) return State.backend.url;
+      return _ideServerUrl || 'http://localhost:11434';
+    }
+
+    // --- Send a command to the backend /api/cli endpoint ---
+    async function sendCliCommand(command) {
+      var cliUrl = getCliUrl();
+      addTerminalLine('  \u2192 ' + cliUrl + '/api/cli', 'system');
+
+      try {
+        var res = await fetch(cliUrl + '/api/cli', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: command }),
+          signal: AbortSignal.timeout(15000)
+        });
+
+        if (!res.ok) {
+          var altUrl = (cliUrl === State.backend.url)
+            ? State.backend.ollamaDirectUrl
+            : State.backend.url;
+          if (altUrl && altUrl !== cliUrl) {
+            addTerminalLine('  Primary failed (HTTP ' + res.status + '), trying ' + altUrl + '...', 'system');
+            res = await fetch(altUrl + '/api/cli', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ command: command }),
+              signal: AbortSignal.timeout(15000)
+            });
+          }
+        }
+
+        if (!res.ok) {
+          addTerminalLine('Error: HTTP ' + res.status + ' from /api/cli', 'error');
+          addTerminalLine('  Make sure tool_server or Win32IDE is running.', 'error');
+          return;
+        }
+
+        var data = await res.json();
+        if (data.output) {
+          var lines = data.output.split('\n');
+          lines.forEach(function (line) {
+            if (line.trim() === '') return;
+            var lineType = 'output';
+            if (line.indexOf('\u2714') >= 0 || line.indexOf('OK') >= 0 || line.indexOf('ACTIVE') >= 0 || line.indexOf('ENABLED') >= 0) lineType = 'success';
+            else if (line.indexOf('\u26A0') >= 0 || line.indexOf('WARNING') >= 0 || line.indexOf('DISABLED') >= 0 || line.indexOf('INACTIVE') >= 0) lineType = 'error';
+            else if (line.indexOf('\u2500') >= 0 || line.indexOf('Usage:') >= 0 || line.indexOf('Tip:') >= 0) lineType = 'system';
+            addTerminalLine(line, lineType);
+          });
+
+          if (data.output === '[clear]') {
+            document.getElementById('terminalOutput').innerHTML = '';
+          }
+        } else if (data.error) {
+          addTerminalLine('Error: ' + data.error, 'error');
+        }
+
+        if (!data.success) {
+          addTerminalLine('(command returned non-success)', 'system');
+        }
+      } catch (e) {
+        addTerminalLine('CLI Error: ' + e.message, 'error');
+        addTerminalLine('  Backends tried: ' + cliUrl, 'error');
+        if (e.name === 'TimeoutError') {
+          addTerminalLine('  Command timed out after 15s. Backend may be busy.', 'error');
+        }
+      }
+    }
+
     function handleTerminal(e) {
       if (e.key === 'Enter') executeCommand();
       else if (e.key === 'ArrowUp') { e.preventDefault(); navigateHistory(-1); }
@@ -7670,11 +7917,34 @@
       var cmd = input.value.trim();
       if (!cmd) return;
 
-      addTerminalLine('rawrxd> ' + cmd, 'command');
+      var promptPrefix = (State.terminal.mode === 'cli') ? 'cli> ' : 'rawrxd> ';
+      addTerminalLine(promptPrefix + cmd, 'command');
       State.terminal.history.push(cmd);
       State.terminal.index = State.terminal.history.length;
       input.value = '';
 
+      // --- CLI mode: forward ALL commands to backend /api/cli ---
+      if (State.terminal.mode === 'cli') {
+        if (cmd.toLowerCase() === 'clear' || cmd.toLowerCase() === 'cls') {
+          document.getElementById('terminalOutput').innerHTML = '';
+          return;
+        }
+        if (cmd.toLowerCase() === 'mode local' || cmd.toLowerCase() === 'local') {
+          switchTerminalMode('local');
+          return;
+        }
+        sendCliCommand(cmd);
+        return;
+      }
+
+      // --- Local mode: auto-forward /commands and !engine to CLI if backend is online ---
+      if ((cmd.charAt(0) === '/' || cmd.substring(0, 7).toLowerCase() === '!engine') && State.backend.online) {
+        addTerminalLine('  [routing to CLI backend]', 'system');
+        sendCliCommand(cmd);
+        return;
+      }
+
+      // --- Local mode: client-side command processing ---
       var args = cmd.toLowerCase().split(/\s+/);
 
       switch (args[0]) {
@@ -7703,11 +7973,45 @@
           addTerminalLine('  ide launch       \u2014 Launch Win32 IDE (if standalone)', 'output');
           addTerminalLine('  ide probe        \u2014 Re-probe for running IDE instance', 'output');
           addTerminalLine('  ide read <path>  \u2014 Read file via IDE bridge', 'output');
+          addTerminalLine('  backends         \u2014 Show/switch inference backends', 'output');
+          addTerminalLine('  backends switch <name> \u2014 Switch active backend', 'output');
+          addTerminalLine('  router           \u2014 LLM router status & decision info', 'output');
+          addTerminalLine('  router pin <pattern> <backend> \u2014 Pin a route', 'output');
+          addTerminalLine('  swarm            \u2014 Swarm dashboard status', 'output');
+          addTerminalLine('  swarm start|stop \u2014 Start/stop swarm', 'output');
+          addTerminalLine('  multi-response   \u2014 Multi-response engine status', 'output');
+          addTerminalLine('  asm-debug        \u2014 ASM debugger status', 'output');
+          addTerminalLine('  asm-debug go|launch|attach \u2014 Debug actions', 'output');
+          addTerminalLine('  safety           \u2014 Safety monitor status', 'output');
+          addTerminalLine('  safety check     \u2014 Check last output', 'output');
+          addTerminalLine('  safety rollback  \u2014 Rollback last output', 'output');
+          addTerminalLine('  cot              \u2014 Chain-of-Thought engine status', 'output');
+          addTerminalLine('  cot presets      \u2014 List CoT presets', 'output');
+          addTerminalLine('  confidence       \u2014 Confidence evaluator status', 'output');
+          addTerminalLine('  governor         \u2014 Task governor status', 'output');
+          addTerminalLine('  lsp              \u2014 LSP integration status', 'output');
+          addTerminalLine('  mode cli         \u2014 Switch to CLI mode (remote commands)', 'output');
           addTerminalLine('  clear            \u2014 Clear terminal', 'output');
+          addTerminalLine('', 'output');
+          addTerminalLine('CLI Commands (prefix with / or switch to CLI tab):', 'system');
+          addTerminalLine('  /help /plan /analyze /optimize /security /suggest', 'system');
+          addTerminalLine('  /bugreport /hotpatch /status /models /agents /memory', 'system');
+          addTerminalLine('  !engine load800b|setup5drive|verify|analyze|compile', 'system');
           break;
 
         case 'clear': case 'cls':
           document.getElementById('terminalOutput').innerHTML = '';
+          break;
+
+        case 'mode':
+          if (args[1] === 'cli') {
+            switchTerminalMode('cli');
+          } else if (args[1] === 'local') {
+            switchTerminalMode('local');
+          } else {
+            addTerminalLine('Usage: mode <local|cli>', 'error');
+            addTerminalLine('  Current mode: ' + State.terminal.mode, 'output');
+          }
           break;
 
         case 'status':
@@ -7719,12 +8023,18 @@
           addTerminalLine('Files:   ' + State.files.length + ' attached', 'output');
           addTerminalLine('Memory:  ' + Conversation.messages.length + ' turns (max ' + Conversation.maxContextMessages + ')', 'output');
           addTerminalLine('SysPrompt: ' + (Conversation.systemPrompt ? Conversation.systemPrompt.substring(0, 60) + '...' : 'none'), 'output');
+          addTerminalLine('Terminal: mode=' + State.terminal.mode + ', history=' + State.terminal.history.length + ' cmds', 'output');
+          addTerminalLine('CLI URL: ' + getCliUrl(), 'output');
           break;
 
         case 'connect':
           addTerminalLine('Connecting to ' + State.backend.url + '...', 'system');
           connectBackend().then(function () {
             addTerminalLine(State.backend.online ? 'Connected!' : 'Connection failed.', State.backend.online ? 'success' : 'error');
+            if (State.backend.online) {
+              addTerminalLine('  CLI endpoint: ' + getCliUrl() + '/api/cli', 'system');
+              addTerminalLine('  Tip: Switch to CLI tab or type /help for remote commands', 'system');
+            }
           });
           break;
 
@@ -7793,6 +8103,53 @@
           addTerminalLine('GET  /api/agents/status   \u2014 Agent & failure status', 'output');
           addTerminalLine('GET  /api/agents/history  \u2014 Agent event history', 'output');
           addTerminalLine('POST /api/agents/replay   \u2014 Replay agent events', 'output');
+          addTerminalLine('POST /api/cli             \u2014 CLI command execution (tool_server)', 'output');
+          addTerminalLine('POST /api/read-file       \u2014 Read file from disk', 'output');
+          addTerminalLine('POST /api/tool            \u2014 Execute agentic tools', 'output');
+          addTerminalLine('\u2500\u2500\u2500 Win32IDE Extended Endpoints \u2500\u2500\u2500', 'system');
+          addTerminalLine('GET  /api/backends        \u2014 List inference backends', 'output');
+          addTerminalLine('GET  /api/backend/active   \u2014 Active backend info', 'output');
+          addTerminalLine('POST /api/backend/switch   \u2014 Switch active backend', 'output');
+          addTerminalLine('GET  /api/router/status     \u2014 LLM router status', 'output');
+          addTerminalLine('GET  /api/router/decision   \u2014 Last routing decision', 'output');
+          addTerminalLine('GET  /api/router/capabilities \u2014 Backend capabilities', 'output');
+          addTerminalLine('GET  /api/router/heatmap    \u2014 Routing heatmap', 'output');
+          addTerminalLine('GET  /api/router/pins       \u2014 Pinned routes', 'output');
+          addTerminalLine('GET  /api/swarm/status      \u2014 Swarm status', 'output');
+          addTerminalLine('GET  /api/swarm/nodes       \u2014 Connected nodes', 'output');
+          addTerminalLine('GET  /api/swarm/tasks       \u2014 Running tasks', 'output');
+          addTerminalLine('GET  /api/swarm/events      \u2014 Swarm event log', 'output');
+          addTerminalLine('POST /api/swarm/start       \u2014 Start swarm', 'output');
+          addTerminalLine('POST /api/swarm/stop        \u2014 Stop swarm', 'output');
+          addTerminalLine('GET  /api/multi-response/status    \u2014 Multi-response status', 'output');
+          addTerminalLine('GET  /api/multi-response/templates \u2014 SGCX templates', 'output');
+          addTerminalLine('GET  /api/multi-response/stats     \u2014 Preference stats', 'output');
+          addTerminalLine('GET  /api/debug/status      \u2014 ASM debug status', 'output');
+          addTerminalLine('GET  /api/debug/breakpoints \u2014 Breakpoints', 'output');
+          addTerminalLine('GET  /api/debug/registers   \u2014 Register state', 'output');
+          addTerminalLine('GET  /api/debug/stack       \u2014 Stack frames', 'output');
+          addTerminalLine('GET  /api/debug/threads     \u2014 Thread list', 'output');
+          addTerminalLine('GET  /api/debug/events      \u2014 Debug events', 'output');
+          addTerminalLine('GET  /api/safety/status     \u2014 Safety monitor status', 'output');
+          addTerminalLine('GET  /api/safety/violations \u2014 Safety violations', 'output');
+          addTerminalLine('POST /api/safety/check      \u2014 Check content safety', 'output');
+          addTerminalLine('POST /api/safety/rollback   \u2014 Rollback last output', 'output');
+          addTerminalLine('GET  /api/cot/status        \u2014 Chain-of-Thought status', 'output');
+          addTerminalLine('GET  /api/cot/presets       \u2014 CoT presets', 'output');
+          addTerminalLine('GET  /api/cot/steps         \u2014 Current chain steps', 'output');
+          addTerminalLine('GET  /api/cot/roles         \u2014 Available CoT roles', 'output');
+          addTerminalLine('POST /api/cot/execute       \u2014 Execute CoT chain', 'output');
+          addTerminalLine('GET  /api/lsp/status        \u2014 LSP integration status', 'output');
+          addTerminalLine('GET  /api/lsp/diagnostics   \u2014 LSP diagnostics', 'output');
+          addTerminalLine('GET  /api/hybrid/status     \u2014 Hybrid completion status', 'output');
+          addTerminalLine('POST /api/hybrid/complete   \u2014 Hybrid code completion', 'output');
+          addTerminalLine('GET  /api/governor/status   \u2014 Task governor status', 'output');
+          addTerminalLine('POST /api/governor/submit   \u2014 Submit task', 'output');
+          addTerminalLine('GET  /api/confidence/status \u2014 Confidence evaluator status', 'output');
+          addTerminalLine('POST /api/confidence/evaluate \u2014 Evaluate confidence', 'output');
+          addTerminalLine('GET  /api/phase10/status    \u2014 Phase 10 status', 'output');
+          addTerminalLine('GET  /api/phase11/status    \u2014 Phase 11 status', 'output');
+          addTerminalLine('GET  /api/phase12/status    \u2014 Phase 12 status', 'output');
           break;
 
         case 'curl':
@@ -7975,7 +8332,7 @@
             addTerminalLine('  IDE URL:       ' + (_ideServerUrl || 'not set'), 'output');
             addTerminalLine('  Backend URL:   ' + State.backend.url, 'output');
             addTerminalLine('  Backend Online:' + (State.backend.online ? ' YES' : ' NO'), State.backend.online ? 'success' : 'error');
-            addTerminalLine('  Polling:       ' + (_idePollInterval ? 'ACTIVE (30s)' : 'INACTIVE'), _idePollInterval ? 'success' : 'output');
+            addTerminalLine('  Polling:       ' + (_win32IdePollTimer ? 'ACTIVE (30s)' : 'INACTIVE'), _win32IdePollTimer ? 'success' : 'output');
             addTerminalLine('  Fullscreen:    ' + (document.body.classList.contains('standalone-fullscreen') ? 'YES' : 'NO'), 'output');
             if (_isFileProtocol) {
               addTerminalLine('  Subcommands: ide launch | ide probe | ide read <path>', 'system');
@@ -7995,29 +8352,471 @@
               addTerminalLine('IDE Detected: ' + (_win32IdeDetected ? 'YES at ' + _ideServerUrl : 'NO'), _win32IdeDetected ? 'success' : 'error');
             });
           } else if (args[1] === 'read' && args.length >= 3) {
-            var filePath = cmd.substring(cmd.indexOf(args[2]));
+            var readCmd = cmd.toLowerCase();
+            var readIdx = readCmd.indexOf('read') + 5;
+            var filePath = cmd.substring(readIdx).trim();
             addTerminalLine('Reading: ' + filePath, 'system');
-            readFileViaIDE(filePath).then(function (content) {
-              if (content) {
-                var lines = content.split('\n');
+            readFileViaIDE(filePath).then(function (result) {
+              if (result && result.content) {
+                addTerminalLine('File: ' + (result.name || filePath) + ' (' + (result.size || '?') + ' bytes)', 'success');
+                var lines = result.content.split('\n');
                 var maxLines = Math.min(lines.length, 30);
                 for (var li = 0; li < maxLines; li++) {
                   addTerminalLine(lines[li], 'output');
                 }
                 if (lines.length > 30) {
-                  addTerminalLine('... (' + (lines.length - 30) + ' more lines)', 'system');
+                  addTerminalLine('  ... (' + (lines.length - 30) + ' more lines)', 'system');
                 }
               } else {
-                addTerminalLine('Failed to read file (IDE offline or path not found).', 'error');
+                addTerminalLine('Failed to read file or empty content.', 'error');
               }
+            }).catch(function (e) {
+              addTerminalLine('Read error: ' + e.message, 'error');
             });
           } else {
             addTerminalLine('Usage: ide [launch|probe|read <path>]', 'error');
           }
           break;
 
+        case 'backends':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 Backend Switcher \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Fetching backends from Win32IDE...', 'system');
+            (async function () {
+              try {
+                var aRes = await fetch(getActiveUrl() + '/api/backend/active', { signal: AbortSignal.timeout(5000) });
+                var aData = aRes.ok ? await aRes.json() : {};
+                addTerminalLine('  Active: ' + (aData.name || aData.backend || aData.type || '\u2014'), 'success');
+                var bRes = await fetch(getActiveUrl() + '/api/backends', { signal: AbortSignal.timeout(5000) });
+                if (bRes.ok) {
+                  var bData = await bRes.json();
+                  var list = bData.backends || bData.list || [];
+                  if (Array.isArray(list) && list.length > 0) {
+                    list.forEach(function (b) {
+                      var name = b.name || b.type || 'unknown';
+                      var url = b.url || b.endpoint || '';
+                      var online = b.online !== false ? '\u2714' : '\u2718';
+                      addTerminalLine('  ' + online + ' ' + name + (url ? ' (' + url + ')' : ''), b.online !== false ? 'output' : 'error');
+                    });
+                  } else {
+                    addTerminalLine('  No backends configured.', 'output');
+                  }
+                }
+                addTerminalLine('  Usage: backends switch <name>', 'system');
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'switch' && args.length >= 3) {
+            var bName = args.slice(2).join(' ');
+            addTerminalLine('Switching backend to: ' + bName + '...', 'system');
+            switchBackend(bName);
+          } else {
+            addTerminalLine('Usage: backends [switch <name>]', 'error');
+          }
+          break;
+
+        case 'router':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 LLM Router \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Fetching router status...', 'system');
+            (async function () {
+              try {
+                var sRes = await fetch(getActiveUrl() + '/api/router/status', { signal: AbortSignal.timeout(5000) });
+                if (sRes.ok) {
+                  var sData = await sRes.json();
+                  addTerminalLine('  Status: ' + (sData.status || sData.state || 'active'), 'success');
+                  if (sData.total_routes) addTerminalLine('  Total Routes: ' + sData.total_routes, 'output');
+                  if (sData.total_decisions) addTerminalLine('  Total Decisions: ' + sData.total_decisions, 'output');
+                }
+                var dRes = await fetch(getActiveUrl() + '/api/router/decision', { signal: AbortSignal.timeout(5000) });
+                if (dRes.ok) {
+                  var dData = await dRes.json();
+                  addTerminalLine('  Last Decision: ' + (dData.backend || dData.selected || dData.decision || '\u2014'), 'output');
+                }
+                var pRes = await fetch(getActiveUrl() + '/api/router/pins', { signal: AbortSignal.timeout(5000) });
+                if (pRes.ok) {
+                  var pData = await pRes.json();
+                  var pins = pData.pins || pData;
+                  if (Array.isArray(pins) && pins.length > 0) {
+                    addTerminalLine('  Pins:', 'output');
+                    pins.forEach(function (p) {
+                      addTerminalLine('    ' + (p.pattern || p.model || '') + ' \u2192 ' + (p.backend || ''), 'output');
+                    });
+                  } else {
+                    addTerminalLine('  Pins: none', 'output');
+                  }
+                }
+                addTerminalLine('  Usage: router pin <pattern> <backend>', 'system');
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'pin' && args.length >= 4) {
+            var pattern = args[2];
+            var backend = args.slice(3).join(' ');
+            addTerminalLine('Pinning route: ' + pattern + ' \u2192 ' + backend, 'system');
+            (async function () {
+              try {
+                var res = await fetch(getActiveUrl() + '/api/router/pin', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ pattern: pattern, backend: backend }),
+                  signal: AbortSignal.timeout(10000)
+                });
+                var data = res.ok ? await res.json() : {};
+                addTerminalLine('Pin result: ' + (data.status || data.message || 'ok'), res.ok ? 'success' : 'error');
+              } catch (e) {
+                addTerminalLine('Pin failed: ' + e.message, 'error');
+              }
+            })();
+          } else {
+            addTerminalLine('Usage: router [pin <pattern> <backend>]', 'error');
+          }
+          break;
+
+        case 'swarm':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 Swarm Dashboard \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Fetching swarm status...', 'system');
+            (async function () {
+              try {
+                var sRes = await fetch(getActiveUrl() + '/api/swarm/status', { signal: AbortSignal.timeout(5000) });
+                if (sRes.ok) {
+                  var sData = await sRes.json();
+                  var status = sData.status || sData.state || 'idle';
+                  addTerminalLine('  Status: ' + status, status === 'running' ? 'success' : 'output');
+                }
+                var nRes = await fetch(getActiveUrl() + '/api/swarm/nodes', { signal: AbortSignal.timeout(5000) });
+                if (nRes.ok) {
+                  var nData = await nRes.json();
+                  var nodes = nData.nodes || nData;
+                  var count = Array.isArray(nodes) ? nodes.length : 0;
+                  addTerminalLine('  Nodes: ' + count, 'output');
+                  if (Array.isArray(nodes) && nodes.length > 0) {
+                    nodes.forEach(function (n) {
+                      var nStatus = n.status || n.state || 'unknown';
+                      addTerminalLine('    ' + (n.name || n.id || n.host || 'node') + ' [' + nStatus + ']', nStatus === 'active' || nStatus === 'online' ? 'success' : 'output');
+                    });
+                  }
+                }
+                var tRes = await fetch(getActiveUrl() + '/api/swarm/tasks', { signal: AbortSignal.timeout(5000) });
+                if (tRes.ok) {
+                  var tData = await tRes.json();
+                  var tasks = tData.tasks || tData;
+                  addTerminalLine('  Tasks: ' + (Array.isArray(tasks) ? tasks.length : 0), 'output');
+                }
+                addTerminalLine('  Usage: swarm start|stop|cache/clear', 'system');
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'start' || args[1] === 'stop' || args[1] === 'cache/clear') {
+            addTerminalLine('Swarm ' + args[1] + '...', 'system');
+            swarmAction(args[1]);
+          } else {
+            addTerminalLine('Usage: swarm [start|stop|cache/clear]', 'error');
+          }
+          break;
+
+        case 'multi-response':
+          addTerminalLine('\u2500\u2500\u2500 Multi-Response Engine \u2500\u2500\u2500', 'output');
+          addTerminalLine('  Fetching status...', 'system');
+          (async function () {
+            try {
+              var sRes = await fetch(getActiveUrl() + '/api/multi-response/status', { signal: AbortSignal.timeout(5000) });
+              if (sRes.ok) {
+                var sData = await sRes.json();
+                addTerminalLine('  Status: ' + (sData.status || sData.state || 'ready'), 'success');
+                addTerminalLine('  Total Generated: ' + (sData.total_generated || sData.generations || 0), 'output');
+              }
+              var tRes = await fetch(getActiveUrl() + '/api/multi-response/templates', { signal: AbortSignal.timeout(5000) });
+              if (tRes.ok) {
+                var tData = await tRes.json();
+                var templates = tData.templates || tData;
+                if (Array.isArray(templates) && templates.length > 0) {
+                  addTerminalLine('  Templates:', 'output');
+                  templates.forEach(function (t) {
+                    addTerminalLine('    [' + (t.name || t.type || t.id || '?') + '] ' + (t.description || ''), 'output');
+                  });
+                }
+              }
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+            } catch (e) {
+              addTerminalLine('  Error: ' + e.message, 'error');
+            }
+          })();
+          break;
+
+        case 'asm-debug':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 ASM Debugger \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Fetching debug status...', 'system');
+            (async function () {
+              try {
+                var sRes = await fetch(getActiveUrl() + '/api/debug/status', { signal: AbortSignal.timeout(5000) });
+                if (sRes.ok) {
+                  var sData = await sRes.json();
+                  var status = sData.status || sData.state || 'idle';
+                  addTerminalLine('  Status: ' + status, status === 'running' || status === 'active' ? 'success' : 'output');
+                }
+                var bRes = await fetch(getActiveUrl() + '/api/debug/breakpoints', { signal: AbortSignal.timeout(5000) });
+                if (bRes.ok) {
+                  var bData = await bRes.json();
+                  var bps = bData.breakpoints || bData;
+                  addTerminalLine('  Breakpoints: ' + (Array.isArray(bps) ? bps.length : 0), 'output');
+                }
+                var thRes = await fetch(getActiveUrl() + '/api/debug/threads', { signal: AbortSignal.timeout(5000) });
+                if (thRes.ok) {
+                  var thData = await thRes.json();
+                  var threads = thData.threads || thData;
+                  addTerminalLine('  Threads: ' + (Array.isArray(threads) ? threads.length : 0), 'output');
+                }
+                var rRes = await fetch(getActiveUrl() + '/api/debug/registers', { signal: AbortSignal.timeout(5000) });
+                if (rRes.ok) {
+                  var rData = await rRes.json();
+                  var regs = rData.registers || rData;
+                  if (typeof regs === 'object' && regs !== null) {
+                    addTerminalLine('  Registers:', 'output');
+                    Object.keys(regs).slice(0, 8).forEach(function (k) {
+                      var val = typeof regs[k] === 'number' ? '0x' + regs[k].toString(16).toUpperCase().padStart(16, '0') : String(regs[k]);
+                      addTerminalLine('    ' + k + ' = ' + val, 'output');
+                    });
+                    if (Object.keys(regs).length > 8) addTerminalLine('    ... (' + (Object.keys(regs).length - 8) + ' more)', 'system');
+                  }
+                }
+                addTerminalLine('  Usage: asm-debug go|launch|attach', 'system');
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'go' || args[1] === 'launch' || args[1] === 'attach') {
+            addTerminalLine('Debug ' + args[1] + '...', 'system');
+            asmDebugAction(args[1]);
+          } else {
+            addTerminalLine('Usage: asm-debug [go|launch|attach]', 'error');
+          }
+          break;
+
+        case 'safety':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 Safety Monitor \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Fetching safety status...', 'system');
+            (async function () {
+              try {
+                var sRes = await fetch(getActiveUrl() + '/api/safety/status', { signal: AbortSignal.timeout(5000) });
+                if (sRes.ok) {
+                  var sData = await sRes.json();
+                  addTerminalLine('  Status: ' + (sData.status || sData.state || 'active'), 'success');
+                }
+                var vRes = await fetch(getActiveUrl() + '/api/safety/violations', { signal: AbortSignal.timeout(5000) });
+                if (vRes.ok) {
+                  var vData = await vRes.json();
+                  var violations = vData.violations || vData;
+                  var count = Array.isArray(violations) ? violations.length : 0;
+                  addTerminalLine('  Violations: ' + count, count > 0 ? 'error' : 'success');
+                  if (count > 0) {
+                    violations.slice(-5).forEach(function (v) {
+                      addTerminalLine('    \u2718 ' + (v.type || v.category || 'violation') + ': ' + ((v.detail || v.message || '').substring(0, 60)), 'error');
+                    });
+                  }
+                }
+                addTerminalLine('  Usage: safety check|rollback', 'system');
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'check') {
+            addTerminalLine('Checking last output safety...', 'system');
+            safetyCheck();
+          } else if (args[1] === 'rollback') {
+            addTerminalLine('Rolling back last output...', 'system');
+            safetyRollback();
+          } else {
+            addTerminalLine('Usage: safety [check|rollback]', 'error');
+          }
+          break;
+
+        case 'cot':
+          if (args.length === 1) {
+            addTerminalLine('\u2500\u2500\u2500 Chain-of-Thought Engine \u2500\u2500\u2500', 'output');
+            addTerminalLine('  Fetching CoT status...', 'system');
+            (async function () {
+              try {
+                var sRes = await fetch(getActiveUrl() + '/api/cot/status', { signal: AbortSignal.timeout(5000) });
+                if (sRes.ok) {
+                  var sData = await sRes.json();
+                  addTerminalLine('  Status: ' + (sData.status || sData.state || 'ready'), 'success');
+                  if (sData.active_chain) addTerminalLine('  Active Chain: ' + sData.active_chain, 'output');
+                  if (sData.total_executions) addTerminalLine('  Total Executions: ' + sData.total_executions, 'output');
+                }
+                var stRes = await fetch(getActiveUrl() + '/api/cot/steps', { signal: AbortSignal.timeout(5000) });
+                if (stRes.ok) {
+                  var stData = await stRes.json();
+                  var steps = stData.steps || stData;
+                  if (Array.isArray(steps) && steps.length > 0) {
+                    addTerminalLine('  Current Steps:', 'output');
+                    steps.forEach(function (s, i) {
+                      addTerminalLine('    ' + (i + 1) + '. [' + (s.role || '?') + '] ' + (s.model || 'default') + (s.skip ? ' (SKIP)' : ''), s.skip ? 'system' : 'output');
+                    });
+                  }
+                }
+                addTerminalLine('  Usage: cot presets|roles', 'system');
+                addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'presets') {
+            addTerminalLine('Fetching CoT presets...', 'system');
+            (async function () {
+              try {
+                var pRes = await fetch(getActiveUrl() + '/api/cot/presets', { signal: AbortSignal.timeout(5000) });
+                if (pRes.ok) {
+                  var pData = await pRes.json();
+                  var presets = pData.presets || pData;
+                  if (Array.isArray(presets) && presets.length > 0) {
+                    presets.forEach(function (p) {
+                      addTerminalLine('  ' + (p.name || p.id || 'preset') + ': ' + (p.description || p.label || ''), 'output');
+                    });
+                  } else if (typeof presets === 'object') {
+                    Object.keys(presets).forEach(function (k) {
+                      addTerminalLine('  ' + k + ': ' + JSON.stringify(presets[k]).substring(0, 60), 'output');
+                    });
+                  }
+                }
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else if (args[1] === 'roles') {
+            addTerminalLine('Fetching CoT roles...', 'system');
+            (async function () {
+              try {
+                var rRes = await fetch(getActiveUrl() + '/api/cot/roles', { signal: AbortSignal.timeout(5000) });
+                if (rRes.ok) {
+                  var rData = await rRes.json();
+                  var roles = rData.roles || rData;
+                  if (Array.isArray(roles) && roles.length > 0) {
+                    roles.forEach(function (r) {
+                      addTerminalLine('  ' + (r.name || r.id || r) + (r.description ? ': ' + r.description : ''), 'output');
+                    });
+                  }
+                }
+              } catch (e) {
+                addTerminalLine('  Error: ' + e.message, 'error');
+              }
+            })();
+          } else {
+            addTerminalLine('Usage: cot [presets|roles]', 'error');
+          }
+          break;
+
+        case 'confidence':
+          addTerminalLine('\u2500\u2500\u2500 Confidence Evaluator \u2500\u2500\u2500', 'output');
+          addTerminalLine('  Fetching status...', 'system');
+          (async function () {
+            try {
+              var sRes = await fetch(getActiveUrl() + '/api/confidence/status', { signal: AbortSignal.timeout(5000) });
+              if (sRes.ok) {
+                var sData = await sRes.json();
+                addTerminalLine('  Status: ' + (sData.status || sData.state || 'ready'), 'success');
+                if (sData.total_evaluations) addTerminalLine('  Total Evaluations: ' + sData.total_evaluations, 'output');
+                if (sData.avg_confidence !== undefined) addTerminalLine('  Avg Confidence: ' + (sData.avg_confidence * 100).toFixed(1) + '%', 'output');
+              }
+              var hRes = await fetch(getActiveUrl() + '/api/confidence/history', { signal: AbortSignal.timeout(5000) });
+              if (hRes.ok) {
+                var hData = await hRes.json();
+                var history = hData.history || hData.evaluations || hData;
+                if (Array.isArray(history) && history.length > 0) {
+                  addTerminalLine('  Recent:', 'output');
+                  history.slice(-5).forEach(function (h) {
+                    var score = h.score !== undefined ? (h.score * 100).toFixed(0) + '%' : h.confidence !== undefined ? (h.confidence * 100).toFixed(0) + '%' : '?';
+                    addTerminalLine('    ' + score + ' \u2014 ' + ((h.model || h.query || '').substring(0, 40)), 'output');
+                  });
+                }
+              }
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+            } catch (e) {
+              addTerminalLine('  Error: ' + e.message, 'error');
+            }
+          })();
+          break;
+
+        case 'governor':
+          addTerminalLine('\u2500\u2500\u2500 Task Governor \u2500\u2500\u2500', 'output');
+          addTerminalLine('  Fetching governor status...', 'system');
+          (async function () {
+            try {
+              var sRes = await fetch(getActiveUrl() + '/api/governor/status', { signal: AbortSignal.timeout(5000) });
+              if (sRes.ok) {
+                var sData = await sRes.json();
+                addTerminalLine('  Status: ' + (sData.status || sData.state || 'ready'), 'success');
+                if (sData.active_tasks !== undefined) addTerminalLine('  Active Tasks: ' + sData.active_tasks, 'output');
+                if (sData.completed !== undefined) addTerminalLine('  Completed: ' + sData.completed, 'output');
+                if (sData.queued !== undefined) addTerminalLine('  Queued: ' + sData.queued, 'output');
+              }
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+            } catch (e) {
+              addTerminalLine('  Error: ' + e.message, 'error');
+            }
+          })();
+          break;
+
+        case 'lsp':
+          addTerminalLine('\u2500\u2500\u2500 LSP Integration \u2500\u2500\u2500', 'output');
+          addTerminalLine('  Fetching LSP status...', 'system');
+          (async function () {
+            try {
+              var sRes = await fetch(getActiveUrl() + '/api/lsp/status', { signal: AbortSignal.timeout(5000) });
+              if (sRes.ok) {
+                var sData = await sRes.json();
+                addTerminalLine('  Status: ' + (sData.status || sData.state || 'active'), 'success');
+                if (sData.language_servers) {
+                  addTerminalLine('  Language Servers:', 'output');
+                  var servers = sData.language_servers;
+                  if (Array.isArray(servers)) {
+                    servers.forEach(function (s) {
+                      addTerminalLine('    ' + (s.name || s.language || 'unknown') + ' [' + (s.status || 'running') + ']', 'output');
+                    });
+                  }
+                }
+              }
+              var dRes = await fetch(getActiveUrl() + '/api/lsp/diagnostics', { signal: AbortSignal.timeout(5000) });
+              if (dRes.ok) {
+                var dData = await dRes.json();
+                var diags = dData.diagnostics || dData;
+                if (Array.isArray(diags) && diags.length > 0) {
+                  addTerminalLine('  Diagnostics (' + diags.length + '):', 'output');
+                  diags.slice(0, 10).forEach(function (d) {
+                    var severity = d.severity || d.level || 'info';
+                    addTerminalLine('    [' + severity + '] ' + (d.file || '') + ':' + (d.line || '?') + ' ' + (d.message || '').substring(0, 50), severity === 'error' ? 'error' : 'output');
+                  });
+                  if (diags.length > 10) addTerminalLine('    ... (' + (diags.length - 10) + ' more)', 'system');
+                } else {
+                  addTerminalLine('  Diagnostics: 0 issues \u2714', 'success');
+                }
+              }
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+            } catch (e) {
+              addTerminalLine('  Error: ' + e.message, 'error');
+            }
+          })();
+          break;
+
         default:
-          addTerminalLine("Unknown: " + args[0] + ". Type 'help' for commands.", 'error');
+          // If it looks like a CLI command but we're offline, inform user
+          if (cmd.charAt(0) === '/' || cmd.substring(0, 7).toLowerCase() === '!engine') {
+            addTerminalLine("CLI command detected but backend is offline.", 'error');
+            addTerminalLine("  Run 'connect' first, or switch to CLI tab when online.", 'system');
+          } else {
+            addTerminalLine("Unknown: " + args[0] + ". Type 'help' for commands.", 'error');
+          }
       }
     }
 
@@ -9601,25 +10400,27 @@
     }
 
     function el(id) { return document.getElementById(id); }
-    var log = State.security.eventLog;
-    el('secLogCount').textContent = log.length;
 
-    if (log.length === 0) {
-      el('secLogBody').innerHTML = '<div class="sec-log-entry"><span class="sec-log-ts">\u2014</span><span class="sec-log-level AUDIT">AUDIT</span><span class="sec-log-detail">No security events yet</span></div>';
-      return;
-    }
+    function renderSecurityLog() {
+      var log = State.security.eventLog;
+      el('secLogCount').textContent = log.length;
 
-    var html = '';
-    var show = log.slice(-50).reverse();
-    show.forEach(function (entry) {
-      var time = new Date(entry.timestamp).toLocaleTimeString([], { hour12: false });
-      html += '<div class="sec-log-entry">';
-      html += '<span class="sec-log-ts">' + time + '</span>';
-      html += '<span class="sec-log-level ' + esc(entry.level) + '">' + esc(entry.level) + '</span>';
-      html += '<span class="sec-log-detail">' + esc(entry.detail) + '</span>';
-      html += '</div>';
-    });
-    el('secLogBody').innerHTML = html;
+      if (log.length === 0) {
+        el('secLogBody').innerHTML = '<div class="sec-log-entry"><span class="sec-log-ts">\u2014</span><span class="sec-log-level AUDIT">AUDIT</span><span class="sec-log-detail">No security events yet</span></div>';
+        return;
+      }
+
+      var html = '';
+      var show = log.slice(-50).reverse();
+      show.forEach(function (entry) {
+        var time = new Date(entry.timestamp).toLocaleTimeString([], { hour12: false });
+        html += '<div class="sec-log-entry">';
+        html += '<span class="sec-log-ts">' + time + '</span>';
+        html += '<span class="sec-log-level ' + esc(entry.level) + '">' + esc(entry.level) + '</span>';
+        html += '<span class="sec-log-detail">' + esc(entry.detail) + '</span>';
+        html += '</div>';
+      });
+      el('secLogBody').innerHTML = html;
     }
 
     function exportSecurityAudit() {
@@ -9912,10 +10713,91 @@
 
       // ================================================================
       // CHAIN EXECUTION ENGINE
+      // Attempts Win32IDE server-side /api/cot/execute first if available,
+      // falls through to client-side step-by-step execution if not.
       // ================================================================
       executeChain: async function (userQuery) {
         if (!this.enabled || this.steps.length === 0) return null;
 
+        // --- Try Win32IDE server-side CoT execution first ---
+        if (_win32IdeDetected && State.backend.online) {
+          try {
+            var cotPayload = {
+              query: userQuery,
+              steps: this.steps.filter(function (s) { return !s.skip; }).map(function (s) {
+                return { role: s.role, model: s.model || State.model.current || 'rawrxd', instruction: s.instruction || '' };
+              })
+            };
+            var cotRes = await fetch(getActiveUrl() + '/api/cot/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(cotPayload),
+              signal: AbortSignal.timeout(120000)
+            });
+            if (cotRes.ok) {
+              var cotData = await cotRes.json();
+              if (cotData.result || cotData.output || cotData.steps) {
+                logDebug('CoT executed via Win32IDE server-side /api/cot/execute', 'info');
+                // Build chain result display from server response
+                var serverSteps = cotData.steps || [];
+                var finalOutput = cotData.result || cotData.output || cotData.final || '';
+                var chainDiv = document.createElement('div');
+                chainDiv.className = 'cot-chain-result';
+                var chainHeader = document.createElement('div');
+                chainHeader.className = 'cot-chain-header';
+                chainHeader.innerHTML =
+                  '<span class="chain-icon">\uD83E\uDDE0</span>' +
+                  '<span class="chain-summary">Chain of Thought (' + (serverSteps.length || cotPayload.steps.length) + ' steps) &mdash; server-side</span>' +
+                  '<span class="chain-toggle">&#x25BC;</span>';
+                chainDiv.appendChild(chainHeader);
+                var stepsContainer = document.createElement('div');
+                stepsContainer.className = 'cot-chain-steps';
+                if (serverSteps.length > 0) {
+                  serverSteps.forEach(function (ss, si) {
+                    var stepDiv = document.createElement('div');
+                    stepDiv.className = 'cot-step-card';
+                    stepDiv.innerHTML =
+                      '<div class="cot-step-header">' +
+                      '<span class="cot-step-num">' + (si + 1) + '</span>' +
+                      '<span class="cot-step-role">' + esc(ss.role || 'step') + '</span>' +
+                      '<span class="cot-step-model">' + esc(ss.model || '') + '</span>' +
+                      '</div>' +
+                      '<div class="cot-step-content">' + formatMessage(ss.content || ss.output || '') + '</div>';
+                    stepsContainer.appendChild(stepDiv);
+                  });
+                }
+                chainDiv.appendChild(stepsContainer);
+                chainHeader.onclick = function () {
+                  stepsContainer.classList.toggle('collapsed');
+                  var arrow = chainHeader.querySelector('.chain-toggle');
+                  arrow.textContent = stepsContainer.classList.contains('collapsed') ? '\u25B6' : '\u25BC';
+                };
+                var msgDiv = addMessage('assistant', '', { skipMemory: true });
+                var textEl = msgDiv.querySelector('.message-text');
+                textEl.innerHTML = '';
+                textEl.appendChild(chainDiv);
+                // Add final output as regular text after the chain display
+                if (finalOutput) {
+                  var finalDiv = document.createElement('div');
+                  finalDiv.style.marginTop = '12px';
+                  finalDiv.innerHTML = formatMessage(finalOutput);
+                  textEl.appendChild(finalDiv);
+                  // Also add to conversation memory
+                  Conversation.messages.push({ role: 'assistant', content: finalOutput });
+                  enforceContextWindow();
+                }
+                this.running = false;
+                return finalOutput || (serverSteps.length > 0 ? serverSteps[serverSteps.length - 1].content || '' : '');
+              }
+            }
+            // If /api/cot/execute returned non-ok, fall through to client-side execution
+            logDebug('Win32IDE /api/cot/execute returned non-ok, falling back to client-side', 'warn');
+          } catch (cotErr) {
+            logDebug('Win32IDE /api/cot/execute failed (' + cotErr.message + '), falling back to client-side', 'warn');
+          }
+        }
+
+        // --- Client-side step-by-step execution (original) ---
         this.running = true;
         this.abortController = new AbortController();
         var signal = this.abortController.signal;
