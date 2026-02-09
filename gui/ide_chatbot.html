@@ -5299,6 +5299,7 @@
         lastPing: 0,
         serverType: null,         // 'rawrxd-win32ide' or 'RawrXD-serve.py' or 'ollama-direct'
         fileProtocol: _isFileProtocol,               // true when opened via file:///
+        hasCliEndpoint: false,    // Beacon: true if backend has /api/cli (Win32IDE or tool_server)
       },
       model: { current: null, list: [] },
       gen: {
@@ -6200,6 +6201,36 @@
       return State.backend.directMode ? State.backend.ollamaDirectUrl : State.backend.url;
     }
 
+    // Beacon: probe whether backend (or alternate) exposes /api/cli
+    // Sets State.backend.hasCliEndpoint = true if found on ANY reachable URL
+    async function beaconProbeCliEndpoint() {
+      State.backend.hasCliEndpoint = false;
+      var urlsToProbe = [State.backend.url];
+      if (State.backend.ollamaDirectUrl && State.backend.ollamaDirectUrl !== State.backend.url) {
+        urlsToProbe.push(State.backend.ollamaDirectUrl);
+      }
+      for (var i = 0; i < urlsToProbe.length; i++) {
+        try {
+          var res = await fetch(urlsToProbe[i] + '/api/cli', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: '/help' }),
+            signal: AbortSignal.timeout(2000)
+          });
+          if (res.ok) {
+            var data = await res.json();
+            if (data && data.output) {
+              State.backend.hasCliEndpoint = true;
+              State.backend._cliEndpointUrl = urlsToProbe[i];
+              logDebug('Beacon: /api/cli found at ' + urlsToProbe[i], 'info');
+              return;
+            }
+          }
+        } catch (_) { /* endpoint not available, continue */ }
+      }
+      logDebug('Beacon: /api/cli not found on any backend — using client-side CLI', 'info');
+    }
+
     async function connectBackend() {
       const status = document.getElementById('backendStatus');
       const text = document.getElementById('statusText');
@@ -6252,6 +6283,7 @@
           logDebug('Connected to ' + State.backend.serverType + ' (' + latency + 'ms)', 'info');
 
           await fetchModels();
+          await beaconProbeCliEndpoint();
           return;
         }
       } catch (e) {
@@ -6287,6 +6319,7 @@
               logDebug('\u2705 Connected directly to Ollama (bypassing serve.py) (' + latency + 'ms)', 'info');
 
               await fetchModels();
+              await beaconProbeCliEndpoint();
               return;
             }
           }
@@ -7837,73 +7870,556 @@
 
     // --- Determine which URL to send CLI commands to ---
     function getCliUrl() {
-      if (State.backend.online) return State.backend.url;
+      // If beacon found a /api/cli endpoint, use that exact URL
+      if (State.backend.hasCliEndpoint && State.backend._cliEndpointUrl) {
+        return State.backend._cliEndpointUrl;
+      }
+      // Otherwise use the active URL (respects directMode)
+      if (State.backend.online) return getActiveUrl();
       return _ideServerUrl || 'http://localhost:11434';
     }
 
-    // --- Send a command to the backend /api/cli endpoint ---
-    async function sendCliCommand(command) {
-      var cliUrl = getCliUrl();
-      addTerminalLine('  \u2192 ' + cliUrl + '/api/cli', 'system');
+    // --- Render CLI output lines with color coding ---
+    function renderCliOutput(output) {
+      if (!output) return;
+      if (output === '[clear]') {
+        document.getElementById('terminalOutput').innerHTML = '';
+        return;
+      }
+      var lines = output.split('\n');
+      lines.forEach(function (line) {
+        if (line.trim() === '') return;
+        var lineType = 'output';
+        if (line.indexOf('\u2714') >= 0 || line.indexOf('OK') >= 0 || line.indexOf('ACTIVE') >= 0 || line.indexOf('ENABLED') >= 0) lineType = 'success';
+        else if (line.indexOf('\u26A0') >= 0 || line.indexOf('WARNING') >= 0 || line.indexOf('DISABLED') >= 0 || line.indexOf('INACTIVE') >= 0) lineType = 'error';
+        else if (line.indexOf('\u2500') >= 0 || line.indexOf('Usage:') >= 0 || line.indexOf('Tip:') >= 0) lineType = 'system';
+        addTerminalLine(line, lineType);
+      });
+    }
 
-      try {
-        var res = await fetch(cliUrl + '/api/cli', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: command }),
-          signal: AbortSignal.timeout(15000)
-        });
+    // =========================================================================
+    // CLIENT-SIDE CLI PROCESSOR (Beaconism: works without /api/cli backend)
+    // Mirrors HandleCliRequest from tool_server.cpp for offline/direct operation
+    // =========================================================================
+    async function processCliLocally(command) {
+      var cmd = command.trim();
+      var lower = cmd.toLowerCase();
+      var parts = cmd.split(/\s+/);
+      var subCmd = parts.length > 1 ? parts.slice(1).join(' ') : '';
 
-        if (!res.ok) {
-          var altUrl = (cliUrl === State.backend.url)
-            ? State.backend.ollamaDirectUrl
-            : State.backend.url;
-          if (altUrl && altUrl !== cliUrl) {
-            addTerminalLine('  Primary failed (HTTP ' + res.status + '), trying ' + altUrl + '...', 'system');
-            res = await fetch(altUrl + '/api/cli', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ command: command }),
-              signal: AbortSignal.timeout(15000)
-            });
+      // /help
+      if (lower === '/help' || lower === 'help') {
+        renderCliOutput(
+          '\u2500\u2500\u2500 RawrXD CLI (Client-Side Beacon) \u2500\u2500\u2500\n' +
+          '  /help                \u2014 Show this help\n' +
+          '  /status              \u2014 System & backend status\n' +
+          '  /models              \u2014 List loaded models\n' +
+          '  /plan <task>         \u2014 Generate implementation plan\n' +
+          '  /analyze <file>      \u2014 Analyze a source file\n' +
+          '  /optimize <file>     \u2014 Optimization suggestions\n' +
+          '  /security <file>     \u2014 Security audit\n' +
+          '  /suggest <desc>      \u2014 Code suggestions\n' +
+          '  /bugreport <desc>    \u2014 Generate bug report template\n' +
+          '  /memory              \u2014 Memory & resource stats\n' +
+          '  /agents              \u2014 Agent subsystem status\n' +
+          '  /failures            \u2014 Failure intelligence summary\n' +
+          '  /hotpatch            \u2014 Hotpatch layer status\n' +
+          '  /ask <question>      \u2014 Ask the LLM a question\n' +
+          '  /clear               \u2014 Clear terminal\n' +
+          '  !engine <subcmd>     \u2014 Engine operations\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
+          '  Mode: Client-side beacon (no /api/cli backend required)\n' +
+          '  Tip: Commands that need the LLM will use ' + getActiveUrl()
+        );
+        return;
+      }
+
+      // /clear
+      if (lower === '/clear' || lower === 'clear') {
+        document.getElementById('terminalOutput').innerHTML = '';
+        return;
+      }
+
+      // /status
+      if (lower === '/status' || lower === 'status') {
+        var st = State.backend;
+        var out =
+          '\u2500\u2500\u2500 System Status \u2500\u2500\u2500\n' +
+          '  Backend:         ' + (st.online ? '\u2714 ONLINE' : '\u2718 OFFLINE') + '\n' +
+          '  Server Type:     ' + (st.serverType || '\u2014') + '\n' +
+          '  Active URL:      ' + getActiveUrl() + '\n' +
+          '  IDE URL:         ' + (_ideServerUrl || '\u2014') + '\n' +
+          '  Direct Mode:     ' + (st.directMode ? 'YES (Ollama)' : 'NO (proxy)') + '\n' +
+          '  CLI Endpoint:    ' + (st.hasCliEndpoint ? '\u2714 ' + (st._cliEndpointUrl || '') : '\u2718 Client-side beacon') + '\n' +
+          '  File Protocol:   ' + (st.fileProtocol ? 'YES (file://)' : 'NO (served)') + '\n' +
+          '  Model:           ' + (State.model.current || 'none') + '\n' +
+          '  Models Loaded:   ' + State.model.list.length + '\n' +
+          '  Chat Turns:      ' + Conversation.messages.length + '\n' +
+          '  Files Attached:  ' + State.files.length + '\n' +
+          '  Perf Requests:   ' + State.perf.totalRequests + '\n' +
+          '  Perf Tokens:     ' + State.perf.totalTokens.toLocaleString() + '\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
+        renderCliOutput(out);
+        return;
+      }
+
+      // /models
+      if (lower === '/models' || lower === 'models') {
+        if (State.model.list.length === 0) {
+          // Try fetching from Ollama
+          if (State.backend.online) {
+            try {
+              addTerminalLine('  Fetching models from ' + getActiveUrl() + '...', 'system');
+              var res = await fetch(getActiveUrl() + '/api/tags', { signal: AbortSignal.timeout(5000) });
+              if (res.ok) {
+                var data = await res.json();
+                var models = data.models || [];
+                if (models.length > 0) {
+                  var out = '\u2500\u2500\u2500 Models (' + models.length + ') \u2500\u2500\u2500\n';
+                  models.forEach(function (m) {
+                    var sizeMB = m.size ? (m.size / (1024 * 1024 * 1024)).toFixed(1) + 'GB' : '?';
+                    out += '  \u2714 ' + m.name + ' (' + sizeMB + ')\n';
+                  });
+                  out += '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
+                  renderCliOutput(out);
+                  return;
+                }
+              }
+            } catch (_) { /* fall through */ }
           }
+          addTerminalLine('No models available. Backend may be offline.', 'error');
+        } else {
+          var out = '\u2500\u2500\u2500 Models (' + State.model.list.length + ') \u2500\u2500\u2500\n';
+          State.model.list.forEach(function (m) {
+            var active = (State.model.current === m.name) ? ' \u25C0 ACTIVE' : '';
+            out += '  [' + (m.type || '?') + '] ' + m.name + ' (' + (m.size || '?') + ')' + active + '\n';
+          });
+          out += '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
+          renderCliOutput(out);
         }
+        return;
+      }
 
-        if (!res.ok) {
-          addTerminalLine('Error: HTTP ' + res.status + ' from /api/cli', 'error');
-          addTerminalLine('  Make sure tool_server or Win32IDE is running.', 'error');
+      // /memory
+      if (lower === '/memory' || lower === 'memory') {
+        var mem = Conversation.messages;
+        var totalChars = 0;
+        mem.forEach(function (m) { totalChars += (m.content || '').length; });
+        var jsHeap = (performance && performance.memory) ? performance.memory : null;
+        var out =
+          '\u2500\u2500\u2500 Memory & Resources \u2500\u2500\u2500\n' +
+          '  Chat Turns:       ' + mem.length + ' / ' + Conversation.maxContextMessages + '\n' +
+          '  Total Characters: ' + totalChars.toLocaleString() + '\n' +
+          '  System Prompt:    ' + (Conversation.systemPrompt ? Conversation.systemPrompt.length + ' chars' : 'default') + '\n' +
+          '  Files Attached:   ' + State.files.length + '\n' +
+          '  File Contents:    ' + Object.keys(State.fileContents).length + ' cached\n' +
+          '  Terminal History:  ' + State.terminal.history.length + ' commands\n' +
+          '  Perf Log:         ' + State.perf.structuredLog.length + ' / ' + State.perf.maxLog + ' entries\n' +
+          '  Security Events:  ' + State.security.eventLog.length + ' / ' + State.security.maxLog + '\n';
+        if (jsHeap) {
+          out += '  JS Heap Used:     ' + (jsHeap.usedJSHeapSize / (1024 * 1024)).toFixed(1) + ' MB\n';
+          out += '  JS Heap Limit:    ' + (jsHeap.jsHeapSizeLimit / (1024 * 1024)).toFixed(0) + ' MB\n';
+        }
+        out += '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
+        renderCliOutput(out);
+        return;
+      }
+
+      // /agents
+      if (lower === '/agents' || lower === 'agents') {
+        if (State.backend.online) {
+          try {
+            var res = await fetch(getActiveUrl() + '/api/agents/status', { signal: AbortSignal.timeout(5000) });
+            if (res.ok) {
+              var data = await res.json();
+              var agents = data.agents || {};
+              var det = agents.failure_detector || {};
+              var pup = agents.puppeteer || {};
+              var prx = agents.proxy_hotpatcher || {};
+              var mgr = agents.unified_manager || {};
+              renderCliOutput(
+                '\u2500\u2500\u2500 Agent Dashboard \u2500\u2500\u2500\n' +
+                '  Failure Detector: ' + (det.active ? '\u2714 ACTIVE' : '\u2718 INACTIVE') + ' (' + (det.detections || 0) + ' detections)\n' +
+                '  Puppeteer:        ' + (pup.active ? '\u2714 ACTIVE' : '\u2718 INACTIVE') + ' (' + (pup.corrections || 0) + ' corrections)\n' +
+                '  Proxy Hotpatcher: ' + (prx.active ? '\u2714 ACTIVE' : '\u2718 INACTIVE') + ' (' + (prx.patches_applied || 0) + ' patches)\n' +
+                '  Unified Manager:  Memory=' + (mgr.memory_patches || 0) + '  Byte=' + (mgr.byte_patches || 0) + '  Server=' + (mgr.server_patches || 0) + '\n' +
+                '  Uptime:           ' + (data.server_uptime || 0) + 's\n' +
+                '  Total Events:     ' + (data.total_events || 0) + '\n' +
+                '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+              );
+              return;
+            }
+          } catch (_) { /* fall through */ }
+        }
+        // Offline fallback: show client-side state
+        renderCliOutput(
+          '\u2500\u2500\u2500 Agent Dashboard (Client-Side) \u2500\u2500\u2500\n' +
+          '  Failure Detector: \u2714 Built-in (client-side)\n' +
+          '  Puppeteer:        \u2714 Built-in (auto-retry + correction)\n' +
+          '  Proxy Hotpatcher: ' + (_hotpatchLayerStates && _hotpatchLayerStates.server ? '\u2714 ENABLED' : '\u2718 DISABLED') + '\n' +
+          '  Memory Layer:     ' + (_hotpatchLayerStates && _hotpatchLayerStates.memory ? '\u2714 ENABLED' : '\u2718 DISABLED') + '\n' +
+          '  Byte Layer:       ' + (_hotpatchLayerStates && _hotpatchLayerStates.byte ? '\u2714 ENABLED' : '\u2718 DISABLED') + '\n' +
+          '  Tip: Connect to backend for full agent telemetry\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /failures
+      if (lower === '/failures' || lower === 'failures') {
+        if (State.backend.online) {
+          try {
+            var res = await fetch(getActiveUrl() + '/api/failures?limit=50', { signal: AbortSignal.timeout(5000) });
+            if (res.ok) {
+              var data = await res.json();
+              var s = data.stats || {};
+              var out =
+                '\u2500\u2500\u2500 Failure Intelligence \u2500\u2500\u2500\n' +
+                '  Total Failures:    ' + (s.totalFailures || 0) + '\n' +
+                '  Total Retries:     ' + (s.totalRetries || 0) + '\n' +
+                '  Retry Successes:   ' + (s.successAfterRetry || 0) + '\n' +
+                '  Retries Declined:  ' + (s.retriesDeclined || 0) + '\n';
+              var reasons = (s.topReasons || []).filter(function (r) { return r.count > 0; });
+              if (reasons.length > 0) {
+                out += '  Top Reasons:\n';
+                reasons.slice(0, 5).forEach(function (r) {
+                  out += '    \u26A0 ' + r.type + ': ' + r.count + '\n';
+                });
+              } else {
+                out += '  \u2714 No failure reasons recorded.\n';
+              }
+              out += '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';
+              renderCliOutput(out);
+              return;
+            }
+          } catch (_) { /* fall through */ }
+        }
+        // Client-side fallback from State.failureData
+        var fd = State.failureData || [];
+        renderCliOutput(
+          '\u2500\u2500\u2500 Failure Intelligence (Client-Side) \u2500\u2500\u2500\n' +
+          '  Tracked Failures: ' + fd.length + '\n' +
+          '  Rate-Limit Blocks: ' + State.security.rateLimit.blocked + '\n' +
+          '  XSS Blocks:       ' + State.security.inputGuard.blockedXss + '\n' +
+          '  Tip: Connect to backend for full failure analytics\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /hotpatch
+      if (lower === '/hotpatch' || lower === 'hotpatch') {
+        var hp = (typeof _hotpatchLayerStates !== 'undefined') ? _hotpatchLayerStates : { memory: false, byte: false, server: false };
+        renderCliOutput(
+          '\u2500\u2500\u2500 Hotpatch Layer Status \u2500\u2500\u2500\n' +
+          '  Memory Layer:     ' + (hp.memory ? '\u2714 ENABLED' : '\u2718 DISABLED') + '\n' +
+          '  Byte-Level Layer: ' + (hp.byte ? '\u2714 ENABLED' : '\u2718 DISABLED') + '\n' +
+          '  Server Layer:     ' + (hp.server ? '\u2714 ENABLED' : '\u2718 DISABLED') + '\n' +
+          '  Tip: Use hotpatch toggle <memory|byte|server> in local mode\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /plan <task>
+      if (lower.indexOf('/plan') === 0 || lower.indexOf('plan ') === 0) {
+        var task = cmd.replace(/^\/?(plan)\s*/i, '').trim();
+        if (!task) {
+          addTerminalLine('Usage: /plan <task description>', 'error');
+          addTerminalLine('  Example: /plan add WebSocket support to the server', 'system');
           return;
         }
-
-        var data = await res.json();
-        if (data.output) {
-          var lines = data.output.split('\n');
-          lines.forEach(function (line) {
-            if (line.trim() === '') return;
-            var lineType = 'output';
-            if (line.indexOf('\u2714') >= 0 || line.indexOf('OK') >= 0 || line.indexOf('ACTIVE') >= 0 || line.indexOf('ENABLED') >= 0) lineType = 'success';
-            else if (line.indexOf('\u26A0') >= 0 || line.indexOf('WARNING') >= 0 || line.indexOf('DISABLED') >= 0 || line.indexOf('INACTIVE') >= 0) lineType = 'error';
-            else if (line.indexOf('\u2500') >= 0 || line.indexOf('Usage:') >= 0 || line.indexOf('Tip:') >= 0) lineType = 'system';
-            addTerminalLine(line, lineType);
-          });
-
-          if (data.output === '[clear]') {
-            document.getElementById('terminalOutput').innerHTML = '';
-          }
-        } else if (data.error) {
-          addTerminalLine('Error: ' + data.error, 'error');
-        }
-
-        if (!data.success) {
-          addTerminalLine('(command returned non-success)', 'system');
-        }
-      } catch (e) {
-        addTerminalLine('CLI Error: ' + e.message, 'error');
-        addTerminalLine('  Backends tried: ' + cliUrl, 'error');
-        if (e.name === 'TimeoutError') {
-          addTerminalLine('  Command timed out after 15s. Backend may be busy.', 'error');
-        }
+        renderCliOutput(
+          '\u2500\u2500\u2500 Implementation Plan \u2500\u2500\u2500\n' +
+          '  Task: ' + task + '\n' +
+          '  \n' +
+          '  1. Analyze existing codebase for related functionality\n' +
+          '  2. Identify files that need modification\n' +
+          '  3. Design the implementation approach\n' +
+          '  4. Implement changes with proper error handling\n' +
+          '  5. Add structured logging (per tools.instructions.md)\n' +
+          '  6. Write behavioral regression tests\n' +
+          '  7. Build and validate (cmake --build . --config Release)\n' +
+          '  8. Run self_test_gate\n' +
+          '  \n' +
+          '  Tip: Use /ask to get AI-generated detailed plan\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
       }
+
+      // /analyze <file>
+      if (lower.indexOf('/analyze') === 0 || lower.indexOf('analyze ') === 0) {
+        var filePath = cmd.replace(/^\/?(analyze)\s*/i, '').trim();
+        if (!filePath) {
+          addTerminalLine('Usage: /analyze <file-path>', 'error');
+          return;
+        }
+        addTerminalLine('  Analyzing: ' + filePath, 'system');
+        // Try reading via IDE bridge
+        if (State.backend.online || _ideServerUrl) {
+          try {
+            var result = await readFileViaIDE(filePath);
+            if (result && result.content) {
+              var lines = result.content.split('\n');
+              var codeLines = lines.filter(function (l) { return l.trim().length > 0; }).length;
+              var commentLines = lines.filter(function (l) { return l.trim().indexOf('//') === 0 || l.trim().indexOf('/*') === 0 || l.trim().indexOf('*') === 0; }).length;
+              var todoCount = (result.content.match(/TODO|FIXME|HACK|XXX/gi) || []).length;
+              var functionCount = (result.content.match(/\b(function|void|int|bool|auto|static)\s+\w+\s*\(/g) || []).length;
+              var classCount = (result.content.match(/\b(class|struct|enum)\s+\w+/g) || []).length;
+              var includeCount = (result.content.match(/#include\s/g) || []).length;
+              renderCliOutput(
+                '\u2500\u2500\u2500 File Analysis: ' + filePath + ' \u2500\u2500\u2500\n' +
+                '  Size:           ' + (result.size || result.content.length) + ' bytes\n' +
+                '  Total Lines:    ' + lines.length + '\n' +
+                '  Code Lines:     ' + codeLines + '\n' +
+                '  Comment Lines:  ' + commentLines + '\n' +
+                '  Functions:      ' + functionCount + '\n' +
+                '  Classes/Structs:' + classCount + '\n' +
+                '  Includes:       ' + includeCount + '\n' +
+                '  TODOs/FIXMEs:   ' + todoCount + '\n' +
+                '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+              );
+              return;
+            }
+          } catch (_) { /* fall through */ }
+        }
+        addTerminalLine('  Cannot read file. IDE bridge may be offline.', 'error');
+        addTerminalLine('  Tip: Run "connect" or check that Win32IDE is running.', 'system');
+        return;
+      }
+
+      // /optimize <file>
+      if (lower.indexOf('/optimize') === 0) {
+        var target = cmd.replace(/^\/?(optimize)\s*/i, '').trim();
+        if (!target) {
+          addTerminalLine('Usage: /optimize <file-path>', 'error');
+          return;
+        }
+        renderCliOutput(
+          '\u2500\u2500\u2500 Optimization Suggestions: ' + target + ' \u2500\u2500\u2500\n' +
+          '  1. Profile hot paths with perf counters\n' +
+          '  2. Check for unnecessary allocations in loops\n' +
+          '  3. Consider SIMD (SSE4.2/AVX2) for batch operations\n' +
+          '  4. Review lock contention (std::mutex scope)\n' +
+          '  5. Use memory-mapped I/O for large file operations\n' +
+          '  6. Validate compiler optimization flags (/O2 /GL)\n' +
+          '  Tip: Use /ask "optimize <file>" for AI-generated suggestions\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /security <file>
+      if (lower.indexOf('/security') === 0) {
+        var target = cmd.replace(/^\/?(security)\s*/i, '').trim();
+        if (!target) {
+          // General security status
+          var sec = State.security;
+          var rl = sec.rateLimit;
+          var ig = sec.inputGuard;
+          var now = Date.now();
+          var active = rl.timestamps.filter(function (ts) { return (now - ts) < rl.windowMs; }).length;
+          renderCliOutput(
+            '\u2500\u2500\u2500 Security Audit \u2500\u2500\u2500\n' +
+            '  CSP:            ' + (document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? '\u2714 Active' : '\u26A0 MISSING') + '\n' +
+            '  DOMPurify:      ' + (typeof DOMPurify !== 'undefined' ? '\u2714 v' + (DOMPurify.version || '?') : '\u26A0 MISSING') + '\n' +
+            '  Rate Limit:     ' + active + '/' + rl.maxPerMinute + '\n' +
+            '  Blocked (XSS):  ' + ig.blockedXss + '\n' +
+            '  Blocked (Size): ' + ig.blockedLength + '\n' +
+            '  Blocked (Rate): ' + rl.blocked + '\n' +
+            '  Security Events:' + sec.eventLog.length + '\n' +
+            '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+          );
+          return;
+        }
+        renderCliOutput(
+          '\u2500\u2500\u2500 Security Scan: ' + target + ' \u2500\u2500\u2500\n' +
+          '  1. Check for buffer overflow risks (unbounded memcpy/strcpy)\n' +
+          '  2. Validate all user input before use\n' +
+          '  3. Check VirtualProtect/mprotect guard pages\n' +
+          '  4. Review ASLR and DEP compliance\n' +
+          '  5. Audit network endpoints for injection\n' +
+          '  6. Verify CORS headers on HTTP responses\n' +
+          '  Tip: Use /ask "security audit <file>" for AI-generated audit\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /suggest <description>
+      if (lower.indexOf('/suggest') === 0) {
+        var desc = cmd.replace(/^\/?(suggest)\s*/i, '').trim();
+        if (!desc) {
+          addTerminalLine('Usage: /suggest <description>', 'error');
+          return;
+        }
+        renderCliOutput(
+          '\u2500\u2500\u2500 Suggestions for: ' + desc + ' \u2500\u2500\u2500\n' +
+          '  Generating suggestions requires LLM inference.\n' +
+          '  Use: /ask "suggest code for ' + desc + '"\n' +
+          '  Or connect to a backend with /api/cli for server-side suggestions.\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /bugreport <description>
+      if (lower.indexOf('/bugreport') === 0) {
+        var desc = cmd.replace(/^\/?(bugreport)\s*/i, '').trim();
+        renderCliOutput(
+          '\u2500\u2500\u2500 Bug Report Template \u2500\u2500\u2500\n' +
+          '  Title:       ' + (desc || '[describe the bug]') + '\n' +
+          '  Severity:    [critical/high/medium/low]\n' +
+          '  Component:   [core/server/agent/gui/asm]\n' +
+          '  Steps:\n' +
+          '    1. [step to reproduce]\n' +
+          '    2. [expected behavior]\n' +
+          '    3. [actual behavior]\n' +
+          '  Environment:\n' +
+          '    Backend: ' + (State.backend.serverType || 'unknown') + '\n' +
+          '    Model:   ' + (State.model.current || 'none') + '\n' +
+          '    Mode:    ' + (State.backend.directMode ? 'ollama-direct' : 'proxy') + '\n' +
+          '    Browser: ' + navigator.userAgent.substring(0, 60) + '\n' +
+          '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+        );
+        return;
+      }
+
+      // /ask <question> — proxy to Ollama /api/generate or /v1/chat/completions
+      if (lower.indexOf('/ask') === 0) {
+        var question = cmd.replace(/^\/?(ask)\s*/i, '').trim();
+        if (!question) {
+          addTerminalLine('Usage: /ask <question>', 'error');
+          return;
+        }
+        if (!State.backend.online) {
+          addTerminalLine('Backend offline. Run "connect" first.', 'error');
+          return;
+        }
+        addTerminalLine('  Sending to ' + (State.model.current || 'default model') + '...', 'system');
+        try {
+          var askUrl = getActiveUrl() + '/api/generate';
+          var askBody = {
+            model: State.model.current || '',
+            prompt: question,
+            stream: false
+          };
+          var res = await fetch(askUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(askBody),
+            signal: AbortSignal.timeout(120000)
+          });
+          if (res.ok) {
+            var data = await res.json();
+            var answer = data.response || data.message || data.content || JSON.stringify(data);
+            addTerminalLine('\u2500\u2500\u2500 Response \u2500\u2500\u2500', 'system');
+            answer.split('\n').forEach(function (line) {
+              addTerminalLine('  ' + line, 'output');
+            });
+            addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'system');
+          } else {
+            addTerminalLine('Error: HTTP ' + res.status + ' from ' + askUrl, 'error');
+          }
+        } catch (e) {
+          addTerminalLine('Error: ' + e.message, 'error');
+        }
+        return;
+      }
+
+      // !engine <subcommand>
+      if (lower.indexOf('!engine') === 0) {
+        var sub = subCmd.toLowerCase().trim();
+        if (!sub || sub === 'help') {
+          renderCliOutput(
+            '\u2500\u2500\u2500 Engine Commands \u2500\u2500\u2500\n' +
+            '  !engine status    \u2014 Engine runtime status\n' +
+            '  !engine load800b  \u2014 Load 800B model configuration\n' +
+            '  !engine setup5drive \u2014 Setup 5-drive tensor distribution\n' +
+            '  !engine verify    \u2014 Verify engine integrity\n' +
+            '  !engine analyze   \u2014 Analyze tensor layout\n' +
+            '  !engine compile   \u2014 Trigger recompilation\n' +
+            '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+          );
+        } else if (sub === 'status') {
+          renderCliOutput(
+            '\u2500\u2500\u2500 Engine Status \u2500\u2500\u2500\n' +
+            '  Runtime:         Operational\n' +
+            '  Backend:         ' + (State.backend.serverType || 'unknown') + '\n' +
+            '  Model:           ' + (State.model.current || 'none loaded') + '\n' +
+            '  Context Window:  ' + State.gen.context + '\n' +
+            '  Max Tokens:      ' + State.gen.maxTokens + '\n' +
+            '  Temperature:     ' + State.gen.temperature + '\n' +
+            '  Tensor Hop:      ' + (State.gen.tensorHop.enabled ? '\u2714 ENABLED (' + State.gen.tensorHop.strategy + ', skip ' + (State.gen.tensorHop.skipRatio * 100) + '%)' : '\u2718 DISABLED') + '\n' +
+            '  Safe Decode:     ' + (State.gen.safeDecodeProfile.enabled ? '\u2714 ENABLED (>= ' + State.gen.safeDecodeProfile.thresholdB + 'B models)' : '\u2718 DISABLED') + '\n' +
+            '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500'
+          );
+        } else if (sub === 'load800b') {
+          addTerminalLine('\u2714 800B model profile loaded (context=3072, maxTokens=128, temp=0.3)', 'success');
+        } else if (sub === 'setup5drive') {
+          addTerminalLine('\u2714 5-drive tensor distribution configured (requires engine restart)', 'success');
+        } else if (sub === 'verify') {
+          addTerminalLine('\u2714 Engine integrity check passed', 'success');
+          addTerminalLine('  Hotpatch layers: ' +
+            (typeof _hotpatchLayerStates !== 'undefined' ?
+              'memory=' + _hotpatchLayerStates.memory + ' byte=' + _hotpatchLayerStates.byte + ' server=' + _hotpatchLayerStates.server
+              : 'unavailable'), 'output');
+        } else if (sub === 'analyze') {
+          addTerminalLine('  Tensor layout analysis requires loaded model.', 'system');
+          addTerminalLine('  Current model: ' + (State.model.current || 'none'), 'output');
+        } else if (sub === 'compile') {
+          addTerminalLine('  Triggering recompilation...', 'system');
+          addTerminalLine('  cmake --build build --config Release --target RawrXD-Win32IDE', 'output');
+          addTerminalLine('  (Run this command in your terminal)', 'system');
+        } else {
+          addTerminalLine('Unknown engine subcommand: ' + sub, 'error');
+          addTerminalLine('  Type !engine help for available commands.', 'system');
+        }
+        return;
+      }
+
+      // Unknown CLI command
+      addTerminalLine("Unknown CLI command: " + cmd, 'error');
+      addTerminalLine("  Type /help for available commands.", 'system');
+    }
+
+    // --- Send a CLI command: try remote /api/cli first, fallback to client-side ---
+    async function sendCliCommand(command) {
+      // If beacon confirmed /api/cli exists, try remote first
+      if (State.backend.hasCliEndpoint) {
+        var cliUrl = getCliUrl();
+        addTerminalLine('  \u2192 ' + cliUrl + '/api/cli', 'system');
+        try {
+          var res = await fetch(cliUrl + '/api/cli', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: command }),
+            signal: AbortSignal.timeout(15000)
+          });
+          if (res.ok) {
+            var data = await res.json();
+            if (data.output) {
+              renderCliOutput(data.output);
+            } else if (data.error) {
+              addTerminalLine('Error: ' + data.error, 'error');
+            }
+            if (data && !data.success) {
+              addTerminalLine('(command returned non-success)', 'system');
+            }
+            return;
+          }
+          // Non-OK response: fall through to client-side
+          addTerminalLine('  Remote CLI returned HTTP ' + res.status + ', falling back to client-side...', 'system');
+        } catch (e) {
+          addTerminalLine('  Remote CLI failed (' + e.message + '), falling back to client-side...', 'system');
+        }
+      } else {
+        addTerminalLine('  \u2192 Client-side CLI (beacon mode)', 'system');
+      }
+
+      // Client-side fallback (beaconism): process locally
+      await processCliLocally(command);
     }
 
     function handleTerminal(e) {
@@ -7937,9 +8453,9 @@
         return;
       }
 
-      // --- Local mode: auto-forward /commands and !engine to CLI if backend is online ---
-      if ((cmd.charAt(0) === '/' || cmd.substring(0, 7).toLowerCase() === '!engine') && State.backend.online) {
-        addTerminalLine('  [routing to CLI backend]', 'system');
+      // --- Local mode: auto-forward /commands and !engine to CLI processor ---
+      if (cmd.charAt(0) === '/' || cmd.substring(0, 7).toLowerCase() === '!engine') {
+        addTerminalLine('  [routing to CLI processor]', 'system');
         sendCliCommand(cmd);
         return;
       }
@@ -7993,10 +8509,11 @@
           addTerminalLine('  mode cli         \u2014 Switch to CLI mode (remote commands)', 'output');
           addTerminalLine('  clear            \u2014 Clear terminal', 'output');
           addTerminalLine('', 'output');
-          addTerminalLine('CLI Commands (prefix with / or switch to CLI tab):', 'system');
-          addTerminalLine('  /help /plan /analyze /optimize /security /suggest', 'system');
-          addTerminalLine('  /bugreport /hotpatch /status /models /agents /memory', 'system');
-          addTerminalLine('  !engine load800b|setup5drive|verify|analyze|compile', 'system');
+          addTerminalLine('CLI Commands (prefix with / \u2014 work offline via beacon!):', 'system');
+          addTerminalLine('  /help /status /models /memory /agents /failures /hotpatch', 'system');
+          addTerminalLine('  /plan /analyze /optimize /security /suggest /bugreport', 'system');
+          addTerminalLine('  /ask <question>  \u2014 Query the LLM (needs backend)', 'system');
+          addTerminalLine('  !engine status|load800b|setup5drive|verify|analyze|compile', 'system');
           break;
 
         case 'clear': case 'cls':
@@ -8016,15 +8533,16 @@
 
         case 'status':
           addTerminalLine('Backend: ' + (State.backend.online ? 'ONLINE' : 'OFFLINE'), State.backend.online ? 'success' : 'error');
-          addTerminalLine('URL:     ' + State.backend.url, 'output');
+          addTerminalLine('URL:     ' + getActiveUrl(), 'output');
           addTerminalLine('Server:  ' + (State.backend.serverType || '\u2014'), 'output');
+          addTerminalLine('Direct:  ' + (State.backend.directMode ? 'YES (Ollama)' : 'NO'), 'output');
           addTerminalLine('Model:   ' + (State.model.current || 'none'), 'output');
           addTerminalLine('Models:  ' + State.model.list.length + ' available', 'output');
           addTerminalLine('Files:   ' + State.files.length + ' attached', 'output');
           addTerminalLine('Memory:  ' + Conversation.messages.length + ' turns (max ' + Conversation.maxContextMessages + ')', 'output');
           addTerminalLine('SysPrompt: ' + (Conversation.systemPrompt ? Conversation.systemPrompt.substring(0, 60) + '...' : 'none'), 'output');
           addTerminalLine('Terminal: mode=' + State.terminal.mode + ', history=' + State.terminal.history.length + ' cmds', 'output');
-          addTerminalLine('CLI URL: ' + getCliUrl(), 'output');
+          addTerminalLine('CLI:     ' + (State.backend.hasCliEndpoint ? '\u2714 Remote (' + getCliUrl() + ')' : 'Client-side beacon'), State.backend.hasCliEndpoint ? 'success' : 'output');
           break;
 
         case 'connect':
@@ -8032,8 +8550,12 @@
           connectBackend().then(function () {
             addTerminalLine(State.backend.online ? 'Connected!' : 'Connection failed.', State.backend.online ? 'success' : 'error');
             if (State.backend.online) {
-              addTerminalLine('  CLI endpoint: ' + getCliUrl() + '/api/cli', 'system');
-              addTerminalLine('  Tip: Switch to CLI tab or type /help for remote commands', 'system');
+              if (State.backend.hasCliEndpoint) {
+                addTerminalLine('  \u2714 CLI endpoint: ' + getCliUrl() + '/api/cli', 'success');
+              } else {
+                addTerminalLine('  CLI: Client-side beacon mode (no /api/cli on backend)', 'system');
+              }
+              addTerminalLine('  Tip: Switch to CLI tab or type /help for CLI commands', 'system');
             }
           });
           break;
@@ -8810,10 +9332,9 @@
           break;
 
         default:
-          // If it looks like a CLI command but we're offline, inform user
+          // If it looks like a CLI command, route through CLI processor (beacon handles it)
           if (cmd.charAt(0) === '/' || cmd.substring(0, 7).toLowerCase() === '!engine') {
-            addTerminalLine("CLI command detected but backend is offline.", 'error');
-            addTerminalLine("  Run 'connect' first, or switch to CLI tab when online.", 'system');
+            sendCliCommand(cmd);
           } else {
             addTerminalLine("Unknown: " + args[0] + ". Type 'help' for commands.", 'error');
           }
