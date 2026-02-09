@@ -5103,6 +5103,312 @@
     .ghost-overlay.minimized .ghost-iframe-wrap {
       display: none;
     }
+
+    /* ═══════════════════════════════════════════════════════════════ */
+    /* WEBVIEW2 BUILT-IN BROWSER                                     */
+    /* Full-screen overlay browser with address bar, nav, bookmarks  */
+    /* Tabs, history, proxy content, model site quick-links          */
+    /* ═══════════════════════════════════════════════════════════════ */
+    .browser-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 9998;
+      background: var(--bg-primary);
+      display: none;
+      flex-direction: column;
+      animation: browserSlideIn 0.22s ease;
+    }
+    .browser-overlay.active { display: flex; }
+    @keyframes browserSlideIn {
+      from { transform: translateY(12px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    .browser-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: linear-gradient(180deg, var(--bg-lighter) 0%, var(--bg-primary) 100%);
+      border-bottom: 1px solid var(--border);
+      height: 40px;
+      flex-shrink: 0;
+    }
+    .browser-toolbar .browser-nav-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 28px; height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+    .browser-toolbar .browser-nav-btn:hover {
+      background: rgba(0,217,255,0.12);
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+    .browser-toolbar .browser-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+    .browser-toolbar .browser-nav-btn:disabled:hover {
+      background: rgba(255,255,255,0.04);
+      color: var(--text-secondary);
+      border-color: var(--border);
+    }
+    .browser-address-bar {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0 12px;
+      height: 28px;
+      margin: 0 4px;
+      transition: border-color 0.15s;
+    }
+    .browser-address-bar:focus-within {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 1px rgba(0,217,255,0.15);
+    }
+    .browser-address-bar .browser-lock {
+      font-size: 11px;
+      margin-right: 6px;
+      color: var(--accent-green);
+      flex-shrink: 0;
+    }
+    .browser-address-bar .browser-lock.insecure { color: var(--accent-red); }
+    .browser-address-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 0;
+    }
+    .browser-address-bar input::placeholder { color: var(--text-muted); }
+    .browser-bookmarks-bar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 2px 8px;
+      background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid var(--border);
+      height: 26px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+    .browser-bookmarks-bar::-webkit-scrollbar { height: 3px; }
+    .browser-bookmarks-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .browser-bookmark-btn {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 2px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      white-space: nowrap;
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+    .browser-bookmark-btn:hover {
+      background: rgba(0,217,255,0.1);
+      color: var(--accent-cyan);
+      border-color: var(--border);
+    }
+    .browser-bookmark-btn.separator {
+      width: 1px;
+      height: 14px;
+      background: var(--border);
+      padding: 0;
+      margin: 0 2px;
+      border: none;
+      cursor: default;
+    }
+    .browser-viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #1a1a2e;
+    }
+    .browser-viewport iframe {
+      width: 100%; height: 100%;
+      border: none;
+      background: #fff;
+    }
+    .browser-viewport .browser-home {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 40px;
+      background: linear-gradient(180deg, var(--bg-primary) 0%, #0a0a1a 100%);
+    }
+    .browser-home .browser-logo { font-size: 48px; opacity: 0.8; }
+    .browser-home .browser-search-box {
+      display: flex;
+      align-items: center;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 0 16px;
+      height: 40px;
+      width: 100%;
+      max-width: 500px;
+      transition: border-color 0.15s;
+    }
+    .browser-home .browser-search-box:focus-within { border-color: var(--accent-cyan); }
+    .browser-home .browser-search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+    .browser-quicklinks {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+    }
+    .browser-quicklink {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .browser-quicklink:hover {
+      background: rgba(0,217,255,0.08);
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+    }
+    .browser-quicklink .ql-icon { font-size: 24px; }
+    .browser-quicklink .ql-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+    .browser-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 10px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      height: 20px;
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .browser-tab-bar {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      padding: 0 4px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      height: 30px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+    .browser-tab-bar::-webkit-scrollbar { height: 2px; }
+    .browser-tab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.1s;
+      flex-shrink: 0;
+    }
+    .browser-tab:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+    .browser-tab.active {
+      background: var(--bg-primary);
+      color: var(--accent-cyan);
+      border-color: var(--border);
+      border-bottom: 1px solid var(--bg-primary);
+    }
+    .browser-tab .tab-close {
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.1s;
+      margin-left: 4px;
+    }
+    .browser-tab:hover .tab-close { opacity: 0.6; }
+    .browser-tab .tab-close:hover { opacity: 1; color: var(--accent-red); }
+    .browser-tab-new {
+      width: 24px; height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .browser-tab-new:hover { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+    /* Proxy content rendered as sanitized HTML */
+    .browser-proxy-content {
+      width: 100%; height: 100%;
+      overflow: auto;
+      padding: 16px 24px;
+      background: #fff;
+      color: #1a1a2e;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .browser-proxy-content a { color: #0066cc; text-decoration: underline; cursor: pointer; }
+    .browser-proxy-content img { max-width: 100%; height: auto; }
+    .browser-proxy-content pre,
+    .browser-proxy-content code {
+      background: #f0f2f5; padding: 2px 6px; border-radius: 3px;
+      font-family: var(--font-mono); font-size: 13px;
+    }
+    .browser-proxy-content pre { padding: 12px; overflow-x: auto; }
+    .browser-proxy-content h1,
+    .browser-proxy-content h2,
+    .browser-proxy-content h3 { color: #0a0a1a; margin-top: 1.2em; }
   </style>
 </head>
 
@@ -5193,6 +5499,7 @@
           <button class="icon-btn" onclick="connectBackend()" title="Connect to Backend">&#x26A1;</button>
           <button class="icon-btn" onclick="refreshBackendBeacon()"
             title="Re-probe Backend + CLI Beacons">&#x1F4E1;</button>
+          <button class="icon-btn" onclick="showBrowserPanel()" title="WebView2 Browser">&#x1F310;</button>
           <button class="icon-btn" onclick="ghostIntoIDE()" title="Ghost into Win32 IDE (RDP beacon)">&#x1F47B;</button>
           <button class="icon-btn" onclick="refreshModels()" title="Refresh Models">&#x21BB;</button>
           <button class="icon-btn" onclick="showDebug()" title="Debug Panel">&#x1F527;</button>
@@ -5309,6 +5616,14 @@
             <span class="icon">&#x1F6A7;</span>
             <span>Phases</span>
           </button>
+          <button class="tool-btn" onclick="showBrowser()" title="Built-in WebView2 browser — model web access">
+            <span class="icon">&#x1F310;</span>
+            <span>Browse</span>
+          </button>
+          <button class="tool-btn" onclick="showBrowserPanel()" title="WebView2 Browser — browse model sites, docs & repos">
+            <span class="icon">&#x1F310;</span>
+            <span>Browser</span>
+          </button>
           <button class="tool-btn" onclick="ghostIntoIDE()" title="Ghost into Win32 IDE via RDP-style beacon">
             <span class="icon">&#x1F47B;</span>
             <span>Ghost IDE</span>
@@ -5321,6 +5636,11 @@
             title="VSIX Extension Manager — install, load & manage plugins">
             <span class="icon">&#x1F9E9;</span>
             <span>Extensions</span>
+          </button>
+          <button class="tool-btn" onclick="showFileEditorPanel()"
+            title="Agentic File Editor — browse, edit, diff, search files">
+            <span class="icon">&#x1F4DD;</span>
+            <span>File Editor</span>
           </button>
           <button class="tool-btn" onclick="clearChat()">
             <span class="icon">&#x1F5D1;</span>
@@ -7722,6 +8042,236 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- WEBVIEW2 BUILT-IN BROWSER — Model website access & web browsing -->
+  <!-- Full browser with address bar, tabs, bookmarks, history, home   -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="browser-overlay" id="browserOverlay">
+    <!-- Tab bar -->
+    <div class="browser-tab-bar" id="browserTabBar">
+      <div class="browser-tab active" id="browserTab0" onclick="browserSwitchTab(0)">
+        <span class="tab-title">New Tab</span>
+        <span class="tab-close" onclick="event.stopPropagation();browserCloseTab(0)">&times;</span>
+      </div>
+      <button class="browser-tab-new" onclick="browserNewTab()" title="New Tab">+</button>
+    </div>
+    <!-- Navigation toolbar -->
+    <div class="browser-toolbar">
+      <button class="browser-nav-btn" id="browserBtnBack" onclick="browserBack()" disabled title="Back">&#x2190;</button>
+      <button class="browser-nav-btn" id="browserBtnFwd" onclick="browserForward()" disabled title="Forward">&#x2192;</button>
+      <button class="browser-nav-btn" id="browserBtnRefresh" onclick="browserRefreshPage()" title="Refresh">&#x21BB;</button>
+      <button class="browser-nav-btn" id="browserBtnHome" onclick="browserGoHome()" title="Home">&#x1F3E0;</button>
+      <div class="browser-address-bar">
+        <span class="browser-lock" id="browserLock">&#x1F512;</span>
+        <input type="text" id="browserUrlInput" placeholder="Search or enter URL... (model sites, docs, GGUF repos)"
+          onkeydown="if(event.key==='Enter')browserNavigate()" spellcheck="false">
+      </div>
+      <button class="browser-nav-btn" onclick="browserAddBookmark()" title="Bookmark this page">&#x2606;</button>
+      <button class="browser-nav-btn" onclick="browserShowBookmarks()" title="Bookmarks">&#x1F516;</button>
+      <button class="browser-nav-btn" onclick="browserDetach()" title="Pop out to new window">&#x2197;</button>
+      <button class="browser-nav-btn" onclick="browserToggleDevtools()" title="DevTools">&#x1F527;</button>
+      <button class="browser-nav-btn" onclick="closeBrowserPanel()" title="Close Browser" style="color:var(--accent-red);">&#x2715;</button>
+    </div>
+    <!-- Bookmarks bar -->
+    <div class="browser-bookmarks-bar" id="browserBookmarksBar">
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/models?sort=trending&search=gguf')">&#x1F917; HuggingFace GGUF</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://ollama.com/library')">&#x1F999; Ollama Library</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/TheBloke')">&#x1F4E6; TheBloke</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://huggingface.co/bartowski')">&#x1F4E6; Bartowski</button>
+      <span class="browser-bookmark-btn separator"></span>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://github.com/ggerganov/llama.cpp')">&#x1F4BB; llama.cpp</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://github.com/ggerganov/ggml')">&#x2699; GGML</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://docs.ollama.com')">&#x1F4D6; Ollama Docs</button>
+      <span class="browser-bookmark-btn separator"></span>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://openrouter.ai/models')">&#x1F310; OpenRouter</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://lmsys.org/blog/2023-06-22-leaderboard/')">&#x1F3C6; LMSys Arena</button>
+      <button class="browser-bookmark-btn" onclick="browserNavigateTo('https://artificialanalysis.ai/leaderboards/models')">&#x1F4CA; AI Analysis</button>
+    </div>
+    <!-- Viewport -->
+    <div class="browser-viewport" id="browserViewport">
+      <!-- Home page shown when no URL loaded -->
+      <div class="browser-home" id="browserHomePage">
+        <div class="browser-logo">&#x1F310;</div>
+        <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent-cyan);letter-spacing:1px;">RawrXD WebView2 Browser</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);text-align:center;">Browse model repositories, documentation, and AI resources<br>Integrated WebView2-style browser with multi-tab support</div>
+        <div class="browser-search-box">
+          <span style="margin-right:8px;font-size:14px;">&#x1F50D;</span>
+          <input type="text" id="browserHomeSearch" placeholder="Search the web or enter a URL..."
+            onkeydown="if(event.key==='Enter')browserNavigateFromHome()">
+        </div>
+        <div class="browser-quicklinks">
+          <a class="browser-quicklink" onclick="browserNavigateTo('https://huggingface.co/models?sort=trending&search=gguf')">
+            <span class="ql-icon">&#x1F917;</span>
+            <span class="ql-label">HuggingFace<br>GGUF Models</span>
+          </a>
+          <a class="browser-quicklink" onclick="browserNavigateTo('https://ollama.com/library')">
+            <span class="ql-icon">&#x1F999;</span>
+            <span class="ql-label">Ollama<br>Library</span>
+          </a>
+          <a class="browser-quicklink" onclick="browserNavigateTo('https://github.com/ggerganov/llama.cpp')">
+            <span class="ql-icon">&#x1F4BB;</span>
+            <span class="ql-label">llama.cpp<br>GitHub</span>
+          </a>
+          <a class="browser-quicklink" onclick="browserNavigateTo('https://openrouter.ai/models')">
+            <span class="ql-icon">&#x1F310;</span>
+            <span class="ql-label">OpenRouter<br>Models</span>
+          </a>
+          <a class="browser-quicklink" onclick="browserNavigateTo('https://huggingface.co/spaces/lmsys/chatbot-arena-leaderboard')">
+            <span class="ql-icon">&#x1F3C6;</span>
+            <span class="ql-label">LMSys<br>Leaderboard</span>
+          </a>
+          <a class="browser-quicklink" onclick="browserNavigateTo('https://docs.ollama.com')">
+            <span class="ql-icon">&#x1F4D6;</span>
+            <span class="ql-label">Ollama<br>Docs</span>
+          </a>
+        </div>
+        <div style="margin-top:12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Tip: Use <span style="color:var(--accent-cyan);">/browse &lt;url&gt;</span> in the terminal to open any URL</div>
+      </div>
+      <!-- iframe injected dynamically by browserNavigateTo() -->
+    </div>
+    <!-- Status bar -->
+    <div class="browser-status-bar">
+      <span id="browserStatusText">Ready</span>
+      <span id="browserStatusUrl" style="max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <span id="browserZoomLevel">100%</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- AGENTIC FILE EDITOR PANEL (Phase 40)                          -->
+  <!-- Full-featured file editor with tree browser, tabbed editing,  -->
+  <!-- diff viewer, search/replace, file operations, undo history    -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="agent-panel" id="fileEditorPanel" style="z-index:1040;display:none;">
+    <div class="agent-header">
+      <span class="agent-title">&#x1F4DD; Agentic File Editor</span>
+      <div class="debug-controls">
+        <button class="code-btn" onclick="feRefreshTree()">&#x1F504; Refresh</button>
+        <button class="code-btn" onclick="feNewFile()">&#x1F4C4; New</button>
+        <button class="code-btn" onclick="feShowDiff()">&#x1F50D; Diff</button>
+        <button class="code-btn" onclick="feShowSearch()">&#x1F50E; Search</button>
+        <button class="code-btn" onclick="feShowHistory()">&#x1F4CB; History</button>
+        <button class="code-btn" onclick="closeFileEditorPanel()">&times; Close</button>
+      </div>
+    </div>
+    <div class="agent-body" style="flex-direction:row;height:calc(100% - 80px);overflow:hidden;">
+      <!-- LEFT: File Tree Browser -->
+      <div id="feTreePane" style="width:240px;min-width:180px;max-width:360px;border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:0;background:rgba(0,0,0,0.15);font-family:var(--font-mono);font-size:11px;">
+        <div style="padding:6px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;">
+          <input id="feTreePath" type="text" placeholder="Root path..." value="."
+            style="flex:1;padding:3px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:10px;"
+            onkeydown="if(event.key==='Enter')feRefreshTree()">
+          <button class="code-btn" onclick="feRefreshTree()" style="padding:2px 6px;font-size:10px;">Go</button>
+        </div>
+        <div id="feTreeContent" style="padding:4px 0;">
+          <div style="padding:12px;color:var(--text-muted);font-size:10px;">Click &#x1F504; Refresh to load file tree</div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Editor Area -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <!-- Tab Bar -->
+        <div id="feTabBar" style="display:flex;gap:0;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);overflow-x:auto;min-height:28px;flex-shrink:0;">
+          <div style="padding:6px 12px;font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">No files open</div>
+        </div>
+
+        <!-- Toolbar -->
+        <div id="feToolbar" style="display:flex;gap:4px;padding:4px 8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.08);flex-wrap:wrap;align-items:center;">
+          <button class="code-btn" onclick="feSaveFile()" style="font-size:10px;padding:2px 8px;" title="Save (Ctrl+S)">&#x1F4BE; Save</button>
+          <button class="code-btn" onclick="feRevertFile()" style="font-size:10px;padding:2px 8px;" title="Revert to saved">&#x21A9; Revert</button>
+          <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
+          <button class="code-btn" onclick="feUndo()" style="font-size:10px;padding:2px 8px;" title="Undo">&#x21B6; Undo</button>
+          <button class="code-btn" onclick="feRedo()" style="font-size:10px;padding:2px 8px;" title="Redo">&#x21B7; Redo</button>
+          <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
+          <button class="code-btn" onclick="feFindReplace()" style="font-size:10px;padding:2px 8px;" title="Find & Replace">&#x1F50D; Find/Replace</button>
+          <button class="code-btn" onclick="feGoToLine()" style="font-size:10px;padding:2px 8px;" title="Go to Line">&#x21E5; Goto</button>
+          <button class="code-btn" onclick="feToggleWordWrap()" style="font-size:10px;padding:2px 8px;" title="Toggle word wrap">&#x21C4; Wrap</button>
+          <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
+          <button class="code-btn" onclick="feRenameActive()" style="font-size:10px;padding:2px 8px;" title="Rename file">&#x270F; Rename</button>
+          <button class="code-btn" onclick="feDeleteActive()" style="font-size:10px;padding:2px 8px;color:#ff6b6b;" title="Delete file">&#x1F5D1; Delete</button>
+          <span style="flex:1;"></span>
+          <span id="feStatusInfo" style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Ready</span>
+        </div>
+
+        <!-- Find/Replace Bar (hidden by default) -->
+        <div id="feFindBar" style="display:none;padding:6px 8px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.1);gap:6px;align-items:center;">
+          <input id="feFindInput" type="text" placeholder="Find..."
+            style="flex:1;padding:3px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:11px;"
+            onkeydown="if(event.key==='Enter')feDoFind()">
+          <input id="feReplaceInput" type="text" placeholder="Replace..."
+            style="flex:1;padding:3px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:11px;"
+            onkeydown="if(event.key==='Enter')feDoReplace()">
+          <label style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:2px;">
+            <input type="checkbox" id="feFindRegex"> Regex
+          </label>
+          <label style="font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:2px;">
+            <input type="checkbox" id="feFindCase"> Match Case
+          </label>
+          <button class="code-btn" onclick="feDoFind()" style="font-size:10px;padding:2px 6px;">Find</button>
+          <button class="code-btn" onclick="feDoReplace()" style="font-size:10px;padding:2px 6px;">Replace</button>
+          <button class="code-btn" onclick="feDoReplaceAll()" style="font-size:10px;padding:2px 6px;">All</button>
+          <span id="feFindCount" style="font-size:10px;color:var(--accent-cyan);font-family:var(--font-mono);"></span>
+          <button class="code-btn" onclick="document.getElementById('feFindBar').style.display='none'" style="font-size:10px;padding:2px 6px;">&times;</button>
+        </div>
+
+        <!-- Editor Textarea with Line Numbers -->
+        <div style="flex:1;display:flex;overflow:hidden;position:relative;">
+          <div id="feLineNumbers" style="width:48px;background:rgba(0,0,0,0.2);border-right:1px solid var(--border);overflow:hidden;padding:8px 4px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);text-align:right;line-height:1.5;user-select:none;white-space:pre;"></div>
+          <textarea id="feEditorArea" spellcheck="false" wrap="off"
+            style="flex:1;resize:none;padding:8px;background:transparent;border:none;color:var(--text-primary);font-family:var(--font-mono);font-size:12px;line-height:1.5;tab-size:4;outline:none;overflow:auto;white-space:pre;"
+            oninput="feOnEditorInput()" onscroll="feOnEditorScroll()" onkeydown="feOnEditorKeydown(event)"
+            placeholder="Open a file from the tree, or use the terminal: read &lt;path&gt;"></textarea>
+        </div>
+
+        <!-- Diff Viewer (hidden by default) -->
+        <div id="feDiffPane" style="display:none;flex:1;overflow:auto;padding:8px;font-family:var(--font-mono);font-size:11px;line-height:1.5;white-space:pre-wrap;background:rgba(0,0,0,0.1);">
+        </div>
+
+        <!-- Status Bar -->
+        <div style="display:flex;justify-content:space-between;padding:3px 8px;border-top:1px solid var(--border);background:rgba(0,0,0,0.1);font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">
+          <span id="feFilePath">No file</span>
+          <span>
+            <span id="feLineCol">Ln 1, Col 1</span>
+            &nbsp;|&nbsp;
+            <span id="feLineCount">0 lines</span>
+            &nbsp;|&nbsp;
+            <span id="feModified" style="color:var(--accent-green);">Saved</span>
+            &nbsp;|&nbsp;
+            <span id="feEncoding">UTF-8</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Operation History Drawer -->
+    <div id="feHistoryDrawer" style="display:none;position:absolute;right:0;top:36px;bottom:0;width:280px;background:var(--surface);border-left:1px solid var(--border);z-index:10;overflow-y:auto;padding:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:11px;color:var(--accent-cyan);">&#x1F4CB; Operation History</strong>
+        <button class="code-btn" onclick="document.getElementById('feHistoryDrawer').style.display='none'" style="font-size:10px;padding:2px 6px;">&times;</button>
+      </div>
+      <div id="feHistoryList" style="font-family:var(--font-mono);font-size:10px;"></div>
+    </div>
+
+    <!-- Search-in-Files Drawer -->
+    <div id="feSearchDrawer" style="display:none;position:absolute;right:0;top:36px;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);z-index:10;overflow-y:auto;padding:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:11px;color:var(--accent-cyan);">&#x1F50E; Search in Files</strong>
+        <button class="code-btn" onclick="document.getElementById('feSearchDrawer').style.display='none'" style="font-size:10px;padding:2px 6px;">&times;</button>
+      </div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <input id="feGlobalSearch" type="text" placeholder="Search pattern..."
+          style="flex:1;padding:4px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:10px;"
+          onkeydown="if(event.key==='Enter')feDoGlobalSearch()">
+        <button class="code-btn" onclick="feDoGlobalSearch()" style="font-size:10px;padding:2px 8px;">Go</button>
+      </div>
+      <div style="display:flex;gap:4px;margin-bottom:8px;">
+        <input id="feSearchPath" type="text" placeholder="File pattern (e.g. *.cpp)" value="*.*"
+          style="flex:1;padding:4px 6px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:var(--font-mono);font-size:10px;">
+      </div>
+      <div id="feSearchResults" style="font-family:var(--font-mono);font-size:10px;"></div>
+    </div>
+  </div>
+
   </main>
 
   <!-- Right Sidebar -->
@@ -7942,6 +8492,29 @@
           'plugins/',
           '.vscode/extensions/',
         ],
+      },
+      // WebView2 Built-In Browser: model website access & web browsing
+      browser: {
+        active: false,
+        tabs: [
+          { id: 0, title: 'New Tab', url: '', history: [], historyIdx: -1, iframeRef: null }
+        ],
+        activeTab: 0,
+        nextTabId: 1,
+        bookmarks: [
+          { name: 'HuggingFace GGUF', url: 'https://huggingface.co/models?sort=trending&search=gguf', icon: '\uD83E\uDD17' },
+          { name: 'Ollama Library', url: 'https://ollama.com/library', icon: '\uD83E\uDD99' },
+          { name: 'TheBloke', url: 'https://huggingface.co/TheBloke', icon: '\uD83D\uDCE6' },
+          { name: 'bartowski', url: 'https://huggingface.co/bartowski', icon: '\uD83D\uDCE6' },
+          { name: 'llama.cpp', url: 'https://github.com/ggerganov/llama.cpp', icon: '\uD83D\uDCBB' },
+          { name: 'Ollama Docs', url: 'https://docs.ollama.com', icon: '\uD83D\uDCD6' },
+          { name: 'OpenRouter', url: 'https://openrouter.ai/models', icon: '\uD83C\uDF10' },
+        ],
+        zoom: 100,
+        devtoolsOpen: false,
+        searchEngine: 'https://www.google.com/search?igu=1&q=',
+        homePage: 'home',   // 'home' = built-in home, or a URL string
+        totalNavigations: 0,
       },
     };
 
@@ -8616,6 +9189,575 @@
     // inside an overlay iframe so the user gets the full IDE experience
     // without leaving the chatbot. Beaconism-driven: works from file://
     // ======================================================================
+
+    // ======================================================================
+    // BUILT-IN BROWSER (WebView2-style) — Model web access, tabbed browsing,
+    // proxy-based page fetching, content extraction for model context.
+    // When hosted in Win32 IDE with WebView2, can use native WebView2 APIs.
+    // When running in standard browser, uses iframe + server proxy for CORS.
+    // ======================================================================
+
+    var BrowserState = {
+      tabs: [{ id: 0, url: '', title: 'New Tab', history: [], historyIdx: -1, content: null }],
+      activeTab: 0,
+      nextTabId: 1,
+      history: [],
+      maxHistory: 200,
+      isWebView2: !!(window.chrome && window.chrome.webview),
+      proxyMode: 'auto', // 'auto' | 'proxy' | 'direct' | 'webview2'
+      extractedContent: null,
+      searchEngine: 'https://duckduckgo.com/?q='
+    };
+
+    function showBrowser() {
+      var el = document.getElementById('browserOverlay');
+      if (el) {
+        el.classList.add('active');
+        // Focus URL bar
+        var input = document.getElementById('browserUrlInput');
+        if (input) setTimeout(function () { input.focus(); }, 100);
+      }
+    }
+
+    function browserClose() {
+      var el = document.getElementById('browserOverlay');
+      if (el) el.classList.remove('active');
+    }
+
+    function browserMinimize() {
+      browserClose();
+      // Show toast that browser is still running
+      if (typeof addSystemMessage === 'function') {
+        addSystemMessage('Browser minimized. Click 🌐 Browse or type `browse` to reopen.');
+      }
+    }
+
+    function browserDetach() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (tab && tab.url) {
+        window.open(tab.url, '_blank', 'width=1024,height=768,menubar=yes,toolbar=yes,location=yes');
+      }
+    }
+
+    function browserGoHome() {
+      var vp = document.getElementById('browserViewport');
+      var home = document.getElementById('browserHomePage');
+      if (!vp) return;
+      // Remove any iframe or proxy content
+      var existingIframe = vp.querySelector('iframe');
+      if (existingIframe) existingIframe.remove();
+      var existingProxy = vp.querySelector('.browser-proxy-content');
+      if (existingProxy) existingProxy.remove();
+      if (home) home.style.display = '';
+      // Update URL bar
+      document.getElementById('browserUrlInput').value = '';
+      document.getElementById('browserStatusUrl').textContent = 'about:home';
+      document.getElementById('browserStatusInfo').textContent = 'Ready';
+      _browserUpdateSsl('');
+      _browserUpdateTab(BrowserState.activeTab, 'New Tab', '');
+    }
+
+    function browserGo(url) {
+      document.getElementById('browserUrlInput').value = url;
+      browserNavigate();
+    }
+
+    function browserNavigate() {
+      var input = document.getElementById('browserUrlInput');
+      var raw = (input.value || '').trim();
+      if (!raw) return;
+
+      // Auto-detect if it's a search query or URL
+      var url = raw;
+      if (raw.indexOf('://') < 0 && raw.indexOf('.') < 0 && raw.indexOf('/') < 0) {
+        // Treat as search query
+        url = BrowserState.searchEngine + encodeURIComponent(raw);
+      } else if (raw.indexOf('://') < 0) {
+        url = 'https://' + raw;
+      }
+
+      input.value = url;
+
+      // Record in history
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (tab) {
+        // Trim forward history when navigating from middle
+        if (tab.historyIdx < tab.history.length - 1) {
+          tab.history = tab.history.slice(0, tab.historyIdx + 1);
+        }
+        tab.history.push(url);
+        tab.historyIdx = tab.history.length - 1;
+        tab.url = url;
+      }
+      BrowserState.history.push({ url: url, timestamp: Date.now() });
+      if (BrowserState.history.length > BrowserState.maxHistory) {
+        BrowserState.history = BrowserState.history.slice(-BrowserState.maxHistory);
+      }
+
+      _browserUpdateNavButtons();
+      _browserLoadUrl(url);
+    }
+
+    function _browserLoadUrl(url) {
+      var vp = document.getElementById('browserViewport');
+      var home = document.getElementById('browserHomePage');
+      var loading = document.getElementById('browserLoading');
+      if (!vp) return;
+
+      // Hide home page
+      if (home) home.style.display = 'none';
+
+      // Show loading
+      if (loading) loading.style.display = '';
+
+      // Remove old content
+      var oldIframe = vp.querySelector('iframe');
+      if (oldIframe) oldIframe.remove();
+      var oldProxy = vp.querySelector('.browser-proxy-content');
+      if (oldProxy) oldProxy.remove();
+
+      document.getElementById('browserStatusUrl').textContent = url;
+      document.getElementById('browserStatusInfo').textContent = 'Loading...';
+      _browserUpdateSsl(url);
+
+      // Strategy: try direct iframe first (works for many sites), then proxy
+      if (BrowserState.proxyMode === 'proxy') {
+        _browserLoadViaProxy(url);
+      } else if (BrowserState.proxyMode === 'webview2' && BrowserState.isWebView2) {
+        _browserLoadViaWebView2(url);
+      } else {
+        // Auto: try iframe first
+        _browserLoadViaIframe(url);
+      }
+    }
+
+    function _browserLoadViaIframe(url) {
+      var vp = document.getElementById('browserViewport');
+      var loading = document.getElementById('browserLoading');
+
+      var iframe = document.createElement('iframe');
+      iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+      iframe.style.cssText = 'width:100%;height:100%;border:none;background:#fff;';
+      iframe.src = url;
+
+      var loadTimeout;
+      iframe.onload = function () {
+        if (loading) loading.style.display = 'none';
+        if (loadTimeout) clearTimeout(loadTimeout);
+        document.getElementById('browserStatusInfo').textContent = 'Loaded (iframe)';
+        // Try to get title
+        try {
+          var title = iframe.contentDocument ? iframe.contentDocument.title : '';
+          if (title) _browserUpdateTab(BrowserState.activeTab, title, url);
+        } catch (e) {
+          // Cross-origin, can't access title
+          _browserUpdateTab(BrowserState.activeTab, _browserTitleFromUrl(url), url);
+        }
+      };
+
+      iframe.onerror = function () {
+        if (loadTimeout) clearTimeout(loadTimeout);
+        // Iframe failed, try proxy
+        iframe.remove();
+        _browserLoadViaProxy(url);
+      };
+
+      // Timeout: if iframe takes too long, try proxy approach
+      loadTimeout = setTimeout(function () {
+        // Check if iframe loaded (simple heuristic)
+        if (loading && loading.style.display !== 'none') {
+          // Still loading after 8s, offer proxy option
+          document.getElementById('browserStatusInfo').textContent = 'Slow load — try proxy? (click Extract)';
+        }
+      }, 8000);
+
+      vp.appendChild(iframe);
+    }
+
+    function _browserLoadViaProxy(url) {
+      var vp = document.getElementById('browserViewport');
+      var loading = document.getElementById('browserLoading');
+
+      // Remove any existing iframe
+      var oldIframe = vp.querySelector('iframe');
+      if (oldIframe) oldIframe.remove();
+
+      document.getElementById('browserStatusInfo').textContent = 'Fetching via proxy...';
+
+      EngineAPI.browseProxy(url).then(function (data) {
+        if (loading) loading.style.display = 'none';
+
+        var html = data.content || data.body || data.output || data.result || '';
+        if (!html) {
+          document.getElementById('browserStatusInfo').textContent = 'Empty response';
+          return;
+        }
+
+        // Render as sanitized content
+        var div = document.createElement('div');
+        div.className = 'browser-proxy-content';
+
+        // Basic sanitization: remove dangerous tags but keep structure
+        var sanitized = html
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<link[^>]*>/gi, '')
+          .replace(/<meta[^>]*>/gi, '')
+          .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+          .replace(/on\w+\s*=\s*'[^']*'/gi, '');
+
+        div.innerHTML = sanitized;
+
+        // Make links clickable within the browser
+        var links = div.querySelectorAll('a[href]');
+        for (var i = 0; i < links.length; i++) {
+          (function (link) {
+            var href = link.getAttribute('href');
+            if (href) {
+              // Resolve relative URLs
+              if (href.indexOf('://') < 0 && href.charAt(0) === '/') {
+                try {
+                  var base = new URL(url);
+                  href = base.origin + href;
+                } catch (e) { /* keep as-is */ }
+              }
+              link.onclick = function (e) {
+                e.preventDefault();
+                browserGo(href);
+              };
+            }
+          })(links[i]);
+        }
+
+        vp.appendChild(div);
+
+        // Extract title
+        var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        var title = titleMatch ? titleMatch[1].trim() : _browserTitleFromUrl(url);
+        _browserUpdateTab(BrowserState.activeTab, title, url);
+        document.getElementById('browserStatusInfo').textContent = 'Loaded (proxy) — ' + html.length + ' bytes';
+
+      }).catch(function (err) {
+        if (loading) loading.style.display = 'none';
+        document.getElementById('browserStatusInfo').textContent = 'Error: ' + (err.message || err);
+
+        // Show error page
+        var div = document.createElement('div');
+        div.className = 'browser-proxy-content';
+        div.innerHTML = '<div style="text-align:center;padding:60px 20px;">' +
+          '<div style="font-size:48px;margin-bottom:16px;">&#x26A0;</div>' +
+          '<h2 style="color:#e74c3c;">Unable to load page</h2>' +
+          '<p style="color:#666;margin:12px 0;">Could not fetch: <code>' + url + '</code></p>' +
+          '<p style="color:#999;font-size:13px;">Error: ' + (err.message || 'Connection failed') + '</p>' +
+          '<p style="color:#999;font-size:12px;margin-top:20px;">Tip: Make sure the backend server is running for proxy mode,<br>or try the URL directly: <a href="' + url + '" target="_blank">' + url + '</a></p>' +
+          '</div>';
+        vp.appendChild(div);
+      });
+    }
+
+    function _browserLoadViaWebView2(url) {
+      // WebView2 native navigation — send message to host application
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({
+          type: 'browser-navigate',
+          url: url
+        });
+        document.getElementById('browserStatusInfo').textContent = 'WebView2 navigation → ' + url;
+      } else {
+        // Fallback to iframe
+        _browserLoadViaIframe(url);
+      }
+    }
+
+    function browserBack() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (!tab || tab.historyIdx <= 0) return;
+      tab.historyIdx--;
+      var url = tab.history[tab.historyIdx];
+      tab.url = url;
+      document.getElementById('browserUrlInput').value = url;
+      _browserUpdateNavButtons();
+      _browserLoadUrl(url);
+    }
+
+    function browserForward() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (!tab || tab.historyIdx >= tab.history.length - 1) return;
+      tab.historyIdx++;
+      var url = tab.history[tab.historyIdx];
+      tab.url = url;
+      document.getElementById('browserUrlInput').value = url;
+      _browserUpdateNavButtons();
+      _browserLoadUrl(url);
+    }
+
+    function browserReload() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (tab && tab.url) {
+        _browserLoadUrl(tab.url);
+      }
+    }
+
+    function browserExtractContent() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      if (!tab || !tab.url) {
+        if (typeof addSystemMessage === 'function') addSystemMessage('No page loaded to extract.');
+        return;
+      }
+
+      var vp = document.getElementById('browserViewport');
+      var iframe = vp ? vp.querySelector('iframe') : null;
+      var proxyDiv = vp ? vp.querySelector('.browser-proxy-content') : null;
+      var text = '';
+
+      // Try to extract from iframe first
+      if (iframe) {
+        try {
+          text = iframe.contentDocument.body.innerText || iframe.contentDocument.body.textContent || '';
+        } catch (e) {
+          // Cross-origin — use proxy extraction
+        }
+      }
+
+      // Try proxy content div
+      if (!text && proxyDiv) {
+        text = proxyDiv.innerText || proxyDiv.textContent || '';
+      }
+
+      // If still no content, fetch via proxy and extract
+      if (!text) {
+        document.getElementById('browserStatusInfo').textContent = 'Extracting via proxy...';
+        EngineAPI.browseExtract(tab.url).then(function (data) {
+          var extracted = data.text || data.content || '';
+          BrowserState.extractedContent = { url: tab.url, text: extracted, timestamp: Date.now() };
+          document.getElementById('browserStatusInfo').textContent = 'Extracted ' + extracted.length + ' chars';
+          if (typeof addSystemMessage === 'function') {
+            addSystemMessage('📋 Extracted ' + extracted.length + ' chars from ' + tab.url);
+          }
+        }).catch(function (err) {
+          document.getElementById('browserStatusInfo').textContent = 'Extract error: ' + err.message;
+        });
+        return;
+      }
+
+      BrowserState.extractedContent = { url: tab.url, text: text, timestamp: Date.now() };
+      document.getElementById('browserStatusInfo').textContent = 'Extracted ' + text.length + ' chars';
+      if (typeof addSystemMessage === 'function') {
+        addSystemMessage('📋 Extracted ' + text.length + ' chars from ' + tab.url);
+      }
+    }
+
+    function browserSendToModel() {
+      // Extract content (if not already) and inject it as context for the model
+      if (!BrowserState.extractedContent || Date.now() - BrowserState.extractedContent.timestamp > 60000) {
+        browserExtractContent();
+        // Wait a moment for extraction, then send
+        setTimeout(function () { _browserDoSendToModel(); }, 2000);
+      } else {
+        _browserDoSendToModel();
+      }
+    }
+
+    function _browserDoSendToModel() {
+      var ec = BrowserState.extractedContent;
+      if (!ec || !ec.text) {
+        if (typeof addSystemMessage === 'function') {
+          addSystemMessage('No extracted content to send. Try clicking Extract first.');
+        }
+        return;
+      }
+
+      // Truncate very long pages
+      var text = ec.text;
+      var maxLen = 8000;
+      if (text.length > maxLen) {
+        text = text.substring(0, maxLen) + '\n\n[... truncated at ' + maxLen + ' chars, full page: ' + ec.text.length + ' chars]';
+      }
+
+      // Inject as a system message into the chat, or add to current context
+      var contextMsg = '[Web Page Content from ' + ec.url + ' — extracted ' + new Date(ec.timestamp).toLocaleTimeString() + ']\n\n' + text;
+
+      // If there's a chat input, prepend context
+      var chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.value = contextMsg + '\n\n---\n\n' + (chatInput.value || '');
+        chatInput.focus();
+        if (typeof addSystemMessage === 'function') {
+          addSystemMessage('🌐→🤖 Web content injected into chat input (' + text.length + ' chars from ' + ec.url + ')');
+        }
+      }
+
+      document.getElementById('browserStatusInfo').textContent = 'Sent to model (' + text.length + ' chars)';
+    }
+
+    // ---- Browser Tab Management ----
+
+    function browserNewTab() {
+      var id = BrowserState.nextTabId++;
+      BrowserState.tabs.push({ id: id, url: '', title: 'New Tab', history: [], historyIdx: -1, content: null });
+      var tabBar = document.getElementById('browserTabBar');
+      if (tabBar) {
+        var newTabBtn = tabBar.querySelector('.browser-new-tab');
+        var tabEl = document.createElement('div');
+        tabEl.className = 'browser-tab';
+        tabEl.id = 'browserTab' + id;
+        tabEl.onclick = function () { browserSwitchTab(BrowserState.tabs.length - 1); };
+        tabEl.innerHTML = '<span class="tab-title">New Tab</span><span class="tab-close" onclick="event.stopPropagation();browserCloseTab(' + (BrowserState.tabs.length - 1) + ')">&#x2715;</span>';
+        tabBar.insertBefore(tabEl, newTabBtn);
+      }
+      browserSwitchTab(BrowserState.tabs.length - 1);
+      _browserUpdateTabCount();
+    }
+
+    function browserSwitchTab(idx) {
+      if (idx < 0 || idx >= BrowserState.tabs.length) return;
+
+      // Deactivate old tab
+      var oldTabEl = document.getElementById('browserTab' + BrowserState.tabs[BrowserState.activeTab].id);
+      if (oldTabEl) oldTabEl.classList.remove('active');
+
+      BrowserState.activeTab = idx;
+      var tab = BrowserState.tabs[idx];
+
+      // Activate new tab
+      var newTabEl = document.getElementById('browserTab' + tab.id);
+      if (newTabEl) newTabEl.classList.add('active');
+
+      // Load the tab's content
+      document.getElementById('browserUrlInput').value = tab.url || '';
+      _browserUpdateNavButtons();
+
+      if (tab.url) {
+        _browserLoadUrl(tab.url);
+      } else {
+        browserGoHome();
+      }
+    }
+
+    function browserCloseTab(idx) {
+      if (BrowserState.tabs.length <= 1) {
+        // Last tab — just go home
+        browserGoHome();
+        return;
+      }
+
+      var tab = BrowserState.tabs[idx];
+      var tabEl = document.getElementById('browserTab' + tab.id);
+      if (tabEl) tabEl.remove();
+
+      BrowserState.tabs.splice(idx, 1);
+
+      // Adjust active tab index
+      if (BrowserState.activeTab >= BrowserState.tabs.length) {
+        BrowserState.activeTab = BrowserState.tabs.length - 1;
+      } else if (BrowserState.activeTab > idx) {
+        BrowserState.activeTab--;
+      }
+
+      // Re-render tab click handlers (they reference by index)
+      _browserRebuildTabBar();
+      browserSwitchTab(BrowserState.activeTab);
+      _browserUpdateTabCount();
+    }
+
+    function _browserRebuildTabBar() {
+      var tabBar = document.getElementById('browserTabBar');
+      if (!tabBar) return;
+      var newTabBtn = tabBar.querySelector('.browser-new-tab');
+      // Remove all tab elements
+      var existingTabs = tabBar.querySelectorAll('.browser-tab');
+      for (var i = 0; i < existingTabs.length; i++) existingTabs[i].remove();
+
+      // Recreate
+      for (var i = 0; i < BrowserState.tabs.length; i++) {
+        (function (idx) {
+          var t = BrowserState.tabs[idx];
+          var el = document.createElement('div');
+          el.className = 'browser-tab' + (idx === BrowserState.activeTab ? ' active' : '');
+          el.id = 'browserTab' + t.id;
+          el.onclick = function () { browserSwitchTab(idx); };
+          el.innerHTML = '<span class="tab-title">' + (t.title || 'New Tab') + '</span>' +
+            '<span class="tab-close" onclick="event.stopPropagation();browserCloseTab(' + idx + ')">&#x2715;</span>';
+          tabBar.insertBefore(el, newTabBtn);
+        })(i);
+      }
+    }
+
+    // ---- Browser Utility Functions ----
+
+    function _browserUpdateNavButtons() {
+      var tab = BrowserState.tabs[BrowserState.activeTab];
+      var btnBack = document.getElementById('browserBtnBack');
+      var btnFwd = document.getElementById('browserBtnFwd');
+      if (btnBack) btnBack.disabled = !tab || tab.historyIdx <= 0;
+      if (btnFwd) btnFwd.disabled = !tab || tab.historyIdx >= tab.history.length - 1;
+    }
+
+    function _browserUpdateSsl(url) {
+      var icon = document.getElementById('browserSslIcon');
+      var status = document.getElementById('browserStatusSsl');
+      if (!url) {
+        if (icon) icon.textContent = '🔒';
+        if (status) status.textContent = '🔒 Secure';
+        return;
+      }
+      var isHttps = url.indexOf('https://') === 0;
+      if (icon) icon.textContent = isHttps ? '🔒' : '⚠';
+      if (icon) icon.style.color = isHttps ? 'var(--accent-green)' : 'var(--accent-orange)';
+      if (status) status.textContent = isHttps ? '🔒 Secure' : '⚠ Not Secure';
+      if (status) status.style.color = isHttps ? 'var(--accent-green)' : 'var(--accent-orange)';
+    }
+
+    function _browserUpdateTab(idx, title, url) {
+      var tab = BrowserState.tabs[idx];
+      if (!tab) return;
+      tab.title = title || tab.title;
+      tab.url = url || tab.url;
+      var el = document.getElementById('browserTab' + tab.id);
+      if (el) {
+        var titleSpan = el.querySelector('.tab-title');
+        if (titleSpan) titleSpan.textContent = (title || '').substring(0, 30) || 'New Tab';
+      }
+    }
+
+    function _browserUpdateTabCount() {
+      var el = document.getElementById('browserTabCount');
+      if (el) el.textContent = BrowserState.tabs.length + ' tab' + (BrowserState.tabs.length !== 1 ? 's' : '');
+    }
+
+    function _browserTitleFromUrl(url) {
+      try {
+        var u = new URL(url);
+        return u.hostname + (u.pathname !== '/' ? u.pathname : '');
+      } catch (e) {
+        return url.substring(0, 40);
+      }
+    }
+
+    // ---- WebView2 Message Handler ----
+    // When hosted inside the Win32 IDE's WebView2 control, the C++ host
+    // can send messages to the browser panel (navigation results, etc.)
+    if (window.chrome && window.chrome.webview) {
+      window.chrome.webview.addEventListener('message', function (e) {
+        var msg = e.data;
+        if (!msg || !msg.type) return;
+        if (msg.type === 'browser-content') {
+          // Host fetched content for us
+          var vp = document.getElementById('browserViewport');
+          var loading = document.getElementById('browserLoading');
+          if (loading) loading.style.display = 'none';
+          if (vp) {
+            var div = document.createElement('div');
+            div.className = 'browser-proxy-content';
+            div.innerHTML = msg.html || msg.content || '';
+            vp.appendChild(div);
+          }
+          if (msg.title) _browserUpdateTab(BrowserState.activeTab, msg.title, msg.url);
+          document.getElementById('browserStatusInfo').textContent = 'Loaded (WebView2)';
+        } else if (msg.type === 'browser-error') {
+          document.getElementById('browserStatusInfo').textContent = 'WebView2 Error: ' + (msg.error || 'Unknown');
+        }
+      });
+    }
 
     // Multi-port beacon scan: try all known ports for Win32 IDE /status
     async function ghostBeaconScan() {
@@ -9516,6 +10658,128 @@
         return this.executeTool('git_status', {});
       },
 
+      // ---- Agentic File Operations ----
+      createFile: function (path, content) {
+        return this.executeTool('write_file', { path: path, content: content || '' });
+      },
+      appendFile: function (path, content) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var existing = data.content || data.output || data.result || '';
+          return self.executeTool('write_file', { path: path, content: existing + content });
+        });
+      },
+      deleteFile: function (path) {
+        return this.executeTool('execute_command', { command: 'del /f /q "' + path.replace(/\//g, '\\') + '"' });
+      },
+      renameFile: function (oldPath, newPath) {
+        return this.executeTool('execute_command', { command: 'move /y "' + oldPath.replace(/\//g, '\\') + '" "' + newPath.replace(/\//g, '\\') + '"' });
+      },
+      copyFile: function (src, dst) {
+        return this.executeTool('execute_command', { command: 'copy /y "' + src.replace(/\//g, '\\') + '" "' + dst.replace(/\//g, '\\') + '"' });
+      },
+      moveFile: function (src, dst) {
+        return this.executeTool('execute_command', { command: 'move /y "' + src.replace(/\//g, '\\') + '" "' + dst.replace(/\//g, '\\') + '"' });
+      },
+      mkDir: function (path) {
+        return this.executeTool('execute_command', { command: 'mkdir "' + path.replace(/\//g, '\\') + '"' });
+      },
+      removeDir: function (path) {
+        return this.executeTool('execute_command', { command: 'rmdir /s /q "' + path.replace(/\//g, '\\') + '"' });
+      },
+      fileInfo: function (path) {
+        return this.executeTool('execute_command', { command: 'dir "' + path.replace(/\//g, '\\') + '"' });
+      },
+      searchFiles: function (pattern, dir) {
+        var d = dir || '.';
+        return this.executeTool('execute_command', { command: 'dir /s /b "' + d.replace(/\//g, '\\') + '\\' + pattern + '"' });
+      },
+      grepInFiles: function (pattern, path) {
+        var p = path || '*.*';
+        return this.executeTool('execute_command', { command: 'findstr /s /n /i "' + pattern + '" "' + p.replace(/\//g, '\\') + '"' });
+      },
+      diffFiles: function (pathA, pathB) {
+        return this.executeTool('execute_command', { command: 'fc "' + pathA.replace(/\//g, '\\') + '" "' + pathB.replace(/\//g, '\\') + '"' });
+      },
+      headFile: function (path, n) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          var lines = content.split('\n').slice(0, n || 20);
+          return { output: lines.join('\n'), lineCount: lines.length };
+        });
+      },
+      tailFile: function (path, n) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          var allLines = content.split('\n');
+          var lines = allLines.slice(-(n || 20));
+          return { output: lines.join('\n'), lineCount: lines.length, totalLines: allLines.length };
+        });
+      },
+      wordCount: function (path) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          var lines = content.split('\n').length;
+          var words = content.split(/\s+/).filter(function (w) { return w.length > 0; }).length;
+          var chars = content.length;
+          var bytes = new Blob([content]).size;
+          return { lines: lines, words: words, chars: chars, bytes: bytes };
+        });
+      },
+      patchFile: function (path, search, replace) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          if (content.indexOf(search) === -1) {
+            return { success: false, error: 'Pattern not found in file' };
+          }
+          var patched = content.split(search).join(replace);
+          var count = content.split(search).length - 1;
+          return self.executeTool('write_file', { path: path, content: patched }).then(function () {
+            return { success: true, replacements: count, message: 'Patched ' + count + ' occurrence(s)' };
+          });
+        });
+      },
+      insertAtLine: function (path, lineNum, text) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          var lines = content.split('\n');
+          var idx = Math.max(0, Math.min(lineNum - 1, lines.length));
+          lines.splice(idx, 0, text);
+          return self.executeTool('write_file', { path: path, content: lines.join('\n') }).then(function () {
+            return { success: true, message: 'Inserted at line ' + lineNum, totalLines: lines.length };
+          });
+        });
+      },
+      deleteLine: function (path, startLine, endLine) {
+        var self = this;
+        var end = endLine || startLine;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          var lines = content.split('\n');
+          var removed = lines.splice(startLine - 1, end - startLine + 1);
+          return self.executeTool('write_file', { path: path, content: lines.join('\n') }).then(function () {
+            return { success: true, message: 'Deleted lines ' + startLine + '-' + end, removedCount: removed.length, totalLines: lines.length };
+          });
+        });
+      },
+      replaceLines: function (path, startLine, endLine, newText) {
+        var self = this;
+        return self.executeTool('read_file', { path: path }).then(function (data) {
+          var content = data.content || data.output || data.result || '';
+          var lines = content.split('\n');
+          var newLines = newText.split('\n');
+          lines.splice(startLine - 1, endLine - startLine + 1, newLines.join('\n'));
+          return self.executeTool('write_file', { path: path, content: lines.join('\n') }).then(function () {
+            return { success: true, message: 'Replaced lines ' + startLine + '-' + endLine };
+          });
+        });
+      },
+
       // ---- Metrics (tool_server: /metrics, /health, /api/status) ----
       fetchMetrics: function () { return this._get('/metrics'); },
       fetchHealth: function () { return this._get('/health'); },
@@ -9607,6 +10871,46 @@
           messages: messages,
           stream: false
         }, options || {}), 60000);
+      },
+
+      // ---- WebView2 Browser / Web Access (proxy-based fetching) ----
+      browseProxy: function (url) {
+        // Try dedicated browse endpoint first, fallback to CLI fetch
+        var self = this;
+        return self._post('/api/browse', { url: url, extract: true }, 30000).catch(function () {
+          // Fallback: try fetching via tool execution (curl / powershell)
+          return self.executeTool('execute_command', {
+            command: 'powershell -c "(Invoke-WebRequest -Uri \'' + url.replace(/'/g, "''") + '\' -UseBasicParsing).Content"'
+          }).then(function (data) {
+            return { content: data.output || data.result || '', url: url, method: 'powershell-fallback' };
+          });
+        });
+      },
+      browseExtract: function (url) {
+        // Extract readable text content from a URL (strips HTML tags)
+        var self = this;
+        return self._post('/api/browse/extract', { url: url }, 30000).catch(function () {
+          return self.browseProxy(url).then(function (data) {
+            var html = data.content || data.body || '';
+            // Client-side HTML strip: remove scripts, styles, then tags
+            var text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                          .replace(/<[^>]+>/g, ' ')
+                          .replace(/\s{2,}/g, ' ')
+                          .trim();
+            return { text: text, url: url, chars: text.length, method: 'client-strip' };
+          });
+        });
+      },
+      browseSearch: function (query) {
+        // Search the web via DuckDuckGo HTML endpoint
+        return this.browseProxy('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query));
+      },
+      browseScreenshot: function (url) {
+        return this._post('/api/browse/screenshot', { url: url }, 30000);
+      },
+      browseHistory: function () {
+        return Promise.resolve({ history: (typeof BrowserState !== 'undefined') ? BrowserState.history : [] });
       },
 
       // ---- Subsystem Map: maps all 450+ source files to categories & endpoints ----
@@ -12105,7 +13409,23 @@
           '  /ext list            \u2014 List installed extensions\n' +
           '  /ext search <query>  \u2014 Marketplace search\n' +
           '  /ext install <id>    \u2014 Install extension by ID\n' +
+          '  /ext uninstall <id>  \u2014 Uninstall extension\n' +
+          '  /ext enable <id>     \u2014 Enable extension\n' +
+          '  /ext disable <id>    \u2014 Disable extension\n' +
+          '  /ext info <id>       \u2014 Extension details\n' +
+          '  /ext load <path>     \u2014 Load .vsix from disk\n' +
           '  /ext host            \u2014 Extension host status\n' +
+          '  /ext panel           \u2014 Toggle extension panel\n' +
+          '  /ext types           \u2014 Supported types (8)\n' +
+          '  /ext builtin         \u2014 Built-in extensions (12)\n' +
+          '  /ext ps              \u2014 PowerShell module info\n' +
+          '\u2500 WebView2 Browser \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
+          '  /browse [url]        \u2014 Open built-in browser (optional URL)\n' +
+          '  /web <query>         \u2014 Web search from terminal\n' +
+          '  /url <url>           \u2014 Navigate browser to URL\n' +
+          '  /bookmarks           \u2014 List browser bookmarks\n' +
+          '  /bookmark <name> <u> \u2014 Add a bookmark\n' +
+          '  /browser-close       \u2014 Close the browser panel\n' +
           '\u2500 Ghost & Beacon \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
           '  /ghost               \u2014 Ghost into Win32 IDE (RDP-style overlay)\n' +
           '  /ide                 \u2014 Open Win32 IDE in new window\n' +
@@ -12115,6 +13435,23 @@
           '  /ghost-close         \u2014 Close ghost session\n' +
           '  /ghost-detach        \u2014 Pop ghost to separate window\n' +
           '  /ghost-wait          \u2014 Auto-wait for IDE to come online\n' +
+          '\u2500 Agentic File Editor \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
+          '  /editor              \u2014 Open file editor panel\n' +
+          '  /edit <file>         \u2014 Open file in editor\n' +
+          '  /create <file> [txt] \u2014 Create new file\n' +
+          '  /delete <file>       \u2014 Delete a file\n' +
+          '  /rename <old> <new>  \u2014 Rename/move file\n' +
+          '  /find <pat> [dir]    \u2014 Search for files\n' +
+          '  /grep <pat> [path]   \u2014 Search in files\n' +
+          '  /diff <a> <b>        \u2014 Compare two files\n' +
+          '  /patch <f> <s> <r>   \u2014 Search & replace in file\n' +
+          '  /cat <file>          \u2014 Display full file\n' +
+          '  /head [n] <file>     \u2014 First N lines\n' +
+          '  /tail [n] <file>     \u2014 Last N lines\n' +
+          '  /wc <file>           \u2014 Word/line/char count\n' +
+          '  /mkdir <path>        \u2014 Create directory\n' +
+          '  /copy <src> <dst>    \u2014 Copy file\n' +
+          '  /move <src> <dst>    \u2014 Move file\n' +
           '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
           '  Mode: Client-side beacon (no /api/cli backend required)\n' +
           '  Tip: Commands that need the LLM will use ' + getActiveUrl()
@@ -13203,6 +14540,312 @@
         return;
       }
 
+      // ═══════════════════════════════════════════════════════════════
+      // AGENTIC FILE EDITING CLI COMMANDS (Phase 40)
+      // ═══════════════════════════════════════════════════════════════
+
+      // /editor, /files — Open File Editor panel
+      if (lower === '/editor' || lower === '/files' || lower === '/file-editor') {
+        showFileEditorPanel();
+        addTerminalLine('\u2500\u2500\u2500 Agentic File Editor \u2500\u2500\u2500', 'output');
+        addTerminalLine('  Panel opened. File editing commands:', 'system');
+        addTerminalLine('  cat | head | tail | create | mkdir | rm | mv | cp | grep | diff | patch | edit', 'system');
+        return;
+      }
+
+      // /edit <file> — Open file in editor panel
+      if (lower.indexOf('/edit ') === 0) {
+        var editPath = cmd.substring(6).trim();
+        if (editPath) {
+          showFileEditorPanel();
+          feOpenFile(editPath);
+          addTerminalLine('  \u2705 Opening ' + editPath + ' in editor', 'success');
+        } else {
+          addTerminalLine('  Usage: /edit <filepath>', 'error');
+        }
+        return;
+      }
+
+      // /create <file> [content] — Create a new file
+      if (lower.indexOf('/create ') === 0) {
+        var createParts = cmd.substring(8).trim().split(/\s+/);
+        var createPath = createParts[0] || '';
+        var createContent = createParts.slice(1).join(' ') || '';
+        if (createPath) {
+          (async function () {
+            try {
+              await EngineAPI.createFile(createPath, createContent);
+              addTerminalLine('  \u2705 Created: ' + createPath, 'success');
+              feLogHistory('create', createPath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /create <filepath> [content]', 'error');
+        }
+        return;
+      }
+
+      // /delete <file> — Delete a file
+      if (lower.indexOf('/delete ') === 0) {
+        var deletePath = cmd.substring(8).trim();
+        if (deletePath) {
+          (async function () {
+            try {
+              await EngineAPI.deleteFile(deletePath);
+              addTerminalLine('  \u2705 Deleted: ' + deletePath, 'success');
+              feLogHistory('delete', deletePath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /delete <filepath>', 'error');
+        }
+        return;
+      }
+
+      // /rename <old> <new> — Rename/move a file
+      if (lower.indexOf('/rename ') === 0) {
+        var renameParts = cmd.substring(8).trim().split(/\s+/);
+        var renOld = renameParts[0] || '';
+        var renNew = renameParts[1] || '';
+        if (renOld && renNew) {
+          (async function () {
+            try {
+              await EngineAPI.renameFile(renOld, renNew);
+              addTerminalLine('  \u2705 Renamed: ' + renOld + ' \u2192 ' + renNew, 'success');
+              feLogHistory('rename', renOld + ' → ' + renNew);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /rename <oldpath> <newpath>', 'error');
+        }
+        return;
+      }
+
+      // /find <pattern> [dir] — Search for files
+      if (lower.indexOf('/find ') === 0) {
+        var findParts = cmd.substring(6).trim().split(/\s+/);
+        var findPattern = findParts[0] || '*.*';
+        var findDir = findParts[1] || '.';
+        (async function () {
+          try {
+            addTerminalLine('  Searching: ' + findPattern + ' in ' + findDir, 'system');
+            var data = await EngineAPI.searchFiles(findPattern, findDir);
+            var output = data.output || data.result || data.stdout || '';
+            var files = output.split('\n').filter(function (f) { return f.trim(); });
+            files.forEach(function (f) { addTerminalLine('  \u2022 ' + f.trim(), 'output'); });
+            addTerminalLine('  \u2500\u2500\u2500 ' + files.length + ' file(s) found \u2500\u2500\u2500', 'system');
+          } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+        })();
+        return;
+      }
+
+      // /grep <pattern> [path] — Search in files
+      if (lower.indexOf('/grep ') === 0) {
+        var grepParts = cmd.substring(6).trim().split(/\s+/);
+        var grepPattern = grepParts[0] || '';
+        var grepPath = grepParts[1] || '*.*';
+        if (grepPattern) {
+          (async function () {
+            try {
+              addTerminalLine('  Searching "' + grepPattern + '" in ' + grepPath, 'system');
+              var data = await EngineAPI.grepInFiles(grepPattern, grepPath);
+              var output = data.output || data.result || data.stdout || '';
+              var lines = output.split('\n').filter(function (l) { return l.trim(); });
+              lines.slice(0, 50).forEach(function (l) { addTerminalLine('  ' + l.trim(), 'output'); });
+              if (lines.length > 50) addTerminalLine('  ... and ' + (lines.length - 50) + ' more', 'system');
+              addTerminalLine('  \u2500\u2500\u2500 ' + lines.length + ' match(es) \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /grep <pattern> [path]', 'error');
+        }
+        return;
+      }
+
+      // /diff <fileA> <fileB> — Compare two files
+      if (lower.indexOf('/diff ') === 0) {
+        var diffParts = cmd.substring(6).trim().split(/\s+/);
+        var diffA = diffParts[0] || '';
+        var diffB = diffParts[1] || '';
+        if (diffA && diffB) {
+          (async function () {
+            try {
+              addTerminalLine('  Comparing: ' + diffA + ' vs ' + diffB, 'system');
+              var data = await EngineAPI.diffFiles(diffA, diffB);
+              var output = data.output || data.result || data.stdout || '';
+              output.split('\n').forEach(function (line) { addTerminalLine('  ' + line, 'output'); });
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /diff <fileA> <fileB>', 'error');
+        }
+        return;
+      }
+
+      // /patch <file> <search> <replace> — Search-and-replace in a file
+      if (lower.indexOf('/patch ') === 0) {
+        var patchParts = cmd.substring(7).trim().split(/\s+/);
+        var patchFile = patchParts[0] || '';
+        var patchSearch = patchParts[1] || '';
+        var patchReplace = patchParts.slice(2).join(' ') || '';
+        if (patchFile && patchSearch) {
+          (async function () {
+            try {
+              addTerminalLine('  Patching: ' + patchFile, 'system');
+              var result = await EngineAPI.patchFile(patchFile, patchSearch, patchReplace);
+              if (result.success) {
+                addTerminalLine('  \u2705 ' + result.message, 'success');
+                feLogHistory('patch', patchFile);
+              } else {
+                addTerminalLine('  \u2718 ' + (result.error || 'Pattern not found'), 'error');
+              }
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /patch <file> <search> <replace>', 'error');
+        }
+        return;
+      }
+
+      // /cat <file> — Display full file content
+      if (lower.indexOf('/cat ') === 0) {
+        var catPath = cmd.substring(5).trim();
+        if (catPath) {
+          (async function () {
+            try {
+              var data = await EngineAPI.toolReadFile(catPath);
+              var content = data.content || data.output || data.result || '';
+              content.split('\n').forEach(function (line, i) {
+                addTerminalLine('  ' + (i + 1).toString().padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500\u2500\u2500 ' + content.split('\n').length + ' lines \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /cat <filepath>', 'error');
+        }
+        return;
+      }
+
+      // /head [n] <file> — Show first N lines
+      if (lower.indexOf('/head ') === 0) {
+        var headParts = cmd.substring(6).trim().split(/\s+/);
+        var headN = parseInt(headParts[0]) || 20;
+        var headPath = headParts[1] || headParts[0] || '';
+        if (headPath === String(headN)) headPath = headParts[1] || '';
+        if (headPath) {
+          (async function () {
+            try {
+              var data = await EngineAPI.headFile(headPath, headN);
+              data.output.split('\n').forEach(function (line, i) {
+                addTerminalLine('  ' + (i + 1).toString().padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500\u2500\u2500 Showing ' + data.lineCount + ' lines \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /head [n] <filepath>', 'error');
+        }
+        return;
+      }
+
+      // /tail [n] <file> — Show last N lines
+      if (lower.indexOf('/tail ') === 0) {
+        var tailParts = cmd.substring(6).trim().split(/\s+/);
+        var tailN = parseInt(tailParts[0]) || 20;
+        var tailPath = tailParts[1] || tailParts[0] || '';
+        if (tailPath === String(tailN)) tailPath = tailParts[1] || '';
+        if (tailPath) {
+          (async function () {
+            try {
+              var data = await EngineAPI.tailFile(tailPath, tailN);
+              var startLine = data.totalLines - data.lineCount + 1;
+              data.output.split('\n').forEach(function (line, i) {
+                addTerminalLine('  ' + (startLine + i).toString().padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500\u2500\u2500 Lines ' + startLine + '-' + data.totalLines + ' of ' + data.totalLines + ' \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /tail [n] <filepath>', 'error');
+        }
+        return;
+      }
+
+      // /wc <file> — Word/line/char count
+      if (lower.indexOf('/wc ') === 0) {
+        var wcPath = cmd.substring(4).trim();
+        if (wcPath) {
+          (async function () {
+            try {
+              var data = await EngineAPI.wordCount(wcPath);
+              addTerminalLine('  Lines:      ' + data.lines, 'output');
+              addTerminalLine('  Words:      ' + data.words, 'output');
+              addTerminalLine('  Characters: ' + data.chars, 'output');
+              addTerminalLine('  Bytes:      ' + data.bytes, 'output');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /wc <filepath>', 'error');
+        }
+        return;
+      }
+
+      // /mkdir <path> — Create directory
+      if (lower.indexOf('/mkdir ') === 0) {
+        var mkdirPath = cmd.substring(7).trim();
+        if (mkdirPath) {
+          (async function () {
+            try {
+              await EngineAPI.mkDir(mkdirPath);
+              addTerminalLine('  \u2705 Directory created: ' + mkdirPath, 'success');
+              feLogHistory('mkdir', mkdirPath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /mkdir <path>', 'error');
+        }
+        return;
+      }
+
+      // /copy <src> <dst> — Copy file
+      if (lower.indexOf('/copy ') === 0) {
+        var copyParts = cmd.substring(6).trim().split(/\s+/);
+        var copySrc = copyParts[0] || '';
+        var copyDst = copyParts[1] || '';
+        if (copySrc && copyDst) {
+          (async function () {
+            try {
+              await EngineAPI.copyFile(copySrc, copyDst);
+              addTerminalLine('  \u2705 Copied: ' + copySrc + ' \u2192 ' + copyDst, 'success');
+              feLogHistory('copy', copySrc + ' → ' + copyDst);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /copy <source> <destination>', 'error');
+        }
+        return;
+      }
+
+      // /move <src> <dst> — Move/rename file
+      if (lower.indexOf('/move ') === 0) {
+        var moveParts = cmd.substring(6).trim().split(/\s+/);
+        var moveSrc = moveParts[0] || '';
+        var moveDst = moveParts[1] || '';
+        if (moveSrc && moveDst) {
+          (async function () {
+            try {
+              await EngineAPI.moveFile(moveSrc, moveDst);
+              addTerminalLine('  \u2705 Moved: ' + moveSrc + ' \u2192 ' + moveDst, 'success');
+              feLogHistory('move', moveSrc + ' → ' + moveDst);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+        } else {
+          addTerminalLine('  Usage: /move <source> <destination>', 'error');
+        }
+        return;
+      }
+
       // Unknown CLI command
       addTerminalLine("Unknown CLI command: " + cmd, 'error');
       addTerminalLine("  Type /help for available commands.", 'system');
@@ -13363,6 +15006,10 @@
           addTerminalLine('  ext host logs    \u2014 Show extension host logs', 'system');
           addTerminalLine('  ext scan         \u2014 Scan local dirs for extensions', 'system');
           addTerminalLine('  ext export       \u2014 Export installed extension list', 'system');
+          addTerminalLine('  ext panel        \u2014 Toggle extension manager panel', 'system');
+          addTerminalLine('  ext types        \u2014 List supported extension types', 'system');
+          addTerminalLine('  ext builtin      \u2014 List 12 built-in extensions', 'system');
+          addTerminalLine('  ext ps           \u2014 PowerShell ExtensionManager.psm1', 'system');
           addTerminalLine('  vsix <path|url>  \u2014 Quick-load a .vsix package', 'system');
           addTerminalLine('', 'output');
           addTerminalLine('Engine API Commands (via EngineAPI \u2014 150+ source files):', 'system');
@@ -13382,6 +15029,30 @@
           addTerminalLine('  write-file <p> <c> \u2014 Write file via tool API', 'system');
           addTerminalLine('  exec <command>   \u2014 Execute system command via tool', 'system');
           addTerminalLine('  git              \u2014 Git status via tool API', 'system');
+          addTerminalLine('', 'output');
+          addTerminalLine('Agentic File Editing Commands:', 'system');
+          addTerminalLine('  cat <file>       \u2014 Display full file with line numbers', 'system');
+          addTerminalLine('  head [n] <file>  \u2014 Show first N lines (default 20)', 'system');
+          addTerminalLine('  tail [n] <file>  \u2014 Show last N lines (default 20)', 'system');
+          addTerminalLine('  create <f> [txt] \u2014 Create new file (touch alias)', 'system');
+          addTerminalLine('  mkdir <path>     \u2014 Create directory', 'system');
+          addTerminalLine('  rm <file>        \u2014 Delete file (delete alias)', 'system');
+          addTerminalLine('  rmdir <path>     \u2014 Remove directory recursively', 'system');
+          addTerminalLine('  mv <src> <dst>   \u2014 Move/rename file', 'system');
+          addTerminalLine('  cp <src> <dst>   \u2014 Copy file', 'system');
+          addTerminalLine('  find <pat> [dir] \u2014 Search for files by pattern', 'system');
+          addTerminalLine('  grep <pat> [path]\u2014 Search text in files', 'system');
+          addTerminalLine('  diff <a> <b>     \u2014 Compare two files', 'system');
+          addTerminalLine('  patch <f> <s> <r>\u2014 Search & replace in file', 'system');
+          addTerminalLine('  append <f> <txt> \u2014 Append text to file', 'system');
+          addTerminalLine('  wc <file>        \u2014 Line/word/char/byte count', 'system');
+          addTerminalLine('  stat <file>      \u2014 File info (info alias)', 'system');
+          addTerminalLine('  edit <file>      \u2014 Open in File Editor panel', 'system');
+          addTerminalLine('  insert-line <f> <n> <txt> \u2014 Insert text at line N', 'system');
+          addTerminalLine('  delete-lines <f> <start> [end] \u2014 Delete lines', 'system');
+          addTerminalLine('  replace-lines <f> <s> <e> <txt> \u2014 Replace lines', 'system');
+          addTerminalLine('', 'output');
+          addTerminalLine('CLI/API Commands:', 'system');
           addTerminalLine('  analyze <file>   \u2014 CLI analyze command', 'system');
           addTerminalLine('  audit <file>     \u2014 Security audit via CLI', 'system');
           addTerminalLine('  optimize <file>  \u2014 Optimize via CLI', 'system');
@@ -13397,6 +15068,16 @@
           addTerminalLine('  engine-map       \u2014 Show all engine subsystems', 'system');
           addTerminalLine('  engine-detail <n>\u2014 Detail for a subsystem', 'system');
           addTerminalLine('  replay <id>      \u2014 Replay an agent by ID', 'system');
+          addTerminalLine('', 'output');
+          addTerminalLine('Browser Commands (WebView2-style built-in browser):', 'system');
+          addTerminalLine('  browse [url]     \u2014 Open browser / navigate to URL', 'system');
+          addTerminalLine('  browse search <q>\u2014 Web search via DuckDuckGo', 'system');
+          addTerminalLine('  browse extract   \u2014 Extract current page text', 'system');
+          addTerminalLine('  browse model     \u2014 Send page content to model', 'system');
+          addTerminalLine('  browse proxy <u> \u2014 Fetch URL via backend proxy', 'system');
+          addTerminalLine('  browse close     \u2014 Close browser panel', 'system');
+          addTerminalLine('  browse tabs      \u2014 List open browser tabs', 'system');
+          addTerminalLine('  browse back/fwd  \u2014 Navigate back/forward', 'system');
           addTerminalLine('', 'output');
           addTerminalLine('  mode cli         \u2014 Switch to CLI mode (remote commands)', 'output');
           addTerminalLine('  clear            \u2014 Clear terminal', 'output');
@@ -15122,6 +16803,10 @@
               addTerminalLine('  ext host logs    \u2014 Show host logs', 'output');
               addTerminalLine('  ext scan         \u2014 Scan local paths for extensions', 'output');
               addTerminalLine('  ext export       \u2014 Export installed list as JSON', 'output');
+              addTerminalLine('  ext panel        \u2014 Toggle extension panel (GUI)', 'output');
+              addTerminalLine('  ext types        \u2014 List supported extension types', 'output');
+              addTerminalLine('  ext builtin      \u2014 List built-in extensions', 'output');
+              addTerminalLine('  ext ps           \u2014 PowerShell extension manager info', 'output');
               return;
             }
 
@@ -15374,6 +17059,48 @@
               return;
             }
 
+            if (sub === 'panel') {
+              toggleExtPanel();
+              addTerminalLine('  \u2714 Extension panel toggled', 'success');
+              return;
+            }
+
+            if (sub === 'types') {
+              addTerminalLine('\u2500\u2500\u2500 Supported Extension Types \u2500\u2500\u2500', 'output');
+              ExtensionState.supportedTypes.forEach(function (t) {
+                var count = ExtensionState.getByType(t).length;
+                addTerminalLine('  \u2022 ' + t.padEnd(14) + count + ' installed', count > 0 ? 'success' : 'output');
+              });
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              return;
+            }
+
+            if (sub === 'builtin') {
+              addTerminalLine('\u2500\u2500\u2500 Built-in Extensions (' + ExtensionState.bundled.length + ') \u2500\u2500\u2500', 'output');
+              ExtensionState.bundled.forEach(function (ext) {
+                var icon = ext.enabled ? '\u2714' : '\u2718';
+                addTerminalLine('  ' + icon + ' ' + (ext.id || ext.name).padEnd(22) + (ext.type || '').padEnd(10) + (ext.desc || '').substring(0, 50), ext.enabled ? 'success' : 'error');
+              });
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              return;
+            }
+
+            if (sub === 'ps' || sub === 'powershell') {
+              addTerminalLine('\u2500\u2500\u2500 PowerShell Extension Manager \u2500\u2500\u2500', 'output');
+              addTerminalLine('  Module:  scripts\\ExtensionManager.psm1', 'output');
+              addTerminalLine('  Usage:', 'output');
+              addTerminalLine('    Import-Module .\\scripts\\ExtensionManager.psm1', 'output');
+              addTerminalLine('    New-Extension -Name "MyExt" -Type Custom -AutoInstall', 'output');
+              addTerminalLine('    Install-Extension -Name "MyExt"', 'output');
+              addTerminalLine('    Enable-Extension -Name "MyExt"', 'output');
+              addTerminalLine('    Show-ExtensionMenu  (interactive TUI)', 'output');
+              addTerminalLine('  Exported: New-Extension, Install-Extension, Enable-Extension,', 'system');
+              addTerminalLine('           Disable-Extension, Remove-Extension, Get-Extension,', 'system');
+              addTerminalLine('           Show-ExtensionMenu, Invoke-ExtensionMenu', 'system');
+              addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
+              return;
+            }
+
             addTerminalLine('  Unknown ext subcommand: ' + sub, 'error');
             addTerminalLine("  Type 'ext help' for available commands", 'system');
           })();
@@ -15407,7 +17134,369 @@
                 }
               }
               refreshExtensionsList();
-            } catch (e) { addTerminalLine('  \u274C Load failed: ' + e.message, 'error'); }
+        case 'browse': case 'web': case 'browser':
+          (function () {
+            var sub = args[1] || '';
+            if (!sub || sub === 'open') {
+              showBrowser();
+              addTerminalLine('  \u2705 Browser opened.', 'success');
+            } else if (sub === 'close') {
+              browserClose();
+              addTerminalLine('  Browser closed.', 'system');
+            } else if (sub === 'search') {
+              var query = args.slice(2).join(' ');
+              if (!query) { addTerminalLine('  Usage: browse search <query>', 'error'); return; }
+              showBrowser();
+              browserGo('https://duckduckgo.com/?q=' + encodeURIComponent(query));
+              addTerminalLine('  \u1F50D Searching: ' + query, 'system');
+            } else if (sub === 'extract') {
+              browserExtractContent();
+              addTerminalLine('  Extracting page content...', 'system');
+            } else if (sub === 'model') {
+              browserSendToModel();
+              addTerminalLine('  Sending page content to model...', 'system');
+            } else if (sub === 'proxy') {
+              var url = args[2] || '';
+              if (!url) { addTerminalLine('  Usage: browse proxy <url>', 'error'); return; }
+              addTerminalLine('  Fetching via proxy: ' + url, 'system');
+              (async function () {
+                try {
+                  var data = await EngineAPI.browseProxy(url);
+                  var text = data.content || data.text || data.body || JSON.stringify(data);
+                  addTerminalLine('  \u2500 Content (' + text.length + ' chars):', 'output');
+                  text.split('\n').slice(0, 30).forEach(function (line) {
+                    addTerminalLine('  ' + line.substring(0, 120), 'output');
+                  });
+                  if (text.split('\n').length > 30) addTerminalLine('  ... (truncated)', 'system');
+                } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+              })();
+            } else if (sub === 'back') {
+              browserBack();
+              addTerminalLine('  Navigating back...', 'system');
+            } else if (sub === 'fwd' || sub === 'forward') {
+              browserForward();
+              addTerminalLine('  Navigating forward...', 'system');
+            } else if (sub === 'tabs') {
+              var tabs = BrowserState.tabs;
+              addTerminalLine('  Open tabs (' + tabs.length + '):', 'output');
+              tabs.forEach(function (t, i) {
+                addTerminalLine('  ' + (i === BrowserState.activeTab ? '\u25B6 ' : '  ') + '[' + i + '] ' + (t.title || t.url || 'New Tab'), 'output');
+              });
+            } else if (sub === 'home') {
+              browserGoHome();
+              addTerminalLine('  Navigated to home.', 'system');
+            } else {
+              // Treat as URL
+              showBrowser();
+              browserGo(sub.indexOf('://') >= 0 ? sub : 'https://' + sub);
+              addTerminalLine('  \u2705 Navigating to: ' + sub, 'system');
+            }
+          })();
+          break;
+
+        // ═══════════════════════════════════════════════════════════════
+        // AGENTIC FILE EDITING COMMANDS (Phase 40)
+        // ═══════════════════════════════════════════════════════════════
+
+        case 'cat':
+          (async function () {
+            var filePath = args[1] || '';
+            if (!filePath) { addTerminalLine('  Usage: cat <filepath>', 'error'); return; }
+            addTerminalLine('  Reading: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.toolReadFile(filePath);
+              var content = data.content || data.output || data.result || '';
+              content.split('\n').forEach(function (line, i) {
+                addTerminalLine('  ' + (i + 1).toString().padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500\u2500\u2500 ' + content.split('\n').length + ' lines \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'head':
+          (async function () {
+            var n = parseInt(args[1]) || 20;
+            var filePath = args[2] || args[1] || '';
+            if (!filePath || filePath === String(n)) { filePath = args[2] || ''; }
+            if (!filePath) { addTerminalLine('  Usage: head [n] <filepath>', 'error'); return; }
+            addTerminalLine('  First ' + n + ' lines of: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.headFile(filePath, n);
+              data.output.split('\n').forEach(function (line, i) {
+                addTerminalLine('  ' + (i + 1).toString().padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500\u2500\u2500 Showing ' + data.lineCount + ' lines \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'tail':
+          (async function () {
+            var n = parseInt(args[1]) || 20;
+            var filePath = args[2] || args[1] || '';
+            if (!filePath || filePath === String(n)) { filePath = args[2] || ''; }
+            if (!filePath) { addTerminalLine('  Usage: tail [n] <filepath>', 'error'); return; }
+            addTerminalLine('  Last ' + n + ' lines of: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.tailFile(filePath, n);
+              var startLine = data.totalLines - data.lineCount + 1;
+              data.output.split('\n').forEach(function (line, i) {
+                addTerminalLine('  ' + (startLine + i).toString().padStart(4) + ' | ' + line, 'output');
+              });
+              addTerminalLine('  \u2500\u2500\u2500 Lines ' + startLine + '-' + data.totalLines + ' of ' + data.totalLines + ' \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'create': case 'touch':
+          (async function () {
+            var filePath = args[1] || '';
+            var content = args.slice(2).join(' ') || '';
+            if (!filePath) { addTerminalLine('  Usage: create <filepath> [content]', 'error'); return; }
+            addTerminalLine('  Creating: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.createFile(filePath, content);
+              addTerminalLine('  \u2705 Created: ' + filePath + (content ? ' (' + content.length + ' bytes)' : ' (empty)'), 'success');
+              feLogHistory('create', filePath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'mkdir':
+          (async function () {
+            var dirPath = args[1] || '';
+            if (!dirPath) { addTerminalLine('  Usage: mkdir <path>', 'error'); return; }
+            addTerminalLine('  Creating directory: ' + dirPath, 'system');
+            try {
+              var data = await EngineAPI.mkDir(dirPath);
+              addTerminalLine('  \u2705 Directory created: ' + dirPath, 'success');
+              feLogHistory('mkdir', dirPath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'rm': case 'delete':
+          (async function () {
+            var filePath = args[1] || '';
+            if (!filePath) { addTerminalLine('  Usage: rm <filepath>', 'error'); return; }
+            addTerminalLine('  Deleting: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.deleteFile(filePath);
+              addTerminalLine('  \u2705 Deleted: ' + filePath, 'success');
+              feLogHistory('delete', filePath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'rmdir':
+          (async function () {
+            var dirPath = args[1] || '';
+            if (!dirPath) { addTerminalLine('  Usage: rmdir <path>', 'error'); return; }
+            addTerminalLine('  Removing directory: ' + dirPath, 'system');
+            try {
+              var data = await EngineAPI.removeDir(dirPath);
+              addTerminalLine('  \u2705 Removed: ' + dirPath, 'success');
+              feLogHistory('rmdir', dirPath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'mv': case 'rename':
+          (async function () {
+            var src = args[1] || '';
+            var dst = args[2] || '';
+            if (!src || !dst) { addTerminalLine('  Usage: mv <source> <destination>', 'error'); return; }
+            addTerminalLine('  Moving: ' + src + ' \u2192 ' + dst, 'system');
+            try {
+              var data = await EngineAPI.moveFile(src, dst);
+              addTerminalLine('  \u2705 Moved: ' + src + ' \u2192 ' + dst, 'success');
+              feLogHistory('move', src + ' → ' + dst);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'cp': case 'copy':
+          (async function () {
+            var src = args[1] || '';
+            var dst = args[2] || '';
+            if (!src || !dst) { addTerminalLine('  Usage: cp <source> <destination>', 'error'); return; }
+            addTerminalLine('  Copying: ' + src + ' \u2192 ' + dst, 'system');
+            try {
+              var data = await EngineAPI.copyFile(src, dst);
+              addTerminalLine('  \u2705 Copied: ' + src + ' \u2192 ' + dst, 'success');
+              feLogHistory('copy', src + ' → ' + dst);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'find':
+          (async function () {
+            var pattern = args[1] || '*.*';
+            var dir = args[2] || '.';
+            addTerminalLine('  Searching: ' + pattern + ' in ' + dir, 'system');
+            try {
+              var data = await EngineAPI.searchFiles(pattern, dir);
+              var output = data.output || data.result || data.stdout || '';
+              var files = output.split('\n').filter(function (f) { return f.trim(); });
+              files.forEach(function (f) { addTerminalLine('  \u2022 ' + f.trim(), 'output'); });
+              addTerminalLine('  \u2500\u2500\u2500 ' + files.length + ' file(s) found \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'grep':
+          (async function () {
+            var pattern = args[1] || '';
+            var path = args[2] || '*.*';
+            if (!pattern) { addTerminalLine('  Usage: grep <pattern> [path]', 'error'); return; }
+            addTerminalLine('  Searching for "' + pattern + '" in ' + path, 'system');
+            try {
+              var data = await EngineAPI.grepInFiles(pattern, path);
+              var output = data.output || data.result || data.stdout || '';
+              var lines = output.split('\n').filter(function (l) { return l.trim(); });
+              lines.slice(0, 50).forEach(function (l) { addTerminalLine('  ' + l.trim(), 'output'); });
+              if (lines.length > 50) addTerminalLine('  ... and ' + (lines.length - 50) + ' more matches', 'system');
+              addTerminalLine('  \u2500\u2500\u2500 ' + lines.length + ' match(es) \u2500\u2500\u2500', 'system');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'diff':
+          (async function () {
+            var pathA = args[1] || '';
+            var pathB = args[2] || '';
+            if (!pathA || !pathB) { addTerminalLine('  Usage: diff <fileA> <fileB>', 'error'); return; }
+            addTerminalLine('  Comparing: ' + pathA + ' vs ' + pathB, 'system');
+            try {
+              var data = await EngineAPI.diffFiles(pathA, pathB);
+              var output = data.output || data.result || data.stdout || '';
+              output.split('\n').forEach(function (line) { addTerminalLine('  ' + line, 'output'); });
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'patch':
+          (async function () {
+            var filePath = args[1] || '';
+            var search = args[2] || '';
+            var replace = args.slice(3).join(' ') || '';
+            if (!filePath || !search) { addTerminalLine('  Usage: patch <file> <search> <replace>', 'error'); return; }
+            addTerminalLine('  Patching: ' + filePath, 'system');
+            addTerminalLine('  Search:  "' + search + '"', 'output');
+            addTerminalLine('  Replace: "' + replace + '"', 'output');
+            try {
+              var result = await EngineAPI.patchFile(filePath, search, replace);
+              if (result.success) {
+                addTerminalLine('  \u2705 ' + result.message, 'success');
+                feLogHistory('patch', filePath + ': ' + search + ' → ' + replace);
+              } else {
+                addTerminalLine('  \u2718 ' + (result.error || 'Pattern not found'), 'error');
+              }
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'append':
+          (async function () {
+            var filePath = args[1] || '';
+            var content = args.slice(2).join(' ') || '';
+            if (!filePath || !content) { addTerminalLine('  Usage: append <filepath> <content>', 'error'); return; }
+            addTerminalLine('  Appending to: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.appendFile(filePath, '\n' + content);
+              addTerminalLine('  \u2705 Appended ' + content.length + ' bytes', 'success');
+              feLogHistory('append', filePath);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'wc':
+          (async function () {
+            var filePath = args[1] || '';
+            if (!filePath) { addTerminalLine('  Usage: wc <filepath>', 'error'); return; }
+            addTerminalLine('  Counting: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.wordCount(filePath);
+              addTerminalLine('  Lines:      ' + data.lines, 'output');
+              addTerminalLine('  Words:      ' + data.words, 'output');
+              addTerminalLine('  Characters: ' + data.chars, 'output');
+              addTerminalLine('  Bytes:      ' + data.bytes, 'output');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'stat': case 'info':
+          (async function () {
+            var filePath = args[1] || '';
+            if (!filePath) { addTerminalLine('  Usage: stat <filepath>', 'error'); return; }
+            addTerminalLine('  File info: ' + filePath, 'system');
+            try {
+              var data = await EngineAPI.fileInfo(filePath);
+              var output = data.output || data.result || data.stdout || '';
+              output.split('\n').forEach(function (line) {
+                if (line.trim()) addTerminalLine('  ' + line, 'output');
+              });
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'insert-line':
+          (async function () {
+            var filePath = args[1] || '';
+            var lineNum = parseInt(args[2]) || 0;
+            var text = args.slice(3).join(' ') || '';
+            if (!filePath || !lineNum) { addTerminalLine('  Usage: insert-line <file> <lineNum> <text>', 'error'); return; }
+            addTerminalLine('  Inserting at line ' + lineNum + ' in: ' + filePath, 'system');
+            try {
+              var result = await EngineAPI.insertAtLine(filePath, lineNum, text);
+              addTerminalLine('  \u2705 ' + result.message + ' (total: ' + result.totalLines + ' lines)', 'success');
+              feLogHistory('insert-line', filePath + ':' + lineNum);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'delete-lines':
+          (async function () {
+            var filePath = args[1] || '';
+            var startLine = parseInt(args[2]) || 0;
+            var endLine = parseInt(args[3]) || startLine;
+            if (!filePath || !startLine) { addTerminalLine('  Usage: delete-lines <file> <start> [end]', 'error'); return; }
+            addTerminalLine('  Deleting lines ' + startLine + '-' + endLine + ' from: ' + filePath, 'system');
+            try {
+              var result = await EngineAPI.deleteLine(filePath, startLine, endLine);
+              addTerminalLine('  \u2705 ' + result.message + ' (' + result.removedCount + ' removed, ' + result.totalLines + ' remaining)', 'success');
+              feLogHistory('delete-lines', filePath + ':' + startLine + '-' + endLine);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'replace-lines':
+          (async function () {
+            var filePath = args[1] || '';
+            var startLine = parseInt(args[2]) || 0;
+            var endLine = parseInt(args[3]) || startLine;
+            var newText = args.slice(4).join(' ') || '';
+            if (!filePath || !startLine) { addTerminalLine('  Usage: replace-lines <file> <start> <end> <text>', 'error'); return; }
+            addTerminalLine('  Replacing lines ' + startLine + '-' + endLine + ' in: ' + filePath, 'system');
+            try {
+              var result = await EngineAPI.replaceLines(filePath, startLine, endLine, newText);
+              addTerminalLine('  \u2705 ' + result.message, 'success');
+              feLogHistory('replace-lines', filePath + ':' + startLine + '-' + endLine);
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
+          })();
+          break;
+
+        case 'edit':
+          (async function () {
+            var filePath = args[1] || '';
+            if (!filePath) { addTerminalLine('  Usage: edit <filepath>', 'error'); return; }
+            addTerminalLine('  Opening in File Editor: ' + filePath, 'system');
+            try {
+              showFileEditorPanel();
+              await feOpenFile(filePath);
+              addTerminalLine('  \u2705 Opened: ' + filePath, 'success');
+            } catch (e) { addTerminalLine('  Error: ' + e.message, 'error'); }
           })();
           break;
 
@@ -15419,6 +17508,10 @@
             addTerminalLine("Unknown: " + args[0] + ". Type 'help' for commands.", 'error');
           }
       }
+    }
+
+    function addTerminalLine(text, type) {
+      var output = document.getElementById('terminalOutput');
     }
 
     function addTerminalLine(text, type) {
@@ -18221,9 +20314,27 @@
       var phaseIds = [10, 11, 12];
       var phaseNames = { 10: 'Speculative Decoding', 11: 'Flash-Attention v2', 12: 'Extreme Compression' };
       for (var i = 0; i < phaseIds.length; i++) {
-        document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 ' + escHtml(e.message) + '</div>';
+        var p = phaseIds[i];
+        var el_id = 'phase' + p + 'Status';
+        try {
+          var res = await fetch(getActiveUrl() + '/api/phase' + p + '/status', { signal: AbortSignal.timeout(5000) });
+          if (res.ok) {
+            var data = await res.json();
+            var status = data.status || data.state || 'unknown';
+            var icon = (status === 'active' || status === 'ready' || status === 'complete') ? '\u2714' : '\u2718';
+            var color = (status === 'active' || status === 'ready' || status === 'complete') ? 'var(--accent-green)' : 'var(--accent-red)';
+            var html = '<div style="color:' + color + ';">' + icon + ' ' + status + '</div>';
+            if (data.progress !== undefined) html += '<div style="color:var(--text-muted);font-size:10px;">Progress: ' + data.progress + '%</div>';
+            if (data.detail) html += '<div style="color:var(--text-secondary);font-size:10px;">' + escHtml(data.detail) + '</div>';
+            if (data.engine) html += '<div style="color:var(--text-muted);font-size:10px;">Engine: ' + escHtml(data.engine) + '</div>';
+            document.getElementById(el_id).innerHTML = html;
+          } else {
+            document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 HTTP ' + res.status + '</div>';
+          }
+        } catch (e) {
+          document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 ' + escHtml(e.message) + '</div>';
+        }
       }
-    }
     }
 
     // ======================================================================
@@ -18568,23 +20679,576 @@
     })();
 
     // ======================================================================
-    // CHAIN-OF-THOUGHT MULTI-MODEL REVIEW SYSTEM
-    // ======================================================================= 'complete' ? '\u2714' : '\u2718';
-    var color = status === 'active' || status === 'ready' || status === 'complete' ? 'var(--accent-green)' : 'var(--accent-red)';
-    var html = '<div style="color:' + color + ';font-weight:600;">' + icon + ' ' + status.toUpperCase() + '</div>';
-    if (data.progress !== undefined) html += '<div style="color:var(--text-muted);margin-top:2px;">Progress: ' + data.progress + '%</div>';
-    if (data.detail) html += '<div style="color:var(--text-muted);margin-top:2px;">' + escHtml(data.detail) + '</div>';
-    if (data.tokens_per_sec !== undefined) html += '<div style="color:var(--accent-cyan);margin-top:2px;">Tokens/sec: ' + data.tokens_per_sec + '</div>';
-    if (data.memory_usage) html += '<div style="color:var(--text-muted);margin-top:2px;">Memory: ' + data.memory_usage + '</div>';
-    document.getElementById(el_id).innerHTML = html;
-          } else {
-      document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 HTTP ' + res.status + '</div>';
-    }
-        } catch (e) {
-      document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 ' + escHtml(e.message) + '</div>';
-    }
+    // EXTENSION PANEL (Phase 39) — Functions for ext-panel UI
+    // ======================================================================
+
+    function toggleExtPanel() {
+      var panel = document.getElementById('extPanel');
+      if (!panel) return;
+      if (panel.style.display === 'none' || !panel.style.display) {
+        panel.style.display = 'flex';
+        refreshExtPanel();
+      } else {
+        panel.style.display = 'none';
       }
     }
+
+    function showExtPanel() {
+      var panel = document.getElementById('extPanel');
+      if (panel) { panel.style.display = 'flex'; refreshExtPanel(); }
+    }
+
+    function refreshExtPanel() {
+      // Update stats
+      var all = ExtensionState.getAll();
+      var enabled = ExtensionState.getEnabled();
+      var builtin = ExtensionState.bundled;
+      var user = ExtensionState.userExtensions;
+      var countBadge = document.getElementById('extCountBadge');
+      if (countBadge) countBadge.textContent = all.length + ' extensions';
+      var statTotal = document.getElementById('extStatTotal');
+      var statEnabled = document.getElementById('extStatEnabled');
+      var statBuiltin = document.getElementById('extStatBuiltin');
+      var statUser = document.getElementById('extStatUser');
+      if (statTotal) statTotal.textContent = all.length;
+      if (statEnabled) statEnabled.textContent = enabled.length;
+      if (statBuiltin) statBuiltin.textContent = builtin.length;
+      if (statUser) statUser.textContent = user.length;
+
+      // Render installed list (all)
+      extRenderList('Installed', all);
+      // Render builtin list
+      extRenderList('Builtin', builtin);
+      // Render types grid
+      extRenderTypes();
+      // Update history
+      extRenderHistory();
+    }
+
+    function switchExtTab(tabName) {
+      // New ext-panel tabs
+      var newTabs = ['installed', 'builtin', 'marketplace', 'vsix', 'types', 'powershell', 'history'];
+      if (newTabs.indexOf(tabName) >= 0) {
+        // Handle new ext-panel
+        var tabBtns = document.querySelectorAll('#extTabs .ext-tab');
+        tabBtns.forEach(function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-ext-tab') === tabName);
+        });
+        newTabs.forEach(function (t) {
+          var capFirst = t.charAt(0).toUpperCase() + t.slice(1);
+          var pane = document.getElementById('extTab' + capFirst);
+          if (pane) pane.classList.toggle('active', t === tabName);
+        });
+        return;
+      }
+      // Fallback: old panel tabs
+      var tabs = ['installed', 'marketplace', 'load', 'running'];
+      tabs.forEach(function (t) {
+        var view = document.getElementById('extView' + t.charAt(0).toUpperCase() + t.slice(1));
+        var btn = document.getElementById('extTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (view) view.style.display = (t === tabName) ? '' : 'none';
+        if (btn) {
+          btn.style.background = (t === tabName) ? 'var(--accent)' : '';
+          btn.style.color = (t === tabName) ? '#000' : '';
+        }
+      });
+      if (tabName === 'installed') refreshExtensionsList();
+      if (tabName === 'running') refreshExtRunning();
+    }
+
+    function extRenderList(listType, extensions) {
+      var el = document.getElementById('extList' + listType);
+      if (!el) return;
+      if (!extensions || extensions.length === 0) {
+        el.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:12px;">No extensions found.</div>';
+        return;
+      }
+      var html = '';
+      extensions.forEach(function (ext) {
+        var id = ext.id || '';
+        var enabled = ext.enabled !== false;
+        var typeBadge = '';
+        if (ext.type === 'vsix') typeBadge = '<span class="vsix-badge">VSIX</span>';
+        else if (ext.type === 'psm1') typeBadge = '<span class="psm1-badge">PSM1</span>';
+        else if (ext.builtin || ext.isBuiltin) typeBadge = '<span class="builtin-badge">Built-in</span>';
+
+        html += '<div class="ext-card" data-ext-id="' + escHtml(id) + '">';
+        html += '  <div class="ext-icon">' + (ext.icon || '&#x1F9E9;') + '</div>';
+        html += '  <div class="ext-body">';
+        html += '    <div class="ext-title-row">';
+        html += '      <span class="ext-name">' + escHtml(ext.name || ext.displayName || id) + '</span>';
+        html += '      <span class="ext-version">v' + escHtml(ext.version || '1.0.0') + '</span>';
+        html += '    </div>';
+        html += '    <div class="ext-publisher">' + escHtml(ext.publisher || ext.author || 'RawrXD') + '</div>';
+        if (ext.desc || ext.description) {
+          html += '    <div class="ext-desc">' + escHtml((ext.desc || ext.description).substring(0, 120)) + '</div>';
+        }
+        html += '    <div class="ext-meta">';
+        html += '      ' + typeBadge;
+        if (ext.type) html += '      <span class="ext-type-badge">' + escHtml(ext.type) + '</span>';
+        html += '      <span class="ext-status-dot" style="background:' + (enabled ? 'var(--accent-green)' : 'var(--accent-red)') + ';"></span>';
+        html += '      <span style="font-size:10px;color:var(--text-muted);">' + (enabled ? 'Enabled' : 'Disabled') + '</span>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '  <div class="ext-actions">';
+        if (enabled) {
+          html += '    <button class="code-btn" onclick="extPanelDisable(\'' + escHtml(id) + '\')" style="font-size:9px;">Disable</button>';
+        } else {
+          html += '    <button class="code-btn" onclick="extPanelEnable(\'' + escHtml(id) + '\')" style="font-size:9px;">Enable</button>';
+        }
+        if (!ext.builtin && !ext.isBuiltin) {
+          html += '    <button class="code-btn" onclick="extPanelUninstall(\'' + escHtml(id) + '\')" style="font-size:9px;color:var(--accent-red);">Uninstall</button>';
+        }
+        html += '  </div>';
+        html += '</div>';
+      });
+      el.innerHTML = html;
+    }
+
+    function extRenderTypes() {
+      var el = document.getElementById('extTypeGrid');
+      if (!el) return;
+      var typeInfo = {
+        'vsix': { icon: '&#x1F4E6;', name: 'VSIX Package', desc: 'Standard VS Code extension package. Unzipped and loaded via extension host.' },
+        'native-dll': { icon: '&#x2699;', name: 'Native DLL', desc: 'C/C++ native extension loaded via LoadLibrary. Uses ExtensionInit/Shutdown entry points.' },
+        'psm1': { icon: '&#x1F4BB;', name: 'PowerShell Module', desc: 'PowerShell .psm1 module managed by ExtensionManager.psm1 lifecycle.' },
+        'js': { icon: '&#x26A1;', name: 'JavaScript', desc: 'JS extension running in QuickJS host or polyfill engine.' },
+        'theme': { icon: '&#x1F3A8;', name: 'Theme', desc: 'Color theme extension providing tokenColors, colors, and icons.' },
+        'language': { icon: '&#x1F4DD;', name: 'Language', desc: 'Language support extension with grammar, snippets, and completions.' },
+        'lsp': { icon: '&#x1F50C;', name: 'LSP Server', desc: 'Language Server Protocol provider via LSP bridge integration.' },
+        'debugger': { icon: '&#x1F41B;', name: 'Debug Adapter', desc: 'DAP-based debugger extension via debug adapter protocol handler.' }
+      };
+      var html = '';
+      ExtensionState.supportedTypes.forEach(function (t) {
+        var info = typeInfo[t] || { icon: '&#x2753;', name: t, desc: '' };
+        var count = ExtensionState.getByType(t).length;
+        html += '<div class="ext-type-card">';
+        html += '  <span style="font-size:24px;">' + info.icon + '</span>';
+        html += '  <strong>' + escHtml(info.name) + '</strong>';
+        html += '  <span style="font-size:10px;color:var(--text-muted);">' + escHtml(info.desc) + '</span>';
+        html += '  <span style="font-size:10px;color:var(--accent);">' + count + ' installed</span>';
+        html += '</div>';
+      });
+      el.innerHTML = html;
+    }
+
+    function extRenderHistory() {
+      var el = document.getElementById('extHistoryList');
+      if (!el) return;
+      if (!ExtensionState._history || ExtensionState._history.length === 0) {
+        el.innerHTML = '<div style="color:var(--text-muted); font-style:italic;">No activity yet.</div>';
+        return;
+      }
+      var html = '';
+      ExtensionState._history.slice().reverse().forEach(function (entry) {
+        var time = new Date(entry.time).toLocaleTimeString();
+        var icon = entry.action === 'install' ? '&#x1F4E5;' : entry.action === 'uninstall' ? '&#x1F5D1;' : entry.action === 'enable' ? '&#x2705;' : entry.action === 'disable' ? '&#x26D4;' : '&#x2022;';
+        html += '<div class="ext-history-item">';
+        html += '  <span style="font-size:14px;">' + icon + '</span>';
+        html += '  <span style="color:var(--text-primary);font-weight:600;">' + escHtml(entry.action || '?') + '</span>';
+        html += '  <span style="color:var(--text-secondary);">' + escHtml(entry.id || '?') + '</span>';
+        html += '  <span style="color:var(--text-muted);font-size:10px;margin-left:auto;">' + time + '</span>';
+        html += '</div>';
+      });
+      el.innerHTML = html;
+    }
+
+    // Initialize _history array on ExtensionState if missing
+    if (typeof ExtensionState !== 'undefined' && !ExtensionState._history) {
+      ExtensionState._history = [];
+    }
+
+    function filterExtList(listType) {
+      var capFirst = listType.charAt(0).toUpperCase() + listType.slice(1);
+      var input = document.getElementById('extSearch' + capFirst);
+      var list = document.getElementById('extList' + capFirst);
+      if (!input || !list) return;
+      var query = (input.value || '').toLowerCase();
+      var cards = list.querySelectorAll('.ext-card');
+      cards.forEach(function (card) {
+        var text = card.textContent.toLowerCase();
+        card.style.display = (!query || text.indexOf(query) >= 0) ? '' : 'none';
+      });
+    }
+
+    function searchMarketplace() {
+      var input = document.getElementById('extMarketplaceSearch');
+      var resultsEl = document.getElementById('extMarketplaceResults');
+      if (!input || !resultsEl) return;
+      var query = (input.value || '').trim();
+      if (!query) { resultsEl.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:12px;">Enter a search query.</div>'; return; }
+
+      resultsEl.innerHTML = '<div style="color:var(--accent);padding:12px;">&#x1F50D; Searching VS Code Marketplace for "' + escHtml(query) + '"...</div>';
+
+      // Try backend EngineAPI
+      if (typeof EngineAPI !== 'undefined' && EngineAPI.searchMarketplace) {
+        EngineAPI.searchMarketplace(query).then(function (data) {
+          var results = data.results || data.extensions || [];
+          if (results.length === 0) {
+            resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">No results for "' + escHtml(query) + '".</div>';
+          } else {
+            var html = '';
+            results.slice(0, 25).forEach(function (r) {
+              var id = r.id || r.extensionId || r.name || '?';
+              var isInstalled = ExtensionState.findById(id) !== undefined;
+              html += '<div class="ext-card">';
+              html += '  <div class="ext-icon">&#x1F9E9;</div>';
+              html += '  <div class="ext-body">';
+              html += '    <div class="ext-title-row">';
+              html += '      <span class="ext-name">' + escHtml(r.displayName || r.name || id) + '</span>';
+              html += '      <span class="ext-version">v' + escHtml(r.version || '?') + '</span>';
+              html += '    </div>';
+              html += '    <div class="ext-publisher">' + escHtml(r.publisher || '?') + '</div>';
+              if (r.description) html += '    <div class="ext-desc">' + escHtml(r.description.substring(0, 120)) + '</div>';
+              html += '    <div class="ext-meta">';
+              if (r.installs) html += '<span style="font-size:10px;color:var(--text-muted);">' + r.installs.toLocaleString() + ' installs</span>';
+              if (r.rating) html += '<span style="font-size:10px;color:var(--accent-orange);">\u2605 ' + r.rating + '</span>';
+              html += '    </div>';
+              html += '  </div>';
+              html += '  <div class="ext-actions">';
+              if (isInstalled) {
+                html += '    <span style="font-size:10px;color:var(--accent-green);font-weight:600;">Installed</span>';
+              } else {
+                html += '    <button class="code-btn" onclick="installFromMarketplaceResult(\'' + escHtml(id) + '\')" style="font-size:9px;">Install</button>';
+              }
+              html += '  </div>';
+              html += '</div>';
+            });
+            if (results.length > 25) html += '<div style="color:var(--text-muted);padding:8px;">... and ' + (results.length - 25) + ' more results</div>';
+            resultsEl.innerHTML = html;
+          }
+        }).catch(function (err) {
+          resultsEl.innerHTML = '<div style="color:var(--accent-red);padding:12px;">Backend error: ' + escHtml(err.message) + '<br>Try searching directly at <a href="https://marketplace.visualstudio.com" target="_blank" style="color:var(--accent);">marketplace.visualstudio.com</a></div>';
+        });
+      } else {
+        resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">Backend offline. Visit <a href="https://marketplace.visualstudio.com/search?term=' + encodeURIComponent(query) + '" target="_blank" style="color:var(--accent);">VS Code Marketplace</a> to search.</div>';
+      }
+    }
+
+    function searchOpenVSX() {
+      var input = document.getElementById('extMarketplaceSearch');
+      var resultsEl = document.getElementById('extMarketplaceResults');
+      if (!input || !resultsEl) return;
+      var query = (input.value || '').trim();
+      if (!query) { resultsEl.innerHTML = '<div style="color:var(--text-muted);font-style:italic;padding:12px;">Enter a search query.</div>'; return; }
+
+      resultsEl.innerHTML = '<div style="color:var(--accent);padding:12px;">&#x1F50D; Searching Open VSX for "' + escHtml(query) + '"...</div>';
+
+      // Open VSX API is public
+      fetch('https://open-vsx.org/api/-/search?query=' + encodeURIComponent(query) + '&size=25', {
+        signal: AbortSignal.timeout(15000)
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        var exts = data.extensions || [];
+        if (exts.length === 0) {
+          resultsEl.innerHTML = '<div style="color:var(--text-muted);padding:12px;">No results on Open VSX for "' + escHtml(query) + '".</div>';
+        } else {
+          var html = '';
+          exts.forEach(function (ext) {
+            var id = (ext.namespace || '') + '.' + (ext.name || '');
+            var isInstalled = ExtensionState.findById(id) !== undefined;
+            html += '<div class="ext-card">';
+            html += '  <div class="ext-icon">&#x1F4E6;</div>';
+            html += '  <div class="ext-body">';
+            html += '    <div class="ext-title-row">';
+            html += '      <span class="ext-name">' + escHtml(ext.displayName || ext.name || id) + '</span>';
+            html += '      <span class="ext-version">v' + escHtml(ext.version || '?') + '</span>';
+            html += '    </div>';
+            html += '    <div class="ext-publisher">' + escHtml(ext.namespace || '?') + '</div>';
+            if (ext.description) html += '    <div class="ext-desc">' + escHtml(ext.description.substring(0, 120)) + '</div>';
+            html += '    <div class="ext-meta">';
+            if (ext.downloadCount) html += '<span style="font-size:10px;color:var(--text-muted);">' + ext.downloadCount.toLocaleString() + ' downloads</span>';
+            if (ext.averageRating) html += '<span style="font-size:10px;color:var(--accent-orange);">\u2605 ' + ext.averageRating.toFixed(1) + '</span>';
+            html += '    </div>';
+            html += '  </div>';
+            html += '  <div class="ext-actions">';
+            if (isInstalled) {
+              html += '    <span style="font-size:10px;color:var(--accent-green);font-weight:600;">Installed</span>';
+            } else {
+              html += '    <button class="code-btn" onclick="installFromOpenVSX(\'' + escHtml(ext.namespace || '') + '\', \'' + escHtml(ext.name || '') + '\')" style="font-size:9px;">Install</button>';
+            }
+            html += '  </div>';
+            html += '</div>';
+          });
+          resultsEl.innerHTML = html;
+        }
+      }).catch(function (err) {
+        resultsEl.innerHTML = '<div style="color:var(--accent-red);padding:12px;">Open VSX error: ' + escHtml(err.message) + '<br>Visit <a href="https://open-vsx.org" target="_blank" style="color:var(--accent);">open-vsx.org</a> directly.</div>';
+      });
+    }
+
+    function installFromMarketplaceResult(extId) {
+      var outputEl = document.getElementById('extInstallOutput');
+      if (outputEl) outputEl.textContent = 'Installing ' + extId + ' from marketplace...';
+      if (typeof EngineAPI !== 'undefined' && EngineAPI.installExtension) {
+        EngineAPI.installExtension(extId, 'marketplace').then(function (data) {
+          if (data.extension) {
+            ExtensionState.install(data.extension);
+          } else {
+            ExtensionState.install({ id: extId, name: extId, enabled: true, type: 'vsix', version: '1.0.0' });
+          }
+          if (outputEl) outputEl.textContent = '\u2705 Installed: ' + extId;
+          refreshExtPanel();
+        }).catch(function (err) {
+          if (outputEl) outputEl.textContent = '\u274C Install failed: ' + err.message;
+        });
+      } else {
+        ExtensionState.install({ id: extId, name: extId, enabled: true, type: 'vsix', version: '1.0.0' });
+        if (outputEl) outputEl.textContent = '\u2705 Registered: ' + extId + ' (backend offline — local state only)';
+        refreshExtPanel();
+      }
+    }
+
+    function installFromOpenVSX(namespace, name) {
+      var extId = namespace + '.' + name;
+      installFromMarketplaceResult(extId);
+    }
+
+    function installVsixFromPath() {
+      var input = document.getElementById('extVsixPath');
+      var outputEl = document.getElementById('extInstallOutput');
+      if (!input) return;
+      var path = (input.value || '').trim();
+      if (!path) { if (outputEl) outputEl.textContent = '\u274C Please enter a .vsix file path.'; return; }
+      if (outputEl) outputEl.textContent = 'Loading VSIX: ' + path + '...';
+
+      if (typeof EngineAPI !== 'undefined' && EngineAPI.loadVsixFromPath) {
+        EngineAPI.loadVsixFromPath(path).then(function (data) {
+          if (data.extension) {
+            ExtensionState.install(data.extension);
+            if (outputEl) outputEl.textContent = '\u2705 Loaded: ' + (data.extension.displayName || data.extension.name || path);
+          } else {
+            if (outputEl) outputEl.textContent = '\u2705 ' + (data.message || 'Loaded: ' + path);
+          }
+          refreshExtPanel();
+        }).catch(function (err) {
+          if (outputEl) outputEl.textContent = '\u274C Load failed: ' + err.message;
+        });
+      } else {
+        // Local-only fallback
+        var name = path.split(/[\\\/]/).pop().replace(/\.vsix$/, '');
+        ExtensionState.install({ id: name, name: name, enabled: true, type: 'vsix', version: '1.0.0', path: path });
+        if (outputEl) outputEl.textContent = '\u2705 Registered: ' + name + ' (backend offline — local state only)';
+        refreshExtPanel();
+      }
+    }
+
+    function installVsixFromFile() {
+      var fileInput = document.getElementById('extVsixFile');
+      var outputEl = document.getElementById('extInstallOutput');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (outputEl) outputEl.textContent = '\u274C Please select a .vsix file.';
+        return;
+      }
+      var file = fileInput.files[0];
+      if (!file.name.endsWith('.vsix')) {
+        if (outputEl) outputEl.textContent = '\u274C Not a .vsix file: ' + file.name;
+        return;
+      }
+      if (outputEl) outputEl.textContent = 'Loading: ' + file.name + ' (' + formatBytesExt(file.size) + ')...';
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var base64 = e.target.result.split(',')[1] || e.target.result;
+        if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
+          EngineAPI._post('/api/extensions/load-vsix', {
+            filename: file.name,
+            data: base64,
+            encoding: 'base64'
+          }, 120000).then(function (data) {
+            if (data.extension) {
+              ExtensionState.install(data.extension);
+              if (outputEl) outputEl.textContent = '\u2705 Loaded: ' + (data.extension.displayName || data.extension.name || file.name);
+            } else {
+              if (outputEl) outputEl.textContent = '\u2705 ' + (data.message || 'Loaded: ' + file.name);
+            }
+            refreshExtPanel();
+          }).catch(function (err) {
+            if (outputEl) outputEl.textContent = '\u274C ' + err.message;
+          });
+        } else {
+          var name = file.name.replace(/\.vsix$/, '');
+          ExtensionState.install({ id: name, name: name, enabled: true, type: 'vsix', version: '1.0.0' });
+          if (outputEl) outputEl.textContent = '\u2705 Registered: ' + name + ' (backend offline)';
+          refreshExtPanel();
+        }
+      };
+      reader.onerror = function () { if (outputEl) outputEl.textContent = '\u274C Failed to read file.'; };
+      reader.readAsDataURL(file);
+    }
+
+    function installFromMarketplaceId() {
+      var input = document.getElementById('extMarketplaceId');
+      var outputEl = document.getElementById('extInstallOutput');
+      if (!input) return;
+      var extId = (input.value || '').trim();
+      if (!extId) { if (outputEl) outputEl.textContent = '\u274C Please enter a publisher.extension-name ID.'; return; }
+      if (extId.indexOf('.') < 0) { if (outputEl) outputEl.textContent = '\u274C ID must be in format: publisher.extension-name'; return; }
+      installFromMarketplaceResult(extId);
+    }
+
+    function installNativeExt() {
+      var input = document.getElementById('extNativePath');
+      var outputEl = document.getElementById('extInstallOutput');
+      if (!input) return;
+      var path = (input.value || '').trim();
+      if (!path) { if (outputEl) outputEl.textContent = '\u274C Please enter a native extension directory path.'; return; }
+      if (outputEl) outputEl.textContent = 'Loading native DLL extension from: ' + path + '...';
+
+      if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
+        EngineAPI._post('/api/extensions/load-native', { path: path }, 30000).then(function (data) {
+          if (data.extension) {
+            ExtensionState.install(Object.assign({}, data.extension, { type: 'native-dll' }));
+            if (outputEl) outputEl.textContent = '\u2705 Native extension loaded: ' + (data.extension.name || path);
+          } else {
+            if (outputEl) outputEl.textContent = '\u2705 ' + (data.message || 'Loaded native extension');
+          }
+          refreshExtPanel();
+        }).catch(function (err) {
+          if (outputEl) outputEl.textContent = '\u274C ' + err.message;
+        });
+      } else {
+        var name = path.split(/[\\\/]/).pop() || 'native-ext';
+        ExtensionState.install({ id: name, name: name, enabled: true, type: 'native-dll', version: '1.0.0', path: path });
+        if (outputEl) outputEl.textContent = '\u2705 Registered: ' + name + ' (backend offline — requires Win32IDE for DLL loading)';
+        refreshExtPanel();
+      }
+    }
+
+    function installPsm1Ext() {
+      var input = document.getElementById('extPsm1Path');
+      var outputEl = document.getElementById('extInstallOutput');
+      if (!input) return;
+      var path = (input.value || '').trim();
+      if (!path) { if (outputEl) outputEl.textContent = '\u274C Please enter a .psm1 file path.'; return; }
+      if (!path.toLowerCase().endsWith('.psm1')) { if (outputEl) outputEl.textContent = '\u274C File must be a .psm1 module.'; return; }
+      if (outputEl) outputEl.textContent = 'Importing PowerShell module: ' + path + '...';
+
+      if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
+        EngineAPI._post('/api/extensions/import-psm1', { path: path }, 30000).then(function (data) {
+          var name = path.split(/[\\\/]/).pop().replace(/\.psm1$/i, '');
+          ExtensionState.install(Object.assign({ id: name, name: name, type: 'psm1', version: '1.0.0', path: path }, data.extension || {}));
+          if (outputEl) outputEl.textContent = '\u2705 PowerShell module imported: ' + name;
+          refreshExtPanel();
+        }).catch(function (err) {
+          if (outputEl) outputEl.textContent = '\u274C Import failed: ' + err.message;
+        });
+      } else {
+        var name = path.split(/[\\\/]/).pop().replace(/\.psm1$/i, '');
+        ExtensionState.install({ id: name, name: name, enabled: true, type: 'psm1', version: '1.0.0', path: path });
+        if (outputEl) outputEl.textContent = '\u2705 Registered: ' + name + ' (backend offline — use PowerShell tab for Import-Module)';
+        refreshExtPanel();
+      }
+    }
+
+    function extPanelEnable(extId) {
+      ExtensionState.enable(extId);
+      if (typeof EngineAPI !== 'undefined' && EngineAPI.enableExtension) {
+        EngineAPI.enableExtension(extId).catch(function () { /* local-only is fine */ });
+      }
+      refreshExtPanel();
+    }
+
+    function extPanelDisable(extId) {
+      ExtensionState.disable(extId);
+      if (typeof EngineAPI !== 'undefined' && EngineAPI.disableExtension) {
+        EngineAPI.disableExtension(extId).catch(function () { /* local-only is fine */ });
+      }
+      refreshExtPanel();
+    }
+
+    function extPanelUninstall(extId) {
+      if (!confirm('Uninstall extension "' + extId + '"?')) return;
+      ExtensionState.uninstall(extId);
+      if (typeof EngineAPI !== 'undefined' && EngineAPI.uninstallExtension) {
+        EngineAPI.uninstallExtension(extId).catch(function () { /* local-only is fine */ });
+      }
+      refreshExtPanel();
+    }
+
+    function extPsAction(action) {
+      var outputEl = document.getElementById('extPsOutput');
+      if (!outputEl) return;
+
+      var commands = {
+        'list': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-Extension | Format-Table -AutoSize',
+        'menu': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Show-ExtensionMenu',
+        'craft': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "d:\\RawrXD\\craft_room" -Recurse | Format-Table Name, Length, LastWriteTime',
+        'scan': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "d:\\RawrXD\\extensions" -Directory | ForEach-Object { Get-Extension -Name $_.Name }'
+      };
+
+      var cmd = commands[action];
+      if (!cmd) { outputEl.textContent = 'Unknown PS action: ' + action; return; }
+
+      outputEl.textContent = 'Running: ' + cmd + '\n\nWaiting for response...';
+
+      if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
+        EngineAPI._post('/api/cli', { command: cmd }, 30000).then(function (data) {
+          outputEl.textContent = data.output || data.result || JSON.stringify(data, null, 2);
+        }).catch(function (err) {
+          outputEl.textContent = 'Backend unavailable. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+        });
+      } else {
+        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+      }
+    }
+
+    function extPsCreate() {
+      var nameInput = document.getElementById('extPsNewName');
+      var typeSelect = document.getElementById('extPsNewType');
+      var outputEl = document.getElementById('extPsOutput');
+      if (!nameInput || !typeSelect || !outputEl) return;
+      var name = (nameInput.value || '').trim();
+      var type = typeSelect.value || 'Custom';
+      if (!name) { outputEl.textContent = '\u274C Please enter an extension name.'; return; }
+
+      var cmd = 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; New-Extension -Name "' + name + '" -Type ' + type + ' -AutoInstall';
+      outputEl.textContent = 'Creating extension: ' + name + ' (type: ' + type + ')...\n\n  ' + cmd;
+
+      if (typeof EngineAPI !== 'undefined' && EngineAPI._post) {
+        EngineAPI._post('/api/cli', { command: cmd }, 30000).then(function (data) {
+          outputEl.textContent = data.output || data.result || ('\u2705 Created extension: ' + name);
+          ExtensionState.install({ id: name.toLowerCase(), name: name, enabled: true, type: type.toLowerCase(), version: '1.0.0', path: 'd:\\RawrXD\\extensions\\' + name.toLowerCase() });
+          refreshExtPanel();
+        }).catch(function (err) {
+          outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+        });
+      } else {
+        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+      }
+    }
+
+    // Wire ext panel into terminal 'ext panel' subcommand and ExtensionState callbacks
+    (function () {
+      // Patch ExtensionState methods to track history
+      var origInstall = ExtensionState.install;
+      ExtensionState.install = function (ext) {
+        var result = origInstall.call(ExtensionState, ext);
+        if (!ExtensionState._history) ExtensionState._history = [];
+        ExtensionState._history.push({ action: 'install', id: ext.id || ext.name || '?', time: Date.now() });
+        return result;
+      };
+      var origUninstall = ExtensionState.uninstall;
+      ExtensionState.uninstall = function (id) {
+        var result = origUninstall.call(ExtensionState, id);
+        if (!ExtensionState._history) ExtensionState._history = [];
+        ExtensionState._history.push({ action: 'uninstall', id: id, time: Date.now() });
+        return result;
+      };
+      var origEnable = ExtensionState.enable;
+      ExtensionState.enable = function (id) {
+        var result = origEnable.call(ExtensionState, id);
+        if (!ExtensionState._history) ExtensionState._history = [];
+        ExtensionState._history.push({ action: 'enable', id: id, time: Date.now() });
+        return result;
+      };
+      var origDisable = ExtensionState.disable;
+      ExtensionState.disable = function (id) {
+        var result = origDisable.call(ExtensionState, id);
+        if (!ExtensionState._history) ExtensionState._history = [];
+        ExtensionState._history.push({ action: 'disable', id: id, time: Date.now() });
+        return result;
+      };
+    })();
 
     // ======================================================================
     // CHAIN-OF-THOUGHT MULTI-MODEL REVIEW SYSTEM
