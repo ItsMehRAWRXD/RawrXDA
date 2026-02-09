@@ -33,6 +33,7 @@ if(RAWR_HAS_MASM)
         src/asm/byte_search.asm
         src/asm/request_patch.asm
         src/asm/inference_kernels.asm
+        src/asm/model_bridge_x64.asm
     )
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)

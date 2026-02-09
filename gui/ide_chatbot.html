@@ -10061,12 +10061,31 @@
       var reqs = data.total_requests != null ? data.total_requests : (data.available_models != null ? data.available_models : '\u2014');
       var toks = data.total_tokens != null ? data.total_tokens : '\u2014';
 
-      el.innerHTML =
+      var html =
         '<p><span class="label">Server:</span> <span class="val-online">' + esc(server) + '</span></p>' +
         '<p><span class="label">Model:</span> <span class="' + (loaded === 'yes' ? 'val-online' : 'val-neutral') + '">' + loaded + '</span></p>' +
         '<p><span class="label">Latency:</span> <span class="val-neutral">' + latency + 'ms</span></p>' +
         '<p><span class="label">Requests:</span> <span class="val-neutral">' + reqs + '</span></p>' +
         '<p><span class="label">Tokens:</span> <span class="val-neutral">' + toks + '</span></p>';
+
+      // Show extended info for RawrXD tool_server
+      if (server.indexOf('rawrxd') !== -1 || server.indexOf('RawrXD') !== -1 || server.indexOf('ToolServer') !== -1) {
+        if (data.license) html += '<p><span class="label">License:</span> <span class="val-online">' + esc(data.license) + '</span></p>';
+        if (data.model_range) html += '<p><span class="label">Range:</span> <span class="val-online">' + esc(data.model_range) + '</span></p>';
+        if (data.capabilities) {
+          var caps = [];
+          if (data.capabilities.kernel_engines) caps.push('Kernels');
+          if (data.capabilities.model_swarm) caps.push('Swarm');
+          if (data.capabilities.dual_engine_800b) caps.push('800B Dual');
+          if (data.capabilities.hotpatching) caps.push('Hotpatch');
+          if (data.capabilities.file_read) caps.push('FileIO');
+          if (data.capabilities.cli) caps.push('CLI');
+          if (caps.length > 0) html += '<p><span class="label">Engines:</span> <span class="val-online">' + caps.join(' · ') + '</span></p>';
+        }
+        if (data.pid) html += '<p><span class="label">PID:</span> <span class="val-neutral">' + data.pid + '</span></p>';
+      }
+
+      el.innerHTML = html;
     }
 
     function updateModeBadge(online) {
@@ -10075,9 +10094,17 @@
       var sEl = document.getElementById('chatStatus');
       if (online) {
         badge.classList.add('active');
-        txt.textContent = State.backend.directMode ? 'Ollama Direct' : 'Backend Connected';
-        sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> ' +
-          (State.backend.directMode ? 'Ollama Direct' : 'Ready');
+        var isRawrXD = State.backend.serverType && (State.backend.serverType.indexOf('rawrxd') !== -1 || State.backend.serverType.indexOf('RawrXD') !== -1 || State.backend.serverType.indexOf('ToolServer') !== -1);
+        if (State.backend.directMode) {
+          txt.textContent = 'Ollama Direct';
+          sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> Ollama Direct';
+        } else if (isRawrXD) {
+          txt.textContent = 'RawrXD Backend';
+          sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> RawrXD Engine';
+        } else {
+          txt.textContent = 'Backend Connected';
+          sEl.innerHTML = '<span style="color:var(--accent-green);">\u25CF</span> Ready';
+        }
       } else {
         badge.classList.remove('active');
         txt.textContent = 'Disconnected';
@@ -13157,6 +13184,22 @@
           }
           addTerminalLine('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500', 'output');
         })();
+        return;
+      }
+
+      // /extensions, /ext — VSIX Extension Manager
+      if (lower === '/extensions' || lower === '/ext' || lower === 'extensions') {
+        showExtensionsPanel();
+        addTerminalLine('\u2500\u2500\u2500 VSIX Extension Manager \u2500\u2500\u2500', 'output');
+        addTerminalLine('  Panel opened. Use ext commands for terminal control:', 'system');
+        addTerminalLine('  ext list | ext search <q> | ext install <id> | ext host', 'system');
+        return;
+      }
+      if (lower.indexOf('/ext ') === 0) {
+        // Route /ext subcommands to the terminal ext handler
+        var extCmd = 'ext ' + cmd.substring(5);
+        document.getElementById('terminalInput').value = extCmd;
+        executeCommand();
         return;
       }
 
@@ -18178,27 +18221,368 @@
       var phaseIds = [10, 11, 12];
       var phaseNames = { 10: 'Speculative Decoding', 11: 'Flash-Attention v2', 12: 'Extreme Compression' };
       for (var i = 0; i < phaseIds.length; i++) {
-        var p = phaseIds[i];
-        var el_id = 'phase' + p + 'Status';
-        try {
-          var res = await fetch(getActiveUrl() + '/api/phase' + p + '/status', { signal: AbortSignal.timeout(5000) });
-          if (res.ok) {
-            var data = await res.json();
-            var status = data.status || data.state || 'unknown';
-            var icon = status === 'active' || status === 'ready' || status === 'complete' ? '\u2714' : '\u2718';
-            var color = status === 'active' || status === 'ready' || status === 'complete' ? 'var(--accent-green)' : 'var(--accent-red)';
-            var html = '<div style="color:' + color + ';font-weight:600;">' + icon + ' ' + status.toUpperCase() + '</div>';
-            if (data.progress !== undefined) html += '<div style="color:var(--text-muted);margin-top:2px;">Progress: ' + data.progress + '%</div>';
-            if (data.detail) html += '<div style="color:var(--text-muted);margin-top:2px;">' + escHtml(data.detail) + '</div>';
-            if (data.tokens_per_sec !== undefined) html += '<div style="color:var(--accent-cyan);margin-top:2px;">Tokens/sec: ' + data.tokens_per_sec + '</div>';
-            if (data.memory_usage) html += '<div style="color:var(--text-muted);margin-top:2px;">Memory: ' + data.memory_usage + '</div>';
-            document.getElementById(el_id).innerHTML = html;
-          } else {
-            document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 HTTP ' + res.status + '</div>';
-          }
-        } catch (e) {
-          document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 ' + escHtml(e.message) + '</div>';
+        document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 ' + escHtml(e.message) + '</div>';
+      }
+    }
+    }
+
+    // ======================================================================
+    // VSIX EXTENSION MANAGER — Panel Functions
+    // Manages .vsix plugin packages, marketplace search, install/uninstall,
+    // enable/disable, extension host lifecycle, and local VSIX loading.
+    // All operations route through EngineAPI to the Ollama-direct backend.
+    // ======================================================================
+
+    function showExtensionsPanel() {
+      document.getElementById('extensionsPanel').style.display = 'flex';
+      refreshExtensionsList();
+    }
+
+    function closeExtensionsPanel() {
+      document.getElementById('extensionsPanel').style.display = 'none';
+    }
+
+    function switchExtTab(tab) {
+      var tabs = ['installed', 'marketplace', 'load', 'running'];
+      tabs.forEach(function (t) {
+        var view = document.getElementById('extView' + t.charAt(0).toUpperCase() + t.slice(1));
+        var btn = document.getElementById('extTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (view) view.style.display = (t === tab) ? '' : 'none';
+        if (btn) {
+          btn.style.background = (t === tab) ? 'var(--accent)' : '';
+          btn.style.color = (t === tab) ? '#000' : '';
         }
+      });
+      if (tab === 'installed') refreshExtensionsList();
+      if (tab === 'running') refreshExtRunning();
+    }
+
+    async function refreshExtensionsList() {
+      var el = document.getElementById('extInstalledList');
+      if (!el) return;
+      // Try backend first
+      try {
+        var data = await EngineAPI.fetchExtensions();
+        var exts = data.extensions || data.installed || [];
+        if (exts.length > 0) State.extensions.installed = exts;
+      } catch (_) { /* use local state */ }
+
+      var exts = State.extensions.installed;
+      if (exts.length === 0) {
+        el.innerHTML = '<div style="color:var(--text-muted);padding:8px;">No extensions installed. Use Marketplace or Load VSIX to add extensions.</div>';
+      } else {
+        var html = '';
+        exts.forEach(function (ext) {
+          var id = ext.id || ext.name || '?';
+          var enabled = ext.enabled !== false;
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+          html += '<span style="font-size:16px;">' + (enabled ? '&#x2705;' : '&#x26D4;') + '</span>';
+          html += '<div style="flex:1;min-width:0;">';
+          html += '<div style="font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(ext.displayName || ext.name || id) + '</div>';
+          html += '<div style="font-size:10px;color:var(--text-muted);">' + escHtml(ext.publisher || '?') + ' &middot; v' + escHtml(ext.version || '?') + '</div>';
+          if (ext.description) html += '<div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">' + escHtml(ext.description).substring(0, 80) + '</div>';
+          html += '</div>';
+          html += '<div style="display:flex;gap:4px;flex-shrink:0;">';
+          if (enabled) {
+            html += '<button class="code-btn" onclick="extToggle(\'' + escHtml(id) + '\', false)" style="font-size:9px;padding:2px 6px;" title="Disable">Disable</button>';
+          } else {
+            html += '<button class="code-btn" onclick="extToggle(\'' + escHtml(id) + '\', true)" style="font-size:9px;padding:2px 6px;" title="Enable">Enable</button>';
+          }
+          html += '<button class="code-btn" onclick="extUninstall(\'' + escHtml(id) + '\')" style="font-size:9px;padding:2px 6px;color:var(--accent-red);" title="Uninstall">&#x1F5D1;</button>';
+          html += '</div>';
+          html += '</div>';
+        });
+        el.innerHTML = html;
+      }
+      updateExtStatusBar();
+    }
+
+    async function refreshExtRunning() {
+      var el = document.getElementById('extRunningList');
+      if (!el) return;
+      try {
+        var data = await EngineAPI.extensionHostStatus();
+        State.extensions.hostStatus = data.status || 'unknown';
+        State.extensions.hostPid = data.pid || null;
+        var running = data.extensions || data.running || [];
+        State.extensions.running = running;
+        if (running.length === 0) {
+          el.innerHTML = '<div style="color:var(--text-muted);">No extension hosts active.</div>';
+        } else {
+          var html = '';
+          running.forEach(function (r) {
+            html += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+            html += '<span style="color:var(--accent-green);font-weight:600;">' + (r.status === 'running' ? '&#x26A1;' : '&#x23F8;') + '</span> ';
+            html += '<span style="color:var(--text-primary);">' + escHtml(r.id || r.name || '?') + '</span> ';
+            if (r.memoryMB) html += '<span style="color:var(--text-muted);font-size:10px;">' + r.memoryMB + 'MB</span> ';
+            if (r.uptime) html += '<span style="color:var(--text-muted);font-size:10px;">up ' + r.uptime + 's</span>';
+            html += '</div>';
+          });
+          el.innerHTML = html;
+        }
+      } catch (e) {
+        el.innerHTML = '<div style="color:var(--text-muted);">Extension host not available: ' + escHtml(e.message) + '</div>';
+      }
+      updateExtStatusBar();
+    }
+
+    async function searchExtMarketplace() {
+      var query = (document.getElementById('extMarketplaceQuery') || {}).value || '';
+      if (!query.trim()) return;
+      var el = document.getElementById('extMarketplaceResults');
+      if (!el) return;
+      el.innerHTML = '<div style="color:var(--text-muted);padding:8px;">&#x1F50D; Searching...</div>';
+      try {
+        var data = await EngineAPI.searchMarketplace(query);
+        var results = data.results || data.extensions || [];
+        State.extensions.marketplace.results = results;
+        State.extensions.marketplace.query = query;
+        State.extensions.marketplace.lastSearch = Date.now();
+        if (results.length === 0) {
+          el.innerHTML = '<div style="color:var(--text-muted);padding:8px;">No results found for "' + escHtml(query) + '".</div>';
+        } else {
+          var html = '';
+          results.forEach(function (r) {
+            var id = r.id || r.extensionId || r.name || '?';
+            var installed = State.extensions.installed.some(function (e) { return (e.id || e.name) === id; });
+            html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+            html += '<span style="font-size:16px;">&#x1F9E9;</span>';
+            html += '<div style="flex:1;min-width:0;">';
+            html += '<div style="font-weight:600;color:var(--text-primary);">' + escHtml(r.displayName || r.name || id) + '</div>';
+            html += '<div style="font-size:10px;color:var(--text-muted);">' + escHtml(r.publisher || '?') + ' &middot; v' + escHtml(r.version || '?');
+            if (r.installs) html += ' &middot; ' + r.installs.toLocaleString() + ' installs';
+            if (r.rating) html += ' &middot; \u2605 ' + r.rating;
+            html += '</div>';
+            if (r.description) html += '<div style="font-size:10px;color:var(--text-secondary);margin-top:2px;">' + escHtml(r.description).substring(0, 100) + '</div>';
+            html += '</div>';
+            if (installed) {
+              html += '<span style="font-size:10px;color:var(--accent-green);font-weight:600;">Installed</span>';
+            } else {
+              html += '<button class="code-btn" onclick="extInstallFromMarketplace(\'' + escHtml(id) + '\')" style="font-size:9px;padding:2px 8px;">Install</button>';
+            }
+            html += '</div>';
+          });
+          el.innerHTML = html;
+        }
+      } catch (e) {
+        el.innerHTML = '<div style="color:var(--accent-red);padding:8px;">Error: ' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    async function extInstallFromMarketplace(extId) {
+      try {
+        var data = await EngineAPI.installExtension(extId, 'marketplace');
+        if (data.extension) State.extensions.installed.push(data.extension);
+        refreshExtensionsList();
+        searchExtMarketplace(); // refresh marketplace view too
+      } catch (e) {
+        alert('Install failed: ' + e.message);
+      }
+    }
+
+    async function extToggle(extId, enable) {
+      try {
+        if (enable) {
+          await EngineAPI.enableExtension(extId);
+        } else {
+          await EngineAPI.disableExtension(extId);
+        }
+        var ext = State.extensions.installed.find(function (e) { return (e.id || e.name) === extId; });
+        if (ext) ext.enabled = enable;
+        refreshExtensionsList();
+      } catch (e) {
+        alert((enable ? 'Enable' : 'Disable') + ' failed: ' + e.message);
+      }
+    }
+
+    async function extUninstall(extId) {
+      if (!confirm('Uninstall extension "' + extId + '"?')) return;
+      try {
+        await EngineAPI.uninstallExtension(extId);
+        State.extensions.installed = State.extensions.installed.filter(function (e) { return (e.id || e.name) !== extId; });
+        refreshExtensionsList();
+      } catch (e) {
+        alert('Uninstall failed: ' + e.message);
+      }
+    }
+
+    function handleVsixFile(files) {
+      if (!files || files.length === 0) return;
+      var file = files[0];
+      if (!file.name.endsWith('.vsix')) {
+        document.getElementById('extLoadStatus').innerHTML = '<div style="color:var(--accent-red);">&#x274C; Not a .vsix file: ' + escHtml(file.name) + '</div>';
+        return;
+      }
+      var statusEl = document.getElementById('extLoadStatus');
+      statusEl.innerHTML = '<div style="color:var(--accent);">&#x23F3; Loading: ' + escHtml(file.name) + ' (' + formatBytesExt(file.size) + ')...</div>';
+
+      // Read as base64 and send to backend
+      var reader = new FileReader();
+      reader.onload = async function (e) {
+        try {
+          var base64 = e.target.result.split(',')[1] || e.target.result;
+          var data = await EngineAPI._post('/api/extensions/load-vsix', {
+            filename: file.name,
+            data: base64,
+            encoding: 'base64'
+          }, 120000);
+          statusEl.innerHTML = '<div style="color:var(--accent-green);">&#x2705; Loaded: ' + escHtml(data.extension ? (data.extension.displayName || data.extension.name || file.name) : file.name) + '</div>';
+          if (data.extension) {
+            State.extensions.installed.push(data.extension);
+            if (data.extension.contributes) {
+              var contribs = Object.keys(data.extension.contributes);
+              statusEl.innerHTML += '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Contributes: ' + contribs.join(', ') + '</div>';
+            }
+          }
+          refreshExtensionsList();
+        } catch (err) {
+          statusEl.innerHTML = '<div style="color:var(--accent-red);">&#x274C; ' + escHtml(err.message) + '</div>';
+        }
+      };
+      reader.onerror = function () {
+        statusEl.innerHTML = '<div style="color:var(--accent-red);">&#x274C; Failed to read file</div>';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function installVsixFromUrl() {
+      var url = (document.getElementById('extVsixUrl') || {}).value || '';
+      if (!url.trim()) return;
+      var statusEl = document.getElementById('extLoadStatus');
+      statusEl.innerHTML = '<div style="color:var(--accent);">&#x23F3; Installing from URL...</div>';
+      try {
+        var data = await EngineAPI.loadVsixFromUrl(url);
+        statusEl.innerHTML = '<div style="color:var(--accent-green);">&#x2705; ' + escHtml(data.message || 'Installed from URL') + '</div>';
+        if (data.extension) {
+          State.extensions.installed.push(data.extension);
+          refreshExtensionsList();
+        }
+      } catch (e) {
+        statusEl.innerHTML = '<div style="color:var(--accent-red);">&#x274C; ' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    async function restartExtensionHost() {
+      try {
+        await EngineAPI.restartExtensionHost();
+        State.extensions.hostStatus = 'running';
+        refreshExtRunning();
+      } catch (e) {
+        alert('Restart failed: ' + e.message);
+      }
+    }
+
+    async function killExtensionHost() {
+      if (!confirm('Kill the extension host? All running extensions will be stopped.')) return;
+      try {
+        await EngineAPI.killExtensionHost();
+        State.extensions.hostStatus = 'idle';
+        State.extensions.hostPid = null;
+        State.extensions.running = [];
+        refreshExtRunning();
+      } catch (e) {
+        alert('Kill failed: ' + e.message);
+      }
+    }
+
+    async function showExtHostLogs() {
+      var el = document.getElementById('extRunningList');
+      if (!el) return;
+      try {
+        var data = await EngineAPI.fetchExtensionHostLogs();
+        var logs = data.logs || data.entries || [];
+        State.extensions.logs = logs.slice(-State.extensions.maxLogs);
+        if (logs.length === 0) {
+          el.innerHTML = '<div style="color:var(--text-muted);">No host logs available.</div>';
+        } else {
+          var html = '<div style="font-size:10px;font-weight:600;color:var(--accent-secondary);margin-bottom:6px;">Extension Host Logs (last ' + Math.min(logs.length, 30) + '):</div>';
+          logs.slice(-30).forEach(function (log) {
+            var level = log.level || 'info';
+            var color = level === 'error' ? 'var(--accent-red)' : level === 'warn' ? 'var(--accent-orange)' : 'var(--text-secondary)';
+            html += '<div style="padding:2px 0;color:' + color + ';font-size:10px;">';
+            html += '[' + escHtml(log.timestamp || '?') + '] [' + level + '] ' + escHtml(log.message || JSON.stringify(log));
+            html += '</div>';
+          });
+          el.innerHTML = html;
+        }
+      } catch (e) {
+        el.innerHTML = '<div style="color:var(--accent-red);">Error fetching logs: ' + escHtml(e.message) + '</div>';
+      }
+    }
+
+    function filterExtensions(val) {
+      var lower = (val || '').toLowerCase();
+      var el = document.getElementById('extInstalledList');
+      if (!el) return;
+      var items = el.querySelectorAll(':scope > div');
+      items.forEach(function (item) {
+        var text = item.textContent.toLowerCase();
+        item.style.display = (lower === '' || text.indexOf(lower) >= 0) ? '' : 'none';
+      });
+    }
+
+    function updateExtStatusBar() {
+      var statusEl = document.getElementById('extStatusText');
+      var hostEl = document.getElementById('extHostStatus');
+      if (statusEl) {
+        var total = State.extensions.installed.length;
+        var active = State.extensions.installed.filter(function (e) { return e.enabled !== false; }).length;
+        statusEl.textContent = 'Extensions: ' + total + ' installed, ' + active + ' active';
+      }
+      if (hostEl) {
+        hostEl.textContent = State.extensions.hostStatus || 'idle';
+        hostEl.style.color = State.extensions.hostStatus === 'running' ? 'var(--accent-green)' : 'var(--text-muted)';
+      }
+    }
+
+    function formatBytesExt(b) {
+      if (b === 0) return '0 B';
+      var k = 1024;
+      var sizes = ['B', 'KB', 'MB', 'GB'];
+      var i = Math.floor(Math.log(b) / Math.log(k));
+      return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // VSIX drop zone drag-and-drop support
+    (function () {
+      var dz = document.getElementById('vsixDropZone');
+      if (!dz) return;
+      dz.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dz.style.borderColor = 'var(--accent)';
+        dz.style.background = 'rgba(0,255,157,0.05)';
+      });
+      dz.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        dz.style.borderColor = 'var(--border)';
+        dz.style.background = '';
+      });
+      dz.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dz.style.borderColor = 'var(--border)';
+        dz.style.background = '';
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleVsixFile(e.dataTransfer.files);
+        }
+      });
+    })();
+
+    // ======================================================================
+    // CHAIN-OF-THOUGHT MULTI-MODEL REVIEW SYSTEM
+    // ======================================================================= 'complete' ? '\u2714' : '\u2718';
+    var color = status === 'active' || status === 'ready' || status === 'complete' ? 'var(--accent-green)' : 'var(--accent-red)';
+    var html = '<div style="color:' + color + ';font-weight:600;">' + icon + ' ' + status.toUpperCase() + '</div>';
+    if (data.progress !== undefined) html += '<div style="color:var(--text-muted);margin-top:2px;">Progress: ' + data.progress + '%</div>';
+    if (data.detail) html += '<div style="color:var(--text-muted);margin-top:2px;">' + escHtml(data.detail) + '</div>';
+    if (data.tokens_per_sec !== undefined) html += '<div style="color:var(--accent-cyan);margin-top:2px;">Tokens/sec: ' + data.tokens_per_sec + '</div>';
+    if (data.memory_usage) html += '<div style="color:var(--text-muted);margin-top:2px;">Memory: ' + data.memory_usage + '</div>';
+    document.getElementById(el_id).innerHTML = html;
+          } else {
+      document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 HTTP ' + res.status + '</div>';
+    }
+        } catch (e) {
+      document.getElementById(el_id).innerHTML = '<div style="color:var(--accent-red);">\u2718 ' + escHtml(e.message) + '</div>';
+    }
       }
     }
 
