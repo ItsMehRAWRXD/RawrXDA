@@ -37,6 +37,7 @@
 
 #include "../modules/ExtensionLoader.hpp"
 #include "../modules/vscode_extension_api.h"
+#include "../../include/mcp_integration.h"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
 #include <climits>
@@ -4078,6 +4079,9 @@ private:
     // Command router
     bool handleVSCExtAPICommand(int commandId);
 
+    // Phase 36: QuickJS Extension Host commands (IDM_QUICKJS_HOST_* range)
+    bool handleQuickJSHostCommand(int commandId);
+
     // State
     bool m_vscExtAPIInitialized = false;
 
@@ -4220,4 +4224,42 @@ private:
     void updateVoiceStatusBar();
     void voiceSavePreferences();
     void voiceLoadPreferences();
+
+    // ========================================================================
+    // PHASE 36: MCP INTEGRATION — Model Context Protocol Server + Client
+    // JSON-RPC 2.0 based tool/resource/prompt hosting for agent interactions
+    // ========================================================================
+    void initMCP();
+    void shutdownMCP();
+    RawrXD::MCP::MCPServer* getMCPServer() { return m_mcpServer.get(); }
+
+    // State
+    std::unique_ptr<RawrXD::MCP::MCPServer> m_mcpServer;
+    bool m_mcpInitialized = false;
+
+    // ========================================================================
+    // PHASE 36: FLIGHT RECORDER — Memory-mapped binary ring-buffer logger
+    // Persistent binary flight recorder at %LOCALAPPDATA%\RawrXD\flight_recorder.bin
+    // ========================================================================
+    static constexpr int IDM_FR_EXPORT_JSON = 10100;
+    static constexpr int IDM_FR_DASHBOARD   = 10101;
+    static constexpr int IDM_FR_CLEAR       = 10102;
+
+    void initFlightRecorder();
+    void shutdownFlightRecorder();
+    void flightRecordEvent(int type, const char* message);
+    void flightRecordDebug(const char* message);
+    void flightRecordError(const char* message);
+    void flightRecordCommand(int commandId);
+    void flightRecordPerformance(const char* label, double elapsedMs);
+    void flightRecordAgentAction(const char* action, const char* detail);
+    void flightRecordCoTStep(int stepIndex, const char* role, const char* summary);
+    void flightRecordCrashMarker(const char* reason);
+    bool handleFlightRecorderCommand(int commandId);
+    void cmdFlightRecorderExportJSON();
+    void cmdFlightRecorderDashboard();
+    void cmdFlightRecorderClear();
+
+    // State
+    bool m_flightRecorderInitialized = false;
 };

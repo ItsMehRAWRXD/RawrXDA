@@ -1054,6 +1054,27 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initTelemetry failed\n");
         }
 
+        // Initialize Phase 36: Flight Recorder — persistent binary ring-buffer
+        try {
+            initFlightRecorder();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initFlightRecorder failed\n");
+        }
+
+        // Initialize Phase 36: MCP Integration — Model Context Protocol
+        try {
+            initMCP();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initMCP failed\n");
+        }
+
+        // Initialize Phase 29+36: VS Code Extension API + QuickJS VSIX Host
+        try {
+            initVSCodeExtensionAPI();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initVSCodeExtensionAPI failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
@@ -1068,6 +1089,15 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Shutdown Phase 29+36: VS Code Extension API + QuickJS VSIX Host
+    shutdownVSCodeExtensionAPI();
+
+    // Shutdown Phase 36: MCP Integration
+    shutdownMCP();
+
+    // Shutdown Phase 36: Flight Recorder
+    shutdownFlightRecorder();
 
     // Shutdown Phase 34: Telemetry Export
     shutdownTelemetry();

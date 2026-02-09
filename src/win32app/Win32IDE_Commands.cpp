@@ -203,6 +203,10 @@ bool Win32IDE::routeCommand(int commandId) {
         return handleQuickWinCommand(commandId);
     } else if (commandId >= 9900 && commandId < 10000) {
         return handleTelemetryCommand(commandId);
+    } else if (commandId >= 10000 && commandId < 10100) {
+        return handleVSCExtAPICommand(commandId);
+    } else if (commandId >= 10100 && commandId < 10200) {
+        return handleFlightRecorderCommand(commandId);
     } else if (commandId >= 9400 && commandId < 9500) {
         return handlePDBCommand(commandId);
     } else if (commandId >= 9000 && commandId < 10000) {

@@ -278,6 +278,39 @@ if(MSVC)
         VERBATIM
     )
 
+    # Phase 37: Chain-of-Thought Engine — Pure MASM CoT DLL Core
+    set(ASM_COT_ENGINE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/rawrxd_cot_engine.asm")
+    set(ASM_COT_ENGINE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_COT_ENGINE_OBJ}
+        COMMAND ml64 /c /Zi /Zd /Fo${ASM_COT_ENGINE_OBJ} ${ASM_COT_ENGINE_SRC}
+        DEPENDS ${ASM_COT_ENGINE_SRC}
+        COMMENT "[MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)"
+        VERBATIM
+    )
+
+    # Phase 37: Chain-of-Thought Engine — DLL Entry + SRW Lock
+    set(ASM_COT_DLL_ENTRY_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/rawrxd_cot_dll_entry.asm")
+    set(ASM_COT_DLL_ENTRY_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_dll_entry.obj")
+    add_custom_command(
+        OUTPUT ${ASM_COT_DLL_ENTRY_OBJ}
+        COMMAND ml64 /c /Zi /Zd /Fo${ASM_COT_DLL_ENTRY_OBJ} ${ASM_COT_DLL_ENTRY_SRC}
+        DEPENDS ${ASM_COT_DLL_ENTRY_SRC}
+        COMMENT "[MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)"
+        VERBATIM
+    )
+
+    # Phase 39–42: CoT Enterprise Finishers — Snapshot, Telemetry, Copy Engine, Security
+    set(ASM_COT_PHASE39_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/rawrxd_cot_phase39.asm")
+    set(ASM_COT_PHASE39_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_phase39.obj")
+    add_custom_command(
+        OUTPUT ${ASM_COT_PHASE39_OBJ}
+        COMMAND ml64 /c /Zi /Zd /Fo${ASM_COT_PHASE39_OBJ} ${ASM_COT_PHASE39_SRC}
+        DEPENDS ${ASM_COT_PHASE39_SRC}
+        COMMENT "[MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)"
+        VERBATIM
+    )
+
     # Collect all MASM objects
     set(MASM_OBJECTS
         ${ASM_REQUANTIZE_OBJ}
@@ -289,6 +322,9 @@ if(MSVC)
         ${ASM_GSIHASH_OBJ}
         ${ASM_REFPROVIDER_OBJ}
         ${ASM_STUBDETECTOR_OBJ}
+        ${ASM_COT_ENGINE_OBJ}
+        ${ASM_COT_DLL_ENTRY_OBJ}
+        ${ASM_COT_PHASE39_OBJ}
     )
 
     # Link MASM objects into RawrEngine
@@ -542,9 +578,62 @@ if(WIN32)
 
         # Phase 34: Telemetry Export
         src/win32app/Win32IDE_Telemetry.cpp
+
+        # Phase 36: MCP Integration — Model Context Protocol Server + Client
+        src/mcp_integration.cpp
+        src/win32app/Win32IDE_MCP.cpp
+
+        # Phase 36: Flight Recorder — memory-mapped binary ring-buffer logger
+        src/win32app/Win32IDE_FlightRecorder.cpp
+
+        # Phase 36: QuickJS VSIX JavaScript Extension Host
+        src/modules/quickjs_extension_host.cpp
+        src/modules/quickjs_node_shims.cpp
+        src/modules/quickjs_vscode_bindings.cpp
     )
     
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES})
+
+    # =========================================================================
+    # Phase 36: QuickJS Static Library (embedded JS runtime)
+    # =========================================================================
+    # QuickJS sources should be placed in 3rdparty/quickjs/
+    # If not present, create stub target that allows compilation without QuickJS
+    set(QUICKJS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/quickjs)
+    if(EXISTS "${QUICKJS_DIR}/quickjs.c")
+        add_library(quickjs_static STATIC
+            ${QUICKJS_DIR}/quickjs.c
+            ${QUICKJS_DIR}/libregexp.c
+            ${QUICKJS_DIR}/libunicode.c
+            ${QUICKJS_DIR}/cutils.c
+            ${QUICKJS_DIR}/quickjs-libc.c
+            ${QUICKJS_DIR}/libbf.c
+        )
+        target_include_directories(quickjs_static PUBLIC ${QUICKJS_DIR})
+        if(MSVC)
+            target_compile_options(quickjs_static PRIVATE /W0 /O2)
+            target_compile_definitions(quickjs_static PRIVATE
+                _CRT_SECURE_NO_WARNINGS
+                CONFIG_BIGNUM
+                CONFIG_VERSION="2024.01.13"
+            )
+        else()
+            target_compile_options(quickjs_static PRIVATE -w -O2)
+            target_compile_definitions(quickjs_static PRIVATE
+                CONFIG_BIGNUM
+                CONFIG_VERSION="2024.01.13"
+                _GNU_SOURCE
+            )
+        endif()
+        target_link_libraries(RawrXD-Win32IDE PRIVATE quickjs_static)
+        target_include_directories(RawrXD-Win32IDE PRIVATE ${QUICKJS_DIR}/..)
+        message(STATUS "QuickJS found: JS extension host enabled")
+        add_definitions(-DRAWR_HAS_QUICKJS=1)
+    else()
+        message(STATUS "QuickJS not found at ${QUICKJS_DIR} — JS extension host uses stubs")
+        # Create stub include directory so headers compile
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_QUICKJS_STUB=1)
+    endif()
     
     # Link RE library into Win32IDE
     target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD-RE-Library)
@@ -554,7 +643,7 @@ if(WIN32)
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
         shlwapi psapi dbghelp dbgeng winhttp ws2_32 winmm gdi32 user32
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
-        advapi32 crypt32 bcrypt
+        advapi32 crypt32 bcrypt wintrust
         ${MASM_OBJECTS}
     )
 
