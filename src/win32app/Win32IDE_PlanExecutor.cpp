@@ -82,6 +82,8 @@ void Win32IDE::generateAgentPlan(const std::string& goal) {
     // Background thread — ask agent for structured plan
     std::string goalCopy = goal;
     std::thread([this, goalCopy]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         std::string planPrompt =
             "Create a detailed step-by-step plan to accomplish the following goal.\n"
             "For each step, provide:\n"
@@ -420,11 +422,13 @@ void Win32IDE::executePlan() {
     showModelProgressBar("Executing plan: " + m_currentPlan.goal);
 
     std::thread([this]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         int totalSteps = (int)m_currentPlan.steps.size();
 
         for (int i = 0; i < totalSteps; i++) {
-            // Check for cancellation
-            if (m_planExecutionCancelled.load()) {
+            // Check for cancellation or shutdown
+            if (m_planExecutionCancelled.load() || isShuttingDown()) {
                 m_currentPlan.steps[i].status = PlanStepStatus::Skipped;
                 for (int j = i + 1; j < totalSteps; j++) {
                     m_currentPlan.steps[j].status = PlanStepStatus::Skipped;
@@ -559,10 +563,12 @@ void Win32IDE::onPlanStepDone(int stepIndex, int result) {
         if (choice == IDYES) {
             // Mark failed step and continue
             std::thread([this, stepIndex]() {
+                DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+                if (_guard.cancelled) return;
                 // Resume from next step
                 int totalSteps = (int)m_currentPlan.steps.size();
                 for (int i = stepIndex + 1; i < totalSteps; i++) {
-                    if (m_planExecutionCancelled.load()) break;
+                    if (m_planExecutionCancelled.load() || isShuttingDown()) break;
                     m_currentPlan.currentStepIndex = i;
                     m_currentPlan.steps[i].status = PlanStepStatus::Running;
 

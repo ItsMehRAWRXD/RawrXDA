@@ -1,10 +1,12 @@
 #ifndef PLUGIN_API_H
 #define PLUGIN_API_H
 
-#include <QString>
+#include <stdint.h>
 
 // Stable C interface for plugins
+#ifdef __cplusplus
 extern "C" {
+#endif
     typedef struct PluginContext {
         void (*requestFileOperation)(const char* operation, const char* filePath, const char* content);
     } PluginContext;
@@ -22,6 +24,8 @@ extern "C" {
     void plugin_onCommand(const char* command);
     void plugin_onModelLoad(const char* modelPath);
     void plugin_cleanup();
+#ifdef __cplusplus
 }
+#endif
 
 #endif // PLUGIN_API_H

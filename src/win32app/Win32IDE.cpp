@@ -891,9 +891,11 @@ int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, cons
     pane.bounds = {0, 0, 0, 0};
 
     pane.manager->onOutput = [this, paneId](const std::string& output) {
+        if (isShuttingDown()) return;
         onTerminalOutput(paneId, output);
     };
     pane.manager->onError = [this, paneId](const std::string& error) {
+        if (isShuttingDown()) return;
         onTerminalError(paneId, error);
     };
 
@@ -1378,6 +1380,8 @@ void Win32IDE::executeCommand()
         appendChatMessage("You", command);
         // Async ask would be better, but for now blocking in thread or using callback logic
         std::thread([this, command](){
+             DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+             if (_guard.cancelled) return;
              m_agent->Ask(command);
         }).detach();
         return;
@@ -1386,6 +1390,7 @@ void Win32IDE::executeCommand()
     // Send to terminal
     TerminalPane* pane = getActiveTerminalPane();
     if (pane && pane->manager && pane->manager->isRunning()) {
+        addPowerShellHistory(command); // Track in shared command history
         command += "\n";
         pane->manager->writeInput(command);
     }
@@ -1393,6 +1398,7 @@ void Win32IDE::executeCommand()
 
 void Win32IDE::onTerminalOutput(int paneId, const std::string& output)
 {
+    if (isShuttingDown()) return;
     TerminalPane* pane = findTerminalPane(paneId);
     if (!pane || !pane->hwnd) return;
     appendText(pane->hwnd, output);
@@ -1401,6 +1407,7 @@ void Win32IDE::onTerminalOutput(int paneId, const std::string& output)
 
 void Win32IDE::onTerminalError(int paneId, const std::string& error)
 {
+    if (isShuttingDown()) return;
     TerminalPane* pane = findTerminalPane(paneId);
     if (!pane || !pane->hwnd) return;
     appendText(pane->hwnd, error);
@@ -1767,6 +1774,7 @@ void Win32IDE::addOutputTab(const std::string& name)
 
 void Win32IDE::appendToOutput(const std::string& text, const std::string& tabName, OutputSeverity severity)
 {
+    if (isShuttingDown()) return;  // Window handles may be destroyed
     if (static_cast<int>(severity) < m_severityFilterLevel) return;
     
     std::string target = tabName.empty() ? m_activeOutputTab : tabName;
@@ -2121,6 +2129,8 @@ void Win32IDE::analyzeScript()
     
     // Asynchronous analysis to avoid blocking UI
     std::thread([this, script]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         if (m_nativeEngine) {
             std::string prompt = "Analyze the following script and report potential bugs, security issues, and improvements:\n\n" + script;
             // Assuming CPUInferenceEngine has an 'infer' or 'generate' method that takes a string
@@ -4685,6 +4695,8 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
     
     // Launch dedicated inference thread using Native Agentic Bridge
     m_inferenceThread = std::thread([this, prompt]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) { m_inferenceRunning = false; return; }
         if (!m_agenticBridge) {
              if (m_inferenceCallback) m_inferenceCallback("Error: Agentic Bridge not initialized.", true);
              m_inferenceRunning = false;
@@ -4693,7 +4705,7 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
 
         // Set callback to route NativeAgent stream to the UI
         m_agenticBridge->SetOutputCallback([this](const std::string& type, const std::string& msg) {
-             if (m_inferenceStopRequested) return;
+             if (m_inferenceStopRequested || isShuttingDown()) return;
              // "stream" type is what we send to chat UI
              if (m_inferenceCallback) m_inferenceCallback(msg, false);
         });
@@ -4724,7 +4736,7 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
         }
 
         m_inferenceRunning = false;
-        if (m_inferenceCallback) {
+        if (m_inferenceCallback && !isShuttingDown()) {
             m_inferenceCallback("", true); // Finalize
         }
     });
@@ -5517,16 +5529,41 @@ int Win32IDE::findTabByPath(const std::string& filePath) const {
 
 // --- Command Input Subclass Procedure ---
 LRESULT CALLBACK Win32IDE::CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
+    // Retrieve IDE pointer via GWLP_USERDATA (set in createTerminal)
+    Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     
     if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {
-        // Execute command on Enter
+        // Execute command on Enter — route through executeCommand()
         if (ide) {
-            char buf[4096] = {};
-            GetWindowTextA(hwnd, buf, sizeof(buf));
-            std::string cmd(buf);
-            if (!cmd.empty()) {
-                ide->appendToOutput("> " + cmd + "\n", "Output", OutputSeverity::Info);
+            ide->executeCommand();
+        }
+        return 0;
+    }
+    
+    // Up arrow — command history navigation (previous) — uses PowerShell history
+    if (uMsg == WM_KEYDOWN && wParam == VK_UP) {
+        if (ide) {
+            ide->navigatePowerShellHistoryUp();
+            // Sync text from PowerShell input to command input
+            if (!ide->m_powerShellCommandHistory.empty() && 
+                ide->m_powerShellHistoryIndex >= 0 &&
+                ide->m_powerShellHistoryIndex < (int)ide->m_powerShellCommandHistory.size()) {
+                SetWindowTextA(hwnd, ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex].c_str());
+                SendMessage(hwnd, EM_SETSEL, -1, -1); // cursor to end
+            }
+        }
+        return 0;
+    }
+    
+    // Down arrow — command history navigation (next) — uses PowerShell history
+    if (uMsg == WM_KEYDOWN && wParam == VK_DOWN) {
+        if (ide) {
+            ide->navigatePowerShellHistoryDown();
+            if (ide->m_powerShellHistoryIndex >= 0 &&
+                ide->m_powerShellHistoryIndex < (int)ide->m_powerShellCommandHistory.size()) {
+                SetWindowTextA(hwnd, ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex].c_str());
+                SendMessage(hwnd, EM_SETSEL, -1, -1);
+            } else {
                 SetWindowTextA(hwnd, "");
             }
         }
@@ -5546,6 +5583,7 @@ void Win32IDE::onAgentOutput(const char* text) {
 }
 
 void Win32IDE::postAgentOutputSafe(const std::string& text) {
+    if (isShuttingDown()) return;
     // Allocate a copy of the string for cross-thread messaging
     // The WM_AGENT_OUTPUT_SAFE handler will free this via free()
     char* copy = _strdup(text.c_str());
@@ -5933,6 +5971,8 @@ void Win32IDE::openModelFromHuggingFace() {
         std::string filename = selectedFile.filename;
         
         std::thread([this, repoId, filename]() {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled) return;
             auto progressCb = [this](const RawrXD::ModelDownloadProgress& prog) {
                 char buf[256];
                 if (prog.has_error) {
@@ -6260,6 +6300,8 @@ void Win32IDE::openModelFromURL() {
         
         // Download on background thread
         std::thread([this, url]() {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled) return;
             auto progressCb = [this](const RawrXD::ModelDownloadProgress& prog) {
                 char buf[256];
                 if (prog.has_error) {

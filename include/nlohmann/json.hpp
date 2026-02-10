@@ -7,18 +7,22 @@
 #include <sstream>
 #include <stdexcept>
 #include <cmath>
+#include <cstdint>
 #include <iomanip>
+#include <iostream>
+#include <iterator>
 
 namespace nlohmann {
 
 /**
  * Lightweight JSON implementation for AI Toolkit
  * Provides essential JSON serialization/deserialization without external dependencies
+ * Uses enum class value_t to avoid name collisions with factory methods
  */
 
 class json {
 public:
-    enum value_t {
+    enum class value_t {
         null,
         object,
         array,
@@ -28,31 +32,31 @@ public:
     };
 
     // Constructors
-    json() : m_type(null) {}
-    json(std::nullptr_t) : m_type(null) {}
-    json(bool b) : m_type(boolean), m_bool(b) {}
-    json(int i) : m_type(number), m_number(static_cast<double>(i)) {}
-    json(unsigned int i) : m_type(number), m_number(static_cast<double>(i)) {}
-    json(long l) : m_type(number), m_number(static_cast<double>(l)) {}
-    json(unsigned long l) : m_type(number), m_number(static_cast<double>(l)) {}
-    json(long long ll) : m_type(number), m_number(static_cast<double>(ll)) {}
-    json(unsigned long long ll) : m_type(number), m_number(static_cast<double>(ll)) {}
-    json(double d) : m_type(number), m_number(d) {}
-    json(float f) : m_type(number), m_number(static_cast<double>(f)) {}
-    json(const std::string& s) : m_type(string), m_string(s) {}
-    json(const char* s) : m_type(string), m_string(s ? s : "") {}
+    json() : m_type(value_t::null) {}
+    json(std::nullptr_t) : m_type(value_t::null) {}
+    json(bool b) : m_type(value_t::boolean), m_bool(b) {}
+    json(int i) : m_type(value_t::number), m_number(static_cast<double>(i)) {}
+    json(unsigned int i) : m_type(value_t::number), m_number(static_cast<double>(i)) {}
+    json(long l) : m_type(value_t::number), m_number(static_cast<double>(l)) {}
+    json(unsigned long l) : m_type(value_t::number), m_number(static_cast<double>(l)) {}
+    json(long long ll) : m_type(value_t::number), m_number(static_cast<double>(ll)) {}
+    json(unsigned long long ll) : m_type(value_t::number), m_number(static_cast<double>(ll)) {}
+    json(double d) : m_type(value_t::number), m_number(d) {}
+    json(float f) : m_type(value_t::number), m_number(static_cast<double>(f)) {}
+    json(const std::string& s) : m_type(value_t::string), m_string(s) {}
+    json(const char* s) : m_type(value_t::string), m_string(s ? s : "") {}
     json(const json& other) { *this = other; }
     json(json&& other) noexcept { *this = std::move(other); }
 
-    // Object constructor
-    json(const std::initializer_list<std::pair<std::string, json>>& init) : m_type(object) {
+    // Object constructor from initializer_list of pairs
+    json(const std::initializer_list<std::pair<std::string, json>>& init) : m_type(value_t::object) {
         for (const auto& [key, value] : init) {
             m_object[key] = value;
         }
     }
 
-    // Array constructor
-    json(const std::initializer_list<json>& init) : m_type(array) {
+    // Array constructor from initializer_list of json
+    json(const std::initializer_list<json>& init) : m_type(value_t::array) {
         for (const auto& item : init) {
             m_array.push_back(item);
         }
@@ -80,29 +84,90 @@ public:
             m_bool = other.m_bool;
             m_object = std::move(other.m_object);
             m_array = std::move(other.m_array);
-            other.m_type = null;
+            other.m_type = value_t::null;
+        }
+        return *this;
+    }
+
+    // Assignment from initializer_list<pair> (creates object)
+    json& operator=(const std::initializer_list<std::pair<std::string, json>>& init) {
+        m_type = value_t::object;
+        m_object.clear();
+        m_array.clear();
+        m_string.clear();
+        for (const auto& [key, value] : init) {
+            m_object[key] = value;
         }
         return *this;
     }
 
     // Type checking
     value_t type() const { return m_type; }
-    bool is_null() const { return m_type == null; }
-    bool is_object() const { return m_type == object; }
-    bool is_array() const { return m_type == array; }
-    bool is_string() const { return m_type == string; }
-    bool is_number() const { return m_type == number; }
-    bool is_boolean() const { return m_type == boolean; }
+    bool is_null() const { return m_type == value_t::null; }
+    bool is_object() const { return m_type == value_t::object; }
+    bool is_array() const { return m_type == value_t::array; }
+    bool is_string() const { return m_type == value_t::string; }
+    bool is_number() const { return m_type == value_t::number; }
+    bool is_boolean() const { return m_type == value_t::boolean; }
+
+    // Exception type alias (compatibility with real nlohmann/json)
+    using exception = std::runtime_error;
+
+    // Implicit conversion operators for nlohmann-style usage
+    operator std::string() const {
+        if (m_type == value_t::string) return m_string;
+        if (m_type == value_t::number) return std::to_string(static_cast<long long>(m_number));
+        if (m_type == value_t::boolean) return m_bool ? "true" : "false";
+        if (m_type == value_t::null) return "";
+        throw std::runtime_error("Cannot convert JSON to string");
+    }
+
+    operator bool() const {
+        if (m_type == value_t::boolean) return m_bool;
+        if (m_type == value_t::number) return m_number != 0.0;
+        if (m_type == value_t::null) return false;
+        if (m_type == value_t::string) return !m_string.empty();
+        return true; // objects and arrays are truthy
+    }
+
+    operator int() const {
+        if (m_type == value_t::number) return static_cast<int>(m_number);
+        throw std::runtime_error("Cannot convert JSON to int");
+    }
+
+    operator double() const {
+        if (m_type == value_t::number) return m_number;
+        throw std::runtime_error("Cannot convert JSON to double");
+    }
+
+    operator uint64_t() const {
+        if (m_type == value_t::number) return static_cast<uint64_t>(m_number);
+        throw std::runtime_error("Cannot convert JSON to uint64_t");
+    }
+
+    // Stream extraction (parse from istream)
+    friend std::istream& operator>>(std::istream& is, json& j) {
+        std::string content((std::istreambuf_iterator<char>(is)),
+                            std::istreambuf_iterator<char>());
+        j = json::parse(content);
+        return is;
+    }
+
+    // Stream insertion (serialize to ostream)
+    friend std::ostream& operator<<(std::ostream& os, const json& j) {
+        os << j.dump();
+        return os;
+    }
 
     // Object access
     json& operator[](const std::string& key) {
-        if (m_type == null) m_type = object;
-        if (m_type != object) throw std::runtime_error("Cannot index non-object as object");
+        if (m_type == value_t::null) m_type = value_t::object;
+        if (m_type != value_t::object) throw std::runtime_error("Cannot index non-object as object");
         return m_object[key];
     }
 
     const json& operator[](const std::string& key) const {
-        if (m_type != object) throw std::runtime_error("Cannot index non-object as object");
+        if (m_type != value_t::object) throw std::runtime_error("Cannot index non-object as object");
         auto it = m_object.find(key);
         if (it != m_object.end()) return it->second;
         static json null_val;
@@ -111,27 +176,27 @@ public:
 
     // Array access
     json& operator[](size_t idx) {
-        if (m_type == null) m_type = array;
-        if (m_type != array) throw std::runtime_error("Cannot index non-array as array");
+        if (m_type == value_t::null) m_type = value_t::array;
+        if (m_type != value_t::array) throw std::runtime_error("Cannot index non-array as array");
         if (idx >= m_array.size()) m_array.resize(idx + 1);
         return m_array[idx];
     }
 
     const json& operator[](size_t idx) const {
-        if (m_type != array) throw std::runtime_error("Cannot index non-array as array");
+        if (m_type != value_t::array) throw std::runtime_error("Cannot index non-array as array");
         if (idx >= m_array.size()) throw std::out_of_range("Array index out of range");
         return m_array[idx];
     }
 
     // contains
     bool contains(const std::string& key) const {
-        if (m_type != object) return false;
+        if (m_type != value_t::object) return false;
         return m_object.find(key) != m_object.end();
     }
 
-    // value with default
+    // value with default (json overload)
     json value(const std::string& key, const json& default_val) const {
-        if (m_type != object) return default_val;
+        if (m_type != value_t::object) return default_val;
         auto it = m_object.find(key);
         return (it != m_object.end()) ? it->second : default_val;
     }
@@ -140,15 +205,22 @@ public:
     template<typename T>
     T get() const;
 
-
     // Array operations
     void push_back(const json& val) {
-        if (m_type == null) m_type = array;
-        if (m_type != array) throw std::runtime_error("Cannot push_back to non-array");
+        if (m_type == value_t::null) m_type = value_t::array;
+        if (m_type != value_t::array) throw std::runtime_error("Cannot push_back to non-array");
         m_array.push_back(val);
     }
-    
-    // Added for compatibility with agentic_executor
+
+    // push_back from initializer_list<pair> (pushes a json object)
+    void push_back(const std::initializer_list<std::pair<std::string, json>>& init) {
+        if (m_type == value_t::null) m_type = value_t::array;
+        if (m_type != value_t::array) throw std::runtime_error("Cannot push_back to non-array");
+        json obj(init);
+        m_array.push_back(std::move(obj));
+    }
+
+    // Typed value with default
     template<typename T>
     T value(const std::string& key, const T& default_val) const {
         auto it = m_object.find(key);
@@ -159,59 +231,134 @@ public:
         }
         return default_val;
     }
-    
+
     std::string value(const std::string& key, const char* default_val) const {
         return value<std::string>(key, std::string(default_val));
     }
 
     json& operator=(size_t n) { *this = json(static_cast<unsigned long long>(n)); return *this; }
-    
+
     template<typename T>
-    json(const std::vector<T>& v) : m_type(array) {
+    json(const std::vector<T>& v) : m_type(value_t::array) {
         for(const auto& e : v) m_array.push_back(json(e));
     }
-    // Also implicit assignment from vector
+
     template<typename T>
     json& operator=(const std::vector<T>& v) {
-        m_type = array;
+        m_type = value_t::array;
         m_array.clear();
         for(const auto& e : v) m_array.push_back(json(e));
         return *this;
     }
 
     size_t size() const {
-        if (m_type == array) return m_array.size();
-        if (m_type == object) return m_object.size();
-        if (m_type == string) return m_string.size();
+        if (m_type == value_t::array) return m_array.size();
+        if (m_type == value_t::object) return m_object.size();
+        if (m_type == value_t::string) return m_string.size();
         return 0;
     }
 
     bool empty() const {
-        if (m_type == array) return m_array.empty();
-        if (m_type == object) return m_object.empty();
-        if (m_type == string) return m_string.empty();
-        return m_type == null;
+        if (m_type == value_t::array) return m_array.empty();
+        if (m_type == value_t::object) return m_object.empty();
+        if (m_type == value_t::string) return m_string.empty();
+        return m_type == value_t::null;
     }
 
-    // Iteration for objects
-    auto begin() {
-        if (m_type != object) throw std::runtime_error("Cannot iterate non-object");
-        return m_object.begin();
+    // ── Polymorphic iterator (supports both array and object iteration) ──
+    class iterator {
+    public:
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = json;
+        using pointer           = json*;
+        using reference         = json&;
+        using iterator_category = std::forward_iterator_tag;
+
+        iterator() : m_is_array(true) {}
+        explicit iterator(std::vector<json>::iterator it) : m_is_array(true), m_arr_it(it) {}
+        explicit iterator(std::map<std::string, json>::iterator it) : m_is_array(false), m_obj_it(it) {}
+
+        reference operator*() { return m_is_array ? *m_arr_it : m_obj_it->second; }
+        pointer   operator->() { return m_is_array ? &(*m_arr_it) : &(m_obj_it->second); }
+
+        iterator& operator++() {
+            if (m_is_array) ++m_arr_it; else ++m_obj_it;
+            return *this;
+        }
+        iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+
+        bool operator==(const iterator& o) const {
+            return m_is_array ? (m_arr_it == o.m_arr_it) : (m_obj_it == o.m_obj_it);
+        }
+        bool operator!=(const iterator& o) const { return !(*this == o); }
+
+        const std::string& key() const { return m_obj_it->first; }
+        reference value() { return m_is_array ? *m_arr_it : m_obj_it->second; }
+
+    private:
+        bool m_is_array;
+        std::vector<json>::iterator m_arr_it;
+        std::map<std::string, json>::iterator m_obj_it;
+    };
+
+    class const_iterator {
+    public:
+        using difference_type   = std::ptrdiff_t;
+        using value_type        = const json;
+        using pointer           = const json*;
+        using reference         = const json&;
+        using iterator_category = std::forward_iterator_tag;
+
+        const_iterator() : m_is_array(true) {}
+        explicit const_iterator(std::vector<json>::const_iterator it) : m_is_array(true), m_arr_it(it) {}
+        explicit const_iterator(std::map<std::string, json>::const_iterator it) : m_is_array(false), m_obj_it(it) {}
+
+        reference operator*()  const { return m_is_array ? *m_arr_it : m_obj_it->second; }
+        pointer   operator->() const { return m_is_array ? &(*m_arr_it) : &(m_obj_it->second); }
+
+        const_iterator& operator++() {
+            if (m_is_array) ++m_arr_it; else ++m_obj_it;
+            return *this;
+        }
+        const_iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+
+        bool operator==(const const_iterator& o) const {
+            return m_is_array ? (m_arr_it == o.m_arr_it) : (m_obj_it == o.m_obj_it);
+        }
+        bool operator!=(const const_iterator& o) const { return !(*this == o); }
+
+        const std::string& key() const { return m_obj_it->first; }
+        reference value() const { return m_is_array ? *m_arr_it : m_obj_it->second; }
+
+    private:
+        bool m_is_array;
+        std::vector<json>::const_iterator m_arr_it;
+        std::map<std::string, json>::const_iterator m_obj_it;
+    };
+
+    // Iteration for arrays and objects
+    iterator begin() {
+        if (m_type == value_t::array) return iterator(m_array.begin());
+        if (m_type == value_t::object) return iterator(m_object.begin());
+        throw std::runtime_error("Cannot iterate non-container JSON type");
     }
 
-    auto end() {
-        if (m_type != object) throw std::runtime_error("Cannot iterate non-object");
-        return m_object.end();
+    iterator end() {
+        if (m_type == value_t::array) return iterator(m_array.end());
+        if (m_type == value_t::object) return iterator(m_object.end());
+        throw std::runtime_error("Cannot iterate non-container JSON type");
     }
 
-    auto begin() const {
-        if (m_type != object) throw std::runtime_error("Cannot iterate non-object");
-        return m_object.begin();
+    const_iterator begin() const {
+        if (m_type == value_t::array) return const_iterator(m_array.begin());
+        if (m_type == value_t::object) return const_iterator(m_object.begin());
+        throw std::runtime_error("Cannot iterate non-container JSON type");
     }
 
-    auto end() const {
-        if (m_type != object) throw std::runtime_error("Cannot iterate non-object");
-        return m_object.end();
+    const_iterator end() const {
+        if (m_type == value_t::array) return const_iterator(m_array.end());
+        if (m_type == value_t::object) return const_iterator(m_object.end());
+        throw std::runtime_error("Cannot iterate non-container JSON type");
     }
 
     // Serialization
@@ -226,15 +373,43 @@ public:
         return parse_value(str, pos);
     }
 
+    // Factory methods (legacy names)
     static json object_type() {
         json j;
-        j.m_type = object;
+        j.m_type = value_t::object;
         return j;
     }
 
     static json array_type() {
         json j;
-        j.m_type = array;
+        j.m_type = value_t::array;
+        return j;
+    }
+
+    // nlohmann-compatible factory methods
+    static json object() {
+        return object_type();
+    }
+
+    static json object(const std::initializer_list<std::pair<std::string, json>>& init) {
+        json j;
+        j.m_type = value_t::object;
+        for (const auto& [key, val] : init) {
+            j.m_object[key] = val;
+        }
+        return j;
+    }
+
+    static json array() {
+        return array_type();
+    }
+
+    static json array(const std::initializer_list<json>& init) {
+        json j;
+        j.m_type = value_t::array;
+        for (const auto& item : init) {
+            j.m_array.push_back(item);
+        }
         return j;
     }
 
@@ -385,13 +560,13 @@ private:
         std::string next_indent_str(current_indent + (indent > 0 ? indent : 0), ' ');
 
         switch (m_type) {
-            case null:
+            case value_t::null:
                 oss << "null";
                 break;
-            case boolean:
+            case value_t::boolean:
                 oss << (m_bool ? "true" : "false");
                 break;
-            case number: {
+            case value_t::number: {
                 if (std::isfinite(m_number)) {
                     long long int_part = static_cast<long long>(m_number);
                     if (m_number == int_part) {
@@ -399,7 +574,6 @@ private:
                     } else {
                         oss << std::fixed << std::setprecision(10) << m_number;
                         std::string num_str = oss.str();
-                        // Remove trailing zeros
                         while (num_str.back() == '0') num_str.pop_back();
                         if (num_str.back() == '.') num_str.pop_back();
                         return num_str;
@@ -409,7 +583,7 @@ private:
                 }
                 break;
             }
-            case string:
+            case value_t::string:
                 oss << '"';
                 for (char c : m_string) {
                     switch (c) {
@@ -430,7 +604,7 @@ private:
                 }
                 oss << '"';
                 break;
-            case array:
+            case value_t::array:
                 oss << "[";
                 if (!m_array.empty() && indent >= 0) oss << "\n";
                 for (size_t i = 0; i < m_array.size(); i++) {
@@ -442,18 +616,20 @@ private:
                 if (!m_array.empty() && indent >= 0) oss << indent_str;
                 oss << "]";
                 break;
-            case object:
+            case value_t::object:
                 oss << "{";
                 if (!m_object.empty() && indent >= 0) oss << "\n";
-                bool first = true;
-                for (const auto& [key, value] : m_object) {
-                    if (!first && indent < 0) oss << ",";
-                    if (indent >= 0 && !first) oss << ",\n";
-                    if (indent >= 0) oss << next_indent_str;
-                    oss << "\"" << key << "\":";
-                    if (indent >= 0) oss << " ";
-                    oss << value.dump_impl(indent, current_indent + (indent > 0 ? indent : 0));
-                    first = false;
+                {
+                    bool first = true;
+                    for (const auto& [key, val] : m_object) {
+                        if (!first && indent < 0) oss << ",";
+                        if (indent >= 0 && !first) oss << ",\n";
+                        if (indent >= 0) oss << next_indent_str;
+                        oss << "\"" << key << "\":";
+                        if (indent >= 0) oss << " ";
+                        oss << val.dump_impl(indent, current_indent + (indent > 0 ? indent : 0));
+                        first = false;
+                    }
                 }
                 if (!m_object.empty() && indent >= 0) oss << "\n" << indent_str;
                 oss << "}";
@@ -463,37 +639,55 @@ private:
     }
 };
 
-// Specializations
+// Template specializations for get<T>()
 template<>
 inline std::string json::get<std::string>() const {
-    if (m_type == string) return m_string;
-    if (m_type == number) return std::to_string(static_cast<long long>(m_number));
-    if (m_type == boolean) return m_bool ? "true" : "false";
-    if (m_type == null) return "null";
+    if (m_type == value_t::string) return m_string;
+    if (m_type == value_t::number) return std::to_string(static_cast<long long>(m_number));
+    if (m_type == value_t::boolean) return m_bool ? "true" : "false";
+    if (m_type == value_t::null) return "null";
     throw std::runtime_error("Cannot get string from this JSON type");
 }
 
 template<>
 inline int json::get<int>() const {
-    if (m_type == number) return static_cast<int>(m_number);
+    if (m_type == value_t::number) return static_cast<int>(m_number);
     throw std::runtime_error("Cannot get int from this JSON type");
 }
 
 template<>
 inline double json::get<double>() const {
-    if (m_type == number) return m_number;
+    if (m_type == value_t::number) return m_number;
     throw std::runtime_error("Cannot get double from this JSON type");
 }
 
 template<>
 inline bool json::get<bool>() const {
-    if (m_type == boolean) return m_bool;
+    if (m_type == value_t::boolean) return m_bool;
     throw std::runtime_error("Cannot get bool from this JSON type");
 }
 
 template<>
+inline unsigned long long json::get<unsigned long long>() const {
+    if (m_type == value_t::number) return static_cast<unsigned long long>(m_number);
+    throw std::runtime_error("Cannot get unsigned long long from this JSON type");
+}
+
+template<>
+inline long long json::get<long long>() const {
+    if (m_type == value_t::number) return static_cast<long long>(m_number);
+    throw std::runtime_error("Cannot get long long from this JSON type");
+}
+
+template<>
+inline float json::get<float>() const {
+    if (m_type == value_t::number) return static_cast<float>(m_number);
+    throw std::runtime_error("Cannot get float from this JSON type");
+}
+
+template<>
 inline std::vector<json> json::get<std::vector<json>>() const {
-    if (m_type == array) return m_array;
+    if (m_type == value_t::array) return m_array;
     throw std::runtime_error("Cannot get array from this JSON type");
 }
 

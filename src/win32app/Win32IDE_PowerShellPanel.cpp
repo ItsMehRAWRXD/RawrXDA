@@ -223,19 +223,23 @@ void Win32IDE::initializePowerShellPanel() {
     
     // Set up callbacks
     m_dedicatedPowerShellTerminal->onOutput = [this](const std::string& output) {
+        if (isShuttingDown()) return;
         appendPowerShellOutput(output, RGB(200, 200, 200));
     };
     
     m_dedicatedPowerShellTerminal->onError = [this](const std::string& error) {
+        if (isShuttingDown()) return;
         appendPowerShellOutput("[ERROR] " + error, RGB(255, 100, 100));
     };
     
     m_dedicatedPowerShellTerminal->onStarted = [this]() {
+        if (isShuttingDown()) return;
         m_powerShellSessionActive = true;
         updatePowerShellStatus();
     };
     
     m_dedicatedPowerShellTerminal->onFinished = [this](int exitCode) {
+        if (isShuttingDown()) return;
         m_powerShellSessionActive = false;
         appendPowerShellOutput("\n[PowerShell session ended with code: " + std::to_string(exitCode) + "]\n", RGB(255, 255, 0));
         updatePowerShellStatus();

@@ -96,6 +96,8 @@ void Win32IDE::onAgentStartLoop() {
     appendToOutput("🚀 Starting Agent Loop: " + promptStr + "\n", "Output", OutputSeverity::Info);
     
     std::thread([this, promptStr]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         if (m_agenticBridge->StartAgentLoop(promptStr, 10)) {
             LOG_INFO("Agent loop completed successfully");
         } else {
@@ -132,6 +134,8 @@ void Win32IDE::onAgentExecuteCommand() {
         
         // Execute in background
         std::thread([this, command]() {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled) return;
             AgentResponse response = m_agenticBridge->ExecuteAgentCommand(command);
 
             // Phase 4B: Choke Point 3 — hookAgentCommand after direct command execution

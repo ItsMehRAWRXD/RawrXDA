@@ -50,6 +50,36 @@ static const char* kWindowClassName = "RawrXD_IDE_MainWindow";
 // Destructor
 // ============================================================================
 Win32IDE::~Win32IDE() {
+    // Ensure shutdown flag is set (may already be from onDestroy)
+    m_shuttingDown.store(true, std::memory_order_release);
+
+    // If onDestroy wasn't called (abnormal exit), do the thread wait here
+    if (m_activeDetachedThreads.load(std::memory_order_acquire) > 0) {
+        for (int i = 0; i < 60 && m_activeDetachedThreads.load(std::memory_order_acquire) > 0; ++i) {
+            Sleep(50);
+        }
+    }
+
+    // Explicitly destroy objects that detached threads reference BEFORE
+    // implicit member destruction order (which is reverse-declaration-order
+    // and unpredictable for crash safety).
+    m_subAgentManager.reset();
+    m_multiResponseEngine.reset();
+    m_agenticBridge.reset();
+    m_agent.reset();
+    m_nativeEngine.reset();
+    m_modelResolver.reset();
+    m_ggufLoader.reset();
+    m_extensionLoader.reset();
+    m_lspServer.reset();
+    m_mcpServer.reset();
+    m_renderer.reset();
+    m_autonomyManager.reset();
+
+    // Null out raw pointers to externally-owned objects (deleted in main)
+    m_engineManager = nullptr;
+    m_codexUltimate = nullptr;
+
     if (m_backgroundBrush) {
         DeleteObject(m_backgroundBrush);
         m_backgroundBrush = nullptr;
@@ -58,8 +88,6 @@ Win32IDE::~Win32IDE() {
         DeleteObject(m_editorFont);
         m_editorFont = nullptr;
     }
-    // AgenticBridge and AutonomyManager are unique_ptrs, auto-destroyed
-    // Renderer is unique_ptr, auto-destroyed
 }
 
 // ============================================================================
@@ -85,12 +113,49 @@ LRESULT CALLBACK Win32IDE::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
 }
 
 // ============================================================================
+// SEH wrappers — must be standalone functions without C++ objects (MSVC C2712)
+typedef void (*OnCreateFn)(void* self, HWND hwnd);
+typedef void (*DeferredInitFn)(void* self);
+
+static void sehCallOnCreate(OnCreateFn fn, void* self, HWND hwnd) {
+    __try {
+        fn(self, hwnd);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        char crashMsg[256];
+        snprintf(crashMsg, sizeof(crashMsg),
+            "[RawrXD] SEH exception 0x%08lX caught in onCreate — window will still display.\n"
+            "Some panels may be missing.", GetExceptionCode());
+        OutputDebugStringA(crashMsg);
+        MessageBoxA(hwnd, crashMsg, "RawrXD IDE - Startup Warning", MB_OK | MB_ICONWARNING);
+    }
+}
+
+static void onCreateTrampoline(void* self, HWND hwnd) {
+    static_cast<Win32IDE*>(self)->onCreate(hwnd);
+}
+
+static void sehCallDeferredInit(DeferredInitFn fn, void* self) {
+    __try {
+        fn(self);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        char crashMsg[256];
+        snprintf(crashMsg, sizeof(crashMsg),
+            "[RawrXD] SEH exception 0x%08lX in deferredHeavyInit — non-fatal.\n",
+            GetExceptionCode());
+        OutputDebugStringA(crashMsg);
+    }
+}
+
+static void deferredInitTrampoline(void* self) {
+    static_cast<Win32IDE*>(self)->deferredHeavyInit();
+}
+
 // handleMessage - Instance message handler
 // ============================================================================
 LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CREATE:
-        onCreate(hwnd);
+        sehCallOnCreate(onCreateTrampoline, this, hwnd);
         return 0;
 
     case WM_SIZE: {
@@ -302,7 +367,7 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     default:
         // Handle deferred heavy initialization (posted from onCreate)
         if (uMsg == WM_APP + 100) {
-            deferredHeavyInit();
+            sehCallDeferredInit(deferredInitTrampoline, this);
             return 0;
         }
         // Handle background init completion — refresh UI
@@ -500,6 +565,8 @@ int Win32IDE::runMessageLoop() {
             if (ctrl && msg.wParam == 'F') { routeCommand(IDM_EDIT_FIND); continue; }
             if (ctrl && msg.wParam == 'H') { routeCommand(IDM_EDIT_REPLACE); continue; }
             if (ctrl && msg.wParam == 'B') { toggleSidebar(); continue; }
+            // Ctrl+Shift+A → Audit Dashboard
+            if (ctrl && shift && msg.wParam == 'A') { routeCommand(IDM_AUDIT_SHOW_DASHBOARD); continue; }
             // Ctrl+, → Settings dialog
             if (ctrl && msg.wParam == VK_OEM_COMMA) { showSettingsDialog(); continue; }
         }
@@ -786,39 +853,45 @@ void Win32IDE::onCreate(HWND hwnd) {
     InitCommonControlsEx(&icex);
 
     // ================================================================
-    // Create UI components one by one with MessageBox diagnostics
-    // (C++ try/catch can't catch SEH crashes on MinGW)
+    // Create UI components — SEH-safe breadcrumb trail for diagnosis
+    // Each step is wrapped so a crash pinpoints the exact function.
     // ================================================================
+    OutputDebugStringA("[onCreate] createMenuBar...\n");
     createMenuBar(hwnd);
+    OutputDebugStringA("[onCreate] createToolbar...\n");
     createToolbar(hwnd);
 
-    // Full VS Code-style sidebar with Activity Bar + Explorer/Search/SCM/Debug/Extensions
+    OutputDebugStringA("[onCreate] createActivityBar...\n");
     createActivityBar(hwnd);
+    OutputDebugStringA("[onCreate] createPrimarySidebar...\n");
     createPrimarySidebar(hwnd);
 
+    OutputDebugStringA("[onCreate] createTabBar...\n");
     createTabBar(hwnd);
+    OutputDebugStringA("[onCreate] createLineNumberGutter...\n");
     createLineNumberGutter(hwnd);
+    OutputDebugStringA("[onCreate] createEditor...\n");
     createEditor(hwnd);
+    OutputDebugStringA("[onCreate] createTerminal...\n");
     createTerminal(hwnd);
+    OutputDebugStringA("[onCreate] createStatusBar...\n");
     createStatusBar(hwnd);
 
-    // ================================================================
-    // Create bottom panels — these were previously missing, causing
-    // the output and terminal panes to be invisible (flags=true but
-    // HWNDs were nullptr).
-    // ================================================================
+    OutputDebugStringA("[onCreate] createOutputTabs...\n");
     createOutputTabs();
+    OutputDebugStringA("[onCreate] createPowerShellPanel...\n");
     createPowerShellPanel();
 
     LOG_INFO("onCreate complete — all panels created");
+    OutputDebugStringA("[onCreate] all panels created OK\n");
 
-    // Initialize syntax coloring engine
+    OutputDebugStringA("[onCreate] initSyntaxColorizer...\n");
     initSyntaxColorizer();
 
-    // Initialize ghost text / inline completions engine
+    OutputDebugStringA("[onCreate] initGhostText...\n");
     initGhostText();
 
-    // Restore previous session (tabs, cursor, panel state)
+    OutputDebugStringA("[onCreate] restoreSession...\n");
     restoreSession();
 
     {
@@ -860,12 +933,15 @@ void Win32IDE::deferredHeavyInit() {
     // Run heavy initialization on a background thread so the UI stays responsive.
     // Any UI updates from here must use PostMessage back to the main thread.
     std::thread([this]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         // Initialize logger
         try {
             IDELogger::getInstance().initialize("C:\\RawrXD_IDE.log");
         } catch (...) {
             OutputDebugStringA("ERROR: Logger init failed\n");
         }
+        if (isShuttingDown()) return;
 
         // Initialize Native CPU Inference Engine
         try {
@@ -878,6 +954,7 @@ void Win32IDE::deferredHeavyInit() {
             m_nativeEngineLoaded = false;
             OutputDebugStringA("ERROR: CPUInferenceEngine init failed\n");
         }
+        if (isShuttingDown()) return;
 
         // Initialize DirectX renderer (needs to be on UI thread ideally, but creation is OK)
         try {
@@ -923,6 +1000,7 @@ void Win32IDE::deferredHeavyInit() {
         } catch (...) {
             OutputDebugStringA("ERROR: ExtensionLoader init failed\n");
         }
+        if (isShuttingDown()) return;
 
         // Initialise the agentic bridge (needs m_hwndMain, which is set)
         try {
@@ -952,6 +1030,7 @@ void Win32IDE::deferredHeavyInit() {
         } catch (...) {
             OutputDebugStringA("ERROR: loadSettings/applySettings failed\n");
         }
+        if (isShuttingDown()) return;
 
         // Initialize Agent History (append-only JSONL event log)
         try {
@@ -1075,10 +1154,19 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initVSCodeExtensionAPI failed\n");
         }
 
+        if (isShuttingDown()) return;
+
+        // Initialize Phase 43: Plugin System (Native Win32 DLL loading)
+        try {
+            initPluginSystem();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initPluginSystem failed\n");
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
-        if (m_hwndMain) {
+        if (m_hwndMain && !isShuttingDown()) {
             PostMessage(m_hwndMain, WM_APP + 101, 0, 0);
         }
     }).detach();
@@ -1089,6 +1177,22 @@ void Win32IDE::deferredHeavyInit() {
 // ============================================================================
 void Win32IDE::onDestroy() {
     LOG_INFO("Win32IDE::onDestroy - shutting down");
+
+    // Signal ALL detached threads to stop touching 'this'
+    m_shuttingDown.store(true, std::memory_order_release);
+
+    // Stop any in-progress inference immediately
+    m_inferenceStopRequested = true;
+    m_planExecutionCancelled.store(true);
+
+    // Wait for all detached threads to notice the flag and exit (up to 3s).
+    for (int i = 0; i < 60 && m_activeDetachedThreads.load(std::memory_order_acquire) > 0; ++i) {
+        Sleep(50);
+    }
+    if (m_activeDetachedThreads.load(std::memory_order_acquire) > 0) {
+        OutputDebugStringA("onDestroy: WARNING — detached threads still active after 3s\n");
+        Sleep(200); // Extra grace
+    }
 
     // Shutdown Phase 29+36: VS Code Extension API + QuickJS VSIX Host
     shutdownVSCodeExtensionAPI();
@@ -1128,6 +1232,36 @@ void Win32IDE::onDestroy() {
 
     // Shutdown backend manager (save configs)
     shutdownBackendManager();
+
+    // Shutdown Phase 43: Plugin System (unload all DLLs)
+    shutdownPlugins();
+
+    // ========================================================================
+    // CRITICAL: Stop all terminals BEFORE saving state / destroying objects.
+    // Terminal threads call onOutput/onError/onFinished callbacks that capture
+    // [this]. If these fire during destructor member teardown → 0xC0000005.
+    // ========================================================================
+    // Stop dedicated PowerShell terminal first
+    if (m_dedicatedPowerShellTerminal) {
+        m_dedicatedPowerShellTerminal->onOutput = nullptr;
+        m_dedicatedPowerShellTerminal->onError = nullptr;
+        m_dedicatedPowerShellTerminal->onStarted = nullptr;
+        m_dedicatedPowerShellTerminal->onFinished = nullptr;
+        m_dedicatedPowerShellTerminal->stop();
+        m_dedicatedPowerShellTerminal.reset();
+    }
+    // Stop all terminal panes — clear callbacks first to prevent use-after-free
+    for (auto& pane : m_terminalPanes) {
+        if (pane.manager) {
+            pane.manager->onOutput = nullptr;
+            pane.manager->onError = nullptr;
+            pane.manager->onStarted = nullptr;
+            pane.manager->onFinished = nullptr;
+            pane.manager->stop();
+            pane.manager.reset();
+        }
+    }
+    m_terminalPanes.clear();
 
     // Save settings to disk
     try { saveSettings(); } catch (...) {}
@@ -1192,6 +1326,31 @@ void Win32IDE::onDestroy() {
     } catch (const std::exception& e) {
         LOG_ERROR("Failed to save session state: " + std::string(e.what()));
     }
+
+    // ========================================================================
+    // PHASE 2: Tear down shared objects that detached threads may reference.
+    // By doing this here (before the destructor), we ensure that even if a
+    // lingering detached thread survives the 3s wait, it hits the shutdown
+    // flag check before touching any of these objects.
+    // ========================================================================
+    try { m_subAgentManager.reset(); } catch (...) {}
+    try { m_multiResponseEngine.reset(); } catch (...) {}
+    try { m_agenticBridge.reset(); } catch (...) {}
+    try { m_agent.reset(); } catch (...) {}
+    try { m_nativeEngine.reset(); } catch (...) {}
+    try { m_modelResolver.reset(); } catch (...) {}
+    try { m_ggufLoader.reset(); } catch (...) {}
+    try { m_extensionLoader.reset(); } catch (...) {}
+    try { m_pluginLoader.reset(); } catch (...) {}
+    try { m_lspServer.reset(); } catch (...) {}
+    try { m_mcpServer.reset(); } catch (...) {}
+    try { m_autonomyManager.reset(); } catch (...) {}
+
+    // Null out raw pointers to externally-owned objects
+    m_engineManager = nullptr;
+    m_codexUltimate = nullptr;
+
+    OutputDebugStringA("onDestroy: all resources released\n");
 }
 
 // ============================================================================

@@ -798,8 +798,11 @@ void Win32IDE::replaySession(const std::string& sessionId) {
 
     std::thread replayThread([this, sid, replayEvents = std::move(replayEvents),
                               totalReplayable]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         int stepIdx = 0;
         for (const auto& ev : replayEvents) {
+            if (isShuttingDown()) break;
             if (ev.type != AgentEventType::AgentStarted || ev.prompt.empty()) continue;
 
             stepIdx++;
@@ -822,12 +825,15 @@ void Win32IDE::replaySession(const std::string& sessionId) {
             }
 
             // Small delay between replay steps to avoid overwhelming the model
+            if (isShuttingDown()) break;
             Sleep(500);
         }
 
         // Post completion
-        PostMessageA(m_hwndMain, WM_AGENT_HISTORY_REPLAY_DONE,
-                     (WPARAM)totalReplayable, (LPARAM)totalReplayable);
+        if (!isShuttingDown()) {
+            PostMessageA(m_hwndMain, WM_AGENT_HISTORY_REPLAY_DONE,
+                         (WPARAM)totalReplayable, (LPARAM)totalReplayable);
+        }
     });
 
     replayThread.detach();

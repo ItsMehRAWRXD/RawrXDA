@@ -33,10 +33,12 @@ bool Win32TerminalManager::start(ShellType shell)
         return false;
     }
 
-    // Ensure write handles are not inherited
-    SetHandleInformation(m_hStdOutWrite, HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation(m_hStdErrWrite, HANDLE_FLAG_INHERIT, 0);
-    SetHandleInformation(m_hStdInRead, HANDLE_FLAG_INHERIT, 0);
+    // Ensure the PARENT's pipe ends are NOT inherited by the child process.
+    // The child inherits: m_hStdInRead (its stdin), m_hStdOutWrite (its stdout), m_hStdErrWrite (its stderr)
+    // The parent keeps: m_hStdInWrite (write to child), m_hStdOutRead (read child out), m_hStdErrRead (read child err)
+    SetHandleInformation(m_hStdOutRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(m_hStdErrRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(m_hStdInWrite, HANDLE_FLAG_INHERIT, 0);
 
     // Set up process startup info
     STARTUPINFOA si;
@@ -50,10 +52,18 @@ bool Win32TerminalManager::start(ShellType shell)
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
 
-    // Choose shell
+    // Choose shell — try pwsh (PS7) first, fall back to powershell.exe (PS5)
     std::string cmd;
     if (shell == PowerShell) {
-        cmd = "powershell.exe -NoExit -Command -";
+        // -NoExit keeps session alive, -NoLogo suppresses banner
+        // -ExecutionPolicy Bypass prevents script restrictions
+        // Try pwsh.exe first (PowerShell 7), fall back to powershell.exe
+        char pwshPath[MAX_PATH];
+        if (SearchPathA(nullptr, "pwsh.exe", nullptr, MAX_PATH, pwshPath, nullptr)) {
+            cmd = "pwsh.exe -NoExit -NoLogo -NoProfile";
+        } else {
+            cmd = "powershell.exe -NoExit -NoLogo -NoProfile";
+        }
     } else {
         cmd = "cmd.exe";
     }
@@ -91,8 +101,16 @@ void Win32TerminalManager::stop()
 {
     if (m_running) {
         m_running = false;
+
+        // Null callbacks BEFORE terminating process to prevent
+        // output/error/monitor threads from calling into destroyed owners
+        onOutput = nullptr;
+        onError = nullptr;
+        onStarted = nullptr;
+        onFinished = nullptr;
+
         TerminateProcess(m_hProcess, 0);
-        WaitForSingleObject(m_hProcess, INFINITE);
+        WaitForSingleObject(m_hProcess, 5000); // 5s max instead of INFINITE
 
         if (m_outputThread.joinable()) m_outputThread.join();
         if (m_errorThread.joinable()) m_errorThread.join();

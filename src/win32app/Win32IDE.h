@@ -34,6 +34,7 @@
 #include "../modules/engine_manager.h"
 #include "../modules/codex_ultimate.h"
 #include "../../include/editor_engine.h"
+#include "../../include/plugin_system/win32_plugin_loader.h"
 
 #include "../modules/ExtensionLoader.hpp"
 #include "../modules/vscode_extension_api.h"
@@ -236,6 +237,17 @@ namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
 #define IDM_ROUTER_SIMULATE         5079
 #define IDM_ROUTER_SIMULATE_LAST    5080
 #define IDM_ROUTER_SHOW_COST_STATS  5081
+
+// Plugin System commands (5200+ range — routed via handleToolsCommand)
+#define IDM_PLUGIN_SHOW_PANEL       5200
+#define IDM_PLUGIN_LOAD             5201
+#define IDM_PLUGIN_UNLOAD           5202
+#define IDM_PLUGIN_UNLOAD_ALL       5203
+#define IDM_PLUGIN_REFRESH          5204
+#define IDM_PLUGIN_SCAN_DIR         5205
+#define IDM_PLUGIN_SHOW_STATUS      5206
+#define IDM_PLUGIN_TOGGLE_HOTLOAD   5207
+#define IDM_PLUGIN_CONFIGURE        5208
 
 struct CodeSnippet {
     std::string name;
@@ -642,6 +654,8 @@ class Win32IDE
 {
     friend class AgenticBridge;
     friend class vscode::VSCodeExtensionAPI;
+    friend void onCreateTrampoline(void* self, HWND hwnd);
+    friend void deferredInitTrampoline(void* self);
 
 public:
     enum class OutputSeverity {
@@ -708,6 +722,8 @@ public:
     void onAIContextSize(int sizeEnum);
     
     // Memory Plugin System (Native VSIX Style)
+    // Note: loadMemoryPlugin is the legacy single-DLL loader.
+    // For the full plugin system, use m_pluginLoader (Phase 43).
     void loadMemoryPlugin(const std::string& path);
 
     // ========================================================================
@@ -1677,6 +1693,31 @@ private:
     void loadExtension(const std::string& name);
     void unloadExtension(const std::string& name);
     void showExtensionHelp(const std::string& name);
+
+    // ========================================================================
+    // PLUGIN SYSTEM — Phase 43: Native Win32 plugin loading (C ABI)
+    // Hot-load DLLs with plugin_init/plugin_cleanup lifecycle.
+    // Hooks: onFileSave, onChatMessage, onCommand, onModelLoad.
+    // Config-gated hot-loading via IDM_PLUGIN_TOGGLE_HOTLOAD.
+    // ========================================================================
+    std::unique_ptr<RawrXD::Win32PluginLoader> m_pluginLoader;
+    std::string m_pluginDirectory;  // Default plugin scan directory
+
+    // Plugin system lifecycle
+    void initPluginSystem();
+    void shutdownPlugins();
+
+    // Plugin UI & command handlers
+    void showPluginPanel();
+    void onPluginLoad();
+    void onPluginUnload();
+    void onPluginUnloadAll();
+    void onPluginRefresh();
+    void onPluginScanDir();
+    void onPluginShowStatus();
+    void onPluginToggleHotLoad();
+    void onPluginConfigure();
+    bool handlePluginCommand(int id);
 
     // File Explorer Sidebar - tree view items
     HWND m_hwndFileTree;
@@ -3048,6 +3089,26 @@ private:
     void toggleLocalServer();
     std::string getLocalServerStatus() const;
 
+    // Global shutdown flag — checked by detached threads before accessing members
+    std::atomic<bool> m_shuttingDown{false};
+    bool isShuttingDown() const { return m_shuttingDown.load(std::memory_order_acquire); }
+
+    // Active detached-thread counter — destructor waits for this to reach 0
+    std::atomic<int> m_activeDetachedThreads{0};
+
+    // RAII guard: increments on construction, decrements on destruction.
+    // If IDE is shutting down at construction time, sets 'cancelled' flag.
+    struct DetachedThreadGuard {
+        std::atomic<int>& counter;
+        bool cancelled;
+        DetachedThreadGuard(std::atomic<int>& c, const std::atomic<bool>& shutting)
+            : counter(c), cancelled(shutting.load(std::memory_order_acquire))
+        { counter.fetch_add(1, std::memory_order_acq_rel); }
+        ~DetachedThreadGuard() { counter.fetch_sub(1, std::memory_order_acq_rel); }
+        DetachedThreadGuard(const DetachedThreadGuard&) = delete;
+        DetachedThreadGuard& operator=(const DetachedThreadGuard&) = delete;
+    };
+
     // Local server state
     std::atomic<bool> m_localServerRunning{false};
     std::thread m_localServerThread;
@@ -3689,6 +3750,20 @@ private:
 
     // Phase 11 state
     bool m_phase11Initialized = false;
+
+    // =========================================================================
+    //         PHASE 41 — Dual-Agent Orchestrator (Architect + Coder)
+    // =========================================================================
+    // HTTP endpoint handlers for dual-agent swarm backed by MASM bridge.
+    void handleDualAgentInitEndpoint(SOCKET client, const std::string& body);
+    void handleDualAgentShutdownEndpoint(SOCKET client);
+    void handleDualAgentStatusEndpoint(SOCKET client);
+    void handleDualAgentHandoffEndpoint(SOCKET client, const std::string& body);
+    void handleDualAgentSubmitEndpoint(SOCKET client, const std::string& body);
+    void handlePhase41StatusEndpoint(SOCKET client);
+
+    // Phase 41 state
+    bool m_dualAgentInitialized = false;
 
     // =========================================================================
     //              PHASE 12 — Native Debugger Engine

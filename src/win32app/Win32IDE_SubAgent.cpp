@@ -243,9 +243,12 @@ void Win32IDE::onSubAgentChain() {
     // Execute chain in background thread to avoid blocking UI
     std::string input = editorContent.substr(0, 2000); // Cap input size
     std::thread([this, promptTemplates, input]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         std::string result = m_subAgentManager->executeChain("win32ide", promptTemplates, input);
 
         // Post result back to UI thread
+        if (isShuttingDown()) return;
         std::string output = "🔗 Chain complete:\n" + result.substr(0, 4000) + "\n";
         PostMessage(m_hwndMain, WM_AGENT_OUTPUT_SAFE, 0, 
                    reinterpret_cast<LPARAM>(new std::string(output)));
@@ -291,8 +294,11 @@ void Win32IDE::onSubAgentSwarm() {
     showSubAgentProgress("HexMag Swarm", static_cast<int>(prompts.size()));
 
     std::thread([this, prompts, config]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         std::string result = m_subAgentManager->executeSwarm("win32ide", prompts, config);
 
+        if (isShuttingDown()) return;
         hideSubAgentProgress();
 
         std::string output = "🐝 Swarm complete (merged result):\n" + result.substr(0, 4000) + "\n";
@@ -452,7 +458,16 @@ void Win32IDE::killTerminalWithTimeout(int paneId, int timeoutMs) {
 
     // Launch a background thread that waits for the timeout, then kills
     std::thread([this, paneId, timeoutMs]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMs));
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
+        // Sleep in small increments so we can check shutdown
+        int remaining = timeoutMs;
+        while (remaining > 0 && !isShuttingDown()) {
+            int chunk = (remaining > 100) ? 100 : remaining;
+            std::this_thread::sleep_for(std::chrono::milliseconds(chunk));
+            remaining -= chunk;
+        }
+        if (isShuttingDown()) return;
 
         // Post kill to UI thread
         PostMessage(m_hwndMain, WM_COMMAND, 

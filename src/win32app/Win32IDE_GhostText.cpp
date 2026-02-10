@@ -137,9 +137,12 @@ void Win32IDE::onGhostTextTimer() {
     int cursorCopy = cursorPos;
 
     std::thread([this, contextCopy, langCopy, cursorCopy]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         std::string completion = requestGhostTextCompletion(contextCopy, langCopy);
 
         // Post result to UI thread
+        if (isShuttingDown()) return;
         if (!completion.empty()) {
             char* heapText = _strdup(completion.c_str());
             PostMessageA(m_hwndMain, WM_GHOST_TEXT_READY, (WPARAM)cursorCopy, (LPARAM)heapText);

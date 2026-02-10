@@ -56,6 +56,9 @@ struct HotpatchEvent {
     uint64_t    timestamp;      // GetTickCount64() or RDTSC
     uint64_t    sequenceId;
     const char* detail;
+    const char* layerName;      // "memory", "byte", or "server"
+    const char* patchName;      // Human-readable patch identifier
+    bool        success;        // Whether the operation succeeded
 };
 
 // ---------------------------------------------------------------------------

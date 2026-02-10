@@ -23824,6 +23824,30 @@
       }
     });
   </script>
+
+  <!-- Defensive check: detect truncated script blocks (e.g. from partial HTTP send) -->
+  <script>
+    (function () {
+      var criticalFns = [
+        'switchTerminalMode', 'handleTerminal', 'showExtensionsPanel',
+        'checkServerStatus', 'showDebug', 'showEndpoints', 'showFailures',
+        'showAgentDashboard', 'showPerfPanel', 'showSecurityPanel',
+        'showToolsPanel', 'showEnginePanel', 'showMetricsPanel'
+      ];
+      var missing = [];
+      for (var i = 0; i < criticalFns.length; i++) {
+        if (typeof window[criticalFns[i]] !== 'function') missing.push(criticalFns[i]);
+      }
+      if (missing.length > 0) {
+        console.error('[RawrXD] CRITICAL: ' + missing.length + ' functions missing — HTML was likely truncated during transfer. Missing: ' + missing.join(', '));
+        var banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#d32f2f;color:#fff;padding:12px 20px;font:bold 14px/1.4 monospace;text-align:center;cursor:pointer;';
+        banner.textContent = '\u26A0 RawrXD: Page was truncated during transfer (' + missing.length + ' functions missing). Click to reload.';
+        banner.onclick = function () { location.reload(true); };
+        document.body.appendChild(banner);
+      }
+    })();
+  </script>
 </body>
 
 </html>

@@ -158,6 +158,28 @@ static std::string buildHttpResponse(int status, const std::string& body,
     return oss.str();
 }
 
+// Reliable send — loops until all bytes are transmitted or an error occurs.
+// A single send() call may transmit fewer bytes than requested (especially
+// for large payloads like the ~1 MB ide_chatbot.html).  Without this loop the
+// browser receives a truncated HTML file whose final </script> tag is missing,
+// which causes every inline function to be undefined (ReferenceError).
+static bool sendAll(LocalServerSocket client, const char* data, int len) {
+    int totalSent = 0;
+    while (totalSent < len) {
+        int sent = send(client, data + totalSent, len - totalSent, 0);
+        if (sent == SOCKET_ERROR || sent == 0) {
+            return false;   // connection lost — caller can log / clean up
+        }
+        totalSent += sent;
+    }
+    return true;
+}
+
+// Overload accepting std::string for convenience
+static bool sendAll(LocalServerSocket client, const std::string& s) {
+    return sendAll(client, s.c_str(), (int)s.size());
+}
+
 static void sendSSEHeaders(LocalServerSocket client) {
     std::string headers =
         "HTTP/1.1 200 OK\r\n"
@@ -168,7 +190,7 @@ static void sendSSEHeaders(LocalServerSocket client) {
         "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
         "Access-Control-Allow-Headers: Content-Type, Authorization\r\n"
         "\r\n";
-    send(client, headers.c_str(), (int)headers.size(), 0);
+    sendAll(client, headers);
 }
 
 // Convenience wrapper: returns extracted string directly (empty if not found)
@@ -257,6 +279,8 @@ void Win32IDE::startLocalServer() {
 
             // Handle client in a detached thread
             std::thread([this, client]() {
+                DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+                if (_guard.cancelled) { closesocket(client); return; }
                 handleLocalServerClient(client);
             }).detach();
         }
@@ -292,6 +316,9 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
     std::string data;
     char buffer[8192];
     int received = 0;
+
+    // Early exit if IDE is shutting down
+    if (isShuttingDown()) { closesocket(client); return; }
 
     while ((received = recv(client, buffer, sizeof(buffer), 0)) > 0) {
         data.append(buffer, buffer + received);
@@ -723,6 +750,41 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         return;
     }
     // ====================================================================
+    // PHASE 41 — DUAL-AGENT ORCHESTRATOR HTTP ENDPOINTS
+    // ====================================================================
+    // Architect (70B-800B reasoning) + Coder (7B-13B fast) workflow
+    // Backed by RawrXD_DualAgent_Orchestrator.asm via model_bridge_x64.asm
+    else if (method == "POST" && path == "/api/agent/dual/init") {
+        handleDualAgentInitEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/agent/dual/shutdown") {
+        handleDualAgentShutdownEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/agent/dual/status") {
+        handleDualAgentStatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/agent/dual/handoff") {
+        handleDualAgentHandoffEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "POST" && path == "/api/agent/dual/submit") {
+        handleDualAgentSubmitEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
+    else if (method == "GET" && path == "/api/phase41/status") {
+        handlePhase41StatusEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ====================================================================
     // PHASE 12 — NATIVE DEBUGGER ENGINE HTTP ENDPOINTS
     // ====================================================================
     // GET endpoints
@@ -959,7 +1021,7 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
             LocalServerUtil::escapeJson(path) + "\"}");
     }
 
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
     closesocket(client);
 }
 
@@ -989,7 +1051,7 @@ void Win32IDE::handleOllamaApiTags(SOCKET client) {
     j << "]}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // ============================================================================
@@ -1028,7 +1090,7 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
         if (isError) {
             std::string json = "{\"error\":\"" + LocalServerUtil::escapeJson(result) + "\"}";
             std::string resp = LocalServerUtil::buildHttpResponse(502, json);
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
 
@@ -1044,16 +1106,16 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
             std::string event = "{\"model\":\"" + LocalServerUtil::escapeJson(backendName)
                 + "\",\"response\":\"" + LocalServerUtil::escapeJson(result)
                 + "\",\"done\":false}\n";
-            send(client, event.c_str(), (int)event.size(), 0);
+            LocalServerUtil::sendAll(client, event);
             std::string doneEvent = "{\"model\":\"" + LocalServerUtil::escapeJson(backendName)
                 + "\",\"response\":\"\",\"done\":true}\n";
-            send(client, doneEvent.c_str(), (int)doneEvent.size(), 0);
+            LocalServerUtil::sendAll(client, doneEvent);
         } else {
             std::string json = "{\"model\":\"" + LocalServerUtil::escapeJson(backendName)
                 + "\",\"response\":\"" + LocalServerUtil::escapeJson(result)
                 + "\",\"done\":true}";
             std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
         }
         return;
     }
@@ -1062,7 +1124,7 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
     if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"no model loaded\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1078,12 +1140,12 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
 
             std::string event = "{\"model\":\"rawrxd\",\"response\":\""
                 + LocalServerUtil::escapeJson(text) + "\",\"done\":false}\n";
-            int r = send(client, event.c_str(), (int)event.size(), 0);
-            if (r < 0) return;
+            bool r = LocalServerUtil::sendAll(client, event);
+            if (!r) return;
         }
 
         std::string doneEvent = "{\"model\":\"rawrxd\",\"response\":\"\",\"done\":true}\n";
-        send(client, doneEvent.c_str(), (int)doneEvent.size(), 0);
+        LocalServerUtil::sendAll(client, doneEvent);
     } else {
         std::string fullResponse = m_nativeEngine->Detokenize(generated);
         m_localServerStats.totalTokens += (int)generated.size();
@@ -1092,7 +1154,7 @@ void Win32IDE::handleOllamaApiGenerate(SOCKET client, const std::string& body) {
             + LocalServerUtil::escapeJson(fullResponse)
             + "\",\"done\":true}";
         std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
     }
 }
 
@@ -1127,7 +1189,7 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
     if (allContent.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":{\"message\":\"No messages provided\"}}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1155,7 +1217,7 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
             std::string errJson = "{\"error\":{\"message\":\""
                 + LocalServerUtil::escapeJson(result) + "\"}}";
             std::string resp = LocalServerUtil::buildHttpResponse(502, errJson);
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
 
@@ -1169,9 +1231,9 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
                   << ",\"choices\":[{\"index\":0,\"delta\":{\"content\":\""
                   << LocalServerUtil::escapeJson(result) << "\"}}]}\n\n";
             std::string eventStr = event.str();
-            send(client, eventStr.c_str(), (int)eventStr.size(), 0);
+            LocalServerUtil::sendAll(client, eventStr);
             std::string doneStr = "data: [DONE]\n\n";
-            send(client, doneStr.c_str(), (int)doneStr.size(), 0);
+            LocalServerUtil::sendAll(client, doneStr);
         } else {
             std::ostringstream j;
             j << "{\"id\":\"" << requestId
@@ -1183,7 +1245,7 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
               << ",\"completion_tokens\":0"
               << ",\"total_tokens\":0}}";
             std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
         }
         return;
     }
@@ -1192,7 +1254,7 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
     if (!m_nativeEngine || !m_nativeEngine->IsModelLoaded()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":{\"message\":\"No model loaded\"}}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1213,12 +1275,12 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
                   << LocalServerUtil::escapeJson(text) << "\"}}]}\n\n";
 
             std::string eventStr = event.str();
-            int r = send(client, eventStr.c_str(), (int)eventStr.size(), 0);
-            if (r < 0) return;
+            bool r = LocalServerUtil::sendAll(client, eventStr);
+            if (!r) return;
         }
 
         std::string doneStr = "data: [DONE]\n\n";
-        send(client, doneStr.c_str(), (int)doneStr.size(), 0);
+        LocalServerUtil::sendAll(client, doneStr);
     } else {
         std::string fullResponse = m_nativeEngine->Detokenize(generated);
         m_localServerStats.totalTokens += (int)generated.size();
@@ -1234,7 +1296,7 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
           << ",\"total_tokens\":" << (tokens.size() + generated.size()) << "}}";
 
         std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
     }
 }
 
@@ -1334,7 +1396,7 @@ void Win32IDE::handleModelsEndpoint(SOCKET client) {
     j << "]}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // ============================================================================
@@ -1354,7 +1416,7 @@ void Win32IDE::handleAskEndpoint(SOCKET client, const std::string& body) {
     if (question.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"No question provided\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1383,7 +1445,7 @@ void Win32IDE::handleAskEndpoint(SOCKET client, const std::string& body) {
             + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendStr)
             + "\",\"error\":true}";
         std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1391,7 +1453,7 @@ void Win32IDE::handleAskEndpoint(SOCKET client, const std::string& body) {
         + "\",\"backend\":\"" + LocalServerUtil::escapeJson(backendStr)
         + "\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // ============================================================================
@@ -1421,16 +1483,23 @@ void Win32IDE::handleServeGui(SOCKET client) {
                 content.resize(bytesRead);
                 CloseHandle(hFile);
 
-                // Send as HTML
+                // Send as HTML — use LocalServerUtil::sendAll() to guarantee the entire
+                // ~1 MB payload is transmitted.  A single send() may only
+                // push part of it, leaving the browser with truncated HTML
+                // (the closing </script> tag for the 770 KB main script
+                // block never arrives, so every function is undefined).
                 std::ostringstream oss;
                 oss << "HTTP/1.1 200 OK\r\n"
                     << "Content-Type: text/html; charset=utf-8\r\n"
                     << "Content-Length: " << content.size() << "\r\n"
                     << "Access-Control-Allow-Origin: *\r\n"
-                    << "Connection: close\r\n\r\n"
-                    << content;
-                std::string response = oss.str();
-                send(client, response.c_str(), (int)response.size(), 0);
+                    << "Connection: close\r\n\r\n";
+                std::string headers = oss.str();
+
+                // Send headers first, then body separately to avoid
+                // copying the ~1 MB content into yet another string.
+                if (!LocalServerUtil::sendAll(client, headers)) return;
+                LocalServerUtil::sendAll(client, content.c_str(), (int)content.size());
                 return;
             }
             CloseHandle(hFile);
@@ -1440,7 +1509,7 @@ void Win32IDE::handleServeGui(SOCKET client) {
     // File not found
     std::string resp = LocalServerUtil::buildHttpResponse(404,
         "{\"error\":\"gui/ide_chatbot.html not found\"}");
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // ============================================================================
@@ -1460,7 +1529,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
         if (pathKey == std::string::npos) {
             std::string resp = LocalServerUtil::buildHttpResponse(400,
                 "{\"error\":\"missing_path\",\"message\":\"Request body must contain 'path' field\"}");
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
         // Find the value string after "path": "..."
@@ -1468,14 +1537,14 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
         if (colonPos == std::string::npos) {
             std::string resp = LocalServerUtil::buildHttpResponse(400,
                 "{\"error\":\"malformed_json\",\"message\":\"Could not parse path value\"}");
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
         auto quoteStart = body.find('"', colonPos + 1);
         if (quoteStart == std::string::npos) {
             std::string resp = LocalServerUtil::buildHttpResponse(400,
                 "{\"error\":\"malformed_json\",\"message\":\"Could not find path string\"}");
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
         // Find closing quote (handle escaped quotes)
@@ -1491,7 +1560,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
         if (quoteEnd >= body.size()) {
             std::string resp = LocalServerUtil::buildHttpResponse(400,
                 "{\"error\":\"malformed_json\",\"message\":\"Unterminated path string\"}");
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
         filePath = body.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
@@ -1525,7 +1594,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
     if (filePath.find("..") != std::string::npos) {
         std::string resp = LocalServerUtil::buildHttpResponse(403,
             "{\"error\":\"forbidden\",\"message\":\"Directory traversal not allowed\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1533,7 +1602,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
     if (filePath.size() < 3 || filePath[1] != ':' || filePath[2] != '\\') {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"invalid_path\",\"message\":\"Only absolute paths are accepted\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1545,7 +1614,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"file_not_found\",\"message\":\"Cannot open file: " +
             LocalServerUtil::escapeJson(filePath) + "\",\"win32_error\":" + std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1557,7 +1626,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(413,
             "{\"error\":\"file_too_large\",\"message\":\"File exceeds 10MB limit\",\"size\":" +
             std::to_string(fileSize == INVALID_FILE_SIZE ? 0 : fileSize) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1570,7 +1639,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
     if (!readOk || bytesRead == 0) {
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"read_failed\",\"message\":\"Failed to read file content\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
     content.resize(bytesRead);
@@ -1595,7 +1664,7 @@ void Win32IDE::handleReadFileEndpoint(SOCKET client, const std::string& body) {
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("read-file: " + filePath + " (" + std::to_string(bytesRead) + " bytes)");
 }
@@ -1614,7 +1683,7 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body) {
     if (command.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"success\":false,\"error\":\"Missing 'command' field\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -1758,7 +1827,7 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body) {
         "\",\"output\":\"" + escaped + "\"}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, jsonBody);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("cli: " + command + " -> " + (success ? "ok" : "error"));
 }
@@ -1796,7 +1865,7 @@ void Win32IDE::handleHotpatchEndpoint(SOCKET client, const std::string& path, co
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // ============================================================================
@@ -1903,7 +1972,7 @@ void Win32IDE::handleAgentHistoryEndpoint(SOCKET client, const std::string& path
       << "}}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // ============================================================================
@@ -1988,7 +2057,7 @@ void Win32IDE::handleAgentStatusEndpoint(SOCKET client) {
     j << "}}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // ============================================================================
@@ -2009,7 +2078,7 @@ void Win32IDE::handleAgentReplayEndpoint(SOCKET client, const std::string& body)
     if (agentId.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"agent_id is required\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2028,7 +2097,7 @@ void Win32IDE::handleAgentReplayEndpoint(SOCKET client, const std::string& body)
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"success\":false,\"result\":\"No events found for agent: " +
             LocalServerUtil::escapeJson(agentId) + "\",\"events_replayed\":0,\"duration_ms\":0}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2061,7 +2130,7 @@ void Win32IDE::handleAgentReplayEndpoint(SOCKET client, const std::string& body)
       << "}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // ============================================================================
@@ -2221,7 +2290,7 @@ void Win32IDE::handleFailuresEndpoint(SOCKET client, const std::string& path) {
       << "]}}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // ============================================================================
@@ -2324,7 +2393,7 @@ void Win32IDE::handleBackendsListEndpoint(SOCKET client) {
     j["count"]    = (int)AIBackendType::Count;
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.dump(2));
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // GET /api/backend/active — current active backend details
@@ -2347,7 +2416,7 @@ void Win32IDE::handleBackendActiveEndpoint(SOCKET client) {
     j["lastError"]     = st.lastError;
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.dump(2));
-    send(client, response.c_str(), (int)response.size(), 0);
+    LocalServerUtil::sendAll(client, response);
 }
 
 // POST /api/backend/switch — switch active backend
@@ -2359,7 +2428,7 @@ void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& bod
         if (backendName.empty()) {
             std::string errResp = LocalServerUtil::buildHttpResponse(400,
                 "{\"error\":\"missing_field\",\"message\":\"'backend' field is required\"}");
-            send(client, errResp.c_str(), (int)errResp.size(), 0);
+            LocalServerUtil::sendAll(client, errResp);
             return;
         }
 
@@ -2369,7 +2438,7 @@ void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& bod
                 "{\"error\":\"invalid_backend\",\"message\":\"Unknown backend: " +
                 LocalServerUtil::escapeJson(backendName) +
                 ". Valid: LocalGGUF, Ollama, OpenAI, Claude, Gemini\"}");
-            send(client, errResp.c_str(), (int)errResp.size(), 0);
+            LocalServerUtil::sendAll(client, errResp);
             return;
         }
 
@@ -2393,18 +2462,18 @@ void Win32IDE::handleBackendSwitchEndpoint(SOCKET client, const std::string& bod
             resp["message"]  = "Switched to " + m_backendConfigs[(size_t)m_activeBackend].name;
 
             std::string httpResp = LocalServerUtil::buildHttpResponse(200, resp.dump(2));
-            send(client, httpResp.c_str(), (int)httpResp.size(), 0);
+            LocalServerUtil::sendAll(client, httpResp);
         } else {
             std::string errResp = LocalServerUtil::buildHttpResponse(422,
                 "{\"error\":\"switch_failed\",\"message\":\"Backend '" +
                 LocalServerUtil::escapeJson(backendName) + "' is disabled or unavailable\"}");
-            send(client, errResp.c_str(), (int)errResp.size(), 0);
+            LocalServerUtil::sendAll(client, errResp);
         }
     } catch (const std::exception& e) {
         std::string errResp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"parse_error\",\"message\":\"Invalid JSON: " +
             LocalServerUtil::escapeJson(e.what()) + "\"}");
-        send(client, errResp.c_str(), (int)errResp.size(), 0);
+        LocalServerUtil::sendAll(client, errResp);
     }
 }
 
@@ -2434,7 +2503,7 @@ void Win32IDE::handleCoTStatusEndpoint(SOCKET client) {
     auto& cot = ChainOfThoughtEngine::instance();
     std::string json = cot.getStatusJSON();
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // GET /api/cot/presets — list all available presets
@@ -2442,7 +2511,7 @@ void Win32IDE::handleCoTPresetsEndpoint(SOCKET client) {
     auto& cot = ChainOfThoughtEngine::instance();
     std::string json = cot.getPresetsJSON();
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // GET /api/cot/steps — current chain configuration
@@ -2450,7 +2519,7 @@ void Win32IDE::handleCoTStepsEndpoint(SOCKET client) {
     auto& cot = ChainOfThoughtEngine::instance();
     std::string json = cot.getStepsJSON();
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // GET /api/cot/roles — all available roles
@@ -2468,7 +2537,7 @@ void Win32IDE::handleCoTRolesEndpoint(SOCKET client) {
     }
     j << "]";
     std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // POST /api/cot/preset — apply a preset { "preset": "review" }
@@ -2478,7 +2547,7 @@ void Win32IDE::handleCoTApplyPresetEndpoint(SOCKET client, const std::string& bo
     if (presetName.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"missing_field\",\"message\":\"'preset' field required\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2487,7 +2556,7 @@ void Win32IDE::handleCoTApplyPresetEndpoint(SOCKET client, const std::string& bo
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"preset_not_found\",\"message\":\"Unknown preset: " +
             LocalServerUtil::escapeJson(presetName) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2495,7 +2564,7 @@ void Win32IDE::handleCoTApplyPresetEndpoint(SOCKET client, const std::string& bo
         LocalServerUtil::escapeJson(presetName) + "\",\"steps\":" +
         cot.getStepsJSON() + "}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // POST /api/cot/steps — set custom steps
@@ -2532,7 +2601,7 @@ void Win32IDE::handleCoTSetStepsEndpoint(SOCKET client, const std::string& body)
     if (steps.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"invalid_steps\",\"message\":\"No valid steps found in request\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2540,7 +2609,7 @@ void Win32IDE::handleCoTSetStepsEndpoint(SOCKET client, const std::string& body)
     std::string json = "{\"success\":true,\"stepCount\":" + std::to_string(steps.size()) +
         ",\"steps\":" + cot.getStepsJSON() + "}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // POST /api/cot/execute — execute the chain { "query": "..." }
@@ -2550,7 +2619,7 @@ void Win32IDE::handleCoTExecuteEndpoint(SOCKET client, const std::string& body) 
     if (query.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"missing_field\",\"message\":\"'query' field required\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2558,7 +2627,7 @@ void Win32IDE::handleCoTExecuteEndpoint(SOCKET client, const std::string& body) 
     if (cot.isRunning()) {
         std::string resp = LocalServerUtil::buildHttpResponse(409,
             "{\"error\":\"chain_running\",\"message\":\"A chain is already running. Cancel it first.\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2596,7 +2665,7 @@ void Win32IDE::handleCoTExecuteEndpoint(SOCKET client, const std::string& body) 
     j << "]}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, j.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // POST /api/cot/cancel — cancel running chain
@@ -2605,7 +2674,7 @@ void Win32IDE::handleCoTCancelEndpoint(SOCKET client) {
     cot.cancel();
     std::string resp = LocalServerUtil::buildHttpResponse(200,
         "{\"success\":true,\"message\":\"Cancel requested\"}");
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 }
 
 // ============================================================================
@@ -2872,7 +2941,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
     auto vp = validateFilePath(body);
     if (!vp.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2880,7 +2949,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
     if (!LocalServerUtil::extractJsonString(body, "content", content)) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"missing_content\",\"message\":\"Request body must contain 'content' field\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2890,7 +2959,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(413,
             "{\"error\":\"content_too_large\",\"message\":\"Content exceeds 50MB write limit\",\"size\":" +
             std::to_string(content.size()) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2904,7 +2973,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
             std::string resp = LocalServerUtil::buildHttpResponse(500,
                 "{\"error\":\"mkdir_failed\",\"message\":\"Failed to create parent directories\",\"win32_error\":" +
                 std::to_string(err) + "}");
-            send(client, resp.c_str(), (int)resp.size(), 0);
+            LocalServerUtil::sendAll(client, resp);
             return;
         }
     }
@@ -2917,7 +2986,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"write_failed\",\"message\":\"Cannot create/open file for writing: " +
             LocalServerUtil::escapeJson(vp.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2930,7 +2999,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"write_failed\",\"message\":\"Failed to write file content\",\"win32_error\":" +
             std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2943,7 +3012,7 @@ void Win32IDE::handleWriteFileEndpoint(SOCKET client, const std::string& body) {
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("write-file: " + vp.path + " (" + std::to_string(bytesWritten) + " bytes)");
 }
@@ -2960,7 +3029,7 @@ void Win32IDE::handleListDirEndpoint(SOCKET client, const std::string& body) {
     auto vp = validateFilePath(body);
     if (!vp.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -2970,14 +3039,14 @@ void Win32IDE::handleListDirEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"not_found\",\"message\":\"Directory not found: " +
             LocalServerUtil::escapeJson(vp.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
     if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"not_directory\",\"message\":\"Path is not a directory: " +
             LocalServerUtil::escapeJson(vp.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3009,7 +3078,7 @@ void Win32IDE::handleListDirEndpoint(SOCKET client, const std::string& body) {
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("list-directory: " + vp.path + " (" + std::to_string(entries.size()) + " entries)");
 }
@@ -3026,7 +3095,7 @@ void Win32IDE::handleDeleteFileEndpoint(SOCKET client, const std::string& body) 
     auto vp = validateFilePath(body);
     if (!vp.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3035,7 +3104,7 @@ void Win32IDE::handleDeleteFileEndpoint(SOCKET client, const std::string& body) 
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"not_found\",\"message\":\"File not found: " +
             LocalServerUtil::escapeJson(vp.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3059,14 +3128,14 @@ void Win32IDE::handleDeleteFileEndpoint(SOCKET client, const std::string& body) 
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"delete_failed\",\"message\":\"Failed to delete: " +
             LocalServerUtil::escapeJson(vp.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
     std::string json = "{\"success\":true,\"path\":\"" + LocalServerUtil::escapeJson(vp.path) +
                        "\",\"message\":\"Deleted successfully\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("delete-file: " + vp.path);
 }
@@ -3082,14 +3151,14 @@ void Win32IDE::handleRenameFileEndpoint(SOCKET client, const std::string& body) 
     auto vpOld = validateFilePath(body, "path");
     if (!vpOld.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vpOld.errorCode, vpOld.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
     auto vpNew = validateFilePath(body, "newPath");
     if (!vpNew.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vpNew.errorCode, vpNew.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3099,7 +3168,7 @@ void Win32IDE::handleRenameFileEndpoint(SOCKET client, const std::string& body) 
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"not_found\",\"message\":\"Source not found: " +
             LocalServerUtil::escapeJson(vpOld.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3109,7 +3178,7 @@ void Win32IDE::handleRenameFileEndpoint(SOCKET client, const std::string& body) 
         std::string resp = LocalServerUtil::buildHttpResponse(409,
             "{\"error\":\"already_exists\",\"message\":\"Destination already exists: " +
             LocalServerUtil::escapeJson(vpNew.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3122,7 +3191,7 @@ void Win32IDE::handleRenameFileEndpoint(SOCKET client, const std::string& body) 
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"rename_failed\",\"message\":\"Failed to rename: " +
             LocalServerUtil::escapeJson(vpOld.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3130,7 +3199,7 @@ void Win32IDE::handleRenameFileEndpoint(SOCKET client, const std::string& body) 
                        "\",\"newPath\":\"" + LocalServerUtil::escapeJson(vpNew.path) +
                        "\",\"message\":\"Renamed successfully\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("rename-file: " + vpOld.path + " -> " + vpNew.path);
 }
@@ -3146,7 +3215,7 @@ void Win32IDE::handleMkdirEndpoint(SOCKET client, const std::string& body) {
     auto vp = validateFilePath(body);
     if (!vp.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3155,14 +3224,14 @@ void Win32IDE::handleMkdirEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"mkdir_failed\",\"message\":\"Failed to create directory: " +
             LocalServerUtil::escapeJson(vp.path) + "\",\"win32_error\":" + std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
     std::string json = "{\"success\":true,\"path\":\"" + LocalServerUtil::escapeJson(vp.path) +
                        "\",\"message\":\"Directory created\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("mkdir: " + vp.path);
 }
@@ -3179,7 +3248,7 @@ void Win32IDE::handleSearchFilesEndpoint(SOCKET client, const std::string& body)
     auto vp = validateFilePath(body);
     if (!vp.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3220,7 +3289,7 @@ void Win32IDE::handleSearchFilesEndpoint(SOCKET client, const std::string& body)
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("search-files: " + vp.path + " pattern=" + pattern + " query=" + textQuery +
              " (" + std::to_string(results.size()) + " results)");
@@ -3238,7 +3307,7 @@ void Win32IDE::handleStatFileEndpoint(SOCKET client, const std::string& body) {
     auto vp = validateFilePath(body);
     if (!vp.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vp.errorCode, vp.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3247,7 +3316,7 @@ void Win32IDE::handleStatFileEndpoint(SOCKET client, const std::string& body) {
         // File doesn't exist — return exists:false rather than error
         std::string json = "{\"exists\":false,\"path\":\"" + LocalServerUtil::escapeJson(vp.path) + "\"}";
         std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3285,7 +3354,7 @@ void Win32IDE::handleStatFileEndpoint(SOCKET client, const std::string& body) {
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("stat-file: " + vp.path);
 }
@@ -3302,14 +3371,14 @@ void Win32IDE::handleCopyFileEndpoint(SOCKET client, const std::string& body) {
     auto vpSrc = validateFilePath(body, "path");
     if (!vpSrc.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vpSrc.errorCode, vpSrc.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
     auto vpDest = validateFilePath(body, "destPath");
     if (!vpDest.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vpDest.errorCode, vpDest.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3319,7 +3388,7 @@ void Win32IDE::handleCopyFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"not_found\",\"message\":\"Source file not found: " +
             LocalServerUtil::escapeJson(vpSrc.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3338,7 +3407,7 @@ void Win32IDE::handleCopyFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(httpCode,
             "{\"error\":\"" + errMsg + "\",\"message\":\"Failed to copy file\",\"win32_error\":" +
             std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3360,7 +3429,7 @@ void Win32IDE::handleCopyFileEndpoint(SOCKET client, const std::string& body) {
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("copy-file: " + vpSrc.path + " -> " + vpDest.path);
 }
@@ -3377,14 +3446,14 @@ void Win32IDE::handleMoveFileEndpoint(SOCKET client, const std::string& body) {
     auto vpSrc = validateFilePath(body, "path");
     if (!vpSrc.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vpSrc.errorCode, vpSrc.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
     auto vpDest = validateFilePath(body, "destPath");
     if (!vpDest.ok) {
         std::string resp = LocalServerUtil::buildHttpResponse(vpDest.errorCode, vpDest.error);
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3394,7 +3463,7 @@ void Win32IDE::handleMoveFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(404,
             "{\"error\":\"not_found\",\"message\":\"Source not found: " +
             LocalServerUtil::escapeJson(vpSrc.path) + "\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3413,7 +3482,7 @@ void Win32IDE::handleMoveFileEndpoint(SOCKET client, const std::string& body) {
         std::string resp = LocalServerUtil::buildHttpResponse(500,
             "{\"error\":\"move_failed\",\"message\":\"Failed to move file\",\"win32_error\":" +
             std::to_string(err) + "}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3422,7 +3491,7 @@ void Win32IDE::handleMoveFileEndpoint(SOCKET client, const std::string& body) {
                        ",\"dest\":\"" + LocalServerUtil::escapeJson(vpDest.path) + "\""
                        ",\"message\":\"File moved successfully\"}";
     std::string resp = LocalServerUtil::buildHttpResponse(200, json);
-    send(client, resp.c_str(), (int)resp.size(), 0);
+    LocalServerUtil::sendAll(client, resp);
 
     LOG_INFO("move-file: " + vpSrc.path + " -> " + vpDest.path);
 }
@@ -3440,7 +3509,7 @@ void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body
     if (tool.empty()) {
         std::string resp = LocalServerUtil::buildHttpResponse(400,
             "{\"error\":\"missing_tool\",\"message\":\"Request body must contain 'tool' field\"}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
         return;
     }
 
@@ -3510,7 +3579,7 @@ void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body
             "\",\"available\":[\"read_file\",\"write_file\",\"list_directory\",\"delete_file\","
             "\"rename_file\",\"mkdir\",\"search_files\",\"stat_file\",\"copy_file\",\"move_file\","
             "\"execute_command\",\"git_status\"]}");
-        send(client, resp.c_str(), (int)resp.size(), 0);
+        LocalServerUtil::sendAll(client, resp);
     }
 
     LOG_INFO("tool-dispatch: " + tool);

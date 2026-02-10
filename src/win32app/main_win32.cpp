@@ -61,7 +61,42 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
     argv = ptrs.data();
 }
 
+// ============================================================================
+// Top-level crash handler — writes crash info to file for diagnosis
+// ============================================================================
+static LONG WINAPI RawrXDCrashHandler(EXCEPTION_POINTERS* ep) {
+    char msg[512];
+    snprintf(msg, sizeof(msg),
+        "CRASH: Exception 0x%08lX at address 0x%p\n",
+        ep->ExceptionRecord->ExceptionCode,
+        ep->ExceptionRecord->ExceptionAddress);
+    OutputDebugStringA(msg);
+
+    // Write crash log to file
+    HANDLE hLog = CreateFileA("rawrxd_crash.log", GENERIC_WRITE, 0, nullptr,
+                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hLog != INVALID_HANDLE_VALUE) {
+        DWORD written = 0;
+        WriteFile(hLog, msg, (DWORD)strlen(msg), &written, nullptr);
+        // Add register context
+        char regBuf[512];
+        snprintf(regBuf, sizeof(regBuf),
+            "RIP=0x%016llX RSP=0x%016llX RBP=0x%016llX\n"
+            "RAX=0x%016llX RBX=0x%016llX RCX=0x%016llX\n"
+            "RDX=0x%016llX RSI=0x%016llX RDI=0x%016llX\n",
+            ep->ContextRecord->Rip, ep->ContextRecord->Rsp, ep->ContextRecord->Rbp,
+            ep->ContextRecord->Rax, ep->ContextRecord->Rbx, ep->ContextRecord->Rcx,
+            ep->ContextRecord->Rdx, ep->ContextRecord->Rsi, ep->ContextRecord->Rdi);
+        WriteFile(hLog, regBuf, (DWORD)strlen(regBuf), &written, nullptr);
+        CloseHandle(hLog);
+    }
+
+    MessageBoxA(nullptr, msg, "RawrXD IDE — CRASH REPORT", MB_OK | MB_ICONERROR);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow) {
+    SetUnhandledExceptionFilter(RawrXDCrashHandler);
 
     // ========================================================================
     // HEADLESS MODE — Phase 19C
@@ -227,8 +262,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     int exitCode = ide.runMessageLoop();
 
     // ========================================================================
-    // CLEANUP — Shutdown cross-process state and JS extension host
+    // CLEANUP — Null out IDE's raw pointers BEFORE deleting external objects.
+    // The IDE's onDestroy() already ran (from WM_DESTROY), but the Win32IDE
+    // object is still alive on the stack. Clear its dangling pointers first.
     // ========================================================================
+    ide.setEngineManager(nullptr);
+    ide.setCodexUltimate(nullptr);
+
+    // Shutdown cross-process state and JS extension host
     {
         auto& jsHost = JSExtensionHost::instance();
         if (jsHost.isInitialized()) {
@@ -244,7 +285,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
-    // Cleanup engine resources
+    // Cleanup engine resources (IDE no longer holds pointers to these)
     delete codex;
     delete engine_mgr;
 

@@ -436,7 +436,10 @@ bool Win32IDE::probeBackendHealth(AIBackendType type) {
 
 void Win32IDE::probeAllBackendsAsync() {
     std::thread([this]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
+            if (isShuttingDown()) return;
             if (m_backendConfigs[i].enabled) {
                 probeBackendHealth((AIBackendType)i);
             }
@@ -517,9 +520,11 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt) {
 void Win32IDE::routeInferenceRequestAsync(const std::string& prompt,
                                             std::function<void(const std::string&, bool)> callback) {
     std::thread([this, prompt, callback]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         std::string result = routeInferenceRequest(prompt);
         bool ok = !result.empty() && result.find("[BackendSwitcher] Error") == std::string::npos;
-        if (callback) callback(result, ok);
+        if (callback && !isShuttingDown()) callback(result, ok);
     }).detach();
 }
 

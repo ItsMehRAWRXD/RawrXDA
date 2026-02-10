@@ -1652,6 +1652,21 @@ void Win32IDE::handleToolsCommand(int commandId) {
             cmdDbgStatus();
             break;
 
+        // ================================================================
+        // Plugin System (5200+ range — Phase 43)
+        // ================================================================
+        case IDM_PLUGIN_SHOW_PANEL:
+        case IDM_PLUGIN_LOAD:
+        case IDM_PLUGIN_UNLOAD:
+        case IDM_PLUGIN_UNLOAD_ALL:
+        case IDM_PLUGIN_REFRESH:
+        case IDM_PLUGIN_SCAN_DIR:
+        case IDM_PLUGIN_SHOW_STATUS:
+        case IDM_PLUGIN_TOGGLE_HOTLOAD:
+        case IDM_PLUGIN_CONFIGURE:
+            handlePluginCommand(commandId);
+            break;
+
         default:
             break;
     }
