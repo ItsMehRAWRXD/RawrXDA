@@ -17,6 +17,9 @@
 #include "../native_agent.hpp"
 #include <commctrl.h>
 #include <richedit.h>
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED 0x02E0
+#endif
 #include <sstream>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -169,6 +172,17 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         return 0;
     }
 
+    case WM_DPICHANGED: {
+        // Per-monitor DPI: apply suggested rect when moving between displays
+        RECT* prc = reinterpret_cast<RECT*>(lParam);
+        if (prc) {
+            SetWindowPos(hwnd, nullptr, prc->left, prc->top,
+                prc->right - prc->left, prc->bottom - prc->top,
+                SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        return 0;
+    }
+
     case WM_GETMINMAXINFO:
     case WM_NCCALCSIZE:
     case WM_WINDOWPOSCHANGING:
@@ -298,10 +312,6 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             } else {
                 hideModelProgressBar();
             }
-            return 0;
-        }
-        if (wParam == 8888) { // GHOST_TEXT_TIMER_ID
-            onGhostTextTimer();
             return 0;
         }
         if (wParam == 42) { // IDT_STATUS_FLASH
@@ -1163,6 +1173,15 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: initPluginSystem failed\n");
         }
 
+        // Auto-start Local HTTP server (port 11435) so HTML beacon / Ghost can detect IDE
+        if (!isShuttingDown()) {
+            try {
+                startLocalServer();
+            } catch (...) {
+                OutputDebugStringA("ERROR: startLocalServer failed\n");
+            }
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
@@ -1349,6 +1368,9 @@ void Win32IDE::onDestroy() {
     // Null out raw pointers to externally-owned objects
     m_engineManager = nullptr;
     m_codexUltimate = nullptr;
+
+    // Null main window to prevent use-after-destroy in destructor or stray callbacks
+    m_hwndMain = nullptr;
 
     OutputDebugStringA("onDestroy: all resources released\n");
 }

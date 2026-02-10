@@ -10,6 +10,10 @@
 #include "../core/js_extension_host.hpp"
 #include "../core/model_memory_hotpatch.hpp"
 #include <commctrl.h>
+#include <shellscalingapi.h>
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
+#endif
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -95,8 +99,23 @@ static LONG WINAPI RawrXDCrashHandler(EXCEPTION_POINTERS* ep) {
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
+// Set Per-Monitor DPI awareness V2 for crisp rendering on high-DPI displays.
+// Must be called before any window creation. Win10 1703+.
+static void ensureDpiAwareness() {
+    typedef BOOL(WINAPI *SetProcessDpiAwarenessContext_t)(DPI_AWARENESS_CONTEXT);
+    HMODULE user32 = GetModuleHandleW(L"user32.dll");
+    if (!user32) return;
+    auto pSet = (SetProcessDpiAwarenessContext_t)GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+    if (!pSet) return;
+    // PerMonitorV2: correct scaling when moving between monitors, proper child DPI
+    pSet(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow) {
     SetUnhandledExceptionFilter(RawrXDCrashHandler);
+
+    // DPI awareness — before any GUI (Win32 GUI fix)
+    ensureDpiAwareness();
 
     // ========================================================================
     // HEADLESS MODE — Phase 19C
@@ -131,8 +150,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // ========================================================================
     // GUI MODE — original Win32IDE path (unchanged)
     // ========================================================================
-    // Initialize common controls
-    INITCOMMONCONTROLSEX icex = { sizeof(INITCOMMONCONTROLSEX), ICC_WIN95_CLASSES | ICC_BAR_CLASSES };
+    // Initialize common controls (toolbar, status bar, tab, tree, list, etc.)
+    INITCOMMONCONTROLSEX icex = { sizeof(INITCOMMONCONTROLSEX),
+        ICC_WIN95_CLASSES | ICC_BAR_CLASSES | ICC_TAB_CLASSES |
+        ICC_TREEVIEW_CLASSES | ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icex);
     
     // ========================================================================
@@ -286,8 +307,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     }
 
     // Cleanup engine resources (IDE no longer holds pointers to these)
-    delete codex;
-    delete engine_mgr;
+    try {
+        delete codex;
+    } catch (...) {}
+    try {
+        delete engine_mgr;
+    } catch (...) {}
 
     return exitCode;
 }

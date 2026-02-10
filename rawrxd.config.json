@@ -82,6 +82,19 @@
     "metricsExport": false,
     "vulkanCompute": false,
     "speculativeDecoding": false,
-    "flashAttention": false
+    "flashAttention": false,
+    "voiceAutomation": true
+  },
+  "voiceAutomation": {
+    "enabled": false,
+    "defaultProvider": "WindowsSAPI",
+    "defaultVoice": "",
+    "rate": 1.0,
+    "volume": 0.8,
+    "pitch": 1.0,
+    "speakOnStream": true,
+    "interruptOnNew": true,
+    "maxQueueSize": 32,
+    "pluginSearchPaths": "plugins;voice_plugins;extensions/voice"
   }
 }

@@ -1,10 +1,82 @@
 cmake_minimum_required(VERSION 3.20)
+
+# =============================================================================
+# Windows SDK & MSVC CRT Path Resolution (Phase 41 Build Fix)
+# =============================================================================
+# MUST run before project() because CMake's compiler test needs these paths.
+# The environment on this machine has partial SDK installs:
+#   10.0.22621.0 — has ucrt, shared, um includes BUT um/x64 libs are separate
+#   10.0.26100.0 — has um/shared includes and um/x64 libs BUT no ucrt
+# We combine them to form a complete toolchain.
+if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
+    # Not running inside a VS Developer Prompt — inject paths manually
+    set(_WIN10_SDK_ROOT "C:/Program Files (x86)/Windows Kits/10")
+    set(_SDK_UCRT_VER "10.0.22621.0")    # Has ucrt
+    set(_SDK_UM_VER "10.0.26100.0")      # Has um/shared headers and um/x64 libs
+    
+    # Fallback: if 10.0.26100.0 doesn't exist for um, try 10.0.22621.0 for everything
+    if(NOT EXISTS "${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/um/windows.h")
+        set(_SDK_UM_VER "${_SDK_UCRT_VER}")
+    endif()
+    if(NOT EXISTS "${_WIN10_SDK_ROOT}/Include/${_SDK_UCRT_VER}/ucrt")
+        set(_SDK_UCRT_VER "${_SDK_UM_VER}")
+    endif()
+
+    # MSVC toolchain root (BuildTools 14.44.x)
+    set(_MSVC_ROOT "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207")
+    
+    # SDK bin tools (rc.exe, mt.exe)
+    set(_SDK_BIN "${_WIN10_SDK_ROOT}/bin/${_SDK_UCRT_VER}/x64")
+    
+    # Build INCLUDE and LIB environment strings
+    set(ENV{INCLUDE} "${_MSVC_ROOT}/include;${_WIN10_SDK_ROOT}/Include/${_SDK_UCRT_VER}/ucrt;${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/shared;${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/um")
+    set(ENV{LIB} "${_MSVC_ROOT}/lib/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
+    set(ENV{PATH} "$ENV{PATH};${_SDK_BIN};${_MSVC_ROOT}/bin/Hostx64/x64")
+    
+    # Tell CMake where the SDK tools are
+    set(CMAKE_MT "${_SDK_BIN}/mt.exe" CACHE FILEPATH "Manifest Tool" FORCE)
+    set(CMAKE_RC_COMPILER "${_SDK_BIN}/rc.exe" CACHE FILEPATH "Resource Compiler" FORCE)
+    set(CMAKE_C_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/cl.exe" CACHE FILEPATH "C Compiler" FORCE)
+    set(CMAKE_CXX_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/cl.exe" CACHE FILEPATH "C++ Compiler" FORCE)
+    set(CMAKE_LINKER "${_MSVC_ROOT}/bin/Hostx64/x64/link.exe" CACHE FILEPATH "Linker" FORCE)
+    set(CMAKE_ASM_MASM_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/ml64.exe" CACHE FILEPATH "MASM64" FORCE)
+    
+    message(STATUS "[SDK Fix] INCLUDE = $ENV{INCLUDE}")
+    message(STATUS "[SDK Fix] LIB     = $ENV{LIB}")
+    message(STATUS "[SDK Fix] MT      = ${_SDK_BIN}/mt.exe")
+endif()
+
 project(RawrEngine VERSION 7.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+
+# =============================================================================
+# Persistent SDK Include/Lib Paths (Phase 41 Build Fix)
+# =============================================================================
+# set(ENV{...}) only works during configure. These persist into build commands.
+if(WIN32 AND MSVC)
+    set(_WIN10_SDK_ROOT "C:/Program Files (x86)/Windows Kits/10")
+    set(_SDK_VER "10.0.22621.0")
+    set(_MSVC_BT_ROOT "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207")
+
+    include_directories(SYSTEM
+        "${_MSVC_BT_ROOT}/include"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/ucrt"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/shared"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/um"
+        "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/winrt"
+    )
+    link_directories(
+        "${_MSVC_BT_ROOT}/lib/x64"
+        "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/ucrt/x64"
+        "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/um/x64"
+    )
+    message(STATUS "[Build Paths] MSVC CRT: ${_MSVC_BT_ROOT}")
+    message(STATUS "[Build Paths] SDK ${_SDK_VER}: ucrt + um + shared")
+endif()
 
 # =============================================================================
 # MASM64 Assembly Kernel Support
@@ -34,6 +106,7 @@ if(RAWR_HAS_MASM)
         src/asm/request_patch.asm
         src/asm/inference_kernels.asm
         src/asm/model_bridge_x64.asm
+        src/asm/RawrXD_DualAgent_Orchestrator.asm
     )
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
@@ -147,6 +220,9 @@ set(SOURCES
     # Phase 33: Voice Chat Engine
     src/core/voice_chat.cpp
 
+    # Phase 44: Voice Automation — Toggleable TTS Response Reader
+    src/core/voice_automation.cpp
+
     # Phase 33: Quick-Win Qt Ports
     src/core/shortcut_manager.cpp
     src/core/backup_manager.cpp
@@ -199,7 +275,7 @@ if(MSVC)
     set(ASM_REQUANTIZE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/requantize_q4km_to_q2k_avx512.obj")
     add_custom_command(
         OUTPUT ${ASM_REQUANTIZE_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_REQUANTIZE_OBJ} ${ASM_REQUANTIZE_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_REQUANTIZE_OBJ} ${ASM_REQUANTIZE_SRC}
         DEPENDS ${ASM_REQUANTIZE_SRC}
         COMMENT "[MASM] Assembling requantize_q4km_to_q2k_avx512.asm (AVX-512 DQ/BW)"
         VERBATIM
@@ -210,7 +286,7 @@ if(MSVC)
     set(ASM_GPU_REQUANT_OBJ "${CMAKE_CURRENT_BINARY_DIR}/gpu_requantize_rocm.obj")
     add_custom_command(
         OUTPUT ${ASM_GPU_REQUANT_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_GPU_REQUANT_OBJ} ${ASM_GPU_REQUANT_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_GPU_REQUANT_OBJ} ${ASM_GPU_REQUANT_SRC}
         DEPENDS ${ASM_GPU_REQUANT_SRC}
         COMMENT "[MASM] Assembling gpu_requantize_rocm.asm (HIP dispatch)"
         VERBATIM
@@ -221,7 +297,7 @@ if(MSVC)
     set(ASM_SWARM_TENSOR_OBJ "${CMAKE_CURRENT_BINARY_DIR}/swarm_tensor_stream.obj")
     add_custom_command(
         OUTPUT ${ASM_SWARM_TENSOR_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_SWARM_TENSOR_OBJ} ${ASM_SWARM_TENSOR_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_SWARM_TENSOR_OBJ} ${ASM_SWARM_TENSOR_SRC}
         DEPENDS ${ASM_SWARM_TENSOR_SRC}
         COMMENT "[MASM] Assembling swarm_tensor_stream.asm (CRC32C, RLE, chunks)"
         VERBATIM
@@ -232,7 +308,7 @@ if(MSVC)
     set(ASM_MONACOCORE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_MonacoCore.obj")
     add_custom_command(
         OUTPUT ${ASM_MONACOCORE_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_MONACOCORE_OBJ} ${ASM_MONACOCORE_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_MONACOCORE_OBJ} ${ASM_MONACOCORE_SRC}
         DEPENDS ${ASM_MONACOCORE_SRC}
         COMMENT "[MASM] Assembling RawrXD_MonacoCore.asm (Gap Buffer, Tokenizer)"
         VERBATIM
@@ -243,7 +319,7 @@ if(MSVC)
     set(ASM_PDBKERNEL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_PDBKernel.obj")
     add_custom_command(
         OUTPUT ${ASM_PDBKERNEL_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_PDBKERNEL_OBJ} ${ASM_PDBKERNEL_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_PDBKERNEL_OBJ} ${ASM_PDBKERNEL_SRC}
         DEPENDS ${ASM_PDBKERNEL_SRC}
         COMMENT "[MASM] Assembling RawrXD_PDBKernel.asm (MSF magic, PubSym scan, GUID hex)"
         VERBATIM
@@ -254,7 +330,7 @@ if(MSVC)
     set(ASM_ROUTERBRIDGE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_RouterBridge.obj")
     add_custom_command(
         OUTPUT ${ASM_ROUTERBRIDGE_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_ROUTERBRIDGE_OBJ} ${ASM_ROUTERBRIDGE_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_ROUTERBRIDGE_OBJ} ${ASM_ROUTERBRIDGE_SRC}
         DEPENDS ${ASM_ROUTERBRIDGE_SRC}
         COMMENT "[MASM] Assembling RawrXD_RouterBridge.asm (Fast-Path Router Dispatch)"
         VERBATIM
@@ -265,7 +341,7 @@ if(MSVC)
     set(ASM_GSIHASH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_GSIHash.obj")
     add_custom_command(
         OUTPUT ${ASM_GSIHASH_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_GSIHASH_OBJ} ${ASM_GSIHASH_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_GSIHASH_OBJ} ${ASM_GSIHASH_SRC}
         DEPENDS ${ASM_GSIHASH_SRC}
         COMMENT "[MASM] Assembling RawrXD_GSIHash.asm (PDB hash, GSI bucket probe)"
         VERBATIM
@@ -276,7 +352,7 @@ if(MSVC)
     set(ASM_REFPROVIDER_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_RefProvider.obj")
     add_custom_command(
         OUTPUT ${ASM_REFPROVIDER_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_REFPROVIDER_OBJ} ${ASM_REFPROVIDER_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_REFPROVIDER_OBJ} ${ASM_REFPROVIDER_SRC}
         DEPENDS ${ASM_REFPROVIDER_SRC}
         COMMENT "[MASM] Assembling RawrXD_RefProvider.asm (Reference hash, pattern match)"
         VERBATIM
@@ -287,7 +363,7 @@ if(MSVC)
     set(ASM_STUBDETECTOR_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_StubDetector.obj")
     add_custom_command(
         OUTPUT ${ASM_STUBDETECTOR_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_STUBDETECTOR_OBJ} ${ASM_STUBDETECTOR_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_STUBDETECTOR_OBJ} ${ASM_STUBDETECTOR_SRC}
         DEPENDS ${ASM_STUBDETECTOR_SRC}
         COMMENT "[MASM] Assembling RawrXD_StubDetector.asm (Stub Pattern Scanner)"
         VERBATIM
@@ -298,7 +374,7 @@ if(MSVC)
     set(ASM_COT_ENGINE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_engine.obj")
     add_custom_command(
         OUTPUT ${ASM_COT_ENGINE_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_COT_ENGINE_OBJ} ${ASM_COT_ENGINE_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_COT_ENGINE_OBJ} ${ASM_COT_ENGINE_SRC}
         DEPENDS ${ASM_COT_ENGINE_SRC}
         COMMENT "[MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)"
         VERBATIM
@@ -309,7 +385,7 @@ if(MSVC)
     set(ASM_COT_DLL_ENTRY_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_dll_entry.obj")
     add_custom_command(
         OUTPUT ${ASM_COT_DLL_ENTRY_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_COT_DLL_ENTRY_OBJ} ${ASM_COT_DLL_ENTRY_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_COT_DLL_ENTRY_OBJ} ${ASM_COT_DLL_ENTRY_SRC}
         DEPENDS ${ASM_COT_DLL_ENTRY_SRC}
         COMMENT "[MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)"
         VERBATIM
@@ -320,9 +396,86 @@ if(MSVC)
     set(ASM_COT_PHASE39_OBJ "${CMAKE_CURRENT_BINARY_DIR}/rawrxd_cot_phase39.obj")
     add_custom_command(
         OUTPUT ${ASM_COT_PHASE39_OBJ}
-        COMMAND ml64 /c /Zi /Zd /Fo${ASM_COT_PHASE39_OBJ} ${ASM_COT_PHASE39_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_COT_PHASE39_OBJ} ${ASM_COT_PHASE39_SRC}
         DEPENDS ${ASM_COT_PHASE39_SRC}
         COMMENT "[MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)"
+        VERBATIM
+    )
+
+    # LSP Bridge: MASM64 Symbol Index Accelerator (binary search, batch FNV-1a, prefix scan)
+    set(ASM_LSP_SYMINDEX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_LSP_SymbolIndex.asm")
+    set(ASM_LSP_SYMINDEX_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_LSP_SymbolIndex.obj")
+    add_custom_command(
+        OUTPUT ${ASM_LSP_SYMINDEX_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_LSP_SYMINDEX_OBJ} ${ASM_LSP_SYMINDEX_SRC}
+        DEPENDS ${ASM_LSP_SYMINDEX_SRC}
+        COMMENT "[MASM] Assembling RawrXD_LSP_SymbolIndex.asm (Hash Lookup, Batch FNV-1a, Prefix Scan)"
+        VERBATIM
+    )
+
+    # Phase 45: RawrCodex — Agentic Decision Tree Core (295KB, 21 procs)
+    set(ASM_RAWRCODEX_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrCodex.asm")
+    set(ASM_RAWRCODEX_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrCodex.obj")
+    add_custom_command(
+        OUTPUT ${ASM_RAWRCODEX_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_RAWRCODEX_OBJ} ${ASM_RAWRCODEX_SRC}
+        DEPENDS ${ASM_RAWRCODEX_SRC}
+        COMMENT "[MASM] Assembling RawrCodex.asm (Agentic Decision Tree, Pattern Engine)"
+        VERBATIM
+    )
+
+    # Phase 45: Debug Engine — Native Debugger Kernel (51KB, DynTrace symbolic resolution)
+    set(ASM_DEBUG_ENGINE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Debug_Engine.asm")
+    set(ASM_DEBUG_ENGINE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Debug_Engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_DEBUG_ENGINE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_DEBUG_ENGINE_OBJ} ${ASM_DEBUG_ENGINE_SRC}
+        DEPENDS ${ASM_DEBUG_ENGINE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Debug_Engine.asm (Breakpoints, Watchpoints, Symbolic DynTrace)"
+        VERBATIM
+    )
+
+    # Phase 45: QuadBuffer Streamer — High-Performance Memory Streaming (52KB)
+    set(ASM_QUADBUFFER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_QuadBuffer_Streamer.asm")
+    set(ASM_QUADBUFFER_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_QuadBuffer_Streamer.obj")
+    add_custom_command(
+        OUTPUT ${ASM_QUADBUFFER_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_QUADBUFFER_OBJ} ${ASM_QUADBUFFER_SRC}
+        DEPENDS ${ASM_QUADBUFFER_SRC}
+        COMMENT "[MASM] Assembling RawrXD_QuadBuffer_Streamer.asm (4-Buffer Ring, Zero-Copy Streaming)"
+        VERBATIM
+    )
+
+    # Phase 45: Swarm Network — Distributed Composition Protocol (36KB)
+    set(ASM_SWARM_NETWORK_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_Swarm_Network.asm")
+    set(ASM_SWARM_NETWORK_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_Swarm_Network.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SWARM_NETWORK_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_SWARM_NETWORK_OBJ} ${ASM_SWARM_NETWORK_SRC}
+        DEPENDS ${ASM_SWARM_NETWORK_SRC}
+        COMMENT "[MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)"
+        VERBATIM
+    )
+
+    # Phase 45: Enterprise License — Feature Gate + Hardware Fingerprint (31KB)
+    set(ASM_ENTERPRISE_LIC_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_EnterpriseLicense.asm")
+    set(ASM_ENTERPRISE_LIC_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_EnterpriseLicense.obj")
+    add_custom_command(
+        OUTPUT ${ASM_ENTERPRISE_LIC_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_ENTERPRISE_LIC_OBJ} ${ASM_ENTERPRISE_LIC_SRC}
+        DEPENDS ${ASM_ENTERPRISE_LIC_SRC}
+        COMMENT "[MASM] Assembling RawrXD_EnterpriseLicense.asm (License Validation, HWID, Feature Gates)"
+        VERBATIM
+    )
+
+    # Phase 45: License Shield — Anti-Tamper + Integrity Guard (34KB)
+    set(ASM_LICENSE_SHIELD_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_License_Shield.asm")
+    set(ASM_LICENSE_SHIELD_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_License_Shield.obj")
+    add_custom_command(
+        OUTPUT ${ASM_LICENSE_SHIELD_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_LICENSE_SHIELD_OBJ} ${ASM_LICENSE_SHIELD_SRC}
+        DEPENDS ${ASM_LICENSE_SHIELD_SRC}
+        COMMENT "[MASM] Assembling RawrXD_License_Shield.asm (CRC32 Integrity, Anti-Debug, Tamper Detection)"
         VERBATIM
     )
 
@@ -340,6 +493,13 @@ if(MSVC)
         ${ASM_COT_ENGINE_OBJ}
         ${ASM_COT_DLL_ENTRY_OBJ}
         ${ASM_COT_PHASE39_OBJ}
+        ${ASM_LSP_SYMINDEX_OBJ}
+        ${ASM_RAWRCODEX_OBJ}
+        ${ASM_DEBUG_ENGINE_OBJ}
+        ${ASM_QUADBUFFER_OBJ}
+        ${ASM_SWARM_NETWORK_OBJ}
+        ${ASM_ENTERPRISE_LIC_OBJ}
+        ${ASM_LICENSE_SHIELD_OBJ}
     )
 
     # Link MASM objects into RawrEngine
@@ -431,6 +591,10 @@ if(WIN32)
         src/win32app/TransparentRenderer.h
         src/win32app/ModelConnection.h
         src/win32app/ContextManager.h
+
+        # Plugin System — Phase 43: Native Win32 DLL loading (C ABI)
+        src/plugin_system/win32_plugin_loader.cpp
+        src/win32app/Win32IDE_Plugins.cpp
         
         # Configuration management
         src/config/IDEConfig.cpp
@@ -467,7 +631,6 @@ if(WIN32)
         src/core/streaming_engine_registry.cpp
         src/core/gpu_backend_bridge.cpp
         src/core/enterprise_license.cpp
-        src/core/enterprise_license_stubs.cpp
         src/core/multi_response_engine.cpp
         src/core/flash_attention.cpp
         src/core/execution_scheduler.cpp
@@ -479,12 +642,13 @@ if(WIN32)
         # Distributed Swarm Compilation (Phase 11)
         src/core/swarm_coordinator.cpp
         src/core/swarm_worker.cpp
-        src/core/swarm_network_stubs.cpp
         src/win32app/Win32IDE_SwarmPanel.cpp
+        
+        # Dual-Agent Orchestrator (Phase 41)
+        src/win32app/Win32IDE_DualAgentPanel.cpp
         
         # Native Debugger Engine (Phase 12)
         src/core/native_debugger_engine.cpp
-        src/core/debug_engine_stubs.cpp
         src/win32app/Win32IDE_NativeDebugPanel.cpp
         
         # Three-Layer Hotpatch System (Phase 14.2)
@@ -552,6 +716,11 @@ if(WIN32)
         src/lsp/RawrXD_LSPServer.cpp
         src/win32app/Win32IDE_LSPServer.cpp
 
+        # Phase 27b: LSP ↔ Hotpatch Bridge (Symbol Export, Diagnostics, JSON-RPC Extension)
+        src/lsp/lsp_hotpatch_bridge.cpp
+        src/lsp/hotpatch_symbol_provider.cpp
+        src/lsp/gguf_diagnostic_provider.cpp
+
         # Phase 28: MonacoCore Native Editor Engine — Toggleable Engine System
         src/core/MonacoCoreEngine.cpp
         src/core/monaco_core_stubs.cpp
@@ -578,6 +747,10 @@ if(WIN32)
         # Phase 33: Voice Chat Engine
         src/core/voice_chat.cpp
         src/win32app/Win32IDE_VoiceChat.cpp
+
+        # Phase 44: Voice Automation — Toggleable TTS with Pluggable Voices
+        src/core/voice_automation.cpp
+        src/win32app/Win32IDE_VoiceAutomation.cpp
 
         # Phase 33: Quick-Win Qt Ports
         src/core/shortcut_manager.cpp
@@ -614,7 +787,8 @@ if(WIN32)
         src/core/extension_polyfill_engine.cpp
     )
     
-    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES})
+    add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
+        src/win32app/RawrXD-Win32IDE.rc)
 
     # =========================================================================
     # Phase 36: QuickJS Static Library (embedded JS runtime)
@@ -663,7 +837,7 @@ if(WIN32)
     target_link_libraries(RawrXD-Win32IDE PRIVATE
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
-        shlwapi psapi dbghelp dbgeng winhttp ws2_32 winmm gdi32 user32
+        shlwapi psapi dbghelp dbgeng winhttp ws2_32 winmm gdi32 user32 ntdll
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         advapi32 crypt32 bcrypt wintrust
         ${MASM_OBJECTS}
@@ -700,6 +874,8 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
         ${CMAKE_CURRENT_SOURCE_DIR}/src/config
         ${CMAKE_CURRENT_SOURCE_DIR}/src/asm
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/plugin_system
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
 
@@ -715,4 +891,8 @@ if(WIN32)
         RUNTIME_OUTPUT_DIRECTORY bin
         OUTPUT_NAME RawrXD-Win32IDE
     )
+    # RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
+    if(MSVC)
+        target_link_options(RawrXD-Win32IDE PRIVATE /LARGEADDRESSAWARE:NO)
+    endif()
 endif()
