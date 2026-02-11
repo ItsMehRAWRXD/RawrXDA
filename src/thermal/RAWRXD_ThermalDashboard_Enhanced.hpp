@@ -10,14 +10,15 @@
 
 #pragma once
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 #include "thermal_dashboard_plugin.hpp"
 #include "PredictiveThrottling.h"
 #include "DynamicLoadBalancer.h"
 #include "SovereignControlBlock.h"
-
-
-// REMOVED_QT: // QtCharts
-
 
 #include <memory>
 #include <vector>
@@ -41,11 +42,11 @@ struct TemperatureDataPoint {
 /**
  * @brief Enhanced Thermal Dashboard with Predictive Visualization
  */
-class ThermalDashboardEnhanced : public void {
+class ThermalDashboardEnhanced {
 
 public:
     explicit ThermalDashboardEnhanced(void* parent = nullptr);
-    ~ThermalDashboardEnhanced() override;
+    ~ThermalDashboardEnhanced();
 
 public:
     /**
@@ -161,8 +162,8 @@ private:
     // ═══════════════════════════════════════════════════════════════════════════
     
     // Temperature history chart
-// REMOVED_QT:     QChartView* m_tempChartView;
-    void* m_tempChart;               // Chart object (was QChart*)
+    void* m_tempChartView;           // Chart view handle
+    void* m_tempChart;               // Chart object handle
     void* m_nvmeTempSeries[5];       // Line series (was QLineSeries*)
     void* m_gpuTempSeries;           // Line series (was QLineSeries*)
     void* m_cpuTempSeries;           // Line series (was QLineSeries*)
@@ -173,14 +174,14 @@ private:
     void* m_tempYAxis;               // Value axis (was QValueAxis*)
     
     // Load balancer chart
-// REMOVED_QT:     QChartView* m_loadChartView;
-    void* m_loadChart;               // Chart object (was QChart*)
+    void* m_loadChartView;           // Chart view handle
+    void* m_loadChart;               // Chart object handle
     void* m_loadSeries[5];           // Line series (was QLineSeries*)
     void* m_selectedDriveSeries;     // Line series (was QLineSeries*)
     
     // Prediction chart
-// REMOVED_QT:     QChartView* m_predChartView;
-    void* m_predChart;               // Chart object (was QChart*)
+    void* m_predChartView;           // Chart view handle
+    void* m_predChart;               // Chart object handle
     void* m_ewmaSeries;              // Line series (was QLineSeries*)
     void* m_slopeSeries;             // Line series (was QLineSeries*)
     void* m_confidenceSeries;        // Line series (was QLineSeries*)
@@ -237,11 +238,11 @@ private:
 /**
  * @brief Compact toolbar widget for thermal status (enhanced)
  */
-class ThermalCompactWidgetEnhanced : public void {
+class ThermalCompactWidgetEnhanced {
 
 public:
     explicit ThermalCompactWidgetEnhanced(void* parent = nullptr);
-    ~ThermalCompactWidgetEnhanced() override = default;
+    ~ThermalCompactWidgetEnhanced() = default;
 
 public:
     void onThermalUpdate(const ThermalSnapshot& snapshot);

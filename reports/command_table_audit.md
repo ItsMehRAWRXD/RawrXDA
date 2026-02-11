@@ -1,5 +1,5 @@
 # COMMAND_TABLE Coverage Audit Report
-Generated: 2026-02-11 07:46:36
+Generated: 2026-02-11 07:47:53
 Source root: `D:\rawrxd\src`
 
 ## Summary

@@ -997,7 +997,8 @@ PatchResult UnifiedHotpatchManager::embedding_index_directory(const char* dirPat
         return PatchResult::error("Embedding engine not initialized", -1);
 
     auto& eng = RawrXD::Embeddings::EmbeddingEngine::instance();
-    return eng.indexDirectory(dirPath);
+    RawrXD::Embeddings::ChunkingConfig chunkCfg;
+    return eng.indexDirectory(dirPath, chunkCfg);
 }
 
 // ---- Vision Encoder ----
@@ -1008,7 +1009,7 @@ PatchResult UnifiedHotpatchManager::vision_initialize(const char* modelPath) {
     auto& vis = RawrXD::Vision::VisionEncoder::instance();
     RawrXD::Vision::VisionModelConfig config;
     config.modelPath = modelPath ? modelPath : "";
-    config.architecture = RawrXD::Vision::VisionModelConfig::CLIP_VIT_L14;
+    config.arch = RawrXD::Vision::VisionModelConfig::Architecture::CLIP_VIT_L14;
     auto r = vis.loadModel(config);
     if (!r.success) {
         m_stats.totalFailures.fetch_add(1);

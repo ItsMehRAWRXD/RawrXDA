@@ -110,23 +110,9 @@ using DistanceFn = float(*)(const float* a, const float* b, uint32_t dim);
 DistanceFn getOptimalDistanceFn(DistanceMetric metric);
 
 // ============================================================================
-// Chunking Strategy for code files
+// Chunking Strategy for code files — uses ChunkingConfig from vector_index.h
+// (already defined in this namespace via #include "vector_index.h")
 // ============================================================================
-struct ChunkingConfig {
-    uint32_t maxChunkTokens;      // Max tokens per chunk
-    uint32_t overlapTokens;       // Overlap between sliding windows
-    bool splitByFunction;         // Use language parser to split by function
-    bool splitByClass;            // Split by class boundary
-    bool generateFileSummary;     // Generate a summary chunk per file
-    bool includeImports;          // Include import/include section
-    uint32_t minChunkLines;       // Skip chunks smaller than this
-
-    ChunkingConfig()
-        : maxChunkTokens(256), overlapTokens(32),
-          splitByFunction(true), splitByClass(true),
-          generateFileSummary(true), includeImports(true),
-          minChunkLines(3) {}
-};
 
 // ============================================================================
 // Language-Aware Chunker

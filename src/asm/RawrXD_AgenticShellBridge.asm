@@ -160,6 +160,14 @@ AGENTSHELL_CL SEGMENT ALIGN(16) 'DATA'
     g_AS_Counter_BytesFromAI    dq 0
                                 db 56 dup(0)
 
+    PUBLIC g_AS_Counter_CtxDropped
+    g_AS_Counter_CtxDropped     dq 0
+                                db 56 dup(0)
+
+    PUBLIC g_AS_Counter_LocalStubHits
+    g_AS_Counter_LocalStubHits  dq 0
+                                db 56 dup(0)
+
     PUBLIC g_AS_MetricEnd
     g_AS_MetricEnd          dq 0454E44414745h       ; "ENDAGE" sentinel
                             db 56 dup(0)
@@ -266,6 +274,26 @@ AGENTSHELL_CL ENDS
     ; Scratch for integer-to-ascii
     g_AS_ItoBuf             db 32 dup(0)
 
+    ; =========================================================================
+    ; Local inference stub mode (0=HTTP/Ollama, 1=deterministic local stub)
+    ; =========================================================================
+    ALIGN 8
+    g_AS_UseLocalStub       dd  0
+    g_AS_LocalStubPad       dd  0
+
+    ; =========================================================================
+    ; Deterministic stub response templates
+    ; =========================================================================
+    szAS_StubExitCode1      db "General failure. Check command syntax and arguments.", 0
+    szAS_StubExitCode2      db "File or directory not found. Verify path exists with 'dir' or 'ls'.", 0
+    szAS_StubExitCode5      db "Access denied. Run with elevated privileges or check permissions.", 0
+    szAS_StubExitCode127    db "Command not found. Verify it is installed and in PATH.", 0
+    szAS_StubExitCode9009   db "Command not recognized. Verify it is installed and in PATH.", 0
+    szAS_StubExitCode128    db "Process terminated by signal. Check for OOM or external kill.", 0
+    szAS_StubDefault        db "Command failed. Review the output above for specific error details.", 0
+    szAS_StubSugPrefix      db " Suggested fix: ", 0
+    szAS_StubSugRetry       db "Retry with corrected syntax.", 0
+
 ; =============================================================================
 ;                           Code Segment
 ; =============================================================================
@@ -340,6 +368,8 @@ AgenticShell_Init PROC FRAME
     mov     qword ptr [g_AS_Counter_AIFailures], 0
     mov     qword ptr [g_AS_Counter_BytesSentToAI], 0
     mov     qword ptr [g_AS_Counter_BytesFromAI], 0
+    mov     qword ptr [g_AS_Counter_CtxDropped], 0
+    mov     qword ptr [g_AS_Counter_LocalStubHits], 0
 
     ; ---- Create manual-reset event for signaling AI thread ----
     xor     ecx, ecx                ; lpEventAttributes = NULL
@@ -367,15 +397,19 @@ AgenticShell_Init PROC FRAME
     mov     qword ptr [g_AS_hInternet], rax
 
     ; ---- InternetConnect to Ollama ----
+    ; InternetConnectA takes 8 params: hInternet, server, port, user,
+    ;   password, service, dwFlags, dwContext
     mov     rcx, rax                ; hInternet
     lea     rdx, szAS_OllamaHost
     mov     r8d, OLLAMA_PORT
     xor     r9, r9                  ; lpszUserName
-    sub     rsp, 48
-    mov     qword ptr [rsp + 32], 0 ; lpszPassword
+    sub     rsp, 64
+    mov     qword ptr [rsp + 32], 0             ; lpszPassword
     mov     qword ptr [rsp + 40], INTERNET_SERVICE_HTTP
+    mov     qword ptr [rsp + 48], 0             ; dwFlags
+    mov     qword ptr [rsp + 56], 0             ; dwContext
     call    InternetConnectA
-    add     rsp, 48
+    add     rsp, 64
     test    rax, rax
     jz      @as_init_fail_inet
     mov     qword ptr [g_AS_hConnect], rax
@@ -582,6 +616,18 @@ AgenticShell_OnCommandEnd PROC FRAME
     mov     r14, r8                 ; r14 = output len
     mov     r15, r9                 ; r15 = command ptr
 
+    ; ---- SPSC ring-full guard ----
+    ; If (head - tail) >= CTX_RING_SLOTS, producer overrun: drop context
+    mov     rax, qword ptr [g_ContextHead]
+    sub     rax, qword ptr [g_ContextTail]
+    cmp     rax, CTX_RING_SLOTS
+    jb      @as_oce_ring_ok
+    ; Ring full — drop this context capture
+    lock inc qword ptr [g_AS_Counter_CtxDropped]
+    xor     eax, eax
+    jmp     @as_oce_exit_ok
+
+@as_oce_ring_ok:
     ; ---- Acquire context slot (atomic increment) ----
     mov     rax, 1
     lock xadd qword ptr [g_ContextHead], rax
@@ -643,6 +689,13 @@ AgenticShell_OnCommandEnd PROC FRAME
     rep movsb
     mov     byte ptr [rdi], 0       ; Null-terminate
 @as_oce_no_output:
+
+    ; ---- SPSC release fence ----
+    ; Ensure all slot data writes (command, output, exitcode, timestamp)
+    ; are globally visible BEFORE the availability flag is set.
+    ; On x86 TSO, regular stores are ordered, but sfence provides
+    ; defense-in-depth against streaming store reordering.
+    sfence
 
     ; ---- Set flags based on exit code and mode ----
     cmp     dword ptr [g_AS_Mode], AI_MODE_PASSIVE
@@ -713,13 +766,15 @@ AgenticShell_GetSuggestion PROC FRAME
     test    rdx, rdx
     jz      @as_gs_null
 
-    ; Check if a suggestion is ready (atomic check-and-clear)
-    xor     eax, eax
-    mov     r8, 1
+    ; Check if a suggestion is ready (atomic test-and-clear)
+    ; cmpxchg: if [SuggestionReady] == RAX(1), store R8(0) → atomically consume
+    ;          if [SuggestionReady] != RAX(1), load current into RAX → no modify
+    mov     rax, 1                  ; Expected: ready (1)
+    xor     r8d, r8d                ; Desired: consumed (0)
     lock cmpxchg qword ptr [g_AS_SuggestionReady], r8
-    ; If old value was 0, no suggestion available
-    test    eax, eax
-    jz      @as_gs_none
+    ; If cmpxchg failed (was not 1), no suggestion available
+    cmp     eax, 1
+    jne     @as_gs_none
 
     ; Determine which buffer is readable
     mov     rax, qword ptr [g_AS_ActiveBuf]
@@ -748,8 +803,7 @@ AgenticShell_GetSuggestion PROC FRAME
     mov     byte ptr [rdi], 0       ; Null-terminate
     pop     rax
 
-    ; Clear suggestion-ready flag (allow new suggestion)
-    mov     qword ptr [g_AS_SuggestionReady], 0
+    ; Flag was atomically cleared by cmpxchg above — no redundant clear needed
 
     jmp     @as_gs_exit
 
@@ -889,7 +943,7 @@ AgenticShell_SetModel ENDP
 ; =============================================================================
 ; AgenticShell_GetStats — Return AI subsystem performance counters
 ;
-; RCX = Output buffer (7 QWORDs = 56 bytes minimum)
+; RCX = Output buffer (9 QWORDs = 72 bytes minimum)
 ;   [0] = CtxCaptured
 ;   [1] = AIRequests
 ;   [2] = AISuccess
@@ -897,6 +951,8 @@ AgenticShell_SetModel ENDP
 ;   [4] = BytesSentToAI
 ;   [5] = BytesFromAI
 ;   [6] = CurrentMode
+;   [7] = CtxDropped         (SPSC ring-full drops)
+;   [8] = LocalStubHits      (deterministic stub invocations)
 ; Returns: RAX = 0
 ; =============================================================================
 PUBLIC AgenticShell_GetStats
@@ -918,6 +974,10 @@ AgenticShell_GetStats PROC
     mov     qword ptr [rcx + 40], rax
     mov     eax, dword ptr [g_AS_Mode]
     mov     qword ptr [rcx + 48], rax
+    mov     rax, qword ptr [g_AS_Counter_CtxDropped]
+    mov     qword ptr [rcx + 56], rax
+    mov     rax, qword ptr [g_AS_Counter_LocalStubHits]
+    mov     qword ptr [rcx + 64], rax
 
     xor     eax, eax
     ret
@@ -1007,6 +1067,11 @@ as_AIWorkerThread PROC FRAME
     cmp     dword ptr [rsi + CTX_OFF_FLAGS], CTX_FLAG_AI_PENDING
     jne     @ai_advance_tail
 
+    ; ---- SPSC acquire fence ----
+    ; Ensure the flag read completes before any slot data reads.
+    ; Pairs with sfence in producer (OnCommandEnd).
+    lfence
+
     ; ---- Build error explanation prompt ----
     ; Target: inactive suggestion buffer (write to opposite of g_AS_ActiveBuf)
     mov     rax, qword ptr [g_AS_ActiveBuf]
@@ -1027,12 +1092,27 @@ as_AIWorkerThread PROC FRAME
     ; Count AI request
     lock inc qword ptr [g_AS_Counter_AIRequests]
 
-    ; ---- HTTP POST to Ollama ----
+    ; ---- Inference dispatch: HTTP (Ollama) or deterministic local stub ----
+    cmp     dword ptr [g_AS_UseLocalStub], 0
+    jne     @ai_use_local_stub
+
+    ; HTTP POST to Ollama
     lea     rcx, g_AS_JsonPayload   ; Payload pointer
     mov     rdx, r13                ; Payload length
     mov     r8, r12                 ; Output suggestion buffer
     mov     r9d, MAX_SUGGESTION_LEN ; Output capacity
     call    as_PostToOllama
+    jmp     @ai_check_infer_result
+
+@ai_use_local_stub:
+    ; Deterministic local inference (no network, no Ollama dependency)
+    mov     rcx, rsi                ; Slot pointer (ContextSlot base)
+    mov     rdx, r12                ; Output suggestion buffer
+    mov     r8d, MAX_SUGGESTION_LEN ; Capacity
+    call    as_LocalInferenceStub
+    lock inc qword ptr [g_AS_Counter_LocalStubHits]
+
+@ai_check_infer_result:
     test    eax, eax
     jnz     @ai_query_failed
 
@@ -1132,14 +1212,27 @@ as_BuildPromptJson PROC FRAME
     lea     rbx, szAS_PromptExplainOut
     call    as_json_escape_copy
 
-    ; ---- Output text from slot (truncated to MAX_PROMPT_CONTEXT) ----
+    ; ---- Output text from slot ----
+    ; Bounds safety: cap output copy to both MAX_PROMPT_CONTEXT and
+    ; remaining JSON buffer capacity (reserve 128 bytes for closing JSON)
+    mov     rax, rdi
+    sub     rax, r12                ; rax = bytes written so far
+    mov     ecx, MAX_JSON_PAYLOAD - 128
+    sub     ecx, eax                ; ecx = remaining capacity for output
+    jle     @bp_skip_output         ; No room left — skip output body
+
+    mov     eax, dword ptr [rsi + CTX_OFF_OUTLEN]
+    cmp     eax, MAX_PROMPT_CONTEXT
+    jbe     @bp_outlen_ok
+    mov     eax, MAX_PROMPT_CONTEXT
+@bp_outlen_ok:
+    cmp     ecx, eax
+    jbe     @bp_out_cap_ok          ; capacity < outLen: use capacity
+    mov     ecx, eax                ; outLen < capacity: use outLen
+@bp_out_cap_ok:
     lea     rbx, [rsi + CTX_OFF_OUTPUT]
-    mov     ecx, dword ptr [rsi + CTX_OFF_OUTLEN]
-    cmp     ecx, MAX_PROMPT_CONTEXT
-    jbe     @bp_out_ok
-    mov     ecx, MAX_PROMPT_CONTEXT
-@bp_out_ok:
     call    as_json_escape_copy_n
+@bp_skip_output:
 
     ; ---- Exit code label ----
     lea     rbx, szAS_PromptExplainExit
@@ -1548,6 +1641,8 @@ as_json_escape_copy_n PROC
     je      @jecn_esc_nl
     cmp     al, 0Dh
     je      @jecn_esc_cr
+    cmp     al, 09h                 ; \t (tab)
+    je      @jecn_esc_tab
 
     mov     byte ptr [rdi], al
     inc     rdi
@@ -1585,6 +1680,14 @@ as_json_escape_copy_n PROC
     dec     edx
     jmp     @jecn_loop
 
+@jecn_esc_tab:
+    mov     byte ptr [rdi], '\'
+    mov     byte ptr [rdi + 1], 't'
+    add     rdi, 2
+    inc     rcx
+    dec     edx
+    jmp     @jecn_loop
+
 @jecn_done:
     pop     rdx
     pop     rax
@@ -1609,10 +1712,13 @@ as_uint32_to_buf PROC
     ret
 
 @u2b_nonzero:
-    ; Convert digits in reverse into stack scratch
-    ; Max 10 digits for uint32
+    ; Convert digits in reverse into static scratch buffer.
+    ; Uses g_AS_ItoBuf (AI thread only — no concurrency concern).
+    ; Avoids push/pop digit reversal which corrupts SEH unwind state
+    ; in a non-FRAME leaf procedure.
     mov     ebx, eax                ; save value
-    lea     r8, [rdi + 10]          ; scratch end (within reasonable range)
+    lea     r8, g_AS_ItoBuf
+    add     r8, 20                  ; r8 = past-end of scratch area
     xor     ecx, ecx                ; digit count
 
 @u2b_loop:
@@ -1621,30 +1727,181 @@ as_uint32_to_buf PROC
 
     mov     eax, ebx
     xor     edx, edx
-    mov     r8d, 10
-    div     r8d                     ; eax = quotient, edx = remainder
+    mov     r9d, 10
+    div     r9d                     ; eax = quotient, edx = remainder
     mov     ebx, eax
     add     dl, '0'
 
-    ; Push digit
-    push    rdx
+    ; Store digit in reverse (decrementing scratch pointer)
+    dec     r8
+    mov     byte ptr [r8], dl
     inc     ecx
     jmp     @u2b_loop
 
 @u2b_emit:
-    ; Pop digits in correct order
-@u2b_pop:
+    ; Copy digits from scratch to output [rdi] in correct order
+    ; r8 = start of digit string, ecx = digit count
+@u2b_copy:
     test    ecx, ecx
     jz      @u2b_done
-    pop     rax
+    mov     al, byte ptr [r8]
     mov     byte ptr [rdi], al
+    inc     r8
     inc     rdi
     dec     ecx
-    jmp     @u2b_pop
+    jmp     @u2b_copy
 
 @u2b_done:
     pop     rbx
     ret
 as_uint32_to_buf ENDP
+
+; =============================================================================
+; AgenticShell_SetLocalMode — Toggle between HTTP/Ollama and local stub
+;
+; ECX = 0: Use HTTP (Ollama) inference (default)
+; ECX = 1: Use deterministic local inference stub (no network)
+; Returns: RAX = 0 on success
+; =============================================================================
+PUBLIC AgenticShell_SetLocalMode
+AgenticShell_SetLocalMode PROC
+    cmp     ecx, 1
+    ja      @as_slm_fail
+    mov     dword ptr [g_AS_UseLocalStub], ecx
+    xor     eax, eax
+    ret
+@as_slm_fail:
+    mov     eax, AGENTSHELL_ERR_INVALID_MODE
+    ret
+AgenticShell_SetLocalMode ENDP
+
+; =============================================================================
+; as_LocalInferenceStub — Deterministic local inference (no HTTP/Ollama)
+;
+; Generates a canned error explanation + suggestion based on exit code.
+; Used for offline testing, CI environments, or as fallback when Ollama
+; is unavailable.
+;
+; RCX = Slot pointer (ContextSlot base — read exit code + command)
+; RDX = Output suggestion buffer
+; R8  = Output capacity
+; Returns: EAX = 0 on success
+; =============================================================================
+as_LocalInferenceStub PROC FRAME
+    push    rbx
+    .pushreg rbx
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
+    push    r12
+    .pushreg r12
+    push    r13
+    .pushreg r13
+    sub     rsp, 32
+    .allocstack 32
+    .endprolog
+
+    mov     rsi, rcx                ; rsi = slot pointer
+    mov     rdi, rdx                ; rdi = output write cursor
+    mov     r12d, r8d               ; r12d = capacity
+    mov     r13, rdx                ; r13 = output start
+
+    ; Reserve 1 byte for null terminator
+    sub     r12d, 1
+    jle     @ls_fail                ; Capacity too small
+
+    ; ---- Select error template based on exit code ----
+    mov     eax, dword ptr [rsi + CTX_OFF_EXITCODE]
+
+    lea     rbx, szAS_StubDefault   ; Default template
+    cmp     eax, 1
+    jne     @ls_not1
+    lea     rbx, szAS_StubExitCode1
+@ls_not1:
+    cmp     eax, 2
+    jne     @ls_not2
+    lea     rbx, szAS_StubExitCode2
+@ls_not2:
+    cmp     eax, 5
+    jne     @ls_not5
+    lea     rbx, szAS_StubExitCode5
+@ls_not5:
+    cmp     eax, 127
+    jne     @ls_not127
+    lea     rbx, szAS_StubExitCode127
+@ls_not127:
+    cmp     eax, 9009
+    jne     @ls_not9009
+    lea     rbx, szAS_StubExitCode9009
+@ls_not9009:
+    ; Check for signal-killed processes (exit codes 128+)
+    cmp     eax, 128
+    jb      @ls_template_selected
+    cmp     eax, 192
+    ja      @ls_template_selected
+    lea     rbx, szAS_StubExitCode128
+@ls_template_selected:
+
+    ; ---- Copy error template to output (bounded) ----
+    xor     ecx, ecx                ; ecx = bytes written
+@ls_copy_msg:
+    cmp     ecx, r12d
+    jae     @ls_finish
+    mov     al, byte ptr [rbx]
+    test    al, al
+    jz      @ls_msg_done
+    mov     byte ptr [rdi], al
+    inc     rbx
+    inc     rdi
+    inc     ecx
+    jmp     @ls_copy_msg
+
+@ls_msg_done:
+    ; ---- Append suggestion suffix ----
+    lea     rbx, szAS_StubSugPrefix
+@ls_copy_sug:
+    cmp     ecx, r12d
+    jae     @ls_finish
+    mov     al, byte ptr [rbx]
+    test    al, al
+    jz      @ls_sug_done
+    mov     byte ptr [rdi], al
+    inc     rbx
+    inc     rdi
+    inc     ecx
+    jmp     @ls_copy_sug
+
+@ls_sug_done:
+    lea     rbx, szAS_StubSugRetry
+@ls_copy_retry:
+    cmp     ecx, r12d
+    jae     @ls_finish
+    mov     al, byte ptr [rbx]
+    test    al, al
+    jz      @ls_finish
+    mov     byte ptr [rdi], al
+    inc     rbx
+    inc     rdi
+    inc     ecx
+    jmp     @ls_copy_retry
+
+@ls_finish:
+    mov     byte ptr [rdi], 0       ; Null-terminate
+    xor     eax, eax                ; Success
+    jmp     @ls_exit
+
+@ls_fail:
+    mov     eax, 1                  ; Failure (capacity exhausted)
+
+@ls_exit:
+    add     rsp, 32
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+as_LocalInferenceStub ENDP
 
 END

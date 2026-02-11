@@ -13,6 +13,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <intrin.h>
+#include <thread>
 #endif
 
 namespace rawrxd::setup {
@@ -190,10 +191,10 @@ void HardwarePage::startDetection()
     m_statusLabel->setText(tr("Starting hardware detection..."));
     m_detectionComplete = false;
     
-    // Run detection in background thread
-    QFuture<void> future = [](auto f){f();}([this]() {
+    // Run detection in background thread (C++20 std::jthread)
+    std::thread([this]() {
         m_detector->detect();
-    });
+    }).detach();
 }
 
 void HardwarePage::onDetectionProgress(int percent, const std::string& status)
