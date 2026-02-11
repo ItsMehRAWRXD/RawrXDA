@@ -1,29 +1,29 @@
 {
-  "generated": "2026-02-11T07:25:14.286693",
+  "generated": "2026-02-11T07:46:36.930170",
   "summary": {
     "total_idm_defines": 431,
-    "total_table_entries": 416,
+    "total_table_entries": 472,
     "total_handlers": 258,
-    "gui_routable": 390,
-    "cli_accessible": 403,
-    "coverage_pct": 87.01,
-    "is_clean": false
+    "gui_routable": 446,
+    "cli_accessible": 458,
+    "coverage_pct": 100.0,
+    "is_clean": true
   },
   "categories": {
-    "File": 15,
-    "Edit": 19,
-    "View": 10,
+    "File": 20,
+    "Edit": 23,
+    "View": 17,
     "Git": 5,
     "Theme": 17,
     "Transparency": 9,
-    "Help": 4,
+    "Help": 6,
     "Terminal": 11,
     "Agent": 11,
     "SubAgent": 5,
     "Autonomy": 6,
-    "AIMode": 4,
+    "AIMode": 13,
     "AIContext": 7,
-    "ReverseEng": 20,
+    "ReverseEng": 26,
     "Backend": 11,
     "Router": 21,
     "LSP": 13,
@@ -36,7 +36,7 @@
     "Confidence": 2,
     "Swarm": 25,
     "Debug": 28,
-    "Plugin": 9,
+    "Plugin": 19,
     "Hotpatch": 17,
     "Monaco": 6,
     "LSPServer": 9,
@@ -44,407 +44,14 @@
     "PDB": 9,
     "Audit": 7,
     "Gauntlet": 2,
-    "Voice": 10,
+    "Voice": 17,
     "QW": 12,
     "Telemetry": 6,
-    "Tools": 4,
+    "Tools": 10,
     "Modules": 3,
     "CLI": 26
   },
-  "missing_from_table": [
-    {
-      "name": "IDM_FILE_AUTOSAVE",
-      "value": 105,
-      "file": "ide_constants.h",
-      "line": 8,
-      "category": "FILE"
-    },
-    {
-      "name": "IDM_FILE_CLOSE_FOLDER",
-      "value": 106,
-      "file": "ide_constants.h",
-      "line": 9,
-      "category": "FILE"
-    },
-    {
-      "name": "IDM_FILE_OPEN_FOLDER",
-      "value": 108,
-      "file": "ide_constants.h",
-      "line": 11,
-      "category": "FILE"
-    },
-    {
-      "name": "IDM_FILE_NEW_WINDOW",
-      "value": 109,
-      "file": "ide_constants.h",
-      "line": 12,
-      "category": "FILE"
-    },
-    {
-      "name": "IDM_FILE_CLOSE_TAB",
-      "value": 110,
-      "file": "ide_constants.h",
-      "line": 13,
-      "category": "FILE"
-    },
-    {
-      "name": "IDM_EDIT_SELECTALL",
-      "value": 208,
-      "file": "ide_constants.h",
-      "line": 22,
-      "category": "EDIT"
-    },
-    {
-      "name": "IDM_EDIT_MULTICURSOR_ADD",
-      "value": 209,
-      "file": "ide_constants.h",
-      "line": 23,
-      "category": "EDIT"
-    },
-    {
-      "name": "IDM_EDIT_MULTICURSOR_REMOVE",
-      "value": 210,
-      "file": "ide_constants.h",
-      "line": 24,
-      "category": "EDIT"
-    },
-    {
-      "name": "IDM_EDIT_GOTO_LINE",
-      "value": 211,
-      "file": "ide_constants.h",
-      "line": 25,
-      "category": "EDIT"
-    },
-    {
-      "name": "IDM_VIEW_TOGGLE_SIDEBAR",
-      "value": 301,
-      "file": "ide_constants.h",
-      "line": 27,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_VIEW_TOGGLE_TERMINAL",
-      "value": 302,
-      "file": "ide_constants.h",
-      "line": 28,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_VIEW_TOGGLE_OUTPUT",
-      "value": 303,
-      "file": "ide_constants.h",
-      "line": 29,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_VIEW_TOGGLE_FULLSCREEN",
-      "value": 304,
-      "file": "ide_constants.h",
-      "line": 30,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_VIEW_ZOOM_IN",
-      "value": 305,
-      "file": "ide_constants.h",
-      "line": 31,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_VIEW_ZOOM_OUT",
-      "value": 306,
-      "file": "ide_constants.h",
-      "line": 32,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_VIEW_ZOOM_RESET",
-      "value": 307,
-      "file": "ide_constants.h",
-      "line": 33,
-      "category": "VIEW"
-    },
-    {
-      "name": "IDM_AI_INLINE_COMPLETE",
-      "value": 401,
-      "file": "ide_constants.h",
-      "line": 35,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_CHAT_MODE",
-      "value": 402,
-      "file": "ide_constants.h",
-      "line": 36,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_EXPLAIN_CODE",
-      "value": 403,
-      "file": "ide_constants.h",
-      "line": 37,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_REFACTOR",
-      "value": 404,
-      "file": "ide_constants.h",
-      "line": 38,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_GENERATE_TESTS",
-      "value": 405,
-      "file": "ide_constants.h",
-      "line": 39,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_GENERATE_DOCS",
-      "value": 406,
-      "file": "ide_constants.h",
-      "line": 40,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_FIX_ERRORS",
-      "value": 407,
-      "file": "ide_constants.h",
-      "line": 41,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_OPTIMIZE_CODE",
-      "value": 408,
-      "file": "ide_constants.h",
-      "line": 42,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_AI_MODEL_SELECT",
-      "value": 409,
-      "file": "ide_constants.h",
-      "line": 43,
-      "category": "AI"
-    },
-    {
-      "name": "IDM_TOOLS_COMMAND_PALETTE",
-      "value": 501,
-      "file": "ide_constants.h",
-      "line": 45,
-      "category": "TOOLS"
-    },
-    {
-      "name": "IDM_TOOLS_SETTINGS",
-      "value": 502,
-      "file": "ide_constants.h",
-      "line": 46,
-      "category": "TOOLS"
-    },
-    {
-      "name": "IDM_TOOLS_EXTENSIONS",
-      "value": 503,
-      "file": "ide_constants.h",
-      "line": 47,
-      "category": "TOOLS"
-    },
-    {
-      "name": "IDM_TOOLS_TERMINAL",
-      "value": 504,
-      "file": "ide_constants.h",
-      "line": 48,
-      "category": "TOOLS"
-    },
-    {
-      "name": "IDM_TOOLS_BUILD",
-      "value": 505,
-      "file": "ide_constants.h",
-      "line": 49,
-      "category": "TOOLS"
-    },
-    {
-      "name": "IDM_TOOLS_DEBUG",
-      "value": 506,
-      "file": "ide_constants.h",
-      "line": 50,
-      "category": "TOOLS"
-    },
-    {
-      "name": "IDM_HELP_DOCS",
-      "value": 601,
-      "file": "ide_constants.h",
-      "line": 52,
-      "category": "HELP"
-    },
-    {
-      "name": "IDM_HELP_SHORTCUTS",
-      "value": 603,
-      "file": "ide_constants.h",
-      "line": 54,
-      "category": "HELP"
-    },
-    {
-      "name": "IDM_DECOMP_RENAME_VAR",
-      "value": 8001,
-      "file": "win32app/Win32IDE_DecompilerView.cpp",
-      "line": 54,
-      "category": "DECOMP"
-    },
-    {
-      "name": "IDM_DECOMP_GOTO_DEF",
-      "value": 8002,
-      "file": "win32app/Win32IDE_DecompilerView.cpp",
-      "line": 55,
-      "category": "DECOMP"
-    },
-    {
-      "name": "IDM_DECOMP_FIND_REFS",
-      "value": 8003,
-      "file": "win32app/Win32IDE_DecompilerView.cpp",
-      "line": 56,
-      "category": "DECOMP"
-    },
-    {
-      "name": "IDM_DECOMP_COPY_LINE",
-      "value": 8004,
-      "file": "win32app/Win32IDE_DecompilerView.cpp",
-      "line": 57,
-      "category": "DECOMP"
-    },
-    {
-      "name": "IDM_DECOMP_COPY_ALL",
-      "value": 8005,
-      "file": "win32app/Win32IDE_DecompilerView.cpp",
-      "line": 58,
-      "category": "DECOMP"
-    },
-    {
-      "name": "IDM_DECOMP_GOTO_ADDR",
-      "value": 8006,
-      "file": "win32app/Win32IDE_DecompilerView.cpp",
-      "line": 59,
-      "category": "DECOMP"
-    },
-    {
-      "name": "IDM_VSCEXT_API_STATUS",
-      "value": 10000,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1900,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_RELOAD",
-      "value": 10001,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1901,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_LIST_COMMANDS",
-      "value": 10002,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1902,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_LIST_PROVIDERS",
-      "value": 10003,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1903,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_DIAGNOSTICS",
-      "value": 10004,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1904,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_EXTENSIONS",
-      "value": 10005,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1905,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_STATS",
-      "value": 10006,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1906,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_LOAD_NATIVE",
-      "value": 10007,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1907,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_DEACTIVATE_ALL",
-      "value": 10008,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1908,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VSCEXT_API_EXPORT_CONFIG",
-      "value": 10009,
-      "file": "modules/vscode_extension_api.h",
-      "line": 1909,
-      "category": "VSCEXT"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_TOGGLE",
-      "value": 10200,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 26,
-      "category": "VOICE"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_SETTINGS",
-      "value": 10201,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 27,
-      "category": "VOICE"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_NEXT_VOICE",
-      "value": 10202,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 28,
-      "category": "VOICE"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_PREV_VOICE",
-      "value": 10203,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 29,
-      "category": "VOICE"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_RATE_UP",
-      "value": 10204,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 30,
-      "category": "VOICE"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_RATE_DOWN",
-      "value": 10205,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 31,
-      "category": "VOICE"
-    },
-    {
-      "name": "IDM_VOICE_AUTO_STOP",
-      "value": 10206,
-      "file": "win32app/Win32IDE_VoiceAutomation.cpp",
-      "line": 32,
-      "category": "VOICE"
-    }
-  ],
+  "missing_from_table": [],
   "orphan_handlers": [
     "handleAgentGoal",
     "handleBackendList",
@@ -460,8 +67,6 @@
     "handleDebugStop",
     "handleExplain",
     "handleGovernor",
-    "handleHelpDocs",
-    "handleHelpShortcuts",
     "handleHistory",
     "handleMultiResponse",
     "handlePolicy",
@@ -473,7 +78,15 @@
     "handleTools"
   ],
   "duplicate_ids": [],
-  "duplicate_aliases": [],
+  "duplicate_aliases": [
+    {
+      "alias": "!decomp_rename",
+      "entries": [
+        "re.decompRename",
+        "decomp.renameVar"
+      ]
+    }
+  ],
   "entries": [
     {
       "id": 1001,
@@ -4634,6 +4247,566 @@
       "category": "CLI",
       "handler": "handleManifestSelfTest",
       "flags": "CMD_ASYNC"
+    },
+    {
+      "id": 105,
+      "symbol": "FILE_AUTOSAVE",
+      "canonical": "file.autoSave",
+      "cli": "!autosave",
+      "exposure": "BOTH",
+      "category": "File",
+      "handler": "handleFileAutoSave",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 106,
+      "symbol": "FILE_CLOSE_FOLDER",
+      "canonical": "file.closeFolder",
+      "cli": "!close_folder",
+      "exposure": "BOTH",
+      "category": "File",
+      "handler": "handleFileCloseFolder",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 108,
+      "symbol": "FILE_OPEN_FOLDER",
+      "canonical": "file.openFolder",
+      "cli": "!open_folder",
+      "exposure": "BOTH",
+      "category": "File",
+      "handler": "handleFileOpenFolder",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 109,
+      "symbol": "FILE_NEW_WINDOW",
+      "canonical": "file.newWindow",
+      "cli": "!new_window",
+      "exposure": "BOTH",
+      "category": "File",
+      "handler": "handleFileNewWindow",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 110,
+      "symbol": "FILE_CLOSE_TAB",
+      "canonical": "file.closeTab",
+      "cli": "!close_tab",
+      "exposure": "BOTH",
+      "category": "File",
+      "handler": "handleFileCloseTab",
+      "flags": "CMD_REQUIRES_FILE"
+    },
+    {
+      "id": 208,
+      "symbol": "EDIT_SELECTALL_IDE",
+      "canonical": "edit.selectAll.ide",
+      "cli": "!selectall_ide",
+      "exposure": "GUI_ONLY",
+      "category": "Edit",
+      "handler": "handleEditSelectAll",
+      "flags": "CMD_REQUIRES_FILE"
+    },
+    {
+      "id": 209,
+      "symbol": "EDIT_MULTICURSOR_ADD",
+      "canonical": "edit.multicursorAdd",
+      "cli": "!multicursor_add",
+      "exposure": "BOTH",
+      "category": "Edit",
+      "handler": "handleEditMulticursorAdd",
+      "flags": "CMD_REQUIRES_FILE | CMD_REQUIRES_CARET"
+    },
+    {
+      "id": 210,
+      "symbol": "EDIT_MULTICURSOR_REM",
+      "canonical": "edit.multicursorRemove",
+      "cli": "!multicursor_rm",
+      "exposure": "BOTH",
+      "category": "Edit",
+      "handler": "handleEditMulticursorRemove",
+      "flags": "CMD_REQUIRES_FILE"
+    },
+    {
+      "id": 211,
+      "symbol": "EDIT_GOTO_LINE",
+      "canonical": "edit.gotoLine",
+      "cli": "!goto_line",
+      "exposure": "BOTH",
+      "category": "Edit",
+      "handler": "handleEditGotoLine",
+      "flags": "CMD_REQUIRES_FILE"
+    },
+    {
+      "id": 301,
+      "symbol": "VIEW_TOGGLE_SIDEBAR",
+      "canonical": "view.toggleSidebar",
+      "cli": "!toggle_sidebar",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewToggleSidebar",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 302,
+      "symbol": "VIEW_TOGGLE_TERMINAL",
+      "canonical": "view.toggleTerminal",
+      "cli": "!toggle_terminal",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewToggleTerminal",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 303,
+      "symbol": "VIEW_TOGGLE_OUTPUT",
+      "canonical": "view.toggleOutput",
+      "cli": "!toggle_output",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewToggleOutput",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 304,
+      "symbol": "VIEW_TOGGLE_FULLSCREEN",
+      "canonical": "view.toggleFullscreen",
+      "cli": "!fullscreen",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewToggleFullscreen",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 305,
+      "symbol": "VIEW_ZOOM_IN",
+      "canonical": "view.zoomIn",
+      "cli": "!zoom_in",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewZoomIn",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 306,
+      "symbol": "VIEW_ZOOM_OUT",
+      "canonical": "view.zoomOut",
+      "cli": "!zoom_out",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewZoomOut",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 307,
+      "symbol": "VIEW_ZOOM_RESET",
+      "canonical": "view.zoomReset",
+      "cli": "!zoom_reset",
+      "exposure": "BOTH",
+      "category": "View",
+      "handler": "handleViewZoomReset",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 401,
+      "symbol": "AI_INLINE_COMPLETE",
+      "canonical": "ai.inlineComplete",
+      "cli": "!ai_complete",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIInlineComplete",
+      "flags": "CMD_REQUIRES_FILE | CMD_REQUIRES_CARET"
+    },
+    {
+      "id": 402,
+      "symbol": "AI_CHAT_MODE",
+      "canonical": "ai.chatMode",
+      "cli": "!ai_chat",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIChatMode",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 403,
+      "symbol": "AI_EXPLAIN_CODE",
+      "canonical": "ai.explainCode",
+      "cli": "!ai_explain",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIExplainCode",
+      "flags": "CMD_REQUIRES_SELECT"
+    },
+    {
+      "id": 404,
+      "symbol": "AI_REFACTOR",
+      "canonical": "ai.refactor",
+      "cli": "!ai_refactor",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIRefactor",
+      "flags": "CMD_REQUIRES_SELECT | CMD_ASYNC"
+    },
+    {
+      "id": 405,
+      "symbol": "AI_GENERATE_TESTS",
+      "canonical": "ai.generateTests",
+      "cli": "!ai_tests",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIGenerateTests",
+      "flags": "CMD_REQUIRES_FILE | CMD_ASYNC"
+    },
+    {
+      "id": 406,
+      "symbol": "AI_GENERATE_DOCS",
+      "canonical": "ai.generateDocs",
+      "cli": "!ai_docs",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIGenerateDocs",
+      "flags": "CMD_REQUIRES_FILE | CMD_ASYNC"
+    },
+    {
+      "id": 407,
+      "symbol": "AI_FIX_ERRORS",
+      "canonical": "ai.fixErrors",
+      "cli": "!ai_fix",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIFixErrors",
+      "flags": "CMD_REQUIRES_FILE | CMD_ASYNC"
+    },
+    {
+      "id": 408,
+      "symbol": "AI_OPTIMIZE_CODE",
+      "canonical": "ai.optimizeCode",
+      "cli": "!ai_optimize",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIOptimizeCode",
+      "flags": "CMD_REQUIRES_SELECT | CMD_ASYNC"
+    },
+    {
+      "id": 409,
+      "symbol": "AI_MODEL_SELECT",
+      "canonical": "ai.modelSelect",
+      "cli": "!ai_model",
+      "exposure": "BOTH",
+      "category": "AIMode",
+      "handler": "handleAIModelSelect",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 501,
+      "symbol": "TOOLS_CMD_PALETTE",
+      "canonical": "tools.commandPalette",
+      "cli": "!palette",
+      "exposure": "BOTH",
+      "category": "Tools",
+      "handler": "handleToolsCommandPalette",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 502,
+      "symbol": "TOOLS_SETTINGS",
+      "canonical": "tools.settings",
+      "cli": "!tools_settings",
+      "exposure": "BOTH",
+      "category": "Tools",
+      "handler": "handleToolsSettings",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 503,
+      "symbol": "TOOLS_EXTENSIONS",
+      "canonical": "tools.extensions",
+      "cli": "!extensions",
+      "exposure": "BOTH",
+      "category": "Tools",
+      "handler": "handleToolsExtensions",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 504,
+      "symbol": "TOOLS_TERMINAL",
+      "canonical": "tools.terminal",
+      "cli": "!tools_terminal",
+      "exposure": "BOTH",
+      "category": "Tools",
+      "handler": "handleToolsTerminal",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 505,
+      "symbol": "TOOLS_BUILD",
+      "canonical": "tools.build",
+      "cli": "!build",
+      "exposure": "BOTH",
+      "category": "Tools",
+      "handler": "handleToolsBuild",
+      "flags": "CMD_ASYNC"
+    },
+    {
+      "id": 506,
+      "symbol": "TOOLS_DEBUG",
+      "canonical": "tools.debug",
+      "cli": "!tools_debug",
+      "exposure": "BOTH",
+      "category": "Tools",
+      "handler": "handleToolsDebug",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 601,
+      "symbol": "HELP_DOCS",
+      "canonical": "help.docs",
+      "cli": "!docs",
+      "exposure": "BOTH",
+      "category": "Help",
+      "handler": "handleHelpDocs",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 603,
+      "symbol": "HELP_SHORTCUTS",
+      "canonical": "help.shortcuts",
+      "cli": "!shortcuts",
+      "exposure": "BOTH",
+      "category": "Help",
+      "handler": "handleHelpShortcuts",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 8001,
+      "symbol": "DECOMP_RENAME_VAR",
+      "canonical": "decomp.renameVar",
+      "cli": "!decomp_rename",
+      "exposure": "BOTH",
+      "category": "ReverseEng",
+      "handler": "handleDecompRenameVar",
+      "flags": "CMD_REQUIRES_FILE | CMD_REQUIRES_CARET"
+    },
+    {
+      "id": 8002,
+      "symbol": "DECOMP_GOTO_DEF",
+      "canonical": "decomp.gotoDef",
+      "cli": "!decomp_goto",
+      "exposure": "BOTH",
+      "category": "ReverseEng",
+      "handler": "handleDecompGotoDef",
+      "flags": "CMD_REQUIRES_FILE | CMD_REQUIRES_CARET"
+    },
+    {
+      "id": 8003,
+      "symbol": "DECOMP_FIND_REFS",
+      "canonical": "decomp.findRefs",
+      "cli": "!decomp_refs",
+      "exposure": "BOTH",
+      "category": "ReverseEng",
+      "handler": "handleDecompFindRefs",
+      "flags": "CMD_REQUIRES_FILE | CMD_REQUIRES_CARET"
+    },
+    {
+      "id": 8004,
+      "symbol": "DECOMP_COPY_LINE",
+      "canonical": "decomp.copyLine",
+      "cli": "!decomp_copyline",
+      "exposure": "BOTH",
+      "category": "ReverseEng",
+      "handler": "handleDecompCopyLine",
+      "flags": "CMD_REQUIRES_FILE | CMD_REQUIRES_CARET"
+    },
+    {
+      "id": 8005,
+      "symbol": "DECOMP_COPY_ALL",
+      "canonical": "decomp.copyAll",
+      "cli": "!decomp_copyall",
+      "exposure": "BOTH",
+      "category": "ReverseEng",
+      "handler": "handleDecompCopyAll",
+      "flags": "CMD_REQUIRES_FILE"
+    },
+    {
+      "id": 8006,
+      "symbol": "DECOMP_GOTO_ADDR",
+      "canonical": "decomp.gotoAddr",
+      "cli": "!decomp_addr",
+      "exposure": "BOTH",
+      "category": "ReverseEng",
+      "handler": "handleDecompGotoAddr",
+      "flags": "CMD_REQUIRES_FILE"
+    },
+    {
+      "id": 10000,
+      "symbol": "VSCEXT_STATUS",
+      "canonical": "vscext.status",
+      "cli": "!vscext status",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtStatus",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10001,
+      "symbol": "VSCEXT_RELOAD",
+      "canonical": "vscext.reload",
+      "cli": "!vscext reload",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtReload",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10002,
+      "symbol": "VSCEXT_LIST_CMDS",
+      "canonical": "vscext.listCommands",
+      "cli": "!vscext commands",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtListCommands",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10003,
+      "symbol": "VSCEXT_LIST_PROVIDERS",
+      "canonical": "vscext.listProviders",
+      "cli": "!vscext providers",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtListProviders",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10004,
+      "symbol": "VSCEXT_DIAGNOSTICS",
+      "canonical": "vscext.diagnostics",
+      "cli": "!vscext diag",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtDiagnostics",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10005,
+      "symbol": "VSCEXT_EXTENSIONS",
+      "canonical": "vscext.extensions",
+      "cli": "!vscext list",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtExtensions",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10006,
+      "symbol": "VSCEXT_STATS",
+      "canonical": "vscext.stats",
+      "cli": "!vscext stats",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtStats",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10007,
+      "symbol": "VSCEXT_LOAD_NATIVE",
+      "canonical": "vscext.loadNative",
+      "cli": "!vscext native",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtLoadNative",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10008,
+      "symbol": "VSCEXT_DEACTIVATE_ALL",
+      "canonical": "vscext.deactivateAll",
+      "cli": "!vscext deactivate",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtDeactivateAll",
+      "flags": "CMD_CONFIRM"
+    },
+    {
+      "id": 10009,
+      "symbol": "VSCEXT_EXPORT_CONFIG",
+      "canonical": "vscext.exportConfig",
+      "cli": "!vscext export",
+      "exposure": "BOTH",
+      "category": "Plugin",
+      "handler": "handleVscExtExportConfig",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10200,
+      "symbol": "VOICE_AUTO_TOGGLE",
+      "canonical": "voice.autoToggle",
+      "cli": "!voice auto",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoToggle",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10201,
+      "symbol": "VOICE_AUTO_SETTINGS",
+      "canonical": "voice.autoSettings",
+      "cli": "!voice settings",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoSettings",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10202,
+      "symbol": "VOICE_AUTO_NEXT",
+      "canonical": "voice.autoNextVoice",
+      "cli": "!voice next",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoNextVoice",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10203,
+      "symbol": "VOICE_AUTO_PREV",
+      "canonical": "voice.autoPrevVoice",
+      "cli": "!voice prev",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoPrevVoice",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10204,
+      "symbol": "VOICE_AUTO_RATE_UP",
+      "canonical": "voice.autoRateUp",
+      "cli": "!voice rate_up",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoRateUp",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10205,
+      "symbol": "VOICE_AUTO_RATE_DOWN",
+      "canonical": "voice.autoRateDown",
+      "cli": "!voice rate_down",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoRateDown",
+      "flags": "CMD_NONE"
+    },
+    {
+      "id": 10206,
+      "symbol": "VOICE_AUTO_STOP",
+      "canonical": "voice.autoStop",
+      "cli": "!voice auto_stop",
+      "exposure": "BOTH",
+      "category": "Voice",
+      "handler": "handleVoiceAutoStop",
+      "flags": "CMD_NONE"
     }
   ]
 }

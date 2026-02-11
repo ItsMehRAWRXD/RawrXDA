@@ -435,6 +435,11 @@ set(SOURCES
 )
 
 # =============================================================================
+# Command Table Audit — Build-time coverage validation targets
+# =============================================================================
+include(cmake/AutoFeatureRegistry.cmake)
+
+# =============================================================================
 # Reverse Engineering Suite (sub-module)
 # =============================================================================
 add_subdirectory(src/reverse_engineering)
