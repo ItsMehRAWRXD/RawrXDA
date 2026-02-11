@@ -12,6 +12,13 @@
 #include "cot_fallback_system.hpp"
 #include "input_guard_slicer.hpp"
 
+// Gap-closing subsystems (v2.0)
+#include "agentic_task_graph.hpp"
+#include "embedding_engine.hpp"
+#include "vision_encoder.hpp"
+#include "../marketplace/extension_marketplace.hpp"
+#include "../auth/rbac_engine.hpp"
+
 // Forward-declare SwarmTrace for determinism check
 struct SwarmTrace;
 #define WIN32_LEAN_AND_MEAN
@@ -872,7 +879,7 @@ PatchResult UnifiedHotpatchManager::guard_preflight(const char* input, size_t in
 // ---- Unified Full Stats JSON ----
 
 std::string UnifiedHotpatchManager::getFullStatsJSON() const {
-    char buf[2048];
+    char buf[4096];
     std::snprintf(buf, sizeof(buf),
         "{"
         "\"hotpatch\":{"
@@ -892,7 +899,12 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
             "\"cotInit\":%s,"
             "\"guardInit\":%s,"
             "\"cotHealthy\":%s,"
-            "\"workflowRunning\":%s"
+            "\"workflowRunning\":%s,"
+            "\"taskgraphInit\":%s,"
+            "\"embeddingInit\":%s,"
+            "\"visionInit\":%s,"
+            "\"marketplaceInit\":%s,"
+            "\"rbacInit\":%s"
         "}"
         "}",
         (unsigned long long)m_stats.memoryPatchCount.load(std::memory_order_relaxed),
@@ -909,6 +921,187 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
         m_cotInit.load(std::memory_order_relaxed) ? "true" : "false",
         m_guardInit.load(std::memory_order_relaxed) ? "true" : "false",
         cot_is_healthy() ? "true" : "false",
-        workflow_is_running() ? "true" : "false");
+        workflow_is_running() ? "true" : "false",
+        m_taskgraphInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_embeddingInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_visionInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_marketplaceInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_rbacInit.load(std::memory_order_relaxed) ? "true" : "false");
     return std::string(buf);
+}
+
+// ===========================================================================
+// Gap-Closing Subsystem Integration (v2.0)
+// ===========================================================================
+
+// ---- Agentic Task Graph ----
+PatchResult UnifiedHotpatchManager::taskgraph_initialize() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_taskgraphInit.load()) return PatchResult::ok("Task graph already initialized");
+
+    auto& tg = RawrXD::Agentic::AgenticTaskGraph::instance();
+    // AgenticTaskGraph is self-initializing singleton
+    m_taskgraphInit.store(true);
+    m_stats.totalOperations.fetch_add(1);
+    emit_event(HotpatchEvent::MemoryPatchApplied, "taskgraph_initialized");
+    return PatchResult::ok("Agentic Task Graph initialized");
+}
+
+PatchResult UnifiedHotpatchManager::taskgraph_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_taskgraphInit.load()) return PatchResult::ok("Task graph not initialized");
+    m_taskgraphInit.store(false);
+    emit_event(HotpatchEvent::MemoryPatchReverted, "taskgraph_shutdown");
+    return PatchResult::ok("Agentic Task Graph shut down");
+}
+
+bool UnifiedHotpatchManager::taskgraph_is_running() const {
+    return m_taskgraphInit.load(std::memory_order_relaxed);
+}
+
+// ---- Embedding Engine ----
+PatchResult UnifiedHotpatchManager::embedding_initialize(const char* modelPath,
+                                                          uint32_t dimensions) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_embeddingInit.load()) return PatchResult::ok("Embedding engine already initialized");
+
+    auto& eng = RawrXD::Embeddings::EmbeddingEngine::instance();
+    RawrXD::Embeddings::EmbeddingModelConfig config;
+    config.modelPath = modelPath ? modelPath : "";
+    config.dimensions = dimensions > 0 ? dimensions : 384;
+    auto r = eng.loadModel(config);
+    if (!r.success) {
+        m_stats.totalFailures.fetch_add(1);
+        return PatchResult::error(r.detail, r.errorCode);
+    }
+
+    m_embeddingInit.store(true);
+    m_stats.totalOperations.fetch_add(1);
+    emit_event(HotpatchEvent::MemoryPatchApplied, "embedding_initialized");
+    return PatchResult::ok("Embedding Engine initialized");
+}
+
+PatchResult UnifiedHotpatchManager::embedding_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_embeddingInit.load()) return PatchResult::ok("Embedding engine not initialized");
+
+    auto& eng = RawrXD::Embeddings::EmbeddingEngine::instance();
+    eng.shutdown();
+    m_embeddingInit.store(false);
+    emit_event(HotpatchEvent::MemoryPatchReverted, "embedding_shutdown");
+    return PatchResult::ok("Embedding Engine shut down");
+}
+
+PatchResult UnifiedHotpatchManager::embedding_index_directory(const char* dirPath) {
+    if (!m_embeddingInit.load())
+        return PatchResult::error("Embedding engine not initialized", -1);
+
+    auto& eng = RawrXD::Embeddings::EmbeddingEngine::instance();
+    return eng.indexDirectory(dirPath);
+}
+
+// ---- Vision Encoder ----
+PatchResult UnifiedHotpatchManager::vision_initialize(const char* modelPath) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_visionInit.load()) return PatchResult::ok("Vision encoder already initialized");
+
+    auto& vis = RawrXD::Vision::VisionEncoder::instance();
+    RawrXD::Vision::VisionModelConfig config;
+    config.modelPath = modelPath ? modelPath : "";
+    config.architecture = RawrXD::Vision::VisionModelConfig::CLIP_VIT_L14;
+    auto r = vis.loadModel(config);
+    if (!r.success) {
+        m_stats.totalFailures.fetch_add(1);
+        return PatchResult::error(r.detail, r.errorCode);
+    }
+
+    m_visionInit.store(true);
+    m_stats.totalOperations.fetch_add(1);
+    emit_event(HotpatchEvent::MemoryPatchApplied, "vision_initialized");
+    return PatchResult::ok("Vision Encoder initialized");
+}
+
+PatchResult UnifiedHotpatchManager::vision_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_visionInit.load()) return PatchResult::ok("Vision encoder not initialized");
+
+    auto& vis = RawrXD::Vision::VisionEncoder::instance();
+    vis.shutdown();
+    m_visionInit.store(false);
+    emit_event(HotpatchEvent::MemoryPatchReverted, "vision_shutdown");
+    return PatchResult::ok("Vision Encoder shut down");
+}
+
+// ---- Extension Marketplace ----
+PatchResult UnifiedHotpatchManager::marketplace_initialize(const char* installDir,
+                                                            const char* cacheDir) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_marketplaceInit.load()) return PatchResult::ok("Marketplace already initialized");
+
+    auto& mp = RawrXD::Extensions::ExtensionMarketplace::instance();
+    if (installDir) mp.setInstallDirectory(installDir);
+    if (cacheDir)   mp.setCacheDirectory(cacheDir);
+
+    m_marketplaceInit.store(true);
+    m_stats.totalOperations.fetch_add(1);
+    emit_event(HotpatchEvent::MemoryPatchApplied, "marketplace_initialized");
+    return PatchResult::ok("Extension Marketplace initialized");
+}
+
+PatchResult UnifiedHotpatchManager::marketplace_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_marketplaceInit.load()) return PatchResult::ok("Marketplace not initialized");
+
+    auto& mp = RawrXD::Extensions::ExtensionMarketplace::instance();
+    mp.shutdown();
+    m_marketplaceInit.store(false);
+    emit_event(HotpatchEvent::MemoryPatchReverted, "marketplace_shutdown");
+    return PatchResult::ok("Extension Marketplace shut down");
+}
+
+// ---- RBAC Engine ----
+PatchResult UnifiedHotpatchManager::rbac_initialize() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_rbacInit.load()) return PatchResult::ok("RBAC already initialized");
+
+    auto& rbac = RawrXD::Auth::RBACEngine::instance();
+    auto r = rbac.initialize();
+    if (!r.success) {
+        m_stats.totalFailures.fetch_add(1);
+        return PatchResult::error(r.detail, r.errorCode);
+    }
+
+    m_rbacInit.store(true);
+    m_stats.totalOperations.fetch_add(1);
+    emit_event(HotpatchEvent::MemoryPatchApplied, "rbac_initialized");
+    return PatchResult::ok("RBAC Engine initialized");
+}
+
+PatchResult UnifiedHotpatchManager::rbac_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_rbacInit.load()) return PatchResult::ok("RBAC not initialized");
+
+    auto& rbac = RawrXD::Auth::RBACEngine::instance();
+    rbac.shutdown();
+    m_rbacInit.store(false);
+    emit_event(HotpatchEvent::MemoryPatchReverted, "rbac_shutdown");
+    return PatchResult::ok("RBAC Engine shut down");
+}
+
+PatchResult UnifiedHotpatchManager::rbac_authorize(const char* sessionToken,
+                                                    uint32_t requiredPermission,
+                                                    const char* action,
+                                                    const char* resource) {
+    if (!m_rbacInit.load())
+        return PatchResult::error("RBAC not initialized", -1);
+
+    auto& rbac = RawrXD::Auth::RBACEngine::instance();
+    auto r = rbac.authorize(sessionToken,
+                             static_cast<RawrXD::Auth::Permission>(requiredPermission),
+                             action, resource);
+    if (!r.success) {
+        m_stats.totalFailures.fetch_add(1);
+        return PatchResult::error(r.detail, r.errorCode);
+    }
+    return PatchResult::ok("Authorized");
 }

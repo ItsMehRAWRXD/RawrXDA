@@ -283,6 +283,7 @@ set(SOURCES
     src/core/feature_registration.cpp
     src/core/feature_handlers.cpp
     src/core/ssot_handlers.cpp
+    src/core/ssot_handlers_ext.cpp
     src/core/ssot_validation.cpp
 
     # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
@@ -333,6 +334,9 @@ set(SOURCES
     # GAP 1: Multi-File Atomic Transactions + WAL Journal
     src/agentic/multi_file_transaction.cpp
     src/core/transaction_journal.cpp
+
+    # GAP 1.5: Agentic Transaction Layer (Cursor-Composer-class orchestration)
+    src/agentic/agentic_transaction.cpp
 
     # GAP 2: HNSW Vector Index
     src/core/vector_index.cpp
@@ -686,6 +690,39 @@ if(MSVC)
         VERBATIM
     )
 
+    # Phase 49: SocketResponder — MASM64 IOCP Zero-Copy HTTP Server
+    set(ASM_SOCKETRESP_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_SocketResponder.asm")
+    set(ASM_SOCKETRESP_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_SocketResponder.obj")
+    add_custom_command(
+        OUTPUT ${ASM_SOCKETRESP_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_SOCKETRESP_OBJ} ${ASM_SOCKETRESP_SRC}
+        DEPENDS ${ASM_SOCKETRESP_SRC}
+        COMMENT "[MASM] Assembling RawrXD_SocketResponder.asm (IOCP HTTP: /health /status /models sub-0.5ms)"
+        VERBATIM
+    )
+
+    # Phase 49: TridentBeacon — MASM64 COM Trident Host + Beacon JS Bridge
+    set(ASM_TRIDENTBEACON_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_TridentBeacon.asm")
+    set(ASM_TRIDENTBEACON_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_TridentBeacon.obj")
+    add_custom_command(
+        OUTPUT ${ASM_TRIDENTBEACON_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_TRIDENTBEACON_OBJ} ${ASM_TRIDENTBEACON_SRC}
+        DEPENDS ${ASM_TRIDENTBEACON_SRC}
+        COMMENT "[MASM] Assembling RawrXD_TridentBeacon.asm (COM Trident Host, Beacon IDispatch, Ollama Bridge)"
+        VERBATIM
+    )
+
+    # Phase 49: TridentBeacon GPU — MASM64 GPU Acceleration + WebGL Bridge
+    set(ASM_TRIDENTGPU_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_TridentBeacon_GPU.asm")
+    set(ASM_TRIDENTGPU_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_TridentBeacon_GPU.obj")
+    add_custom_command(
+        OUTPUT ${ASM_TRIDENTGPU_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/src/asm" /Fo${ASM_TRIDENTGPU_OBJ} ${ASM_TRIDENTGPU_SRC}
+        DEPENDS ${ASM_TRIDENTGPU_SRC}
+        COMMENT "[MASM] Assembling RawrXD_TridentBeacon_GPU.asm (IE11 Feature Control, WebGL FBO, OpenGL Bridge)"
+        VERBATIM
+    )
+
     # Collect all MASM objects
     set(MASM_OBJECTS
         ${ASM_REQUANTIZE_OBJ}
@@ -708,6 +745,9 @@ if(MSVC)
         ${ASM_ENTERPRISE_LIC_OBJ}
         ${ASM_LICENSE_SHIELD_OBJ}
         ${ASM_VULKANBRIDGE_OBJ}
+        ${ASM_SOCKETRESP_OBJ}
+        ${ASM_TRIDENTBEACON_OBJ}
+        ${ASM_TRIDENTGPU_OBJ}
     )
 
     # Link MASM objects into RawrEngine
@@ -995,6 +1035,9 @@ if(WIN32)
         # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
         src/agentic/autonomous_recovery_orchestrator.cpp
 
+        # T5: Agentic Transaction Layer (multi-step command execute/rollback)
+        src/agentic/agentic_transaction.cpp
+
         # Disk Recovery Agent (C++ implementation)
         # NOTE: DiskRecoveryToolHandler.cpp requires ToolRegistry.cpp — deferred.
         src/agent/DiskRecoveryAgent.cpp
@@ -1172,6 +1215,7 @@ if(WIN32)
         src/core/feature_registration.cpp
         src/core/feature_handlers.cpp
         src/core/ssot_handlers.cpp
+        src/core/ssot_handlers_ext.cpp
         src/core/ssot_validation.cpp
 
         # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
@@ -1337,6 +1381,7 @@ if(WIN32)
         shlwapi psapi dbghelp dbgeng winhttp ws2_32 winmm gdi32 user32 ntdll
         d2d1 dwrite d3d11 dcomp d3dcompiler dwmapi
         advapi32 crypt32 bcrypt wintrust
+        opengl32 wininet
         ${MASM_OBJECTS}
     )
 

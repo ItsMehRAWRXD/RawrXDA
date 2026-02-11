@@ -1,0 +1,4 @@
+aiohttp>=3.8.0
+asyncio
+argparse
+typing-extensions>=4.0.0

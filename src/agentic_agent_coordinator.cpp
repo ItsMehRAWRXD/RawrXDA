@@ -1,8 +1,6 @@
 // AgenticAgentCoordinator Implementation - Pure C++20
 #include "agentic_agent_coordinator.h"
-#ifdef RAWR_HAS_QT
-#include "agentic_iterative_reasoning.h"
-#endif
+#include "agentic_iterative_reasoning.h"  // Always include — ensures complete type for unique_ptr
 #include "agentic_loop_state.h"
 #include <algorithm>
 #include <iostream>

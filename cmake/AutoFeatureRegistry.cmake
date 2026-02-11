@@ -1,13 +1,19 @@
 # =============================================================================
-# AutoFeatureRegistry.cmake — CMake pre-build auto-registration integration
+# CommandTableAudit.cmake — CMake integration for COMMAND_TABLE coverage audit
 # =============================================================================
-# Include this in your CMakeLists.txt to auto-regenerate command registrations
-# whenever source IDM_* defines or handler declarations change.
+# Provides build targets for validating COMMAND_TABLE coverage against
+# Win32IDE.h IDM_* defines and handler declarations.
 #
 # Usage in CMakeLists.txt:
 #   include(cmake/AutoFeatureRegistry.cmake)
-#   setup_auto_feature_registry(RawrEngine)
-#   setup_auto_feature_registry(RawrXD-Win32IDE)
+#
+# Targets:
+#   audit-registry    — Run coverage audit, generate reports
+#   audit-registry-ci — Same but exits non-zero if gaps found (for CI)
+#
+# The SSOT for command registration is:
+#   src/core/command_registry.hpp  → COMMAND_TABLE X-macro
+#   src/core/unified_command_dispatch.cpp → AutoRegistrar
 #
 # Architecture: C++20, Win32, no Qt, no exceptions
 # Rule: NO SOURCE FILE IS TO BE SIMPLIFIED.
@@ -18,74 +24,33 @@ find_package(Python3 COMPONENTS Interpreter QUIET)
 if(NOT Python3_FOUND)
     find_program(PYTHON_EXECUTABLE python python3)
     if(NOT PYTHON_EXECUTABLE)
-        message(WARNING "[AutoFeatureRegistry] Python not found — auto-registration disabled")
-        set(AUTO_FEATURE_REGISTRY_ENABLED OFF)
+        message(WARNING "[CommandAudit] Python not found — audit targets disabled")
         return()
     endif()
 else()
     set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE})
 endif()
 
-set(AUTO_FEATURE_REGISTRY_ENABLED ON)
-set(AUTO_REG_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/auto_register_commands.py")
-set(AUTO_REG_OUTPUT_HPP "${CMAKE_CURRENT_SOURCE_DIR}/src/core/auto_feature_registry.hpp")
-set(AUTO_REG_OUTPUT_CPP "${CMAKE_CURRENT_SOURCE_DIR}/src/core/auto_feature_registry.cpp")
+set(AUDIT_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/scripts/audit_command_table.py")
 
-# Source files that trigger regeneration when modified
-set(AUTO_REG_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/win32app/Win32IDE.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/feature_handlers.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/feature_registration.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shared_feature_dispatch.h"
-    "${AUTO_REG_SCRIPT}"
-)
-
-# Custom command: regenerate auto_feature_registry.{hpp,cpp}
-add_custom_command(
-    OUTPUT "${AUTO_REG_OUTPUT_HPP}" "${AUTO_REG_OUTPUT_CPP}"
-    COMMAND ${PYTHON_EXECUTABLE} "${AUTO_REG_SCRIPT}"
-            --src-root "${CMAKE_CURRENT_SOURCE_DIR}/src"
-    DEPENDS ${AUTO_REG_DEPENDS}
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    COMMENT "[AutoReg] Regenerating command registrations..."
-    VERBATIM
-)
-
-# Custom target for manual regeneration: cmake --build . --target regenerate-registry
-add_custom_target(regenerate-registry
-    COMMAND ${PYTHON_EXECUTABLE} "${AUTO_REG_SCRIPT}"
-            --src-root "${CMAKE_CURRENT_SOURCE_DIR}/src"
-            --verbose
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    COMMENT "[AutoReg] Force-regenerating command registrations..."
-    VERBATIM
-)
-
-# Custom target for dry-run/audit: cmake --build . --target audit-registry
+# Custom target: audit coverage and generate reports
 add_custom_target(audit-registry
-    COMMAND ${PYTHON_EXECUTABLE} "${AUTO_REG_SCRIPT}"
+    COMMAND ${PYTHON_EXECUTABLE} "${AUDIT_SCRIPT}"
             --src-root "${CMAKE_CURRENT_SOURCE_DIR}/src"
-            --dry-run --verbose
+            --generate
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    COMMENT "[AutoReg] Auditing command registry coverage..."
+    COMMENT "[Audit] Running COMMAND_TABLE coverage audit..."
     VERBATIM
 )
 
-# Function to add auto-registry to a target
-function(setup_auto_feature_registry TARGET_NAME)
-    if(NOT AUTO_FEATURE_REGISTRY_ENABLED)
-        message(STATUS "[AutoReg] Skipped for ${TARGET_NAME} (Python not available)")
-        return()
-    endif()
-    
-    # Add generated sources to the target
-    target_sources(${TARGET_NAME} PRIVATE
-        "${AUTO_REG_OUTPUT_HPP}"
-        "${AUTO_REG_OUTPUT_CPP}"
-    )
-    
-    # Ensure regeneration happens before compilation
-    add_dependencies(${TARGET_NAME} regenerate-registry)
-    
-    message(STATUS "[AutoReg] Enabled for target: ${TARGET_NAME}")
-endfunction()
+# CI-friendly target: fails if gaps exist
+add_custom_target(audit-registry-ci
+    COMMAND ${PYTHON_EXECUTABLE} "${AUDIT_SCRIPT}"
+            --src-root "${CMAKE_CURRENT_SOURCE_DIR}/src"
+            --quiet
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "[Audit] CI coverage gate..."
+    VERBATIM
+)
+
+message(STATUS "[CommandAudit] Audit targets available: audit-registry, audit-registry-ci")

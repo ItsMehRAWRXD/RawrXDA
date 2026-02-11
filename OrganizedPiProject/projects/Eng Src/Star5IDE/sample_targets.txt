@@ -1,0 +1,14 @@
+# Sample targets file for testing the RFI/LFI scanner
+# These are example URLs - replace with actual targets you have permission to test
+
+# Example RFI targets
+http://example.com/page.php?id=
+http://test.com/index.php?page=
+http://demo.com/view.php?file=
+http://sample.com/include.php?path=
+
+# Example LFI targets  
+http://example.com/read.php?file=
+http://test.com/display.php?path=
+http://demo.com/show.php?page=
+http://sample.com/view.php?include=

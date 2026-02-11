@@ -571,6 +571,80 @@ enum CmdFlags : uint32_t {
     X(0,    CLI_MANIFEST_JSON,     "cli.manifestJson",      "!manifest_json",    CLI_ONLY, "CLI",     handleManifestJSON,         CMD_NONE) \
     X(0,    CLI_MANIFEST_MD,       "cli.manifestMd",        "!manifest_md",      CLI_ONLY, "CLI",     handleManifestMarkdown,     CMD_NONE) \
     X(0,    CLI_SELF_TEST,         "cli.selfTest",          "!self_test",        CLI_ONLY, "CLI",     handleManifestSelfTest,     CMD_ASYNC) \
+    \
+    /* ═══════════════════ IDE CORE (ide_constants.h 105-110) ═══════════════════ */ \
+    X(105,  FILE_AUTOSAVE,         "file.autoSave",         "!autosave",         BOTH, "File",        handleFileAutoSave,         CMD_NONE) \
+    X(106,  FILE_CLOSE_FOLDER,     "file.closeFolder",      "!close_folder",     BOTH, "File",        handleFileCloseFolder,      CMD_NONE) \
+    X(108,  FILE_OPEN_FOLDER,      "file.openFolder",       "!open_folder",      BOTH, "File",        handleFileOpenFolder,       CMD_NONE) \
+    X(109,  FILE_NEW_WINDOW,       "file.newWindow",        "!new_window",       BOTH, "File",        handleFileNewWindow,        CMD_NONE) \
+    X(110,  FILE_CLOSE_TAB,        "file.closeTab",         "!close_tab",        BOTH, "File",        handleFileCloseTab,         CMD_REQUIRES_FILE) \
+    \
+    /* ═══════════════════ IDE EDIT (ide_constants.h 208-211) ═══════════════════ */ \
+    X(208,  EDIT_SELECTALL_IDE,    "edit.selectAll.ide",    "!selectall_ide",    GUI_ONLY, "Edit",     handleEditSelectAll,        CMD_REQUIRES_FILE) \
+    X(209,  EDIT_MULTICURSOR_ADD,  "edit.multicursorAdd",   "!multicursor_add",  BOTH, "Edit",        handleEditMulticursorAdd,   CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(210,  EDIT_MULTICURSOR_REM,  "edit.multicursorRemove","!multicursor_rm",   BOTH, "Edit",        handleEditMulticursorRemove,CMD_REQUIRES_FILE) \
+    X(211,  EDIT_GOTO_LINE,        "edit.gotoLine",         "!goto_line",        BOTH, "Edit",        handleEditGotoLine,         CMD_REQUIRES_FILE) \
+    \
+    /* ═══════════════════ IDE VIEW (ide_constants.h 301-307) ═══════════════════ */ \
+    X(301,  VIEW_TOGGLE_SIDEBAR,   "view.toggleSidebar",    "!toggle_sidebar",   BOTH, "View",        handleViewToggleSidebar,    CMD_NONE) \
+    X(302,  VIEW_TOGGLE_TERMINAL,  "view.toggleTerminal",   "!toggle_terminal",  BOTH, "View",        handleViewToggleTerminal,   CMD_NONE) \
+    X(303,  VIEW_TOGGLE_OUTPUT,    "view.toggleOutput",     "!toggle_output",    BOTH, "View",        handleViewToggleOutput,     CMD_NONE) \
+    X(304,  VIEW_TOGGLE_FULLSCREEN,"view.toggleFullscreen", "!fullscreen",       BOTH, "View",        handleViewToggleFullscreen, CMD_NONE) \
+    X(305,  VIEW_ZOOM_IN,          "view.zoomIn",           "!zoom_in",          BOTH, "View",        handleViewZoomIn,           CMD_NONE) \
+    X(306,  VIEW_ZOOM_OUT,         "view.zoomOut",          "!zoom_out",         BOTH, "View",        handleViewZoomOut,          CMD_NONE) \
+    X(307,  VIEW_ZOOM_RESET,       "view.zoomReset",        "!zoom_reset",       BOTH, "View",        handleViewZoomReset,        CMD_NONE) \
+    \
+    /* ═══════════════════ IDE AI FEATURES (ide_constants.h 401-409) ═══════════════════ */ \
+    X(401,  AI_INLINE_COMPLETE,    "ai.inlineComplete",     "!ai_complete",      BOTH, "AIMode",      handleAIInlineComplete,     CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(402,  AI_CHAT_MODE,          "ai.chatMode",           "!ai_chat",          BOTH, "AIMode",      handleAIChatMode,           CMD_NONE) \
+    X(403,  AI_EXPLAIN_CODE,       "ai.explainCode",        "!ai_explain",       BOTH, "AIMode",      handleAIExplainCode,        CMD_REQUIRES_SELECT) \
+    X(404,  AI_REFACTOR,           "ai.refactor",           "!ai_refactor",      BOTH, "AIMode",      handleAIRefactor,           CMD_REQUIRES_SELECT | CMD_ASYNC) \
+    X(405,  AI_GENERATE_TESTS,     "ai.generateTests",      "!ai_tests",         BOTH, "AIMode",      handleAIGenerateTests,      CMD_REQUIRES_FILE | CMD_ASYNC) \
+    X(406,  AI_GENERATE_DOCS,      "ai.generateDocs",       "!ai_docs",          BOTH, "AIMode",      handleAIGenerateDocs,       CMD_REQUIRES_FILE | CMD_ASYNC) \
+    X(407,  AI_FIX_ERRORS,         "ai.fixErrors",          "!ai_fix",           BOTH, "AIMode",      handleAIFixErrors,          CMD_REQUIRES_FILE | CMD_ASYNC) \
+    X(408,  AI_OPTIMIZE_CODE,      "ai.optimizeCode",       "!ai_optimize",      BOTH, "AIMode",      handleAIOptimizeCode,       CMD_REQUIRES_SELECT | CMD_ASYNC) \
+    X(409,  AI_MODEL_SELECT,       "ai.modelSelect",        "!ai_model",         BOTH, "AIMode",      handleAIModelSelect,        CMD_NONE) \
+    \
+    /* ═══════════════════ IDE TOOLS (ide_constants.h 501-506) ═══════════════════ */ \
+    X(501,  TOOLS_CMD_PALETTE,     "tools.commandPalette",  "!palette",          BOTH, "Tools",       handleToolsCommandPalette,  CMD_NONE) \
+    X(502,  TOOLS_SETTINGS,        "tools.settings",        "!tools_settings",   BOTH, "Tools",       handleToolsSettings,        CMD_NONE) \
+    X(503,  TOOLS_EXTENSIONS,      "tools.extensions",      "!extensions",       BOTH, "Tools",       handleToolsExtensions,      CMD_NONE) \
+    X(504,  TOOLS_TERMINAL,        "tools.terminal",        "!tools_terminal",   BOTH, "Tools",       handleToolsTerminal,        CMD_NONE) \
+    X(505,  TOOLS_BUILD,           "tools.build",           "!build",            BOTH, "Tools",       handleToolsBuild,           CMD_ASYNC) \
+    X(506,  TOOLS_DEBUG,           "tools.debug",           "!tools_debug",      BOTH, "Tools",       handleToolsDebug,           CMD_NONE) \
+    \
+    /* ═══════════════════ IDE HELP (ide_constants.h 601, 603) ═══════════════════ */ \
+    X(601,  HELP_DOCS,             "help.docs",             "!docs",             BOTH, "Help",        handleHelpDocs,             CMD_NONE) \
+    X(603,  HELP_SHORTCUTS,        "help.shortcuts",        "!shortcuts",        BOTH, "Help",        handleHelpShortcuts,        CMD_NONE) \
+    \
+    /* ═══════════════════ DECOMPILER CONTEXT MENU (8001-8006) ═══════════════════ */ \
+    X(8001, DECOMP_RENAME_VAR,     "decomp.renameVar",      "!decomp_rename",    BOTH, "ReverseEng",  handleDecompRenameVar,      CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(8002, DECOMP_GOTO_DEF,       "decomp.gotoDef",        "!decomp_goto",      BOTH, "ReverseEng",  handleDecompGotoDef,        CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(8003, DECOMP_FIND_REFS,      "decomp.findRefs",       "!decomp_refs",      BOTH, "ReverseEng",  handleDecompFindRefs,       CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(8004, DECOMP_COPY_LINE,      "decomp.copyLine",       "!decomp_copyline",  BOTH, "ReverseEng",  handleDecompCopyLine,       CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(8005, DECOMP_COPY_ALL,       "decomp.copyAll",        "!decomp_copyall",   BOTH, "ReverseEng",  handleDecompCopyAll,        CMD_REQUIRES_FILE) \
+    X(8006, DECOMP_GOTO_ADDR,      "decomp.gotoAddr",       "!decomp_addr",      BOTH, "ReverseEng",  handleDecompGotoAddr,       CMD_REQUIRES_FILE) \
+    \
+    /* ═══════════════════ VSCODE EXTENSION API (10000-10009) ═══════════════════ */ \
+    X(10000, VSCEXT_STATUS,        "vscext.status",         "!vscext status",    BOTH, "Plugin",      handleVscExtStatus,         CMD_NONE) \
+    X(10001, VSCEXT_RELOAD,        "vscext.reload",         "!vscext reload",    BOTH, "Plugin",      handleVscExtReload,         CMD_NONE) \
+    X(10002, VSCEXT_LIST_CMDS,     "vscext.listCommands",   "!vscext commands",  BOTH, "Plugin",      handleVscExtListCommands,   CMD_NONE) \
+    X(10003, VSCEXT_LIST_PROVIDERS,"vscext.listProviders",  "!vscext providers", BOTH, "Plugin",      handleVscExtListProviders,  CMD_NONE) \
+    X(10004, VSCEXT_DIAGNOSTICS,   "vscext.diagnostics",    "!vscext diag",      BOTH, "Plugin",      handleVscExtDiagnostics,    CMD_NONE) \
+    X(10005, VSCEXT_EXTENSIONS,    "vscext.extensions",     "!vscext list",      BOTH, "Plugin",      handleVscExtExtensions,     CMD_NONE) \
+    X(10006, VSCEXT_STATS,         "vscext.stats",          "!vscext stats",     BOTH, "Plugin",      handleVscExtStats,          CMD_NONE) \
+    X(10007, VSCEXT_LOAD_NATIVE,   "vscext.loadNative",     "!vscext native",    BOTH, "Plugin",      handleVscExtLoadNative,     CMD_NONE) \
+    X(10008, VSCEXT_DEACTIVATE_ALL,"vscext.deactivateAll",  "!vscext deactivate",BOTH, "Plugin",      handleVscExtDeactivateAll,  CMD_CONFIRM) \
+    X(10009, VSCEXT_EXPORT_CONFIG, "vscext.exportConfig",   "!vscext export",    BOTH, "Plugin",      handleVscExtExportConfig,   CMD_NONE) \
+    \
+    /* ═══════════════════ VOICE AUTOMATION (10200-10206) ═══════════════════ */ \
+    X(10200, VOICE_AUTO_TOGGLE,    "voice.autoToggle",      "!voice auto",       BOTH, "Voice",       handleVoiceAutoToggle,      CMD_NONE) \
+    X(10201, VOICE_AUTO_SETTINGS,  "voice.autoSettings",    "!voice settings",   BOTH, "Voice",       handleVoiceAutoSettings,    CMD_NONE) \
+    X(10202, VOICE_AUTO_NEXT,      "voice.autoNextVoice",   "!voice next",       BOTH, "Voice",       handleVoiceAutoNextVoice,   CMD_NONE) \
+    X(10203, VOICE_AUTO_PREV,      "voice.autoPrevVoice",   "!voice prev",       BOTH, "Voice",       handleVoiceAutoPrevVoice,   CMD_NONE) \
+    X(10204, VOICE_AUTO_RATE_UP,   "voice.autoRateUp",      "!voice rate_up",    BOTH, "Voice",       handleVoiceAutoRateUp,      CMD_NONE) \
+    X(10205, VOICE_AUTO_RATE_DOWN, "voice.autoRateDown",    "!voice rate_down",  BOTH, "Voice",       handleVoiceAutoRateDown,    CMD_NONE) \
+    X(10206, VOICE_AUTO_STOP,      "voice.autoStop",        "!voice auto_stop",  BOTH, "Voice",       handleVoiceAutoStop,        CMD_NONE) \
     /* ═══════════════════ END OF TABLE ═══════════════════ */
 
 // ============================================================================

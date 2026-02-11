@@ -20,6 +20,13 @@ class SafeRefactorEngine;
 class ReasoningSchemaRegistry;
 class CoTFallbackSystem;
 class InputGuardSlicer;
+
+// Forward declarations — gap-closing subsystems (v2.0)
+namespace RawrXD { namespace Agentic { class AgenticTaskGraph; } }
+namespace RawrXD { namespace Embeddings { class EmbeddingEngine; } }
+namespace RawrXD { namespace Vision { class VisionEncoder; } }
+namespace RawrXD { namespace Extensions { class ExtensionMarketplace; } }
+namespace RawrXD { namespace Auth { class RBACEngine; } }
 #include <cstdint>
 #include <cstddef>
 #include <mutex>
@@ -203,6 +210,33 @@ public:
     // Unified stats JSON across all subsystems
     std::string   getFullStatsJSON() const;
 
+    // ---- Gap-Closing Subsystems (v2.0) ----
+
+    // Agentic Task Graph — DAG-based task orchestration
+    PatchResult   taskgraph_initialize();
+    PatchResult   taskgraph_shutdown();
+    bool          taskgraph_is_running() const;
+
+    // Embedding Engine — vector index + semantic search
+    PatchResult   embedding_initialize(const char* modelPath, uint32_t dimensions);
+    PatchResult   embedding_shutdown();
+    PatchResult   embedding_index_directory(const char* dirPath);
+
+    // Vision Encoder — multi-modal image input
+    PatchResult   vision_initialize(const char* modelPath);
+    PatchResult   vision_shutdown();
+
+    // Extension Marketplace — non-Qt extension management
+    PatchResult   marketplace_initialize(const char* installDir, const char* cacheDir);
+    PatchResult   marketplace_shutdown();
+
+    // RBAC Engine — enterprise auth + audit
+    PatchResult   rbac_initialize();
+    PatchResult   rbac_shutdown();
+    PatchResult   rbac_authorize(const char* sessionToken,
+                                  uint32_t requiredPermission,
+                                  const char* action, const char* resource);
+
     // ---- Preset Management (JSON, manual serializer) ----
     PatchResult save_preset(const char* filename, const HotpatchPreset& preset);
     PatchResult load_preset(const char* filename, HotpatchPreset* outPreset);
@@ -267,4 +301,11 @@ private:
     std::atomic<bool>                       m_schemaInit{false};
     std::atomic<bool>                       m_cotInit{false};
     std::atomic<bool>                       m_guardInit{false};
+
+    // Gap-closing subsystem initialization flags (v2.0)
+    std::atomic<bool>                       m_taskgraphInit{false};
+    std::atomic<bool>                       m_embeddingInit{false};
+    std::atomic<bool>                       m_visionInit{false};
+    std::atomic<bool>                       m_marketplaceInit{false};
+    std::atomic<bool>                       m_rbacInit{false};
 };
