@@ -6,55 +6,72 @@
  */
 
 #include "ide_agent_bridge.hpp"
-
-#include <QDateTime>
-#include <QDebug>
-#include <QTimer>
-#include <QDir>
+#include "json_types.hpp"
+#include <chrono>
+#include <cstdio>
+#include <ctime>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <vector>
 
 /**
  * @brief Constructor
  */
-IDEAgentBridge::IDEAgentBridge(QObject* parent)
-    : QObject(parent)
-    , m_invoker(std::make_unique<ModelInvoker>(this))
-    , m_executor(std::make_unique<ActionExecutor>(this))
+IDEAgentBridge::IDEAgentBridge()
+    : m_invoker(std::make_unique<ModelInvoker>())
+    , m_executor(std::make_unique<ActionExecutor>())
 {
-    // Connect invoker signals
-    connect(m_invoker.get(), &ModelInvoker::planGenerationStarted,
-            this, &IDEAgentBridge::agentThinkingStarted);
+    // Wire invoker callbacks
+    m_invoker->onPlanGenerationStarted = [this](const std::string& msg) {
+        if (onAgentThinkingStarted) onAgentThinkingStarted(msg);
+    };
 
-    connect(m_invoker.get(), &ModelInvoker::planGenerated,
-            this, &IDEAgentBridge::onPlanGenerated);
+    m_invoker->onPlanGenerated = [this](const LLMResponse& response) {
+        onPlanGenerated(response);
+    };
 
-    connect(m_invoker.get(), &ModelInvoker::invocationError,
-            this, [this](const QString& error, bool recoverable) {
-                emit agentError("Plan generation failed: " + error, recoverable);
-            });
+    m_invoker->onInvocationError = [this](const std::string& error, bool recoverable) {
+        if (onAgentError) onAgentError("Plan generation failed: " + error, recoverable);
+    };
 
-    // Connect executor signals
-    connect(m_executor.get(), &ActionExecutor::planStarted,
-            this, &IDEAgentBridge::agentExecutionStarted);
+    // Wire executor callbacks (C-style function pointers)
+    m_executor->registerPlanStartedCallback([](int totalActions, void* ud) {
+        auto* self = static_cast<IDEAgentBridge*>(ud);
+        if (self->onAgentExecutionStarted) self->onAgentExecutionStarted(totalActions);
+    }, this);
 
-    connect(m_executor.get(), &ActionExecutor::actionCompleted,
-            this, &IDEAgentBridge::onActionCompleted);
+    m_executor->registerActionCompletedCallback([](int index, bool success, const nlohmann::json& result, void* ud) {
+        auto* self = static_cast<IDEAgentBridge*>(ud);
+        self->onActionCompleted(index, success, result);
+    }, this);
 
-    connect(m_executor.get(), &ActionExecutor::actionFailed,
-            this, &IDEAgentBridge::onActionFailed);
+    m_executor->registerActionFailedCallback([](int index, const std::string& error, bool recoverable, void* ud) {
+        auto* self = static_cast<IDEAgentBridge*>(ud);
+        self->onActionFailed(index, error, recoverable);
+    }, this);
 
-    connect(m_executor.get(), &ActionExecutor::progressUpdated,
-            this, [this](int current, int total) {
-                emit agentProgressUpdated(current, total, 
-                    QDateTime::currentMSecsSinceEpoch() - m_executionStartTime);
-            });
+    m_executor->registerProgressUpdatedCallback([](int current, int total, void* ud) {
+        auto* self = static_cast<IDEAgentBridge*>(ud);
+        if (self->onAgentProgressUpdated) {
+            auto now = std::chrono::system_clock::now();
+            int elapsed = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()).count()) - self->m_executionStartTime;
+            self->onAgentProgressUpdated(current, total, elapsed);
+        }
+    }, this);
 
-    connect(m_executor.get(), &ActionExecutor::planCompleted,
-            this, &IDEAgentBridge::onPlanCompleted);
+    m_executor->registerPlanCompletedCallback([](bool success, const nlohmann::json& result, void* ud) {
+        auto* self = static_cast<IDEAgentBridge*>(ud);
+        self->onPlanCompleted(success, result);
+    }, this);
 
-    connect(m_executor.get(), &ActionExecutor::userInputNeeded,
-            this, &IDEAgentBridge::onUserInputNeeded);
+    m_executor->registerUserInputNeededCallback([](const std::string& query, const std::vector<std::string>& options, void* ud) {
+        auto* self = static_cast<IDEAgentBridge*>(ud);
+        self->onUserInputNeeded(query, options);
+    }, this);
 
-    m_projectRoot = QDir::currentPath();
+    m_projectRoot = std::filesystem::current_path().string();
 }
 
 /**
@@ -65,18 +82,19 @@ IDEAgentBridge::~IDEAgentBridge() = default;
 /**
  * @brief Initialize bridge
  */
-void IDEAgentBridge::initialize(const QString& endpoint,
-                               const QString& backend,
-                               const QString& apiKey)
+void IDEAgentBridge::initialize(const std::string& endpoint,
+                               const std::string& backend,
+                               const std::string& apiKey)
 {
     m_invoker->setLLMBackend(backend, endpoint, apiKey);
-    qInfo() << "[IDEAgentBridge] Initialized with backend:" << backend << "at" << endpoint;
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Initialized with backend: %s at %s\n",
+            backend.c_str(), endpoint.c_str());
 }
 
 /**
  * @brief Set project root
  */
-void IDEAgentBridge::setProjectRoot(const QString& root)
+void IDEAgentBridge::setProjectRoot(const std::string& root)
 {
     m_projectRoot = root;
 
@@ -86,21 +104,21 @@ void IDEAgentBridge::setProjectRoot(const QString& root)
 
     m_executor->setContext(ctx);
 
-    qDebug() << "[IDEAgentBridge] Project root set to:" << root;
+    fprintf(stderr, "[IDEAgentBridge] Project root set to: %s\n", root.c_str());
 }
 
 /**
  * @brief Execute wish (full pipeline)
  */
-void IDEAgentBridge::executeWish(const QString& wish, bool requireApproval)
+void IDEAgentBridge::executeWish(const std::string& wish, bool requireApproval)
 {
     if (m_isExecuting) {
-        emit agentError("Execution already in progress", false);
+        agentError("Execution already in progress", false);
         return;
     }
 
-    if (wish.isEmpty()) {
-        emit agentError("Wish cannot be empty", false);
+    if (wish.empty()) {
+        agentError("Wish cannot be empty", false);
         return;
     }
 
@@ -113,17 +131,17 @@ void IDEAgentBridge::executeWish(const QString& wish, bool requireApproval)
     params.availableTools = {"search_files", "file_edit", "run_build",
                              "execute_tests", "commit_git", "invoke_command"};
 
-    qDebug() << "[IDEAgentBridge] Executing wish:" << wish;
+    fprintf(stderr, "[IDEAgentBridge] Executing wish: %s\n", wish.c_str());
     m_invoker->invokeAsync(params);
 }
 
 /**
  * @brief Plan wish (preview mode)
  */
-void IDEAgentBridge::planWish(const QString& wish)
+void IDEAgentBridge::planWish(const std::string& wish)
 {
     if (m_isExecuting) {
-        emit agentError("Execution already in progress", false);
+        agentError("Execution already in progress", false);
         return;
     }
 
@@ -135,7 +153,7 @@ void IDEAgentBridge::planWish(const QString& wish)
     params.availableTools = {"search_files", "file_edit", "run_build",
                              "execute_tests", "commit_git", "invoke_command"};
 
-    qDebug() << "[IDEAgentBridge] Planning wish:" << wish;
+    fprintf(stderr, "[IDEAgentBridge] Planning wish: %s\n", wish.c_str());
     m_invoker->invokeAsync(params);
 }
 
@@ -145,7 +163,7 @@ void IDEAgentBridge::planWish(const QString& wish)
 void IDEAgentBridge::approvePlan()
 {
     if (!m_waitingForApproval) {
-        qWarning() << "[IDEAgentBridge] No plan waiting for approval";
+        fprintf(stderr, "[WARN] [IDEAgentBridge] No plan waiting for approval\n");
         return;
     }
 
@@ -160,8 +178,8 @@ void IDEAgentBridge::rejectPlan()
 {
     m_waitingForApproval = false;
     m_isExecuting = false;
-    emit executionCancelled();
-    qDebug() << "[IDEAgentBridge] Plan rejected by user";
+    executionCancelled();
+    fprintf(stderr, "[IDEAgentBridge] Plan rejected by user\n");
 }
 
 /**
@@ -175,9 +193,9 @@ void IDEAgentBridge::cancelExecution()
 
     m_isExecuting = false;
     m_waitingForApproval = false;
-    emit executionCancelled();
+    executionCancelled();
 
-    qDebug() << "[IDEAgentBridge] Execution cancelled";
+    fprintf(stderr, "[IDEAgentBridge] Execution cancelled\n");
 }
 
 /**
@@ -191,7 +209,7 @@ void IDEAgentBridge::setDryRunMode(bool enabled)
     ctx.dryRun = enabled;
     m_executor->setContext(ctx);
 
-    qDebug() << "[IDEAgentBridge] Dry-run mode:" << (enabled ? "ON" : "OFF");
+    fprintf(stderr, "[IDEAgentBridge] Dry-run mode: %s\n", enabled ? "ON" : "OFF");
 }
 
 /**
@@ -200,7 +218,7 @@ void IDEAgentBridge::setDryRunMode(bool enabled)
 void IDEAgentBridge::setStopOnError(bool stopOnError)
 {
     m_stopOnError = stopOnError;
-    qDebug() << "[IDEAgentBridge] Stop on error:" << (stopOnError ? "YES" : "NO");
+    fprintf(stderr, "[IDEAgentBridge] Stop on error: %s\n", stopOnError ? "YES" : "NO");
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -214,17 +232,17 @@ void IDEAgentBridge::onPlanGenerated(const LLMResponse& response)
 {
     if (!response.success) {
         m_isExecuting = false;
-        emit agentError("Failed to generate plan: " + response.error, true);
+        agentError("Failed to generate plan: " + response.error, true);
         return;
     }
 
     m_currentPlan = convertToExecutionPlan(response.parsedPlan);
-    emit agentGeneratedPlan(m_currentPlan);
+    agentGeneratedPlan(m_currentPlan);
 
     // If user approval is required, wait
     if (m_requireApproval) {
         m_waitingForApproval = true;
-        emit planApprovalNeeded(m_currentPlan);
+        planApprovalNeeded(m_currentPlan);
     } else {
         // Auto-execute
         executeCurrentPlan();
@@ -234,53 +252,63 @@ void IDEAgentBridge::onPlanGenerated(const LLMResponse& response)
 /**
  * @brief Handle action completion
  */
-void IDEAgentBridge::onActionCompleted(int index, bool success, const QJsonObject& result)
+void IDEAgentBridge::onActionCompleted(int index, bool success, const nlohmann::json& result)
 {
-    QString description = m_currentPlan.actions[index].toObject().value("description").toString();
-    emit agentExecutionProgress(index, description, success);
+    std::string description;
+    if (m_currentPlan.actions.is_array()
+        && index >= 0
+        && static_cast<size_t>(index) < m_currentPlan.actions.size()
+        && m_currentPlan.actions[index].is_object()) {
+        description = m_currentPlan.actions[index].value("description", std::string(""));
+    }
 
-    qDebug() << "[IDEAgentBridge] Action" << (index+1) << "completed:" << (success ? "OK" : "FAILED");
+    agentExecutionProgress(index, description, success);
+
+    fprintf(stderr, "[IDEAgentBridge] Action %d completed: %s\n",
+            index + 1, success ? "OK" : "FAILED");
 }
 
 /**
  * @brief Handle action failure
  */
-void IDEAgentBridge::onActionFailed(int index, const QString& error, bool recoverable)
+void IDEAgentBridge::onActionFailed(int index, const std::string& error, bool recoverable)
 {
-    qWarning() << "[IDEAgentBridge] Action" << index << "failed:" << error;
+    fprintf(stderr, "[WARN] [IDEAgentBridge] Action %d failed: %s\n", index, error.c_str());
 
     if (!recoverable) {
         m_isExecuting = false;
-        emit agentError("Unrecoverable error in action " + QString::number(index) + ": " + error, false);
+        agentError("Unrecoverable error in action " + std::to_string(index) + ": " + error, false);
     }
 }
 
 /**
  * @brief Handle plan completion
  */
-void IDEAgentBridge::onPlanCompleted(bool success, const QJsonObject& result)
+void IDEAgentBridge::onPlanCompleted(bool success, const nlohmann::json& result)
 {
-    int elapsedMs = QDateTime::currentMSecsSinceEpoch() - m_executionStartTime;
+    auto now = std::chrono::system_clock::now();
+    int elapsedMs = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()).count()) - m_executionStartTime;
 
     m_isExecuting = false;
 
     if (success) {
         recordExecution(m_currentPlan.wish, true, result, elapsedMs);
-        qInfo() << "[IDEAgentBridge] Plan completed successfully in" << elapsedMs << "ms";
-        emit agentCompleted(result, elapsedMs);
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Plan completed successfully in %d ms\n", elapsedMs);
+        agentCompleted(result, elapsedMs);
     } else {
         recordExecution(m_currentPlan.wish, false, result, elapsedMs);
-        emit agentError("Plan execution failed", true);
+        agentError("Plan execution failed", true);
     }
 }
 
 /**
  * @brief Handle user input needed
  */
-void IDEAgentBridge::onUserInputNeeded(const QString& query, const QStringList& options)
+void IDEAgentBridge::onUserInputNeeded(const std::string& query, const std::vector<std::string>& options)
 {
-    qDebug() << "[IDEAgentBridge] User input needed:" << query;
-    emit userInputRequested(query, options);
+    fprintf(stderr, "[IDEAgentBridge] User input needed: %s\n", query.c_str());
+    userInputRequested(query, options);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -290,11 +318,11 @@ void IDEAgentBridge::onUserInputNeeded(const QString& query, const QStringList& 
 /**
  * @brief Build execution context
  */
-QString IDEAgentBridge::buildExecutionContext() const
+std::string IDEAgentBridge::buildExecutionContext() const
 {
-    QString context = "RawrXD IDE - GGUF Quantization Framework\n";
+    std::string context = "RawrXD IDE - GGUF Quantization Framework\n";
     context += "Project Root: " + m_projectRoot + "\n";
-    context += "Dry Run Mode: " + QString(m_dryRun ? "ENABLED" : "DISABLED") + "\n";
+    context += "Dry Run Mode: " + std::string(m_dryRun ? "ENABLED" : "DISABLED") + "\n";
 
     return context;
 }
@@ -302,14 +330,14 @@ QString IDEAgentBridge::buildExecutionContext() const
 /**
  * @brief Convert LLM plan to ExecutionPlan
  */
-ExecutionPlan IDEAgentBridge::convertToExecutionPlan(const QJsonArray& llmPlan)
+ExecutionPlan IDEAgentBridge::convertToExecutionPlan(const nlohmann::json& llmPlan)
 {
     ExecutionPlan plan;
     plan.actions = llmPlan;
     plan.status = "Ready for execution";
 
     // Estimate time based on number of actions
-    plan.estimatedTimeMs = llmPlan.size() * 2000; // ~2s per action
+    plan.estimatedTimeMs = static_cast<int>(llmPlan.size()) * 2000; // ~2s per action
 
     return plan;
 }
@@ -319,13 +347,17 @@ ExecutionPlan IDEAgentBridge::convertToExecutionPlan(const QJsonArray& llmPlan)
  */
 void IDEAgentBridge::executeCurrentPlan()
 {
-    if (m_currentPlan.actions.isEmpty()) {
-        emit agentError("No plan to execute", false);
+    if (m_currentPlan.actions.empty()) {
+        agentError("No plan to execute", false);
         m_isExecuting = false;
         return;
     }
 
-    m_executionStartTime = QDateTime::currentMSecsSinceEpoch();
+    {
+        auto now = std::chrono::system_clock::now();
+        m_executionStartTime = static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()).count());
+    }
 
     ExecutionContext ctx;
     ctx.projectRoot = m_projectRoot;
@@ -335,27 +367,43 @@ void IDEAgentBridge::executeCurrentPlan()
     m_executor->setContext(ctx);
     m_executor->executePlan(m_currentPlan.actions, m_stopOnError);
 
-    qDebug() << "[IDEAgentBridge] Plan execution started with" 
-             << m_currentPlan.actions.size() << "actions";
+    fprintf(stderr, "[IDEAgentBridge] Plan execution started with %d actions\n",
+            static_cast<int>(m_currentPlan.actions.size()));
 }
 
 /**
  * @brief Record execution in history
  */
-void IDEAgentBridge::recordExecution(const QString& wish,
+void IDEAgentBridge::recordExecution(const std::string& wish,
                                     bool success,
-                                    const QJsonObject& result,
+                                    const nlohmann::json& result,
                                     int elapsedMs)
 {
-    QJsonObject entry;
+    nlohmann::json entry;
     entry["wish"] = wish;
     entry["success"] = success;
-    entry["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+    // Generate ISO8601 timestamp
+    {
+        auto now = std::chrono::system_clock::now();
+        std::time_t t = std::chrono::system_clock::to_time_t(now);
+        struct tm tm_buf{};
+#ifdef _WIN32
+        localtime_s(&tm_buf, &t);
+#else
+        localtime_r(&t, &tm_buf);
+#endif
+        char buf[64];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tm_buf);
+        entry["timestamp"] = std::string(buf);
+    }
+
     entry["elapsedMs"] = elapsedMs;
     entry["result"] = result;
 
-    m_executionHistory.append(entry);
+    m_executionHistory.push_back(entry);
 
-    qDebug() << "[IDEAgentBridge] Execution recorded:" << (success ? "SUCCESS" : "FAILED")
-             << "in" << elapsedMs << "ms";
+    fprintf(stderr, "[IDEAgentBridge] Execution recorded: %s in %d ms\n",
+            success ? "SUCCESS" : "FAILED", elapsedMs);
 }
+

@@ -7,18 +7,30 @@
  * - Progress tracking and observability
  * - Thread-safe operation
  *
+ * Architecture: C++20, no Qt, no exceptions
+ * Error model: PatchResult pattern where applicable
+ *
  * @author RawrXD Agent Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QProcess>
+#include "simple_json.hpp"
+
+#include <string>
+#include <vector>
+#include <map>
 #include <memory>
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <cstdint>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 /**
  * @enum ActionType
@@ -42,32 +54,67 @@ enum class ActionType {
  */
 struct Action {
     ActionType type = ActionType::Unknown;
-    QString target;                         ///< File, command, or resource name
-    QJsonObject params;                     ///< Action-specific parameters
-    QString description;                    ///< Human-readable description
+    std::string id;                         ///< Unique action ID
+    std::string target;                     ///< File, command, or resource name
+    JsonValue params;                       ///< Action-specific parameters (Object)
+    std::string description;                ///< Human-readable description
 
     // Result tracking
     bool executed = false;
-    bool success = false;
-    QString result;
-    QString error;
+    bool success  = false;
+    std::string result;
+    std::string error;
 };
+
+/**
+ * @struct ProcessResult
+ * @brief Result from an external process execution
+ */
+struct ProcessResult {
+    int exitCode = -1;
+    std::string stdoutStr;
+    std::string stderrStr;
+    bool timedOut = false;
+};
+
+/**
+ * @brief Model invoker function pointer type
+ *
+ * Signature: JsonValue invoke(const std::string& wish, const JsonValue& params, void* userData)
+ */
+typedef JsonValue (*ModelInvokeFunc)(const std::string& wish, const JsonValue& params, void* userData);
 
 /**
  * @struct ExecutionContext
  * @brief Stateful context for plan execution
  */
 struct ExecutionContext {
-    QString projectRoot;                    ///< Project working directory
-    QStringList environmentVars;            ///< Additional env vars
-    int timeoutMs = 30000;                  ///< Default action timeout
-    bool dryRun = false;                    ///< Preview without executing
-    QJsonObject state;                      ///< Shared state across actions
+    std::string projectRoot;                    ///< Project working directory
+    std::vector<std::string> environmentVars;   ///< Additional env vars
+    int timeoutMs = 30000;                      ///< Default action timeout
+    bool dryRun = false;                        ///< Preview without executing
+    JsonValue state;                            ///< Shared state across actions (Object)
+
+    // Model invocation (for recursive agent)
+    ModelInvokeFunc modelInvokeFunc = nullptr;
+    void* modelInvokeUserData = nullptr;
 
     // Tracking
     int currentActionIndex = 0;
     int totalActions = 0;
 };
+
+// =========================================================================
+// Callback types (replace Qt signals)
+// =========================================================================
+
+typedef void (*PlanStartedCallback)(int totalActions, void* userData);
+typedef void (*ActionStartedCallback)(int index, const std::string& description, void* userData);
+typedef void (*ActionCompletedCallback)(int index, bool success, const JsonValue& result, void* userData);
+typedef void (*ActionFailedCallback)(int index, const std::string& error, bool recoverable, void* userData);
+typedef void (*ProgressUpdatedCallback)(int current, int total, void* userData);
+typedef void (*PlanCompletedCallback)(bool success, const JsonValue& result, void* userData);
+typedef void (*UserInputNeededCallback)(const std::string& query, const std::vector<std::string>& options, void* userData);
 
 /**
  * @class ActionExecutor
@@ -78,10 +125,10 @@ struct ExecutionContext {
  * - Execute each action with appropriate handler
  * - Collect results and aggregate state
  * - Handle errors with recovery strategies
- * - Track progress for UI updates
+ * - Track progress via callbacks
  * - Provide rollback on failure
  *
- * @note Thread-safe via Qt signal/slot mechanism
+ * @note Thread-safe via std::mutex
  * @note All blocking operations run on background threads
  *
  * @example
@@ -89,26 +136,24 @@ struct ExecutionContext {
  * ActionExecutor executor;
  * executor.setContext(ctx);
  *
- * connect(&executor, &ActionExecutor::actionCompleted,
- *         this, &MyClass::onActionDone);
- *
+ * executor.registerActionCompletedCallback(onActionDone, nullptr);
  * executor.executePlan(planArray);
  * @endcode
  */
-class ActionExecutor : public QObject {
-    Q_OBJECT
-
+class ActionExecutor {
 public:
+    ActionExecutor(const ActionExecutor&) = delete;
+    ActionExecutor& operator=(const ActionExecutor&) = delete;
+
     /**
      * @brief Constructor
-     * @param parent Qt parent object
      */
-    explicit ActionExecutor(QObject* parent = nullptr);
+    ActionExecutor();
 
     /**
-     * @brief Destructor
+     * @brief Destructor - joins background thread if active
      */
-    ~ActionExecutor() override;
+    ~ActionExecutor();
 
     /**
      * @brief Set execution context (project root, env, timeout)
@@ -130,14 +175,14 @@ public:
     bool executeAction(Action& action);
 
     /**
-     * @brief Execute complete plan (asynchronous)
-     * @param actions Array of actions to execute
+     * @brief Execute complete plan (asynchronous, runs on background thread)
+     * @param actions JsonValue Array of actions to execute
      * @param stopOnError If true, stop at first failure; if false, continue
      *
-     * Emits actionStarted/actionCompleted for each action.
-     * Emits planCompleted at end with overall result.
+     * Fires ActionStarted/ActionCompleted callbacks for each action.
+     * Fires PlanCompleted callback at end with overall result.
      */
-    void executePlan(const QJsonArray& actions, bool stopOnError = true);
+    void executePlan(const JsonValue& actions, bool stopOnError = true);
 
     /**
      * @brief Cancel executing plan
@@ -148,13 +193,13 @@ public:
      * @brief Check if execution is in progress
      * @return true if plan is being executed
      */
-    bool isExecuting() const { return m_isExecuting; }
+    bool isExecuting() const { return m_isExecuting.load(); }
 
     /**
      * @brief Get all executed actions
      * @return Vector of completed actions with results
      */
-    QVector<Action> executedActions() const { return m_executedActions; }
+    std::vector<Action> executedActions() const { return m_executedActions; }
 
     /**
      * @brief Rollback previous action (if supported)
@@ -165,194 +210,140 @@ public:
 
     /**
      * @brief Get aggregated result from plan
-     * @return JSON object with results from all actions
+     * @return JsonValue object with results from all actions
      */
-    QJsonObject getAggregatedResult() const;
+    JsonValue getAggregatedResult() const;
 
-signals:
-    /**
-     * @brief Emitted when plan execution begins
-     * @param totalActions Number of actions to execute
-     */
-    void planStarted(int totalActions);
+    // -----------------------------------------------------------------
+    // Callback Registration (replaces Qt signals)
+    // -----------------------------------------------------------------
 
-    /**
-     * @brief Emitted when an action begins
-     * @param index Action index in plan
-     * @param description Human-readable action description
-     */
-    void actionStarted(int index, const QString& description);
-
-    /**
-     * @brief Emitted when an action completes
-     * @param index Action index
-     * @param success Whether action succeeded
-     * @param result Result data from action
-     */
-    void actionCompleted(int index, bool success, const QJsonObject& result);
-
-    /**
-     * @brief Emitted when action fails
-     * @param index Action index
-     * @param error Error message
-     * @param recoverable Whether execution can continue
-     */
-    void actionFailed(int index, const QString& error, bool recoverable);
-
-    /**
-     * @brief Emitted for progress updates
-     * @param current Current action index
-     * @param total Total actions
-     */
-    void progressUpdated(int current, int total);
-
-    /**
-     * @brief Emitted when entire plan completes
-     * @param success Overall success (all actions passed)
-     * @param result Aggregated results
-     */
-    void planCompleted(bool success, const QJsonObject& result);
-
-    /**
-     * @brief Emitted when user input is needed
-     * @param query Question to ask user
-     * @param options Possible answers
-     */
-    void userInputNeeded(const QString& query, const QStringList& options);
-
-private slots:
-    /**
-     * @brief Handle action executor background task completion
-     */
-    void onActionTaskFinished();
-
-    /**
-     * @brief Handle process completion for system commands
-     */
-    void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void registerPlanStartedCallback(PlanStartedCallback cb, void* userData);
+    void registerActionStartedCallback(ActionStartedCallback cb, void* userData);
+    void registerActionCompletedCallback(ActionCompletedCallback cb, void* userData);
+    void registerActionFailedCallback(ActionFailedCallback cb, void* userData);
+    void registerProgressUpdatedCallback(ProgressUpdatedCallback cb, void* userData);
+    void registerPlanCompletedCallback(PlanCompletedCallback cb, void* userData);
+    void registerUserInputNeededCallback(UserInputNeededCallback cb, void* userData);
 
 private:
-    // ─────────────────────────────────────────────────────────────────────
+    // -----------------------------------------------------------------
     // Action Handlers
-    // ─────────────────────────────────────────────────────────────────────
+    // -----------------------------------------------------------------
 
-    /**
-     * @brief Execute file edit action
-     * @param action Action containing edit parameters
-     * @return true if successful
-     */
+    /** @brief Execute file edit action */
     bool handleFileEdit(Action& action);
 
-    /**
-     * @brief Execute file search action
-     * @param action Action containing search parameters
-     * @return true if successful
-     */
+    /** @brief Execute file search action */
     bool handleSearchFiles(Action& action);
 
-    /**
-     * @brief Execute build action
-     * @param action Action containing build parameters
-     * @return true if successful
-     */
+    /** @brief Execute build action */
     bool handleRunBuild(Action& action);
 
-    /**
-     * @brief Execute test action
-     * @param action Action containing test parameters
-     * @return true if successful
-     */
+    /** @brief Execute test action */
     bool handleExecuteTests(Action& action);
 
-    /**
-     * @brief Execute git operation
-     * @param action Action containing git parameters
-     * @return true if successful
-     */
+    /** @brief Execute git operation */
     bool handleCommitGit(Action& action);
 
-    /**
-     * @brief Execute arbitrary command
-     * @param action Action containing command
-     * @return true if successful
-     */
+    /** @brief Execute arbitrary command */
     bool handleInvokeCommand(Action& action);
 
-    /**
-     * @brief Handle recursive agent invocation
-     * @param action Action for agent recursion
-     * @return true if successful
-     */
+    /** @brief Handle recursive agent invocation */
     bool handleRecursiveAgent(Action& action);
 
-    /**
-     * @brief Prompt user for input
-     * @param action Action containing query
-     * @return true if user approved
-     */
+    /** @brief Prompt user for input */
     bool handleQueryUser(Action& action);
 
-    // ─────────────────────────────────────────────────────────────────────
+    // -----------------------------------------------------------------
     // Utility Methods
-    // ─────────────────────────────────────────────────────────────────────
+    // -----------------------------------------------------------------
 
-    /**
-     * @brief Parse JSON action object into Action struct
-     * @param jsonAction JSON representation of action
-     * @return Parsed Action
-     */
-    Action parseJsonAction(const QJsonObject& jsonAction);
+    /** @brief Parse JSON action object into Action struct */
+    Action parseJsonAction(const JsonValue& jsonAction);
 
-    /**
-     * @brief Create backup of file before modification
-     * @param filePath Path to file
-     * @return true if backup created successfully
-     */
-    bool createBackup(const QString& filePath);
+    /** @brief Create backup of file before modification */
+    bool createBackup(const std::string& filePath);
 
-    /**
-     * @brief Restore file from backup
-     * @param filePath Path to file
-     * @return true if restore successful
-     */
-    bool restoreFromBackup(const QString& filePath);
+    /** @brief Restore file from backup */
+    bool restoreFromBackup(const std::string& filePath);
 
-    /**
-     * @brief Execute command and capture output
-     * @param command Command to execute
-     * @param args Command arguments
-     * @param timeoutMs Timeout in milliseconds
-     * @return Exit code and stdout/stderr
-     */
-    QJsonObject executeCommand(const QString& command,
-                               const QStringList& args,
-                               int timeoutMs);
+    /** @brief Execute command and capture output */
+    JsonValue executeCommand(const std::string& command,
+                             const std::vector<std::string>& args,
+                             int timeoutMs);
 
-    /**
-     * @brief Validate file edit is safe
-     * @param filePath Target file
-     * @param action Edit action type
-     * @return true if safe
-     */
-    bool validateFileEditSafety(const QString& filePath, const QString& action);
+    /** @brief Validate file edit is safe */
+    bool validateFileEditSafety(const std::string& filePath, const std::string& action);
 
-    /**
-     * @brief Map action type string to enum
-     * @param typeStr String representation of type
-     * @return Corresponding ActionType enum
-     */
-    ActionType stringToActionType(const QString& typeStr) const;
+    /** @brief Map action type string to enum */
+    ActionType stringToActionType(const std::string& typeStr) const;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // -----------------------------------------------------------------
+    // Process Execution (Windows: CreateProcessA, POSIX: fork+exec)
+    // -----------------------------------------------------------------
+
+    /** @brief Run external process with stdout/stderr capture and timeout */
+    ProcessResult runProcess(const std::string& command,
+                             const std::vector<std::string>& args,
+                             const std::string& workingDir,
+                             int timeoutMs);
+
+    // -----------------------------------------------------------------
+    // Callback Notification Helpers
+    // -----------------------------------------------------------------
+
+    void notifyPlanStarted(int totalActions);
+    void notifyActionStarted(int index, const std::string& description);
+    void notifyActionCompleted(int index, bool success, const JsonValue& result);
+    void notifyActionFailed(int index, const std::string& error, bool recoverable);
+    void notifyProgressUpdated(int current, int total);
+    void notifyPlanCompleted(bool success, const JsonValue& result);
+    void notifyUserInputNeeded(const std::string& query, const std::vector<std::string>& options);
+
+    // Formerly: onActionTaskFinished / onProcessFinished (Qt slots, now regular methods)
+    void onActionTaskFinished();
+    void onProcessFinished(int exitCode, int exitStatus);
+
+    // -----------------------------------------------------------------
     // Member Variables
-    // ─────────────────────────────────────────────────────────────────────
+    // -----------------------------------------------------------------
 
     ExecutionContext m_context;
-    bool m_isExecuting = false;
+    std::atomic<bool> m_isExecuting{false};
     bool m_stopOnError = true;
-    bool m_cancelled = false;
+    std::atomic<bool> m_cancelled{false};
 
-    QVector<Action> m_executedActions;      ///< History of executed actions
-    QMap<QString, QString> m_backups;       ///< Backup file mappings
-    std::unique_ptr<QProcess> m_process;    ///< Current subprocess
+    std::vector<Action> m_executedActions;          ///< History of executed actions
+    std::map<std::string, std::string> m_backups;   ///< Backup file mappings
+
+    // Background execution thread
+    std::thread m_executionThread;
+    std::mutex m_threadMutex;
+
+    // Current process handle for cancellation
+#ifdef _WIN32
+    HANDLE m_currentProcessHandle = INVALID_HANDLE_VALUE;
+    std::mutex m_processMutex;
+#endif
+
+    // -----------------------------------------------------------------
+    // Callback storage
+    // -----------------------------------------------------------------
+
+    struct PlanStartedCB      { PlanStartedCallback fn;      void* userData; };
+    struct ActionStartedCB    { ActionStartedCallback fn;    void* userData; };
+    struct ActionCompletedCB  { ActionCompletedCallback fn;  void* userData; };
+    struct ActionFailedCB     { ActionFailedCallback fn;     void* userData; };
+    struct ProgressUpdatedCB  { ProgressUpdatedCallback fn;  void* userData; };
+    struct PlanCompletedCB    { PlanCompletedCallback fn;    void* userData; };
+    struct UserInputNeededCB  { UserInputNeededCallback fn;  void* userData; };
+
+    std::vector<PlanStartedCB>      m_planStartedCBs;
+    std::vector<ActionStartedCB>    m_actionStartedCBs;
+    std::vector<ActionCompletedCB>  m_actionCompletedCBs;
+    std::vector<ActionFailedCB>     m_actionFailedCBs;
+    std::vector<ProgressUpdatedCB>  m_progressUpdatedCBs;
+    std::vector<PlanCompletedCB>    m_planCompletedCBs;
+    std::vector<UserInputNeededCB>  m_userInputNeededCBs;
 };

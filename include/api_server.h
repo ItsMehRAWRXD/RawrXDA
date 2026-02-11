@@ -169,6 +169,11 @@ private:
     bool CheckRateLimit(const std::string& client_id);
     void UpdateRateLimit(const std::string& client_id);
 
+    // CoT engine proxy — bridges to Python rawrxd_cot_engine.py Flask backend
+    bool ProxyToCotEngine(const std::string& request_body, std::string& response,
+                          const std::string& path = "/api/cot",
+                          const std::string& method = "POST");
+
 private:
     AppState& app_state_;
     std::atomic<bool> is_running_;

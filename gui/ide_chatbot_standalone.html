@@ -360,6 +360,16 @@
       height: calc(100vh - var(--titlebar-height));
     }
 
+    /* Hide redundant header brand when standalone titlebar is visible */
+    body.standalone-mode .header-bar .brand {
+      visibility: hidden;
+      width: 0;
+      overflow: hidden;
+      gap: 0;
+      padding: 0;
+      flex: 0 0 0;
+    }
+
     /* Fullscreen mode hides titlebar */
     body.standalone-fullscreen .standalone-titlebar {
       display: none !important;
@@ -1342,6 +1352,182 @@
       50% {
         opacity: 0.7;
       }
+    }
+
+    /* ======== Voice Input Styles (Phase 33 Parity) ======== */
+    .voice-btn.recording {
+      background: var(--accent-red, #ff3d3d) !important;
+      color: #fff !important;
+      animation: voice-pulse 1s ease-in-out infinite;
+      border-color: var(--accent-red, #ff3d3d) !important;
+    }
+
+    @keyframes voice-pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 61, 61, 0.5);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(255, 61, 61, 0);
+      }
+    }
+
+    .voice-btn.recording::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
+      background: #ff3d3d;
+      border-radius: 50%;
+      animation: voice-dot 0.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes voice-dot {
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0.3;
+      }
+    }
+
+    .voice-btn {
+      position: relative;
+    }
+
+    .voice-interim-text {
+      font-style: italic;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    .voice-settings-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .voice-settings-panel {
+      background: var(--bg-secondary, #1e1e2e);
+      border: 1px solid var(--border-subtle, #333);
+      border-radius: 16px;
+      padding: 24px;
+      width: 420px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    .voice-settings-panel h3 {
+      margin: 0 0 16px 0;
+      color: var(--text-primary, #e0e0e0);
+      font-size: 18px;
+    }
+
+    .voice-setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 13px;
+      color: var(--text-secondary, #aaa);
+    }
+
+    .voice-setting-row label {
+      flex: 1;
+    }
+
+    .voice-setting-row select,
+    .voice-setting-row input[type=range] {
+      flex: 0 0 180px;
+      background: var(--bg-primary, #12121a);
+      border: 1px solid var(--border-subtle, #333);
+      color: var(--text-primary, #e0e0e0);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .voice-toggle-switch {
+      width: 44px;
+      height: 24px;
+      background: #444;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .voice-toggle-switch.on {
+      background: var(--accent-primary, #ff6b35);
+    }
+
+    .voice-toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: left 0.2s;
+    }
+
+    .voice-toggle-switch.on::after {
+      left: 22px;
+    }
+
+    .voice-status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted, #777);
+      padding: 2px 0;
+    }
+
+    .voice-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .voice-status-dot.active {
+      background: #4caf50;
+    }
+
+    .voice-status-dot.error {
+      background: #f44336;
+    }
+
+    .voice-settings-close {
+      float: right;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .voice-settings-close:hover {
+      color: var(--text-primary);
     }
 
     .stream-rate-indicator {
@@ -6193,6 +6379,8 @@
             rows="1" onkeydown="handleInput(event)"></textarea>
           <div class="input-actions">
             <button class="input-btn" onclick="attachFile()" title="Attach File">&#x1F4CE;</button>
+            <button class="input-btn voice-btn" id="voiceBtn" onclick="RawrVoice.toggleRecording()"
+              title="Voice Input (Ctrl+Shift+V)">&#x1F3A4;</button>
             <button class="input-btn stop" id="stopBtn" onclick="stopGeneration()" title="Stop Generation (Ctrl+C)"
               style="display:none;">&#x23F9;</button>
             <button class="input-btn send" id="sendBtn" onclick="sendMessage()" title="Send">&#x27A4;</button>
@@ -6215,6 +6403,13 @@
           <div class="toolbar-item" id="dualAgentBtn" onclick="DualAgent.toggle()"
             title="Dual Agent: OFF — Toggle Architect↔Coder pipeline" style="opacity:0.5;">
             <span>&#x1F996;</span> <span id="dualAgentLabel">Dual</span>
+          </div>
+          <div class="toolbar-item" id="voiceToolbarBtn" onclick="RawrVoice.toggleTTS()"
+            title="Toggle TTS: Read AI responses aloud">
+            <span>&#x1F50A;</span> <span id="voiceTTSLabel">TTS: OFF</span>
+          </div>
+          <div class="toolbar-item" id="voiceSettingsBtn" onclick="RawrVoice.showSettings()" title="Voice Settings">
+            <span>&#x2699;</span> Voice
           </div>
           <div class="toolbar-item" style="margin-left: auto; opacity: 0.6;">
             <span>&#x21B5;</span> Enter to send
@@ -7226,10 +7421,19 @@
                   <span class="sec-directive-value" id="secDomPurifyStatus">Checking...</span>
                   <span class="sec-directive-status pass" id="secDomPurifyBadge">—</span>
                 </div>
-                <div class="sec-directive">
+                <div class="sec-directive" style="flex-wrap:wrap;gap:6px;">
                   <span class="sec-directive-name">Max Input Length</span>
-                  <span class="sec-directive-value" id="secMaxInputVal">50,000 chars</span>
+                  <span class="sec-directive-value" id="secMaxInputVal">1,000,000,000 chars</span>
                   <span class="sec-directive-status pass">ENFORCED</span>
+                </div>
+                <div class="sec-directive" style="flex-wrap:wrap;gap:6px;align-items:center;">
+                  <span class="sec-directive-name">Adjust Limit</span>
+                  <input type="number" id="secInputMaxLengthInput" min="1" max="1000000000" step="1000"
+                    style="width:160px;padding:4px 8px;font-size:11px;font-family:var(--font-mono);background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:4px;"
+                    oninput="this.value=Math.min(1000000000,Math.max(1,parseInt(this.value)||1))">
+                  <button class="code-btn" onclick="setMaxInputLength()"
+                    style="font-size:10px;padding:4px 10px;">Apply</button>
+                  <span id="secInputLimitFeedback" style="font-size:10px;color:var(--text-muted);"></span>
                 </div>
                 <div class="sec-directive">
                   <span class="sec-directive-name">Script Tag Filter</span>
@@ -8737,7 +8941,7 @@
           blocked: 0,
         },
         inputGuard: {
-          maxLength: 50000,
+          maxLength: 1000000000,
           blockedXss: 0,
           blockedLength: 0,
           blockedUrl: 0,
@@ -19360,6 +19564,25 @@
       logStructured(level, 'security_event', { detail: detail });
     }
 
+    // --- Manual Max Input Length Adjustment ---
+    function setMaxInputLength(newLimit) {
+      var inp = document.getElementById('secInputMaxLengthInput');
+      var val = parseInt(newLimit !== undefined ? newLimit : (inp ? inp.value : 0), 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 1000000000) val = 1000000000;
+      State.security.inputGuard.maxLength = val;
+      secLog('CONFIG', 'Max input length set to ' + val.toLocaleString() + ' chars');
+      var display = el('secMaxInputVal');
+      if (display) display.textContent = val.toLocaleString() + ' chars';
+      var feedback = el('secInputLimitFeedback');
+      if (feedback) {
+        feedback.textContent = '\u2713 Set to ' + val.toLocaleString();
+        feedback.style.color = 'var(--accent-green, #5cb85c)';
+      }
+      if (inp) inp.value = val;
+      logDebug('\u2699\ufe0f Max input length adjusted to ' + val.toLocaleString() + ' chars');
+    }
+
     // --- Input Sanitization Guard ---
     function validateInput(text) {
       if (!text || typeof text !== 'string') {
@@ -19544,6 +19767,11 @@
       el('secBlkLength').textContent = ig.blockedLength;
       el('secBlkRate').textContent = rl.blocked;
       el('secBlkUrl').textContent = ig.blockedUrl;
+
+      // Update max input length display and input field
+      el('secMaxInputVal').textContent = ig.maxLength.toLocaleString() + ' chars';
+      var limInput = document.getElementById('secInputMaxLengthInput');
+      if (limInput && !limInput.matches(':focus')) limInput.value = ig.maxLength;
 
       // URL validation status
       var urlOk = isUrlAllowed(State.backend.url);
@@ -22627,7 +22855,9 @@
               stream: false,
             }, chainExtras);
 
-            var res = await fetch(State.backend.url + '/v1/chat/completions', {
+            // Use getActiveUrl() to respect directMode (Ollama vs Win32IDE)
+            var cotUrl = getActiveUrl();
+            var res = await fetch(cotUrl + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
@@ -22643,26 +22873,46 @@
               }
               stepSuccess = true;
             } else {
-              // Try Ollama /api/generate fallback
-              var ollamaPayload = {
+              // Try Ollama /api/chat fallback (native Ollama endpoint)
+              var ollamaChatPayload = {
                 model: stepModel,
-                prompt: stepInstruction + '\n\nUser query: ' + userQuery +
-                  (chainResults.length > 0 ? '\n\nPrevious steps:\n' + chainResults.map(function (r, idx) { return 'Step ' + (idx + 1) + ': ' + r.content; }).join('\n') : ''),
+                messages: messages,
                 stream: false,
                 options: buildOllamaOptions(),
               };
-              var res2 = await fetch(State.backend.url + '/api/generate', {
+              var ollamaUrl = State.backend.ollamaDirectUrl || cotUrl;
+              var resCh = await fetch(ollamaUrl + '/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(ollamaPayload),
+                body: JSON.stringify(ollamaChatPayload),
                 signal: signal,
               });
-              if (res2.ok) {
-                var data2 = await res2.json();
-                stepContent = data2.response || '[No response]';
+              if (resCh.ok) {
+                var dataCh = await resCh.json();
+                stepContent = (dataCh.message && dataCh.message.content) || dataCh.response || '[No response]';
                 stepSuccess = true;
               } else {
-                stepContent = '[Error: HTTP ' + res2.status + ']';
+                // Try Ollama /api/generate fallback
+                var ollamaPayload = {
+                  model: stepModel,
+                  prompt: stepInstruction + '\n\nUser query: ' + userQuery +
+                    (chainResults.length > 0 ? '\n\nPrevious steps:\n' + chainResults.map(function (r, idx) { return 'Step ' + (idx + 1) + ': ' + r.content; }).join('\n') : ''),
+                  stream: false,
+                  options: buildOllamaOptions(),
+                };
+                var res2 = await fetch(ollamaUrl + '/api/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(ollamaPayload),
+                  signal: signal,
+                });
+                if (res2.ok) {
+                  var data2 = await res2.json();
+                  stepContent = data2.response || '[No response]';
+                  stepSuccess = true;
+                } else {
+                  stepContent = '[Error: HTTP ' + res2.status + ']';
+                }
               }
             }
           } catch (e) {
@@ -23823,6 +24073,410 @@
         }
       }
     });
+  </script>
+
+  <!-- ====================================================================
+       RawrXD Voice Engine — Production-grade Web Speech API Integration
+       Features: STT via SpeechRecognition, TTS via SpeechSynthesis,
+                 Interim results, auto-send, voice settings, hotkeys
+       Phase 33 parity with Win32 IDE voice subsystem
+       ==================================================================== -->
+  <script>
+    var RawrVoice = (function () {
+      'use strict';
+
+      var state = {
+        sttSupported: false,
+        ttsSupported: false,
+        recognition: null,
+        isRecording: false,
+        ttsEnabled: false,
+        ttsVoice: null,
+        ttsRate: 1.0,
+        ttsPitch: 1.0,
+        ttsVolume: 1.0,
+        lang: 'en-US',
+        continuous: true,
+        interimResults: true,
+        autoSend: false,
+        settingsOpen: false,
+        lastTranscript: '',
+        interimText: '',
+        metrics: {
+          recordingCount: 0,
+          transcriptionCount: 0,
+          ttsCount: 0,
+          errCount: 0,
+          totalRecordMs: 0,
+          lastRecordStart: 0
+        }
+      };
+
+      function init() {
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          state.sttSupported = true;
+          state.recognition = new SpeechRecognition();
+          state.recognition.continuous = state.continuous;
+          state.recognition.interimResults = state.interimResults;
+          state.recognition.lang = state.lang;
+          state.recognition.maxAlternatives = 1;
+
+          state.recognition.onstart = function () {
+            state.isRecording = true;
+            state.metrics.lastRecordStart = Date.now();
+            state.metrics.recordingCount++;
+            updateUI();
+            logVoice('STT started (lang=' + state.lang + ')');
+          };
+
+          state.recognition.onresult = function (e) {
+            var final = '', interim = '';
+            for (var i = e.resultIndex; i < e.results.length; i++) {
+              var transcript = e.results[i][0].transcript;
+              if (e.results[i].isFinal) { final += transcript; }
+              else { interim += transcript; }
+            }
+            if (final) {
+              state.lastTranscript = final;
+              state.metrics.transcriptionCount++;
+              insertTranscript(final);
+              logVoice('STT final: ' + final.substring(0, 80));
+            }
+            if (interim) { state.interimText = interim; showInterim(interim); }
+          };
+
+          state.recognition.onerror = function (e) {
+            state.metrics.errCount++;
+            logVoice('STT error: ' + e.error);
+            if (e.error === 'not-allowed') {
+              if (typeof addMessage === 'function') addMessage('system', '\u26A0\uFE0F **Voice:** Microphone access denied. Please allow microphone in browser settings.', { skipMemory: true });
+            } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+              if (typeof addMessage === 'function') addMessage('system', '\u26A0\uFE0F **Voice:** Speech recognition error: ' + e.error, { skipMemory: true });
+            }
+            state.isRecording = false;
+            updateUI();
+          };
+
+          state.recognition.onend = function () {
+            if (state.isRecording && state.metrics.lastRecordStart) {
+              state.metrics.totalRecordMs += Date.now() - state.metrics.lastRecordStart;
+            }
+            state.isRecording = false;
+            state.interimText = '';
+            clearInterim();
+            updateUI();
+            logVoice('STT ended');
+            if (state.autoSend && state.lastTranscript) {
+              var el = document.getElementById('chatInput');
+              if (el && el.value.trim() && typeof sendMessage === 'function') { sendMessage(); }
+              state.lastTranscript = '';
+            }
+          };
+        } else {
+          logVoice('SpeechRecognition API not available in this browser');
+        }
+
+        if (window.speechSynthesis) {
+          state.ttsSupported = true;
+          speechSynthesis.onvoiceschanged = function () {
+            logVoice('TTS voices loaded: ' + speechSynthesis.getVoices().length);
+          };
+          speechSynthesis.getVoices();
+          logVoice('TTS available');
+        } else {
+          logVoice('SpeechSynthesis API not available');
+        }
+
+        document.addEventListener('keydown', function (e) {
+          if (e.ctrlKey && e.shiftKey && e.key === 'V') { e.preventDefault(); toggleRecording(); }
+          if (e.ctrlKey && e.shiftKey && e.key === 'U') { e.preventDefault(); toggleTTS(); }
+        });
+
+        updateUI();
+        logVoice('Voice engine initialized (STT=' + state.sttSupported + ', TTS=' + state.ttsSupported + ')');
+      }
+
+      function toggleRecording() {
+        if (!state.sttSupported) {
+          if (typeof addMessage === 'function') addMessage('system', '\u26A0\uFE0F **Voice:** Speech recognition not supported in this browser. Use Chrome or Edge.', { skipMemory: true });
+          return;
+        }
+        if (state.isRecording) { stopRecording(); } else { startRecording(); }
+      }
+
+      function startRecording() {
+        if (!state.sttSupported || state.isRecording) return;
+        try {
+          state.recognition.lang = state.lang;
+          state.recognition.continuous = state.continuous;
+          state.recognition.interimResults = state.interimResults;
+          state.recognition.start();
+        } catch (e) { logVoice('STT start error: ' + e.message); state.metrics.errCount++; }
+      }
+
+      function stopRecording() {
+        if (!state.isRecording || !state.recognition) return;
+        try { state.recognition.stop(); } catch (e) { logVoice('STT stop error: ' + e.message); }
+      }
+
+      function insertTranscript(text) {
+        var el = document.getElementById('chatInput');
+        if (!el) return;
+        var existing = el.value;
+        if (existing && !existing.endsWith(' ') && !existing.endsWith('\n')) { el.value += ' '; }
+        el.value += text;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        el.focus();
+      }
+
+      function showInterim(text) {
+        var existing = document.getElementById('voiceInterimDisplay');
+        if (!existing) {
+          var el = document.getElementById('chatInput');
+          if (!el) return;
+          var span = document.createElement('div');
+          span.id = 'voiceInterimDisplay';
+          span.className = 'voice-interim-text';
+          span.style.cssText = 'font-size:12px;padding:4px 12px 0 12px;min-height:16px;';
+          el.parentElement.parentElement.insertBefore(span, el.parentElement.nextSibling);
+          existing = span;
+        }
+        existing.textContent = '\uD83C\uDFA4 ' + text;
+      }
+
+      function clearInterim() {
+        var el = document.getElementById('voiceInterimDisplay');
+        if (el) el.textContent = '';
+      }
+
+      function toggleTTS() {
+        state.ttsEnabled = !state.ttsEnabled;
+        updateUI();
+        logVoice('TTS toggled: ' + (state.ttsEnabled ? 'ON' : 'OFF'));
+        if (!state.ttsEnabled) { speechSynthesis.cancel(); }
+      }
+
+      function speak(text) {
+        if (!state.ttsSupported || !state.ttsEnabled) return;
+        if (!text || !text.trim()) return;
+        var clean = text
+          .replace(/```[\s\S]*?```/g, ' code block ')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/\*([^*]+)\*/g, '$1')
+          .replace(/#+\s*/g, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/\n+/g, '. ')
+          .trim();
+        if (!clean) return;
+        var chunks = chunkText(clean, 200);
+        for (var i = 0; i < chunks.length; i++) {
+          var utter = new SpeechSynthesisUtterance(chunks[i]);
+          utter.lang = state.lang;
+          utter.rate = state.ttsRate;
+          utter.pitch = state.ttsPitch;
+          utter.volume = state.ttsVolume;
+          if (state.ttsVoice) {
+            var voices = speechSynthesis.getVoices();
+            for (var v = 0; v < voices.length; v++) {
+              if (voices[v].name === state.ttsVoice) { utter.voice = voices[v]; break; }
+            }
+          }
+          speechSynthesis.speak(utter);
+        }
+        state.metrics.ttsCount++;
+      }
+
+      function chunkText(text, maxLen) {
+        var chunks = [];
+        var sentences = text.split(/(?<=[.!?])\s+/);
+        var current = '';
+        for (var i = 0; i < sentences.length; i++) {
+          if (current.length + sentences[i].length > maxLen && current) {
+            chunks.push(current.trim()); current = '';
+          }
+          current += sentences[i] + ' ';
+        }
+        if (current.trim()) chunks.push(current.trim());
+        return chunks.length ? chunks : [text];
+      }
+
+      function stopSpeaking() { if (state.ttsSupported) speechSynthesis.cancel(); }
+
+      function updateUI() {
+        var voiceBtn = document.getElementById('voiceBtn');
+        if (voiceBtn) {
+          if (state.isRecording) {
+            voiceBtn.classList.add('recording');
+            voiceBtn.innerHTML = '&#x23F9;';
+            voiceBtn.title = 'Stop Voice Input';
+          } else {
+            voiceBtn.classList.remove('recording');
+            voiceBtn.innerHTML = '&#x1F3A4;';
+            voiceBtn.title = 'Voice Input (Ctrl+Shift+V)';
+          }
+          if (!state.sttSupported) {
+            voiceBtn.style.opacity = '0.3';
+            voiceBtn.style.cursor = 'not-allowed';
+            voiceBtn.title = 'Speech recognition not supported in this browser';
+          }
+        }
+        var ttsLabel = document.getElementById('voiceTTSLabel');
+        if (ttsLabel) {
+          ttsLabel.textContent = 'TTS: ' + (state.ttsEnabled ? 'ON' : 'OFF');
+          var ttsBtn = document.getElementById('voiceToolbarBtn');
+          if (ttsBtn) {
+            ttsBtn.style.opacity = state.ttsEnabled ? '1' : '0.5';
+            ttsBtn.style.color = state.ttsEnabled ? 'var(--accent-primary)' : '';
+          }
+        }
+      }
+
+      function showSettings() {
+        if (state.settingsOpen) return;
+        state.settingsOpen = true;
+        var overlay = document.createElement('div');
+        overlay.className = 'voice-settings-overlay';
+        overlay.id = 'voiceSettingsOverlay';
+        overlay.onclick = function (e) { if (e.target === overlay) closeSettings(); };
+        var voices = state.ttsSupported ? speechSynthesis.getVoices() : [];
+        var html = '<div class="voice-settings-panel">';
+        html += '<button class="voice-settings-close" onclick="RawrVoice.closeSettings()">&times;</button>';
+        html += '<h3>\uD83C\uDFA4 Voice Settings</h3>';
+        html += '<div class="voice-status-indicator"><span class="voice-status-dot ' + (state.sttSupported ? 'active' : 'error') + '"></span> Speech-to-Text: ' + (state.sttSupported ? 'Available' : 'Unsupported') + '</div><br>';
+        html += '<div class="voice-status-indicator"><span class="voice-status-dot ' + (state.ttsSupported ? 'active' : 'error') + '"></span> Text-to-Speech: ' + (state.ttsSupported ? 'Available (' + voices.length + ' voices)' : 'Unsupported') + '</div>';
+        html += '<hr style="border-color:var(--border-subtle);margin:12px 0">';
+        html += '<div class="voice-setting-row"><label>Language</label><select id="voiceLangSel" onchange="RawrVoice.setLang(this.value)">';
+        var langs = [['en-US', 'English (US)'], ['en-GB', 'English (UK)'], ['es-ES', 'Spanish'], ['fr-FR', 'French'], ['de-DE', 'German'], ['it-IT', 'Italian'], ['pt-BR', 'Portuguese (BR)'], ['ja-JP', 'Japanese'], ['ko-KR', 'Korean'], ['zh-CN', 'Chinese (Simplified)'], ['ru-RU', 'Russian'], ['ar-SA', 'Arabic'], ['hi-IN', 'Hindi']];
+        for (var i = 0; i < langs.length; i++) { html += '<option value="' + langs[i][0] + '"' + (state.lang === langs[i][0] ? ' selected' : '') + '>' + langs[i][1] + '</option>'; }
+        html += '</select></div>';
+        html += '<div class="voice-setting-row"><label>TTS Voice</label><select id="voiceTTSVoiceSel" onchange="RawrVoice.setVoice(this.value)"><option value="">Browser Default</option>';
+        for (var v = 0; v < voices.length; v++) { var sel = state.ttsVoice === voices[v].name ? ' selected' : ''; html += '<option value="' + voices[v].name.replace(/"/g, '&quot;') + '"' + sel + '>' + voices[v].name + ' (' + voices[v].lang + ')' + (voices[v].default ? ' *' : '') + '</option>'; }
+        html += '</select></div>';
+        html += '<div class="voice-setting-row"><label>Speech Rate: <span id="rateVal">' + state.ttsRate.toFixed(1) + '</span></label><input type="range" min="0.5" max="2.0" step="0.1" value="' + state.ttsRate + '" oninput="RawrVoice.setRate(this.value);document.getElementById(\'rateVal\').textContent=parseFloat(this.value).toFixed(1)"></div>';
+        html += '<div class="voice-setting-row"><label>Pitch: <span id="pitchVal">' + state.ttsPitch.toFixed(1) + '</span></label><input type="range" min="0.5" max="2.0" step="0.1" value="' + state.ttsPitch + '" oninput="RawrVoice.setPitch(this.value);document.getElementById(\'pitchVal\').textContent=parseFloat(this.value).toFixed(1)"></div>';
+        html += '<div class="voice-setting-row"><label>Volume: <span id="volVal">' + Math.round(state.ttsVolume * 100) + '%</span></label><input type="range" min="0" max="1.0" step="0.05" value="' + state.ttsVolume + '" oninput="RawrVoice.setVolume(this.value);document.getElementById(\'volVal\').textContent=Math.round(this.value*100)+\'%\'"></div>';
+        html += '<div class="voice-setting-row"><label>Continuous Listening</label><div class="voice-toggle-switch ' + (state.continuous ? 'on' : '') + '" id="voiceContinuousToggle" onclick="RawrVoice.toggleContinuous()"></div></div>';
+        html += '<div class="voice-setting-row"><label>Auto-send on silence</label><div class="voice-toggle-switch ' + (state.autoSend ? 'on' : '') + '" id="voiceAutoSendToggle" onclick="RawrVoice.toggleAutoSend()"></div></div>';
+        html += '<div class="voice-setting-row"><label>Read AI responses aloud</label><div class="voice-toggle-switch ' + (state.ttsEnabled ? 'on' : '') + '" id="voiceTTSToggle" onclick="RawrVoice.toggleTTS();document.getElementById(\'voiceTTSToggle\').classList.toggle(\'on\')"></div></div>';
+        html += '<hr style="border-color:var(--border-subtle);margin:12px 0">';
+        html += '<div style="font-size:12px;color:var(--text-muted)"><strong>Metrics</strong><br>';
+        html += 'Recordings: ' + state.metrics.recordingCount + ' | Transcriptions: ' + state.metrics.transcriptionCount + ' | TTS: ' + state.metrics.ttsCount + ' | Errors: ' + state.metrics.errCount + '<br>';
+        if (state.metrics.totalRecordMs > 0) { html += 'Total record time: ' + (state.metrics.totalRecordMs / 1000).toFixed(1) + 's'; }
+        html += '</div>';
+        html += '<div style="margin-top:16px;display:flex;gap:8px">';
+        html += '<button onclick="RawrVoice.testTTS()" style="flex:1;padding:8px;background:var(--accent-primary,#ff6b35);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">\uD83D\uDD0A Test TTS</button>';
+        html += '<button onclick="RawrVoice.testSTT()" style="flex:1;padding:8px;background:var(--bg-tertiary,#2a2a3a);color:var(--text-primary);border:1px solid var(--border-subtle,#333);border-radius:8px;cursor:pointer;font-size:13px">\uD83C\uDFA4 Test STT</button>';
+        html += '</div></div>';
+        overlay.innerHTML = html;
+        document.body.appendChild(overlay);
+      }
+
+      function closeSettings() {
+        state.settingsOpen = false;
+        var el = document.getElementById('voiceSettingsOverlay');
+        if (el) el.remove();
+        savePrefs();
+      }
+
+      function setLang(lang) { state.lang = lang; if (state.recognition) state.recognition.lang = lang; }
+      function setVoice(name) { state.ttsVoice = name || null; }
+      function setRate(v) { state.ttsRate = parseFloat(v); }
+      function setPitch(v) { state.ttsPitch = parseFloat(v); }
+      function setVolume(v) { state.ttsVolume = parseFloat(v); }
+      function toggleContinuous() {
+        state.continuous = !state.continuous;
+        var el = document.getElementById('voiceContinuousToggle');
+        if (el) el.classList.toggle('on');
+        if (state.recognition) state.recognition.continuous = state.continuous;
+      }
+      function toggleAutoSend() {
+        state.autoSend = !state.autoSend;
+        var el = document.getElementById('voiceAutoSendToggle');
+        if (el) el.classList.toggle('on');
+      }
+
+      function testTTS() {
+        if (!state.ttsSupported) { alert('TTS not supported'); return; }
+        var oldEnabled = state.ttsEnabled;
+        state.ttsEnabled = true;
+        speak('Hello! RawrXD voice system is working. This is a text-to-speech test.');
+        state.ttsEnabled = oldEnabled;
+      }
+
+      function testSTT() {
+        if (!state.sttSupported) { alert('STT not supported in this browser'); return; }
+        if (typeof addMessage === 'function') addMessage('system', '\uD83C\uDFA4 **Voice Test:** Listening for 5 seconds... speak now!', { skipMemory: true });
+        startRecording();
+        setTimeout(function () { if (state.isRecording) stopRecording(); }, 5000);
+      }
+
+      function savePrefs() {
+        try {
+          localStorage.setItem('rawrxd_voice_prefs', JSON.stringify({
+            lang: state.lang, ttsEnabled: state.ttsEnabled, ttsVoice: state.ttsVoice,
+            ttsRate: state.ttsRate, ttsPitch: state.ttsPitch, ttsVolume: state.ttsVolume,
+            continuous: state.continuous, autoSend: state.autoSend
+          }));
+        } catch (e) { /* localStorage may be unavailable */ }
+      }
+
+      function loadPrefs() {
+        try {
+          var raw = localStorage.getItem('rawrxd_voice_prefs');
+          if (raw) {
+            var p = JSON.parse(raw);
+            if (p.lang) state.lang = p.lang;
+            if (typeof p.ttsEnabled === 'boolean') state.ttsEnabled = p.ttsEnabled;
+            if (p.ttsVoice) state.ttsVoice = p.ttsVoice;
+            if (typeof p.ttsRate === 'number') state.ttsRate = p.ttsRate;
+            if (typeof p.ttsPitch === 'number') state.ttsPitch = p.ttsPitch;
+            if (typeof p.ttsVolume === 'number') state.ttsVolume = p.ttsVolume;
+            if (typeof p.continuous === 'boolean') state.continuous = p.continuous;
+            if (typeof p.autoSend === 'boolean') state.autoSend = p.autoSend;
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function logVoice(msg) {
+        if (typeof logDebug === 'function') logDebug('[Voice] ' + msg, 'info');
+        else console.log('[RawrVoice] ' + msg);
+      }
+
+      function hookTTS() {
+        var origAddMessage = window.addMessage;
+        if (origAddMessage && !origAddMessage._voiceHooked) {
+          window.addMessage = function (role, content, opts) {
+            var result = origAddMessage.call(this, role, content, opts);
+            if (role === 'assistant' && state.ttsEnabled) {
+              setTimeout(function () { speak(content); }, 100);
+            }
+            return result;
+          };
+          window.addMessage._voiceHooked = true;
+          logVoice('TTS hook installed on addMessage');
+        }
+      }
+
+      loadPrefs();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { init(); hookTTS(); });
+      } else { init(); hookTTS(); }
+
+      return {
+        toggleRecording: toggleRecording, startRecording: startRecording, stopRecording: stopRecording,
+        toggleTTS: toggleTTS, speak: speak, stopSpeaking: stopSpeaking,
+        showSettings: showSettings, closeSettings: closeSettings,
+        testTTS: testTTS, testSTT: testSTT,
+        setLang: setLang, setVoice: setVoice, setRate: setRate, setPitch: setPitch, setVolume: setVolume,
+        toggleContinuous: toggleContinuous, toggleAutoSend: toggleAutoSend,
+        getState: function () { return state; }, getMetrics: function () { return state.metrics; },
+        isRecording: function () { return state.isRecording; }, isTTSEnabled: function () { return state.ttsEnabled; }
+      };
+    })();
   </script>
 </body>
 

@@ -25,6 +25,8 @@
 #include <atomic>
 #include <mutex>
 
+#include "../agentic/OllamaProvider.h"
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -47,9 +49,9 @@ void Win32IDE::initGhostText() {
     m_ghostTextColumn         = -1;
     m_ghostTextFont           = nullptr;
 
-    // Create ghost text font — italic version of editor font
+    // Create ghost text font — italic version of editor font (DPI-scaled)
     LOGFONTA lf = {};
-    lf.lfHeight         = -14;    // ~10.5pt
+    lf.lfHeight         = -dpiScale(14);    // ~10.5pt at 96 DPI
     lf.lfWeight         = FW_NORMAL;
     lf.lfItalic         = TRUE;
     lf.lfCharSet        = DEFAULT_CHARSET;
@@ -131,15 +133,34 @@ void Win32IDE::onGhostTextTimer() {
     // Detect language for context
     std::string language = getSyntaxLanguageName();
 
+    // Gather suffix context (text after cursor, up to 2KB) for FIM
+    int textLen = GetWindowTextLengthA(m_hwndEditor);
+    int suffixEnd = (cursorPos + 2048 < textLen) ? cursorPos + 2048 : textLen;
+    int suffixLen = suffixEnd - cursorPos;
+    std::string suffix;
+    if (suffixLen > 0) {
+        TEXTRANGEA trSuffix;
+        trSuffix.chrg.cpMin = cursorPos;
+        trSuffix.chrg.cpMax = suffixEnd;
+        std::vector<char> suffBuf(suffixLen + 1, 0);
+        trSuffix.lpstrText = suffBuf.data();
+        SendMessageA(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&trSuffix);
+        suffix.assign(suffBuf.data());
+    }
+
     // Fire background thread for completion
     std::string contextCopy = context;
+    std::string suffixCopy = suffix;
     std::string langCopy = language;
+    std::string fileCopy = m_currentFile;
     int cursorCopy = cursorPos;
+    int lineCopy = lineIndex;
+    int colCopy = column;
 
-    std::thread([this, contextCopy, langCopy, cursorCopy]() {
+    std::thread([this, contextCopy, suffixCopy, langCopy, fileCopy, cursorCopy, lineCopy, colCopy]() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
-        std::string completion = requestGhostTextCompletion(contextCopy, langCopy);
+        std::string completion = requestGhostTextCompletion(contextCopy, langCopy, suffixCopy, fileCopy, lineCopy, colCopy);
 
         // Post result to UI thread
         if (isShuttingDown()) return;
@@ -158,7 +179,51 @@ void Win32IDE::onGhostTextTimer() {
 
 std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
                                                    const std::string& language) {
-    // Strategy 1: Use native engine if model is loaded
+    // Legacy 2-arg overload — forward to FIM-aware version with empty suffix
+    return requestGhostTextCompletion(context, language, "", "", 0, 0);
+}
+
+std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
+                                                   const std::string& language,
+                                                   const std::string& suffix,
+                                                   const std::string& filePath,
+                                                   int cursorLine, int cursorCol) {
+    using namespace RawrXD::Prediction;
+
+    // ---- Strategy 0: OllamaProvider with FIM (preferred path) ----
+    // Lazy-init the provider on first call
+    if (!m_predictionProvider) {
+        std::string baseUrl = m_ollamaBaseUrl.empty() ? "http://localhost:11434" : m_ollamaBaseUrl;
+        m_predictionProvider = std::make_unique<OllamaProvider>(baseUrl);
+
+        PredictionConfig cfg;
+        cfg.model       = m_ollamaModelOverride.empty() ? "qwen2.5-coder:14b" : m_ollamaModelOverride;
+        cfg.temperature = 0.2f;
+        cfg.maxTokens   = 256;
+        cfg.maxLines    = GHOST_TEXT_MAX_LINES;
+        cfg.useFIM      = true;
+        cfg.stopSequences = "<|endoftext|>,<|fim_pad|>,\n\n\n";
+        m_predictionProvider->Configure(cfg);
+    }
+
+    // Try FIM prediction through OllamaProvider
+    if (m_predictionProvider->IsAvailable()) {
+        PredictionContext ctx;
+        ctx.prefix       = context;
+        ctx.suffix       = suffix;
+        ctx.language     = language;
+        ctx.filePath     = filePath;
+        ctx.cursorLine   = cursorLine;
+        ctx.cursorColumn = cursorCol;
+
+        PredictionResult result = m_predictionProvider->Predict(ctx);
+        if (result.success && !result.completion.empty()) {
+            return trimGhostText(result.completion);
+        }
+        // If FIM failed, fall through to legacy strategies
+    }
+
+    // ---- Strategy 1: Use native engine if model is loaded ----
     if (m_nativeEngine && m_nativeEngine->IsModelLoaded()) {
         auto tokens = m_nativeEngine->Tokenize(
             "Complete the following " + language + " code. Output ONLY the completion, "

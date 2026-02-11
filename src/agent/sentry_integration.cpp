@@ -1,245 +1,285 @@
+/**
+ * @file sentry_integration.cpp
+ * @brief SentryIntegration implementation – Qt-free (C++20 / Win32)
+ *
+ * Sends crash reports, performance transactions, and breadcrumbs
+ * to Sentry via WinHTTP (through process_utils.hpp http:: namespace).
+ */
+
 #include "sentry_integration.hpp"
-#include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonArray>
-#include <QDateTime>
-#include <QUuid>
-#include <QDebug>
-#include <QElapsedTimer>
-#include <QCoreApplication>
+#include "process_utils.hpp"
+#include "../json_types.hpp"
+#include <cstdio>
+#include <chrono>
+#include <cstring>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <objbase.h>     // CoCreateGuid
+#pragma comment(lib, "ole32.lib")
+#endif
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+static int64_t nowMs() {
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(
+        system_clock::now().time_since_epoch()).count();
+}
+
+static std::string generateEventId() {
+#ifdef _WIN32
+    GUID guid{};
+    CoCreateGuid(&guid);
+    char buf[64];
+    snprintf(buf, sizeof(buf),
+             "%08lx%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
+             guid.Data1, guid.Data2, guid.Data3,
+             guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+             guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    return buf;
+#else
+    // Simple fallback: timestamp + random
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%016llx%08x",
+             (unsigned long long)nowMs(), (unsigned)rand());
+    return buf;
+#endif
+}
+
+static std::string isoTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto tt  = std::chrono::system_clock::to_time_t(now);
+    struct tm t{};
+#ifdef _WIN32
+    gmtime_s(&t, &tt);
+#else
+    gmtime_r(&tt, &t);
+#endif
+    char buf[32];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &t);
+    return buf;
+}
+
+// ── Singleton ────────────────────────────────────────────────────────────
 
 SentryIntegration* SentryIntegration::s_instance = nullptr;
 
 SentryIntegration* SentryIntegration::instance() {
-    if (!s_instance) {
-        s_instance = new SentryIntegration();
-    }
+    if (!s_instance) s_instance = new SentryIntegration();
     return s_instance;
 }
 
-SentryIntegration::SentryIntegration(QObject* parent)
-    : QObject(parent)
-    , m_initialized(false)
-{
-}
+SentryIntegration::SentryIntegration()  = default;
+SentryIntegration::~SentryIntegration() = default;
 
-SentryIntegration::~SentryIntegration() {
-}
+// ── initialize ───────────────────────────────────────────────────────────
 
 bool SentryIntegration::initialize() {
-    // PRODUCTION-READY: External configuration via environment variable
-    m_dsn = qEnvironmentVariable("SENTRY_DSN");
-    
-    if (m_dsn.isEmpty()) {
-        qWarning() << "[Sentry] DSN not configured (set SENTRY_DSN environment variable). Crash reporting disabled.";
-        return false;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_initialized) return true;
+
+    m_dsn = getEnvVar("SENTRY_DSN");
+    if (m_dsn.empty()) {
+        fprintf(stderr, "[Sentry] SENTRY_DSN not set – crash reporting disabled\n");
+        // Not fatal: run without sentry
     }
-    
+
     m_initialized = true;
-    
-    // PRODUCTION-READY: Structured logging with initialization details
-    qInfo().noquote() << QString("[Sentry] INITIALIZED | DSN: %1***").arg(m_dsn.left(20));
-    
-    // Add initial breadcrumb
-    addBreadcrumb("Sentry initialized", "sentry");
-    
+    fprintf(stderr, "[Sentry] Initialized (dsn=%s)\n",
+            m_dsn.empty() ? "<none>" : "***");
     return true;
 }
 
-void SentryIntegration::captureException(const QString& exception, const QJsonObject& context) {
-    if (!m_initialized) {
-        return;
+// ── captureException ─────────────────────────────────────────────────────
+
+void SentryIntegration::captureException(const std::string& exception,
+                                         const JsonObject& context) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    std::string eventId = generateEventId();
+
+    JsonObject event;
+    event["event_id"]  = JsonValue(eventId);
+    event["timestamp"] = JsonValue(isoTimestamp());
+    event["level"]     = JsonValue("error");
+    event["platform"]  = JsonValue("native");
+
+    // Exception payload
+    JsonObject exVal;
+    exVal["type"]  = JsonValue("RuntimeError");
+    exVal["value"] = JsonValue(exception);
+
+    JsonArray exValues;
+    exValues.push_back(JsonValue(std::move(exVal)));
+
+    JsonObject exBlock;
+    exBlock["values"] = JsonValue(std::move(exValues));
+    event["exception"] = JsonValue(std::move(exBlock));
+
+    // Merge user context
+    if (!context.empty()) {
+        event["extra"] = JsonValue(context);
     }
-    
-    // PRODUCTION-READY: Latency tracking for error reporting
-    QElapsedTimer timer;
-    timer.start();
-    
-    QJsonObject event;
-    event["event_id"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    event["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-    event["level"] = "error";
-    event["platform"] = "native";
-    event["sdk"] = QJsonObject{
-        {"name", "rawrxd-sentry"},
-        {"version", "1.0"}
-    };
-    
-    // Exception data
-    QJsonObject exceptionData;
-    exceptionData["type"] = "Exception";
-    exceptionData["value"] = exception;
-    
-    // Add context if provided
-    if (!context.isEmpty()) {
-        exceptionData["context"] = context;
+
+    // Attach breadcrumbs
+    if (!m_breadcrumbs.empty()) {
+        JsonArray crumbs;
+        for (auto& bc : m_breadcrumbs)
+            crumbs.push_back(JsonValue(bc));
+        event["breadcrumbs"] = JsonValue(std::move(crumbs));
     }
-    
-    event["exception"] = QJsonObject{
-        {"values", QJsonArray{exceptionData}}
-    };
-    
-    // Add breadcrumbs for context
-    if (!m_breadcrumbs.isEmpty()) {
-        QJsonArray breadcrumbArray;
-        for (const auto& bc : m_breadcrumbs) {
-            breadcrumbArray.append(bc);
-        }
-        event["breadcrumbs"] = QJsonObject{{"values", breadcrumbArray}};
-    }
-    
-    // PRODUCTION-READY: Environment information (no PII)
-    event["environment"] = qEnvironmentVariable("RAWRXD_ENV", "production");
-    event["release"] = QCoreApplication::applicationVersion();
-    
+
     sendEvent(event);
-    
-    qint64 latency = timer.elapsed();
-    qInfo().noquote() << QString("[Sentry] EXCEPTION_CAPTURED | Exception: %1 | Latency: %2ms")
-        .arg(exception.left(100))
-        .arg(latency);
-    
-    emit errorReported(event["event_id"].toString());
+
+    if (m_errCb) m_errCb(m_errCtx, eventId.c_str());
+
+    fprintf(stderr, "[Sentry] Exception captured: %s (id=%s)\n",
+            exception.c_str(), eventId.c_str());
 }
 
-void SentryIntegration::captureMessage(const QString& message, const QString& level) {
-    if (!m_initialized) {
-        return;
-    }
-    
-    QJsonObject event;
-    event["event_id"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    event["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-    event["level"] = level;
-    event["platform"] = "native";
-    event["message"] = message;
-    event["environment"] = qEnvironmentVariable("RAWRXD_ENV", "production");
-    event["release"] = QCoreApplication::applicationVersion();
-    
+// ── captureMessage ───────────────────────────────────────────────────────
+
+void SentryIntegration::captureMessage(const std::string& message,
+                                       const std::string& level) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    std::string eventId = generateEventId();
+
+    JsonObject event;
+    event["event_id"]  = JsonValue(eventId);
+    event["timestamp"] = JsonValue(isoTimestamp());
+    event["level"]     = JsonValue(level);
+    event["message"]   = JsonValue(message);
+    event["platform"]  = JsonValue("native");
+
     sendEvent(event);
-    
-    qInfo().noquote() << QString("[Sentry] MESSAGE_CAPTURED | Level: %1 | Message: %2")
-        .arg(level)
-        .arg(message.left(100));
+    fprintf(stderr, "[Sentry] Message: [%s] %s\n", level.c_str(), message.c_str());
 }
 
-void SentryIntegration::addBreadcrumb(const QString& message, const QString& category) {
-    QJsonObject breadcrumb;
-    breadcrumb["timestamp"] = QDateTime::currentDateTimeUtc().toSecsSinceEpoch();
-    breadcrumb["message"] = message;
-    breadcrumb["category"] = category;
-    breadcrumb["level"] = "info";
-    
-    m_breadcrumbs.append(breadcrumb);
-    
-    // PRODUCTION-READY: Limit breadcrumbs to prevent memory bloat
-    if (m_breadcrumbs.size() > 100) {
-        m_breadcrumbs.removeFirst();
+// ── addBreadcrumb ────────────────────────────────────────────────────────
+
+void SentryIntegration::addBreadcrumb(const std::string& message,
+                                      const std::string& category) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    JsonObject crumb;
+    crumb["timestamp"] = JsonValue(isoTimestamp());
+    crumb["message"]   = JsonValue(message);
+    crumb["category"]  = JsonValue(category);
+
+    m_breadcrumbs.push_back(std::move(crumb));
+
+    // Cap at 100 breadcrumbs
+    while (m_breadcrumbs.size() > 100) {
+        m_breadcrumbs.erase(m_breadcrumbs.begin());
     }
 }
 
-QString SentryIntegration::startTransaction(const QString& operation) {
-    QString transactionId = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    m_activeTransactions[transactionId] = QDateTime::currentMSecsSinceEpoch();
-    
-    addBreadcrumb(QString("Transaction started: %1").arg(operation), "performance");
-    
-    qDebug().noquote() << QString("[Sentry] TRANSACTION_START | ID: %1 | Operation: %2")
-        .arg(transactionId)
-        .arg(operation);
-    
-    return transactionId;
+// ── startTransaction ─────────────────────────────────────────────────────
+
+std::string SentryIntegration::startTransaction(const std::string& operation) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    std::string txId = generateEventId();
+    m_activeTransactions[txId] = nowMs();
+
+    fprintf(stderr, "[Sentry] Transaction started: %s (op=%s)\n",
+            txId.c_str(), operation.c_str());
+    return txId;
 }
 
-void SentryIntegration::finishTransaction(const QString& transactionId) {
-    if (!m_activeTransactions.contains(transactionId)) {
-        qWarning() << "[Sentry] Unknown transaction ID:" << transactionId;
+// ── finishTransaction ────────────────────────────────────────────────────
+
+void SentryIntegration::finishTransaction(const std::string& transactionId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto it = m_activeTransactions.find(transactionId);
+    if (it == m_activeTransactions.end()) {
+        fprintf(stderr, "[Sentry] finishTransaction: unknown id %s\n",
+                transactionId.c_str());
         return;
     }
-    
-    qint64 startTime = m_activeTransactions.take(transactionId);
-    qint64 durationMs = QDateTime::currentMSecsSinceEpoch() - startTime;
-    
-    // PRODUCTION-READY: Performance monitoring event
-    if (m_initialized) {
-        QJsonObject event;
-        event["event_id"] = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        event["type"] = "transaction";
-        event["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-        event["transaction"] = transactionId;
-        event["start_timestamp"] = QDateTime::fromMSecsSinceEpoch(startTime).toString(Qt::ISODate);
-        event["duration"] = durationMs;
-        event["environment"] = qEnvironmentVariable("RAWRXD_ENV", "production");
-        event["release"] = QCoreApplication::applicationVersion();
-        
-        sendEvent(event);
-    }
-    
-    qInfo().noquote() << QString("[Sentry] TRANSACTION_FINISH | ID: %1 | Duration: %2ms")
-        .arg(transactionId)
-        .arg(durationMs);
-    
-    emit transactionCompleted(transactionId, durationMs);
+
+    int64_t startMs   = it->second;
+    int64_t durationMs = nowMs() - startMs;
+    m_activeTransactions.erase(it);
+
+    // Send transaction event
+    JsonObject event;
+    event["event_id"]  = JsonValue(transactionId);
+    event["type"]      = JsonValue("transaction");
+    event["timestamp"] = JsonValue(isoTimestamp());
+    event["platform"]  = JsonValue("native");
+
+    JsonObject spans;
+    spans["duration_ms"] = JsonValue(durationMs);
+    event["spans"] = JsonValue(std::move(spans));
+
+    sendEvent(event);
+
+    if (m_txCb) m_txCb(m_txCtx, transactionId.c_str(), durationMs);
+
+    fprintf(stderr, "[Sentry] Transaction finished: %s (%lld ms)\n",
+            transactionId.c_str(), (long long)durationMs);
 }
 
-void SentryIntegration::setUser(const QString& userId) {
-    if (!m_initialized) {
-        return;
-    }
-    
-    // PRODUCTION-READY: Only store anonymized user ID (no PII)
-    qInfo().noquote() << QString("[Sentry] USER_SET | UserID: %1***").arg(userId.left(8));
-    
-    addBreadcrumb(QString("User context set: %1").arg(userId.left(8)), "auth");
+// ── setUser ──────────────────────────────────────────────────────────────
+
+void SentryIntegration::setUser(const std::string& userId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    // Store for inclusion in future events (breadcrumb approach)
+    addBreadcrumb("User set: " + userId, "auth");
 }
 
-void SentryIntegration::sendEvent(const QJsonObject& event) {
-    if (!m_initialized || m_dsn.isEmpty()) {
+// ── sendEvent (private) ──────────────────────────────────────────────────
+
+void SentryIntegration::sendEvent(const JsonObject& event) {
+    if (m_dsn.empty()) {
+        // No DSN configured – log only
+        fprintf(stderr, "[Sentry] (no DSN) event: %s\n",
+                JsonDoc::toJson(event).c_str());
         return;
     }
-    
-    // PRODUCTION-READY: Non-blocking async HTTP POST to Sentry
-    QNetworkAccessManager* nam = new QNetworkAccessManager(this);
-    
-    // Parse DSN to get endpoint
-    // Format: https://[key]@[host]/[project_id]
-    QString sentryUrl = m_dsn;
-    if (sentryUrl.contains("@")) {
-        int atPos = sentryUrl.indexOf("@");
-        int slashPos = sentryUrl.lastIndexOf("/");
-        QString host = sentryUrl.mid(atPos + 1, slashPos - atPos - 1);
-        QString projectId = sentryUrl.mid(slashPos + 1);
-        sentryUrl = QString("https://%1/api/%2/store/").arg(host, projectId);
-    }
-    
-    QUrl url(sentryUrl);
-    QNetworkRequest request;
-    request.setUrl(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    
-    // Extract Sentry auth key from DSN
-    if (m_dsn.contains("//") && m_dsn.contains("@")) {
-        int start = m_dsn.indexOf("//") + 2;
-        int end = m_dsn.indexOf("@");
-        QString key = m_dsn.mid(start, end - start);
-        request.setRawHeader("X-Sentry-Auth", QString("Sentry sentry_key=%1, sentry_version=7").arg(key).toUtf8());
-    }
-    
-    QJsonDocument doc(event);
-    QByteArray data = doc.toJson(QJsonDocument::Compact);
-    
-    QNetworkReply* reply = nam->post(request, data);
-    
-    // PRODUCTION-READY: Resource guard - cleanup reply when finished
-    connect(reply, &QNetworkReply::finished, [reply, nam]() {
-        if (reply->error() != QNetworkReply::NoError) {
-            qWarning().noquote() << QString("[Sentry] SEND_FAILED | Error: %1").arg(reply->errorString());
-        } else {
-            qDebug().noquote() << "[Sentry] EVENT_SENT | Status: OK";
+
+    // Parse DSN: https://<key>@<host>/<project_id>
+    // Format: https://KEY@HOST/PROJECT_ID
+    std::string dsn = m_dsn;
+    std::string key, host, projectId;
+
+    // Strip scheme
+    size_t schemeEnd = dsn.find("://");
+    if (schemeEnd != std::string::npos) dsn = dsn.substr(schemeEnd + 3);
+
+    // key@host/project
+    size_t atPos = dsn.find('@');
+    if (atPos != std::string::npos) {
+        key = dsn.substr(0, atPos);
+        std::string rest = dsn.substr(atPos + 1);
+        size_t slashPos = rest.find('/');
+        if (slashPos != std::string::npos) {
+            host      = rest.substr(0, slashPos);
+            projectId = rest.substr(slashPos + 1);
         }
-        reply->deleteLater();
-        nam->deleteLater();
+    }
+
+    if (key.empty() || host.empty() || projectId.empty()) {
+        fprintf(stderr, "[Sentry] Invalid DSN format\n");
+        return;
+    }
+
+    std::string url = "https://" + host + "/api/" + projectId + "/store/";
+    std::string payload = JsonDoc::toJson(event);
+
+    http::Response resp = http::post(url, payload, {
+        {"Content-Type",          "application/json"},
+        {"X-Sentry-Auth",
+         "Sentry sentry_version=7, sentry_client=rawrxd/1.0, sentry_key=" + key}
     });
+
+    if (!resp.ok()) {
+        fprintf(stderr, "[Sentry] HTTP %d: %s\n",
+                resp.statusCode, resp.error.c_str());
+    }
 }

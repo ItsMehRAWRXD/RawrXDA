@@ -1,24 +1,21 @@
 #include "self_code.hpp"
-#include <QFile>
-#include <QTextStream>
-#include <QProcess>
-#include <QDir>
-#include <QDateTime>
-#include <QDebug>
-#include <QFileInfo>
+#include "process_utils.hpp"
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <vector>
 
-bool SelfCode::editSource(const QString& filePath,
-                          const QString& oldSnippet,
-                          const QString& newSnippet) {
-    QFile f(filePath);
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+bool SelfCode::editSource(const std::string& filePath,
+                          const std::string& oldSnippet,
+                          const std::string& newSnippet) {
+    std::string content = fileutil::readAll(filePath);
+    if (content.empty()) {
         m_lastError = "Cannot read " + filePath;
         return false;
     }
-    QString content = QString::fromUtf8(f.readAll());
-    f.close();
 
-    if (!content.contains(oldSnippet)) {
+    if (content.find(oldSnippet) == std::string::npos) {
         m_lastError = "Old snippet not found in " + filePath;
         return false;
     }
@@ -26,144 +23,126 @@ bool SelfCode::editSource(const QString& filePath,
     if (!replaceInFile(filePath, oldSnippet, newSnippet))
         return false;
 
-    if (filePath.endsWith(".hpp") || filePath.endsWith(".h"))
-        regenerateMOC(filePath);
-
     return true;
 }
 
-bool SelfCode::addInclude(const QString& hppFile,
-                          const QString& includeLine) {
-    if (!includeLine.startsWith("#include"))
+bool SelfCode::addInclude(const std::string& hppFile,
+                          const std::string& includeLine) {
+    if (includeLine.rfind("#include", 0) != 0)
         return false;
 
-    QFile f(hppFile);
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    std::string content = fileutil::readAll(hppFile);
+    if (content.empty()) {
         m_lastError = "Cannot read " + hppFile;
         return false;
     }
-    QString content = QString::fromUtf8(f.readAll());
-    f.close();
 
-    if (content.contains(includeLine))
+    if (content.find(includeLine) != std::string::npos)
         return true;
 
-    int lastInclude = content.lastIndexOf("#include");
-    if (lastInclude == -1) {
+    // Find last #include
+    size_t lastInclude = content.rfind("#include");
+    if (lastInclude == std::string::npos) {
         return insertAfterIncludeGuard(hppFile, includeLine);
     }
-    int insertPos = content.indexOf('\n', lastInclude);
-    if (insertPos == -1)
-        insertPos = content.length();
+    size_t insertPos = content.find('\n', lastInclude);
+    if (insertPos == std::string::npos)
+        insertPos = content.size();
     else
         insertPos += 1;
 
-    QString newContent = content.left(insertPos)
-                         + includeLine + "\n"
-                         + content.mid(insertPos);
-    return replaceInFile(hppFile, content, newContent);
+    std::string newContent = content.substr(0, insertPos)
+                           + includeLine + "\n"
+                           + content.substr(insertPos);
+    return fileutil::writeAll(hppFile, newContent);
 }
 
-bool SelfCode::regenerateMOC(const QString& header) {
-    QFile f(header);
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        m_lastError = "Cannot read " + header;
-        return false;
-    }
-    QString h = QString::fromUtf8(f.readAll());
-    f.close();
-    bool needMoc = h.contains("Q_OBJECT") || h.contains("Q_PROPERTY") ||
-                   h.contains("Q_SIGNALS") || h.contains("Q_SLOTS");
-    if (!needMoc)
-        return true;
-
-
-
-    if (!QFile::setFileTime(header, QDateTime::currentDateTime())) {
-        m_lastError = "Could not touch " + header;
-        return false;
-    }
+bool SelfCode::regenerateMOC(const std::string& /*header*/) {
+    // MOC is a Qt concept — no longer needed in non-Qt build
     return true;
 }
 
-bool SelfCode::rebuildTarget(const QString& target,
-                             const QString& config) {
-    QStringList args = {"--build", "build", "--config", config, "--target", target};
-    if (!runProcess("cmake", args))
-        return false;
+bool SelfCode::rebuildTarget(const std::string& target,
+                             const std::string& config) {
+    ProcResult pr = proc::run("cmake",
+        {"--build", "build", "--config", config, "--target", target},
+        120000);
 
-    QString exe = QDir::current().absoluteFilePath(
-        QString("build/bin/%1/RawrXD-QtShell.exe").arg(config));
-    QFileInfo fi(exe);
-    if (!fi.exists() || fi.size() == 0) {
+    if (!pr.ok()) {
+        m_lastError = "cmake build failed: " + pr.stderrStr;
+        return false;
+    }
+
+    std::filesystem::path exe = std::filesystem::current_path() / "build" / "bin" / config / "RawrXD-Shell.exe";
+    std::error_code ec;
+    if (!std::filesystem::exists(exe, ec) || std::filesystem::file_size(exe, ec) == 0) {
         m_lastError = "Binary not produced or zero size";
         return false;
     }
     return true;
 }
 
-bool SelfCode::replaceInFile(const QString& path,
-                             const QString& oldText,
-                             const QString& newText) {
-    QFile f(path);
-    if (!f.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        m_lastError = "Cannot read/write " + path;
+bool SelfCode::replaceInFile(const std::string& path,
+                             const std::string& oldText,
+                             const std::string& newText) {
+    std::string content = fileutil::readAll(path);
+    if (content.empty()) {
+        m_lastError = "Cannot read " + path;
         return false;
     }
-    QString content = QString::fromUtf8(f.readAll());
-    int idx = content.indexOf(oldText);
-    if (idx == -1) {
+
+    size_t idx = content.find(oldText);
+    if (idx == std::string::npos) {
         m_lastError = "Old text not found (exact match required)";
-        f.close();
         return false;
     }
     content.replace(idx, oldText.length(), newText);
-    f.resize(0);
-    f.write(content.toUtf8());
-    f.close();
-    return true;
-}
-
-bool SelfCode::insertAfterIncludeGuard(const QString& hpp,
-                                       const QString& includeLine) {
-    QFile f(hpp);
-    if (!f.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        m_lastError = "Cannot read/write " + hpp;
+    if (!fileutil::writeAll(path, content)) {
+        m_lastError = "Failed to write " + path;
         return false;
     }
-    QString content = QString::fromUtf8(f.readAll());
-    int pos = 0;
-    if (content.startsWith("#pragma once")) {
-        pos = content.indexOf('\n');
-        if (pos != -1) pos += 1;
-    } else if (content.contains("#ifndef")) {
-        int endif = content.indexOf("#endif");
-        if (endif != -1)
-            pos = content.indexOf('\n', endif);
-        if (pos != -1)
-            pos += 1;
-    }
-    if (pos == -1) pos = 0;
-
-    QString newContent = content.left(pos)
-                         + includeLine + "\n"
-                         + content.mid(pos);
-    f.resize(0);
-    f.write(newContent.toUtf8());
-    f.close();
     return true;
 }
 
-bool SelfCode::runProcess(const QString& program,
-                          const QStringList& args) {
-    QProcess proc;
-    proc.start(program, args);
-    if (!proc.waitForFinished(120000)) {
+bool SelfCode::insertAfterIncludeGuard(const std::string& hpp,
+                                       const std::string& includeLine) {
+    std::string content = fileutil::readAll(hpp);
+    if (content.empty()) {
+        m_lastError = "Cannot read " + hpp;
+        return false;
+    }
+
+    size_t pos = 0;
+    if (content.rfind("#pragma once", 0) == 0) {
+        pos = content.find('\n');
+        if (pos != std::string::npos) pos += 1;
+    } else {
+        size_t ifndef = content.find("#ifndef");
+        if (ifndef != std::string::npos) {
+            size_t define = content.find("#define", ifndef);
+            if (define != std::string::npos) {
+                pos = content.find('\n', define);
+                if (pos != std::string::npos) pos += 1;
+            }
+        }
+    }
+    if (pos == std::string::npos) pos = 0;
+
+    std::string newContent = content.substr(0, pos)
+                           + includeLine + "\n"
+                           + content.substr(pos);
+    return fileutil::writeAll(hpp, newContent);
+}
+
+bool SelfCode::runProcess(const std::string& program,
+                          const std::vector<std::string>& args) {
+    ProcResult pr = proc::run(program, args, 120000);
+    if (pr.timedOut) {
         m_lastError = program + " timed out";
         return false;
     }
-    if (proc.exitCode() != 0) {
-        m_lastError = program + " failed: " + proc.readAllStandardError();
+    if (pr.exitCode != 0) {
+        m_lastError = program + " failed: " + pr.stderrStr;
         return false;
     }
     return true;

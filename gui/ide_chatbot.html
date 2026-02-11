@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' file: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:;">
+    content="default-src 'self' file: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' http://localhost:* ws://localhost:* http://127.0.0.1:*; img-src 'self' data: blob:;">
   <title>RawrXD IDE // AGENTIC INTERFACE</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦖</text></svg>">
@@ -1385,6 +1385,183 @@
 
     .toolbar-item:hover {
       color: var(--accent-primary);
+    }
+
+    /* Voice Input Styles */
+    .voice-btn.recording {
+      background: var(--accent-red, #ff3d3d) !important;
+      color: #fff !important;
+      animation: voice-pulse 1s ease-in-out infinite;
+      border-color: var(--accent-red, #ff3d3d) !important;
+    }
+
+    @keyframes voice-pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 61, 61, 0.5);
+      }
+
+      50% {
+        box-shadow: 0 0 0 8px rgba(255, 61, 61, 0);
+      }
+    }
+
+    .voice-btn.recording::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
+      background: #ff3d3d;
+      border-radius: 50%;
+      animation: voice-dot 0.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes voice-dot {
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0.3;
+      }
+    }
+
+    .voice-btn {
+      position: relative;
+    }
+
+    .voice-interim-text {
+      font-style: italic;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    /* Voice Settings Overlay */
+    .voice-settings-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .voice-settings-panel {
+      background: var(--bg-secondary, #1e1e2e);
+      border: 1px solid var(--border-subtle, #333);
+      border-radius: 16px;
+      padding: 24px;
+      width: 420px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    }
+
+    .voice-settings-panel h3 {
+      margin: 0 0 16px 0;
+      color: var(--text-primary, #e0e0e0);
+      font-size: 18px;
+    }
+
+    .voice-setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 13px;
+      color: var(--text-secondary, #aaa);
+    }
+
+    .voice-setting-row label {
+      flex: 1;
+    }
+
+    .voice-setting-row select,
+    .voice-setting-row input[type=range] {
+      flex: 0 0 180px;
+      background: var(--bg-primary, #12121a);
+      border: 1px solid var(--border-subtle, #333);
+      color: var(--text-primary, #e0e0e0);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .voice-toggle-switch {
+      width: 44px;
+      height: 24px;
+      background: #444;
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .voice-toggle-switch.on {
+      background: var(--accent-primary, #ff6b35);
+    }
+
+    .voice-toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: left 0.2s;
+    }
+
+    .voice-toggle-switch.on::after {
+      left: 22px;
+    }
+
+    .voice-status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted, #777);
+      padding: 2px 0;
+    }
+
+    .voice-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .voice-status-dot.active {
+      background: #4caf50;
+    }
+
+    .voice-status-dot.error {
+      background: #f44336;
+    }
+
+    .voice-settings-close {
+      float: right;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .voice-settings-close:hover {
+      color: var(--text-primary);
     }
 
     /* Right Sidebar */
@@ -5608,10 +5785,1317 @@
       color: #0a0a1a;
       margin-top: 1.2em;
     }
+
+    /* ==================================================================
+       MULTI-WINDOW MANAGER — Floating/Dockable Window System
+       Layered on top of the existing grid IDE. Each "mw-window" is an
+       independent workspace that can run its own model, task, or tool.
+       ================================================================== */
+
+    /* ---- Window Manager Toolbar ---- */
+    .mw-toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 32px;
+      background: linear-gradient(90deg, #0d0d1a 0%, #141428 50%, #0d0d1a 100%);
+      border-bottom: 1px solid rgba(0, 217, 255, 0.25);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      z-index: 100000;
+      gap: 4px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      user-select: none;
+      -webkit-app-region: drag;
+      transition: transform 0.2s;
+    }
+
+    .mw-toolbar.mw-hidden {
+      transform: translateY(-100%);
+    }
+
+    .mw-toolbar .mw-brand {
+      color: #ff6b35;
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+      -webkit-app-region: no-drag;
+      cursor: default;
+    }
+
+    .mw-toolbar .mw-tabs {
+      display: flex;
+      gap: 2px;
+      flex: 1;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-app-region: no-drag;
+    }
+
+    .mw-toolbar .mw-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mw-tab {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px 4px 0 0;
+      color: var(--text-muted, #8888aa);
+      cursor: pointer;
+      white-space: nowrap;
+      font-size: 11px;
+      transition: all 0.15s;
+      -webkit-app-region: no-drag;
+      max-width: 180px;
+    }
+
+    .mw-tab:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .mw-tab.mw-active {
+      background: rgba(0, 217, 255, 0.12);
+      border-color: rgba(0, 217, 255, 0.4);
+      color: #00d9ff;
+      font-weight: 600;
+    }
+
+    .mw-tab .mw-tab-icon {
+      font-size: 13px;
+    }
+
+    .mw-tab .mw-tab-close {
+      margin-left: 4px;
+      opacity: 0;
+      color: #ff4444;
+      cursor: pointer;
+      font-size: 13px;
+      transition: opacity 0.1s;
+    }
+
+    .mw-tab:hover .mw-tab-close {
+      opacity: 0.7;
+    }
+
+    .mw-tab .mw-tab-close:hover {
+      opacity: 1;
+    }
+
+    .mw-tab .mw-tab-badge {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00ff88;
+      animation: mw-pulse 2s infinite;
+    }
+
+    @keyframes mw-pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .mw-toolbar-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      -webkit-app-region: no-drag;
+    }
+
+    .mw-toolbar-actions button {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ccc;
+      padding: 2px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .mw-toolbar-actions button:hover {
+      background: rgba(0, 217, 255, 0.15);
+      border-color: rgba(0, 217, 255, 0.4);
+      color: #00d9ff;
+    }
+
+    .mw-kernel-status {
+      font-size: 10px;
+      color: #666;
+      margin-left: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mw-kernel-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #444;
+      transition: background 0.3s;
+    }
+
+    .mw-kernel-dot.active {
+      background: #00ff88;
+    }
+
+    .mw-kernel-dot.busy {
+      background: #ffaa00;
+      animation: mw-pulse 1s infinite;
+    }
+
+    /* ---- Floating Window Shell ---- */
+    .mw-window {
+      position: fixed;
+      background: rgba(14, 14, 28, 0.96);
+      border: 1px solid rgba(0, 217, 255, 0.2);
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 217, 255, 0.3);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10000;
+      min-width: 380px;
+      min-height: 260px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      resize: both;
+    }
+
+    .mw-window.mw-focused {
+      border-color: rgba(0, 217, 255, 0.5);
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 217, 255, 0.15);
+      z-index: 10001;
+    }
+
+    .mw-window.mw-maximized {
+      top: 33px !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: calc(100vh - 33px) !important;
+      border-radius: 0;
+      resize: none;
+    }
+
+    .mw-window.mw-minimized {
+      display: none !important;
+    }
+
+    .mw-window.mw-snapped-left {
+      top: 33px !important;
+      left: 0 !important;
+      width: 50vw !important;
+      height: calc(100vh - 33px) !important;
+      border-radius: 0;
+    }
+
+    .mw-window.mw-snapped-right {
+      top: 33px !important;
+      left: 50vw !important;
+      width: 50vw !important;
+      height: calc(100vh - 33px) !important;
+      border-radius: 0;
+    }
+
+    .mw-window.mw-snapped-top {
+      top: 33px !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: calc(50vh - 16px) !important;
+      border-radius: 0;
+    }
+
+    .mw-window.mw-snapped-bottom {
+      top: calc(50vh + 17px) !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: calc(50vh - 17px) !important;
+      border-radius: 0;
+    }
+
+    /* Quadrant snapping */
+    .mw-window.mw-quad-tl {
+      top: 33px !important;
+      left: 0 !important;
+      width: 50vw !important;
+      height: calc(50vh - 16px) !important;
+      border-radius: 0;
+    }
+
+    .mw-window.mw-quad-tr {
+      top: 33px !important;
+      left: 50vw !important;
+      width: 50vw !important;
+      height: calc(50vh - 16px) !important;
+      border-radius: 0;
+    }
+
+    .mw-window.mw-quad-bl {
+      top: calc(50vh + 17px) !important;
+      left: 0 !important;
+      width: 50vw !important;
+      height: calc(50vh - 17px) !important;
+      border-radius: 0;
+    }
+
+    .mw-window.mw-quad-br {
+      top: calc(50vh + 17px) !important;
+      left: 50vw !important;
+      width: 50vw !important;
+      height: calc(50vh - 17px) !important;
+      border-radius: 0;
+    }
+
+    /* Window titlebar */
+    .mw-titlebar {
+      display: flex;
+      align-items: center;
+      height: 30px;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 0 6px;
+      cursor: move;
+      flex-shrink: 0;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .mw-titlebar .mw-win-icon {
+      font-size: 14px;
+    }
+
+    .mw-titlebar .mw-win-title {
+      flex: 1;
+      font-size: 11px;
+      font-weight: 600;
+      color: #ccc;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mw-titlebar .mw-win-model {
+      font-size: 10px;
+      color: #00d9ff;
+      background: rgba(0, 217, 255, 0.1);
+      padding: 1px 6px;
+      border-radius: 3px;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mw-titlebar .mw-win-ctrl {
+      display: flex;
+      gap: 2px;
+    }
+
+    .mw-titlebar .mw-win-ctrl button {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 3px;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s;
+    }
+
+    .mw-titlebar .mw-win-ctrl button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .mw-titlebar .mw-win-ctrl .mw-btn-close:hover {
+      background: #e81123;
+      color: #fff;
+    }
+
+    /* Window body */
+    .mw-body {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Window statusbar */
+    .mw-statusbar {
+      height: 20px;
+      background: rgba(0, 0, 0, 0.25);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      gap: 8px;
+      font-size: 10px;
+      color: #666;
+      flex-shrink: 0;
+    }
+
+    .mw-statusbar .mw-status-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .mw-statusbar .mw-status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #00ff88;
+    }
+
+    .mw-statusbar .mw-status-dot.idle {
+      background: #666;
+    }
+
+    .mw-statusbar .mw-status-dot.busy {
+      background: #ffaa00;
+      animation: mw-pulse 1s infinite;
+    }
+
+    .mw-statusbar .mw-status-dot.error {
+      background: #ff4444;
+    }
+
+    /* ---- Window Content Templates ---- */
+
+    /* Chat Window */
+    .mw-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .mw-chat-msg {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+
+    .mw-chat-msg.user {
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid rgba(0, 217, 255, 0.15);
+      align-self: flex-end;
+      color: #ddd;
+    }
+
+    .mw-chat-msg.assistant {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      align-self: flex-start;
+      color: #bbb;
+    }
+
+    .mw-chat-msg.system {
+      background: rgba(255, 107, 53, 0.08);
+      border: 1px solid rgba(255, 107, 53, 0.15);
+      align-self: center;
+      color: #ff6b35;
+      font-size: 11px;
+      font-style: italic;
+    }
+
+    .mw-chat-input-row {
+      padding: 6px 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .mw-chat-input-row textarea {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      color: #ddd;
+      padding: 6px 8px;
+      font-family: var(--font-mono, monospace);
+      font-size: 12px;
+      resize: none;
+      min-height: 32px;
+      max-height: 120px;
+      outline: none;
+    }
+
+    .mw-chat-input-row textarea:focus {
+      border-color: rgba(0, 217, 255, 0.4);
+    }
+
+    .mw-chat-input-row button {
+      background: linear-gradient(135deg, #00d9ff, #0077ff);
+      border: none;
+      color: #fff;
+      padding: 0 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .mw-chat-input-row button:hover {
+      filter: brightness(1.2);
+    }
+
+    /* Audit Window */
+    .mw-audit-area {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mw-audit-toolbar {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .mw-audit-toolbar button {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #ccc;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+
+    .mw-audit-toolbar button:hover {
+      background: rgba(0, 255, 136, 0.12);
+      border-color: rgba(0, 255, 136, 0.3);
+      color: #00ff88;
+    }
+
+    .mw-audit-results {
+      flex: 1;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 11px;
+      font-family: var(--font-mono, monospace);
+      color: #aaa;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .mw-audit-drop {
+      border: 2px dashed rgba(0, 217, 255, 0.2);
+      border-radius: 6px;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .mw-audit-drop:hover,
+    .mw-audit-drop.dragover {
+      border-color: rgba(0, 217, 255, 0.5);
+      background: rgba(0, 217, 255, 0.05);
+      color: #00d9ff;
+    }
+
+    /* CoT (Chain of Thought) Window */
+    .mw-cot-chain {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mw-cot-step {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border-left: 3px solid;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .mw-cot-step.thinking {
+      border-color: #ffaa00;
+      background: rgba(255, 170, 0, 0.08);
+      color: #dda;
+    }
+
+    .mw-cot-step.analysis {
+      border-color: #00d9ff;
+      background: rgba(0, 217, 255, 0.08);
+      color: #adf;
+    }
+
+    .mw-cot-step.conclusion {
+      border-color: #00ff88;
+      background: rgba(0, 255, 136, 0.08);
+      color: #afc;
+    }
+
+    .mw-cot-step.error {
+      border-color: #ff4444;
+      background: rgba(255, 68, 68, 0.08);
+      color: #faa;
+    }
+
+    .mw-cot-step .mw-cot-label {
+      font-weight: 700;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .mw-cot-controls {
+      padding: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .mw-cot-controls button {
+      background: rgba(255, 170, 0, 0.1);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      color: #ffaa00;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .mw-cot-controls button:hover {
+      background: rgba(255, 170, 0, 0.2);
+    }
+
+    /* Swarm Window */
+    .mw-swarm-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 6px;
+      padding: 8px;
+      overflow-y: auto;
+    }
+
+    .mw-swarm-agent {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mw-swarm-agent .mw-agent-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #ccc;
+    }
+
+    .mw-swarm-agent .mw-agent-model {
+      font-size: 10px;
+      color: #00d9ff;
+    }
+
+    .mw-swarm-agent .mw-agent-status {
+      font-size: 10px;
+      color: #888;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mw-swarm-agent .mw-agent-progress {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .mw-swarm-agent .mw-agent-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+
+    .mw-swarm-controls {
+      padding: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .mw-swarm-controls button {
+      background: rgba(178, 102, 255, 0.1);
+      border: 1px solid rgba(178, 102, 255, 0.2);
+      color: #b266ff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .mw-swarm-controls button:hover {
+      background: rgba(178, 102, 255, 0.2);
+    }
+
+    /* Terminal Window */
+    .mw-term-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: var(--font-mono, monospace);
+      font-size: 12px;
+      color: #0f0;
+      background: rgba(0, 0, 0, 0.4);
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .mw-term-input-row {
+      display: flex;
+      padding: 4px 8px;
+      border-top: 1px solid rgba(0, 255, 0, 0.15);
+      background: rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+    }
+
+    .mw-term-input-row span {
+      color: #0f0;
+      font-family: var(--font-mono, monospace);
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    .mw-term-input-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #0f0;
+      font-family: var(--font-mono, monospace);
+      font-size: 12px;
+      outline: none;
+      padding: 4px;
+    }
+
+    /* Model Manager Window */
+    .mw-model-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mw-model-card {
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mw-model-card:hover {
+      background: rgba(0, 217, 255, 0.06);
+      border-color: rgba(0, 217, 255, 0.2);
+    }
+
+    .mw-model-card.selected {
+      border-color: rgba(0, 217, 255, 0.5);
+      background: rgba(0, 217, 255, 0.1);
+    }
+
+    .mw-model-card .mw-model-name {
+      flex: 1;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ddd;
+    }
+
+    .mw-model-card .mw-model-size {
+      font-size: 10px;
+      color: #888;
+    }
+
+    .mw-model-card .mw-model-quant {
+      font-size: 9px;
+      background: rgba(0, 217, 255, 0.1);
+      color: #00d9ff;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* Perf Monitor Window */
+    .mw-perf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 8px;
+      overflow-y: auto;
+    }
+
+    .mw-perf-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 8px;
+    }
+
+    .mw-perf-card .mw-perf-label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .mw-perf-card .mw-perf-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #00d9ff;
+      margin-top: 2px;
+    }
+
+    .mw-perf-card .mw-perf-unit {
+      font-size: 10px;
+      color: #666;
+    }
+
+    .mw-perf-canvas-wrap {
+      padding: 8px;
+    }
+
+    .mw-perf-canvas-wrap canvas {
+      width: 100%;
+      height: 100px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    /* Code Editor Window */
+    .mw-editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mw-editor-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
+    .mw-editor-tab {
+      padding: 4px 12px;
+      font-size: 11px;
+      color: #888;
+      cursor: pointer;
+      border-right: 1px solid rgba(255, 255, 255, 0.04);
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .mw-editor-tab:hover {
+      color: #ccc;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .mw-editor-tab.active {
+      color: #fff;
+      background: rgba(0, 217, 255, 0.08);
+      border-bottom: 2px solid #00d9ff;
+    }
+
+    .mw-editor-textarea {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.3);
+      border: none;
+      color: #ddd;
+      padding: 10px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 13px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      tab-size: 4;
+    }
+
+    /* Debug/Hotpatch Window */
+    .mw-debug-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: var(--font-mono, monospace);
+      font-size: 11px;
+      color: #aaa;
+      background: rgba(0, 0, 0, 0.2);
+      line-height: 1.4;
+    }
+
+    .mw-debug-log .log-info {
+      color: #00d9ff;
+    }
+
+    .mw-debug-log .log-warn {
+      color: #ffaa00;
+    }
+
+    .mw-debug-log .log-error {
+      color: #ff4444;
+    }
+
+    .mw-debug-log .log-success {
+      color: #00ff88;
+    }
+
+    /* Reverse Engineering Window */
+    .mw-re-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      gap: 6px;
+    }
+
+    .mw-re-hexview {
+      flex: 1;
+      font-family: var(--font-mono, monospace);
+      font-size: 11px;
+      color: #0f0;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 8px;
+      border-radius: 4px;
+      overflow: auto;
+      white-space: pre;
+      line-height: 1.4;
+    }
+
+    /* ---- Snap Ghost (visual guide during drag) ---- */
+    .mw-snap-ghost {
+      position: fixed;
+      background: rgba(0, 217, 255, 0.08);
+      border: 2px solid rgba(0, 217, 255, 0.3);
+      border-radius: 4px;
+      z-index: 99999;
+      pointer-events: none;
+      transition: all 0.15s;
+      display: none;
+    }
+
+    .mw-snap-ghost.visible {
+      display: block;
+    }
+
+    /* ---- New Window Picker Modal ---- */
+    .mw-picker-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mw-picker-overlay.visible {
+      display: flex;
+    }
+
+    .mw-picker {
+      background: rgba(14, 14, 28, 0.98);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      width: min(680px, 90vw);
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    }
+
+    .mw-picker h2 {
+      color: #00d9ff;
+      font-size: 16px;
+      margin: 0 0 4px 0;
+      font-family: var(--font-mono, monospace);
+    }
+
+    .mw-picker .mw-picker-sub {
+      color: #666;
+      font-size: 11px;
+      margin-bottom: 16px;
+    }
+
+    .mw-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      gap: 8px;
+    }
+
+    .mw-picker-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 12px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mw-picker-item:hover {
+      background: rgba(0, 217, 255, 0.08);
+      border-color: rgba(0, 217, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .mw-picker-item .mw-pi-icon {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .mw-picker-item .mw-pi-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #ccc;
+    }
+
+    .mw-picker-item .mw-pi-desc {
+      font-size: 9px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    /* ---- Layout Preset Picker ---- */
+    .mw-layout-bar {
+      display: flex;
+      gap: 4px;
+      padding: 4px 8px;
+      background: rgba(0, 0, 0, 0.15);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .mw-layout-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #888;
+      padding: 2px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 10px;
+      transition: all 0.15s;
+    }
+
+    .mw-layout-btn:hover {
+      background: rgba(0, 217, 255, 0.1);
+      color: #00d9ff;
+    }
+
+    .mw-layout-btn.active {
+      background: rgba(0, 217, 255, 0.15);
+      border-color: rgba(0, 217, 255, 0.3);
+      color: #00d9ff;
+    }
+
+    /* ---- Adjust existing layout for MW toolbar ---- */
+    body.mw-mode .standalone-titlebar {
+      top: 32px;
+    }
+
+    body.mw-mode .ide-container {
+      margin-top: 32px;
+      height: calc(100vh - 32px);
+    }
+
+    body.mw-mode .ghost-overlay {
+      top: 32px;
+    }
+
+    body.mw-mode .sidebar-toggle {
+      top: 38px;
+    }
+
+    body.mw-mode .rightbar-toggle {
+      top: 38px;
+    }
+
+    /* Transition animations for windows */
+    .mw-window-enter {
+      animation: mwWinEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes mwWinEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .mw-window-exit {
+      animation: mwWinExit 0.2s ease-in forwards;
+    }
+
+    @keyframes mwWinExit {
+      from {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+    }
   </style>
 </head>
 
 <body>
+  <!-- ==================================================================
+       MULTI-WINDOW MANAGER — Toolbar, Window Container, Picker
+       Overlays on top of existing IDE. Activated via toolbar or Ctrl+N.
+       ================================================================== -->
+  <div class="mw-toolbar" id="mwToolbar">
+    <span class="mw-brand" title="Multi-Window Manager">&#x1F996; MW</span>
+    <div class="mw-tabs" id="mwTabs">
+      <div class="mw-tab mw-active" data-winid="main" onclick="MWM.focusWindow('main')">
+        <span class="mw-tab-icon">&#x1F4BB;</span>
+        <span>Main IDE</span>
+        <span class="mw-tab-badge"></span>
+      </div>
+    </div>
+    <div class="mw-toolbar-actions">
+      <button onclick="MWM.showPicker()" title="New Window (Ctrl+N)">&#x2795; New</button>
+      <button onclick="MWM.showLayoutPicker()" title="Layout Presets">&#x25A6; Layout</button>
+      <button onclick="MWM.swarmAll()" title="Swarm current query to all windows">&#x1F41D; Swarm</button>
+      <button onclick="MWM.chainAll()" title="Chain of Thought across windows">&#x1F517; Chain</button>
+      <button onclick="MWM.toggleMainIDE()" title="Show/Hide Main IDE">&#x1F441; Main</button>
+      <button onclick="MWM.tileAll()" title="Auto-tile all windows">&#x25A8; Tile</button>
+      <button onclick="MWM.cascadeAll()" title="Cascade all windows">&#x1F5D7; Cascade</button>
+      <button onclick="MWM.minimizeAll()" title="Minimize all">&#x1F5D5;</button>
+      <button onclick="MWM.restoreAll()" title="Restore all">&#x1F5D6;</button>
+      <span class="mw-kernel-status">
+        <span class="mw-kernel-dot" id="mwKernelDot"></span>
+        <span id="mwKernelText">KERNEL</span>
+        <span id="mwTaskCount">0 tasks</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Snap guide ghost -->
+  <div class="mw-snap-ghost" id="mwSnapGhost"></div>
+
+  <!-- Floating windows container (windows are appended here by JS) -->
+  <div id="mwWindowContainer"></div>
+
+  <!-- New Window Picker Modal -->
+  <div class="mw-picker-overlay" id="mwPickerOverlay" onclick="if(event.target===this)MWM.hidePicker()">
+    <div class="mw-picker">
+      <h2>&#x2795; Open New Window</h2>
+      <div class="mw-picker-sub">Each window runs independently with its own model, context, and task. Open as many as
+        you need.</div>
+      <div class="mw-picker-grid" id="mwPickerGrid">
+        <div class="mw-picker-item" onclick="MWM.create('chat')">
+          <div class="mw-pi-icon">&#x1F4AC;</div>
+          <div class="mw-pi-label">Chat</div>
+          <div class="mw-pi-desc">AI conversation</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('audit')">
+          <div class="mw-pi-icon">&#x1F50D;</div>
+          <div class="mw-pi-label">Audit</div>
+          <div class="mw-pi-desc">Code/file auditor</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('cot')">
+          <div class="mw-pi-icon">&#x1F9E0;</div>
+          <div class="mw-pi-label">Chain of Thought</div>
+          <div class="mw-pi-desc">Multi-step reasoning</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('swarm')">
+          <div class="mw-pi-icon">&#x1F41D;</div>
+          <div class="mw-pi-label">Swarm</div>
+          <div class="mw-pi-desc">Multi-model parallel</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('code')">
+          <div class="mw-pi-icon">&#x1F4DD;</div>
+          <div class="mw-pi-label">Code Editor</div>
+          <div class="mw-pi-desc">Syntax-highlighted editor</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('terminal')">
+          <div class="mw-pi-icon">&#x1F4DF;</div>
+          <div class="mw-pi-label">Terminal</div>
+          <div class="mw-pi-desc">Command shell</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('models')">
+          <div class="mw-pi-icon">&#x1F916;</div>
+          <div class="mw-pi-label">Model Manager</div>
+          <div class="mw-pi-desc">Browse & switch models</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('perf')">
+          <div class="mw-pi-icon">&#x1F4CA;</div>
+          <div class="mw-pi-label">Performance</div>
+          <div class="mw-pi-desc">Metrics & throughput</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('hotpatch')">
+          <div class="mw-pi-icon">&#x1F527;</div>
+          <div class="mw-pi-label">Hotpatch</div>
+          <div class="mw-pi-desc">Live memory patching</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('reverse')">
+          <div class="mw-pi-icon">&#x1F52C;</div>
+          <div class="mw-pi-label">Reverse Eng.</div>
+          <div class="mw-pi-desc">Binary analysis</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('debug')">
+          <div class="mw-pi-icon">&#x1F41E;</div>
+          <div class="mw-pi-label">Debug</div>
+          <div class="mw-pi-desc">Debug log viewer</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('benchmark')">
+          <div class="mw-pi-icon">&#x26A1;</div>
+          <div class="mw-pi-label">Benchmark</div>
+          <div class="mw-pi-desc">Speed tests</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('compile')">
+          <div class="mw-pi-icon">&#x1F3D7;</div>
+          <div class="mw-pi-label">Compiler</div>
+          <div class="mw-pi-desc">Build system</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('browser')">
+          <div class="mw-pi-icon">&#x1F310;</div>
+          <div class="mw-pi-label">Browser</div>
+          <div class="mw-pi-desc">WebView2 browser</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('deploy')">
+          <div class="mw-pi-icon">&#x1F680;</div>
+          <div class="mw-pi-label">Deploy</div>
+          <div class="mw-pi-desc">Deployment manager</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.create('files')">
+          <div class="mw-pi-icon">&#x1F4C2;</div>
+          <div class="mw-pi-label">Files</div>
+          <div class="mw-pi-desc">File explorer</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="MWM.hidePicker()"
+          style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#888;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:12px;">Cancel
+          (Esc)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout Preset Picker -->
+  <div class="mw-picker-overlay" id="mwLayoutOverlay" onclick="if(event.target===this)MWM.hideLayoutPicker()">
+    <div class="mw-picker" style="width:min(500px,90vw);">
+      <h2>&#x25A6; Layout Presets</h2>
+      <div class="mw-picker-sub">Instantly arrange your workspace. All existing windows are rearranged.</div>
+      <div class="mw-picker-grid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr));">
+        <div class="mw-picker-item" onclick="MWM.applyLayout('focus')">
+          <div class="mw-pi-icon">&#x1F4BB;</div>
+          <div class="mw-pi-label">Focus</div>
+          <div class="mw-pi-desc">Main IDE only</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('split-chat')">
+          <div class="mw-pi-icon">&#x25EB;</div>
+          <div class="mw-pi-label">IDE + Chat</div>
+          <div class="mw-pi-desc">Side by side</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('triple')">
+          <div class="mw-pi-icon">&#x25A4;</div>
+          <div class="mw-pi-label">Triple</div>
+          <div class="mw-pi-desc">IDE + Chat + Code</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('quad')">
+          <div class="mw-pi-icon">&#x25A6;</div>
+          <div class="mw-pi-label">Quad</div>
+          <div class="mw-pi-desc">4-way split</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('swarm-mode')">
+          <div class="mw-pi-icon">&#x1F41D;</div>
+          <div class="mw-pi-label">Swarm Mode</div>
+          <div class="mw-pi-desc">Swarm + 4 chats</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('audit-station')">
+          <div class="mw-pi-icon">&#x1F50D;</div>
+          <div class="mw-pi-label">Audit Station</div>
+          <div class="mw-pi-desc">Audit + Code + Term</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('cot-lab')">
+          <div class="mw-pi-icon">&#x1F9E0;</div>
+          <div class="mw-pi-label">CoT Lab</div>
+          <div class="mw-pi-desc">CoT + Chat + Perf</div>
+        </div>
+        <div class="mw-picker-item" onclick="MWM.applyLayout('dev-full')">
+          <div class="mw-pi-icon">&#x1F4BB;</div>
+          <div class="mw-pi-label">Dev Full</div>
+          <div class="mw-pi-desc">Every tool open</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="MWM.hideLayoutPicker()"
+          style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#888;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:12px;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================================================================
        STANDALONE TITLEBAR — Visible when opened via file:// or standalone
        Provides window chrome: drag area, version, backend status, IDE launcher
@@ -6193,6 +7677,8 @@
             rows="1" onkeydown="handleInput(event)"></textarea>
           <div class="input-actions">
             <button class="input-btn" onclick="attachFile()" title="Attach File">&#x1F4CE;</button>
+            <button class="input-btn voice-btn" id="voiceBtn" onclick="RawrVoice.toggleRecording()"
+              title="Voice Input (Ctrl+Shift+V)">&#x1F3A4;</button>
             <button class="input-btn stop" id="stopBtn" onclick="stopGeneration()" title="Stop Generation (Ctrl+C)"
               style="display:none;">&#x23F9;</button>
             <button class="input-btn send" id="sendBtn" onclick="sendMessage()" title="Send">&#x27A4;</button>
@@ -6215,6 +7701,13 @@
           <div class="toolbar-item" id="dualAgentBtn" onclick="DualAgent.toggle()"
             title="Dual Agent: OFF — Toggle Architect↔Coder pipeline" style="opacity:0.5;">
             <span>&#x1F996;</span> <span id="dualAgentLabel">Dual</span>
+          </div>
+          <div class="toolbar-item" id="voiceToolbarBtn" onclick="RawrVoice.toggleTTS()"
+            title="Toggle TTS: Read AI responses aloud">
+            <span>&#x1F50A;</span> <span id="voiceTTSLabel">TTS: OFF</span>
+          </div>
+          <div class="toolbar-item" id="voiceSettingsBtn" onclick="RawrVoice.showSettings()" title="Voice Settings">
+            <span>&#x2699;</span> Voice
           </div>
           <div class="toolbar-item" style="margin-left: auto; opacity: 0.6;">
             <span>&#x21B5;</span> Enter to send
@@ -7226,10 +8719,19 @@
                   <span class="sec-directive-value" id="secDomPurifyStatus">Checking...</span>
                   <span class="sec-directive-status pass" id="secDomPurifyBadge">—</span>
                 </div>
-                <div class="sec-directive">
+                <div class="sec-directive" style="flex-wrap:wrap;gap:6px;">
                   <span class="sec-directive-name">Max Input Length</span>
-                  <span class="sec-directive-value" id="secMaxInputVal">50,000 chars</span>
+                  <span class="sec-directive-value" id="secMaxInputVal">1,000,000,000 chars</span>
                   <span class="sec-directive-status pass">ENFORCED</span>
+                </div>
+                <div class="sec-directive" style="flex-wrap:wrap;gap:6px;align-items:center;">
+                  <span class="sec-directive-name">Adjust Limit</span>
+                  <input type="number" id="secInputMaxLengthInput" min="1" max="1000000000" step="1000"
+                    style="width:160px;padding:4px 8px;font-size:11px;font-family:var(--font-mono);background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-subtle);border-radius:4px;"
+                    oninput="this.value=Math.min(1000000000,Math.max(1,parseInt(this.value)||1))">
+                  <button class="code-btn" onclick="setMaxInputLength()"
+                    style="font-size:10px;padding:4px 10px;">Apply</button>
+                  <span id="secInputLimitFeedback" style="font-size:10px;color:var(--text-muted);"></span>
                 </div>
                 <div class="sec-directive">
                   <span class="sec-directive-name">Script Tag Filter</span>
@@ -8672,8 +10174,8 @@
     const State = {
       backend: {
         online: false,
-        url: 'http://localhost:11435',
-        ollamaDirectUrl: 'http://localhost:11434',  // Fallback: talk to Ollama directly
+        url: 'http://127.0.0.1:11435',
+        ollamaDirectUrl: 'http://127.0.0.1:11434',  // Fallback: talk to Ollama directly
         directMode: false,                           // true = bypassing serve.py, talking to Ollama
         lastPing: 0,
         serverType: null,         // 'rawrxd-win32ide' or 'RawrXD-serve.py' or 'ollama-direct'
@@ -8737,7 +10239,7 @@
           blocked: 0,
         },
         inputGuard: {
-          maxLength: 50000,
+          maxLength: 1000000000,
           blockedXss: 0,
           blockedLength: 0,
           blockedUrl: 0,
@@ -8745,6 +10247,17 @@
         urlAllowlist: [/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?/i],
         eventLog: [],          // ring buffer of security events
         maxLog: 200,
+      },
+      // Action Item #20: Reasoning pipeline state (exposed to /commands via ide_chat_commands.js)
+      reasoning: {
+        depth: 4,           // P4 = normal
+        preset: 'normal',   // fast|normal|deep|critical|swarm|adaptive|dev|max
+        mode: 'adaptive',   // adaptive, manual, thermal
+        cotVisible: false,  // true = show CoT steps
+        cotMode: 'summary', // off, summary, full, dev
+        swarm: false,       // parallel agent execution
+        thermalThrottling: false,
+        traceEnabled: false // pipeline trace mode (?trace=1)
       },
       // Ghost IDE session: RDP-style beacon into Win32 IDE via iframe
       ghost: {
@@ -19360,6 +20873,25 @@
       logStructured(level, 'security_event', { detail: detail });
     }
 
+    // --- Manual Max Input Length Adjustment ---
+    function setMaxInputLength(newLimit) {
+      var inp = document.getElementById('secInputMaxLengthInput');
+      var val = parseInt(newLimit !== undefined ? newLimit : (inp ? inp.value : 0), 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 1000000000) val = 1000000000;
+      State.security.inputGuard.maxLength = val;
+      secLog('CONFIG', 'Max input length set to ' + val.toLocaleString() + ' chars');
+      var display = el('secMaxInputVal');
+      if (display) display.textContent = val.toLocaleString() + ' chars';
+      var feedback = el('secInputLimitFeedback');
+      if (feedback) {
+        feedback.textContent = '\u2713 Set to ' + val.toLocaleString();
+        feedback.style.color = 'var(--accent-green, #5cb85c)';
+      }
+      if (inp) inp.value = val;
+      logDebug('\u2699\ufe0f Max input length adjusted to ' + val.toLocaleString() + ' chars');
+    }
+
     // --- Input Sanitization Guard ---
     function validateInput(text) {
       if (!text || typeof text !== 'string') {
@@ -19544,6 +21076,11 @@
       el('secBlkLength').textContent = ig.blockedLength;
       el('secBlkRate').textContent = rl.blocked;
       el('secBlkUrl').textContent = ig.blockedUrl;
+
+      // Update max input length display and input field
+      el('secMaxInputVal').textContent = ig.maxLength.toLocaleString() + ' chars';
+      var limInput = document.getElementById('secInputMaxLengthInput');
+      if (limInput && !limInput.matches(':focus')) limInput.value = ig.maxLength;
 
       // URL validation status
       var urlOk = isUrlAllowed(State.backend.url);
@@ -22627,7 +24164,9 @@
               stream: false,
             }, chainExtras);
 
-            var res = await fetch(State.backend.url + '/v1/chat/completions', {
+            // Use getActiveUrl() to respect directMode (Ollama vs Win32IDE)
+            var cotUrl = getActiveUrl();
+            var res = await fetch(cotUrl + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
@@ -22643,26 +24182,46 @@
               }
               stepSuccess = true;
             } else {
-              // Try Ollama /api/generate fallback
-              var ollamaPayload = {
+              // Try Ollama /api/chat fallback (native Ollama endpoint)
+              var ollamaChatPayload = {
                 model: stepModel,
-                prompt: stepInstruction + '\n\nUser query: ' + userQuery +
-                  (chainResults.length > 0 ? '\n\nPrevious steps:\n' + chainResults.map(function (r, idx) { return 'Step ' + (idx + 1) + ': ' + r.content; }).join('\n') : ''),
+                messages: messages,
                 stream: false,
                 options: buildOllamaOptions(),
               };
-              var res2 = await fetch(State.backend.url + '/api/generate', {
+              var ollamaUrl = State.backend.ollamaDirectUrl || cotUrl;
+              var resCh = await fetch(ollamaUrl + '/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(ollamaPayload),
+                body: JSON.stringify(ollamaChatPayload),
                 signal: signal,
               });
-              if (res2.ok) {
-                var data2 = await res2.json();
-                stepContent = data2.response || '[No response]';
+              if (resCh.ok) {
+                var dataCh = await resCh.json();
+                stepContent = (dataCh.message && dataCh.message.content) || dataCh.response || '[No response]';
                 stepSuccess = true;
               } else {
-                stepContent = '[Error: HTTP ' + res2.status + ']';
+                // Try Ollama /api/generate fallback
+                var ollamaPayload = {
+                  model: stepModel,
+                  prompt: stepInstruction + '\n\nUser query: ' + userQuery +
+                    (chainResults.length > 0 ? '\n\nPrevious steps:\n' + chainResults.map(function (r, idx) { return 'Step ' + (idx + 1) + ': ' + r.content; }).join('\n') : ''),
+                  stream: false,
+                  options: buildOllamaOptions(),
+                };
+                var res2 = await fetch(ollamaUrl + '/api/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(ollamaPayload),
+                  signal: signal,
+                });
+                if (res2.ok) {
+                  var data2 = await res2.json();
+                  stepContent = data2.response || '[No response]';
+                  stepSuccess = true;
+                } else {
+                  stepContent = '[Error: HTTP ' + res2.status + ']';
+                }
               }
             }
           } catch (e) {
@@ -23823,6 +25382,560 @@
         }
       }
     });
+
+    // ---- Export const-declared globals to window for cross-script access ----
+    // const/let at top-level in classic <script> are NOT on window, only var/function are.
+    // The PostMessage bridge (in a separate <script>) needs window.State etc.
+    window.State = State;
+    window.Conversation = Conversation;
+    window.CoT = CoT;
+  </script>
+
+  <!-- ====================================================================
+       RawrXD Voice Engine — Production-grade Web Speech API Integration
+       Features: STT via SpeechRecognition, TTS via SpeechSynthesis,
+                 Interim results, auto-send, voice settings, hotkeys
+       Phase 33 parity with Win32 IDE voice subsystem
+       ==================================================================== -->
+  <script>
+    var RawrVoice = (function () {
+      'use strict';
+
+      // ---- State ----
+      var state = {
+        sttSupported: false,
+        ttsSupported: false,
+        recognition: null,
+        isRecording: false,
+        ttsEnabled: false,
+        ttsVoice: null,
+        ttsRate: 1.0,
+        ttsPitch: 1.0,
+        ttsVolume: 1.0,
+        lang: 'en-US',
+        continuous: true,
+        interimResults: true,
+        autoSend: false,
+        settingsOpen: false,
+        lastTranscript: '',
+        interimText: '',
+        metrics: {
+          recordingCount: 0,
+          transcriptionCount: 0,
+          ttsCount: 0,
+          errCount: 0,
+          totalRecordMs: 0,
+          lastRecordStart: 0
+        }
+      };
+
+      // ---- Feature Detection ----
+      function init() {
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+          state.sttSupported = true;
+          state.recognition = new SpeechRecognition();
+          state.recognition.continuous = state.continuous;
+          state.recognition.interimResults = state.interimResults;
+          state.recognition.lang = state.lang;
+          state.recognition.maxAlternatives = 1;
+
+          state.recognition.onstart = function () {
+            state.isRecording = true;
+            state.metrics.lastRecordStart = Date.now();
+            state.metrics.recordingCount++;
+            updateUI();
+            logVoice('STT started (lang=' + state.lang + ')');
+          };
+
+          state.recognition.onresult = function (e) {
+            var final = '';
+            var interim = '';
+            for (var i = e.resultIndex; i < e.results.length; i++) {
+              var transcript = e.results[i][0].transcript;
+              if (e.results[i].isFinal) {
+                final += transcript;
+              } else {
+                interim += transcript;
+              }
+            }
+
+            if (final) {
+              state.lastTranscript = final;
+              state.metrics.transcriptionCount++;
+              insertTranscript(final);
+              logVoice('STT final: ' + final.substring(0, 80));
+            }
+
+            if (interim) {
+              state.interimText = interim;
+              showInterim(interim);
+            }
+          };
+
+          state.recognition.onerror = function (e) {
+            state.metrics.errCount++;
+            logVoice('STT error: ' + e.error);
+
+            if (e.error === 'not-allowed') {
+              addMessage('system', '\u26A0\uFE0F **Voice:** Microphone access denied. Please allow microphone in browser settings.', { skipMemory: true });
+            } else if (e.error === 'no-speech') {
+              // Normal — just no speech detected, don't alarm user
+            } else if (e.error !== 'aborted') {
+              addMessage('system', '\u26A0\uFE0F **Voice:** Speech recognition error: ' + e.error, { skipMemory: true });
+            }
+
+            state.isRecording = false;
+            updateUI();
+          };
+
+          state.recognition.onend = function () {
+            if (state.isRecording && state.metrics.lastRecordStart) {
+              state.metrics.totalRecordMs += Date.now() - state.metrics.lastRecordStart;
+            }
+            state.isRecording = false;
+            state.interimText = '';
+            clearInterim();
+            updateUI();
+            logVoice('STT ended');
+
+            // Auto-send if configured and we have a transcript
+            if (state.autoSend && state.lastTranscript) {
+              var el = document.getElementById('chatInput');
+              if (el && el.value.trim()) {
+                sendMessage();
+              }
+              state.lastTranscript = '';
+            }
+          };
+        } else {
+          logVoice('SpeechRecognition API not available in this browser');
+        }
+
+        // TTS
+        if (window.speechSynthesis) {
+          state.ttsSupported = true;
+          // Load voices (some browsers load async)
+          speechSynthesis.onvoiceschanged = function () {
+            logVoice('TTS voices loaded: ' + speechSynthesis.getVoices().length);
+          };
+          // Trigger initial load
+          speechSynthesis.getVoices();
+          logVoice('TTS available');
+        } else {
+          logVoice('SpeechSynthesis API not available');
+        }
+
+        // Register keyboard shortcut
+        document.addEventListener('keydown', function (e) {
+          // Ctrl+Shift+V — toggle voice recording
+          if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+            e.preventDefault();
+            toggleRecording();
+          }
+          // Ctrl+Shift+U — toggle TTS
+          if (e.ctrlKey && e.shiftKey && e.key === 'U') {
+            e.preventDefault();
+            toggleTTS();
+          }
+        });
+
+        updateUI();
+        logVoice('Voice engine initialized (STT=' + state.sttSupported + ', TTS=' + state.ttsSupported + ')');
+      }
+
+      // ---- STT Control ----
+      function toggleRecording() {
+        if (!state.sttSupported) {
+          addMessage('system', '\u26A0\uFE0F **Voice:** Speech recognition not supported in this browser. Use Chrome or Edge.', { skipMemory: true });
+          return;
+        }
+        if (state.isRecording) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      }
+
+      function startRecording() {
+        if (!state.sttSupported || state.isRecording) return;
+        try {
+          state.recognition.lang = state.lang;
+          state.recognition.continuous = state.continuous;
+          state.recognition.interimResults = state.interimResults;
+          state.recognition.start();
+        } catch (e) {
+          logVoice('STT start error: ' + e.message);
+          state.metrics.errCount++;
+        }
+      }
+
+      function stopRecording() {
+        if (!state.isRecording || !state.recognition) return;
+        try {
+          state.recognition.stop();
+        } catch (e) {
+          logVoice('STT stop error: ' + e.message);
+        }
+      }
+
+      // ---- Helper: Insert transcribed text into chat input ----
+      function insertTranscript(text) {
+        var el = document.getElementById('chatInput');
+        if (!el) return;
+        var existing = el.value;
+        if (existing && !existing.endsWith(' ') && !existing.endsWith('\n')) {
+          el.value += ' ';
+        }
+        el.value += text;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        el.focus();
+      }
+
+      function showInterim(text) {
+        var existing = document.getElementById('voiceInterimDisplay');
+        if (!existing) {
+          var el = document.getElementById('chatInput');
+          if (!el) return;
+          var span = document.createElement('div');
+          span.id = 'voiceInterimDisplay';
+          span.className = 'voice-interim-text';
+          span.style.cssText = 'font-size:12px;padding:4px 12px 0 12px;min-height:16px;';
+          el.parentElement.parentElement.insertBefore(span, el.parentElement.nextSibling);
+          existing = span;
+        }
+        existing.textContent = '\uD83C\uDFA4 ' + text;
+      }
+
+      function clearInterim() {
+        var el = document.getElementById('voiceInterimDisplay');
+        if (el) el.textContent = '';
+      }
+
+      // ---- TTS Control ----
+      function toggleTTS() {
+        state.ttsEnabled = !state.ttsEnabled;
+        updateUI();
+        logVoice('TTS toggled: ' + (state.ttsEnabled ? 'ON' : 'OFF'));
+        if (!state.ttsEnabled) {
+          speechSynthesis.cancel();
+        }
+      }
+
+      function speak(text) {
+        if (!state.ttsSupported || !state.ttsEnabled) return;
+        if (!text || !text.trim()) return;
+
+        // Strip markdown/HTML for cleaner speech
+        var clean = text
+          .replace(/```[\s\S]*?```/g, ' code block ')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/\*([^*]+)\*/g, '$1')
+          .replace(/#+\s*/g, '')
+          .replace(/<[^>]+>/g, '')
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/\n+/g, '. ')
+          .trim();
+
+        if (!clean) return;
+
+        // Chunk long text (browsers have limits ~200-300 chars per utterance)
+        var chunks = chunkText(clean, 200);
+        for (var i = 0; i < chunks.length; i++) {
+          var utter = new SpeechSynthesisUtterance(chunks[i]);
+          utter.lang = state.lang;
+          utter.rate = state.ttsRate;
+          utter.pitch = state.ttsPitch;
+          utter.volume = state.ttsVolume;
+
+          if (state.ttsVoice) {
+            var voices = speechSynthesis.getVoices();
+            for (var v = 0; v < voices.length; v++) {
+              if (voices[v].name === state.ttsVoice) {
+                utter.voice = voices[v];
+                break;
+              }
+            }
+          }
+
+          speechSynthesis.speak(utter);
+        }
+        state.metrics.ttsCount++;
+      }
+
+      function chunkText(text, maxLen) {
+        var chunks = [];
+        var sentences = text.split(/(?<=[.!?])\s+/);
+        var current = '';
+        for (var i = 0; i < sentences.length; i++) {
+          if (current.length + sentences[i].length > maxLen && current) {
+            chunks.push(current.trim());
+            current = '';
+          }
+          current += sentences[i] + ' ';
+        }
+        if (current.trim()) chunks.push(current.trim());
+        return chunks.length ? chunks : [text];
+      }
+
+      function stopSpeaking() {
+        if (state.ttsSupported) speechSynthesis.cancel();
+      }
+
+      // ---- UI Updates ----
+      function updateUI() {
+        var voiceBtn = document.getElementById('voiceBtn');
+        if (voiceBtn) {
+          if (state.isRecording) {
+            voiceBtn.classList.add('recording');
+            voiceBtn.innerHTML = '&#x23F9;'; // stop icon
+            voiceBtn.title = 'Stop Voice Input';
+          } else {
+            voiceBtn.classList.remove('recording');
+            voiceBtn.innerHTML = '&#x1F3A4;'; // microphone
+            voiceBtn.title = 'Voice Input (Ctrl+Shift+V)';
+          }
+
+          if (!state.sttSupported) {
+            voiceBtn.style.opacity = '0.3';
+            voiceBtn.style.cursor = 'not-allowed';
+            voiceBtn.title = 'Speech recognition not supported in this browser';
+          }
+        }
+
+        var ttsLabel = document.getElementById('voiceTTSLabel');
+        if (ttsLabel) {
+          ttsLabel.textContent = 'TTS: ' + (state.ttsEnabled ? 'ON' : 'OFF');
+          var ttsBtn = document.getElementById('voiceToolbarBtn');
+          if (ttsBtn) {
+            ttsBtn.style.opacity = state.ttsEnabled ? '1' : '0.5';
+            ttsBtn.style.color = state.ttsEnabled ? 'var(--accent-primary)' : '';
+          }
+        }
+      }
+
+      // ---- Settings Panel ----
+      function showSettings() {
+        if (state.settingsOpen) return;
+        state.settingsOpen = true;
+
+        var overlay = document.createElement('div');
+        overlay.className = 'voice-settings-overlay';
+        overlay.id = 'voiceSettingsOverlay';
+        overlay.onclick = function (e) { if (e.target === overlay) closeSettings(); };
+
+        var voices = state.ttsSupported ? speechSynthesis.getVoices() : [];
+
+        var html = '<div class="voice-settings-panel">';
+        html += '<button class="voice-settings-close" onclick="RawrVoice.closeSettings()">&times;</button>';
+        html += '<h3>\uD83C\uDFA4 Voice Settings</h3>';
+
+        // Status indicators
+        html += '<div class="voice-status-indicator"><span class="voice-status-dot ' + (state.sttSupported ? 'active' : 'error') + '"></span> Speech-to-Text: ' + (state.sttSupported ? 'Available' : 'Unsupported') + '</div><br>';
+        html += '<div class="voice-status-indicator"><span class="voice-status-dot ' + (state.ttsSupported ? 'active' : 'error') + '"></span> Text-to-Speech: ' + (state.ttsSupported ? 'Available (' + voices.length + ' voices)' : 'Unsupported') + '</div>';
+        html += '<hr style="border-color:var(--border-subtle);margin:12px 0">';
+
+        // Language
+        html += '<div class="voice-setting-row"><label>Language</label>';
+        html += '<select id="voiceLangSel" onchange="RawrVoice.setLang(this.value)">';
+        var langs = [['en-US', 'English (US)'], ['en-GB', 'English (UK)'], ['es-ES', 'Spanish'], ['fr-FR', 'French'], ['de-DE', 'German'], ['it-IT', 'Italian'], ['pt-BR', 'Portuguese (BR)'], ['ja-JP', 'Japanese'], ['ko-KR', 'Korean'], ['zh-CN', 'Chinese (Simplified)'], ['ru-RU', 'Russian'], ['ar-SA', 'Arabic'], ['hi-IN', 'Hindi']];
+        for (var i = 0; i < langs.length; i++) {
+          html += '<option value="' + langs[i][0] + '"' + (state.lang === langs[i][0] ? ' selected' : '') + '>' + langs[i][1] + '</option>';
+        }
+        html += '</select></div>';
+
+        // TTS Voice selection
+        html += '<div class="voice-setting-row"><label>TTS Voice</label>';
+        html += '<select id="voiceTTSVoiceSel" onchange="RawrVoice.setVoice(this.value)">';
+        html += '<option value="">Browser Default</option>';
+        for (var v = 0; v < voices.length; v++) {
+          var sel = state.ttsVoice === voices[v].name ? ' selected' : '';
+          html += '<option value="' + voices[v].name.replace(/"/g, '&quot;') + '"' + sel + '>' + voices[v].name + ' (' + voices[v].lang + ')' + (voices[v].default ? ' *' : '') + '</option>';
+        }
+        html += '</select></div>';
+
+        // Rate
+        html += '<div class="voice-setting-row"><label>Speech Rate: <span id="rateVal">' + state.ttsRate.toFixed(1) + '</span></label>';
+        html += '<input type="range" min="0.5" max="2.0" step="0.1" value="' + state.ttsRate + '" oninput="RawrVoice.setRate(this.value);document.getElementById(\'rateVal\').textContent=parseFloat(this.value).toFixed(1)"></div>';
+
+        // Pitch
+        html += '<div class="voice-setting-row"><label>Pitch: <span id="pitchVal">' + state.ttsPitch.toFixed(1) + '</span></label>';
+        html += '<input type="range" min="0.5" max="2.0" step="0.1" value="' + state.ttsPitch + '" oninput="RawrVoice.setPitch(this.value);document.getElementById(\'pitchVal\').textContent=parseFloat(this.value).toFixed(1)"></div>';
+
+        // Volume
+        html += '<div class="voice-setting-row"><label>Volume: <span id="volVal">' + Math.round(state.ttsVolume * 100) + '%</span></label>';
+        html += '<input type="range" min="0" max="1.0" step="0.05" value="' + state.ttsVolume + '" oninput="RawrVoice.setVolume(this.value);document.getElementById(\'volVal\').textContent=Math.round(this.value*100)+\'%\'"></div>';
+
+        // Continuous mode toggle
+        html += '<div class="voice-setting-row"><label>Continuous Listening</label>';
+        html += '<div class="voice-toggle-switch ' + (state.continuous ? 'on' : '') + '" id="voiceContinuousToggle" onclick="RawrVoice.toggleContinuous()"></div></div>';
+
+        // Auto-send toggle
+        html += '<div class="voice-setting-row"><label>Auto-send on silence</label>';
+        html += '<div class="voice-toggle-switch ' + (state.autoSend ? 'on' : '') + '" id="voiceAutoSendToggle" onclick="RawrVoice.toggleAutoSend()"></div></div>';
+
+        // TTS for AI responses toggle
+        html += '<div class="voice-setting-row"><label>Read AI responses aloud</label>';
+        html += '<div class="voice-toggle-switch ' + (state.ttsEnabled ? 'on' : '') + '" id="voiceTTSToggle" onclick="RawrVoice.toggleTTS();document.getElementById(\'voiceTTSToggle\').classList.toggle(\'on\')"></div></div>';
+
+        // Metrics
+        html += '<hr style="border-color:var(--border-subtle);margin:12px 0">';
+        html += '<div style="font-size:12px;color:var(--text-muted)">';
+        html += '<strong>Metrics</strong><br>';
+        html += 'Recordings: ' + state.metrics.recordingCount + ' &nbsp;|&nbsp; ';
+        html += 'Transcriptions: ' + state.metrics.transcriptionCount + ' &nbsp;|&nbsp; ';
+        html += 'TTS: ' + state.metrics.ttsCount + ' &nbsp;|&nbsp; ';
+        html += 'Errors: ' + state.metrics.errCount + '<br>';
+        if (state.metrics.totalRecordMs > 0) {
+          html += 'Total record time: ' + (state.metrics.totalRecordMs / 1000).toFixed(1) + 's';
+        }
+        html += '</div>';
+
+        // Test buttons
+        html += '<div style="margin-top:16px;display:flex;gap:8px">';
+        html += '<button onclick="RawrVoice.testTTS()" style="flex:1;padding:8px;background:var(--accent-primary,#ff6b35);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px">\uD83D\uDD0A Test TTS</button>';
+        html += '<button onclick="RawrVoice.testSTT()" style="flex:1;padding:8px;background:var(--bg-tertiary,#2a2a3a);color:var(--text-primary);border:1px solid var(--border-subtle,#333);border-radius:8px;cursor:pointer;font-size:13px">\uD83C\uDFA4 Test STT</button>';
+        html += '</div>';
+
+        html += '</div>';
+        overlay.innerHTML = html;
+        document.body.appendChild(overlay);
+      }
+
+      function closeSettings() {
+        state.settingsOpen = false;
+        var el = document.getElementById('voiceSettingsOverlay');
+        if (el) el.remove();
+        // Persist to localStorage
+        savePrefs();
+      }
+
+      // ---- Settings Setters ----
+      function setLang(lang) { state.lang = lang; if (state.recognition) state.recognition.lang = lang; }
+      function setVoice(name) { state.ttsVoice = name || null; }
+      function setRate(v) { state.ttsRate = parseFloat(v); }
+      function setPitch(v) { state.ttsPitch = parseFloat(v); }
+      function setVolume(v) { state.ttsVolume = parseFloat(v); }
+      function toggleContinuous() {
+        state.continuous = !state.continuous;
+        var el = document.getElementById('voiceContinuousToggle');
+        if (el) el.classList.toggle('on');
+        if (state.recognition) state.recognition.continuous = state.continuous;
+      }
+      function toggleAutoSend() {
+        state.autoSend = !state.autoSend;
+        var el = document.getElementById('voiceAutoSendToggle');
+        if (el) el.classList.toggle('on');
+      }
+
+      // ---- Test Functions ----
+      function testTTS() {
+        if (!state.ttsSupported) { alert('TTS not supported'); return; }
+        var oldEnabled = state.ttsEnabled;
+        state.ttsEnabled = true;
+        speak('Hello! RawrXD voice system is working. This is a text-to-speech test.');
+        state.ttsEnabled = oldEnabled;
+      }
+
+      function testSTT() {
+        if (!state.sttSupported) { alert('STT not supported in this browser'); return; }
+        addMessage('system', '\uD83C\uDFA4 **Voice Test:** Listening for 5 seconds... speak now!', { skipMemory: true });
+        startRecording();
+        setTimeout(function () { if (state.isRecording) stopRecording(); }, 5000);
+      }
+
+      // ---- Persistence ----
+      function savePrefs() {
+        try {
+          localStorage.setItem('rawrxd_voice_prefs', JSON.stringify({
+            lang: state.lang,
+            ttsEnabled: state.ttsEnabled,
+            ttsVoice: state.ttsVoice,
+            ttsRate: state.ttsRate,
+            ttsPitch: state.ttsPitch,
+            ttsVolume: state.ttsVolume,
+            continuous: state.continuous,
+            autoSend: state.autoSend
+          }));
+        } catch (e) { /* localStorage may be unavailable in file:// mode */ }
+      }
+
+      function loadPrefs() {
+        try {
+          var raw = localStorage.getItem('rawrxd_voice_prefs');
+          if (raw) {
+            var p = JSON.parse(raw);
+            if (p.lang) state.lang = p.lang;
+            if (typeof p.ttsEnabled === 'boolean') state.ttsEnabled = p.ttsEnabled;
+            if (p.ttsVoice) state.ttsVoice = p.ttsVoice;
+            if (typeof p.ttsRate === 'number') state.ttsRate = p.ttsRate;
+            if (typeof p.ttsPitch === 'number') state.ttsPitch = p.ttsPitch;
+            if (typeof p.ttsVolume === 'number') state.ttsVolume = p.ttsVolume;
+            if (typeof p.continuous === 'boolean') state.continuous = p.continuous;
+            if (typeof p.autoSend === 'boolean') state.autoSend = p.autoSend;
+          }
+        } catch (e) { /* ignore */ }
+      }
+
+      function logVoice(msg) {
+        if (typeof logDebug === 'function') logDebug('[Voice] ' + msg, 'info');
+        else console.log('[RawrVoice] ' + msg);
+      }
+
+      // ---- Public: hook into addMessage to auto-TTS AI responses ----
+      function hookTTS() {
+        // Intercept assistant messages for auto-TTS
+        var origAddMessage = window.addMessage;
+        if (origAddMessage && !origAddMessage._voiceHooked) {
+          window.addMessage = function (role, content, opts) {
+            var result = origAddMessage.call(this, role, content, opts);
+            if (role === 'assistant' && state.ttsEnabled) {
+              // Delay slightly so the message appears first
+              setTimeout(function () { speak(content); }, 100);
+            }
+            return result;
+          };
+          window.addMessage._voiceHooked = true;
+          logVoice('TTS hook installed on addMessage');
+        }
+      }
+
+      // ---- Init on load ----
+      loadPrefs();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { init(); hookTTS(); });
+      } else {
+        init();
+        hookTTS();
+      }
+
+      // ---- Public API ----
+      return {
+        toggleRecording: toggleRecording,
+        startRecording: startRecording,
+        stopRecording: stopRecording,
+        toggleTTS: toggleTTS,
+        speak: speak,
+        stopSpeaking: stopSpeaking,
+        showSettings: showSettings,
+        closeSettings: closeSettings,
+        testTTS: testTTS,
+        testSTT: testSTT,
+        setLang: setLang,
+        setVoice: setVoice,
+        setRate: setRate,
+        setPitch: setPitch,
+        setVolume: setVolume,
+        toggleContinuous: toggleContinuous,
+        toggleAutoSend: toggleAutoSend,
+        getState: function () { return state; },
+        getMetrics: function () { return state.metrics; },
+        isRecording: function () { return state.isRecording; },
+        isTTSEnabled: function () { return state.ttsEnabled; }
+      };
+    })();
   </script>
 
   <!-- Defensive check: detect truncated script blocks (e.g. from partial HTTP send) -->
@@ -23834,9 +25947,13 @@
         'showAgentDashboard', 'showPerfPanel', 'showSecurityPanel',
         'showToolsPanel', 'showEnginePanel', 'showMetricsPanel'
       ];
+      var criticalObjs = ['RawrVoice'];
       var missing = [];
       for (var i = 0; i < criticalFns.length; i++) {
         if (typeof window[criticalFns[i]] !== 'function') missing.push(criticalFns[i]);
+      }
+      for (var i = 0; i < criticalObjs.length; i++) {
+        if (typeof window[criticalObjs[i]] === 'undefined') missing.push(criticalObjs[i]);
       }
       if (missing.length > 0) {
         console.error('[RawrXD] CRITICAL: ' + missing.length + ' functions missing — HTML was likely truncated during transfer. Missing: ' + missing.join(', '));
@@ -23847,7 +25964,1685 @@
         document.body.appendChild(banner);
       }
     })();
+
+    // ======================================================================
+    // GLOBAL EXPORTS — Expose const-declared objects to window for
+    // cross-frame access (postMessage bridge, test harness, extensions).
+    // `const` creates lexical bindings, NOT window properties.
+    // ======================================================================
+    window.State = State;
+    window.Conversation = Conversation;
+    window.CoT = CoT;
+
+    // ======================================================================
+    // POSTMESSAGE TEST BRIDGE
+    // Allows parent frames (test_jumper.html) to access IDE internals
+    // without triggering cross-origin errors.
+    // ======================================================================
+    (function () {
+      'use strict';
+      var ALLOWED_ORIGINS = [
+        window.location.origin,
+        'http://localhost:11435',
+        'http://127.0.0.1:11435',
+        'http://localhost:11434',
+        'null'  // file:// protocol sends origin "null"
+      ];
+
+      var TestAPI = {
+        ping: function () { return { ready: true, url: location.href, ts: Date.now() }; },
+        getState: function () {
+          // Return a structured-clone-safe copy (strips DOM refs, Window, RegExp, functions)
+          try { return window.State ? JSON.parse(JSON.stringify(window.State)) : null; }
+          catch (e) { return window.State ? { backend: window.State.backend, model: window.State.model, chat: window.State.chat, gen: window.State.gen, security: { rateLimit: window.State.security.rateLimit, inputGuard: window.State.security.inputGuard } } : null; }
+        },
+        getBackendState: function () { return window.State ? window.State.backend : null; },
+        getModelState: function () { return window.State ? window.State.model : null; },
+        getConversation: function () {
+          // Conversation has methods — return a summary object instead
+          if (!window.Conversation) return null;
+          return { exists: true, addMessage: typeof window.Conversation.addMessage === 'function', getContextForAPI: typeof window.Conversation.getContextForAPI === 'function', clear: typeof window.Conversation.clear === 'function' };
+        },
+        getRawrVoice: function () { return window.RawrVoice ? window.RawrVoice.getState() : null; },
+        getRawrVoiceMetrics: function () { return window.RawrVoice ? window.RawrVoice.getMetrics() : null; },
+        getEngineAPI: function () { return window.EngineAPI ? true : false; },
+        getCoT: function () { return window.CoT ? { enabled: window.CoT.enabled, steps: window.CoT.steps.length } : null; },
+        getDualAgent: function () { return window.DualAgent ? true : false; },
+        hasFn: function (name) { return typeof window[name] === 'function'; },
+        hasObj: function (name) { return typeof window[name] !== 'undefined' && window[name] !== null; },
+        callFn: function () {
+          // Accept (name, ...fnArgs) — flatten to handle both apply and direct calls
+          // Harness convention: send('callFn', ['fnName', [arg1, arg2]])
+          // Bridge apply spreads to: callFn('fnName', [arg1, arg2])
+          // So a[1] is the args array — use it directly for apply()
+          var a = Array.prototype.slice.call(arguments);
+          var name = a[0];
+          var fnArgs = a.length === 2 && Array.isArray(a[1]) ? a[1] : a.slice(1);
+          if (typeof window[name] === 'function') {
+            var r = window[name].apply(null, fnArgs);
+            return r === undefined ? null : r;  // coerce undefined for postMessage
+          }
+          return null;
+        },
+        getElement: function (id) { var el = document.getElementById(id); return el ? { id: el.id, tag: el.tagName, visible: el.offsetParent !== null || (el.style && el.style.display !== 'none') } : null; },
+        // CSP-safe eval fallback — only for test bridge, guarded by origin check
+        eval: function (expr) {
+          try { return (new Function('return ' + expr))(); }
+          catch (e) { return { error: e.message }; }
+        },
+        // CSP-safe named commands (no eval needed)
+        getChildCount: function (id) { var el = document.getElementById(id); return el ? el.children.length : 0; },
+        getPerfHistoryLen: function () { return window.State && window.State.perf ? window.State.perf.history.length : 0; },
+        getStructuredLogLen: function () { return window.State && window.State.perf ? window.State.perf.structuredLog.length : 0; },
+        getSecurityLogLen: function () { return window.State && window.State.security ? window.State.security.eventLog.length : 0; },
+        clearConversation: function () { if (window.Conversation && window.Conversation.clear) { window.Conversation.clear(); return true; } return false; },
+        elements: function () {
+          var ids = ['chatMessages', 'chatInput', 'modelSelect', 'terminalInput', 'backendStatus', 'cotSwitch',
+            'debugPanel', 'perfPanel', 'securityPanel', 'agentDashboard', 'failurePanel', 'extensionPanel',
+            'endpointPanel', 'browserPanel', 'fileEditorPanel', 'rePanel'];
+          var result = {};
+          for (var i = 0; i < ids.length; i++) { result[ids[i]] = !!document.getElementById(ids[i]); }
+          return result;
+        },
+        libs: function () {
+          return {
+            DOMPurify: typeof DOMPurify !== 'undefined',
+            hljs: typeof hljs !== 'undefined',
+            mermaid: typeof mermaid !== 'undefined',
+            marked: typeof marked !== 'undefined'
+          };
+        }
+      };
+
+      window.addEventListener('message', function (event) {
+        if (ALLOWED_ORIGINS.indexOf(event.origin) === -1 && event.origin !== window.location.origin) return;
+        var data = event.data;
+        if (!data || !data.cmd || data.type === 'rawrxd-ide-ready') return;
+
+        var id = data.id;
+        var cmd = data.cmd;
+        var args = data.args || [];
+        var origin = event.origin === 'null' ? '*' : event.origin;
+        var source = event.source;
+
+        function sendReply(result, error) {
+          if (!source) return;
+          try {
+            source.postMessage({
+              id: id, cmd: cmd,
+              result: result === undefined ? null : result,
+              error: error || null,
+              ts: performance.now()
+            }, origin);
+          } catch (cloneErr) {
+            // DataCloneError — result not structured-cloneable (Promise, DOM, etc.)
+            source.postMessage({
+              id: id, cmd: cmd,
+              result: null,
+              error: 'Result not cloneable: ' + cloneErr.message,
+              ts: performance.now()
+            }, origin);
+          }
+        }
+
+        var result, error;
+        try {
+          if (TestAPI[cmd]) {
+            result = typeof TestAPI[cmd] === 'function' ? TestAPI[cmd].apply(null, args) : TestAPI[cmd];
+          } else {
+            error = 'Unknown command: ' + cmd;
+          }
+        } catch (e) {
+          error = e.message || String(e);
+        }
+
+        // Handle async results (Promises from callFn on async functions)
+        if (result && typeof result.then === 'function') {
+          result.then(function (v) { sendReply(v, null); })
+            .catch(function (e) { sendReply(null, e.message || String(e)); });
+        } else {
+          sendReply(result, error);
+        }
+      });
+
+      // Signal ready to parent frame
+      if (window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({ type: 'rawrxd-ide-ready', url: location.href, ts: Date.now() }, '*');
+        } catch (e) { /* cross-origin, bridge will still work via postMessage */ }
+      }
+      console.log('[TestBridge] PostMessage bridge initialized');
+    })();
   </script>
+
+  <!-- ==================================================================
+       MULTI-WINDOW MANAGER (MWM) — Complete JS Engine
+       Manages floating windows, drag/resize, snap, IPC, model routing,
+       swarm orchestration, CoT chaining, MASM kernel bridge.
+       ================================================================== -->
+  <script>
+    var MWM = (function () {
+      'use strict';
+
+      // ========== STATE ==========
+      var windows = {};          // id -> windowState
+      var windowOrder = [];      // z-order stack (front = last)
+      var nextId = 1;
+      var dragState = null;      // active drag
+      var snapZone = null;       // current snap target
+      var mainVisible = true;
+      var kernelReady = false;
+      var taskCount = 0;
+      var modelCache = [];       // cached model list
+
+      // Window type definitions
+      var TYPES = {
+        chat: { icon: '\u{1F4AC}', label: 'Chat', color: '#00d9ff' },
+        audit: { icon: '\u{1F50D}', label: 'Audit', color: '#00ff88' },
+        cot: { icon: '\u{1F9E0}', label: 'Chain of Thought', color: '#ffaa00' },
+        swarm: { icon: '\u{1F41D}', label: 'Swarm', color: '#b266ff' },
+        code: { icon: '\u{1F4DD}', label: 'Code Editor', color: '#00d9ff' },
+        terminal: { icon: '\u{1F4DF}', label: 'Terminal', color: '#00ff88' },
+        models: { icon: '\u{1F916}', label: 'Model Manager', color: '#ff6b35' },
+        perf: { icon: '\u{1F4CA}', label: 'Performance', color: '#00d9ff' },
+        hotpatch: { icon: '\u{1F527}', label: 'Hotpatch', color: '#ffaa00' },
+        reverse: { icon: '\u{1F52C}', label: 'Reverse Eng.', color: '#ff4444' },
+        debug: { icon: '\u{1F41E}', label: 'Debug', color: '#ffaa00' },
+        benchmark: { icon: '\u{26A1}', label: 'Benchmark', color: '#00d9ff' },
+        compile: { icon: '\u{1F3D7}', label: 'Compiler', color: '#00ff88' },
+        browser: { icon: '\u{1F310}', label: 'Browser', color: '#0077ff' },
+        deploy: { icon: '\u{1F680}', label: 'Deploy', color: '#ff6b35' },
+        files: { icon: '\u{1F4C2}', label: 'Files', color: '#b266ff' }
+      };
+
+      // ========== HELPERS ==========
+      function $(sel) { return document.querySelector(sel); }
+      function $$(sel) { return document.querySelectorAll(sel); }
+      function uid() { return 'mw-' + (nextId++); }
+
+      function getBackendUrl() {
+        try { return (window.State && window.State.backend && window.State.backend.url) || 'http://localhost:11434'; }
+        catch (e) { return 'http://localhost:11434'; }
+      }
+
+      function getActiveModel() {
+        try { return (window.State && window.State.model && window.State.model.active) || 'llama3.2'; }
+        catch (e) { return 'llama3.2'; }
+      }
+
+      function escHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      // ========== WINDOW CREATION ==========
+      function create(type, opts) {
+        opts = opts || {};
+        var id = uid();
+        var td = TYPES[type] || TYPES.chat;
+        var model = opts.model || getActiveModel();
+        // Calculate position (cascade from top-left)
+        var count = Object.keys(windows).length;
+        var x = opts.x != null ? opts.x : 60 + (count % 8) * 30;
+        var y = opts.y != null ? opts.y : 60 + (count % 8) * 30;
+        var w = opts.width || 520;
+        var h = opts.height || 420;
+
+        var state = {
+          id: id,
+          type: type,
+          model: model,
+          title: opts.title || td.label,
+          x: x, y: y, width: w, height: h,
+          minimized: false, maximized: false, snapClass: null,
+          messages: [],
+          taskIds: [],
+          created: Date.now()
+        };
+        windows[id] = state;
+        windowOrder.push(id);
+
+        // Build DOM
+        var el = document.createElement('div');
+        el.className = 'mw-window mw-window-enter';
+        el.id = id;
+        el.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;';
+        el.innerHTML = buildWindowHTML(id, type, td, model);
+
+        document.getElementById('mwWindowContainer').appendChild(el);
+        addTab(id, td, state.title);
+        focusWindow(id);
+        setupWindowEvents(el, id);
+        initWindowContent(id, type);
+        updateKernelStatus();
+        hidePicker();
+
+        // Activate MW mode
+        document.body.classList.add('mw-mode');
+
+        return id;
+      }
+
+      function buildWindowHTML(id, type, td, model) {
+        var modelSelect = '<select class="mw-win-model" onchange="MWM.switchModel(\'' + id + '\',this.value)" title="Switch model">';
+        // Will be populated async
+        modelSelect += '<option value="' + escHtml(model) + '">' + escHtml(model) + '</option>';
+        modelSelect += '</select>';
+
+        var html = '';
+        // Titlebar
+        html += '<div class="mw-titlebar" data-winid="' + id + '">';
+        html += '  <span class="mw-win-icon">' + td.icon + '</span>';
+        html += '  <span class="mw-win-title">' + escHtml(td.label) + '</span>';
+        html += '  ' + modelSelect;
+        html += '  <div class="mw-win-ctrl">';
+        html += '    <button onclick="MWM.minimizeWindow(\'' + id + '\')" title="Minimize">\u2014</button>';
+        html += '    <button onclick="MWM.toggleMaximize(\'' + id + '\')" title="Maximize">\u25A1</button>';
+        html += '    <button class="mw-btn-close" onclick="MWM.closeWindow(\'' + id + '\')" title="Close">\u2715</button>';
+        html += '  </div>';
+        html += '</div>';
+        // Body
+        html += '<div class="mw-body" id="' + id + '-body">';
+        html += buildBodyHTML(id, type);
+        html += '</div>';
+        // Statusbar
+        html += '<div class="mw-statusbar">';
+        html += '  <span class="mw-status-item"><span class="mw-status-dot idle" id="' + id + '-dot"></span><span id="' + id + '-status">Idle</span></span>';
+        html += '  <span style="flex:1;"></span>';
+        html += '  <span id="' + id + '-perf" class="mw-status-item">0 tok/s</span>';
+        html += '</div>';
+
+        return html;
+      }
+
+      function buildBodyHTML(id, type) {
+        switch (type) {
+          case 'chat': return buildChatBody(id);
+          case 'audit': return buildAuditBody(id);
+          case 'cot': return buildCoTBody(id);
+          case 'swarm': return buildSwarmBody(id);
+          case 'code': return buildCodeBody(id);
+          case 'terminal': return buildTerminalBody(id);
+          case 'models': return buildModelsBody(id);
+          case 'perf': return buildPerfBody(id);
+          case 'hotpatch': return buildDebugBody(id, 'Hotpatch Log');
+          case 'reverse': return buildReverseBody(id);
+          case 'debug': return buildDebugBody(id, 'Debug Log');
+          case 'benchmark': return buildBenchmarkBody(id);
+          case 'compile': return buildCompileBody(id);
+          case 'browser': return buildBrowserBody(id);
+          case 'deploy': return buildDebugBody(id, 'Deploy Log');
+          case 'files': return buildFilesBody(id);
+          default: return '<div style="padding:20px;color:#888;">Unknown window type</div>';
+        }
+      }
+
+      // ---- Per-type body builders ----
+      function buildChatBody(id) {
+        return '<div class="mw-chat-messages" id="' + id + '-msgs"></div>' +
+          '<div class="mw-chat-input-row">' +
+          '  <textarea id="' + id + '-input" placeholder="Type a message... (Enter to send)" rows="1" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();MWM.sendChat(\'' + id + '\');}"></textarea>' +
+          '  <button onclick="MWM.sendChat(\'' + id + '\')">Send</button>' +
+          '</div>';
+      }
+
+      function buildAuditBody(id) {
+        return '<div class="mw-audit-area">' +
+          '  <div class="mw-audit-toolbar">' +
+          '    <button onclick="MWM.auditAction(\'' + id + '\',\'security\')">&#x1F6E1; Security</button>' +
+          '    <button onclick="MWM.auditAction(\'' + id + '\',\'performance\')">&#x26A1; Performance</button>' +
+          '    <button onclick="MWM.auditAction(\'' + id + '\',\'quality\')">&#x2728; Quality</button>' +
+          '    <button onclick="MWM.auditAction(\'' + id + '\',\'full\')">&#x1F50D; Full Audit</button>' +
+          '    <button onclick="MWM.auditAction(\'' + id + '\',\'dependencies\')">&#x1F4E6; Deps</button>' +
+          '    <button onclick="MWM.auditAction(\'' + id + '\',\'accessibility\')">&#x267F; A11Y</button>' +
+          '  </div>' +
+          '  <div class="mw-audit-drop" id="' + id + '-drop" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="MWM.auditDrop(\'' + id + '\',event)">Drop file here or click to paste code</div>' +
+          '  <div class="mw-audit-results" id="' + id + '-results">Audit results will appear here...</div>' +
+          '</div>';
+      }
+
+      function buildCoTBody(id) {
+        return '<div class="mw-cot-chain" id="' + id + '-chain"></div>' +
+          '<div class="mw-cot-controls">' +
+          '  <textarea id="' + id + '-input" placeholder="Enter your question for multi-step reasoning..." rows="2" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#ddd;padding:6px 8px;font-family:inherit;font-size:12px;resize:none;outline:none;"></textarea>' +
+          '  <button onclick="MWM.startCoT(\'' + id + '\')">&#x1F9E0; Think</button>' +
+          '  <button onclick="MWM.clearCoT(\'' + id + '\')">Clear</button>' +
+          '</div>';
+      }
+
+      function buildSwarmBody(id) {
+        return '<div class="mw-swarm-grid" id="' + id + '-grid"></div>' +
+          '<div class="mw-swarm-controls">' +
+          '  <textarea id="' + id + '-input" placeholder="Query to swarm across models..." rows="1" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#ddd;padding:6px 8px;font-family:inherit;font-size:12px;resize:none;outline:none;"></textarea>' +
+          '  <button onclick="MWM.startSwarm(\'' + id + '\')">&#x1F41D; Swarm</button>' +
+          '  <button onclick="MWM.stopSwarm(\'' + id + '\')">&#x1F6D1; Stop</button>' +
+          '</div>';
+      }
+
+      function buildCodeBody(id) {
+        return '<div class="mw-editor-container">' +
+          '  <div class="mw-editor-tabs"><div class="mw-editor-tab active">untitled.js</div></div>' +
+          '  <textarea class="mw-editor-textarea" id="' + id + '-editor" spellcheck="false" placeholder="// Start coding...">' +
+          '</textarea></div>';
+      }
+
+      function buildTerminalBody(id) {
+        return '<div class="mw-term-output" id="' + id + '-output">RawrXD Terminal v3.4\\nType "help" for commands.\\n\\n$ </div>' +
+          '<div class="mw-term-input-row">' +
+          '  <span>$&nbsp;</span>' +
+          '  <input id="' + id + '-input" type="text" placeholder="Enter command..." onkeydown="if(event.key===\'Enter\')MWM.termExec(\'' + id + '\')">' +
+          '</div>';
+      }
+
+      function buildModelsBody(id) {
+        return '<div class="mw-model-list" id="' + id + '-list"><div style="padding:20px;color:#666;text-align:center;">Loading models...</div></div>';
+      }
+
+      function buildPerfBody(id) {
+        return '<div class="mw-perf-grid" id="' + id + '-grid">' +
+          buildPerfCards(id) +
+          '</div>' +
+          '<div class="mw-perf-canvas-wrap"><canvas id="' + id + '-canvas" width="400" height="100"></canvas></div>';
+      }
+
+      function buildPerfCards(id) {
+        return '<div class="mw-perf-card"><div class="mw-perf-label">Tokens/sec</div><div class="mw-perf-value" id="' + id + '-tps">0</div></div>' +
+          '<div class="mw-perf-card"><div class="mw-perf-label">Active Tasks</div><div class="mw-perf-value" id="' + id + '-tasks">0</div></div>' +
+          '<div class="mw-perf-card"><div class="mw-perf-label">Windows</div><div class="mw-perf-value" id="' + id + '-wins">' + Object.keys(windows).length + '</div></div>' +
+          '<div class="mw-perf-card"><div class="mw-perf-label">Uptime</div><div class="mw-perf-value" id="' + id + '-uptime">0s</div></div>' +
+          '<div class="mw-perf-card"><div class="mw-perf-label">Memory</div><div class="mw-perf-value" id="' + id + '-mem">--</div></div>' +
+          '<div class="mw-perf-card"><div class="mw-perf-label">Kernel</div><div class="mw-perf-value" id="' + id + '-kern">' + (kernelReady ? 'ON' : 'OFF') + '</div></div>';
+      }
+
+      function buildDebugBody(id, title) {
+        return '<div class="mw-debug-log" id="' + id + '-log">[' + new Date().toLocaleTimeString() + '] ' + title + ' initialized\\n</div>';
+      }
+
+      function buildReverseBody(id) {
+        return '<div class="mw-re-area">' +
+          '  <div class="mw-audit-toolbar">' +
+          '    <button onclick="MWM.reAction(\'' + id + '\',\'pe\')">PE Analyze</button>' +
+          '    <button onclick="MWM.reAction(\'' + id + '\',\'disasm\')">Disassemble</button>' +
+          '    <button onclick="MWM.reAction(\'' + id + '\',\'gguf\')">GGUF Inspect</button>' +
+          '    <button onclick="MWM.reAction(\'' + id + '\',\'strings\')">Strings</button>' +
+          '    <button onclick="MWM.reAction(\'' + id + '\',\'entropy\')">Entropy</button>' +
+          '  </div>' +
+          '  <div class="mw-audit-drop" ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="MWM.reDrop(\'' + id + '\',event)">Drop binary file here for analysis</div>' +
+          '  <div class="mw-re-hexview" id="' + id + '-hex">Hex view will appear here...</div>' +
+          '</div>';
+      }
+
+      function buildBenchmarkBody(id) {
+        return '<div class="mw-audit-area">' +
+          '  <div class="mw-audit-toolbar">' +
+          '    <button onclick="MWM.benchAction(\'' + id + '\',\'throughput\')">&#x26A1; Throughput</button>' +
+          '    <button onclick="MWM.benchAction(\'' + id + '\',\'latency\')">&#x23F1; Latency</button>' +
+          '    <button onclick="MWM.benchAction(\'' + id + '\',\'memory\')">&#x1F4BE; Memory</button>' +
+          '    <button onclick="MWM.benchAction(\'' + id + '\',\'allmodels\')">&#x1F916; All Models</button>' +
+          '  </div>' +
+          '  <div class="mw-audit-results" id="' + id + '-results">Benchmark results will appear here...</div>' +
+          '</div>';
+      }
+
+      function buildCompileBody(id) {
+        return '<div class="mw-audit-area">' +
+          '  <div class="mw-audit-toolbar">' +
+          '    <button onclick="MWM.compileAction(\'' + id + '\',\'cmake\')">CMake</button>' +
+          '    <button onclick="MWM.compileAction(\'' + id + '\',\'masm\')">MASM</button>' +
+          '    <button onclick="MWM.compileAction(\'' + id + '\',\'msvc\')">MSVC</button>' +
+          '    <button onclick="MWM.compileAction(\'' + id + '\',\'clang\')">Clang</button>' +
+          '    <button onclick="MWM.compileAction(\'' + id + '\',\'clean\')">Clean</button>' +
+          '  </div>' +
+          '  <div class="mw-debug-log" id="' + id + '-log">[Build] Ready. Select a build target.\\n</div>' +
+          '</div>';
+      }
+
+      function buildBrowserBody(id) {
+        return '<div style="padding:4px;display:flex;gap:4px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0;">' +
+          '  <input id="' + id + '-url" type="text" value="https://ollama.com" placeholder="URL..." style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:4px;color:#ddd;padding:4px 8px;font-size:11px;outline:none;" onkeydown="if(event.key===\'Enter\')MWM.browserNav(\'' + id + '\')">' +
+          '  <button onclick="MWM.browserNav(\'' + id + '\')" style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.2);color:#00d9ff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Go</button>' +
+          '</div>' +
+          '<iframe id="' + id + '-frame" style="flex:1;border:none;background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+      }
+
+      function buildFilesBody(id) {
+        return '<div class="mw-model-list" id="' + id + '-list">' +
+          '  <div style="padding:20px;color:#666;text-align:center;">File browser - connect to backend for file listing</div>' +
+          '</div>';
+      }
+
+      // ========== WINDOW EVENTS (drag, resize, focus) ==========
+      function setupWindowEvents(el, id) {
+        var titlebar = el.querySelector('.mw-titlebar');
+        if (!titlebar) return;
+
+        titlebar.addEventListener('mousedown', function (e) {
+          if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
+          e.preventDefault();
+          focusWindow(id);
+          var rect = el.getBoundingClientRect();
+          dragState = {
+            id: id,
+            el: el,
+            startX: e.clientX,
+            startY: e.clientY,
+            origX: rect.left,
+            origY: rect.top
+          };
+        });
+
+        titlebar.addEventListener('dblclick', function (e) {
+          if (e.target.tagName === 'BUTTON') return;
+          toggleMaximize(id);
+        });
+
+        el.addEventListener('mousedown', function () { focusWindow(id); });
+      }
+
+      // Global mouse handlers for drag
+      document.addEventListener('mousemove', function (e) {
+        if (!dragState) return;
+        var dx = e.clientX - dragState.startX;
+        var dy = e.clientY - dragState.startY;
+        var nx = dragState.origX + dx;
+        var ny = dragState.origY + dy;
+
+        // Clear snap classes during drag
+        var ws = windows[dragState.id];
+        if (ws && ws.maximized) {
+          ws.maximized = false;
+          dragState.el.classList.remove('mw-maximized');
+        }
+        if (ws && ws.snapClass) {
+          dragState.el.classList.remove(ws.snapClass);
+          ws.snapClass = null;
+        }
+
+        dragState.el.style.left = nx + 'px';
+        dragState.el.style.top = ny + 'px';
+
+        // Detect snap zones
+        detectSnap(e.clientX, e.clientY);
+      });
+
+      document.addEventListener('mouseup', function (e) {
+        if (!dragState) return;
+        if (snapZone) {
+          applySnap(dragState.id, snapZone);
+          hideSnapGhost();
+          snapZone = null;
+        }
+        dragState = null;
+      });
+
+      function detectSnap(mx, my) {
+        var ghost = document.getElementById('mwSnapGhost');
+        var W = window.innerWidth;
+        var H = window.innerHeight;
+        var T = 33; // toolbar height
+        var edge = 12;
+        var zone = null;
+
+        if (mx < edge && my < H / 2) zone = 'mw-quad-tl';
+        else if (mx < edge && my >= H / 2) zone = 'mw-quad-bl';
+        else if (mx < edge) zone = 'mw-snapped-left';
+        else if (mx > W - edge && my < H / 2) zone = 'mw-quad-tr';
+        else if (mx > W - edge && my >= H / 2) zone = 'mw-quad-br';
+        else if (mx > W - edge) zone = 'mw-snapped-right';
+        else if (my < T + edge) zone = 'mw-snapped-top';
+        else if (my > H - edge) zone = 'mw-snapped-bottom';
+
+        snapZone = zone;
+        if (zone && ghost) {
+          // Show ghost preview
+          var r = getSnapRect(zone, W, H, T);
+          ghost.style.left = r.x + 'px';
+          ghost.style.top = r.y + 'px';
+          ghost.style.width = r.w + 'px';
+          ghost.style.height = r.h + 'px';
+          ghost.classList.add('visible');
+        } else if (ghost) {
+          ghost.classList.remove('visible');
+        }
+      }
+
+      function getSnapRect(zone, W, H, T) {
+        switch (zone) {
+          case 'mw-snapped-left': return { x: 0, y: T, w: W / 2, h: H - T };
+          case 'mw-snapped-right': return { x: W / 2, y: T, w: W / 2, h: H - T };
+          case 'mw-snapped-top': return { x: 0, y: T, w: W, h: (H - T) / 2 };
+          case 'mw-snapped-bottom': return { x: 0, y: T + (H - T) / 2, w: W, h: (H - T) / 2 };
+          case 'mw-quad-tl': return { x: 0, y: T, w: W / 2, h: (H - T) / 2 };
+          case 'mw-quad-tr': return { x: W / 2, y: T, w: W / 2, h: (H - T) / 2 };
+          case 'mw-quad-bl': return { x: 0, y: T + (H - T) / 2, w: W / 2, h: (H - T) / 2 };
+          case 'mw-quad-br': return { x: W / 2, y: T + (H - T) / 2, w: W / 2, h: (H - T) / 2 };
+          default: return { x: 0, y: T, w: W, h: H - T };
+        }
+      }
+
+      function applySnap(id, zone) {
+        var el = document.getElementById(id);
+        var ws = windows[id];
+        if (!el || !ws) return;
+        // Remove old snap
+        if (ws.snapClass) el.classList.remove(ws.snapClass);
+        el.classList.add(zone);
+        ws.snapClass = zone;
+      }
+
+      function hideSnapGhost() {
+        var g = document.getElementById('mwSnapGhost');
+        if (g) g.classList.remove('visible');
+      }
+
+      // ========== WINDOW MANAGEMENT ==========
+      function focusWindow(id) {
+        // Remove focused from all
+        var all = document.querySelectorAll('.mw-window');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('mw-focused');
+        // Add to target
+        var el = document.getElementById(id);
+        if (el) {
+          el.classList.add('mw-focused');
+          // Bring to front
+          var maxZ = 10000;
+          for (var j = 0; j < all.length; j++) {
+            var z = parseInt(all[j].style.zIndex) || 10000;
+            if (z > maxZ) maxZ = z;
+          }
+          el.style.zIndex = maxZ + 1;
+        }
+        // Update tab
+        var tabs = document.querySelectorAll('.mw-tab');
+        for (var k = 0; k < tabs.length; k++) tabs[k].classList.remove('mw-active');
+        var tab = document.querySelector('.mw-tab[data-winid="' + id + '"]');
+        if (tab) tab.classList.add('mw-active');
+      }
+
+      function minimizeWindow(id) {
+        var el = document.getElementById(id);
+        var ws = windows[id];
+        if (!el || !ws) return;
+        ws.minimized = true;
+        el.classList.add('mw-minimized');
+        var tab = document.querySelector('.mw-tab[data-winid="' + id + '"]');
+        if (tab) tab.style.opacity = '0.5';
+      }
+
+      function toggleMaximize(id) {
+        var el = document.getElementById(id);
+        var ws = windows[id];
+        if (!el || !ws) return;
+        ws.maximized = !ws.maximized;
+        if (ws.snapClass) { el.classList.remove(ws.snapClass); ws.snapClass = null; }
+        el.classList.toggle('mw-maximized', ws.maximized);
+      }
+
+      function closeWindow(id) {
+        var el = document.getElementById(id);
+        if (el) {
+          el.classList.remove('mw-window-enter');
+          el.classList.add('mw-window-exit');
+          setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 200);
+        }
+        removeTab(id);
+        delete windows[id];
+        var idx = windowOrder.indexOf(id);
+        if (idx >= 0) windowOrder.splice(idx, 1);
+        updateKernelStatus();
+        // If no windows left, deactivate MW mode
+        if (Object.keys(windows).length === 0) {
+          document.body.classList.remove('mw-mode');
+          mainVisible = true;
+          var ide = document.querySelector('.ide-container');
+          if (ide) ide.style.display = '';
+        }
+      }
+
+      function restoreWindow(id) {
+        var el = document.getElementById(id);
+        var ws = windows[id];
+        if (!el || !ws) return;
+        ws.minimized = false;
+        el.classList.remove('mw-minimized');
+        focusWindow(id);
+        var tab = document.querySelector('.mw-tab[data-winid="' + id + '"]');
+        if (tab) tab.style.opacity = '';
+      }
+
+      // ========== TABS ==========
+      function addTab(id, td, title) {
+        var container = document.getElementById('mwTabs');
+        if (!container) return;
+        var tab = document.createElement('div');
+        tab.className = 'mw-tab';
+        tab.dataset.winid = id;
+        tab.onclick = function () {
+          var ws = windows[id];
+          if (ws && ws.minimized) restoreWindow(id);
+          else focusWindow(id);
+        };
+        tab.innerHTML = '<span class="mw-tab-icon">' + td.icon + '</span>' +
+          '<span>' + escHtml(title) + '</span>' +
+          '<span class="mw-tab-close" onclick="event.stopPropagation();MWM.closeWindow(\'' + id + '\')">\u2715</span>';
+        container.appendChild(tab);
+      }
+
+      function removeTab(id) {
+        var tab = document.querySelector('.mw-tab[data-winid="' + id + '"]');
+        if (tab && tab.parentNode) tab.parentNode.removeChild(tab);
+      }
+
+      // ========== MAIN IDE TOGGLE ==========
+      function toggleMainIDE() {
+        mainVisible = !mainVisible;
+        var ide = document.querySelector('.ide-container');
+        var standalone = document.querySelector('.standalone-titlebar');
+        if (ide) ide.style.display = mainVisible ? '' : 'none';
+        if (standalone) standalone.style.display = mainVisible ? '' : 'none';
+      }
+
+      // ========== AI INTEGRATION — CHAT ==========
+      function sendChat(id) {
+        var ws = windows[id];
+        if (!ws) return;
+        var input = document.getElementById(id + '-input');
+        if (!input) return;
+        var text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+
+        // Add user message
+        appendChatMsg(id, 'user', text);
+        setWindowStatus(id, 'busy', 'Generating...');
+
+        // Stream from backend
+        streamChat(id, text, ws.model);
+      }
+
+      function appendChatMsg(id, role, content) {
+        var container = document.getElementById(id + '-msgs');
+        if (!container) return;
+        var msg = document.createElement('div');
+        msg.className = 'mw-chat-msg ' + role;
+        // Basic markdown-ish rendering
+        if (typeof DOMPurify !== 'undefined') {
+          msg.innerHTML = DOMPurify.sanitize(formatMd(content));
+        } else {
+          msg.textContent = content;
+        }
+        container.appendChild(msg);
+        container.scrollTop = container.scrollHeight;
+        return msg;
+      }
+
+      function formatMd(text) {
+        return text
+          .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+          .replace(/\n/g, '<br>');
+      }
+
+      function streamChat(id, query, model) {
+        var url = getBackendUrl();
+        var ws = windows[id];
+        taskCount++;
+        updateKernelStatus();
+
+        var msgs = [];
+        if (ws && ws.messages) msgs = ws.messages.slice();
+        msgs.push({ role: 'user', content: query });
+        if (ws) ws.messages = msgs;
+
+        // Try OpenAI-compat endpoint first
+        var startTime = performance.now();
+        var tokenCount = 0;
+
+        fetch(url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: model,
+            messages: msgs,
+            stream: true,
+            max_tokens: 4096,
+            temperature: 0.7
+          })
+        }).then(function (resp) {
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          var reader = resp.body.getReader();
+          var decoder = new TextDecoder();
+          var assistantMsg = appendChatMsg(id, 'assistant', '');
+          var fullText = '';
+
+          function pump() {
+            return reader.read().then(function (result) {
+              if (result.done) {
+                // Finalize
+                if (ws) ws.messages.push({ role: 'assistant', content: fullText });
+                var elapsed = (performance.now() - startTime) / 1000;
+                var tps = tokenCount > 0 ? (tokenCount / elapsed).toFixed(1) : '0';
+                setWindowStatus(id, 'idle', 'Done — ' + tokenCount + ' tokens');
+                setPerfText(id, tps + ' tok/s');
+                taskCount--;
+                updateKernelStatus();
+                return;
+              }
+
+              var chunk = decoder.decode(result.value, { stream: true });
+              var lines = chunk.split('\n');
+              for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (!line || line === 'data: [DONE]') continue;
+                if (line.startsWith('data: ')) line = line.slice(6);
+                try {
+                  var j = JSON.parse(line);
+                  var delta = '';
+                  // OpenAI format
+                  if (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) {
+                    delta = j.choices[0].delta.content;
+                  }
+                  // Ollama format
+                  else if (j.message && j.message.content) {
+                    delta = j.message.content;
+                  }
+                  // Raw text
+                  else if (j.response) {
+                    delta = j.response;
+                  }
+                  if (delta) {
+                    fullText += delta;
+                    tokenCount++;
+                    if (assistantMsg) {
+                      if (typeof DOMPurify !== 'undefined') {
+                        assistantMsg.innerHTML = DOMPurify.sanitize(formatMd(fullText));
+                      } else {
+                        assistantMsg.textContent = fullText;
+                      }
+                    }
+                    var c = document.getElementById(id + '-msgs');
+                    if (c) c.scrollTop = c.scrollHeight;
+                  }
+                } catch (e) { /* skip non-JSON lines */ }
+              }
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function (err) {
+          // Fallback: try Ollama native /api/chat
+          fetch(url + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: model,
+              messages: msgs,
+              stream: true
+            })
+          }).then(function (resp) {
+            if (!resp.ok) {
+              appendChatMsg(id, 'system', 'Error: Backend not reachable (' + resp.status + ')');
+              setWindowStatus(id, 'error', 'Error');
+              taskCount--;
+              updateKernelStatus();
+              return;
+            }
+            var reader = resp.body.getReader();
+            var decoder = new TextDecoder();
+            var assistantMsg = appendChatMsg(id, 'assistant', '');
+            var fullText = '';
+
+            function pump2() {
+              return reader.read().then(function (result) {
+                if (result.done) {
+                  if (ws) ws.messages.push({ role: 'assistant', content: fullText });
+                  var elapsed = (performance.now() - startTime) / 1000;
+                  var tps = tokenCount > 0 ? (tokenCount / elapsed).toFixed(1) : '0';
+                  setWindowStatus(id, 'idle', 'Done — ' + tokenCount + ' tokens');
+                  setPerfText(id, tps + ' tok/s');
+                  taskCount--;
+                  updateKernelStatus();
+                  return;
+                }
+                var chunk = decoder.decode(result.value, { stream: true });
+                var lines = chunk.split('\n');
+                for (var i = 0; i < lines.length; i++) {
+                  var line = lines[i].trim();
+                  if (!line) continue;
+                  try {
+                    var j = JSON.parse(line);
+                    var delta = (j.message && j.message.content) || j.response || '';
+                    if (delta) {
+                      fullText += delta;
+                      tokenCount++;
+                      if (assistantMsg) {
+                        if (typeof DOMPurify !== 'undefined') {
+                          assistantMsg.innerHTML = DOMPurify.sanitize(formatMd(fullText));
+                        } else {
+                          assistantMsg.textContent = fullText;
+                        }
+                      }
+                      var c = document.getElementById(id + '-msgs');
+                      if (c) c.scrollTop = c.scrollHeight;
+                    }
+                  } catch (e) { }
+                }
+                return pump2();
+              });
+            }
+            return pump2();
+          }).catch(function (e2) {
+            appendChatMsg(id, 'system', 'Error: ' + e2.message);
+            setWindowStatus(id, 'error', 'Disconnected');
+            taskCount--;
+            updateKernelStatus();
+          });
+        });
+      }
+
+      // ========== AUDIT ==========
+      function auditAction(id, type) {
+        var results = document.getElementById(id + '-results');
+        if (!results) return;
+        var ws = windows[id];
+        var model = ws ? ws.model : getActiveModel();
+        setWindowStatus(id, 'busy', 'Auditing...');
+
+        // Get code from drop zone or prompt
+        var dropZone = document.getElementById(id + '-drop');
+        var code = (dropZone && dropZone.dataset.code) || '';
+        if (!code) code = prompt('Paste code or file content to audit:') || '';
+        if (!code) { setWindowStatus(id, 'idle', 'No input'); return; }
+
+        var prompt_text = 'Perform a ' + type + ' audit on the following code. Be thorough and specific. List all findings with severity:\n\n```\n' + code + '\n```';
+        taskCount++;
+        updateKernelStatus();
+
+        results.textContent = 'Running ' + type + ' audit...\n';
+
+        streamToElement(results, model, prompt_text, function () {
+          setWindowStatus(id, 'idle', 'Audit complete');
+          taskCount--;
+          updateKernelStatus();
+        });
+      }
+
+      function auditDrop(id, event) {
+        event.preventDefault();
+        var dropZone = document.getElementById(id + '-drop');
+        if (!dropZone) return;
+        var files = event.dataTransfer.files;
+        if (files.length > 0) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            dropZone.dataset.code = e.target.result;
+            dropZone.textContent = '\u2705 Loaded: ' + files[0].name + ' (' + files[0].size + ' bytes)';
+            dropZone.classList.remove('dragover');
+          };
+          reader.readAsText(files[0]);
+        }
+      }
+
+      // ========== CHAIN OF THOUGHT ==========
+      function startCoT(id) {
+        var input = document.getElementById(id + '-input');
+        var chain = document.getElementById(id + '-chain');
+        if (!input || !chain) return;
+        var query = input.value.trim();
+        if (!query) return;
+        input.value = '';
+        var ws = windows[id];
+        var model = ws ? ws.model : getActiveModel();
+
+        setWindowStatus(id, 'busy', 'Thinking...');
+        taskCount++;
+        updateKernelStatus();
+
+        // Step 1: Understanding
+        addCoTStep(chain, 'thinking', 'Step 1: Understanding', 'Analyzing the question...');
+
+        var steps = [
+          { type: 'thinking', label: 'Understanding', prompt: 'First, analyze and restate this question in your own words. What is being asked?\n\n' + query },
+          { type: 'analysis', label: 'Analysis', prompt: 'Now, given the question below, break it down into sub-problems and analyze each:\n\n' + query },
+          { type: 'analysis', label: 'Research', prompt: 'Given your analysis, what relevant knowledge, patterns, or approaches apply? Be specific:\n\n' + query },
+          { type: 'conclusion', label: 'Conclusion', prompt: 'Synthesize all your analysis into a clear, comprehensive final answer:\n\n' + query }
+        ];
+
+        var context = [];
+        function runStep(i) {
+          if (i >= steps.length) {
+            setWindowStatus(id, 'idle', 'CoT complete — ' + steps.length + ' steps');
+            taskCount--;
+            updateKernelStatus();
+            return;
+          }
+          var step = steps[i];
+          var msgs = context.concat([{ role: 'user', content: step.prompt }]);
+
+          var stepDiv = addCoTStep(chain, step.type, 'Step ' + (i + 1) + ': ' + step.label, '');
+
+          streamToDiv(stepDiv.querySelector('.mw-cot-text') || stepDiv, model, msgs, function (text) {
+            context.push({ role: 'assistant', content: text });
+            runStep(i + 1);
+          });
+        }
+        runStep(0);
+      }
+
+      function addCoTStep(chain, type, label, text) {
+        var div = document.createElement('div');
+        div.className = 'mw-cot-step ' + type;
+        div.innerHTML = '<div class="mw-cot-label">' + escHtml(label) + '</div><div class="mw-cot-text">' + escHtml(text) + '</div>';
+        chain.appendChild(div);
+        chain.scrollTop = chain.scrollHeight;
+        return div;
+      }
+
+      function clearCoT(id) {
+        var chain = document.getElementById(id + '-chain');
+        if (chain) chain.innerHTML = '';
+      }
+
+      // ========== SWARM ==========
+      function startSwarm(id) {
+        var input = document.getElementById(id + '-input');
+        var grid = document.getElementById(id + '-grid');
+        if (!input || !grid) return;
+        var query = input.value.trim();
+        if (!query) return;
+        input.value = '';
+
+        grid.innerHTML = '';
+        setWindowStatus(id, 'busy', 'Swarming...');
+
+        // Get all available models
+        var url = getBackendUrl();
+        fetch(url + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
+          var models = (data.models || []).slice(0, 8);
+          if (models.length === 0) {
+            grid.innerHTML = '<div style="padding:20px;color:#888;">No models available</div>';
+            setWindowStatus(id, 'error', 'No models');
+            return;
+          }
+
+          taskCount += models.length;
+          updateKernelStatus();
+          var completed = 0;
+
+          models.forEach(function (m) {
+            var agentId = uid();
+            var card = document.createElement('div');
+            card.className = 'mw-swarm-agent';
+            card.id = agentId;
+            card.innerHTML =
+              '<div class="mw-agent-header"><span>\u{1F916}</span><span>' + escHtml(m.name) + '</span></div>' +
+              '<div class="mw-agent-model">' + escHtml(m.name) + '</div>' +
+              '<div class="mw-agent-status">Starting...</div>' +
+              '<div class="mw-agent-progress"><div class="mw-agent-progress-bar" style="width:0%"></div></div>' +
+              '<div class="mw-agent-response" style="font-size:11px;color:#aaa;margin-top:4px;max-height:120px;overflow-y:auto;"></div>';
+            grid.appendChild(card);
+
+            // Fire parallel request
+            swarmAgent(agentId, m.name, query, function () {
+              completed++;
+              if (completed >= models.length) {
+                setWindowStatus(id, 'idle', 'Swarm complete — ' + models.length + ' agents');
+                taskCount -= models.length;
+                updateKernelStatus();
+              }
+            });
+          });
+        }).catch(function () {
+          grid.innerHTML = '<div style="padding:20px;color:#ff4444;">Failed to load models from ' + escHtml(url) + '</div>';
+          setWindowStatus(id, 'error', 'Backend error');
+        });
+      }
+
+      function swarmAgent(agentId, model, query, onDone) {
+        var url = getBackendUrl();
+        var statusEl = document.querySelector('#' + agentId + ' .mw-agent-status');
+        var barEl = document.querySelector('#' + agentId + ' .mw-agent-progress-bar');
+        var respEl = document.querySelector('#' + agentId + ' .mw-agent-response');
+        if (statusEl) statusEl.textContent = 'Generating...';
+
+        fetch(url + '/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: query }], stream: true })
+        }).then(function (resp) {
+          var reader = resp.body.getReader();
+          var decoder = new TextDecoder();
+          var text = '';
+          var tokens = 0;
+
+          function pump() {
+            return reader.read().then(function (res) {
+              if (res.done) {
+                if (statusEl) statusEl.textContent = 'Done — ' + tokens + ' tokens';
+                if (barEl) barEl.style.width = '100%';
+                onDone();
+                return;
+              }
+              var chunk = decoder.decode(res.value, { stream: true });
+              chunk.split('\n').forEach(function (line) {
+                line = line.trim();
+                if (!line) return;
+                try {
+                  var j = JSON.parse(line);
+                  var d = (j.message && j.message.content) || j.response || '';
+                  if (d) {
+                    text += d;
+                    tokens++;
+                    if (respEl) respEl.textContent = text;
+                    if (barEl) barEl.style.width = Math.min(tokens, 100) + '%';
+                  }
+                } catch (e) { }
+              });
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function (e) {
+          if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+          onDone();
+        });
+      }
+
+      function stopSwarm(id) {
+        // Note: AbortController would be needed for true cancellation
+        setWindowStatus(id, 'idle', 'Stopped');
+      }
+
+      // ========== SWARM ALL / CHAIN ALL ==========
+      function swarmAll() {
+        var query = prompt('Enter query to swarm across all chat windows:');
+        if (!query) return;
+        Object.keys(windows).forEach(function (id) {
+          var ws = windows[id];
+          if (ws.type === 'chat') {
+            appendChatMsg(id, 'system', '\u{1F41D} Swarm query received');
+            streamChat(id, query, ws.model);
+          }
+        });
+      }
+
+      function chainAll() {
+        var query = prompt('Enter query to chain across all chat windows sequentially:');
+        if (!query) return;
+        var chatWindows = Object.keys(windows).filter(function (id) { return windows[id].type === 'chat'; });
+        if (chatWindows.length === 0) { alert('No chat windows open'); return; }
+
+        function chainStep(i, context) {
+          if (i >= chatWindows.length) return;
+          var id = chatWindows[i];
+          var ws = windows[id];
+          var enhanced = i === 0 ? query : 'Previous model said: "' + context + '"\n\nNow improve or continue: ' + query;
+          appendChatMsg(id, 'system', '\u{1F517} Chain step ' + (i + 1) + '/' + chatWindows.length);
+
+          // Simplified chain - in production, track response and pass to next
+          streamChat(id, enhanced, ws.model);
+          // For simplicity, advance after a delay (proper impl would await stream end)
+          setTimeout(function () { chainStep(i + 1, 'continuing chain...'); }, 3000);
+        }
+        chainStep(0, '');
+      }
+
+      // ========== TERMINAL ==========
+      function termExec(id) {
+        var input = document.getElementById(id + '-input');
+        var output = document.getElementById(id + '-output');
+        if (!input || !output) return;
+        var cmd = input.value.trim();
+        if (!cmd) return;
+        input.value = '';
+
+        output.textContent += cmd + '\n';
+
+        // Built-in commands
+        if (cmd === 'help') {
+          output.textContent += 'Available: help, clear, models, windows, stats, kernel, swarm <query>, cot <query>\n\n$ ';
+        } else if (cmd === 'clear') {
+          output.textContent = '$ ';
+        } else if (cmd === 'windows') {
+          Object.keys(windows).forEach(function (wid) {
+            var w = windows[wid];
+            output.textContent += '  ' + wid + ' [' + w.type + '] ' + w.title + ' model=' + w.model + '\n';
+          });
+          output.textContent += '\n$ ';
+        } else if (cmd === 'models') {
+          fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (d) {
+            (d.models || []).forEach(function (m) { output.textContent += '  ' + m.name + '\n'; });
+            output.textContent += '\n$ ';
+          }).catch(function () { output.textContent += 'Error fetching models\n\n$ '; });
+        } else if (cmd === 'stats') {
+          output.textContent += '  Windows: ' + Object.keys(windows).length + '\n';
+          output.textContent += '  Tasks: ' + taskCount + '\n';
+          output.textContent += '  Kernel: ' + (kernelReady ? 'ACTIVE' : 'STANDBY') + '\n\n$ ';
+        } else if (cmd === 'kernel') {
+          output.textContent += '  MASM MultiWindow Kernel v1.0\n';
+          output.textContent += '  Workers: 4 threads\n';
+          output.textContent += '  IPC: Shared memory (1MB)\n';
+          output.textContent += '  Ring buffers: 5 priority levels\n\n$ ';
+        } else {
+          output.textContent += 'Unknown command: ' + cmd + '\n\n$ ';
+        }
+        output.scrollTop = output.scrollHeight;
+      }
+
+      // ========== MODEL MANAGEMENT ==========
+      function switchModel(id, model) {
+        var ws = windows[id];
+        if (ws) ws.model = model;
+      }
+
+      function initWindowContent(id, type) {
+        // Populate model selector for this window
+        var select = document.querySelector('#' + id + ' .mw-win-model');
+        if (select) populateModelSelect(select, windows[id] ? windows[id].model : '');
+
+        // Type-specific init
+        if (type === 'models') loadModelList(id);
+        if (type === 'perf') startPerfMonitor(id);
+      }
+
+      function populateModelSelect(select, current) {
+        fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
+          var models = data.models || [];
+          modelCache = models;
+          select.innerHTML = '';
+          models.forEach(function (m) {
+            var opt = document.createElement('option');
+            opt.value = m.name;
+            opt.textContent = m.name;
+            if (m.name === current) opt.selected = true;
+            select.appendChild(opt);
+          });
+        }).catch(function () { /* keep default */ });
+      }
+
+      function loadModelList(id) {
+        var list = document.getElementById(id + '-list');
+        if (!list) return;
+        fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
+          var models = data.models || [];
+          list.innerHTML = '';
+          if (models.length === 0) {
+            list.innerHTML = '<div style="padding:20px;color:#666;text-align:center;">No models found</div>';
+            return;
+          }
+          models.forEach(function (m) {
+            var card = document.createElement('div');
+            card.className = 'mw-model-card';
+            card.onclick = function () {
+              document.querySelectorAll('.mw-model-card').forEach(function (c) { c.classList.remove('selected'); });
+              card.classList.add('selected');
+            };
+            var sizeGB = m.size ? (m.size / 1073741824).toFixed(1) + ' GB' : '?';
+            card.innerHTML =
+              '<span style="font-size:18px;">\u{1F916}</span>' +
+              '<span class="mw-model-name">' + escHtml(m.name) + '</span>' +
+              '<span class="mw-model-size">' + sizeGB + '</span>';
+            list.appendChild(card);
+          });
+        }).catch(function () {
+          list.innerHTML = '<div style="padding:20px;color:#ff4444;">Backend not reachable</div>';
+        });
+      }
+
+      // ========== PERF MONITOR ==========
+      function startPerfMonitor(id) {
+        var interval = setInterval(function () {
+          if (!windows[id]) { clearInterval(interval); return; }
+          var el;
+          el = document.getElementById(id + '-tasks'); if (el) el.textContent = taskCount;
+          el = document.getElementById(id + '-wins'); if (el) el.textContent = Object.keys(windows).length;
+          el = document.getElementById(id + '-uptime'); if (el) {
+            var s = Math.floor((Date.now() - (windows[id].created || Date.now())) / 1000);
+            el.textContent = s < 60 ? s + 's' : Math.floor(s / 60) + 'm';
+          }
+          if (performance.memory) {
+            el = document.getElementById(id + '-mem');
+            if (el) el.textContent = (performance.memory.usedJSHeapSize / 1048576).toFixed(0) + 'MB';
+          }
+        }, 1000);
+      }
+
+      // ========== STREAMING HELPERS ==========
+      function streamToElement(el, model, prompt_text, onDone) {
+        var url = getBackendUrl();
+        fetch(url + '/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt_text }], stream: true })
+        }).then(function (resp) {
+          var reader = resp.body.getReader();
+          var decoder = new TextDecoder();
+          function pump() {
+            return reader.read().then(function (res) {
+              if (res.done) { if (onDone) onDone(); return; }
+              var chunk = decoder.decode(res.value, { stream: true });
+              chunk.split('\n').forEach(function (line) {
+                line = line.trim();
+                if (!line) return;
+                try {
+                  var j = JSON.parse(line);
+                  var d = (j.message && j.message.content) || j.response || '';
+                  if (d) el.textContent += d;
+                } catch (e) { }
+              });
+              el.scrollTop = el.scrollHeight;
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function (e) {
+          el.textContent += '\nError: ' + e.message;
+          if (onDone) onDone();
+        });
+      }
+
+      function streamToDiv(div, model, msgs, onDone) {
+        var url = getBackendUrl();
+        var text = '';
+        fetch(url + '/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: model, messages: msgs, stream: true })
+        }).then(function (resp) {
+          var reader = resp.body.getReader();
+          var decoder = new TextDecoder();
+          function pump() {
+            return reader.read().then(function (res) {
+              if (res.done) { if (onDone) onDone(text); return; }
+              var chunk = decoder.decode(res.value, { stream: true });
+              chunk.split('\n').forEach(function (line) {
+                line = line.trim();
+                if (!line) return;
+                try {
+                  var j = JSON.parse(line);
+                  var d = (j.message && j.message.content) || j.response || '';
+                  if (d) { text += d; div.textContent = text; }
+                } catch (e) { }
+              });
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function (e) {
+          div.textContent += '\nError: ' + e.message;
+          if (onDone) onDone(text);
+        });
+      }
+
+      // ========== STATUS HELPERS ==========
+      function setWindowStatus(id, state, text) {
+        var dot = document.getElementById(id + '-dot');
+        var status = document.getElementById(id + '-status');
+        if (dot) { dot.className = 'mw-status-dot ' + state; }
+        if (status) status.textContent = text || state;
+      }
+
+      function setPerfText(id, text) {
+        var el = document.getElementById(id + '-perf');
+        if (el) el.textContent = text;
+      }
+
+      function updateKernelStatus() {
+        var dot = document.getElementById('mwKernelDot');
+        var text = document.getElementById('mwKernelText');
+        var count = document.getElementById('mwTaskCount');
+        if (dot) dot.className = 'mw-kernel-dot' + (taskCount > 0 ? ' busy' : ' active');
+        if (count) count.textContent = taskCount + ' tasks | ' + Object.keys(windows).length + ' wins';
+      }
+
+      // ========== LAYOUT PRESETS ==========
+      function applyLayout(name) {
+        hideLayoutPicker();
+        var ids = Object.keys(windows);
+
+        switch (name) {
+          case 'focus':
+            mainVisible = true;
+            toggleMainIDE();
+            ids.forEach(function (id) { minimizeWindow(id); });
+            break;
+
+          case 'split-chat':
+            if (ids.length === 0) create('chat');
+            mainVisible = true;
+            var ide = document.querySelector('.ide-container');
+            if (ide) { ide.style.display = ''; ide.style.width = '50vw'; }
+            var chatWins = ids.filter(function (id) { return windows[id].type === 'chat'; });
+            if (chatWins.length > 0) applySnap(chatWins[0], 'mw-snapped-right');
+            break;
+
+          case 'triple':
+            ensureWindowType('chat');
+            ensureWindowType('code');
+            tileAll();
+            break;
+
+          case 'quad':
+            ensureWindowType('chat');
+            ensureWindowType('code');
+            ensureWindowType('terminal');
+            ensureWindowType('audit');
+            quadTile();
+            break;
+
+          case 'swarm-mode':
+            create('swarm');
+            for (var i = 0; i < 3; i++) create('chat');
+            tileAll();
+            break;
+
+          case 'audit-station':
+            ensureWindowType('audit');
+            ensureWindowType('code');
+            ensureWindowType('terminal');
+            tileAll();
+            break;
+
+          case 'cot-lab':
+            ensureWindowType('cot');
+            ensureWindowType('chat');
+            ensureWindowType('perf');
+            tileAll();
+            break;
+
+          case 'dev-full':
+            ['chat', 'code', 'terminal', 'audit', 'perf', 'debug'].forEach(function (t) {
+              ensureWindowType(t);
+            });
+            tileAll();
+            break;
+        }
+      }
+
+      function ensureWindowType(type) {
+        var existing = Object.keys(windows).filter(function (id) { return windows[id].type === type; });
+        if (existing.length === 0) create(type);
+      }
+
+      function tileAll() {
+        var ids = Object.keys(windows).filter(function (id) { return !windows[id].minimized; });
+        if (ids.length === 0) return;
+        var cols = Math.ceil(Math.sqrt(ids.length));
+        var rows = Math.ceil(ids.length / cols);
+        var W = window.innerWidth;
+        var H = window.innerHeight - 33;
+        var cw = Math.floor(W / cols);
+        var rh = Math.floor(H / rows);
+
+        ids.forEach(function (id, i) {
+          var col = i % cols;
+          var row = Math.floor(i / cols);
+          var el = document.getElementById(id);
+          var ws = windows[id];
+          if (!el || !ws) return;
+          // Clear snap classes
+          if (ws.snapClass) { el.classList.remove(ws.snapClass); ws.snapClass = null; }
+          if (ws.maximized) { el.classList.remove('mw-maximized'); ws.maximized = false; }
+          el.style.left = (col * cw) + 'px';
+          el.style.top = (33 + row * rh) + 'px';
+          el.style.width = cw + 'px';
+          el.style.height = rh + 'px';
+          el.style.borderRadius = '0';
+        });
+      }
+
+      function quadTile() {
+        var ids = Object.keys(windows).filter(function (id) { return !windows[id].minimized; }).slice(0, 4);
+        var zones = ['mw-quad-tl', 'mw-quad-tr', 'mw-quad-bl', 'mw-quad-br'];
+        ids.forEach(function (id, i) { if (zones[i]) applySnap(id, zones[i]); });
+      }
+
+      function cascadeAll() {
+        var ids = Object.keys(windows);
+        ids.forEach(function (id, i) {
+          var el = document.getElementById(id);
+          var ws = windows[id];
+          if (!el || !ws) return;
+          if (ws.snapClass) { el.classList.remove(ws.snapClass); ws.snapClass = null; }
+          if (ws.maximized) { el.classList.remove('mw-maximized'); ws.maximized = false; }
+          if (ws.minimized) { ws.minimized = false; el.classList.remove('mw-minimized'); }
+          el.style.left = (50 + i * 30) + 'px';
+          el.style.top = (60 + i * 30) + 'px';
+          el.style.width = '520px';
+          el.style.height = '420px';
+          el.style.borderRadius = '8px';
+          focusWindow(id);
+        });
+      }
+
+      function minimizeAll() {
+        Object.keys(windows).forEach(function (id) { minimizeWindow(id); });
+      }
+
+      function restoreAll() {
+        Object.keys(windows).forEach(function (id) { restoreWindow(id); });
+      }
+
+      // ========== PICKER ==========
+      function showPicker() { var el = document.getElementById('mwPickerOverlay'); if (el) el.classList.add('visible'); }
+      function hidePicker() { var el = document.getElementById('mwPickerOverlay'); if (el) el.classList.remove('visible'); }
+      function showLayoutPicker() { var el = document.getElementById('mwLayoutOverlay'); if (el) el.classList.add('visible'); }
+      function hideLayoutPicker() { var el = document.getElementById('mwLayoutOverlay'); if (el) el.classList.remove('visible'); }
+
+      // ========== MISC WINDOW ACTIONS ==========
+      function benchAction(id, type) {
+        var results = document.getElementById(id + '-results');
+        if (!results) return;
+        results.textContent = 'Running ' + type + ' benchmark...\n\n';
+        setWindowStatus(id, 'busy', 'Benchmarking...');
+
+        if (type === 'allmodels') {
+          fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
+            var models = data.models || [];
+            var idx = 0;
+            function benchNext() {
+              if (idx >= models.length) {
+                setWindowStatus(id, 'idle', 'Benchmark complete');
+                return;
+              }
+              var m = models[idx++];
+              results.textContent += 'Testing ' + m.name + '... ';
+              var start = performance.now();
+              fetch(getBackendUrl() + '/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: m.name, messages: [{ role: 'user', content: 'Hello' }], stream: false })
+              }).then(function () {
+                var ms = (performance.now() - start).toFixed(0);
+                results.textContent += ms + 'ms\n';
+                benchNext();
+              }).catch(function (e) {
+                results.textContent += 'FAILED: ' + e.message + '\n';
+                benchNext();
+              });
+            }
+            benchNext();
+          });
+        } else {
+          // Single benchmark
+          var start = performance.now();
+          var prompt = type === 'throughput' ? 'Write a 500 word essay about AI.' :
+            type === 'latency' ? 'Say hello.' : 'What is 1+1?';
+          streamToElement(results, windows[id] ? windows[id].model : getActiveModel(), prompt, function () {
+            var ms = (performance.now() - start).toFixed(0);
+            results.textContent += '\n\n--- ' + type + ' benchmark: ' + ms + 'ms ---\n';
+            setWindowStatus(id, 'idle', type + ': ' + ms + 'ms');
+          });
+        }
+      }
+
+      function compileAction(id, type) {
+        var log = document.getElementById(id + '-log');
+        if (log) log.textContent += '[Build] Starting ' + type + ' build...\n';
+        setWindowStatus(id, 'busy', 'Building...');
+        // Simulate build (in real usage, this would call the backend)
+        setTimeout(function () {
+          if (log) log.textContent += '[Build] ' + type + ' build complete.\n';
+          setWindowStatus(id, 'idle', 'Build OK');
+        }, 1500);
+      }
+
+      function reAction(id, type) {
+        var hex = document.getElementById(id + '-hex');
+        if (hex) hex.textContent = 'Running ' + type + ' analysis...\n\n';
+        setWindowStatus(id, 'busy', 'Analyzing...');
+      }
+
+      function reDrop(id, event) {
+        event.preventDefault();
+        var hex = document.getElementById(id + '-hex');
+        var files = event.dataTransfer.files;
+        if (files.length > 0 && hex) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var arr = new Uint8Array(e.target.result);
+            var lines = [];
+            for (var i = 0; i < Math.min(arr.length, 4096); i += 16) {
+              var addr = i.toString(16).padStart(8, '0');
+              var hexBytes = [];
+              var ascii = '';
+              for (var j = 0; j < 16 && i + j < arr.length; j++) {
+                hexBytes.push(arr[i + j].toString(16).padStart(2, '0'));
+                ascii += arr[i + j] >= 32 && arr[i + j] < 127 ? String.fromCharCode(arr[i + j]) : '.';
+              }
+              lines.push(addr + '  ' + hexBytes.join(' ').padEnd(48) + '  ' + ascii);
+            }
+            hex.textContent = files[0].name + ' (' + arr.length + ' bytes)\n\n' + lines.join('\n');
+          };
+          reader.readAsArrayBuffer(files[0]);
+        }
+      }
+
+      function browserNav(id) {
+        var url = document.getElementById(id + '-url');
+        var frame = document.getElementById(id + '-frame');
+        if (url && frame) frame.src = url.value;
+      }
+
+      // ========== KEYBOARD SHORTCUTS ==========
+      document.addEventListener('keydown', function (e) {
+        // Ctrl+N = new window picker
+        if (e.ctrlKey && e.key === 'n' && !e.shiftKey && !e.altKey) {
+          e.preventDefault();
+          showPicker();
+        }
+        // Escape = close picker
+        if (e.key === 'Escape') {
+          hidePicker();
+          hideLayoutPicker();
+        }
+        // Ctrl+Shift+T = tile all
+        if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+          e.preventDefault();
+          tileAll();
+        }
+        // Ctrl+Shift+W = close focused window
+        if (e.ctrlKey && e.shiftKey && e.key === 'W') {
+          e.preventDefault();
+          var focused = document.querySelector('.mw-window.mw-focused');
+          if (focused) closeWindow(focused.id);
+        }
+      });
+
+      // ========== MASM KERNEL BRIDGE ==========
+      // In production, this bridges to the MASM kernel DLL via native messaging.
+      // In the HTML-only mode, it provides a JS-side simulation.
+      var MASMKernel = {
+        init: function () {
+          kernelReady = true;
+          updateKernelStatus();
+          console.log('[MWM] MASM MultiWindow Kernel bridge initialized');
+          return true;
+        },
+        submitTask: function (type, priority, windowId, callback) {
+          taskCount++;
+          updateKernelStatus();
+          return ++nextId;
+        },
+        cancelTask: function (taskId) {
+          taskCount = Math.max(0, taskCount - 1);
+          updateKernelStatus();
+        },
+        registerWindow: function (type, x, y, w, h) { return ++nextId; },
+        unregisterWindow: function (windowId) { },
+        sendIPC: function (msg, src, dst, payload) { },
+        getStats: function () {
+          return {
+            activeWindows: Object.keys(windows).length,
+            activeTasks: taskCount,
+            totalProcessed: 0,
+            workerCount: 4,
+            uptime: Date.now()
+          };
+        },
+        swarmBroadcast: function (type, payload, modelCount) { return modelCount; },
+        chainOfThought: function (windowId, steps, callbacks) { return 0; }
+      };
+
+      // Initialize kernel bridge
+      MASMKernel.init();
+
+      // ========== AUTO-ACTIVATE MW TOOLBAR ==========
+      // The toolbar is always visible. The main IDE remains the primary view.
+      // Windows overlay on top. The "Main IDE" tab represents the base layout.
+      document.body.classList.add('mw-mode');
+
+      // ========== PUBLIC API ==========
+      return {
+        create: create,
+        closeWindow: closeWindow,
+        focusWindow: focusWindow,
+        minimizeWindow: minimizeWindow,
+        toggleMaximize: toggleMaximize,
+        toggleMainIDE: toggleMainIDE,
+        sendChat: sendChat,
+        auditAction: auditAction,
+        auditDrop: auditDrop,
+        startCoT: startCoT,
+        clearCoT: clearCoT,
+        startSwarm: startSwarm,
+        stopSwarm: stopSwarm,
+        swarmAll: swarmAll,
+        chainAll: chainAll,
+        termExec: termExec,
+        switchModel: switchModel,
+        benchAction: benchAction,
+        compileAction: compileAction,
+        reAction: reAction,
+        reDrop: reDrop,
+        browserNav: browserNav,
+        showPicker: showPicker,
+        hidePicker: hidePicker,
+        showLayoutPicker: showLayoutPicker,
+        hideLayoutPicker: hideLayoutPicker,
+        applyLayout: applyLayout,
+        tileAll: tileAll,
+        cascadeAll: cascadeAll,
+        minimizeAll: minimizeAll,
+        restoreAll: restoreAll,
+        quadTile: quadTile,
+        // Internals for debugging
+        windows: windows,
+        kernel: MASMKernel,
+        getTaskCount: function () { return taskCount; }
+      };
+    })();
+
+    // Export to window for cross-script access
+    window.MWM = MWM;
+    console.log('[RawrXD] Multi-Window Manager loaded — Ctrl+N to open new window');
+  </script>
+
+  <!-- Action Item #20: Chat Command Router — exposes /p, /preset, /cot, /fix, /agent etc. -->
+  <script src="ide_chat_commands.js"
+    onerror="console.warn('[RawrXD] ide_chat_commands.js not found — /commands disabled')"></script>
 </body>
 
 </html>

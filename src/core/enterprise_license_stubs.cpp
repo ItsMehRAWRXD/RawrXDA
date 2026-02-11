@@ -7,9 +7,11 @@
 //   - Return safe default values
 //   - Never crash
 //
-// Once the ASM modules are assembled and linked, these stubs will be
-// overridden by the real implementations via linker precedence.
+// When RAWR_HAS_MASM=1 (MSVC builds with ASM linked), this entire file is
+// disabled so the real ASM .obj symbols take precedence.
 // ============================================================================
+
+#if !defined(RAWR_HAS_MASM) || !RAWR_HAS_MASM
 
 #include <cstdint>
 #include <cstddef>
@@ -80,3 +82,5 @@ uint64_t g_FlashAttnTiles = 0;
 #endif // !_MSC_VER
 
 } // extern "C"
+
+#endif // !RAWR_HAS_MASM

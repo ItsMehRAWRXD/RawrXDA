@@ -59,6 +59,47 @@ cmake .. -DENABLE_QT=OFF -DUSE_AVX512=ON -DRAWRXD_BUILD_CLI=ON
 cmake --build . --config Release
 ```
 
+## 🏗️ Build Targets
+
+| Target | Description |
+|--------|-------------|
+| `RawrEngine` | CLI inference engine + agentic core |
+| `RawrXD-Win32IDE` | Full Win32 GUI IDE with all subsystems |
+| `RawrXD-InferenceEngine` | **Standalone inference** — loads GGUF, emits tokens, no IDE |
+| `rawrxd-monaco-gen` | Monaco/React IDE generator |
+
+### Standalone Inference Engine (Phase 6)
+```powershell
+cmake --build . --config Release --target RawrXD-InferenceEngine
+# Usage:
+bin\RawrXD-InferenceEngine.exe model.gguf --prompt "Hello" --tokens 256
+bin\RawrXD-InferenceEngine.exe model.gguf --interactive
+bin\RawrXD-InferenceEngine.exe model.gguf --benchmark
+```
+
+## 🔄 Tier System & Phase Deprecation
+
+The original numbered phase system (Phases 0–46) has been superseded by a tier-based maturity model. Phases 7–17 were **merged into core infrastructure**, not abandoned:
+
+| Old Phase | Status | Where It Went |
+|-----------|--------|---------------|
+| Phase 7 (Security/Policy) | Merged | `agent_policy.h/cpp` — T3-C Hotpatch Safety |
+| Phase 8 (Explainability) | Merged | `agent_explainability.cpp` — Agent Transparency |
+| Phase 9 (Swarm I/O) | Merged | ASM init sequence + `swarm_coordinator.cpp` |
+| Phase 10 (Orchestration) | Merged | `SafetyContract`, `ConfidenceGate`, `ExecutionGovernor` |
+| Phase 11 (Swarm Coordinator) | Merged | `RawrXD_Swarm_Network.asm` + `Win32IDE_SwarmPanel.cpp` |
+| Phase 12 (Native Debugger) | Merged | `RawrXD_Debug_Engine.asm` + `Win32IDE_NativeDebugPanel.cpp` |
+| Phase 13 | Never defined | — |
+| Phase 14 (Hotpatch UI) | Merged | `Win32IDE_HotpatchPanel.cpp` + T3-C |
+| Phases 15–16 (CFG/SSA) | Merged | `RawrCodex.asm` prerequisites |
+| Phase 17 (Type Recovery) | Merged | `RawrCodex.asm` + `enterprise_license.cpp` |
+| Phase 18 (Distributed) | Rewritten | Swarm Subsystem (Phase 21) |
+
+### Current Tier Status
+- **T3: COMPLETE** — Telemetry Kernel → Deterministic Replay → Hotpatch Safety
+- **T4: COMPLETE** — Autonomous Recovery Orchestrator (divergence → symbolize → fix → verify → commit)
+- **Inference Engine: Phase 6 compilation target added** — `RawrXD-InferenceEngine.exe`
+
 ## ⚠️ Migration Notes (v2.0 → v3.0)
 - **Qt Removal**: All `qtapp/` references are deprecated. The core engine is now `src/agentic_engine.cpp` (Native).
 - **Simulations**: Legacy simulation stubs (`cli_extras_stubs.cpp`, `stubs.cpp`) have been removed or neutralized.

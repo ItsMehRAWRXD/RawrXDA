@@ -48,6 +48,9 @@ int main(int argc, char** argv) {
 ╚══════════════════════════════════════════════════════════════╝
 )" << std::endl;
 
+    // Command registration is automatic via static AutoRegistrar in
+    // unified_command_dispatch.cpp — reads COMMAND_TABLE at startup.
+
     std::string model_path;
     uint16_t port = 8080;
     bool enable_http = true;

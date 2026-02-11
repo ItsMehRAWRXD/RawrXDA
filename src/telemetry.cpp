@@ -30,20 +30,17 @@
 
 // Standard output for debug logging
 #include <iostream>
-
-// Additional includes required for the extended implementation
-#include <QJsonDocument>
-#include <QFile>
-#include <QDateTime>
+#include <fstream>
+#include <iomanip>
 
 // ---------------------------------------------------------------------------
 // Telemetry class implementation (high‑level wrapper)
 // ---------------------------------------------------------------------------
 
 Telemetry::Telemetry()
-    : is_enabled_(true) {
-    // Initialize the low‑level telemetry subsystem. If it fails we simply
-    // keep the wrapper functional but disabled – this mirrors the original
+    : is_enabled_(true), events_(nlohmann::json::array()) {
+    // Initialize the low-level telemetry subsystem. If it fails we simply
+    // keep the wrapper functional but disabled - this mirrors the original
     // behaviour where telemetry was optional.
     if (!telemetry::Initialize()) {
         is_enabled_ = false;
@@ -61,25 +58,38 @@ void Telemetry::initializeHardware() {
     telemetry::InitializeHardware();
 }
 
-void Telemetry::recordEvent(const QString &event_name, const QJsonObject &metadata) {
-    if (!is_enabled_) return;
-    QJsonObject event;
-    event["name"] = event_name;
-    event["timestamp"] = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
-    event["metadata"] = metadata;
-    events_.append(event);
-    // In a production system we would also stream this event to a logger.
-    std::cout << "Telemetry event recorded: " << event_name.toStdString() << std::endl;
+static std::string CurrentISOTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto tt = std::chrono::system_clock::to_time_t(now);
+    std::tm tm_buf{};
+#ifdef _WIN32
+    gmtime_s(&tm_buf, &tt);
+#else
+    gmtime_r(&tt, &tm_buf);
+#endif
+    char buf[64];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &tm_buf);
+    return std::string(buf);
 }
 
-bool Telemetry::saveTelemetry(const QString &filepath) {
+void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json& metadata) {
+    if (!is_enabled_) return;
+    nlohmann::json event;
+    event["name"] = event_name;
+    event["timestamp"] = CurrentISOTimestamp();
+    event["metadata"] = metadata;
+    events_.push_back(event);
+    // In a production system we would also stream this event to a logger.
+    std::cout << "Telemetry event recorded: " << event_name << std::endl;
+}
+
+bool Telemetry::saveTelemetry(const std::string& filepath) {
     if (!is_enabled_) return false;
-    QJsonObject root;
+    nlohmann::json root;
     root["events"] = events_;
-    QJsonDocument doc(root);
-    QFile file(filepath);
-    if (!file.open(QIODevice::WriteOnly)) return false;
-    file.write(doc.toJson());
+    std::ofstream file(filepath);
+    if (!file.is_open()) return false;
+    file << root.dump(2);
     file.close();
     return true;
 }
@@ -176,7 +186,7 @@ bool Initialize() {
     g_startMs = NowMs();
 
     // *** PRODUCTION READINESS: Disable heavy COM/PDH/WMI initialization during static init ***
-    // *** These will be deferred to a manual Init() call after Qt app is fully initialized ***
+    // *** These will be deferred to a manual InitializeHardware() call after application startup ***
     /*
     // COM init - only if WMI available
     HRESULT hr = E_FAIL;
@@ -224,7 +234,7 @@ bool Initialize() {
 }
 
 // Two-phase initialization: Heavy COM/PDH/WMI work moved here
-// Call this AFTER QApplication is fully initialized
+// Call this AFTER application is fully initialized
 bool InitializeHardware() {
     std::lock_guard<std::mutex> guard(g_lock);
     if (!g_initialized) return false;  // Must call Initialize() first

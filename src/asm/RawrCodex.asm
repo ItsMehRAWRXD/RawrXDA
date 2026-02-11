@@ -2590,7 +2590,8 @@ RawrCodex_DecodeInstruction PROC
     imul eax, 8
     lea rcx, regNames64
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames64 + rax]
+    lea r11, regNames64
+    lea rdx, [r11 + rax]
     call lstrcpyA
     jmp @@decode_done
 
@@ -2611,7 +2612,8 @@ RawrCodex_DecodeInstruction PROC
 @@pop_no_ext:
     imul eax, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames64 + rax]
+    lea r11, regNames64
+    lea rdx, [r11 + rax]
     call lstrcpyA
     jmp @@decode_done
 
@@ -2696,7 +2698,8 @@ RawrCodex_DecodeInstruction PROC
     and edx, 0Fh
     shl edx, 2                      ; * 4 bytes per entry
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [ccMnemonics + rdx]
+    lea r11, ccMnemonics
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     movsx eax, BYTE PTR [rsi + r15]
     inc r15d
@@ -2747,7 +2750,8 @@ RawrCodex_DecodeInstruction PROC
     push rdx
     imul edx, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames64 + rdx]
+    lea r11, regNames64
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     ; Append ", "
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
@@ -2762,7 +2766,8 @@ RawrCodex_DecodeInstruction PROC
     call lstrlenA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     add rcx, rax
-    lea rdx, [regNames64 + rdx]
+    lea r11, regNames64
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     inc r15d
     jmp @@decode_done
@@ -2770,7 +2775,8 @@ RawrCodex_DecodeInstruction PROC
     push rdx
     imul edx, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames32 + rdx]
+    lea r11, regNames32
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     call lstrlenA
@@ -2784,7 +2790,8 @@ RawrCodex_DecodeInstruction PROC
     call lstrlenA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     add rcx, rax
-    lea rdx, [regNames32 + rdx]
+    lea r11, regNames32
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     inc r15d
     jmp @@decode_done
@@ -2864,7 +2871,8 @@ RawrCodex_DecodeInstruction PROC
     push rdx
     imul ecx, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     call lstrlenA
@@ -2878,7 +2886,8 @@ RawrCodex_DecodeInstruction PROC
     call lstrlenA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     add rcx, rax
-    lea rdx, [regNames64 + rdx]
+    lea r11, regNames64
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     inc r15d
     jmp @@decode_done
@@ -2886,7 +2895,8 @@ RawrCodex_DecodeInstruction PROC
     push rdx
     imul ecx, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames32 + rcx]
+    lea r11, regNames32
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     call lstrlenA
@@ -2900,7 +2910,8 @@ RawrCodex_DecodeInstruction PROC
     call lstrlenA
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
     add rcx, rax
-    lea rdx, [regNames32 + rdx]
+    lea r11, regNames32
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     inc r15d
     jmp @@decode_done
@@ -3079,7 +3090,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3                      ; * 8 bytes per entry
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [aluGroupMn + rcx]
+    lea r11, aluGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     ; Skip ModR/M + SIB + disp
@@ -3125,7 +3137,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [aluGroupMn + rcx]
+    lea r11, aluGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     movzx eax, BYTE PTR [rsi + r15]
@@ -3174,7 +3187,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [aluGroupMn + rcx]
+    lea r11, aluGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     ; Skip ModR/M
@@ -3219,7 +3233,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [aluGroupMn + rcx]
+    lea r11, aluGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     inc r15d                        ; ModR/M
@@ -3273,7 +3288,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [shiftGroupMn + rcx]
+    lea r11, shiftGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     inc r15d                        ; ModR/M
@@ -3314,7 +3330,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [shiftGroupMn + rcx]
+    lea r11, shiftGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     inc r15d                        ; ModR/M
@@ -3354,7 +3371,8 @@ RawrCodex_DecodeInstruction PROC
     shl ecx, 3
     push rax
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [shiftGroupMn + rcx]
+    lea r11, shiftGroupMn
+    lea rdx, [r11 + rcx]
     call lstrcpyA
     pop rax
     inc r15d
@@ -3406,14 +3424,16 @@ RawrCodex_DecodeInstruction PROC
     ; 64-bit: imm64 (8 bytes)
     imul eax, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames64 + rax]
+    lea r11, regNames64
+    lea rdx, [r11 + rax]
     call lstrcpyA
     add r15d, 8                     ; imm64
     jmp @@decode_done
 @@movi_32:
     imul eax, 8
     lea rcx, [r13].RAWRINSTRUCTION.szOperands
-    lea rdx, [regNames32 + rax]
+    lea r11, regNames32
+    lea rdx, [r11 + rax]
     call lstrcpyA
     add r15d, 4                     ; imm32
     jmp @@decode_done
@@ -3525,7 +3545,8 @@ RawrCodex_DecodeInstruction PROC
     and edx, 0Fh
     shl edx, 2                      ; * 4 bytes per entry
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [ccMnemonics + rdx]
+    lea r11, ccMnemonics
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     pop rax
     movsxd rax, DWORD PTR [rsi + r15]
@@ -3552,7 +3573,8 @@ RawrCodex_DecodeInstruction PROC
     and edx, 0Fh
     shl edx, 3                      ; * 8 bytes per entry
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [cmovMnemonics + rdx]
+    lea r11, cmovMnemonics
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     ; Skip ModR/M byte (simplified)
     inc r15d
@@ -3569,7 +3591,8 @@ RawrCodex_DecodeInstruction PROC
     and edx, 0Fh
     shl edx, 3                      ; * 8 bytes per entry
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
-    lea rdx, [setMnemonics + rdx]
+    lea r11, setMnemonics
+    lea rdx, [r11 + rdx]
     call lstrcpyA
     ; Skip ModR/M byte
     inc r15d
@@ -4251,18 +4274,21 @@ DecodeModRM PROC
     test r13d, r13d                 ; is64bit?
     jz @@reg_32bit
     imul ecx, 8
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
     jmp @@copy_reg_name
 @@reg_32bit:
     cmp ecx, 8
     jge @@reg_extended_32
     imul ecx, 8
-    lea rdx, [regNames32 + rcx]
+    lea r11, regNames32
+    lea rdx, [r11 + rcx]
     jmp @@copy_reg_name
 @@reg_extended_32:
     ; Extended 32-bit regs (r8d-r15d): use 64-bit name table
     imul ecx, 8
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
 @@copy_reg_name:
     mov rcx, r12                    ; reg_buf
     call lstrcpyA
@@ -4289,17 +4315,20 @@ DecodeModRM PROC
     test r13d, r13d
     jz @@rm_reg_32
     imul ecx, 8
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
     jmp @@copy_rm_reg
 @@rm_reg_32:
     cmp ecx, 8
     jge @@rm_reg_ext32
     imul ecx, 8
-    lea rdx, [regNames32 + rcx]
+    lea r11, regNames32
+    lea rdx, [r11 + rcx]
     jmp @@copy_rm_reg
 @@rm_reg_ext32:
     imul ecx, 8
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
 @@copy_rm_reg:
     push r8
     mov rcx, rdi                    ; rm_buf
@@ -4346,17 +4375,20 @@ DecodeModRM PROC
     test r13d, r13d
     jz @@mem_base_32
     imul ecx, 8
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
     jmp @@format_mem
 @@mem_base_32:
     cmp ecx, 8
     jge @@mem_base_ext32
     imul ecx, 8
-    lea rdx, [regNames32 + rcx]
+    lea r11, regNames32
+    lea rdx, [r11 + rcx]
     jmp @@format_mem
 @@mem_base_ext32:
     imul ecx, 8
-    lea rdx, [regNames64 + rcx]
+    lea r11, regNames64
+    lea rdx, [r11 + rcx]
 
 @@format_mem:
     pop rax                         ; mod
@@ -7374,7 +7406,8 @@ RawrCodex_StructureControlFlow PROC
     inc r13d
     ; Record DFS parent
     mov eax, [rsp + 54h + 8]       ; current BB (adjusted for push rax)
-    mov DWORD PTR [domDfsParent + rdx*4], eax
+    lea r11, domDfsParent
+    mov DWORD PTR [r11 + rdx*4], eax
 @@scf_succ_found_skip:
     jmp @@scf_succ_found
 
@@ -7404,7 +7437,8 @@ RawrCodex_StructureControlFlow PROC
     mov eax, r12d
     dec eax
     sub eax, r15d                   ; RPO number = (numBBs - 1) - counter
-    mov DWORD PTR [domDfsNums + rsi*4], eax
+    lea r11, domDfsNums
+    mov DWORD PTR [r11 + rsi*4], eax
     inc r15d
     jmp @@scf_dfs_loop
 

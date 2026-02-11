@@ -1,119 +1,125 @@
 #pragma once
-
-#include <QString>
-#include <QJsonObject>
-#include <QObject>
-#include <QProcess>
-#include <QMutex>
-#include <QVector>
-#include <QRegularExpression>
+// sandboxed_terminal.hpp – Qt-free sandboxed terminal (C++20 / Win32)
 #include <chrono>
+#include <cstdint>
 #include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+struct JsonValue;
+using JsonObject = std::unordered_map<std::string, JsonValue>;
 
 /**
- * @class SandboxedTerminal
- * @brief Production-ready terminal with security isolation and command filtering
- * 
- * Features:
- * - Process isolation with resource limits
- * - Command filtering with whitelist/blacklist
- * - Output filtering and sanitization
- * - Security auditing with comprehensive logging
- * - Structured logging with metrics
- * - Configuration-driven security policies
- * - Timeout management
- * - Environment variable control
+ * Production-ready terminal with security isolation and command filtering.
+ *   - Process isolation with resource limits
+ *   - Command filtering (whitelist/blacklist)
+ *   - Output sanitization
+ *   - Structured logging + audit trail
+ *   - Win32 CreateProcess backend
  */
-class SandboxedTerminal : public QObject {
-    Q_OBJECT
-
+class SandboxedTerminal {
 public:
-    explicit SandboxedTerminal(QObject* parent = nullptr);
-    ~SandboxedTerminal() override;
+    SandboxedTerminal();
+    ~SandboxedTerminal();
 
-    // Configuration
+    // ---------- Configuration ----------
     struct Config {
-        QStringList commandWhitelist;        // Allowed commands
-        QStringList commandBlacklist;        // Explicitly forbidden commands
-        bool useWhitelistMode = true;        // If true, only whitelist allowed; if false, blacklist forbidden
-        int maxExecutionTimeMs = 30000;      // Command timeout
-        int maxOutputSize = 1048576;         // 1MB max output
-        bool enableOutputFiltering = true;   // Filter sensitive data from output
-        bool enableAuditLog = true;
-        QString auditLogPath;
-        QString workingDirectory;
-        QStringList allowedEnvironmentVars;  // Environment variables to preserve
-        bool enableResourceLimits = true;
-        qint64 maxMemoryBytes = 536870912;   // 512MB
-        int maxCpuPercent = 80;
-        bool enableMetrics = true;
+        std::vector<std::string> commandWhitelist;
+        std::vector<std::string> commandBlacklist;
+        bool        useWhitelistMode      = true;
+        int         maxExecutionTimeMs    = 30000;
+        int         maxOutputSize         = 1048576; // 1 MB
+        bool        enableOutputFiltering = true;
+        bool        enableAuditLog        = true;
+        std::string auditLogPath;
+        std::string workingDirectory;
+        std::vector<std::string> allowedEnvironmentVars;
+        bool        enableResourceLimits  = true;
+        int64_t     maxMemoryBytes        = 536870912; // 512 MB
+        int         maxCpuPercent         = 80;
+        bool        enableMetrics         = true;
     };
 
-    void setConfig(const Config& config);
+    void   setConfig(const Config& config);
     Config getConfig() const;
 
-    // Command execution
+    // ---------- Command execution ----------
     struct CommandResult {
-        QString output;
-        QString error;
-        int exitCode;
-        bool timedOut;
-        bool wasBlocked;
-        QString blockReason;
-        qint64 executionTimeMs;
+        std::string output;
+        std::string error;
+        int         exitCode        = -1;
+        bool        timedOut        = false;
+        bool        wasBlocked      = false;
+        std::string blockReason;
+        int64_t     executionTimeMs = 0;
     };
 
-    CommandResult executeCommand(const QString& command, const QStringList& args = QStringList());
-    bool isCommandAllowed(const QString& command) const;
-    QString sanitizeOutput(const QString& output) const;
-    
+    CommandResult executeCommand(const std::string& command,
+                                 const std::vector<std::string>& args = {});
+    bool        isCommandAllowed(const std::string& command) const;
+    std::string sanitizeOutput(const std::string& output) const;
+
     // Process management
     bool isRunning() const;
     void terminate();
     void kill();
 
-    // Metrics
+    // ---------- Metrics ----------
     struct Metrics {
-        qint64 commandsExecuted = 0;
-        qint64 commandsBlocked = 0;
-        qint64 commandsTimedOut = 0;
-        qint64 outputBytesFiltered = 0;
-        qint64 securityViolations = 0;
-        qint64 errorCount = 0;
-        double avgExecutionTimeMs = 0.0;
+        int64_t commandsExecuted     = 0;
+        int64_t commandsBlocked      = 0;
+        int64_t commandsTimedOut     = 0;
+        int64_t outputBytesFiltered  = 0;
+        int64_t securityViolations   = 0;
+        int64_t errorCount           = 0;
+        double  avgExecutionTimeMs   = 0.0;
     };
 
     Metrics getMetrics() const;
-    void resetMetrics();
+    void    resetMetrics();
 
-signals:
-    void commandStarted(const QString& command);
-    void commandFinished(const CommandResult& result);
-    void commandBlocked(const QString& command, const QString& reason);
-    void securityViolation(const QString& violation);
-    void errorOccurred(const QString& error);
-    void metricsUpdated(const Metrics& metrics);
+    // ---------- Callbacks (replaces Qt signals) ----------
+    using CmdStringCb   = void(*)(void* ctx, const char* command);
+    using CmdResultCb   = void(*)(void* ctx, const CommandResult* result);
+    using CmdBlockCb    = void(*)(void* ctx, const char* command, const char* reason);
+    using StringCb      = void(*)(void* ctx, const char* msg);
+    using MetricsCb     = void(*)(void* ctx, const Metrics* m);
+
+    void setCommandStartedCb(CmdStringCb cb, void* ctx)    { m_startCb  = cb; m_startCtx  = ctx; }
+    void setCommandFinishedCb(CmdResultCb cb, void* ctx)    { m_finishCb = cb; m_finishCtx = ctx; }
+    void setCommandBlockedCb(CmdBlockCb cb, void* ctx)      { m_blockCb  = cb; m_blockCtx  = ctx; }
+    void setSecurityViolationCb(StringCb cb, void* ctx)     { m_secCb    = cb; m_secCtx    = ctx; }
+    void setErrorCb(StringCb cb, void* ctx)                  { m_errCb    = cb; m_errCtx    = ctx; }
+    void setMetricsUpdatedCb(MetricsCb cb, void* ctx)        { m_metCb    = cb; m_metCtx    = ctx; }
 
 private:
-    // Configuration
-    Config m_config;
-    mutable QMutex m_configMutex;
+    // State
+    Config          m_config;
+    mutable std::mutex m_configMutex;
 
-    // Process
-    QProcess* m_process;
-    mutable QMutex m_processMutex;
+    void*           m_processHandle = nullptr; // Win32 HANDLE
+    mutable std::mutex m_processMutex;
 
-    // Metrics
-    Metrics m_metrics;
-    mutable QMutex m_metricsMutex;
+    Metrics         m_metrics;
+    mutable std::mutex m_metricsMutex;
 
-    // Helper methods
-    void logStructured(const QString& level, const QString& message, const QJsonObject& context = QJsonObject());
-    void recordLatency(const QString& operation, const std::chrono::milliseconds& duration);
-    void logAudit(const QString& action, const QJsonObject& details);
-    bool validateCommand(const QString& command, QString& blockReason);
-    bool validateCommand(const QString& command, QString& blockReason) const;  // const overload
-    QStringList buildSanitizedEnvironment() const;
+    // Helpers
+    void logStructured(const std::string& level, const std::string& message,
+                       const JsonObject& context = {});
+    void recordLatency(const std::string& operation, std::chrono::milliseconds duration);
+    void logAudit(const std::string& action, const JsonObject& details);
+    bool validateCommand(const std::string& command, std::string& blockReason) const;
+    std::vector<std::string> buildSanitizedEnvironment() const;
     bool enforceResourceLimits();
-    QString filterSensitiveData(const QString& data) const;
+    std::string filterSensitiveData(const std::string& data) const;
+
+    // Callback state
+    CmdStringCb m_startCb  = nullptr;  void* m_startCtx  = nullptr;
+    CmdResultCb m_finishCb = nullptr;  void* m_finishCtx = nullptr;
+    CmdBlockCb  m_blockCb  = nullptr;  void* m_blockCtx  = nullptr;
+    StringCb    m_secCb    = nullptr;  void* m_secCtx    = nullptr;
+    StringCb    m_errCb    = nullptr;  void* m_errCtx    = nullptr;
+    MetricsCb   m_metCb    = nullptr;  void* m_metCtx    = nullptr;
 };

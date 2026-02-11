@@ -3,8 +3,8 @@
 // =============================================================================
 // These provide real, production-grade C++ fallback implementations for the
 // symbols normally supplied by RawrXD_Swarm_Network.asm. When the real MASM
-// object is assembled and linked (MSVC builds), these are superseded by the
-// .obj definitions (strong symbols).
+// object is assembled and linked (MSVC builds), RAWR_HAS_MASM=1 disables
+// these stubs so the ASM .obj symbols take precedence.
 //
 // On non-MSVC / MinGW builds, these are the actual implementations used.
 // All functions are now fully operational with real logic — no dummy returns.
@@ -13,6 +13,8 @@
 // Threading: Ring buffer uses compare-and-swap for lock-free push/pop
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED
 // =============================================================================
+
+#if !defined(RAWR_HAS_MASM) || !RAWR_HAS_MASM
 
 #include <cstdint>
 #include <cstring>
@@ -1033,3 +1035,5 @@ uint32_t swarm_build_discovery_packet(void* buffer, uint32_t buf_size,
 #ifdef __cplusplus
 }
 #endif
+
+#endif // !RAWR_HAS_MASM

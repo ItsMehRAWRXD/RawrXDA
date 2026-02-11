@@ -3,11 +3,13 @@
 // =============================================================================
 // These stubs allow the build to link without the actual MASM64 object file
 // (RawrXD_Debug_Engine.asm → .obj). When the real ASM is assembled and linked,
-// these stubs are superseded by the .obj definitions (strong symbols).
+// RAWR_HAS_MASM=1 disables these stubs so the ASM .obj symbols take precedence.
 //
 // Pattern: matches swarm_network_stubs.cpp
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED
 // =============================================================================
+
+#if !defined(RAWR_HAS_MASM) || !RAWR_HAS_MASM
 
 #include <cstdint>
 #include <cstring>
@@ -551,3 +553,5 @@ uint64_t Dbg_RDTSC(void) {
 #ifdef __cplusplus
 }
 #endif
+
+#endif // !RAWR_HAS_MASM

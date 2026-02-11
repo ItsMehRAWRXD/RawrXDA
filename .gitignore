@@ -2,14 +2,38 @@
 build/
 build_fresh/
 build_manual/
+build2/
+build_clean/
+build_fresh/
+build_ghost/
+build_mingw/
+build_msvc/
+build_nasm/
+build_new/
+build_output/
+build_pure_cpp/
+build_test/
+build_universal/
+build_verify/
+build_win32_gui_test/
+build_gui_3/
+build-arm64/
 bin/
 lib/
+obj/
 *.o
 *.a
 *.so
 *.dll
 *.exe
 *.dylib
+*.obj
+*.pdb
+*.lst
+*.lib
+*.exp
+*.ilk
+NUL.obj
 
 # CMake
 CMakeFiles/
@@ -41,6 +65,10 @@ out/rawrxd-ide/.vite/
 # Models (large, user-provided)
 models/*.gguf
 models/*.bin
+*.gguf
+*.bin
+*.sqlite
+*.zip
 
 # Temp
 tmp/

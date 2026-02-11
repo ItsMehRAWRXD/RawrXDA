@@ -1,0 +1,28 @@
+{
+  "BackupId": "TODO-AutoFix-BUG-20260126-070641-716",
+  "PowerShellVersion": "7.5.4",
+  "OperationName": "TODO-AutoFix-BUG",
+  "Metadata": {
+    "Count": 2,
+    "SourcePath": "D:\\lazy init ide\\test",
+    "Pattern": "BUG",
+    "Timestamp": "2026-01-26T07:06:41.7095694-05:00"
+  },
+  "Timestamp": "2026-01-26T07:06:41.7216427-05:00",
+  "TargetFiles": [
+    {
+      "BackupSize": 977,
+      "OriginalSize": 977,
+      "Backup": "D:\\lazy init ide\\.backups\\TODO-AutoFix-BUG-20260126-070641-716\\test_test_patterns.js.bak",
+      "Original": "D:\\lazy init ide\\test\\test_patterns.js",
+      "Hash": "C20523EAE09AA0337735BD8F4EFA40683770DCA3CE853A61A25ABBD3DA6150B9",
+      "Compressed": false,
+      "Encoding": "UTF8"
+    }
+  ],
+  "Stats": {
+    "CompressedBytes": 0,
+    "TotalBytes": 977,
+    "TotalFiles": 1
+  }
+}

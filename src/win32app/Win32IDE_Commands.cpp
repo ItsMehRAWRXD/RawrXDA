@@ -3,6 +3,7 @@
 
 #include "Win32IDE.h"
 #include "IDEConfig.h"
+#include "win32_feature_adapter.h"
 #include "../core/unified_hotpatch_manager.hpp"
 #include "../core/proxy_hotpatcher.hpp"
 #include <commctrl.h>
@@ -207,6 +208,14 @@ bool Win32IDE::routeCommand(int commandId) {
         return handleVSCExtAPICommand(commandId);
     } else if (commandId >= 10100 && commandId < 10200) {
         return handleFlightRecorderCommand(commandId);
+    } else if (commandId >= 10200 && commandId < 10300) {
+        // Phase 44: VoiceAutomation commands
+        extern bool Win32IDE_HandleVoiceAutomationCommand(HWND, WPARAM);
+        return Win32IDE_HandleVoiceAutomationCommand(nullptr, (WPARAM)commandId);
+    } else if (commandId >= 10300 && commandId < 10400) {
+        // Phase 45: DiskRecovery panel commands
+        handleRecoveryCommand(commandId);
+        return true;
     } else if (commandId >= 9400 && commandId < 9500) {
         return handlePDBCommand(commandId);
     } else if (commandId >= 9000 && commandId < 10000) {
@@ -2268,7 +2277,7 @@ void Win32IDE::showCommandPalette()
         SendMessageA(m_hwndCommandPaletteInput, EM_SETCUEBANNER, TRUE, (LPARAM)L"> Type a command... (prefix :category to filter)");
         // Use static font — created once, never leaked
         static HFONT s_inputFont = CreateFontA(
-            -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            -dpiScale(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
         );
@@ -2294,13 +2303,13 @@ void Win32IDE::showCommandPalette()
     if (m_hwndCommandPaletteList) {
         // Use static font — created once, never leaked
         static HFONT s_listFont = CreateFontA(
-            -14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            -dpiScale(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
         );
         if (s_listFont) SendMessage(m_hwndCommandPaletteList, WM_SETFONT, (WPARAM)s_listFont, TRUE);
-        // Set item height for owner-draw
-        SendMessageA(m_hwndCommandPaletteList, LB_SETITEMHEIGHT, 0, MAKELPARAM(24, 0));
+        // Set item height for owner-draw (DPI-scaled)
+        SendMessageA(m_hwndCommandPaletteList, LB_SETITEMHEIGHT, 0, MAKELPARAM(dpiScale(24), 0));
     }
 
     // Update command availability before populating
@@ -2456,8 +2465,9 @@ void Win32IDE::executeCommandFromPalette(int index)
     // MRU tracking: increment usage count (session-only, no disk writes)
     m_commandMRU[commandId]++;
 
-    // Route the command — all command ranges handled by routeCommand
-    routeCommand(commandId);
+    // Execute via SSOT dispatch — the ONE AND ONLY command path.
+    // No legacy routeCommand() fallback. Drift is structurally impossible.
+    routeCommandUnified(commandId, this);
 
     // Flash the status bar with execution confirmation
     if (m_hwndStatusBar) {
@@ -2586,12 +2596,12 @@ LRESULT CALLBACK Win32IDE::CommandPaletteProc(HWND hwnd, UINT uMsg, WPARAM wPara
         static HFONT s_normalFont = nullptr;
         static HFONT s_boldFont = nullptr;
         if (!s_normalFont) {
-            s_normalFont = CreateFontA(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            s_normalFont = CreateFontA(-pThis->dpiScale(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                 ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                 CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
         }
         if (!s_boldFont) {
-            s_boldFont = CreateFontA(-14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+            s_boldFont = CreateFontA(-pThis->dpiScale(14), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                 ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                 CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI");
         }

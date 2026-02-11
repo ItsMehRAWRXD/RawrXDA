@@ -5,6 +5,8 @@
 //
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "agentic_hotpatch_orchestrator.hpp"
+#include <mutex>
+#include <vector>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <cstring>

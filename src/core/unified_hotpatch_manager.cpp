@@ -3,6 +3,17 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "unified_hotpatch_manager.hpp"
 #include "../server/gguf_server_hotpatch.hpp"
+#include "live_binary_patcher.hpp"
+#include "autonomous_workflow_engine.hpp"
+#include "workspace_reasoning_profiles.hpp"
+#include "deterministic_swarm.hpp"
+#include "safe_refactor_engine.hpp"
+#include "reasoning_schema_versioning.hpp"
+#include "cot_fallback_system.hpp"
+#include "input_guard_slicer.hpp"
+
+// Forward-declare SwarmTrace for determinism check
+struct SwarmTrace;
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <cstring>
@@ -155,6 +166,270 @@ UnifiedResult UnifiedHotpatchManager::remove_server_patch(const char* name) {
         }
     }
     return UnifiedResult::from(PatchResult::error("Server patch not found", 2), "server", next_sequence());
+}
+
+// ---------------------------------------------------------------------------
+// PT Driver (Layer 0 — Page Table substrate)
+// ---------------------------------------------------------------------------
+
+PatchResult UnifiedHotpatchManager::pt_initialize() {
+    return PTDriverContract::instance().initialize();
+}
+
+PatchResult UnifiedHotpatchManager::pt_shutdown() {
+    return PTDriverContract::instance().shutdown();
+}
+
+const PTDriverStats& UnifiedHotpatchManager::pt_get_stats() const {
+    return PTDriverContract::instance().get_stats();
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_arm_watchpoint(uintptr_t addr, uint64_t size,
+                                                         WatchpointEntry::WatchpointCallback cb,
+                                                         void* ctx, bool oneShot, uint32_t* outId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().arm_watchpoint(addr, size, cb, ctx, oneShot, outId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::PTWatchpointArmed, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_disarm_watchpoint(uint32_t id) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().disarm_watchpoint(id);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_take_snapshot(uintptr_t addr, uint64_t size,
+                                                        const char* label, uint32_t layerIndex,
+                                                        uint32_t* outSnapshotId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().take_snapshot(addr, size, label, layerIndex, outSnapshotId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::PTSnapshotTaken, label ? label : "snapshot");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_restore_snapshot(uint32_t snapshotId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().restore_snapshot(snapshotId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::PTSnapshotRestored, "snapshot restored");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_set_protection(uintptr_t addr, uint64_t size,
+                                                          uint32_t newProtect, uint32_t* outOldProtect) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().set_protection(addr, size, newProtect, outOldProtect);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::PTProtectionChanged, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_alloc_large_arena(uint64_t sizeBytes, uint64_t pageSize,
+                                                             uint32_t* outArenaId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().allocate_large_arena(sizeBytes, pageSize, outArenaId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::PTArenaAllocated, "large-page arena");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::pt_normalize(const ASLRContext* ctx,
+                                                     uintptr_t absAddr, uintptr_t* outRelative) {
+    uint64_t seq = next_sequence();
+    PatchResult r = PTDriverContract::instance().normalize_address(ctx, absAddr, outRelative);
+
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.ptOperationCount.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "pt", seq);
+}
+
+// ---------------------------------------------------------------------------
+// Live Binary (Layer 5 — Real-Time Code Replacement)
+// ---------------------------------------------------------------------------
+
+PatchResult UnifiedHotpatchManager::live_initialize(size_t pool_pages) {
+    return LiveBinaryPatcher::instance().initialize(pool_pages);
+}
+
+PatchResult UnifiedHotpatchManager::live_shutdown() {
+    return LiveBinaryPatcher::instance().shutdown();
+}
+
+PatchResult UnifiedHotpatchManager::live_verify_integrity() {
+    return LiveBinaryPatcher::instance().verify_integrity();
+}
+
+const LiveBinaryPatcherStats& UnifiedHotpatchManager::live_get_stats() const {
+    return LiveBinaryPatcher::instance().get_stats();
+}
+
+UnifiedResult UnifiedHotpatchManager::live_register_function(const char* name, uintptr_t addr,
+                                                              uint32_t* outSlotId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().register_function(name, addr, outSlotId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.liveBinaryCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::LiveBinaryRegistered, name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_install_trampoline(uint32_t slotId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().install_trampoline(slotId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.liveBinaryCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::LiveBinaryTrampolineSet, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_revert_trampoline(uint32_t slotId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().revert_trampoline(slotId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::LiveBinaryReverted, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_swap_implementation(uint32_t slotId,
+                                                                const uint8_t* newCode, size_t codeSize,
+                                                                const RVARelocation* relocs, size_t relocCount) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().swap_implementation(slotId, newCode, codeSize,
+                                                                      relocs, relocCount);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.liveBinaryCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::LiveBinarySwapped, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_apply_batch(const LivePatchUnit* units, size_t count) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().apply_batch(units, count);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.liveBinaryCount.fetch_add(static_cast<uint64_t>(count), std::memory_order_relaxed);
+        emit_event(HotpatchEvent::LiveBinaryBatchApplied, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_revert_last(uint32_t slotId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().revert_last_swap(slotId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::LiveBinaryReverted, r.detail);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_load_module(const char* dll_path, uint32_t* outModuleId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().load_module(dll_path, outModuleId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.liveBinaryCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::LiveBinaryModuleLoaded, dll_path);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::live_unload_module(uint32_t moduleId) {
+    uint64_t seq = next_sequence();
+    PatchResult r = LiveBinaryPatcher::instance().unload_module(moduleId);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::LiveBinaryReverted, "module unloaded");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "live", seq);
 }
 
 // ---------------------------------------------------------------------------
@@ -394,6 +669,246 @@ void UnifiedHotpatchManager::resetStats() {
     m_stats.memoryPatchCount.store(0, std::memory_order_relaxed);
     m_stats.bytePatchCount.store(0, std::memory_order_relaxed);
     m_stats.serverPatchCount.store(0, std::memory_order_relaxed);
+    m_stats.ptOperationCount.store(0, std::memory_order_relaxed);
+    m_stats.liveBinaryCount.store(0, std::memory_order_relaxed);
     m_stats.totalOperations.store(0, std::memory_order_relaxed);
     m_stats.totalFailures.store(0, std::memory_order_relaxed);
+}
+
+void UnifiedHotpatchManager::clearAllPatches() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_serverPatches.clear();
+    resetStats();
+    emit_event(HotpatchEvent::ServerPatchRemoved, "all_patches_cleared");
+}
+
+// ===========================================================================
+// Platform Subsystem Integration (Valuation-Critical)
+// ===========================================================================
+
+// ---- Autonomous Workflow Engine ----
+
+PatchResult UnifiedHotpatchManager::workflow_initialize() {
+    if (m_workflowInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("Workflow engine already initialized");
+    }
+    // AutonomousWorkflowEngine is singleton, just mark ready
+    m_workflowInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::PresetLoaded, "workflow_engine_init");
+    return PatchResult::ok("Autonomous workflow engine initialized");
+}
+
+PatchResult UnifiedHotpatchManager::workflow_shutdown() {
+    m_workflowInit.store(false, std::memory_order_relaxed);
+    return PatchResult::ok("Workflow engine shut down");
+}
+
+bool UnifiedHotpatchManager::workflow_is_running() const {
+    if (!m_workflowInit.load(std::memory_order_relaxed)) return false;
+    auto& engine = AutonomousWorkflowEngine::instance();
+    return engine.isRunning();
+}
+
+// ---- Workspace Reasoning Profiles ----
+
+PatchResult UnifiedHotpatchManager::profiles_initialize(const char* persistPath) {
+    if (m_profilesInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("Profiles already initialized");
+    }
+    auto& mgr = WorkspaceReasoningProfileManager::instance();
+    WorkspaceProfileConfig cfg;
+    if (persistPath) {
+        cfg.persistPath = persistPath;
+    }
+    mgr.setConfig(cfg);
+    PatchResult r = mgr.loadFromFile();
+    m_profilesInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::PresetLoaded, "workspace_profiles_init");
+    return r.success ? r : PatchResult::ok("Profiles initialized (no prior data)");
+}
+
+PatchResult UnifiedHotpatchManager::profiles_load_for_workspace(const char* workspacePath) {
+    if (!m_profilesInit.load(std::memory_order_relaxed)) {
+        return PatchResult::error("Profiles not initialized", 1);
+    }
+    if (!workspacePath) {
+        return PatchResult::error("Null workspace path", 2);
+    }
+    auto& mgr = WorkspaceReasoningProfileManager::instance();
+    WorkspaceProfileEntry entry;
+    bool found = mgr.getWorkspaceEntry(std::string(workspacePath), entry);
+    if (found) {
+        return PatchResult::ok("Profile loaded for workspace");
+    }
+    return PatchResult::error("No profile found for workspace", 3);
+}
+
+// ---- Deterministic Swarm ----
+
+PatchResult UnifiedHotpatchManager::swarm_set_seed(uint64_t masterSeed) {
+    auto& engine = DeterministicSwarmEngine::instance();
+    SwarmSeed seed = SwarmSeed::fromMaster(masterSeed);
+    engine.setSeed(seed);
+    emit_event(HotpatchEvent::PresetLoaded, "swarm_seed_set");
+    return PatchResult::ok("Swarm seed set");
+}
+
+PatchResult UnifiedHotpatchManager::swarm_verify_determinism() {
+    // Deterministic swarm doesn't have a direct verifyDeterminism() —
+    // verification is done by replaying a trace and checking .reproducible.
+    // This is a convenience wrapper: returns ok if no trace to replay.
+    return PatchResult::ok("Swarm determinism — use replayTrace for full verification");
+}
+
+// ---- Safe Refactor Engine ----
+
+PatchResult UnifiedHotpatchManager::refactor_initialize() {
+    if (m_refactorInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("Refactor engine already initialized");
+    }
+    m_refactorInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::PresetLoaded, "refactor_engine_init");
+    return PatchResult::ok("Safe refactor engine initialized");
+}
+
+PatchResult UnifiedHotpatchManager::refactor_shutdown() {
+    m_refactorInit.store(false, std::memory_order_relaxed);
+    return PatchResult::ok("Refactor engine shut down");
+}
+
+// ---- Reasoning Schema Versioning ----
+
+PatchResult UnifiedHotpatchManager::schema_initialize() {
+    if (m_schemaInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("Schema registry already initialized");
+    }
+    auto& reg = ReasoningSchemaRegistry::instance();
+    (void)reg; // Touch singleton to initialize
+    m_schemaInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::PresetLoaded, "schema_registry_init");
+    return PatchResult::ok("Reasoning schema registry initialized");
+}
+
+PatchResult UnifiedHotpatchManager::schema_verify_compatibility(const char* versionStr) {
+    if (!m_schemaInit.load(std::memory_order_relaxed)) {
+        return PatchResult::error("Schema registry not initialized", 1);
+    }
+    if (!versionStr) {
+        return PatchResult::error("Null version string", 2);
+    }
+    auto& reg = ReasoningSchemaRegistry::instance();
+    SemanticVersion target = SemanticVersion::parse(versionStr);
+    SemanticVersion current = reg.getCurrentVersion();
+    if (current.isCompatibleWith(target)) {
+        return PatchResult::ok("Schema version compatible");
+    }
+    return PatchResult::error("Schema version incompatible — migration required", 3);
+}
+
+// ---- CoT Fallback System ----
+
+PatchResult UnifiedHotpatchManager::cot_initialize() {
+    if (m_cotInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("CoT fallback already initialized");
+    }
+    auto& sys = CoTFallbackSystem::instance();
+    (void)sys; // Touch singleton
+    m_cotInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::PresetLoaded, "cot_fallback_init");
+    return PatchResult::ok("CoT fallback system initialized");
+}
+
+PatchResult UnifiedHotpatchManager::cot_disable() {
+    if (!m_cotInit.load(std::memory_order_relaxed)) {
+        return PatchResult::error("CoT fallback not initialized", 1);
+    }
+    auto& sys = CoTFallbackSystem::instance();
+    sys.disableCoT(std::string("Disabled via unified manager"));
+    emit_event(HotpatchEvent::PresetLoaded, "cot_disabled");
+    return PatchResult::ok("CoT backend disabled — using fallback");
+}
+
+PatchResult UnifiedHotpatchManager::cot_enable() {
+    if (!m_cotInit.load(std::memory_order_relaxed)) {
+        return PatchResult::error("CoT fallback not initialized", 1);
+    }
+    auto& sys = CoTFallbackSystem::instance();
+    sys.enableCoT();
+    emit_event(HotpatchEvent::PresetLoaded, "cot_enabled");
+    return PatchResult::ok("CoT backend re-enabled");
+}
+
+bool UnifiedHotpatchManager::cot_is_healthy() const {
+    if (!m_cotInit.load(std::memory_order_relaxed)) return false;
+    auto& sys = CoTFallbackSystem::instance();
+    return sys.isCoTAvailable();
+}
+
+// ---- Input Guard Slicer ----
+
+PatchResult UnifiedHotpatchManager::guard_initialize() {
+    if (m_guardInit.load(std::memory_order_relaxed)) {
+        return PatchResult::ok("Input guard already initialized");
+    }
+    auto& guard = InputGuardSlicer::instance();
+    (void)guard; // Touch singleton
+    m_guardInit.store(true, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::PresetLoaded, "input_guard_init");
+    return PatchResult::ok("Input guard with backend slicing initialized");
+}
+
+PatchResult UnifiedHotpatchManager::guard_preflight(const char* input, size_t inputLen) {
+    if (!m_guardInit.load(std::memory_order_relaxed)) {
+        return PatchResult::error("Input guard not initialized", 1);
+    }
+    if (!input || inputLen == 0) {
+        return PatchResult::error("Null or empty input", 2);
+    }
+    auto& guard = InputGuardSlicer::instance();
+    std::string inputStr(input, inputLen);
+    return guard.preflightCheck(inputStr);
+}
+
+// ---- Unified Full Stats JSON ----
+
+std::string UnifiedHotpatchManager::getFullStatsJSON() const {
+    char buf[2048];
+    std::snprintf(buf, sizeof(buf),
+        "{"
+        "\"hotpatch\":{"
+            "\"memoryPatches\":%llu,"
+            "\"bytePatches\":%llu,"
+            "\"serverPatches\":%llu,"
+            "\"ptOperations\":%llu,"
+            "\"liveBinary\":%llu,"
+            "\"totalOps\":%llu,"
+            "\"totalFailures\":%llu"
+        "},"
+        "\"subsystems\":{"
+            "\"workflowInit\":%s,"
+            "\"profilesInit\":%s,"
+            "\"refactorInit\":%s,"
+            "\"schemaInit\":%s,"
+            "\"cotInit\":%s,"
+            "\"guardInit\":%s,"
+            "\"cotHealthy\":%s,"
+            "\"workflowRunning\":%s"
+        "}"
+        "}",
+        (unsigned long long)m_stats.memoryPatchCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.bytePatchCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.serverPatchCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.ptOperationCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.liveBinaryCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.totalOperations.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.totalFailures.load(std::memory_order_relaxed),
+        m_workflowInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_profilesInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_refactorInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_schemaInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_cotInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_guardInit.load(std::memory_order_relaxed) ? "true" : "false",
+        cot_is_healthy() ? "true" : "false",
+        workflow_is_running() ? "true" : "false");
+    return std::string(buf);
 }

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QObject>
 #include <cstdint>
 #include <string>
+#include <vector>
+#include <mutex>
 
 // Telemetry snapshot structure
 struct TelemetrySnapshot {
@@ -25,25 +23,33 @@ struct TelemetrySnapshot {
 
 namespace telemetry {
     bool Initialize();
-    bool InitializeHardware();  // Two-phase init: call after QApplication exists
+    bool InitializeHardware();  // Two-phase init
     bool Poll(TelemetrySnapshot& out);
     void Shutdown();
 }
 
-class Telemetry : public QObject {
-    Q_OBJECT
+// Telemetry event entry
+struct TelemetryEvent {
+    std::string name;
+    uint64_t timestampMs = 0;
+    // Metadata stored as key-value pairs
+    std::vector<std::pair<std::string, std::string>> metadata;
+};
+
+class Telemetry {
 public:
     Telemetry();
     ~Telemetry();
     
-    // Two-phase initialization: call this after QApplication is running
+    // Two-phase initialization
     void initializeHardware();
     
-    void recordEvent(const QString& event_name, const QJsonObject& metadata = QJsonObject());
-    bool saveTelemetry(const QString& filepath);
+    void recordEvent(const std::string& event_name);
+    bool saveTelemetry(const std::string& filepath);
     void enableTelemetry(bool enable);
     
 private:
-    bool is_enabled_;
-    QJsonArray events_;
+    bool is_enabled_ = false;
+    std::vector<TelemetryEvent> events_;
+    std::mutex m_mutex;
 };

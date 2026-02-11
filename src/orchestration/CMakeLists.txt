@@ -1,13 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 project(RawrXDOrchestration)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 COMPONENTS Core Network Sql Multimedia REQUIRED)
-
+# Qt-free: uses STL + WinSock + Win32 audio APIs
 add_library(RawrXDOrchestration STATIC
     llm_router.hpp
     llm_router.cpp
@@ -15,15 +12,13 @@ add_library(RawrXDOrchestration STATIC
     agent_coordinator.cpp
     voice_processor.hpp
     voice_processor.cpp
-    qt6_audio_helper.hpp
 )
 
 target_link_libraries(RawrXDOrchestration
     PUBLIC
-        Qt6::Core
-        Qt6::Network
-        Qt6::Sql
-        Qt6::Multimedia
+        $<$<PLATFORM_ID:Windows>:ws2_32>
+        $<$<PLATFORM_ID:Windows>:winmm>
+        $<$<PLATFORM_ID:Windows>:winhttp>
 )
 
 target_include_directories(RawrXDOrchestration

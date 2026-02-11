@@ -1,0 +1,979 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Automatic MOC for target RawrXDOrchestration
+  RawrXDOrchestration.vcxproj -> D:\rawrxd\build\src\orchestration\Release\RawrXDOrchestration.lib
+  Automatic MOC for target brutal_compression_lib
+  brutal_compression_lib.vcxproj -> D:\rawrxd\build\Release\brutal_compression_lib.lib
+  Automatic MOC for target cpu_inference_engine
+  cpu_inference_engine.vcxproj -> D:\rawrxd\build\Release\cpu_inference_engine.lib
+  ggml-base.vcxproj -> D:\rawrxd\build\3rdparty\ggml\src\Release\ggml-base.lib
+  ggml-cpu.vcxproj -> D:\rawrxd\build\3rdparty\ggml\src\Release\ggml-cpu.lib
+  ggml.vcxproj -> D:\rawrxd\build\3rdparty\ggml\src\Release\ggml.lib
+  masm_bridge.vcxproj -> D:\rawrxd\build\Release\masm_bridge.lib
+  Automatic MOC for target masm_writers
+  masm_writers.vcxproj -> D:\rawrxd\build\src\masm\Release\masm_writers.lib
+  Automatic MOC for target quant_utils
+  quant_utils.vcxproj -> D:\rawrxd\build\Release\quant_utils.lib
+  Automatic MOC for target rawrxd_compiler_qt
+  rawrxd_compiler_qt.vcxproj -> D:\rawrxd\build\Release\rawrxd_compiler_qt.lib
+  Automatic MOC for target self_test_gate
+  self_test_gate.vcxproj -> D:\rawrxd\build\Release\self_test_gate.lib
+  Automatic MOC for target RawrXD-QtShell
+  lsp_client_incremental.cpp
+  language_server_integration_impl.cpp
+D:\rawrxd\src\lsp_client_incremental.cpp(34,16): error C2668: 'QList<QList<RawrXD::DiffOp>>::append': ambiguous call to overloaded function [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(458,10):
+      could be 'void QList<QList<RawrXD::DiffOp>>::append(QList<QList<RawrXD::DiffOp>> &&)'
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(454,10):
+      or       'void QList<QList<RawrXD::DiffOp>>::append(const QList<QList<RawrXD::DiffOp>> &)'
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(446,10):
+      or       'void QList<QList<RawrXD::DiffOp>>::append(QList<RawrXD::DiffOp> &&)'
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(444,10):
+      or       'void QList<QList<RawrXD::DiffOp>>::append(const QList<RawrXD::DiffOp> &)'
+      D:\rawrxd\src\lsp_client_incremental.cpp(34,16):
+      while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\lsp_client_incremental.cpp(63,17): error C2039: 'sendIncrementalUpdate': is not a member of 'RawrXD::LSPClient' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\lsp_client.h(69,7):
+      see declaration of 'RawrXD::LSPClient'
+  
+D:\rawrxd\src\lsp_client_incremental.cpp(76,26): error C3861: 'offsetToPosition': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\lsp_client_incremental.cpp(78,15): error C3861: 'offsetToPosition': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\lsp_client_incremental.cpp(106,5): error C3861: 'sendNotification': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\lsp_client_incremental.cpp(110,17): error C2039: 'cancelRequest': is not a member of 'RawrXD::LSPClient' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\lsp_client.h(69,7):
+      see declaration of 'RawrXD::LSPClient'
+  
+D:\rawrxd\src\lsp_client_incremental.cpp(113,5): error C3861: 'sendNotification': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\lsp_client_incremental.cpp(114,5): error C2065: 'm_pendingCancellations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\lsp_client_incremental.cpp(122,21): error C2039: 'offsetToPosition': is not a member of 'RawrXD::LSPClient' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\lsp_client.h(69,7):
+      see declaration of 'RawrXD::LSPClient'
+  
+D:\rawrxd\src\language_server_integration_impl.hpp(4,10): error C1083: Cannot open include file: 'codebase_context_analyzer.hpp': No such file or directory [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+  (compiling source file '../src/language_server_integration_impl.cpp')
+  
+  ide_agent_bridge_hot_patching_integration_lsp.cpp
+D:\rawrxd\src\agent\ide_agent_bridge_hot_patching_integration.hpp(177,1): error C1020: unexpected #endif [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+  (compiling source file '../src/ide_agent_bridge_hot_patching_integration_lsp.cpp')
+  
+  tool_registry_thermal.cpp
+D:\rawrxd\src\tool_registry_thermal.cpp(225,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\include\tool_registry.hpp(193,8):
+      see declaration of 'ToolDefinition'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(225,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+      'nlohmann::json::json': no overloaded function could convert all the argument types
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
+          D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(239,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(239,28):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(239,28):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(254,34): error C2440: 'initializing': cannot convert from 'initializer list' to 'nlohmann::json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(254,34):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(254,34):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(277,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(277,24):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(277,24):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(310,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\include\tool_registry.hpp(193,8):
+      see declaration of 'ToolDefinition'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(310,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+      'nlohmann::json::json': no overloaded function could convert all the argument types
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
+          D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(325,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(325,28):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(325,28):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(334,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(334,24):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(334,24):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(358,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\include\tool_registry.hpp(193,8):
+      see declaration of 'ToolDefinition'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(358,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+      'nlohmann::json::json': no overloaded function could convert all the argument types
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
+          D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(368,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(368,28):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(368,28):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(371,29): error C2440: 'initializing': cannot convert from 'const nlohmann::json' to 'int32_t' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(371,29):
+      No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(375,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(375,28):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(375,28):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(395,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(395,24):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(395,24):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(419,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\include\tool_registry.hpp(193,8):
+      see declaration of 'ToolDefinition'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(419,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+      'nlohmann::json::json': no overloaded function could convert all the argument types
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
+          D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(431,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(431,28):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(431,28):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(451,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(451,24):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(451,24):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(478,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\include\tool_registry.hpp(193,8):
+      see declaration of 'ToolDefinition'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(478,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+      'nlohmann::json::json': no overloaded function could convert all the argument types
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+              D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
+          D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(494,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(494,28):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(494,28):
+          while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(500,37): error C2064: term does not evaluate to a function taking 0 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\tool_registry_thermal.cpp(506,28): error C2665: 'nlohmann::json::push_back': no overloaded function could convert all the argument types [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\include\nlohmann\json.hpp(299,10):
+      could be 'void nlohmann::json::push_back(nlohmann::json &&)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(506,28):
+          'void nlohmann::json::push_back(nlohmann::json &&)': cannot convert argument 1 from 'initializer list' to 'nlohmann::json &&'
+              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
+              Reason: cannot convert from 'initializer list' to 'nlohmann::json'
+              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
+              'nlohmann::json::json': ambiguous call to overloaded function
+                  D:\rawrxd\include\nlohmann\json.hpp(59,5):
+                  could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+                  D:\rawrxd\include\nlohmann\json.hpp(52,5):
+                  or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
+                  while trying to match the argument list '(initializer list)'
+      D:\rawrxd\include\nlohmann\json.hpp(293,10):
+      or       'void nlohmann::json::push_back(const nlohmann::json &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(506,28):
+          'void nlohmann::json::push_back(const nlohmann::json &)': cannot convert argument 1 from 'initializer list' to 'const nlohmann::json &'
+              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
+              Reason: cannot convert from 'initializer list' to 'const nlohmann::json'
+              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
+              'nlohmann::json::json': ambiguous call to overloaded function
+                  D:\rawrxd\include\nlohmann\json.hpp(59,5):
+                  could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+                  D:\rawrxd\include\nlohmann\json.hpp(52,5):
+                  or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+                  D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
+                  while trying to match the argument list '(initializer list)'
+      D:\rawrxd\src\tool_registry_thermal.cpp(506,28):
+      while trying to match the argument list '(initializer list)'
+  
+D:\rawrxd\src\tool_registry_thermal.cpp(517,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\tool_registry_thermal.cpp(517,24):
+      'nlohmann::json::json': ambiguous call to overloaded function
+          D:\rawrxd\include\nlohmann\json.hpp(59,5):
+          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
+          D:\rawrxd\include\nlohmann\json.hpp(52,5):
+          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
+          D:\rawrxd\src\tool_registry_thermal.cpp(517,24):
+          while trying to match the argument list '(initializer list)'
+  
+  agent_hot_patcher.cpp
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(13,7): error C2614: 'AgentHotPatcher': illegal member initialization: 'm_enabled' is not a base or member [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(14,7): error C2614: 'AgentHotPatcher': illegal member initialization: 'm_idCounter' is not a base or member [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(15,7): error C2614: 'AgentHotPatcher': illegal member initialization: 'm_interceptionPort' is not a base or member [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(25,23): error C2556: 'bool AgentHotPatcher::initialize(const QString &,int)': overloaded function differs only by return type from 'void AgentHotPatcher::initialize(const QString &,int)' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(91,10):
+      see declaration of 'AgentHotPatcher::initialize'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(25,23): error C2371: 'AgentHotPatcher::initialize': redefinition; different basic types [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(91,10):
+      see declaration of 'AgentHotPatcher::initialize'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(29,5): error C2065: 'm_ggufLoaderPath': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(30,5): error C2065: 'm_interceptionPort': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(39,10): error C3861: 'loadCorrectionPatterns': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(45,14): error C3861: 'startInterceptorServer': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(51,5): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(59,10): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(70,19): error C2079: 'doc' uses undefined class 'QJsonDocument' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(70,40): error C2027: use of undefined type 'QJsonDocument' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qmetatype.h(1546,1):
+      see declaration of 'QJsonDocument'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(70,40): error C3861: 'fromJson': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(93,17): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(94,22): error C2660: 'AgentHotPatcher::hallucinationCorrected': function does not take 2 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(194,10):
+      see declaration of 'AgentHotPatcher::hallucinationCorrected'
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(94,22):
+      while trying to match the argument list '(HallucinationDetection, QString)'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(105,13): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(111,14): error C2660: 'AgentHotPatcher::applyBehaviorPatches': function does not take 2 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(129,13):
+      see declaration of 'AgentHotPatcher::applyBehaviorPatches'
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(111,14):
+      while trying to match the argument list '(QJsonObject, const QJsonObject)'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(118,57): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(119,57): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(143,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(153,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(163,19): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(178,64): error C2039: 'year': is not a member of 'QDateTime' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qdatetime.h(286,21):
+      see declaration of 'QDateTime'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(179,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(189,19): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(196,20): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(196,51): error C3536: 'it': cannot be used before it is initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(196,57): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(198,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(215,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(223,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(228,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(233,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(246,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(254,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(265,9): error C2039: 'lastApplied': is not a member of 'NavigationFix' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(43,8):
+      see declaration of 'NavigationFix'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(266,9): error C2039: 'timesCorrected': is not a member of 'NavigationFix' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(43,8):
+      see declaration of 'NavigationFix'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(269,10): error C3861: 'validateNavigationPath': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46): error C2663: 'QString::replace': no overloaded function has valid conversion for 'this' pointer [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(566,14):
+      could be 'QString &QString::replace(const QRegularExpression &,const QString &)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(const QRegularExpression &,const QString &)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(564,14):
+      or       'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(563,14):
+      or       'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(561,14):
+      or       'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(560,14):
+      or       'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(559,14):
+      or       'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(558,14):
+      or       'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(556,14):
+      or       'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+          'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
+              Conversion loses qualifiers
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
+      while trying to match the argument list '(const char [3], const char [2])'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,42): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,31): error C2530: 'knownFix': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,40): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,59): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46): error C2663: 'QString::replace': no overloaded function has valid conversion for 'this' pointer [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(566,14):
+      could be 'QString &QString::replace(const QRegularExpression &,const QString &)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(const QRegularExpression &,const QString &)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(564,14):
+      or       'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(563,14):
+      or       'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(561,14):
+      or       'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(560,14):
+      or       'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(559,14):
+      or       'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(558,14):
+      or       'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(556,14):
+      or       'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)'
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+          'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
+              Conversion loses qualifiers
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
+      while trying to match the argument list '(const QString, const QString)'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(324,30): error C2511: 'QJsonObject AgentHotPatcher::applyBehaviorPatches(const QJsonObject &,const QJsonObject &)': overloaded member function not found in 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
+      see declaration of 'AgentHotPatcher'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C3312: no callable 'begin' function found for type 'unknown' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C3312: no callable 'end' function found for type 'unknown' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,31): error C2530: 'patch': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,37): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C2597: illegal reference to non-static member 'AgentHotPatcher::m_behaviorPatches' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(213,32):
+      see declaration of 'AgentHotPatcher::m_behaviorPatches'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,56): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C2451: a conditional expression of type 'unknown' is not valid [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39):
+      ill-formed reference to a non-static member
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(335,17): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(339,17): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(368,45): error C2352: 'AgentHotPatcher::fixNavigationError': a call of a non-static member function requires an object [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(261,32):
+      see declaration of 'AgentHotPatcher::fixNavigationError'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(379,18): error C2352: 'AgentHotPatcher::behaviorPatchApplied': a call of a non-static member function requires an object [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(196,10):
+      see declaration of 'AgentHotPatcher::behaviorPatchApplied'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(391,9): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(392,9): error C3861: 'saveCorrectionPatterns': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9): error C2679: binary '[': no operator found which takes a right-hand operand of type 'const QString' (or there is no acceptable conversion) [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(1937,40):
+      could be 'const _Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept const'
+          with
+          [
+              _Ty=NavigationFix
+          ]
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9):
+          'const _Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept const': cannot convert argument 2 from 'const QString' to 'const unsigned __int64'
+          with
+          [
+              _Ty=NavigationFix
+          ]
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,33):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(1927,34):
+      or       '_Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept'
+          with
+          [
+              _Ty=NavigationFix
+          ]
+          D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9):
+          '_Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept': cannot convert argument 2 from 'const QString' to 'const unsigned __int64'
+          with
+          [
+              _Ty=NavigationFix
+          ]
+              D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,33):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9):
+      while trying to match the argument list '(std::vector<NavigationFix,std::allocator<NavigationFix>>, const QString)'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(403,9): error C3861: 'saveCorrectionPatterns': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(419,27): error C2039: 'append': is not a member of 'std::vector<BehaviorPatch,std::allocator<BehaviorPatch>>' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(442,7):
+      see declaration of 'std::vector<BehaviorPatch,std::allocator<BehaviorPatch>>'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(432,61): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,44): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,40): error C2530: 'h': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,42): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,68): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,44): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,40): error C2530: 'h': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,42): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,68): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(443,16): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,34): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,49): error C2676: binary '[': 'QJsonObject' does not define this operator or a conversion to a type acceptable to the predefined operator [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,74): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
+      see declaration of 'HallucinationDetection'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,89): error C2676: binary '[': 'QJsonObject' does not define this operator or a conversion to a type acceptable to the predefined operator [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(450,61): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(453,10): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,41): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,35): error C2530: 'fix': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,39): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,58): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(457,29): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(471,35): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(472,57): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(480,5): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(486,12): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(489,41): error C2039: 'analyzeForHallucinations': is not a member of 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
+      see declaration of 'AgentHotPatcher'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(492,12): error C3861: 'detectHallucination': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(495,23): error C2039: 'validateNavigationPath': is not a member of 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
+      see declaration of 'AgentHotPatcher'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(552,28): error C2065: 'm_idCounter': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(555,23): error C2039: 'loadCorrectionPatterns': is not a member of 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
+      see declaration of 'AgentHotPatcher'
+  
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(557,26): error C2065: 'm_mutex': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(557,24): error C2641: cannot deduce template arguments for 'QMutexLocker' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(562,5): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(563,5): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(564,5): error C2065: 'm_navigationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agent\agent_hot_patcher.cpp(564,5): error C1003: error count exceeds 100; stopping compilation [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+  ide_agent_bridge_hot_patching_integration.cpp
+D:\rawrxd\src\agent\ide_agent_bridge_hot_patching_integration.hpp(177,1): error C1020: unexpected #endif [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+  (compiling source file '../src/agent/ide_agent_bridge_hot_patching_integration.cpp')
+  
+  ai_model_caller_real.cpp
+D:\rawrxd\src\ai_model_caller_real.cpp(73,5): error C3861: 'va_start': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\ai_model_caller_real.cpp(78,5): error C3861: 'va_end': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\ai_model_caller_real.cpp(131,16): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(133,30): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(138,27): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(458,16): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(467,21): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(468,34): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(562,26): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(563,31): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
+      see declaration of 'ggml_tensor'
+  
+D:\rawrxd\src\ai_model_caller_real.cpp(563,9): error C2660: 'memcpy': function does not take 2 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_string.h(43,15):
+      see declaration of 'memcpy'
+      D:\rawrxd\src\ai_model_caller_real.cpp(563,9):
+      while trying to match the argument list '(float *, size_t)'
+  
+  directstorage_real.cpp
+D:\rawrxd\src\directstorage_real.cpp(24,16): error C2011: '_GUID': 'struct' type redefinition [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\guiddef.h(22,16):
+      see declaration of '_GUID'
+  
+D:\rawrxd\src\directstorage_real.cpp(280,10): error C2079: 'IID_IDStorageFactory' uses undefined struct '_GUID' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\directstorage_real.cpp(282,42): error C2664: 'HRESULT (const GUID &,void **)': cannot convert argument 1 from '<error type>' to 'const GUID &' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\directstorage_real.cpp(282,42):
+      Reason: cannot convert from '<error type>' to 'const GUID'
+      D:\rawrxd\src\directstorage_real.cpp(282,42):
+      use of undefined type '_GUID'
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\guiddef.h(22,16):
+      see declaration of '_GUID'
+  
+D:\rawrxd\src\directstorage_real.cpp(312,10): error C2079: 'IID_IDStorageQueue' uses undefined struct '_GUID' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\directstorage_real.cpp(314,24): error C2664: 'HRESULT IDStorageFactory::CreateQueue(const DSTORAGE_QUEUE_DESC *,const GUID &,void **)': cannot convert argument 2 from '<error type>' to 'const GUID &' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\directstorage_real.cpp(314,48):
+      Reason: cannot convert from '<error type>' to 'const GUID'
+      D:\rawrxd\src\directstorage_real.cpp(314,48):
+      use of undefined type '_GUID'
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\guiddef.h(22,16):
+      see declaration of '_GUID'
+      D:\rawrxd\src\directstorage_real.cpp(129,21):
+      see declaration of 'IDStorageFactory::CreateQueue'
+      D:\rawrxd\src\directstorage_real.cpp(314,24):
+      while trying to match the argument list '(DSTORAGE_QUEUE_DESC *, <error type>, void **)'
+  
+  vulkan_compute_real.cpp
+D:\rawrxd\src\vulkan_compute_real.cpp(14,1): error C2365: 'vkCreateDebugUtilsMessengerEXT': redefinition; previous definition was 'function' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\VulkanSDK\1.4.328.1\include\vulkan\vulkan_core.h(15280,32):
+      see declaration of 'vkCreateDebugUtilsMessengerEXT'
+  
+D:\rawrxd\src\vulkan_compute_real.cpp(15,1): error C2365: 'vkDestroyDebugUtilsMessengerEXT': redefinition; previous definition was 'function' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\VulkanSDK\1.4.328.1\include\vulkan\vulkan_core.h(15288,28):
+      see declaration of 'vkDestroyDebugUtilsMessengerEXT'
+  
+D:\rawrxd\src\vulkan_compute_real.cpp(16,1): error C2365: 'vkCmdPushDescriptorSetKHR': redefinition; previous definition was 'function' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      C:\VulkanSDK\1.4.328.1\include\vulkan\vulkan_core.h(10464,28):
+      see declaration of 'vkCmdPushDescriptorSetKHR'
+  
+D:\rawrxd\src\vulkan_compute_real.cpp(111,5): error C2659: '=': function as left operand [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\vulkan_compute_real.cpp(113,5): error C2659: '=': function as left operand [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\vulkan_compute_real.cpp(117,9): warning C4551: function call missing argument list [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\vulkan_compute_real.cpp(214,9): error C2065: 'VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\vulkan_compute_real.cpp(360,33): warning C4551: function call missing argument list [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+  phase_integration_real.cpp
+D:\rawrxd\src\agentic\phase_integration_real.cpp(16,48): error C2143: syntax error: missing '}' before 'constant' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agentic\phase_integration_real.cpp(16,48): error C2059: syntax error: 'constant' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agentic\phase_integration_real.cpp(16,58): error C2143: syntax error: missing ';' before '}' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agentic\phase_integration_real.cpp(16,58): error C2059: syntax error: '}' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+D:\rawrxd\src\agentic\phase_integration_real.cpp(124,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(124,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(124,13):
+      while trying to match the argument list '(int, const char [54], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(145,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(145,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(145,13):
+      while trying to match the argument list '(int, const char [57], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(166,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(166,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(166,13):
+      while trying to match the argument list '(int, const char [59], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(187,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(187,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(187,13):
+      while trying to match the argument list '(int, const char [58], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(208,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(208,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(208,13):
+      while trying to match the argument list '(int, const char [58], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(229,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(229,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(229,13):
+      while trying to match the argument list '(int, const char [58], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(250,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(250,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(250,13):
+      while trying to match the argument list '(int, const char [58], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(271,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(271,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(271,13):
+      while trying to match the argument list '(int, const char [58], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(302,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(302,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(302,5):
+      while trying to match the argument list '(int, const char [1])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(303,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(303,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(303,5):
+      while trying to match the argument list '(int, const char [55])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(304,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(304,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(304,5):
+      while trying to match the argument list '(int, const char [30])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(305,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(305,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(305,5):
+      while trying to match the argument list '(int, const char [55])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(306,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(306,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(306,5):
+      while trying to match the argument list '(int, const char [41], int)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(307,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(307,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(307,5):
+      while trying to match the argument list '(int, const char [42])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(308,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(308,16):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(308,5):
+      while trying to match the argument list '(int, const char [1])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(335,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(335,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(335,13):
+      while trying to match the argument list '(int, const char [44])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(348,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(348,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(348,13):
+      while trying to match the argument list '(int, const char [44])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(361,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(361,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(361,13):
+      while trying to match the argument list '(int, const char [44])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(374,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(374,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(374,13):
+      while trying to match the argument list '(int, const char [44])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(387,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(387,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(387,13):
+      while trying to match the argument list '(int, const char [44])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(400,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(400,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(400,13):
+      while trying to match the argument list '(int, const char [45])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(413,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(413,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(413,13):
+      while trying to match the argument list '(int, const char [43])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(426,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(426,24):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(426,13):
+      while trying to match the argument list '(int, const char [40])'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(473,9): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(473,20):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(473,9):
+      while trying to match the argument list '(int, const char [39], const char *)'
+  
+D:\rawrxd\src\agentic\phase_integration_real.cpp(478,9): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(478,20):
+      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
+      see declaration of 'LogMessage'
+      D:\rawrxd\src\agentic\phase_integration_real.cpp(478,9):
+      while trying to match the argument list '(int, const char [43])'
+  
+  mocs_compilation_Release.cpp
+D:\rawrxd\src\agent\ide_agent_bridge_hot_patching_integration.hpp(177,1): error C1020: unexpected #endif [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
+  (compiling source file 'RawrXD-QtShell_autogen/mocs_compilation_Release.cpp')
+  
+  Generating Code...

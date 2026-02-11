@@ -48,7 +48,10 @@ class MultiResponseEngine;
 class SubAgentManager;
 namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
 
+#include "../agentic/OllamaProvider.h"
+
 // Agent and AI IDs
+#define IDM_AGENT_BOUNDED_LOOP 4120
 #define IDM_AGENT_START_LOOP 4100
 #define IDM_AGENT_EXECUTE_CMD 4101
 #define IDM_AGENT_CONFIGURE_MODEL 4102
@@ -571,6 +574,9 @@ struct IDESettings {
     int themeId                 = 3101; // IDM_THEME_DARK_PLUS
     BYTE windowAlpha            = 255;
 
+    // Display Scaling (100 = 100%, 125 = 125%, etc. 0 = auto/system DPI)
+    int uiScalePercent          = 0; // 0 = auto (follow system DPI)
+
     // Server
     bool localServerEnabled     = false;
     int localServerPort         = 11435;
@@ -834,6 +840,12 @@ private:
     void onDestroy();
     void onSize(int width, int height);
     void onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
+
+    // DPI scaling
+    UINT getDpi() const;
+    int dpiScale(int basePixels) const;
+    void recreateFonts();
+
     void onTerminalOutput(int paneId, const std::string& output);
     void onTerminalError(int paneId, const std::string& error);
 
@@ -1490,7 +1502,8 @@ private:
         Search = 2,
         SourceControl = 3,
         RunDebug = 4,
-        Extensions = 5
+        Extensions = 5,
+        DiskRecovery = 6
     };
     
     void createActivityBar(HWND hwndParent);
@@ -1811,6 +1824,7 @@ private:
     HBRUSH m_mainWindowBrush;
     HFONT m_editorFont;
     HFONT m_hFontUI;
+    UINT  m_currentDpi = 96;
 
     // Code snippets
     std::vector<CodeSnippet> m_codeSnippets;
@@ -1925,6 +1939,15 @@ private:
     HWND m_hwndDebugCallStack;
     HWND m_hwndDebugConsole;
     bool m_debuggingActive;
+
+    // Disk Recovery View
+    HWND m_hwndRecoveryTitle     = nullptr;
+    HWND m_hwndRecoveryDriveList = nullptr;
+    HWND m_hwndRecoveryOutPath   = nullptr;
+    HWND m_hwndRecoveryStatus    = nullptr;
+    HWND m_hwndRecoveryProgress  = nullptr;
+    HWND m_hwndRecoveryLog       = nullptr;
+    bool m_recoveryTimerActive   = false;
 
     // Full Debugger UI HWNDs
     HWND m_hwndDebuggerContainer = nullptr;
@@ -2139,6 +2162,9 @@ private:
     std::string m_ollamaBaseUrl;      // e.g., http://localhost:11434
     std::string m_ollamaModelOverride; // if set, use this tag instead of deriving from filename
 
+    // FIM Prediction Provider (OllamaProvider for ghost text)
+    std::unique_ptr<RawrXD::Prediction::OllamaProvider> m_predictionProvider;
+
     // File Explorer members (additional)
     HIMAGELIST m_hImageList;
     std::vector<FileExplorerItem> m_rootItems;
@@ -2293,6 +2319,9 @@ private:
     void triggerGhostTextCompletion();
     void onGhostTextTimer();
     std::string requestGhostTextCompletion(const std::string& context, const std::string& language);
+    std::string requestGhostTextCompletion(const std::string& context, const std::string& language,
+                                            const std::string& suffix, const std::string& filePath,
+                                            int cursorLine, int cursorCol);
     void onGhostTextReady(int requestedCursorPos, const char* completionText);
     void dismissGhostText();
     void acceptGhostText();
@@ -2310,6 +2339,36 @@ private:
     int m_ghostTextLine         = -1;
     int m_ghostTextColumn       = -1;
     HFONT m_ghostTextFont       = nullptr;
+
+    // ========================================================================
+    // Agent Panel — Multi-File Edit Session (Win32IDE_AgentPanel.cpp)
+    // ========================================================================
+    void initAgentPanel();
+    void startAgentSession(const std::string& userGoal);
+    void agentAcceptHunk(int fileIndex, int hunkIndex);
+    void agentRejectHunk(int fileIndex, int hunkIndex);
+    void agentAcceptAll();
+    void agentRejectAll();
+    std::string getAgentSessionSummary() const;
+    void renderAgentDiffPanel(HDC hdc, RECT panelRect);
+    void onBoundedAgentLoop();  // Ctrl+Shift+I → Bounded Agent (FIM tools)
+
+    // ========================================================================
+    // Disk Recovery Panel (Win32IDE_DiskRecovery.cpp)
+    // ========================================================================
+    void createDiskRecoveryView(HWND hwndParent);
+    void setDarkThemeForWindow(HWND hwnd);
+    void recoveryAppendLog(const char* msg);
+    void onRecoveryScan();
+    void onRecoveryProbe();
+    void onRecoveryStart();
+    void onRecoveryPause();
+    void onRecoveryAbort();
+    void onRecoveryKeyExtract();
+    void onRecoveryBadMapExport();
+    void onRecoveryBrowse();
+    void onRecoveryTimer();
+    void handleRecoveryCommand(int commandId);
 
     // ========================================================================
     // Plan Executor — Plan → Approve → Execute (Win32IDE_PlanExecutor.cpp)
@@ -4312,6 +4371,11 @@ private:
     void updateVoiceStatusBar();
     void voiceSavePreferences();
     void voiceLoadPreferences();
+
+    // ========================================================================
+    // PHASE 44: VOICE AUTOMATION — TTS for AI Responses (Production Wiring)
+    // ========================================================================
+    bool m_voiceAutomationInitialized = false;
 
     // ========================================================================
     // PHASE 36: MCP INTEGRATION — Model Context Protocol Server + Client

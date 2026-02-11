@@ -289,6 +289,9 @@ void Win32IDE::onVoiceChatTimer()
         else color = RGB(0, 200, 80);                     // green
         SendMessage(g_hwndVoiceLevel, PBM_SETBARCOLOR, 0, (LPARAM)color);
     }
+
+    // Keep status bar voice indicator current
+    updateVoiceStatusBar();
 }
 
 // ============================================================================
@@ -310,6 +313,18 @@ void Win32IDE::cmdVoiceRecord()
         VoiceChatResult r = g_voiceChat->transcribeLastRecording(transcript);
         if (r.success && !transcript.empty()) {
             logInfo("Voice STT: " + transcript);
+            // Insert transcription into editor at caret position
+            if (m_hwndEditor) {
+                SendMessageA(m_hwndEditor, EM_REPLACESEL, TRUE,
+                             (LPARAM)transcript.c_str());
+            }
+            // Also show in transcript panel
+            if (g_hwndVoiceTranscript) {
+                int len = GetWindowTextLengthA(g_hwndVoiceTranscript);
+                SendMessageA(g_hwndVoiceTranscript, EM_SETSEL, len, len);
+                std::string line = "[You] " + transcript + "\r\n";
+                SendMessageA(g_hwndVoiceTranscript, EM_REPLACESEL, FALSE, (LPARAM)line.c_str());
+            }
         }
     } else {
         g_voiceChat->startRecording();

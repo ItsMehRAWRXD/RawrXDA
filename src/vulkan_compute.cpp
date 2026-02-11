@@ -1,5 +1,5 @@
-#include "vulkan_compute.h"
 #include <vulkan/vulkan.h>
+#include "vulkan_compute.h"
 #include <iostream>
 #include <algorithm>
 #include <fstream>
@@ -1669,6 +1669,26 @@ void VulkanCompute::Cleanup() {
             matmul_descriptor_set_layout_ = nullptr;
         }
         
+        // Clean up Fused MLP descriptor system
+        if (fused_mlp_descriptor_pool_) {
+            vkDestroyDescriptorPool(device_, fused_mlp_descriptor_pool_, nullptr);
+            fused_mlp_descriptor_pool_ = nullptr;
+        }
+        if (fused_mlp_descriptor_layout_) {
+            vkDestroyDescriptorSetLayout(device_, fused_mlp_descriptor_layout_, nullptr);
+            fused_mlp_descriptor_layout_ = nullptr;
+        }
+        
+        // Clean up Flash Attention descriptor system
+        if (flash_attn_descriptor_pool_) {
+            vkDestroyDescriptorPool(device_, flash_attn_descriptor_pool_, nullptr);
+            flash_attn_descriptor_pool_ = nullptr;
+        }
+        if (flash_attn_descriptor_layout_) {
+            vkDestroyDescriptorSetLayout(device_, flash_attn_descriptor_layout_, nullptr);
+            flash_attn_descriptor_layout_ = nullptr;
+        }
+        
         // Clean up persistent staging buffer (for optimized transfers)
         if (staging_buffer_) {
             vkDestroyBuffer(device_, staging_buffer_, nullptr);
@@ -1716,3 +1736,565 @@ void VulkanCompute::Cleanup() {
     
     std::cout << "Vulkan resources cleaned up successfully" << std::endl;
 }
+
+// =============================================================================
+// LoadShaderFromMemory — Load SPIR-V from a memory buffer (for hotswap)
+// =============================================================================
+bool VulkanCompute::LoadShaderFromMemory(const std::string& name, const uint32_t* spirv_code, size_t code_size) {
+    if (!spirv_code || code_size == 0 || code_size % sizeof(uint32_t) != 0) {
+        std::cerr << "Invalid SPIR-V memory buffer" << std::endl;
+        return false;
+    }
+
+    VkShaderModuleCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = code_size;
+    create_info.pCode = spirv_code;
+
+    ComputeShader shader;
+    shader.name = name;
+    shader.spirv_code.assign(spirv_code, spirv_code + code_size / sizeof(uint32_t));
+
+    if (vkCreateShaderModule(device_, &create_info, nullptr, &shader.module) != VK_SUCCESS) {
+        std::cerr << "Failed to create shader module from memory: " << name << std::endl;
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lock(shader_mutex_);
+    shaders_[name] = std::move(shader);
+    stats_.shader_load_count.fetch_add(1, std::memory_order_relaxed);
+    std::cout << "Loaded shader from memory: " << name << std::endl;
+    return true;
+}
+
+// =============================================================================
+// ReplacePipeline — Destroy old pipeline and create new one from updated shader
+// =============================================================================
+bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::string& new_spirv_path) {
+    std::lock_guard<std::mutex> lock(shader_mutex_);
+
+    auto it = shaders_.find(shader_name);
+    if (it == shaders_.end()) {
+        std::cerr << "Shader not found for replacement: " << shader_name << std::endl;
+        return false;
+    }
+
+    // Ensure no in-flight work
+    if (device_) vkDeviceWaitIdle(device_);
+
+    // Destroy old shader module
+    if (it->second.module) {
+        vkDestroyShaderModule(device_, it->second.module, nullptr);
+        it->second.module = nullptr;
+    }
+    // Destroy old pipeline (but keep layout — it's reusable)
+    if (it->second.pipeline) {
+        vkDestroyPipeline(device_, it->second.pipeline, nullptr);
+        it->second.pipeline = nullptr;
+    }
+
+    // Load new SPIR-V
+    std::vector<uint32_t> new_code;
+    if (!LoadSPIRVCode(new_spirv_path, new_code)) {
+        std::cerr << "Failed to load replacement SPIR-V from: " << new_spirv_path << std::endl;
+        return false;
+    }
+
+    VkShaderModuleCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = new_code.size() * sizeof(uint32_t);
+    create_info.pCode = new_code.data();
+
+    if (vkCreateShaderModule(device_, &create_info, nullptr, &it->second.module) != VK_SUCCESS) {
+        std::cerr << "Failed to create replacement shader module" << std::endl;
+        return false;
+    }
+    it->second.spirv_code = std::move(new_code);
+
+    // Recreate pipeline with existing layout
+    if (it->second.layout) {
+        VkPipelineShaderStageCreateInfo stage_info{};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        stage_info.module = it->second.module;
+        stage_info.pName = "main";
+
+        VkComputePipelineCreateInfo pipeline_info{};
+        pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipeline_info.layout = it->second.layout;
+        pipeline_info.stage = stage_info;
+
+        if (vkCreateComputePipelines(device_, nullptr, 1, &pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
+            std::cerr << "Failed to create replacement compute pipeline" << std::endl;
+            return false;
+        }
+    }
+
+    stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
+    std::cout << "Pipeline replaced: " << shader_name << std::endl;
+    return true;
+}
+
+// =============================================================================
+// HotswapShader — Atomic shader replacement without destroying in-flight work
+// =============================================================================
+bool VulkanCompute::HotswapShader(const std::string& pipeline_name,
+                                   const uint32_t* new_spirv, size_t spirv_size) {
+    if (!new_spirv || spirv_size == 0) return false;
+
+    std::lock_guard<std::mutex> lock(shader_mutex_);
+
+    auto it = shaders_.find(pipeline_name);
+    if (it == shaders_.end()) {
+        // Register as new shader
+        return LoadShaderFromMemory(pipeline_name, new_spirv, spirv_size);
+    }
+
+    // Wait for GPU idle to ensure no in-flight references
+    if (device_) vkDeviceWaitIdle(device_);
+
+    // Create new shader module
+    VkShaderModuleCreateInfo create_info{};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = spirv_size;
+    create_info.pCode = new_spirv;
+
+    VkShaderModule new_module = nullptr;
+    if (vkCreateShaderModule(device_, &create_info, nullptr, &new_module) != VK_SUCCESS) {
+        std::cerr << "HotswapShader: failed to create new module" << std::endl;
+        return false;
+    }
+
+    // Destroy old module
+    VkShaderModule old_module = it->second.module;
+    it->second.module = new_module;
+    it->second.spirv_code.assign(new_spirv, new_spirv + spirv_size / sizeof(uint32_t));
+
+    if (old_module) {
+        vkDestroyShaderModule(device_, old_module, nullptr);
+    }
+
+    // Rebuild pipeline if layout exists
+    if (it->second.layout) {
+        VkPipeline old_pipeline = it->second.pipeline;
+
+        VkPipelineShaderStageCreateInfo stage_info{};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        stage_info.module = new_module;
+        stage_info.pName = "main";
+
+        VkComputePipelineCreateInfo pipeline_info{};
+        pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipeline_info.layout = it->second.layout;
+        pipeline_info.stage = stage_info;
+
+        if (vkCreateComputePipelines(device_, nullptr, 1, &pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
+            std::cerr << "HotswapShader: failed to rebuild pipeline" << std::endl;
+            it->second.pipeline = old_pipeline; // Rollback
+            return false;
+        }
+
+        if (old_pipeline) {
+            vkDestroyPipeline(device_, old_pipeline, nullptr);
+        }
+    }
+
+    stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
+    std::cout << "Shader hotswapped: " << pipeline_name << std::endl;
+    return true;
+}
+
+// =============================================================================
+// EnsureFusedMLPPipeline — Linear → GeLU → Linear fused kernel
+// =============================================================================
+bool VulkanCompute::EnsureFusedMLPPipeline(const std::string& spirv_path) {
+    auto it = shaders_.find("fused_mlp");
+    if (it != shaders_.end() && it->second.pipeline && fused_mlp_descriptor_layout_) {
+        return true; // Already initialized
+    }
+
+    if (!LoadShader("fused_mlp", spirv_path)) return false;
+    it = shaders_.find("fused_mlp");
+    if (it == shaders_.end()) return false;
+
+    // 4 bindings: input, weight1, weight2, output
+    std::vector<VkDescriptorSetLayoutBinding> bindings(4);
+    for (uint32_t i = 0; i < 4; ++i) {
+        bindings[i].binding = i;
+        bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindings[i].descriptorCount = 1;
+        bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        bindings[i].pImmutableSamplers = nullptr;
+    }
+
+    VkDescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 4;
+    layout_info.pBindings = bindings.data();
+    if (vkCreateDescriptorSetLayout(device_, &layout_info, nullptr, &fused_mlp_descriptor_layout_) != VK_SUCCESS) return false;
+
+    VkDescriptorPoolSize pool_size{};
+    pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    pool_size.descriptorCount = 40;
+    VkDescriptorPoolCreateInfo pool_info{};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+    pool_info.maxSets = 10;
+    if (vkCreateDescriptorPool(device_, &pool_info, nullptr, &fused_mlp_descriptor_pool_) != VK_SUCCESS) return false;
+
+    // Push constants: batch_size, hidden_dim, intermediate_dim
+    VkPushConstantRange push_constant{};
+    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(uint32_t) * 3;
+
+    VkPipelineLayoutCreateInfo pli{};
+    pli.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pli.setLayoutCount = 1;
+    pli.pSetLayouts = &fused_mlp_descriptor_layout_;
+    pli.pushConstantRangeCount = 1;
+    pli.pPushConstantRanges = &push_constant;
+    if (vkCreatePipelineLayout(device_, &pli, nullptr, &it->second.layout) != VK_SUCCESS) return false;
+
+    VkPipelineShaderStageCreateInfo stage{};
+    stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stage.module = it->second.module;
+    stage.pName = "main";
+
+    VkComputePipelineCreateInfo cpi{};
+    cpi.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpi.layout = it->second.layout;
+    cpi.stage = stage;
+    if (vkCreateComputePipelines(device_, nullptr, 1, &cpi, nullptr, &it->second.pipeline) != VK_SUCCESS) return false;
+
+    stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
+    std::cout << "Fused MLP pipeline initialized" << std::endl;
+    return true;
+}
+
+bool VulkanCompute::DispatchFusedMLP(uint32_t input_idx, uint32_t weight1_idx,
+                                      uint32_t weight2_idx, uint32_t output_idx,
+                                      uint32_t batch_size, uint32_t hidden_dim,
+                                      uint32_t intermediate_dim) {
+    if (input_idx >= allocated_buffers_.size() || weight1_idx >= allocated_buffers_.size() ||
+        weight2_idx >= allocated_buffers_.size() || output_idx >= allocated_buffers_.size()) return false;
+
+    auto it = shaders_.find("fused_mlp");
+    if (it == shaders_.end() || !it->second.pipeline || !fused_mlp_descriptor_layout_) return false;
+
+    VkBuffer bufs[4] = {
+        allocated_buffers_[input_idx].first,
+        allocated_buffers_[weight1_idx].first,
+        allocated_buffers_[weight2_idx].first,
+        allocated_buffers_[output_idx].first
+    };
+    size_t sizes[4] = {
+        (size_t)batch_size * hidden_dim * sizeof(float),
+        (size_t)hidden_dim * intermediate_dim * sizeof(float),
+        (size_t)intermediate_dim * hidden_dim * sizeof(float),
+        (size_t)batch_size * hidden_dim * sizeof(float)
+    };
+
+    VkDescriptorSetAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = fused_mlp_descriptor_pool_;
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &fused_mlp_descriptor_layout_;
+    VkDescriptorSet ds = nullptr;
+    if (vkAllocateDescriptorSets(device_, &alloc_info, &ds) != VK_SUCCESS) return false;
+
+    std::vector<VkDescriptorBufferInfo> bi(4);
+    std::vector<VkWriteDescriptorSet> writes(4);
+    for (int i = 0; i < 4; ++i) {
+        bi[i].buffer = bufs[i]; bi[i].offset = 0; bi[i].range = sizes[i];
+        writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[i].pNext = nullptr; writes[i].dstSet = ds; writes[i].dstBinding = i;
+        writes[i].dstArrayElement = 0; writes[i].descriptorCount = 1;
+        writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[i].pImageInfo = nullptr; writes[i].pBufferInfo = &bi[i];
+        writes[i].pTexelBufferView = nullptr;
+    }
+    vkUpdateDescriptorSets(device_, 4, writes.data(), 0, nullptr);
+
+    bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd) {
+        uint32_t pc[3] = { batch_size, hidden_dim, intermediate_dim };
+        vkCmdPushConstants(cmd, it->second.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), pc);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.layout, 0, 1, &ds, 0, nullptr);
+        const uint32_t TILE = 16;
+        vkCmdDispatch(cmd, (hidden_dim + TILE - 1) / TILE, (batch_size + TILE - 1) / TILE, 1);
+    });
+
+    if (ds) vkFreeDescriptorSets(device_, fused_mlp_descriptor_pool_, 1, &ds);
+    if (success) stats_.dispatch_count.fetch_add(1, std::memory_order_relaxed);
+    return success;
+}
+
+// =============================================================================
+// EnsureFlashAttentionPipeline — Flash Attention v2 GPU dispatch
+// =============================================================================
+bool VulkanCompute::EnsureFlashAttentionPipeline(const std::string& spirv_path) {
+    auto it = shaders_.find("flash_attn_v2");
+    if (it != shaders_.end() && it->second.pipeline && flash_attn_descriptor_layout_) {
+        return true;
+    }
+
+    if (!LoadShader("flash_attn_v2", spirv_path)) return false;
+    it = shaders_.find("flash_attn_v2");
+    if (it == shaders_.end()) return false;
+
+    // 4 bindings: Q, K, V, Output
+    std::vector<VkDescriptorSetLayoutBinding> bindings(4);
+    for (uint32_t i = 0; i < 4; ++i) {
+        bindings[i].binding = i;
+        bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindings[i].descriptorCount = 1;
+        bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        bindings[i].pImmutableSamplers = nullptr;
+    }
+
+    VkDescriptorSetLayoutCreateInfo layout_info{};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = 4;
+    layout_info.pBindings = bindings.data();
+    if (vkCreateDescriptorSetLayout(device_, &layout_info, nullptr, &flash_attn_descriptor_layout_) != VK_SUCCESS) return false;
+
+    VkDescriptorPoolSize pool_size{};
+    pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    pool_size.descriptorCount = 40;
+    VkDescriptorPoolCreateInfo pool_info{};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = &pool_size;
+    pool_info.maxSets = 10;
+    if (vkCreateDescriptorPool(device_, &pool_info, nullptr, &flash_attn_descriptor_pool_) != VK_SUCCESS) return false;
+
+    // Push constants: seq_len, head_dim, num_heads, scale (as uint32_t bit-cast)
+    VkPushConstantRange push_constant{};
+    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    push_constant.offset = 0;
+    push_constant.size = sizeof(uint32_t) * 4;
+
+    VkPipelineLayoutCreateInfo pli{};
+    pli.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pli.setLayoutCount = 1;
+    pli.pSetLayouts = &flash_attn_descriptor_layout_;
+    pli.pushConstantRangeCount = 1;
+    pli.pPushConstantRanges = &push_constant;
+    if (vkCreatePipelineLayout(device_, &pli, nullptr, &it->second.layout) != VK_SUCCESS) return false;
+
+    VkPipelineShaderStageCreateInfo stage{};
+    stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    stage.module = it->second.module;
+    stage.pName = "main";
+
+    VkComputePipelineCreateInfo cpi{};
+    cpi.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpi.layout = it->second.layout;
+    cpi.stage = stage;
+    if (vkCreateComputePipelines(device_, nullptr, 1, &cpi, nullptr, &it->second.pipeline) != VK_SUCCESS) return false;
+
+    stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
+    std::cout << "Flash Attention v2 pipeline initialized" << std::endl;
+    return true;
+}
+
+bool VulkanCompute::DispatchFlashAttentionV2(uint32_t q_idx, uint32_t k_idx, uint32_t v_idx,
+                                              uint32_t output_idx, uint32_t seq_len,
+                                              uint32_t head_dim, uint32_t num_heads,
+                                              float scale) {
+    if (q_idx >= allocated_buffers_.size() || k_idx >= allocated_buffers_.size() ||
+        v_idx >= allocated_buffers_.size() || output_idx >= allocated_buffers_.size()) return false;
+
+    auto it = shaders_.find("flash_attn_v2");
+    if (it == shaders_.end() || !it->second.pipeline || !flash_attn_descriptor_layout_) return false;
+
+    // Auto-compute scale if not provided
+    if (scale <= 0.0f) {
+        scale = 1.0f / std::sqrt(static_cast<float>(head_dim));
+    }
+
+    VkBuffer bufs[4] = {
+        allocated_buffers_[q_idx].first,
+        allocated_buffers_[k_idx].first,
+        allocated_buffers_[v_idx].first,
+        allocated_buffers_[output_idx].first
+    };
+    size_t buf_size = static_cast<size_t>(num_heads) * seq_len * head_dim * sizeof(float);
+
+    VkDescriptorSetAllocateInfo ai{};
+    ai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    ai.descriptorPool = flash_attn_descriptor_pool_;
+    ai.descriptorSetCount = 1;
+    ai.pSetLayouts = &flash_attn_descriptor_layout_;
+    VkDescriptorSet ds = nullptr;
+    if (vkAllocateDescriptorSets(device_, &ai, &ds) != VK_SUCCESS) return false;
+
+    std::vector<VkDescriptorBufferInfo> bi(4);
+    std::vector<VkWriteDescriptorSet> writes(4);
+    for (int i = 0; i < 4; ++i) {
+        bi[i].buffer = bufs[i]; bi[i].offset = 0; bi[i].range = buf_size;
+        writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[i].pNext = nullptr; writes[i].dstSet = ds; writes[i].dstBinding = i;
+        writes[i].dstArrayElement = 0; writes[i].descriptorCount = 1;
+        writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writes[i].pImageInfo = nullptr; writes[i].pBufferInfo = &bi[i];
+        writes[i].pTexelBufferView = nullptr;
+    }
+    vkUpdateDescriptorSets(device_, 4, writes.data(), 0, nullptr);
+
+    uint32_t scale_bits;
+    std::memcpy(&scale_bits, &scale, sizeof(uint32_t));
+
+    bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd) {
+        uint32_t pc[4] = { seq_len, head_dim, num_heads, scale_bits };
+        vkCmdPushConstants(cmd, it->second.layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), pc);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.pipeline);
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, it->second.layout, 0, 1, &ds, 0, nullptr);
+        // One workgroup per head, tiled over sequence
+        const uint32_t TILE = 64; // Flash Attention tiles
+        vkCmdDispatch(cmd, (seq_len + TILE - 1) / TILE, num_heads, 1);
+    });
+
+    if (ds) vkFreeDescriptorSets(device_, flash_attn_descriptor_pool_, 1, &ds);
+    if (success) {
+        stats_.dispatch_count.fetch_add(1, std::memory_order_relaxed);
+        stats_.attention_count.fetch_add(1, std::memory_order_relaxed);
+    }
+    return success;
+}
+
+// =============================================================================
+// DispatchSpeculativeVerify — Verify draft tokens against target model logits
+// =============================================================================
+bool VulkanCompute::DispatchSpeculativeVerify(uint32_t draft_logits_idx,
+                                               uint32_t target_logits_idx,
+                                               uint32_t seq_len, uint32_t vocab_size,
+                                               SpeculativeResult* out_result) {
+    if (!out_result) return false;
+    if (draft_logits_idx >= allocated_buffers_.size() || target_logits_idx >= allocated_buffers_.size()) return false;
+
+    // CPU fallback: compare draft vs target logits token-by-token
+    size_t logits_size = static_cast<size_t>(seq_len) * vocab_size * sizeof(float);
+    std::vector<float> draft_logits(seq_len * vocab_size);
+    std::vector<float> target_logits(seq_len * vocab_size);
+
+    if (!CopyBufferToHost(draft_logits_idx, draft_logits.data(), logits_size)) return false;
+    if (!CopyBufferToHost(target_logits_idx, target_logits.data(), logits_size)) return false;
+
+    out_result->accepted_tokens.clear();
+    out_result->draft_count = seq_len;
+    out_result->accepted_count = 0;
+
+    for (uint32_t t = 0; t < seq_len; ++t) {
+        const float* draft_row = draft_logits.data() + static_cast<size_t>(t) * vocab_size;
+        const float* target_row = target_logits.data() + static_cast<size_t>(t) * vocab_size;
+
+        // Find argmax of both
+        uint32_t draft_token = 0, target_token = 0;
+        float draft_max = draft_row[0], target_max = target_row[0];
+        for (uint32_t v = 1; v < vocab_size; ++v) {
+            if (draft_row[v] > draft_max) { draft_max = draft_row[v]; draft_token = v; }
+            if (target_row[v] > target_max) { target_max = target_row[v]; target_token = v; }
+        }
+
+        if (draft_token == target_token) {
+            out_result->accepted_tokens.push_back(draft_token);
+            out_result->accepted_count++;
+        } else {
+            // First rejection — accept the target token and stop
+            out_result->accepted_tokens.push_back(target_token);
+            out_result->accepted_count++;
+            break;
+        }
+    }
+
+    out_result->acceptance_rate = (seq_len > 0)
+        ? static_cast<float>(out_result->accepted_count) / static_cast<float>(seq_len)
+        : 0.0f;
+
+    return true;
+}
+
+// =============================================================================
+// C-callable exports for MASM bridge
+// =============================================================================
+static VulkanCompute* g_vulkan_instance = nullptr;
+
+extern "C" {
+
+int VulkanKernel_Init(void) {
+    if (g_vulkan_instance) return 1; // Already initialized
+    g_vulkan_instance = new VulkanCompute();
+    return g_vulkan_instance->Initialize() ? 1 : 0;
+}
+
+int VulkanKernel_LoadShader(const char* name, const char* spirv_path) {
+    if (!g_vulkan_instance || !name || !spirv_path) return 0;
+    return g_vulkan_instance->LoadShader(name, spirv_path) ? 1 : 0;
+}
+
+int VulkanKernel_CreatePipeline(const char* shader_name) {
+    if (!g_vulkan_instance || !shader_name) return 0;
+    return g_vulkan_instance->CreateComputePipeline(shader_name) ? 1 : 0;
+}
+
+int VulkanKernel_AllocBuffer(uint64_t size, uint32_t* out_idx) {
+    if (!g_vulkan_instance || !out_idx) return 0;
+    size_t mem_size = 0;
+    return g_vulkan_instance->AllocateBuffer(static_cast<size_t>(size), *out_idx, mem_size) ? 1 : 0;
+}
+
+int VulkanKernel_CopyToDevice(uint32_t buf_idx, const void* data, uint64_t size) {
+    if (!g_vulkan_instance || !data) return 0;
+    return g_vulkan_instance->CopyHostToBuffer(const_cast<void*>(data), buf_idx,
+                                                static_cast<size_t>(size)) ? 1 : 0;
+}
+
+int VulkanKernel_CopyToHost(uint32_t buf_idx, void* data, uint64_t size) {
+    if (!g_vulkan_instance || !data) return 0;
+    return g_vulkan_instance->CopyBufferToHost(buf_idx, data,
+                                                static_cast<size_t>(size)) ? 1 : 0;
+}
+
+int VulkanKernel_DispatchMatMul(uint32_t a, uint32_t b, uint32_t out,
+                                 uint32_t M, uint32_t K, uint32_t N) {
+    if (!g_vulkan_instance) return 0;
+    return g_vulkan_instance->DispatchMatMul(a, b, out, M, K, N) ? 1 : 0;
+}
+
+int VulkanKernel_DispatchFlashAttn(uint32_t q, uint32_t k, uint32_t v,
+                                    uint32_t out, uint32_t seq_len,
+                                    uint32_t head_dim, uint32_t num_heads) {
+    if (!g_vulkan_instance) return 0;
+    return g_vulkan_instance->DispatchFlashAttentionV2(q, k, v, out, seq_len, head_dim, num_heads) ? 1 : 0;
+}
+
+int VulkanKernel_HotswapShader(const char* name, const uint32_t* spirv, uint64_t size) {
+    if (!g_vulkan_instance || !name || !spirv) return 0;
+    return g_vulkan_instance->HotswapShader(name, spirv, static_cast<size_t>(size)) ? 1 : 0;
+}
+
+void VulkanKernel_GetStats(uint64_t* dispatches, uint64_t* matmuls,
+                            uint64_t* attentions, uint64_t* errors) {
+    if (!g_vulkan_instance) return;
+    const auto& s = g_vulkan_instance->GetStats();
+    if (dispatches) *dispatches = s.dispatch_count.load(std::memory_order_relaxed);
+    if (matmuls) *matmuls = s.matmul_count.load(std::memory_order_relaxed);
+    if (attentions) *attentions = s.attention_count.load(std::memory_order_relaxed);
+    if (errors) *errors = s.error_count.load(std::memory_order_relaxed);
+}
+
+void VulkanKernel_Cleanup(void) {
+    if (g_vulkan_instance) {
+        g_vulkan_instance->Cleanup();
+        delete g_vulkan_instance;
+        g_vulkan_instance = nullptr;
+    }
+}
+
+} // extern "C"

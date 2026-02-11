@@ -1,0 +1,86 @@
+
+Microsoft (R) Program Maintenance Utility Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+[  6%] Built target masm_kernels
+[  6%] Built target RawrXD-RE-Library
+[  7%] Linking CXX executable RawrEngine.exe
+[ 37%] Built target RawrEngine
+[ 38%] Built target rawrxd-monaco-gen
+[ 39%] Built target re_deobfuscator
+[ 39%] Built target re_model_reverse
+[ 40%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_extension_host.cpp.obj
+quickjs_extension_host.cpp
+[ 40%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_node_shims.cpp.obj
+quickjs_node_shims.cpp
+[ 40%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_vscode_bindings.cpp.obj
+quickjs_vscode_bindings.cpp
+[ 41%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/rawrxd_state_mmf.cpp.obj
+rawrxd_state_mmf.cpp
+[ 41%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/js_extension_host.cpp.obj
+js_extension_host.cpp
+[ 41%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/extension_polyfill_engine.cpp.obj
+extension_polyfill_engine.cpp
+[ 42%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+[ 42%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+[ 42%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+[ 43%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+[ 43%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+[ 43%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+[ 44%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+[ 44%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+[ 44%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+[ 45%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+[ 45%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+[ 45%] Building RC object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/RawrXD-Win32IDE.rc.res
+Microsoft (R) Windows (R) Resource Compiler Version 10.0.10011.16384
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+[ 46%] Linking CXX executable bin\RawrXD-Win32IDE.exe
+[100%] Built target RawrXD-Win32IDE

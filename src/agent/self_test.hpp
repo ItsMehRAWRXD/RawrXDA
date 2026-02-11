@@ -1,13 +1,13 @@
 #pragma once
+// self_test.hpp – Qt-free SelfTest (C++20 / Win32)
+#include <cstdint>
+#include <string>
+#include <vector>
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
-
-class SelfTest : public QObject {
-    Q_OBJECT
+class SelfTest {
 public:
-    explicit SelfTest(QObject* parent = nullptr);
+    SelfTest();
+    ~SelfTest() = default;
 
     bool runAll();               // unit + integration + perf
     bool runUnitTests();         // build/bin/*_test.exe
@@ -15,17 +15,22 @@ public:
     bool runLint();              // cl.exe /analyze
     bool runBenchmarkBaseline(); // tokens/sec vs. stored baseline
 
-    QString lastOutput() const { return m_output; }
-    QString lastError() const { return m_error; }
+    const std::string& lastOutput() const { return m_output; }
+    const std::string& lastError()  const { return m_error; }
 
-signals:
-    void log(const QString& line);
+    // Callback for log lines (replaces Qt signal)
+    using LogCallback = void(*)(void* ctx, const char* line);
+    void setLogCb(LogCallback cb, void* ctx) { m_logCb = cb; m_logCtx = ctx; }
 
 private:
-    bool runProcess(const QString& prog, const QStringList& args, int timeoutMs = 60000);
-    double parseTPS(const QString& log) const;
-    bool checkBenchmarkRegression(const QString& name, double current, double baseline);
+    bool   runProcess(const std::string& prog, const std::vector<std::string>& args, int timeoutMs = 60000);
+    double parseTPS(const std::string& log) const;
+    bool   checkBenchmarkRegression(const std::string& name, double current, double baseline);
+    void   log(const std::string& line);
 
-    QString m_output;
-    QString m_error;
+    std::string m_output;
+    std::string m_error;
+
+    LogCallback m_logCb  = nullptr;
+    void*       m_logCtx = nullptr;
 };

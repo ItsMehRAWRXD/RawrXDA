@@ -1,215 +1,26 @@
-[  1%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE.cpp.obj
-[  2%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Commands.cpp.obj
-[  4%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_LocalServer.cpp.obj
-[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_MultiResponse.cpp.obj
-In file included from D:\rawrxd\src\win32app\Win32IDE.cpp:6:
-D:/rawrxd/src/core/multi_response_engine.h:47:8: error: redefinition of 'struct ResponseTemplate'
-   47 | struct ResponseTemplate {
-      |        ^~~~~~~~~~~~~~~~
-In file included from D:\rawrxd\src\win32app\Win32IDE.cpp:2:
-D:\rawrxd\src\win32app\multi_response_engine.h:37:8: note: previous definition of 'struct ResponseTemplate'
-   37 | struct ResponseTemplate {
-      |        ^~~~~~~~~~~~~~~~
-D:/rawrxd/src/core/multi_response_engine.h:70:8: error: redefinition of 'struct MultiResponseSession'
-   70 | struct MultiResponseSession {
-      |        ^~~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\multi_response_engine.h:45:8: note: previous definition of 'struct MultiResponseSession'
-   45 | struct MultiResponseSession {
-      |        ^~~~~~~~~~~~~~~~~~~~
-D:/rawrxd/src/core/multi_response_engine.h:83:8: error: redefinition of 'struct MultiResponseStats'
-   83 | struct MultiResponseStats {
-      |        ^~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\multi_response_engine.h:62:8: note: previous definition of 'struct MultiResponseStats'
-   62 | struct MultiResponseStats {
-      |        ^~~~~~~~~~~~~~~~~~
-D:/rawrxd/src/core/multi_response_engine.h:104:8: error: redefinition of 'struct MultiResponseResult'
-  104 | struct MultiResponseResult {
-      |        ^~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\multi_response_engine.h:18:8: note: previous definition of 'struct MultiResponseResult'
-   18 | struct MultiResponseResult {
-      |        ^~~~~~~~~~~~~~~~~~~
-D:/rawrxd/src/core/multi_response_engine.h:139:7: error: redefinition of 'class MultiResponseEngine'
-  139 | class MultiResponseEngine {
-      |       ^~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\multi_response_engine.h:71:7: note: previous definition of 'class MultiResponseEngine'
-   71 | class MultiResponseEngine {
-      |       ^~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseGenerate()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:55:26: error: 'getLastUserMessage' was not declared in this scope
-   55 |     std::string prompt = getLastUserMessage();
-      |                          ^~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:76:34: error: 'const struct MultiResponseSession' has no member named 'totalMs'
-   76 |                 << (int)session->totalMs << "ms\n";
-      |                                  ^~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:78:38: error: 'const struct MultiResponseSession::Response' has no member named 'index'
-   78 |                 oss << "  [" << resp.index << "] " << resp.templateName
-      |                                      ^~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:78:60: error: 'const struct MultiResponseSession::Response' has no member named 'templateName'; did you mean 'templateId'?
-   78 |                 oss << "  [" << resp.index << "] " << resp.templateName
-      |                                                            ^~~~~~~~~~~~
-      |                                                            templateId
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:80:30: error: 'const struct MultiResponseSession::Response' has no member named 'error'
-   80 |                     << (resp.error ? " (ERROR)" : " OK") << "\n";
-      |                              ^~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseSelectPreferred()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:127:52: error: 'const __gnu_cxx::__alloc_traits<std::allocator<MultiResponseSession::Response>, MultiResponseSession::Response>::value_type' {aka 'const struct MultiResponseSession::Response'} has no member named 'templateName'; did you mean 'templateId'?
-  127 |                    " (" + session->responses[next].templateName + ")",
-      |                                                    ^~~~~~~~~~~~
-      |                                                    templateId
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseCompare()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:146:26: error: 'const struct MultiResponseSession' has no member named 'totalMs'
-  146 |         << (int)session->totalMs << "ms\n\n";
-      |                          ^~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:149:42: error: 'const struct MultiResponseSession::Response' has no member named 'index'
-  149 |         oss << "──── Response #" << resp.index << ": " << resp.templateName;
-      |                                          ^~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:149:64: error: 'const struct MultiResponseSession::Response' has no member named 'templateName'; did you mean 'templateId'?
-  149 |         oss << "──── Response #" << resp.index << ": " << resp.templateName;
-      |                                                                ^~~~~~~~~~~~
-      |                                                                templateId
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:150:45: error: 'const struct MultiResponseSession::Response' has no member named 'index'
-  150 |         if (session->preferredIndex == resp.index) oss << " ★ PREFERRED";
-      |                                             ^~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:152:78: error: 'const struct MultiResponseSession::Response' has no member named 'tokenCount'
-  152 |         oss << "Latency: " << (int)resp.latencyMs << "ms | Tokens: " << resp.tokenCount;
-      |                                                                              ^~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:153:18: error: 'const struct MultiResponseSession::Response' has no member named 'error'
-  153 |         if (resp.error) oss << " | ERROR: " << resp.errorDetail;
-      |                  ^~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:153:53: error: 'const struct MultiResponseSession::Response' has no member named 'errorDetail'
-  153 |         if (resp.error) oss << " | ERROR: " << resp.errorDetail;
-      |                                                     ^~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseShowStats()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:173:42: error: 'struct MultiResponseStats' has no member named 'totalResponsesGenerated'
-  173 |     oss << "Total responses:  " << stats.totalResponsesGenerated << "\n";
-      |                                          ^~~~~~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:174:42: error: 'struct MultiResponseStats' has no member named 'totalPreferencesRecorded'
-  174 |     oss << "Total prefs:      " << stats.totalPreferencesRecorded << "\n";
-      |                                          ^~~~~~~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:175:42: error: 'struct MultiResponseStats' has no member named 'errorCount'
-  175 |     oss << "Errors:           " << stats.errorCount << "\n\n";
-      |                                          ^~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:180:50: error: 'struct MultiResponseStats' has no member named 'preferenceCount'
-  180 |         oss << "  " << names[i] << ": " << stats.preferenceCount[i]
-      |                                                  ^~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:181:45: error: 'struct MultiResponseStats' has no member named 'avgLatencyMs'
-  181 |             << " picks (avg " << (int)stats.avgLatencyMs[i] << "ms)\n";
-      |                                             ^~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseShowTemplates()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:195:25: error: 'const struct ResponseTemplate' has no member named 'shortLabel'
-  195 |         oss << "[" << t.shortLabel << "] " << t.name
-      |                         ^~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:197:32: error: 'const struct ResponseTemplate' has no member named 'temperature'
-  197 |             << " | temp=" << t.temperature
-      |                                ^~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:198:34: error: 'const struct ResponseTemplate' has no member named 'maxTokens'
-  198 |             << " | maxTok=" << t.maxTokens << "\n"
-      |                                  ^~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:199:28: error: 'const struct ResponseTemplate' has no member named 'description'
-  199 |             << "    " << t.description << "\n\n";
-      |                            ^~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseToggleTemplate()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:211:31: error: 'ResponseTemplateId' does not name a type; did you mean 'ResponseTemplate'?
-  211 |     auto tmplId = static_cast<ResponseTemplateId>(toggleIdx);
-      |                               ^~~~~~~~~~~~~~~~~~
-      |                               ResponseTemplate
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseShowPreferences()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:237:41: error: 'const struct std::pair<long long unsigned int, int>' has no member named 'preferredTemplate'
-  237 |         int tidx = static_cast<int>(rec.preferredTemplate);
-      |                                         ^~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:238:35: error: 'const struct std::pair<long long unsigned int, int>' has no member named 'sessionId'
-  238 |         oss << "Session #" << rec.sessionId << " → "
-      |                                   ^~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:240:31: error: 'const struct std::pair<long long unsigned int, int>' has no member named 'promptSnippet'
-  240 |             << " | \"" << rec.promptSnippet.substr(0, 60) << "...\"\n";
-      |                               ^~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::cmdMultiResponseApplyPreferred()':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:291:40: error: 'const struct MultiResponseSession::Response' has no member named 'index'
-  291 |                    std::to_string(resp.index) + " (" + resp.templateName + ")...",
-      |                                        ^~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:291:61: error: 'const struct MultiResponseSession::Response' has no member named 'templateName'; did you mean 'templateId'?
-  291 |                    std::to_string(resp.index) + " (" + resp.templateName + ")...",
-      |                                                             ^~~~~~~~~~~~
-      |                                                             templateId
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:295:56: error: 'const struct MultiResponseSession::Response' has no member named 'templateName'; did you mean 'templateId'?
-  295 |     appendToOutput("\n═══ Preferred Response (" + resp.templateName + ") ═══\n" +
-      |                                                        ^~~~~~~~~~~~
-      |                                                        templateId
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::handleMultiResponseStatusEndpoint(SOCKET)':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:308:28: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  308 |     std::string response = LocalServerUtil::buildHttpResponse(200, json);
-      |                            ^~~~~~~~~~~~~~~
-      |                            LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::handleMultiResponseTemplatesEndpoint(SOCKET)':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:324:40: error: 'const struct ResponseTemplate' has no member named 'shortLabel'
-  324 |           << ",\"shortLabel\":\"" << t.shortLabel << "\""
-      |                                        ^~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:325:39: error: 'const struct ResponseTemplate' has no member named 'temperature'
-  325 |           << ",\"temperature\":" << t.temperature
-      |                                       ^~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:326:37: error: 'const struct ResponseTemplate' has no member named 'maxTokens'
-  326 |           << ",\"maxTokens\":" << t.maxTokens
-      |                                     ^~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:333:28: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  333 |     std::string response = LocalServerUtil::buildHttpResponse(200, o.str());
-      |                            ^~~~~~~~~~~~~~~
-      |                            LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::handleMultiResponseGenerateEndpoint(SOCKET, const std::string&)':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:370:31: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  370 |         std::string errResp = LocalServerUtil::buildHttpResponse(400,
-      |                               ^~~~~~~~~~~~~~~
-      |                               LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:381:28: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  381 |     std::string response = LocalServerUtil::buildHttpResponse(code, json);
-      |                            ^~~~~~~~~~~~~~~
-      |                            LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: At global scope:
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:386:6: error: no declaration matches 'void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET)'
-  386 | void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET client) {
-      |      ^~~~~~~~
-In file included from D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:13:
-D:\rawrxd\src\win32app\Win32IDE.h:3407:10: note: candidate is: 'void Win32IDE::handleMultiResponseResultsEndpoint(SOCKET, const std::string&)'
- 3407 |     void handleMultiResponseResultsEndpoint(SOCKET client, const std::string& sessionId);
-      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE.h:693:7: note: 'class Win32IDE' defined here
-  693 | class Win32IDE
-      |       ^~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::handleMultiResponsePreferEndpoint(SOCKET, const std::string&)':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:426:31: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  426 |         std::string errResp = LocalServerUtil::buildHttpResponse(400,
-      |                               ^~~~~~~~~~~~~~~
-      |                               LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:432:65: error: no matching function for call to 'MultiResponseEngine::setPreference(uint64_t, int&, std::string&)'
-  432 |     MultiResponseResult r = m_multiResponseEngine->setPreference(
-      |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-  433 |         (uint64_t)sessionId, responseIndex, reason);
-      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~              
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:432:65: note: there is 1 candidate
-In file included from D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:14:
-D:\rawrxd\src\win32app\multi_response_engine.h:172:25: note: candidate 1: 'MultiResponseResult MultiResponseEngine::setPreference(uint64_t, int)'
-  172 |     MultiResponseResult setPreference(uint64_t sid, int index) {
-      |                         ^~~~~~~~~~~~~
-D:\rawrxd\src\win32app\multi_response_engine.h:172:25: note: candidate expects 2 arguments, 3 provided
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:439:37: error: 'struct MultiResponseResult' has no member named 'errorCode'
-  439 |     int code = r.success ? 200 : (r.errorCode == 404 ? 404 : 400);
-      |                                     ^~~~~~~~~
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:440:28: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  440 |     std::string response = LocalServerUtil::buildHttpResponse(code, json);
-      |                            ^~~~~~~~~~~~~~~
-      |                            LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::handleMultiResponseStatsEndpoint(SOCKET)':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:449:28: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  449 |     std::string response = LocalServerUtil::buildHttpResponse(200, json);
-      |                            ^~~~~~~~~~~~~~~
-      |                            LocalServerStats
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp: In member function 'void Win32IDE::handleMultiResponsePreferencesEndpoint(SOCKET)':
-D:\rawrxd\src\win32app\Win32IDE_MultiResponse.cpp:458:28: error: 'LocalServerUtil' has not been declared; did you mean 'LocalServerStats'?
-  458 |     std::string response = LocalServerUtil::buildHttpResponse(200, json);
-      |                            ^~~~~~~~~~~~~~~
-      |                            LocalServerStats
-mingw32-make[3]: *** [CMakeFiles\RawrXD-Win32IDE.dir\build.make:529: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_MultiResponse.cpp.obj] Error 1
-mingw32-make[3]: *** Waiting for unfinished jobs....
-mingw32-make[3]: *** [CMakeFiles\RawrXD-Win32IDE.dir\build.make:94: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE.cpp.obj] Error 1
-mingw32-make[2]: *** [CMakeFiles\Makefile2:156: CMakeFiles/RawrXD-Win32IDE.dir/all] Error 2
-mingw32-make[1]: *** [CMakeFiles\Makefile2:163: CMakeFiles/RawrXD-Win32IDE.dir/rule] Error 2
-mingw32-make: *** [Makefile:149: RawrXD-Win32IDE] Error 2
+[0/1] Re-running CMake...
+-- Building for: Visual Studio 17 2022
+-- [SDK Fix] INCLUDE = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um
+-- [SDK Fix] LIB     = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/lib/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+CMake Error at CMakeLists.txt:49 (project):
+  Failed to run MSBuild command:
+
+    C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe
+
+  to get the value of VCTargetsPath:
+
+    MSBuild version 17.14.23+b0019275e for .NET Framework
+    MSBUILD : error MSB1009: Project file does not exist.
+    Switch: VCTargetsPath.vcxproj
+    
+
+  Exit code: 1
+
+
+
+-- Configuring incomplete, errors occurred!
+ninja: error: rebuilding 'build.ninja': subcommand failed
+FAILED: build.ninja D:/rawrxd/build/cmake_install.cmake D:/rawrxd/build/src/reverse_engineering/cmake_install.cmake 
+"C:\Program Files\CMake\bin\cmake.exe" --regenerate-during-build -SD:\rawrxd -BD:\rawrxd\build

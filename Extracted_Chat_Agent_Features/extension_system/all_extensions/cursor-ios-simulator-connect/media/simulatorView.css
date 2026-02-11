@@ -1,0 +1,141 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html,
+body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background-color: var(--vscode-editor-background);
+}
+
+.simulator-wrapper {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	overflow: hidden;
+	position: relative;
+	background-color: #000;
+}
+
+#simulator-canvas {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+	cursor: pointer;
+	touch-action: none;
+	image-rendering: -webkit-optimize-contrast;
+	image-rendering: crisp-edges;
+}
+
+.loading {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16px;
+	color: var(--vscode-descriptionForeground);
+}
+
+.loading.hidden {
+	display: none;
+}
+
+.spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid var(--vscode-progressBar-background);
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Touch feedback */
+.touch-indicator {
+	position: absolute;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background-color: rgba(255, 255, 255, 0.3);
+	border: 2px solid rgba(255, 255, 255, 0.6);
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	animation: touch-feedback 0.3s ease-out forwards;
+}
+
+@keyframes touch-feedback {
+	0% {
+		opacity: 1;
+		transform: translate(-50%, -50%) scale(0.5);
+	}
+
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -50%) scale(1.5);
+	}
+}
+
+/* Keyboard focus indicator */
+#simulator-canvas:focus {
+	outline: none;
+}
+
+/* Controls bar */
+.controls-bar {
+	position: fixed;
+	bottom: 8px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 8px;
+	padding: 6px 12px;
+	background-color: var(--vscode-editor-background);
+	border: 1px solid var(--vscode-widget-border);
+	border-radius: 8px;
+	z-index: 100;
+	/* Allow clicks to pass through the bar background (so it doesn't block the simulator dock/search area). */
+	pointer-events: none;
+}
+
+.control-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	background-color: var(--vscode-button-secondaryBackground);
+	border: none;
+	border-radius: 6px;
+	color: var(--vscode-button-secondaryForeground);
+	cursor: pointer;
+	transition: background-color 0.15s;
+	/* Keep buttons clickable even though the bar itself is click-through. */
+	pointer-events: auto;
+}
+
+.control-btn:hover {
+	background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.control-btn:active {
+	transform: scale(0.95);
+}
+
+.control-btn svg {
+	width: 20px;
+	height: 20px;
+}

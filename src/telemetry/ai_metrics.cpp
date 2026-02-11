@@ -1,4 +1,10 @@
 #include "telemetry/ai_metrics.h"
+#include <chrono>
+#include <cstdint>
+#include <map>
+#include <mutex>
+#include <string>
+#include <vector>
 #include <algorithm>
 #include <numeric>
 #include <sstream>

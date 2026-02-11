@@ -70,9 +70,9 @@ void Win32IDE::createPowerShellPanel() {
         NULL
     );
     
-    // Set output font
+    // Set output font (DPI-scaled)
     HFONT hFont = CreateFont(
-        16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        -dpiScale(16), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
     );
@@ -124,7 +124,7 @@ void Win32IDE::createPowerShellPanel() {
     );
     
     HFONT hSmallFont = CreateFont(
-        12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        -dpiScale(12), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
     );
@@ -307,15 +307,23 @@ void Win32IDE::layoutPowerShellPanel() {
     int mainWidth = mainRect.right - mainRect.left;
     int mainHeight = mainRect.bottom - mainRect.top;
     
-    // Position at bottom of IDE
-    int panelTop = mainHeight - m_powerShellPanelHeight;
+    // Calculate correct bounds — must respect sidebar, activity bar, and secondary sidebar
+    const int ACTIVITY_BAR_WIDTH = dpiScale(48);
+    const int STATUSBAR_HEIGHT = dpiScale(24);
+    int sidebarWidth = m_sidebarVisible ? m_sidebarWidth : 0;
+    int secondarySidebarWidth = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
+    int panelLeft = ACTIVITY_BAR_WIDTH + sidebarWidth;
+    int panelWidth = mainWidth - panelLeft - secondarySidebarWidth;
+    
+    // Position at bottom of IDE (above status bar)
+    int panelTop = mainHeight - STATUSBAR_HEIGHT - m_powerShellPanelHeight;
     
     SetWindowPos(m_hwndPowerShellPanel, NULL,
-        0, panelTop,
-        mainWidth, m_powerShellPanelHeight,
+        panelLeft, panelTop,
+        panelWidth, m_powerShellPanelHeight,
         SWP_NOZORDER);
     
-    updatePowerShellPanelLayout(mainWidth, m_powerShellPanelHeight);
+    updatePowerShellPanelLayout(panelWidth, m_powerShellPanelHeight);
 }
 
 void Win32IDE::updatePowerShellPanelLayout(int width, int height) {

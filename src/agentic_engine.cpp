@@ -15,6 +15,9 @@
 #include <unordered_set>
 #include <numeric>
 
+// MASM Telemetry bridge — lock-free atomic counters
+#include "rawrxd_telemetry_exports.h"
+
 AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
 
 AgenticEngine::~AgenticEngine() {}
@@ -621,6 +624,10 @@ std::string AgenticEngine::executeChain(const std::vector<std::string>& steps,
                                          const std::string& initialInput) {
     std::string currentInput = initialInput;
     for (size_t i = 0; i < steps.size(); i++) {
+        // Atomic counter increment — single lock xadd, practically invisible to profiler
+#if defined(RAWRXD_LINK_TELEMETRY_KERNEL_ASM) || defined(RAWR_HAS_MASM)
+        UTC_IncrementCounter(&g_Counter_AgentLoop);
+#endif
         std::string prompt = steps[i];
         // Replace {{input}} placeholder
         const std::string placeholder = "{{input}}";

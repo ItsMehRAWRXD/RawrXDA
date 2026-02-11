@@ -51,6 +51,9 @@ project(RawrEngine VERSION 7.4.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Static link MSVC runtime — no vcruntime140.dll dependency
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
 
 # =============================================================================
@@ -85,9 +88,13 @@ endif()
 # MinGW builds skip ASM kernels and use C++ fallbacks.
 if(MSVC)
     enable_language(ASM_MASM)
-    set(CMAKE_ASM_MASM_FLAGS "/c /Zi /Zd")
+    set(CMAKE_ASM_MASM_FLAGS "/c /Zi /Zd /I${CMAKE_CURRENT_SOURCE_DIR}/src/asm")
     set(RAWR_HAS_MASM TRUE)
     add_definitions(-DRAWR_HAS_MASM=1)
+    add_definitions(-DRAWRXD_LINK_QUADBUFFER_ASM=1)
+    add_definitions(-DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1)
+    add_definitions(-DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1)
+    add_definitions(-DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1)
     message(STATUS "MASM64 enabled: ASM kernels will be compiled")
 else()
     set(RAWR_HAS_MASM FALSE)
@@ -107,9 +114,21 @@ if(RAWR_HAS_MASM)
         src/asm/inference_kernels.asm
         src/asm/model_bridge_x64.asm
         src/asm/RawrXD_DualAgent_Orchestrator.asm
+        src/asm/RawrXD_DiskRecoveryAgent.asm
+        src/asm/disk_recovery_scsi.asm
+        src/asm/RawrXD-AnalyzerDistiller.asm
+        src/asm/RawrXD-StreamingOrchestrator.asm
+        src/asm/RawrXD_Telemetry_Kernel.asm
+        src/asm/RawrXD_Prometheus_Exporter.asm
+        src/asm/RawrXD_SelfPatch_Agent.asm
+        src/asm/RawrXD_SourceEdit_Kernel.asm
     )
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
+    add_definitions(-DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1)
+    add_definitions(-DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1)
+    add_definitions(-DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1)
+    add_definitions(-DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1)
 else()
     set(ASM_KERNEL_SOURCES "")
 endif()
@@ -169,6 +188,30 @@ set(SOURCES
     src/core/proxy_hotpatcher.cpp
     src/server/gguf_server_hotpatch.cpp
     src/agent/agentic_hotpatch_orchestrator.cpp
+
+    # Autonomous SubAgents — Bulk Fix Orchestration for models/swarms
+    src/agent/autonomous_subagent.cpp
+    src/agent/agentic_failure_detector.cpp
+    src/agent/agentic_puppeteer.cpp
+
+    # HTTP Client — WinHTTP/curl async with future retention
+    src/agent/llm_http_client.cpp
+    src/agent/model_invoker.cpp
+    src/agent/planner.cpp
+
+    # Agent Self-Repair (MASM64 self-patching kernel bridge)
+    src/agent/agent_self_repair.cpp
+    src/agent/agent_self_healing_orchestrator.cpp
+
+    # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
+    src/agentic/DeterministicReplayEngine.cpp
+    src/agentic/AgentToolHandlers.cpp
+
+    # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
+    src/agentic/autonomous_recovery_orchestrator.cpp
+
+    # Disk Recovery Agent (C++ wrapper for ASM SCSI kernel)
+    src/agent/DiskRecoveryAgent.cpp
     
     # Phase 21: Distributed Swarm Bridge + Universal Model Hotpatcher
     src/core/swarm_decision_bridge.cpp
@@ -214,6 +257,13 @@ set(SOURCES
     src/core/swarm_network_stubs.cpp
     src/tool_registry.cpp
 
+    # Stubgen: AnalyzerDistiller + StreamingOrchestrator (C++ fallbacks, guarded by RAWR_HAS_MASM)
+    src/core/analyzer_distiller_stubs.cpp
+    src/core/streaming_orchestrator_stubs.cpp
+
+    # PT Driver Contract — Page Table substrate (VEH watchpoints, COW snapshots, ASLR, large pages)
+    src/core/pt_driver_contract.cpp
+
     # Phase 21: Distributed Swarm Inference Orchestrator
     src/cli/swarm_orchestrator.cpp
 
@@ -223,16 +273,37 @@ set(SOURCES
     # Phase 44: Voice Automation — Toggleable TTS Response Reader
     src/core/voice_automation.cpp
 
-    # Phase 33: Quick-Win Qt Ports
+    # Phase 33: Quick-Win Ports
     src/core/shortcut_manager.cpp
     src/core/backup_manager.cpp
     src/core/alert_system.cpp
 
+    # Shared Feature Dispatch System (CLI + GUI unified command routing)
+    src/core/shared_feature_dispatch.cpp
+    src/core/feature_registration.cpp
+    src/core/feature_handlers.cpp
+    src/core/ssot_handlers.cpp
+    src/core/ssot_validation.cpp
+
+    # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
+    src/core/unified_command_dispatch.cpp
+
     # Phase 32A: Chain-of-Thought Multi-Model Review Engine
     src/core/chain_of_thought_engine.cpp
 
+    # Phase 32B: Tunable Reasoning Pipeline (P-Settings Orchestrator)
+    src/core/reasoning_profile.cpp
+    src/core/reasoning_pipeline_orchestrator.cpp
+    src/core/reasoning_cot_bridge.cpp
+
     # Phase 36: Cross-Process MMF State Synchronization (shared with Win32IDE)
     src/core/rawrxd_state_mmf.cpp
+
+    # Phase 46: VulkanKernel — Full GPU Compute Engine (SPIR-V, Flash Attn v2, Fused MLP)
+    src/vulkan_compute.cpp
+
+    # Phase 46: Live Binary Patcher — Layer 5 Hotpatch (trampolines, code-page swap, RVA reloc)
+    src/core/live_binary_patcher.cpp
 
     # Phase 37: Iterative Partial Inference with Adaptive Tensor Traversal
     src/core/traversal_strategy.cpp
@@ -241,6 +312,122 @@ set(SOURCES
     src/core/cross_run_tensor_cache.cpp
     src/core/convergence_controller.cpp
     src/core/iterative_tensor_traversal.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Cursor-Parity Gaps — META prerequisites + GAP 1-10
+    # ═══════════════════════════════════════════════════════════════════
+
+    # META 1: SQLite RAII Wrapper
+    src/core/sqlite_wrapper.cpp
+    src/core/sqlite3_stubs.cpp   # Link stubs — replace with sqlite3.c amalgamation for production
+
+    # META 2: Work-Stealing Thread Pool
+    src/core/thread_pool.cpp
+
+    # META 3: Memory Pressure Handler
+    src/core/memory_pressure_handler.cpp
+
+    # META 4: JSON-RPC 2.0 Parser
+    src/core/jsonrpc_parser.cpp
+
+    # GAP 1: Multi-File Atomic Transactions + WAL Journal
+    src/agentic/multi_file_transaction.cpp
+    src/core/transaction_journal.cpp
+
+    # GAP 2: HNSW Vector Index
+    src/core/vector_index.cpp
+
+    # GAP 3: Model Cascade Router (Thompson Sampling)
+    src/agentic/model_cascade.cpp
+
+    # GAP 4: Ghost-Text Context Assembler
+    src/agentic/context_assembler.cpp
+
+    # GAP 5: Chat Message Renderer (Markdown → HTML)
+    src/ui/chat_message_renderer.cpp
+
+    # GAP 6: Git Context Provider (CLI subprocess)
+    src/git/git_context.cpp
+
+    # GAP 7: LSP Diagnostic Consumer + Quick-Fix
+    src/lsp/diagnostic_consumer.cpp
+
+    # GAP 8: Jinja2-Style Prompt Template Engine
+    src/core/prompt_template_engine.cpp
+
+    # GAP 9: Speculative Decoder v2 (Draft-Verify-Accept)
+    src/gpu/speculative_decoder_v2.cpp
+
+    # GAP 10: Completion Feedback (Online Logistic Regression)
+    src/telemetry/completion_feedback.cpp
+
+    # T3-D: Replay + Telemetry Fusion Engine
+    src/telemetry/replay_telemetry_fusion.cpp
+
+    # T3-D: Hotpatch Telemetry Safety Layer
+    src/telemetry/hotpatch_telemetry_safety.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # GPU + Agentic + UI Integration (STL/Win32 native)
+    # ═══════════════════════════════════════════════════════════════════
+
+    # GPU Backend — Vulkan/CUDA/CPU fallback chain (fprintf logging)
+    src/gpu/gpu_backend.cpp
+
+    # KV-Cache Optimizer — sliding-window eviction, std::chrono timing
+    src/gpu/kv_cache_optimizer.cpp
+
+    # Speculative Decoder v1 — draft/verify with std::mt19937 RNG
+    src/gpu/speculative_decoder.cpp
+
+    # Agentic Controller — callback-based event loop (no QObject/signals)
+    src/agentic_controller.cpp
+
+    # Phase 2 UI Integration — Win32 MessageBox, std::filesystem, std::function callbacks
+    src/ui/phase2_integration_example.cpp
+
+    # Multi-Model Benchmark Tool — has its own main(), built as separate target
+    # src/tools/multi_model_benchmark.cpp  # EXCLUDED: duplicate main() symbol
+
+    # Agentic Agent Coordinator — multi-agent lifecycle (ctor, dtor, createAgent, synchronize)
+    src/agentic_agent_coordinator.cpp
+
+    # Production Config Manager — singleton config loader (instance, loadConfig, value)
+    src/production_config_manager.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Valuation-Critical Platform Subsystems (>2× step-up from $40M baseline)
+    # ═══════════════════════════════════════════════════════════════════
+
+    # Autonomous End-to-End Workflow Engine (scan → bulk_fix → verify → build → test → diff)
+    src/core/autonomous_workflow_engine.cpp
+
+    # Workspace-Level Reasoning Profiles (fast/dev/critical per repo)
+    src/core/workspace_reasoning_profiles.cpp
+
+    # Deterministic Swarm Reproducibility (same input + seed = same result)
+    src/core/deterministic_swarm.cpp
+
+    # Safe-by-Default Bulk Refactor Engine + Diff-Aware Verification Gates
+    src/core/safe_refactor_engine.cpp
+
+    # Reasoning Schema Versioning (semver, migration, backwards-compatible)
+    src/core/reasoning_schema_versioning.cpp
+
+    # CoT Backend Disable/Fallback System (circuit breaker, graceful degradation)
+    src/core/cot_fallback_system.cpp
+
+    # Input Guard with Backend Slicing (OOM protection, chunk routing, budget)
+    src/core/input_guard_slicer.cpp
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Autonomous-Fix Replay Harness (Deterministic Validation Layer)
+    # ═══════════════════════════════════════════════════════════════════
+    src/test_harness/replay_fixture.cpp
+    src/test_harness/replay_oracle.cpp
+    src/test_harness/replay_mock_inference.cpp
+    src/test_harness/replay_harness.cpp
+    src/test_harness/replay_reporter.cpp
 )
 
 # =============================================================================
@@ -259,9 +446,18 @@ target_include_directories(RawrEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server
     ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/git
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
     ${CMAKE_CURRENT_SOURCE_DIR}/src/reverse_engineering
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/gpu
 )
 
 target_link_libraries(RawrEngine PRIVATE Threads::Threads)
@@ -479,6 +675,17 @@ if(MSVC)
         VERBATIM
     )
 
+    # Phase 46: VulkanBridge — MASM64 GPU Dispatch Shim (VkBridge_Init, MatMul, FlashAttn, Hotswap)
+    set(ASM_VULKANBRIDGE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_VulkanBridge.asm")
+    set(ASM_VULKANBRIDGE_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_VulkanBridge.obj")
+    add_custom_command(
+        OUTPUT ${ASM_VULKANBRIDGE_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_VULKANBRIDGE_OBJ} ${ASM_VULKANBRIDGE_SRC}
+        DEPENDS ${ASM_VULKANBRIDGE_SRC}
+        COMMENT "[MASM] Assembling RawrXD_VulkanBridge.asm (GPU Dispatch Shim: Init, MatMul, FlashAttn, Hotswap)"
+        VERBATIM
+    )
+
     # Collect all MASM objects
     set(MASM_OBJECTS
         ${ASM_REQUANTIZE_OBJ}
@@ -500,6 +707,7 @@ if(MSVC)
         ${ASM_SWARM_NETWORK_OBJ}
         ${ASM_ENTERPRISE_LIC_OBJ}
         ${ASM_LICENSE_SHIELD_OBJ}
+        ${ASM_VULKANBRIDGE_OBJ}
     )
 
     # Link MASM objects into RawrEngine
@@ -508,18 +716,187 @@ if(MSVC)
     # Ensure MASM objects are built before linking
     add_custom_target(masm_kernels DEPENDS ${MASM_OBJECTS})
     add_dependencies(RawrEngine masm_kernels)
+
+    # =========================================================================
+    # NanoQuant Engine — Sub-1-Bit Quantization Static Library
+    # MASM64 kernel (ADMM, AVX2/AVX-512) + C++ bridge + GGML type registration
+    # Disabled by default — ASM kernel requires ml64 port fixes (A2008/A2083).
+    # Enable with: cmake -DRAWR_ENABLE_NANOQUANT=ON
+    # =========================================================================
+    option(RAWR_ENABLE_NANOQUANT "Enable NanoQuant sub-1-bit quantization engine (requires working NanoQuant ASM)" OFF)
+    if(RAWR_ENABLE_NANOQUANT)
+    set(ASM_NANOQUANT_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/asm/RawrXD_NanoQuant_Engine.asm")
+    set(ASM_NANOQUANT_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_NanoQuant_Engine.obj")
+    add_custom_command(
+        OUTPUT ${ASM_NANOQUANT_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_NANOQUANT_OBJ} ${ASM_NANOQUANT_SRC}
+        DEPENDS ${ASM_NANOQUANT_SRC}
+        COMMENT "[MASM] Assembling RawrXD_NanoQuant_Engine.asm (ADMM, AVX2/512, NQ_1/NQ_R4)"
+        VERBATIM
+    )
+
+    add_library(RawrXD_NanoQuant STATIC
+        src/ggml/ggml_nanoquant.cpp
+        src/agentic/agent_tool_quantize.cpp
+    )
+    target_include_directories(RawrXD_NanoQuant PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(RawrXD_NanoQuant PRIVATE ${ASM_NANOQUANT_OBJ})
+    add_custom_target(nanoquant_asm DEPENDS ${ASM_NANOQUANT_OBJ})
+    add_dependencies(RawrXD_NanoQuant nanoquant_asm)
+
+    # Link NanoQuant into main targets
+    target_link_libraries(RawrEngine PRIVATE RawrXD_NanoQuant)
+    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_NANOQUANT=1)
+
+    message(STATUS "[NanoQuant] Sub-1-bit quantization engine enabled (NQ_1 + NQ_R4)")
+    else()
+    message(STATUS "[NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON")
+    endif()
+endif()
+
+# =============================================================================
+# Vulkan SDK (optional — GPU compute acceleration)
+# =============================================================================
+find_package(Vulkan QUIET)
+if(Vulkan_FOUND)
+    message(STATUS "[Vulkan] Found SDK: ${Vulkan_INCLUDE_DIRS}")
+    target_include_directories(RawrEngine PRIVATE ${Vulkan_INCLUDE_DIRS})
+    target_link_libraries(RawrEngine PRIVATE Vulkan::Vulkan)
+    target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
+else()
+    # Try manual path (C:/VulkanSDK)
+    file(GLOB _VK_SDK_DIRS "C:/VulkanSDK/1.*")
+    if(_VK_SDK_DIRS)
+        list(SORT _VK_SDK_DIRS)
+        list(GET _VK_SDK_DIRS -1 _VK_SDK_DIR)
+        message(STATUS "[Vulkan] Manual SDK: ${_VK_SDK_DIR}")
+        target_include_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Include")
+        target_link_directories(RawrEngine PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrEngine PRIVATE vulkan-1)
+        target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=1)
+    else()
+        message(STATUS "[Vulkan] SDK not found — GPU compute uses CPU fallback")
+        target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_VULKAN=0)
+    endif()
 endif()
 
 if(WIN32)
-    target_link_libraries(RawrEngine PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp ws2_32)
+    target_link_libraries(RawrEngine PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp ws2_32 ntdll advapi32 crypt32)
     if(NOT MSVC)
         target_link_libraries(RawrEngine PRIVATE gomp)
     endif()
 endif()
 
+# RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
+if(MSVC)
+    target_link_options(RawrEngine PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
 if(NOT MSVC)
     target_compile_options(RawrEngine PRIVATE -march=native -O3 -w -mavx2 -mfma -fopenmp)
 endif()
+
+# =============================================================================
+# Phase 6: Standalone Inference Engine Executable (T4)
+# =============================================================================
+# Produces RawrXD-InferenceEngine.exe — loads GGUF and emits tokens with no IDE.
+# This is the self-hosting blocker: inference must run independently.
+# T4 integration: the AutonomousRecoveryOrchestrator invokes this for reasoning.
+# =============================================================================
+set(INFERENCE_ENGINE_SOURCES
+    src/inference/inference_standalone_main.cpp
+    src/inference/ultra_fast_inference.cpp
+    src/inference/polymorphic_loader.cpp
+    src/inference/ollama_blob_parser.cpp
+    src/cpu_inference_engine.cpp
+    src/gguf_loader.cpp
+    src/gguf_vocab_resolver.cpp
+    src/streaming_gguf_loader.cpp
+    src/compression_interface.cpp
+    src/memory_core.cpp
+    src/stubs.cpp
+    src/engine/gguf_core.cpp
+    src/engine/inference_kernels.cpp
+    src/engine/transformer.cpp
+    src/engine/bpe_tokenizer.cpp
+    src/engine/sampler.cpp
+    src/engine/rawr_engine.cpp
+    src/engine/core_generator.cpp
+    src/codec/compression.cpp
+    src/codec/brutal_gzip.cpp
+    src/utils/Diagnostics.cpp
+)
+
+add_executable(RawrXD-InferenceEngine ${INFERENCE_ENGINE_SOURCES})
+
+target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+    RAWR_STANDALONE_INFERENCE=1
+)
+
+target_include_directories(RawrXD-InferenceEngine PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/inference
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/codec
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(RawrXD-InferenceEngine PRIVATE Threads::Threads)
+
+if(WIN32)
+    target_link_libraries(RawrXD-InferenceEngine PRIVATE
+        shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32
+    )
+endif()
+
+if(RAWR_HAS_MASM)
+    # Link quantization + telemetry kernels into inference engine
+    set(INFERENCE_ASM_SOURCES
+        src/asm/inference_core.asm
+        src/asm/inference_kernels.asm
+        src/asm/quant_avx2.asm
+        src/asm/RawrXD_KQuant_Dequant.asm
+        src/asm/FlashAttention_AVX512.asm
+        src/asm/RawrXD_Telemetry_Kernel.asm
+    )
+    set_source_files_properties(${INFERENCE_ASM_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
+    target_sources(RawrXD-InferenceEngine PRIVATE ${INFERENCE_ASM_SOURCES})
+    target_compile_definitions(RawrXD-InferenceEngine PRIVATE
+        RAWR_HAS_MASM=1
+        RAWRXD_LINK_TELEMETRY_KERNEL_ASM=1
+        RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
+    )
+
+    # NanoQuant integration (optional)
+    if(TARGET RawrXD_NanoQuant)
+        target_link_libraries(RawrXD-InferenceEngine PRIVATE RawrXD_NanoQuant)
+        target_compile_definitions(RawrXD-InferenceEngine PRIVATE RAWR_HAS_NANOQUANT=1)
+    endif()
+endif()
+
+if(MSVC)
+    target_compile_options(RawrXD-InferenceEngine PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/EHsc /O2 /W0 /arch:AVX2>
+    )
+else()
+    target_compile_options(RawrXD-InferenceEngine PRIVATE -O3 -w -mavx2 -mfma -march=native)
+endif()
+
+set_target_properties(RawrXD-InferenceEngine PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY bin
+    OUTPUT_NAME RawrXD-InferenceEngine
+)
+
+# Telemetry_Kernel.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
+if(MSVC)
+    target_link_options(RawrXD-InferenceEngine PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
+message(STATUS "[Phase 6] Standalone inference engine target: RawrXD-InferenceEngine")
 
 add_executable(rawrxd-monaco-gen
     src/monaco_gen.cpp
@@ -585,6 +962,8 @@ if(WIN32)
         src/win32app/Win32IDE_SubAgent.h
         src/win32app/Win32IDE_SubAgent.cpp
         src/win32app/Win32IDE_AgentHistory.cpp
+        src/win32app/Win32IDE_AgentPanel.cpp
+        src/win32app/Win32IDE_DiskRecovery.cpp
         src/win32app/Win32TerminalManager.cpp
         src/win32app/Win32TerminalManager.h
         src/win32app/TransparentRenderer.cpp
@@ -603,6 +982,23 @@ if(WIN32)
         src/stubs.cpp
         src/agentic_engine.cpp
         src/subagent_core.cpp
+
+        # Bounded Agent Loop + FIM Provider (Agent→IDE Pivot)
+        src/agentic/AgentToolHandlers.cpp
+        src/agentic/BoundedAgentLoop.cpp
+        src/agentic/OllamaProvider.cpp
+        src/agentic/DiffEngine.cpp
+
+        # T3-D: Deterministic Replay Engine (DivergenceEvent + TelemetrySnapshot)
+        src/agentic/DeterministicReplayEngine.cpp
+
+        # T4: Autonomous Recovery Orchestrator (FailureClass → recovery → verify → commit)
+        src/agentic/autonomous_recovery_orchestrator.cpp
+
+        # Disk Recovery Agent (C++ implementation)
+        # NOTE: DiskRecoveryToolHandler.cpp requires ToolRegistry.cpp — deferred.
+        src/agent/DiskRecoveryAgent.cpp
+        # src/agentic/DiskRecoveryToolHandler.cpp  # Deferred: needs ToolRegistry.cpp
         src/agent_history.cpp
         src/agent_policy.cpp
         src/agent_explainability.cpp
@@ -657,10 +1053,23 @@ if(WIN32)
         src/core/unified_hotpatch_manager.cpp
         src/core/proxy_hotpatcher.cpp
         src/server/gguf_server_hotpatch.cpp
+        src/core/pt_driver_contract.cpp
         src/win32app/Win32IDE_HotpatchPanel.cpp
         
         # Agent-Driven Hotpatch Orchestration (Phase 18)
         src/agent/agentic_hotpatch_orchestrator.cpp
+
+        # HTTP Client — WinHTTP async with future retention (CLI+GUI)
+        src/agent/llm_http_client.cpp
+        src/agent/model_invoker.cpp
+        src/agent/planner.cpp
+        src/agent/autonomous_subagent.cpp
+        src/agent/agentic_failure_detector.cpp
+        src/agent/agentic_puppeteer.cpp
+
+        # Agent Self-Repair — MASM64 self-patching kernel bridge
+        src/agent/agent_self_repair.cpp
+        src/agent/agent_self_healing_orchestrator.cpp
         
         # Module implementations
         src/modules/vsix_loader_win32.cpp
@@ -752,11 +1161,21 @@ if(WIN32)
         src/core/voice_automation.cpp
         src/win32app/Win32IDE_VoiceAutomation.cpp
 
-        # Phase 33: Quick-Win Qt Ports
+        # Phase 33: Quick-Win Ports
         src/core/shortcut_manager.cpp
         src/core/backup_manager.cpp
         src/core/alert_system.cpp
         src/win32app/Win32IDE_QuickWins.cpp
+
+        # Shared Feature Dispatch System (CLI + GUI unified command routing)
+        src/core/shared_feature_dispatch.cpp
+        src/core/feature_registration.cpp
+        src/core/feature_handlers.cpp
+        src/core/ssot_handlers.cpp
+        src/core/ssot_validation.cpp
+
+        # Unified Command Dispatch — Zero-drift SSOT dispatch (replaces manual registration)
+        src/core/unified_command_dispatch.cpp
 
         # Phase 21: Distributed Swarm Inference Orchestrator
         src/cli/swarm_orchestrator.cpp
@@ -785,8 +1204,60 @@ if(WIN32)
         # Phase 37: JS Extension Host + Auto-Polyfill Engine
         src/core/js_extension_host.cpp
         src/core/extension_polyfill_engine.cpp
+
+        # Phase 46: VulkanKernel — Full GPU Compute Engine
+        src/vulkan_compute.cpp
+
+        # Phase 46: Live Binary Patcher — Layer 5 Hotpatch
+        src/core/live_binary_patcher.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Valuation-Critical Platform Subsystems (linker deps for UnifiedHotpatchManager)
+        # ═══════════════════════════════════════════════════════════════
+        src/core/autonomous_workflow_engine.cpp
+        src/core/workspace_reasoning_profiles.cpp
+        src/core/deterministic_swarm.cpp
+        src/core/reasoning_schema_versioning.cpp
+        src/core/cot_fallback_system.cpp
+        src/core/input_guard_slicer.cpp
+        src/core/safe_refactor_engine.cpp
+        src/agentic_agent_coordinator.cpp
+        src/production_config_manager.cpp
     )
     
+    # =========================================================================
+    # MultiWindow Task Scheduler Kernel (MASM64 DLL)
+    # =========================================================================
+    if(RAWR_HAS_MASM)
+        set(MW_KERNEL_ASM src/asm/RawrXD_MultiWindow_Kernel.asm)
+        set_source_files_properties(${MW_KERNEL_ASM} PROPERTIES LANGUAGE ASM_MASM)
+
+        add_library(RawrXD_MultiWindow_Kernel SHARED
+            ${MW_KERNEL_ASM}
+            src/core/multiwindow_scheduler.cpp
+        )
+        target_include_directories(RawrXD_MultiWindow_Kernel PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+        )
+        set_target_properties(RawrXD_MultiWindow_Kernel PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY bin
+            OUTPUT_NAME RawrXD_MultiWindow_Kernel
+            LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/src/asm/MultiWindowKernel.def"
+        )
+        target_link_libraries(RawrXD_MultiWindow_Kernel PRIVATE
+            kernel32 user32 winhttp
+        )
+        target_compile_definitions(RawrXD_MultiWindow_Kernel PRIVATE
+            RAWRXD_MW_KERNEL_EXPORTS=1
+        )
+        add_definitions(-DRAWRXD_HAS_MW_KERNEL=1)
+        message(STATUS "MultiWindow Kernel DLL target enabled")
+    else()
+        add_definitions(-DRAWRXD_HAS_MW_KERNEL=0)
+        message(STATUS "MultiWindow Kernel DLL skipped (no MASM)")
+    endif()
+
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
         src/win32app/RawrXD-Win32IDE.rc)
 
@@ -834,6 +1305,32 @@ if(WIN32)
     # Link RE library into Win32IDE
     target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD-RE-Library)
     
+    # Link MultiWindow Kernel into Win32IDE
+    if(TARGET RawrXD_MultiWindow_Kernel)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD_MultiWindow_Kernel)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_MW_KERNEL=1)
+    endif()
+    
+    # Link NanoQuant into Win32IDE
+    if(TARGET RawrXD_NanoQuant)
+        target_link_libraries(RawrXD-Win32IDE PRIVATE RawrXD_NanoQuant)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_NANOQUANT=1)
+    endif()
+    
+    # Vulkan SDK for Win32IDE
+    if(Vulkan_FOUND)
+        target_include_directories(RawrXD-Win32IDE PRIVATE ${Vulkan_INCLUDE_DIRS})
+        target_link_libraries(RawrXD-Win32IDE PRIVATE Vulkan::Vulkan)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=1)
+    elseif(_VK_SDK_DIRS)
+        target_include_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Include")
+        target_link_directories(RawrXD-Win32IDE PRIVATE "${_VK_SDK_DIR}/Lib")
+        target_link_libraries(RawrXD-Win32IDE PRIVATE vulkan-1)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=1)
+    else()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_VULKAN=0)
+    endif()
+
     target_link_libraries(RawrXD-Win32IDE PRIVATE
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid
@@ -868,6 +1365,7 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/src/core
         ${CMAKE_CURRENT_SOURCE_DIR}/src/server
         ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
         ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
         ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
         ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
@@ -895,4 +1393,31 @@ if(WIN32)
     if(MSVC)
         target_link_options(RawrXD-Win32IDE PRIVATE /LARGEADDRESSAWARE:NO)
     endif()
+endif()
+
+# ============================================================================
+# Command Registry Validation (Build-Time Integrity Check)
+# ============================================================================
+# Validates that all IDM_* in Win32IDE.h are present in COMMAND_TABLE.
+# Run manually: python tools/validate_command_registry.py
+# Run strict:   python tools/validate_command_registry.py --strict
+# ============================================================================
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+    add_custom_target(validate_registry
+        COMMAND ${Python3_EXECUTABLE} 
+            ${CMAKE_SOURCE_DIR}/tools/validate_command_registry.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Validating command registry integrity (SSOT check)..."
+        VERBATIM
+    )
+    
+    add_custom_target(validate_registry_strict
+        COMMAND ${Python3_EXECUTABLE} 
+            ${CMAKE_SOURCE_DIR}/tools/validate_command_registry.py --strict
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Validating command registry (STRICT — all IDM_* must be in COMMAND_TABLE)..."
+        VERBATIM
+    )
 endif()

@@ -1,5 +1,5 @@
 #include "gpu_backend.h"
-#include <QDebug>
+#include <cstdio>
 
 // Static member initialization
 GpuBackend::Backend GpuBackend::s_currentBackend = GpuBackend::CPU;
@@ -8,7 +8,7 @@ bool GpuBackend::s_initialized = false;
 bool GpuBackend::initialize(Backend backend)
 {
     if (s_initialized && s_currentBackend == backend) {
-        qDebug() << "GPU backend already initialized:" << backendName(backend);
+        fprintf(stderr, "[GpuBackend] Already initialized: %s\n", backendName(backend));
         return true;
     }
 
@@ -19,7 +19,7 @@ bool GpuBackend::initialize(Backend backend)
             s_initialized = true;
             return true;
         }
-        qWarning() << "Failed to initialize Vulkan, falling back to CPU";
+        fprintf(stderr, "[GpuBackend] WARNING: Failed to initialize Vulkan, falling back to CPU\n");
         return initializeCpu();
 
     case CUDA:
@@ -28,7 +28,7 @@ bool GpuBackend::initialize(Backend backend)
             s_initialized = true;
             return true;
         }
-        qWarning() << "Failed to initialize CUDA, falling back to CPU";
+        fprintf(stderr, "[GpuBackend] WARNING: Failed to initialize CUDA, falling back to CPU\n");
         return initializeCpu();
 
     case CPU:
@@ -48,11 +48,11 @@ bool GpuBackend::isBackendAvailable(Backend backend)
     switch (backend) {
     case Vulkan:
         // In a real implementation, this would check for Vulkan support
-        qDebug() << "Checking Vulkan availability...";
+        fprintf(stderr, "[GpuBackend] Checking Vulkan availability...\n");
         return true;  // Simplified for this example
     case CUDA:
         // In a real implementation, this would check for CUDA support
-        qDebug() << "Checking CUDA availability...";
+        fprintf(stderr, "[GpuBackend] Checking CUDA availability...\n");
         return false;  // Assume not available for this example
     case CPU:
         return true;  // CPU always available
@@ -60,7 +60,7 @@ bool GpuBackend::isBackendAvailable(Backend backend)
     return false;
 }
 
-QString GpuBackend::backendName(Backend backend)
+const char* GpuBackend::backendName(Backend backend)
 {
     switch (backend) {
     case CPU:
@@ -79,7 +79,7 @@ bool GpuBackend::initializeWithFallback()
     if (isBackendAvailable(Vulkan) && initializeVulkan()) {
         s_currentBackend = Vulkan;
         s_initialized = true;
-        qInfo() << "✓ GPU Backend initialized with Vulkan";
+        fprintf(stderr, "[GpuBackend] OK: GPU Backend initialized with Vulkan\n");
         return true;
     }
 
@@ -87,18 +87,18 @@ bool GpuBackend::initializeWithFallback()
     if (isBackendAvailable(CUDA) && initializeCuda()) {
         s_currentBackend = CUDA;
         s_initialized = true;
-        qInfo() << "✓ GPU Backend initialized with CUDA";
+        fprintf(stderr, "[GpuBackend] OK: GPU Backend initialized with CUDA\n");
         return true;
     }
 
     // Final fallback to CPU
-    qWarning() << "No GPU backends available, falling back to CPU (slower performance)";
+    fprintf(stderr, "[GpuBackend] WARNING: No GPU backends available, falling back to CPU (slower performance)\n");
     return initializeCpu();
 }
 
 bool GpuBackend::initializeVulkan()
 {
-    qDebug() << "Attempting to initialize Vulkan...";
+    fprintf(stderr, "[GpuBackend] Attempting to initialize Vulkan...\n");
     
     // In a real implementation, this would:
     // 1. Call ggml_vk_init()
@@ -106,25 +106,25 @@ bool GpuBackend::initializeVulkan()
     // 3. Return false on failure (no Vulkan support, etc.)
     
     // For this example, we'll simulate success
-    qInfo() << "✓ Vulkan initialized successfully";
+    fprintf(stderr, "[GpuBackend] OK: Vulkan initialized successfully\n");
     return true;
 }
 
 bool GpuBackend::initializeCuda()
 {
-    qDebug() << "Attempting to initialize CUDA...";
+    fprintf(stderr, "[GpuBackend] Attempting to initialize CUDA...\n");
     
     // In a real implementation, this would check for CUDA support
     // For this example, we'll simulate failure
-    qWarning() << "CUDA not available";
+    fprintf(stderr, "[GpuBackend] WARNING: CUDA not available\n");
     return false;
 }
 
 bool GpuBackend::initializeCpu()
 {
-    qDebug() << "Initializing CPU backend...";
+    fprintf(stderr, "[GpuBackend] Initializing CPU backend...\n");
     s_currentBackend = CPU;
     s_initialized = true;
-    qInfo() << "✓ CPU backend ready (models will run on CPU - slower performance)";
+    fprintf(stderr, "[GpuBackend] OK: CPU backend ready (models will run on CPU - slower performance)\n");
     return true;
 }

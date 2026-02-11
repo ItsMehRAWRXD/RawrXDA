@@ -1,0 +1,179 @@
+# =============================================================================
+# throughput-gate.yml — T3-D Throughput CI Gate
+# =============================================================================
+# Blocks PRs if:
+#   - GEMM/sec drops > 3%
+#   - FlashAttn/sec drops > 5%
+#   - AgentLoop count mismatches replay journal
+#   - Error counters spike
+#   - Hotpatch safety delta is abnormal
+#
+# Runs: throughput_ci_gate.ps1 from ci/
+# =============================================================================
+
+name: Throughput Gate (T3-D)
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'src/asm/**'
+      - 'src/core/**'
+      - 'src/telemetry/**'
+      - 'src/agent/**'
+      - 'src/server/**'
+      - 'src/gpu/**'
+      - 'include/**'
+      - 'ci/throughput_ci_gate.ps1'
+      - '.github/workflows/throughput-gate.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'src/asm/**'
+      - 'src/core/**'
+      - 'src/telemetry/**'
+      - 'src/agent/**'
+      - 'src/server/**'
+      - 'src/gpu/**'
+      - 'include/**'
+      - 'ci/throughput_ci_gate.ps1'
+  workflow_dispatch:
+    inputs:
+      gemm_threshold:
+        description: 'GEMM throughput regression threshold (%)'
+        required: false
+        default: '3.0'
+      flashattn_threshold:
+        description: 'FlashAttn throughput regression threshold (%)'
+        required: false
+        default: '5.0'
+      token_threshold:
+        description: 'Token throughput regression threshold (%)'
+        required: false
+        default: '3.0'
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  throughput-gate:
+    name: T3-D Throughput Gate
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need baseline comparison
+
+      # -----------------------------------------------------------------------
+      # 2. Setup MSVC + ml64
+      # -----------------------------------------------------------------------
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # -----------------------------------------------------------------------
+      # 3. Verify toolchain
+      # -----------------------------------------------------------------------
+      - name: Verify ml64 and cl
+        shell: pwsh
+        run: |
+          Write-Host "=== MSVC Toolchain Verification ==="
+          $ml64 = Get-Command ml64.exe -ErrorAction SilentlyContinue
+          if (!$ml64) { throw "ml64.exe not found — MASM not available" }
+          Write-Host "ml64: $($ml64.Source)"
+          $cl = Get-Command cl.exe -ErrorAction SilentlyContinue
+          if (!$cl) { throw "cl.exe not found" }
+          Write-Host "cl: $($cl.Source)"
+
+      # -----------------------------------------------------------------------
+      # 4. Cache baseline data (if available)
+      # -----------------------------------------------------------------------
+      - name: Cache throughput baseline
+        uses: actions/cache@v4
+        with:
+          path: ci/baseline
+          key: throughput-baseline-${{ github.base_ref || github.ref_name }}-${{ hashFiles('src/asm/**', 'src/core/**') }}
+          restore-keys: |
+            throughput-baseline-${{ github.base_ref || github.ref_name }}-
+            throughput-baseline-main-
+
+      # -----------------------------------------------------------------------
+      # 5. Build (Release)
+      # -----------------------------------------------------------------------
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 `
+            -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1
+
+      - name: Build RawrEngine
+        shell: pwsh
+        run: cmake --build build --config Release --target RawrEngine -- /m
+
+      # -----------------------------------------------------------------------
+      # 6. Run Throughput Gate
+      # -----------------------------------------------------------------------
+      - name: Run Throughput CI Gate
+        shell: pwsh
+        env:
+          GEMM_THRESHOLD: ${{ github.event.inputs.gemm_threshold || '3.0' }}
+          FLASHATTN_THRESHOLD: ${{ github.event.inputs.flashattn_threshold || '5.0' }}
+          TOKEN_THRESHOLD: ${{ github.event.inputs.token_threshold || '3.0' }}
+        run: |
+          $params = @{
+            BaselinePath     = "ci/baseline/throughput_baseline.json"
+            PrometheusExport = "build/Release/prometheus_export.txt"
+            ReplayJournal    = "build/Release/replay_journal.json"
+            GEMMThreshold    = [double]$env:GEMM_THRESHOLD
+            FlashAttnThreshold = [double]$env:FLASHATTN_THRESHOLD
+            TokenThreshold   = [double]$env:TOKEN_THRESHOLD
+            LatencyThreshold = 5.0
+            PatchDeltaThreshold = 50.0
+            OutputReport     = "ci/throughput_report.json"
+          }
+          & ci/throughput_ci_gate.ps1 @params
+
+      # -----------------------------------------------------------------------
+      # 7. Upload report artifact
+      # -----------------------------------------------------------------------
+      - name: Upload throughput report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: throughput-gate-report
+          path: |
+            ci/throughput_report.json
+            ci/baseline/
+          retention-days: 30
+
+      # -----------------------------------------------------------------------
+      # 8. Annotate PR with gate result
+      # -----------------------------------------------------------------------
+      - name: Annotate PR
+        if: always() && github.event_name == 'pull_request'
+        shell: pwsh
+        run: |
+          if (Test-Path "ci/throughput_report.json") {
+            $report = Get-Content "ci/throughput_report.json" -Raw | ConvertFrom-Json
+            $total  = $report.phases.Count
+            $passed = ($report.phases | Where-Object { $_.passed -eq $true }).Count
+            $status = if ($report.overall_passed) { "✅ PASSED" } else { "❌ FAILED" }
+            Write-Host "::notice title=Throughput Gate (T3-D)::$status — $passed/$total phases passed"
+
+            if (-not $report.overall_passed) {
+              $failedPhases = ($report.phases | Where-Object { $_.passed -eq $false })
+              foreach ($p in $failedPhases) {
+                Write-Host "::error title=$($p.name)::$($p.summary)"
+              }
+            }
+          }

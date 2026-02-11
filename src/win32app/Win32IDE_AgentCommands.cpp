@@ -367,6 +367,9 @@ void Win32IDE::handleAgentCommand(int commandId) {
         case IDM_AGENT_START_LOOP:
             onAgentStartLoop();
             break;
+        case IDM_AGENT_BOUNDED_LOOP:
+            onBoundedAgentLoop();
+            break;
         case IDM_AGENT_EXECUTE_CMD:
             onAgentExecuteCommand();
             break;

@@ -75,6 +75,9 @@ void Win32IDE::loadSettings() {
         m_settings.failureDetectorEnabled = j.value("failureDetector", (int)m_settings.failureDetectorEnabled) != 0;
         m_settings.failureMaxRetries = j.value("failureMaxRetries", m_settings.failureMaxRetries);
 
+        // Display Scaling
+        m_settings.uiScalePercent    = j.value("uiScalePercent", m_settings.uiScalePercent);
+
         // Editor
         m_settings.tabSize           = j.value("tabSize", m_settings.tabSize);
         m_settings.useSpaces         = j.value("useSpaces", (int)m_settings.useSpaces) != 0;
@@ -125,6 +128,9 @@ void Win32IDE::saveSettings() {
     j["ghostText"]          = m_settings.ghostTextEnabled ? 1 : 0;
     j["failureDetector"]    = m_settings.failureDetectorEnabled ? 1 : 0;
     j["failureMaxRetries"]  = m_settings.failureMaxRetries;
+
+    // Display Scaling
+    j["uiScalePercent"]     = m_settings.uiScalePercent;
 
     // Editor
     j["tabSize"]            = m_settings.tabSize;
@@ -189,6 +195,8 @@ void Win32IDE::applyDefaultSettings() {
 
     m_settings.localServerEnabled  = false;
     m_settings.localServerPort     = 11435;
+
+    m_settings.uiScalePercent      = 0;   // 0 = auto (follow system DPI)
 }
 
 // ============================================================================

@@ -1,11 +1,27 @@
 #pragma once
 
+#ifdef RAWR_HAS_QT
 #include <QString>
 #include <QObject>
 #include <QJsonObject>
 #include <QJsonArray>
+#else
+#include <string>
+#endif
 #include <memory>
 #include <vector>
+
+#ifndef RAWR_HAS_QT
+// ============================================================================
+// Non-Qt stub: AgenticIterativeReasoning is unavailable without Qt.
+// The coordinator compiles but the iterative reasoning path is a no-op.
+// ============================================================================
+class AgenticIterativeReasoning {
+public:
+    AgenticIterativeReasoning() = default;
+    ~AgenticIterativeReasoning() = default;
+};
+#else
 
 class AgenticLoopState;
 class AgenticEngine;
@@ -163,3 +179,5 @@ private:
     QJsonObject m_metrics;
     std::vector<std::pair<QString, int>> m_phaseDurations;
 };
+
+#endif // RAWR_HAS_QT

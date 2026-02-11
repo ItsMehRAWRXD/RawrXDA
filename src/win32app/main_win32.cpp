@@ -191,6 +191,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
+    // Command registration is automatic via static AutoRegistrar in
+    // unified_command_dispatch.cpp — reads COMMAND_TABLE at startup.
+
     // Initialize managers
     VSIXLoader::GetInstance().Initialize("plugins");
     

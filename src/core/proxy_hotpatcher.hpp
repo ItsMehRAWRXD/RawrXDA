@@ -83,12 +83,16 @@ public:
     // ---- Stream Termination ----
     PatchResult add_termination_rule(const StreamTerminationRule& rule);
     PatchResult remove_termination_rule(const char* name);
+    /// Clear all termination rules
+    PatchResult clear_termination_rules();
     // Check if output should be terminated. Returns true if a rule triggered.
     bool check_termination(const char* output, size_t outputLen, size_t tokenCount);
 
     // ---- Output Rewriting ----
     PatchResult add_rewrite_rule(const OutputRewriteRule& rule);
     PatchResult remove_rewrite_rule(const char* name);
+    /// Clear all rewrite rules
+    PatchResult clear_rewrite_rules();
     // Rewrite output in-place (buffer must have room for expansion).
     // Returns the new length after rewrites.
     size_t apply_rewrites(char* output, size_t outputLen, size_t bufferCapacity);
@@ -96,6 +100,8 @@ public:
     // ---- Custom Validators ----
     PatchResult add_validator(const ProxyValidator& validator);
     PatchResult remove_validator(const char* name);
+    /// Clear all validators
+    PatchResult clear_validators();
     // Run all validators on the output. Returns true if ALL pass.
     bool run_validators(const char* output, size_t outputLen);
 

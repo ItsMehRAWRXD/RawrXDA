@@ -1,10 +1,12 @@
 #include "kv_cache_optimizer.h"
-#include <QDebug>
+#include <cstdio>
+#include <algorithm>
 
-KVCacheOptimizer::KVCacheOptimizer(QObject *parent)
-    : QObject(parent)
-    , m_cacheSizeLimit(32000) // Default limit: 32k tokens
-    , m_slidingWindowSize(1000) // Default sliding window size
+KVCacheOptimizer::KVCacheOptimizer()
+    : m_cacheSizeLimit(32000)    // Default limit: 32k tokens
+    , m_slidingWindowSize(1000)  // Default sliding window size
+    , m_lastAccessTime{}
+    , m_gpuCacheInitialized(false)
 {
 }
 
@@ -17,27 +19,35 @@ void KVCacheOptimizer::setCacheSizeLimit(int limit)
     m_cacheSizeLimit = limit;
 }
 
-void KVCacheOptimizer::addTokens(const QList<int> &tokens)
+void KVCacheOptimizer::addTokens(const std::vector<int> &tokens)
 {
-    m_cachedTokens.append(tokens);
+    m_cachedTokens.insert(m_cachedTokens.end(), tokens.begin(), tokens.end());
     evictIfNeeded();
-    m_lastAccessTime = QDateTime::currentDateTime();
+    m_lastAccessTime = std::chrono::steady_clock::now();
+
+    if (onCacheUpdated) {
+        onCacheUpdated(static_cast<int>(m_cachedTokens.size()));
+    }
 }
 
-QList<int> KVCacheOptimizer::getCachedTokens() const
+std::vector<int> KVCacheOptimizer::getCachedTokens() const
 {
     return m_cachedTokens;
 }
 
 void KVCacheOptimizer::evictIfNeeded()
 {
-    if (m_cachedTokens.size() > m_cacheSizeLimit) {
+    if (static_cast<int>(m_cachedTokens.size()) > m_cacheSizeLimit) {
         // Implement dynamic sliding-window eviction
-        int tokensToEvict = m_cachedTokens.size() - m_cacheSizeLimit;
+        int tokensToEvict = static_cast<int>(m_cachedTokens.size()) - m_cacheSizeLimit;
         if (tokensToEvict > 0) {
             // Remove tokens from the beginning (oldest tokens)
             m_cachedTokens.erase(m_cachedTokens.begin(), m_cachedTokens.begin() + tokensToEvict);
-            qDebug() << "Evicted" << tokensToEvict << "tokens from KV cache";
+            fprintf(stderr, "[KVCache] Evicted %d tokens from KV cache\n", tokensToEvict);
+
+            if (onCacheEvicted) {
+                onCacheEvicted(tokensToEvict);
+            }
         }
     }
 }

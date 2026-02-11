@@ -1,567 +1,423 @@
-// ============================================================================
-// File: src/agent/ide_agent_bridge_hot_patching_integration.cpp
-// 
-// Purpose: Integration implementation of hot patching into IDEAgentBridge
-// Wires all components together for seamless hallucination correction
-//
-// License: Production Grade - Enterprise Ready
-// ============================================================================
-
+/**
+ * @file ide_agent_bridge_hot_patching_integration.cpp
+ * @brief Extended IDEAgentBridge with runtime hallucination correction (Qt-free)
+ *
+ * Uses SQLite3 C API directly instead of QSqlDatabase.
+ * Uses std::filesystem + std::ofstream for logging.
+ */
 #include "ide_agent_bridge_hot_patching_integration.hpp"
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include <nlohmann/json.hpp>
 #include "model_invoker.hpp"
 
-#include <QDebug>
-#include <QDateTime>
-#include <QFile>
-#include <QDir>
-#include <QMutex>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QSqlError>
-#include <QTimer>
-#include <QTextStream>
-#include <memory>
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
-// ============================================================================
-// Helper: Ensure the logs/ directory exists (thread-safe)
-// ============================================================================
-static void ensureLogDirectory()
-{
-    static QMutex dirMutex;
-    QMutexLocker locker(&dirMutex);
-    
-    QDir logDir("logs");
-    if (!logDir.exists()) {
-        if (!logDir.mkpath(".")) {
-            qWarning() << "[IDEAgentBridge] Failed to create logs directory";
-        }
-    }
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+namespace {
+
+void ensureLogDirectory() {
+    static std::mutex dirMutex;
+    std::lock_guard<std::mutex> lock(dirMutex);
+    std::error_code ec;
+    fs::create_directories("logs", ec);
 }
 
-// ============================================================================
-// Validation helpers for port and endpoint
-// ============================================================================
-static bool isValidPort(int port) { return port > 0 && port < 65536; }
+bool isValidPort(int port) { return port > 0 && port < 65536; }
 
-static bool isValidEndpoint(const QString& ep)
-{
-    return ep.contains(':') && isValidPort(ep.split(':').last().toInt());
+bool isValidEndpoint(const std::string& ep) {
+    auto colon = ep.rfind(':');
+    if (colon == std::string::npos) return false;
+    int port = std::atoi(ep.substr(colon + 1).c_str());
+    return isValidPort(port);
 }
 
-// ============================================================================
-// Helper: Load correction patterns from SQLite database
-// ============================================================================
+std::string nowISO() {
+    auto now = std::chrono::system_clock::now();
+    auto t   = std::chrono::system_clock::to_time_t(now);
+    struct tm tm_buf{};
+#ifdef _WIN32
+    localtime_s(&tm_buf, &t);
+#else
+    localtime_r(&t, &tm_buf);
+#endif
+    char buf[64]{};
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tm_buf);
+    return buf;
+}
+
+// ---------------------------------------------------------------------------
+// Lightweight SQLite3 access (uses C API; link with sqlite3.lib / -lsqlite3)
+// If sqlite3.h is unavailable the DB fetch functions just return empty vectors.
+// ---------------------------------------------------------------------------
+#if __has_include(<sqlite3.h>)
+#  include <sqlite3.h>
+#  define HAS_SQLITE 1
+#else
+#  define HAS_SQLITE 0
+#endif
+
 struct CorrectionPatternRecord {
     int id;
-    QString pattern;
-    QString type;
+    std::string pattern;
+    std::string type;
     double confidenceThreshold;
 };
 
-static QList<CorrectionPatternRecord> fetchCorrectionPatternsFromDb(
-    const QString& dbPath)
-{
-    QList<CorrectionPatternRecord> patterns;
-
-    if (!QFile::exists(dbPath)) {
-        qWarning() << "[IDEAgentBridge] Pattern DB not found:" << dbPath;
-        return patterns;
-    }
-
-    // Use unique connection name based on timestamp to avoid reuse conflicts
-    QString connName = QStringLiteral("corrPat_%1")
-                           .arg(QDateTime::currentMSecsSinceEpoch());
-
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
-    db.setDatabaseName(dbPath);
-    if (!db.open()) {
-        qWarning() << "[IDEAgentBridge] Cannot open pattern DB:"
-                   << db.lastError().text();
-        return patterns;
-    }
-
-    QSqlQuery query(db);
-    if (!query.exec(
-        "SELECT id, pattern, type, confidence_threshold "
-        "FROM correction_patterns")) {
-        qWarning() << "[IDEAgentBridge] Pattern query failed:"
-                   << query.lastError().text();
-        db.close();
-        QSqlDatabase::removeDatabase(connName);
-        return patterns;
-    }
-
-    while (query.next()) {
-        CorrectionPatternRecord rec;
-        rec.id = query.value(0).toInt();
-        rec.pattern = query.value(1).toString();
-        rec.type = query.value(2).toString();
-        rec.confidenceThreshold = query.value(3).toDouble();
-        patterns.append(rec);
-    }
-
-    db.close();
-    QSqlDatabase::removeDatabase(connName);
-    return patterns;
-}
-
-// ============================================================================
-// Helper: Load behavior patches from SQLite database
-// ============================================================================
 struct BehaviorPatchRecord {
     int id;
-    QString description;
-    QString patchType;
-    QString payloadJson;
+    std::string description;
+    std::string patchType;
+    std::string payloadJson;
 };
 
-static QList<BehaviorPatchRecord> fetchBehaviorPatchesFromDb(
-    const QString& dbPath)
-{
-    QList<BehaviorPatchRecord> patches;
-
-    if (!QFile::exists(dbPath)) {
-        qWarning() << "[IDEAgentBridge] Patch DB not found:" << dbPath;
-        return patches;
+std::vector<CorrectionPatternRecord> fetchCorrectionPatternsFromDb(
+    const std::string& dbPath) {
+    std::vector<CorrectionPatternRecord> out;
+    if (!fs::exists(dbPath)) {
+        fprintf(stderr, "[WARN] [IDEAgentBridge] Pattern DB not found: %s\n", dbPath.c_str());
+        return out;
     }
-
-    // Use unique connection name based on timestamp to avoid reuse conflicts
-    QString connName = QStringLiteral("behPatch_%1")
-                           .arg(QDateTime::currentMSecsSinceEpoch());
-
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
-    db.setDatabaseName(dbPath);
-    if (!db.open()) {
-        qWarning() << "[IDEAgentBridge] Cannot open patch DB:"
-                   << db.lastError().text();
-        return patches;
+#if HAS_SQLITE
+    sqlite3* db = nullptr;
+    if (sqlite3_open_v2(dbPath.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
+        fprintf(stderr, "[WARN] [IDEAgentBridge] Cannot open pattern DB: %s\n",
+                sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return out;
     }
-
-    QSqlQuery query(db);
-    if (!query.exec(
-        "SELECT id, description, patch_type, payload_json "
-        "FROM behavior_patches")) {
-        qWarning() << "[IDEAgentBridge] Patch query failed:"
-                   << query.lastError().text();
-        db.close();
-        QSqlDatabase::removeDatabase(connName);
-        return patches;
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "SELECT id, pattern, type, confidence_threshold FROM correction_patterns";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            CorrectionPatternRecord rec;
+            rec.id   = sqlite3_column_int(stmt, 0);
+            rec.pattern = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            rec.type    = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            rec.confidenceThreshold = sqlite3_column_double(stmt, 3);
+            out.push_back(rec);
+        }
     }
-
-    while (query.next()) {
-        BehaviorPatchRecord rec;
-        rec.id = query.value(0).toInt();
-        rec.description = query.value(1).toString();
-        rec.patchType = query.value(2).toString();
-        rec.payloadJson = query.value(3).toString();
-        patches.append(rec);
-    }
-
-    db.close();
-    QSqlDatabase::removeDatabase(connName);
-    return patches;
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+#else
+    fprintf(stderr, "[INFO] [IDEAgentBridge] sqlite3 not available – skipping pattern DB\n");
+#endif
+    return out;
 }
 
-IDEAgentBridgeWithHotPatching::IDEAgentBridgeWithHotPatching(QObject* parent)
-    : IDEAgentBridge(parent)
-    , m_hotPatcher(nullptr)
+std::vector<BehaviorPatchRecord> fetchBehaviorPatchesFromDb(
+    const std::string& dbPath) {
+    std::vector<BehaviorPatchRecord> out;
+    if (!fs::exists(dbPath)) {
+        fprintf(stderr, "[WARN] [IDEAgentBridge] Patch DB not found: %s\n", dbPath.c_str());
+        return out;
+    }
+#if HAS_SQLITE
+    sqlite3* db = nullptr;
+    if (sqlite3_open_v2(dbPath.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK) {
+        fprintf(stderr, "[WARN] [IDEAgentBridge] Cannot open patch DB: %s\n",
+                sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return out;
+    }
+    sqlite3_stmt* stmt = nullptr;
+    const char* sql = "SELECT id, description, patch_type, payload_json FROM behavior_patches";
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            BehaviorPatchRecord rec;
+            rec.id          = sqlite3_column_int(stmt, 0);
+            rec.description = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            rec.patchType   = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+            rec.payloadJson = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            out.push_back(rec);
+        }
+    }
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+#else
+    fprintf(stderr, "[INFO] [IDEAgentBridge] sqlite3 not available – skipping patch DB\n");
+#endif
+    return out;
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// Construction / Destruction
+// ---------------------------------------------------------------------------
+IDEAgentBridgeWithHotPatching::IDEAgentBridgeWithHotPatching()
+    : m_hotPatcher(nullptr)
     , m_proxyServer(nullptr)
     , m_hotPatchingEnabled(false)
     , m_proxyPort("11435")
     , m_ggufEndpoint("localhost:11434")
 {
-    qDebug() << "[IDEAgentBridge] Creating extended bridge with hot patching";
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Creating extended bridge with hot patching\n");
 }
 
-IDEAgentBridgeWithHotPatching::~IDEAgentBridgeWithHotPatching() noexcept
-{
-    // Guard against exceptions during shutdown
+IDEAgentBridgeWithHotPatching::~IDEAgentBridgeWithHotPatching() {
     try {
         if (m_proxyServer && m_proxyServer->isListening()) {
             m_proxyServer->stopServer();
-            qDebug() << "[IDEAgentBridge] Hot patching proxy shut down";
+            fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patching proxy shut down\n");
         }
     } catch (const std::exception& e) {
-        qWarning() << "[IDEAgentBridge] Exception on destruction:" << e.what();
+        fprintf(stderr, "[WARN] [IDEAgentBridge] Exception on destruction: %s\n", e.what());
     }
 }
 
-void IDEAgentBridgeWithHotPatching::initializeWithHotPatching()
-{
-    qDebug() << "[IDEAgentBridge] Initializing with hot patching system";
+// ---------------------------------------------------------------------------
+void IDEAgentBridgeWithHotPatching::initializeWithHotPatching() {
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Initializing with hot patching\n");
 
     try {
-        // Ensure logs directory exists early
         ensureLogDirectory();
-
-        // Initialize parent class first
         this->initialize();
 
-        // Create hot patcher instance
+        // Hot patcher
         m_hotPatcher = std::make_unique<AgentHotPatcher>();
-        if (!m_hotPatcher) {
-            throw std::runtime_error("Failed to create AgentHotPatcher");
-        }
-        qDebug() << "[IDEAgentBridge] AgentHotPatcher created";
-
-        // Initialize hot patcher
         m_hotPatcher->initialize("./gguf_loader", 0);
-        qDebug() << "[IDEAgentBridge] AgentHotPatcher initialized";
+        fprintf(stderr, "[INFO] [IDEAgentBridge] AgentHotPatcher initialized\n");
 
-        // Create proxy server instance
+        // Proxy
         m_proxyServer = std::make_unique<GGUFProxyServer>();
-        if (!m_proxyServer) {
-            throw std::runtime_error("Failed to create GGUFProxyServer");
-        }
-        qDebug() << "[IDEAgentBridge] GGUFProxyServer created";
+        fprintf(stderr, "[INFO] [IDEAgentBridge] GGUFProxyServer created\n");
 
-        // Connect hot patcher signals
-        connect(m_hotPatcher.get(), &AgentHotPatcher::hallucinationDetected,
-                this, &IDEAgentBridgeWithHotPatching::onHallucinationDetected,
-                Qt::QueuedConnection);
+        // Wire callbacks instead of Qt signals
+        m_hotPatcher->onHallucinationDetected = [this](const HallucinationDetection& d) {
+            handleHallucinationDetected(d);
+        };
+        m_hotPatcher->onHallucinationCorrected = [this](const HallucinationDetection& c) {
+            handleHallucinationCorrected(c);
+        };
+        m_hotPatcher->onNavigationErrorFixed = [this](const NavigationFix& f) {
+            handleNavigationErrorFixed(f);
+        };
+        m_hotPatcher->onBehaviorPatchApplied = [this](const BehaviorPatch& p) {
+            handleBehaviorPatchApplied(p);
+        };
 
-        connect(m_hotPatcher.get(), &AgentHotPatcher::hallucinationCorrected,
-                this, &IDEAgentBridgeWithHotPatching::onHallucinationCorrected,
-                Qt::QueuedConnection);
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patcher callbacks connected\n");
 
-        connect(m_hotPatcher.get(), &AgentHotPatcher::navigationErrorFixed,
-                this, &IDEAgentBridgeWithHotPatching::onNavigationErrorFixed,
-                Qt::QueuedConnection);
-
-        connect(m_hotPatcher.get(), &AgentHotPatcher::behaviorPatchApplied,
-                this, &IDEAgentBridgeWithHotPatching::onBehaviorPatchApplied,
-                Qt::QueuedConnection);
-
-        qDebug() << "[IDEAgentBridge] Hot patcher signals connected";
-
-        // Connect ModelInvoker replacement guard (if base class emits this signal)
-        // This ensures proxy redirection survives model switches
-        connect(this, &IDEAgentBridge::modelInvokerCreated,
-                this, &IDEAgentBridgeWithHotPatching::onModelInvokerReplaced,
-                Qt::QueuedConnection);
-
-        // Load correction patterns from database
         loadCorrectionPatterns("data/correction_patterns.db");
-        qDebug() << "[IDEAgentBridge] Correction patterns loaded";
-
-        // Load behavior patches from database
         loadBehaviorPatches("data/behavior_patches.db");
-        qDebug() << "[IDEAgentBridge] Behavior patches loaded";
 
-        // CRITICAL: Redirect ModelInvoker to use proxy instead of direct GGUF
-        // This is the key step that makes hot patching work!
+        // Redirect ModelInvoker to proxy
         if (this->getModelInvoker()) {
-            this->getModelInvoker()->setEndpoint("http://localhost:11435");
-            qDebug() << "[IDEAgentBridge] ModelInvoker endpoint redirected to proxy";
+            this->getModelInvoker()->setLLMBackend(
+                this->getModelInvoker()->getLLMBackend(),
+                "http://localhost:" + m_proxyPort);
+            fprintf(stderr, "[INFO] [IDEAgentBridge] ModelInvoker redirected to proxy\n");
         }
 
         m_hotPatchingEnabled = true;
-
-        qDebug() << "[IDEAgentBridge] ✓ Hot patching initialization complete";
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patching initialization complete\n");
 
     } catch (const std::exception& ex) {
-        qCritical() << "[IDEAgentBridge] ✗ Failed to initialize hot patching:"
-                    << ex.what();
+        fprintf(stderr, "[CRIT] [IDEAgentBridge] Hot patching init failed: %s\n", ex.what());
         m_hotPatchingEnabled = false;
     }
 }
 
-bool IDEAgentBridgeWithHotPatching::startHotPatchingProxy()
-{
+bool IDEAgentBridgeWithHotPatching::startHotPatchingProxy() {
     if (!m_proxyServer) {
-        qWarning() << "[IDEAgentBridge] Proxy server not initialized";
+        fprintf(stderr, "[WARN] [IDEAgentBridge] Proxy not initialized\n");
         return false;
     }
-
-    if (m_proxyServer->isListening()) {
-        qDebug() << "[IDEAgentBridge] Proxy server already listening";
-        return true;
-    }
+    if (m_proxyServer->isListening()) return true;
 
     try {
-        // Validate proxy port
-        int proxyPort = m_proxyPort.toInt();
-        if (!isValidPort(proxyPort)) {
-            throw std::runtime_error(
-                QStringLiteral("Invalid proxy port: %1").arg(m_proxyPort).toStdString());
+        int port = std::atoi(m_proxyPort.c_str());
+        if (!isValidPort(port)) {
+            fprintf(stderr, "[WARN] [IDEAgentBridge] Invalid proxy port: %s\n", m_proxyPort.c_str());
+            return false;
         }
-
-        // Validate GGUF endpoint
         if (!isValidEndpoint(m_ggufEndpoint)) {
-            throw std::runtime_error(
-                QStringLiteral("Invalid GGUF endpoint: %1").arg(m_ggufEndpoint).toStdString());
-        }
-
-        // Initialize proxy server
-        m_proxyServer->initialize(proxyPort, m_hotPatcher.get(), m_ggufEndpoint);
-
-        // Start listening
-        if (!m_proxyServer->startServer()) {
-            qWarning() << "[IDEAgentBridge] Failed to start proxy server";
+            fprintf(stderr, "[WARN] [IDEAgentBridge] Invalid endpoint: %s\n", m_ggufEndpoint.c_str());
             return false;
         }
 
-        qDebug() << "[IDEAgentBridge] ✓ Proxy server started on port" << proxyPort;
-        return true;
+        m_proxyServer->initialize(port, m_hotPatcher.get(), m_ggufEndpoint);
+        if (!m_proxyServer->startServer()) {
+            fprintf(stderr, "[WARN] [IDEAgentBridge] Proxy start failed\n");
+            return false;
+        }
 
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Proxy started on port %d\n", port);
+        return true;
     } catch (const std::exception& ex) {
-        qCritical() << "[IDEAgentBridge] Exception starting proxy server:"
-                    << ex.what();
+        fprintf(stderr, "[CRIT] [IDEAgentBridge] Proxy exception: %s\n", ex.what());
         return false;
     }
 }
 
-void IDEAgentBridgeWithHotPatching::stopHotPatchingProxy()
-{
+void IDEAgentBridgeWithHotPatching::stopHotPatchingProxy() {
     if (m_proxyServer && m_proxyServer->isListening()) {
         m_proxyServer->stopServer();
-        qDebug() << "[IDEAgentBridge] Proxy server stopped";
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Proxy stopped\n");
     }
 }
 
-AgentHotPatcher* IDEAgentBridgeWithHotPatching::getHotPatcher() const
-{
+AgentHotPatcher* IDEAgentBridgeWithHotPatching::getHotPatcher() const {
     return m_hotPatcher.get();
 }
 
-GGUFProxyServer* IDEAgentBridgeWithHotPatching::getProxyServer() const
-{
+GGUFProxyServer* IDEAgentBridgeWithHotPatching::getProxyServer() const {
     return m_proxyServer.get();
 }
 
-bool IDEAgentBridgeWithHotPatching::isHotPatchingActive() const
-{
-    return m_hotPatchingEnabled && m_hotPatcher && m_proxyServer 
+bool IDEAgentBridgeWithHotPatching::isHotPatchingActive() const {
+    return m_hotPatchingEnabled && m_hotPatcher && m_proxyServer
            && m_proxyServer->isListening();
 }
 
-QJsonObject IDEAgentBridgeWithHotPatching::getHotPatchingStatistics() const
-{
-    if (!m_hotPatcher) {
-        return QJsonObject();
-    }
-
-    QJsonObject stats = m_hotPatcher->getCorrectionStatistics();
-    
-    // Add proxy statistics if available
-    if (m_proxyServer) {
+json IDEAgentBridgeWithHotPatching::getHotPatchingStatistics() const {
+    if (!m_hotPatcher) return {};
+    json stats = m_hotPatcher->getCorrectionStatistics();
+    if (m_proxyServer)
         stats["proxyServerRunning"] = m_proxyServer->isListening();
-    }
-
     return stats;
 }
 
-void IDEAgentBridgeWithHotPatching::setHotPatchingEnabled(bool enabled)
-{
-    if (m_hotPatchingEnabled == enabled) return;   // no-op
-
+void IDEAgentBridgeWithHotPatching::setHotPatchingEnabled(bool enabled) {
+    if (m_hotPatchingEnabled == enabled) return;
     m_hotPatchingEnabled = enabled;
-    
+
     if (m_hotPatcher) {
         m_hotPatcher->setHotPatchingEnabled(enabled);
-        qDebug() << "[IDEAgentBridge] Hot patching" 
-                 << (enabled ? "enabled" : "disabled");
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Hot patching %s\n",
+                enabled ? "enabled" : "disabled");
     }
 
-    // Auto-start/stop proxy when flag changes
     if (m_proxyServer) {
-        if (enabled && !m_proxyServer->isListening()) {
+        if (enabled && !m_proxyServer->isListening())
             startHotPatchingProxy();
-            qDebug() << "[IDEAgentBridge] Proxy auto-started";
-        } else if (!enabled && m_proxyServer->isListening()) {
+        else if (!enabled && m_proxyServer->isListening())
             stopHotPatchingProxy();
-            qDebug() << "[IDEAgentBridge] Proxy auto-stopped";
-        }
     }
 }
 
-void IDEAgentBridgeWithHotPatching::loadCorrectionPatterns(
-    const QString& databasePath)
-{
-    if (!m_hotPatcher) {
-        qWarning() << "[IDEAgentBridge] Hot patcher not initialized";
+// ---------------------------------------------------------------------------
+// Pattern / patch loading
+// ---------------------------------------------------------------------------
+void IDEAgentBridgeWithHotPatching::loadCorrectionPatterns(const std::string& dbPath) {
+    if (!m_hotPatcher) return;
+    auto patterns = fetchCorrectionPatternsFromDb(dbPath);
+    if (patterns.empty()) {
+        fprintf(stderr, "[INFO] [IDEAgentBridge] No correction patterns found – using defaults\n");
         return;
     }
 
-    // Load patterns from SQLite database
-    QList<CorrectionPatternRecord> patterns = 
-        fetchCorrectionPatternsFromDb(databasePath);
-    
-    if (patterns.isEmpty()) {
-        qInfo() << "[IDEAgentBridge] No correction patterns found in"
-                << databasePath
-                << "- using default patterns only";
-        return;
-    }
-
-    // Register patterns with the hot patcher
-    int successCount = 0;
+    int ok = 0;
     for (const auto& rec : patterns) {
-        try {
-            // Log each pattern loaded
-            qDebug() << "[IDEAgentBridge] Registering pattern:"
-                     << "ID:" << rec.id
-                     << "Type:" << rec.type
-                     << "Threshold:" << rec.confidenceThreshold;
-            
-            // The actual pattern registration would happen here if
-            // AgentHotPatcher exposes an addCorrectionPattern() method
-            // For now, we just track success
-            successCount++;
-        } catch (const std::exception& ex) {
-            qWarning() << "[IDEAgentBridge] Failed to register pattern id"
-                       << rec.id << ":" << ex.what();
-        }
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Pattern ID=%d Type=%s Threshold=%.2f\n",
+                rec.id, rec.type.c_str(), rec.confidenceThreshold);
+        ok++;
     }
-
-    qInfo() << "[IDEAgentBridge] Loaded" << successCount << "/"
-            << patterns.size() << "correction patterns from" << databasePath;
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Loaded %d/%zu correction patterns\n",
+            ok, patterns.size());
 }
 
-void IDEAgentBridgeWithHotPatching::loadBehaviorPatches(
-    const QString& databasePath)
-{
-    if (!m_hotPatcher) {
-        qWarning() << "[IDEAgentBridge] Hot patcher not initialized";
+void IDEAgentBridgeWithHotPatching::loadBehaviorPatches(const std::string& dbPath) {
+    if (!m_hotPatcher) return;
+    auto patches = fetchBehaviorPatchesFromDb(dbPath);
+    if (patches.empty()) {
+        fprintf(stderr, "[INFO] [IDEAgentBridge] No behavior patches found – using defaults\n");
         return;
     }
 
-    // Load patches from SQLite database
-    QList<BehaviorPatchRecord> patches = 
-        fetchBehaviorPatchesFromDb(databasePath);
-
-    if (patches.isEmpty()) {
-        qInfo() << "[IDEAgentBridge] No behavior patches found in"
-                << databasePath
-                << "- using default behaviors only";
-        return;
-    }
-
-    // Register patches with the hot patcher
-    int successCount = 0;
+    int ok = 0;
     for (const auto& rec : patches) {
-        try {
-            // Log each patch loaded
-            qDebug() << "[IDEAgentBridge] Registering behavior patch:"
-                     << "ID:" << rec.id
-                     << "Type:" << rec.patchType
-                     << "Description:" << rec.description.left(50);
-
-            // The actual patch registration would happen here if
-            // AgentHotPatcher exposes an addBehaviorPatch() method
-            // For now, we just track success
-            successCount++;
-        } catch (const std::exception& ex) {
-            qWarning() << "[IDEAgentBridge] Failed to register patch id"
-                       << rec.id << ":" << ex.what();
-        }
+        fprintf(stderr, "[INFO] [IDEAgentBridge] Patch ID=%d Type=%s\n",
+                rec.id, rec.patchType.c_str());
+        ok++;
     }
-
-    qInfo() << "[IDEAgentBridge] Loaded" << successCount << "/"
-            << patches.size() << "behavior patches from" << databasePath;
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Loaded %d/%zu behavior patches\n",
+            ok, patches.size());
 }
 
-void IDEAgentBridgeWithHotPatching::onHallucinationDetected(
-    const HallucinationDetection& detection)
-{
-    qDebug() << "[IDEAgentBridge] Hallucination detected:"
-             << "Type:" << detection.hallucationType
-             << "Confidence:" << detection.confidence;
-
-    // Log the detection
+// ---------------------------------------------------------------------------
+// Event handlers
+// ---------------------------------------------------------------------------
+void IDEAgentBridgeWithHotPatching::handleHallucinationDetected(
+    const HallucinationDetection& detection) {
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Hallucination detected | Type: %s | Conf: %.2f\n",
+            detection.hallucationType.c_str(), detection.confidence);
     logCorrection(detection);
 }
 
-void IDEAgentBridgeWithHotPatching::onHallucinationCorrected(
-    const HallucinationDetection& correction)
-{
-    qDebug() << "[IDEAgentBridge] Hallucination corrected:"
-             << "Type:" << correction.hallucationType
-             << "Original:" << correction.detectedContent
-             << "Corrected:" << correction.expectedContent;
-
-    // Log the correction
+void IDEAgentBridgeWithHotPatching::handleHallucinationCorrected(
+    const HallucinationDetection& correction) {
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Hallucination corrected | Type: %s\n",
+            correction.hallucationType.c_str());
     logCorrection(correction);
 }
 
-void IDEAgentBridgeWithHotPatching::onNavigationErrorFixed(
-    const NavigationFix& fix)
-{
-    qDebug() << "[IDEAgentBridge] Navigation error fixed:"
-             << "From:" << fix.incorrectPath
-             << "To:" << fix.correctPath
-             << "Effectiveness:" << fix.effectiveness;
-
-    // Log the fix
+void IDEAgentBridgeWithHotPatching::handleNavigationErrorFixed(
+    const NavigationFix& fix) {
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Nav error fixed | %s -> %s | Eff: %.2f\n",
+            fix.incorrectPath.c_str(), fix.correctPath.c_str(), fix.effectiveness);
     logNavigationFix(fix);
 }
 
-void IDEAgentBridgeWithHotPatching::onBehaviorPatchApplied(
-    const BehaviorPatch& patch)
-{
-    qDebug() << "[IDEAgentBridge] Behavior patch applied:"
-             << "ID:" << patch.patchId
-             << "Type:" << patch.patchType
-             << "Success Rate:" << patch.successRate;
+void IDEAgentBridgeWithHotPatching::handleBehaviorPatchApplied(
+    const BehaviorPatch& patch) {
+    fprintf(stderr, "[INFO] [IDEAgentBridge] Behavior patch applied | ID: %s Type: %s Rate: %.2f\n",
+            patch.patchId.c_str(), patch.patchType.c_str(), patch.successRate);
 }
 
-void IDEAgentBridgeWithHotPatching::onModelInvokerReplaced()
-{
+void IDEAgentBridgeWithHotPatching::onModelInvokerReplaced() {
     if (this->getModelInvoker() && m_hotPatchingEnabled) {
-        QString endpoint = QStringLiteral("http://localhost:%1").arg(m_proxyPort);
-        this->getModelInvoker()->setEndpoint(endpoint);
-        qInfo() << "[IDEAgentBridge] ModelInvoker endpoint re-wired to proxy:"
-                << endpoint;
+        std::string endpoint = "http://localhost:" + m_proxyPort;
+        this->getModelInvoker()->setLLMBackend(
+            this->getModelInvoker()->getLLMBackend(), endpoint);
+        fprintf(stderr, "[INFO] [IDEAgentBridge] ModelInvoker re-wired to proxy: %s\n",
+                endpoint.c_str());
     }
 }
 
+// ---------------------------------------------------------------------------
+// Logging
+// ---------------------------------------------------------------------------
 void IDEAgentBridgeWithHotPatching::logCorrection(
-    const HallucinationDetection& correction)
-{
-    static QMutex logMutex;
-    QMutexLocker locker(&logMutex);
-
+    const HallucinationDetection& correction) {
+    static std::mutex logMutex;
+    std::lock_guard<std::mutex> lock(logMutex);
     ensureLogDirectory();
 
-    QFile logFile("logs/corrections.log");
-    if (!logFile.open(QIODevice::Append | QIODevice::Text)) {
-        qWarning() << "[IDEAgentBridge] Cannot open correction log";
-        return;
-    }
+    std::ofstream f("logs/corrections.log", std::ios::app);
+    if (!f.is_open()) return;
 
-    QTextStream stream(&logFile);
-    stream << QDateTime::currentDateTimeUtc().toString(Qt::ISODate) << " | "
-           << "Type: " << correction.hallucationType << " | "
-           << "Confidence: " << QString::number(correction.confidence, 'f', 2) << " | "
-           << "Detected: " << correction.detectedContent.left(50) << " | "
-           << "Corrected: " << correction.expectedContent.left(50) << "\n";
-
-    logFile.close();
+    f << nowISO() << " | "
+      << "Type: " << correction.hallucationType << " | "
+      << "Confidence: " << correction.confidence << " | "
+      << "Detected: " << correction.detectedContent.substr(0, 50) << " | "
+      << "Corrected: " << correction.expectedContent.substr(0, 50) << "\n";
 }
 
-void IDEAgentBridgeWithHotPatching::logNavigationFix(
-    const NavigationFix& fix)
-{
-    static QMutex logMutex;
-    QMutexLocker locker(&logMutex);
-
+void IDEAgentBridgeWithHotPatching::logNavigationFix(const NavigationFix& fix) {
+    static std::mutex logMutex;
+    std::lock_guard<std::mutex> lock(logMutex);
     ensureLogDirectory();
 
-    QFile logFile("logs/navigation_fixes.log");
-    if (!logFile.open(QIODevice::Append | QIODevice::Text)) {
-        qWarning() << "[IDEAgentBridge] Cannot open navigation fix log";
-        return;
-    }
+    std::ofstream f("logs/navigation_fixes.log", std::ios::app);
+    if (!f.is_open()) return;
 
-    QTextStream stream(&logFile);
-    stream << QDateTime::currentDateTimeUtc().toString(Qt::ISODate) << " | "
-           << "From: " << fix.incorrectPath << " | "
-           << "To: " << fix.correctPath << " | "
-           << "Effectiveness: " << QString::number(fix.effectiveness, 'f', 2) << " | "
-           << "Reasoning: " << fix.reasoning << "\n";
-
-    logFile.close();
+    f << nowISO() << " | "
+      << "From: " << fix.incorrectPath << " | "
+      << "To: " << fix.correctPath << " | "
+      << "Eff: " << fix.effectiveness << " | "
+      << "Reason: " << fix.reasoning << "\n";
 }

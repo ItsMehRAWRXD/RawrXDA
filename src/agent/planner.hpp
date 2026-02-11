@@ -1,16 +1,15 @@
 #pragma once
-#include <QString>
-#include <QJsonArray>
+#include <string>
+#include <nlohmann/json.hpp>
 
 class Planner {
 public:
-    // Convert natural language wish into structured task list
-    QJsonArray plan(const QString& humanWish);
-
+    nlohmann::json plan(const std::string& humanWish);
 private:
-    QJsonArray planQuantKernel(const QString& wish);
-    QJsonArray planRelease(const QString& wish);
-    QJsonArray planWebProject(const QString& wish);
-    QJsonArray planSelfReplication(const QString& wish);
-    QJsonArray planGeneric(const QString& wish);
+    nlohmann::json planQuantKernel(const std::string& wish);
+    nlohmann::json planRelease(const std::string& wish);
+    nlohmann::json planWebProject(const std::string& wish);
+    nlohmann::json planSelfReplication(const std::string& wish);
+    nlohmann::json planBulkFix(const std::string& wish);
+    nlohmann::json planGeneric(const std::string& wish);
 };

@@ -1,42 +1,29 @@
 #pragma once
-#include <QString>
-#include <QObject>
+#include <string>
+#include <functional>
 
-class ReleaseAgent : public QObject {
-    Q_OBJECT
+class ReleaseAgent {
 public:
-    explicit ReleaseAgent(QObject* parent = nullptr);
-    
-    // Bump version in CMakeLists.txt (major/minor/patch)
-    bool bumpVersion(const QString& part);
-    
-    // Git tag and upload to GitHub
+    ReleaseAgent();
+    bool bumpVersion(const std::string& part);
     bool tagAndUpload();
-    
-    // Tweet announcement (requires TWITTER_BEARER env var)
-    bool tweet(const QString& text);
+    bool tweet(const std::string& text);
+    bool signBinary(const std::string& exePath);
+    bool uploadToCDN(const std::string& localFile, const std::string& blobName);
+    bool createGitHubRelease(const std::string& tag, const std::string& changelog);
+    bool updateUpdateManifest(const std::string& tag, const std::string& sha256);
+    bool tweetRelease(const std::string& text);
+    std::string version() const { return m_version; }
+    void setChangelog(const std::string& changelog) { m_changelog = changelog; }
 
-    // Extended autonomous release helpers
-    bool signBinary(const QString& exePath);
-    bool uploadToCDN(const QString& localFile, const QString& blobName);
-    bool createGitHubRelease(const QString& tag, const QString& changelog);
-    bool updateUpdateManifest(const QString& tag, const QString& sha256);
-    bool tweetRelease(const QString& text);
-    
-    // Get current version string
-    QString version() const { return m_version; }
-    
-    // Set changelog for release notes
-    void setChangelog(const QString& changelog) { m_changelog = changelog; }
-    
-signals:
-    void versionBumped(const QString& newVersion);
-    void releaseCreated(const QString& tag);
-    void tweetSent(const QString& text);
-    void error(const QString& message);
-    
+    // Callbacks (replace Qt signals)
+    std::function<void(const std::string&)> onVersionBumped;
+    std::function<void(const std::string&)> onReleaseCreated;
+    std::function<void(const std::string&)> onTweetSent;
+    std::function<void(const std::string&)> onError;
+
 private:
-    QString m_version;
-    QString m_changelog;
-    QString m_lastError;
+    std::string m_version;
+    std::string m_changelog;
+    std::string m_lastError;
 };

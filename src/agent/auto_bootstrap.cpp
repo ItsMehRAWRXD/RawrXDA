@@ -1,258 +1,253 @@
+/**
+ * @file auto_bootstrap.cpp
+ * @brief Zero-touch agent bootstrap (Qt-free, Win32/POSIX)
+ *
+ * Grabs a "wish" from env-var, clipboard (Win32), or console,
+ * then plans and executes it.
+ */
 #include "auto_bootstrap.hpp"
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <future>
+#include <string>
+#include <vector>
+
+#ifdef _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#endif
+
+#include <nlohmann/json.hpp>
 #include "planner.hpp"
 #include "self_patch.hpp"
 #include "release_agent.hpp"
 #include "meta_learn.hpp"
 #include "zero_touch.hpp"
-#include <QCoreApplication>
-#include <QApplication>
-#include <QTimer>
-#include <QProcessEnvironment>
-#include <QInputDialog>
-#include <QMessageBox>
-#include <QClipboard>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QtConcurrent>
-#include <QProcess>
-#include <QDebug>
+
+using json = nlohmann::json;
 
 AutoBootstrap* AutoBootstrap::s_instance = nullptr;
 
 AutoBootstrap* AutoBootstrap::instance() {
     if (!s_instance) {
-        s_instance = new AutoBootstrap(qApp);
+        s_instance = new AutoBootstrap();
     }
     return s_instance;
 }
 
-AutoBootstrap::AutoBootstrap(QObject* parent) : QObject(parent) {}
-
 void AutoBootstrap::installZeroTouch() {
     static ZeroTouch* zero = nullptr;
-    if (zero) {
-        return;
-    }
-    zero = new ZeroTouch(instance());
+    if (zero) return;
+    zero = new ZeroTouch();
     zero->installAll();
 }
 
-void AutoBootstrap::startWithWish(const QString& wish) {
+void AutoBootstrap::startWithWish(const std::string& wish) {
     instance()->startWithWishInternal(wish);
 }
 
-QString AutoBootstrap::grabWish() {
-    // 1. Environment variable (CI / voice assistant / automation)
-    QString env = QProcessEnvironment::systemEnvironment().value("RAWRXD_WISH");
-    if (!env.isEmpty()) {
-        qDebug() << "Wish from env-var:" << env;
-        return env;
-    }
-    
-    // 2. Clipboard (Windows speech recognition leaves it here)
-    QClipboard* clip = QApplication::clipboard();
-    QString spoken = clip->text(QClipboard::Selection);
-    if (spoken.isEmpty()) {
-        spoken = clip->text(QClipboard::Clipboard);
-    }
-    
-    if (!spoken.isEmpty() && spoken.length() < 200 && !spoken.contains('\n')) {
-        qDebug() << "Wish from clipboard:" << spoken;
-        return spoken;
-    }
-    
-    // 3. Dialog (fallback for desktop)
-    bool ok;
-    QString typed = QInputDialog::getText(
-        nullptr, 
-        "RawrXD Agent", 
-        "What should I build / fix / ship?",
-        QLineEdit::Normal,
-        "",
-        &ok
-    );
-    
-    if (ok && !typed.isEmpty()) {
-        qDebug() << "Wish from dialog:" << typed;
-        return typed;
-    }
-    
-    return QString();
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+namespace {
+
+std::string toLower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return s;
 }
 
-void AutoBootstrap::startWithWishInternal(const QString& wish) {
-    if (wish.isEmpty()) {
-        qDebug() << "No wish received, aborting";
+bool containsCI(const std::string& haystack, const std::string& needle) {
+    return toLower(haystack).find(toLower(needle)) != std::string::npos;
+}
+
+#ifdef _WIN32
+std::string getClipboardText() {
+    if (!OpenClipboard(nullptr)) return {};
+    HANDLE hData = GetClipboardData(CF_TEXT);
+    if (!hData) { CloseClipboard(); return {}; }
+    const char* text = static_cast<const char*>(GlobalLock(hData));
+    std::string result = text ? text : "";
+    GlobalUnlock(hData);
+    CloseClipboard();
+    return result;
+}
+#endif
+
+std::string readLineFromConsole(const std::string& prompt) {
+    fprintf(stderr, "%s", prompt.c_str());
+    std::string line;
+    if (!std::getline(std::cin, line)) return {};
+    return line;
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------
+// Wish acquisition
+// ---------------------------------------------------------------------------
+std::string AutoBootstrap::grabWish() {
+    // 1. Environment variable (CI / voice assistant / automation)
+    const char* envWish = std::getenv("RAWRXD_WISH");
+    if (envWish && envWish[0]) {
+        fprintf(stderr, "[INFO] [AutoBootstrap] Wish from env-var: %s\n", envWish);
+        return envWish;
+    }
+
+    // 2. Clipboard (Windows only)
+#ifdef _WIN32
+    {
+        std::string clip = getClipboardText();
+        if (!clip.empty() && clip.size() < 200 && clip.find('\n') == std::string::npos) {
+            fprintf(stderr, "[INFO] [AutoBootstrap] Wish from clipboard: %s\n", clip.c_str());
+            return clip;
+        }
+    }
+#endif
+
+    // 3. Console prompt (fallback)
+    std::string typed = readLineFromConsole(
+        "[RawrXD Agent] What should I build / fix / ship? > ");
+    if (!typed.empty()) {
+        fprintf(stderr, "[INFO] [AutoBootstrap] Wish from console: %s\n", typed.c_str());
+        return typed;
+    }
+
+    return {};
+}
+
+// ---------------------------------------------------------------------------
+void AutoBootstrap::start() {
+    std::string wish = grabWish();
+    if (!wish.empty()) startWithWishInternal(wish);
+}
+
+void AutoBootstrap::startWithWishInternal(const std::string& wish) {
+    if (wish.empty()) {
+        fprintf(stderr, "[WARN] [AutoBootstrap] No wish received, aborting\n");
         return;
     }
 
-    emit wishReceived(wish);
+    if (onWishReceived) onWishReceived(wish);
 
     if (!safetyGate(wish)) {
-        qDebug() << "Safety gate rejected wish";
+        fprintf(stderr, "[WARN] [AutoBootstrap] Safety gate rejected wish\n");
         return;
     }
 
     Planner planner;
-    QJsonArray plan = planner.plan(wish);
+    json plan = planner.plan(wish);
 
-    if (plan.isEmpty()) {
-        QMessageBox::warning(nullptr, "Agent", "I don't know how to do that yet.");
-        emit executionCompleted(false);
+    if (plan.empty() || !plan.is_array()) {
+        fprintf(stderr, "[WARN] [AutoBootstrap] Planner returned empty plan\n");
+        if (onExecutionCompleted) onExecutionCompleted(false);
         return;
     }
 
     executePlan(wish, plan);
 }
 
-bool AutoBootstrap::safetyGate(const QString& wish) {
-    // Blacklist dangerous operations
-    QStringList blacklist = {
-        "rm -rf", "format", "del /", "shutdown", 
+// ---------------------------------------------------------------------------
+bool AutoBootstrap::safetyGate(const std::string& wish) {
+    static const std::vector<std::string> blacklist = {
+        "rm -rf", "format", "del /", "shutdown",
         "powershell -c \"rm", "remove-item -recurse",
         "dd if=/dev/zero", "mkfs"
     };
-    
-    QString lowerWish = wish.toLower();
-    for (const QString& word : blacklist) {
-        if (lowerWish.contains(word.toLower())) {
-            QMessageBox::critical(
-                nullptr, 
-                "Agent Safety", 
-                QString("Blocked dangerous operation: %1").arg(word)
-            );
+
+    for (const auto& word : blacklist) {
+        if (containsCI(wish, word)) {
+            fprintf(stderr, "[CRIT] [AutoBootstrap] Blocked dangerous op: %s\n", word.c_str());
             return false;
         }
     }
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    QString autoApprove = env.value("RAWRXD_AUTO_APPROVE");
-    bool ciContext = env.value("CI").compare("true", Qt::CaseInsensitive) == 0 || env.contains("GITHUB_ACTIONS");
-    if (autoApprove.compare("1", Qt::CaseInsensitive) == 0 ||
-        autoApprove.compare("true", Qt::CaseInsensitive) == 0 ||
-        ciContext) {
-        qDebug() << "Safety gate auto-approved";
+
+    // Auto-approve in CI
+    const char* autoApprove = std::getenv("RAWRXD_AUTO_APPROVE");
+    const char* ci          = std::getenv("CI");
+    const char* gh          = std::getenv("GITHUB_ACTIONS");
+
+    if ((autoApprove && (std::string(autoApprove) == "1" || std::string(autoApprove) == "true")) ||
+        (ci && std::string(ci) == "true") ||
+        gh) {
+        fprintf(stderr, "[INFO] [AutoBootstrap] Safety gate auto-approved (CI context)\n");
         return true;
     }
-    
-    // Ask user confirmation
-    QString message = QString("Autonomously execute:\n\n%1\n\nProceed?").arg(wish);
-    int result = QMessageBox::question(
-        nullptr, 
-        "Agent Launch", 
-        message,
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::No
-    );
-    
-    return (result == QMessageBox::Yes);
+
+    // Ask user
+    fprintf(stderr, "[AutoBootstrap] Autonomously execute:\n  %s\nProceed? [y/N] > ", wish.c_str());
+    std::string answer;
+    std::getline(std::cin, answer);
+    return (!answer.empty() && (answer[0] == 'y' || answer[0] == 'Y'));
 }
 
-void AutoBootstrap::executePlan(const QString& wish, const QJsonArray& plan) {
-    emit executionStarted();
-    
+// ---------------------------------------------------------------------------
+void AutoBootstrap::executePlan(const std::string& wish, const nlohmann::json& plan) {
+    if (onExecutionStarted) onExecutionStarted();
+
     // Show plan summary
-    QString summary;
-    for (const QJsonValue& v : plan) {
-        QString type = v.toObject()["type"].toString();
-        summary += "• " + type + "\n";
+    std::string summary;
+    for (const auto& v : plan) {
+        std::string type = v.value("type", "unknown");
+        summary += "  - " + type + "\n";
     }
-    
-    qDebug() << "Execution plan for" << wish << ":\n" << summary;
-    emit planGenerated(summary);
-    
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    bool headless = env.value("RAWRXD_AUTO_APPROVE").compare("1", Qt::CaseInsensitive) == 0 ||
-                    env.value("RAWRXD_AUTO_APPROVE").compare("true", Qt::CaseInsensitive) == 0 ||
-                    env.value("CI").compare("true", Qt::CaseInsensitive) == 0 ||
-                    env.contains("GITHUB_ACTIONS");
-    if (!headless) {
-        QMessageBox::information(nullptr, "Agent Plan", summary);
-    }
-    
-    // Execute in background thread
-    QtConcurrent::run([this, plan]() {
+    fprintf(stderr, "[INFO] [AutoBootstrap] Execution plan for: %s\n%s",
+            wish.c_str(), summary.c_str());
+    if (onPlanGenerated) onPlanGenerated(summary);
+
+    // Execute in background
+    auto fut = std::async(std::launch::async, [this, plan]() {
         SelfPatch patch;
         ReleaseAgent rel;
         MetaLearn ml;
-        
         bool success = true;
-        
-        for (const QJsonValue& v : plan) {
-            QJsonObject t = v.toObject();
-            QString type = t["type"].toString();
-            
-            qDebug() << "Executing task:" << type;
-            
+
+        for (const auto& v : plan) {
+            std::string type = v.value("type", "");
+            fprintf(stderr, "[INFO] [AutoBootstrap] Executing task: %s\n", type.c_str());
+
             if (type == "add_kernel") {
-                success = patch.addKernel(
-                    t["target"].toString(), 
-                    t["template"].toString()
-                );
-            } 
-            else if (type == "add_cpp") {
-                success = patch.addCpp(
-                    t["target"].toString(), 
-                    t["deps"].toString()
-                );
-            } 
-            else if (type == "build") {
-                QString target = t.value("target").toString();
-                QStringList args = {"--build", "build", "--config", "Release"};
-                if (!target.isEmpty()) {
-                    args << "--target" << target;
-                }
-                int rc = QProcess::execute("cmake", args);
-                success = (rc == 0);
-            } 
-            else if (type == "hot_reload") {
+                success = patch.addKernel(v.value("target", ""), v.value("template", ""));
+            } else if (type == "add_cpp") {
+                success = patch.addCpp(v.value("target", ""), v.value("deps", ""));
+            } else if (type == "build") {
+                std::string target = v.value("target", "");
+                std::string cmd = "cmake --build build --config Release";
+                if (!target.empty()) cmd += " --target " + target;
+#ifdef _WIN32
+                success = (std::system(cmd.c_str()) == 0);
+#else
+                success = (std::system(cmd.c_str()) == 0);
+#endif
+            } else if (type == "hot_reload") {
                 success = patch.hotReload();
-            } 
-            else if (type == "bump_version") {
-                success = rel.bumpVersion(t["part"].toString());
-            } 
-            else if (type == "tag") {
+            } else if (type == "bump_version") {
+                success = rel.bumpVersion(v.value("part", ""));
+            } else if (type == "tag") {
                 success = rel.tagAndUpload();
-            } 
-            else if (type == "tweet") {
-                success = rel.tweet(t["text"].toString());
-            } 
-            else if (type == "meta_learn") {
+            } else if (type == "tweet") {
+                success = rel.tweet(v.value("text", ""));
+            } else if (type == "meta_learn") {
                 success = ml.record(
-                    t.value("quant").toString(),
-                    t.value("kernel").toString(),
-                    t.value("gpu").toString(),
-                    t.value("tps").toDouble(),
-                    t.value("ppl").toDouble()
-                );
+                    v.value("quant", ""), v.value("kernel", ""),
+                    v.value("gpu", ""),
+                    v.value("tps", 0.0), v.value("ppl", 0.0));
+            } else {
+                fprintf(stderr, "[WARN] [AutoBootstrap] Unknown task type: %s\n", type.c_str());
             }
-            else if (type == "bench" || type == "bench_all") {
-                // Benchmarks run during build
-                qDebug() << "Benchmark task (handled by build system)";
-            }
-            else if (type == "self_test") {
-                SelfTest selfTest;
-                connect(&selfTest, &SelfTest::log, this, [](const QString& line) {
-                    qDebug() << "[SelfTest]" << line;
-                });
-                success = selfTest.runAll();
-                if (!success) {
-                    qWarning() << "Self-test failed:" << selfTest.lastError();
-                }
-            }
-            
+
             if (!success) {
-                qWarning() << "Task failed:" << type;
-                emit executionCompleted(false);
-                return;
+                fprintf(stderr, "[WARN] [AutoBootstrap] Task failed: %s\n", type.c_str());
+                break;
             }
         }
-        
-        qDebug() << "All tasks completed successfully";
-        emit executionCompleted(true);
-    });
-}
 
-void AutoBootstrap::start() {
-    QString wish = grabWish();
-    startWithWishInternal(wish);
+        if (onExecutionCompleted) onExecutionCompleted(success);
+    });
+
+    // Fire-and-forget (detaches when fut goes out of scope with async)
+    (void)fut;
 }

@@ -1,127 +1,88 @@
+/**
+ * @file agentic_copilot_bridge.hpp
+ * @brief Bridge between agentic backend and IDE frontend (Qt-free)
+ */
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QVariant>
-#include <QHash>
-#include <mutex>
+#include <string>
 #include <vector>
+#include <mutex>
 #include <memory>
+#include <functional>
+#include "json_types.hpp"
 
-// Forward declarations
 class AgenticEngine;
 class ChatInterface;
 class MultiTabEditor;
 class TerminalPool;
 class AgenticExecutor;
 
-/**
- * @class AgenticCopilotBridge
- * @brief Bridge between agentic backend and IDE frontend UI components
- * 
- * Provides a unified interface for:
- * - Code completion and suggestions
- * - Code analysis and refactoring
- * - Test generation
- * - Multi-turn conversations
- * - Agent task execution
- * - Model training and updates
- */
-class AgenticCopilotBridge : public QObject {
-    Q_OBJECT
-
+class AgenticCopilotBridge {
 public:
-    explicit AgenticCopilotBridge(QObject* parent = nullptr);
+    AgenticCopilotBridge();
     ~AgenticCopilotBridge();
-
-    // Initialization
-    void initialize(AgenticEngine* engine, ChatInterface* chat, MultiTabEditor* editor, 
+    void initialize(AgenticEngine* engine, ChatInterface* chat, MultiTabEditor* editor,
                    TerminalPool* terminals, AgenticExecutor* executor);
-
-    // Code Generation & Analysis
-    QString generateCodeCompletion(const QString& context, const QString& prefix);
-    QString analyzeActiveFile();
-    QString suggestRefactoring(const QString& code);
-    QString generateTestsForCode(const QString& code);
-
-    // Conversation & Interaction
-    QString askAgent(const QString& question, const QJsonObject& context = QJsonObject());
-    QString continuePreviousConversation(const QString& followUp);
-
-    // Execution & Error Recovery
-    QString executeWithFailureRecovery(const QString& prompt);
-    QString hotpatchResponse(const QString& originalResponse, const QJsonObject& context);
-    bool detectAndCorrectFailure(QString& response, const QJsonObject& context);
-
-    // Agent Task Execution
-    QJsonObject executeAgentTask(const QJsonObject& task);
-    QJsonArray planMultiStepTask(const QString& goal);
-
-    // Code Transformation
-    QJsonObject transformCode(const QString& code, const QString& transformation);
-    QString explainCode(const QString& code);
-    QString findBugs(const QString& code);
-
-    // Feedback & Model Management
-    void submitFeedback(const QString& feedback, bool isPositive);
-    void updateModel(const QString& newModelPath);
-    QJsonObject trainModel(const QString& datasetPath, const QString& modelPath, const QJsonObject& config);
+    std::string generateCodeCompletion(const std::string& context, const std::string& prefix);
+    std::string analyzeActiveFile();
+    std::string suggestRefactoring(const std::string& code);
+    std::string generateTestsForCode(const std::string& code);
+    std::string askAgent(const std::string& question, const JsonObject& context = JsonObject());
+    std::string continuePreviousConversation(const std::string& followUp);
+    std::string executeWithFailureRecovery(const std::string& prompt);
+    std::string hotpatchResponse(const std::string& originalResponse, const JsonObject& context);
+    bool detectAndCorrectFailure(std::string& response, const JsonObject& context);
+    JsonObject executeAgentTask(const JsonObject& task);
+    JsonArray planMultiStepTask(const std::string& goal);
+    JsonObject transformCode(const std::string& code, const std::string& transformation);
+    std::string explainCode(const std::string& code);
+    std::string findBugs(const std::string& code);
+    void submitFeedback(const std::string& feedback, bool isPositive);
+    void updateModel(const std::string& newModelPath);
+    JsonObject trainModel(const std::string& datasetPath, const std::string& modelPath, const JsonObject& config);
     bool isTrainingModel() const;
+    void showResponse(const std::string& response);
+    void displayMessage(const std::string& message);
 
-    // Display methods
-    void showResponse(const QString& response);
-    void displayMessage(const QString& message);
-
-public slots:
-    void onChatMessage(const QString& message);
-    void onModelLoaded(const QString& modelPath);
+    // Event handlers (replace Qt slots)
+    void onChatMessage(const std::string& message);
+    void onModelLoaded(const std::string& modelPath);
     void onEditorContentChanged();
     void onTrainingProgress(int epoch, int totalEpochs, float loss, float perplexity);
-    void onTrainingCompleted(const QString& modelPath, float finalPerplexity);
+    void onTrainingCompleted(const std::string& modelPath, float finalPerplexity);
 
-signals:
-    void completionReady(const QString& completion);
-    void analysisReady(const QString& analysis);
-    void agentResponseReady(const QString& response);
-    void taskExecuted(const QJsonObject& result);
-    void errorOccurred(const QString& errorMsg);
-    void modelUpdated();
-    void trainingProgress(int epoch, int totalEpochs, float loss, float perplexity);
-    void trainingCompleted(const QString& modelPath, float finalPerplexity);
-    void feedbackSubmitted();
-    // New signals for enhanced UI interaction and metrics
-    void responseReady(const QString& response);
-    void messageDisplayed(const QString& message);
-    void chatMessageProcessed(const QString& originalMessage, const QString& agentResponse);
-    void modelLoaded(const QString& modelPath);
-    void editorAnalysisReady(const QString& analysis);
+    // Callbacks (replace Qt signals)
+    std::function<void(const std::string&)> onCompletionReady;
+    std::function<void(const std::string&)> onAnalysisReady;
+    std::function<void(const std::string&)> onAgentResponseReady;
+    std::function<void(const JsonObject&)> onTaskExecuted;
+    std::function<void(const std::string&)> onErrorOccurred;
+    std::function<void()> onModelUpdated;
+    std::function<void(int, int, float, float)> onTrainingProgressCb;
+    std::function<void(const std::string&, float)> onTrainingCompletedCb;
+    std::function<void()> onFeedbackSubmitted;
+    std::function<void(const std::string&)> onResponseReady;
+    std::function<void(const std::string&)> onMessageDisplayed;
+    std::function<void(const std::string&, const std::string&)> onChatMessageProcessed;
+    std::function<void(const std::string&)> onModelLoadedCb;
+    std::function<void(const std::string&)> onEditorAnalysisReady;
 
 private:
-    // Private helper methods for corrections
-    QString correctHallucinations(const QString& response, const QJsonObject& context);
-    QString enforceResponseFormat(const QString& response, const QString& format);
-    QString bypassRefusals(const QString& response, const QString& originalPrompt);
+    std::string correctHallucinations(const std::string& response, const JsonObject& context);
+    std::string enforceResponseFormat(const std::string& response, const std::string& format);
+    std::string bypassRefusals(const std::string& response, const std::string& originalPrompt);
+    JsonObject buildExecutionContext();
+    JsonObject buildCodeContext(const std::string& code);
+    JsonObject buildFileContext();
 
-    // Context building
-    QJsonObject buildExecutionContext();
-    QJsonObject buildCodeContext(const QString& code);
-    QJsonObject buildFileContext();
-
-    // Member variables
     mutable std::mutex m_mutex;
     AgenticEngine* m_agenticEngine = nullptr;
     ChatInterface* m_chatInterface = nullptr;
     MultiTabEditor* m_multiTabEditor = nullptr;
     TerminalPool* m_terminalPool = nullptr;
     AgenticExecutor* m_agenticExecutor = nullptr;
-
-    // Conversation & state tracking
-    QJsonArray m_conversationHistory;
-    QString m_lastConversationContext;
+    JsonArray m_conversationHistory;
+    std::string m_lastConversationContext;
     bool m_hotpatchingEnabled = true;
-
-    // Training state
     bool m_isTraining = false;
 };

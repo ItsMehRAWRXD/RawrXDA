@@ -51,7 +51,7 @@ GGUF_SCAN_DIRS = [
 BLOB_DIR = "D:/OllamaModels/blobs"
 
 DEFAULT_PORT = 11435
-DEFAULT_OLLAMA_URL = "http://localhost:11434"
+DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 
 # Phase 4: Security & Hardening Configuration
 MAX_REQUEST_BODY = 10 * 1024 * 1024    # 10 MB max request body
@@ -130,6 +130,45 @@ _agent_status = {
     "proxy_hotpatcher": {"active": True, "patches_applied": 0},
     "unified_manager": {"memory_patches": 0, "byte_patches": 0, "server_patches": 0},
 }
+
+
+# ---------------------------------------------------------------------------
+# Model-count cache — avoids re-enumerating Ollama + GGUF on every /status
+# ---------------------------------------------------------------------------
+_model_cache_lock = threading.Lock()
+_model_cache = {"ts": 0.0, "count": 0, "models": None}
+_MODEL_CACHE_TTL = 10  # seconds
+
+def _get_cached_model_count(ollama_url):
+    """Return cached model count (refreshed every 10s in background)."""
+    now = time.time()
+    with _model_cache_lock:
+        if now - _model_cache["ts"] < _MODEL_CACHE_TTL and _model_cache["models"] is not None:
+            return _model_cache["count"]
+    # Cache miss — refresh (outside lock to avoid blocking other threads)
+    models = get_all_models(ollama_url)
+    with _model_cache_lock:
+        _model_cache["ts"] = time.time()
+        _model_cache["count"] = len(models)
+        _model_cache["models"] = models
+    return len(models)
+
+def _get_cached_models(ollama_url):
+    """Return cached model list (refreshed every 10s)."""
+    now = time.time()
+    with _model_cache_lock:
+        if now - _model_cache["ts"] < _MODEL_CACHE_TTL and _model_cache["models"] is not None:
+            return _model_cache["models"]
+    models = get_all_models(ollama_url)
+    with _model_cache_lock:
+        _model_cache["ts"] = time.time()
+        _model_cache["count"] = len(models)
+        _model_cache["models"] = models
+    return models
+
+# Pre-serialized /health response — zero JSON overhead
+_HEALTH_BYTES = b'{"status":"ok","server":"RawrXD-serve.py"}'
+_HEALTH_LEN = str(len(_HEALTH_BYTES))
 
 
 def _bump_stat(key, amount=1):
@@ -266,11 +305,14 @@ def query_ollama_models(ollama_url):
 
 
 def get_all_models(ollama_url):
-    """Aggregate all model sources."""
+    """Aggregate all model sources.  Ollama models listed FIRST so that
+    API consumers (test harness, IDE) pick a runnable model by default."""
     models = []
+    # Running Ollama models first — they can actually serve inference
+    models.extend(query_ollama_models(ollama_url))
+    # GGUF / blob files second — informational / for manual loading
     models.extend(scan_gguf_models())
     models.extend(scan_blobs())
-    models.extend(query_ollama_models(ollama_url))
     return models
 
 
@@ -309,7 +351,12 @@ def ask_ollama(question, model, ollama_url, context_size=4096):
 
 
 def proxy_chat_completions(body_bytes, ollama_url, stream=False):
-    """Proxy OpenAI-compatible /v1/chat/completions to Ollama (which supports it natively)."""
+    """Proxy OpenAI-compatible /v1/chat/completions to Ollama.
+
+    Strategy: Try Ollama's OpenAI-compat endpoint first (/v1/chat/completions).
+    If 404, fall back to native /api/chat and translate the response.
+    """
+    # ---- Attempt 1: Ollama OpenAI-compatible endpoint (v0.1.24+) ----
     try:
         req = urllib.request.Request(
             f"{ollama_url}/v1/chat/completions",
@@ -319,10 +366,152 @@ def proxy_chat_completions(body_bytes, ollama_url, stream=False):
         )
         resp = urllib.request.urlopen(req, timeout=300)
         return resp
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise Exception(f"Ollama error on /v1/chat/completions: HTTP {e.code}")
+        # 404 — fall through to /api/chat translation
     except urllib.error.URLError as e:
-        raise Exception(f"Ollama unreachable at {ollama_url}/v1/chat/completions: {e}")
-    except Exception as e:
-        raise Exception(f"Chat completions proxy error: {e}")
+        raise Exception(f"Ollama unreachable at {ollama_url}: {e}")
+
+    # ---- Attempt 2: Translate to Ollama native /api/chat ----
+    try:
+        body_json = json.loads(body_bytes)
+    except Exception:
+        body_json = {}
+
+    ollama_body = {
+        "model": body_json.get("model", ""),
+        "messages": body_json.get("messages", []),
+        "stream": stream,
+    }
+    # Forward supported generation params
+    for key in ("temperature", "top_p", "top_k", "seed", "num_predict"):
+        if key in body_json:
+            if "options" not in ollama_body:
+                ollama_body["options"] = {}
+            ollama_body["options"][key] = body_json[key]
+    if "max_tokens" in body_json:
+        if "options" not in ollama_body:
+            ollama_body["options"] = {}
+        ollama_body["options"]["num_predict"] = body_json["max_tokens"]
+
+    ollama_data = json.dumps(ollama_body).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(
+            f"{ollama_url}/api/chat",
+            data=ollama_data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req, timeout=300)
+    except urllib.error.HTTPError as e:
+        # Ollama returns 404 for model-not-found — pass through the error body
+        try:
+            err_body = json.loads(e.read())
+        except Exception:
+            err_body = {"error": f"Ollama HTTP {e.code}"}
+        raise Exception(json.dumps(err_body))
+    except urllib.error.URLError as e:
+        raise Exception(f"Ollama unreachable at {ollama_url}/api/chat: {e}")
+
+    if stream:
+        # For streaming, return a wrapper that translates NDJSON → SSE
+        return _OllamaChatToSSEAdapter(resp)
+    else:
+        # For non-streaming, read and translate to OpenAI format
+        raw = resp.read()
+        resp.close()
+        try:
+            ollama_resp = json.loads(raw)
+        except Exception:
+            raise Exception(f"Invalid JSON from Ollama /api/chat: {raw[:200]}")
+
+        openai_resp = {
+            "id": f"chatcmpl-{int(time.time()*1000)}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": ollama_resp.get("model", body_json.get("model", "")),
+            "choices": [{
+                "index": 0,
+                "message": ollama_resp.get("message", {"role": "assistant", "content": ""}),
+                "finish_reason": "stop",
+            }],
+            "usage": {
+                "prompt_tokens": ollama_resp.get("prompt_eval_count", 0),
+                "completion_tokens": ollama_resp.get("eval_count", 0),
+                "total_tokens": ollama_resp.get("prompt_eval_count", 0) + ollama_resp.get("eval_count", 0),
+            },
+        }
+        # Return a fake response object with .read() and .close()
+        return _BytesResponse(json.dumps(openai_resp).encode("utf-8"))
+
+
+class _BytesResponse:
+    """Minimal file-like response wrapping bytes for proxy return."""
+    def __init__(self, data):
+        self._data = data
+        self._read = False
+    def read(self, n=-1):
+        if self._read:
+            return b""
+        self._read = True
+        return self._data
+    def close(self):
+        pass
+
+
+class _OllamaChatToSSEAdapter:
+    """Translates Ollama /api/chat NDJSON stream to OpenAI SSE format."""
+    def __init__(self, resp):
+        self._resp = resp
+        self._buffer = b""
+        self._done = False
+
+    def read(self, n=4096):
+        if self._done:
+            return b""
+        chunk = self._resp.read(n)
+        if not chunk:
+            self._done = True
+            return b"data: [DONE]\n\n"
+
+        self._buffer += chunk
+        output = b""
+        while b"\n" in self._buffer:
+            line, self._buffer = self._buffer.split(b"\n", 1)
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+                msg = obj.get("message", {})
+                content = msg.get("content", "")
+                is_done = obj.get("done", False)
+
+                sse_obj = {
+                    "id": f"chatcmpl-{int(time.time()*1000)}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": obj.get("model", ""),
+                    "choices": [{
+                        "index": 0,
+                        "delta": {"content": content} if content else {},
+                        "finish_reason": "stop" if is_done else None,
+                    }],
+                }
+                output += f"data: {json.dumps(sse_obj)}\n\n".encode("utf-8")
+
+                if is_done:
+                    output += b"data: [DONE]\n\n"
+                    self._done = True
+                    break
+            except json.JSONDecodeError:
+                continue
+        return output
+
+    def close(self):
+        self._resp.close()
 
 
 def proxy_api_generate(body_bytes, ollama_url):
@@ -365,10 +554,22 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Vary", "Origin")
 
-    def send_security_headers(self):
-        """Phase 4: Add security-hardening response headers."""
+    def send_security_headers(self, allow_framing=False):
+        """Phase 4: Add security-hardening response headers.
+        
+        Args:
+            allow_framing: If True, omit X-Frame-Options to permit same-origin
+                           iframe embedding (used by test pages embedding /gui).
+        """
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "DENY")
+        if not allow_framing:
+            self.send_header("X-Frame-Options", "SAMEORIGIN")
+        # CSP frame-ancestors supersedes X-Frame-Options and is more reliable
+        # with sandbox iframes.  Allow self + localhost variants.
+        self.send_header(
+            "Content-Security-Policy",
+            "frame-ancestors 'self' http://localhost:* http://127.0.0.1:*"
+        )
         self.send_header("X-XSS-Protection", "1; mode=block")
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("Cache-Control", "no-store")
@@ -413,17 +614,33 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
     def _handle_get(self):
 
         if self.path == "/health" or self.path == "/":
-            self._json_response(200, {"status": "ok", "server": "RawrXD-serve.py"})
+            # Fast-path: pre-serialized bytes, no JSON overhead
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", _HEALTH_LEN)
+                self.send_cors_headers()
+                self.send_security_headers()
+                self.end_headers()
+                self.wfile.write(_HEALTH_BYTES)
+            except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+                pass
 
         elif self.path == "/models":
-            models = get_all_models(self.ollama_url)
+            models = _get_cached_models(self.ollama_url)
             self._json_response(200, {"models": models})
 
         elif self.path in ("/gui", "/gui/"):
             self._serve_html()
 
+        elif self.path in ("/test", "/test/", "/test-jumper"):
+            self._serve_test_jumper()
+
+        elif self.path in ("/test-harness", "/test-harness/"):
+            self._serve_test_harness()
+
         elif self.path == "/status":
-            models = get_all_models(self.ollama_url)
+            model_count = _get_cached_model_count(self.ollama_url)
             uptime = int(time.time() - _server_stats["start_time"])
             with _stats_lock:
                 stats_copy = dict(_server_stats)
@@ -432,7 +649,7 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
                 "model_loaded": False,
                 "backend": "rawrxd-serve.py",
                 "server": "RawrXD-serve.py",
-                "available_models": len(models),
+                "available_models": model_count,
                 "total_requests": stats_copy["total_requests"],
                 "total_tokens": stats_copy["total_tokens"],
                 "total_chat_completions": stats_copy["total_chat_completions"],
@@ -578,7 +795,8 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Cache-Control", "no-cache")
-                self.send_header("Transfer-Encoding", "chunked")
+                self.send_header("Connection", "close")
+                self.send_header("X-Accel-Buffering", "no")
                 self.send_cors_headers()
                 self.send_security_headers()
                 self.end_headers()
@@ -590,10 +808,13 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
                             break
                         self.wfile.write(chunk)
                         self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
                 except Exception:
                     pass
                 finally:
                     ollama_resp.close()
+                    self.close_connection = True
             else:
                 # Non-streaming — read full response and forward
                 try:
@@ -623,6 +844,14 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
         elif self.path == "/api/generate":
             # Proxy to Ollama's native /api/generate (supports streaming)
             _bump_stat("total_stream_requests")
+
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                data = {}
+
+            is_stream = data.get("stream", True)
+
             try:
                 ollama_resp = proxy_api_generate(body, self.ollama_url)
             except Exception as e:
@@ -631,25 +860,115 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
                 self._json_response(502, {"error": str(e)})
                 return
 
-            # Stream back
-            self.send_response(200)
-            self.send_header("Content-Type", "application/x-ndjson")
-            self.send_header("Transfer-Encoding", "chunked")
-            self.send_cors_headers()
-            self.send_security_headers()
-            self.end_headers()
+            if not is_stream:
+                # Non-streaming: read full response and send with Content-Length
+                try:
+                    resp_data = ollama_resp.read()
+                    ollama_resp.close()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(resp_data)))
+                    self.send_cors_headers()
+                    self.send_security_headers()
+                    self.end_headers()
+                    self.wfile.write(resp_data)
+                except Exception as e:
+                    self._json_response(502, {"error": str(e)})
+            else:
+                # Streaming: relay NDJSON chunks
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "close")
+                self.send_cors_headers()
+                self.send_security_headers()
+                self.end_headers()
+
+                try:
+                    while True:
+                        chunk = ollama_resp.read(4096)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                except Exception:
+                    pass
+                finally:
+                    ollama_resp.close()
+                    self.close_connection = True
+
+        elif self.path == "/api/chat":
+            # Direct proxy to Ollama /api/chat (native format, no translation)
+            _bump_stat("total_api_chat")
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+
+            is_stream = data.get("stream", True)
 
             try:
-                while True:
-                    chunk = ollama_resp.read(4096)
-                    if not chunk:
-                        break
-                    self.wfile.write(chunk)
-                    self.wfile.flush()
-            except Exception:
-                pass
-            finally:
-                ollama_resp.close()
+                ollama_data = json.dumps(data).encode("utf-8")
+                req = urllib.request.Request(
+                    f"{self.ollama_url}/api/chat",
+                    data=ollama_data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                ollama_resp = urllib.request.urlopen(req, timeout=300)
+            except urllib.error.HTTPError as e:
+                try:
+                    err_body = e.read().decode("utf-8", errors="replace")
+                except Exception:
+                    err_body = f"HTTP {e.code}"
+                _add_failure("endpoint_error", err_body, "proxy", "Failed",
+                             body_str[:200], "serve.py")
+                self._json_response(e.code, {"error": err_body})
+                return
+            except Exception as e:
+                self._json_response(502, {"error": str(e)})
+                return
+
+            if is_stream:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "close")
+                self.send_header("X-Accel-Buffering", "no")
+                self.send_cors_headers()
+                self.send_security_headers()
+                self.end_headers()
+
+                try:
+                    while True:
+                        chunk = ollama_resp.read(4096)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+                except Exception:
+                    pass
+                finally:
+                    ollama_resp.close()
+                    self.close_connection = True
+            else:
+                try:
+                    resp_data = ollama_resp.read()
+                    ollama_resp.close()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(resp_data)))
+                    self.send_cors_headers()
+                    self.send_security_headers()
+                    self.end_headers()
+                    self.wfile.write(resp_data)
+                except Exception as e:
+                    self._json_response(502, {"error": str(e)})
 
         elif self.path == "/ask":
             try:
@@ -815,13 +1134,17 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
 
     def _json_response(self, status, obj):
         body = json.dumps(obj).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_cors_headers()
-        self.send_security_headers()
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_cors_headers()
+            self.send_security_headers()
+            self.end_headers()
+            self.wfile.write(body)
+        except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+            # Client disconnected before we could write — ignore silently
+            pass
 
     def _serve_html(self):
         if not HTML_PATH.exists():
@@ -829,6 +1152,37 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
             return
 
         content = HTML_PATH.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_cors_headers()
+        # allow_framing=True: /gui is embedded in test iframes
+        self.send_security_headers(allow_framing=True)
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _serve_test_jumper(self):
+        test_path = SCRIPT_DIR / "test_jumper.html"
+        if not test_path.exists():
+            self._json_response(404, {"error": "gui/test_jumper.html not found"})
+            return
+
+        content = test_path.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_cors_headers()
+        self.send_security_headers()
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _serve_test_harness(self):
+        harness_path = PROJECT_ROOT / "test" / "RawrXD-UI-TestHarness.html"
+        if not harness_path.exists():
+            self._json_response(404, {"error": "test/RawrXD-UI-TestHarness.html not found"})
+            return
+
+        content = harness_path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
@@ -850,7 +1204,12 @@ def main():
 
     RawrXDHandler.ollama_url = args.ollama_url
 
-    server = http.server.HTTPServer(("0.0.0.0", args.port), RawrXDHandler)
+    # Use ThreadingHTTPServer for concurrent request handling
+    # (prevents single-threaded blocking when clients timeout/disconnect)
+    import socketserver
+    class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+        daemon_threads = True
+    server = ThreadedHTTPServer(("0.0.0.0", args.port), RawrXDHandler)
 
     # Startup banner
     print(f"\033[1;33m")
@@ -859,6 +1218,7 @@ def main():
     print(f"  ╠══════════════════════════════════════════════════╣")
     print(f"  ║  Server:  http://localhost:{args.port:<14}      ║")
     print(f"  ║  GUI:     http://localhost:{args.port}/gui{' ' * (9 - len(str(args.port)))}      ║")
+    print(f"  ║  Tests:   http://localhost:{args.port}/test{' ' * (8 - len(str(args.port)))}      ║")
     print(f"  ║  Ollama:  {args.ollama_url:<31}      ║")
     print(f"  ╠══════════════════════════════════════════════════╣")
     print(f"  ║  Endpoints:                                     ║")
@@ -878,8 +1238,8 @@ def main():
     print(f"  ╚══════════════════════════════════════════════════╝")
     print(f"\033[0m")
 
-    models = get_all_models(args.ollama_url)
-    print(f"  Found {len(models)} models:")
+    models = _get_cached_models(args.ollama_url)
+    print(f"  Found {len(models)} models (cached for {_MODEL_CACHE_TTL}s):")
     for m in models[:10]:
         print(f"    • {m['name']} ({m['size']}) [{m['type']}]")
     if len(models) > 10:

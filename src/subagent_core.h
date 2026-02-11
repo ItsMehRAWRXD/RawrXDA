@@ -22,6 +22,12 @@
 class AgenticEngine;
 class AgentHistoryRecorder;
 class PolicyEngine;
+class BulkFixOrchestrator;
+class AgenticFailureDetector;
+class AgenticPuppeteer;
+struct BulkFixStrategy;
+struct BulkFixTarget;
+struct BulkFixResult;
 
 // ============================================================================
 // Pluggable logger — callers inject via setLogCallback; default = no-op
@@ -192,6 +198,23 @@ public:
     void setOutputCallback(OutputCallback cb)         { m_outputCallback = cb; }
     void setCompletionCallback(CompletionCallback cb) { m_completionCallback = cb; }
 
+    // ---- Autonomous Bulk Fix (models & swarms call this) ----
+    void setFailureDetector(AgenticFailureDetector* detector) { m_failureDetector = detector; }
+    void setPuppeteer(AgenticPuppeteer* puppeteer)             { m_puppeteer = puppeteer; }
+    BulkFixOrchestrator* getBulkFixOrchestrator();
+
+    /// Execute a bulk fix strategy across targets (synchronous)
+    std::string executeBulkFix(const std::string& parentId,
+                                const std::string& strategyName,
+                                const std::vector<std::string>& targetPaths,
+                                const std::string& context = "");
+
+    /// Execute a bulk fix asynchronously
+    std::string executeBulkFixAsync(const std::string& parentId,
+                                     const std::string& strategyName,
+                                     const std::vector<std::string>& targetPaths,
+                                     const std::string& context = "");
+
     // ---- Status ----
     int activeSubAgentCount() const;
     int totalSpawned() const { return m_totalSpawned.load(); }
@@ -218,6 +241,8 @@ private:
                          std::string& initialInput) const;
     bool parseSwarmCall(const std::string& text, std::vector<std::string>& prompts,
                          SwarmConfig& config) const;
+    bool parseBulkFixCall(const std::string& text, std::string& strategyName,
+                           std::vector<std::string>& targetPaths, std::string& context) const;
 
     // Logging/metrics helpers
     void logInfo(const std::string& msg) const  { if (m_logCb) m_logCb(1, msg); }
@@ -256,4 +281,9 @@ private:
     OutputCallback m_outputCallback;
     CompletionCallback m_completionCallback;
     std::atomic<int> m_totalSpawned{0};
+
+    // Autonomous bulk fix subsystem
+    AgenticFailureDetector* m_failureDetector = nullptr;
+    AgenticPuppeteer* m_puppeteer = nullptr;
+    std::unique_ptr<BulkFixOrchestrator> m_bulkFixOrchestrator;
 };

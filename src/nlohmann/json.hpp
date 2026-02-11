@@ -31,6 +31,7 @@ namespace nlohmann {
         json(long long n) : value_(std::make_shared<std::string>(std::to_string(n))), type_(2) {}
         json(unsigned long long n) : value_(std::make_shared<std::string>(std::to_string(n))), type_(2) {} 
         json(unsigned int n) : value_(std::make_shared<std::string>(std::to_string(n))), type_(2) {}
+        json(unsigned long n) : value_(std::make_shared<std::string>(std::to_string(n))), type_(2) {}
         json(double n) : value_(std::make_shared<std::string>(std::to_string(n))), type_(2) {}
         json(bool b) : value_(std::make_shared<std::string>(b ? "true" : "false")), type_(3) {}
         
@@ -77,6 +78,7 @@ namespace nlohmann {
         json& operator=(long long n) { *this = json(n); return *this; }
         json& operator=(unsigned long long n) { *this = json(n); return *this; }
         json& operator=(unsigned int n) { *this = json(n); return *this; }
+        json& operator=(unsigned long n) { *this = json(n); return *this; }
         json& operator=(double n) { *this = json(n); return *this; }
         json& operator=(const std::string& s) { *this = json(s); return *this; }
         json& operator=(const char* s) { *this = json(s); return *this; }
@@ -93,8 +95,16 @@ namespace nlohmann {
             if (str == "[]") return json::array();
             return json(str); // For now just wrap content
         }
+        // 3-arg overload: parse(str, callback, allow_exceptions)
+        static json parse(const std::string& str, void* /*cb*/, bool allow_exceptions) {
+            json result = parse(str);
+            if (!allow_exceptions) { /* never throws in our mini impl */ }
+            return result;
+        }
+        bool is_discarded() const { return type_ == 0 && !value_ && !object_ && !array_; }
         static json object() { json j; j.type_ = 4; j.object_ = std::make_shared<std::map<std::string, json>>(); return j; }
         static json array() { json j; j.type_ = 5; j.array_ = std::make_shared<std::vector<json>>(); return j; }
+        static json array(std::initializer_list<json> init) { json j; j.type_ = 5; j.array_ = std::make_shared<std::vector<json>>(init); return j; }
 
         json& operator[](const std::string& key) {
             if (type_ == 0) type_ = 4;
@@ -254,11 +264,53 @@ namespace nlohmann {
             }
             return "{}";
         }
-        
-        auto begin() { if (!object_) object_ = std::make_shared<std::map<std::string, json>>(); return object_->begin(); }
-        auto end() { if (!object_) object_ = std::make_shared<std::map<std::string, json>>(); return object_->end(); }
-        auto begin() const { if (object_) return object_->begin(); static std::map<std::string, json> e; return e.begin(); }
-        auto end() const { if (object_) return object_->end(); static std::map<std::string, json> e; return e.end(); }
+
+        // ---- Unified iterators: dereference always yields json& ----
+        struct json_iterator {
+            using vec_it = std::vector<json>::iterator;
+            using map_it = std::map<std::string, json>::iterator;
+            bool is_arr;
+            vec_it vi; map_it mi;
+            json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi() {}
+            json_iterator(map_it a, map_it) : is_arr(false), vi(), mi(a) {}
+            json& operator*() { return is_arr ? *vi : mi->second; }
+            json* operator->() { return is_arr ? &(*vi) : &(mi->second); }
+            json_iterator& operator++() { if (is_arr) ++vi; else ++mi; return *this; }
+            bool operator!=(const json_iterator& o) const { return is_arr ? vi != o.vi : mi != o.mi; }
+            bool operator==(const json_iterator& o) const { return !(*this != o); }
+        };
+        struct const_json_iterator {
+            using vec_it = std::vector<json>::const_iterator;
+            using map_it = std::map<std::string, json>::const_iterator;
+            bool is_arr;
+            vec_it vi; map_it mi;
+            const_json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi() {}
+            const_json_iterator(map_it a, map_it) : is_arr(false), vi(), mi(a) {}
+            const json& operator*() const { return is_arr ? *vi : mi->second; }
+            const json* operator->() const { return is_arr ? &(*vi) : &(mi->second); }
+            const_json_iterator& operator++() { if (is_arr) ++vi; else ++mi; return *this; }
+            bool operator!=(const const_json_iterator& o) const { return is_arr ? vi != o.vi : mi != o.mi; }
+            bool operator==(const const_json_iterator& o) const { return !(*this != o); }
+        };
+
+        auto begin() { 
+            if (type_ == 5) { if (!array_) array_ = std::make_shared<std::vector<json>>(); return json_iterator(array_->begin(), array_->end()); }
+            if (!object_) object_ = std::make_shared<std::map<std::string, json>>(); return json_iterator(object_->begin(), object_->end()); 
+        }
+        auto end() { 
+            if (type_ == 5) { if (!array_) array_ = std::make_shared<std::vector<json>>(); return json_iterator(array_->end(), array_->end()); }
+            if (!object_) object_ = std::make_shared<std::map<std::string, json>>(); return json_iterator(object_->end(), object_->end()); 
+        }
+        auto begin() const { 
+            if (type_ == 5 && array_) return const_json_iterator(array_->begin(), array_->end());
+            if (object_) return const_json_iterator(object_->begin(), object_->end());
+            static std::vector<json> ev; return const_json_iterator(ev.begin(), ev.end());
+        }
+        auto end() const { 
+            if (type_ == 5 && array_) return const_json_iterator(array_->end(), array_->end());
+            if (object_) return const_json_iterator(object_->end(), object_->end());
+            static std::vector<json> ev; return const_json_iterator(ev.end(), ev.end());
+        }
 
         struct ItemsProxy {
              std::shared_ptr<std::map<std::string, json>> obj;

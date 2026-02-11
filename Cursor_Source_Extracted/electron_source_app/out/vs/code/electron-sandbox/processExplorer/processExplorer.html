@@ -1,0 +1,69 @@
+<!-- Copyright (C) Microsoft Corporation. All rights reserved. -->
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="
+				default-src
+					'none'
+				;
+				img-src
+					'self'
+					data:
+				;
+				script-src
+					'self'
+					blob:
+					'nonce-0c6a828f1297'
+				;
+				style-src
+					'self'
+					'unsafe-inline'
+				;
+				connect-src
+					'self'
+					https:
+					file:
+				;
+				font-src
+					'self'
+				;
+		">
+		<link rel="stylesheet" href="./processExplorerMain.css">
+	</head>
+
+	<body aria-label="">
+		<div id="tabs" style="display:flex;gap:0;padding:0;background:#1a1a1a;border-bottom:1px solid #2a2a2a;">
+			<button id="tab-live" class="tab-button"
+				style="padding:10px 20px;background:transparent;border:none;color:#cccccc;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s ease;">Live</button>
+			<button id="tab-history-mem" class="tab-button"
+				style="padding:10px 20px;background:transparent;border:none;color:#cccccc;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s ease;">History
+				(Mem)</button>
+			<button id="tab-history-cpu" class="tab-button"
+				style="padding:10px 20px;background:transparent;border:none;color:#cccccc;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s ease;">History
+				(CPU)</button>
+		</div>
+		<div id="process-list"></div>
+		<div id="history-mem" style="display:none;padding:8px;overflow:auto;">
+			<div id="analysis-bar-mem" style="display:none;align-items:center;padding:8px 12px;margin-bottom:12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:4px;"></div>
+			<div style="position:relative;">
+				<canvas id="history-mem-chart" style="display:block;"></canvas>
+				<div id="time-range-controls-mem" style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px;"></div>
+			</div>
+			<div id="history-mem-legend" style="margin-top:12px;font-size:11px;line-height:1.4;"></div>
+		</div>
+		<div id="history-cpu" style="display:none;padding:8px;overflow:auto;">
+			<div id="analysis-bar-cpu" style="display:none;align-items:center;padding:8px 12px;margin-bottom:12px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:4px;"></div>
+			<div style="position:relative;">
+				<canvas id="history-cpu-chart" style="display:block;"></canvas>
+				<div id="time-range-controls-cpu" style="position:absolute;bottom:8px;right:8px;display:flex;gap:4px;"></div>
+			</div>
+			<div id="history-cpu-legend" style="margin-top:12px;font-size:11px;line-height:1.4;"></div>
+		</div>
+	</body>
+
+	<!-- Startup (do not modify order of script tags!) -->
+	<script src="./processExplorer.js" type="module"></script>
+</html>

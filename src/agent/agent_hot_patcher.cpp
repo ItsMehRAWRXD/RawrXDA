@@ -1,484 +1,573 @@
-#include "agent_hot_patcher.hpp"
-#include <QDebug>
-#include <QDateTime>
-#include <QJsonArray>
-#include <QJsonValue>
-#include <QRegularExpression>
-#include <QFile>
-#include <QDir>
-#include <algorithm>
+// ============================================================================
+// File: src/agent/agent_hot_patcher.cpp
+//
+// Purpose: Real-time hallucination detection and correction implementation
+//
+// Architecture: C++20, no Qt, no exceptions
+// Threading: std::mutex + std::lock_guard
+// ============================================================================
 
-AgentHotPatcher::AgentHotPatcher(QObject* parent)
-    : QObject(parent)
-    , m_enabled(false)
+#include "agent_hot_patcher.hpp"
+
+#include <filesystem>
+#include <regex>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <chrono>
+#include <ctime>
+
+namespace fs = std::filesystem;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Construction / Destruction
+// ═══════════════════════════════════════════════════════════════════════════
+
+AgentHotPatcher::AgentHotPatcher()
+    : m_enabled(false)
     , m_idCounter(0)
     , m_interceptionPort(0)
 {
-    // Register meta-types for queued signal connections
-    qRegisterMetaType<HallucinationDetection>("HallucinationDetection");
-    qRegisterMetaType<NavigationFix>("NavigationFix");
-    qRegisterMetaType<BehaviorPatch>("BehaviorPatch");
 }
 
 AgentHotPatcher::~AgentHotPatcher() noexcept = default;
 
-bool AgentHotPatcher::initialize(const QString& ggufLoaderPath, int interceptionPort)
+// ═══════════════════════════════════════════════════════════════════════════
+// Initialization
+// ═══════════════════════════════════════════════════════════════════════════
+
+bool AgentHotPatcher::initialize(const std::string& ggufLoaderPath, int interceptionPort)
 {
-    QMutexLocker locker(&m_mutex);
-    
+    std::lock_guard<std::mutex> locker(m_mutex);
+
     m_ggufLoaderPath = ggufLoaderPath;
     m_interceptionPort = interceptionPort;
-    
+
     // Verify GGUF loader exists
-    if (!QFile::exists(ggufLoaderPath)) {
-        qWarning() << "GGUF loader not found:" << ggufLoaderPath;
+    std::error_code ec;
+    if (!fs::exists(ggufLoaderPath, ec)) {
+        fprintf(stderr, "GGUF loader not found: %s\n", ggufLoaderPath.c_str());
         return false;
     }
-    
+
     // Load existing correction patterns
     if (!loadCorrectionPatterns()) {
-        qDebug() << "No existing correction patterns found, starting fresh";
+        fprintf(stderr, "No existing correction patterns found, starting fresh\n");
     }
-    
+
     // Start interceptor server if port specified
     if (interceptionPort > 0) {
         if (!startInterceptorServer(interceptionPort)) {
-            qWarning() << "Failed to start interceptor server on port" << interceptionPort;
+            fprintf(stderr, "Failed to start interceptor server on port %d\n", interceptionPort);
             return false;
         }
     }
-    
+
     m_enabled = true;
-    qDebug() << "AgentHotPatcher initialized successfully";
-    
+    fprintf(stderr, "AgentHotPatcher initialized successfully\n");
+
     return true;
 }
 
-QJsonObject AgentHotPatcher::interceptModelOutput(const QString& modelOutput, const QJsonObject& context)
+// ═══════════════════════════════════════════════════════════════════════════
+// Interception
+// ═══════════════════════════════════════════════════════════════════════════
+
+JsonValue AgentHotPatcher::interceptModelOutput(const std::string& modelOutput, const JsonValue& context)
 {
     if (!m_enabled) {
         // Pass through unmodified
-        QJsonObject result;
+        JsonValue result;
         result["original"] = modelOutput;
         result["modified"] = false;
         return result;
     }
-    
-    QMutexLocker locker(&m_mutex);
-    
+
+    std::lock_guard<std::mutex> locker(m_mutex);
+
     // Parse model output as JSON
-    QJsonDocument doc = QJsonDocument::fromJson(modelOutput.toUtf8());
-    QJsonObject output = doc.object();
-    
+    JsonValue output = JsonValue::parse(modelOutput);
+
     // Check if output has reasoning we can analyze
     if (output.contains("reasoning") || output.contains("thinking")) {
-        QString reasoning = output.contains("reasoning") ? 
-                           output["reasoning"].toString() : 
-                           output["thinking"].toString();
-        
+        std::string reasoning = output.contains("reasoning")
+                                 ? output.value("reasoning").toString()
+                                 : output.value("thinking").toString();
+
         // Detect hallucinations
         HallucinationDetection hallucination = detectHallucination(reasoning, context);
         if (hallucination.confidence > 0.6) {
-            emit hallucinationDetected(hallucination);
-            
+            notifyHallucinationDetected(hallucination);
+
             // Correct the hallucination
-            QString corrected = correctHallucination(hallucination);
-            if (!corrected.isEmpty()) {
+            std::string corrected = correctHallucination(hallucination);
+            if (!corrected.empty()) {
                 if (output.contains("reasoning")) {
                     output["reasoning"] = corrected;
                 } else {
                     output["thinking"] = corrected;
                 }
                 hallucination.correctionApplied = true;
-                m_detectedHallucinations.append(hallucination);
-                emit hallucinationCorrected(hallucination, corrected);
+                m_detectedHallucinations.push_back(hallucination);
+                notifyHallucinationCorrected(hallucination, corrected);
             }
         }
     }
-    
+
     // Validate navigation in the output
     if (output.contains("navigationPath")) {
-        QString navPath = output["navigationPath"].toString();
+        std::string navPath = output.value("navigationPath").toString();
         NavigationFix fix = fixNavigationError(navPath, context);
-        if (!fix.fixId.isEmpty()) {
+        if (!fix.fixId.empty()) {
             output["navigationPath"] = fix.correctPath;
-            m_navigationFixes.append(fix);
-            emit navigationErrorFixed(fix);
+            m_navigationFixes.push_back(fix);
+            notifyNavigationErrorFixed(fix);
         }
     }
-    
+
     // Apply behavioral patches
     output = applyBehaviorPatches(output, context);
-    
+
     // Build result
-    QJsonObject result;
+    JsonValue result;
     result["original"] = modelOutput;
     result["modified"] = output;
-    result["wasModified"] = (output != doc.object());
+    // Compare original parse with current output
+    JsonValue originalParsed = JsonValue::parse(modelOutput);
+    result["wasModified"] = (output != originalParsed);
     result["hallucinationsDetected"] = static_cast<int>(m_detectedHallucinations.size());
     result["navigationFixesApplied"] = static_cast<int>(m_navigationFixes.size());
-    
+
     return result;
 }
 
-HallucinationDetection AgentHotPatcher::detectHallucination(const QString& content, const QJsonObject& context)
+// ═══════════════════════════════════════════════════════════════════════════
+// Hallucination Detection
+// ═══════════════════════════════════════════════════════════════════════════
+
+HallucinationDetection AgentHotPatcher::detectHallucination(const std::string& content, const JsonValue& context)
 {
+    (void)context; // Reserved for future context-aware detection
+
     HallucinationDetection detection;
     detection.detectionId = generateUniqueId();
-    detection.detectedAt = QDateTime::currentDateTime();
+    detection.detectedAt = strutil::currentISOTimestamp();
     detection.detectedContent = content;
     detection.confidence = 0.0;
     detection.correctionApplied = false;
-    
+
     // Check for path hallucinations
-    QRegularExpression pathRegex(R"((?:file|path|dir|directory):\s*([^\s,\.]+))");
-    QRegularExpressionMatchIterator pathIt = pathRegex.globalMatch(content);
-    
-    while (pathIt.hasNext()) {
-        QRegularExpressionMatch match = pathIt.next();
-        QString path = match.captured(1);
-        
-        // Check if this path looks invalid
-        if (path.contains("//") || path.contains("\\\\") || path.contains("...")) {
-            detection.hallucationType = "invalid_path";
-            detection.confidence = 0.8;
-            detection.detectedContent = path;
-            detection.correctionStrategy = "normalize_path";
-            return detection;
+    try {
+        std::regex pathRegex(R"((?:file|path|dir|directory):\s*([^\s,\.]+))");
+        auto pathIt = std::sregex_iterator(content.begin(), content.end(), pathRegex);
+        auto pathEnd = std::sregex_iterator();
+
+        for (; pathIt != pathEnd; ++pathIt) {
+            std::smatch match = *pathIt;
+            std::string path = match[1].str();
+
+            // Check if this path looks invalid
+            if (path.find("//") != std::string::npos ||
+                path.find("\\\\") != std::string::npos ||
+                path.find("...") != std::string::npos) {
+                detection.hallucinationType = "invalid_path";
+                detection.confidence = 0.8;
+                detection.detectedContent = path;
+                detection.correctionStrategy = "normalize_path";
+                return detection;
+            }
+
+            // Check if path references non-existent locations
+            if (path.starts_with("/mystical") || path.starts_with("/phantom") ||
+                path.find("nonexistent") != std::string::npos ||
+                path.find("virtual") != std::string::npos) {
+                detection.hallucinationType = "fabricated_path";
+                detection.confidence = 0.9;
+                detection.detectedContent = path;
+                detection.correctionStrategy = "replace_with_valid_path";
+                return detection;
+            }
         }
-        
-        // Check if path references non-existent locations
-        if (path.startsWith("/mystical") || path.startsWith("/phantom") || 
-            path.contains("nonexistent") || path.contains("virtual")) {
-            detection.hallucationType = "fabricated_path";
-            detection.confidence = 0.9;
-            detection.detectedContent = path;
-            detection.correctionStrategy = "replace_with_valid_path";
-            return detection;
-        }
+    } catch (const std::regex_error&) {
+        // Regex failed — skip path analysis
     }
-    
+
     // Check for logic hallucinations (impossible conditions)
-    if (content.contains("always succeeds") && content.contains("always fails")) {
-        detection.hallucationType = "logic_contradiction";
+    if (content.find("always succeeds") != std::string::npos &&
+        content.find("always fails") != std::string::npos) {
+        detection.hallucinationType = "logic_contradiction";
         detection.confidence = 0.95;
         detection.correctionStrategy = "resolve_contradiction";
         return detection;
     }
-    
+
     // Check for factual hallucinations (wrong facts)
-    QRegularExpression factRegex(R"((?:C\+\+|Python|Java)\s+(?:was created|version)\s+(\d{4}))");
-    QRegularExpressionMatchIterator factIt = factRegex.globalMatch(content);
-    
-    while (factIt.hasNext()) {
-        QRegularExpressionMatch match = factIt.next();
-        int year = match.captured(1).toInt();
-        
-        // Check if year is way off
-        if (year < 1970 || year > QDateTime::currentDateTime().year() + 5) {
-            detection.hallucationType = "incorrect_fact";
-            detection.confidence = 0.85;
-            detection.detectedContent = match.captured(0);
-            detection.correctionStrategy = "correct_fact";
-            return detection;
+    try {
+        std::regex factRegex(R"((?:C\+\+|Python|Java)\s+(?:was created|version)\s+(\d{4}))");
+        auto factIt = std::sregex_iterator(content.begin(), content.end(), factRegex);
+        auto factEnd = std::sregex_iterator();
+
+        // Get current year for comparison
+        auto now = std::chrono::system_clock::now();
+        auto time_t_now = std::chrono::system_clock::to_time_t(now);
+        struct tm tm_now {};
+#ifdef _WIN32
+        localtime_s(&tm_now, &time_t_now);
+#else
+        localtime_r(&time_t_now, &tm_now);
+#endif
+        int currentYear = tm_now.tm_year + 1900;
+
+        for (; factIt != factEnd; ++factIt) {
+            std::smatch match = *factIt;
+            int year = 0;
+            try { year = std::stoi(match[1].str()); } catch (...) { continue; }
+
+            // Check if year is way off
+            if (year < 1970 || year > currentYear + 5) {
+                detection.hallucinationType = "incorrect_fact";
+                detection.confidence = 0.85;
+                detection.detectedContent = match[0].str();
+                detection.correctionStrategy = "correct_fact";
+                return detection;
+            }
         }
+    } catch (const std::regex_error&) {
+        // Regex failed — skip fact analysis
     }
-    
+
     // Check for incomplete reasoning
-    if (content.startsWith("The answer is") && content.length() < 20) {
-        detection.hallucationType = "incomplete_reasoning";
+    if (content.starts_with("The answer is") && content.size() < 20) {
+        detection.hallucinationType = "incomplete_reasoning";
         detection.confidence = 0.6;
         detection.correctionStrategy = "expand_reasoning";
         return detection;
     }
-    
+
     // Check known hallucination patterns
     for (auto it = m_hallucationPatterns.begin(); it != m_hallucationPatterns.end(); ++it) {
-        if (content.contains(it.key(), Qt::CaseInsensitive)) {
-            detection.hallucationType = "pattern_match";
+        if (strutil::containsCI(content, it->first)) {
+            detection.hallucinationType = "pattern_match";
             detection.confidence = 0.7;
             detection.correctionStrategy = "apply_known_correction";
-            detection.expectedContent = it.value();
+            detection.expectedContent = it->second;
             return detection;
         }
     }
-    
+
     // No hallucination detected
     detection.confidence = 0.0;
     return detection;
 }
 
-QString AgentHotPatcher::correctHallucination(const HallucinationDetection& hallucination)
+// ═══════════════════════════════════════════════════════════════════════════
+// Hallucination Correction
+// ═══════════════════════════════════════════════════════════════════════════
+
+std::string AgentHotPatcher::correctHallucination(const HallucinationDetection& hallucination)
 {
-    QString correction;
-    
-    if (hallucination.hallucationType == "invalid_path") {
+    std::string correction;
+
+    if (hallucination.hallucinationType == "invalid_path") {
         // Normalize the path
         correction = hallucination.detectedContent;
-        correction.replace("//", "/");
-        correction.replace("\\\\", "\\");
+        correction = strutil::replaceAll(correction, "//", "/");
+        correction = strutil::replaceAll(correction, "\\\\", "\\");
         return correction;
     }
-    
-    if (hallucination.hallucationType == "fabricated_path") {
+
+    if (hallucination.hallucinationType == "fabricated_path") {
         // Replace with realistic path
         return "./src/kernels/q8k_kernel.cpp";
     }
-    
-    if (hallucination.hallucationType == "logic_contradiction") {
+
+    if (hallucination.hallucinationType == "logic_contradiction") {
         // Remove the contradictory statement
         return "The implementation uses robust error handling to manage edge cases.";
     }
-    
-    if (hallucination.hallucationType == "incorrect_fact") {
+
+    if (hallucination.hallucinationType == "incorrect_fact") {
         // Provide correct fact
-        if (hallucination.detectedContent.contains("C++")) {
+        if (hallucination.detectedContent.find("C++") != std::string::npos) {
             return "C++ was standardized in 1998 (C++98).";
         }
-        if (hallucination.detectedContent.contains("Python")) {
+        if (hallucination.detectedContent.find("Python") != std::string::npos) {
             return "Python was created in 1989 by Guido van Rossum.";
         }
-        if (hallucination.detectedContent.contains("Java")) {
+        if (hallucination.detectedContent.find("Java") != std::string::npos) {
             return "Java was created by Sun Microsystems in 1995.";
         }
     }
-    
-    if (hallucination.hallucationType == "incomplete_reasoning") {
+
+    if (hallucination.hallucinationType == "incomplete_reasoning") {
         // Expand the reasoning
-        return hallucination.detectedContent + 
+        return hallucination.detectedContent +
                " Let me analyze this step by step: First, we need to understand the requirements. "
                "Second, we evaluate the available approaches. Third, we select the best solution. "
                "Finally, we validate and document the outcome.";
     }
-    
-    if (hallucination.hallucationType == "pattern_match" && !hallucination.expectedContent.isEmpty()) {
+
+    if (hallucination.hallucinationType == "pattern_match" && !hallucination.expectedContent.empty()) {
         return hallucination.expectedContent;
     }
-    
+
     return correction;
 }
 
-NavigationFix AgentHotPatcher::fixNavigationError(const QString& navigationPath, const QJsonObject& projectContext)
+// ═══════════════════════════════════════════════════════════════════════════
+// Navigation Error Fixing
+// ═══════════════════════════════════════════════════════════════════════════
+
+NavigationFix AgentHotPatcher::fixNavigationError(const std::string& navigationPath,
+                                                    const JsonValue& projectContext)
 {
+    (void)projectContext; // Reserved for context-aware navigation
+
     NavigationFix fix;
     fix.fixId = generateUniqueId();
-    fix.lastApplied = QDateTime::currentDateTime();
+    fix.lastApplied = strutil::currentISOTimestamp();
     fix.timesCorrected = 0;
     fix.effectiveness = 0.0;
-    
+
     if (!validateNavigationPath(navigationPath)) {
         // Detect the error type
-        if (navigationPath.contains("..") && navigationPath.count("..") > 3) {
+        if (navigationPath.find("..") != std::string::npos &&
+            strutil::countOccurrences(navigationPath, "..") > 3) {
             fix.incorrectPath = navigationPath;
             fix.correctPath = "./src/agent"; // Typical navigation
             fix.reasoning = "Too many parent directory traversals detected";
             fix.effectiveness = 0.9;
             return fix;
         }
-        
-        if (navigationPath.contains("//") || navigationPath.contains("\\\\")) {
+
+        if (navigationPath.find("//") != std::string::npos ||
+            navigationPath.find("\\\\") != std::string::npos) {
             fix.incorrectPath = navigationPath;
-            fix.correctPath = navigationPath.replace("//", "/").replace("\\\\", "\\");
+            std::string corrected = strutil::replaceAll(navigationPath, "//", "/");
+            fix.correctPath = strutil::replaceAll(corrected, "\\\\", "\\");
             fix.reasoning = "Double slashes detected in path";
             fix.effectiveness = 0.95;
             return fix;
         }
-        
-        if (navigationPath.startsWith("/") || navigationPath.startsWith("C:")) {
+
+        if (navigationPath.starts_with("/") || navigationPath.starts_with("C:")) {
             fix.incorrectPath = navigationPath;
-            fix.correctPath = "./" + navigationPath.mid(1);
+            fix.correctPath = "./" + navigationPath.substr(1);
             fix.reasoning = "Absolute path converted to relative";
             fix.effectiveness = 0.8;
             return fix;
         }
-        
+
         // Check for circular navigation
-        QStringList components = navigationPath.split("/", Qt::SkipEmptyParts);
-        for (int i = 0; i < components.size() - 1; ++i) {
+        auto components = strutil::split(navigationPath, '/', true);
+        for (size_t i = 0; i + 1 < components.size(); ++i) {
             if (components[i] == components[i + 1]) {
                 fix.incorrectPath = navigationPath;
-                fix.correctPath = components.join("/");
+                fix.correctPath = strutil::join(components, "/");
                 fix.reasoning = "Circular path components detected";
                 fix.effectiveness = 0.85;
                 return fix;
             }
         }
     }
-    
+
     // Check known navigation fixes
     for (const NavigationFix& knownFix : m_navigationFixes) {
-        if (navigationPath.contains(knownFix.incorrectPath)) {
+        if (navigationPath.find(knownFix.incorrectPath) != std::string::npos) {
             fix.incorrectPath = navigationPath;
-            fix.correctPath = navigationPath.replace(knownFix.incorrectPath, knownFix.correctPath);
+            fix.correctPath = strutil::replaceAll(navigationPath, knownFix.incorrectPath, knownFix.correctPath);
             fix.reasoning = "Known navigation pattern corrected";
             fix.effectiveness = knownFix.effectiveness;
             return fix;
         }
     }
-    
+
     // No fix needed
     fix.fixId.clear();
     return fix;
 }
 
-QJsonObject AgentHotPatcher::applyBehaviorPatches(const QJsonObject& output, const QJsonObject& context)
+// ═══════════════════════════════════════════════════════════════════════════
+// Behavior Patches
+// ═══════════════════════════════════════════════════════════════════════════
+
+JsonValue AgentHotPatcher::applyBehaviorPatches(const JsonValue& output, const JsonValue& context)
 {
-    QJsonObject patchedOutput = output;
-    
+    JsonValue patchedOutput = output;
+
     for (const BehaviorPatch& patch : m_behaviorPatches) {
         if (!patch.enabled) continue;
-        
+
         // Check if patch condition is met
         bool conditionMet = false;
-        
-        if (patch.condition.contains("hallucination")) {
+
+        if (patch.condition.find("hallucination") != std::string::npos) {
             if (m_detectedHallucinations.size() > 0) {
                 conditionMet = true;
             }
-        } else if (patch.condition.contains("navigation_error")) {
+        } else if (patch.condition.find("navigation_error") != std::string::npos) {
             if (m_navigationFixes.size() > 0) {
                 conditionMet = true;
             }
-        } else if (patch.condition.contains("empty_reasoning")) {
-            if (!output.contains("reasoning") || output["reasoning"].toString().isEmpty()) {
+        } else if (patch.condition.find("empty_reasoning") != std::string::npos) {
+            if (!output.contains("reasoning") || output.value("reasoning").toString().empty()) {
                 conditionMet = true;
             }
-        } else if (patch.condition.contains("missing_logic")) {
+        } else if (patch.condition.find("missing_logic") != std::string::npos) {
             if (!output.contains("step_by_step")) {
                 conditionMet = true;
             }
         }
-        
+
         // Apply patch action
         if (conditionMet) {
             if (patch.patchType == "output_filter") {
-                if (patch.action.contains("add_validation")) {
+                if (patch.action.find("add_validation") != std::string::npos) {
                     patchedOutput["validation_required"] = true;
                 }
-                if (patch.action.contains("remove_hallucinated")) {
+                if (patch.action.find("remove_hallucinated") != std::string::npos) {
                     patchedOutput.remove("speculative_content");
                 }
             } else if (patch.patchType == "prompt_modifier") {
-                if (patch.action.contains("enforce_reasoning")) {
+                if (patch.action.find("enforce_reasoning") != std::string::npos) {
                     patchedOutput["step_by_step"] = true;
                 }
             } else if (patch.patchType == "validator") {
-                if (patch.action.contains("validate_paths")) {
+                if (patch.action.find("validate_paths") != std::string::npos) {
                     if (patchedOutput.contains("navigationPath")) {
-                        NavigationFix fix = fixNavigationError(
-                            patchedOutput["navigationPath"].toString(), 
+                        NavigationFix navFix = fixNavigationError(
+                            patchedOutput.value("navigationPath").toString(),
                             context
                         );
-                        if (!fix.fixId.isEmpty()) {
-                            patchedOutput["navigationPath"] = fix.correctPath;
+                        if (!navFix.fixId.empty()) {
+                            patchedOutput["navigationPath"] = navFix.correctPath;
                         }
                     }
                 }
             }
-            
-            emit behaviorPatchApplied(patch);
+
+            notifyBehaviorPatchApplied(patch);
         }
     }
-    
+
     return patchedOutput;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Pattern Registration
+// ═══════════════════════════════════════════════════════════════════════════
+
 void AgentHotPatcher::registerCorrectionPattern(const HallucinationDetection& pattern)
 {
-    QMutexLocker locker(&m_mutex);
-    
-    if (!pattern.detectedContent.isEmpty() && !pattern.expectedContent.isEmpty()) {
+    std::lock_guard<std::mutex> locker(m_mutex);
+
+    if (!pattern.detectedContent.empty() && !pattern.expectedContent.empty()) {
         m_hallucationPatterns[pattern.detectedContent] = pattern.expectedContent;
         saveCorrectionPatterns();
-        qDebug() << "Registered hallucination correction pattern";
+        fprintf(stderr, "Registered hallucination correction pattern\n");
     }
 }
 
 void AgentHotPatcher::registerNavigationFix(const NavigationFix& fix)
 {
-    QMutexLocker locker(&m_mutex);
-    
-    if (!fix.incorrectPath.isEmpty() && !fix.correctPath.isEmpty()) {
+    std::lock_guard<std::mutex> locker(m_mutex);
+
+    if (!fix.incorrectPath.empty() && !fix.correctPath.empty()) {
         m_navigationPatterns[fix.incorrectPath] = fix.correctPath;
         saveCorrectionPatterns();
-        qDebug() << "Registered navigation fix pattern";
+        fprintf(stderr, "Registered navigation fix pattern\n");
     }
 }
 
 void AgentHotPatcher::createBehaviorPatch(const BehaviorPatch& patch)
 {
-    QMutexLocker locker(&m_mutex);
-    
+    std::lock_guard<std::mutex> locker(m_mutex);
+
     // Check if patch with this ID already exists
     auto it = std::find_if(m_behaviorPatches.begin(), m_behaviorPatches.end(),
                           [&patch](const BehaviorPatch& p) { return p.patchId == patch.patchId; });
-    
+
     if (it != m_behaviorPatches.end()) {
         *it = patch; // Update existing patch
     } else {
-        m_behaviorPatches.append(patch); // Add new patch
+        m_behaviorPatches.push_back(patch); // Add new patch
     }
-    
-    qDebug() << "Behavior patch created/updated:" << patch.patchId;
+
+    fprintf(stderr, "Behavior patch created/updated: %s\n", patch.patchId.c_str());
 }
 
-QJsonObject AgentHotPatcher::getCorrectionStatistics() const
+// ═══════════════════════════════════════════════════════════════════════════
+// Statistics
+// ═══════════════════════════════════════════════════════════════════════════
+
+JsonValue AgentHotPatcher::getCorrectionStatistics() const
 {
-    QMutexLocker locker(&m_mutex);
-    
-    QJsonObject stats;
-    
+    std::lock_guard<std::mutex> locker(m_mutex);
+
+    JsonValue stats;
+
     // Hallucination statistics
     stats["totalHallucinationsDetected"] = static_cast<int>(m_detectedHallucinations.size());
-    
+
     int hallucinationsCorrected = 0;
     for (const HallucinationDetection& h : m_detectedHallucinations) {
         if (h.correctionApplied) hallucinationsCorrected++;
     }
     stats["hallucinationsCorrected"] = hallucinationsCorrected;
-    
+
     // Hallucination types breakdown
-    QJsonObject hallucinationTypes;
+    JsonValue hallucinationTypes;
     for (const HallucinationDetection& h : m_detectedHallucinations) {
-        if (!h.hallucationType.isEmpty()) {
-            hallucinationTypes[h.hallucationType] = hallucinationTypes[h.hallucationType].toInt() + 1;
+        if (!h.hallucinationType.empty()) {
+            hallucinationTypes[h.hallucinationType] = hallucinationTypes.value(h.hallucinationType).toInt() + 1;
         }
     }
     stats["hallucinationTypes"] = hallucinationTypes;
-    
+
     // Navigation fix statistics
     stats["totalNavigationFixesApplied"] = static_cast<int>(m_navigationFixes.size());
-    
+
     double avgEffectiveness = 0.0;
-    if (!m_navigationFixes.isEmpty()) {
+    if (!m_navigationFixes.empty()) {
         for (const NavigationFix& fix : m_navigationFixes) {
             avgEffectiveness += fix.effectiveness;
         }
-        avgEffectiveness /= m_navigationFixes.size();
+        avgEffectiveness /= static_cast<double>(m_navigationFixes.size());
     }
     stats["averageNavigationFixEffectiveness"] = avgEffectiveness;
-    
+
     // Behavior patch statistics
     stats["totalBehaviorPatches"] = static_cast<int>(m_behaviorPatches.size());
-    stats["enabledPatches"] = 0;
+    int enabledPatches = 0;
     for (const BehaviorPatch& patch : m_behaviorPatches) {
         if (patch.enabled) {
-            stats["enabledPatches"] = stats["enabledPatches"].toInt() + 1;
+            enabledPatches++;
         }
     }
-    
+    stats["enabledPatches"] = enabledPatches;
+
     // Overall statistics
     stats["hotPatchingEnabled"] = m_enabled;
     stats["totalCorrectionPatterns"] = static_cast<int>(m_hallucationPatterns.size());
     stats["totalNavigationPatterns"] = static_cast<int>(m_navigationPatterns.size());
-    
+
     return stats;
 }
+
+int AgentHotPatcher::getCorrectionPatternCount() const
+{
+    std::lock_guard<std::mutex> locker(m_mutex);
+    return static_cast<int>(m_hallucationPatterns.size());
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Configuration
+// ═══════════════════════════════════════════════════════════════════════════
 
 void AgentHotPatcher::setHotPatchingEnabled(bool enabled)
 {
     m_enabled = enabled;
-    qDebug() << "Hot patching" << (enabled ? "enabled" : "disabled");
+    fprintf(stderr, "Hot patching %s\n", enabled ? "enabled" : "disabled");
 }
 
 bool AgentHotPatcher::isHotPatchingEnabled() const
@@ -486,93 +575,105 @@ bool AgentHotPatcher::isHotPatchingEnabled() const
     return m_enabled;
 }
 
-HallucinationDetection AgentHotPatcher::analyzeForHallucinations(const QString& content)
+void AgentHotPatcher::setDebugLogging(bool enabled)
 {
-    // This is called internally by detectHallucination
-    return detectHallucination(content, QJsonObject());
+    m_debugLogging = enabled;
 }
 
-bool AgentHotPatcher::validateNavigationPath(const QString& path)
+// ═══════════════════════════════════════════════════════════════════════════
+// Private Helpers
+// ═══════════════════════════════════════════════════════════════════════════
+
+HallucinationDetection AgentHotPatcher::analyzeForHallucinations(const std::string& content)
 {
-    if (path.isEmpty()) return false;
-    
+    // This is called internally by detectHallucination
+    return detectHallucination(content, JsonValue());
+}
+
+bool AgentHotPatcher::validateNavigationPath(const std::string& path)
+{
+    if (path.empty()) return false;
+
     // Check for invalid patterns
-    if (path.contains("//") || path.contains("\\\\")) return false;
-    if (path.contains("...")) return false;
-    if (path.count("..") > 5) return false; // Too many parent traversals
-    
+    if (path.find("//") != std::string::npos ||
+        path.find("\\\\") != std::string::npos) return false;
+    if (path.find("...") != std::string::npos) return false;
+    if (strutil::countOccurrences(path, "..") > 5) return false; // Too many parent traversals
+
     // Check for suspicious patterns
-    if (path.startsWith("/sys") || path.startsWith("/proc") || path.startsWith("/dev")) return false;
-    
+    if (path.starts_with("/sys") || path.starts_with("/proc") || path.starts_with("/dev")) return false;
+
     return true;
 }
 
-QString AgentHotPatcher::extractReasoningChain(const QJsonObject& output)
+std::string AgentHotPatcher::extractReasoningChain(const JsonValue& output)
 {
-    QString reasoning;
-    
+    std::string reasoning;
+
     if (output.contains("reasoning")) {
-        reasoning = output["reasoning"].toString();
+        reasoning = output.value("reasoning").toString();
     } else if (output.contains("thinking")) {
-        reasoning = output["thinking"].toString();
+        reasoning = output.value("thinking").toString();
     } else if (output.contains("step_by_step")) {
-        reasoning = output["step_by_step"].toString();
+        reasoning = output.value("step_by_step").toString();
     }
-    
+
     return reasoning;
 }
 
-QStringList AgentHotPatcher::validateReasoningLogic(const QString& reasoning)
+std::vector<std::string> AgentHotPatcher::validateReasoningLogic(const std::string& reasoning)
 {
-    QStringList issues;
-    
+    std::vector<std::string> issues;
+
     // Check for contradictions
-    if (reasoning.contains("always") && reasoning.contains("never")) {
-        issues << "Logic contradiction detected: contains both 'always' and 'never'";
+    if (reasoning.find("always") != std::string::npos &&
+        reasoning.find("never") != std::string::npos) {
+        issues.push_back("Logic contradiction detected: contains both 'always' and 'never'");
     }
-    
+
     // Check for circular reasoning
-    QStringList sentences = reasoning.split(".");
+    auto sentences = strutil::split(reasoning, '.');
     if (sentences.size() > 2) {
-        if (sentences.first() == sentences.last()) {
-            issues << "Circular reasoning detected";
+        if (sentences.front() == sentences.back()) {
+            issues.push_back("Circular reasoning detected");
         }
     }
-    
+
     // Check for incomplete logic chains
-    if (reasoning.contains("therefore") && !reasoning.contains("because")) {
-        issues << "Incomplete logic chain: has conclusion but no premise";
+    if (reasoning.find("therefore") != std::string::npos &&
+        reasoning.find("because") == std::string::npos) {
+        issues.push_back("Incomplete logic chain: has conclusion but no premise");
     }
-    
+
     return issues;
 }
 
-QString AgentHotPatcher::generateUniqueId()
+std::string AgentHotPatcher::generateUniqueId()
 {
-    return QString::number(m_idCounter++);
+    return std::to_string(m_idCounter++);
 }
 
 bool AgentHotPatcher::loadCorrectionPatterns()
 {
-    QMutexLocker locker(&m_mutex);
-    
+    std::lock_guard<std::mutex> locker(m_mutex);
+
     // In production, this would load from persistent storage
     // For now, we'll initialize with some common patterns
-    
+
     m_hallucationPatterns["/mystical/path"] = "./src";
     m_hallucationPatterns["/phantom/dir"] = "./data";
     m_navigationPatterns["/absolute/path/.."] = "./relative/path";
-    
+
     return true;
 }
 
 bool AgentHotPatcher::saveCorrectionPatterns()
 {
-    QMutexLocker locker(&m_mutex);
-    
+    std::lock_guard<std::mutex> locker(m_mutex);
+
     // In production, this would save to persistent storage
-    qDebug() << "Correction patterns saved";
-    
+    fprintf(stderr, "Correction patterns saved\n");
+
     return true;
 }
 
@@ -580,12 +681,105 @@ bool AgentHotPatcher::startInterceptorServer(int port)
 {
     // In production, this would start a network server
     // For now, just log the intent
-    qDebug() << "Interceptor server configured for port" << port;
-    
+    fprintf(stderr, "Interceptor server configured for port %d\n", port);
+
     return true;
 }
 
-QJsonObject AgentHotPatcher::processInterceptedResponse(const QJsonObject& response)
+JsonValue AgentHotPatcher::processInterceptedResponse(const JsonValue& response)
 {
-    return applyBehaviorPatches(response, QJsonObject());
+    return applyBehaviorPatches(response, JsonValue());
+}
+
+HallucinationDetection AgentHotPatcher::detectPathHallucination(const std::string& content)
+{
+    HallucinationDetection detection;
+    // Check for known fabricated paths
+    if (content.find("/mystical") != std::string::npos ||
+        content.find("/phantom") != std::string::npos) {
+        detection.hallucinationType = "fabricated_path";
+        detection.confidence = 0.9;
+        detection.detectedContent = content;
+        detection.correctionStrategy = "replace_with_valid_path";
+    }
+    return detection;
+}
+
+HallucinationDetection AgentHotPatcher::detectLogicContradiction(const std::string& content)
+{
+    HallucinationDetection detection;
+    if (content.find("always succeeds") != std::string::npos &&
+        content.find("always fails") != std::string::npos) {
+        detection.hallucinationType = "logic_contradiction";
+        detection.confidence = 0.95;
+        detection.correctionStrategy = "resolve_contradiction";
+    }
+    return detection;
+}
+
+HallucinationDetection AgentHotPatcher::detectIncompleteReasoning(const std::string& content)
+{
+    HallucinationDetection detection;
+    if (content.starts_with("The answer is") && content.size() < 20) {
+        detection.hallucinationType = "incomplete_reasoning";
+        detection.confidence = 0.6;
+        detection.correctionStrategy = "expand_reasoning";
+    }
+    return detection;
+}
+
+std::string AgentHotPatcher::normalizePathInContent(const std::string& content, const std::string& validPath)
+{
+    std::string normalized = content;
+    // Replace common fabricated paths
+    normalized = strutil::replaceAll(normalized, "/mystical/path", validPath);
+    normalized = strutil::replaceAll(normalized, "/phantom/dir", validPath);
+    // Normalize slashes
+    normalized = strutil::replaceAll(normalized, "//", "/");
+    return normalized;
+}
+
+bool AgentHotPatcher::isValidPath(const std::string& path) const
+{
+    if (path.empty()) return false;
+    if (path.find("//") != std::string::npos) return false;
+    if (path.find("...") != std::string::npos) return false;
+    if (path.starts_with("/sys") || path.starts_with("/proc") || path.starts_with("/dev")) return false;
+    return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Callback Registration & Notification
+// ═══════════════════════════════════════════════════════════════════════════
+
+void AgentHotPatcher::registerHallucinationDetectedCallback(HallucinationDetectedCallback cb, void* userData) {
+    if (cb) m_hallucinationDetectedCBs.push_back({cb, userData});
+}
+void AgentHotPatcher::registerHallucinationCorrectedCallback(HallucinationCorrectedCallback cb, void* userData) {
+    if (cb) m_hallucinationCorrectedCBs.push_back({cb, userData});
+}
+void AgentHotPatcher::registerNavigationErrorFixedCallback(NavigationErrorFixedCallback cb, void* userData) {
+    if (cb) m_navigationErrorFixedCBs.push_back({cb, userData});
+}
+void AgentHotPatcher::registerBehaviorPatchAppliedCallback(BehaviorPatchAppliedCallback cb, void* userData) {
+    if (cb) m_behaviorPatchAppliedCBs.push_back({cb, userData});
+}
+void AgentHotPatcher::registerStatisticsUpdatedCallback(StatisticsUpdatedCallback cb, void* userData) {
+    if (cb) m_statisticsUpdatedCBs.push_back({cb, userData});
+}
+
+void AgentHotPatcher::notifyHallucinationDetected(const HallucinationDetection& detection) {
+    for (const auto& cb : m_hallucinationDetectedCBs) cb.fn(detection, cb.userData);
+}
+void AgentHotPatcher::notifyHallucinationCorrected(const HallucinationDetection& detection, const std::string& corrected) {
+    for (const auto& cb : m_hallucinationCorrectedCBs) cb.fn(detection, corrected, cb.userData);
+}
+void AgentHotPatcher::notifyNavigationErrorFixed(const NavigationFix& fix) {
+    for (const auto& cb : m_navigationErrorFixedCBs) cb.fn(fix, cb.userData);
+}
+void AgentHotPatcher::notifyBehaviorPatchApplied(const BehaviorPatch& patch) {
+    for (const auto& cb : m_behaviorPatchAppliedCBs) cb.fn(patch, cb.userData);
+}
+void AgentHotPatcher::notifyStatisticsUpdated(const JsonValue& stats) {
+    for (const auto& cb : m_statisticsUpdatedCBs) cb.fn(stats, cb.userData);
 }

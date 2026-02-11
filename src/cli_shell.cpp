@@ -20,6 +20,12 @@
 #include "cli/cli_headless_systems.h"
 #include "deterministic_replay.h"
 #include "../include/chain_of_thought_engine.h"
+#include "core/voice_chat.hpp"
+#include "core/voice_automation.hpp"
+
+// ── Unified Feature Dispatch (CLI ↔ Win32 parity) ──────────────────────────
+#include "cli/cli_feature_bridge.h"
+#include "core/feature_handlers.h"
 
 namespace fs = std::filesystem;
 
@@ -55,6 +61,11 @@ struct CLIState {
     // Agentic engine + SubAgent manager (set from main or externally)
     AgenticEngine* agenticEngine = nullptr;
     SubAgentManager* subAgentMgr = nullptr;
+    
+    // Voice state (Phase 33 parity with Win32IDE)
+    std::unique_ptr<VoiceChat> voiceChat;
+    bool voiceInitialized = false;
+    bool voiceTTSEnabled = false;
 };
 
 CLIState g_state;
@@ -62,6 +73,247 @@ std::mutex g_stateMutex;
 
 // Declaration for server start function
 void start_server(int port);
+
+// ============================================================================
+// VOICE OPERATIONS (Phase 33 — Feature Parity with Win32IDE_VoiceChat)
+// ============================================================================
+
+static void ensure_voice_init() {
+    if (g_state.voiceInitialized) return;
+    g_state.voiceChat = std::make_unique<VoiceChat>();
+    VoiceChatConfig cfg;
+    cfg.sampleRate    = 16000;
+    cfg.channels      = 1;
+    cfg.bitsPerSample = 16;
+    cfg.enableVAD     = true;
+    cfg.vadThreshold  = 0.02f;
+    cfg.vadSilenceMs  = 1500;
+    cfg.enableMetrics = true;
+    cfg.userName      = "CLI User";
+    auto r = g_state.voiceChat->configure(cfg);
+    if (r.success) {
+        g_state.voiceInitialized = true;
+        std::cout << "\xE2\x9C\x85 Voice engine initialized (16kHz mono, VAD enabled)\n";
+    } else {
+        std::cout << "\xE2\x9D\x8C Voice init failed: " << r.detail << "\n";
+    }
+}
+
+void cmd_voice(const std::string& args) {
+    if (args.empty() || args == "help") {
+        std::cout << "\n\xF0\x9F\x8E\x99\xEF\xB8\x8F  VOICE COMMANDS:\n";
+        std::cout << "  !voice init               Initialize voice engine\n";
+        std::cout << "  !voice record              Start/stop recording\n";
+        std::cout << "  !voice ptt                 Push-to-talk toggle\n";
+        std::cout << "  !voice transcribe          Transcribe last recording\n";
+        std::cout << "  !voice speak <text>        Text-to-speech\n";
+        std::cout << "  !voice tts <on|off>        Toggle TTS for AI responses\n";
+        std::cout << "  !voice mode <ptt|vad|off>  Set capture mode\n";
+        std::cout << "  !voice devices             List audio devices\n";
+        std::cout << "  !voice device <id>         Select input device\n";
+        std::cout << "  !voice room <name>         Join/leave voice room\n";
+        std::cout << "  !voice metrics             Show voice metrics\n";
+        std::cout << "  !voice status              Show voice status\n";
+        return;
+    }
+    
+    // Parse subcommand
+    auto sp = args.find(' ');
+    std::string sub = (sp == std::string::npos) ? args : args.substr(0, sp);
+    std::string param = (sp == std::string::npos) ? "" : args.substr(sp + 1);
+    
+    if (sub == "init") {
+        ensure_voice_init();
+        return;
+    }
+    
+    // All other commands require init
+    ensure_voice_init();
+    if (!g_state.voiceInitialized || !g_state.voiceChat) {
+        std::cout << "\xE2\x9D\x8C Voice engine not available.\n";
+        return;
+    }
+    
+    if (sub == "record") {
+        if (g_state.voiceChat->isRecording()) {
+            auto r = g_state.voiceChat->stopRecording();
+            std::cout << "\xE2\x8F\xB9 Recording stopped.";
+            if (r.success) {
+                size_t samples = g_state.voiceChat->getRecordedSampleCount();
+                double secs = static_cast<double>(samples) / 16000.0;
+                std::cout << " (" << std::fixed << std::setprecision(1) << secs << "s, " << samples << " samples)";
+            }
+            std::cout << "\n";
+        } else {
+            auto r = g_state.voiceChat->startRecording();
+            if (r.success) {
+                std::cout << "\xE2\x8F\xBA Recording... (type !voice record to stop)\n";
+            } else {
+                std::cout << "\xE2\x9D\x8C Record failed: " << r.detail << "\n";
+            }
+        }
+    }
+    else if (sub == "ptt") {
+        if (g_state.voiceChat->isPTTActive()) {
+            g_state.voiceChat->pttEnd();
+            std::cout << "\xF0\x9F\x8E\x99 PTT released.\n";
+            // Auto-transcribe on PTT release
+            std::string text;
+            auto r = g_state.voiceChat->transcribeLastRecording(text);
+            if (r.success && !text.empty()) {
+                std::cout << "\xF0\x9F\x93\x9D Transcription: " << text << "\n";
+            }
+        } else {
+            g_state.voiceChat->pttBegin();
+            std::cout << "\xF0\x9F\x8E\x99 PTT active — speak now (type !voice ptt to release)\n";
+        }
+    }
+    else if (sub == "transcribe") {
+        std::string text;
+        auto r = g_state.voiceChat->transcribeLastRecording(text);
+        if (r.success && !text.empty()) {
+            std::cout << "\xF0\x9F\x93\x9D Transcription: " << text << "\n";
+        } else {
+            std::cout << "\xE2\x9D\x8C Transcription failed: " << r.detail << "\n";
+        }
+    }
+    else if (sub == "speak") {
+        if (param.empty()) {
+            std::cout << "Usage: !voice speak <text to speak>\n";
+            return;
+        }
+        auto r = g_state.voiceChat->speak(param);
+        if (r.success) {
+            std::cout << "\xF0\x9F\x94\x8A Speaking: " << param.substr(0, 60) << (param.size() > 60 ? "..." : "") << "\n";
+        } else {
+            std::cout << "\xE2\x9D\x8C TTS failed: " << r.detail << "\n";
+        }
+    }
+    else if (sub == "tts") {
+        if (param == "on") {
+            g_state.voiceTTSEnabled = true;
+            std::cout << "\xF0\x9F\x94\x8A TTS for AI responses: ON\n";
+        } else if (param == "off") {
+            g_state.voiceTTSEnabled = false;
+            std::cout << "\xF0\x9F\x94\x87 TTS for AI responses: OFF\n";
+        } else {
+            std::cout << "TTS is currently: " << (g_state.voiceTTSEnabled ? "ON" : "OFF") << "\n";
+            std::cout << "Usage: !voice tts <on|off>\n";
+        }
+    }
+    else if (sub == "mode") {
+        if (param == "ptt") {
+            g_state.voiceChat->setMode(VoiceChatMode::PushToTalk);
+            std::cout << "\xE2\x9C\x85 Voice mode: Push-to-Talk\n";
+        } else if (param == "vad") {
+            g_state.voiceChat->setMode(VoiceChatMode::Continuous);
+            std::cout << "\xE2\x9C\x85 Voice mode: Continuous (VAD)\n";
+        } else if (param == "off") {
+            g_state.voiceChat->setMode(VoiceChatMode::Disabled);
+            std::cout << "\xE2\x9C\x85 Voice mode: Disabled\n";
+        } else {
+            auto mode = g_state.voiceChat->getMode();
+            const char* modeStr = (mode == VoiceChatMode::PushToTalk) ? "Push-to-Talk" :
+                                  (mode == VoiceChatMode::Continuous) ? "Continuous (VAD)" : "Disabled";
+            std::cout << "Current mode: " << modeStr << "\n";
+            std::cout << "Usage: !voice mode <ptt|vad|off>\n";
+        }
+    }
+    else if (sub == "devices") {
+        auto inputs = VoiceChat::enumerateInputDevices();
+        auto outputs = VoiceChat::enumerateOutputDevices();
+        std::cout << "\n\xF0\x9F\x8E\xA7 INPUT DEVICES:\n";
+        for (const auto& dev : inputs) {
+            std::cout << "  [" << dev.id << "] " << dev.name;
+            if (dev.isDefault) std::cout << " (default)";
+            std::cout << "\n";
+        }
+        std::cout << "\n\xF0\x9F\x94\x8A OUTPUT DEVICES:\n";
+        for (const auto& dev : outputs) {
+            std::cout << "  [" << dev.id << "] " << dev.name;
+            if (dev.isDefault) std::cout << " (default)";
+            std::cout << "\n";
+        }
+        if (inputs.empty()) std::cout << "  (no input devices found)\n";
+        if (outputs.empty()) std::cout << "  (no output devices found)\n";
+    }
+    else if (sub == "device") {
+        if (param.empty()) {
+            std::cout << "Usage: !voice device <id>\n";
+            return;
+        }
+        try {
+            int id = std::stoi(param);
+            auto r = g_state.voiceChat->selectInputDevice(id);
+            if (r.success) {
+                std::cout << "\xE2\x9C\x85 Input device set to ID " << id << "\n";
+            } else {
+                std::cout << "\xE2\x9D\x8C Failed: " << r.detail << "\n";
+            }
+        } catch (...) {
+            std::cout << "\xE2\x9D\x8C Invalid device ID\n";
+        }
+    }
+    else if (sub == "room") {
+        if (g_state.voiceChat->isInRoom()) {
+            std::string room = g_state.voiceChat->getRoomName();
+            g_state.voiceChat->leaveRoom();
+            std::cout << "\xF0\x9F\x9A\xAA Left room '" << room << "'\n";
+        } else {
+            std::string room = param.empty() ? "general" : param;
+            auto r = g_state.voiceChat->joinRoom(room);
+            if (r.success) {
+                std::cout << "\xF0\x9F\x8E\xA4 Joined room '" << room << "'\n";
+            } else {
+                std::cout << "\xE2\x9D\x8C Join failed: " << r.detail << "\n";
+            }
+        }
+    }
+    else if (sub == "metrics") {
+        auto m = g_state.voiceChat->getMetrics();
+        std::cout << "\n\xF0\x9F\x93\x8A VOICE METRICS:\n";
+        std::cout << "  Recordings:        " << m.recordingCount << "\n";
+        std::cout << "  Playbacks:         " << m.playbackCount << "\n";
+        std::cout << "  Transcriptions:    " << m.transcriptionCount << "\n";
+        std::cout << "  TTS Calls:         " << m.ttsCount << "\n";
+        std::cout << "  Errors:            " << m.errorCount << "\n";
+        std::cout << "  Bytes Recorded:    " << m.bytesRecorded << "\n";
+        std::cout << "  Bytes Played:      " << m.bytesPlayed << "\n";
+        std::cout << "  VAD Speech Events: " << m.vadSpeechEvents << "\n";
+        std::cout << "  Relay Msg Sent:    " << m.relayMessagesSent << "\n";
+        std::cout << "  Relay Msg Recv:    " << m.relayMessagesRecv << "\n";
+        std::cout << std::fixed << std::setprecision(2);
+        std::cout << "  Avg Record Latency:    " << m.avgRecordingLatencyMs << " ms\n";
+        std::cout << "  Avg Transcribe Latency:" << m.avgTranscriptionLatencyMs << " ms\n";
+        std::cout << "  Avg TTS Latency:       " << m.avgTtsLatencyMs << " ms\n";
+        std::cout << "  Avg Playback Latency:  " << m.avgPlaybackLatencyMs << " ms\n";
+    }
+    else if (sub == "status") {
+        auto mode = g_state.voiceChat->getMode();
+        const char* modeStr = (mode == VoiceChatMode::PushToTalk) ? "Push-to-Talk" :
+                              (mode == VoiceChatMode::Continuous) ? "Continuous (VAD)" : "Disabled";
+        std::cout << "\n\xF0\x9F\x8E\x99 VOICE STATUS:\n";
+        std::cout << "  Engine:      " << (g_state.voiceInitialized ? "Initialized" : "Not init") << "\n";
+        std::cout << "  Recording:   " << (g_state.voiceChat->isRecording() ? "YES" : "No") << "\n";
+        std::cout << "  Playing:     " << (g_state.voiceChat->isPlaying() ? "YES" : "No") << "\n";
+        std::cout << "  PTT Active:  " << (g_state.voiceChat->isPTTActive() ? "YES" : "No") << "\n";
+        std::cout << "  In Room:     " << (g_state.voiceChat->isInRoom() ? g_state.voiceChat->getRoomName() : "No") << "\n";
+        std::cout << "  Mode:        " << modeStr << "\n";
+        std::cout << "  VAD State:   ";
+        switch (g_state.voiceChat->getVADState()) {
+            case VADState::Silence:  std::cout << "Silence"; break;
+            case VADState::Speech:   std::cout << "Speech detected"; break;
+            case VADState::Trailing: std::cout << "Trailing silence"; break;
+        }
+        std::cout << "\n";
+        std::cout << "  RMS Level:   " << std::fixed << std::setprecision(4) << g_state.voiceChat->getCurrentRMS() << "\n";
+        std::cout << "  TTS Auto:    " << (g_state.voiceTTSEnabled ? "ON" : "OFF") << "\n";
+        std::cout << "  Recorded:    " << g_state.voiceChat->getRecordedSampleCount() << " samples\n";
+    }
+    else {
+        std::cout << "Unknown voice subcommand: " << sub << ". Type !voice help\n";
+    }
+}
 
 // ============================================================================
 // FILE OPERATIONS (Feature Parity with Win32IDE_FileOps)
@@ -1581,6 +1833,20 @@ void print_help() {
     std::cout << "  !cot run <query>              Execute chain on query\n";
     std::cout << "  !cot cancel                   Cancel running chain\n";
     std::cout << "  !cot stats                    Execution statistics\n";
+    std::cout << "\n🎙️  VOICE (Phase 33):\n";
+    std::cout << "  !voice                        Show voice commands help\n";
+    std::cout << "  !voice init                   Initialize voice engine\n";
+    std::cout << "  !voice record                 Start/stop recording\n";
+    std::cout << "  !voice ptt                    Push-to-talk toggle\n";
+    std::cout << "  !voice transcribe             Transcribe last recording\n";
+    std::cout << "  !voice speak <text>           Text-to-speech\n";
+    std::cout << "  !voice tts <on|off>           Toggle TTS for AI responses\n";
+    std::cout << "  !voice mode <ptt|vad|off>     Set capture mode\n";
+    std::cout << "  !voice devices                List audio devices\n";
+    std::cout << "  !voice device <id>            Select input device\n";
+    std::cout << "  !voice room <name>            Join/leave voice room\n";
+    std::cout << "  !voice metrics                Show voice metrics\n";
+    std::cout << "  !voice status                 Show voice status\n";
     std::cout << "\n⚙️  CONFIGURATION:\n";
     std::cout << "  !mode <mode>                  Set AI mode (ask|plan|edit|...)\n";
     std::cout << "  !engine <name>                Switch model\n";
@@ -1603,6 +1869,14 @@ void print_help() {
 void route_command(const std::string& line) {
     if (line.empty()) return;
     
+    // ── UNIFIED DISPATCH — Try shared feature registry first ────────────
+    // This gives CLI access to the same features as Win32 GUI.
+    // route_command_unified() returns true if the command was handled.
+    if (route_command_unified(line.c_str(), &g_state)) {
+        return; // Handled by shared dispatch — same code path as Win32 GUI
+    }
+    
+    // ── LEGACY ROUTING — Commands not yet in shared dispatch ────────────
     // Parse command and arguments
     auto space = line.find(' ');
     std::string cmd = (space == std::string::npos) ? line : line.substr(0, space);
@@ -1685,6 +1959,9 @@ void route_command(const std::string& line) {
     else if (cmd == "!agents") cmd_agents_list(args);
     else if (cmd == "!todo") cmd_todo_list(args);
     
+    // Voice operations (Phase 33)
+    else if (cmd == "!voice") cmd_voice(args);
+    
     // Status & info
     else if (cmd == "!status") cmd_status(args);
     else if (cmd == "!help") print_help();
@@ -1759,6 +2036,11 @@ void route_command(const std::string& line) {
         double queryMs = std::chrono::duration<double, std::milli>(queryEnd - queryStart).count();
         std::cout << out << "\n";
         
+        // Phase 33: Auto-TTS for AI responses if enabled
+        if (g_state.voiceTTSEnabled && g_state.voiceInitialized && g_state.voiceChat) {
+            g_state.voiceChat->speak(out);
+        }
+        
         // Record response in replay journal + history
         cli_record_action(static_cast<int>(ReplayActionType::AgentResponse),
                           "agent", "CLI chat response", "", out, 0, 1.0f, queryMs);
@@ -1802,13 +2084,17 @@ int main() {
     // Initialize Phase 20: Headless CLI systems (safety, confidence, replay, governor, etc.)
     cli_headless_init(g_state.agenticEngine, g_state.subAgentMgr);
     
-    std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
-    std::cout << "║      RawrXD AI Runtime (CLI) - Feature Parity with Win32 IDE        ║\n";
-    std::cout << "║    50+ Commands | Safety | Confidence | Replay | Governor | Multi   ║\n";
-    std::cout << "╚════════════════════════════════════════════════════════════════════╝\n\n";
-    std::cout << "Type !help for commands or start typing to chat with AI.\n";
-    std::cout << "Phase 19: Agentic Decision Tree active. Use !decision_tree dump to inspect.\n";
-    std::cout << "Phase 20: Safety | Confidence | Replay | Governor | Multi-Response | History | Policy\n\n";
+    // Report unified feature dispatch status
+    size_t cliCount = getCliFeatureCount();
+    size_t guiCount = getGuiFeatureCount();
+    size_t totalCount = getTotalFeatureCount();
+    
+    std::cout << "\n\xE2\x95\x94\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x97\n";
+    std::cout << "\xE2\x95\x91   RawrXD AI Runtime (CLI) \xE2\x80\x94 Unified Feature Dispatch v2.0       \xE2\x95\x91\n";
+    std::cout << "\xE2\x95\x91   " << totalCount << " features registered | CLI: " << cliCount << " | GUI: " << guiCount << " | Zero-Qt  \xE2\x95\x91\n";
+    std::cout << "\xE2\x95\x91   Pure C++20 + x64 MASM | Win32 | 3-Layer Hotpatch              \xE2\x95\x91\n";
+    std::cout << "\xE2\x95\x9A\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x9D\n\n";
+    std::cout << "Type !help for commands, !manifest_md for feature manifest, or chat with AI.\n\n";
 
     std::string line;
     while (true) {
@@ -1821,6 +2107,13 @@ int main() {
     
     // Clean shutdown of all headless systems
     cli_headless_shutdown();
+    
+    // Phase 33: Clean shutdown of voice engine
+    if (g_state.voiceInitialized && g_state.voiceChat) {
+        g_state.voiceChat->shutdown();
+        g_state.voiceChat.reset();
+        g_state.voiceInitialized = false;
+    }
     
     return 0;
 }

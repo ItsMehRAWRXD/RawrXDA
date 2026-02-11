@@ -1,273 +1,202 @@
+/**
+ * @file code_signer.cpp
+ * @brief Code signing via signtool / codesign subprocesses (Qt-free)
+ */
 #include "code_signer.hpp"
-#include <QProcess>
-#include <QDebug>
-#include <QFileInfo>
-#include <QStandardPaths>
-#include <QElapsedTimer>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#ifdef _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#else
+#  include <sys/wait.h>
+#  include <unistd.h>
+#endif
+
+namespace fs = std::filesystem;
 
 CodeSigner* CodeSigner::s_instance = nullptr;
 
 CodeSigner* CodeSigner::instance() {
-    if (!s_instance) {
-        s_instance = new CodeSigner();
-    }
+    if (!s_instance) s_instance = new CodeSigner();
     return s_instance;
 }
 
-CodeSigner::CodeSigner(QObject* parent)
-    : QObject(parent)
-{
-}
+// ---------------------------------------------------------------------------
+bool CodeSigner::executeCommand(const std::string& command,
+                                const std::vector<std::string>& args) {
+    std::string cmdLine = command;
+    for (const auto& a : args) {
+        cmdLine += ' ';
+        if (a.find(' ') != std::string::npos)
+            cmdLine += '"' + a + '"';
+        else
+            cmdLine += a;
+    }
 
-CodeSigner::~CodeSigner() {
-}
+#ifdef _WIN32
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    std::string cmd = cmdLine;
 
-bool CodeSigner::signWindowsExecutable(const QString& exePath, 
-                                       const QString& certPath,
-                                       const QString& certPassword) {
-#ifdef Q_OS_WIN
-    QElapsedTimer timer;
-    timer.start();
-    
-    if (!QFileInfo::exists(exePath)) {
-        qWarning() << "[CodeSigner] Executable not found:" << exePath;
+    if (!CreateProcessA(nullptr, cmd.data(), nullptr, nullptr,
+                        FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        fprintf(stderr, "[WARN] [CodeSigner] Failed to start: %s (err %lu)\n",
+                command.c_str(), GetLastError());
         return false;
     }
-    
-    // PRODUCTION-READY: Get certificate password from environment
-    QString password = certPassword.isEmpty() 
-        ? qEnvironmentVariable("CODE_SIGN_PASSWORD") 
-        : certPassword;
-    
-    QStringList args;
-    args << "sign";
-    args << "/fd" << "SHA256";  // Use SHA256 digest algorithm
-    args << "/tr" << "http://timestamp.digicert.com";  // Timestamp server
-    args << "/td" << "SHA256";  // Timestamp digest algorithm
-    
-    if (!certPath.isEmpty()) {
-        args << "/f" << certPath;
-        if (!password.isEmpty()) {
-            args << "/p" << password;
+
+    WaitForSingleObject(pi.hProcess, 300000);
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    if (exitCode != 0) {
+        fprintf(stderr, "[WARN] [CodeSigner] Command failed | Exit code: %lu\n", exitCode);
+        return false;
+    }
+    return true;
+#else
+    int rc = std::system(cmdLine.c_str());
+    if (WIFEXITED(rc) && WEXITSTATUS(rc) == 0) return true;
+    fprintf(stderr, "[WARN] [CodeSigner] Command failed | Exit: %d\n",
+            WIFEXITED(rc) ? WEXITSTATUS(rc) : -1);
+    return false;
+#endif
+}
+
+// ---------------------------------------------------------------------------
+bool CodeSigner::signWindowsExecutable(const std::string& exePath,
+                                       const std::string& certPath,
+                                       const std::string& certPassword) {
+#ifdef _WIN32
+    if (!fs::exists(exePath)) {
+        fprintf(stderr, "[WARN] [CodeSigner] Executable not found: %s\n", exePath.c_str());
+        return false;
+    }
+
+    std::string password = certPassword;
+    if (password.empty()) {
+        const char* env = std::getenv("CODE_SIGN_PASSWORD");
+        if (env) password = env;
+    }
+
+    std::vector<std::string> args = {"sign", "/fd", "SHA256",
+        "/tr", "http://timestamp.digicert.com", "/td", "SHA256"};
+
+    if (!certPath.empty()) {
+        args.push_back("/f"); args.push_back(certPath);
+        if (!password.empty()) {
+            args.push_back("/p"); args.push_back(password);
         }
     } else {
-        // Use certificate from store (auto-select best)
-        args << "/a";
+        args.push_back("/a");
     }
-    
-    args << exePath;
-    
-    qInfo().noquote() << QString("[CodeSigner] SIGN_START | File: %1").arg(exePath);
-    
-    bool success = executeCommand("signtool.exe", args);
-    
-    qint64 latency = timer.elapsed();
-    
-    if (success) {
-        qInfo().noquote() << QString("[CodeSigner] SIGN_SUCCESS | File: %1 | Latency: %2ms")
-            .arg(exePath)
-            .arg(latency);
-    } else {
-        qWarning().noquote() << QString("[CodeSigner] SIGN_FAILED | File: %1 | Latency: %2ms")
-            .arg(exePath)
-            .arg(latency);
-    }
-    
-    emit signatureCompleted(exePath, success);
-    return success;
+    args.push_back(exePath);
+
+    fprintf(stderr, "[INFO] [CodeSigner] SIGN_START | File: %s\n", exePath.c_str());
+    bool ok = executeCommand("signtool.exe", args);
+    fprintf(stderr, "[%s] [CodeSigner] SIGN_%s | File: %s\n",
+            ok ? "INFO" : "WARN", ok ? "SUCCESS" : "FAILED", exePath.c_str());
+    if (onSignatureCompleted) onSignatureCompleted(exePath, ok);
+    return ok;
 #else
-    Q_UNUSED(exePath);
-    Q_UNUSED(certPath);
-    Q_UNUSED(certPassword);
-    qWarning() << "[CodeSigner] Windows code signing not supported on this platform";
+    (void)exePath; (void)certPath; (void)certPassword;
+    fprintf(stderr, "[WARN] [CodeSigner] Windows signing not supported on this platform\n");
     return false;
 #endif
 }
 
-bool CodeSigner::signMacOSBundle(const QString& bundlePath, const QString& identity) {
-#ifdef Q_OS_MACOS
-    QElapsedTimer timer;
-    timer.start();
-    
-    if (!QFileInfo::exists(bundlePath)) {
-        qWarning() << "[CodeSigner] Bundle not found:" << bundlePath;
+// ---------------------------------------------------------------------------
+bool CodeSigner::signMacOSBundle(const std::string& bundlePath,
+                                 const std::string& identity) {
+#ifdef __APPLE__
+    if (!fs::exists(bundlePath)) {
+        fprintf(stderr, "[WARN] [CodeSigner] Bundle not found: %s\n", bundlePath.c_str());
         return false;
     }
-    
-    // PRODUCTION-READY: Get identity from environment if not provided
-    QString signingIdentity = identity.isEmpty() 
-        ? qEnvironmentVariable("CODESIGN_IDENTITY", "Developer ID Application") 
+    std::string sigId = identity.empty()
+        ? (std::getenv("CODESIGN_IDENTITY") ? std::getenv("CODESIGN_IDENTITY")
+                                            : "Developer ID Application")
         : identity;
-    
-    QStringList args;
-    args << "--force";
-    args << "--sign" << signingIdentity;
-    args << "--options" << "runtime";  // Hardened runtime for notarization
-    args << "--timestamp";  // Include timestamp
-    args << "--deep";  // Sign nested code
-    args << bundlePath;
-    
-    qInfo().noquote() << QString("[CodeSigner] SIGN_START | Bundle: %1 | Identity: %2")
-        .arg(bundlePath)
-        .arg(signingIdentity);
-    
-    bool success = executeCommand("codesign", args);
-    
-    qint64 latency = timer.elapsed();
-    
-    if (success) {
-        qInfo().noquote() << QString("[CodeSigner] SIGN_SUCCESS | Bundle: %1 | Latency: %2ms")
-            .arg(bundlePath)
-            .arg(latency);
-    } else {
-        qWarning().noquote() << QString("[CodeSigner] SIGN_FAILED | Bundle: %1 | Latency: %2ms")
-            .arg(bundlePath)
-            .arg(latency);
-    }
-    
-    emit signatureCompleted(bundlePath, success);
-    return success;
+
+    std::vector<std::string> args = {
+        "--force", "--sign", sigId, "--options", "runtime",
+        "--timestamp", "--deep", bundlePath};
+
+    fprintf(stderr, "[INFO] [CodeSigner] SIGN_START | Bundle: %s\n", bundlePath.c_str());
+    bool ok = executeCommand("codesign", args);
+    fprintf(stderr, "[%s] [CodeSigner] SIGN_%s | Bundle: %s\n",
+            ok ? "INFO" : "WARN", ok ? "SUCCESS" : "FAILED", bundlePath.c_str());
+    if (onSignatureCompleted) onSignatureCompleted(bundlePath, ok);
+    return ok;
 #else
-    Q_UNUSED(bundlePath);
-    Q_UNUSED(identity);
-    qWarning() << "[CodeSigner] macOS code signing not supported on this platform";
+    (void)bundlePath; (void)identity;
+    fprintf(stderr, "[WARN] [CodeSigner] macOS signing not supported on this platform\n");
     return false;
 #endif
 }
 
-bool CodeSigner::verifySignature(const QString& exePath) {
-    QElapsedTimer timer;
-    timer.start();
-    
-#ifdef Q_OS_WIN
-    QStringList args;
-    args << "verify" << "/pa" << exePath;
-    
-    qInfo().noquote() << QString("[CodeSigner] VERIFY_START | File: %1").arg(exePath);
-    bool success = executeCommand("signtool.exe", args);
-#elif defined(Q_OS_MACOS)
-    QStringList args;
-    args << "--verify" << "--deep" << "--strict" << exePath;
-    
-    qInfo().noquote() << QString("[CodeSigner] VERIFY_START | File: %1").arg(exePath);
-    bool success = executeCommand("codesign", args);
+// ---------------------------------------------------------------------------
+bool CodeSigner::verifySignature(const std::string& exePath) {
+#ifdef _WIN32
+    bool ok = executeCommand("signtool.exe", {"verify", "/pa", exePath});
+#elif defined(__APPLE__)
+    bool ok = executeCommand("codesign", {"--verify", "--deep", "--strict", exePath});
 #else
-    qWarning() << "[CodeSigner] Signature verification not supported on this platform";
-    bool success = false;
+    (void)exePath;
+    bool ok = false;
+    fprintf(stderr, "[WARN] [CodeSigner] Verification not supported\n");
 #endif
-    
-    qint64 latency = timer.elapsed();
-    
-    if (success) {
-        qInfo().noquote() << QString("[CodeSigner] VERIFY_SUCCESS | File: %1 | Latency: %2ms")
-            .arg(exePath)
-            .arg(latency);
-    } else {
-        qWarning().noquote() << QString("[CodeSigner] VERIFY_FAILED | File: %1 | Latency: %2ms")
-            .arg(exePath)
-            .arg(latency);
-    }
-    
-    return success;
+    fprintf(stderr, "[%s] [CodeSigner] VERIFY_%s | File: %s\n",
+            ok ? "INFO" : "WARN", ok ? "SUCCESS" : "FAILED", exePath.c_str());
+    return ok;
 }
 
-bool CodeSigner::notarizeMacOSApp(const QString& bundlePath, 
-                                  const QString& appleId,
-                                  const QString& password) {
-#ifdef Q_OS_MACOS
-    QElapsedTimer timer;
-    timer.start();
-    
-    // PRODUCTION-READY: Get notarization credentials from environment
-    QString notarizePassword = password.isEmpty() 
-        ? qEnvironmentVariable("NOTARIZE_PASSWORD") 
-        : password;
-    
-    if (appleId.isEmpty() || notarizePassword.isEmpty()) {
-        qWarning() << "[CodeSigner] Notarization requires Apple ID and password";
+// ---------------------------------------------------------------------------
+bool CodeSigner::notarizeMacOSApp(const std::string& bundlePath,
+                                  const std::string& appleId,
+                                  const std::string& password) {
+#ifdef __APPLE__
+    std::string pwd = password;
+    if (pwd.empty()) {
+        const char* env = std::getenv("NOTARIZE_PASSWORD");
+        if (env) pwd = env;
+    }
+    if (appleId.empty() || pwd.empty()) {
+        fprintf(stderr, "[WARN] [CodeSigner] Notarization requires Apple ID + password\n");
         return false;
     }
-    
-    // Create temporary ZIP for notarization
-    QString zipPath = bundlePath + ".zip";
-    QStringList zipArgs;
-    zipArgs << "-r" << zipPath << bundlePath;
-    
-    if (!executeCommand("zip", zipArgs)) {
-        qWarning() << "[CodeSigner] Failed to create ZIP for notarization";
+
+    std::string zipPath = bundlePath + ".zip";
+    if (!executeCommand("zip", {"-r", zipPath, bundlePath})) {
+        fprintf(stderr, "[WARN] [CodeSigner] Failed to create ZIP\n");
         return false;
     }
-    
-    qInfo().noquote() << QString("[CodeSigner] NOTARIZE_START | Bundle: %1").arg(bundlePath);
-    
-    // Submit for notarization (requires Xcode 13+)
-    QStringList args;
-    args << "notarytool" << "submit" << zipPath;
-    args << "--apple-id" << appleId;
-    args << "--password" << notarizePassword;
-    args << "--wait";  // Wait for completion
-    
-    bool success = executeCommand("xcrun", args);
-    
-    qint64 latency = timer.elapsed();
-    
-    if (success) {
-        qInfo().noquote() << QString("[CodeSigner] NOTARIZE_SUCCESS | Bundle: %1 | Latency: %2ms")
-            .arg(bundlePath)
-            .arg(latency);
-        
-        // Staple the notarization ticket
-        QStringList stapleArgs;
-        stapleArgs << "stapler" << "staple" << bundlePath;
-        executeCommand("xcrun", stapleArgs);
+
+    bool ok = executeCommand("xcrun",
+        {"notarytool", "submit", zipPath,
+         "--apple-id", appleId, "--password", pwd, "--wait"});
+
+    if (ok) {
+        fprintf(stderr, "[INFO] [CodeSigner] NOTARIZE_SUCCESS\n");
+        executeCommand("xcrun", {"stapler", "staple", bundlePath});
     } else {
-        qWarning().noquote() << QString("[CodeSigner] NOTARIZE_FAILED | Bundle: %1 | Latency: %2ms")
-            .arg(bundlePath)
-            .arg(latency);
+        fprintf(stderr, "[WARN] [CodeSigner] NOTARIZE_FAILED\n");
     }
-    
-    // Cleanup temporary ZIP
-    QFile::remove(zipPath);
-    
-    emit notarizationCompleted(bundlePath, success);
-    return success;
+
+    fs::remove(zipPath);
+    if (onNotarizationCompleted) onNotarizationCompleted(bundlePath, ok);
+    return ok;
 #else
-    Q_UNUSED(bundlePath);
-    Q_UNUSED(appleId);
-    Q_UNUSED(password);
-    qWarning() << "[CodeSigner] macOS notarization not supported on this platform";
+    (void)bundlePath; (void)appleId; (void)password;
+    fprintf(stderr, "[WARN] [CodeSigner] Notarization not supported\n");
     return false;
 #endif
-}
-
-bool CodeSigner::executeCommand(const QString& command, const QStringList& args) {
-    QProcess process;
-    process.setProgram(command);
-    process.setArguments(args);
-    
-    // PRODUCTION-READY: Resource guard - ensure process cleanup
-    process.start();
-    
-    if (!process.waitForStarted(5000)) {
-        qWarning().noquote() << QString("[CodeSigner] Failed to start command: %1").arg(command);
-        return false;
-    }
-    
-    if (!process.waitForFinished(300000)) {  // 5 minute timeout
-        qWarning().noquote() << QString("[CodeSigner] Command timeout: %1").arg(command);
-        process.kill();
-        return false;
-    }
-    
-    int exitCode = process.exitCode();
-    
-    if (exitCode != 0) {
-        QString errorOutput = QString::fromUtf8(process.readAllStandardError());
-        qWarning().noquote() << QString("[CodeSigner] Command failed | Exit code: %1 | Error: %2")
-            .arg(exitCode)
-            .arg(errorOutput);
-        return false;
-    }
-    
-    return true;
 }

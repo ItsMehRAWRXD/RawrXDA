@@ -1,18 +1,16 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QDateTime>
+#include <string>
 #include <memory>
 #include <vector>
 #include <unordered_map>
 #include <chrono>
+#include <functional>
+#include <nlohmann/json.hpp>
 
 /**
  * @class AgenticObservability
- * @brief Comprehensive observability for agentic systems
+ * @brief Comprehensive observability for agentic systems (Qt-free)
  * 
  * Three pillars of observability:
  * 1. STRUCTURED LOGGING: Detailed context at key points
@@ -20,12 +18,13 @@
  * 3. DISTRIBUTED TRACING: Request flow visualization across components
  * 
  * Enables production monitoring, debugging, and performance optimization.
+ * No Qt dependency. Uses function pointer callbacks instead of signals.
  */
-class AgenticObservability : public QObject
+class AgenticObservability
 {
-    Q_OBJECT
-
 public:
+    using TimePoint = std::chrono::system_clock::time_point;
+
     enum class LogLevel {
         DEBUG = 0,
         INFO = 1,
@@ -35,63 +34,69 @@ public:
     };
 
     struct LogEntry {
-        QDateTime timestamp;
+        TimePoint timestamp;
         LogLevel level;
-        QString component;
-        QString message;
-        QJsonObject context;
-        QString traceId;
-        QString spanId;
+        std::string component;
+        std::string message;
+        nlohmann::json context;
+        std::string traceId;
+        std::string spanId;
     };
 
     struct MetricPoint {
-        QString metricName;
+        std::string metricName;
         float value;
-        QJsonObject labels;
-        QDateTime timestamp;
-        QString unit;
+        nlohmann::json labels;
+        TimePoint timestamp;
+        std::string unit;
     };
 
     struct TraceSpan {
-        QString spanId;
-        QString parentSpanId;
-        QString traceId;
-        QString operation;
-        QDateTime startTime;
-        QDateTime endTime;
-        QJsonObject attributes;
+        std::string spanId;
+        std::string parentSpanId;
+        std::string traceId;
+        std::string operation;
+        TimePoint startTime;
+        TimePoint endTime;
+        nlohmann::json attributes;
         bool hasError;
-        QString errorMessage;
+        std::string errorMessage;
         int statusCode;
     };
 
+    // Callback types (replaces Qt signals)
+    using LogCallback    = void(*)(const LogEntry& entry, void* userData);
+    using MetricCallback = void(*)(const std::string& metricName, void* userData);
+    using SpanCallback   = void(*)(const std::string& spanId, void* userData);
+    using AnomalyCallback= void(*)(const std::string& description, void* userData);
+
 public:
-    explicit AgenticObservability(QObject* parent = nullptr);
+    AgenticObservability();
     ~AgenticObservability();
 
     // ===== STRUCTURED LOGGING =====
     void log(
         LogLevel level,
-        const QString& component,
-        const QString& message,
-        const QJsonObject& context = QJsonObject()
+        const std::string& component,
+        const std::string& message,
+        const nlohmann::json& context = nlohmann::json::object()
     );
 
-    void logDebug(const QString& component, const QString& message, const QJsonObject& context = QJsonObject());
-    void logInfo(const QString& component, const QString& message, const QJsonObject& context = QJsonObject());
-    void logWarn(const QString& component, const QString& message, const QJsonObject& context = QJsonObject());
-    void logError(const QString& component, const QString& message, const QJsonObject& context = QJsonObject());
-    void logCritical(const QString& component, const QString& message, const QJsonObject& context = QJsonObject());
+    void logDebug(const std::string& component, const std::string& message, const nlohmann::json& context = nlohmann::json::object());
+    void logInfo(const std::string& component, const std::string& message, const nlohmann::json& context = nlohmann::json::object());
+    void logWarn(const std::string& component, const std::string& message, const nlohmann::json& context = nlohmann::json::object());
+    void logError(const std::string& component, const std::string& message, const nlohmann::json& context = nlohmann::json::object());
+    void logCritical(const std::string& component, const std::string& message, const nlohmann::json& context = nlohmann::json::object());
 
     // Retrieve logs
     std::vector<LogEntry> getLogs(
         int limit = 100,
         LogLevel minLevel = LogLevel::DEBUG,
-        const QString& component = ""
+        const std::string& component = ""
     ) const;
     std::vector<LogEntry> getLogsByTimeRange(
-        const QDateTime& start,
-        const QDateTime& end,
+        const TimePoint& start,
+        const TimePoint& end,
         LogLevel minLevel = LogLevel::DEBUG
     ) const;
 
@@ -99,92 +104,92 @@ public:
     
     // Record metric points
     void recordMetric(
-        const QString& metricName,
+        const std::string& metricName,
         float value,
-        const QJsonObject& labels = QJsonObject(),
-        const QString& unit = ""
+        const nlohmann::json& labels = nlohmann::json::object(),
+        const std::string& unit = ""
     );
 
     // Counters
-    void incrementCounter(const QString& metricName, int delta = 1, const QJsonObject& labels = QJsonObject());
-    float getCounterValue(const QString& metricName) const;
+    void incrementCounter(const std::string& metricName, int delta = 1, const nlohmann::json& labels = nlohmann::json::object());
+    float getCounterValue(const std::string& metricName) const;
 
     // Gauges (point-in-time measurements)
-    void setGauge(const QString& metricName, float value, const QJsonObject& labels = QJsonObject());
-    float getGaugeValue(const QString& metricName) const;
+    void setGauge(const std::string& metricName, float value, const nlohmann::json& labels = nlohmann::json::object());
+    float getGaugeValue(const std::string& metricName) const;
 
     // Histograms (distributions)
     void recordHistogram(
-        const QString& metricName,
+        const std::string& metricName,
         float value,
-        const QJsonObject& labels = QJsonObject()
+        const nlohmann::json& labels = nlohmann::json::object()
     );
-    QJsonObject getHistogramStats(const QString& metricName) const;
+    nlohmann::json getHistogramStats(const std::string& metricName) const;
 
     // Timing measurements
     class TimingGuard {
     public:
-        TimingGuard(AgenticObservability* obs, const QString& metricName);
+        TimingGuard(AgenticObservability* obs, const std::string& metricName);
         ~TimingGuard();
     private:
         AgenticObservability* m_obs;
-        QString m_metricName;
+        std::string m_metricName;
         std::chrono::high_resolution_clock::time_point m_start;
     };
 
-    std::unique_ptr<TimingGuard> measureDuration(const QString& metricName);
+    std::unique_ptr<TimingGuard> measureDuration(const std::string& metricName);
 
     // Get metrics
-    std::vector<MetricPoint> getMetrics(const QString& pattern = "", int limit = 100) const;
-    QJsonObject getMetricsSummary() const;
-    QJsonObject getPercentiles(const QString& metricName) const;
+    std::vector<MetricPoint> getMetrics(const std::string& pattern = "", int limit = 100) const;
+    nlohmann::json getMetricsSummary() const;
+    nlohmann::json getPercentiles(const std::string& metricName) const;
 
     // ===== DISTRIBUTED TRACING =====
     
     // Start trace
-    QString startTrace(const QString& operation);
+    std::string startTrace(const std::string& operation);
     
     // Start span (child of current trace)
-    QString startSpan(const QString& spanName, const QString& parentSpanId = "");
+    std::string startSpan(const std::string& spanName, const std::string& parentSpanId = "");
     void endSpan(
-        const QString& spanId,
+        const std::string& spanId,
         bool hasError = false,
-        const QString& errorMessage = "",
+        const std::string& errorMessage = "",
         int statusCode = 0
     );
     
     // Set span attributes
-    void setSpanAttribute(const QString& spanId, const QString& key, const QVariant& value);
-    void addSpanEvent(const QString& spanId, const QString& eventName, const QJsonObject& attributes);
+    void setSpanAttribute(const std::string& spanId, const std::string& key, const nlohmann::json& value);
+    void addSpanEvent(const std::string& spanId, const std::string& eventName, const nlohmann::json& attributes);
 
     // Get trace information
-    TraceSpan* getSpan(const QString& spanId);
-    std::vector<TraceSpan> getTraceSpans(const QString& traceId) const;
-    QJsonObject getTraceVisualization(const QString& traceId) const;
+    TraceSpan* getSpan(const std::string& spanId);
+    std::vector<TraceSpan> getTraceSpans(const std::string& traceId) const;
+    nlohmann::json getTraceVisualization(const std::string& traceId) const;
 
     // ===== DIAGNOSTICS =====
     
     // Health checks
-    QJsonObject getSystemHealth() const;
+    nlohmann::json getSystemHealth() const;
     bool isHealthy() const;
     
     // Performance summary
-    QJsonObject getPerformanceSummary() const;
-    QJsonObject getErrorSummary() const;
+    nlohmann::json getPerformanceSummary() const;
+    nlohmann::json getErrorSummary() const;
     
     // Bottleneck detection
-    std::vector<QString> detectBottlenecks();
-    QJsonObject analyzeLatency();
+    std::vector<std::string> detectBottlenecks();
+    nlohmann::json analyzeLatency();
 
     // ===== EXPORT/REPORTING =====
-    QString generateReport(
-        const QDateTime& startTime,
-        const QDateTime& endTime
+    std::string generateReport(
+        const TimePoint& startTime,
+        const TimePoint& endTime
     ) const;
     
-    QString exportMetricsAsCsv() const;
-    QString exportTracesAsJson() const;
-    QString exportLogsAsJson() const;
+    std::string exportMetricsAsCsv() const;
+    std::string exportTracesAsJson() const;
+    std::string exportLogsAsJson() const;
 
     // ===== CONFIGURATION =====
     void setLogLevel(LogLevel level) { m_minLogLevel = level; }
@@ -193,17 +198,18 @@ public:
     void setTracingEnabled(bool enabled) { m_tracingEnabled = enabled; }
     void setSamplingRate(float rate) { m_samplingRate = rate; }
 
-signals:
-    void logWritten(const LogEntry& entry);
-    void metricRecorded(const QString& metricName);
-    void spanCompleted(const QString& spanId);
-    void anomalyDetected(const QString& description);
+    // ===== CALLBACKS (replaces Qt signals) =====
+    void setLogCallback(LogCallback cb, void* userData = nullptr) { m_logCb = cb; m_logCbData = userData; }
+    void setMetricCallback(MetricCallback cb, void* userData = nullptr) { m_metricCb = cb; m_metricCbData = userData; }
+    void setSpanCallback(SpanCallback cb, void* userData = nullptr) { m_spanCb = cb; m_spanCbData = userData; }
+    void setAnomalyCallback(AnomalyCallback cb, void* userData = nullptr) { m_anomalyCb = cb; m_anomalyCbData = userData; }
 
 private:
     // Helper methods
-    QString generateTraceId();
-    QString generateSpanId();
-    QString levelToString(LogLevel level) const;
+    std::string generateTraceId();
+    std::string generateSpanId();
+    std::string levelToString(LogLevel level) const;
+    static std::string timePointToISO(const TimePoint& tp);
     void checkAndRotateLogs();
     void prune();
 
@@ -211,7 +217,7 @@ private:
     std::vector<LogEntry> m_logs;
     std::vector<MetricPoint> m_metrics;
     std::unordered_map<std::string, TraceSpan> m_spans;
-    std::unordered_map<std::string, std::vector<QString>> m_traceSpans; // trace_id -> span_ids
+    std::unordered_map<std::string, std::vector<std::string>> m_traceSpans; // trace_id -> span_ids
 
     // Configuration
     LogLevel m_minLogLevel = LogLevel::DEBUG;
@@ -220,9 +226,15 @@ private:
     bool m_tracingEnabled = true;
     float m_samplingRate = 1.0f;
     
-    // Metrics
-    QDateTime m_systemStartTime;
+    // State
+    TimePoint m_systemStartTime;
     int m_totalLogsWritten = 0;
     int m_totalMetricsRecorded = 0;
-    std::unordered_map<std::string, int> m_errorCounts; // error_type -> count
+    std::unordered_map<std::string, int> m_errorCounts; // component -> count
+
+    // Callbacks (function pointers, per project rules — no std::function)
+    LogCallback    m_logCb = nullptr;       void* m_logCbData = nullptr;
+    MetricCallback m_metricCb = nullptr;    void* m_metricCbData = nullptr;
+    SpanCallback   m_spanCb = nullptr;      void* m_spanCbData = nullptr;
+    AnomalyCallback m_anomalyCb = nullptr;  void* m_anomalyCbData = nullptr;
 };

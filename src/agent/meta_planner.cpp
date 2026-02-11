@@ -1,113 +1,134 @@
 #include "meta_planner.hpp"
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QRegularExpression>
+#include "../json_types.hpp"
+#include <algorithm>
+#include <string>
 
-QJsonArray MetaPlanner::plan(const QString& humanWish) {
-    // 1. normalise
-    QString wish = humanWish.toLower().trimmed();
+namespace {
 
-    // 2. keyword  template
-    if (wish.contains("quant") || wish.contains("quantize"))
+// Helper: case-insensitive contains
+bool strContains(const std::string& haystack, const std::string& needle) {
+    std::string h = haystack, n = needle;
+    std::transform(h.begin(), h.end(), h.begin(), ::tolower);
+    std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+    return h.find(n) != std::string::npos;
+}
+
+// Helper: extract last whitespace-delimited word
+std::string lastWord(const std::string& s) {
+    auto pos = s.rfind(' ');
+    return (pos != std::string::npos) ? s.substr(pos + 1) : s;
+}
+
+// Helper: extract Nth word (0-based)
+std::string nthWord(const std::string& s, int n) {
+    size_t start = 0;
+    for (int i = 0; i < n; ++i) {
+        start = s.find(' ', start);
+        if (start == std::string::npos) return {};
+        ++start;
+    }
+    auto end = s.find(' ', start);
+    return s.substr(start, end - start);
+}
+
+} // anon
+
+JsonArray MetaPlanner::plan(const std::string& humanWish) {
+    std::string wish = humanWish;
+    // Trim
+    while (!wish.empty() && (wish.front() == ' ' || wish.front() == '\t')) wish.erase(wish.begin());
+    while (!wish.empty() && (wish.back() == ' ' || wish.back() == '\t')) wish.pop_back();
+
+    if (strContains(wish, "quant") || strContains(wish, "quantize"))
         return quantPlan(wish);
-
-    if (wish.contains("kernel") || wish.contains("asm") || wish.contains("neon"))
+    if (strContains(wish, "kernel") || strContains(wish, "asm") || strContains(wish, "neon"))
         return kernelPlan(wish);
-
-    if (wish.contains("ship") || wish.contains("release") || wish.contains("tag"))
+    if (strContains(wish, "ship") || strContains(wish, "release") || strContains(wish, "tag"))
         return releasePlan(wish);
-
-    if (wish.contains("fix") || wish.contains("bug") || wish.contains("crash"))
+    if (strContains(wish, "fix") || strContains(wish, "bug") || strContains(wish, "crash"))
         return fixPlan(wish);
-
-    if (wish.contains("perf") || wish.contains("speed") || wish.contains("fast"))
+    if (strContains(wish, "perf") || strContains(wish, "speed") || strContains(wish, "fast"))
         return perfPlan(wish);
-
-    if (wish.contains("test") || wish.contains("coverage"))
+    if (strContains(wish, "test") || strContains(wish, "coverage"))
         return testPlan(wish);
-
-    // 3. fallback - generic dev cycle
     return genericPlan(wish);
 }
 
-// ---------- keyword  plan templates ----------
-
-QJsonArray MetaPlanner::quantPlan(const QString& wish) {
-    QJsonArray plan;
-    QString lastWord = wish.section(' ', -1);
-    plan.append(task("add_kernel", "quant_vulkan", QJsonObject{{"type", lastWord}}));
-    plan.append(task("add_cpp", "quant_vulkan_wrapper", QJsonObject{}));
-    plan.append(task("bench", "quant_ladder", QJsonObject{{"metric", "tokens/sec"}, {"threshold", 0.95}}));
-    plan.append(task("self_test", "quant_regression", QJsonObject{{"cases", 50}}));
-    plan.append(task("release", "patch", QJsonObject{{"notes", QString("Add ") + lastWord + " quantization"}}));
+JsonArray MetaPlanner::quantPlan(const std::string& wish) {
+    JsonArray plan;
+    std::string lw = lastWord(wish);
+    plan.push_back(task("add_kernel", "quant_vulkan", JsonObject{{"type", lw}}));
+    plan.push_back(task("add_cpp", "quant_vulkan_wrapper", JsonObject{}));
+    plan.push_back(task("bench", "quant_ladder", JsonObject{{"metric", "tokens/sec"}, {"threshold", 0.95}}));
+    plan.push_back(task("self_test", "quant_regression", JsonObject{{"cases", 50}}));
+    plan.push_back(task("release", "patch", JsonObject{{"notes", std::string("Add ") + lw + " quantization"}}));
     return plan;
 }
 
-QJsonArray MetaPlanner::kernelPlan(const QString& wish) {
-    QString kernel = wish.section(' ', -1); // "AVX2", "NEON", etc.
-    QJsonArray plan;
-    plan.append(task("add_asm", kernel, QJsonObject{{"target", kernel}}));
-    plan.append(task("bench", "kernel", QJsonObject{{"metric", "tokens/sec"}, {"threshold", 1.05}}));
-    plan.append(task("self_test", "kernel_regression", QJsonObject{{"cases", 100}}));
-    plan.append(task("release", "minor", QJsonObject{{"notes", QString("Add ") + kernel + " kernel"}}));
+JsonArray MetaPlanner::kernelPlan(const std::string& wish) {
+    std::string kernel = lastWord(wish);
+    JsonArray plan;
+    plan.push_back(task("add_asm", kernel, JsonObject{{"target", kernel}}));
+    plan.push_back(task("bench", "kernel", JsonObject{{"metric", "tokens/sec"}, {"threshold", 1.05}}));
+    plan.push_back(task("self_test", "kernel_regression", JsonObject{{"cases", 100}}));
+    plan.push_back(task("release", "minor", JsonObject{{"notes", std::string("Add ") + kernel + " kernel"}}));
     return plan;
 }
 
-QJsonArray MetaPlanner::releasePlan(const QString& wish) {
-    QString part = wish.contains("major") ? "major" :
-                   wish.contains("minor") ? "minor" : "patch";
-    QJsonArray plan;
-    plan.append(task("self_test", "all", QJsonObject{}));
-    plan.append(task("bench", "all", QJsonObject{{"metric", "tokens/sec"}}));
-    plan.append(task("bump_version", part, QJsonObject{}));
-    plan.append(task("sign_binary", "RawrXD-QtShell.exe", QJsonObject{}));
-    plan.append(task("upload_cdn", "RawrXD-QtShell.exe", QJsonObject{}));
-    plan.append(task("create_release", "v1.x.x", QJsonObject{{"changelog", wish}}));
-    plan.append(task("tweet", QString::fromUtf8("\xF0\x9F\x9A\x80 New release: v1.x.x - autonomous IDE"), QJsonObject{}));
+JsonArray MetaPlanner::releasePlan(const std::string& wish) {
+    std::string part = strContains(wish, "major") ? "major" :
+                       strContains(wish, "minor") ? "minor" : "patch";
+    JsonArray plan;
+    plan.push_back(task("self_test", "all", JsonObject{}));
+    plan.push_back(task("bench", "all", JsonObject{{"metric", "tokens/sec"}}));
+    plan.push_back(task("bump_version", part, JsonObject{}));
+    plan.push_back(task("sign_binary", "RawrXD-Shell.exe", JsonObject{}));
+    plan.push_back(task("upload_cdn", "RawrXD-Shell.exe", JsonObject{}));
+    plan.push_back(task("create_release", "v1.x.x", JsonObject{{"changelog", wish}}));
+    plan.push_back(task("tweet", "\xF0\x9F\x9A\x80 New release: v1.x.x - autonomous IDE", JsonObject{}));
     return plan;
 }
 
-QJsonArray MetaPlanner::fixPlan(const QString& wish) {
-    QString target = wish.section(' ', 1, 1); // guess target from sentence
-    QJsonArray plan;
-    plan.append(task("edit_source", target, QJsonObject{{"old", "TODO"}, {"new", "FIX"}}));
-    plan.append(task("self_test", "regression", QJsonObject{{"cases", 10}}));
-    plan.append(task("release", "patch", QJsonObject{{"notes", wish}}));
+JsonArray MetaPlanner::fixPlan(const std::string& wish) {
+    std::string target = nthWord(wish, 1);
+    JsonArray plan;
+    plan.push_back(task("edit_source", target, JsonObject{{"old", "TODO"}, {"new", "FIX"}}));
+    plan.push_back(task("self_test", "regression", JsonObject{{"cases", 10}}));
+    plan.push_back(task("release", "patch", JsonObject{{"notes", wish}}));
     return plan;
 }
 
-QJsonArray MetaPlanner::perfPlan(const QString& wish) {
-    QString metric = wish.contains("speed") ? "tokens/sec" : "latency";
-    QJsonArray plan;
-    plan.append(task("profile", "inference", QJsonObject{{"metric", metric}}));
-    plan.append(task("auto_tune", "quant", QJsonObject{}));
-    plan.append(task("bench", "inference", QJsonObject{{"metric", metric}, {"threshold", 1.10}}));
-    plan.append(task("release", "patch", QJsonObject{{"notes", "Performance improvement"}}));
+JsonArray MetaPlanner::perfPlan(const std::string& wish) {
+    std::string metric = strContains(wish, "speed") ? "tokens/sec" : "latency";
+    JsonArray plan;
+    plan.push_back(task("profile", "inference", JsonObject{{"metric", metric}}));
+    plan.push_back(task("auto_tune", "quant", JsonObject{}));
+    plan.push_back(task("bench", "inference", JsonObject{{"metric", metric}, {"threshold", 1.10}}));
+    plan.push_back(task("release", "patch", JsonObject{{"notes", "Performance improvement"}}));
     return plan;
 }
 
-QJsonArray MetaPlanner::testPlan(const QString& wish) {
-    QJsonArray plan;
-    plan.append(task("self_test", "all", QJsonObject{}));
-    plan.append(task("bench", "all", QJsonObject{{"metric", "coverage"}}));
-    plan.append(task("release", "patch", QJsonObject{{"notes", "Test coverage improvement"}}));
+JsonArray MetaPlanner::testPlan(const std::string& wish) {
+    (void)wish;
+    JsonArray plan;
+    plan.push_back(task("self_test", "all", JsonObject{}));
+    plan.push_back(task("bench", "all", JsonObject{{"metric", "coverage"}}));
+    plan.push_back(task("release", "patch", JsonObject{{"notes", "Test coverage improvement"}}));
     return plan;
 }
 
-QJsonArray MetaPlanner::genericPlan(const QString& wish) {
-    // fallback: generic dev cycle
-    QJsonArray plan;
-    plan.append(task("edit_source", "main.cpp", QJsonObject{{"old", "TODO"}, {"new", wish}}));
-    plan.append(task("self_test", "regression", QJsonObject{{"cases", 10}}));
-    plan.append(task("release", "patch", QJsonObject{{"notes", wish}}));
+JsonArray MetaPlanner::genericPlan(const std::string& wish) {
+    JsonArray plan;
+    plan.push_back(task("edit_source", "main.cpp", JsonObject{{"old", "TODO"}, {"new", wish}}));
+    plan.push_back(task("self_test", "regression", JsonObject{{"cases", 10}}));
+    plan.push_back(task("release", "patch", JsonObject{{"notes", wish}}));
     return plan;
 }
 
-// ---------- helper ----------
-QJsonObject MetaPlanner::task(const QString& type,
-                              const QString& target,
-                              const QJsonObject& params) {
-    QJsonObject t;
+JsonObject MetaPlanner::task(const std::string& type,
+                              const std::string& target,
+                              const JsonObject& params) {
+    JsonObject t;
     t["type"] = type;
     t["target"] = target;
     t["params"] = params;

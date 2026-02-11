@@ -424,6 +424,18 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_METRICS, "&Metrics...");
     AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, "🎙️ &Voice Chat");
 
+    // Voice Automation submenu (Phase 44: TTS for AI responses)
+    HMENU hVoiceAutoMenu = CreatePopupMenu();
+    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10200, "Toggle Voice Automation\tCtrl+Shift+A");
+    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10206, "Stop Speaking\tEscape");
+    AppendMenuA(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10202, "Next Voice\tCtrl+Shift+]");
+    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10203, "Previous Voice\tCtrl+Shift+[");
+    AppendMenuA(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10204, "Increase Speech Rate\tCtrl+Shift+=");
+    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10205, "Decrease Speech Rate\tCtrl+Shift+-");
+    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, "🔊 Voice &Automation");
+
     // Backup submenu
     HMENU hBackupMenu = CreatePopupMenu();
     AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_CREATE, "&Create Backup Now\tCtrl+Shift+B");
@@ -479,6 +491,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
     // Agent menu (existing agentic bridge operations)
     HMENU hAgentMenu = CreatePopupMenu();
     AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_START_LOOP, "Start &Agent Loop");
+    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_BOUNDED_LOOP, "&Bounded Agent (FIM Tools)\tCtrl+Shift+I");
     // AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_INTERACTIVE, "Interactive &AI Shell Mode");
 
     AppendMenuA(hAgentMenu, MF_SEPARATOR, 0, nullptr);
@@ -724,6 +737,150 @@ void Win32IDE::updateTitleBarText()
     }
 }
 
+// ============================================================================
+// DPI SCALING
+// ============================================================================
+
+UINT Win32IDE::getDpi() const {
+    if (m_hwndMain) {
+        // GetDpiForWindow requires Windows 10 1607+
+        typedef UINT (WINAPI *PFN_GetDpiForWindow)(HWND);
+        static PFN_GetDpiForWindow pGetDpiForWindow = nullptr;
+        static bool resolved = false;
+        if (!resolved) {
+            HMODULE hUser32 = GetModuleHandleA("user32.dll");
+            if (hUser32) {
+                pGetDpiForWindow = (PFN_GetDpiForWindow)GetProcAddress(hUser32, "GetDpiForWindow");
+            }
+            resolved = true;
+        }
+        if (pGetDpiForWindow) {
+            UINT dpi = pGetDpiForWindow(m_hwndMain);
+            if (dpi > 0) return dpi;
+        }
+    }
+    // Fallback: system DPI via device caps
+    HDC hdc = GetDC(nullptr);
+    UINT dpi = (UINT)GetDeviceCaps(hdc, LOGPIXELSY);
+    ReleaseDC(nullptr, hdc);
+    return dpi ? dpi : 96;
+}
+
+int Win32IDE::dpiScale(int basePixels) const {
+    // If user override is set, blend it with system DPI
+    if (m_settings.uiScalePercent > 0) {
+        return MulDiv(basePixels, m_settings.uiScalePercent, 100);
+    }
+    return MulDiv(basePixels, m_currentDpi, 96);
+}
+
+void Win32IDE::recreateFonts() {
+    m_currentDpi = getDpi();
+
+    // Editor font — monospace
+    if (m_editorFont) { DeleteObject(m_editorFont); m_editorFont = nullptr; }
+    m_editorFont = CreateFontA(
+        -dpiScale(16), 0, 0, 0, FW_NORMAL,
+        FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
+    );
+
+    // UI font — proportional  
+    if (m_hFontUI) { DeleteObject(m_hFontUI); m_hFontUI = nullptr; }
+    m_hFontUI = CreateFontA(
+        -dpiScale(14), 0, 0, 0, FW_NORMAL,
+        FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+    );
+
+    // Ghost text font — italic monospace
+    if (m_ghostTextFont) { DeleteObject(m_ghostTextFont); m_ghostTextFont = nullptr; }
+    LOGFONTA lf = {};
+    lf.lfHeight         = -dpiScale(14);
+    lf.lfWeight         = FW_NORMAL;
+    lf.lfItalic         = TRUE;
+    lf.lfCharSet        = DEFAULT_CHARSET;
+    lf.lfQuality        = CLEARTYPE_QUALITY;
+    lf.lfPitchAndFamily = FIXED_PITCH | FF_MODERN;
+    strncpy(lf.lfFaceName, m_currentTheme.fontName.c_str(), LF_FACESIZE - 1);
+    lf.lfFaceName[LF_FACESIZE - 1] = '\0';
+    m_ghostTextFont = CreateFontIndirectA(&lf);
+
+    // Apply editor font
+    if (m_hwndEditor && m_editorFont) {
+        SendMessage(m_hwndEditor, WM_SETFONT, (WPARAM)m_editorFont, TRUE);
+        // Also update CHARFORMAT for RichEdit
+        CHARFORMAT2A cf;
+        memset(&cf, 0, sizeof(cf));
+        cf.cbSize = sizeof(cf);
+        cf.dwMask = CFM_FACE | CFM_SIZE;
+        cf.yHeight = dpiScale(16) * 15; // twips (1pt = 20 twips, height/96*72*20)
+        strcpy(cf.szFaceName, "Consolas");
+        SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    }
+
+    // Apply UI font to all known UI controls
+    auto setFont = [](HWND hwnd, HFONT font) {
+        if (hwnd) SendMessage(hwnd, WM_SETFONT, (WPARAM)font, TRUE);
+    };
+    setFont(m_hwndTabBar, m_hFontUI);
+    setFont(m_hwndSecondarySidebarHeader, m_hFontUI);
+    setFont(m_hwndModelSelector, m_hFontUI);
+    setFont(m_hwndCopilotChatOutput, m_hFontUI);
+    setFont(m_hwndCopilotChatInput, m_hFontUI);
+    setFont(m_hwndCopilotSendBtn, m_hFontUI);
+    setFont(m_hwndCopilotClearBtn, m_hFontUI);
+    setFont(m_hwndCommandPaletteInput, m_hFontUI);
+    setFont(m_hwndCommandPaletteList, m_hFontUI);
+    setFont(m_hwndSearchInput, m_hFontUI);
+    setFont(m_hwndSearchResults, m_hFontUI);
+    setFont(m_hwndFloatingContent, m_hFontUI);
+
+    // PowerShell panel fonts
+    if (m_hwndPowerShellOutput) {
+        HFONT psFont = CreateFontA(
+            -dpiScale(16), 0, 0, 0, FW_NORMAL,
+            FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
+        );
+        SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)psFont, TRUE);
+        if (m_hwndPowerShellInput) SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)psFont, TRUE);
+        if (m_hwndPSBtnExecute) SendMessage(m_hwndPSBtnExecute, WM_SETFONT, (WPARAM)psFont, TRUE);
+    }
+    if (m_hwndPowerShellStatusBar) {
+        HFONT psSmall = CreateFontA(
+            -dpiScale(12), 0, 0, 0, FW_NORMAL,
+            FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+        );
+        SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)psSmall, TRUE);
+    }
+
+    // Terminal panes
+    for (auto& pane : m_terminalPanes) {
+        if (pane.hwnd) {
+            CHARFORMAT2A tcf;
+            memset(&tcf, 0, sizeof(tcf));
+            tcf.cbSize = sizeof(tcf);
+            tcf.dwMask = CFM_FACE | CFM_SIZE;
+            tcf.yHeight = dpiScale(9) * 20; // 9pt in twips
+            strcpy(tcf.szFaceName, "Consolas");
+            SendMessage(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
+        }
+    }
+
+    // File tree
+    if (m_hwndFileTree) {
+        setFont(m_hwndFileTree, m_hFontUI);
+    }
+
+    LOG_INFO("Fonts recreated at DPI=" + std::to_string(m_currentDpi));
+}
+
 void Win32IDE::createEditor(HWND hwnd)
 {
 
@@ -735,43 +892,16 @@ void Win32IDE::createEditor(HWND hwnd)
         return;
     }
 
-    // Create a proper HFONT for the editor
-    if (m_editorFont) { DeleteObject(m_editorFont); m_editorFont = nullptr; }
-    m_editorFont = CreateFontA(
-        -16,                    // Height (negative = character height)
-        0, 0, 0,               // Width, Escapement, Orientation
-        FW_NORMAL,             // Weight
-        FALSE, FALSE, FALSE,   // Italic, Underline, StrikeOut
-        ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY,
-        FIXED_PITCH | FF_MODERN,
-        "Consolas"
-    );
-    if (m_editorFont) {
-        SendMessage(m_hwndEditor, WM_SETFONT, (WPARAM)m_editorFont, TRUE);
-    }
-
-    // Create UI font for dialogs and controls
-    if (m_hFontUI) { DeleteObject(m_hFontUI); m_hFontUI = nullptr; }
-    m_hFontUI = CreateFontA(
-        -14,                    // Height
-        0, 0, 0,               // Width, Escapement, Orientation
-        FW_NORMAL,             // Weight
-        FALSE, FALSE, FALSE,   // Italic, Underline, StrikeOut
-        ANSI_CHARSET,
-        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY,
-        DEFAULT_PITCH | FF_SWISS,
-        "Segoe UI"
-    );
+    // Create DPI-scaled fonts for editor and UI
+    m_currentDpi = getDpi();
+    recreateFonts();
 
     // Set default font and colors via CHARFORMAT
     CHARFORMAT2A cf;
     memset(&cf, 0, sizeof(cf));
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
-    cf.yHeight = 220; // 11 points
+    cf.yHeight = dpiScale(11) * 20; // points → twips, DPI-scaled
     cf.crTextColor = RGB(212, 212, 212); // Light gray text (VS Code style)
     strcpy(cf.szFaceName, "Consolas");
     SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
@@ -953,11 +1083,25 @@ void Win32IDE::layoutTerminalPanes(int width, int top, int height)
     LOG_INFO(std::string(logBuf));
 
     if (width <= 0 || height <= 0 || m_terminalPanes.empty()) return;
+
+    // Calculate correct left offset — terminal panes are children of m_hwndMain,
+    // so we must offset past activity bar + sidebar to avoid overlapping them
+    const int ACTIVITY_BAR_WIDTH = dpiScale(48);
+    int sidebarWidth = m_sidebarVisible ? m_sidebarWidth : 0;
+    int editorLeft = ACTIVITY_BAR_WIDTH + sidebarWidth;
+    int secondarySidebarWidth = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
+
+    // Clamp width to editor area (exclude sidebars)
+    RECT mainRect;
+    GetClientRect(m_hwndMain, &mainRect);
+    int editorWidth = (mainRect.right - mainRect.left) - editorLeft - secondarySidebarWidth;
+    if (editorWidth <= 0) editorWidth = width; // fallback
+
     int count = static_cast<int>(m_terminalPanes.size());
     if (count == 1) {
         auto& pane = m_terminalPanes[0];
-        MoveWindow(pane.hwnd, 0, top, width, height, TRUE);
-        pane.bounds = {0, top, width, top + height};
+        MoveWindow(pane.hwnd, editorLeft, top, editorWidth, height, TRUE);
+        pane.bounds = {editorLeft, top, editorLeft + editorWidth, top + height};
         return;
     }
 
@@ -967,15 +1111,15 @@ void Win32IDE::layoutTerminalPanes(int width, int top, int height)
         for (int i = 0; i < count; ++i) {
             int currentHeight = (i == count - 1) ? (height - paneHeight * (count - 1)) : paneHeight;
             auto& pane = m_terminalPanes[i];
-            MoveWindow(pane.hwnd, 0, y, width, currentHeight, TRUE);
-            pane.bounds = {0, y, width, y + currentHeight};
+            MoveWindow(pane.hwnd, editorLeft, y, editorWidth, currentHeight, TRUE);
+            pane.bounds = {editorLeft, y, editorLeft + editorWidth, y + currentHeight};
             y += currentHeight;
         }
     } else {
-        int paneWidth = width / count;
-        int x = 0;
+        int paneWidth = editorWidth / count;
+        int x = editorLeft;
         for (int i = 0; i < count; ++i) {
-            int currentWidth = (i == count - 1) ? (width - paneWidth * (count - 1)) : paneWidth;
+            int currentWidth = (i == count - 1) ? (editorWidth - paneWidth * (count - 1)) : paneWidth;
             auto& pane = m_terminalPanes[i];
             MoveWindow(pane.hwnd, x, top, currentWidth, height, TRUE);
             pane.bounds = {x, top, x + currentWidth, top + height};
@@ -2605,13 +2749,14 @@ int Win32IDE::getPanelAreaWidth() const
     GetClientRect(m_hwndMain, &rcMain);
     int totalWidth = rcMain.right - rcMain.left;
 
-    // Panel area width = total width minus sidebar (if visible) minus activity bar
+    // Panel area width = total width minus sidebar (if visible) minus activity bar minus secondary sidebar
     int sidebarOffset = 0;
     if (m_sidebarVisible) {
-        sidebarOffset = m_sidebarWidth + 48; // 48 = activity bar width
+        sidebarOffset = m_sidebarWidth + dpiScale(48); // activity bar width (DPI-scaled)
     }
+    int secondarySidebarOffset = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
 
-    return totalWidth - sidebarOffset;
+    return totalWidth - sidebarOffset - secondarySidebarOffset;
 }
 
 // ============================================================================
@@ -4977,7 +5122,7 @@ void Win32IDE::createChatPanel() {
         5, 5, 290, 25,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
     
-    HFONT hFont = CreateFontA(14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, 
+    HFONT hFont = CreateFontA(-dpiScale(14), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, 
                               OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, 
                               DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
     if (m_hwndSecondarySidebarHeader) {
@@ -5146,7 +5291,7 @@ void Win32IDE::createChatPanel() {
     }
     
     m_secondarySidebarVisible = true;
-    m_secondarySidebarWidth = 300;
+    m_secondarySidebarWidth = 320;
 
 }
 

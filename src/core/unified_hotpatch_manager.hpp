@@ -9,6 +9,17 @@
 
 #include "model_memory_hotpatch.hpp"
 #include "byte_level_hotpatcher.hpp"
+#include "pt_driver_contract.hpp"
+#include "live_binary_patcher.hpp"
+
+// Forward declarations — platform subsystems
+class AutonomousWorkflowEngine;
+class WorkspaceReasoningProfileManager;
+class DeterministicSwarmEngine;
+class SafeRefactorEngine;
+class ReasoningSchemaRegistry;
+class CoTFallbackSystem;
+class InputGuardSlicer;
 #include <cstdint>
 #include <cstddef>
 #include <mutex>
@@ -50,6 +61,20 @@ struct HotpatchEvent {
         ServerPatchRemoved  = 5,
         PresetLoaded        = 6,
         PresetSaved         = 7,
+        // PT driver events
+        PTWatchpointArmed   = 8,
+        PTWatchpointHit     = 9,
+        PTSnapshotTaken     = 10,
+        PTSnapshotRestored  = 11,
+        PTProtectionChanged = 12,
+        PTArenaAllocated    = 13,
+        // Live Binary (Layer 5) events
+        LiveBinaryRegistered     = 14,
+        LiveBinaryTrampolineSet  = 15,
+        LiveBinarySwapped        = 16,
+        LiveBinaryReverted       = 17,
+        LiveBinaryBatchApplied   = 18,
+        LiveBinaryModuleLoaded   = 19,
     };
 
     Type        type;
@@ -102,6 +127,82 @@ public:
     UnifiedResult add_server_patch(ServerHotpatch* patch);
     UnifiedResult remove_server_patch(const char* name);
 
+    /// Clear all patches across all layers (memory, byte, server)
+    void clearAllPatches();
+
+    // ---- PT Driver (Layer 0 — Page Table substrate) ----
+    UnifiedResult pt_arm_watchpoint(uintptr_t addr, uint64_t size,
+                                    WatchpointEntry::WatchpointCallback cb,
+                                    void* ctx, bool oneShot, uint32_t* outId);
+    UnifiedResult pt_disarm_watchpoint(uint32_t id);
+    UnifiedResult pt_take_snapshot(uintptr_t addr, uint64_t size,
+                                   const char* label, uint32_t layerIndex,
+                                   uint32_t* outSnapshotId);
+    UnifiedResult pt_restore_snapshot(uint32_t snapshotId);
+    UnifiedResult pt_set_protection(uintptr_t addr, uint64_t size,
+                                    uint32_t newProtect, uint32_t* outOldProtect);
+    UnifiedResult pt_alloc_large_arena(uint64_t sizeBytes, uint64_t pageSize,
+                                       uint32_t* outArenaId);
+    UnifiedResult pt_normalize(const ASLRContext* ctx,
+                               uintptr_t absAddr, uintptr_t* outRelative);
+
+    // PT lifecycle (delegates to PTDriverContract singleton)
+    PatchResult pt_initialize();
+    PatchResult pt_shutdown();
+    const PTDriverStats& pt_get_stats() const;
+
+    // ---- Live Binary (Layer 5 — Real-Time Code Replacement) ----
+    UnifiedResult live_register_function(const char* name, uintptr_t addr, uint32_t* outSlotId);
+    UnifiedResult live_install_trampoline(uint32_t slotId);
+    UnifiedResult live_revert_trampoline(uint32_t slotId);
+    UnifiedResult live_swap_implementation(uint32_t slotId,
+                                           const uint8_t* newCode, size_t codeSize,
+                                           const RVARelocation* relocs, size_t relocCount);
+    UnifiedResult live_apply_batch(const LivePatchUnit* units, size_t count);
+    UnifiedResult live_revert_last(uint32_t slotId);
+    UnifiedResult live_load_module(const char* dll_path, uint32_t* outModuleId);
+    UnifiedResult live_unload_module(uint32_t moduleId);
+    PatchResult   live_initialize(size_t pool_pages = 4);
+    PatchResult   live_shutdown();
+    PatchResult   live_verify_integrity();
+    const LiveBinaryPatcherStats& live_get_stats() const;
+
+    // ---- Platform Subsystem Integration (Valuation-Critical) ----
+
+    // Autonomous Workflow Engine — scan → fix → verify → build → test → diff
+    PatchResult   workflow_initialize();
+    PatchResult   workflow_shutdown();
+    bool          workflow_is_running() const;
+
+    // Workspace Reasoning Profiles — per-repo fast/dev/critical modes
+    PatchResult   profiles_initialize(const char* persistPath);
+    PatchResult   profiles_load_for_workspace(const char* workspacePath);
+
+    // Deterministic Swarm — reproducible execution
+    PatchResult   swarm_set_seed(uint64_t masterSeed);
+    PatchResult   swarm_verify_determinism();
+
+    // Safe Refactor Engine — diff previews + rollback
+    PatchResult   refactor_initialize();
+    PatchResult   refactor_shutdown();
+
+    // Reasoning Schema Versioning — migration + compatibility
+    PatchResult   schema_initialize();
+    PatchResult   schema_verify_compatibility(const char* versionStr);
+
+    // CoT Fallback — circuit breaker + graceful degradation
+    PatchResult   cot_initialize();
+    PatchResult   cot_disable();
+    PatchResult   cot_enable();
+    bool          cot_is_healthy() const;
+
+    // Input Guard — OOM protection + backend slicing
+    PatchResult   guard_initialize();
+    PatchResult   guard_preflight(const char* input, size_t inputLen);
+
+    // Unified stats JSON across all subsystems
+    std::string   getFullStatsJSON() const;
+
     // ---- Preset Management (JSON, manual serializer) ----
     PatchResult save_preset(const char* filename, const HotpatchPreset& preset);
     PatchResult load_preset(const char* filename, HotpatchPreset* outPreset);
@@ -118,6 +219,8 @@ public:
         std::atomic<uint64_t> memoryPatchCount{0};
         std::atomic<uint64_t> bytePatchCount{0};
         std::atomic<uint64_t> serverPatchCount{0};
+        std::atomic<uint64_t> ptOperationCount{0};
+        std::atomic<uint64_t> liveBinaryCount{0};
         std::atomic<uint64_t> totalOperations{0};
         std::atomic<uint64_t> totalFailures{0};
     };
@@ -156,4 +259,12 @@ private:
 
     // Registered server patches
     std::vector<ServerHotpatch*>            m_serverPatches;
+
+    // Platform subsystem initialization flags
+    std::atomic<bool>                       m_workflowInit{false};
+    std::atomic<bool>                       m_profilesInit{false};
+    std::atomic<bool>                       m_refactorInit{false};
+    std::atomic<bool>                       m_schemaInit{false};
+    std::atomic<bool>                       m_cotInit{false};
+    std::atomic<bool>                       m_guardInit{false};
 };

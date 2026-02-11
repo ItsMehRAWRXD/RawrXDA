@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Add source files
 add_executable(test_streaming_gguf_loader
     memory_mapped_file.cpp
-    streaming_gguf_loader_qt.cpp
+    streaming_gguf_loader.cpp
     test_streaming_gguf_loader.cpp
 )
 

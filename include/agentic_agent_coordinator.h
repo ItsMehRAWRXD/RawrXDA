@@ -10,8 +10,9 @@
 
 using json = nlohmann::json;
 
+#include "../include/agentic_iterative_reasoning.h"
+
 class AgenticLoopState;
-class AgenticIterativeReasoning;
 class AgenticEngine;
 namespace CPUInference { class CPUInferenceEngine; }
 
@@ -98,12 +99,15 @@ protected:
     void logCoordination(const std::string& message);
 
 private:
+    std::string selectBestAgentForTask(const std::string& taskDescription);
+
     AgenticEngine* m_engine = nullptr;
     CPUInference::CPUInferenceEngine* m_inference = nullptr;
     
     std::unordered_map<std::string, std::unique_ptr<AgentInstance>> m_agents;
-    std::unordered_map<std::string, TaskAssignment> m_assignments;
+    std::unordered_map<std::string, std::unique_ptr<TaskAssignment>> m_assignments;
     std::vector<AgentConflict> m_conflicts;
     
     std::chrono::system_clock::time_point m_coordinationStartTime;
+    int m_totalTasksAssigned = 0;
 };

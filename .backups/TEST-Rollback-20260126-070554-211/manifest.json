@@ -1,0 +1,34 @@
+{
+  "BackupId": "TEST-Rollback-20260126-070554-211",
+  "Timestamp": "2026-01-26T07:05:54.2173921-05:00",
+  "Metadata": {
+    "Test": true
+  },
+  "TargetFiles": [
+    {
+      "Compressed": false,
+      "Hash": "C20523EAE09AA0337735BD8F4EFA40683770DCA3CE853A61A25ABBD3DA6150B9",
+      "BackupSize": 977,
+      "OriginalSize": 977,
+      "Original": "D:\\lazy init ide\\test\\test_patterns.js",
+      "Encoding": "UTF8",
+      "Backup": "D:\\lazy init ide\\.backups\\TEST-Rollback-20260126-070554-211\\test_test_patterns.js.bak"
+    },
+    {
+      "Compressed": false,
+      "Hash": "5DAE96F19A9762B152C213A6F374DE7BBA43CFEA6BB97AF733CB50FC735C235E",
+      "BackupSize": 849,
+      "OriginalSize": 849,
+      "Original": "D:\\lazy init ide\\src\\RawrXD_PatternBridge.asm",
+      "Encoding": "UTF8",
+      "Backup": "D:\\lazy init ide\\.backups\\TEST-Rollback-20260126-070554-211\\src_RawrXD_PatternBridge.asm.bak"
+    }
+  ],
+  "OperationName": "TEST-Rollback",
+  "PowerShellVersion": "7.5.4",
+  "Stats": {
+    "TotalFiles": 2,
+    "CompressedBytes": 0,
+    "TotalBytes": 1826
+  }
+}

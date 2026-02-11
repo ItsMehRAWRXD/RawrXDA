@@ -1,6 +1,8 @@
 // AgenticAgentCoordinator Implementation - Pure C++20
 #include "agentic_agent_coordinator.h"
+#ifdef RAWR_HAS_QT
 #include "agentic_iterative_reasoning.h"
+#endif
 #include "agentic_loop_state.h"
 #include <algorithm>
 #include <iostream>
@@ -40,7 +42,7 @@ AgenticAgentCoordinator::~AgenticAgentCoordinator()
 void AgenticAgentCoordinator::initialize(AgenticEngine* engine, CPUInference::CPUInferenceEngine* inference)
 {
     m_engine = engine;
-    m_inferenceEngine = inference;
+    m_inference = inference;
 
     std::cout << "[AgenticAgentCoordinator] Initialized with AgenticEngine and InferenceEngine" << std::endl;
 }
@@ -54,7 +56,9 @@ std::string AgenticAgentCoordinator::createAgent(AgentRole role)
     auto agent = std::make_unique<AgentInstance>();
     agent->agentId = agentId;
     agent->role = role;
+#ifdef RAWR_HAS_QT
     agent->reasoner = std::make_unique<AgenticIterativeReasoning>();
+#endif
     agent->state = std::make_unique<AgenticLoopState>();
     agent->isAvailable = true;
     agent->utilization = 0.0f;
@@ -161,7 +165,7 @@ std::string AgenticAgentCoordinator::assignTask(
     assignment->status = "assigned";
 
     m_assignments[taskId] = std::move(assignment);
-    m_totalTasksAssigned++;
+    ++m_totalTasksAssigned;
 
     auto agent = getAgent(agentId);
     if (agent) {

@@ -1,35 +1,27 @@
 #pragma once
-#include <QString>
-#include <QObject>
-#include <QJsonArray>
+#include <string>
+#include <nlohmann/json.hpp>
+#include <vector>
+#include <functional>
 
-class AutoBootstrap : public QObject {
-    Q_OBJECT
+class AutoBootstrap {
 public:
     static AutoBootstrap* instance();
     static void installZeroTouch();
-    static void startWithWish(const QString& wish);
-    
-    // Start autonomy loop with zero-touch input
+    static void startWithWish(const std::string& wish);
     void start();
-    
-signals:
-    void wishReceived(const QString& wish);
-    void planGenerated(const QString& planSummary);
-    void executionStarted();
-    void executionCompleted(bool success);
-    
+
+    // Callbacks (replace Qt signals)
+    std::function<void(const std::string&)> onWishReceived;
+    std::function<void(const std::string&)> onPlanGenerated;
+    std::function<void()> onExecutionStarted;
+    std::function<void(bool)> onExecutionCompleted;
+
 private:
-    explicit AutoBootstrap(QObject* parent = nullptr);
-    
-    // Grab wish from env-var > clipboard > dialog
-    QString grabWish();
-    
-    // Safety gate to prevent dangerous commands
-    bool safetyGate(const QString& wish);
-    
-    void startWithWishInternal(const QString& wish);
-    void executePlan(const QString& wish, const QJsonArray& plan);
-    
+    AutoBootstrap() = default;
+    std::string grabWish();
+    bool safetyGate(const std::string& wish);
+    void startWithWishInternal(const std::string& wish);
+    void executePlan(const std::string& wish, const nlohmann::json& plan);
     static AutoBootstrap* s_instance;
 };

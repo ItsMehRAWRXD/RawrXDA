@@ -1,57 +1,67 @@
-#include <QtTest>
-#include <QFile>
-#include <QDir>
-#include <QThread>
-#include <QFileSystemWatcher>
+/**
+ * @file instruction_loader_test.cpp
+ * @brief Tests for instruction file loading (Qt-free)
+ *
+ * Tests file reading and content verification.
+ * File-system watching is handled by platform APIs (not Qt QFileSystemWatcher).
+ */
 
-class InstructionLoaderTest : public QObject {
-    Q_OBJECT
+#include <cassert>
+#include <chrono>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <string>
+#include <thread>
 
-private slots:
+class InstructionLoaderTest {
+public:
     void testLoadAndReload() {
-        QString tmp = QDir::tempPath() + "/rawrxd_instr_test.md";
+        std::string tmp = (std::filesystem::temp_directory_path() / "rawrxd_instr_test.md").string();
 
         // Write initial instructions
-        QFile f(tmp);
-        if (f.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            f.write("INSTR: HelloAI\nAlways greet the user.");
-            f.close();
-        } else {
-            QFAIL("Failed to create temp instruction file");
+        {
+            std::ofstream f(tmp, std::ios::trunc);
+            assert(f.is_open());
+            f << "INSTR: HelloAI\nAlways greet the user.";
         }
 
-        QFileSystemWatcher watcher;
-        bool notified = false;
-        connect(&watcher, &QFileSystemWatcher::fileChanged, this, [&](const QString& path){
-            if (path == tmp) notified = true;
-        });
-
-        QVERIFY(watcher.addPath(tmp));
-
-        // Modify file and ensure watcher notices
-        if (f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-            f.write("INSTR: NewMarker\nChanged content");
-            f.close();
-        } else {
-            QFAIL("Failed to modify temp instruction file");
+        // Verify initial content
+        {
+            std::ifstream f(tmp);
+            assert(f.is_open());
+            std::string content((std::istreambuf_iterator<char>(f)),
+                                 std::istreambuf_iterator<char>());
+            assert(content.find("HelloAI") != std::string::npos);
         }
 
-        QTest::qWait(600);
-        QVERIFY(notified);
+        // Modify file
+        {
+            std::ofstream f(tmp, std::ios::trunc);
+            assert(f.is_open());
+            f << "INSTR: NewMarker\nChanged content";
+        }
 
-        // Read file content and verify change
-        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QString content = QTextStream(&f).readAll();
-            f.close();
-            QVERIFY(content.contains("NewMarker"));
-        } else {
-            QFAIL("Failed to open temp instruction file for read");
+        // Verify modified content
+        {
+            std::ifstream f(tmp);
+            assert(f.is_open());
+            std::string content((std::istreambuf_iterator<char>(f)),
+                                 std::istreambuf_iterator<char>());
+            assert(content.find("NewMarker") != std::string::npos);
         }
 
         // Cleanup
-        QFile::remove(tmp);
+        std::filesystem::remove(tmp);
+        fprintf(stderr, "[INFO] InstructionLoaderTest::testLoadAndReload PASSED\n");
     }
 };
 
-QTEST_MAIN(InstructionLoaderTest)
-#include "instruction_loader_test.moc"
+// Standalone test runner (no MOC needed)
+#ifdef INSTRUCTION_LOADER_TEST_MAIN
+int main() {
+    InstructionLoaderTest test;
+    test.testLoadAndReload();
+    return 0;
+}
+#endif

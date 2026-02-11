@@ -1,258 +1,344 @@
 // Phase 2 Polish Features - Integration Example
-// Shows how to use all new widgets in MainWindow_v5.cpp
+// Shows how to use all new widgets in the Win32/HTML-based IDE.
+// All Qt dependencies replaced with Win32 API + STL.
 
-#include "ui/diff_preview_widget.h"
-#include "ui/streaming_token_progress.h"
-#include "ui/gpu_backend_selector.h"
-#include "ui/model_download_dialog.h"
-#include "ui/telemetry_optin_dialog.h"
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <commctrl.h>
+#endif
+
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#include <functional>
+#include <fstream>
+#include <filesystem>
+#include <chrono>
+#include <thread>
 
 namespace RawrXD {
 
 // ============================================================================
-// INTEGRATION EXAMPLE 1: Diff Preview Widget
+// Lightweight callback types (replacing Qt signals/slots)
 // ============================================================================
-// Add to MainWindow class members:
-//   DiffPreviewWidget* m_diffPreview{nullptr};
-//
-// In MainWindow::initialize():
 
-void integrateoDiffPreview() {
-    // Create diff preview dock
-    QDockWidget* diffDock = new QDockWidget("Code Changes", this);
-    m_diffPreview = new DiffPreviewWidget(diffDock);
-    diffDock->setWidget(m_diffPreview);
-    addDockWidget(Qt::BottomDockWidgetArea, diffDock);
-    diffDock->hide();  // Hidden until there's a diff to show
-    
-    // Connect to agentic engine for AI-generated code changes
-    connect(m_agenticEngine, &AgenticEngine::codeChangeProposed,
-            this, [this](const QString& file, const QString& original, const QString& proposed) {
-        DiffChange change;
-        change.filePath = file;
-        change.originalContent = original;
-        change.proposedContent = proposed;
-        change.changeDescription = "AI-suggested refactoring";
-        m_diffPreview->showDiff(change);
-        diffDock->show();
-    });
-    
-    // Handle user acceptance
-    m_diffPreview->setAcceptCallback([this](const DiffChange& change) {
-        // Apply the change to the file
-        QFile file(change.filePath);
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            file.write(change.proposedContent.toUtf8());
-            file.close();
-            statusBar()->showMessage("✓ Changes applied to " + change.filePath, 3000);
+using CodeChangeCallback = std::function<void(const std::string& file,
+                                               const std::string& original,
+                                               const std::string& proposed)>;
+using AcceptCallback     = std::function<void(const std::string& filePath,
+                                               const std::string& content)>;
+using RejectCallback     = std::function<void(const std::string& filePath)>;
+using BackendChangedCb   = std::function<void(int backendIndex)>;
+using TelemetryDecisionCb = std::function<void(bool enabled)>;
+
+// ============================================================================
+// INTEGRATION EXAMPLE 1: Diff Preview
+// ============================================================================
+// Instead of QDockWidget, use an HWND panel child of the main window.
+// The diff content is rendered via the HTML/Monaco layer using postMessage.
+
+struct DiffChange {
+    std::string filePath;
+    std::string originalContent;
+    std::string proposedContent;
+    std::string changeDescription;
+};
+
+class DiffPreviewPanel {
+public:
+    DiffPreviewPanel() = default;
+    ~DiffPreviewPanel() = default;
+
+    void showDiff(const DiffChange& change) {
+        m_currentChange = change;
+        m_visible = true;
+        fprintf(stderr, "[DiffPreview] Showing diff for: %s\n", change.filePath.c_str());
+        // In production: post change to Monaco editor via HTML bridge
+    }
+
+    void hide() { m_visible = false; }
+    bool isVisible() const { return m_visible; }
+
+    AcceptCallback onAccept = nullptr;
+    RejectCallback onReject = nullptr;
+
+    void acceptCurrent() {
+        if (onAccept && !m_currentChange.filePath.empty()) {
+            onAccept(m_currentChange.filePath, m_currentChange.proposedContent);
         }
-    });
-    
-    m_diffPreview->setRejectCallback([this](const DiffChange& change) {
-        statusBar()->showMessage("✗ Changes rejected for " + change.filePath, 3000);
-    });
+    }
+
+    void rejectCurrent() {
+        if (onReject && !m_currentChange.filePath.empty()) {
+            onReject(m_currentChange.filePath);
+        }
+    }
+
+private:
+    DiffChange m_currentChange;
+    bool m_visible = false;
+};
+
+void integrateDiffPreview(DiffPreviewPanel& panel) {
+    // Set accept handler: write proposed content to file
+    panel.onAccept = [](const std::string& filePath, const std::string& content) {
+        std::ofstream ofs(filePath, std::ios::binary | std::ios::trunc);
+        if (ofs.is_open()) {
+            ofs.write(content.data(), content.size());
+            ofs.close();
+            fprintf(stderr, "[DiffPreview] OK: Changes applied to %s\n", filePath.c_str());
+        } else {
+            fprintf(stderr, "[DiffPreview] ERROR: Failed to write to %s\n", filePath.c_str());
+        }
+    };
+
+    panel.onReject = [](const std::string& filePath) {
+        fprintf(stderr, "[DiffPreview] Changes rejected for %s\n", filePath.c_str());
+    };
 }
 
 // ============================================================================
 // INTEGRATION EXAMPLE 2: Streaming Token Progress Bar
 // ============================================================================
-// Add to MainWindow class members:
-//   StreamingTokenProgressBar* m_tokenProgress{nullptr};
-//
-// In MainWindow::initialize():
+// Instead of adding a QProgressBar to QStatusBar, use a Win32 progress
+// control in the status bar area, or report via console / HTML status line.
 
-void integrateTokenProgress() {
-    // Add to status bar
-    m_tokenProgress = new StreamingTokenProgressBar(this);
-    statusBar()->addPermanentWidget(m_tokenProgress);
-    
-    // Connect to inference engine
-    connect(m_inferenceEngine, &InferenceEngine::generationStarted,
-            this, [this](int estimatedTokens) {
-        m_tokenProgress->startGeneration(estimatedTokens);
-    });
-    
-    connect(m_inferenceEngine, &InferenceEngine::tokenGenerated,
-            m_tokenProgress, &StreamingTokenProgressBar::onTokenGenerated);
-    
-    connect(m_inferenceEngine, &InferenceEngine::generationComplete,
-            this, [this]() {
-        m_tokenProgress->completeGeneration();
-    });
-    
-    // Optional: Log performance metrics
-    connect(m_tokenProgress, &StreamingTokenProgressBar::generationCompleted,
-            this, [](int totalTokens, double tokensPerSecond) {
-        qDebug() << "Generation metrics: " << totalTokens << "tokens @" 
-                 << tokensPerSecond << "tok/s";
-    });
+class StreamingTokenProgress {
+public:
+    void startGeneration(int estimatedTokens) {
+        m_estimatedTokens = estimatedTokens;
+        m_generatedTokens = 0;
+        m_startTime = std::chrono::steady_clock::now();
+        fprintf(stderr, "[TokenProgress] Generation started (est. %d tokens)\n", estimatedTokens);
+    }
+
+    void onTokenGenerated() {
+        m_generatedTokens++;
+    }
+
+    void completeGeneration() {
+        auto elapsed = std::chrono::steady_clock::now() - m_startTime;
+        double seconds = std::chrono::duration<double>(elapsed).count();
+        double tokPerSec = (seconds > 0.0) ? (m_generatedTokens / seconds) : 0.0;
+        fprintf(stderr, "[TokenProgress] Generation complete: %d tokens @ %.1f tok/s\n",
+                m_generatedTokens, tokPerSec);
+
+        if (onGenerationCompleted) {
+            onGenerationCompleted(m_generatedTokens, tokPerSec);
+        }
+    }
+
+    std::function<void(int totalTokens, double tokensPerSecond)> onGenerationCompleted = nullptr;
+
+private:
+    int m_estimatedTokens = 0;
+    int m_generatedTokens = 0;
+    std::chrono::steady_clock::time_point m_startTime;
+};
+
+void integrateTokenProgress(StreamingTokenProgress& progress) {
+    // Optional: Log performance metrics via callback
+    progress.onGenerationCompleted = [](int totalTokens, double tokensPerSecond) {
+        fprintf(stderr, "[Metrics] Generation metrics: %d tokens @ %.2f tok/s\n",
+                totalTokens, tokensPerSecond);
+    };
 }
 
 // ============================================================================
 // INTEGRATION EXAMPLE 3: GPU Backend Selector
 // ============================================================================
-// Add to MainWindow class members:
-//   GPUBackendSelector* m_backendSelector{nullptr};
-//
-// In MainWindow::initialize():
+// Instead of a QComboBox in QToolBar, use a Win32 ComboBox or an HTML
+// dropdown rendered in the IDE toolbar area.
 
-void integrateBackendSelector() {
-    // Add to toolbar
-    QToolBar* aiToolbar = addToolBar("AI Settings");
-    aiToolbar->setObjectName("AIToolbar");
-    
-    m_backendSelector = new GPUBackendSelector(this);
-    aiToolbar->addWidget(m_backendSelector);
-    
-    // Connect to inference engine to change backend
-    connect(m_backendSelector, &GPUBackendSelector::backendChanged,
-            this, [this](ComputeBackend backend) {
-        qDebug() << "Switching to backend:" << (int)backend;
-        
-        // Configure inference engine
-        if (m_inferenceEngine) {
-            QString backendStr;
-            switch (backend) {
-                case ComputeBackend::CUDA: backendStr = "cuda"; break;
-                case ComputeBackend::Vulkan: backendStr = "vulkan"; break;
-                case ComputeBackend::CPU: backendStr = "cpu"; break;
-                default: backendStr = "auto"; break;
-            }
-            
-            // Reload model with new backend
-            m_inferenceEngine->setBackend(backendStr);
-            statusBar()->showMessage("✓ Switched to " + backendStr + " backend", 3000);
+enum class ComputeBackend { CPU = 0, Vulkan = 1, CUDA = 2, Auto = 3 };
+
+class GPUBackendSelector {
+public:
+    GPUBackendSelector() : m_current(ComputeBackend::Auto) {}
+
+    void setBackend(ComputeBackend backend) {
+        m_current = backend;
+        const char* names[] = { "cpu", "vulkan", "cuda", "auto" };
+        int idx = static_cast<int>(backend);
+        fprintf(stderr, "[BackendSelector] Switched to: %s\n", names[idx]);
+
+        if (onBackendChanged) {
+            onBackendChanged(idx);
         }
-    });
-    
-    // Optional: Add refresh button
-    QPushButton* refreshBtn = new QPushButton("🔄 Refresh", this);
-    refreshBtn->setToolTip("Refresh available backends");
-    connect(refreshBtn, &QPushButton::clicked, 
-            m_backendSelector, &GPUBackendSelector::refreshBackends);
-    aiToolbar->addWidget(refreshBtn);
+    }
+
+    ComputeBackend currentBackend() const { return m_current; }
+
+    void refreshBackends() {
+        fprintf(stderr, "[BackendSelector] Refreshing available backends...\n");
+        // In production: query Vulkan/CUDA availability and update dropdown
+    }
+
+    BackendChangedCb onBackendChanged = nullptr;
+
+private:
+    ComputeBackend m_current;
+};
+
+void integrateBackendSelector(GPUBackendSelector& selector) {
+    selector.onBackendChanged = [](int backendIndex) {
+        const char* names[] = { "cpu", "vulkan", "cuda", "auto" };
+        fprintf(stderr, "[IDE] Backend changed to: %s\n", names[backendIndex]);
+        // In production: reload model with new backend via InferenceEngine
+    };
 }
 
 // ============================================================================
 // INTEGRATION EXAMPLE 4: Auto Model Download
 // ============================================================================
-// In MainWindow::initialize(), after checking for models:
+// Instead of QDialog + QTimer::singleShot, use Win32 MessageBox or a
+// custom HWND dialog. Download via WinHTTP / libcurl.
+
+class AutoModelDownloader {
+public:
+    bool hasLocalModels() const {
+        // Check standard model directories for .gguf files
+        const char* modelDirs[] = { "models", "~/.rawrxd/models", nullptr };
+        for (int i = 0; modelDirs[i]; i++) {
+            std::error_code ec;
+            if (std::filesystem::exists(modelDirs[i], ec) &&
+                std::filesystem::is_directory(modelDirs[i], ec)) {
+                for (const auto& entry : std::filesystem::directory_iterator(modelDirs[i], ec)) {
+                    if (entry.path().extension() == ".gguf") {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+};
 
 void integrateAutoModelDownload() {
-    // Check if user has any models
     AutoModelDownloader downloader;
-    
+
     if (!downloader.hasLocalModels()) {
-        qDebug() << "No local models detected - showing download dialog";
-        
-        // Show download dialog on first launch
-        QTimer::singleShot(500, this, [this]() {
-            ModelDownloadDialog* downloadDialog = new ModelDownloadDialog(this);
-            
-            if (downloadDialog->exec() == QDialog::Accepted) {
-                // Model downloaded successfully
-                statusBar()->showMessage("✓ Model downloaded! Refreshing model list...", 5000);
-                
-                // Refresh chat interface model list
-                if (m_chatInterface) {
-                    m_chatInterface->refreshModels();
-                }
-            } else {
-                // User skipped download
-                statusBar()->showMessage(
-                    "No models installed. Use File → Download Model to get started", 
-                    10000);
-            }
-            
-            downloadDialog->deleteLater();
-        });
+        fprintf(stderr, "[ModelDownload] No local models detected\n");
+
+#ifdef _WIN32
+        int result = MessageBoxA(nullptr,
+            "No GGUF models found.\nWould you like to download a recommended model?",
+            "RawrXD - Model Setup",
+            MB_YESNO | MB_ICONQUESTION);
+
+        if (result == IDYES) {
+            fprintf(stderr, "[ModelDownload] User accepted model download\n");
+            // In production: launch WinHTTP download of recommended .gguf
+        } else {
+            fprintf(stderr, "[ModelDownload] User skipped model download\n");
+        }
+#else
+        fprintf(stderr, "[ModelDownload] No models installed. Place .gguf files in models/ dir\n");
+#endif
     }
-    
-    // Add menu action for manual downloads
-    QMenu* fileMenu = menuBar()->addMenu("&File");
-    QAction* downloadAction = fileMenu->addAction("📥 Download Model...");
-    connect(downloadAction, &QAction::triggered, this, [this]() {
-        ModelDownloadDialog* dialog = new ModelDownloadDialog(this);
-        dialog->exec();
-        dialog->deleteLater();
-    });
 }
 
 // ============================================================================
 // INTEGRATION EXAMPLE 5: Telemetry Opt-In
 // ============================================================================
-// In MainWindow::initialize(), after UI is ready:
+// Instead of a QDialog with signals, use a Win32 dialog or a startup
+// prompt in the HTML layer with postMessage callback.
 
-void integrateTelemetryOptIn() {
-    // Check if user has already made a telemetry decision
-    if (!hasTelemetryPreference()) {
-        qDebug() << "No telemetry preference found - showing opt-in dialog";
-        
-        // Show telemetry dialog after 2 seconds (give UI time to load)
-        QTimer::singleShot(2000, this, [this]() {
-            TelemetryOptInDialog* telemetryDialog = new TelemetryOptInDialog(this);
-            
-            connect(telemetryDialog, &TelemetryOptInDialog::telemetryDecisionMade,
-                    this, [this](bool enabled) {
-                if (enabled) {
-                    qDebug() << "Telemetry ENABLED by user";
-                    m_telemetry->enableTelemetry(true);
-                    m_telemetry->initializeHardware();
-                    
-                    // Record first launch event
-                    QJsonObject metadata;
-                    metadata["version"] = "5.0";
-                    metadata["first_launch"] = true;
-                    m_telemetry->recordEvent("app_started", metadata);
-                    
-                    statusBar()->showMessage("✓ Thank you for helping improve RawrXD IDE!", 5000);
-                } else {
-                    qDebug() << "Telemetry DISABLED by user";
-                    m_telemetry->enableTelemetry(false);
-                    statusBar()->showMessage("Telemetry disabled - you can enable it later in Settings", 5000);
-                }
-            });
-            
-            telemetryDialog->exec();
-            telemetryDialog->deleteLater();
-        });
-    } else {
-        // Load saved preference
-        bool enabled = getTelemetryPreference();
-        m_telemetry->enableTelemetry(enabled);
-        
-        if (enabled) {
-            m_telemetry->initializeHardware();
-            qDebug() << "Telemetry enabled (from saved preference)";
-        } else {
-            qDebug() << "Telemetry disabled (from saved preference)";
-        }
+class TelemetryPreference {
+public:
+    bool hasDecision() const {
+        // Check if preference file exists
+        std::error_code ec;
+        return std::filesystem::exists(preferencePath(), ec);
     }
-    
-    // Add settings menu to change preference later
-    QMenu* settingsMenu = menuBar()->addMenu("&Settings");
-    QAction* telemetrySettings = settingsMenu->addAction("📊 Telemetry Settings...");
-    connect(telemetrySettings, &QAction::triggered, this, [this]() {
-        TelemetryOptInDialog* dialog = new TelemetryOptInDialog(this);
-        dialog->exec();
-        dialog->deleteLater();
-    });
+
+    bool isEnabled() const {
+        std::ifstream ifs(preferencePath());
+        if (!ifs.is_open()) return false;
+        std::string val;
+        std::getline(ifs, val);
+        return val == "enabled";
+    }
+
+    void save(bool enabled) {
+        auto dir = std::filesystem::path(preferencePath()).parent_path();
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+
+        std::ofstream ofs(preferencePath(), std::ios::trunc);
+        ofs << (enabled ? "enabled" : "disabled") << "\n";
+        ofs.close();
+        fprintf(stderr, "[Telemetry] Preference saved: %s\n", enabled ? "enabled" : "disabled");
+    }
+
+private:
+    static std::string preferencePath() {
+#ifdef _WIN32
+        const char* appdata = std::getenv("APPDATA");
+        if (appdata) {
+            return std::string(appdata) + "\\RawrXD\\telemetry_preference.txt";
+        }
+        return "telemetry_preference.txt";
+#else
+        const char* home = std::getenv("HOME");
+        if (home) {
+            return std::string(home) + "/.rawrxd/telemetry_preference.txt";
+        }
+        return "telemetry_preference.txt";
+#endif
+    }
+};
+
+void integrateTelemetryOptIn(TelemetryPreference& pref) {
+    if (!pref.hasDecision()) {
+        fprintf(stderr, "[Telemetry] No telemetry preference found - prompting user\n");
+
+#ifdef _WIN32
+        int result = MessageBoxA(nullptr,
+            "Help improve RawrXD IDE by sending anonymous usage data?\n\n"
+            "This includes performance metrics and error reports.\n"
+            "No personal data or model content is collected.\n\n"
+            "You can change this later in Settings.",
+            "RawrXD - Telemetry",
+            MB_YESNO | MB_ICONINFORMATION);
+
+        bool enabled = (result == IDYES);
+        pref.save(enabled);
+        fprintf(stderr, "[Telemetry] User chose: %s\n", enabled ? "ENABLED" : "DISABLED");
+#else
+        // Non-Windows: default to disabled, user can enable via config
+        pref.save(false);
+        fprintf(stderr, "[Telemetry] Defaulting to disabled (set in config to enable)\n");
+#endif
+    } else {
+        bool enabled = pref.isEnabled();
+        fprintf(stderr, "[Telemetry] Loaded saved preference: %s\n", enabled ? "enabled" : "disabled");
+    }
 }
 
 // ============================================================================
 // COMPLETE INTEGRATION - Call all integration functions
 // ============================================================================
 
-void MainWindow::initializePhase2Features() {
-    qDebug() << "[MainWindow] Initializing Phase 2 polish features...";
-    
-    integrateDiffPreview();
-    integrateTokenProgress();
-    integrateBackendSelector();
+struct Phase2Features {
+    DiffPreviewPanel diffPreview;
+    StreamingTokenProgress tokenProgress;
+    GPUBackendSelector backendSelector;
+    TelemetryPreference telemetryPreference;
+};
+
+void initializePhase2Features(Phase2Features& features) {
+    fprintf(stderr, "[Phase2] Initializing Phase 2 polish features...\n");
+
+    integrateDiffPreview(features.diffPreview);
+    integrateTokenProgress(features.tokenProgress);
+    integrateBackendSelector(features.backendSelector);
     integrateAutoModelDownload();
-    integrateTelemetryOptIn();
-    
-    qDebug() << "[MainWindow] ✓ Phase 2 features initialized";
+    integrateTelemetryOptIn(features.telemetryPreference);
+
+    fprintf(stderr, "[Phase2] OK: Phase 2 features initialized\n");
 }
 
 } // namespace RawrXD

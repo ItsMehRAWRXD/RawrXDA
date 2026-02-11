@@ -1,151 +1,146 @@
+// zero_touch.cpp – Qt-free ZeroTouch implementation (C++20 / Win32)
+// Provides automated dev-environment bootstrapping: file watchers, git hooks, voice triggers
 #include "zero_touch.hpp"
-#include "auto_bootstrap.hpp"
 
-#include <QApplication>
-#include <QByteArray>
-#include <QClipboard>
-#include <QDir>
-#include <QDirIterator>
-#include <QFile>
-#include <QFileInfo>
-#include <QFileSystemWatcher>
-#include <QStringList>
-#include <QTimer>
-#include <QDebug>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 
-ZeroTouch::ZeroTouch(QObject* parent)
-    : QObject(parent) {}
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+namespace fs = std::filesystem;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+static void zt_log(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    fprintf(stderr, "[ZeroTouch] ");
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+    va_end(ap);
+}
+
+static bool writeTextFile(const fs::path& path, const std::string& content) {
+    std::ofstream ofs(path, std::ios::out | std::ios::trunc);
+    if (!ofs.is_open()) return false;
+    ofs << content;
+    return ofs.good();
+}
+
+// ---------------------------------------------------------------------------
+// ZeroTouch
+// ---------------------------------------------------------------------------
+
+ZeroTouch::ZeroTouch() = default;
 
 void ZeroTouch::installAll() {
+    zt_log("Installing all zero-touch components...");
     installFileWatcher();
     installGitHook();
     installVoiceTrigger();
-    qDebug() << "Zero-touch triggers installed";
+    zt_log("All zero-touch components installed.");
 }
 
+// ---------------------------------------------------------------------------
+// File watcher – creates a .vscode/settings.json entry for watcherExclude
+// (actual directory monitoring is handled by the Win32IDE / HeadlessIDE loop)
+// ---------------------------------------------------------------------------
 void ZeroTouch::installFileWatcher() {
-    QString srcRoot = QDir::current().absoluteFilePath("src");
-    QDir srcDir(srcRoot);
-    if (!srcDir.exists()) {
-        qDebug() << "ZeroTouch: src directory missing, skipping file watcher";
+    zt_log("Installing file watcher configuration...");
+
+    fs::path vscodePath = fs::current_path() / ".vscode";
+    std::error_code ec;
+    fs::create_directories(vscodePath, ec);
+    if (ec) {
+        zt_log("  WARNING: Could not create .vscode directory: %s", ec.message().c_str());
         return;
     }
 
-    auto* watcher = new QFileSystemWatcher(this);
-    QStringList files;
-    QDirIterator it(srcRoot, QStringList() << "*.cpp" << "*.hpp", QDir::Files, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        files << it.next();
-    }
-    if (files.isEmpty()) {
-        qDebug() << "ZeroTouch: no source files found for watcher";
+    fs::path settingsPath = vscodePath / "settings.json";
+    if (fs::exists(settingsPath)) {
+        zt_log("  .vscode/settings.json already exists – skipping watcher config.");
         return;
     }
 
-    watcher->addPaths(files);
+    const char* defaultSettings =
+        "{\n"
+        "  \"files.watcherExclude\": {\n"
+        "    \"**/build/**\": true,\n"
+        "    \"**/.git/objects/**\": true,\n"
+        "    \"**/node_modules/**\": true\n"
+        "  }\n"
+        "}\n";
 
-    connect(watcher, &QFileSystemWatcher::fileChanged,
-            this, [watcher](const QString& path) {
-                if (!QFileInfo::exists(path)) {
-                    // Editors rewrite files; re-add watcher silently
-                    watcher->addPath(path);
-                }
-
-                if (!path.endsWith(".cpp") && !path.endsWith(".hpp")) {
-                    return;
-                }
-
-                QTimer::singleShot(5000, watcher, [path]() {
-                    QString wish = QStringLiteral("Auto-fix and ship after source change in %1")
-                                        .arg(QFileInfo(path).fileName());
-                    qputenv("RAWRXD_AUTO_APPROVE", "1");
-                    AutoBootstrap::startWithWish(wish);
-                });
-            });
+    if (writeTextFile(settingsPath, defaultSettings)) {
+        zt_log("  Created %s", settingsPath.string().c_str());
+    } else {
+        zt_log("  WARNING: Failed to write %s", settingsPath.string().c_str());
+    }
 }
 
+// ---------------------------------------------------------------------------
+// Git hook – installs a pre-commit hook that runs self_test_gate
+// ---------------------------------------------------------------------------
 void ZeroTouch::installGitHook() {
-    QDir hooksDir(QDir::current().absoluteFilePath(".git/hooks"));
-    if (!hooksDir.exists()) {
-        qDebug() << "ZeroTouch: git hooks directory missing - skip";
+    zt_log("Installing git pre-commit hook...");
+
+    fs::path gitHooksDir = fs::current_path() / ".git" / "hooks";
+    if (!fs::is_directory(gitHooksDir)) {
+        zt_log("  No .git/hooks directory found – not a git repo? Skipping.");
         return;
     }
 
-    QString hookPath = hooksDir.filePath("post-commit");
-    QString agentExe = QDir::current().absoluteFilePath("build/bin/Release/RawrXD-Agent.exe");
-    agentExe.replace('\\', '/');
-
-    QString hookScript = QString(
-        "#!/bin/sh\n"
-        "# RawrXD zero-touch trigger\n"
-        "WISH=$(git log -1 --pretty=%B | head -1)\n"
-        "if echo \"$WISH\" | grep -qE \"(ship|release|fix|add)\"; then\n"
-        "  export RAWRXD_WISH=\"$WISH\"\n"
-        "  %1\n"
-        "fi\n"
-    ).arg(agentExe);
-
-    QFile hookFile(hookPath);
-    if (!hookFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        qWarning() << "ZeroTouch: failed to write git hook" << hookPath;
-        return;
-    }
-
-    hookFile.write(hookScript.toUtf8());
-    hookFile.setPermissions(QFile::Permissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner));
-    hookFile.close();
-
-    qDebug() << "ZeroTouch: post-commit hook installed";
-}
-
-void ZeroTouch::installVoiceTrigger() {
-    QTimer* poller = new QTimer(this);
-    poller->setInterval(2000);
-
-    connect(poller, &QTimer::timeout, this, [this]() {
-        QClipboard* clipboard = QApplication::clipboard();
-        QString spoken = clipboard->text(QClipboard::Selection);
-        if (spoken.isEmpty()) {
-            spoken = clipboard->text(QClipboard::Clipboard);
-        }
-
-        if (spoken.isEmpty() || spoken == m_lastVoiceWish) {
+    fs::path hookPath = gitHooksDir / "pre-commit";
+    if (fs::exists(hookPath)) {
+        // Check if it's ours
+        std::ifstream existing(hookPath);
+        std::string firstLine;
+        if (std::getline(existing, firstLine) && firstLine.find("RawrXD") != std::string::npos) {
+            zt_log("  RawrXD pre-commit hook already installed – skipping.");
             return;
         }
+        zt_log("  WARNING: pre-commit hook already exists (third-party) – not overwriting.");
+        return;
+    }
 
-        if (spoken.length() > 10 && spoken.length() < 200 &&
-            (spoken.contains("ship", Qt::CaseInsensitive) ||
-             spoken.contains("release", Qt::CaseInsensitive) ||
-             spoken.contains("fix", Qt::CaseInsensitive))) {
-            m_lastVoiceWish = spoken;
-            clipboard->clear(QClipboard::Selection);
-            qputenv("RAWRXD_AUTO_APPROVE", "1");
-            AutoBootstrap::startWithWish(spoken);
-        }
-    });
+    const char* hookScript =
+        "#!/bin/sh\n"
+        "# RawrXD auto-installed pre-commit hook\n"
+        "# Runs the self-test gate before allowing commits\n"
+        "echo \"[RawrXD] Running self-test gate...\"\n"
+        "if command -v ./build/self_test_gate >/dev/null 2>&1; then\n"
+        "  ./build/self_test_gate\n"
+        "  exit $?\n"
+        "elif command -v ./build/Release/self_test_gate.exe >/dev/null 2>&1; then\n"
+        "  ./build/Release/self_test_gate.exe\n"
+        "  exit $?\n"
+        "else\n"
+        "  echo \"[RawrXD] self_test_gate not found – skipping.\"\n"
+        "  exit 0\n"
+        "fi\n";
 
-    poller->start();
+    if (writeTextFile(hookPath, hookScript)) {
+        zt_log("  Installed pre-commit hook at %s", hookPath.string().c_str());
+    } else {
+        zt_log("  WARNING: Failed to write pre-commit hook.");
+    }
 }
 
-/*
- ---------- 4. CI cron (GitHub Actions) ----------
- File: .github/workflows/zero_human.yml (job excerpt)
- on:
-   schedule:
-     - cron: '0 2 * * *'   # 02:00 UTC nightly
-   workflow_dispatch:
- jobs:
-   self_improve:
-     runs-on: windows-latest
-     steps:
-       - uses: actions/checkout@v4
-       - name: Let IDE improve itself
-         run: |
-           set RAWRXD_WISH="Improve inference speed by 10 % without quality loss"
-           build\bin\Release\RawrXD-Agent.exe
-         env:
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-           CERT_PASS: ${{ secrets.CERT_PASS }}
-           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
-           TWITTER_BEARER: ${{ secrets.TWITTER_BEARER }}
-*/
+// ---------------------------------------------------------------------------
+// Voice trigger – placeholder for future Web Speech / audio integration
+// ---------------------------------------------------------------------------
+void ZeroTouch::installVoiceTrigger() {
+    zt_log("Voice trigger stub installed (no-op until audio subsystem is integrated).");
+    m_lastVoiceWish.clear();
+    // Future: register a named-pipe or localhost HTTP endpoint that the
+    // GUI voice engine can POST transcribed commands to.
+    // For now the IDE chatbot handles voice via the HTML frontend.
+}

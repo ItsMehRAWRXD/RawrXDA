@@ -1,146 +1,105 @@
-// agentic_puppeteer.hpp - Response correction via pattern matching
+// agentic_puppeteer.hpp - Response correction via pattern matching (Qt-free)
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QStringList>
-#include <QMutex>
-#include <QHash>
-#include <memory>
+#include <string>
+#include <vector>
+#include <mutex>
+#include <unordered_map>
+#include <functional>
+#include <nlohmann/json.hpp>
+#include <cstdint>
 
-// Failure types the puppeteer can correct
 enum class FailureType {
-    RefusalResponse,      // Model refuses to respond
-    Hallucination,        // Model makes up false information
-    FormatViolation,      // Output doesn't match expected format
-    InfiniteLoop,         // Response repeats same content
-    TokenLimitExceeded,   // Hit token limit mid-response
-    None                  // No failure detected
+    RefusalResponse, Hallucination, FormatViolation, InfiniteLoop,
+    TokenLimitExceeded, None
 };
 
-// Correction result
 struct CorrectionResult {
     bool success = false;
-    QString correctedOutput;
+    std::string correctedOutput;
     FailureType detectedFailure = FailureType::None;
-    QString diagnosticMessage;
-    
-    static CorrectionResult ok(const QString& output, FailureType failure) {
+    std::string diagnosticMessage;
+    static CorrectionResult ok(const std::string& output, FailureType failure) {
         return CorrectionResult{true, output, failure, "Correction applied"};
     }
-    
-    static CorrectionResult error(FailureType failureType, const QString& diagnostic) {
-        return CorrectionResult{false, QString(), failureType, diagnostic};
+    static CorrectionResult error(FailureType failureType, const std::string& diagnostic) {
+        return CorrectionResult{false, "", failureType, diagnostic};
     }
 };
 
-// Base puppeteer for general response correction
-class AgenticPuppeteer : public QObject
-{
-    Q_OBJECT
-
+class AgenticPuppeteer {
 public:
-    explicit AgenticPuppeteer(QObject* parent = nullptr);
-    ~AgenticPuppeteer() override;
+    AgenticPuppeteer();
+    virtual ~AgenticPuppeteer();
 
-    // Main correction API
-    CorrectionResult correctResponse(const QString& originalResponse, const QString& userPrompt = QString());
-    CorrectionResult correctJsonResponse(const QJsonObject& response, const QString& context = QString());
-    
-    // Detection and diagnosis
-    FailureType detectFailure(const QString& response);
-    QString diagnoseFailure(const QString& response);
-    
-    // Pattern configuration
-    void addRefusalPattern(const QString& pattern);
-    void addHallucinationPattern(const QString& pattern);
-    void addLoopPattern(const QString& pattern);
-    QStringList getRefusalPatterns() const;
-    QStringList getHallucinationPatterns() const;
-    
-    // Statistics
+    CorrectionResult correctResponse(const std::string& originalResponse, const std::string& userPrompt = "");
+    CorrectionResult correctJsonResponse(const nlohmann::json& response, const std::string& context = "");
+    FailureType detectFailure(const std::string& response);
+    std::string diagnoseFailure(const std::string& response);
+    void addRefusalPattern(const std::string& pattern);
+    void addHallucinationPattern(const std::string& pattern);
+    void addLoopPattern(const std::string& pattern);
+    std::vector<std::string> getRefusalPatterns() const;
+    std::vector<std::string> getHallucinationPatterns() const;
+
     struct Stats {
-        qint64 responsesAnalyzed = 0;
-        qint64 failuresDetected = 0;
-        qint64 successfulCorrections = 0;
-        qint64 failedCorrections = 0;
-        QHash<int, qint64> failureTypeCount;
+        int64_t responsesAnalyzed = 0;
+        int64_t failuresDetected = 0;
+        int64_t successfulCorrections = 0;
+        int64_t failedCorrections = 0;
+        std::unordered_map<int, int64_t> failureTypeCount;
     };
-    
+
     Stats getStatistics() const;
     void resetStatistics();
-    
-    // Enable/disable
     void setEnabled(bool enable);
     bool isEnabled() const;
 
-signals:
-    void failureDetected(FailureType type, const QString& diagnostic);
-    void correctionApplied(const QString& correctedOutput);
-    void correctionFailed(FailureType type, const QString& error);
+    // Callbacks (replace Qt signals)
+    std::function<void(FailureType, const std::string&)> onFailureDetected;
+    std::function<void(const std::string&)> onCorrectionApplied;
+    std::function<void(FailureType, const std::string&)> onCorrectionFailed;
 
 protected:
-    // Helper methods
-    QString applyRefusalBypass(const QString& response);
-    QString correctHallucination(const QString& response);
-    QString enforceFormat(const QString& response);
-    QString handleInfiniteLoop(const QString& response);
-    
-    mutable QMutex m_mutex;
-    QStringList m_refusalPatterns;
-    QStringList m_hallucinationPatterns;
-    QStringList m_loopPatterns;
+    std::string applyRefusalBypass(const std::string& response);
+    std::string correctHallucination(const std::string& response);
+    std::string enforceFormat(const std::string& response);
+    std::string handleInfiniteLoop(const std::string& response);
+
+    mutable std::mutex m_mutex;
+    std::vector<std::string> m_refusalPatterns;
+    std::vector<std::string> m_hallucinationPatterns;
+    std::vector<std::string> m_loopPatterns;
     Stats m_stats;
     bool m_enabled = true;
 };
 
-// Specialized: Refusal bypass (jailbreak recovery)
-class RefusalBypassPuppeteer : public AgenticPuppeteer
-{
-    Q_OBJECT
-
+class RefusalBypassPuppeteer : public AgenticPuppeteer {
 public:
-    explicit RefusalBypassPuppeteer(QObject* parent = nullptr);
-
-    CorrectionResult bypassRefusal(const QString& refusedResponse, const QString& originalPrompt);
-    QString reframePrompt(const QString& refusedResponse);
-    
+    RefusalBypassPuppeteer();
+    CorrectionResult bypassRefusal(const std::string& refusedResponse, const std::string& originalPrompt);
+    std::string reframePrompt(const std::string& refusedResponse);
 private:
-    QString generateAlternativePrompt(const QString& original);
+    std::string generateAlternativePrompt(const std::string& original);
 };
 
-// Specialized: Hallucination correction
-class HallucinationCorrectorPuppeteer : public AgenticPuppeteer
-{
-    Q_OBJECT
-
+class HallucinationCorrectorPuppeteer : public AgenticPuppeteer {
 public:
-    explicit HallucinationCorrectorPuppeteer(QObject* parent = nullptr);
-
-    CorrectionResult detectAndCorrectHallucination(const QString& response, const QStringList& knownFacts);
-    QString validateFactuality(const QString& claim);
-    
+    HallucinationCorrectorPuppeteer();
+    CorrectionResult detectAndCorrectHallucination(const std::string& response, const std::vector<std::string>& knownFacts);
+    std::string validateFactuality(const std::string& claim);
 private:
-    QStringList m_knownFactDatabase;
+    std::vector<std::string> m_knownFactDatabase;
 };
 
-// Specialized: Format enforcement
-class FormatEnforcerPuppeteer : public AgenticPuppeteer
-{
-    Q_OBJECT
-
+class FormatEnforcerPuppeteer : public AgenticPuppeteer {
 public:
-    explicit FormatEnforcerPuppeteer(QObject* parent = nullptr);
-
-    CorrectionResult enforceJsonFormat(const QString& response);
-    CorrectionResult enforceMarkdownFormat(const QString& response);
-    CorrectionResult enforceCodeBlockFormat(const QString& response);
-    
-    void setRequiredJsonSchema(const QJsonObject& schema);
-    QJsonObject getRequiredJsonSchema() const;
-    
+    FormatEnforcerPuppeteer();
+    CorrectionResult enforceJsonFormat(const std::string& response);
+    CorrectionResult enforceMarkdownFormat(const std::string& response);
+    CorrectionResult enforceCodeBlockFormat(const std::string& response);
+    void setRequiredJsonSchema(const nlohmann::json& schema);
+    nlohmann::json getRequiredJsonSchema() const;
 private:
-    QJsonObject m_requiredSchema;
+    nlohmann::json m_requiredSchema;
 };

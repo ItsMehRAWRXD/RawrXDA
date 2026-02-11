@@ -1,4 +1,5 @@
 #pragma once
-#include <QString>
+// sign_binary.hpp – Qt-free binary signing (C++20 / Win32)
+#include <string>
 
-bool signBinary(const QString& exePath);
+bool signBinary(const std::string& exePath);

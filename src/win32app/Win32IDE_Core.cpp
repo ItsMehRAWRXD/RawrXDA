@@ -15,6 +15,7 @@
 #include "../modules/native_memory.hpp"
 #include "../modules/ExtensionLoader.hpp"
 #include "../native_agent.hpp"
+#include "win32_feature_adapter.h"  // Unified Feature Dispatch adapter
 #include <commctrl.h>
 #include <richedit.h>
 #ifndef WM_DPICHANGED
@@ -22,6 +23,7 @@
 #endif
 #include <sstream>
 #include <fstream>
+#include <algorithm>
 #include <nlohmann/json.hpp>
 
 // Menu command IDs — must match Win32IDE.cpp definitions
@@ -180,6 +182,9 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 prc->right - prc->left, prc->bottom - prc->top,
                 SWP_NOZORDER | SWP_NOACTIVATE);
         }
+        // Recreate all fonts at the new DPI and re-layout
+        recreateFonts();
+        InvalidateRect(hwnd, nullptr, TRUE);
         return 0;
     }
 
@@ -272,6 +277,13 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     case WM_VSCROLL:
         // Forward scrollbar messages and update line numbers
         {
+            // Phase 44: VoiceAutomation slider routing
+            if (uMsg == WM_HSCROLL) {
+                extern bool Win32IDE_HandleVoiceAutomationScroll(HWND, LPARAM);
+                if (Win32IDE_HandleVoiceAutomationScroll(hwnd, lParam)) {
+                    return 0;
+                }
+            }
             LRESULT result = DefWindowProcA(hwnd, uMsg, wParam, lParam);
             updateLineNumbers();
             // Recolor visible lines on scroll
@@ -324,6 +336,31 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
         if (wParam == 0x7C01) { // VOICE_TIMER_ID (voice chat VU meter)
             onVoiceChatTimer();
+            return 0;
+        }
+        if (wParam == 0x7C10) { // VA_TIMER_ID (Phase 44: VoiceAutomation status)
+            extern void Win32IDE_VoiceAutomationTimerTick();
+            Win32IDE_VoiceAutomationTimerTick();
+            return 0;
+        }
+        if (wParam == 0xDC01) { // RECOVERY_TIMER_ID (Phase 45: DiskRecovery progress)
+            onRecoveryTimer();
+            return 0;
+        }
+        break;
+
+    // Phase 33: Voice Chat Global Hotkeys
+    case WM_HOTKEY:
+        if (wParam == 0xA001) { // VOICE_HOTKEY_TOGGLE_PTT
+            cmdVoicePTT();
+            return 0;
+        }
+        if (wParam == 0xA002) { // VOICE_HOTKEY_TOGGLE_PANEL
+            cmdVoiceTogglePanel();
+            return 0;
+        }
+        if (wParam == 0xA003) { // VOICE_HOTKEY_STOP
+            cmdVoiceRecord(); // stop recording
             return 0;
         }
         break;
@@ -565,20 +602,61 @@ int Win32IDE::runMessageLoop() {
                 }
                 continue;
             }
-            if (ctrl && msg.wParam == 'N') { routeCommand(IDM_FILE_NEW); continue; }
-            if (ctrl && msg.wParam == 'O') { routeCommand(IDM_FILE_OPEN); continue; }
+            if (ctrl && msg.wParam == 'N') { routeCommandUnified(IDM_FILE_NEW, this); continue; }
+            if (ctrl && msg.wParam == 'O') { routeCommandUnified(IDM_FILE_OPEN, this); continue; }
             if (ctrl && msg.wParam == 'S') {
-                if (shift) routeCommand(IDM_FILE_SAVEAS);
-                else routeCommand(IDM_FILE_SAVE);
+                if (shift) routeCommandUnified(IDM_FILE_SAVEAS, this);
+                else routeCommandUnified(IDM_FILE_SAVE, this);
                 continue;
             }
-            if (ctrl && msg.wParam == 'F') { routeCommand(IDM_EDIT_FIND); continue; }
-            if (ctrl && msg.wParam == 'H') { routeCommand(IDM_EDIT_REPLACE); continue; }
+            if (ctrl && msg.wParam == 'F') { routeCommandUnified(IDM_EDIT_FIND, this); continue; }
+            if (ctrl && msg.wParam == 'H') { routeCommandUnified(IDM_EDIT_REPLACE, this); continue; }
             if (ctrl && msg.wParam == 'B') { toggleSidebar(); continue; }
             // Ctrl+Shift+A → Audit Dashboard
-            if (ctrl && shift && msg.wParam == 'A') { routeCommand(IDM_AUDIT_SHOW_DASHBOARD); continue; }
+            if (ctrl && shift && msg.wParam == 'A') { routeCommandUnified(IDM_AUDIT_SHOW_DASHBOARD, this); continue; }
+            // Ctrl+Shift+I → Bounded Agent Loop (tool-calling autonomous agent)
+            if (ctrl && shift && msg.wParam == 'I') { routeCommandUnified(IDM_AGENT_BOUNDED_LOOP, this); continue; }
             // Ctrl+, → Settings dialog
             if (ctrl && msg.wParam == VK_OEM_COMMA) { showSettingsDialog(); continue; }
+            // Ctrl+= / Ctrl+- → UI Zoom In/Out, Ctrl+0 → Reset zoom
+            if (ctrl && (msg.wParam == VK_OEM_PLUS || msg.wParam == 0xBB)) {
+                // Zoom in: increase scale by 10%
+                if (m_settings.uiScalePercent == 0) {
+                    m_settings.uiScalePercent = MulDiv(100, m_currentDpi, 96) + 10;
+                } else {
+                    m_settings.uiScalePercent = (std::min)(m_settings.uiScalePercent + 10, 300);
+                }
+                recreateFonts();
+                RECT rc; GetClientRect(m_hwndMain, &rc);
+                onSize(rc.right, rc.bottom);
+                InvalidateRect(m_hwndMain, nullptr, TRUE);
+                saveSettings();
+                continue;
+            }
+            if (ctrl && (msg.wParam == VK_OEM_MINUS || msg.wParam == 0xBD)) {
+                // Zoom out: decrease scale by 10%
+                if (m_settings.uiScalePercent == 0) {
+                    m_settings.uiScalePercent = (std::max)(MulDiv(100, m_currentDpi, 96) - 10, 75);
+                } else {
+                    m_settings.uiScalePercent = (std::max)(m_settings.uiScalePercent - 10, 75);
+                }
+                recreateFonts();
+                RECT rc; GetClientRect(m_hwndMain, &rc);
+                onSize(rc.right, rc.bottom);
+                InvalidateRect(m_hwndMain, nullptr, TRUE);
+                saveSettings();
+                continue;
+            }
+            if (ctrl && msg.wParam == '0') {
+                // Reset zoom to system DPI
+                m_settings.uiScalePercent = 0;
+                recreateFonts();
+                RECT rc; GetClientRect(m_hwndMain, &rc);
+                onSize(rc.right, rc.bottom);
+                InvalidateRect(m_hwndMain, nullptr, TRUE);
+                saveSettings();
+                continue;
+            }
         }
 
         TranslateMessage(&msg);
@@ -622,13 +700,13 @@ void Win32IDE::onSize(int width, int height) {
 
     if (width <= 0 || height <= 0) return;
 
-    const int TOOLBAR_HEIGHT = 32;
-    const int STATUSBAR_HEIGHT = 24;
-    const int ACTIVITY_BAR_WIDTH = 48;
-    const int TAB_BAR_HEIGHT = 28;
+    const int TOOLBAR_HEIGHT = dpiScale(32);
+    const int STATUSBAR_HEIGHT = dpiScale(24);
+    const int ACTIVITY_BAR_WIDTH = dpiScale(48);
+    const int TAB_BAR_HEIGHT = dpiScale(28);
 
     int sidebarWidth = m_sidebarVisible ? m_sidebarWidth : 0;
-    int secondarySidebarWidth = m_secondarySidebarVisible ? 320 : 0;
+    int secondarySidebarWidth = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
     // Only reserve space for panels that actually have HWNDs created
     int panelHeight = (m_outputPanelVisible && m_hwndOutputTabs) ? m_outputTabHeight : 0;
     int powerShellHeight = (m_powerShellPanelVisible && m_hwndPowerShellPanel) ? m_powerShellPanelHeight : 0;
@@ -1118,8 +1196,26 @@ void Win32IDE::deferredHeavyInit() {
         // Initialize Phase 33: Voice Chat Engine
         try {
             initVoiceChat();
+            voiceLoadPreferences();
+            createVoiceChatPanel(m_hwndMain);
+            registerVoiceHotkeys();
+            updateVoiceStatusBar();
         } catch (...) {
             OutputDebugStringA("ERROR: initVoiceChat failed\n");
+        }
+
+        // Initialize Phase 44: Voice Automation (TTS for responses)
+        try {
+            RECT rc;
+            GetClientRect(m_hwndMain, &rc);
+            extern void Win32IDE_CreateVoiceAutomationPanel(HWND, int, int, int, int);
+            Win32IDE_CreateVoiceAutomationPanel(m_hwndMain, 0, rc.bottom - 80, rc.right, 80);
+            extern void Win32IDE_AddVoiceAutomationMenu(HMENU);
+            // Menu items already added in menu creation; just mark initialized
+            m_voiceAutomationInitialized = true;
+            OutputDebugStringA("Phase 44: VoiceAutomation panel created\n");
+        } catch (...) {
+            OutputDebugStringA("ERROR: VoiceAutomation init failed\n");
         }
 
         // Initialize Phase 33: Quick-Win Systems (Shortcuts, Backups, Alerts, SLO)
@@ -1225,7 +1321,16 @@ void Win32IDE::onDestroy() {
     // Shutdown Phase 34: Telemetry Export
     shutdownTelemetry();
 
+    // Shutdown Phase 44: Voice Automation
+    if (m_voiceAutomationInitialized) {
+        extern void Win32IDE_DestroyVoiceAutomationPanel();
+        Win32IDE_DestroyVoiceAutomationPanel();
+        m_voiceAutomationInitialized = false;
+    }
+
     // Shutdown Phase 33: Voice Chat Engine
+    voiceSavePreferences();
+    unregisterVoiceHotkeys();
     shutdownVoiceChat();
 
     // Shutdown Phase 33: Quick-Win Systems
@@ -1407,10 +1512,24 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
         cancelModelOperation();
         return;
     }
-    if (routeCommand(id)) {
-        return; // handled
+    
+    // ── UNIFIED DISPATCH — The ONE AND ONLY command path ────────────────
+    // All commands live in COMMAND_TABLE (command_registry.hpp).
+    // No legacy fallback. No dual routing. Drift is structurally impossible.
+    // If routeCommandUnified returns false, the command does NOT EXIST.
+    if (routeCommandUnified(id, this)) {
+        return; // Dispatched via g_commandRegistry[] — identical path to CLI
     }
 
-    // Fall through to default handling
+    // Command not found in SSOT registry.
+    // This is NOT an error path for "legacy commands" — those are gone.
+    // This only fires for truly unknown IDs (e.g. system-generated WM_COMMAND).
+#ifdef _DEBUG
+    {
+        char dbgBuf[128];
+        snprintf(dbgBuf, sizeof(dbgBuf), "[SSOT] Unregistered WM_COMMAND: %d\n", id);
+        OutputDebugStringA(dbgBuf);
+    }
+#endif
     DefWindowProcA(hwnd, WM_COMMAND, MAKEWPARAM(id, codeNotify), (LPARAM)hwndCtl);
 }

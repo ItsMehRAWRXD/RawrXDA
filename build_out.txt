@@ -1,0 +1,255 @@
+[0/1] Re-running CMake...
+-- [SDK Fix] INCLUDE = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um
+-- [SDK Fix] LIB     = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/lib/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- [Build Paths] MSVC CRT: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207
+-- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
+-- MASM64 enabled: ASM kernels will be compiled
+-- [RE] Deobfuscator MASM64 targets registered
+-- [RE] Model reverse pipeline MASM64 target registered
+-- [RE] Omega v3 MASM32 target registered
+-- [RE] Reverser compiler NASM targets registered
+-- [RE] Reverse Engineering Suite configured:
+--   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
+--   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
+--   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
+--   Deobfuscator:      3 ASM files + 1 INC + build/test
+--   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
+--   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
+--   Model Reverse:     model-llm-harvester.asm
+--   Security Toolkit:  RawrXD_IDE_unified.asm
+--   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
+-- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
+-- Configuring done (0.1s)
+-- Generating done (0.1s)
+-- Build files have been written to: D:/rawrxd/build
+[1/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\server\gguf_server_hotpatch.cpp.obj
+[2/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_repair.cpp.obj
+[3/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[4/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\byte_level_hotpatcher.cpp.obj
+[5/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pt_driver_contract.cpp.obj
+[6/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_memory_hotpatch.cpp.obj
+[7/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[8/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\proxy_hotpatcher.cpp.obj
+[9/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/DeterministicReplayEngine.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'LARGE_INTEGER': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2146: syntax error: missing ';' before identifier 'freq'
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'freq': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'start': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(256): error C2065: 'freq': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(257): error C2065: 'start': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(258): error C2065: 'freq': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(259): error C2065: 'start': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'LARGE_INTEGER': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2146: syntax error: missing ';' before identifier 'end'
+D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'end': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(264): error C2065: 'end': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(265): error C2065: 'end': undeclared identifier
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(106): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(107): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(108): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(109): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(34): error C2733: 'QueryPerformanceCounter': you cannot overload a function with 'extern "C"' linkage
+D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(41): error C2733: 'QueryPerformanceFrequency': you cannot overload a function with 'extern "C"' linkage
+D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): error C2678: binary '>>': no operator found which takes a left-hand operand of type 'std::ifstream' (or there is no acceptable conversion)
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(313): note: could be 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_streambuf<char,std::char_traits<char>> *)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_streambuf<char,std::char_traits<char>> *)': cannot convert argument 2 from 'nlohmann::json' to 'std::basic_streambuf<char,std::char_traits<char>> *'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(309): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(void *&)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(void *&)': cannot convert argument 2 from 'nlohmann::json' to 'void *&'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(305): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long double &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long double &)': cannot convert argument 2 from 'nlohmann::json' to 'long double &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(301): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(double &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(double &)': cannot convert argument 2 from 'nlohmann::json' to 'double &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(297): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(float &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(float &)': cannot convert argument 2 from 'nlohmann::json' to 'float &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(293): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned __int64 &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned __int64 &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned __int64 &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(289): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(__int64 &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(__int64 &)': cannot convert argument 2 from 'nlohmann::json' to '__int64 &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(285): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned long &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned long &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned long &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(281): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long &)': cannot convert argument 2 from 'nlohmann::json' to 'long &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(277): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned int &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned int &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned int &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(269): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(int &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(int &)': cannot convert argument 2 from 'nlohmann::json' to 'int &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(265): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned short &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned short &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned short &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(233): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(short &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(short &)': cannot convert argument 2 from 'nlohmann::json' to 'short &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(229): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(bool &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(bool &)': cannot convert argument 2 from 'nlohmann::json' to 'bool &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(200): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::ios_base &(__cdecl *)(std::ios_base &))'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::ios_base &(__cdecl *)(std::ios_base &))': cannot convert argument 2 from 'nlohmann::json' to 'std::ios_base &(__cdecl *)(std::ios_base &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(195): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_ios<char,std::char_traits<char>> &(__cdecl *)(std::basic_ios<char,std::char_traits<char>> &))'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_ios<char,std::char_traits<char>> &(__cdecl *)(std::basic_ios<char,std::char_traits<char>> &))': cannot convert argument 2 from 'nlohmann::json' to 'std::basic_ios<char,std::char_traits<char>> &(__cdecl *)(std::basic_ios<char,std::char_traits<char>> &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(190): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_istream<char,std::char_traits<char>> &(__cdecl *)(std::basic_istream<char,std::char_traits<char>> &))'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_istream<char,std::char_traits<char>> &(__cdecl *)(std::basic_istream<char,std::char_traits<char>> &))': cannot convert argument 2 from 'nlohmann::json' to 'std::basic_istream<char,std::char_traits<char>> &(__cdecl *)(std::basic_istream<char,std::char_traits<char>> &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, int)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, __int64)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, unsigned __int64)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, unsigned int)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstddef(43): note: or       'std::byte std::operator >>(const std::byte,const _IntType) noexcept'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::byte std::operator >>(const std::byte,const _IntType) noexcept': could not deduce template argument for '__formal'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstddef(36): note: 'std::enable_if_t<false,int>' : Failed to specialize alias template
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(3395): note: or       'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,std::basic_string<_Elem,_Traits,_Alloc> &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,std::basic_string<_Elem,_Traits,_Alloc> &)': could not deduce template argument for 'std::basic_istream<_Elem,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,std::basic_string<_Elem,_Traits,_Alloc> &)': could not deduce template argument for 'std::basic_string<_Elem,_Traits,_Alloc> &' from 'nlohmann::json'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(846): note: or       'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem (&)[_Size])'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem (&)[_Size])': could not deduce template argument for 'std::basic_istream<_Elem,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem (&)[_Size])': could not deduce template argument for '_Elem (&)[_Size]' from 'nlohmann::json'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(852): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char (&)[_Size])'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char (&)[_Size])': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char (&)[_Size])': could not deduce template argument for 'signed char (&)[_Size]' from 'nlohmann::json'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(858): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char (&)[_Size])'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char (&)[_Size])': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char (&)[_Size])': could not deduce template argument for 'unsigned char (&)[_Size]' from 'nlohmann::json'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(881): note: or       'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)': could not deduce template argument for 'std::basic_istream<_Elem,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)': template parameter '_Elem' is ambiguous
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: could be 'nlohmann::json'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'char'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)': could not deduce template argument for '_Elem &' from 'nlohmann::json'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(904): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char &)': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'initializing': cannot convert from 'nlohmann::json' to 'signed char &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(910): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char &)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char &)': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'initializing': cannot convert from 'nlohmann::json' to 'unsigned char &'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(923): note: or       '_Istr &&std::operator >>(_Istr &&,_Ty &&)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '_Istr &&std::operator >>(_Istr &&,_Ty &&)': could not deduce template argument for '__formal'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(922): note: '<template-parameter>': you cannot create a pointer to a reference
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: while trying to match the argument list '(std::ifstream, nlohmann::json)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(96): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(97): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(98): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(100): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(101): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(101): error C2059: syntax error: ')'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(103): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(104): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(104): error C2530: 'tc': references must be initialized
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(105): error C3536: 'tc': cannot be used before it is initialized
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(107): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(110): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(111): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(111): error C2530: 'tr': references must be initialized
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(112): error C3536: 'tr': cannot be used before it is initialized
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(121): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(122): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(122): error C2059: syntax error: ')'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(125): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(126): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(397): error C2039: 'Instance': is not a member of 'RawrXD::Agent::AgentToolHandlers'
+D:\rawrxd\src\agentic\AgentToolHandlers.h(53): note: see declaration of 'RawrXD::Agent::AgentToolHandlers'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(397): error C3861: 'Instance': identifier not found
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(399): error C2039: 'HasTool': is not a member of 'RawrXD::Agent::AgentToolHandlers'
+D:\rawrxd\src\agentic\AgentToolHandlers.h(53): note: see declaration of 'RawrXD::Agent::AgentToolHandlers'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(403): error C2039: 'Execute': is not a member of 'RawrXD::Agent::AgentToolHandlers'
+D:\rawrxd\src\agentic\AgentToolHandlers.h(53): note: see declaration of 'RawrXD::Agent::AgentToolHandlers'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(585): error C2664: 'int QueryPerformanceFrequency(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(585): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(585): note: while trying to match the argument list '(LARGE_INTEGER *)'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(586): error C2664: 'int QueryPerformanceCounter(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(586): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(586): note: while trying to match the argument list '(LARGE_INTEGER *)'
+[10/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_hotpatch_manager.cpp.obj
+[11/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/autonomous_recovery_orchestrator.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'LARGE_INTEGER': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2146: syntax error: missing ';' before identifier 'freq'
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'freq': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'start': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(256): error C2065: 'freq': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(257): error C2065: 'start': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(258): error C2065: 'freq': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(259): error C2065: 'start': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'LARGE_INTEGER': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2146: syntax error: missing ';' before identifier 'end'
+D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'end': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(264): error C2065: 'end': undeclared identifier
+D:\rawrxd\include\rawrxd_telemetry_exports.h(265): error C2065: 'end': undeclared identifier
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(106): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(107): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(108): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\DeterministicReplayEngine.h(109): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(34): error C2733: 'QueryPerformanceCounter': you cannot overload a function with 'extern "C"' linkage
+D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(41): error C2733: 'QueryPerformanceFrequency': you cannot overload a function with 'extern "C"' linkage
+D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(62): error C2733: 'UTC_ReadCounter': you cannot overload a function with 'extern "C"' linkage
+D:\rawrxd\include\rawrxd_telemetry_exports.h(73): note: see declaration of 'UTC_ReadCounter'
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(63): error C2556: 'void UTC_LogEvent(const char *)': overloaded function differs only by return type from 'uint64_t UTC_LogEvent(const char *)'
+D:\rawrxd\include\rawrxd_telemetry_exports.h(86): note: see declaration of 'UTC_LogEvent'
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(63): error C2371: 'UTC_LogEvent': redefinition; different basic types
+D:\rawrxd\include\rawrxd_telemetry_exports.h(86): note: see declaration of 'UTC_LogEvent'
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(66): error C2373: 'g_Counter_MemPatches': redefinition; different type modifiers
+D:\rawrxd\include\rawrxd_telemetry_exports.h(38): note: see declaration of 'g_Counter_MemPatches'
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(67): error C2373: 'g_Counter_Errors': redefinition; different type modifiers
+D:\rawrxd\include\rawrxd_telemetry_exports.h(41): note: see declaration of 'g_Counter_Errors'
+D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(59): error C2039: 'CounterSnapshot': is not a member of '`global namespace''
+D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(59): error C2873: 'CounterSnapshot': symbol cannot be used in a using-declaration
+D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(60): error C2039: 'FusionSnapshot': is not a member of '`global namespace''
+D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(60): error C2873: 'FusionSnapshot': symbol cannot be used in a using-declaration
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(676): error C2110: '+': cannot add two pointers
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(867): error C2664: 'int QueryPerformanceFrequency(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(867): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(867): note: while trying to match the argument list '(LARGE_INTEGER *)'
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(868): error C2664: 'int QueryPerformanceCounter(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(868): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
+D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(868): note: while trying to match the argument list '(LARGE_INTEGER *)'
+[12/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\production_release.cpp.obj
+[13/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_hotpatcher.cpp.obj
+[14/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vsix_loader_win32.cpp.obj
+[15/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_decision_bridge.cpp.obj
+[16/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quantum_safe_transport.cpp.obj
+[17/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\adaptive_pipeline_parallel.cpp.obj
+[18/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
+[19/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchPanel.cpp.obj
+[20/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmPanel.cpp.obj
+[21/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\codex_ultimate.cpp.obj
+[22/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_merger.cpp.obj
+[23/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativeDebugPanel.cpp.obj
+[24/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DualAgentPanel.cpp.obj
+[25/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeExtAPI.cpp.obj
+[26/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vscode_extension_api.cpp.obj
+ninja: build stopped: subcommand failed.

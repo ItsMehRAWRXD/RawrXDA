@@ -10,6 +10,7 @@
 #include "agent_history.h"
 #include "agent_policy.h"
 #include "native_agent.hpp"
+#include "agent/autonomous_subagent.hpp"
 #include <random>
 #include <iomanip>
 #include <algorithm>
@@ -778,6 +779,25 @@ bool SubAgentManager::dispatchToolCall(
         return true;
     }
 
+    // ---- Bulk Fix tool call ----
+    std::string bfStrategy;
+    std::vector<std::string> bfTargets;
+    std::string bfContext;
+    if (parseBulkFixCall(modelOutput, bfStrategy, bfTargets, bfContext)) {
+        logInfo("Detected bulk_fix tool call: strategy='" + bfStrategy +
+                "' targets=" + std::to_string(bfTargets.size()));
+        metric("subagent.tool_dispatch.bulk_fix");
+        if (m_historyRecorder) {
+            m_historyRecorder->recordToolInvoke(parentId, "bulk_fix",
+                bfStrategy + " (" + std::to_string(bfTargets.size()) + " targets)");
+        }
+        toolResult = executeBulkFix(parentId, bfStrategy, bfTargets, bfContext);
+        if (m_historyRecorder) {
+            m_historyRecorder->recordToolResult(parentId, "bulk_fix", toolResult, true);
+        }
+        return true;
+    }
+
     return false;
 }
 
@@ -1069,4 +1089,218 @@ bool SubAgentManager::parseSwarmCall(const std::string& text,
     if (!mergePrompt.empty()) config.mergePrompt = mergePrompt;
 
     return !prompts.empty();
+}
+
+// ============================================================================
+// Autonomous Bulk Fix — Bridge from SubAgentManager
+// ============================================================================
+
+BulkFixOrchestrator* SubAgentManager::getBulkFixOrchestrator() {
+    if (!m_bulkFixOrchestrator) {
+        m_bulkFixOrchestrator = std::make_unique<BulkFixOrchestrator>(
+            this, m_engine, m_failureDetector, m_puppeteer);
+    }
+    return m_bulkFixOrchestrator.get();
+}
+
+std::string SubAgentManager::executeBulkFix(
+    const std::string& parentId,
+    const std::string& strategyName,
+    const std::vector<std::string>& targetPaths,
+    const std::string& context)
+{
+    metric("subagent.bulk_fix_total");
+    logInfo("BulkFix started: strategy='" + strategyName + "' targets=" +
+            std::to_string(targetPaths.size()) + " parent=" + parentId);
+
+    if (m_historyRecorder) {
+        m_historyRecorder->recordToolInvoke(parentId, "bulk_fix",
+            strategyName + " (" + std::to_string(targetPaths.size()) + " targets)");
+    }
+
+    auto* orchestrator = getBulkFixOrchestrator();
+
+    // Build targets from paths
+    std::vector<BulkFixTarget> targets;
+    for (int i = 0; i < (int)targetPaths.size(); i++) {
+        BulkFixTarget t;
+        t.id = "target_" + std::to_string(i);
+        t.path = targetPaths[i];
+        t.context = context;
+        targets.push_back(t);
+    }
+
+    // Map strategy name to factory
+    BulkFixStrategy strategy;
+    if (strategyName == "compile_error_fix") {
+        strategy = BulkFixOrchestrator::makeCompileErrorFixStrategy();
+    } else if (strategyName == "format_enforcement") {
+        strategy = BulkFixOrchestrator::makeFormatEnforcementStrategy();
+    } else if (strategyName == "stub_implementation") {
+        strategy = BulkFixOrchestrator::makeStubImplementationStrategy();
+    } else if (strategyName == "header_include_fix") {
+        strategy = BulkFixOrchestrator::makeHeaderIncludeFixStrategy();
+    } else if (strategyName == "lint_fix") {
+        strategy = BulkFixOrchestrator::makeLintFixStrategy();
+    } else if (strategyName == "test_generation") {
+        strategy = BulkFixOrchestrator::makeTestGenerationStrategy();
+    } else if (strategyName == "doc_comments") {
+        strategy = BulkFixOrchestrator::makeDocCommentStrategy();
+    } else if (strategyName == "security_audit_fix") {
+        strategy = BulkFixOrchestrator::makeSecurityAuditFixStrategy();
+    } else {
+        strategy = BulkFixOrchestrator::makeCustomStrategy(strategyName,
+            "Apply '" + strategyName + "' fix to file: {{path}}\n"
+            "Context: {{context}}\n"
+            "Return the corrected code.\n");
+    }
+
+    BulkFixResult result = orchestrator->applyBulkRefactor(parentId, strategy, targets);
+
+    std::string summary = "BulkFix '" + strategyName + "': " +
+        std::to_string(result.fixedCount()) + "/" + std::to_string(targetPaths.size()) +
+        " fixed, " + std::to_string(result.failedCount()) + " failed";
+
+    logInfo(summary);
+    if (result.fixedCount() == (int)targetPaths.size()) {
+        metric("subagent.bulk_fix_completed");
+    } else {
+        metric("subagent.bulk_fix_partial");
+    }
+
+    if (m_historyRecorder) {
+        m_historyRecorder->recordToolResult(parentId, "bulk_fix", summary,
+                                             result.success);
+    }
+
+    return summary + "\n\n" + result.mergedResult;
+}
+
+std::string SubAgentManager::executeBulkFixAsync(
+    const std::string& parentId,
+    const std::string& strategyName,
+    const std::vector<std::string>& targetPaths,
+    const std::string& context)
+{
+    metric("subagent.bulk_fix_async_total");
+    logInfo("BulkFix async started: strategy='" + strategyName + "' targets=" +
+            std::to_string(targetPaths.size()));
+
+    auto* orchestrator = getBulkFixOrchestrator();
+
+    std::vector<BulkFixTarget> targets;
+    for (int i = 0; i < (int)targetPaths.size(); i++) {
+        BulkFixTarget t;
+        t.id = "target_" + std::to_string(i);
+        t.path = targetPaths[i];
+        t.context = context;
+        targets.push_back(t);
+    }
+
+    BulkFixStrategy strategy;
+    if (strategyName == "compile_error_fix") {
+        strategy = BulkFixOrchestrator::makeCompileErrorFixStrategy();
+    } else if (strategyName == "stub_implementation") {
+        strategy = BulkFixOrchestrator::makeStubImplementationStrategy();
+    } else {
+        strategy = BulkFixOrchestrator::makeCustomStrategy(strategyName,
+            "Apply '" + strategyName + "' fix to file: {{path}}\nContext: {{context}}\n");
+    }
+
+    return orchestrator->dispatchBulkFix(parentId, strategy, targets);
+}
+
+// ============================================================================
+// parseBulkFixCall — Parse model output for bulk_fix tool invocations
+// ============================================================================
+
+bool SubAgentManager::parseBulkFixCall(
+    const std::string& text,
+    std::string& strategyName,
+    std::vector<std::string>& targetPaths,
+    std::string& context) const
+{
+    size_t pos = text.find("bulk_fix");
+    if (pos == std::string::npos) pos = text.find("bulkFix");
+    if (pos == std::string::npos) pos = text.find("TOOL:bulk_fix");
+    if (pos == std::string::npos) pos = text.find("bulk_autonomous_fix");
+    if (pos == std::string::npos) pos = text.find("autonomous_bulk");
+    if (pos == std::string::npos) return false;
+
+    // Extract JSON block
+    size_t jsonStart = text.find('{', pos);
+    if (jsonStart == std::string::npos) return false;
+
+    int depth = 0;
+    size_t jsonEnd = jsonStart;
+    for (size_t i = jsonStart; i < text.size(); i++) {
+        if (text[i] == '{') depth++;
+        else if (text[i] == '}') {
+            depth--;
+            if (depth == 0) { jsonEnd = i; break; }
+        }
+    }
+    if (jsonEnd <= jsonStart) return false;
+
+    std::string json = text.substr(jsonStart, jsonEnd - jsonStart + 1);
+
+    auto extractStr = [&](const std::string& key) -> std::string {
+        std::string pattern = "\"" + key + "\":\"";
+        size_t p = json.find(pattern);
+        if (p == std::string::npos) {
+            pattern = "\"" + key + "\": \"";
+            p = json.find(pattern);
+        }
+        if (p == std::string::npos) return "";
+        size_t vstart = p + pattern.size();
+        std::string value;
+        for (size_t i = vstart; i < json.size(); i++) {
+            if (json[i] == '\\' && i + 1 < json.size()) value += json[++i];
+            else if (json[i] == '"') break;
+            else value += json[i];
+        }
+        return value;
+    };
+
+    strategyName = extractStr("strategy");
+    if (strategyName.empty()) strategyName = extractStr("type");
+    if (strategyName.empty()) return false;
+
+    context = extractStr("context");
+    if (context.empty()) context = extractStr("description");
+
+    // Parse targets/files array
+    size_t targetsPos = json.find("\"targets\"");
+    if (targetsPos == std::string::npos) targetsPos = json.find("\"files\"");
+    if (targetsPos == std::string::npos) targetsPos = json.find("\"paths\"");
+    if (targetsPos == std::string::npos) return false;
+
+    size_t arrStart = json.find('[', targetsPos);
+    if (arrStart == std::string::npos) return false;
+
+    int adepth = 0;
+    size_t arrEnd = arrStart;
+    for (size_t i = arrStart; i < json.size(); i++) {
+        if (json[i] == '[') adepth++;
+        else if (json[i] == ']') {
+            adepth--;
+            if (adepth == 0) { arrEnd = i; break; }
+        }
+    }
+    if (arrEnd <= arrStart) return false;
+
+    std::string arr = json.substr(arrStart + 1, arrEnd - arrStart - 1);
+    size_t strStart = 0;
+    while ((strStart = arr.find('"', strStart)) != std::string::npos) {
+        strStart++;
+        std::string val;
+        for (size_t i = strStart; i < arr.size(); i++) {
+            if (arr[i] == '\\' && i + 1 < arr.size()) val += arr[++i];
+            else if (arr[i] == '"') { strStart = i + 1; break; }
+            else val += arr[i];
+        }
+        if (!val.empty()) targetPaths.push_back(val);
+    }
+
+    return !targetPaths.empty();
 }

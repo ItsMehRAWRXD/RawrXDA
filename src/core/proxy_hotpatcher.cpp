@@ -237,3 +237,21 @@ void ProxyHotpatcher::resetStats() {
     m_stats.validationsPassed.store(0, std::memory_order_relaxed);
     m_stats.validationsFailed.store(0, std::memory_order_relaxed);
 }
+
+PatchResult ProxyHotpatcher::clear_termination_rules() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_terminationRules.clear();
+    return PatchResult::ok("All termination rules cleared");
+}
+
+PatchResult ProxyHotpatcher::clear_rewrite_rules() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_rewriteRules.clear();
+    return PatchResult::ok("All rewrite rules cleared");
+}
+
+PatchResult ProxyHotpatcher::clear_validators() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_validators.clear();
+    return PatchResult::ok("All validators cleared");
+}

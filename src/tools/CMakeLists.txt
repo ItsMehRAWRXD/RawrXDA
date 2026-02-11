@@ -5,10 +5,10 @@ add_executable(simple_gpu_test
     simple_gpu_test.cpp
 )
 
+# Qt-free: pure C++ with STL
 target_link_libraries(simple_gpu_test PRIVATE
     InferenceEngine
     ggml
-    Qt${QT_VERSION_MAJOR}::Core
 )
 
 # Real Multi-Model Benchmark - For comprehensive model testing
@@ -19,7 +19,6 @@ add_executable(real_multi_model_benchmark
 target_link_libraries(real_multi_model_benchmark PRIVATE
     InferenceEngine
     ggml
-    Qt${QT_VERSION_MAJOR}::Core
 )
 
 # GGUF API Server - Real HTTP API with GPU inference
@@ -30,7 +29,6 @@ add_executable(gguf_api_server
 target_link_libraries(gguf_api_server PRIVATE
     InferenceEngine
     ggml
-    Qt${QT_VERSION_MAJOR}::Core
     ws2_32
 )
 

@@ -41,6 +41,7 @@ constexpr int IDC_ACTIVITY_SEARCH = 6002;
 constexpr int IDC_ACTIVITY_SCM = 6003;
 constexpr int IDC_ACTIVITY_DEBUG = 6004;
 constexpr int IDC_ACTIVITY_EXTENSIONS = 6005;
+constexpr int IDC_ACTIVITY_RECOVERY = 6006;
 
 constexpr int IDC_EXPLORER_TREE = 6010;
 constexpr int IDC_EXPLORER_NEW_FILE = 6011;
@@ -103,7 +104,8 @@ void Win32IDE::createActivityBar(HWND hwndParent)
         {IDC_ACTIVITY_SEARCH, "Search"},
         {IDC_ACTIVITY_SCM, "Source"},
         {IDC_ACTIVITY_DEBUG, "Debug"},
-        {IDC_ACTIVITY_EXTENSIONS, "Exts"}
+        {IDC_ACTIVITY_EXTENSIONS, "Exts"},
+        {IDC_ACTIVITY_RECOVERY, "Recov"}
     };
 
     for (const auto& btn : buttons) {
@@ -116,7 +118,7 @@ void Win32IDE::createActivityBar(HWND hwndParent)
         y += 48;
     }
 
-    appendToOutput("Activity Bar created with 5 views\n", "Output", OutputSeverity::Info);
+    appendToOutput("Activity Bar created with 6 views\n", "Output", OutputSeverity::Info);
 }
 
 LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -133,6 +135,7 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
             case IDC_ACTIVITY_SCM: pThis->setSidebarView(SidebarView::SourceControl); break;
             case IDC_ACTIVITY_DEBUG: pThis->setSidebarView(SidebarView::RunDebug); break;
             case IDC_ACTIVITY_EXTENSIONS: pThis->setSidebarView(SidebarView::Extensions); break;
+            case IDC_ACTIVITY_RECOVERY: pThis->setSidebarView(SidebarView::DiskRecovery); break;
             }
         }
         return 0;
@@ -189,6 +192,7 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
     createSourceControlView(m_hwndSidebarContent);
     createRunDebugView(m_hwndSidebarContent);
     createExtensionsView(m_hwndSidebarContent);
+    createDiskRecoveryView(m_hwndSidebarContent);
 
     // Default to Explorer view
     setSidebarView(SidebarView::Explorer);
@@ -260,6 +264,19 @@ void Win32IDE::setSidebarView(SidebarView view)
     ShowWindow(m_hwndDebugToolbar, SW_HIDE);
     ShowWindow(m_hwndExtensionsList, SW_HIDE);
     ShowWindow(m_hwndExtensionSearch, SW_HIDE);
+    // Recovery view controls
+    if (m_hwndRecoveryTitle)     ShowWindow(m_hwndRecoveryTitle, SW_HIDE);
+    if (m_hwndRecoveryDriveList) ShowWindow(m_hwndRecoveryDriveList, SW_HIDE);
+    if (m_hwndRecoveryOutPath)   ShowWindow(m_hwndRecoveryOutPath, SW_HIDE);
+    if (m_hwndRecoveryStatus)    ShowWindow(m_hwndRecoveryStatus, SW_HIDE);
+    if (m_hwndRecoveryProgress)  ShowWindow(m_hwndRecoveryProgress, SW_HIDE);
+    if (m_hwndRecoveryLog)       ShowWindow(m_hwndRecoveryLog, SW_HIDE);
+    // Also hide all child buttons created in createDiskRecoveryView
+    EnumChildWindows(m_hwndSidebarContent, [](HWND hwnd, LPARAM) -> BOOL {
+        int id = GetDlgCtrlID(hwnd);
+        if (id >= 10301 && id <= 10312) ShowWindow(hwnd, SW_HIDE);
+        return TRUE;
+    }, 0);
 
     m_currentSidebarView = view;
 
@@ -301,6 +318,22 @@ void Win32IDE::setSidebarView(SidebarView view)
         appendToOutput("Extensions view activated\n", "Output", OutputSeverity::Info);
         break;
 
+    case SidebarView::DiskRecovery:
+        if (m_hwndRecoveryTitle)     ShowWindow(m_hwndRecoveryTitle, SW_SHOW);
+        if (m_hwndRecoveryDriveList) ShowWindow(m_hwndRecoveryDriveList, SW_SHOW);
+        if (m_hwndRecoveryOutPath)   ShowWindow(m_hwndRecoveryOutPath, SW_SHOW);
+        if (m_hwndRecoveryStatus)    ShowWindow(m_hwndRecoveryStatus, SW_SHOW);
+        if (m_hwndRecoveryProgress)  ShowWindow(m_hwndRecoveryProgress, SW_SHOW);
+        if (m_hwndRecoveryLog)       ShowWindow(m_hwndRecoveryLog, SW_SHOW);
+        // Show all recovery buttons/controls
+        EnumChildWindows(m_hwndSidebarContent, [](HWND hwnd, LPARAM) -> BOOL {
+            int id = GetDlgCtrlID(hwnd);
+            if (id >= 10301 && id <= 10312) ShowWindow(hwnd, SW_SHOW);
+            return TRUE;
+        }, 0);
+        appendToOutput("Disk Recovery view activated\n", "Output", OutputSeverity::Info);
+        break;
+
     default:
         break;
     }
@@ -326,6 +359,9 @@ void Win32IDE::updateSidebarContent()
         break;
     case SidebarView::Extensions:
         loadInstalledExtensions();
+        break;
+    case SidebarView::DiskRecovery:
+        // Recovery panel is self-updating via timer
         break;
     default:
         break;

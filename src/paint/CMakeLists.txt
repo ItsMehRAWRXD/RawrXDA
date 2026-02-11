@@ -26,16 +26,15 @@ target_include_directories(RawrXD-Paint PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/image_generator
 )
 
+# Qt-free: uses Win32 GDI/GDI+ / Direct2D
 target_link_libraries(RawrXD-Paint
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-)
-
-# Enable Qt MOC and UIC
-set_target_properties(RawrXD-Paint PROPERTIES
-    AUTOMOC ON
-    AUTORCC ON
+    gdi32
+    gdiplus
+    user32
+    d2d1
+    dwrite
+    comctl32
+    comdlg32
 )
 
 # Example image generator executable
@@ -48,5 +47,5 @@ target_include_directories(image_gen_example PRIVATE
 )
 
 message(STATUS "✓ Paint Application and Image Generator configured")
-message(STATUS "  - RawrXD-Paint executable (Qt-based paint editor)")
+message(STATUS "  - RawrXD-Paint executable (Win32 GDI+/D2D paint editor)")
 message(STATUS "  - image_gen_example (Image generator showcase)")

@@ -32,6 +32,9 @@
 #include <commdlg.h>
 #include <shlobj.h>
 
+// MASM Telemetry Kernel bridge — lock-free counters + ring buffer + Prometheus
+#include "rawrxd_telemetry_exports.h"
+
 // ============================================================================
 // Telemetry Data Structures (no Qt, no STL allocators in hot path)
 // ============================================================================
@@ -157,6 +160,19 @@ void Win32IDE::initTelemetry()
 
     m_telemetryInitialized = true;
 
+    // Initialize MASM Telemetry Kernel (lock-free counters + ring buffer)
+#if defined(RAWRXD_LINK_TELEMETRY_KERNEL_ASM) || defined(RAWR_HAS_MASM)
+    {
+        uint64_t masmResult = UTC_InitTelemetry(nullptr);
+        char masmMsg[256];
+        snprintf(masmMsg, sizeof(masmMsg),
+            "[Telemetry] MASM Kernel init: %s (code=%llu)",
+            masmResult == 0 ? "OK" : "FAILED",
+            static_cast<unsigned long long>(masmResult));
+        OutputDebugStringA(masmMsg);
+    }
+#endif
+
     char msg[256];
     snprintf(msg, sizeof(msg),
         "[Telemetry] Initialized — session: %s, opt-in: %s",
@@ -181,6 +197,11 @@ void Win32IDE::shutdownTelemetry()
     sess.endTimeMs = telemetryNowMs();
     sess.eventCount = g_sessionEventCount;
     g_sessions.push_back(sess);
+
+    // Shutdown MASM Telemetry Kernel (flush ring buffer + close log)
+#if defined(RAWRXD_LINK_TELEMETRY_KERNEL_ASM) || defined(RAWR_HAS_MASM)
+    UTC_ShutdownTelemetry();
+#endif
 
     m_telemetryInitialized = false;
     OutputDebugStringA("[Telemetry] Shutdown complete\n");

@@ -1,0 +1,193 @@
+{
+  "passed": 24,
+  "binary": "D:\\rawrxd\\RawrXD_IDE_unified.exe",
+  "total": 26,
+  "failed": 0,
+  "tests": [
+    {
+      "latency": 1027,
+      "status": "PASS",
+      "name": "compile",
+      "detail": "1027ms",
+      "switch": "-compile"
+    },
+    {
+      "latency": 1025,
+      "status": "PASS",
+      "name": "compile-alias-c",
+      "detail": "1025ms",
+      "switch": "-c"
+    },
+    {
+      "latency": 1027,
+      "status": "PASS",
+      "name": "compile-alias-slash-c",
+      "detail": "1027ms",
+      "switch": "/c"
+    },
+    {
+      "latency": 1012,
+      "status": "PASS",
+      "name": "encrypt",
+      "detail": "1012ms",
+      "switch": "-encrypt"
+    },
+    {
+      "latency": 1018,
+      "status": "PASS",
+      "name": "entropy",
+      "detail": "1018ms",
+      "switch": "-entropy"
+    },
+    {
+      "latency": 1007,
+      "status": "PASS",
+      "name": "avscan",
+      "detail": "1007ms",
+      "switch": "-avscan"
+    },
+    {
+      "latency": 1006,
+      "status": "PASS",
+      "name": "bbcov",
+      "detail": "1006ms",
+      "switch": "-bbcov"
+    },
+    {
+      "latency": 1021,
+      "status": "PASS",
+      "name": "covfuse",
+      "detail": "1021ms",
+      "switch": "-covfuse"
+    },
+    {
+      "latency": 1049,
+      "status": "PASS",
+      "name": "dyntrace-no-pid",
+      "detail": "1049ms",
+      "switch": "-dyntrace"
+    },
+    {
+      "latency": 1023,
+      "status": "PASS",
+      "name": "agenttrace",
+      "detail": "1023ms",
+      "switch": "-agenttrace"
+    },
+    {
+      "latency": 1081,
+      "status": "PASS",
+      "name": "gapfuzz-no-pid",
+      "detail": "1081ms",
+      "switch": "-gapfuzz"
+    },
+    {
+      "latency": 1039,
+      "status": "PASS",
+      "name": "intelpt-stub",
+      "detail": "1039ms",
+      "switch": "-intelpt"
+    },
+    {
+      "latency": 1057,
+      "status": "PASS",
+      "name": "diffcov-no-baseline",
+      "detail": "1057ms",
+      "switch": "-diffcov"
+    },
+    {
+      "latency": 1033,
+      "status": "PASS",
+      "name": "sideload",
+      "detail": "1033ms",
+      "switch": "-sideload"
+    },
+    {
+      "latency": 1021,
+      "status": "PASS",
+      "name": "trace-maponly",
+      "detail": "1021ms",
+      "switch": "-trace"
+    },
+    {
+      "latency": 1041,
+      "status": "PASS",
+      "name": "stubgen-no-args",
+      "detail": "1041ms",
+      "switch": "-stubgen"
+    },
+    {
+      "latency": 1028,
+      "status": "PASS",
+      "name": "inject-no-pid",
+      "detail": "1028ms",
+      "switch": "-inject"
+    },
+    {
+      "latency": 36096,
+      "status": "PASS",
+      "name": "agent",
+      "detail": "36096ms",
+      "switch": "-agent"
+    },
+    {
+      "latency": 0,
+      "status": "SKIPPED",
+      "name": "persist",
+      "detail": "Registry modification (use -SkipPersist:False to enable)",
+      "switch": "-persist"
+    },
+    {
+      "latency": 0,
+      "status": "SKIPPED",
+      "name": "uac",
+      "detail": "Requires elevation (use -SkipElevated:False to enable)",
+      "switch": "-uac"
+    },
+    {
+      "latency": 0,
+      "status": "PASS",
+      "name": "log-file-format",
+      "detail": "Structured log validated",
+      "switch": "N/A"
+    },
+    {
+      "latency": 0,
+      "status": "PASS",
+      "name": "trace-map-integrity",
+      "detail": "JSON structure valid",
+      "switch": "N/A"
+    },
+    {
+      "latency": 0,
+      "status": "PASS",
+      "name": "bbcov-report-integrity",
+      "detail": "JSON structure valid",
+      "switch": "N/A"
+    },
+    {
+      "latency": 0,
+      "status": "PASS",
+      "name": "covfusion-report-integrity",
+      "detail": "JSON structure + schema_version valid",
+      "switch": "N/A"
+    },
+    {
+      "latency": 0,
+      "status": "PASS",
+      "name": "schema-version-v1",
+      "detail": "All reports have schema_version:1",
+      "switch": "N/A"
+    },
+    {
+      "latency": 0,
+      "status": "PASS",
+      "name": "rva-only-addresses",
+      "detail": "No absolute VAs detected in reports",
+      "switch": "N/A"
+    }
+  ],
+  "timestamp": "2026-02-10T21:19:25.8148858-05:00",
+  "contract": "CLI_CONTRACT_v1.0 (v1.1 addendum)",
+  "skipped": 2
+}

@@ -6,12 +6,11 @@
 // apply corrective hotpatches: memory patches, byte-level GGUF edits,
 // server-layer request/response transforms, and proxy rewrites.
 //
-// This is the NON-QT version for Win32IDE. No QObject, no signals/slots.
-// Uses function-pointer callbacks and poll-based notification.
+// This is the Win32IDE version. Uses function-pointer callbacks and poll-based notification.
 //
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #pragma once
-
+#include <functional>
 #include "../core/model_memory_hotpatch.hpp"
 #include "../core/unified_hotpatch_manager.hpp"
 #include "../core/proxy_hotpatcher.hpp"

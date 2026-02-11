@@ -1,4 +1,11 @@
 #include "agentic_deep_thinking_engine.hpp"
+#include <functional>
+#include <map>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 #include <iostream>
 #include <chrono>
 #include <algorithm>

@@ -1,12 +1,11 @@
 #pragma once
+// zero_touch.hpp – Qt-free ZeroTouch (C++20 / Win32)
+#include <string>
 
-#include <QObject>
-#include <QString>
-
-class ZeroTouch : public QObject {
-    Q_OBJECT
+class ZeroTouch {
 public:
-    explicit ZeroTouch(QObject* parent = nullptr);
+    ZeroTouch();
+    ~ZeroTouch() = default;
 
     void installAll();
     void installFileWatcher();
@@ -14,5 +13,5 @@ public:
     void installVoiceTrigger();
 
 private:
-    QString m_lastVoiceWish;
+    std::string m_lastVoiceWish;
 };
