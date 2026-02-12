@@ -3,6 +3,7 @@
 // Explorer, Search, Source Control, Run & Debug, Extensions
 
 #include "Win32IDE.h"
+#include "Win32IDE_IELabels.h"
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shellapi.h>
@@ -85,6 +86,7 @@ constexpr int IDC_FILE_TREE = 1026;
 // Activity Bar Implementation
 // ============================================================================
 
+// ESP:m_hwndActivityBar — Activity Bar (Files, Search, SCM, Debug, Extensions, Recovery)
 void Win32IDE::createActivityBar(HWND hwndParent)
 {
     m_hwndActivityBar = CreateWindowExA(
@@ -160,13 +162,13 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
 }
 
 // ============================================================================
-// Primary Sidebar Container
+// Primary Sidebar Container — ESP:m_hwndSidebar, m_hwndSidebarContent
 // ============================================================================
 
 void Win32IDE::createPrimarySidebar(HWND hwndParent)
 {
     m_hwndSidebar = CreateWindowExA(
-        0, "STATIC", "Sidebar",
+        0, "STATIC", RAWRXD_IDE_LABEL_SIDEBAR,
         WS_CHILD | WS_VISIBLE | WS_BORDER,
         ACTIVITY_BAR_WIDTH, 0, SIDEBAR_DEFAULT_WIDTH, 600,
         hwndParent, nullptr, m_hInstance, nullptr
@@ -442,10 +444,10 @@ void Win32IDE::createExplorerView(HWND hwndParent)
         );
     }
 
-    // TreeView for file/folder structure
+    // ESP:m_hwndExplorerTree — File Explorer TreeView (IDC_EXPLORER_TREE 6010)
     appendToOutput("Creating Explorer TreeView control\n", "Output", OutputSeverity::Debug);
     m_hwndExplorerTree = CreateWindowExA(
-        WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
+        WS_EX_CLIENTEDGE, WC_TREEVIEWA, RAWRXD_IDE_LABEL_FILE_EXPLORER,
         WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
         0, 30, SIDEBAR_DEFAULT_WIDTH, 570,
         hwndParent, (HMENU)IDC_EXPLORER_TREE, m_hInstance, nullptr

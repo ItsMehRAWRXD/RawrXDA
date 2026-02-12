@@ -158,12 +158,12 @@ static std::string ExecCmd(const char* cmd) {
 #define IDC_STATUS_COPILOT 1410
 #define IDC_STATUS_NOTIFICATIONS 1411
 
-#define IDM_FILE_NEW 2001
-#define IDM_FILE_OPEN 2002
-#define IDM_FILE_SAVE 2003
-#define IDM_FILE_SAVEAS 2004
+#define IDM_FILE_NEW 1001
+#define IDM_FILE_OPEN 1002
+#define IDM_FILE_SAVE 1003
+#define IDM_FILE_SAVEAS 1004
 #define IDM_FILE_LOAD_MODEL 1030
-#define IDM_FILE_EXIT 2005
+#define IDM_FILE_EXIT 1099
 
 #define IDM_EDIT_UNDO 2007
 #define IDM_EDIT_REDO 2008
@@ -337,7 +337,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     m_nativeEngineLoaded = false;
 }
 
-// Create the menu bar
+// ESP:m_hMenu — Main menu bar; submenus File/Edit/View/Terminal/Tools/Modules/Help/Audit/Git/Agent (see Win32IDE_IELabels.h)
 void Win32IDE::createMenuBar(HWND hwnd)
 {
     // Initialize Enhanced Status Bar info (after UI is created)
@@ -378,6 +378,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
     // View menu
     HMENU hViewMenu = CreatePopupMenu();
     AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_MINIMAP, "&Minimap");
+    AppendMenuA(hViewMenu, MF_STRING, IDM_T1_BREADCRUMBS_TOGGLE, "&Breadcrumbs");
     AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_TABS, "&Output Tabs");
     AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_PANEL, "Output &Panel");
     AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_MODULE_BROWSER, "Module &Browser");
@@ -389,6 +390,9 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, "Use Streaming Loader (Low Memory)");
     AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, "Enable Vulkan Renderer (experimental)");
+    AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuA(hViewMenu, MF_STRING, IDM_TELDASH_SHOW, "Telemetry &Dashboard...");
+    AppendMenuA(hViewMenu, MF_STRING, IDM_EMOJI_PICKER, "&Emoji Picker");
     AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hViewMenu, "&View");
 
     // Terminal menu
@@ -455,9 +459,10 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_DISMISS_ALL, "&Dismiss All Alerts");
     AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, "🔔 A&lerts");
 
-    // Shortcuts & SLO
+    // Shortcuts & SLO (Tier 5: IDM_SHORTCUT_SHOW opens visual shortcut editor)
     AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuA(hToolsMenu, MF_STRING, IDM_QW_SHORTCUT_EDITOR, "⌨️ &Keyboard Shortcuts...\tCtrl+K Ctrl+S");
+    AppendMenuA(hToolsMenu, MF_STRING, IDM_SHORTCUT_SHOW, "Keyboard Shortcut &Editor...");
     AppendMenuA(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, "📊 &SLO Dashboard...");
 
     AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, "&Tools");
@@ -478,6 +483,17 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuA(hHelpMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, "&About");
     AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, "&Help");
+
+    // Audit menu (Phase 31 — menu wiring, stubs, dashboard)
+    HMENU hAuditMenu = CreatePopupMenu();
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_SHOW_DASHBOARD, "Show &Dashboard\tCtrl+Shift+A");
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_FULL, "&Run Full Audit");
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_DETECT_STUBS, "Detect &Stubs");
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_CHECK_MENUS, "Check &Menu Wiring");
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_TESTS, "Run Component &Tests");
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_EXPORT_REPORT, "&Export Report...");
+    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_QUICK_STATS, "&Quick Stats");
+    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAuditMenu, "&Audit");
 
     // Git menu
     HMENU hGitMenu = CreatePopupMenu();
@@ -1740,6 +1756,8 @@ void Win32IDE::updateMenuEnableStates() {
     CheckMenuItem(m_hMenu, IDM_VIEW_USE_STREAMING_LOADER, MF_BYCOMMAND | (m_useStreamingLoader ? MF_CHECKED : MF_UNCHECKED));
     // Vulkan renderer menu state
     CheckMenuItem(m_hMenu, IDM_VIEW_USE_VULKAN_RENDERER, MF_BYCOMMAND | (m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED));
+    // Breadcrumbs (View) — sync check with m_settings.breadcrumbsEnabled
+    CheckMenuItem(m_hMenu, IDM_T1_BREADCRUMBS_TOGGLE, MF_BYCOMMAND | (m_settings.breadcrumbsEnabled ? MF_CHECKED : MF_UNCHECKED));
 
     DrawMenuBar(m_hwndMain);
 }
@@ -4098,21 +4116,23 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
     HMENU hMenu = CreatePopupMenu();
     if (!hMenu) return;
     
+    static constexpr int IDC_CTX_REFRESH = 50001, IDC_CTX_OPEN_EXPLORER = 50002, IDC_CTX_SET_ROOT = 50003;
+    static constexpr int IDC_CTX_LOAD_MODEL = 50011, IDC_CTX_MODEL_INFO = 50012, IDC_CTX_OPEN_EDITOR = 50013, IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015;
     if (isDirectory) {
-        AppendMenuA(hMenu, MF_STRING, 1001, "Refresh");
-        AppendMenuA(hMenu, MF_STRING, 1002, "Open in Explorer");
+        AppendMenuA(hMenu, MF_STRING, IDC_CTX_REFRESH, "Refresh");
+        AppendMenuA(hMenu, MF_STRING, IDC_CTX_OPEN_EXPLORER, "Open in Explorer");
         AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hMenu, MF_STRING, 1003, "Set as Root Path");
+        AppendMenuA(hMenu, MF_STRING, IDC_CTX_SET_ROOT, "Set as Root Path");
     } else {
         if (isModelFile(filePath)) {
-            AppendMenuA(hMenu, MF_STRING, 2001, "Load Model");
-            AppendMenuA(hMenu, MF_STRING, 2002, "Show Model Info");
+            AppendMenuA(hMenu, MF_STRING, IDC_CTX_LOAD_MODEL, "Load Model");
+            AppendMenuA(hMenu, MF_STRING, IDC_CTX_MODEL_INFO, "Show Model Info");
             AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
         }
-        AppendMenuA(hMenu, MF_STRING, 2003, "Open with Editor");
-        AppendMenuA(hMenu, MF_STRING, 2004, "Copy Path");
+        AppendMenuA(hMenu, MF_STRING, IDC_CTX_OPEN_EDITOR, "Open with Editor");
+        AppendMenuA(hMenu, MF_STRING, IDC_CTX_COPY_PATH, "Copy Path");
         AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hMenu, MF_STRING, 2005, "Show in Explorer");
+        AppendMenuA(hMenu, MF_STRING, IDC_CTX_SHOW_EXPLORER, "Show in Explorer");
     }
     
     POINT pt;
@@ -4121,11 +4141,11 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
     int cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x, pt.y, 0, m_hwndMain, nullptr);
     
     switch (cmd) {
-        case 1001: // Refresh directory
+        case 50001: // Refresh directory
             refreshFileExplorer();
             break;
-        case 1002: // Open in Explorer
-        case 2005: // Show in Explorer
+        case 50002: // Open in Explorer
+        case 50015: // Show in Explorer
             ShellExecuteA(nullptr, "explore", filePath.c_str(), nullptr, nullptr, SW_SHOW);
             break;
         case 999: // Delete from Explorer context menu
@@ -4134,20 +4154,20 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
         case 1000: // Rename from Explorer context menu
             renameItemInExplorer();
             break;
-        case 1003: // Set as Root Path
+        case 50003: // Set as Root Path
             m_currentExplorerPath = filePath;
             populateFileTree();
             break;
-        case 2001: // Load Model
+        case 50011: // Load Model
             loadModelFromExplorer(filePath);
             break;
-        case 2002: // Show Model Info
+        case 50012: // Show Model Info
             if (loadGGUFModel(filePath)) {
                 std::string info = "Model Information:\n" + getModelInfo();
                 MessageBoxA(m_hwndMain, info.c_str(), "Model Info", MB_OK | MB_ICONINFORMATION);
             }
             break;
-        case 2003: // Open with Editor
+        case 50013: // Open with Editor
             {
                 std::ifstream file(filePath);
                 if (file.is_open()) {
@@ -4158,7 +4178,7 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
                 }
             }
             break;
-        case 2004: // Copy Path
+        case 50014: // Copy Path
             if (OpenClipboard(m_hwndMain)) {
                 EmptyClipboard();
                 HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, filePath.size() + 1);

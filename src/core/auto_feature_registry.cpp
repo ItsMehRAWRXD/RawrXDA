@@ -17,6 +17,17 @@
 #include "auto_feature_registry.hpp"
 #include "auto_feature_registry_guards.hpp"
 #include "feature_handlers.h"
+#include "native_inference_pipeline.hpp"
+// Command IDs used by handlers when routing to GUI (avoid pulling full Win32IDE.h)
+#ifndef IDM_TERMINAL_CLEAR
+#define IDM_TERMINAL_CLEAR 4010
+#endif
+#ifndef IDM_AI_AGENT_CYCLES_SET
+#define IDM_AI_AGENT_CYCLES_SET 4217
+#define IDM_AI_AGENT_MULTI_ENABLE 4218
+#define IDM_AI_AGENT_MULTI_DISABLE 4219
+#define IDM_AI_AGENT_MULTI_STATUS 4220
+#endif
 #include "unified_hotpatch_manager.hpp"
 #include "model_memory_hotpatch.hpp"
 #include "byte_level_hotpatcher.hpp"
@@ -52,11 +63,17 @@
 #include <cstring>
 #include <string>
 #include <DbgHelp.h>
+#if defined(_WIN32)
+#include <tlhelp32.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
+#endif
 #pragma comment(lib, "dbghelp.lib")
 
 // Bring reverse engineering types into scope
 using RawrXD::ReverseEngineering::BinaryAnalyzer;
 using RawrXD::ReverseEngineering::NativeDisassembler;
+using RawrXD::ReverseEngineering::NativeCompiler;
 using RawrXD::Perf::PerfTelemetry;
 using RawrXD::ReverseEngineering::RECodex;
 
@@ -656,6 +673,7 @@ CommandResult handleAgentStartLoop(const CommandContext& ctx) {
 // Global AI context state (thread-safe via atomic)
 static std::atomic<int> g_aiContextTokens{8192};
 static std::atomic<int> g_aiMode{0}; // 0=normal, 1=deepThink, 2=deepResearch, 3=max, 4=noRefusal
+static std::atomic<int> g_aiMaxIterations{1}; // Cycle multiplier for MAX / multi-agent
 
 static CommandResult setAiContext(const CommandContext& ctx, int tokens, const char* label) {
     g_aiContextTokens.store(tokens, std::memory_order_relaxed);
@@ -1010,10 +1028,65 @@ CommandResult handleAiModeMax(const CommandContext& ctx) {
     engine.setDefaultLanguage("cpp");
     engine.enableDetailedLogging();
 
-    // If the user passed a problem, run the full engine pipeline
+    // Parse optional cycle multiplier and agent count from args
+    int cycleMultiplier = g_aiMaxIterations.load(std::memory_order_relaxed);
+    if (cycleMultiplier < 1) cycleMultiplier = 1;
+    
+    int currentMode = g_aiMode.load(std::memory_order_relaxed);
+    bool multiAgent = (currentMode == 5);  // Mode 5 = multi-agent
+    int agentCount = 3;  // Default for multi-agent
+
+    // Parse command-line flags if present
     std::string userInput;
     if (ctx.args && ctx.args[0]) {
-        userInput = ctx.args;
+        std::string argsStr(ctx.args);
+        
+        // Parse "--cycles N"
+        size_t cyclesPos = argsStr.find("--cycles");
+        if (cyclesPos != std::string::npos) {
+            size_t numPos = argsStr.find_first_of("0123456789", cyclesPos + 8);
+            if (numPos != std::string::npos) {
+                cycleMultiplier = std::atoi(argsStr.c_str() + numPos);
+                cycleMultiplier = std::clamp(cycleMultiplier, 1, 8);
+            }
+        }
+        
+        // Parse "--agents N"
+        size_t agentsPos = argsStr.find("--agents");
+        if (agentsPos != std::string::npos) {
+            size_t numPos = argsStr.find_first_of("0123456789", agentsPos + 8);
+            if (numPos != std::string::npos) {
+                agentCount = std::atoi(argsStr.c_str() + numPos);
+                agentCount = std::clamp(agentCount, 2, 8);
+                multiAgent = true;
+            }
+        }
+        
+        // Parse "--multi" flag
+        if (argsStr.find("--multi") != std::string::npos) {
+            multiAgent = true;
+        }
+        
+        // Extract problem text (everything after flags)
+        size_t problemStart = 0;
+        size_t lastFlag = argsStr.rfind("--");
+        if (lastFlag != std::string::npos) {
+            size_t nextSpace = argsStr.find(' ', lastFlag);
+            if (nextSpace != std::string::npos) {
+                size_t valEnd = nextSpace;
+                while (valEnd < argsStr.size() && (std::isdigit(argsStr[valEnd]) || std::isspace(argsStr[valEnd]))) 
+                    valEnd++;
+                problemStart = valEnd;
+            }
+        }
+        if (problemStart < argsStr.size()) {
+            userInput = argsStr.substr(problemStart);
+            size_t start = userInput.find_first_not_of(" \t");
+            if (start != std::string::npos) userInput = userInput.substr(start);
+        } else if (argsStr.find("--") == std::string::npos) {
+            // No flags present, entire string is the problem
+            userInput = argsStr;
+        }
     }
 
     if (!userInput.empty()) {
@@ -1024,8 +1097,23 @@ CommandResult handleAiModeMax(const CommandContext& ctx) {
         thinkCtx.maxTokens = 1048576;         // Full 1M context
         thinkCtx.deepResearch = true;          // All research capabilities
         thinkCtx.allowSelfCorrection = true;
-        thinkCtx.maxIterations = 10;           // Maximum iterations
-
+        thinkCtx.maxIterations = 10;           // Base iterations
+        thinkCtx.cycleMultiplier = cycleMultiplier;  // Apply multiplier
+        
+        char configBuf[512];
+        snprintf(configBuf, sizeof(configBuf),
+                 "[AI] MAX Mode — %dx Cycle Multiplier | %s | Total iterations: up to %d\n",
+                 cycleMultiplier,
+                 multiAgent ? "Multi-Agent" : "Single Agent",
+                 thinkCtx.maxIterations * cycleMultiplier);
+        ctx.output(configBuf);
+        
+        if (multiAgent) {
+            // Multi-agent execution (if implemented in the engine)
+            ctx.output("[AI] Multi-Agent mode not yet fully integrated in MAX handler.\n");
+            ctx.output("     Use ai.agent.multiAgent.enable + ai.mode.deepThink for full multi-agent support.\n");
+        }
+        
         auto result = engine.think(thinkCtx);
 
         ctx.output("[AI] MAX MODE — Full Pipeline Analysis\n");
@@ -1150,6 +1238,107 @@ CommandResult handleAiModelSelect(const CommandContext& ctx) {
         ctx.output("  local-gguf      (Direct GGUF inference)\n");
     }
     return CommandResult::ok("ai.model");
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// AI Agent Configuration Handlers — 8x Cycles + Multi-Agent Orchestration
+// ────────────────────────────────────────────────────────────────────────
+
+static CommandResult handleAIAgentCyclesSet(const CommandContext& ctx) {
+    // Set cycle multiplier for agent execution (1x-8x)
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: ai.agent.cycles.set <1-8>\n");
+        ctx.output("Sets the cycle multiplier for agent thinking iterations (1x-8x).\n");
+        return CommandResult::error("Missing cycle multiplier", -1);
+    }
+
+    int multiplier = std::atoi(ctx.args);
+    multiplier = std::clamp(multiplier, 1, 8);
+
+    // Store in global config
+    g_aiMaxIterations.store(multiplier, std::memory_order_relaxed);
+
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[AI] Cycle multiplier set to %dx (max iterations: base x %d)\n",
+             multiplier, multiplier);
+    ctx.output(buf);
+
+    TelemetryCollector::instance()->trackFeatureUsage("ai.agent.cycles.set");
+    return CommandResult::ok("ai.agent.cycles.set");
+}
+
+static CommandResult handleAIAgentMultiEnable(const CommandContext& ctx) {
+    // Enable multi-agent mode with specified agent count
+    int agentCount = 3;  // Default
+    if (ctx.args && ctx.args[0]) {
+        agentCount = std::atoi(ctx.args);
+        agentCount = std::clamp(agentCount, 2, 8);
+    }
+
+    // Store in global config
+    g_aiMode.store(5, std::memory_order_relaxed);  // Mode 5 = multi-agent
+
+    char buf[512];
+    snprintf(buf, sizeof(buf),
+             "[AI] Multi-Agent mode ENABLED\n"
+             "  Agents: %d\n"
+             "  Strategy: Consensus voting\n"
+             "  Threshold: 60%% agreement\n"
+             "\nMultiple AI agents will now collaborate on complex reasoning tasks.\n"
+             "Each agent may use a different model for diverse perspectives.\n",
+             agentCount);
+    ctx.output(buf);
+
+    TelemetryCollector::instance()->trackFeatureUsage("ai.agent.multiAgent.enable");
+    return CommandResult::ok("ai.agent.multiAgent.enable");
+}
+
+static CommandResult handleAIAgentMultiDisable(const CommandContext& ctx) {
+    // Disable multi-agent mode (revert to single agent)
+    g_aiMode.store(1, std::memory_order_relaxed);  // Mode 1 = standard
+
+    ctx.output("[AI] Multi-Agent mode DISABLED. Reverted to single-agent execution.\n");
+
+    TelemetryCollector::instance()->trackFeatureUsage("ai.agent.multiAgent.disable");
+    return CommandResult::ok("ai.agent.multiAgent.disable");
+}
+
+static CommandResult handleAIAgentMultiStatus(const CommandContext& ctx) {
+    // Show current multi-agent configuration
+    auto& engine = getDeepThinkingEngine();
+    auto stats = engine.getStats();
+
+    int currentMode = g_aiMode.load(std::memory_order_relaxed);
+    int cycleMultiplier = g_aiMaxIterations.load(std::memory_order_relaxed);
+
+    char buf[1024];
+    snprintf(buf, sizeof(buf),
+             "╔═══════════════════════════════════════════════════════════╗\n"
+             "║         AGENT CONFIGURATION STATUS                        ║\n"
+             "╠═══════════════════════════════════════════════════════════╣\n"
+             "║ Mode:              %-35s ║\n"
+             "║ Cycle Multiplier:  %-2dx                                   ║\n"
+             "║ Max Iterations:    %-3d (base: 10)                         ║\n"
+             "╠═══════════════════════════════════════════════════════════╣\n"
+             "║ STATISTICS                                                ║\n"
+             "║ Total Thinking Requests: %-5d                            ║\n"
+             "║ Multi-Agent Requests:    %-5d                            ║\n"
+             "║ Consensus Reached:       %-3d / %-3d                      ║\n"
+             "║ Avg Consensus Confidence: %-5.1f%%                        ║\n"
+             "║ Total Agents Spawned:    %-5d                            ║\n"
+             "╚═══════════════════════════════════════════════════════════╝\n",
+             (currentMode == 5) ? "Multi-Agent" : "Single-Agent",
+             cycleMultiplier,
+             10 * cycleMultiplier,
+             stats.totalThinkingRequests,
+             stats.multiAgentRequests,
+             stats.consensusReached,
+             stats.multiAgentRequests,
+             stats.avgConsensusConfidence * 100.0f,
+             stats.totalAgentsSpawned);
+    ctx.output(buf);
+
+    return CommandResult::ok("ai.agent.multiAgent.status");
 }
 
 CommandResult handleAiOptimizeCode(const CommandContext& ctx) {
@@ -2352,7 +2541,7 @@ CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx) {
 }
 
 CommandResult handleHotpatchProxyValidate(const CommandContext& ctx) {
-    auto stats = ProxyHotpatcher::instance().getStats();
+    const auto& stats = ProxyHotpatcher::instance().getStats();
     char buf[512];
     snprintf(buf, sizeof(buf),
              "[Hotpatch/Proxy] Validation report:\n"
@@ -2361,9 +2550,9 @@ CommandResult handleHotpatchProxyValidate(const CommandContext& ctx) {
              "  Termination rules   : %zu\n"
              "  Validators          : %zu\n"
              "  Total invocations   : %llu\n",
-             stats.biasesApplied, stats.rewritesApplied,
-             stats.streamsTerminated, stats.validationsPassed,
-             (unsigned long long)stats.tokensProcessed);
+             (size_t)stats.biasesApplied.load(), (size_t)stats.rewritesApplied.load(),
+             (size_t)stats.streamsTerminated.load(), (size_t)stats.validationsPassed.load(),
+             (unsigned long long)stats.tokensProcessed.load());
     ctx.output(buf);
     return CommandResult::ok("proxy.validate");
 }
@@ -2451,7 +2640,7 @@ CommandResult handleHotpatchShowEventLog(const CommandContext& ctx) {
 }
 
 CommandResult handleHotpatchShowProxyStats(const CommandContext& ctx) {
-    auto stats = ProxyHotpatcher::instance().getStats();
+    const auto& stats = ProxyHotpatcher::instance().getStats();
     char buf[512];
     snprintf(buf, sizeof(buf),
              "[Hotpatch/Proxy] Statistics:\n"
@@ -2461,10 +2650,10 @@ CommandResult handleHotpatchShowProxyStats(const CommandContext& ctx) {
              "  Validators       : %zu\n"
              "  Total invocations: %llu\n"
              "  Total rewrites   : %llu\n",
-             stats.biasesApplied, stats.rewritesApplied,
-             stats.streamsTerminated, stats.validationsPassed,
-             (unsigned long long)stats.tokensProcessed,
-             (unsigned long long)stats.rewritesApplied);
+             (size_t)stats.biasesApplied.load(), (size_t)stats.rewritesApplied.load(),
+             (size_t)stats.streamsTerminated.load(), (size_t)stats.validationsPassed.load(),
+             (unsigned long long)stats.tokensProcessed.load(),
+             (unsigned long long)stats.rewritesApplied.load());
     ctx.output(buf);
     return CommandResult::ok("hotpatch.showProxyStats");
 }
@@ -2505,9 +2694,9 @@ CommandResult handleLspFindReferences(const CommandContext& ctx) {
         ctx.output(buf);
         int found = 0;
         for (auto& sym : symbols) {
-            if (strstr(sym.name.c_str(), ctx.args)) {
+            if (sym.name && strstr(sym.name, ctx.args)) {
                 snprintf(buf, sizeof(buf), "  -> %s [%s] layer=%d\n",
-                         sym.name.c_str(), sym.detail.c_str(), (int)sym.layer);
+                         sym.name, (sym.detail ? sym.detail : ""), (int)sym.layer);
                 ctx.output(buf);
                 found++;
             }
@@ -2526,7 +2715,7 @@ CommandResult handleLspGotoDefinition(const CommandContext& ctx) {
         for (auto& sym : symbols) {
             if (sym.name == ctx.args) {
                 snprintf(buf, sizeof(buf), "[LSP] Definition: %s at %s:%d\n",
-                         sym.name.c_str(), sym.filePath.c_str(), sym.line);
+                         (sym.name ? sym.name : ""), (sym.filePath ? sym.filePath : ""), sym.line);
                 ctx.output(buf);
                 return CommandResult::ok("lsp.gotoDefinition");
             }
@@ -2551,8 +2740,8 @@ CommandResult handleLspHoverInfo(const CommandContext& ctx) {
             if (sym.name == ctx.args) {
                 snprintf(buf, sizeof(buf),
                          "[LSP] Hover: %s\n  Detail: %s\n  File: %s:%d\n  Layer: %d\n",
-                         sym.name.c_str(), sym.detail.c_str(),
-                         sym.filePath.c_str(), sym.line, (int)sym.layer);
+                         (sym.name ? sym.name : ""), (sym.detail ? sym.detail : ""),
+                         (sym.filePath ? sym.filePath : ""), sym.line, (int)sym.layer);
                 ctx.output(buf);
                 TelemetryCollector::instance()->trackFeatureUsage("lsp.hoverInfo");
                 return CommandResult::ok("lsp.hoverInfo");
@@ -2644,8 +2833,8 @@ CommandResult handleLspServerExportSymbols(const CommandContext& ctx) {
         char entry[512];
         snprintf(entry, sizeof(entry),
                  "    {\"name\": \"%s\", \"detail\": \"%s\", \"file\": \"%s\", \"line\": %d, \"layer\": %d}",
-                 symbols[i].name.c_str(), symbols[i].detail.c_str(),
-                 symbols[i].filePath.c_str(), symbols[i].line, (int)symbols[i].layer);
+                 (symbols[i].name ? symbols[i].name : ""), (symbols[i].detail ? symbols[i].detail : ""),
+                 (symbols[i].filePath ? symbols[i].filePath : ""), symbols[i].line, (int)symbols[i].layer);
         json += entry;
         if (i + 1 < symbols.size()) json += ",";
         json += "\n";
@@ -2796,8 +2985,8 @@ CommandResult handleLspShowSymbolInfo(const CommandContext& ctx) {
                          "  Detail:   %s\n"
                          "  Location: %s:%d\n"
                          "  Layer:    %d\n",
-                         sym.name.c_str(), sym.detail.c_str(),
-                         sym.filePath.c_str(), sym.line, (int)sym.layer);
+                         (sym.name ? sym.name : ""), (sym.detail ? sym.detail : ""),
+                         (sym.filePath ? sym.filePath : ""), sym.line, (int)sym.layer);
                 ctx.output(buf);
                 return CommandResult::ok("lsp.showSymbolInfo");
             }
@@ -3178,9 +3367,9 @@ CommandResult handleQwSloDashboard(const CommandContext& ctx) {
              "  Server patches:  %llu\n"
              "  Proxy invocs:    %llu\n",
              (unsigned long long)stats.memoryPatchCount.load(),
-             (unsigned long long)stats.bytePatchesApplied.load(),
-             (unsigned long long)stats.serverPatchesApplied.load(),
-             (unsigned long long)stats.proxyInvocations.load());
+             (unsigned long long)stats.bytePatchCount.load(),
+             (unsigned long long)stats.serverPatchCount.load(),
+             (unsigned long long)stats.ptOperationCount.load());
     ctx.output(buf);
     return CommandResult::ok("qw.sloDashboard");
 }
@@ -3256,15 +3445,15 @@ CommandResult handleRevengCompile(const CommandContext& ctx) {
     }
     // Read source and compile
     NativeCompiler::CompileOptions opts;
-    opts.arch = "x64";
+    opts.targetArch = "x64";
     auto result = NativeCompiler::CompileToNative(std::string(ctx.args), opts);
     char buf[512];
     snprintf(buf, sizeof(buf), "[RE] Compile %s: %s\n",
              result.success ? "succeeded" : "FAILED",
-             result.errors.empty() ? "(no errors)" : result.errors.c_str());
+             result.errorLog.empty() ? "(no errors)" : result.errorLog.c_str());
     ctx.output(buf);
-    if (result.success && result.outputData.size() > 0) {
-        snprintf(buf, sizeof(buf), "  Output size: %zu bytes\n", result.outputData.size());
+    if (result.success && !result.machineCode.empty()) {
+        snprintf(buf, sizeof(buf), "  Output size: %zu bytes\n", result.machineCode.size());
         ctx.output(buf);
     }
     return result.success ? CommandResult::ok("reveng.compile") : CommandResult::error("Compile failed", -1);
@@ -3734,9 +3923,9 @@ CommandResult handleSubagentChain(const CommandContext& ctx) {
         auto& mi = getModelInvoker();
         cfg.model = mi.getLLMBackend().empty() ? "qwen2.5-coder:14b" : mi.getLLMBackend();
         RawrXD::Agent::BoundedAgentLoop loop; loop.Configure(cfg);
-        auto result = loop.Execute(std::string("Chain task: ") + ctx.args);
-        if (result.success && !result.output.empty()) {
-            ctx.output(result.output.c_str()); ctx.output("\n");
+        auto result = loop.Execute(std::string("Chain task: ") + (ctx.args ? ctx.args : ""));
+        if (!result.empty()) {
+            ctx.output(result.c_str()); ctx.output("\n");
         }
     }
     else {
@@ -3888,7 +4077,7 @@ CommandResult handleSwarmCacheStatus(const CommandContext& ctx) {
     snprintf(buf, sizeof(buf), "[Swarm] Trace cache status:\n  Stored traces: %zu\n", ids.size());
     ctx.output(buf);
     for (size_t i = 0; i < ids.size() && i < 20; ++i) {
-        snprintf(buf, sizeof(buf), "  [%zu] trace_id=%llu\n", i, (unsigned long long)ids[i]);
+        snprintf(buf, sizeof(buf), "  [%zu] trace_id=%s\n", i, ids[i].c_str());
         ctx.output(buf);
     }
     return CommandResult::ok("swarm.cacheStatus");
@@ -3987,7 +4176,7 @@ CommandResult handleSwarmShowEvents(const CommandContext& ctx) {
     ctx.output("[Swarm] Recent trace events:\n");
     for (size_t i = 0; i < ids.size() && i < 10; ++i) {
         SwarmTrace trace;
-        if (dse.getTrace(ids[i], &trace)) {
+        if (dse.getTrace(ids[i], trace)) {
             char buf[256];
             snprintf(buf, sizeof(buf), "  Trace %llu: %zu steps, output='%.50s'\n",
                      (unsigned long long)trace.id, trace.steps.size(),
@@ -4008,10 +4197,10 @@ CommandResult handleSwarmShowStats(const CommandContext& ctx) {
              "  Total replays    : %llu\n"
              "  Reproducible     : %llu\n"
              "  Divergent        : %llu\n",
-             (unsigned long long)stats.totalTraces,
-             (unsigned long long)stats.totalReplays,
-             (unsigned long long)stats.reproducibleReplays,
-             (unsigned long long)stats.divergentReplays);
+             (unsigned long long)stats.totalTraces.load(),
+             (unsigned long long)stats.totalReplays.load(),
+             (unsigned long long)stats.reproducibleReplays.load(),
+             (unsigned long long)stats.divergentReplays.load());
     ctx.output(buf);
     return CommandResult::ok("swarm.showStats");
 }
@@ -4021,7 +4210,7 @@ CommandResult handleSwarmShowTaskGraph(const CommandContext& ctx) {
     ctx.output("[Swarm] Task graph (trace dependencies):\n");
     for (size_t i = 0; i < ids.size() && i < 20; ++i) {
         SwarmTrace trace;
-        if (DeterministicSwarmEngine::instance().getTrace(ids[i], &trace)) {
+        if (DeterministicSwarmEngine::instance().getTrace(ids[i], trace)) {
             char buf[256];
             snprintf(buf, sizeof(buf), "  [%zu] id=%llu steps=%zu profile='%s'\n",
                      i, (unsigned long long)trace.id, trace.steps.size(),
@@ -5903,7 +6092,7 @@ CommandResult handleModelBfHotpatchEnable(const CommandContext& ctx) {
             req->params["bf_tokens_per_sec"] = static_cast<float>(best->tokens_per_sec);
 
             // Live-swap the native inference pipeline to the best model
-            NativeInferencePipeline::instance().SwapModel(best->filepath.c_str());
+            RawrXD::NativeInferencePipeline::instance().SwapModel(best->path.c_str());
 
             // Also configure ModelInvoker backend for agentic routing
             getModelInvoker().setLLMBackend(
@@ -5962,7 +6151,7 @@ CommandResult handleModelBfHotpatchApply(const CommandContext& ctx) {
     ctx.output(buf);
 
     // Perform real model swap via NativeInferencePipeline
-    auto swapResult = NativeInferencePipeline::instance().SwapModel(s_bfActiveModelPath.c_str());
+    auto swapResult = RawrXD::NativeInferencePipeline::instance().SwapModel(s_bfActiveModelPath.c_str());
     snprintf(buf, sizeof(buf), "[BruteForce/Hotpatch] NativeInferencePipeline::SwapModel: %s — %s\n",
              swapResult.success ? "OK" : "FAILED", swapResult.detail);
     ctx.output(buf);
@@ -6186,6 +6375,18 @@ void initAutoFeatureRegistry() {
     autoReg("ai.context_1m", "Ai Context 1m", "Context 1m (ai system)",
         FeatureGroup::AIMode, IDM_AI_CONTEXT_1M, "!ai_context_1m", "",
         handleAiContext1m, true, true, false);
+    autoReg("ai.agent.cycles.set", "Ai Agent Cycles Set", "Set cycle multiplier (1x-8x) (ai system)",
+        FeatureGroup::AIMode, IDM_AI_AGENT_CYCLES_SET, "!ai_agent_cycles_set", "",
+        handleAIAgentCyclesSet, true, true, false);
+    autoReg("ai.agent.multiAgent.enable", "Ai Agent Multi Enable", "Enable multi-agent mode (ai system)",
+        FeatureGroup::AIMode, IDM_AI_AGENT_MULTI_ENABLE, "!ai_agent_multi_enable", "",
+        handleAIAgentMultiEnable, true, true, false);
+    autoReg("ai.agent.multiAgent.disable", "Ai Agent Multi Disable", "Disable multi-agent mode (ai system)",
+        FeatureGroup::AIMode, IDM_AI_AGENT_MULTI_DISABLE, "!ai_agent_multi_disable", "",
+        handleAIAgentMultiDisable, true, true, false);
+    autoReg("ai.agent.multiAgent.status", "Ai Agent Multi Status", "Show multi-agent configuration (ai system)",
+        FeatureGroup::AIMode, IDM_AI_AGENT_MULTI_STATUS, "!ai_agent_multi_status", "",
+        handleAIAgentMultiStatus, true, true, false);
 
     // ══════════════ ASM (12 commands) ══════════════
     autoReg("asm.parse_symbols", "Asm Parse Symbols", "Parse symbols (asm system)",

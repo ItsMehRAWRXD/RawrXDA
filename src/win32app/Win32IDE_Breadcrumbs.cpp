@@ -9,6 +9,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "Win32IDE_IELabels.h"
 #include <sstream>
 #include <algorithm>
 
@@ -36,22 +37,26 @@ static const COLORREF BC_ICON_FUNC    = RGB(220, 220, 170);
 
 void Win32IDE::createBreadcrumbBar(HWND hwndParent)
 {
-    if (!m_settings.breadcrumbsEnabled) return;
+    if (!hwndParent) return;
 
     m_breadcrumbHeight = 22;
 
+    // ESP:IDC_BREADCRUMB_BAR — Symbol path bar (File > Class > Method), subclassed for custom paint
     m_hwndBreadcrumbs = CreateWindowExA(
         0, "STATIC", "",
-        WS_CHILD | WS_VISIBLE | SS_OWNERDRAW | SS_NOTIFY,
+        WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOTIFY,
         0, 0, 800, m_breadcrumbHeight,
-        hwndParent, (HMENU)9810, m_hInstance, nullptr);
+        hwndParent, (HMENU)(UINT_PTR)IDC_BREADCRUMB_BAR, m_hInstance, nullptr);
 
     if (!m_hwndBreadcrumbs) {
         RAWRXD_LOG_INFO("Failed to create breadcrumb bar");
         return;
     }
 
+    SetWindowTextA(m_hwndBreadcrumbs, RAWRXD_IDE_LABEL_BREADCRUMB_BAR);
     SetWindowLongPtr(m_hwndBreadcrumbs, GWLP_USERDATA, (LONG_PTR)this);
+    // Subclass for custom paint (paintBreadcrumbs) and click handling
+    SetWindowLongPtr(m_hwndBreadcrumbs, GWLP_WNDPROC, (LONG_PTR)BreadcrumbProc);
 
     // Create breadcrumb font (smaller than editor font)
     m_breadcrumbFont = CreateFontA(
@@ -61,6 +66,9 @@ void Win32IDE::createBreadcrumbBar(HWND hwndParent)
 
     // Initialize with file-only breadcrumb
     updateBreadcrumbs();
+
+    // Show/hide based on settings
+    ShowWindow(m_hwndBreadcrumbs, m_settings.breadcrumbsEnabled ? SW_SHOW : SW_HIDE);
 
     RAWRXD_LOG_INFO("Breadcrumb bar created");
 }

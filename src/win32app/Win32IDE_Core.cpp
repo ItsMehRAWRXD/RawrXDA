@@ -6,6 +6,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "Win32IDE_IELabels.h"
 #include "IDELogger.h"
 #include "IDEConfig.h"
 #include "lsp/RawrXD_LSPServer.h"
@@ -824,12 +825,19 @@ void Win32IDE::onSize(int width, int height) {
         tabBarBottom = contentTop + TAB_BAR_HEIGHT;
     }
 
-    int editorContentHeight = editorAreaHeight - (tabBarBottom - contentTop);
+    // Breadcrumb bar (below tab bar, above editor) — ESP IE labeled
+    int breadcrumbBottom = tabBarBottom;
+    if (m_hwndBreadcrumbs && m_settings.breadcrumbsEnabled) {
+        MoveWindow(m_hwndBreadcrumbs, editorLeft, tabBarBottom, editorWidth, m_breadcrumbHeight, TRUE);
+        breadcrumbBottom = tabBarBottom + m_breadcrumbHeight;
+    }
+
+    int editorContentHeight = editorAreaHeight - (breadcrumbBottom - contentTop);
 
     // Line number gutter (left of editor)
     int gutterWidth = m_hwndLineNumbers ? m_lineNumberWidth : 0;
     if (m_hwndLineNumbers) {
-        MoveWindow(m_hwndLineNumbers, editorLeft, tabBarBottom, gutterWidth, editorContentHeight, TRUE);
+        MoveWindow(m_hwndLineNumbers, editorLeft, breadcrumbBottom, gutterWidth, editorContentHeight, TRUE);
     }
 
     // Editor (right of gutter)
@@ -837,11 +845,11 @@ void Win32IDE::onSize(int width, int height) {
         int minimapW = (m_minimapVisible && m_hwndMinimap) ? m_minimapWidth : 0;
         int editorX = editorLeft + gutterWidth;
         int editorW = editorWidth - gutterWidth - minimapW;
-        MoveWindow(m_hwndEditor, editorX, tabBarBottom, editorW, editorContentHeight, TRUE);
+        MoveWindow(m_hwndEditor, editorX, breadcrumbBottom, editorW, editorContentHeight, TRUE);
 
         // Minimap
         if (m_hwndMinimap && m_minimapVisible) {
-            MoveWindow(m_hwndMinimap, editorRight - minimapW, tabBarBottom, minimapW, editorContentHeight, TRUE);
+            MoveWindow(m_hwndMinimap, editorRight - minimapW, breadcrumbBottom, minimapW, editorContentHeight, TRUE);
         }
     }
 
@@ -1021,7 +1029,7 @@ void Win32IDE::onCreate(HWND hwnd) {
     // Each step is wrapped so a crash pinpoints the exact function.
     // ================================================================
     OutputDebugStringA("[onCreate] createMenuBar...\n");
-    createMenuBar(hwnd);
+    createMenuBar(hwnd);  // ESP:m_hMenu — menus/submenus wired end-to-end
     OutputDebugStringA("[onCreate] createToolbar...\n");
     createToolbar(hwnd);
 
@@ -1032,8 +1040,9 @@ void Win32IDE::onCreate(HWND hwnd) {
 
     OutputDebugStringA("[onCreate] createTabBar...\n");
     createTabBar(hwnd);
+    OutputDebugStringA("[onCreate] createBreadcrumbBar...\n");
+    createBreadcrumbBar(hwnd);  // ESP:IDC_BREADCRUMB_BAR — symbol path bar
     OutputDebugStringA("[onCreate] createLineNumberGutter...\n");
-    createLineNumberGutter(hwnd);
     OutputDebugStringA("[onCreate] createEditor...\n");
     createEditor(hwnd);
     OutputDebugStringA("[onCreate] createTerminal...\n");
@@ -1045,6 +1054,10 @@ void Win32IDE::onCreate(HWND hwnd) {
     createOutputTabs();
     OutputDebugStringA("[onCreate] createPowerShellPanel...\n");
     createPowerShellPanel();
+
+    if (m_hwndMain) {
+        SetPropA(m_hwndMain, "RawrXD.IDE.Label", (HANDLE)RAWRXD_IDE_LABEL_MAIN_WINDOW);
+    }
 
     LOG_INFO("onCreate complete — all panels created");
     OutputDebugStringA("[onCreate] all panels created OK\n");
@@ -1394,6 +1407,15 @@ void Win32IDE::deferredHeavyInitBody() {
                 initAllCursorParityModules();
             } catch (...) {
                 OutputDebugStringA("ERROR: initAllCursorParityModules failed\n");
+            }
+        }
+
+        // Initialize Tier 5 cosmetic features (Emoji, Telemetry Dashboard, Shortcut Editor, etc.)
+        if (!isShuttingDown()) {
+            try {
+                initTier5Cosmetics();
+            } catch (...) {
+                OutputDebugStringA("ERROR: initTier5Cosmetics failed\n");
             }
         }
 

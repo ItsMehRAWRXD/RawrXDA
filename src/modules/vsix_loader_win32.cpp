@@ -4,6 +4,9 @@
 // The full vsix_loader.cpp (with libzip) is used by other targets.
 // ============================================================================
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 #include "vsix_loader.h"
 #include <fstream>
 #include <sstream>
@@ -161,11 +164,82 @@ std::string VSIXLoader::GetPluginUsage(const std::string& plugin_id) {
 }
 
 bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context_size) {
-    // Placeholder — actual memory module loading is done via NativeMemoryModule
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // Validate module path
+    if (module_path.empty()) {
+        std::cerr << "[VSIXLoader] LoadMemoryModule: empty path" << std::endl;
+        return false;
+    }
+
+    if (!std::filesystem::exists(module_path)) {
+        std::cerr << "[VSIXLoader] Module not found: " << module_path << std::endl;
+        return false;
+    }
+
+    // Load as a native DLL module
+    HMODULE hMod = LoadLibraryA(module_path.c_str());
+    if (!hMod) {
+        DWORD err = GetLastError();
+        std::cerr << "[VSIXLoader] LoadLibrary failed for " << module_path
+                  << " (error " << err << ")" << std::endl;
+        return false;
+    }
+
+    // Look for standard entry points
+    typedef int (*InitFunc)(size_t contextSize);
+    typedef const char* (*NameFunc)();
+
+    auto initFn = (InitFunc)GetProcAddress(hMod, "RawrModule_Init");
+    auto nameFn = (NameFunc)GetProcAddress(hMod, "RawrModule_Name");
+
+    std::string moduleName = module_path;
+    if (nameFn) {
+        const char* name = nameFn();
+        if (name) moduleName = name;
+    }
+
+    if (initFn) {
+        int result = initFn(context_size);
+        if (result != 0) {
+            std::cerr << "[VSIXLoader] Module init failed (code " << result << "): " << moduleName << std::endl;
+            FreeLibrary(hMod);
+            return false;
+        }
+    }
+
+    // Store handle for later unload — use engine map with size as pseudo-key
+    std::string key = "mem_module_" + std::to_string(context_size);
+    engines_[key] = module_path;
+
+    std::cout << "[VSIXLoader] Loaded memory module: " << moduleName
+              << " (context: " << context_size << ")" << std::endl;
     return true;
 }
 
 bool VSIXLoader::UnloadMemoryModule(size_t context_size) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::string key = "mem_module_" + std::to_string(context_size);
+    auto it = engines_.find(key);
+    if (it == engines_.end()) {
+        std::cerr << "[VSIXLoader] No memory module loaded for context size " << context_size << std::endl;
+        return false;
+    }
+
+    // Get the module handle and call shutdown if available
+    HMODULE hMod = GetModuleHandleA(it->second.c_str());
+    if (hMod) {
+        typedef void (*ShutdownFunc)();
+        auto shutdownFn = (ShutdownFunc)GetProcAddress(hMod, "RawrModule_Shutdown");
+        if (shutdownFn) {
+            shutdownFn();
+        }
+        FreeLibrary(hMod);
+    }
+
+    engines_.erase(it);
+    std::cout << "[VSIXLoader] Unloaded memory module for context size " << context_size << std::endl;
     return true;
 }
 

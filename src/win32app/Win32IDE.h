@@ -86,11 +86,12 @@ struct IDWriteTextLayout;
 #define IDM_SUBAGENT_TODO_CLEAR 4113
 #define IDM_SUBAGENT_STATUS 4114
 
-// Terminal extended IDs (4006–4009)
+// Terminal extended IDs (4006–4010)
 #define IDM_TERMINAL_KILL 4006
 #define IDM_TERMINAL_SPLIT_H 4007
 #define IDM_TERMINAL_SPLIT_V 4008
 #define IDM_TERMINAL_SPLIT_CODE 4009
+#define IDM_TERMINAL_CLEAR 4010
 
 // Autonomy IDs
 #define IDM_AUTONOMY_TOGGLE 4150
@@ -138,6 +139,10 @@ struct IDWriteTextLayout;
 #define IDM_AI_CONTEXT_256K 4214
 #define IDM_AI_CONTEXT_512K 4215
 #define IDM_AI_CONTEXT_1M 4216
+#define IDM_AI_AGENT_CYCLES_SET 4217
+#define IDM_AI_AGENT_MULTI_ENABLE 4218
+#define IDM_AI_AGENT_MULTI_DISABLE 4219
+#define IDM_AI_AGENT_MULTI_STATUS 4220
 
 // Reverse Engineering IDs
 #define IDM_REVENG_ANALYZE 4300
@@ -4943,12 +4948,18 @@ private:
     void cmdVisionPasteClipboard();
     void cmdVisionScreenshot();
     void cmdVisionBuildPayload();
+    void cmdVisionViewIDEGUIAndHotpatch();  // View IDE GUI + audit/hotpatch layout
     bool m_visionEncoderUIInitialized = false;
+
+    // GUI layout hotpatch (image viewer): audit overlaps/zero-size, auto-correct via onSize
+    bool auditIDEGUILayout(std::string& reportOut);
+    void hotpatchIDELayout();
 
     static constexpr int IDM_VISION_LOAD_FILE         = 11530;
     static constexpr int IDM_VISION_PASTE_CLIPBOARD   = 11531;
     static constexpr int IDM_VISION_SCREENSHOT        = 11532;
     static constexpr int IDM_VISION_BUILD_PAYLOAD     = 11533;
+    static constexpr int IDM_VISION_VIEW_GUI_HOTPATCH = 11534;
 
     // ── Refactoring Engine (200+ pluginable refactorings) ──
     void initRefactoringEngine();
@@ -5590,9 +5601,22 @@ private:
     void paintMinimapEnhanced(HDC hdc, const RECT& rect);
     bool m_minimapHighlightCursor = true;
 
-    // 3. Breadcrumbs (integration hooks — main code in Win32IDE_Breadcrumbs.cpp)
+    // 3. Breadcrumbs (main implementation in Win32IDE_Breadcrumbs.cpp)
+    static constexpr int IDC_BREADCRUMB_BAR = 9825;  // ESP: control ID for symbol path bar
+    struct BreadcrumbItem {
+        std::string label;
+        std::string symbolKind;
+        int line  = 0;
+        int column = 0;
+    };
+    void createBreadcrumbBar(HWND hwndParent);
+    void updateBreadcrumbs();
     void updateBreadcrumbsOnCursorMove();
     void updateBreadcrumbsForCursor(int line, int column);
+    void onBreadcrumbClick(int index);
+    void paintBreadcrumbs(HDC hdc, RECT& rc);
+    static LRESULT CALLBACK BreadcrumbProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    std::vector<BreadcrumbItem> m_breadcrumbPath;
     int  m_breadcrumbHeight = 22;
     HFONT m_breadcrumbFont = nullptr;
     HWND  m_hwndBreadcrumbs = nullptr;
@@ -5826,10 +5850,21 @@ private:
     // 46. Telemetry Dashboard
     void initTelemetryDashboard();
     bool handleTelemetryDashboardCommand(int commandId);
+    void cmdTelDashShow();
+    void cmdTelDashLog();
+    void cmdTelDashClear();
+    void cmdTelDashExport();
+    void cmdTelDashStats();
 
     // 47. Shortcut Editor Panel
     void initShortcutEditorPanel();
+    void initShortcutEditor();  // implementation in Win32IDE_ShortcutEditor.cpp
     bool handleShortcutEditorCommand(int commandId);
+    void cmdShortcutEditorShow();
+    void cmdShortcutEditorRecord();
+    void cmdShortcutEditorReset();
+    void cmdShortcutEditorSave();
+    void cmdShortcutEditorList();
 
     // 48. Color Picker
     void initColorPicker();
@@ -5838,6 +5873,9 @@ private:
     // 49. Emoji Support
     void initEmojiSupport();
     bool handleEmojiCommand(int commandId);
+    void cmdEmojiPicker();
+    void cmdEmojiConfig();
+    void cmdEmojiTest();
 
     // 50. Crash Reporter
     void initCrashReporter();
@@ -5863,19 +5901,31 @@ public:
     static constexpr int IDM_MARKETPLACE_SHOW      = 11550;
     static constexpr int IDM_MARKETPLACE_STATUS    = 11559;
 
-    static constexpr int IDM_TELDASH_SHOW          = 11560;
+    static constexpr int IDM_TELDASH_LOG           = 11565;
+    static constexpr int IDM_TELDASH_CLEAR         = 11566;
+    static constexpr int IDM_TELDASH_EXPORT        = 11567;
+    static constexpr int IDM_TELDASH_SHOW          = 11568;  // avoid conflict with IDM_SEMANTIC_BUILD_INDEX 11560
     static constexpr int IDM_TELDASH_STATS         = 11569;
 
     static constexpr int IDM_SHORTCUT_SHOW         = 11570;
-    static constexpr int IDM_SHORTCUT_LIST         = 11579;
+    static constexpr int IDM_SHORTCUT_RECORD      = 11571;
+    static constexpr int IDM_SHORTCUT_RESET       = 11572;
+    static constexpr int IDM_SHORTCUT_SAVE        = 11573;
+    static constexpr int IDM_SHORTCUT_LIST        = 11579;
 
     static constexpr int IDM_COLORPICK_SCAN        = 11580;
     static constexpr int IDM_COLORPICK_LIST        = 11589;
 
     static constexpr int IDM_EMOJI_PICKER          = 11590;
+    static constexpr int IDM_EMOJI_INSERT         = 11591;
+    static constexpr int IDM_EMOJI_CONFIG         = 11592;
     static constexpr int IDM_EMOJI_TEST            = 11599;
 
     static constexpr int IDM_CRASH_SHOW            = 11600;
     static constexpr int IDM_CRASH_STATS           = 11609;
+
+    bool m_telemetryDashboardInitialized = false;
+    bool m_shortcutEditorInitialized     = false;
+    bool m_emojiSupportInitialized       = false;
 private:
 };
