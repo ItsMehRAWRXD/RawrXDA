@@ -231,6 +231,16 @@ public:
      */
     std::vector<Slot*> getAllSlots() const;
 
+    /**
+     * Get count of active (in-use) slots.
+     */
+    uint32_t getActiveCount() const;
+
+    /**
+     * Find the first slot matching a given role/type.
+     */
+    Slot* findSlot(SlotType type) const;
+
 private:
     std::vector<Slot> slots_;
     std::vector<Slot*> free_slots_;
@@ -420,6 +430,8 @@ private:
         uint32_t step_id;
         std::vector<uint8_t> compressed_kv;
         std::vector<uint8_t> compressed_activations;
+        std::vector<uint8_t> compressed_data;
+        size_t original_size = 0;
     };
     std::unordered_map<uint32_t, Checkpoint> checkpoints_;
     

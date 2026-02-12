@@ -759,7 +759,37 @@ PipelineResult ReasoningPipelineOrchestrator::runSwarmPipeline(
             try {
                 agentResults[i].output = cb(systemPrompt, input, agentModels[i]);
                 agentResults[i].success = true;
-                agentResults[i].confidence = 0.5f; // placeholder
+
+                // Compute confidence from output quality signals
+                float confidence = 0.5f;
+
+                // Length-based confidence: very short or very long = lower confidence
+                size_t outLen = agentResults[i].output.size();
+                if (outLen > 50 && outLen < 5000) {
+                    confidence += 0.15f;  // Reasonable length
+                } else if (outLen <= 50) {
+                    confidence -= 0.1f;   // Suspiciously short
+                }
+
+                // Check for self-contradiction indicators
+                if (agentResults[i].output.find("however") != std::string::npos ||
+                    agentResults[i].output.find("on the other hand") != std::string::npos) {
+                    confidence -= 0.05f;  // Hedging
+                }
+
+                // Check for refusal patterns
+                if (agentResults[i].output.find("I cannot") != std::string::npos ||
+                    agentResults[i].output.find("I'm unable") != std::string::npos) {
+                    confidence -= 0.2f;
+                }
+
+                // Check for structured output (code blocks, bullets = higher quality)
+                if (agentResults[i].output.find("```") != std::string::npos ||
+                    agentResults[i].output.find("- ") != std::string::npos) {
+                    confidence += 0.1f;
+                }
+
+                agentResults[i].confidence = std::clamp(confidence, 0.0f, 1.0f);
             } catch (...) {
                 agentResults[i].success = false;
                 agentResults[i].errorMsg = "Agent " + std::to_string(i) + " failed.";

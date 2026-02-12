@@ -1067,7 +1067,7 @@ RawrXD_StartSocketServer PROC FRAME
     ; Set up sockaddr_in for bind
     lea     rsi, [rsp + 16]
     mov     WORD PTR [rsi], AF_INET ; sin_family
-    movzx   ecx, WORD PTR r12d
+    mov     ecx, r12d               ; port (u_short, zero-extended in r12d)
     sub     rsp, 32
     call    htons
     add     rsp, 32

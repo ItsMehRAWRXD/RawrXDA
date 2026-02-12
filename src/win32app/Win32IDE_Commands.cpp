@@ -6,6 +6,7 @@
 #include "win32_feature_adapter.h"
 #include "../core/unified_hotpatch_manager.hpp"
 #include "../core/proxy_hotpatcher.hpp"
+#include "../core/instructions_provider.hpp"
 #include <commctrl.h>
 #include <richedit.h>
 #include <commdlg.h>
@@ -216,11 +217,79 @@ bool Win32IDE::routeCommand(int commandId) {
         // Phase 45: DiskRecovery panel commands
         handleRecoveryCommand(commandId);
         return true;
+    } else if (commandId >= 10500 && commandId < 10600) {
+        // Phase 34: Instructions Context commands
+        if (commandId == IDM_INSTRUCTIONS_VIEW) {
+            showInstructionsDialog();
+        } else if (commandId == IDM_INSTRUCTIONS_RELOAD) {
+            auto& provider = InstructionsProvider::instance();
+            auto r = provider.reload();
+            if (r.success) {
+                LOG_INFO("Instructions reloaded: " + std::to_string(provider.getLoadedCount()) + " files");
+            }
+        } else if (commandId == IDM_INSTRUCTIONS_COPY) {
+            std::string content = getInstructionsContent();
+            if (!content.empty() && OpenClipboard(m_hwndMain)) {
+                EmptyClipboard();
+                HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, content.size() + 1);
+                if (hMem) {
+                    char* p = (char*)GlobalLock(hMem);
+                    if (p) {
+                        memcpy(p, content.c_str(), content.size() + 1);
+                        GlobalUnlock(hMem);
+                        SetClipboardData(CF_TEXT, hMem);
+                    }
+                }
+                CloseClipboard();
+            }
+        }
+        return true;
+    } else if (commandId >= 10600 && commandId < 10700) {
+        // Phase 45: Game Engine Integration (Unity + Unreal)
+        handleGameEngineCommand(commandId);
+        return true;
+    } else if (commandId >= 10700 && commandId < 10800) {
+        // Phase 48: The Final Crucible
+        handleCrucibleCommand(commandId);
+        return true;
+    } else if (commandId >= 10800 && commandId < 10900) {
+        // Phase 49: Copilot Gap Closer
+        handleCopilotGapCommand(commandId);
+        return true;
+    } else if (commandId >= 11000 && commandId < 11100) {
+        // Phase 13: Distributed Pipeline Orchestrator
+        handlePipelineCommand(commandId);
+        return true;
+    } else if (commandId >= 11100 && commandId < 11200) {
+        // Phase 14: Hotpatch Control Plane
+        handleHotpatchCtrlCommand(commandId);
+        return true;
+    } else if (commandId >= 11200 && commandId < 11300) {
+        // Phase 15: Static Analysis Engine
+        handleStaticAnalysisCommand(commandId);
+        return true;
+    } else if (commandId >= 11300 && commandId < 11400) {
+        // Phase 16: Semantic Code Intelligence
+        handleSemanticCommand(commandId);
+        return true;
+    } else if (commandId >= 11400 && commandId < 11500) {
+        // Phase 17: Enterprise Telemetry & Compliance
+        handleTelemetryCommand(commandId);
+        return true;
+    } else if (commandId >= 11500 && commandId < 11600) {
+        // Cursor/JB-Parity Feature Modules
+        return handleCursorParityCommand(commandId);
     } else if (commandId >= 9400 && commandId < 9500) {
         return handlePDBCommand(commandId);
     } else if (commandId >= 9000 && commandId < 10000) {
         handleHotpatchCommand(commandId);
         return true;
+    } else if (commandId >= 12000 && commandId < 12100) {
+        // Tier 1: Critical Cosmetics
+        return handleTier1Command(commandId);
+    } else if (commandId >= 13000 && commandId < 13100) {
+        // Flagship Product Pillars (Provable Agent, AI RE, Airgapped Enterprise)
+        return handleFlagshipCommand(commandId);
     }
     
     return false;
@@ -2199,6 +2268,76 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_QW_ALERT_DISMISS_ALL,  "Alerts: Dismiss All",                  "",              "Alerts"});
     m_commandRegistry.push_back({IDM_QW_ALERT_RESOURCE_STATUS, "Alerts: Resource Status",           "",              "Alerts"});
     m_commandRegistry.push_back({IDM_QW_SLO_DASHBOARD,      "SLO: Dashboard",                       "",              "SLO"});
+
+    // Phase 13: Distributed Pipeline Orchestrator
+    m_commandRegistry.push_back({IDM_PIPELINE_STATUS,       "Pipeline: Show Status",               "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_SUBMIT,       "Pipeline: Submit Task",               "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_CANCEL,       "Pipeline: Cancel Task",               "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_LIST_NODES,   "Pipeline: List Compute Nodes",        "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_ADD_NODE,     "Pipeline: Add Compute Node",          "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_REMOVE_NODE,  "Pipeline: Remove Compute Node",       "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_DAG_VIEW,     "Pipeline: DAG Visualization",         "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_STATS,        "Pipeline: Show Statistics",            "", "Pipeline"});
+    m_commandRegistry.push_back({IDM_PIPELINE_SHUTDOWN,     "Pipeline: Shutdown Orchestrator",      "", "Pipeline"});
+
+    // Phase 14: Hotpatch Control Plane
+    m_commandRegistry.push_back({IDM_HPCTRL_LIST_PATCHES,   "HotpatchCtrl: List Patches",          "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_PATCH_DETAIL,   "HotpatchCtrl: Patch Detail",          "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_VALIDATE,       "HotpatchCtrl: Validate All",          "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_STAGE,          "HotpatchCtrl: Stage Patch",            "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_APPLY,          "HotpatchCtrl: Apply Patch",            "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_ROLLBACK,       "HotpatchCtrl: Rollback Patch",         "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_SUSPEND,        "HotpatchCtrl: Suspend Patch",          "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_AUDIT_LOG,      "HotpatchCtrl: View Audit Log",         "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_TXN_BEGIN,      "HotpatchCtrl: Begin Transaction",      "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_TXN_COMMIT,     "HotpatchCtrl: Commit Transaction",     "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_TXN_ROLLBACK,   "HotpatchCtrl: Rollback Transaction",   "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_DEP_GRAPH,      "HotpatchCtrl: Dependency Graph",       "", "HotpatchCtrl"});
+    m_commandRegistry.push_back({IDM_HPCTRL_STATS,          "HotpatchCtrl: Statistics",              "", "HotpatchCtrl"});
+
+    // Phase 15: Static Analysis Engine
+    m_commandRegistry.push_back({IDM_SA_BUILD_CFG,          "StaticAnalysis: Build CFG",            "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_COMPUTE_DOMINATORS, "StaticAnalysis: Compute Dominators",   "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_CONVERT_SSA,        "StaticAnalysis: Convert to SSA",       "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_DETECT_LOOPS,       "StaticAnalysis: Detect Loops",         "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_OPTIMIZE,           "StaticAnalysis: Run Optimizations",    "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_FULL_ANALYSIS,      "StaticAnalysis: Full Analysis Pipeline","", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_EXPORT_DOT,         "StaticAnalysis: Export CFG as DOT",    "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_EXPORT_JSON,        "StaticAnalysis: Export CFG as JSON",   "", "StaticAnalysis"});
+    m_commandRegistry.push_back({IDM_SA_STATS,              "StaticAnalysis: Statistics",            "", "StaticAnalysis"});
+
+    // Phase 16: Semantic Code Intelligence
+    m_commandRegistry.push_back({IDM_SEM_GO_TO_DEF,         "Semantic: Go To Definition",           "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_FIND_REFS,         "Semantic: Find All References",        "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_FIND_IMPLS,        "Semantic: Find Implementations",       "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_TYPE_HIERARCHY,    "Semantic: Type Hierarchy",             "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_CALL_GRAPH,        "Semantic: Call Graph",                 "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_SEARCH_SYMBOLS,    "Semantic: Search Symbols",             "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_FILE_SYMBOLS,      "Semantic: File Symbols",               "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_UNUSED,            "Semantic: Find Unused Symbols",        "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_INDEX_FILE,        "Semantic: Index File",                 "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_REBUILD_INDEX,     "Semantic: Rebuild Index",              "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_SAVE_INDEX,        "Semantic: Save Index",                 "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_LOAD_INDEX,        "Semantic: Load Index",                 "", "Semantic"});
+    m_commandRegistry.push_back({IDM_SEM_STATS,             "Semantic: Statistics",                  "", "Semantic"});
+
+    // Phase 17: Enterprise Telemetry & Compliance
+    m_commandRegistry.push_back({IDM_TEL_TRACE_STATUS,      "Telemetry: Trace Status",              "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_START_SPAN,        "Telemetry: Start Span",                "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_AUDIT_LOG,         "Telemetry: View Audit Log",            "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_AUDIT_VERIFY,      "Telemetry: Verify Audit Integrity",    "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_COMPLIANCE_REPORT, "Telemetry: Generate Compliance Report","", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_VIOLATIONS,        "Telemetry: Show Violations",           "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_LICENSE_STATUS,    "Telemetry: License Status",            "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_USAGE_METER,       "Telemetry: Usage Meter",               "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_METRICS_DASHBOARD, "Telemetry: Metrics Dashboard",         "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_METRICS_FLUSH,     "Telemetry: Flush Metrics",             "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_EXPORT_AUDIT,      "Telemetry: Export Audit Log",          "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_EXPORT_OTLP,       "Telemetry: Export OTLP Telemetry",     "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_GDPR_EXPORT,       "Telemetry: GDPR Export User Data",     "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_GDPR_DELETE,       "Telemetry: GDPR Delete User Data",     "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_SET_LEVEL,         "Telemetry: Set Telemetry Level",       "", "Telemetry"});
+    m_commandRegistry.push_back({IDM_TEL_STATS,             "Telemetry: Statistics",                 "", "Telemetry"});
 
     m_filteredCommands = m_commandRegistry;
 }

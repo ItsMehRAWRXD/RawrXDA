@@ -25,6 +25,11 @@ namespace LSP {
 // Diagnostic Severity (matches LSP spec)
 // ============================================================================
 
+// Windows headers #define ERROR 0 — must undefine to use as enum value
+#ifdef ERROR
+#undef ERROR
+#endif
+
 enum class DiagnosticSeverity : uint8_t {
     ERROR       = 1,
     WARNING     = 2,

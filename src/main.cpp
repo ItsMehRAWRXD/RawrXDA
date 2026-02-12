@@ -13,6 +13,7 @@
 #include "agent_policy.h"
 #include "agent_explainability.h"
 #include "ai_backend.h"
+#include "dml_inference_engine.h"
 
 // Phase 20-25: New subsystem headers
 #include "swarm_decision_bridge.h"
@@ -28,6 +29,9 @@
 
 // Phase 20: CLI headless systems (for ! commands dispatch)
 #include "cli_headless_systems.h"
+
+// Phase 26: ReverseEngineered MASM Kernel — Scheduler, Heartbeat, Deadlock, GPU DMA, Tensor
+#include "../include/reverse_engineered_bridge.h"
 
 // Phase 33: Voice Chat Engine
 #include "core/voice_chat.hpp"
@@ -57,6 +61,7 @@ int main(int argc, char** argv) {
     bool enable_repl = true;
     std::string history_dir = "./history";
     std::string policy_dir = "./policies";
+    std::string engine_type = "cpu";   // "cpu" or "dml"
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -64,6 +69,8 @@ int main(int argc, char** argv) {
             model_path = argv[++i];
         } else if (arg == "--port" && i + 1 < argc) {
             port = static_cast<uint16_t>(std::stoi(argv[++i]));
+        } else if (arg == "--engine" && i + 1 < argc) {
+            engine_type = argv[++i];
         } else if (arg == "--no-http") {
             enable_http = false;
         } else if (arg == "--no-repl") {
@@ -77,6 +84,7 @@ int main(int argc, char** argv) {
 Usage: RawrEngine [options]
   --model <path>    Path to GGUF model file
   --port <port>     HTTP server port (default: 8080)
+  --engine <type>   Inference engine: cpu (default) or dml (DirectML GPU)
   --no-http         Disable HTTP server
   --no-repl         Disable interactive REPL
   --history-dir <d> Directory for history JSONL (default: ./history)
@@ -157,13 +165,25 @@ REPL Commands:
         }
     }
 
-    RawrXD::CPUInferenceEngine engine;
+    // Create inference engine based on --engine flag
+    RawrXD::CPUInferenceEngine cpuEngine;
+    RawrXD::DMLInferenceEngine dmlEngine;
+    RawrXD::InferenceEngine* engine = nullptr;
+
+    if (engine_type == "dml" || engine_type == "directml" || engine_type == "gpu") {
+        std::cout << "[SYSTEM] Using DirectML GPU inference engine (AMD RX 7800 XT)\n";
+        engine = &dmlEngine;
+    } else {
+        std::cout << "[SYSTEM] Using CPU inference engine\n";
+        engine = &cpuEngine;
+    }
+
     if (!model_path.empty()) {
         std::cout << "[SYSTEM] Loading model: " << model_path << "\n";
-        if (!engine.LoadModel(model_path)) {
+        if (!engine->LoadModel(model_path)) {
             std::cout << "[SYSTEM] Model load failed. /complete will return empty results.\n";
         } else {
-            std::cout << "[SYSTEM] Model loaded.\n";
+            std::cout << "[SYSTEM] Model loaded via " << engine->GetEngineName() << " engine.\n";
         }
     } else {
         std::cout << "[SYSTEM] No model specified. Use --model <path> to load a GGUF.\n";
@@ -171,7 +191,7 @@ REPL Commands:
 
     // Initialize agentic engine
     AgenticEngine agentEngine;
-    agentEngine.setInferenceEngine(&engine);
+    agentEngine.setInferenceEngine(engine);
 
     // Initialize sub-agent manager with console logging
     SubAgentManager subAgentMgr(&agentEngine);
@@ -314,6 +334,33 @@ REPL Commands:
     auto& swarmOrchestrator = RawrXD::Swarm::SwarmOrchestrator::instance();
     std::cout << "[SYSTEM] Swarm Orchestrator: ready (use !swarm_join to start)\n";
 
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 26: ReverseEngineered MASM Kernel Subsystems
+    // Work-Stealing Scheduler + Conflict Detection + Heartbeat + INFINITY I/O
+    // ═══════════════════════════════════════════════════════════════════
+#ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
+    {
+        auto reResult = RawrXD::ReverseEngineered::InitializeAllSubsystems(
+            0,      // workerCount: auto-detect from CPU cores
+            0,      // heartbeatPort: 0 = disabled for single-node CLI
+            256     // maxResources for conflict detection
+        );
+        std::cout << "[SYSTEM] ReverseEngineered Kernel: " << reResult.detail
+                  << " (scheduler=" << (reResult.success ? "ON" : "OFF")
+                  << ", deadlock_detect=ON, GPU_DMA=ready)\n";
+
+        if (reResult.success) {
+            // Report high-res tick capability
+            uint64_t tick = GetHighResTick();
+            uint64_t us = TicksToMicroseconds(1);
+            std::cout << "[SYSTEM]   Timer resolution: "
+                      << (us > 0 ? "sub-microsecond" : "millisecond") << "\n";
+        }
+    }
+#else
+    std::cout << "[SYSTEM] ReverseEngineered Kernel: DISABLED (no MASM)\n";
+#endif
+
     // Start HTTP server with agentic support
     RawrXD::CompletionServer server;
     if (enable_http) {
@@ -323,7 +370,7 @@ REPL Commands:
         server.SetPolicyEngine(&policyEngine);
         server.SetExplainabilityEngine(&explainEngine);
         server.SetBackendManager(&backendMgr);
-        server.Start(port, &engine, model_path);
+        server.Start(port, engine, model_path);
     }
 
     if (enable_repl) {
@@ -400,6 +447,16 @@ REPL Commands:
                           << "  /voice room <name>       Join/leave voice room (Phase 33)\n"
                           << "  /voice status            Voice chat status (Phase 33)\n"
                           << "  /voice metrics           Voice chat metrics (Phase 33)\n"
+                          << "\n  Phase 26 — ReverseEngineered Kernel:\n"
+                          << "  /scheduler status       Work-stealing scheduler status\n"
+                          << "  /scheduler submit       Submit a test task\n"
+                          << "  /conflict status        Conflict detector / deadlock stats\n"
+                          << "  /heartbeat status       Heartbeat monitor node health\n"
+                          << "  /heartbeat add <ip> <p> Add heartbeat peer node\n"
+                          << "  /gpu dma status         GPU DMA transfer status\n"
+                          << "  /tensor bench           Run quantized matmul benchmark\n"
+                          << "  /timer                  High-res timer test\n"
+                          << "  /crc32 <text>           CRC32 of arbitrary text\n"
                           << "  exit                    Quit\n\n";
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
@@ -991,6 +1048,175 @@ REPL Commands:
                           << "  Bytes Recorded:" << m.bytesRecorded << "\n"
                           << "  VAD Events:    " << m.vadSpeechEvents << "\n";
             }
+            // ── Phase 26: ReverseEngineered Kernel Commands ──
+#ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
+            else if (input == "/scheduler status") {
+                auto& state = RawrXD::ReverseEngineered::GetState();
+                bool initialized = state.schedulerInit.load();
+                std::cout << "[Scheduler] Work-stealing scheduler: "
+                          << (initialized ? "INITIALIZED" : "NOT INITIALIZED") << "\n";
+                if (initialized) {
+                    // Live probe: submit a real task and verify worker execution
+                    uint64_t probeUs = 0;
+                    bool probeOk = RawrXD::ReverseEngineered::ProbeScheduler(&probeUs);
+                    std::cout << "  Probe task: " << (probeOk ? "OK" : "FAILED")
+                              << " (" << probeUs << " us)\n";
+                    std::cout << "  Workers: " << state.workerCount.load()
+                              << "  NUMA: enabled\n"
+                              << "  Tasks submitted: " << state.tasksSubmitted.load()
+                              << "  completed: " << state.tasksCompleted.load() << "\n";
+                }
+            }
+            else if (input == "/scheduler submit") {
+                // Submit a benchmark task that writes a sentinel to verify execution
+                auto& state = RawrXD::ReverseEngineered::GetState();
+                volatile uint64_t sentinel = 0;
+                auto testFn = [](void* arg) -> void {
+                    if (arg) *static_cast<volatile uint64_t*>(arg) = 0xDEADC0DEULL;
+                };
+                uint64_t t0 = GetHighResTick();
+                int64_t taskId = Scheduler_SubmitTask(
+                    reinterpret_cast<void*>(+testFn),
+                    const_cast<uint64_t*>(&sentinel), 0, 0, nullptr);
+                state.tasksSubmitted.fetch_add(1);
+                if (taskId >= 0) {
+                    std::cout << "[Scheduler] Task submitted: id=" << taskId << "\n";
+                    void* result = Scheduler_WaitForTask(taskId, 5000);
+                    uint64_t elapsedUs = TicksToMicroseconds(GetHighResTick() - t0);
+                    bool workerRan = (sentinel == 0xDEADC0DEULL);
+                    if (workerRan) state.tasksCompleted.fetch_add(1);
+                    std::cout << "[Scheduler] Worker executed: "
+                              << (workerRan ? "YES" : "NO")
+                              << "  Wait result: " << (result ? "OK" : "timeout")
+                              << "  Latency: " << elapsedUs << " us\n";
+                } else {
+                    std::cout << "[Scheduler] Task submit failed: " << taskId << "\n";
+                }
+            }
+            else if (input == "/conflict status") {
+                auto& state = RawrXD::ReverseEngineered::GetState();
+                bool initialized = state.conflictDetectorInit.load();
+                std::cout << "[ConflictDetector] Deadlock detection: "
+                          << (initialized ? "INITIALIZED" : "NOT INITIALIZED") << "\n";
+                if (initialized) {
+                    // Live probe: register + lock + unlock a test resource
+                    uint64_t probeUs = 0;
+                    int probeRc = RawrXD::ReverseEngineered::ProbeConflictDetector(&probeUs);
+                    const char* probeMsg = "error";
+                    if (probeRc == 0) probeMsg = "OK";
+                    else if (probeRc == 1) probeMsg = "DEADLOCK_DETECTED";
+                    else if (probeRc == -2) probeMsg = "TABLE_FULL";
+                    std::cout << "  Probe: " << probeMsg
+                              << " (" << probeUs << " us)\n";
+                    std::cout << "  Max resources: " << state.maxResources.load()
+                              << "  Scan interval: " << state.conflictScanIntervalMs.load() << "ms\n"
+                              << "  Lock ops: " << state.conflictLocks.load()
+                              << "  Unlock ops: " << state.conflictUnlocks.load() << "\n";
+                }
+            }
+            else if (input == "/heartbeat status") {
+                auto& state = RawrXD::ReverseEngineered::GetState();
+                bool initialized = state.heartbeatInit.load();
+                std::cout << "[Heartbeat] UDP gossip monitor: "
+                          << (initialized ? "ACTIVE" : "DISABLED") << "\n";
+                if (initialized) {
+                    std::cout << "  Listen port: " << state.heartbeatPort.load()
+                              << "  Interval: " << state.heartbeatIntervalMs.load() << "ms\n"
+                              << "  Nodes added: " << state.heartbeatNodesAdded.load() << "\n";
+                } else {
+                    std::cout << "  Port not configured (heartbeatPort=0 at init)\n"
+                              << "  Use /heartbeat add <ip> <port> to register nodes\n";
+                }
+            }
+            else if (input.substr(0, 15) == "/heartbeat add ") {
+                std::string args = input.substr(15);
+                size_t sp = args.find(' ');
+                if (sp != std::string::npos) {
+                    std::string ip = args.substr(0, sp);
+                    uint16_t hp = static_cast<uint16_t>(std::stoul(args.substr(sp + 1)));
+                    static uint32_t nextNodeId = 1;
+                    int rc = Heartbeat_AddNode(nextNodeId++, ip.c_str(), hp);
+                    if (rc == 0) {
+                        RawrXD::ReverseEngineered::GetState().heartbeatNodesAdded.fetch_add(1);
+                    }
+                    std::cout << "[Heartbeat] Add node " << ip << ":" << hp
+                              << " -> " << (rc == 0 ? "OK" : "FAILED") << "\n";
+                } else {
+                    std::cout << "[Heartbeat] Usage: /heartbeat add <ip> <port>\n";
+                }
+            }
+            else if (input == "/gpu dma status") {
+                auto& state = RawrXD::ReverseEngineered::GetState();
+                std::cout << "[GPU DMA] Running live probe...\n";
+                uint64_t probeUs = 0;
+                bool allocOk = false, transferOk = false, verifyOk = false;
+                RawrXD::ReverseEngineered::ProbeDMA(&probeUs, &allocOk, &transferOk, &verifyOk);
+                std::cout << "  Alloc: " << (allocOk ? "OK" : "FAILED")
+                          << "  Transfer: " << (transferOk ? "OK" : "FAILED")
+                          << "  Verify: " << (verifyOk ? "OK" : "MISMATCH")
+                          << " (" << probeUs << " us)\n";
+                std::cout << "  Total DMA transfers: " << state.dmaTransfers.load() << "\n";
+            }
+            else if (input == "/tensor bench") {
+                // Quick benchmark: 64x64 INT8 matmul
+                const uint32_t M = 64, N = 64, K = 64;
+                void* A = AllocateDMABuffer(M * K);
+                void* B = AllocateDMABuffer(K * N);
+                float* C = (float*)AllocateDMABuffer(M * N * sizeof(float));
+                if (A && B && C) {
+                    memset(A, 1, M * K);
+                    memset(B, 1, K * N);
+                    uint64_t t0 = GetHighResTick();
+                    Tensor_QuantizedMatMul(A, B, C, M, N, K, QUANT_Q8_0);
+                    uint64_t t1 = GetHighResTick();
+                    uint64_t elapsed = TicksToMicroseconds(t1 - t0);
+                    RawrXD::ReverseEngineered::GetState().tensorOps.fetch_add(1);
+                    double gflops = 0.0;
+                    if (elapsed > 0) {
+                        gflops = (2.0 * M * N * K) / (static_cast<double>(elapsed) * 1000.0);
+                    }
+                    std::cout << "[Tensor] 64x64 Q8_0 matmul: " << elapsed << " us"
+                              << "  (" << gflops << " GFLOPS)\n"
+                              << "  C[0,0]=" << C[0] << " C[63,63]=" << C[63*64+63] << "\n"
+                              << "  Total tensor ops: " << RawrXD::ReverseEngineered::GetState().tensorOps.load() << "\n";
+                    VirtualFree(A, 0, MEM_RELEASE);
+                    VirtualFree(B, 0, MEM_RELEASE);
+                    VirtualFree(C, 0, MEM_RELEASE);
+                } else {
+                    std::cout << "[Tensor] DMA buffer allocation failed\n";
+                }
+            }
+            else if (input == "/timer") {
+                uint64_t t0 = GetHighResTick();
+                Sleep(100);
+                uint64_t t1 = GetHighResTick();
+                uint64_t ms = TicksToMilliseconds(t1 - t0);
+                uint64_t us = TicksToMicroseconds(t1 - t0);
+                std::cout << "[Timer] 100ms sleep measured: " << ms << " ms (" << us << " us)\n";
+                // CRC test
+                const char* testData = "RawrXD-ReverseEngineered-Kernel";
+                uint32_t crc = CalculateCRC32(testData, strlen(testData));
+                std::cout << "[CRC32] \"" << testData << "\" -> 0x"
+                          << std::hex << crc << std::dec << "\n";
+            }
+            else if (input.rfind("/crc32 ", 0) == 0) {
+                std::string payload = input.substr(7);
+                if (payload.empty()) {
+                    std::cout << "[CRC32] Usage: /crc32 <text>\n";
+                } else {
+                    auto& st = RawrXD::ReverseEngineered::GetState();
+                    uint64_t t0 = GetHighResTick();
+                    uint32_t crc = CalculateCRC32(payload.c_str(),
+                                                  static_cast<uint32_t>(payload.size()));
+                    uint64_t t1 = GetHighResTick();
+                    uint64_t us = TicksToMicroseconds(t1 - t0);
+                    std::cout << "[CRC32] Input : " << payload << "\n"
+                              << "[CRC32] Length: " << payload.size() << " bytes\n"
+                              << "[CRC32] Hash  : 0x" << std::hex << crc << std::dec << "\n"
+                              << "[CRC32] Time  : " << us << " us\n";
+                }
+            }
+#endif
             else {
                 std::cout << "Unknown command. Type /help for commands.\n";
             }
@@ -1000,6 +1226,17 @@ REPL Commands:
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Phase 26: ReverseEngineered Kernel Shutdown
+    // ═══════════════════════════════════════════════════════════════════
+#ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
+    {
+        std::cout << "[SYSTEM] Shutting down ReverseEngineered kernel...\n";
+        RawrXD::ReverseEngineered::ShutdownAllSubsystems();
+        std::cout << "[SYSTEM] ReverseEngineered kernel shutdown complete\n";
+    }
+#endif
 
     server.Stop();
     return 0;

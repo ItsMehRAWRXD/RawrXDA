@@ -202,6 +202,27 @@ if(NOT TARGET test_production_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}
     message(STATUS "  ✓ Added test_production_regression (Qt-free regression suite)")
 endif()
 
+# Instructions Provider Test (getAllContent aggregation, priority sort, hot-reload watcher)
+if(NOT TARGET test_instructions_provider AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_instructions_provider.cpp")
+    add_executable(test_instructions_provider
+        test_instructions_provider.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/instructions_provider.cpp
+    )
+    target_include_directories(test_instructions_provider PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_instructions_provider PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    if(WIN32)
+        target_link_libraries(test_instructions_provider PRIVATE shell32 ole32)
+    endif()
+    add_test(NAME test_instructions_provider COMMAND test_instructions_provider)
+    message(STATUS "  ✓ Added test_instructions_provider")
+endif()
+
 message(STATUS "========================================")
 message(STATUS "Test Suite Registration Complete")
 message(STATUS "Run tests: ctest --output-on-failure -C Release")

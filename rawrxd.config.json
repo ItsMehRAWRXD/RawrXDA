@@ -34,6 +34,23 @@
     "model": "llama2",
     "timeout": 30
   },
+  "modelServer": {
+    "proxyPort": 3000,
+    "aiPort": 3001,
+    "configPath": "D:\\rawrxd\\ide\\model-server\\config.json",
+    "tiinyAI": {
+      "port": 45100,
+      "command": "D:\\rawrxd\\bin\\tiinyai.exe"
+    },
+    "gguf": {
+      "port": 45101,
+      "command": "D:\\rawrxd\\build_ide_output\\CodexAIReverseEngine.exe"
+    },
+    "pyre": {
+      "port": 45102,
+      "command": "D:\\rawrxd\\build_ide_output\\CodexAIReverseEngine.exe"
+    }
+  },
   "agent": {
     "maxIterations": 10,
     "autoApprove": false,
@@ -79,10 +96,10 @@
     "powerShellPanel": true,
     "debugger": true,
     "gitIntegration": true,
-    "metricsExport": false,
+    "metricsExport": true,
     "vulkanCompute": false,
-    "speculativeDecoding": false,
-    "flashAttention": false,
+    "speculativeDecoding": true,
+    "flashAttention": true,
     "voiceAutomation": true
   },
   "voiceAutomation": {

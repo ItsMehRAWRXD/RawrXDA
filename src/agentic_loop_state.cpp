@@ -8,7 +8,8 @@
 
 // ===== STATIC HELPERS =====
 
-std::string AgenticLoopState::timePointToISO(const TimePoint& tp)
+// Const overloads (actual implementation)
+std::string AgenticLoopState::timePointToISO(const TimePoint& tp) const
 {
     auto tt = std::chrono::system_clock::to_time_t(tp);
     struct tm tmBuf;
@@ -22,7 +23,7 @@ std::string AgenticLoopState::timePointToISO(const TimePoint& tp)
     return std::string(buf);
 }
 
-std::string AgenticLoopState::timePointToHMS(const TimePoint& tp)
+std::string AgenticLoopState::timePointToHMS(const TimePoint& tp) const
 {
     auto tt = std::chrono::system_clock::to_time_t(tp);
     struct tm tmBuf;
@@ -664,7 +665,7 @@ std::string AgenticLoopState::phaseToString(ReasoningPhase phase) const
     }
 }
 
-AgenticLoopState::ReasoningPhase AgenticLoopState::stringToPhase(const std::string& str) const
+ReasoningPhase AgenticLoopState::stringToPhase(const std::string& str) const
 {
     if (str == "Analysis")     return ReasoningPhase::Analysis;
     if (str == "Planning")     return ReasoningPhase::Planning;
@@ -688,7 +689,7 @@ std::string AgenticLoopState::statusToString(IterationStatus status) const
     }
 }
 
-AgenticLoopState::IterationStatus AgenticLoopState::stringToStatus(const std::string& str) const
+IterationStatus AgenticLoopState::stringToStatus(const std::string& str) const
 {
     if (str == "NotStarted")         return IterationStatus::NotStarted;
     if (str == "InProgress")         return IterationStatus::InProgress;

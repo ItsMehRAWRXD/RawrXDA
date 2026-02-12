@@ -34,11 +34,53 @@
 // Real backend integration
 #include "backend/agentic_tools.h"
 
-// Stub InferenceEngine for standalone tool server
+// Standalone tool server InferenceEngine — validates model file exists on disk.
+// When compiled with the full inference pipeline, replace this class with the
+// real InferenceEngine from inference_engine.h via RAWR_HAS_INFERENCE define.
+#ifndef RAWR_HAS_INFERENCE
 class InferenceEngine {
 public:
-    bool loadModel(const std::string& path) { return true; }
+    bool loadModel(const std::string& path) {
+        // Verify the model file actually exists and is a valid GGUF
+        if (path.empty()) {
+            fprintf(stderr, "[ToolServer] loadModel: empty path\n");
+            return false;
+        }
+        HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hFile == INVALID_HANDLE_VALUE) {
+            fprintf(stderr, "[ToolServer] loadModel: file not found: %s (err=%lu)\n",
+                    path.c_str(), GetLastError());
+            return false;
+        }
+        // Validate GGUF magic: 0x46475547 ('GGUF')
+        DWORD bytesRead = 0;
+        uint32_t magic = 0;
+        ReadFile(hFile, &magic, 4, &bytesRead, nullptr);
+        LARGE_INTEGER fileSize;
+        GetFileSizeEx(hFile, &fileSize);
+        CloseHandle(hFile);
+
+        if (bytesRead < 4 || magic != 0x46475547) {
+            fprintf(stderr, "[ToolServer] loadModel: not a valid GGUF file: %s (magic=0x%08X)\n",
+                    path.c_str(), magic);
+            return false;
+        }
+        m_modelPath = path;
+        m_modelSizeBytes = (uint64_t)fileSize.QuadPart;
+        fprintf(stderr, "[ToolServer] Model validated: %s (%.2f GB)\n",
+                path.c_str(), m_modelSizeBytes / (1024.0 * 1024.0 * 1024.0));
+        return true;
+    }
+    bool isLoaded() const { return !m_modelPath.empty(); }
+    const std::string& modelPath() const { return m_modelPath; }
+    uint64_t modelSize() const { return m_modelSizeBytes; }
+private:
+    std::string m_modelPath;
+    uint64_t m_modelSizeBytes = 0;
 };
+#endif // RAWR_HAS_INFERENCE
+
 static std::unique_ptr<InferenceEngine> g_engine;
 static std::unique_ptr<RawrXD::Backend::AgenticToolExecutor> g_tool_executor;
 
@@ -3267,22 +3309,231 @@ private:
     std::string HandleBrowseRequest(const std::string& method, const std::string& path, const std::string& body) {
         (void)method;
         if (path == "/api/browse" || path == "/api/browse/extract") {
-            // Proxy browse: extract content from a URL
-            // Parse URL from body
+            // Proxy browse: extract content from a URL via WinHTTP
             try {
                 auto j = nlohmann::json::parse(body);
                 std::string url = j.value("url", "");
                 if (url.empty()) {
                     return JsonOk(R"({"success":false,"error":"No URL provided"})");
                 }
-                // Return a placeholder — real implementation would use WinHTTP to fetch the page
+
+                // Parse URL into components (scheme, host, path)
+                // Expect "http://host/path" or "https://host/path"
+                bool useSSL = false;
+                std::string hostStr, pathStr;
+                {
+                    std::string work = url;
+                    if (work.rfind("https://", 0) == 0) {
+                        useSSL = true;
+                        work = work.substr(8);
+                    } else if (work.rfind("http://", 0) == 0) {
+                        work = work.substr(7);
+                    }
+                    size_t slashPos = work.find('/');
+                    if (slashPos != std::string::npos) {
+                        hostStr = work.substr(0, slashPos);
+                        pathStr = work.substr(slashPos);
+                    } else {
+                        hostStr = work;
+                        pathStr = "/";
+                    }
+                }
+
+                // Convert host and path to wide strings for WinHTTP
+                auto toWide = [](const std::string& s) -> std::wstring {
+                    if (s.empty()) return L"";
+                    int needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+                    std::wstring ws(needed, L'\0');
+                    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &ws[0], needed);
+                    return ws;
+                };
+                std::wstring wHost = toWide(hostStr);
+                std::wstring wPath = toWide(pathStr);
+
+                INTERNET_PORT port = useSSL ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT;
+
+                // Strip port from host if present (e.g. "host:8080")
+                size_t colonPos = hostStr.find(':');
+                if (colonPos != std::string::npos) {
+                    port = (INTERNET_PORT)std::atoi(hostStr.c_str() + colonPos + 1);
+                    wHost = toWide(hostStr.substr(0, colonPos));
+                }
+
+                // WinHTTP session
+                HINTERNET hSession = WinHttpOpen(L"RawrXD-ToolServer/1.0",
+                                                  WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                                  WINHTTP_NO_PROXY_NAME,
+                                                  WINHTTP_NO_PROXY_BYPASS, 0);
+                if (!hSession) {
+                    return JsonOk(R"({"success":false,"error":"WinHttpOpen failed"})");
+                }
+
+                HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(), port, 0);
+                if (!hConnect) {
+                    WinHttpCloseHandle(hSession);
+                    return JsonOk(R"({"success":false,"error":"WinHttpConnect failed"})");
+                }
+
+                DWORD flags = useSSL ? WINHTTP_FLAG_SECURE : 0;
+                HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", wPath.c_str(),
+                                                         nullptr, WINHTTP_NO_REFERER,
+                                                         WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+                if (!hRequest) {
+                    WinHttpCloseHandle(hConnect);
+                    WinHttpCloseHandle(hSession);
+                    return JsonOk(R"({"success":false,"error":"WinHttpOpenRequest failed"})");
+                }
+
+                // Set timeouts: resolve=5s, connect=10s, send=10s, receive=30s
+                WinHttpSetTimeouts(hRequest, 5000, 10000, 10000, 30000);
+
+                BOOL sent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                                WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+                if (!sent) {
+                    WinHttpCloseHandle(hRequest);
+                    WinHttpCloseHandle(hConnect);
+                    WinHttpCloseHandle(hSession);
+                    return JsonOk(R"({"success":false,"error":"WinHttpSendRequest failed"})");
+                }
+
+                BOOL received = WinHttpReceiveResponse(hRequest, nullptr);
+                if (!received) {
+                    WinHttpCloseHandle(hRequest);
+                    WinHttpCloseHandle(hConnect);
+                    WinHttpCloseHandle(hSession);
+                    return JsonOk(R"({"success":false,"error":"WinHttpReceiveResponse failed"})");
+                }
+
+                // Check HTTP status
+                DWORD statusCode = 0;
+                DWORD statusSize = sizeof(statusCode);
+                WinHttpQueryHeaders(hRequest,
+                                     WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                     WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusSize,
+                                     WINHTTP_NO_HEADER_INDEX);
+
+                // Read response body (cap at 10MB)
+                std::string htmlBody;
+                const size_t MAX_BODY = 10 * 1024 * 1024;
+                DWORD bytesAvailable = 0;
+                while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+                    if (htmlBody.size() + bytesAvailable > MAX_BODY) break;
+                    std::vector<char> buf(bytesAvailable);
+                    DWORD bytesRead = 0;
+                    if (WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead)) {
+                        htmlBody.append(buf.data(), bytesRead);
+                    } else {
+                        break;
+                    }
+                }
+
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+
+                // Extract <title> from HTML
+                std::string title;
+                {
+                    size_t tStart = htmlBody.find("<title>");
+                    if (tStart == std::string::npos) tStart = htmlBody.find("<TITLE>");
+                    if (tStart != std::string::npos) {
+                        tStart += 7; // skip "<title>"
+                        size_t tEnd = htmlBody.find("</title>", tStart);
+                        if (tEnd == std::string::npos) tEnd = htmlBody.find("</TITLE>", tStart);
+                        if (tEnd != std::string::npos) {
+                            title = htmlBody.substr(tStart, tEnd - tStart);
+                            // Trim whitespace
+                            while (!title.empty() && (title.front() == ' ' || title.front() == '\n' || title.front() == '\r' || title.front() == '\t'))
+                                title.erase(title.begin());
+                            while (!title.empty() && (title.back() == ' ' || title.back() == '\n' || title.back() == '\r' || title.back() == '\t'))
+                                title.pop_back();
+                        }
+                    }
+                    if (title.empty()) title = "Untitled";
+                }
+
+                // Extract text content: strip HTML tags for the "content" field
+                std::string textContent;
+                if (path == "/api/browse/extract") {
+                    textContent.reserve(htmlBody.size());
+                    bool inTag = false;
+                    bool inScript = false;
+                    bool inStyle = false;
+                    for (size_t i = 0; i < htmlBody.size(); ++i) {
+                        char c = htmlBody[i];
+                        if (c == '<') {
+                            inTag = true;
+                            // Check for <script or <style
+                            if (i + 7 < htmlBody.size()) {
+                                std::string tagPeek = htmlBody.substr(i, 7);
+                                for (auto& ch : tagPeek) ch = (char)std::tolower((unsigned char)ch);
+                                if (tagPeek == "<script") inScript = true;
+                                if (tagPeek.substr(0, 6) == "<style") inStyle = true;
+                            }
+                            // Check for </script> or </style>
+                            if (i + 8 < htmlBody.size()) {
+                                std::string closeTag = htmlBody.substr(i, 9);
+                                for (auto& ch : closeTag) ch = (char)std::tolower((unsigned char)ch);
+                                if (closeTag == "</script>") inScript = false;
+                            }
+                            if (i + 7 < htmlBody.size()) {
+                                std::string closeTag = htmlBody.substr(i, 8);
+                                for (auto& ch : closeTag) ch = (char)std::tolower((unsigned char)ch);
+                                if (closeTag == "</style>") inStyle = false;
+                            }
+                            continue;
+                        }
+                        if (c == '>') { inTag = false; continue; }
+                        if (!inTag && !inScript && !inStyle) {
+                            if (c == '&') {
+                                // Decode common HTML entities
+                                if (htmlBody.compare(i, 4, "&lt;") == 0) { textContent += '<'; i += 3; }
+                                else if (htmlBody.compare(i, 4, "&gt;") == 0) { textContent += '>'; i += 3; }
+                                else if (htmlBody.compare(i, 5, "&amp;") == 0) { textContent += '&'; i += 4; }
+                                else if (htmlBody.compare(i, 6, "&nbsp;") == 0) { textContent += ' '; i += 5; }
+                                else if (htmlBody.compare(i, 6, "&quot;") == 0) { textContent += '"'; i += 5; }
+                                else textContent += c;
+                            } else {
+                                textContent += c;
+                            }
+                        }
+                    }
+                    // Collapse excessive whitespace
+                    std::string collapsed;
+                    collapsed.reserve(textContent.size());
+                    bool lastWasSpace = false;
+                    for (char c : textContent) {
+                        bool isWS = (c == ' ' || c == '\t' || c == '\r');
+                        if (c == '\n') {
+                            if (!lastWasSpace) collapsed += '\n';
+                            lastWasSpace = true;
+                        } else if (isWS) {
+                            if (!lastWasSpace) collapsed += ' ';
+                            lastWasSpace = true;
+                        } else {
+                            collapsed += c;
+                            lastWasSpace = false;
+                        }
+                    }
+                    textContent = std::move(collapsed);
+                }
+
+                // Build ISO8601 timestamp
+                SYSTEMTIME st;
+                GetSystemTime(&st);
+                char tsBuf[64];
+                snprintf(tsBuf, sizeof(tsBuf), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+                         st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+
                 nlohmann::json r;
-                r["success"] = true;
-                r["url"] = url;
-                r["title"] = "Fetched: " + url;
-                r["content"] = "Content extraction requires WinHTTP proxy (not yet wired to live fetch). URL: " + url;
-                r["html"] = "";
-                r["extracted_at"] = "";
+                r["success"]      = (statusCode >= 200 && statusCode < 400);
+                r["url"]          = url;
+                r["status_code"]  = (int)statusCode;
+                r["title"]        = title;
+                r["content"]      = (path == "/api/browse/extract") ? textContent : "";
+                r["html"]         = htmlBody;
+                r["content_length"] = (int)htmlBody.size();
+                r["extracted_at"] = std::string(tsBuf);
                 return JsonOk(r.dump());
             } catch (...) {
                 return JsonOk(R"({"success":false,"error":"Invalid JSON body"})");

@@ -416,6 +416,72 @@ CommandResult handlePluginToggleHotload(const CommandContext& ctx);
 CommandResult handlePluginConfigure(const CommandContext& ctx);
 
 // ============================================================================
+// GAME ENGINE INTEGRATION — Unreal/Unity development
+// ============================================================================
+
+CommandResult handleUnrealInit(const CommandContext& ctx);
+CommandResult handleUnrealAttach(const CommandContext& ctx);
+CommandResult handleUnityInit(const CommandContext& ctx);
+CommandResult handleUnityAttach(const CommandContext& ctx);
+
+// ============================================================================
+// REVERSE ENGINEERING — Binary analysis & patching
+// ============================================================================
+
+CommandResult handleRevengDisassemble(const CommandContext& ctx);
+CommandResult handleRevengDecompile(const CommandContext& ctx);
+CommandResult handleRevengFindVulnerabilities(const CommandContext& ctx);
+
+// ============================================================================
+// MODEL MANAGEMENT — Quantization, fine-tuning, LoRA
+// ============================================================================
+
+CommandResult handleModelList(const CommandContext& ctx);
+CommandResult handleModelLoad(const CommandContext& ctx);
+CommandResult handleModelQuantize(const CommandContext& ctx);
+CommandResult handleModelFinetune(const CommandContext& ctx);
+CommandResult handleModelUnload(const CommandContext& ctx);
+
+// ============================================================================
+// DISK RECOVERY — File recovery & partition analysis
+// ============================================================================
+
+CommandResult handleDiskListDrives(const CommandContext& ctx);
+CommandResult handleDiskScanPartitions(const CommandContext& ctx);
+
+// ============================================================================
+// PERFORMANCE GOVERNANCE — CPU/memory/task management
+// ============================================================================
+
+CommandResult handleGovernorStatus(const CommandContext& ctx);
+CommandResult handleGovernorSetPowerLevel(const CommandContext& ctx);
+
+// ============================================================================
+// MARKETPLACE & EXTENSIONS — Extension management
+// ============================================================================
+
+CommandResult handleMarketplaceList(const CommandContext& ctx);
+CommandResult handleMarketplaceInstall(const CommandContext& ctx);
+
+// ============================================================================
+// EMBEDDINGS — Vector encoding & search
+// ============================================================================
+
+CommandResult handleEmbeddingEncode(const CommandContext& ctx);
+
+// ============================================================================
+// VISION — Image analysis & understanding
+// ============================================================================
+
+CommandResult handleVisionAnalyzeImage(const CommandContext& ctx);
+
+// ============================================================================
+// PROMPT ENGINE — Context classification & generation
+// ============================================================================
+
+CommandResult handlePromptClassifyContext(const CommandContext& ctx);
+
+// ============================================================================
 // MANIFEST — Self-introspection
 // ============================================================================
 

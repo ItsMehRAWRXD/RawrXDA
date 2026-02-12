@@ -13,6 +13,7 @@
 #include "HeadlessIDE.h"
 #include "IOutputSink.h"
 #include "../../include/chain_of_thought_engine.h"
+#include "../core/instructions_provider.hpp"
 
 // Phase 10+ singletons — wired for real status queries
 #include "../core/execution_governor.h"
@@ -25,6 +26,8 @@
 #include "../agent_history.h"
 #include "../agent_explainability.h"
 #include "../agent_policy.h"
+#include "../agentic/AgentOllamaClient.h"
+#include "../../include/lsp/RawrXD_LSPServer.h"
 
 #include <iostream>
 #include <fstream>
@@ -38,6 +41,12 @@
 // Global shutdown flag for SIGINT/SIGTERM handler
 // ============================================================================
 static std::atomic<HeadlessIDE*> g_headlessInstance{nullptr};
+
+// ============================================================================
+// Embedded LSP server instance (owned by HeadlessIDE init, lives in .cpp scope)
+// ============================================================================
+static std::unique_ptr<RawrXDLSPServer> g_embeddedLSP;
+static std::mutex                       g_embeddedLSPMutex;
 
 static void headlessSignalHandler(int sig) {
     HeadlessIDE* inst = g_headlessInstance.load();
@@ -249,6 +258,7 @@ HeadlessResult HeadlessIDE::initialize(const HeadlessConfig& config) {
     tryInit(&HeadlessIDE::initPhase11, "Phase11-Swarm");
     tryInit(&HeadlessIDE::initPhase12, "Phase12-NativeDebug");
     tryInit(&HeadlessIDE::initHotpatch, "Hotpatch");
+    tryInit(&HeadlessIDE::initInstructions, "Instructions");
 
     // Load model if specified
     if (!m_config.modelPath.empty()) {
@@ -404,22 +414,82 @@ HeadlessResult HeadlessIDE::initEngines() {
 
 HeadlessResult HeadlessIDE::initBackendManager() {
     auto startTime = std::chrono::steady_clock::now();
+
+    // Configure default backend based on config
+    if (!m_config.backend.empty()) {
+        if (m_config.backend == "ollama")  m_activeBackend = AIBackendType::Ollama;
+        else if (m_config.backend == "openai")  m_activeBackend = AIBackendType::OpenAI;
+        else if (m_config.backend == "claude")  m_activeBackend = AIBackendType::Claude;
+        else if (m_config.backend == "gemini")  m_activeBackend = AIBackendType::Gemini;
+        else m_activeBackend = AIBackendType::LocalGGUF;
+    }
+
+    // Probe Ollama availability (primary backend)
+    RawrXD::Agent::OllamaConfig ollamaCfg;
+    ollamaCfg.host = "127.0.0.1";
+    ollamaCfg.port = 11434;
+    ollamaCfg.timeout_ms = 3000;
+    RawrXD::Agent::AgentOllamaClient probeClient(ollamaCfg);
+    bool ollamaAvailable = probeClient.TestConnection();
+
+    std::ostringstream statusMsg;
+    statusMsg << "Backend manager initialized (headless)";
+    if (ollamaAvailable) {
+        auto models = probeClient.ListModels();
+        statusMsg << " | Ollama: online (" << models.size() << " models)";
+        // Default to Ollama if available and no explicit backend set
+        if (m_config.backend.empty()) {
+            m_activeBackend = AIBackendType::Ollama;
+        }
+    } else {
+        statusMsg << " | Ollama: offline";
+    }
+
+    const char* backendNames[] = { "LocalGGUF", "Ollama", "OpenAI", "Claude", "Gemini" };
+    statusMsg << " | Active: " << backendNames[static_cast<int>(m_activeBackend)];
+
     m_backendManagerInitialized = true;
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now() - startTime).count();
-    std::string msg = "Backend manager initialized (headless) [" + std::to_string(elapsed) + "us]";
-    m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Debug);
+    statusMsg << " [" << elapsed << "us]";
+    m_outputSink->appendOutput(statusMsg.str().c_str(), OutputSeverity::Debug);
     m_outputSink->onStatusUpdate("backend_manager", "active");
+    m_outputSink->onStatusUpdate("backend", backendNames[static_cast<int>(m_activeBackend)]);
     return HeadlessResult::ok("Backend manager ready");
 }
 
 HeadlessResult HeadlessIDE::initLLMRouter() {
     auto startTime = std::chrono::steady_clock::now();
+
+    // Configure routing table with backend priorities
+    // Priority: Ollama (local, fast) > LocalGGUF > Cloud backends
+    struct RouterEntry {
+        AIBackendType type;
+        const char* name;
+        int priority;  // lower = higher priority
+        bool available;
+    };
+
+    RouterEntry routes[] = {
+        { AIBackendType::Ollama,    "Ollama",    1, m_backendManagerInitialized },
+        { AIBackendType::LocalGGUF, "LocalGGUF",  2, m_modelLoaded },
+        { AIBackendType::OpenAI,    "OpenAI",    10, false },
+        { AIBackendType::Claude,    "Claude",    11, false },
+        { AIBackendType::Gemini,    "Gemini",    12, false },
+    };
+
+    int activeRoutes = 0;
+    for (auto& r : routes) {
+        if (r.available) activeRoutes++;
+    }
+
     m_routerInitialized = true;
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now() - startTime).count();
-    std::string msg = "LLM router initialized (headless) [" + std::to_string(elapsed) + "us]";
-    m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Debug);
+    char msg[256];
+    snprintf(msg, sizeof(msg), "LLM router initialized: %d/%d backends available [%lldus]",
+             activeRoutes, 5, (long long)elapsed);
+    m_outputSink->appendOutput(msg, OutputSeverity::Debug);
     m_outputSink->onStatusUpdate("llm_router", "active");
     return HeadlessResult::ok("LLM router ready");
 }
@@ -472,15 +542,73 @@ HeadlessResult HeadlessIDE::initAsmSemantic() {
 
 HeadlessResult HeadlessIDE::initLSPClient() {
     auto startTime = std::chrono::steady_clock::now();
+
+    // Create embedded LSP server for headless diagnostics + code intelligence
+    {
+        std::lock_guard<std::mutex> lk(g_embeddedLSPMutex);
+        if (!g_embeddedLSP) {
+            g_embeddedLSP = std::make_unique<RawrXDLSPServer>();
+        }
+
+        // Configure for in-process (pipe) transport — headless owns stdio
+        ServerConfig lspConfig;
+        lspConfig.useStdio           = false;  // Use named pipe, not stdio
+        lspConfig.pipeName           = "\\\\.\\pipe\\rawrxd-lsp-headless";
+        lspConfig.enableSemanticTokens = true;
+        lspConfig.enableHover        = true;
+        lspConfig.enableCompletion   = true;
+        lspConfig.enableDefinition   = true;
+        lspConfig.enableReferences   = true;
+        lspConfig.enableDocumentSymbol  = true;
+        lspConfig.enableWorkspaceSymbol = true;
+        lspConfig.enableDiagnostics  = true;
+        lspConfig.indexThrottleMs    = 100;  // Faster for headless
+        lspConfig.maxSymbolResults   = 1000;
+        lspConfig.maxCompletionItems = 200;
+
+        // Set workspace root from current working dir or explicitly if available
+        char cwd[MAX_PATH];
+        if (GetCurrentDirectoryA(MAX_PATH, cwd)) {
+            lspConfig.rootPath = cwd;
+            // Convert to file URI
+            std::string pathStr = cwd;
+            for (auto& c : pathStr) { if (c == '\\') c = '/'; }
+            lspConfig.rootUri = "file:///" + pathStr;
+        }
+
+        g_embeddedLSP->configure(lspConfig);
+
+        // Start the LSP server (launches reader + dispatch threads)
+        if (g_embeddedLSP->start()) {
+            m_lspServerCount = 1;
+
+            // Trigger initial project indexing if we have a root path
+            if (!lspConfig.rootPath.empty()) {
+                g_embeddedLSP->rebuildIndex();
+                size_t symCount = g_embeddedLSP->getIndexedSymbolCount();
+                size_t fileCount = g_embeddedLSP->getTrackedFileCount();
+
+                std::ostringstream oss;
+                oss << "  LSP initial index: " << symCount << " symbols across "
+                    << fileCount << " files";
+                m_outputSink->appendOutput(oss.str().c_str(), OutputSeverity::Debug);
+            }
+        } else {
+            m_outputSink->appendOutput("LSP server failed to start on named pipe",
+                                       OutputSeverity::Warning);
+            // Still mark initialized — server exists but isn't running
+        }
+    }
+
     m_lspInitialized = true;
-    m_lspServerCount = 0;
     m_lspCompletionCount = 0;
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::steady_clock::now() - startTime).count();
-    std::string msg = "LSP client initialized (headless) [" + std::to_string(elapsed) + "us]";
+    std::string msg = "LSP client initialized (headless, embedded server) [" +
+                      std::to_string(elapsed) + "us]";
     m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Debug);
     m_outputSink->onStatusUpdate("lsp_client", "active");
-    return HeadlessResult::ok("LSP client ready");
+    return HeadlessResult::ok("LSP client ready (embedded server)");
 }
 
 HeadlessResult HeadlessIDE::initHybridBridge() {
@@ -599,22 +727,142 @@ HeadlessResult HeadlessIDE::initHotpatch() {
     return HeadlessResult::ok("Hotpatch ready");
 }
 
+HeadlessResult HeadlessIDE::initInstructions() {
+    auto startTime = std::chrono::steady_clock::now();
+    auto& provider = InstructionsProvider::instance();
+
+    // Add workspace-relative search paths
+    provider.addSearchPath(".");
+    provider.addSearchPath(".github");
+
+    auto r = provider.loadAll();
+    m_instructionsInitialized = r.success;
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now() - startTime).count();
+
+    if (r.success) {
+        std::string msg = "Instructions loaded: " +
+            std::to_string(provider.getLoadedCount()) + " files (" +
+            std::to_string(provider.getAllContent().size()) + " bytes) [" +
+            std::to_string(elapsed) + "us]";
+        m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Info);
+        m_outputSink->onStatusUpdate("instructions", "loaded");
+    } else {
+        std::string msg = std::string("Instructions: ") + r.detail +
+            " [" + std::to_string(elapsed) + "us]";
+        m_outputSink->appendOutput(msg.c_str(), OutputSeverity::Warning);
+        m_outputSink->onStatusUpdate("instructions", "unavailable");
+    }
+
+    return r.success ? HeadlessResult::ok("Instructions loaded") 
+                     : HeadlessResult::error(r.detail);
+}
+
+std::string HeadlessIDE::getInstructionsContent() const {
+    auto& provider = InstructionsProvider::instance();
+    if (!provider.isLoaded()) {
+        InstructionsProvider::instance().loadAll();
+    }
+    return provider.getAllContent();
+}
+
 // ============================================================================
 // Model Operations
 // ============================================================================
 bool HeadlessIDE::loadModel(const std::string& filepath) {
     m_outputSink->appendOutput(("Loading model: " + filepath).c_str(), OutputSeverity::Info);
-    // Use the GGUF loader to load the model
-    // This mirrors Win32IDE::loadModelForInference but without GUI callbacks
-    m_loadedModelPath = filepath;
+    auto t0 = std::chrono::steady_clock::now();
 
-    // Extract model name from path
-    size_t lastSlash = filepath.find_last_of("/\\");
-    m_loadedModelName = (lastSlash != std::string::npos) ? filepath.substr(lastSlash + 1) : filepath;
+    // Phase 1: Resolve the model source — local, Ollama, HuggingFace, URL
+    RawrXD::ModelSourceResolver resolver;
+    RawrXD::ResolvedModelPath resolved = resolver.Resolve(filepath,
+        [this](const RawrXD::ModelDownloadProgress& p) {
+            if (p.total_bytes > 0) {
+                char buf[256];
+                snprintf(buf, sizeof(buf), "[Model] Downloading %.1f%% (%llu / %llu bytes)",
+                         p.progress_percent, (unsigned long long)p.downloaded_bytes,
+                         (unsigned long long)p.total_bytes);
+                m_outputSink->appendOutput(buf, OutputSeverity::Info);
+            }
+        });
+    
+    std::string localPath = resolved.success ? resolved.local_path : filepath;
+    
+    // Phase 2: Validate file exists on disk
+    DWORD attr = GetFileAttributesA(localPath.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES || (attr & FILE_ATTRIBUTE_DIRECTORY)) {
+        std::string err = "Model file not found: " + localPath;
+        if (!resolved.success && !resolved.error_message.empty()) {
+            err += " (" + resolved.error_message + ")";
+        }
+        m_outputSink->appendOutput(err.c_str(), OutputSeverity::Error);
+        return false;
+    }
 
+    // Phase 3: Open with StreamingGGUFLoader and parse header + metadata
+    auto loader = std::make_unique<RawrXD::StreamingGGUFLoader>();
+    if (!loader->Open(localPath)) {
+        m_outputSink->appendOutput("Failed to open GGUF file", OutputSeverity::Error);
+        return false;
+    }
+
+    if (!loader->ParseHeader()) {
+        m_outputSink->appendOutput("Invalid GGUF header — file may be corrupt", OutputSeverity::Error);
+        loader->Close();
+        return false;
+    }
+
+    RawrXD::GGUFHeader hdr = loader->GetHeader();
+    // Validate magic: 0x46475547 = "GGUF" little-endian
+    if (hdr.magic != 0x46475547) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "Bad GGUF magic: 0x%08X (expected 0x46475547)", hdr.magic);
+        m_outputSink->appendOutput(buf, OutputSeverity::Error);
+        loader->Close();
+        return false;
+    }
+
+    if (!loader->ParseMetadata()) {
+        m_outputSink->appendOutput("Failed to parse GGUF metadata", OutputSeverity::Warning);
+        // Non-fatal — we can still load with header-only info
+    }
+
+    RawrXD::GGUFMetadata meta = loader->GetMetadata();
+
+    // Phase 4: Build tensor index for streaming zone loading
+    loader->BuildTensorIndex();
+
+    // Store state
+    m_loadedModelPath = localPath;
+    size_t lastSlash = localPath.find_last_of("/\\");
+    m_loadedModelName = (lastSlash != std::string::npos) ? localPath.substr(lastSlash + 1) : localPath;
     m_modelLoaded = true;
+
+    auto t1 = std::chrono::steady_clock::now();
+    int loadMs = static_cast<int>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
+
+    // Report model info
+    std::ostringstream info;
+    info << "Model loaded: " << m_loadedModelName << "\n"
+         << "  GGUF version: " << hdr.version << "\n"
+         << "  Tensors: " << hdr.tensor_count << "\n"
+         << "  Metadata KVs: " << hdr.metadata_kv_count << "\n"
+         << "  Layers: " << meta.layer_count << "\n"
+         << "  Context length: " << meta.context_length << "\n"
+         << "  Embedding dim: " << meta.embedding_dim << "\n"
+         << "  Vocab size: " << meta.vocab_size << "\n"
+         << "  File size: " << (loader->GetFileSize() / (1024*1024)) << " MB\n"
+         << "  Load latency: " << loadMs << " ms\n";
+    if (resolved.success && resolved.source_type != GGUFConstants::ModelSourceType::LOCAL_FILE) {
+        info << "  Source: " << resolved.original_input << "\n";
+    }
+    m_outputSink->appendOutput(info.str().c_str(), OutputSeverity::Info);
     m_outputSink->onStatusUpdate("model", m_loadedModelName.c_str());
-    m_outputSink->appendOutput(("Model loaded: " + m_loadedModelName).c_str(), OutputSeverity::Info);
+
+    loader->Close();
+    recordSimpleEvent("model_loaded");
     return true;
 }
 
@@ -687,16 +935,51 @@ void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
 
     m_outputSink->onStreamStart("inference");
 
-    // In headless mode, streaming tokens go to both the callback and the output sink
-    // The actual streaming logic delegates to the engine's streaming interface
-    std::string result = runInference(prompt);
+    // Use AgentOllamaClient streaming API for real per-token delivery
+    if (m_activeBackend == AIBackendType::Ollama || m_activeBackend == AIBackendType::LocalGGUF) {
+        RawrXD::Agent::OllamaConfig cfg;
+        cfg.host = "127.0.0.1";
+        cfg.port = 11434;
+        cfg.chat_model = "qwen2.5-coder:14b";
+        cfg.temperature = m_config.temperature;
+        cfg.max_tokens = m_config.maxTokens;
+        cfg.use_gpu = true;
+        cfg.num_gpu = 99;
 
-    // Emit result in batch mode — delivers entire inference output as a single chunk
-    // When the engine's per-token streaming API is wired, switch to incremental emission
+        RawrXD::Agent::AgentOllamaClient client(cfg);
+        std::vector<RawrXD::Agent::ChatMessage> messages;
+        messages.push_back({"system", "You are RawrXD IDE's embedded AI assistant.", "", {}});
+        messages.push_back({"user", prompt, "", {}});
+
+        bool streamOk = client.ChatStream(
+            messages, nlohmann::json::array(),
+            /* on_token */ [&](const std::string& token) {
+                if (tokenCallback) {
+                    tokenCallback(token.c_str(), token.size());
+                }
+                m_outputSink->onStreamingToken(token.c_str(), token.size(), StreamTokenOrigin::Inference);
+            },
+            /* on_tool_call */ [](const std::string&, const nlohmann::json&) {},
+            /* on_done */ [&](const std::string& full, uint64_t pt, uint64_t ct, double tps) {
+                char perf[256];
+                snprintf(perf, sizeof(perf), "[stream] %llu+%llu tokens, %.1f tok/s",
+                         (unsigned long long)pt, (unsigned long long)ct, tps);
+                m_outputSink->appendOutput(perf, OutputSeverity::Debug);
+            },
+            /* on_error */ [&](const std::string& err) {
+                m_outputSink->appendOutput(("Stream error: " + err).c_str(), OutputSeverity::Error);
+            }
+        );
+
+        m_outputSink->onStreamEnd("inference", streamOk);
+        return;
+    }
+
+    // Fallback: batch inference emitted as single chunk
+    std::string result = runInference(prompt);
     if (tokenCallback && !result.empty()) {
         tokenCallback(result.c_str(), result.size());
     }
-
     m_outputSink->onStreamEnd("inference", !result.empty());
 }
 
@@ -704,14 +987,35 @@ void HeadlessIDE::runInferenceStreaming(const std::string& prompt,
 // Backend Switcher (Phase 8B)
 // ============================================================================
 bool HeadlessIDE::setActiveBackend(AIBackendType type) {
-    m_outputSink->appendOutput(
-        ("Switching backend to type " + std::to_string((int)type)).c_str(),
-        OutputSeverity::Info);
+    const char* backendNames[] = { "LocalGGUF", "Ollama", "OpenAI", "Claude", "Gemini" };
+    int idx = static_cast<int>(type);
+    if (idx < 0 || idx >= static_cast<int>(AIBackendType::Count)) {
+        m_outputSink->appendOutput("Invalid backend type", OutputSeverity::Error);
+        return false;
+    }
+
+    // Probe health before switching
+    if (!probeBackendHealth(type)) {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Backend '%s' health check failed — switch aborted", backendNames[idx]);
+        m_outputSink->appendOutput(buf, OutputSeverity::Warning);
+        return false;
+    }
+
+    AIBackendType previousBackend = m_activeBackend;
+    m_activeBackend = type;
+
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Backend switched: %s → %s",
+             backendNames[static_cast<int>(previousBackend)], backendNames[idx]);
+    m_outputSink->appendOutput(buf, OutputSeverity::Info);
+    m_outputSink->onStatusUpdate("backend", backendNames[idx]);
+    recordSimpleEvent("backend_switch");
     return true;
 }
 
 HeadlessIDE::AIBackendType HeadlessIDE::getActiveBackendType() const {
-    return AIBackendType::LocalGGUF;
+    return m_activeBackend;
 }
 
 std::string HeadlessIDE::getBackendStatusString() const {
@@ -726,33 +1030,104 @@ std::string HeadlessIDE::getBackendStatusString() const {
 }
 
 bool HeadlessIDE::probeBackendHealth(AIBackendType type) {
-    return true;  // Local backend is always "healthy" if process is running
+    switch (type) {
+        case AIBackendType::LocalGGUF:
+            // Local GGUF: healthy if model is loaded
+            return m_modelLoaded;
+
+        case AIBackendType::Ollama: {
+            // Probe Ollama server connection
+            RawrXD::Agent::OllamaConfig cfg;
+            cfg.host = "127.0.0.1";
+            cfg.port = 11434;
+            cfg.timeout_ms = 5000; // Quick probe timeout
+            RawrXD::Agent::AgentOllamaClient client(cfg);
+            bool connected = client.TestConnection();
+            if (connected) {
+                auto models = client.ListModels();
+                m_outputSink->appendOutput(
+                    ("Ollama: " + std::to_string(models.size()) + " models available").c_str(),
+                    OutputSeverity::Debug);
+            }
+            return connected;
+        }
+
+        case AIBackendType::OpenAI:
+        case AIBackendType::Claude:
+        case AIBackendType::Gemini:
+            // Cloud backends: check if API key is configured
+            // (API key management is in BackendState singleton)
+            return false; // Not yet configured in headless mode
+
+        default:
+            return false;
+    }
 }
 
 std::string HeadlessIDE::routeInferenceRequest(const std::string& prompt) {
     m_inferenceRequestCount++;
     recordSimpleEvent("inference_request");
 
-    // Route through engine manager if available
+    auto t0 = std::chrono::steady_clock::now();
+
+    // Route based on active backend type
+    if (m_activeBackend == AIBackendType::Ollama || m_activeBackend == AIBackendType::LocalGGUF) {
+        // Use AgentOllamaClient for Ollama-backed inference
+        RawrXD::Agent::OllamaConfig cfg;
+        cfg.host = "127.0.0.1";
+        cfg.port = 11434;
+        cfg.chat_model = "qwen2.5-coder:14b";
+        cfg.temperature = m_config.temperature;
+        cfg.max_tokens = m_config.maxTokens;
+        cfg.use_gpu = true;
+        cfg.num_gpu = 99;
+
+        RawrXD::Agent::AgentOllamaClient client(cfg);
+
+        // Build conversation with system context
+        std::vector<RawrXD::Agent::ChatMessage> messages;
+        messages.push_back({"system", "You are RawrXD IDE's embedded AI assistant. "
+            "Provide accurate, concise answers. When asked about code, give working examples.", "", {}});
+        if (m_modelLoaded) {
+            messages.push_back({"system", "Loaded model: " + m_loadedModelName, "", {}});
+        }
+        messages.push_back({"user", prompt, "", {}});
+
+        auto result = client.ChatSync(messages);
+
+        auto t1 = std::chrono::steady_clock::now();
+        double durationMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+
+        if (result.success) {
+            char perf[256];
+            snprintf(perf, sizeof(perf),
+                     "[inference] %llu prompt + %llu completion tokens, %.1f tok/s, %.0f ms",
+                     (unsigned long long)result.prompt_tokens,
+                     (unsigned long long)result.completion_tokens,
+                     result.tokens_per_sec, durationMs);
+            m_outputSink->appendOutput(perf, OutputSeverity::Debug);
+            return result.response;
+        } else {
+            m_outputSink->appendOutput(
+                ("Ollama inference failed: " + result.error_message).c_str(),
+                OutputSeverity::Warning);
+            // Fall through to engine manager path
+        }
+    }
+
+    // Secondary path: route through engine manager if available
     if (m_engineManager) {
         std::string currentId = m_engineManager->GetCurrentEngine();
         auto* engine = currentId.empty() ? nullptr : m_engineManager->GetEngine(currentId);
         if (engine && engine->loaded) {
-            // Engine is loaded but EngineInfo doesn't have Infer() — 
-            // actual inference routes through the local server layer
-            m_outputSink->appendOutput(("Engine '" + engine->name + "' active").c_str(), OutputSeverity::Info);
+            m_outputSink->appendOutput(("Engine '" + engine->name + "' active but no inference API").c_str(),
+                                       OutputSeverity::Debug);
         }
     }
 
-    // Fallback: try CodexUltimate binary analysis (not a generative model)
-    if (m_codexUltimate) {
-        // CodexUltimate provides disassembly/PE analysis, not text generation
-        // No-op for inference routing
-    }
-
-    // Final fallback: return structured echo indicating no engine is loaded
-    return "[headless-inference] Prompt received (" + std::to_string(prompt.size()) +
-           " chars) — no active engine, load a model with 'load <path>'";
+    // Final fallback: provide actionable error
+    return "[error] Inference unavailable — ensure Ollama is running on port 11434 "
+           "or configure an alternative backend with 'backend <type>'";
 }
 
 // ============================================================================
@@ -857,7 +1232,31 @@ std::string HeadlessIDE::getLSPStatusString() const {
     std::ostringstream oss;
     oss << "LSP client: " << (m_lspInitialized ? "Active" : "Inactive") << " (headless)\n";
     oss << "Servers: " << m_lspServerCount << " configured\n";
-    oss << "Completions served: " << m_lspCompletionCount;
+
+    // Query real embedded server stats if available
+    {
+        std::lock_guard<std::mutex> lk(g_embeddedLSPMutex);
+        if (g_embeddedLSP) {
+            auto state = g_embeddedLSP->getState();
+            const char* stateStr = "Unknown";
+            switch (state) {
+                case ServerState::Created:      stateStr = "Created"; break;
+                case ServerState::Initializing: stateStr = "Initializing"; break;
+                case ServerState::Running:      stateStr = "Running"; break;
+                case ServerState::ShuttingDown: stateStr = "ShuttingDown"; break;
+                case ServerState::Stopped:      stateStr = "Stopped"; break;
+            }
+            oss << "Embedded server state: " << stateStr << "\n";
+            oss << "Indexed symbols: " << g_embeddedLSP->getIndexedSymbolCount() << "\n";
+            oss << "Tracked files: " << g_embeddedLSP->getTrackedFileCount() << "\n";
+            auto stats = g_embeddedLSP->getStats();
+            oss << "Completion requests: " << stats.completionRequests << "\n";
+            oss << "Definition requests: " << stats.definitionRequests << "\n";
+            oss << "Hover requests: " << stats.hoverRequests;
+        } else {
+            oss << "Completions served: " << m_lspCompletionCount;
+        }
+    }
     return oss.str();
 }
 
@@ -1148,6 +1547,32 @@ void HeadlessIDE::handleClient(SOCKET clientFd) {
         responseBody = "{\"status\":\"ok\",\"mode\":\"headless\",\"uptime\":" +
                        std::to_string(getUptimeMs()) + "}";
     }
+    // ========== Phase 34: Production Instructions Context ==========
+    else if (path == "/api/instructions" && method == "GET") {
+        auto& ip = InstructionsProvider::instance();
+        if (!ip.isLoaded()) ip.loadAll();
+        responseBody = ip.toJSON();
+    }
+    else if (path == "/api/instructions/summary" && method == "GET") {
+        auto& ip = InstructionsProvider::instance();
+        if (!ip.isLoaded()) ip.loadAll();
+        responseBody = ip.toJSONSummary();
+    }
+    else if (path == "/api/instructions/content" && method == "GET") {
+        auto& ip = InstructionsProvider::instance();
+        if (!ip.isLoaded()) ip.loadAll();
+        std::string content = ip.getAllContent();
+        responseBody = "{\"content\":\"" + content + "\"}";
+        // Return raw markdown as text/markdown
+        contentType = "text/markdown; charset=utf-8";
+        responseBody = ip.getAllContent();
+    }
+    else if (path == "/api/instructions/reload" && method == "POST") {
+        auto& ip = InstructionsProvider::instance();
+        auto r = ip.reload();
+        responseBody = "{\"success\":" + std::string(r.success ? "true" : "false") +
+                       ",\"detail\":\"" + std::string(r.detail) + "\"}";
+    }
     else {
         statusCode = 404;
         responseBody = "{\"error\":\"Not found\",\"path\":\"" + path + "\"}";
@@ -1205,7 +1630,8 @@ std::string HeadlessIDE::getFullStatusDump() const {
     oss << "    \"exec_governor\": " << (m_phase10Initialized ? "true" : "false") << ",\n";
     oss << "    \"swarm\": " << (m_phase11Initialized ? "true" : "false") << ",\n";
     oss << "    \"native_debugger\": " << (m_phase12Initialized ? "true" : "false") << ",\n";
-    oss << "    \"hotpatch\": " << (m_hotpatchInitialized ? "true" : "false") << "\n";
+    oss << "    \"hotpatch\": " << (m_hotpatchInitialized ? "true" : "false") << ",\n";
+    oss << "    \"instructions\": " << (m_instructionsInitialized ? "true" : "false") << "\n";
     oss << "  }\n";
     oss << "}";
     return oss.str();
@@ -1504,6 +1930,54 @@ void HeadlessIDE::processReplCommand(const std::string& input) {
     else if (input == "server") {
         m_outputSink->appendOutput(getServerStatus().c_str(), OutputSeverity::Info);
     }
+    // ── Phase 34: Instructions Context Commands ─────────────────────────
+    else if (input == "instructions" || input == "instructions show") {
+        auto& ip = InstructionsProvider::instance();
+        if (!ip.isLoaded()) ip.loadAll();
+        std::string content = ip.getAllContent();
+        if (content.empty()) {
+            m_outputSink->appendOutput("No instruction files loaded. Try 'instructions reload'.",
+                                        OutputSeverity::Warning);
+        } else {
+            m_outputSink->appendOutput(content.c_str(), OutputSeverity::Info);
+        }
+    }
+    else if (input == "instructions list") {
+        auto& ip = InstructionsProvider::instance();
+        if (!ip.isLoaded()) ip.loadAll();
+        auto files = ip.getAll();
+        std::ostringstream oss;
+        oss << "Loaded instruction files (" << files.size() << "):\n";
+        for (const auto& f : files) {
+            oss << "  " << f.fileName << " (" << f.lineCount << " lines, "
+                << f.sizeBytes << " bytes) — " << f.filePath << "\n";
+        }
+        m_outputSink->appendOutput(oss.str().c_str(), OutputSeverity::Info);
+    }
+    else if (input == "instructions reload") {
+        auto& ip = InstructionsProvider::instance();
+        auto r = ip.reload();
+        std::string msg = r.success
+            ? ("Instructions reloaded (" + std::to_string(ip.getLoadedCount()) + " files)")
+            : ("Reload failed: " + std::string(r.detail));
+        m_outputSink->appendOutput(msg.c_str(),
+            r.success ? OutputSeverity::Info : OutputSeverity::Error);
+    }
+    else if (input == "instructions paths") {
+        auto& ip = InstructionsProvider::instance();
+        auto paths = ip.getSearchPaths();
+        std::ostringstream oss;
+        oss << "Search paths (" << paths.size() << "):\n";
+        for (const auto& p : paths) {
+            oss << "  " << p << "\n";
+        }
+        m_outputSink->appendOutput(oss.str().c_str(), OutputSeverity::Info);
+    }
+    else if (input == "instructions json") {
+        auto& ip = InstructionsProvider::instance();
+        if (!ip.isLoaded()) ip.loadAll();
+        m_outputSink->appendOutput(ip.toJSON().c_str(), OutputSeverity::Info);
+    }
     else {
         // Treat as inference prompt
         if (m_modelLoaded) {
@@ -1551,6 +2025,12 @@ RawrXD Headless IDE — REPL Commands
   server           HTTP server status
   server start     Start HTTP server
   server stop      Stop HTTP server
+  instructions     Show production instructions (all lines)
+  instructions list   List loaded instruction files
+  instructions show   Show full content
+  instructions reload Reload from disk
+  instructions paths  Show search paths
+  instructions json   Export as JSON
   quit / exit      Exit the REPL
 
   <any other text>  Treated as inference prompt

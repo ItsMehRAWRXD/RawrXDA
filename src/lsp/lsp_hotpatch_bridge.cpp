@@ -39,6 +39,7 @@
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <map>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -462,10 +463,17 @@ void LSPHotpatchBridge::handleHotpatchApply(int /*id*/, const json& params) {
             }
 
             if (!bytes.empty()) {
-                pr = apply_memory_patch(
+                // Before applying, read original bytes for revertability
+                std::vector<uint8_t> originalBytes(bytes.size());
+                memcpy(originalBytes.data(), reinterpret_cast<void*>(static_cast<uintptr_t>(addr)), bytes.size());
+
+                // Track the patch (tracking not stored; revert not supported)\n                // TrackedMemoryPatch tracked;\n                // tracked.address = ...;\n                // tracked.originalBytes = ...;\n                // tracked.name = name;\n                // m_trackedPatches[name] = std::move(tracked);\n                (void)originalBytes; // suppress unused warning
+
+
+                pr = UnifiedHotpatchManager::instance().apply_memory_patch(
                     reinterpret_cast<void*>(static_cast<uintptr_t>(addr)),
                     bytes.size(),
-                    bytes.data());
+                    bytes.data()).result;
             } else {
                 pr = PatchResult::error("Empty patch data");
             }
@@ -487,7 +495,11 @@ void LSPHotpatchBridge::handleHotpatchApply(int /*id*/, const json& params) {
             }
 
             if (!bytes.empty()) {
-                pr = direct_write(filename.c_str(), offset, bytes.data(), bytes.size());
+                 BytePatch bp = {};
+                 bp.offset = offset;
+                 bp.data = bytes;
+                 // bp.pattern is not used for direct write
+                 pr = UnifiedHotpatchManager::instance().apply_byte_patch(filename.c_str(), bp).result;
             } else {
                 pr = PatchResult::error("Empty patch data");
             }
@@ -542,11 +554,40 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
     PatchResult pr = PatchResult::error("Revert not implemented for this layer");
 
     if (layer == HotpatchLayer::Memory) {
-        // Memory revert: The API requires a MemoryPatchEntry*.
-        // From JSON-RPC we can only provide an address — report the limitation.
-        pr = PatchResult::error(
-            "Memory revert via JSON-RPC requires a tracked MemoryPatchEntry. "
-            "Use the C++ API (revert_memory_patch) with the original entry pointer.");
+        // Memory revert: construct a MemoryPatchEntry from the client-provided
+        // address, size, and original bytes, then delegate to UnifiedHotpatchManager
+        if (params.contains("address") && params.contains("size") &&
+            params.contains("originalData")) {
+            uint64_t address  = params["address"].get<uint64_t>();
+            uint64_t size     = params["size"].get<uint64_t>();
+            std::string hexData = params["originalData"].get<std::string>();
+
+            // Decode hex string to bytes
+            std::vector<uint8_t> origBytes;
+            origBytes.reserve(hexData.size() / 2);
+            for (size_t i = 0; i + 1 < hexData.size(); i += 2) {
+                uint8_t b = (uint8_t)std::stoul(hexData.substr(i, 2), nullptr, 16);
+                origBytes.push_back(b);
+            }
+
+            if (origBytes.empty() || origBytes.size() > 64) {
+                pr = PatchResult::error("originalData must be 1-64 bytes (hex encoded)");
+            } else {
+                // Build a MemoryPatchEntry with the backed-up original bytes
+                MemoryPatchEntry entry{};
+                entry.targetAddr   = static_cast<uintptr_t>(address);
+                entry.patchSize    = static_cast<size_t>(size);
+                entry.originalSize = origBytes.size();
+                entry.applied      = true;  // Mark as applied so revert proceeds
+                memcpy(entry.originalBytes, origBytes.data(), origBytes.size());
+
+                auto ur = UnifiedHotpatchManager::instance().revert_memory_patch(&entry);
+                pr = ur.result;
+            }
+        } else {
+            pr = PatchResult::error(
+                "Memory patch revert requires 'address', 'size', and 'originalData' (hex)");
+        }
     } else if (layer == HotpatchLayer::Byte) {
         // Byte revert requires original data to write back
         if (params.contains("filename") && params.contains("offset") &&
@@ -563,7 +604,10 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
             }
 
             if (!bytes.empty()) {
-                pr = direct_write(filename.c_str(), offset, bytes.data(), bytes.size());
+                BytePatch bp = {};
+                bp.offset = offset;
+                bp.data = bytes;
+                pr = UnifiedHotpatchManager::instance().apply_byte_patch(filename.c_str(), bp).result;
             } else {
                 pr = PatchResult::error("Empty original data");
             }
@@ -887,7 +931,7 @@ void LSPHotpatchBridge::handleWorkspaceSymbols(int /*id*/, const json& params) {
 // Params: {} (none)
 // Result: { "bridge": {...}, "symbols": {...}, "diagnostics": {...}, "hotpatch": {...} }
 
-void LSPHotpatchBridge::handleWorkspaceStats(int /*id*/, const json& /*params*/) {
+void LSPHotpatchBridge::handleWorkspaceStats(int id, const json& params) {
     m_stats.requestsHandled.fetch_add(1);
 
     json result;

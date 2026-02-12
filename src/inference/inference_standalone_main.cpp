@@ -19,13 +19,17 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <chrono>
 #include <vector>
+#include <functional>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
+
+#include "ultra_fast_inference.h"
 
 // ============================================================================
 // Forward declarations — these live in the inference core sources
@@ -111,24 +115,49 @@ static BenchmarkResult runBenchmark(const InferenceCLI& cli) {
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Placeholder: actual inference engine call would go here
-    // In production this loads via polymorphic_loader → ultra_fast_inference
-    // For now, report the benchmark harness timing.
+    // Load model via polymorphic_loader → ultra_fast_inference
+    rawrxd::inference::AutonomousInferenceEngine::InferenceConfig config;
+    config.max_memory_mb = 0; // Auto-detect
+    config.quality_target = 0.8f;
+    config.enable_streaming_pruning = true;
+    config.enable_hotpatching = true;
+    config.enable_gpu = true;
 
-    // Simulate token generation timing for harness validation
+    rawrxd::inference::AutonomousInferenceEngine engine(config);
+
+    if (!engine.loadModelAutomatic(cli.modelPath)) {
+        printf("[Benchmark] ERROR: Failed to load model: %s\n", cli.modelPath.c_str());
+        result.tokensPerSecond = 0;
+        return result;
+    }
+
+    // Tokenize prompt (simplified: one token per word)
+    std::vector<int32_t> prompt_tokens;
+    std::istringstream iss(cli.prompt.empty() ? "Hello world" : cli.prompt);
+    std::string word;
+    while (iss >> word) {
+        // Simple hash-based token ID
+        uint32_t h = 0;
+        for (char c : word) h = h * 31 + static_cast<uint32_t>(c);
+        prompt_tokens.push_back(static_cast<int32_t>(h % 32000));
+    }
+
+    // Run inference with token callback
     int tokens = 0;
-    auto firstTokenTime = std::chrono::high_resolution_clock::now();
+    auto firstTokenTime = start;
     bool firstToken = false;
 
-    // The real loop would call engine.generateNext() until EOS or max_tokens
-    for (int i = 0; i < cli.maxTokens; ++i) {
+    engine.infer(prompt_tokens, [&](const std::string& token) {
         if (!firstToken) {
             firstTokenTime = std::chrono::high_resolution_clock::now();
             firstToken = true;
         }
         tokens++;
-        // Break on EOS in real implementation
-    }
+        if (cli.interactive) {
+            printf("%s", token.c_str());
+            fflush(stdout);
+        }
+    }, cli.maxTokens);
 
     auto end = std::chrono::high_resolution_clock::now();
     double totalMs = std::chrono::duration<double, std::milli>(end - start).count();
@@ -156,6 +185,27 @@ static void runInteractive(const InferenceCLI& cli) {
     printf("Model: %s\n", cli.modelPath.c_str());
     printf("Type 'exit' or 'quit' to stop.\n\n");
 
+    // Load the inference engine once for the session
+    rawrxd::inference::AutonomousInferenceEngine::InferenceConfig config;
+    config.max_memory_mb = 0; // auto-detect
+    config.quality_target = 0.8f;
+    config.enable_streaming_pruning = true;
+    config.enable_hotpatching = true;
+    config.enable_gpu = true;
+
+    rawrxd::inference::AutonomousInferenceEngine engine(config);
+    bool modelLoaded = false;
+
+    if (!cli.modelPath.empty()) {
+        printf("[Interactive] Loading model: %s\n", cli.modelPath.c_str());
+        modelLoaded = engine.loadModelAutomatic(cli.modelPath);
+        if (modelLoaded) {
+            printf("[Interactive] Model loaded successfully.\n\n");
+        } else {
+            printf("[Interactive] WARNING: Failed to load model. Inference unavailable.\n\n");
+        }
+    }
+
     char lineBuf[4096];
     while (true) {
         printf(">>> ");
@@ -173,10 +223,36 @@ static void runInteractive(const InferenceCLI& cli) {
 
         if (len == 0) continue;
 
-        // In production, this feeds the prompt to the inference engine
-        // and streams tokens to stdout. For now, echo the prompt.
-        printf("[Inference] Processing: %s\n", lineBuf);
-        printf("[Inference] (Engine integration pending — GGUF loader required)\n\n");
+        if (!modelLoaded) {
+            printf("[Inference] ERROR: No model loaded. Start with --model <path>\n\n");
+            continue;
+        }
+
+        // Tokenize prompt
+        std::vector<int32_t> promptTokens;
+        std::istringstream iss(lineBuf);
+        std::string word;
+        while (iss >> word) {
+            uint32_t h = 0;
+            for (char c : word) h = h * 31 + (uint32_t)c;
+            promptTokens.push_back((int32_t)(h % 32000));
+        }
+
+        // Run inference, streaming tokens to stdout
+        auto start = std::chrono::high_resolution_clock::now();
+        int tokenCount = 0;
+
+        engine.infer(promptTokens, [&](const std::string& token) {
+            printf("%s", token.c_str());
+            fflush(stdout);
+            tokenCount++;
+        }, cli.maxTokens);
+
+        auto end = std::chrono::high_resolution_clock::now();
+        double ms = std::chrono::duration<double, std::milli>(end - start).count();
+        double tps = (ms > 0) ? (tokenCount * 1000.0 / ms) : 0;
+
+        printf("\n[%d tokens, %.1f ms, %.1f tok/s]\n\n", tokenCount, ms, tps);
     }
 }
 
@@ -220,8 +296,35 @@ int main(int argc, char* argv[]) {
     if (!cli.prompt.empty()) {
         printf("[Inference] Prompt: %s\n", cli.prompt.c_str());
         printf("[Inference] Generating up to %d tokens...\n", cli.maxTokens);
-        // In production: engine.load(modelPath) → engine.generate(prompt)
-        printf("[Inference] (Standalone engine integration active)\n");
+
+        rawrxd::inference::AutonomousInferenceEngine::InferenceConfig config;
+        config.max_memory_mb = 0;
+        config.quality_target = 0.8f;
+        config.enable_streaming_pruning = true;
+        config.enable_hotpatching = true;
+        config.enable_gpu = true;
+
+        rawrxd::inference::AutonomousInferenceEngine engine(config);
+        if (engine.loadModelAutomatic(cli.modelPath)) {
+            std::vector<int32_t> promptTokens;
+            std::istringstream piss(cli.prompt);
+            std::string w;
+            while (piss >> w) {
+                uint32_t h = 0;
+                for (char c : w) h = h * 31 + (uint32_t)c;
+                promptTokens.push_back((int32_t)(h % 32000));
+            }
+
+            int tokenCount = 0;
+            engine.infer(promptTokens, [&](const std::string& token) {
+                printf("%s", token.c_str());
+                fflush(stdout);
+                tokenCount++;
+            }, cli.maxTokens);
+            printf("\n[%d tokens generated]\n", tokenCount);
+        } else {
+            printf("[Inference] ERROR: Failed to load model: %s\n", cli.modelPath.c_str());
+        }
     }
 
 #if defined(RAWRXD_LINK_TELEMETRY_KERNEL_ASM) || defined(RAWR_HAS_MASM)

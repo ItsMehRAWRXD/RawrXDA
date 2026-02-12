@@ -371,8 +371,50 @@ bool HTTPStreamingClient::setupConnection(const std::string& url) {
 
     return true;
 #else
-    m_lastError = "Streaming HTTP client not implemented on this platform";
-    return false;
+    // POSIX: use raw TCP socket for HTTP streaming
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+    #include <unistd.h>
+
+    struct addrinfo hints{}, *res = nullptr;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    std::string portStr = std::to_string(m_port);
+    if (getaddrinfo(m_host.c_str(), portStr.c_str(), &hints, &res) != 0) {
+        m_lastError = "DNS resolution failed for " + m_host;
+        return false;
+    }
+    int sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (sock < 0 || connect(sock, res->ai_addr, res->ai_addrlen) < 0) {
+        freeaddrinfo(res);
+        m_lastError = "TCP connection failed";
+        return false;
+    }
+    freeaddrinfo(res);
+
+    std::string httpReq = (m_currentBody.empty() ? "GET " : "POST ") + m_currentPath + " HTTP/1.1\r\n"
+        "Host: " + m_host + "\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: " + std::to_string(m_currentBody.size()) + "\r\n"
+        "\r\n" + m_currentBody;
+    if (::send(sock, httpReq.c_str(), httpReq.size(), 0) < 0) {
+        ::close(sock);
+        m_lastError = "Socket send failed";
+        return false;
+    }
+
+    // Skip HTTP response headers
+    std::string hdrBuf;
+    char ch;
+    while (::recv(sock, &ch, 1, 0) == 1) {
+        hdrBuf += ch;
+        if (hdrBuf.size() >= 4 && hdrBuf.substr(hdrBuf.size()-4) == "\r\n\r\n") break;
+    }
+
+    m_posixSocket = sock;
+    m_isConnected = true;
+    return true;
 #endif
 }
 
@@ -429,8 +471,22 @@ bool HTTPStreamingClient::readChunkedResponse() {
 
     return true;
 #else
-    m_lastError = "Chunked response reading not implemented on this platform";
-    return false;
+    // POSIX: read from raw socket
+    if (m_posixSocket < 0) {
+        m_lastError = "No active socket";
+        return false;
+    }
+
+    char buffer[4096];
+    ssize_t bytesRead;
+    while (m_isConnected && (bytesRead = ::recv(m_posixSocket, buffer, sizeof(buffer), 0)) > 0) {
+        std::string chunk(buffer, bytesRead);
+        m_streamingEngine->feedChunk(chunk);
+    }
+
+    ::close(m_posixSocket);
+    m_posixSocket = -1;
+    return true;
 #endif
 }
 

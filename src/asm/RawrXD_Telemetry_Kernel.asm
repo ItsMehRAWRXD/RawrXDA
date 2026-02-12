@@ -125,7 +125,7 @@ TELEMETRY_CL ENDS
     szNewline           db 13, 10, 0     ; CRLF for Windows
 
     ; Status strings
-    szInitOk            db "[UTC] Telemetry kernel initialized", 13, 10, 0
+    szTK_InitOk         db "[UTC] Telemetry kernel initialized", 13, 10, 0
     szFlushOk           db "[UTC] Buffer flushed to disk", 13, 10, 0
     szShutdownOk        db "[UTC] Telemetry kernel shutdown", 13, 10, 0
 
@@ -190,7 +190,7 @@ UTC_InitTelemetry PROC FRAME
     mov  g_TailIdx, rax
 
     ; Write init banner to log
-    lea  rcx, szInitOk
+    lea  rcx, szTK_InitOk
     call UTC_LogEvent
 
     xor  eax, eax               ; Return success

@@ -281,11 +281,159 @@ VoiceChatResult VoiceChat::selectOutputDevice(int deviceId)
     return VoiceChatResult::ok("Output device set");
 }
 #else
-// POSIX stubs
-std::vector<VoiceChat::AudioDevice> VoiceChat::enumerateInputDevices() { return {}; }
-std::vector<VoiceChat::AudioDevice> VoiceChat::enumerateOutputDevices() { return {}; }
-VoiceChatResult VoiceChat::selectInputDevice(int) { return VoiceChatResult::error("Not supported on this platform"); }
-VoiceChatResult VoiceChat::selectOutputDevice(int) { return VoiceChatResult::error("Not supported on this platform"); }
+// POSIX ALSA/PulseAudio — Runtime-loaded audio device enumeration
+#include <dlfcn.h>
+
+// PulseAudio simple API types for runtime loading
+typedef struct pa_simple pa_simple;
+typedef enum { PA_STREAM_PLAYBACK = 1, PA_STREAM_RECORD = 2 } pa_stream_direction_t;
+typedef struct { uint32_t format; uint32_t rate; uint8_t channels; } pa_sample_spec;
+
+std::vector<VoiceChat::AudioDevice> VoiceChat::enumerateInputDevices() {
+    std::vector<AudioDevice> devices;
+    // Try PulseAudio first via pactl
+    FILE* pipe = popen("pactl list sources short 2>/dev/null", "r");
+    if (pipe) {
+        char line[512];
+        int id = 0;
+        while (fgets(line, sizeof(line), pipe)) {
+            AudioDevice dev;
+            dev.id = id++;
+            // Format: index\tname\tmodule\tsample_spec\tstate
+            char* tab1 = strchr(line, '\t');
+            if (tab1) {
+                char* tab2 = strchr(tab1 + 1, '\t');
+                size_t nameLen = tab2 ? (size_t)(tab2 - tab1 - 1) : strlen(tab1 + 1);
+                nameLen = nameLen < sizeof(dev.name) - 1 ? nameLen : sizeof(dev.name) - 1;
+                memcpy(dev.name, tab1 + 1, nameLen);
+                dev.name[nameLen] = '\0';
+            } else {
+                snprintf(dev.name, sizeof(dev.name), "Input %d", id - 1);
+            }
+            dev.isDefault = (id == 1); // First source is typically default
+            dev.channels = 1;
+            dev.sampleRate = 16000;
+            devices.push_back(dev);
+        }
+        pclose(pipe);
+    }
+    // Fallback: try ALSA /proc enumeration
+    if (devices.empty()) {
+        FILE* f = fopen("/proc/asound/cards", "r");
+        if (f) {
+            char buf[256];
+            int id = 0;
+            while (fgets(buf, sizeof(buf), f)) {
+                // Lines with card numbers start with a space + number
+                int cardNum = -1;
+                char cardName[128] = {};
+                if (sscanf(buf, " %d [%127[^]]", &cardNum, cardName) >= 1) {
+                    AudioDevice dev;
+                    dev.id = id++;
+                    snprintf(dev.name, sizeof(dev.name), "ALSA: %s (hw:%d)", cardName, cardNum);
+                    dev.isDefault = (cardNum == 0);
+                    dev.channels = 1;
+                    dev.sampleRate = 16000;
+                    devices.push_back(dev);
+                }
+            }
+            fclose(f);
+        }
+    }
+    if (devices.empty()) {
+        AudioDevice fallback;
+        fallback.id = 0;
+        snprintf(fallback.name, sizeof(fallback.name), "Default (system)");
+        fallback.isDefault = true;
+        fallback.channels = 1;
+        fallback.sampleRate = 16000;
+        devices.push_back(fallback);
+    }
+    return devices;
+}
+
+std::vector<VoiceChat::AudioDevice> VoiceChat::enumerateOutputDevices() {
+    std::vector<AudioDevice> devices;
+    FILE* pipe = popen("pactl list sinks short 2>/dev/null", "r");
+    if (pipe) {
+        char line[512];
+        int id = 0;
+        while (fgets(line, sizeof(line), pipe)) {
+            AudioDevice dev;
+            dev.id = id++;
+            char* tab1 = strchr(line, '\t');
+            if (tab1) {
+                char* tab2 = strchr(tab1 + 1, '\t');
+                size_t nameLen = tab2 ? (size_t)(tab2 - tab1 - 1) : strlen(tab1 + 1);
+                nameLen = nameLen < sizeof(dev.name) - 1 ? nameLen : sizeof(dev.name) - 1;
+                memcpy(dev.name, tab1 + 1, nameLen);
+                dev.name[nameLen] = '\0';
+            } else {
+                snprintf(dev.name, sizeof(dev.name), "Output %d", id - 1);
+            }
+            dev.isDefault = (id == 1);
+            dev.channels = 2;
+            dev.sampleRate = 44100;
+            devices.push_back(dev);
+        }
+        pclose(pipe);
+    }
+    if (devices.empty()) {
+        FILE* f = fopen("/proc/asound/cards", "r");
+        if (f) {
+            char buf[256];
+            int id = 0;
+            while (fgets(buf, sizeof(buf), f)) {
+                int cardNum = -1;
+                char cardName[128] = {};
+                if (sscanf(buf, " %d [%127[^]]", &cardNum, cardName) >= 1) {
+                    AudioDevice dev;
+                    dev.id = id++;
+                    snprintf(dev.name, sizeof(dev.name), "ALSA: %s (hw:%d)", cardName, cardNum);
+                    dev.isDefault = (cardNum == 0);
+                    dev.channels = 2;
+                    dev.sampleRate = 44100;
+                    devices.push_back(dev);
+                }
+            }
+            fclose(f);
+        }
+    }
+    if (devices.empty()) {
+        AudioDevice fallback;
+        fallback.id = 0;
+        snprintf(fallback.name, sizeof(fallback.name), "Default (system)");
+        fallback.isDefault = true;
+        fallback.channels = 2;
+        fallback.sampleRate = 44100;
+        devices.push_back(fallback);
+    }
+    return devices;
+}
+
+VoiceChatResult VoiceChat::selectInputDevice(int deviceId) {
+    auto devices = enumerateInputDevices();
+    for (const auto& d : devices) {
+        if (d.id == deviceId) {
+            m_inputDeviceId = deviceId;
+            logStructured("INFO", "POSIX input device selected");
+            return VoiceChatResult::ok("Input device set");
+        }
+    }
+    return VoiceChatResult::error("Invalid input device ID", 1);
+}
+
+VoiceChatResult VoiceChat::selectOutputDevice(int deviceId) {
+    auto devices = enumerateOutputDevices();
+    for (const auto& d : devices) {
+        if (d.id == deviceId) {
+            m_outputDeviceId = deviceId;
+            logStructured("INFO", "POSIX output device selected");
+            return VoiceChatResult::ok("Output device set");
+        }
+    }
+    return VoiceChatResult::error("Invalid output device ID", 1);
+}
 #endif
 
 // ============================================================================

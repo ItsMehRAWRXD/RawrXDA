@@ -1,5 +1,6 @@
 #define NOMINMAX
 #include "ui/chat_panel.h"
+#include "ui/tool_action_status.h"
 #include <string>
 
 namespace RawrXD {
@@ -48,6 +49,25 @@ std::string ChatPanel::getInput() const {
 
 void ChatPanel::clearInput() {
     if (m_input) SetWindowTextW(m_input, L"");
+}
+
+void ChatPanel::appendToolAction(const ToolActionStatus& action) {
+    if (!m_transcript) return;
+    std::string text = ToolActionStatusFormatter::formatPlainText(action);
+    std::wstring wtext(text.begin(), text.end());
+    int len = GetWindowTextLengthW(m_transcript);
+    SendMessageW(m_transcript, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+    std::wstring line = L"  " + wtext;
+    SendMessageW(m_transcript, EM_REPLACESEL, TRUE, (LPARAM)line.c_str());
+}
+
+void ChatPanel::appendWorkingBubble(const WorkingBubble& bubble) {
+    if (!m_transcript) return;
+    std::string text = ToolActionStatusFormatter::formatWorkingBubblePlainText(bubble);
+    std::wstring wtext(text.begin(), text.end());
+    int len = GetWindowTextLengthW(m_transcript);
+    SendMessageW(m_transcript, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+    SendMessageW(m_transcript, EM_REPLACESEL, TRUE, (LPARAM)wtext.c_str());
 }
 
 } // namespace UI

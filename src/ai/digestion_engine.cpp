@@ -848,17 +848,43 @@ RawrXDDigestionEngine::Stats RawrXDDigestionEngine::getStatistics() const {
 // Signal/Callback Stubs (function pointer callbacks, no Qt signals)
 // ============================================================================
 
-void RawrXDDigestionEngine::pipelineStarted(int) {}
-void RawrXDDigestionEngine::fileScanStarted(const std::string &) {}
-void RawrXDDigestionEngine::fileScanCompleted(const std::string &, int, int) {}
-void RawrXDDigestionEngine::stubDetected(const StubInstance &) {}
-void RawrXDDigestionEngine::stubFixed(const StubInstance &) {}
-void RawrXDDigestionEngine::progressUpdate(int, int, int, int) {}
-void RawrXDDigestionEngine::errorOccurred(const std::string &, const std::string &) {}
-void RawrXDDigestionEngine::pipelineCompleted(const Stats &) {}
-void RawrXDDigestionEngine::checkpointSaved(int) {}
-void RawrXDDigestionEngine::aiFixRequested(const std::string &, std::string *) {}
-void RawrXDDigestionEngine::aiFixGenerated(const std::string &, float) {}
+void RawrXDDigestionEngine::pipelineStarted(int taskCount) {
+    if (m_pipelineStartedCb) m_pipelineStartedCb(m_pipelineStartedCtx, taskCount);
+}
+void RawrXDDigestionEngine::fileScanStarted(const std::string& filePath) {
+    if (m_fileScanStartedCb) m_fileScanStartedCb(m_fileScanStartedCtx, filePath.c_str());
+}
+void RawrXDDigestionEngine::fileScanCompleted(const std::string& filePath, int stubsFound, int stubsFixed) {
+    if (m_fileScanCompletedCb) m_fileScanCompletedCb(m_fileScanCompletedCtx, filePath.c_str(), stubsFound, stubsFixed);
+}
+void RawrXDDigestionEngine::stubDetected(const StubInstance& stub) {
+    if (m_stubDetectedCb) m_stubDetectedCb(m_stubDetectedCtx, &stub);
+}
+void RawrXDDigestionEngine::stubFixed(const StubInstance& stub) {
+    if (m_stubFixedCb) m_stubFixedCb(m_stubFixedCtx, &stub);
+}
+void RawrXDDigestionEngine::progressUpdate(int current, int total, int fixed, int failed) {
+    if (m_progressUpdateCb) m_progressUpdateCb(m_progressUpdateCtx, current, total, fixed, failed);
+}
+void RawrXDDigestionEngine::errorOccurred(const std::string& context, const std::string& message) {
+    if (m_errorOccurredCb) m_errorOccurredCb(m_errorOccurredCtx, context.c_str(), message.c_str());
+}
+void RawrXDDigestionEngine::pipelineCompleted(const Stats& stats) {
+    if (m_pipelineCompletedCb) m_pipelineCompletedCb(m_pipelineCompletedCtx, &stats);
+}
+void RawrXDDigestionEngine::checkpointSaved(int checkpointId) {
+    if (m_checkpointSavedCb) m_checkpointSavedCb(m_checkpointSavedCtx, checkpointId);
+}
+void RawrXDDigestionEngine::aiFixRequested(const std::string& stubCode, std::string* outFix) {
+    if (m_aiFixRequestedCb) {
+        char fixBuf[8192] = {};
+        m_aiFixRequestedCb(m_aiFixRequestedCtx, stubCode.c_str(), fixBuf, sizeof(fixBuf));
+        if (outFix && fixBuf[0]) *outFix = fixBuf;
+    }
+}
+void RawrXDDigestionEngine::aiFixGenerated(const std::string& fixCode, float confidence) {
+    if (m_aiFixGeneratedCb) m_aiFixGeneratedCb(m_aiFixGeneratedCtx, fixCode.c_str(), confidence);
+}
 
 // ============================================================================
 // Internal Dispatch Stubs

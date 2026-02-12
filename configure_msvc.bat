@@ -2,11 +2,24 @@
 REM Configure + Build RawrXD with MSVC cl.exe + ml64.exe via Ninja
 REM Uses SDK 10.0.22621.0 which has complete bin tools
 
-call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+REM Auto-detect VS toolchain: try D: first, then C:
+set "_VCVARS="
+if exist "D:\VS2022Enterprise\VC\Auxiliary\Build\vcvars64.bat" set "_VCVARS=D:\VS2022Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+if not defined _VCVARS if exist "C:\VS2022Enterprise\VC\Auxiliary\Build\vcvars64.bat" set "_VCVARS=C:\VS2022Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+if not defined _VCVARS if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" set "_VCVARS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+if defined _VCVARS (
+    call "%_VCVARS%"
+) else (
+    echo [WARN] vcvars64.bat not found — relying on PATH
+)
 
 REM Manually fix up SDK paths if winsdk.bat failed to add them
-REM The SDK 10.0.22621.0 include/lib/bin dirs exist but vcvars validation is buggy
-set "WINKITS=C:\Program Files (x86)\Windows Kits\10"
+REM Auto-detect Windows Kits location
+if exist "D:\Program Files (x86)\Windows Kits\10" (
+    set "WINKITS=D:\Program Files (x86)\Windows Kits\10"
+) else (
+    set "WINKITS=C:\Program Files (x86)\Windows Kits\10"
+)
 set "SDKVER=10.0.22621.0"
 
 REM Add missing SDK include paths (um, shared, winrt, cppwinrt)

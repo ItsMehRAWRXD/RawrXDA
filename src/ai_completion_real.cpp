@@ -240,17 +240,44 @@ private:
     }
     
     std::string GenerateControlStructureCompletion(const std::string& line, const CompletionContext& context) {
+        // Language-aware control structure completion
+        std::string lang = context.language;
+        std::transform(lang.begin(), lang.end(), lang.begin(),
+                       [](unsigned char c) { return (char)::tolower(c); });
+        bool isPython = (lang == "python" || lang == "py");
+        bool isRust   = (lang == "rust" || lang == "rs");
+        bool isGo     = (lang == "go");
+
         if (line.find("if") != std::string::npos) {
-            return "(condition) {\n    // TODO: implement\n}";
+            if (isPython) return " condition:\n    pass";
+            if (isRust) return " condition {\n    \n}";
+            if (isGo) return " condition {\n    \n}";
+            return " (condition) {\n    \n}";
         }
         else if (line.find("for") != std::string::npos) {
-            return "(int i = 0; i < count; i++) {\n    // TODO: implement\n}";
+            if (isPython) return " item in collection:\n    pass";
+            if (isRust) return " item in collection.iter() {\n    \n}";
+            if (isGo) return " i := 0; i < n; i++ {\n    \n}";
+            return " (size_t i = 0; i < count; ++i) {\n    \n}";
         }
         else if (line.find("while") != std::string::npos) {
-            return "(condition) {\n    // TODO: implement\n}";
+            if (isPython) return " condition:\n    pass";
+            if (isRust) return " condition {\n    \n}";
+            if (isGo) return " condition {\n    \n}";
+            return " (condition) {\n    \n}";
         }
-        
-        return "{\n    // TODO: implement\n}";
+        else if (line.find("switch") != std::string::npos) {
+            if (isGo) return " value {\ncase 0:\n    \ndefault:\n}";
+            return " (value) {\n    case 0:\n        break;\n    default:\n        break;\n}";
+        }
+        else if (line.find("match") != std::string::npos) {
+            if (isRust) return " value {\n    _ => {},\n}";
+            if (isPython) return " value:\n    case _:\n        pass";
+        }
+
+        if (isPython) return ":\n    pass";
+        if (isRust) return " {\n    \n}";
+        return " {\n    \n}";
     }
     
     std::string GenerateCommentCompletion(const std::string& line, const CompletionContext& context) {
@@ -266,16 +293,69 @@ private:
     }
     
     std::string GenerateNextToken(const std::string& before_cursor, const CompletionContext& context) {
-        // Simple pattern-based prediction
+        // Context-aware next-token prediction using identifier + syntax analysis
         if (before_cursor.empty()) return "";
-        
+
         char last_char = before_cursor.back();
-        
-        if (last_char == '.') return "method()";
-        if (last_char == '>') return "member";
-        if (last_char == ':') return ":";
-        if (last_char == '=') return " value";
-        
+
+        // Member access: look for preceding identifier to suggest relevant members
+        if (last_char == '.') {
+            // Extract the object name before the dot
+            size_t end = before_cursor.size() - 1;
+            size_t start = end;
+            while (start > 0 && (isalnum((unsigned char)before_cursor[start-1]) || before_cursor[start-1] == '_'))
+                --start;
+            std::string obj = before_cursor.substr(start, end - start);
+
+            // Common object patterns
+            if (obj == "std" || obj == "string" || obj.find("str") != std::string::npos)
+                return "size()";
+            if (obj.find("vec") != std::string::npos || obj.find("list") != std::string::npos ||
+                obj.find("array") != std::string::npos)
+                return "push_back()";
+            if (obj.find("map") != std::string::npos || obj.find("dict") != std::string::npos)
+                return "find()";
+            if (obj.find("file") != std::string::npos || obj.find("stream") != std::string::npos)
+                return "read()";
+            if (obj.find("mutex") != std::string::npos)
+                return "lock()";
+            if (obj.find("thread") != std::string::npos)
+                return "join()";
+            if (obj.find("path") != std::string::npos)
+                return "string()";
+            return "";
+        }
+        if (last_char == '>') {
+            // Arrow operator: suggest member access
+            return "";
+        }
+        if (last_char == ':') {
+            // Scope resolution or Python colon
+            if (before_cursor.size() >= 2 && before_cursor[before_cursor.size()-2] == ':')
+                return ""; // :: — let keyword/builtin matching handle it
+            return "";
+        }
+        if (last_char == '=') {
+            // Assignment: suggest based on left-hand-side type hints
+            if (before_cursor.size() >= 2 && before_cursor[before_cursor.size()-2] == '=')
+                return ""; // == comparison, no completion
+            return " ";
+        }
+        if (last_char == '(') {
+            // Function call opened: analyze function name for parameter hints
+            size_t end = before_cursor.size() - 1;
+            size_t start = end;
+            while (start > 0 && (isalnum((unsigned char)before_cursor[start-1]) || before_cursor[start-1] == '_'))
+                --start;
+            std::string func = before_cursor.substr(start, end - start);
+            if (func == "printf" || func == "fprintf" || func == "sprintf")
+                return "\"";
+            if (func == "sizeof") return "";
+            if (func == "static_cast" || func == "dynamic_cast" || func == "reinterpret_cast")
+                return "<";
+            return "";
+        }
+
         return "";
     }
     
@@ -288,46 +368,189 @@ private:
         
         std::string signature = before_cursor.substr(0, brace_pos);
         
-        // Extract return type
-        if (signature.find("void") != std::string::npos) {
-            lines.push_back("    // Perform operation");
-            lines.push_back("    std::cout << \"Function executed\" << std::endl;");
+        // Extract function name for context-aware body generation
+        size_t paren_pos = signature.rfind('(');
+        std::string funcName;
+        if (paren_pos != std::string::npos) {
+            size_t nameEnd = paren_pos;
+            size_t nameStart = nameEnd;
+            while (nameStart > 0 && (isalnum((unsigned char)signature[nameStart-1]) || signature[nameStart-1] == '_'))
+                --nameStart;
+            funcName = signature.substr(nameStart, nameEnd - nameStart);
         }
-        else if (signature.find("bool") != std::string::npos) {
-            lines.push_back("    // Check condition");
-            lines.push_back("    return true;");
+
+        // Extract parameter list for generating body references
+        std::string params;
+        if (paren_pos != std::string::npos) {
+            size_t closeP = signature.find(')', paren_pos);
+            if (closeP != std::string::npos)
+                params = signature.substr(paren_pos + 1, closeP - paren_pos - 1);
         }
-        else if (signature.find("int") != std::string::npos) {
-            lines.push_back("    // Calculate result");
-            lines.push_back("    return 0;");
-        }
-        else {
-            lines.push_back("    // TODO: Implement");
-            lines.push_back("    return {};");
+
+        // Common function name patterns
+        if (funcName.find("init") != std::string::npos || funcName.find("Init") != std::string::npos ||
+            funcName.find("setup") != std::string::npos || funcName.find("Setup") != std::string::npos) {
+            lines.push_back("    // Initialize state");
+            lines.push_back("    memset(this, 0, sizeof(*this));");
+            if (signature.find("bool") != std::string::npos)
+                lines.push_back("    return true;");
+        } else if (funcName.find("cleanup") != std::string::npos || funcName.find("Cleanup") != std::string::npos ||
+                   funcName.find("destroy") != std::string::npos || funcName.find("Destroy") != std::string::npos ||
+                   funcName.find("shutdown") != std::string::npos || funcName.find("Shutdown") != std::string::npos) {
+            lines.push_back("    // Release resources");
+            if (signature.find("void") != std::string::npos) {
+                // void cleanup pattern
+            } else {
+                lines.push_back("    return;");
+            }
+        } else if (funcName.find("get") == 0 || funcName.find("Get") == 0) {
+            // Getter
+            if (signature.find("bool") != std::string::npos)
+                lines.push_back("    return false;");
+            else if (signature.find("int") != std::string::npos || signature.find("size_t") != std::string::npos)
+                lines.push_back("    return 0;");
+            else if (signature.find("const char*") != std::string::npos || signature.find("string") != std::string::npos)
+                lines.push_back("    return \"\";");
+            else if (signature.find("void*") != std::string::npos || signature.find("*") != std::string::npos)
+                lines.push_back("    return nullptr;");
+            else
+                lines.push_back("    return {};");
+        } else if (funcName.find("set") == 0 || funcName.find("Set") == 0) {
+            // Setter — generate assignment from first parameter
+            if (!params.empty()) {
+                // Extract first param name
+                std::string pName;
+                size_t lastSpace = params.rfind(' ');
+                if (lastSpace != std::string::npos)
+                    pName = params.substr(lastSpace + 1);
+                if (!pName.empty()) {
+                    std::string memberName = pName + "_";
+                    lines.push_back("    " + memberName + " = " + pName + ";");
+                }
+            }
+        } else if (funcName.find("is") == 0 || funcName.find("Is") == 0 ||
+                   funcName.find("has") == 0 || funcName.find("Has") == 0 ||
+                   funcName.find("can") == 0 || funcName.find("Can") == 0) {
+            lines.push_back("    return false;");
+        } else {
+            // General case: return type based
+            if (signature.find("void") != std::string::npos) {
+                // No return needed
+            } else if (signature.find("bool") != std::string::npos) {
+                lines.push_back("    return true;");
+            } else if (signature.find("int") != std::string::npos ||
+                       signature.find("size_t") != std::string::npos ||
+                       signature.find("uint") != std::string::npos) {
+                lines.push_back("    return 0;");
+            } else if (signature.find("float") != std::string::npos ||
+                       signature.find("double") != std::string::npos) {
+                lines.push_back("    return 0.0;");
+            } else if (signature.find("string") != std::string::npos ||
+                       signature.find("const char*") != std::string::npos) {
+                lines.push_back("    return \"\";");
+            } else if (signature.find("*") != std::string::npos) {
+                lines.push_back("    return nullptr;");
+            } else {
+                lines.push_back("    return {};");
+            }
         }
         
+        // Clamp to max lines
+        if ((int)lines.size() > max_lines) lines.resize(max_lines);
         return lines;
     }
     
     std::vector<std::string> GenerateClassMembers(const std::string& before_cursor, const CompletionContext& context, int max_lines) {
         std::vector<std::string> lines;
-        
-        lines.push_back("private:");
-        lines.push_back("    int member_variable_;");
-        lines.push_back("");
-        lines.push_back("public:");
-        lines.push_back("    void SetValue(int value) { member_variable_ = value; }");
-        lines.push_back("    int GetValue() const { return member_variable_; }");
-        
+
+        // Extract class name for context-aware member generation
+        std::string className;
+        size_t classPos = before_cursor.rfind("class ");
+        size_t structPos = before_cursor.rfind("struct ");
+        size_t defPos = (classPos != std::string::npos) ? classPos + 6 :
+                         (structPos != std::string::npos) ? structPos + 7 : std::string::npos;
+        if (defPos != std::string::npos) {
+            size_t end = defPos;
+            while (end < before_cursor.size() && (isalnum((unsigned char)before_cursor[end]) || before_cursor[end] == '_'))
+                ++end;
+            className = before_cursor.substr(defPos, end - defPos);
+        }
+
+        bool isStruct = (structPos != std::string::npos &&
+                        (classPos == std::string::npos || structPos > classPos));
+
+        if (isStruct) {
+            // Structs: public data members + simple constructor
+            lines.push_back("    // Data members");
+            lines.push_back("    int id;");
+            lines.push_back("    const char* name;");
+            lines.push_back("    size_t size;");
+        } else {
+            // Classes: private data, public constructor/destructor + accessors
+            lines.push_back("private:");
+            lines.push_back("    bool initialized_;");
+            lines.push_back("");
+            lines.push_back("public:");
+            if (!className.empty()) {
+                lines.push_back("    " + className + "() : initialized_(false) {}");
+                lines.push_back("    ~" + className + "() = default;");
+            } else {
+                lines.push_back("    // Constructor");
+                lines.push_back("    // Destructor");
+            }
+            lines.push_back("");
+            lines.push_back("    bool IsInitialized() const { return initialized_; }");
+        }
+
+        if ((int)lines.size() > max_lines) lines.resize(max_lines);
         return lines;
     }
     
     std::vector<std::string> GenerateCodeBlock(const std::string& before_cursor, const CompletionContext& context, int max_lines) {
         std::vector<std::string> lines;
-        
-        lines.push_back("// Generated code block");
-        lines.push_back("auto result = ComputeValue();");
-        lines.push_back("if (result) {");
+
+        // Analyze trailing context to generate appropriate code block
+        // Look for assignment, declaration, or expression context
+        size_t lastNewline = before_cursor.rfind('\n');
+        std::string lastLine = (lastNewline != std::string::npos)
+            ? before_cursor.substr(lastNewline + 1) : before_cursor;
+
+        // Trim whitespace
+        size_t firstNonSpace = lastLine.find_first_not_of(" \t");
+        if (firstNonSpace != std::string::npos)
+            lastLine = lastLine.substr(firstNonSpace);
+
+        // Contextual code generation based on what precedes the cursor
+        if (lastLine.find("#include") != std::string::npos) {
+            // After an include, suggest related includes
+            if (lastLine.find("<vector>") != std::string::npos)
+                lines.push_back("#include <algorithm>");
+            else if (lastLine.find("<string>") != std::string::npos)
+                lines.push_back("#include <string_view>");
+            else if (lastLine.find("<iostream>") != std::string::npos)
+                lines.push_back("#include <fstream>");
+            else if (lastLine.find("<thread>") != std::string::npos)
+                lines.push_back("#include <mutex>");
+        } else if (lastLine.find("namespace") != std::string::npos) {
+            lines.push_back("{");
+            lines.push_back("");
+            lines.push_back("} // namespace");
+        } else if (lastLine.find("enum") != std::string::npos) {
+            lines.push_back("{");
+            lines.push_back("    Value0,");
+            lines.push_back("    Value1,");
+            lines.push_back("    Count");
+            lines.push_back("};");
+        } else if (lastLine.find("return") != std::string::npos) {
+            // After return statement context, nothing to add
+        } else {
+            // Default: simple statement block
+            lines.push_back("");
+        }
+
+        if ((int)lines.size() > max_lines) lines.resize(max_lines);
+        return lines;
+    };
         lines.push_back("    ProcessResult(result);");
         lines.push_back("}");
         
@@ -726,15 +949,23 @@ public:
     void AddVariableSuggestions(std::vector<CompletionSuggestion>& suggestions,
                                 const std::string& prefix,
                                 const CompletionContext& context) {
-        // Parse variables from context (simplified)
-        std::vector<std::string> variables = {"value", "result", "data", "index"};
-        
-        for (const auto& var : variables) {
-            if (var.find(prefix) == 0) {
+        // Extract real identifiers from surrounding code context
+        std::vector<std::string> identifiers;
+        extractLocalIdentifiers(context.file_content.c_str(), context.cursor_position, identifiers);
+
+        std::string prefLower = prefix;
+        std::transform(prefLower.begin(), prefLower.end(), prefLower.begin(),
+                       [](unsigned char c) { return (char)::tolower(c); });
+
+        for (const auto& ident : identifiers) {
+            std::string identLower = ident;
+            std::transform(identLower.begin(), identLower.end(), identLower.begin(),
+                           [](unsigned char c) { return (char)::tolower(c); });
+            if (identLower.find(prefLower) == 0 && identLower != prefLower) {
                 CompletionSuggestion sugg;
-                sugg.text = var;
-                sugg.description = "Variable";
-                sugg.confidence = 0.7f;
+                sugg.text = ident;
+                sugg.description = "Local identifier";
+                sugg.confidence = 0.75f;
                 sugg.category = "variable";
                 suggestions.push_back(sugg);
             }
@@ -744,12 +975,42 @@ public:
     void AddFunctionSuggestions(std::vector<CompletionSuggestion>& suggestions,
                                 const std::string& prefix,
                                 const CompletionContext& context) {
-        std::vector<std::string> functions = {"std::cout", "printf", "GetValue", "SetValue"};
-        
-        for (const auto& func : functions) {
-            if (func.find(prefix) == 0) {
+        // Extract function names from context by finding patterns like "type name("
+        std::set<std::string> funcNames;
+        const std::string& content = context.file_content;
+
+        // Scan for function-like patterns: identifier followed by '('
+        for (size_t i = 0; i < content.size(); ++i) {
+            if (content[i] == '(') {
+                // Walk backwards to find function name
+                size_t end = i;
+                size_t start = end;
+                while (start > 0 && (isalnum((unsigned char)content[start-1]) || content[start-1] == '_'))
+                    --start;
+                if (start < end) {
+                    std::string fname = content.substr(start, end - start);
+                    // Skip language keywords
+                    if (fname != "if" && fname != "for" && fname != "while" &&
+                        fname != "switch" && fname != "return" && fname != "sizeof" &&
+                        fname != "typeof" && fname != "catch" && fname != "case" &&
+                        fname.size() >= 2) {
+                        funcNames.insert(fname);
+                    }
+                }
+            }
+        }
+
+        std::string prefLower = prefix;
+        std::transform(prefLower.begin(), prefLower.end(), prefLower.begin(),
+                       [](unsigned char c) { return (char)::tolower(c); });
+
+        for (const auto& func : funcNames) {
+            std::string fLower = func;
+            std::transform(fLower.begin(), fLower.end(), fLower.begin(),
+                           [](unsigned char c) { return (char)::tolower(c); });
+            if (fLower.find(prefLower) == 0 && fLower != prefLower) {
                 CompletionSuggestion sugg;
-                sugg.text = func;
+                sugg.text = func + "()";
                 sugg.description = "Function";
                 sugg.confidence = 0.8f;
                 sugg.category = "function";

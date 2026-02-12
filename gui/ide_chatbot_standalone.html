@@ -9117,10 +9117,10 @@
       extensions: {},
       installed: [],
       enabled: [],
-      registryPath: 'd:\\RawrXD\\extensions\\registry.json',
-      extensionRoot: 'd:\\RawrXD\\extensions',
-      moduleStore: 'd:\\RawrXD\\scripts\\modules',
-      craftRoom: 'd:\\RawrXD\\craft_room',
+      registryPath: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\extensions\\registry.json',
+      extensionRoot: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\extensions',
+      moduleStore: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\scripts\\modules',
+      craftRoom: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\craft_room',
       marketplace: {
         url: 'https://marketplace.visualstudio.com/_apis/public/gallery',
         openVsxUrl: 'https://open-vsx.org/api',
@@ -10447,7 +10447,7 @@
             model: model,
             prompt: 'Reply with the word: OK',
             stream: false,
-            options: { temperature: 0.1, num_ctx: 512, top_p: 0.9, top_k: 40 },
+            options: { temperature: 0.1, num_ctx: 512, top_p: State.gen.top_p || 0.9, top_k: State.gen.top_k || 40 },
           }),
           signal: AbortSignal.timeout(15000),
         });
@@ -11641,6 +11641,7 @@
           if (data.models && Array.isArray(data.models)) {
             State.model.list = data.models;
             populateModelSelect(data.models);
+            if (typeof updateBridgeModelNames === 'function') updateBridgeModelNames();
             logDebug('Loaded ' + data.models.length + ' models from /models', 'info');
             return;
           }
@@ -11665,6 +11666,7 @@
           });
           State.model.list = mapped;
           populateModelSelect(mapped);
+          if (typeof updateBridgeModelNames === 'function') updateBridgeModelNames();
           logDebug('Loaded ' + mapped.length + ' models from Ollama /api/tags' + (State.backend.directMode ? ' (direct)' : ''), 'info');
           return;
         }
@@ -11779,8 +11781,12 @@
       '800b-dual': { label: '\uD83E\uDDE0 800B Dual Engine', css: 'tier-800b', color: '#ff00ff', range: '671-800B' }
     };
 
-    // Model name lookup (mirrors model_bridge_x64.asm g_ModelNames)
-    var BRIDGE_MODEL_NAMES = [
+    // Model name lookup — initially populated from model_bridge_x64.asm g_ModelNames,
+    // then dynamically updated from backend /api/model/profiles at runtime
+    var BRIDGE_MODEL_NAMES = [];
+
+    // Default bridge model names (fallback when backend is offline)
+    var _DEFAULT_BRIDGE_MODEL_NAMES = [
       'qwen2.5:1.5b', 'qwen2.5:3b', 'llama3.2:3b', 'phi-4:3.8b',
       'gemma2:7b', 'llama3.1:8b', 'qwen2.5:7b', 'mistral:7b', 'deepseek-r1:8b',
       'llama3.1:13b', 'qwen2.5:14b', 'gemma2:27b',
@@ -11789,6 +11795,19 @@
       'BigDaddyG-Q4_K_M', 'RawrXD-800B-DualEngine', 'deepseek-v3:671b-swarm',
       'mixtral-8x22b:141b', 'commandr-plus:104b-swarm'
     ];
+
+    // Populate BRIDGE_MODEL_NAMES dynamically: prefer loaded model list, then bridge profiles, then defaults
+    function updateBridgeModelNames() {
+      if (State.model.list && State.model.list.length > 0) {
+        BRIDGE_MODEL_NAMES = State.model.list.map(function (m) { return m.name || m; });
+      } else if (BridgeState.profiles && BridgeState.profiles.length > 0) {
+        BRIDGE_MODEL_NAMES = BridgeState.profiles.map(function (p) { return p.name || p.model || ''; }).filter(Boolean);
+      } else {
+        BRIDGE_MODEL_NAMES = _DEFAULT_BRIDGE_MODEL_NAMES.slice();
+      }
+    }
+    // Initialize with defaults until backend connects
+    BRIDGE_MODEL_NAMES = _DEFAULT_BRIDGE_MODEL_NAMES.slice();
 
     // Fetch all 24 profiles from MASM bridge endpoint
     async function fetchBridgeProfiles() {
@@ -13591,7 +13610,7 @@
       if (_win32IdeUrl) return _win32IdeUrl;
       // Last resort: proxy URL (never Ollama direct)
       if (!State.backend.directMode && State.backend.online) return State.backend.url;
-      return 'http://localhost:11435';
+      return _ideServerUrl || 'http://localhost:11435';
     }
 
     // --- Render CLI output lines with color coding ---
@@ -16692,7 +16711,7 @@
               if (rest && rest.charAt(0) === '[') {
                 steps = JSON.parse(rest);
               } else {
-                steps = [{ model: State.model.current || 'llama3', prompt: rest || 'Summarize the system' }];
+                steps = [{ model: State.model.current || (State.model.list && State.model.list[0] && State.model.list[0].name) || 'rawrxd', prompt: rest || 'Summarize the system' }];
               }
               addTerminalLine('  Running chain with ' + steps.length + ' step(s)...', 'system');
               var data = await EngineAPI.chain(steps);
@@ -20552,7 +20571,7 @@
           if (stepsRaw) {
             steps = JSON.parse(stepsRaw);
           } else {
-            steps = [{ model: State.model.current || 'llama3', prompt: prompt }];
+            steps = [{ model: State.model.current || (State.model.list && State.model.list[0] && State.model.list[0].name) || 'rawrxd', prompt: prompt }];
           }
           data = await EngineAPI.chain(steps);
         } else {
@@ -22345,11 +22364,12 @@
       var outputEl = document.getElementById('extPsOutput');
       if (!outputEl) return;
 
+      var basePath = ExtensionState.craftRoom ? ExtensionState.craftRoom.replace(/\\craft_room$/, '') : (window._rawrxdBasePath || 'd:\\RawrXD');
       var commands = {
         'list': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-Extension | Format-Table -AutoSize',
         'menu': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Show-ExtensionMenu',
-        'craft': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "d:\\RawrXD\\craft_room" -Recurse | Format-Table Name, Length, LastWriteTime',
-        'scan': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "d:\\RawrXD\\extensions" -Directory | ForEach-Object { Get-Extension -Name $_.Name }'
+        'craft': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "' + ExtensionState.craftRoom + '" -Recurse | Format-Table Name, Length, LastWriteTime',
+        'scan': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "' + ExtensionState.extensionRoot + '" -Directory | ForEach-Object { Get-Extension -Name $_.Name }'
       };
 
       var cmd = commands[action];
@@ -22361,10 +22381,10 @@
         EngineAPI._cli(cmd).then(function (data) {
           outputEl.textContent = data.output || data.result || JSON.stringify(data, null, 2);
         }).catch(function (err) {
-          outputEl.textContent = 'Backend unavailable. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+          outputEl.textContent = 'Backend unavailable. Run this in PowerShell:\n\n  cd ' + basePath + '\n  ' + cmd;
         });
       } else {
-        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd ' + basePath + '\n  ' + cmd;
       }
     }
 
@@ -22383,13 +22403,13 @@
       if (typeof EngineAPI !== 'undefined' && EngineAPI._cli) {
         EngineAPI._cli(cmd).then(function (data) {
           outputEl.textContent = data.output || data.result || ('\u2705 Created extension: ' + name);
-          ExtensionState.install({ id: name.toLowerCase(), name: name, enabled: true, type: type.toLowerCase(), version: '1.0.0', path: 'd:\\RawrXD\\extensions\\' + name.toLowerCase() });
+          ExtensionState.install({ id: name.toLowerCase(), name: name, enabled: true, type: type.toLowerCase(), version: '1.0.0', path: ExtensionState.extensionRoot + '\\' + name.toLowerCase() });
           refreshExtPanel();
         }).catch(function (err) {
-          outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+          outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd ' + (ExtensionState.extensionRoot || 'd:\\RawrXD').replace(/\\extensions$/, '') + '\n  ' + cmd;
         });
       } else {
-        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd ' + (ExtensionState.extensionRoot || 'd:\\RawrXD').replace(/\\extensions$/, '') + '\n  ' + cmd;
       }
     }
 
@@ -24478,6 +24498,7 @@
       };
     })();
   </script>
+  <script src="/gui/rawrxd-nav.js"></script>
 </body>
 
 </html>

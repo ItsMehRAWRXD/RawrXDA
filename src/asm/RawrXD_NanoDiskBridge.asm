@@ -43,6 +43,13 @@ EXTERNDEF ResetEvent:PROC
 EXTERNDEF FlushFileBuffers:PROC
 EXTERNDEF GetTickCount64:PROC
 
+; Shared symbols from RawrXD_DiskRecoveryAgent.asm (fixes LNK2005 duplicates)
+EXTERNDEF szNewLine:BYTE
+EXTERNDEF FmtBuf:BYTE
+EXTERNDEF g_hStdOut:QWORD
+EXTERN ConsolePrint:PROC
+EXTERN PrintU64:PROC
+
 ; =============================================================================
 ; DiskKernel imports (from DiskKernel.def ordinals / linked at build time)
 ; =============================================================================
@@ -246,16 +253,15 @@ NANO_QUANTIZE_JOB ENDS
     szErrInvalidRank     db "invalid_rank", 0
     szErrIoTimeout       db "io_timeout", 0
 
-    ; Formatting
-    szNewLine            db 13, 10, 0
+    ; Formatting — szNewLine, FmtBuf imported via EXTERNDEF above
+
     szComma              db ", ", 0
     szCloseParen         db ")", 13, 10, 0
     szBytes              db " bytes", 13, 10, 0
     szX                  db "x", 13, 10, 0
 
-    ; Number format scratch
-    align 8
-    FmtBuf               db 256 dup(0)
+    ; Number format scratch — imported from RawrXD_DiskRecoveryAgent.asm
+    ; (FmtBuf declared via EXTERNDEF above)
 
 ; =============================================================================
 ; .data? — Uninitialized data
@@ -272,8 +278,7 @@ NANO_QUANTIZE_JOB ENDS
     align 8
     g_QuantizeJob        NANO_QUANTIZE_JOB <>
 
-    ; Console handle cache
-    g_hStdOut            QWORD   ?
+    ; Console handle cache — g_hStdOut imported via EXTERNDEF above
 
     ; Next job ID counter (atomically incremented)
     g_NextJobId          DWORD   ?
@@ -287,91 +292,9 @@ NANO_QUANTIZE_JOB ENDS
 .code
 
 ; =============================================================================
-; ConsolePrint — Write a null-terminated string to stdout
-; RCX = ptr to string
-; Clobbers: RAX, RCX, RDX, R8, R9
+; ConsolePrint / PrintU64 — removed duplicate PROCs (LNK2005 fix)
+; Now imported via EXTERN from RawrXD_DiskRecoveryAgent.asm
 ; =============================================================================
-ConsolePrint PROC
-    push rbx
-    push rsi
-    sub  rsp, 48
-
-    mov  rsi, rcx
-
-    ; lstrlenA
-    call lstrlenA
-    mov  rbx, rax
-
-    test rbx, rbx
-    jz   cp_done
-
-    mov  ecx, STD_OUTPUT_HANDLE
-    call GetStdHandle
-    test rax, rax
-    jz   cp_done
-
-    mov  rcx, rax
-    mov  rdx, rsi
-    mov  r8d, ebx
-    lea  r9, [rsp+32]
-    mov  qword ptr [rsp+32], 0
-    mov  qword ptr [rsp+40], 0
-    call WriteFile
-
-cp_done:
-    add  rsp, 48
-    pop  rsi
-    pop  rbx
-    ret
-ConsolePrint ENDP
-
-; =============================================================================
-; PrintU64 — Print a QWORD as decimal string to console
-; RCX = value
-; Clobbers: RAX, RCX, RDX, R8, R9
-; =============================================================================
-PrintU64 PROC
-    push rbx
-    push rsi
-    push rdi
-    sub  rsp, 48
-
-    mov  rbx, rcx
-
-    lea  rdi, FmtBuf
-    add  rdi, 30
-    mov  byte ptr [rdi], 0
-    dec  rdi
-
-    mov  rax, rbx
-    test rax, rax
-    jnz  pu64_loop
-    mov  byte ptr [rdi], '0'
-    dec  rdi
-    jmp  pu64_print
-
-pu64_loop:
-    test rax, rax
-    jz   pu64_print
-    xor  edx, edx
-    mov  rcx, 10
-    div  rcx
-    add  dl, '0'
-    mov  byte ptr [rdi], dl
-    dec  rdi
-    jmp  pu64_loop
-
-pu64_print:
-    inc  rdi
-    mov  rcx, rdi
-    call ConsolePrint
-
-    add  rsp, 48
-    pop  rdi
-    pop  rsi
-    pop  rbx
-    ret
-PrintU64 ENDP
 
 ; =============================================================================
 ; AllocDmaBuffer — Allocate a DMA-aligned buffer via VirtualAlloc

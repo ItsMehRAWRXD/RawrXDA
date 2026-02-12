@@ -137,34 +137,218 @@ bool HTTPClient::streamRequest(
 
     if (m_logger) m_logger->debug("Starting streaming request to: {}", request.url);
 
-    try {
-        // Implementation would use curl_easy_setopt with CURLOPT_WRITEFUNCTION
-        // callback for each received chunk
+#if !(defined(HAVE_CURL) && HAVE_CURL)
+    // WinHTTP streaming implementation
+    HINTERNET hSession = WinHttpOpen(L"RawrXD/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) {
+        if (m_logger) m_logger->error("WinHttpOpen failed: {}", GetLastError());
+        if (m_metrics) m_metrics->incrementCounter("stream_errors");
+        return false;
+    }
 
-        // Simulate streaming response
-        callback(R"({"response": "hello "})");
-        callback(R"({"response": "world"})");
-        callback(R"({"response": "!", "done": true})");
+    // Parse URL components
+    URL_COMPONENTS urlComp = {};
+    urlComp.dwStructSize = sizeof(urlComp);
+    wchar_t hostName[256] = {}, urlPath[1024] = {};
+    urlComp.lpszHostName = hostName;
+    urlComp.dwHostNameLength = 256;
+    urlComp.lpszUrlPath = urlPath;
+    urlComp.dwUrlPathLength = 1024;
+
+    std::wstring wideUrl(request.url.begin(), request.url.end());
+    if (!WinHttpCrackUrl(wideUrl.c_str(), 0, 0, &urlComp)) {
+        WinHttpCloseHandle(hSession);
+        if (m_logger) m_logger->error("Failed to parse URL: {}", request.url);
+        return false;
+    }
+
+    HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); return false; }
+
+    std::wstring wideMethod(request.method.begin(), request.method.end());
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, wideMethod.c_str(), urlPath,
+                                            NULL, WINHTTP_NO_REFERER,
+                                            WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                            (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0);
+    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
+
+    // Add headers
+    for (const auto& hdr : request.headers) {
+        std::wstring whdr(hdr.first.begin(), hdr.first.end());
+        whdr += L": ";
+        std::wstring wval(hdr.second.begin(), hdr.second.end());
+        whdr += wval;
+        WinHttpAddRequestHeaders(hRequest, whdr.c_str(), (DWORD)-1, WINHTTP_ADDREQ_FLAG_ADD);
+    }
+
+    // Send request
+    BOOL bSent = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                    (LPVOID)request.body.c_str(), (DWORD)request.body.size(),
+                                    (DWORD)request.body.size(), 0);
+    if (!bSent || !WinHttpReceiveResponse(hRequest, NULL)) {
+        WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+        if (m_logger) m_logger->error("Stream send failed: {}", GetLastError());
+        return false;
+    }
+
+    // Stream response chunks
+    DWORD dwSize = 0;
+    bool success = true;
+    try {
+        do {
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+            if (dwSize == 0) break;
+
+            std::string chunk(dwSize, '\0');
+            DWORD dwRead = 0;
+            if (WinHttpReadData(hRequest, &chunk[0], dwSize, &dwRead)) {
+                chunk.resize(dwRead);
+                callback(chunk);
+            } else {
+                break;
+            }
+        } while (dwSize > 0);
+    } catch (const std::exception& e) {
+        if (m_logger) m_logger->error("Stream processing error: {}", e.what());
+        success = false;
+    }
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    if (m_metrics) m_metrics->incrementCounter(success ? "stream_requests" : "stream_errors");
+    return success;
+#else
+    // CURL streaming implementation
+    try {
+        CURL* curl = curl_easy_init();
+        if (!curl) {
+            if (m_logger) m_logger->error("curl_easy_init failed");
+            return false;
+        }
+
+        curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request.method.c_str());
+
+        // Set up streaming write callback
+        auto writeCallback = [](char* ptr, size_t size, size_t nmemb, void* userdata) -> size_t {
+            size_t total = size * nmemb;
+            auto* cb = reinterpret_cast<std::function<void(const std::string&)>*>(userdata);
+            (*cb)(std::string(ptr, total));
+            return total;
+        };
+
+        std::function<void(const std::string&)> cbWrapper = callback;
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +writeCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &cbWrapper);
+
+        if (!request.body.empty()) {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request.body.c_str());
+        }
+
+        struct curl_slist* headers = nullptr;
+        for (const auto& hdr : request.headers) {
+            std::string h = hdr.first + ": " + hdr.second;
+            headers = curl_slist_append(headers, h.c_str());
+        }
+        if (headers) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (headers) curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+
+        if (res != CURLE_OK) {
+            if (m_logger) m_logger->error("Stream curl error: {}", curl_easy_strerror(res));
+            if (m_metrics) m_metrics->incrementCounter("stream_errors");
+            return false;
+        }
 
         if (m_metrics) m_metrics->incrementCounter("stream_requests");
         return true;
-
     } catch (const std::exception& e) {
         if (m_logger) m_logger->error("Stream request failed: {}", e.what());
         if (m_metrics) m_metrics->incrementCounter("stream_errors");
         return false;
     }
+#endif
 }
 
 bool HTTPClient::downloadFile(const std::string& url, const std::string& outputPath) {
     if (m_logger) m_logger->info("Downloading file from: {} to: {}", url, outputPath);
 
     try {
-        // Would use curl_easy_setopt(curl, CURLOPT_WRITEDATA, fileHandle);
+        // Use WinHTTP to download directly to file
+        HINTERNET hSession = WinHttpOpen(L"RawrXD/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                         WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession) {
+            if (m_logger) m_logger->error("WinHttpOpen failed for download: {}", GetLastError());
+            if (m_metrics) m_metrics->incrementCounter("download_errors");
+            return false;
+        }
 
-        if (m_logger) m_logger->info("Download complete: {}", outputPath);
+        URL_COMPONENTS urlComp = {};
+        urlComp.dwStructSize = sizeof(urlComp);
+        wchar_t hostName[256] = {}, urlPath[1024] = {};
+        urlComp.lpszHostName = hostName;
+        urlComp.dwHostNameLength = 256;
+        urlComp.lpszUrlPath = urlPath;
+        urlComp.dwUrlPathLength = 1024;
+
+        std::wstring wideUrl(url.begin(), url.end());
+        if (!WinHttpCrackUrl(wideUrl.c_str(), 0, 0, &urlComp)) {
+            WinHttpCloseHandle(hSession);
+            if (m_logger) m_logger->error("Failed to parse download URL: {}", url);
+            return false;
+        }
+
+        HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort, 0);
+        HINTERNET hRequest = hConnect ? WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL,
+                                                           WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES,
+                                                           (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0)
+                                     : NULL;
+
+        if (!hRequest || !WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, NULL, 0, 0, 0)
+            || !WinHttpReceiveResponse(hRequest, NULL)) {
+            if (hRequest) WinHttpCloseHandle(hRequest);
+            if (hConnect) WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            if (m_logger) m_logger->error("Download HTTP request failed");
+            if (m_metrics) m_metrics->incrementCounter("download_errors");
+            return false;
+        }
+
+        // Open output file
+        std::ofstream outFile(outputPath, std::ios::binary);
+        if (!outFile.is_open()) {
+            WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
+            if (m_logger) m_logger->error("Cannot open output file: {}", outputPath);
+            return false;
+        }
+
+        // Stream data to file
+        DWORD dwSize = 0, dwRead = 0;
+        size_t totalBytes = 0;
+        char buffer[8192];
+        do {
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+            if (dwSize == 0) break;
+            DWORD toRead = (dwSize < sizeof(buffer)) ? dwSize : sizeof(buffer);
+            if (WinHttpReadData(hRequest, buffer, toRead, &dwRead)) {
+                outFile.write(buffer, dwRead);
+                totalBytes += dwRead;
+            }
+        } while (dwSize > 0);
+
+        outFile.close();
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        if (m_logger) m_logger->info("Download complete: {} ({} bytes)", outputPath, totalBytes);
         if (m_metrics) m_metrics->incrementCounter("file_downloads");
-        return true;
+        return totalBytes > 0;
 
     } catch (const std::exception& e) {
         if (m_logger) m_logger->error("Download failed: {}", e.what());

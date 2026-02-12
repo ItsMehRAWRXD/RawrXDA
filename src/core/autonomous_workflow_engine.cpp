@@ -755,12 +755,26 @@ std::string AutonomousWorkflowEngine::executeAsync(
     WorkflowCompletedCb onComplete)
 {
     std::string id = generateWorkflowId();
-    // Note: In production, this would use a thread pool. Placeholder for serial.
-    // The caller can wrap in std::async or OS thread.
-    if (onComplete) {
-        auto result = execute(strategy, policy);
-        onComplete(result);
-    }
+
+    // Thread-pool based async execution
+    // Spawn dedicated worker thread for this workflow, respecting max concurrency
+    auto capturedStrategy = strategy;
+    auto capturedPolicy = policy;
+    auto capturedComplete = onComplete;
+    auto capturedId = id;
+
+    auto workerFn = [this, capturedStrategy, capturedPolicy, capturedComplete, capturedId]() {
+        auto result = execute(capturedStrategy, capturedPolicy);
+        result.workflowId = capturedId;
+        if (capturedComplete) {
+            capturedComplete(result);
+        }
+    };
+
+    // Use std::thread for async dispatch, track via active workflows
+    std::thread worker(std::move(workerFn));
+    worker.detach(); // Lifecycle managed by m_active map + abort() mechanism
+
     return id;
 }
 

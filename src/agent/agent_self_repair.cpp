@@ -16,6 +16,7 @@
 #include <vector>
 #include <tlhelp32.h>
 #include "agent_self_repair.hpp"
+#include "../core/sentinel_watchdog.hpp"
 #include <cstring>
 #include <cstdio>
 
@@ -517,6 +518,12 @@ PatchResult AgentSelfRepair::redirectFunction(uint32_t slotId) {
         return PatchResult::error("Failed to suspend threads for safe patching");
     }
 
+    // Deactivate sentinel watchdog before modifying .text (prevents false hash alarm)
+    bool sentinelWasActive = SentinelWatchdog::instance().isActive();
+    if (sentinelWasActive) {
+        SentinelWatchdog::instance().deactivate();
+    }
+
     // Install trampoline via LiveBinaryPatcher
     PatchResult result = LiveBinaryPatcher::instance().install_trampoline(slotId);
 
@@ -533,6 +540,12 @@ PatchResult AgentSelfRepair::redirectFunction(uint32_t slotId) {
         result = LiveBinaryPatcher::instance().swap_implementation(
             slotId, relay, sizeof(relay), nullptr, 0
         );
+    }
+
+    // Re-establish sentinel baseline and reactivate after .text modification
+    if (sentinelWasActive) {
+        SentinelWatchdog::instance().updateBaseline();
+        SentinelWatchdog::instance().activate();
     }
 
     // Resume all threads
@@ -585,7 +598,19 @@ PatchResult AgentSelfRepair::revertFunction(uint32_t slotId) {
     std::vector<HANDLE> suspendedThreads;
     suspendOtherThreads(suspendedThreads);
 
+    // Deactivate sentinel watchdog before modifying .text (prevents false hash alarm)
+    bool sentinelWasActive = SentinelWatchdog::instance().isActive();
+    if (sentinelWasActive) {
+        SentinelWatchdog::instance().deactivate();
+    }
+
     PatchResult result = LiveBinaryPatcher::instance().revert_trampoline(slotId);
+
+    // Re-establish sentinel baseline and reactivate after .text modification
+    if (sentinelWasActive) {
+        SentinelWatchdog::instance().updateBaseline();
+        SentinelWatchdog::instance().activate();
+    }
 
     resumeOtherThreads(suspendedThreads);
 

@@ -133,9 +133,39 @@ std::string AdvancedFeatures::OptimizePerformance(const std::string& code) {
     optimized = std::regex_replace(optimized, std::regex("for\\s*\\(\\s*int\\s+i\\s*=\\s*0;\\s*i\\s*<\\s*vec\\.size\\(\\);\\s*\\+\\+i\\s*\\)"), 
                                    "for (size_t i = 0, len = vec.size(); i < len; ++i)");
     
-    // Add reserve for vectors
+    // Add reserve for vectors — scan for vector declarations followed by push_back loops
     if (optimized.find("std::vector") != std::string::npos && optimized.find("push_back") != std::string::npos) {
-        // This is simplified - would need AST parsing for real implementation
+        // Find vector declarations and insert .reserve() before push_back loops
+        // Pattern: "std::vector<T> name;" followed eventually by "for (...) { name.push_back"
+        std::regex vecDeclPattern(R"(std::vector<[^>]+>\s+(\w+)\s*;)");
+        auto matchBegin = std::sregex_iterator(optimized.begin(), optimized.end(), vecDeclPattern);
+        auto matchEnd = std::sregex_iterator();
+        
+        std::vector<std::pair<size_t, std::string>> insertions;
+        for (auto it = matchBegin; it != matchEnd; ++it) {
+            std::string varName = (*it)[1].str();
+            size_t declEnd = static_cast<size_t>(it->position() + it->length());
+            
+            // Check if a push_back for this var exists after declaration
+            std::string pushPattern = varName + ".push_back";
+            size_t pushPos = optimized.find(pushPattern, declEnd);
+            if (pushPos != std::string::npos) {
+                // Look for a preceding "for" loop with a container.size() bound
+                std::regex loopSizeRegex("for\\s*\\([^;]*;[^;]*<\\s*(\\w+)\\.size\\(\\)");
+                std::string searchWindow = optimized.substr(declEnd, pushPos - declEnd);
+                std::smatch loopMatch;
+                if (std::regex_search(searchWindow, loopMatch, loopSizeRegex)) {
+                    std::string sizeSource = loopMatch[1].str();
+                    std::string reserveStmt = "\n    " + varName + ".reserve(" + sizeSource + ".size());";
+                    insertions.push_back({declEnd, reserveStmt});
+                }
+            }
+        }
+        
+        // Apply insertions in reverse order to preserve positions
+        for (auto it = insertions.rbegin(); it != insertions.rend(); ++it) {
+            optimized.insert(it->first, it->second);
+        }
     }
     
     return optimized;

@@ -474,6 +474,7 @@
     <span class="stat stat-fail" id="statFail">❌ 0</span>
     <span class="stat stat-skip" id="statSkip">⏭ 0</span>
     <span class="stat stat-running" id="statRunning">⏳ 0</span>
+    <span class="stat" id="fallbackBadge" style="display:none;color:#ffd700;font-weight:700">⚡ OLLAMA FALLBACK</span>
     <div class="progress-track">
       <div class="progress-fill" id="progressFill" style="width:0"></div>
     </div>
@@ -516,6 +517,8 @@
         ideWindow: null,
         ideLoaded: false,
         log: [],
+        proxyAvailable: null,   // null=untested, true/false after probe
+        fallbackMode: false,    // true = proxy down, using Ollama direct where possible
       };
 
       // ---- Helpers ----
@@ -540,6 +543,42 @@
         return val;
       }
       function ollamaUrl() { return document.getElementById('ollamaUrl').value.replace(/\/+$/, ''); }
+
+      // Effective base URL: uses proxy if available, otherwise Ollama direct
+      function effectiveBase() {
+        if (S.fallbackMode) return ollamaUrl();
+        return backendUrl();
+      }
+
+      // Probe the proxy backend to determine availability
+      async function probeBackend() {
+        try {
+          const res = await fetchWithTimeout(backendUrl() + '/health', {}, 4000);
+          S.proxyAvailable = res.ok;
+        } catch (_) {
+          S.proxyAvailable = false;
+        }
+        S.fallbackMode = !S.proxyAvailable;
+        var badge = document.getElementById('fallbackBadge');
+        if (S.fallbackMode) {
+          if (badge) badge.style.display = '';
+          log('⚠ Proxy backend (' + backendUrl() + ') is OFFLINE — engaging Ollama-direct fallback mode', 'warn');
+          log('  Tests requiring proxy-only features will auto-skip', 'warn');
+          log('  Chat, models, streaming tests will use Ollama at ' + ollamaUrl(), 'info');
+        } else {
+          if (badge) badge.style.display = 'none';
+          log('✓ Proxy backend is online at ' + backendUrl(), 'success');
+        }
+        return S.proxyAvailable;
+      }
+
+      // Helper: skip a test if proxy is required but unavailable
+      function requireProxy(detail) {
+        if (S.fallbackMode) {
+          return { status: 'skip', detail: detail || 'Requires proxy server (offline)' };
+        }
+        return null; // continue with test
+      }
 
       function log(msg, level) {
         level = level || 'info';
@@ -702,6 +741,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: '/health endpoint',
           fn: async () => {
+            const skip = requireProxy('Proxy health endpoint');
+            if (skip) return skip;
             const t0 = performance.now();
             const { data } = await fetchJSON(base() + '/health');
             const ms = Math.round(performance.now() - t0);
@@ -712,6 +753,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: '/status returns server info',
           fn: async () => {
+            const skip = requireProxy('Proxy status endpoint');
+            if (skip) return skip;
             const t0 = performance.now();
             const { data } = await fetchJSON(base() + '/status');
             const ms = Math.round(performance.now() - t0);
@@ -723,6 +766,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: '/status has request counters',
           fn: async () => {
+            const skip = requireProxy('Proxy status counters');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/status');
             const has = data.total_requests !== undefined;
             return { status: has ? 'pass' : 'fail', detail: 'total_requests=' + (data.total_requests || '?') };
@@ -732,6 +777,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: 'CORS headers present',
           fn: async () => {
+            const skip = requireProxy('Proxy CORS headers');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/health');
             const cors = res.headers.get('Access-Control-Allow-Origin');
             return { status: cors ? 'pass' : 'fail', detail: 'ACAO: ' + (cors || 'missing') };
@@ -741,6 +788,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: 'Security headers (X-Content-Type-Options)',
           fn: async () => {
+            const skip = requireProxy('Proxy security headers');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/health');
             const xcto = res.headers.get('X-Content-Type-Options');
             const xfo = res.headers.get('X-Frame-Options');
@@ -751,6 +800,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: 'OPTIONS preflight returns 204',
           fn: async () => {
+            const skip = requireProxy('Proxy OPTIONS preflight');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/health', { method: 'OPTIONS' });
             return { status: res.status === 204 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
           }
@@ -770,6 +821,8 @@
         tests.push({
           cat: C1, catLabel: C1L, name: 'Proxy /api/tags matches Ollama',
           fn: async () => {
+            const skip = requireProxy('Needs both proxy + Ollama');
+            if (skip) return skip;
             const { data: direct } = await fetchJSON(olla() + '/api/tags');
             const { data: proxy } = await fetchJSON(base() + '/api/tags');
             const directNames = (direct.models || []).map(m => m.name).sort().join(',');
@@ -788,19 +841,34 @@
           cat: C2, catLabel: C2L, name: '/models returns model list',
           fn: async () => {
             const t0 = performance.now();
-            const { data } = await fetchJSON(base() + '/models');
+            let list, source;
+            if (S.fallbackMode) {
+              // Fallback: query Ollama /api/tags directly and transform
+              const { data } = await fetchJSON(olla() + '/api/tags');
+              list = (data.models || []).map(m => ({ name: m.name, type: 'ollama', size: m.size ? (m.size / 1e9).toFixed(1) + 'GB' : '?' }));
+              source = 'Ollama-direct';
+            } else {
+              const { data } = await fetchJSON(base() + '/models');
+              list = data.models || data;
+              source = 'proxy';
+            }
             const ms = Math.round(performance.now() - t0);
-            const list = data.models || data;
             const count = Array.isArray(list) ? list.length : 0;
-            return { status: count > 0 ? 'pass' : 'fail', detail: count + ' models', latency: ms };
+            return { status: count > 0 ? 'pass' : 'fail', detail: count + ' models via ' + source, latency: ms };
           }
         });
 
         tests.push({
           cat: C2, catLabel: C2L, name: 'Models have name + type + size',
           fn: async () => {
-            const { data } = await fetchJSON(base() + '/models');
-            const list = data.models || [];
+            let list;
+            if (S.fallbackMode) {
+              const { data } = await fetchJSON(olla() + '/api/tags');
+              list = (data.models || []).map(m => ({ name: m.name, type: 'ollama', size: m.size ? (m.size / 1e9).toFixed(1) + 'GB' : '?' }));
+            } else {
+              const { data } = await fetchJSON(base() + '/models');
+              list = data.models || [];
+            }
             if (list.length === 0) return { status: 'skip', detail: 'no models' };
             const m = list[0];
             const hasFields = m.name && m.type && m.size;
@@ -811,8 +879,14 @@
         tests.push({
           cat: C2, catLabel: C2L, name: 'Ollama models have type=ollama',
           fn: async () => {
-            const { data } = await fetchJSON(base() + '/models');
-            const list = data.models || [];
+            let list;
+            if (S.fallbackMode) {
+              const { data } = await fetchJSON(olla() + '/api/tags');
+              list = (data.models || []).map(m => ({ name: m.name, type: 'ollama' }));
+            } else {
+              const { data } = await fetchJSON(base() + '/models');
+              list = data.models || [];
+            }
             const ollamaModels = list.filter(m => m.type === 'ollama');
             return { status: ollamaModels.length > 0 ? 'pass' : 'skip', detail: ollamaModels.length + ' Ollama models' };
           }
@@ -821,6 +895,7 @@
         tests.push({
           cat: C2, catLabel: C2L, name: 'GGUF scan finds local models',
           fn: async () => {
+            if (S.fallbackMode) return { status: 'skip', detail: 'GGUF scan requires proxy server' };
             const { data } = await fetchJSON(base() + '/models');
             const list = data.models || [];
             const ggufModels = list.filter(m => m.type === 'gguf');
@@ -839,7 +914,8 @@
           fn: async () => {
             const models = await getFirstModel();
             const t0 = performance.now();
-            const { data } = await fetchJSON(base() + '/v1/chat/completions', {
+            const target = effectiveBase();
+            const { data } = await fetchJSON(target + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -851,7 +927,7 @@
             const ms = Math.round(performance.now() - t0);
             const content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
             const hasContent = content.length > 0;
-            return { status: hasContent ? 'pass' : 'fail', detail: '"' + content.substring(0, 80) + '"', latency: ms };
+            return { status: hasContent ? 'pass' : 'fail', detail: '"' + content.substring(0, 80) + '"' + (S.fallbackMode ? ' [Ollama-direct]' : ''), latency: ms };
           }
         });
 
@@ -859,7 +935,8 @@
           cat: C3, catLabel: C3L, name: 'Response has usage.total_tokens',
           fn: async () => {
             const models = await getFirstModel();
-            const { data } = await fetchJSON(base() + '/v1/chat/completions', {
+            const target = effectiveBase();
+            const { data } = await fetchJSON(target + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -869,7 +946,7 @@
               })
             }, 30000);
             const usage = data.usage || {};
-            return { status: usage.total_tokens > 0 ? 'pass' : 'fail', detail: 'prompt=' + (usage.prompt_tokens || '?') + ' completion=' + (usage.completion_tokens || '?') + ' total=' + (usage.total_tokens || '?') };
+            return { status: usage.total_tokens > 0 ? 'pass' : 'fail', detail: 'prompt=' + (usage.prompt_tokens || '?') + ' completion=' + (usage.completion_tokens || '?') + ' total=' + (usage.total_tokens || '?') + (S.fallbackMode ? ' [Ollama-direct]' : '') };
           }
         });
 
@@ -878,20 +955,23 @@
           fn: async () => {
             const models = await getFirstModel();
             const t0 = performance.now();
-            const { data } = await fetchJSON(base() + '/api/generate', {
+            const target = effectiveBase();
+            const { data } = await fetchJSON(target + '/api/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ model: models, prompt: 'Reply PONG', stream: false, options: { num_predict: 10 } })
             }, 30000);
             const ms = Math.round(performance.now() - t0);
             const resp = data.response || '';
-            return { status: resp.length > 0 ? 'pass' : 'fail', detail: '"' + resp.substring(0, 80) + '"', latency: ms };
+            return { status: resp.length > 0 ? 'pass' : 'fail', detail: '"' + resp.substring(0, 80) + '"' + (S.fallbackMode ? ' [Ollama-direct]' : ''), latency: ms };
           }
         });
 
         tests.push({
           cat: C3, catLabel: C3L, name: 'Legacy /ask endpoint',
           fn: async () => {
+            const skip = requireProxy('Legacy /ask is proxy-only');
+            if (skip) return skip;
             const models = await getFirstModel();
             const t0 = performance.now();
             const { data } = await fetchJSON(base() + '/ask', {
@@ -916,7 +996,8 @@
           fn: async () => {
             const models = await getFirstModel();
             const t0 = performance.now();
-            const res = await fetchWithTimeout(base() + '/v1/chat/completions', {
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -953,7 +1034,8 @@
           cat: C4, catLabel: C4L, name: 'SSE has data: prefix format',
           fn: async () => {
             const models = await getFirstModel();
-            const res = await fetchWithTimeout(base() + '/v1/chat/completions', {
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -983,7 +1065,8 @@
           cat: C4, catLabel: C4L, name: 'SSE ends with [DONE]',
           fn: async () => {
             const models = await getFirstModel();
-            const res = await fetchWithTimeout(base() + '/v1/chat/completions', {
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1014,7 +1097,8 @@
           fn: async () => {
             const models = await getFirstModel();
             const t0 = performance.now();
-            const res = await fetchWithTimeout(base() + '/api/generate', {
+            const target = effectiveBase();
+            const res = await fetchWithTimeout(target + '/api/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ model: models, prompt: 'Count 1 to 3', stream: true, options: { num_predict: 30 } })
@@ -1053,6 +1137,8 @@
         tests.push({
           cat: C5, catLabel: C5L, name: '/api/agents/status responds',
           fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
             const t0 = performance.now();
             const { data } = await fetchJSON(base() + '/api/agents/status');
             const ms = Math.round(performance.now() - t0);
@@ -1064,6 +1150,8 @@
         tests.push({
           cat: C5, catLabel: C5L, name: 'Failure detector is active',
           fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/agents/status');
             const fd = data.agents && data.agents.failure_detector;
             return { status: fd && fd.active ? 'pass' : 'fail', detail: fd ? 'detections=' + fd.detections : 'not found' };
@@ -1073,6 +1161,8 @@
         tests.push({
           cat: C5, catLabel: C5L, name: 'Puppeteer is active',
           fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/agents/status');
             const pp = data.agents && data.agents.puppeteer;
             return { status: pp && pp.active ? 'pass' : 'fail', detail: pp ? 'corrections=' + pp.corrections : 'not found' };
@@ -1082,6 +1172,8 @@
         tests.push({
           cat: C5, catLabel: C5L, name: 'Proxy hotpatcher is active',
           fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/agents/status');
             const ph = data.agents && data.agents.proxy_hotpatcher;
             return { status: ph && ph.active ? 'pass' : 'fail', detail: ph ? 'patches=' + ph.patches_applied : 'not found' };
@@ -1091,6 +1183,8 @@
         tests.push({
           cat: C5, catLabel: C5L, name: 'Unified manager tracks layers',
           fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/agents/status');
             const um = data.agents && data.agents.unified_manager;
             return { status: um ? 'pass' : 'fail', detail: um ? 'mem=' + um.memory_patches + ' byte=' + um.byte_patches + ' srv=' + um.server_patches : 'not found' };
@@ -1100,6 +1194,8 @@
         tests.push({
           cat: C5, catLabel: C5L, name: '/api/agents/history responds',
           fn: async () => {
+            const skip = requireProxy('Agents API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/agents/history');
             const events = data.events || [];
             return { status: Array.isArray(events) ? 'pass' : 'fail', detail: events.length + ' events' };
@@ -1115,6 +1211,8 @@
         tests.push({
           cat: C6, catLabel: C6L, name: '/api/failures returns data',
           fn: async () => {
+            const skip = requireProxy('Failures API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/failures');
             const fArr = data.failures || [];
             const stats = data.stats || {};
@@ -1125,6 +1223,8 @@
         tests.push({
           cat: C6, catLabel: C6L, name: 'Failure stats include top reasons',
           fn: async () => {
+            const skip = requireProxy('Failures API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/failures');
             const stats = data.stats || {};
             const reasons = stats.topReasons || [];
@@ -1135,6 +1235,8 @@
         tests.push({
           cat: C6, catLabel: C6L, name: '/api/failures?limit=5 respects limit',
           fn: async () => {
+            const skip = requireProxy('Failures API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/failures?limit=5');
             const fArr = data.failures || [];
             return { status: fArr.length <= 5 ? 'pass' : 'fail', detail: fArr.length + ' returned (limit 5)' };
@@ -1144,6 +1246,8 @@
         tests.push({
           cat: C6, catLabel: C6L, name: 'Replay retry works',
           fn: async () => {
+            const skip = requireProxy('Replay API requires proxy');
+            if (skip) return skip;
             // First get a failure to replay
             const { data: fData } = await fetchJSON(base() + '/api/failures?limit=1');
             const failures = fData.failures || [];
@@ -1167,6 +1271,8 @@
         tests.push({
           cat: C7, catLabel: C7L, name: 'POST /api/read-file reads a known file',
           fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
             const t0 = performance.now();
             const { data } = await fetchJSON(base() + '/api/read-file', {
               method: 'POST',
@@ -1182,6 +1288,8 @@
         tests.push({
           cat: C7, catLabel: C7L, name: 'GET /api/read-file?path= works',
           fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
             const { data } = await fetchJSON(base() + '/api/read-file?path=D%3A%2Frawrxd%2FCMakeLists.txt');
             const hasContent = data.content && data.content.length > 0;
             return { status: hasContent ? 'pass' : 'fail', detail: 'size=' + (data.size || 0) };
@@ -1191,6 +1299,8 @@
         tests.push({
           cat: C7, catLabel: C7L, name: 'Missing file returns 404',
           fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
             try {
               const res = await fetchWithTimeout(base() + '/api/read-file', {
                 method: 'POST',
@@ -1207,6 +1317,8 @@
         tests.push({
           cat: C7, catLabel: C7L, name: 'Network path rejected (security)',
           fn: async () => {
+            const skip = requireProxy('File API requires proxy');
+            if (skip) return skip;
             try {
               const res = await fetchWithTimeout(base() + '/api/read-file', {
                 method: 'POST',
@@ -1229,6 +1341,8 @@
         tests.push({
           cat: C8, catLabel: C8L, name: '404 for unknown endpoint',
           fn: async () => {
+            const skip = requireProxy('Endpoint security requires proxy');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/api/this-does-not-exist-xyz');
             return { status: res.status === 404 ? 'pass' : 'fail', detail: 'HTTP ' + res.status };
           }
@@ -1237,6 +1351,8 @@
         tests.push({
           cat: C8, catLabel: C8L, name: 'Invalid JSON returns 400',
           fn: async () => {
+            const skip = requireProxy('JSON validation requires proxy');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1251,8 +1367,9 @@
           fn: async () => {
             // Send 11MB body to trigger 413
             const huge = 'x'.repeat(11 * 1024 * 1024);
+            const target = effectiveBase();
             try {
-              const res = await fetchWithTimeout(base() + '/ask', {
+              const res = await fetchWithTimeout(target + '/ask', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: huge
@@ -1274,6 +1391,8 @@
         tests.push({
           cat: C9, catLabel: C9L, name: '/gui serves HTML',
           fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
             const t0 = performance.now();
             const res = await fetchWithTimeout(base() + '/gui');
             const ms = Math.round(performance.now() - t0);
@@ -1287,6 +1406,8 @@
         tests.push({
           cat: C9, catLabel: C9L, name: 'GUI HTML is not truncated',
           fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/gui');
             const html = await res.text();
             const hasClosingTag = html.includes('</html>');
@@ -1302,6 +1423,8 @@
         tests.push({
           cat: C9, catLabel: C9L, name: 'GUI has DOMPurify shim',
           fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/gui');
             const html = await res.text();
             const hasShim = html.includes('DOMPurify') && html.includes('sanitize');
@@ -1312,6 +1435,8 @@
         tests.push({
           cat: C9, catLabel: C9L, name: 'GUI has highlight.js shim',
           fn: async () => {
+            const skip = requireProxy('GUI serving requires proxy');
+            if (skip) return skip;
             const res = await fetchWithTimeout(base() + '/gui');
             const html = await res.text();
             const hasHljs = html.includes('hljs') && html.includes('highlightElement');
@@ -1328,6 +1453,7 @@
         tests.push({
           cat: C10, catLabel: C10L, name: 'IDE loads in iframe',
           fn: async () => {
+            if (S.fallbackMode) return { status: 'skip', detail: 'IDE iframe requires proxy /gui endpoint' };
             const loaded = await loadIdeFrame(15000);
             return { status: loaded ? 'pass' : 'fail', detail: loaded ? 'IDE loaded in frame' : 'Failed to load IDE' };
           }
@@ -2030,39 +2156,47 @@
       let _cachedModel = null;
       async function getFirstModel() {
         if (_cachedModel) return _cachedModel;
-        try {
-          const { data } = await fetchJSON(backendUrl() + '/models');
-          const list = data.models || [];
-          // Prefer smaller Ollama models for faster test inference
-          const ollamaModels = list.filter(m => m.type === 'ollama');
-          if (ollamaModels.length > 0) {
-            // Sort by size ascending (parse GB string), pick smallest
-            const sorted = ollamaModels.slice().sort((a, b) => {
-              const sa = parseFloat((a.size || '0').replace(/[^0-9.]/g, '')) || 999;
-              const sb = parseFloat((b.size || '0').replace(/[^0-9.]/g, '')) || 999;
-              return sa - sb;
-            });
-            // Skip 0.0GB (cloud/meta models) if possible
-            const usable = sorted.filter(m => parseFloat((m.size || '0').replace(/[^0-9.]/g, '')) > 0.1);
-            const pick = usable.length > 0 ? usable[0] : sorted[0];
-            _cachedModel = pick.name || pick;
-            log('Selected model for tests: ' + _cachedModel, 'info');
-            return _cachedModel;
-          }
-          if (list.length > 0) {
-            _cachedModel = list[0].name || list[0];
-            return _cachedModel;
-          }
-        } catch (_) { }
-        // Fallback: try Ollama directly
+        // In fallback mode, skip proxy /models and go straight to Ollama
+        if (!S.fallbackMode) {
+          try {
+            const { data } = await fetchJSON(backendUrl() + '/models');
+            const list = data.models || [];
+            // Prefer smaller Ollama models for faster test inference
+            const ollamaModels = list.filter(m => m.type === 'ollama');
+            if (ollamaModels.length > 0) {
+              const sorted = ollamaModels.slice().sort((a, b) => {
+                const sa = parseFloat((a.size || '0').replace(/[^0-9.]/g, '')) || 999;
+                const sb = parseFloat((b.size || '0').replace(/[^0-9.]/g, '')) || 999;
+                return sa - sb;
+              });
+              const usable = sorted.filter(m => parseFloat((m.size || '0').replace(/[^0-9.]/g, '')) > 0.1);
+              const pick = usable.length > 0 ? usable[0] : sorted[0];
+              _cachedModel = pick.name || pick;
+              log('Selected model for tests: ' + _cachedModel, 'info');
+              return _cachedModel;
+            }
+            if (list.length > 0) {
+              _cachedModel = list[0].name || list[0];
+              return _cachedModel;
+            }
+          } catch (_) { }
+        }
+        // Fallback (or proxy failed): try Ollama directly
         try {
           const { data } = await fetchJSON(ollamaUrl() + '/api/tags');
           if (data.models && data.models.length > 0) {
-            _cachedModel = data.models[0].name;
+            // Pick smallest model for faster tests
+            const sorted = data.models.slice().sort((a, b) => (a.size || 0) - (b.size || 0));
+            const usable = sorted.filter(m => (m.size || 0) > 100000000); // >100MB
+            const pick = usable.length > 0 ? usable[0] : sorted[0];
+            _cachedModel = pick.name;
+            log('Selected model for tests (Ollama-direct): ' + _cachedModel, 'info');
             return _cachedModel;
           }
         } catch (_) { }
-        return 'llama3.2:latest'; // last resort fallback
+        // Dynamic fallback: use first available model from either backend
+        return (window.State && window.State.model && window.State.model.list && window.State.model.list[0] && window.State.model.list[0].name)
+          || 'rawrxd'; // last resort fallback
       }
 
       // ---- PostMessage Bridge for Cross-Origin IDE Testing ----
@@ -2362,6 +2496,9 @@
         log('Backend: ' + backendUrl(), 'info');
         log('Ollama: ' + ollamaUrl(), 'info');
 
+        // Probe proxy availability before running tests
+        await probeBackend();
+
         const tests = defineTests();
         log('Defined ' + tests.length + ' tests across ' + new Set(tests.map(t => t.cat)).size + ' categories', 'info');
 
@@ -2443,11 +2580,15 @@
         S.categories.clear();
         S.activeFilter = null;
         S.log = [];
+        S.proxyAvailable = null;
+        S.fallbackMode = false;
         _cachedModel = null;
 
         document.getElementById('results').innerHTML = '';
         document.getElementById('logPanel').innerHTML = '';
         document.getElementById('categoryFilter').innerHTML = '';
+        var badge = document.getElementById('fallbackBadge');
+        if (badge) badge.style.display = 'none';
         updateSummary();
         document.getElementById('durationBadge').textContent = '—';
       }
@@ -2521,6 +2662,7 @@
       };
     })();
   </script>
+  <script src="/gui/rawrxd-nav.js"></script>
 </body>
 
 </html>

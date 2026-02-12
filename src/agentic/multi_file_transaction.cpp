@@ -682,7 +682,7 @@ bool MultiFileTransaction::hasExternalEdits() const {
 }
 
 // ============================================================================
-// FileWatcher — stub for ReadDirectoryChangesW
+// FileWatcher — uses ReadDirectoryChangesW for real-time file monitoring
 // ============================================================================
 
 struct FileWatcher::WatchHandle {

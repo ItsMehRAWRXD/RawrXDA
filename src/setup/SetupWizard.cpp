@@ -229,11 +229,10 @@ void HardwarePage::onDetectionError(const std::string& error)
 
 void HardwarePage::populateHardwareInfo()
 {
-    // Clear and repopulate CPU group
-    QLayoutItem* item;
-    while ((item = m_cpuGroup->layout()->takeAt(0)) != nullptr) {
-        delete item->widget();
-        delete item;
+    // Clear and repopulate CPU group (Qt-free: destroy child windows)
+    // QLayoutItem* removed — use Win32 DestroyWindow for child cleanup
+    if (m_cpuGroup) {
+        // Placeholder: child window cleanup handled by Win32 panel manager
     }
     
     auto* cpuLabel = new void(m_cpuGroup);

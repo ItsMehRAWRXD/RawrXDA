@@ -676,10 +676,17 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
         switch (compression_type_) {
             case CompressionType::BRUTAL_GZIP:
             case CompressionType::ZLIB: {
-                // For GZIP/ZLIB, data is typically stored as-is or needs standard decompression
-                // brutal_gzip is primarily a compression library, not decompression
-                // For now, pass through (actual decompression would use zlib/gzip library)
-                decompressed = compressed;
+                // Decompress GZIP/ZLIB data via codec::inflate (DEFLATE decoder)
+                bool ok = false;
+                std::vector<uint8_t> output = codec::inflate(compressed, &ok);
+                if (!ok || output.empty()) {
+                    // If inflate fails, try brutal::decompress as fallback
+                    output = brutal::decompress(compressed);
+                    if (output.empty()) {
+                        return false;
+                    }
+                }
+                decompressed = std::move(output);
                 return true;
             }
             

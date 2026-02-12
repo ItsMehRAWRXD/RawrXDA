@@ -233,6 +233,10 @@ public:
     std::string getVersionString() const;
     uint64_t getUptimeMs() const;
 
+    // ---- Instructions Context (Phase 34 — persistent across session) ----
+    std::string getInstructionsContent() const;
+    bool isInstructionsLoaded() const { return m_instructionsInitialized; }
+
 private:
     // ---- Argument parsing ----
     HeadlessResult parseArgs(int argc, char* argv[]);
@@ -252,6 +256,7 @@ private:
     HeadlessResult initPhase11();
     HeadlessResult initPhase12();
     HeadlessResult initHotpatch();
+    HeadlessResult initInstructions();
 
     // ---- Run modes ----
     int runServerMode();
@@ -295,6 +300,7 @@ private:
     bool m_phase11Initialized         = false;
     bool m_phase12Initialized         = false;
     bool m_hotpatchInitialized        = false;
+    bool m_instructionsInitialized  = false;
 
     // HTTP server state
     std::atomic<bool>                 m_serverRunning{false};

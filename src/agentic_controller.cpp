@@ -4,6 +4,11 @@
 #include "production_config_manager.h"
 #include "win32app/IDELogger.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <array>
 #include <cstdlib>
 #include <cstdio>
@@ -95,7 +100,21 @@ std::string AgenticController::resolveSnapshotPreference() const {
 void AgenticController::publishHeartbeat() {
     // Build a simple JSON payload manually
     std::string payload = "{";
-    // payload += "\"timestamp\":\"...\",";  // TODO: add ISO8601 timestamp if needed
+
+    // ISO8601 timestamp
+    {
+        SYSTEMTIME st;
+        GetSystemTime(&st);
+        char tsBuf[64];
+        snprintf(tsBuf, sizeof(tsBuf),
+                 "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+                 st.wYear, st.wMonth, st.wDay,
+                 st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+        payload += "\"timestamp\":\"";
+        payload += tsBuf;
+        payload += "\",";
+    }
+
     payload += "\"uptime_ms\":";
     payload += std::to_string(m_bootTimer.isValid() ? m_bootTimer.elapsed() : 0);
 

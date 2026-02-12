@@ -184,6 +184,38 @@ constexpr uint32_t MODULES_MAX = 3052;
 // CLI-Only         (ID = 0 means no GUI mapping)
 constexpr uint32_t CLI_ONLY   = 0;
 
+// ============================================================================
+// RELOCATED CATEGORIES (previously collided with 9xxx ranges)
+// ============================================================================
+
+// Model Management (range 11001-11050)
+constexpr uint32_t MODEL_MIN  = 11001;
+constexpr uint32_t MODEL_MAX  = 11050;
+
+// Disk Recovery    (range 11100-11150)
+constexpr uint32_t DISK_MIN   = 11100;
+constexpr uint32_t DISK_MAX   = 11150;
+
+// Performance Governance (range 11200-11250)
+constexpr uint32_t PERFGOV_MIN = 11200;
+constexpr uint32_t PERFGOV_MAX = 11250;
+
+// Marketplace & Extensions (range 11300-11350)
+constexpr uint32_t MARKETPLACE_MIN = 11300;
+constexpr uint32_t MARKETPLACE_MAX = 11350;
+
+// Embeddings & Vectors (range 11400-11450)
+constexpr uint32_t EMBED_MIN  = 11400;
+constexpr uint32_t EMBED_MAX  = 11450;
+
+// Vision & Image Analysis (range 11500-11550)
+constexpr uint32_t VISION_MIN = 11500;
+constexpr uint32_t VISION_MAX = 11550;
+
+// Prompt Engine    (range 11600-11650)
+constexpr uint32_t PROMPT_MIN = 11600;
+constexpr uint32_t PROMPT_MAX = 11650;
+
 } // namespace RawrXD::Ranges
 
 #endif // RAWRXD_COMMAND_RANGES_HPP

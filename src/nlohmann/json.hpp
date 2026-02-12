@@ -231,6 +231,12 @@ namespace nlohmann {
         json& at(const std::string& k) { return (*this)[k]; }
         const json& at(const std::string& k) const { return (*this)[k]; }
 
+        // Erase key from object
+        size_t erase(const std::string& key) {
+            if (type_ == 4 && object_) return object_->erase(key);
+            return 0;
+        }
+
         std::string dump(int indent = -1) const {
             if (type_ == 0) return "null";
             if (type_ == 1) return "\"" + (value_ ? *value_ : "") + "\"";
@@ -281,6 +287,8 @@ namespace nlohmann {
             json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi() {}
             json_iterator(map_it a, map_it) : is_arr(false), vi(), mi(a) { sync(); }
             void sync() { if (!is_arr) { first = mi->first; second_ptr_ = &mi->second; } }
+            const std::string& key() const { return first; }
+            json& value() { return *second_ptr_; }
             json& operator*() { return is_arr ? *vi : mi->second; }
             json* operator->() { return is_arr ? &(*vi) : &(mi->second); }
             json_iterator& operator++() { if (is_arr) ++vi; else { ++mi; sync(); } return *this; }
@@ -299,6 +307,8 @@ namespace nlohmann {
             const_json_iterator(vec_it a, vec_it) : is_arr(true), vi(a), mi() {}
             const_json_iterator(map_it a, map_it) : is_arr(false), vi(), mi(a) { sync(); }
             void sync() { if (!is_arr) { first = mi->first; second_ptr_ = &mi->second; } }
+            const std::string& key() const { return first; }
+            const json& value() const { return *second_ptr_; }
             const json& operator*() const { return is_arr ? *vi : mi->second; }
             const json* operator->() const { return is_arr ? &(*vi) : &(mi->second); }
             const_json_iterator& operator++() { if (is_arr) ++vi; else { ++mi; sync(); } return *this; }
@@ -327,9 +337,15 @@ namespace nlohmann {
 
         struct ItemsProxy {
              std::shared_ptr<std::map<std::string, json>> obj;
-             auto begin() { return obj ? obj->begin() : std::make_shared<std::map<std::string, json>>()->begin(); }
-             auto end() { return obj ? obj->end() : std::make_shared<std::map<std::string, json>>()->end(); }
+             auto begin() { return obj ? obj->begin() : std::map<std::string, json>::iterator(); }
+             auto end() { return obj ? obj->end() : std::map<std::string, json>::iterator(); }
+        };
+        struct ConstItemsProxy {
+             std::shared_ptr<std::map<std::string, json>> obj;
+             auto begin() const { return obj ? obj->cbegin() : std::map<std::string, json>::const_iterator(); }
+             auto end() const { return obj ? obj->cend() : std::map<std::string, json>::const_iterator(); }
         };
         ItemsProxy items() { return {object_}; }
+        ConstItemsProxy items() const { return {object_}; }
     };
 }

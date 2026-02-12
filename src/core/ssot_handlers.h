@@ -225,4 +225,21 @@ CommandResult handleTelemetryDashboard(const CommandContext& ctx);
 CommandResult handleTelemetryClear(const CommandContext& ctx);
 CommandResult handleTelemetrySnapshot(const CommandContext& ctx);
 
+// ═══════════ TIER 1: CRITICAL COSMETICS (12000-12099) ═══════════
+CommandResult handleTier1SmoothScrollToggle(const CommandContext& ctx);
+CommandResult handleTier1MinimapEnhanced(const CommandContext& ctx);
+CommandResult handleTier1BreadcrumbsToggle(const CommandContext& ctx);
+CommandResult handleTier1FuzzyPalette(const CommandContext& ctx);
+CommandResult handleTier1SettingsGUI(const CommandContext& ctx);
+CommandResult handleTier1WelcomePage(const CommandContext& ctx);
+CommandResult handleTier1FileIconTheme(const CommandContext& ctx);
+CommandResult handleTier1TabDragToggle(const CommandContext& ctx);
+CommandResult handleTier1SplitVertical(const CommandContext& ctx);
+CommandResult handleTier1SplitHorizontal(const CommandContext& ctx);
+CommandResult handleTier1SplitGrid(const CommandContext& ctx);
+CommandResult handleTier1SplitClose(const CommandContext& ctx);
+CommandResult handleTier1SplitFocusNext(const CommandContext& ctx);
+CommandResult handleTier1AutoUpdateCheck(const CommandContext& ctx);
+CommandResult handleTier1UpdateDismiss(const CommandContext& ctx);
+
 #endif // RAWRXD_SSOT_HANDLERS_H

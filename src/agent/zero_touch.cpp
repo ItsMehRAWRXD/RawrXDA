@@ -135,12 +135,92 @@ void ZeroTouch::installGitHook() {
 }
 
 // ---------------------------------------------------------------------------
-// Voice trigger – placeholder for future Web Speech / audio integration
+// Voice trigger — named-pipe listener for RawrXD_VoiceTrigger
+// GUI voice engine writes transcribed commands to the pipe.
 // ---------------------------------------------------------------------------
 void ZeroTouch::installVoiceTrigger() {
-    zt_log("Voice trigger stub installed (no-op until audio subsystem is integrated).");
+    zt_log("Installing voice trigger named-pipe listener...");
     m_lastVoiceWish.clear();
-    // Future: register a named-pipe or localhost HTTP endpoint that the
-    // GUI voice engine can POST transcribed commands to.
-    // For now the IDE chatbot handles voice via the HTML frontend.
+
+    // Create a named pipe that GUI voice engine can write transcribed commands to.
+    // Pipe name: \\.\pipe\RawrXD_VoiceTrigger
+    // Protocol: UTF-8 text lines, newline-delimited.
+    // The pipe listener runs in a background thread.
+
+    m_voicePipeRunning.store(true);
+    m_voiceThread = std::thread([this]() {
+        const wchar_t* pipeName = L"\\\\.\\pipe\\RawrXD_VoiceTrigger";
+
+        while (m_voicePipeRunning.load()) {
+            HANDLE hPipe = CreateNamedPipeW(
+                pipeName,
+                PIPE_ACCESS_INBOUND,
+                PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                1,           // max instances
+                0,           // out buffer
+                4096,        // in buffer
+                1000,        // default timeout ms
+                nullptr      // security
+            );
+
+            if (hPipe == INVALID_HANDLE_VALUE) {
+                zt_log("  WARNING: CreateNamedPipe failed (err=%lu) — voice trigger disabled.",
+                       GetLastError());
+                return;
+            }
+
+            zt_log("  Voice pipe created, waiting for connection...");
+
+            // Wait for client connection (blocking)
+            BOOL connected = ConnectNamedPipe(hPipe, nullptr)
+                ? TRUE
+                : (GetLastError() == ERROR_PIPE_CONNECTED ? TRUE : FALSE);
+
+            if (!connected || !m_voicePipeRunning.load()) {
+                CloseHandle(hPipe);
+                continue;
+            }
+
+            zt_log("  Voice client connected.");
+
+            // Read transcribed commands line by line
+            char buf[4096];
+            DWORD bytesRead = 0;
+            std::string lineBuffer;
+
+            while (m_voicePipeRunning.load() &&
+                   ReadFile(hPipe, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+                buf[bytesRead] = '\0';
+                lineBuffer += buf;
+
+                // Process complete lines
+                size_t nlPos;
+                while ((nlPos = lineBuffer.find('\n')) != std::string::npos) {
+                    std::string command = lineBuffer.substr(0, nlPos);
+                    lineBuffer.erase(0, nlPos + 1);
+
+                    // Trim \r if present
+                    if (!command.empty() && command.back() == '\r')
+                        command.pop_back();
+
+                    if (!command.empty()) {
+                        m_lastVoiceWish = command;
+                        zt_log("  Voice command received: \"%s\"", command.c_str());
+
+                        // Dispatch to voice callback if registered
+                        if (m_voiceCallback) {
+                            m_voiceCallback(command);
+                        }
+                    }
+                }
+            }
+
+            DisconnectNamedPipe(hPipe);
+            CloseHandle(hPipe);
+            zt_log("  Voice client disconnected.");
+        }
+    });
+    m_voiceThread.detach();
+
+    zt_log("  Voice trigger pipe listener started on \\\\.\\pipe\\RawrXD_VoiceTrigger");
 }

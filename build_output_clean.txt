@@ -1,34 +1,256 @@
-[  1%] Building CXX object CMakeFiles/RawrEngine.dir/src/main.cpp.obj
-In file included from D:\rawrxd\src\main.cpp:25:
-D:\rawrxd\src\ide_window.h:3:9: warning: 'WIN32_LEAN_AND_MEAN' redefined
-    3 | #define WIN32_LEAN_AND_MEAN
-      |         ^~~~~~~~~~~~~~~~~~~
-<command-line>: note: this is the location of the previous definition
-In file included from D:\rawrxd\src\ide_window.h:11:
-D:\rawrxd\src\engine/react_ide_generator.h:55:5: error: 'ReactIDEGenerator::ReactIDEGenerator()' cannot be overloaded with 'ReactIDEGenerator::ReactIDEGenerator()'
-   55 |     ReactIDEGenerator();
-      |     ^~~~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:20:5: note: previous declaration 'ReactIDEGenerator::ReactIDEGenerator()'
-   20 |     ReactIDEGenerator();
-      |     ^~~~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:60:10: error: 'bool ReactIDEGenerator::GenerateMinimalIDE(const std::string&, const std::filesystem::__cxx11::path&)' cannot be overloaded with 'bool ReactIDEGenerator::GenerateMinimalIDE(const std::string&, const std::filesystem::__cxx11::path&)'
-   60 |     bool GenerateMinimalIDE(const std::string& name, const std::filesystem::path& output_dir);
-      |          ^~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:23:10: note: previous declaration 'bool ReactIDEGenerator::GenerateMinimalIDE(const std::string&, const std::filesystem::__cxx11::path&)'
-   23 |     bool GenerateMinimalIDE(const std::string& name, const std::filesystem::path& output_dir);
-      |          ^~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:61:10: error: 'bool ReactIDEGenerator::GenerateFullIDE(const std::string&, const std::filesystem::__cxx11::path&)' cannot be overloaded with 'bool ReactIDEGenerator::GenerateFullIDE(const std::string&, const std::filesystem::__cxx11::path&)'
-   61 |     bool GenerateFullIDE(const std::string& name, const std::filesystem::path& output_dir);
-      |          ^~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:24:10: note: previous declaration 'bool ReactIDEGenerator::GenerateFullIDE(const std::string&, const std::filesystem::__cxx11::path&)'
-   24 |     bool GenerateFullIDE(const std::string& name, const std::filesystem::path& output_dir);
-      |          ^~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:62:10: error: 'bool ReactIDEGenerator::GenerateAgenticIDE(const std::string&, const std::filesystem::__cxx11::path&)' cannot be overloaded with 'bool ReactIDEGenerator::GenerateAgenticIDE(const std::string&, const std::filesystem::__cxx11::path&)'
-   62 |     bool GenerateAgenticIDE(const std::string& name, const std::filesystem::path& output_dir);
-      |          ^~~~~~~~~~~~~~~~~~
-D:\rawrxd\src\engine/react_ide_generator.h:25:10: note: previous declaration 'bool ReactIDEGenerator::GenerateAgenticIDE(const std::string&, const std::filesystem::__cxx11::path&)'
-   25 |     bool GenerateAgenticIDE(const std::string& name, const std::filesystem::path& output_dir);
-      |          ^~~~~~~~~~~~~~~~~~
-mingw32-make[2]: *** [CMakeFiles\RawrEngine.dir\build.make:79: CMakeFiles/RawrEngine.dir/src/main.cpp.obj] Error 1
-mingw32-make[1]: *** [CMakeFiles\Makefile2:89: CMakeFiles/RawrEngine.dir/all] Error 2
-mingw32-make: *** [Makefile:90: all] Error 2
+[1/948] Building ASM_MASM object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\asm\RawrXD_MultiWindow_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_MultiWindow_Kernel.asm
+
+[2/948] [MASM] Assembling RawrXD_Debug_Engine.asm (Breakpoints, Watchpoints, Symbolic DynTrace)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Debug_Engine.asm
+
+[3/948] [MASM] Assembling RawrCodex.asm (Agentic Decision Tree, Pattern Engine)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrCodex.asm
+
+[4/948] [MASM] Assembling RawrXD_EnterpriseLicense.asm (License Validation, HWID, Feature Gates)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_EnterpriseLicense.asm
+
+[5/948] [MASM] Assembling RawrXD_GSIHash.asm (PDB hash, GSI bucket probe)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_GSIHash.asm
+
+[6/948] [MASM] Assembling RawrXD_LSP_SymbolIndex.asm (Hash Lookup, Batch FNV-1a, Prefix Scan)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_LSP_SymbolIndex.asm
+
+[7/948] [MASM] Assembling RawrXD_License_Shield.asm (CRC32 Integrity, Anti-Debug, Tamper Detection)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_License_Shield.asm
+
+[8/948] [MASM] Assembling RawrXD_MonacoCore.asm (Gap Buffer, Tokenizer)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_MonacoCore.asm
+
+[9/948] [MASM] Assembling RawrXD_PDBKernel.asm (MSF magic, PubSym scan, GUID hex)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_PDBKernel.asm
+
+[10/948] [MASM] Assembling RawrXD_QuadBuffer_Streamer.asm (4-Buffer Ring, Zero-Copy Streaming)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_QuadBuffer_Streamer.asm
+
+[11/948] [MASM] Assembling RawrXD_RefProvider.asm (Reference hash, pattern match)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RefProvider.asm
+
+[12/948] [MASM] Assembling RawrXD_RouterBridge.asm (Fast-Path Router Dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RouterBridge.asm
+
+[13/948] [MASM] Assembling RawrXD_StubDetector.asm (Stub Pattern Scanner)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_StubDetector.asm
+
+[14/948] [MASM] Assembling RawrXD_SocketResponder.asm (IOCP HTTP: /health /status /models sub-0.5ms)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SocketResponder.asm
+
+[15/948] [MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Swarm_Network.asm
+
+[16/948] [MASM] Assembling RawrXD_TridentBeacon.asm (COM Trident Host, Beacon IDispatch, Ollama Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon.asm
+
+[17/948] [MASM] Assembling RawrXD_TridentBeacon_GPU.asm (IE11 Feature Control, WebGL FBO, OpenGL Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon_GPU.asm
+
+[18/948] [MASM] Assembling RawrXD_VulkanBridge.asm (GPU Dispatch Shim: Init, MatMul, FlashAttn, Hotswap)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_VulkanBridge.asm
+
+[19/948] [MASM] Assembling gpu_requantize_rocm.asm (HIP dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/gpu_requantize_rocm.asm
+
+[20/948] [MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_dll_entry.asm
+
+[21/948] [MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_engine.asm
+
+[22/948] [MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_phase39.asm
+
+[23/948] [MASM] Assembling requantize_q4km_to_q2k_avx512.asm (AVX-512 DQ/BW)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/requantize_q4km_to_q2k_avx512.asm
+
+[24/948] [MASM] Assembling swarm_tensor_stream.asm (CRC32C, RLE, chunks)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/swarm_tensor_stream.asm
+
+[25/948] [MASM64] Assembling RawrXD_MetaReverse.asm (authenticity detection)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm
+
+[26/948] [MASM64] Assembling RawrXD_OmegaDeobfuscator.asm (AVX-512 deobfuscation)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+
+[27/948] [MASM64] Assembling model-llm-harvester.asm (LLM weight generator)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/model_reverse/model-llm-harvester.asm
+
+[28/948] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\inference\inference_standalone_main.cpp.obj
+FAILED: CMakeFiles/RawrXD-InferenceEngine.dir/src/inference/inference_standalone_main.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_STANDALONE_INFERENCE=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\inference -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\codec -ID:\rawrxd\include -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-InferenceEngine.dir\src\inference\inference_standalone_main.cpp.obj /FdCMakeFiles\RawrXD-InferenceEngine.dir\ /FS -c D:\rawrxd\src\inference\inference_standalone_main.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[29/948] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\inference\ultra_fast_inference.cpp.obj
+FAILED: CMakeFiles/RawrXD-InferenceEngine.dir/src/inference/ultra_fast_inference.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_STANDALONE_INFERENCE=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\inference -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\codec -ID:\rawrxd\include -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-InferenceEngine.dir\src\inference\ultra_fast_inference.cpp.obj /FdCMakeFiles\RawrXD-InferenceEngine.dir\ /FS -c D:\rawrxd\src\inference\ultra_fast_inference.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[30/948] Building CXX object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\core\multiwindow_scheduler.cpp.obj
+[31/948] Building CXX object src\reverse_engineering\CMakeFiles\RawrXD-RE-Library.dir\pe_tools\re_tools.cpp.obj
+ninja: build stopped: subcommand failed.

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <curl/curl.h>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 // Simple HTTP client using Windows API (or curl)
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
@@ -31,8 +32,42 @@ bool HFDownloader::SearchModels(const std::string& query, std::vector<ModelInfo>
         return false;
     }
     
-    // Parse JSON response (simplified - would use nlohmann/json in real implementation)
-    std::cout << "Search results: " << response.substr(0, 200) << "..." << std::endl;
+    // Parse JSON array of model objects
+    try {
+        auto json = nlohmann::json::parse(response);
+        if (!json.is_array()) return false;
+        
+        results.clear();
+        results.reserve(json.size());
+        
+        for (const auto& item : json) {
+            ModelInfo info;
+            info.repo_id = item.value("modelId", item.value("id", ""));
+            info.model_name = info.repo_id;
+            
+            // Extract description from tags or pipeline_tag
+            if (item.contains("pipeline_tag"))
+                info.description = item["pipeline_tag"].get<std::string>();
+            
+            // Extract sibling files (GGUF files listed under "siblings")
+            if (item.contains("siblings") && item["siblings"].is_array()) {
+                for (const auto& sib : item["siblings"]) {
+                    std::string fname = sib.value("rfilename", "");
+                    if (!fname.empty()) {
+                        info.files.push_back(fname);
+                        // Accumulate total size if available
+                        if (sib.contains("size"))
+                            info.total_size_bytes += sib["size"].get<uint64_t>();
+                    }
+                }
+            }
+            
+            results.push_back(std::move(info));
+        }
+    } catch (const nlohmann::json::exception& e) {
+        std::cerr << "JSON parse error in SearchModels: " << e.what() << std::endl;
+        return false;
+    }
     
     return true;
 }
@@ -206,9 +241,8 @@ bool HFDownloader::DownloadFile(const std::string& url, const std::string& outpu
     DownloadProgress progress;
     progress.current_file = output_path;
     progress.total_bytes = static_cast<uint64_t>(dl_total);
-    progress.downloaded_bytes = success ? static_cast<uint64_t>(dl_total) : 0;
+    progress.bytes_downloaded = success ? static_cast<uint64_t>(dl_total) : 0;
     progress.progress_percent = success && dl_total ? 100.0f : 0.0f;
-    progress.is_completed = success;
     if (callback) {
         callback(progress);
     }
@@ -226,7 +260,42 @@ std::string HFDownloader::GetAuthHeader(const std::string& token) const {
 }
 
 bool HFDownloader::ParseModelMetadata(const std::string& json_response, ModelInfo& info) {
-    // Simplified JSON parsing
-    // In real implementation, would use nlohmann/json
-    return true;
+    try {
+        auto json = nlohmann::json::parse(json_response);
+        
+        // Extract model identity
+        info.repo_id = json.value("modelId", json.value("id", info.repo_id));
+        info.model_name = info.repo_id;
+        
+        // Description from cardData or pipeline_tag
+        if (json.contains("cardData") && json["cardData"].contains("model_summary"))
+            info.description = json["cardData"]["model_summary"].get<std::string>();
+        else if (json.contains("pipeline_tag"))
+            info.description = json["pipeline_tag"].get<std::string>();
+        
+        // Extract file list and total size from siblings array
+        info.files.clear();
+        info.total_size_bytes = 0;
+        if (json.contains("siblings") && json["siblings"].is_array()) {
+            for (const auto& sib : json["siblings"]) {
+                std::string fname = sib.value("rfilename", "");
+                if (!fname.empty()) {
+                    info.files.push_back(fname);
+                    if (sib.contains("size"))
+                        info.total_size_bytes += sib["size"].get<uint64_t>();
+                }
+            }
+        }
+        
+        // Fallback: use safetensors size if available
+        if (info.total_size_bytes == 0 && json.contains("safetensors")) {
+            if (json["safetensors"].contains("total"))
+                info.total_size_bytes = json["safetensors"]["total"].get<uint64_t>();
+        }
+        
+        return true;
+    } catch (const nlohmann::json::exception& e) {
+        std::cerr << "JSON parse error in ParseModelMetadata: " << e.what() << std::endl;
+        return false;
+    }
 }

@@ -11,6 +11,8 @@
 #include "byte_level_hotpatcher.hpp"
 #include "pt_driver_contract.hpp"
 #include "live_binary_patcher.hpp"
+#include "shadow_page_detour.hpp"
+#include "sentinel_watchdog.hpp"
 
 // Forward declarations — platform subsystems
 class AutonomousWorkflowEngine;
@@ -82,6 +84,16 @@ struct HotpatchEvent {
         LiveBinaryReverted       = 17,
         LiveBinaryBatchApplied   = 18,
         LiveBinaryModuleLoaded   = 19,
+        // Shadow-Page Detour + Sentinel (Layer 6) events
+        ShadowDetourRegistered   = 20,
+        ShadowDetourApplied      = 21,
+        ShadowDetourReverted     = 22,
+        ShadowDetourRollbackAll  = 23,
+        ShadowDetourVerified     = 24,
+        SentinelActivated        = 25,
+        SentinelDeactivated      = 26,
+        SentinelViolation        = 27,
+        SentinelLockdown         = 28,
     };
 
     Type        type;
@@ -174,6 +186,28 @@ public:
     PatchResult   live_verify_integrity();
     const LiveBinaryPatcherStats& live_get_stats() const;
 
+    // ---- Shadow-Page Detour (Layer 6 — Atomic Prologue Rewrite) ----
+    UnifiedResult shadow_register_detour(const char* name, void* funcAddr);
+    UnifiedResult shadow_apply_patch(const char* name,
+                                      const uint8_t* newCode, size_t codeSize);
+    UnifiedResult shadow_verify_and_patch(void* originalFn,
+                                           const std::string& newAsmSource);
+    UnifiedResult shadow_rollback(const char* name);
+    UnifiedResult shadow_rollback_all();
+    UnifiedResult shadow_verify_all();
+    size_t        shadow_get_active_count() const;
+    HotpatchKernelStats shadow_get_kernel_stats() const;
+    SnapshotStats       shadow_get_snapshot_stats() const;
+    PatchResult   shadow_initialize();
+    PatchResult   shadow_shutdown();
+
+    // ---- Sentinel Watchdog (Layer 6 — .text Integrity Monitor) ----
+    PatchResult   sentinel_activate();
+    PatchResult   sentinel_deactivate();
+    PatchResult   sentinel_update_baseline();
+    SentinelStats sentinel_get_stats() const;
+    bool          sentinel_is_active() const;
+
     // ---- Platform Subsystem Integration (Valuation-Critical) ----
 
     // Autonomous Workflow Engine — scan → fix → verify → build → test → diff
@@ -255,6 +289,8 @@ public:
         std::atomic<uint64_t> serverPatchCount{0};
         std::atomic<uint64_t> ptOperationCount{0};
         std::atomic<uint64_t> liveBinaryCount{0};
+        std::atomic<uint64_t> shadowDetourCount{0};
+        std::atomic<uint64_t> sentinelEventCount{0};
         std::atomic<uint64_t> totalOperations{0};
         std::atomic<uint64_t> totalFailures{0};
     };
@@ -308,4 +344,8 @@ private:
     std::atomic<bool>                       m_visionInit{false};
     std::atomic<bool>                       m_marketplaceInit{false};
     std::atomic<bool>                       m_rbacInit{false};
+
+    // Layer 6: Shadow-Page Detour + Sentinel Watchdog
+    std::atomic<bool>                       m_shadowInit{false};
+    std::atomic<bool>                       m_sentinelInit{false};
 };

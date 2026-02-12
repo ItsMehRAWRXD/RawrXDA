@@ -19,6 +19,7 @@
 #include "Win32IDE.h"
 #include "IDELogger.h"
 #include "../../include/chain_of_thought_engine.h"
+#include "../core/instructions_provider.hpp"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <thread>
@@ -441,12 +442,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/backend/active") {
+    if (method == "GET" && path == "/api/backend/active") {
         handleBackendActiveEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && (path == "/api/backend/switch" || path == "/api/backends/switch")) {
+    if (method == "POST" && (path == "/api/backend/switch" || path == "/api/backends/switch")) {
         handleBackendSwitchEndpoint(client, body);
         closesocket(client);
         return;
@@ -457,17 +458,17 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/router/decision") {
+    if (method == "GET" && path == "/api/router/decision") {
         handleRouterDecisionEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/router/capabilities") {
+    if (method == "GET" && path == "/api/router/capabilities") {
         handleRouterCapabilitiesEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/router/route") {
+    if (method == "POST" && path == "/api/router/route") {
         handleRouterRouteEndpoint(client, body);
         closesocket(client);
         return;
@@ -478,22 +479,22 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/router/pins") {
+    if (method == "GET" && path == "/api/router/pins") {
         handleRouterPinsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/router/heatmap") {
+    if (method == "GET" && path == "/api/router/heatmap") {
         handleRouterHeatmapEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/router/ensemble") {
+    if (method == "POST" && path == "/api/router/ensemble") {
         handleRouterEnsembleEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/router/simulate") {
+    if (method == "POST" && path == "/api/router/simulate") {
         handleRouterSimulateEndpoint(client, body);
         closesocket(client);
         return;
@@ -504,7 +505,7 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/lsp/diagnostics") {
+    if (method == "GET" && path == "/api/lsp/diagnostics") {
         handleLSPDiagnosticsEndpoint(client);
         closesocket(client);
         return;
@@ -515,12 +516,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/asm/navigate") {
+    if (method == "POST" && path == "/api/asm/navigate") {
         handleAsmNavigateEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/asm/analyze") {
+    if (method == "POST" && path == "/api/asm/analyze") {
         handleAsmAnalyzeEndpoint(client, body);
         closesocket(client);
         return;
@@ -531,17 +532,17 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/multi-response/templates") {
+    if (method == "GET" && path == "/api/multi-response/templates") {
         handleMultiResponseTemplatesEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/multi-response/generate") {
+    if (method == "POST" && path == "/api/multi-response/generate") {
         handleMultiResponseGenerateEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path.rfind("/api/multi-response/results", 0) == 0) {
+    if (method == "GET" && path.rfind("/api/multi-response/results", 0) == 0) {
         // Extract session ID from query: /api/multi-response/results?session=123
         std::string sid = "latest";
         auto qpos = path.find("session=");
@@ -550,17 +551,17 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/multi-response/prefer") {
+    if (method == "POST" && path == "/api/multi-response/prefer") {
         handleMultiResponsePreferEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/multi-response/stats") {
+    if (method == "GET" && path == "/api/multi-response/stats") {
         handleMultiResponseStatsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/multi-response/preferences") {
+    if (method == "GET" && path == "/api/multi-response/preferences") {
         handleMultiResponsePreferencesEndpoint(client);
         closesocket(client);
         return;
@@ -573,27 +574,27 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path.rfind("/api/hybrid/diagnostics", 0) == 0) {
+    if (method == "GET" && path.rfind("/api/hybrid/diagnostics", 0) == 0) {
         handleHybridDiagnosticsEndpoint(client, path);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/hybrid/rename") {
+    if (method == "POST" && path == "/api/hybrid/rename") {
         handleHybridSmartRenameEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/hybrid/analyze") {
+    if (method == "POST" && path == "/api/hybrid/analyze") {
         handleHybridAnalyzeEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/hybrid/status") {
+    if (method == "GET" && path == "/api/hybrid/status") {
         handleHybridStatusEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/hybrid/symbol-usage") {
+    if (method == "POST" && path == "/api/hybrid/symbol-usage") {
         handleHybridSymbolUsageEndpoint(client, body);
         closesocket(client);
         return;
@@ -604,17 +605,17 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/governor/submit") {
+    if (method == "POST" && path == "/api/governor/submit") {
         handleGovernorSubmitEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/governor/kill") {
+    if (method == "POST" && path == "/api/governor/kill") {
         handleGovernorKillEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/governor/result") {
+    if (method == "POST" && path == "/api/governor/result") {
         handleGovernorResultEndpoint(client, body);
         closesocket(client);
         return;
@@ -625,17 +626,17 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/safety/check") {
+    if (method == "POST" && path == "/api/safety/check") {
         handleSafetyCheckEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/safety/violations") {
+    if (method == "GET" && path == "/api/safety/violations") {
         handleSafetyViolationsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/safety/rollback") {
+    if (method == "POST" && path == "/api/safety/rollback") {
         handleSafetyRollbackEndpoint(client, body);
         closesocket(client);
         return;
@@ -646,12 +647,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/replay/records") {
+    if (method == "POST" && path == "/api/replay/records") {
         handleReplayRecordsEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/replay/sessions") {
+    if (method == "GET" && path == "/api/replay/sessions") {
         handleReplaySessionsEndpoint(client);
         closesocket(client);
         return;
@@ -662,12 +663,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/confidence/evaluate") {
+    if (method == "POST" && path == "/api/confidence/evaluate") {
         handleConfidenceEvaluateEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/confidence/history") {
+    if (method == "GET" && path == "/api/confidence/history") {
         handleConfidenceHistoryEndpoint(client);
         closesocket(client);
         return;
@@ -684,67 +685,67 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/swarm/nodes") {
+    if (method == "GET" && path == "/api/swarm/nodes") {
         handleSwarmNodesEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/swarm/tasks") {
+    if (method == "GET" && path == "/api/swarm/tasks") {
         handleSwarmTaskGraphEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/swarm/stats") {
+    if (method == "GET" && path == "/api/swarm/stats") {
         handleSwarmStatsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/swarm/events") {
+    if (method == "GET" && path == "/api/swarm/events") {
         handleSwarmEventsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/swarm/config") {
+    if (method == "GET" && path == "/api/swarm/config") {
         handleSwarmConfigEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/swarm/worker") {
+    if (method == "GET" && path == "/api/swarm/worker") {
         handleSwarmWorkerEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/swarm/start") {
+    if (method == "POST" && path == "/api/swarm/start") {
         handleSwarmStartEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/swarm/stop") {
+    if (method == "POST" && path == "/api/swarm/stop") {
         handleSwarmStopEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/swarm/nodes/add") {
+    if (method == "POST" && path == "/api/swarm/nodes/add") {
         handleSwarmAddNodeEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/swarm/build") {
+    if (method == "POST" && path == "/api/swarm/build") {
         handleSwarmBuildEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/swarm/cancel") {
+    if (method == "POST" && path == "/api/swarm/cancel") {
         handleSwarmCancelEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/swarm/cache/clear") {
+    if (method == "POST" && path == "/api/swarm/cache/clear") {
         handleSwarmCacheClearEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/phase11/status") {
+    if (method == "GET" && path == "/api/phase11/status") {
         handlePhase11StatusEndpoint(client);
         closesocket(client);
         return;
@@ -759,27 +760,27 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/agent/dual/shutdown") {
+    if (method == "POST" && path == "/api/agent/dual/shutdown") {
         handleDualAgentShutdownEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/agent/dual/status") {
+    if (method == "GET" && path == "/api/agent/dual/status") {
         handleDualAgentStatusEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/agent/dual/handoff") {
+    if (method == "POST" && path == "/api/agent/dual/handoff") {
         handleDualAgentHandoffEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/agent/dual/submit") {
+    if (method == "POST" && path == "/api/agent/dual/submit") {
         handleDualAgentSubmitEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/phase41/status") {
+    if (method == "GET" && path == "/api/phase41/status") {
         handlePhase41StatusEndpoint(client);
         closesocket(client);
         return;
@@ -793,37 +794,37 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/breakpoints") {
+    if (method == "GET" && path == "/api/debug/breakpoints") {
         handleDbgBreakpointsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/registers") {
+    if (method == "GET" && path == "/api/debug/registers") {
         handleDbgRegistersEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/stack") {
+    if (method == "GET" && path == "/api/debug/stack") {
         handleDbgStackEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/modules") {
+    if (method == "GET" && path == "/api/debug/modules") {
         handleDbgModulesEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/threads") {
+    if (method == "GET" && path == "/api/debug/threads") {
         handleDbgThreadsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/events") {
+    if (method == "GET" && path == "/api/debug/events") {
         handleDbgEventsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/debug/watches") {
+    if (method == "GET" && path == "/api/debug/watches") {
         handleDbgWatchesEndpoint(client);
         closesocket(client);
         return;
@@ -834,27 +835,27 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/debug/disasm") {
+    if (method == "POST" && path == "/api/debug/disasm") {
         handleDbgDisasmEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/debug/launch") {
+    if (method == "POST" && path == "/api/debug/launch") {
         handleDbgLaunchEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/debug/attach") {
+    if (method == "POST" && path == "/api/debug/attach") {
         handleDbgAttachEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/debug/go") {
+    if (method == "POST" && path == "/api/debug/go") {
         handleDbgGoEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/phase12/status") {
+    if (method == "GET" && path == "/api/phase12/status") {
         handlePhase12StatusEndpoint(client);
         closesocket(client);
         return;
@@ -865,37 +866,37 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/cot/presets") {
+    if (method == "GET" && path == "/api/cot/presets") {
         handleCoTPresetsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/cot/steps") {
+    if (method == "GET" && path == "/api/cot/steps") {
         handleCoTStepsEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "GET" && path == "/api/cot/roles") {
+    if (method == "GET" && path == "/api/cot/roles") {
         handleCoTRolesEndpoint(client);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/cot/preset") {
+    if (method == "POST" && path == "/api/cot/preset") {
         handleCoTApplyPresetEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/cot/steps") {
+    if (method == "POST" && path == "/api/cot/steps") {
         handleCoTSetStepsEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/cot/execute") {
+    if (method == "POST" && path == "/api/cot/execute") {
         handleCoTExecuteEndpoint(client, body);
         closesocket(client);
         return;
     }
-    else if (method == "POST" && path == "/api/cot/cancel") {
+    if (method == "POST" && path == "/api/cot/cancel") {
         handleCoTCancelEndpoint(client);
         closesocket(client);
         return;
@@ -1011,6 +1012,27 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
     // ========== Hotpatch Layer Control ==========
     else if (method == "POST" && (path == "/api/hotpatch/toggle" || path == "/api/hotpatch/apply" || path == "/api/hotpatch/revert")) {
         handleHotpatchEndpoint(client, path, body);
+        closesocket(client);
+        return;
+    }
+    // ========== Phase 34: Production Instructions Context ==========
+    else if (method == "GET" && path == "/api/instructions") {
+        handleInstructionsEndpoint(client, "full");
+        closesocket(client);
+        return;
+    }
+    if (method == "GET" && path == "/api/instructions/summary") {
+        handleInstructionsEndpoint(client, "summary");
+        closesocket(client);
+        return;
+    }
+    if (method == "GET" && path == "/api/instructions/content") {
+        handleInstructionsContentEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    if (method == "POST" && path == "/api/instructions/reload") {
+        handleInstructionsReloadEndpoint(client);
         closesocket(client);
         return;
     }
@@ -3583,4 +3605,66 @@ void Win32IDE::handleToolDispatchEndpoint(SOCKET client, const std::string& body
     }
 
     LOG_INFO("tool-dispatch: " + tool);
+}
+
+// ============================================================================
+// Phase 34: INSTRUCTIONS CONTEXT — /api/instructions
+// Read and serve tools.instructions.md (all lines) as context
+// ============================================================================
+
+void Win32IDE::handleInstructionsEndpoint(SOCKET client, const std::string& mode) {
+    auto& provider = InstructionsProvider::instance();
+
+    // Lazy-load on first access
+    if (!provider.isLoaded()) {
+        provider.loadAll();
+    }
+
+    std::string json;
+    if (mode == "summary") {
+        json = provider.toJSONSummary();
+    } else {
+        json = provider.toJSON();
+    }
+
+    std::string response = LocalServerUtil::buildHttpResponse(200, json);
+    LocalServerUtil::sendAll(client, response);
+}
+
+void Win32IDE::handleInstructionsContentEndpoint(SOCKET client) {
+    auto& provider = InstructionsProvider::instance();
+
+    if (!provider.isLoaded()) {
+        provider.loadAll();
+    }
+
+    std::string content = provider.getAllContent();
+
+    // Respond as text/markdown
+    std::ostringstream resp;
+    resp << "HTTP/1.1 200 OK\r\n";
+    resp << "Content-Type: text/markdown; charset=utf-8\r\n";
+    resp << "Content-Length: " << content.size() << "\r\n";
+    resp << "Access-Control-Allow-Origin: *\r\n";
+    resp << "X-Instructions-Files: " << provider.getLoadedCount() << "\r\n";
+    resp << "Connection: close\r\n";
+    resp << "\r\n";
+    resp << content;
+
+    LocalServerUtil::sendAll(client, resp.str());
+}
+
+void Win32IDE::handleInstructionsReloadEndpoint(SOCKET client) {
+    auto& provider = InstructionsProvider::instance();
+    auto result = provider.reload();
+
+    std::ostringstream json;
+    json << "{\"success\":" << (result.success ? "true" : "false")
+         << ",\"detail\":\"" << LocalServerUtil::escapeJson(result.detail) << "\""
+         << ",\"files_loaded\":" << provider.getLoadedCount()
+         << "}";
+
+    std::string response = LocalServerUtil::buildHttpResponse(
+        result.success ? 200 : 500, json.str());
+    LocalServerUtil::sendAll(client, response);
 }

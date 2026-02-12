@@ -229,5 +229,3 @@ inline size_t ExportPrometheusToBuffer(char* buf, size_t /*bufSize*/) {
 #else
 // Pure C: extern "C" block was already closed above
 #endif
-
-#endif // Included via #pragma once

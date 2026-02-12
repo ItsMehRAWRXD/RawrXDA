@@ -43,9 +43,15 @@
 #include <chrono>
 #include <cstring>
 
-// Link pragma — ensures dbgeng.lib is linked even if CMake misses it
-#pragma comment(lib, "dbgeng.lib")
+// Link pragma — dbghelp always available; dbgeng loaded dynamically to
+// avoid 0xC0000005 on systems where DbgEng runtime is absent/incompatible.
+// #pragma comment(lib, "dbgeng.lib")  // REMOVED — now resolved via LoadLibrary
 #pragma comment(lib, "dbghelp.lib")
+
+// Dynamic DebugCreate — resolved at runtime
+typedef HRESULT (STDAPICALLTYPE *PFN_DebugCreate)(REFIID InterfaceId, PVOID* Interface);
+static HMODULE       g_hDbgEng       = nullptr;
+static PFN_DebugCreate g_pfnDebugCreate = nullptr;
 
 using namespace RawrXD::Debugger;
 
@@ -362,11 +368,25 @@ DebugResult NativeDebuggerEngine::shutdown() {
 DebugResult NativeDebuggerEngine::initDbgEng() {
     HRESULT hr;
 
+    // --- Dynamic load dbgeng.dll (prevents 0xC0000005 if runtime missing) ---
+    if (!g_hDbgEng) {
+        g_hDbgEng = LoadLibraryA("dbgeng.dll");
+        if (!g_hDbgEng) {
+            return DebugResult::error("dbgeng.dll not found — install Debugging Tools for Windows", (int)GetLastError());
+        }
+        g_pfnDebugCreate = (PFN_DebugCreate)GetProcAddress(g_hDbgEng, "DebugCreate");
+        if (!g_pfnDebugCreate) {
+            FreeLibrary(g_hDbgEng);
+            g_hDbgEng = nullptr;
+            return DebugResult::error("DebugCreate export not found in dbgeng.dll", (int)GetLastError());
+        }
+    }
+
     // Create IDebugClient
-    hr = DebugCreate(__uuidof(IDebugClient7), (void**)&m_debugClient);
+    hr = g_pfnDebugCreate(__uuidof(IDebugClient7), (void**)&m_debugClient);
     if (FAILED(hr)) {
         // Fallback to IDebugClient5
-        hr = DebugCreate(__uuidof(IDebugClient5), (void**)&m_debugClient);
+        hr = g_pfnDebugCreate(__uuidof(IDebugClient5), (void**)&m_debugClient);
         if (FAILED(hr)) {
             return DebugResult::error("Failed to create IDebugClient", hr);
         }

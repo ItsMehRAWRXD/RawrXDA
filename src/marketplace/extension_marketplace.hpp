@@ -36,10 +36,10 @@ namespace Extensions {
 // ============================================================================
 struct ExtResult {
     bool success;
-    const char* detail;
+    std::string detail;
     int errorCode;
 
-    static ExtResult ok(const char* msg = "OK") {
+    static ExtResult ok(const std::string& msg = "OK") {
         ExtResult r;
         r.success = true;
         r.detail = msg;
@@ -47,7 +47,7 @@ struct ExtResult {
         return r;
     }
 
-    static ExtResult error(const char* msg, int code = -1) {
+    static ExtResult error(const std::string& msg, int code = -1) {
         ExtResult r;
         r.success = false;
         r.detail = msg;

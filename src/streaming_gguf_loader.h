@@ -64,6 +64,11 @@ public:
     std::vector<TensorRef> GetTensorIndex() const;
     std::string GetTensorZone(const std::string& tensor_name) const;
 
+    // Access raw tensor data
+    bool GetTensorData(const std::string& tensor_name, std::vector<uint8_t>& data);
+    // Get total file size
+    uint64_t GetTotalFileSize();
+
 private:
     std::string filepath_;
     std::ifstream file_;
@@ -101,11 +106,6 @@ private:
     
     // Get zone for tensor name
     std::string GetZoneForTensor(const std::string& tensor_name) const;
-    
-    // Access raw tensor data (internal helper)
-    bool GetTensorData(const std::string& tensor_name, std::vector<uint8_t>& data);
-    // Get total file size (internal helper)
-    uint64_t GetTotalFileSize();
 
     // Template reading
     template<typename T>

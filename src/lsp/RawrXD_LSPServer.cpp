@@ -889,8 +889,103 @@ void RawrXDLSPServer::handleDidClose(const json& params) {
     }
 }
 
-void RawrXDLSPServer::handleDidSave(const json& /*params*/) {
-    // Diagnostics could be triggered here.  For now, no-op.
+void RawrXDLSPServer::handleDidSave(const json& params) {
+    // On save: re-index + trigger diagnostic refresh
+    std::string uri;
+    if (params.contains("textDocument") && params["textDocument"].contains("uri")) {
+        uri = params["textDocument"]["uri"].get<std::string>();
+    }
+    if (uri.empty()) return;
+
+    std::string filePath = uriToFilePath(uri);
+    std::string content;
+
+    // If the save notification includes text (willSaveWaitUntil full-text mode),
+    // use it directly; otherwise read from the open document cache or disk
+    if (params.contains("text")) {
+        content = params["text"].get<std::string>();
+    } else {
+        std::lock_guard<std::mutex> lk(m_docMutex);
+        auto it = m_openDocuments.find(uri);
+        if (it != m_openDocuments.end()) {
+            content = it->second.content;
+            it->second.dirty = false;  // Mark clean on save
+        }
+    }
+
+    // Re-index the saved file to update symbol database
+    if (!content.empty()) {
+        indexFileContent(filePath, content);
+    } else {
+        // Fall back to reading from disk
+        indexFileFromDisk(filePath);
+    }
+
+    // Generate basic diagnostics from the content
+    // This catches common issues: unclosed brackets, very long lines, TODO markers
+    std::vector<DiagnosticEntry> diagnostics;
+
+    if (!content.empty()) {
+        std::istringstream iss(content);
+        std::string line;
+        int lineNum = 0;
+        int braceDepth = 0;
+        int parenDepth = 0;
+
+        while (std::getline(iss, line)) {
+            // Line length warning
+            if (line.size() > 200) {
+                DiagnosticEntry d;
+                d.range.start = { lineNum, 0 };
+                d.range.end = { lineNum, static_cast<int>(line.size()) };
+                d.severity = DiagnosticSeverity::Hint;
+                d.code = "line-too-long";
+                d.source = "rawrxd";
+                d.message = "Line exceeds 200 characters (" + std::to_string(line.size()) + ")";
+                diagnostics.push_back(std::move(d));
+            }
+
+            // TODO/FIXME/HACK markers
+            for (const char* marker : {"TODO", "FIXME", "HACK", "XXX"}) {
+                auto pos = line.find(marker);
+                if (pos != std::string::npos) {
+                    DiagnosticEntry d;
+                    d.range.start = { lineNum, static_cast<int>(pos) };
+                    d.range.end = { lineNum, static_cast<int>(pos + strlen(marker)) };
+                    d.severity = DiagnosticSeverity::Information;
+                    d.code = "task-marker";
+                    d.source = "rawrxd";
+                    d.message = std::string(marker) + " marker found";
+                    diagnostics.push_back(std::move(d));
+                }
+            }
+
+            // Track brace/paren depth (simple — not comment/string aware)
+            for (char c : line) {
+                if (c == '{') braceDepth++;
+                else if (c == '}') braceDepth--;
+                else if (c == '(') parenDepth++;
+                else if (c == ')') parenDepth--;
+            }
+            lineNum++;
+        }
+
+        // Report unbalanced braces at end of file
+        if (braceDepth != 0) {
+            DiagnosticEntry d;
+            d.range.start = { lineNum - 1, 0 };
+            d.range.end = { lineNum - 1, 1 };
+            d.severity = DiagnosticSeverity::Warning;
+            d.code = "unbalanced-braces";
+            d.source = "rawrxd";
+            d.message = "Unbalanced braces: depth " + std::to_string(braceDepth) +
+                        " at end of file";
+            diagnostics.push_back(std::move(d));
+        }
+    }
+
+    // Publish diagnostics (empty list clears previous diagnostics)
+    publishDiagnostics(uri, diagnostics);
 }
 
 // ============================================================================

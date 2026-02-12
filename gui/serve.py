@@ -11,6 +11,7 @@ Endpoints:
   POST /ask                   — Forward chat query to Ollama /api/generate
   POST /v1/chat/completions   — OpenAI-compatible proxy to Ollama
   POST /api/generate          — Ollama-compatible streaming proxy
+  POST /api/chat              — Direct Ollama /api/chat proxy
   GET  /gui                   — Serve gui/ide_chatbot.html
   GET  /health                — Health check
   GET  /status                — Server status + stats
@@ -18,7 +19,23 @@ Endpoints:
   GET  /api/agents/status     — Agent subsystem status
   GET  /api/agents/history    — Agent event history
   POST /api/agents/replay     — Replay a failed agent event
-  POST /api/read-file          — Read a local file by path (IDE auto-attach)
+  POST /api/read-file         — Read a local file by path
+  POST /api/write-file        — Write/create file (up to 50MB)
+  POST /api/delete-file       — Delete file or empty dir
+  POST /api/rename-file       — Rename/move file
+  POST /api/mkdir             — Create directories recursively
+  POST /api/list-directory    — List directory contents
+  POST /api/search-files      — Recursive text/regex search
+  POST /api/git/status        — Git status (porcelain + branch + remotes)
+  POST /api/git/diff          — Git diff (staged or unstaged)
+  POST /api/git/log           — Git log (configurable limit)
+  POST /api/git/add           — Git add (stage files)
+  POST /api/git/commit        — Git commit with message
+  POST /api/git/push          — Git push to remote
+  POST /api/git/pull          — Git pull from remote
+  POST /api/terminal/exec     — Execute shell command (with safety guards)
+  GET  /api/agent/tools       — List available agentic tools
+  POST /api/agent/execute-tool — Execute a tool call from the AI agent
 
 Usage:
   python gui/serve.py                    # Default port 11435
@@ -37,6 +54,10 @@ import urllib.error
 import urllib.parse
 import argparse
 import glob
+import subprocess
+import shutil
+import fnmatch
+import re
 from pathlib import Path
 
 # ============================================================================
@@ -443,7 +464,7 @@ def proxy_chat_completions(body_bytes, ollama_url, stream=False):
                 "total_tokens": ollama_resp.get("prompt_eval_count", 0) + ollama_resp.get("eval_count", 0),
             },
         }
-        # Return a fake response object with .read() and .close()
+        # Return an adapter response object wrapping real Ollama data
         return _BytesResponse(json.dumps(openai_resp).encode("utf-8"))
 
 
@@ -1065,8 +1086,962 @@ class RawrXDHandler(http.server.BaseHTTPRequestHandler):
             else:
                 self._json_response(400, {"error": "Missing 'path' field"})
 
+        # ==================================================================
+        # FILE OPERATIONS — Real production endpoints for IDE file management
+        # ==================================================================
+
+        elif self.path == "/api/write-file":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            file_path = data.get("path")
+            content = data.get("content", "")
+            create_dirs = data.get("createDirs", False)
+            if not file_path:
+                self._json_response(400, {"error": "Missing 'path' field"})
+                return
+            try:
+                resolved = Path(file_path).resolve()
+                # Block network paths
+                if str(resolved).startswith("\\\\") or str(resolved).startswith("//"):
+                    self._json_response(403, {"error": "Network paths forbidden"})
+                    return
+                # Size guard: 50MB
+                if len(content.encode("utf-8")) > 50 * 1024 * 1024:
+                    self._json_response(413, {"error": "Content exceeds 50MB limit"})
+                    return
+                if create_dirs:
+                    resolved.parent.mkdir(parents=True, exist_ok=True)
+                resolved.write_text(content, encoding="utf-8")
+                _bump_stat("total_file_writes")
+                self._json_response(200, {
+                    "ok": True,
+                    "path": str(resolved),
+                    "size": len(content),
+                    "created": not resolved.exists() or True,
+                })
+            except PermissionError:
+                self._json_response(403, {"error": f"Permission denied: {file_path}"})
+            except Exception as e:
+                self._json_response(500, {"error": f"Write failed: {e}"})
+
+        elif self.path == "/api/delete-file":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            file_path = data.get("path")
+            force = data.get("force", False)
+            if not file_path:
+                self._json_response(400, {"error": "Missing 'path' field"})
+                return
+            try:
+                resolved = Path(file_path).resolve()
+                if not resolved.exists():
+                    self._json_response(404, {"error": f"Not found: {file_path}"})
+                    return
+                if resolved.is_file():
+                    resolved.unlink()
+                elif resolved.is_dir():
+                    if force:
+                        shutil.rmtree(str(resolved))
+                    else:
+                        resolved.rmdir()  # only empty dirs
+                _bump_stat("total_file_deletes")
+                self._json_response(200, {"ok": True, "deleted": str(resolved)})
+            except PermissionError:
+                self._json_response(403, {"error": f"Permission denied: {file_path}"})
+            except OSError as e:
+                self._json_response(400, {"error": f"Delete failed: {e}"})
+
+        elif self.path == "/api/rename-file":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            old_path = data.get("old_path") or data.get("path")
+            new_path = data.get("new_path") or data.get("newPath")
+            if not old_path or not new_path:
+                self._json_response(400, {"error": "Missing 'old_path' or 'new_path'"})
+                return
+            try:
+                src = Path(old_path).resolve()
+                dst = Path(new_path).resolve()
+                if not src.exists():
+                    self._json_response(404, {"error": f"Source not found: {old_path}"})
+                    return
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                src.rename(dst)
+                _bump_stat("total_file_renames")
+                self._json_response(200, {
+                    "ok": True,
+                    "old_path": str(src),
+                    "new_path": str(dst),
+                })
+            except PermissionError:
+                self._json_response(403, {"error": f"Permission denied"})
+            except Exception as e:
+                self._json_response(500, {"error": f"Rename failed: {e}"})
+
+        elif self.path == "/api/mkdir":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            dir_path = data.get("path")
+            if not dir_path:
+                self._json_response(400, {"error": "Missing 'path' field"})
+                return
+            try:
+                resolved = Path(dir_path).resolve()
+                resolved.mkdir(parents=True, exist_ok=True)
+                self._json_response(200, {"ok": True, "path": str(resolved)})
+            except PermissionError:
+                self._json_response(403, {"error": f"Permission denied: {dir_path}"})
+            except Exception as e:
+                self._json_response(500, {"error": f"mkdir failed: {e}"})
+
+        elif self.path in ("/api/list-directory", "/api/list-dir"):
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            dir_path = data.get("path", str(PROJECT_ROOT))
+            max_entries = data.get("limit", 50000)
+            show_hidden = data.get("showHidden", False)
+            try:
+                resolved = Path(dir_path).resolve()
+                if not resolved.exists():
+                    self._json_response(404, {"error": f"Directory not found: {dir_path}"})
+                    return
+                if not resolved.is_dir():
+                    self._json_response(400, {"error": f"Not a directory: {dir_path}"})
+                    return
+                entries = []
+                count = 0
+                for item in sorted(resolved.iterdir()):
+                    if count >= max_entries:
+                        break
+                    name = item.name
+                    if not show_hidden and name.startswith("."):
+                        continue
+                    try:
+                        stat = item.stat()
+                        entries.append({
+                            "name": name,
+                            "path": str(item),
+                            "isDir": item.is_dir(),
+                            "size": stat.st_size if item.is_file() else 0,
+                            "modified": int(stat.st_mtime * 1000),
+                        })
+                        count += 1
+                    except (PermissionError, OSError):
+                        entries.append({
+                            "name": name,
+                            "path": str(item),
+                            "isDir": item.is_dir(),
+                            "size": 0,
+                            "modified": 0,
+                            "error": "access_denied",
+                        })
+                        count += 1
+                self._json_response(200, {
+                    "ok": True,
+                    "path": str(resolved),
+                    "entries": entries,
+                    "total": count,
+                    "truncated": count >= max_entries,
+                })
+            except PermissionError:
+                self._json_response(403, {"error": f"Permission denied: {dir_path}"})
+            except Exception as e:
+                self._json_response(500, {"error": f"List failed: {e}"})
+
+        elif self.path == "/api/search-files":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            query = data.get("query", "")
+            search_path = data.get("path", str(PROJECT_ROOT))
+            is_regex = data.get("isRegex", False)
+            case_sensitive = data.get("caseSensitive", False)
+            max_results = data.get("maxResults", 500)
+            file_pattern = data.get("filePattern", "*")
+            if not query:
+                self._json_response(400, {"error": "Missing 'query' field"})
+                return
+            try:
+                resolved = Path(search_path).resolve()
+                if not resolved.is_dir():
+                    self._json_response(404, {"error": f"Directory not found: {search_path}"})
+                    return
+                flags = 0 if case_sensitive else re.IGNORECASE
+                if is_regex:
+                    pattern = re.compile(query, flags)
+                else:
+                    pattern = re.compile(re.escape(query), flags)
+                results = []
+                files_searched = 0
+                # Walk directory tree
+                for root, dirs, files in os.walk(str(resolved)):
+                    # Skip hidden/build dirs
+                    dirs[:] = [d for d in dirs if not d.startswith(".") and d not in
+                               ("node_modules", "__pycache__", ".git", "build", "Release", "Debug")]
+                    for fname in files:
+                        if len(results) >= max_results:
+                            break
+                        if file_pattern != "*" and not fnmatch.fnmatch(fname, file_pattern):
+                            continue
+                        fpath = os.path.join(root, fname)
+                        try:
+                            # Skip binary/large files
+                            fsize = os.path.getsize(fpath)
+                            if fsize > 5 * 1024 * 1024:  # 5MB
+                                continue
+                            with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                                files_searched += 1
+                                for line_num, line in enumerate(f, 1):
+                                    if len(results) >= max_results:
+                                        break
+                                    match = pattern.search(line)
+                                    if match:
+                                        results.append({
+                                            "file": fpath.replace("\\", "/"),
+                                            "line": line_num,
+                                            "column": match.start() + 1,
+                                            "text": line.rstrip("\n\r")[:500],
+                                            "matchLength": match.end() - match.start(),
+                                        })
+                        except (PermissionError, OSError, UnicodeDecodeError):
+                            continue
+                    if len(results) >= max_results:
+                        break
+                self._json_response(200, {
+                    "ok": True,
+                    "results": results,
+                    "total": len(results),
+                    "filesSearched": files_searched,
+                    "truncated": len(results) >= max_results,
+                })
+            except re.error as e:
+                self._json_response(400, {"error": f"Invalid regex: {e}"})
+            except Exception as e:
+                self._json_response(500, {"error": f"Search failed: {e}"})
+
+        elif self.path == "/api/copy-file":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            src = data.get("path")
+            dst = data.get("destPath")
+            overwrite = data.get("overwrite", False)
+            if not src or not dst:
+                self._json_response(400, {"error": "Missing 'path' or 'destPath'"})
+                return
+            try:
+                src_p = Path(src).resolve()
+                dst_p = Path(dst).resolve()
+                if not src_p.exists():
+                    self._json_response(404, {"error": f"Source not found: {src}"})
+                    return
+                if dst_p.exists() and not overwrite:
+                    self._json_response(409, {"error": f"Destination exists: {dst}. Use overwrite=true."})
+                    return
+                dst_p.parent.mkdir(parents=True, exist_ok=True)
+                if src_p.is_dir():
+                    shutil.copytree(str(src_p), str(dst_p), dirs_exist_ok=overwrite)
+                else:
+                    shutil.copy2(str(src_p), str(dst_p))
+                self._json_response(200, {"ok": True, "src": str(src_p), "dest": str(dst_p)})
+            except Exception as e:
+                self._json_response(500, {"error": f"Copy failed: {e}"})
+
+        elif self.path == "/api/move-file":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            src = data.get("path")
+            dst = data.get("destPath")
+            overwrite = data.get("overwrite", False)
+            if not src or not dst:
+                self._json_response(400, {"error": "Missing 'path' or 'destPath'"})
+                return
+            try:
+                src_p = Path(src).resolve()
+                dst_p = Path(dst).resolve()
+                if not src_p.exists():
+                    self._json_response(404, {"error": f"Source not found: {src}"})
+                    return
+                if dst_p.exists() and not overwrite:
+                    self._json_response(409, {"error": f"Destination exists: {dst}. Use overwrite=true."})
+                    return
+                dst_p.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src_p), str(dst_p))
+                self._json_response(200, {"ok": True, "src": str(src_p), "dest": str(dst_p)})
+            except Exception as e:
+                self._json_response(500, {"error": f"Move failed: {e}"})
+
+        elif self.path == "/api/stat-file":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            file_path = data.get("path")
+            if not file_path:
+                self._json_response(400, {"error": "Missing 'path' field"})
+                return
+            try:
+                resolved = Path(file_path).resolve()
+                if not resolved.exists():
+                    self._json_response(404, {"error": f"Not found: {file_path}"})
+                    return
+                stat = resolved.stat()
+                self._json_response(200, {
+                    "ok": True,
+                    "path": str(resolved),
+                    "name": resolved.name,
+                    "isDir": resolved.is_dir(),
+                    "isFile": resolved.is_file(),
+                    "size": stat.st_size,
+                    "modified": int(stat.st_mtime * 1000),
+                    "created": int(stat.st_ctime * 1000),
+                    "extension": resolved.suffix,
+                })
+            except PermissionError:
+                self._json_response(403, {"error": f"Permission denied: {file_path}"})
+            except Exception as e:
+                self._json_response(500, {"error": f"stat failed: {e}"})
+
+        # ==================================================================
+        # GIT OPERATIONS — Real subprocess-based git integration
+        # ==================================================================
+
+        elif self.path == "/api/git/status":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                data = {}
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            try:
+                result = subprocess.run(
+                    ["git", "status", "--porcelain", "-b"],
+                    cwd=repo_path, capture_output=True, text=True, timeout=15
+                )
+                if result.returncode != 0:
+                    self._json_response(500, {"error": f"git status failed: {result.stderr}"})
+                    return
+                lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
+                branch = ""
+                changes = []
+                for line in lines:
+                    if line.startswith("## "):
+                        branch = line[3:].split("...")[0]
+                    elif line:
+                        status_code = line[:2]
+                        file_name = line[3:]
+                        changes.append({
+                            "status": status_code.strip(),
+                            "file": file_name,
+                            "staged": status_code[0] != " " and status_code[0] != "?",
+                        })
+                # Get remote info
+                remote_result = subprocess.run(
+                    ["git", "remote", "-v"],
+                    cwd=repo_path, capture_output=True, text=True, timeout=10
+                )
+                remotes = []
+                if remote_result.returncode == 0:
+                    for rline in remote_result.stdout.strip().split("\n"):
+                        if rline and "(push)" in rline:
+                            parts = rline.split()
+                            if len(parts) >= 2:
+                                remotes.append({"name": parts[0], "url": parts[1]})
+                self._json_response(200, {
+                    "ok": True,
+                    "branch": branch,
+                    "changes": changes,
+                    "totalChanges": len(changes),
+                    "remotes": remotes,
+                    "clean": len(changes) == 0,
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except subprocess.TimeoutExpired:
+                self._json_response(504, {"error": "git status timed out"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git status failed: {e}"})
+
+        elif self.path == "/api/git/diff":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                data = {}
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            staged = data.get("staged", False)
+            file_filter = data.get("file", None)
+            cmd = ["git", "diff"]
+            if staged:
+                cmd.append("--cached")
+            cmd.append("--stat")
+            if file_filter:
+                cmd.extend(["--", file_filter])
+            try:
+                # Get stat summary
+                stat_result = subprocess.run(
+                    cmd, cwd=repo_path, capture_output=True, text=True, timeout=30
+                )
+                # Get full diff
+                full_cmd = ["git", "diff"]
+                if staged:
+                    full_cmd.append("--cached")
+                if file_filter:
+                    full_cmd.extend(["--", file_filter])
+                diff_result = subprocess.run(
+                    full_cmd, cwd=repo_path, capture_output=True, text=True, timeout=30
+                )
+                self._json_response(200, {
+                    "ok": True,
+                    "stat": stat_result.stdout,
+                    "diff": diff_result.stdout[:500000],  # 500KB limit
+                    "truncated": len(diff_result.stdout) > 500000,
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except subprocess.TimeoutExpired:
+                self._json_response(504, {"error": "git diff timed out"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git diff failed: {e}"})
+
+        elif self.path == "/api/git/log":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                data = {}
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            limit = data.get("limit", 50)
+            try:
+                result = subprocess.run(
+                    ["git", "log", f"-{limit}",
+                     "--pretty=format:%H|%h|%an|%ae|%ai|%s"],
+                    cwd=repo_path, capture_output=True, text=True, timeout=15
+                )
+                if result.returncode != 0:
+                    self._json_response(500, {"error": f"git log failed: {result.stderr}"})
+                    return
+                commits = []
+                for line in result.stdout.strip().split("\n"):
+                    if not line:
+                        continue
+                    parts = line.split("|", 5)
+                    if len(parts) >= 6:
+                        commits.append({
+                            "hash": parts[0],
+                            "shortHash": parts[1],
+                            "author": parts[2],
+                            "email": parts[3],
+                            "date": parts[4],
+                            "message": parts[5],
+                        })
+                self._json_response(200, {
+                    "ok": True,
+                    "commits": commits,
+                    "total": len(commits),
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except subprocess.TimeoutExpired:
+                self._json_response(504, {"error": "git log timed out"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git log failed: {e}"})
+
+        elif self.path == "/api/git/add":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            files = data.get("files", ["."])  # default: stage all
+            try:
+                cmd = ["git", "add"] + files
+                result = subprocess.run(
+                    cmd, cwd=repo_path, capture_output=True, text=True, timeout=30
+                )
+                if result.returncode != 0:
+                    self._json_response(500, {"error": f"git add failed: {result.stderr}"})
+                    return
+                self._json_response(200, {
+                    "ok": True,
+                    "staged": files,
+                    "message": f"Staged {len(files)} item(s)",
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git add failed: {e}"})
+
+        elif self.path == "/api/git/commit":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            message = data.get("message", "")
+            if not message:
+                self._json_response(400, {"error": "Missing 'message' field"})
+                return
+            try:
+                result = subprocess.run(
+                    ["git", "commit", "-m", message],
+                    cwd=repo_path, capture_output=True, text=True, timeout=30
+                )
+                if result.returncode != 0:
+                    stderr = result.stderr.strip()
+                    if "nothing to commit" in result.stdout.lower() or "nothing to commit" in stderr.lower():
+                        self._json_response(200, {
+                            "ok": True,
+                            "noop": True,
+                            "message": "Nothing to commit, working tree clean",
+                        })
+                    else:
+                        self._json_response(500, {"error": f"git commit failed: {stderr or result.stdout}"})
+                    return
+                # Parse commit hash from output
+                commit_hash = ""
+                for line in result.stdout.split("\n"):
+                    if line.strip().startswith("["):
+                        # e.g. [main abc1234] commit message
+                        parts = line.strip().split()
+                        if len(parts) >= 2:
+                            commit_hash = parts[1].rstrip("]")
+                self._json_response(200, {
+                    "ok": True,
+                    "message": message,
+                    "hash": commit_hash,
+                    "output": result.stdout.strip(),
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git commit failed: {e}"})
+
+        elif self.path == "/api/git/push":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                data = {}
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            remote = data.get("remote", "origin")
+            branch = data.get("branch", "")
+            force = data.get("force", False)
+            try:
+                cmd = ["git", "push", remote]
+                if branch:
+                    cmd.append(branch)
+                if force:
+                    cmd.append("--force")
+                result = subprocess.run(
+                    cmd, cwd=repo_path, capture_output=True, text=True, timeout=120
+                )
+                if result.returncode != 0:
+                    self._json_response(500, {
+                        "error": f"git push failed: {result.stderr.strip()}",
+                        "stdout": result.stdout.strip(),
+                    })
+                    return
+                self._json_response(200, {
+                    "ok": True,
+                    "remote": remote,
+                    "branch": branch or "(current)",
+                    "output": (result.stdout + result.stderr).strip(),
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except subprocess.TimeoutExpired:
+                self._json_response(504, {"error": "git push timed out (120s)"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git push failed: {e}"})
+
+        elif self.path == "/api/git/pull":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                data = {}
+            repo_path = data.get("path", str(PROJECT_ROOT))
+            remote = data.get("remote", "origin")
+            branch = data.get("branch", "")
+            try:
+                cmd = ["git", "pull", remote]
+                if branch:
+                    cmd.append(branch)
+                result = subprocess.run(
+                    cmd, cwd=repo_path, capture_output=True, text=True, timeout=120
+                )
+                if result.returncode != 0:
+                    self._json_response(500, {"error": f"git pull failed: {result.stderr.strip()}"})
+                    return
+                self._json_response(200, {
+                    "ok": True,
+                    "output": result.stdout.strip(),
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": "git not found in PATH"})
+            except subprocess.TimeoutExpired:
+                self._json_response(504, {"error": "git pull timed out (120s)"})
+            except Exception as e:
+                self._json_response(500, {"error": f"git pull failed: {e}"})
+
+        # ==================================================================
+        # TERMINAL — Real subprocess execution for agentic shell commands
+        # ==================================================================
+
+        elif self.path == "/api/terminal/exec":
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            command = data.get("command", "")
+            cwd = data.get("cwd", str(PROJECT_ROOT))
+            timeout_sec = min(data.get("timeout", 60), 300)  # max 5 min
+            if not command:
+                self._json_response(400, {"error": "Missing 'command' field"})
+                return
+            # Security: block dangerous commands
+            dangerous = ["format ", "del /s", "rd /s", "rm -rf /", "mkfs",
+                         "shutdown", "reboot", "poweroff", ":(){", "fork bomb"]
+            cmd_lower = command.lower().strip()
+            for d in dangerous:
+                if d in cmd_lower:
+                    self._json_response(403, {
+                        "error": f"Blocked dangerous command pattern: {d}"
+                    })
+                    return
+            try:
+                _bump_stat("total_terminal_execs")
+                result = subprocess.run(
+                    command, shell=True, cwd=cwd,
+                    capture_output=True, text=True, timeout=timeout_sec
+                )
+                self._json_response(200, {
+                    "ok": True,
+                    "exitCode": result.returncode,
+                    "stdout": result.stdout[:200000],  # 200KB limit
+                    "stderr": result.stderr[:50000],    # 50KB limit
+                    "truncated": len(result.stdout) > 200000 or len(result.stderr) > 50000,
+                    "command": command,
+                    "cwd": cwd,
+                })
+            except subprocess.TimeoutExpired:
+                self._json_response(504, {
+                    "error": f"Command timed out after {timeout_sec}s",
+                    "command": command,
+                })
+            except FileNotFoundError:
+                self._json_response(500, {"error": f"Command not found: {command}"})
+            except Exception as e:
+                self._json_response(500, {"error": f"Exec failed: {e}"})
+
+        # ==================================================================
+        # AGENTIC TOOL-USE — Structured tool calls for AI agent loop
+        # ==================================================================
+
+        elif self.path == "/api/agent/tools":
+            # Return available tools for the agent to call
+            tools = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "read_file",
+                        "description": "Read the contents of a file at the given path",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "path": {"type": "string", "description": "Absolute file path"},
+                            },
+                            "required": ["path"],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "write_file",
+                        "description": "Write content to a file (creates parent dirs)",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "path": {"type": "string", "description": "Absolute file path"},
+                                "content": {"type": "string", "description": "File content"},
+                            },
+                            "required": ["path", "content"],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_files",
+                        "description": "Search for text/regex across files in a directory",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "query": {"type": "string", "description": "Search query"},
+                                "path": {"type": "string", "description": "Directory to search"},
+                                "isRegex": {"type": "boolean", "description": "Treat query as regex"},
+                            },
+                            "required": ["query"],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "list_directory",
+                        "description": "List files and folders in a directory",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "path": {"type": "string", "description": "Directory path"},
+                            },
+                            "required": ["path"],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "run_command",
+                        "description": "Execute a shell command and return output",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "command": {"type": "string", "description": "Shell command"},
+                                "cwd": {"type": "string", "description": "Working directory"},
+                            },
+                            "required": ["command"],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "git_status",
+                        "description": "Get git status of the repository",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "path": {"type": "string", "description": "Repository path"},
+                            },
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "git_commit",
+                        "description": "Stage all changes and commit with a message",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "message": {"type": "string", "description": "Commit message"},
+                                "path": {"type": "string", "description": "Repository path"},
+                            },
+                            "required": ["message"],
+                        },
+                    },
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "git_push",
+                        "description": "Push commits to remote",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "remote": {"type": "string", "description": "Remote name (default: origin)"},
+                                "branch": {"type": "string", "description": "Branch name"},
+                            },
+                        },
+                    },
+                },
+            ]
+            self._json_response(200, {"tools": tools})
+
+        elif self.path == "/api/agent/execute-tool" or self.path == "/api/tool":
+            # Execute a single tool call from the agent
+            try:
+                data = json.loads(body_str) if body_str else {}
+            except json.JSONDecodeError:
+                self._json_response(400, {"error": "Invalid JSON"})
+                return
+            tool_name = data.get("name", "")
+            args = data.get("arguments", {})
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = {}
+            _add_agent_event("tool_call", f"{tool_name}({json.dumps(args)[:200]})", "agent")
+            try:
+                result = self._execute_tool(tool_name, args)
+                self._json_response(200, {"ok": True, "result": result})
+            except Exception as e:
+                _add_failure("tool_error", f"{tool_name}: {e}", "agent", "Failed")
+                self._json_response(500, {"error": f"Tool {tool_name} failed: {e}"})
+
         else:
             self._json_response(404, {"error": "not_found"})
+
+    # ---- Agentic tool executor for AI agent loop ----
+    def _execute_tool(self, tool_name, args):
+        """Execute a named tool and return the result dict.
+        Called by /api/agent/execute-tool for the agentic loop.
+        """
+        if tool_name == "read_file":
+            path = args.get("path", "")
+            resolved = Path(path).resolve()
+            if not resolved.exists():
+                return {"error": f"File not found: {path}"}
+            if not resolved.is_file():
+                return {"error": f"Not a file: {path}"}
+            if resolved.stat().st_size > 2 * 1024 * 1024:
+                return {"error": f"File too large ({resolved.stat().st_size} bytes)"}
+            content = resolved.read_text(encoding="utf-8", errors="replace")
+            return {"content": content, "path": str(resolved), "size": len(content)}
+
+        elif tool_name == "write_file":
+            path = args.get("path", "")
+            content = args.get("content", "")
+            resolved = Path(path).resolve()
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            resolved.write_text(content, encoding="utf-8")
+            _bump_stat("total_file_writes")
+            return {"ok": True, "path": str(resolved), "size": len(content)}
+
+        elif tool_name == "search_files":
+            query = args.get("query", "")
+            search_path = args.get("path", str(PROJECT_ROOT))
+            is_regex = args.get("isRegex", False)
+            resolved = Path(search_path).resolve()
+            flags = re.IGNORECASE
+            pattern = re.compile(query, flags) if is_regex else re.compile(re.escape(query), flags)
+            results = []
+            for root, dirs, files in os.walk(str(resolved)):
+                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in
+                           ("node_modules", "__pycache__", ".git", "build", "Release", "Debug")]
+                for fname in files:
+                    if len(results) >= 100:
+                        break
+                    fpath = os.path.join(root, fname)
+                    try:
+                        if os.path.getsize(fpath) > 2 * 1024 * 1024:
+                            continue
+                        with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                            for lnum, line in enumerate(f, 1):
+                                if len(results) >= 100:
+                                    break
+                                if pattern.search(line):
+                                    results.append({
+                                        "file": fpath.replace("\\", "/"),
+                                        "line": lnum,
+                                        "text": line.rstrip()[:300],
+                                    })
+                    except (PermissionError, OSError):
+                        continue
+                if len(results) >= 100:
+                    break
+            return {"results": results, "total": len(results)}
+
+        elif tool_name == "list_directory":
+            dir_path = args.get("path", str(PROJECT_ROOT))
+            resolved = Path(dir_path).resolve()
+            if not resolved.is_dir():
+                return {"error": f"Not a directory: {dir_path}"}
+            entries = []
+            for item in sorted(resolved.iterdir()):
+                if len(entries) >= 200:
+                    break
+                entries.append({
+                    "name": item.name,
+                    "isDir": item.is_dir(),
+                    "size": item.stat().st_size if item.is_file() else 0,
+                })
+            return {"entries": entries, "path": str(resolved)}
+
+        elif tool_name == "run_command":
+            command = args.get("command", "")
+            cwd = args.get("cwd", str(PROJECT_ROOT))
+            if not command:
+                return {"error": "Empty command"}
+            dangerous = ["format ", "del /s", "rd /s", "rm -rf /", "mkfs",
+                         "shutdown", "reboot", "poweroff"]
+            for d in dangerous:
+                if d in command.lower():
+                    return {"error": f"Blocked dangerous command: {d}"}
+            result = subprocess.run(
+                command, shell=True, cwd=cwd,
+                capture_output=True, text=True, timeout=60
+            )
+            _bump_stat("total_terminal_execs")
+            return {
+                "exitCode": result.returncode,
+                "stdout": result.stdout[:100000],
+                "stderr": result.stderr[:20000],
+            }
+
+        elif tool_name == "git_status":
+            repo = args.get("path", str(PROJECT_ROOT))
+            result = subprocess.run(
+                ["git", "status", "--porcelain", "-b"],
+                cwd=repo, capture_output=True, text=True, timeout=15
+            )
+            return {"output": result.stdout, "exitCode": result.returncode}
+
+        elif tool_name == "git_commit":
+            repo = args.get("path", str(PROJECT_ROOT))
+            message = args.get("message", "Auto-commit")
+            subprocess.run(["git", "add", "."], cwd=repo, capture_output=True, timeout=30)
+            result = subprocess.run(
+                ["git", "commit", "-m", message],
+                cwd=repo, capture_output=True, text=True, timeout=30
+            )
+            return {
+                "output": result.stdout + result.stderr,
+                "exitCode": result.returncode,
+            }
+
+        elif tool_name == "git_push":
+            repo = args.get("path", str(PROJECT_ROOT))
+            remote = args.get("remote", "origin")
+            branch = args.get("branch", "")
+            cmd = ["git", "push", remote]
+            if branch:
+                cmd.append(branch)
+            result = subprocess.run(
+                cmd, cwd=repo, capture_output=True, text=True, timeout=120
+            )
+            return {
+                "output": result.stdout + result.stderr,
+                "exitCode": result.returncode,
+            }
+
+        else:
+            return {"error": f"Unknown tool: {tool_name}"}
 
     # ---- Local file reader for IDE file-path auto-attach ----
     def _read_local_file(self, file_path):

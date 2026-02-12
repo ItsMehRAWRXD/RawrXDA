@@ -449,4 +449,63 @@ void Win32IDE::onContextSizeChanged(int newValue) {
 
     updateContextSliderLabel();
     appendToOutput("Context size changed to " + std::to_string(m_currentContextSize) + " tokens\n", "Output", OutputSeverity::Info);
+
+    // Update context window display with new max
+    setContextWindowMax(static_cast<int>(m_currentContextSize));
+}
+
+// ============================================================================
+// CONTEXT WINDOW TOKEN USAGE DISPLAY
+// ============================================================================
+// Shows a live breakdown of token budget consumption in the status bar:
+//   Ctx: 97.5K/128K  76%
+// Categories: System | Tools | UserContext | Messages | ToolResults
+// ============================================================================
+
+std::string Win32IDE::formatTokenCount(int tokens) const {
+    if (tokens >= 1000000) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%.1fM", tokens / 1000000.0);
+        return buf;
+    }
+    if (tokens >= 1000) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%.1fK", tokens / 1000.0);
+        return buf;
+    }
+    return std::to_string(tokens);
+}
+
+void Win32IDE::setContextWindowMax(int maxTokens) {
+    m_contextUsage.maxTokens = maxTokens;
+    updateContextWindowDisplay();
+}
+
+void Win32IDE::addContextTokens(const std::string& category, int tokens) {
+    if (category == "system")       m_contextUsage.systemTokens      = tokens;
+    else if (category == "tools")   m_contextUsage.toolDefTokens     = tokens;
+    else if (category == "user")    m_contextUsage.userContextTokens = tokens;
+    else if (category == "messages") m_contextUsage.messageTokens    = tokens;
+    else if (category == "results") m_contextUsage.toolResultTokens  = tokens;
+    updateContextWindowDisplay();
+}
+
+void Win32IDE::updateContextWindowDisplay() {
+    if (!m_hwndStatusBar) return;
+
+    int total = m_contextUsage.totalUsed();
+    float pct = m_contextUsage.percentage();
+    int pctInt = static_cast<int>(pct + 0.5f);
+
+    std::string label = "Ctx: " + formatTokenCount(total) + "/" +
+                        formatTokenCount(m_contextUsage.maxTokens) +
+                        "  " + std::to_string(pctInt) + "%";
+
+    if (m_contextUsage.isDanger()) {
+        label += " !! DANGER";
+    } else if (m_contextUsage.isWarning()) {
+        label += " ! WARN";
+    }
+
+    SendMessage(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)label.c_str());
 }

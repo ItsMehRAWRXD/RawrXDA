@@ -226,54 +226,165 @@ InferenceResult RunRealInference(const std::vector<int>& input_tokens, int max_n
         return result;
     }
     
-    // ===== FORWARD PASS (SIMPLIFIED, SINGLE LAYER EXAMPLE) =====
+    // ===== FORWARD PASS (GGML TENSOR-BASED) =====
     
-    // For full production, iterate through all layers
-    // This is a simplified example showing the structure
+    // 1. Embed input tokens — lookup rows from embedding table
+    int n_embd_dim = (int)tok_embeddings->ne[0];
+    std::vector<float> hidden(n_embd_dim, 0.0f);
     
-    // Get embedding layer
-    struct ggml_tensor* tok_embeddings = ggml_get_tensor(model_ctx, "token_embd.weight");
-    if (!tok_embeddings) {
-        LogMessage(WARN, "Token embeddings not found, using random initialization");
-        for (int i = 0; i < n_vocab; i++) {
-            result.logits[i] = 1.0f / n_vocab;
-        }
-        delete[] result.logits;
-        result.error_code = 0;
-        result.tokens.push_back(input_tokens.back());
-        result.confidence = 1.0f / n_vocab;
-        result.perplexity = (float)n_vocab;
-        LogMessage(INFO, "Inference completed (no model) in %dms", GetTickCount() - start_time);
-        return result;
+    // Embed last token (for next-token prediction)
+    int last_token = input_tokens.back();
+    if (last_token >= 0 && last_token < (int)tok_embeddings->ne[1]) {
+        float* emb_data = (float*)tok_embeddings->data;
+        memcpy(hidden.data(), emb_data + (size_t)last_token * n_embd_dim,
+               n_embd_dim * sizeof(float));
     }
     
-    LogMessage(DEBUG, "Token embeddings found: shape=[%d, %d]", 
-        tok_embeddings->ne[0], tok_embeddings->ne[1]);
+    // 2. Run through transformer layers
+    for (int layer = 0; layer < n_layers; ++layer) {
+        char nameBuf[128];
+        
+        // Layer norm (RMSNorm) — attention input
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_norm.weight", layer);
+        struct ggml_tensor* norm_w = ggml_get_tensor(model_ctx, nameBuf);
+        std::vector<float> normed(n_embd_dim);
+        float rms = 0.0f;
+        for (int i = 0; i < n_embd_dim; ++i) rms += hidden[i] * hidden[i];
+        rms = 1.0f / sqrtf(rms / n_embd_dim + 1e-5f);
+        for (int i = 0; i < n_embd_dim; ++i) {
+            float w = norm_w ? ((float*)norm_w->data)[i] : 1.0f;
+            normed[i] = hidden[i] * rms * w;
+        }
+        
+        // Self-attention: Q, K, V projections
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_q.weight", layer);
+        struct ggml_tensor* wq = ggml_get_tensor(model_ctx, nameBuf);
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_k.weight", layer);
+        struct ggml_tensor* wk = ggml_get_tensor(model_ctx, nameBuf);
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_v.weight", layer);
+        struct ggml_tensor* wv = ggml_get_tensor(model_ctx, nameBuf);
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.attn_output.weight", layer);
+        struct ggml_tensor* wo = ggml_get_tensor(model_ctx, nameBuf);
+        
+        // Simplified single-head attention (project, attend, output)
+        std::vector<float> attn_out(n_embd_dim, 0.0f);
+        if (wq && wk && wv && wo) {
+            // Q = normed @ Wq  (take first head_dim elements for simplified single-head)
+            std::vector<float> q(head_dim, 0.0f), k(head_dim, 0.0f), v(head_dim, 0.0f);
+            float* wq_data = (float*)wq->data;
+            float* wk_data = (float*)wk->data;
+            float* wv_data = (float*)wv->data;
+            for (int i = 0; i < head_dim; ++i) {
+                for (int j = 0; j < n_embd_dim; ++j) {
+                    q[i] += normed[j] * wq_data[(size_t)i * n_embd_dim + j];
+                    k[i] += normed[j] * wk_data[(size_t)i * n_embd_dim + j];
+                    v[i] += normed[j] * wv_data[(size_t)i * n_embd_dim + j];
+                }
+            }
+            
+            // Scaled dot-product attention
+            float score = 0.0f;
+            for (int i = 0; i < head_dim; ++i) score += q[i] * k[i];
+            score /= sqrtf((float)head_dim);
+            float attn_weight = 1.0f; // softmax of single token = 1.0
+            
+            // Attention output = weight * V, then project through Wo
+            float* wo_data = (float*)wo->data;
+            for (int i = 0; i < n_embd_dim; ++i) {
+                float val = 0.0f;
+                for (int j = 0; j < head_dim && j < n_embd_dim; ++j) {
+                    val += (v[j] * attn_weight) * wo_data[(size_t)i * n_embd_dim + j];
+                }
+                attn_out[i] = val;
+            }
+        }
+        
+        // Residual connection
+        for (int i = 0; i < n_embd_dim; ++i) hidden[i] += attn_out[i];
+        
+        // FFN: norm -> gate/up -> silu -> down
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_norm.weight", layer);
+        struct ggml_tensor* ffn_norm = ggml_get_tensor(model_ctx, nameBuf);
+        rms = 0.0f;
+        for (int i = 0; i < n_embd_dim; ++i) rms += hidden[i] * hidden[i];
+        rms = 1.0f / sqrtf(rms / n_embd_dim + 1e-5f);
+        for (int i = 0; i < n_embd_dim; ++i) {
+            float w = ffn_norm ? ((float*)ffn_norm->data)[i] : 1.0f;
+            normed[i] = hidden[i] * rms * w;
+        }
+        
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_gate.weight", layer);
+        struct ggml_tensor* wgate = ggml_get_tensor(model_ctx, nameBuf);
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_up.weight", layer);
+        struct ggml_tensor* wup = ggml_get_tensor(model_ctx, nameBuf);
+        snprintf(nameBuf, sizeof(nameBuf), "blk.%d.ffn_down.weight", layer);
+        struct ggml_tensor* wdown = ggml_get_tensor(model_ctx, nameBuf);
+        
+        if (wgate && wup && wdown) {
+            int ffn_dim = (int)wgate->ne[0];
+            if (ffn_dim > 0) {
+                // Clamp FFN dim to avoid huge allocations
+                ffn_dim = std::min(ffn_dim, n_embd_dim * 4);
+                std::vector<float> gate_out(ffn_dim, 0.0f);
+                std::vector<float> up_out(ffn_dim, 0.0f);
+                float* wgate_data = (float*)wgate->data;
+                float* wup_data = (float*)wup->data;
+                for (int i = 0; i < ffn_dim; ++i) {
+                    for (int j = 0; j < n_embd_dim; ++j) {
+                        gate_out[i] += normed[j] * wgate_data[(size_t)i * n_embd_dim + j];
+                        up_out[i]   += normed[j] * wup_data[(size_t)i * n_embd_dim + j];
+                    }
+                    // SiLU activation on gate
+                    gate_out[i] = gate_out[i] / (1.0f + expf(-gate_out[i]));
+                    gate_out[i] *= up_out[i];
+                }
+                // Down projection
+                float* wdown_data = (float*)wdown->data;
+                std::vector<float> ffn_out(n_embd_dim, 0.0f);
+                for (int i = 0; i < n_embd_dim; ++i) {
+                    for (int j = 0; j < ffn_dim; ++j) {
+                        ffn_out[i] += gate_out[j] * wdown_data[(size_t)i * ffn_dim + j];
+                    }
+                }
+                // Residual
+                for (int i = 0; i < n_embd_dim; ++i) hidden[i] += ffn_out[i];
+            }
+        }
+    }
     
-    // Create computation graph for one step
-    struct ggml_cgraph* gf = ggml_new_graph(model_ctx);
+    // 3. Final layer norm
+    struct ggml_tensor* output_norm = ggml_get_tensor(model_ctx, "output_norm.weight");
+    float rms_final = 0.0f;
+    for (int i = 0; i < n_embd_dim; ++i) rms_final += hidden[i] * hidden[i];
+    rms_final = 1.0f / sqrtf(rms_final / n_embd_dim + 1e-5f);
+    for (int i = 0; i < n_embd_dim; ++i) {
+        float w = output_norm ? ((float*)output_norm->data)[i] : 1.0f;
+        hidden[i] = hidden[i] * rms_final * w;
+    }
     
-    // Get current position in KV cache
-    int current_pos = g_kv_cache.n_used;
-    int seq_len = input_tokens.size();
+    // 4. Output projection (hidden -> logits)
+    struct ggml_tensor* output_weight = ggml_get_tensor(model_ctx, "output.weight");
+    if (!output_weight) output_weight = tok_embeddings; // Weight tying
     
-    // For demonstration: compute attention over current sequence
-    // In production, you would:
-    // 1. Embed input tokens
-    // 2. Apply positional embeddings
-    // 3. Run through each transformer layer:
-    //    a. Self-attention (with KV cache)
-    //    b. Feed-forward
-    //    c. Layer norm and residual connections
-    // 4. Final layer norm and output projection
-    
-    // STUB: Using simplified computation for safety
-    // Full production would require complete transformer forward pass
-    
-    // Initialize logits with uniform distribution for safety
-    float uniform_prob = 1.0f / n_vocab;
-    for (int i = 0; i < n_vocab; i++) {
-        result.logits[i] = uniform_prob;
+    if (output_weight && output_weight->data) {
+        float* out_data = (float*)output_weight->data;
+        for (int i = 0; i < n_vocab; ++i) {
+            float dot = 0.0f;
+            for (int j = 0; j < n_embd_dim; ++j) {
+                dot += hidden[j] * out_data[(size_t)i * n_embd_dim + j];
+            }
+            result.logits[i] = dot;
+        }
+    } else {
+        // Fallback: project embedding similarity
+        float* emb_data = (float*)tok_embeddings->data;
+        for (int i = 0; i < n_vocab; ++i) {
+            float dot = 0.0f;
+            for (int j = 0; j < n_embd_dim; ++j) {
+                dot += hidden[j] * emb_data[(size_t)i * n_embd_dim + j];
+            }
+            result.logits[i] = dot;
+        }
     }
     
     // Sampling: Top-k with temperature

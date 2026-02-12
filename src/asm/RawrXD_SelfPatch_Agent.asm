@@ -128,7 +128,7 @@ ALIGN 16
 g_journal       JOURNAL_ENTRY MAX_JOURNAL_ENTRIES DUP(<>)
 g_journal_count QWORD   0               ; Current number of entries
 g_next_patch_id QWORD   1               ; Monotonic patch ID counter
-g_initialized   DWORD   0               ; Init flag
+g_spa_initialized DWORD 0               ; Init flag
 
 ; Statistics
 ALIGN 16
@@ -143,7 +143,7 @@ ALIGN 16
 g_sp_cs         CRITICAL_SECTION <>
 
 ; Status messages
-szInitOk        DB "SelfPatch: subsystem initialized", 0
+szSPA_InitOk    DB "SelfPatch: subsystem initialized", 0
 szInitFail      DB "SelfPatch: init failed — already initialized", 0
 szPatchApplied  DB "SelfPatch: patch applied successfully", 0
 szPatchFailed   DB "SelfPatch: patch application failed", 0
@@ -289,7 +289,7 @@ asm_selfpatch_init PROC FRAME
     .endprolog
 
     ; Check if already initialized
-    cmp     DWORD PTR g_initialized, 1
+    cmp     DWORD PTR g_spa_initialized, 1
     je      @@init_already
 
     ; Build CRC32 lookup table
@@ -316,9 +316,9 @@ asm_selfpatch_init PROC FRAME
     mov     QWORD PTR g_next_patch_id, 1
 
     ; Mark initialized
-    mov     DWORD PTR g_initialized, 1
+    mov     DWORD PTR g_spa_initialized, 1
 
-    lea     rcx, szInitOk
+    lea     rcx, szSPA_InitOk
     call    OutputDebugStringA
 
     xor     eax, eax                    ; SELFPATCH_OK
@@ -371,7 +371,7 @@ asm_selfpatch_scan_text PROC FRAME
     .endprolog
 
     ; Validate init
-    cmp     DWORD PTR g_initialized, 1
+    cmp     DWORD PTR g_spa_initialized, 1
     jne     @@scan_not_init
 
     ; Validate parameters
@@ -506,7 +506,7 @@ asm_selfpatch_apply PROC FRAME
     .endprolog
 
     ; Validate init
-    cmp     DWORD PTR g_initialized, 1
+    cmp     DWORD PTR g_spa_initialized, 1
     jne     @@apply_not_init
 
     ; Validate params
@@ -675,7 +675,7 @@ asm_selfpatch_verify_crc PROC FRAME
     .allocstack 40
     .endprolog
 
-    cmp     DWORD PTR g_initialized, 1
+    cmp     DWORD PTR g_spa_initialized, 1
     jne     @@vcrc_not_init
 
     mov     r12, rcx                    ; r12 = patch_id
@@ -812,7 +812,7 @@ asm_selfpatch_rollback PROC FRAME
     .allocstack 64
     .endprolog
 
-    cmp     DWORD PTR g_initialized, 1
+    cmp     DWORD PTR g_spa_initialized, 1
     jne     @@rb_not_init
 
     mov     r12, rcx                    ; r12 = patch_id

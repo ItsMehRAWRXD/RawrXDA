@@ -11,9 +11,12 @@
 #include <cstring>
 
 // ============================================================================
-// EXTERN "C" BRIDGE IMPLEMENTATION — Callable from x64 MASM
+// EXTERN "C" BRIDGE IMPLEMENTATION — DISABLED
+// Canonical definitions live in unified_command_dispatch.cpp.
+// These are kept as reference but guarded to prevent LNK2005 duplicates.
 // ============================================================================
 
+#if 0  // Canonical versions in unified_command_dispatch.cpp
 extern "C" {
 
 int rawrxd_dispatch_feature(const char* featureId, const char* args, void* idePtr) {
@@ -73,6 +76,7 @@ int rawrxd_get_feature_count(void) {
 }
 
 } // extern "C"
+#endif  // Canonical versions in unified_command_dispatch.cpp
 
 // ============================================================================
 // STDOUT output callback (for CLI mode)

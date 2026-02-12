@@ -1,255 +1,909 @@
-[0/1] Re-running CMake...
--- [SDK Fix] INCLUDE = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um
--- [SDK Fix] LIB     = C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/lib/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x64
--- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
--- [Build Paths] MSVC CRT: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207
--- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
--- MASM64 enabled: ASM kernels will be compiled
--- [RE] Deobfuscator MASM64 targets registered
--- [RE] Model reverse pipeline MASM64 target registered
--- [RE] Omega v3 MASM32 target registered
--- [RE] Reverser compiler NASM targets registered
--- [RE] Reverse Engineering Suite configured:
---   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
---   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
---   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
---   Deobfuscator:      3 ASM files + 1 INC + build/test
---   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
---   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
---   Model Reverse:     model-llm-harvester.asm
---   Security Toolkit:  RawrXD_IDE_unified.asm
---   RE Modules:        gpu_dma_complete_reverse_engineered.asm
--- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
--- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
--- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
--- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
--- Configuring done (0.1s)
--- Generating done (0.1s)
--- Build files have been written to: D:/rawrxd/build
-[1/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\server\gguf_server_hotpatch.cpp.obj
-[2/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_repair.cpp.obj
-[3/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
-[4/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\byte_level_hotpatcher.cpp.obj
-[5/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pt_driver_contract.cpp.obj
-[6/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_memory_hotpatch.cpp.obj
-[7/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
-[8/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\proxy_hotpatcher.cpp.obj
-[9/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj
-FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/DeterministicReplayEngine.cpp.obj 
-C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'LARGE_INTEGER': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2146: syntax error: missing ';' before identifier 'freq'
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'freq': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'start': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(256): error C2065: 'freq': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(257): error C2065: 'start': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(258): error C2065: 'freq': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(259): error C2065: 'start': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'LARGE_INTEGER': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2146: syntax error: missing ';' before identifier 'end'
-D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'end': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(264): error C2065: 'end': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(265): error C2065: 'end': undeclared identifier
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(106): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(107): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(108): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(109): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(34): error C2733: 'QueryPerformanceCounter': you cannot overload a function with 'extern "C"' linkage
-D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(41): error C2733: 'QueryPerformanceFrequency': you cannot overload a function with 'extern "C"' linkage
-D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): error C2678: binary '>>': no operator found which takes a left-hand operand of type 'std::ifstream' (or there is no acceptable conversion)
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(313): note: could be 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_streambuf<char,std::char_traits<char>> *)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_streambuf<char,std::char_traits<char>> *)': cannot convert argument 2 from 'nlohmann::json' to 'std::basic_streambuf<char,std::char_traits<char>> *'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(309): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(void *&)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(void *&)': cannot convert argument 2 from 'nlohmann::json' to 'void *&'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(305): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long double &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long double &)': cannot convert argument 2 from 'nlohmann::json' to 'long double &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(301): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(double &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(double &)': cannot convert argument 2 from 'nlohmann::json' to 'double &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(297): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(float &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(float &)': cannot convert argument 2 from 'nlohmann::json' to 'float &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(293): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned __int64 &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned __int64 &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned __int64 &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(289): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(__int64 &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(__int64 &)': cannot convert argument 2 from 'nlohmann::json' to '__int64 &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(285): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned long &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned long &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned long &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(281): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(long &)': cannot convert argument 2 from 'nlohmann::json' to 'long &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(277): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned int &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned int &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned int &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(269): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(int &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(int &)': cannot convert argument 2 from 'nlohmann::json' to 'int &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(265): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned short &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(unsigned short &)': cannot convert argument 2 from 'nlohmann::json' to 'unsigned short &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(233): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(short &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(short &)': cannot convert argument 2 from 'nlohmann::json' to 'short &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(229): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(bool &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(bool &)': cannot convert argument 2 from 'nlohmann::json' to 'bool &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(200): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::ios_base &(__cdecl *)(std::ios_base &))'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::ios_base &(__cdecl *)(std::ios_base &))': cannot convert argument 2 from 'nlohmann::json' to 'std::ios_base &(__cdecl *)(std::ios_base &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(195): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_ios<char,std::char_traits<char>> &(__cdecl *)(std::basic_ios<char,std::char_traits<char>> &))'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_ios<char,std::char_traits<char>> &(__cdecl *)(std::basic_ios<char,std::char_traits<char>> &))': cannot convert argument 2 from 'nlohmann::json' to 'std::basic_ios<char,std::char_traits<char>> &(__cdecl *)(std::basic_ios<char,std::char_traits<char>> &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(190): note: or       'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_istream<char,std::char_traits<char>> &(__cdecl *)(std::basic_istream<char,std::char_traits<char>> &))'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,std::char_traits<char>> &std::basic_istream<char,std::char_traits<char>>::operator >>(std::basic_istream<char,std::char_traits<char>> &(__cdecl *)(std::basic_istream<char,std::char_traits<char>> &))': cannot convert argument 2 from 'nlohmann::json' to 'std::basic_istream<char,std::char_traits<char>> &(__cdecl *)(std::basic_istream<char,std::char_traits<char>> &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, int)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, __int64)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, unsigned __int64)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'built-in C++ operator>>(int, unsigned int)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '>>': cannot convert argument 1 from 'std::ifstream' to 'int'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstddef(43): note: or       'std::byte std::operator >>(const std::byte,const _IntType) noexcept'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::byte std::operator >>(const std::byte,const _IntType) noexcept': could not deduce template argument for '__formal'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstddef(36): note: 'std::enable_if_t<false,int>' : Failed to specialize alias template
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(3395): note: or       'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,std::basic_string<_Elem,_Traits,_Alloc> &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,std::basic_string<_Elem,_Traits,_Alloc> &)': could not deduce template argument for 'std::basic_istream<_Elem,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,std::basic_string<_Elem,_Traits,_Alloc> &)': could not deduce template argument for 'std::basic_string<_Elem,_Traits,_Alloc> &' from 'nlohmann::json'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(846): note: or       'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem (&)[_Size])'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem (&)[_Size])': could not deduce template argument for 'std::basic_istream<_Elem,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem (&)[_Size])': could not deduce template argument for '_Elem (&)[_Size]' from 'nlohmann::json'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(852): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char (&)[_Size])'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char (&)[_Size])': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char (&)[_Size])': could not deduce template argument for 'signed char (&)[_Size]' from 'nlohmann::json'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(858): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char (&)[_Size])'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char (&)[_Size])': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char (&)[_Size])': could not deduce template argument for 'unsigned char (&)[_Size]' from 'nlohmann::json'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(881): note: or       'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)': could not deduce template argument for 'std::basic_istream<_Elem,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)': template parameter '_Elem' is ambiguous
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: could be 'nlohmann::json'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: or       'char'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<_Elem,_Traits> &std::operator >>(std::basic_istream<_Elem,_Traits> &,_Elem &)': could not deduce template argument for '_Elem &' from 'nlohmann::json'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(904): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,signed char &)': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'initializing': cannot convert from 'nlohmann::json' to 'signed char &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(910): note: or       'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char &)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'std::basic_istream<char,_Traits> &std::operator >>(std::basic_istream<char,_Traits> &,unsigned char &)': could not deduce template argument for 'std::basic_istream<char,_Traits> &' from 'std::ifstream'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: 'initializing': cannot convert from 'nlohmann::json' to 'unsigned char &'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(923): note: or       '_Istr &&std::operator >>(_Istr &&,_Ty &&)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: '_Istr &&std::operator >>(_Istr &&,_Ty &&)': could not deduce template argument for '__formal'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\istream(922): note: '<template-parameter>': you cannot create a pointer to a reference
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(72): note: while trying to match the argument list '(std::ifstream, nlohmann::json)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(96): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(97): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(98): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(100): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(101): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(101): error C2059: syntax error: ')'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(103): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(104): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(104): error C2530: 'tc': references must be initialized
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(105): error C3536: 'tc': cannot be used before it is initialized
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(107): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(110): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(111): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(111): error C2530: 'tr': references must be initialized
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(112): error C3536: 'tr': cannot be used before it is initialized
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(121): error C2039: 'contains': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(122): error C2676: binary '[': 'const std::pair<const std::string,nlohmann::json>' does not define this operator or a conversion to a type acceptable to the predefined operator
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(122): error C2059: syntax error: ')'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(125): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(126): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(397): error C2039: 'Instance': is not a member of 'RawrXD::Agent::AgentToolHandlers'
-D:\rawrxd\src\agentic\AgentToolHandlers.h(53): note: see declaration of 'RawrXD::Agent::AgentToolHandlers'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(397): error C3861: 'Instance': identifier not found
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(399): error C2039: 'HasTool': is not a member of 'RawrXD::Agent::AgentToolHandlers'
-D:\rawrxd\src\agentic\AgentToolHandlers.h(53): note: see declaration of 'RawrXD::Agent::AgentToolHandlers'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(403): error C2039: 'Execute': is not a member of 'RawrXD::Agent::AgentToolHandlers'
-D:\rawrxd\src\agentic\AgentToolHandlers.h(53): note: see declaration of 'RawrXD::Agent::AgentToolHandlers'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(585): error C2664: 'int QueryPerformanceFrequency(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(585): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
-D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(585): note: while trying to match the argument list '(LARGE_INTEGER *)'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(586): error C2664: 'int QueryPerformanceCounter(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(586): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
-D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.cpp(586): note: while trying to match the argument list '(LARGE_INTEGER *)'
-[10/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_hotpatch_manager.cpp.obj
-[11/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
-FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/agentic/autonomous_recovery_orchestrator.cpp.obj 
-C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'LARGE_INTEGER': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2146: syntax error: missing ';' before identifier 'freq'
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'freq': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(255): error C2065: 'start': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(256): error C2065: 'freq': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(257): error C2065: 'start': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(258): error C2065: 'freq': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(259): error C2065: 'start': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'LARGE_INTEGER': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2146: syntax error: missing ';' before identifier 'end'
-D:\rawrxd\include\rawrxd_telemetry_exports.h(263): error C2065: 'end': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(264): error C2065: 'end': undeclared identifier
-D:\rawrxd\include\rawrxd_telemetry_exports.h(265): error C2065: 'end': undeclared identifier
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(106): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(107): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(108): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-D:\rawrxd\src\agentic\DeterministicReplayEngine.h(109): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(34): error C2733: 'QueryPerformanceCounter': you cannot overload a function with 'extern "C"' linkage
-D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
-C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\profileapi.h(41): error C2733: 'QueryPerformanceFrequency': you cannot overload a function with 'extern "C"' linkage
-D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
-D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(62): error C2733: 'UTC_ReadCounter': you cannot overload a function with 'extern "C"' linkage
-D:\rawrxd\include\rawrxd_telemetry_exports.h(73): note: see declaration of 'UTC_ReadCounter'
-D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(63): error C2556: 'void UTC_LogEvent(const char *)': overloaded function differs only by return type from 'uint64_t UTC_LogEvent(const char *)'
-D:\rawrxd\include\rawrxd_telemetry_exports.h(86): note: see declaration of 'UTC_LogEvent'
-D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(63): error C2371: 'UTC_LogEvent': redefinition; different basic types
-D:\rawrxd\include\rawrxd_telemetry_exports.h(86): note: see declaration of 'UTC_LogEvent'
-D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(66): error C2373: 'g_Counter_MemPatches': redefinition; different type modifiers
-D:\rawrxd\include\rawrxd_telemetry_exports.h(38): note: see declaration of 'g_Counter_MemPatches'
-D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(67): error C2373: 'g_Counter_Errors': redefinition; different type modifiers
-D:\rawrxd\include\rawrxd_telemetry_exports.h(41): note: see declaration of 'g_Counter_Errors'
-D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(59): error C2039: 'CounterSnapshot': is not a member of '`global namespace''
-D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(59): error C2873: 'CounterSnapshot': symbol cannot be used in a using-declaration
-D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(60): error C2039: 'FusionSnapshot': is not a member of '`global namespace''
-D:\rawrxd\src\agentic\../../include/hotpatch_telemetry_safety.h(60): error C2873: 'FusionSnapshot': symbol cannot be used in a using-declaration
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(676): error C2110: '+': cannot add two pointers
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(867): error C2664: 'int QueryPerformanceFrequency(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(867): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
-D:\rawrxd\include\rawrxd_telemetry_exports.h(245): note: see declaration of 'QueryPerformanceFrequency'
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(867): note: while trying to match the argument list '(LARGE_INTEGER *)'
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(868): error C2664: 'int QueryPerformanceCounter(int64_t *)': cannot convert argument 1 from 'LARGE_INTEGER *' to 'int64_t *'
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(868): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
-D:\rawrxd\include\rawrxd_telemetry_exports.h(244): note: see declaration of 'QueryPerformanceCounter'
-D:\rawrxd\src\agentic\autonomous_recovery_orchestrator.cpp(868): note: while trying to match the argument list '(LARGE_INTEGER *)'
-[12/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\production_release.cpp.obj
-[13/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_hotpatcher.cpp.obj
-[14/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vsix_loader_win32.cpp.obj
-[15/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_decision_bridge.cpp.obj
-[16/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quantum_safe_transport.cpp.obj
-[17/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\adaptive_pipeline_parallel.cpp.obj
-[18/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
-[19/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchPanel.cpp.obj
-[20/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmPanel.cpp.obj
-[21/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\codex_ultimate.cpp.obj
-[22/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_merger.cpp.obj
-[23/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativeDebugPanel.cpp.obj
-[24/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DualAgentPanel.cpp.obj
-[25/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeExtAPI.cpp.obj
-[26/102] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vscode_extension_api.cpp.obj
-ninja: build stopped: subcommand failed.
+[1/14] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Pyre_Compute.asm.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/asm/RawrXD_Pyre_Compute.asm.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\ml64.exe -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -IC:\VulkanSDK\1.4.328.1\include /c /Zi /Zd /ID:/rawrxd/src/asm -c -Fo CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Pyre_Compute.asm.obj D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+
+D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm(35) : error A2006:undefined symbol : BF800000h
+
+D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm(36) : error A2006:undefined symbol : FF800000h
+
+[2/14] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\RawrXD_Complete_ReverseEngineered.asm.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/RawrXD_Complete_ReverseEngineered.asm.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\ml64.exe -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -IC:\VulkanSDK\1.4.328.1\include /c /Zi /Zd /ID:/rawrxd/src/asm -c -Fo CMakeFiles\RawrEngine.dir\src\RawrXD_Complete_ReverseEngineered.asm.obj D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(2) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(3) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(5) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(6) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(7) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(8) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(11) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(12) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(13) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(16) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(17) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(19) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(20) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(22) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(24) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(25) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(26) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(29) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(30) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(33) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(34) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(37) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(39) : error A2034:must be in segment block
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(40) : error A2034:must be in segment block
+
+D:\rawrxd\src\RawrXD_Complete_ReverseEngineered.asm(41) : fatal error A1010:unmatched block nesting : INFINITY_Shutdown
+
+[3/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\speciator_engine.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/speciator_engine.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\speciator_engine.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\speciator_engine.cpp
+D:\rawrxd\src\core\speciator_engine.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\speciator_engine.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\speciator_engine.cpp(164): error C2601: 'SpeciatorEngine::crossover': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(191): error C2601: 'SpeciatorEngine::mutate': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(203): error C2601: 'SpeciatorEngine::tournamentSelect': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(228): error C2601: 'SpeciatorEngine::runGeneration': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(255): error C2601: 'SpeciatorEngine::runEvolution': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(266): error C2601: 'SpeciatorEngine::getCurrentGeneration': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(271): error C2601: 'SpeciatorEngine::checkSpeciation': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(280): error C2601: 'SpeciatorEngine::forceSpeciation': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(293): error C2601: 'SpeciatorEngine::generateVariant': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(316): error C2601: 'SpeciatorEngine::getAllVariants': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(321): error C2601: 'SpeciatorEngine::allocateResources': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(340): error C2601: 'SpeciatorEngine::migrateGenome': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(357): error C2601: 'SpeciatorEngine::getStats': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(366): error C2601: 'SpeciatorEngine::getPopulationSize': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(370): error C2601: 'SpeciatorEngine::getSpeciesCount': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(379): error C2601: 'SpeciatorEngine::getBestFitness': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(390): error C2601: 'SpeciatorEngine::registerCallback': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(395): error C2601: 'SpeciatorEngine::notifyCallback': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(404): error C2601: 'SpeciatorEngine::dumpDiagnostics': local function definitions are illegal
+D:\rawrxd\src\core\speciator_engine.cpp(142): note: this line contains a '{' which has not yet been matched
+D:\rawrxd\src\core\speciator_engine.cpp(142): fatal error C1075: '{': no matching token found
+[4/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\mesh_brain.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/mesh_brain.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\mesh_brain.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\mesh_brain.cpp
+D:\rawrxd\src\core\mesh_brain.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\mesh_brain.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\mesh_brain.cpp(165): error C3861: 'asm_mesh_crdt_lookup': identifier not found
+D:\rawrxd\src\core\mesh_brain.cpp(288): error C3861: 'asm_mesh_topology_remove': identifier not found
+D:\rawrxd\src\core\mesh_brain.cpp(359): error C3861: 'asm_mesh_topology_count': identifier not found
+D:\rawrxd\src\core\mesh_brain.cpp(369): error C3861: 'asm_mesh_topology_count': identifier not found
+D:\rawrxd\src\core\mesh_brain.cpp(371): error C3861: 'asm_mesh_topology_list': identifier not found
+D:\rawrxd\src\core\mesh_brain.cpp(586): error C3861: 'asm_mesh_topology_active_count': identifier not found
+[5/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_gpu_staging.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/vision_gpu_staging.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\vision_gpu_staging.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\vision_gpu_staging.cpp
+D:\rawrxd\src\core\vision_gpu_staging.cpp(272): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(284): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(292): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(297): error C2065: 'vulkanMemoryTypeIndex_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(300): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(306): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(309): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(320): error C2065: 'vulkanDll_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(340): error C2065: 'd3d12Device_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(391): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(391): error C2065: 'vulkanDll_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(392): error C2065: 'PFN_vkUnmapMemory': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(392): error C2146: syntax error: missing ';' before identifier 'GetProcAddress'
+D:\rawrxd\src\core\vision_gpu_staging.cpp(392): error C2065: 'vulkanDll_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(393): error C2065: 'PFN_vkDestroyBuffer': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(393): error C2146: syntax error: missing ';' before identifier 'GetProcAddress'
+D:\rawrxd\src\core\vision_gpu_staging.cpp(393): error C2065: 'vulkanDll_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(394): error C2065: 'PFN_vkFreeMemory': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(394): error C2146: syntax error: missing ';' before identifier 'GetProcAddress'
+D:\rawrxd\src\core\vision_gpu_staging.cpp(394): error C2065: 'vulkanDll_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(397): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(401): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(404): error C2065: 'vulkanDevice_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(406): error C2065: 'vulkanDll_': undeclared identifier
+D:\rawrxd\src\core\vision_gpu_staging.cpp(411): error C2065: 'vulkanDll_': undeclared identifier
+[6/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers_ext.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/ssot_handlers_ext.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\ssot_handlers_ext.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\ssot_handlers_ext.cpp
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(675): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(676): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(685): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(685): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(686): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(883): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(883): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+D:\rawrxd\src\core\ssot_handlers_ext.cpp(884): error C2027: use of undefined type 'PatchResult'
+D:\rawrxd\src\core\js_extension_host.hpp(78): note: see declaration of 'PatchResult'
+[7/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\feature_handlers.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/feature_handlers.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\feature_handlers.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\feature_handlers.cpp
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\feature_handlers.cpp(115): error C3535: cannot deduce type for 'auto *' from 'SubsystemRegistry'
+D:\rawrxd\src\core\feature_handlers.cpp(115): error C2440: 'initializing': cannot convert from 'SubsystemRegistry' to '<error type> *'
+D:\rawrxd\src\core\feature_handlers.cpp(115): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\feature_handlers.cpp(117): error C2838: 'Editor': illegal qualified name in member declaration
+D:\rawrxd\src\core\feature_handlers.cpp(117): error C2065: 'Editor': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(118): error C3536: 'handler': cannot be used before it is initialized
+D:\rawrxd\src\core\feature_handlers.cpp(279): error C2665: 'RawrXD::Agent::AgentOllamaClient::AgentOllamaClient': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\../agentic/AgentOllamaClient.h(195): note: could be 'RawrXD::Agent::AgentOllamaClient::AgentOllamaClient(const RawrXD::Agent::AgentOllamaClient &)'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: 'RawrXD::Agent::AgentOllamaClient::AgentOllamaClient(const RawrXD::Agent::AgentOllamaClient &)': cannot convert argument 1 from 'const char [23]' to 'const RawrXD::Agent::AgentOllamaClient &'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: Reason: cannot convert from 'const char [23]' to 'const RawrXD::Agent::AgentOllamaClient'
+D:\rawrxd\src\core\../agentic/AgentOllamaClient.h(119): note: or       'RawrXD::Agent::AgentOllamaClient::AgentOllamaClient(const RawrXD::Agent::OllamaConfig &)'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: 'RawrXD::Agent::AgentOllamaClient::AgentOllamaClient(const RawrXD::Agent::OllamaConfig &)': cannot convert argument 1 from 'const char [23]' to 'const RawrXD::Agent::OllamaConfig &'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: Reason: cannot convert from 'const char [23]' to 'const RawrXD::Agent::OllamaConfig'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: 'RawrXD::Agent::OllamaConfig::OllamaConfig': no overloaded function could convert all the argument types
+D:\rawrxd\src\core\../agentic/AgentOllamaClient.h(49): note: could be 'RawrXD::Agent::OllamaConfig::OllamaConfig(RawrXD::Agent::OllamaConfig &&)'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: 'RawrXD::Agent::OllamaConfig::OllamaConfig(RawrXD::Agent::OllamaConfig &&)': cannot convert argument 1 from 'const char [23]' to 'RawrXD::Agent::OllamaConfig &&'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: Reason: cannot convert from 'const char [23]' to 'RawrXD::Agent::OllamaConfig'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\../agentic/AgentOllamaClient.h(49): note: or       'RawrXD::Agent::OllamaConfig::OllamaConfig(const RawrXD::Agent::OllamaConfig &)'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: 'RawrXD::Agent::OllamaConfig::OllamaConfig(const RawrXD::Agent::OllamaConfig &)': cannot convert argument 1 from 'const char [23]' to 'const RawrXD::Agent::OllamaConfig &'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: Reason: cannot convert from 'const char [23]' to 'const RawrXD::Agent::OllamaConfig'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: while trying to match the argument list '(const char [23])'
+D:\rawrxd\src\core\feature_handlers.cpp(279): note: while trying to match the argument list '(const char [23])'
+D:\rawrxd\src\core\feature_handlers.cpp(661): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(662): error C2039: 'totalAnomalies': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(685): error C2039: 'totalAnomalies': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(686): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(710): error C2838: 'Custom': illegal qualified name in member declaration
+D:\rawrxd\src\core\feature_handlers.cpp(710): error C2065: 'Custom': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(722): error C2664: 'const AnomalyEntry *AutoRepairOrchestrator::getAnomalyLog(uint32_t &) const': cannot convert argument 1 from 'size_t *' to 'uint32_t &'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(213): note: see declaration of 'AutoRepairOrchestrator::getAnomalyLog'
+D:\rawrxd\src\core\feature_handlers.cpp(722): note: while trying to match the argument list '(size_t *)'
+D:\rawrxd\src\core\feature_handlers.cpp(724): error C2664: 'const RepairAction *AutoRepairOrchestrator::getRepairLog(uint32_t &) const': cannot convert argument 1 from 'size_t *' to 'uint32_t &'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(214): note: see declaration of 'AutoRepairOrchestrator::getRepairLog'
+D:\rawrxd\src\core\feature_handlers.cpp(724): note: while trying to match the argument list '(size_t *)'
+D:\rawrxd\src\core\feature_handlers.cpp(729): error C2039: 'totalAnomalies': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(730): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(738): error C2664: 'const AnomalyEntry *AutoRepairOrchestrator::getAnomalyLog(uint32_t &) const': cannot convert argument 1 from 'size_t *' to 'uint32_t &'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(213): note: see declaration of 'AutoRepairOrchestrator::getAnomalyLog'
+D:\rawrxd\src\core\feature_handlers.cpp(738): note: while trying to match the argument list '(size_t *)'
+D:\rawrxd\src\core\feature_handlers.cpp(755): error C2065: 'RepairConfig': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(755): error C2146: syntax error: missing ';' before identifier 'cfg'
+D:\rawrxd\src\core\feature_handlers.cpp(755): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(756): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(807): error C2039: 'totalAnomalies': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(808): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(809): error C2039: 'totalPolls': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(821): error C2065: 'RepairConfig': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(821): error C2146: syntax error: missing ';' before identifier 'cfg'
+D:\rawrxd\src\core\feature_handlers.cpp(821): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(822): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(844): error C2838: 'Custom': illegal qualified name in member declaration
+D:\rawrxd\src\core\feature_handlers.cpp(844): error C2065: 'Custom': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(854): error C2039: 'totalPolls': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(855): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(855): error C2039: 'totalPolls': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(858): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(858): error C2039: 'totalPolls': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(869): error C2039: 'totalAnomalies': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(870): error C2039: 'totalRepairs': is not a member of 'AutoRepairStats'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(131): note: see declaration of 'AutoRepairStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1226): error C2039: 'breakpointsHit': is not a member of 'RawrXD::Debugger::DebugSessionStats'
+D:\rawrxd\src\core\native_debugger_types.h(336): note: see declaration of 'RawrXD::Debugger::DebugSessionStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1227): error C2039: 'stepsTaken': is not a member of 'RawrXD::Debugger::DebugSessionStats'
+D:\rawrxd\src\core\native_debugger_types.h(336): note: see declaration of 'RawrXD::Debugger::DebugSessionStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1228): error C2039: 'exceptionsHandled': is not a member of 'RawrXD::Debugger::DebugSessionStats'
+D:\rawrxd\src\core\native_debugger_types.h(336): note: see declaration of 'RawrXD::Debugger::DebugSessionStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1325): error C2039: 'enabled': is not a member of 'RawrXD::Debugger::NativeBreakpoint'
+D:\rawrxd\src\core\native_debugger_types.h(156): note: see declaration of 'RawrXD::Debugger::NativeBreakpoint'
+D:\rawrxd\src\core\feature_handlers.cpp(1373): error C2039: 'totalApplied': is not a member of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(286): note: see declaration of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(1385): error C2039: 'totalApplied': is not a member of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(286): note: see declaration of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(1404): error C2039: 'totalBiasesApplied': is not a member of 'ProxyHotpatchStats'
+D:\rawrxd\src\core\proxy_hotpatcher.hpp(60): note: see declaration of 'ProxyHotpatchStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1405): error C2039: 'totalRewritesApplied': is not a member of 'ProxyHotpatchStats'
+D:\rawrxd\src\core\proxy_hotpatcher.hpp(60): note: see declaration of 'ProxyHotpatchStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1406): error C2039: 'totalValidationsRun': is not a member of 'ProxyHotpatchStats'
+D:\rawrxd\src\core\proxy_hotpatcher.hpp(60): note: see declaration of 'ProxyHotpatchStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1407): error C2039: 'totalApplied': is not a member of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(286): note: see declaration of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(1421): error C2039: 'totalBytesModified': is not a member of 'MemoryPatchStats'
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(61): note: see declaration of 'MemoryPatchStats'
+D:\rawrxd\src\core\feature_handlers.cpp(1501): error C2039: 'getActivePatches': is not a member of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\../server/gguf_server_hotpatch.hpp(23): note: see declaration of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\feature_handlers.cpp(1505): error C3536: 'patches': cannot be used before it is initialized
+D:\rawrxd\src\core\feature_handlers.cpp(1506): error C3312: no callable 'begin' function found for type '<error>'
+D:\rawrxd\src\core\feature_handlers.cpp(1506): error C3312: no callable 'end' function found for type '<error>'
+D:\rawrxd\src\core\feature_handlers.cpp(1506): error C2530: 'p': references must be initialized
+D:\rawrxd\src\core\feature_handlers.cpp(1506): error C3531: 'p': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\core\feature_handlers.cpp(1506): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\core\feature_handlers.cpp(1506): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\core\feature_handlers.cpp(1518): error C2039: 'clearAllPatches': is not a member of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\../server/gguf_server_hotpatch.hpp(23): note: see declaration of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\feature_handlers.cpp(1524): error C2039: 'removePatch': is not a member of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\../server/gguf_server_hotpatch.hpp(23): note: see declaration of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\feature_handlers.cpp(1536): error C2039: 'addPatch': is not a member of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\../server/gguf_server_hotpatch.hpp(23): note: see declaration of 'GGUFServerHotpatch'
+D:\rawrxd\src\core\feature_handlers.cpp(1612): error C2065: 'RepairConfig': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1612): error C2146: syntax error: missing ';' before identifier 'rcfg'
+D:\rawrxd\src\core\feature_handlers.cpp(1612): error C2065: 'rcfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1613): error C2065: 'rcfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1632): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1632): error C2512: 'std::lock_guard<std::mutex>::lock_guard': no appropriate default constructor available
+D:\rawrxd\src\core\feature_handlers.cpp(1632): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\feature_handlers.cpp(1635): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1636): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1636): error C2530: 'b': references must be initialized
+D:\rawrxd\src\core\feature_handlers.cpp(1637): error C3536: 'b': cannot be used before it is initialized
+D:\rawrxd\src\core\feature_handlers.cpp(1639): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1648): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1648): error C2512: 'std::lock_guard<std::mutex>::lock_guard': no appropriate default constructor available
+D:\rawrxd\src\core\feature_handlers.cpp(1648): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\feature_handlers.cpp(1649): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1661): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1662): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1662): error C2530: 'b': references must be initialized
+D:\rawrxd\src\core\feature_handlers.cpp(1662): error C3531: 'b': a symbol whose type contains 'auto' must have an initializer
+D:\rawrxd\src\core\feature_handlers.cpp(1662): error C2143: syntax error: missing ';' before ':'
+D:\rawrxd\src\core\feature_handlers.cpp(1662): error C2143: syntax error: missing ';' before ')'
+D:\rawrxd\src\core\feature_handlers.cpp(1666): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1670): error C2065: 'g_backendCfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1707): error C2065: 'RepairConfig': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1707): error C2146: syntax error: missing ';' before identifier 'cfg'
+D:\rawrxd\src\core\feature_handlers.cpp(1707): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1708): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\feature_handlers.cpp(1808): error C2039: 'totalApplied': is not a member of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(286): note: see declaration of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2169): error C2039: 'enabled': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2170): error C2039: 'totalChecks': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2171): error C2039: 'refusalCount': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2172): error C2039: 'safetyViolationCount': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2181): error C2039: 'totalChecks': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2182): error C2039: 'hallucinationCount': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2182): error C2039: 'totalChecks': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2186): error C2039: 'hallucinationCount': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2187): error C2039: 'formatViolationCount': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2188): error C2039: 'timeoutCount': is not a member of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\../agent/agentic_failure_detector.hpp(51): note: see declaration of 'AgenticFailureDetector::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2196): error C2664: 'const RepairAction *AutoRepairOrchestrator::getRepairLog(uint32_t &) const': cannot convert argument 1 from 'size_t *' to 'uint32_t &'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(214): note: see declaration of 'AutoRepairOrchestrator::getRepairLog'
+D:\rawrxd\src\core\feature_handlers.cpp(2196): note: while trying to match the argument list '(size_t *)'
+D:\rawrxd\src\core\feature_handlers.cpp(2201): error C2039: 'description': is not a member of 'RepairAction'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(115): note: see declaration of 'RepairAction'
+D:\rawrxd\src\core\feature_handlers.cpp(2217): error C2039: 'totalLockdowns': is not a member of 'SentinelStats'
+D:\rawrxd\src\core\sentinel_watchdog.hpp(80): note: see declaration of 'SentinelStats'
+D:\rawrxd\src\core\feature_handlers.cpp(2227): error C2039: 'totalCorrections': is not a member of 'AgenticPuppeteer::Stats'
+D:\rawrxd\src\core\../agent/agentic_puppeteer.hpp(45): note: see declaration of 'AgenticPuppeteer::Stats'
+D:\rawrxd\src\core\feature_handlers.cpp(2227): fatal error C1003: error count exceeds 100; stopping compilation
+[8/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/ssot_handlers.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\ssot_handlers.cpp
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\ssot_handlers.cpp(303): error C2039: 'logEvent': is not a member of 'AutoRepairOrchestrator'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(183): note: see declaration of 'AutoRepairOrchestrator'
+D:\rawrxd\src\core\ssot_handlers.cpp(337): error C2039: 'logEvent': is not a member of 'AutoRepairOrchestrator'
+D:\rawrxd\src\core\auto_repair_orchestrator.hpp(183): note: see declaration of 'AutoRepairOrchestrator'
+D:\rawrxd\src\core\ssot_handlers.cpp(676): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(676): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(676): error C2280: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': attempting to reference a deleted function
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: see declaration of 'std::atomic<unsigned __int64>::atomic'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': function was explicitly deleted
+D:\rawrxd\src\core\ssot_handlers.cpp(676): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1045): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1068): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(1068): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1068): error C2280: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': attempting to reference a deleted function
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: see declaration of 'std::atomic<unsigned __int64>::atomic'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': function was explicitly deleted
+D:\rawrxd\src\core\ssot_handlers.cpp(1065): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1311): error C2039: 'description': is not a member of 'HotpatchEvent'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(63): note: see declaration of 'HotpatchEvent'
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): error C2280: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': attempting to reference a deleted function
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: see declaration of 'std::atomic<unsigned __int64>::atomic'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': function was explicitly deleted
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(1889): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1888): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1888): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1888): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 3 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1888): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(1890): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2131): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(2131): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2131): error C2280: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': attempting to reference a deleted function
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: see declaration of 'std::atomic<unsigned __int64>::atomic'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': function was explicitly deleted
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 3 has type 'uint64_t'
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2130): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): error C2280: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': attempting to reference a deleted function
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: see declaration of 'std::atomic<unsigned __int64>::atomic'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': function was explicitly deleted
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(2153): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2152): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 1 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2152): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 2 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2152): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 3 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2152): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2212): error C4839: non-standard use of class 'std::atomic<unsigned __int64>' as an argument to a variadic function
+D:\rawrxd\src\core\ssot_handlers.cpp(2212): note: the constructor and destructor will not be called; a bitwise copy of the class will be passed as the argument
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2115): note: see declaration of 'std::atomic<unsigned __int64>'
+D:\rawrxd\src\core\ssot_handlers.cpp(2212): error C2280: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': attempting to reference a deleted function
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: see declaration of 'std::atomic<unsigned __int64>::atomic'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\atomic(2135): note: 'std::atomic<unsigned __int64>::atomic(const std::atomic<unsigned __int64> &)': function was explicitly deleted
+D:\rawrxd\src\core\ssot_handlers.cpp(2211): warning C4477: 'fprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 7 has type 'std::atomic<unsigned __int64>'
+[9/14] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\ToolRegistry.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agentic/ToolRegistry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agentic\ToolRegistry.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agentic\ToolRegistry.cpp
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\agentic\ToolRegistry.cpp(893): error C2039: 'key': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\ToolRegistry.cpp(893): error C2530: 'key': references must be initialized
+D:\rawrxd\src\agentic\ToolRegistry.cpp(894): error C2039: 'value': is not a member of 'std::pair<const std::string,nlohmann::json>'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\utility(247): note: see declaration of 'std::pair<const std::string,nlohmann::json>'
+D:\rawrxd\src\agentic\ToolRegistry.cpp(894): error C2530: 'schema': references must be initialized
+D:\rawrxd\src\agentic\ToolRegistry.cpp(895): error C3536: 'schema': cannot be used before it is initialized
+D:\rawrxd\src\agentic\ToolRegistry.cpp(895): error C3536: 'key': cannot be used before it is initialized
+D:\rawrxd\src\agentic\ToolRegistry.cpp(902): error C2088: built-in operator '[' cannot be applied to an operand of type 'const json'
+D:\rawrxd\src\agentic\ToolRegistry.cpp(902): error C2530: 'val': references must be initialized
+D:\rawrxd\src\agentic\ToolRegistry.cpp(903): error C3536: 'val': cannot be used before it is initialized
+D:\rawrxd\src\agentic\ToolRegistry.cpp(904): error C2110: '+': cannot add two pointers
+D:\rawrxd\src\agentic\ToolRegistry.cpp(908): error C2110: '+': cannot add two pointers
+D:\rawrxd\src\agentic\ToolRegistry.cpp(912): error C2110: '+': cannot add two pointers
+[10/14] Building CXX object CMakeFiles\RawrEngine.dir\src\context\semantic_index.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/context/semantic_index.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\context\semantic_index.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\context\semantic_index.cpp
+D:\rawrxd\src\context\semantic_index.cpp(879): error C2065: 'SymbolEntry': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(879): error C2146: syntax error: missing ';' before identifier 'sym'
+D:\rawrxd\src\context\semantic_index.cpp(879): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(880): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(881): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(882): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(883): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(884): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(885): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(886): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(888): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(889): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(889): error C7732: expected an expression before ']'
+D:\rawrxd\src\context\semantic_index.cpp(889): error C2679: binary '[': no operator found which takes a right-hand operand of type 'int' (or there is no acceptable conversion)
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\map(345): note: could be 'RawrXD::SemanticIndex::RichSymbol &std::map<std::string,RawrXD::SemanticIndex::RichSymbol,std::less<std::string>,std::allocator<std::pair<const std::string,RawrXD::SemanticIndex::RichSymbol>>>::operator [](const std::basic_string<char,std::char_traits<char>,std::allocator<char>> &)'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'RawrXD::SemanticIndex::RichSymbol &std::map<std::string,RawrXD::SemanticIndex::RichSymbol,std::less<std::string>,std::allocator<std::pair<const std::string,RawrXD::SemanticIndex::RichSymbol>>>::operator [](const std::basic_string<char,std::char_traits<char>,std::allocator<char>> &)': cannot convert argument 2 from 'int' to 'const std::basic_string<char,std::char_traits<char>,std::allocator<char>> &'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: Reason: cannot convert from 'int' to 'const std::basic_string<char,std::char_traits<char>,std::allocator<char>>'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string': no overloaded function could convert all the argument types
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(818): note: could be 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const )'
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const )': cannot convert argument 1 from 'int' to 'const _Elem *const '
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: Conversion from integral type to pointer type requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1390): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(std::initializer_list<_Elem>,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(std::initializer_list<_Elem>,const _Alloc &)': cannot convert argument 1 from 'int' to 'std::initializer_list<_Elem>'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+        and
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1207): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Ty &,const unsigned __int64,const unsigned __int64,const _Alloc &)'
+        with
+        [
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(848): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(_Iter,_Iter,const _Alloc &)'
+        with
+        [
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(842): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const unsigned __int64,const _Elem,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(825): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const ,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(812): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const ,const unsigned __int64,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: while trying to match the argument list '(int)'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\map(174): note: or       'RawrXD::SemanticIndex::RichSymbol &std::map<std::string,RawrXD::SemanticIndex::RichSymbol,std::less<std::string>,std::allocator<std::pair<const std::string,RawrXD::SemanticIndex::RichSymbol>>>::operator [](std::basic_string<char,std::char_traits<char>,std::allocator<char>> &&)'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'RawrXD::SemanticIndex::RichSymbol &std::map<std::string,RawrXD::SemanticIndex::RichSymbol,std::less<std::string>,std::allocator<std::pair<const std::string,RawrXD::SemanticIndex::RichSymbol>>>::operator [](std::basic_string<char,std::char_traits<char>,std::allocator<char>> &&)': cannot convert argument 2 from 'int' to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>> &&'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: Reason: cannot convert from 'int' to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string': no overloaded function could convert all the argument types
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(818): note: could be 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const )'
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const )': cannot convert argument 1 from 'int' to 'const _Elem *const '
+        with
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: Conversion from integral type to pointer type requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1390): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(std::initializer_list<_Elem>,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(std::initializer_list<_Elem>,const _Alloc &)': cannot convert argument 1 from 'int' to 'std::initializer_list<_Elem>'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+        and
+        [
+            _Elem=char
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1207): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Ty &,const unsigned __int64,const unsigned __int64,const _Alloc &)'
+        with
+        [
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(848): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(_Iter,_Iter,const _Alloc &)'
+        with
+        [
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(842): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const unsigned __int64,const _Elem,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(825): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const ,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(812): note: or       'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(const _Elem *const ,const unsigned __int64,const _Alloc &)'
+        with
+        [
+            _Elem=char,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\context\semantic_index.cpp(889): note: while trying to match the argument list '(int)'
+D:\rawrxd\src\context\semantic_index.cpp(889): note: while trying to match the argument list '(std::map<std::string,RawrXD::SemanticIndex::RichSymbol,std::less<std::string>,std::allocator<std::pair<const std::string,RawrXD::SemanticIndex::RichSymbol>>>, int)'
+D:\rawrxd\src\context\semantic_index.cpp(889): error C2065: 'sym': undeclared identifier
+D:\rawrxd\src\context\semantic_index.cpp(914): error C2676: binary '[': 'std::multimap<std::string,RawrXD::SemanticIndex::DependencyEdge,std::less<std::string>,std::allocator<std::pair<const std::string,RawrXD::SemanticIndex::DependencyEdge>>>' does not define this operator or a conversion to a type acceptable to the predefined operator
+[11/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/missing_handler_stubs.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\missing_handler_stubs.cpp
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\missing_handler_stubs.cpp(781): error C2653: 'NativeDebuggerEngine': is not a class or namespace name
+D:\rawrxd\src\core\missing_handler_stubs.cpp(781): error C3861: 'Instance': identifier not found
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): error C2065: 'DebugThread': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): error C2923: 'std::vector': 'DebugThread' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: see declaration of 'DebugThread'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): error C2641: cannot deduce template arguments for 'std::vector'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector': no matching overloaded function found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(2250): note: could be 'std::vector<conditional_t<std::_Is_from_primary<std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>,std::indirectly_readable_traits<remove_cv<remove_reference<_Ty>::type>::type>,std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>::value_type,_Alloc> std::vector(_Iter,_Iter,_Alloc)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<conditional_t<std::_Is_from_primary<std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>,std::indirectly_readable_traits<remove_cv<remove_reference<_Ty>::type>::type>,std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>::value_type,_Alloc> std::vector(_Iter,_Iter,_Alloc)': expects 3 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(768): note: or       'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&,const _Identity<_Alloc>::type &) noexcept(<expr>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&,const _Identity<_Alloc>::type &) noexcept(<expr>)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(759): note: or       'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&) noexcept'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&) noexcept': expects 1 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(752): note: or       'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &,const _Identity<_Alloc>::type &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &,const _Identity<_Alloc>::type &)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(745): note: or       'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &)': expects 1 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(719): note: or       'std::vector<_Ty,_Alloc> std::vector(std::initializer_list<_Elem>,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(std::initializer_list<_Elem>,const _Alloc &)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(692): note: or       'std::vector<_Ty,_Alloc> std::vector(_Iter,_Iter,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(_Iter,_Iter,const _Alloc &)': expects 3 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(686): note: or       'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Ty &,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Ty &,const _Alloc &)': expects 3 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(678): note: or       'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Alloc &)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(674): note: or       'std::vector<_Ty,_Alloc> std::vector(const _Alloc &) noexcept'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(const _Alloc &) noexcept': expects 1 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(670): note: or       'std::vector<_Ty,_Alloc> std::vector(void) noexcept(<expr>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(void) noexcept(<expr>)': could not deduce template argument for '_Ty'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: or       'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(782): note: 'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc>)': expects 1 arguments - 0 provided
+D:\rawrxd\src\core\missing_handler_stubs.cpp(784): error C3536: 'result': cannot be used before it is initialized
+D:\rawrxd\src\core\missing_handler_stubs.cpp(784): error C2662: 'bool std::vector<_Ty,_Alloc>::empty(void) noexcept const': cannot convert 'this' pointer from 'std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(784): note: Reason: cannot convert from 'std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(784): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1908): note: see declaration of 'std::vector<_Ty,_Alloc>::empty'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(784): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(786): error C2065: 'RegisterSnapshot': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(786): error C2146: syntax error: missing ';' before identifier 'snap'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(786): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(787): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(788): error C3536: 'regResult': cannot be used before it is initialized
+D:\rawrxd\src\core\missing_handler_stubs.cpp(792): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(793): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(794): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(795): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(796): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(797): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(798): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(799): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(800): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(801): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(802): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(803): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(804): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(805): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(806): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(807): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(808): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): error C2065: 'DisassembledInstruction': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): error C2923: 'std::vector': 'DisassembledInstruction' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: see declaration of 'DisassembledInstruction'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): error C2641: cannot deduce template arguments for 'std::vector'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector': no matching overloaded function found
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(2250): note: could be 'std::vector<conditional_t<std::_Is_from_primary<std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>,std::indirectly_readable_traits<remove_cv<remove_reference<_Ty>::type>::type>,std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>::value_type,_Alloc> std::vector(_Iter,_Iter,_Alloc)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<conditional_t<std::_Is_from_primary<std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>,std::indirectly_readable_traits<remove_cv<remove_reference<_Ty>::type>::type>,std::iterator_traits<remove_cv<remove_reference<_Ty>::type>::type>>::value_type,_Alloc> std::vector(_Iter,_Iter,_Alloc)': expects 3 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(768): note: or       'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&,const _Identity<_Alloc>::type &) noexcept(<expr>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&,const _Identity<_Alloc>::type &) noexcept(<expr>)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(759): note: or       'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&) noexcept'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc> &&) noexcept': expects 1 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(752): note: or       'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &,const _Identity<_Alloc>::type &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &,const _Identity<_Alloc>::type &)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(745): note: or       'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(const std::vector<_Ty,_Alloc> &)': expects 1 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(719): note: or       'std::vector<_Ty,_Alloc> std::vector(std::initializer_list<_Elem>,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(std::initializer_list<_Elem>,const _Alloc &)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(692): note: or       'std::vector<_Ty,_Alloc> std::vector(_Iter,_Iter,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(_Iter,_Iter,const _Alloc &)': expects 3 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(686): note: or       'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Ty &,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Ty &,const _Alloc &)': expects 3 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(678): note: or       'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Alloc &)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type,const _Alloc &)': expects 2 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(674): note: or       'std::vector<_Ty,_Alloc> std::vector(const _Alloc &) noexcept'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(const _Alloc &) noexcept': expects 1 arguments - 0 provided
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(670): note: or       'std::vector<_Ty,_Alloc> std::vector(void) noexcept(<expr>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(void) noexcept(<expr>)': could not deduce template argument for '_Ty'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: or       'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(814): note: 'std::vector<_Ty,_Alloc> std::vector(std::vector<_Ty,_Alloc>)': expects 1 arguments - 0 provided
+D:\rawrxd\src\core\missing_handler_stubs.cpp(815): error C2065: 'snap': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(816): error C2662: 'bool std::vector<_Ty,_Alloc>::empty(void) noexcept const': cannot convert 'this' pointer from 'std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(816): note: Reason: cannot convert from 'std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(816): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1908): note: see declaration of 'std::vector<_Ty,_Alloc>::empty'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(816): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): error C2663: 'std::vector<_Ty,_Alloc>::_Unchecked_begin': no overloaded function has valid conversion for 'this' pointer
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1896): note: could be 'const _Ty *std::vector<_Ty,_Alloc>::_Unchecked_begin(void) noexcept const'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: 'const _Ty *std::vector<_Ty,_Alloc>::_Unchecked_begin(void) noexcept const': cannot convert 'this' pointer from 'std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Reason: cannot convert from 'std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1892): note: or       '_Ty *std::vector<_Ty,_Alloc>::_Unchecked_begin(void) noexcept'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: '_Ty *std::vector<_Ty,_Alloc>::_Unchecked_begin(void) noexcept': cannot convert 'this' pointer from 'std::vector' to 'std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Reason: cannot convert from 'std::vector' to 'std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): error C2663: 'std::vector<_Ty,_Alloc>::_Unchecked_end': no overloaded function has valid conversion for 'this' pointer
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1904): note: could be 'const _Ty *std::vector<_Ty,_Alloc>::_Unchecked_end(void) noexcept const'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: 'const _Ty *std::vector<_Ty,_Alloc>::_Unchecked_end(void) noexcept const': cannot convert 'this' pointer from 'std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Reason: cannot convert from 'std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1900): note: or       '_Ty *std::vector<_Ty,_Alloc>::_Unchecked_end(void) noexcept'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: '_Ty *std::vector<_Ty,_Alloc>::_Unchecked_end(void) noexcept': cannot convert 'this' pointer from 'std::vector' to 'std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Reason: cannot convert from 'std::vector' to 'std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\missing_handler_stubs.cpp(818): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(823): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\missing_handler_stubs.cpp(823): note: placeholders and their parameters expect 2 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\missing_handler_stubs.cpp(823): note: the missing variadic argument 1 is required by format string '%016llX'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(1946): error C2065: 'conf': undeclared identifier
+D:\rawrxd\src\core\missing_handler_stubs.cpp(1942): error C2664: 'uint64_t ReplayJournal::recordAction(ReplayActionType,const std::string &,const std::string &,const std::string &,const std::string &,int,float,double,const std::string &)': cannot convert argument 8 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'double'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(1948): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\deterministic_replay.h(194): note: see declaration of 'ReplayJournal::recordAction'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(1942): note: while trying to match the argument list '(ReplayActionType, const char [7], const char [13], std::basic_string<char,std::char_traits<char>,std::allocator<char>>, std::basic_string<char,std::char_traits<char>,std::allocator<char>>, int, double, std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2785): error C2039: 'enabled': is not a member of 'RawrXD::Debugger::NativeBreakpoint'
+D:\rawrxd\src\core\native_debugger_types.h(156): note: see declaration of 'RawrXD::Debugger::NativeBreakpoint'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2783): warning C4477: 'snprintf' : format string '%-7s' requires an argument of type 'char *', but variadic argument 2 has type 'unsigned __int64'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2783): warning C4477: 'snprintf' : format string '%-5u' requires an argument of type 'unsigned int', but variadic argument 4 has type 'const char *'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2783): warning C4313: 'snprintf': '%u' in format string conflicts with argument 4 of type 'const char *'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2783): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2783): note: placeholders and their parameters expect 5 variadic arguments, but 4 were provided
+D:\rawrxd\src\core\missing_handler_stubs.cpp(2783): note: the missing variadic argument 5 is required by format string '%s'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(3737): error C2039: 'totalApplied': is not a member of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(286): note: see declaration of 'UnifiedHotpatchManager::Stats'
+D:\rawrxd\src\core\missing_handler_stubs.cpp(3736): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\missing_handler_stubs.cpp(3736): note: placeholders and their parameters expect 1 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\missing_handler_stubs.cpp(3736): note: the missing variadic argument 1 is required by format string '%u'
+[12/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\model_bruteforce_engine.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/model_bruteforce_engine.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\model_bruteforce_engine.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\model_bruteforce_engine.cpp
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(697): error C2039: 'architecture': is not a member of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\../gguf_loader.h(79): note: see declaration of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(698): error C2039: 'architecture': is not a member of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\../gguf_loader.h(79): note: see declaration of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(703): error C2039: 'embedding_length': is not a member of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\../gguf_loader.h(79): note: see declaration of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(704): error C2039: 'embedding_length': is not a member of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\../gguf_loader.h(79): note: see declaration of 'RawrXD::GGUFMetadata'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(745): error C2039: 'maxContextTokens': is not a member of 'RawrXD::PipelineConfig'
+D:\rawrxd\src\core\native_inference_pipeline.hpp(55): note: see declaration of 'RawrXD::PipelineConfig'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(746): error C2039: 'useGPU': is not a member of 'RawrXD::PipelineConfig'
+D:\rawrxd\src\core\native_inference_pipeline.hpp(55): note: see declaration of 'RawrXD::PipelineConfig'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(986): error C2039: 'recordSlot': is not a member of 'RawrXD::Perf::PerfTelemetry'
+D:\rawrxd\src\core\perf_telemetry.hpp(232): note: see declaration of 'RawrXD::Perf::PerfTelemetry'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1220): error C3873: 'U+26a1': this character is not allowed as a first character of an identifier
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1220): error C2065: '⚡': undeclared identifier
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1220): error C2059: syntax error: '/'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1220): error C2144: syntax error: '<error>' should be preceded by ')'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1206): error C2660: 'snprintf': function does not take 2 arguments
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt\stdio.h(1919): note: see declaration of 'snprintf'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1206): note: while trying to match the argument list '(char [2048], size_t)'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1220): error C2144: syntax error: '<error>' should be preceded by ';'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1220): error C2059: syntax error: '<'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1221): error C2332: 'class': missing tag name
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1221): error C2059: syntax error: '/'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1223): error C2059: syntax error: ')'
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1223): error C2001: newline in constant
+D:\rawrxd\src\core\model_bruteforce_engine.cpp(1234): error C2059: syntax error: ')'
+[13/14] Building CXX object CMakeFiles\RawrEngine.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\auto_feature_registry.cpp(600): error C2065: 'BoundedAgentConfig': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(600): error C2146: syntax error: missing ';' before identifier 'config'
+D:\rawrxd\src\core\auto_feature_registry.cpp(600): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(601): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(602): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(603): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(604): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(605): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(606): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(610): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(610): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(610): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(609): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(609): note: placeholders and their parameters expect 3 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(609): note: the missing variadic argument 1 is required by format string '%s'
+D:\rawrxd\src\core\auto_feature_registry.cpp(612): error C2065: 'BoundedAgentLoop': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(612): error C2146: syntax error: missing ';' before identifier 'loop'
+D:\rawrxd\src\core\auto_feature_registry.cpp(612): error C2065: 'config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(612): error C3861: 'loop': identifier not found
+D:\rawrxd\src\core\auto_feature_registry.cpp(613): error C2065: 'loop': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(615): error C3536: 'result': cannot be used before it is initialized
+D:\rawrxd\src\core\auto_feature_registry.cpp(614): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(614): note: placeholders and their parameters expect 2 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(614): note: the missing variadic argument 1 is required by format string '%s'
+D:\rawrxd\src\core\auto_feature_registry.cpp(630): error C2653: 'AgentOllamaClient': is not a class or namespace name
+D:\rawrxd\src\core\auto_feature_registry.cpp(630): error C2065: 'Config': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(630): error C2146: syntax error: missing ';' before identifier 'cfg'
+D:\rawrxd\src\core\auto_feature_registry.cpp(630): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(631): error C2065: 'cfg': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): error C2146: syntax error: missing ';' before identifier 'output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(666): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(666): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C2086: 'int ctx': redefinition
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): note: see declaration of 'ctx'
+D:\rawrxd\src\core\auto_feature_registry.cpp(668): error C2146: syntax error: missing ';' before identifier 'output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(669): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(669): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(671): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(671): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(687): error C2059: syntax error: 'return'
+D:\rawrxd\src\core\auto_feature_registry.cpp(688): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(688): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(704): error C2059: syntax error: 'return'
+D:\rawrxd\src\core\auto_feature_registry.cpp(705): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(705): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(721): error C2059: syntax error: 'return'
+D:\rawrxd\src\core\auto_feature_registry.cpp(722): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(722): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(736): error C2059: syntax error: 'return'
+D:\rawrxd\src\core\auto_feature_registry.cpp(737): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(737): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(739): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\core\auto_feature_registry.cpp(739): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\core\auto_feature_registry.cpp(898): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(898): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(898): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(903): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(903): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(903): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(911): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(911): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(911): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(918): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(926): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(926): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(926): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1021): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1021): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1021): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1026): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1026): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1026): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1033): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1033): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1033): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1038): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1038): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1038): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1044): error C2664: 'void CommandContext::output(const char *) const': cannot convert argument 1 from 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const char *'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1044): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\shared_feature_dispatch.h(92): note: see declaration of 'CommandContext::output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1044): note: while trying to match the argument list '(std::basic_string<char,std::char_traits<char>,std::allocator<char>>)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C3646: 'setLLMBackend': unknown override specifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C3551: if a trailing return type is used then the leading return type shall be the single type-specifier 'auto' (not 'int')
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C2556: 'int getModelInvoker(void)': overloaded function differs only by return type from 'ModelInvoker &getModelInvoker(void)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(72): note: see declaration of 'getModelInvoker'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C2040: 'getModelInvoker': 'int (void)' differs in levels of indirection from 'ModelInvoker &(void)'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C2059: syntax error: '('
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C2059: syntax error: 'string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1112): error C2059: syntax error: ')'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1113): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1113): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1115): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1115): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1118): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1118): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1120): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\auto_feature_registry.cpp(1120): error C2365: 'snprintf': redefinition; previous definition was 'function'
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt\stdio.h(1919): note: see declaration of 'snprintf'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1120): error C2065: 'buf': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(1120): error C2065: 'buf': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(1121): error C2065: 'model': undeclared identifier
+D:\rawrxd\src\core\auto_feature_registry.cpp(1122): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\core\auto_feature_registry.cpp(1122): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\core\auto_feature_registry.cpp(1122): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\core\auto_feature_registry.cpp(1122): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\auto_feature_registry.cpp(1122): error C2086: 'int ctx': redefinition
+D:\rawrxd\src\core\auto_feature_registry.cpp(665): note: see declaration of 'ctx'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1122): error C2146: syntax error: missing ';' before identifier 'output'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1123): error C2059: syntax error: '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1123): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\core\auto_feature_registry.cpp(1123): fatal error C1003: error count exceeds 100; stopping compilation
+ninja: build stopped: cannot make progress due to previous errors.

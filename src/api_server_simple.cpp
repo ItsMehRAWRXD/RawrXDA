@@ -1,6 +1,6 @@
 /**
  * Simple GGUF API Server - Lightweight Ollama-Compatible HTTP API
- * Provides real HTTP endpoints without full inference backend initially
+ * Provides real HTTP endpoints with actual inference backend via EngineRegistry
  * Demonstrates working Winsock HTTP server for model serving
  */
 
@@ -14,6 +14,7 @@
 #include <chrono>
 #include <ctime>
 #include <sstream>
+#include "engine_iface.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma warning(disable : 4996)
@@ -22,6 +23,8 @@
 static std::atomic<bool> g_running(false);
 static SOCKET g_listen_socket = INVALID_SOCKET;
 static std::chrono::steady_clock::time_point g_start_time;
+static std::string g_active_model;   // currently loaded model name
+static Engine* g_active_engine = nullptr;
 
 // ============================================================
 // HTTP Response Builder
@@ -64,44 +67,139 @@ std::string HandleStatusRequest() {
 }
 
 std::string HandleTagsRequest() {
-    std::string json = R"({
-  "models": [
-    {
-      "name": "llama2",
-      "modified_at": "2025-01-30T00:00:00Z",
-      "size": 3826046976,
-      "digest": "sha256:44040b922233197f6ef88da7d4d6e5767c6a6c9f14ffd7e25b7ad9fe36d6cbee"
+    // Build real model list from EngineRegistry
+    // Try known engine names that could be registered
+    static const char* engine_names[] = {
+        "Sovereign-800B", "Sovereign-Small", "sovereign800b",
+        "rawr-engine", "cpu-inference", nullptr
+    };
+
+    std::ostringstream json;
+    json << R"({"models":[)";
+
+    bool first = true;
+    for (int i = 0; engine_names[i]; i++) {
+        Engine* e = EngineRegistry::get(engine_names[i]);
+        if (e) {
+            if (!first) json << ",";
+            first = false;
+            auto now = std::time(nullptr);
+            auto tm = *std::gmtime(&now);
+            char ts[30];
+            strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ", &tm);
+            json << R"({"name":")" << e->name()
+                 << R"(","modified_at":")" << ts
+                 << R"(","size":0,"digest":"local"})";
+        }
     }
-  ]
-})";
-    return BuildHttpResponse(200, "application/json", json);
+
+    // If no engines registered, report empty
+    if (first) {
+        json << R"({"name":"none","modified_at":"","size":0,"digest":"no engines registered"})";
+    }
+
+    json << "]}";
+    return BuildHttpResponse(200, "application/json", json.str());
+}
+
+// Crude JSON string value extractor (no external JSON library)
+static std::string extract_json_string(const std::string& json,
+                                        const std::string& key) {
+    std::string search = "\"" + key + "\"";
+    size_t pos = json.find(search);
+    if (pos == std::string::npos) return "";
+    pos = json.find(':', pos + search.size());
+    if (pos == std::string::npos) return "";
+    pos = json.find('"', pos + 1);
+    if (pos == std::string::npos) return "";
+    pos++; // skip opening quote
+    size_t end = json.find('"', pos);
+    if (end == std::string::npos) return "";
+    return json.substr(pos, end - pos);
 }
 
 std::string HandleGenerateRequest(const std::string& body) {
-    // Simulate token-by-token streaming response
-    // Extract prompt length to simulate token count
-    int tokens = std::max(1, (int)(body.length() / 10));
-    
-    // Simulate inference latency: ~50ms per token base + overhead
-    std::this_thread::sleep_for(std::chrono::milliseconds(tokens * 50));
-    
+    // ---- Parse request body ----
+    std::string model_name = extract_json_string(body, "model");
+    std::string prompt = extract_json_string(body, "prompt");
+
+    if (prompt.empty()) {
+        return BuildHttpResponse(400, "application/json",
+            R"({"error":"Missing 'prompt' field in request body"})");
+    }
+
+    // ---- Resolve inference engine ----
+    Engine* engine = nullptr;
+    if (!model_name.empty()) {
+        engine = EngineRegistry::get(model_name);
+    }
+    // Fallback: use globally active engine, or try known names
+    if (!engine) engine = g_active_engine;
+    if (!engine) engine = EngineRegistry::get("Sovereign-800B");
+    if (!engine) engine = EngineRegistry::get("Sovereign-Small");
+    if (!engine) engine = EngineRegistry::get("sovereign800b");
+
+    if (!engine) {
+        return BuildHttpResponse(500, "application/json",
+            R"({"error":"No inference engine available. Load a model first."})");
+    }
+
+    // ---- Build AgentRequest and run real inference ----
+    AgentRequest req;
+    req.prompt = prompt;
+    req.mode = ASK;
+    req.deep_thinking = false;
+    req.deep_research = false;
+    req.no_refusal = false;
+    req.context_limit = 4096;
+
+    auto t_start = std::chrono::steady_clock::now();
+
+    std::string response_text = engine->infer(req);
+
+    auto t_end = std::chrono::steady_clock::now();
+    double elapsed_ms = std::chrono::duration<double, std::milli>(t_end - t_start).count();
+
+    // ---- Compute real metrics ----
+    // Estimate token count from response length (byte-level: 1 char ≈ 1 token)
+    int eval_count = (int)response_text.size();
+    double tokens_per_sec = (elapsed_ms > 0.0)
+        ? (eval_count * 1000.0 / elapsed_ms) : 0.0;
+
     auto now = std::time(nullptr);
     auto tm = *std::gmtime(&now);
     char timestamp[30];
     strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", &tm);
-    
-    std::string response_text = "This is a generated response from the GGUF inference engine. ";
-    response_text += "Processed " + std::to_string(tokens) + " tokens at approximately ";
-    response_text += std::to_string((int)(tokens * 1000 / (tokens * 50))) + " tokens/sec.";
-    
+
+    // ---- Escape response for JSON ----
+    std::string escaped;
+    escaped.reserve(response_text.size() + 32);
+    for (char c : response_text) {
+        switch (c) {
+            case '"':  escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\n': escaped += "\\n";  break;
+            case '\r': escaped += "\\r";  break;
+            case '\t': escaped += "\\t";  break;
+            default:
+                if (c >= 32) escaped += c;
+                break;
+        }
+    }
+
     std::ostringstream json;
-    json << R"({)"
-         << R"("response":")" << response_text << R"(",)"
-         << R"("created_at":")" << timestamp << R"(",)"
-         << R"("done":true,)"
-         << R"("eval_count":)" << tokens
-         << R"(})";
-    
+    json << R"({"model":")" << engine->name()
+         << R"(","response":")" << escaped
+         << R"(","created_at":")" << timestamp
+         << R"(","done":true)"
+         << R"(,"eval_count":)" << eval_count
+         << R"(,"eval_duration_ms":)" << (int)elapsed_ms
+         << R"(,"tokens_per_sec":)" << (int)tokens_per_sec
+         << "}";
+
+    printf("[INFER] Engine=%s prompt_len=%zu response_len=%d %.1fms (%.0f tok/s)\n",
+           engine->name(), prompt.size(), eval_count, elapsed_ms, tokens_per_sec);
+
     return BuildHttpResponse(200, "application/json", json.str());
 }
 

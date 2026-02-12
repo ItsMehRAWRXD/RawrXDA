@@ -406,9 +406,9 @@ struct VSCodeLocation {
 };
 
 // ============================================================================
-// SymbolKind — Matches VS Code's enum values
+// VSCodeSymbolKind — Matches VS Code's enum values
 // ============================================================================
-enum class SymbolKind : int {
+enum class VSCodeSymbolKind : int {
     File            = 0,
     Module          = 1,
     Namespace       = 2,
@@ -443,7 +443,7 @@ enum class SymbolKind : int {
 struct VSCodeDocumentSymbol {
     std::string                         name;
     std::string                         detail;
-    SymbolKind                          kind;
+    VSCodeSymbolKind                    kind;
     VSCodeRange                         range;
     VSCodeRange                         selectionRange;
     std::vector<VSCodeDocumentSymbol>   children;

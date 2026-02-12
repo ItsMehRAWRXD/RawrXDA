@@ -1,4 +1,5 @@
 #include "agentic_engine.h"
+#include "cpu_inference_engine.h"
 #include "native_agent.hpp"
 #include "advanced_agent_features.hpp"
 #include "reverse_engineering/RawrDumpBin.hpp"
@@ -14,9 +15,29 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <numeric>
+#include <mutex>
+#include <chrono>
+#include <iomanip>
+
+// Feedback tracking structures
+struct FeedbackEntry {
+    std::string requestId;
+    bool positive;
+    std::string comment;
+    std::chrono::steady_clock::time_point timestamp;
+};
 
 // MASM Telemetry bridge — lock-free atomic counters
 #include "rawrxd_telemetry_exports.h"
+
+// Static feedback tracking
+static std::mutex g_feedbackMutex;
+static std::vector<FeedbackEntry> g_feedbackLog;
+static int g_positiveCount = 0;
+static int g_negativeCount = 0;
+static std::vector<std::string> g_avoidPatterns;
+static bool g_prefVerbose = false;
+static std::string g_prefLanguage = "en";
 
 AgenticEngine::AgenticEngine() : m_inferenceEngine(nullptr) {}
 
@@ -237,14 +258,176 @@ std::string AgenticEngine::explainError(const std::string& errorMessage) {
     return chat("Explain error: " + errorMessage);
 }
 
-void AgenticEngine::collectFeedback(const std::string&, bool, const std::string&) {}
-void AgenticEngine::trainFromFeedback() {}
-std::string AgenticEngine::getLearningStats() const { return "{}"; }
-void AgenticEngine::adaptToUserPreferences(const std::string&) {}
+void AgenticEngine::collectFeedback(const std::string& requestId, bool positive, const std::string& comment) {
+    std::lock_guard<std::mutex> lock(g_feedbackMutex);
+    FeedbackEntry entry;
+    entry.requestId = requestId;
+    entry.positive = positive;
+    entry.comment = comment;
+    entry.timestamp = std::chrono::steady_clock::now();
+    g_feedbackLog.push_back(entry);
 
-bool AgenticEngine::validateInput(const std::string&) { return true; }
-std::string AgenticEngine::sanitizeCode(const std::string& code) { return code; }
-bool AgenticEngine::isCommandSafe(const std::string&) { return true; }
+    // Track positive/negative ratio for adaptive behavior
+    if (positive) g_positiveCount++;
+    else g_negativeCount++;
+
+    // Keep feedback log bounded
+    if (g_feedbackLog.size() > 10000) {
+        g_feedbackLog.erase(g_feedbackLog.begin(), g_feedbackLog.begin() + 5000);
+    }
+}
+
+void AgenticEngine::trainFromFeedback() {
+    std::lock_guard<std::mutex> lock(g_feedbackMutex);
+    if (g_feedbackLog.empty()) return;
+
+    // Analyze negative feedback patterns to adjust behavior
+    std::unordered_map<std::string, int> negPatterns;
+    for (const auto& fb : g_feedbackLog) {
+        if (!fb.positive && !fb.comment.empty()) {
+            // Extract keywords from negative feedback
+            std::istringstream iss(fb.comment);
+            std::string word;
+            while (iss >> word) {
+                std::transform(word.begin(), word.end(), word.begin(), ::tolower);
+                if (word.size() > 3) negPatterns[word]++;
+            }
+        }
+    }
+
+    // Store top patterns for future reference
+    g_avoidPatterns.clear();
+    for (const auto& [word, count] : negPatterns) {
+        if (count >= 3) g_avoidPatterns.push_back(word);
+    }
+}
+
+std::string AgenticEngine::getLearningStats() const {
+    std::lock_guard<std::mutex> lock(g_feedbackMutex);
+    std::ostringstream oss;
+    oss << "{\"totalFeedback\":" << g_feedbackLog.size()
+        << ",\"positive\":" << g_positiveCount
+        << ",\"negative\":" << g_negativeCount
+        << ",\"avoidPatterns\":" << g_avoidPatterns.size()
+        << ",\"approvalRate\":";
+    uint64_t total = g_positiveCount + g_negativeCount;
+    if (total > 0)
+        oss << std::fixed << std::setprecision(3) << (double)g_positiveCount / (double)total;
+    else
+        oss << "0.0";
+    oss << "}";
+    return oss.str();
+}
+
+void AgenticEngine::adaptToUserPreferences(const std::string& preferencesJson) {
+    // Parse preference keys from JSON and apply to engine config
+    // Expected format: {"temperature": 0.7, "verbosity": "concise", "language": "en"}
+    if (preferencesJson.empty()) return;
+
+    auto extractStr = [&](const std::string& key) -> std::string {
+        std::string pat = "\"" + key + "\":\"";
+        auto pos = preferencesJson.find(pat);
+        if (pos == std::string::npos) { pat = "\"" + key + "\": \""; pos = preferencesJson.find(pat); }
+        if (pos == std::string::npos) return "";
+        auto s = pos + pat.size();
+        auto e = preferencesJson.find('"', s);
+        return (e != std::string::npos) ? preferencesJson.substr(s, e - s) : "";
+    };
+
+    std::string verbosity = extractStr("verbosity");
+    if (verbosity == "concise") g_prefVerbose = false;
+    else if (verbosity == "verbose") g_prefVerbose = true;
+
+    std::string lang = extractStr("language");
+    if (!lang.empty()) g_prefLanguage = lang;
+}
+
+bool AgenticEngine::validateInput(const std::string& input) {
+    if (input.empty()) return false;
+    if (input.size() > 1024 * 1024) return false; // 1MB limit
+
+    // Check for null bytes
+    if (input.find('\0') != std::string::npos) return false;
+
+    // Check for common injection patterns
+    static const char* dangerousPatterns[] = {
+        "<script", "javascript:", "data:text/html",
+        "\x1b[",  // ANSI escape injection
+        nullptr
+    };
+    std::string lower = input;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    for (int i = 0; dangerousPatterns[i]; ++i) {
+        if (lower.find(dangerousPatterns[i]) != std::string::npos) return false;
+    }
+
+    return true;
+}
+
+std::string AgenticEngine::sanitizeCode(const std::string& code) {
+    std::string sanitized = code;
+
+    // Remove dangerous system calls (but preserve them as comments)
+    static const std::pair<std::string, std::string> replacements[] = {
+        {"system(",    "/* BLOCKED: system( */"},
+        {"exec(",      "/* BLOCKED: exec( */"},
+        {"popen(",     "/* BLOCKED: popen( */"},
+        {"ShellExecute(", "/* BLOCKED: ShellExecute( */"},
+        {"WinExec(",   "/* BLOCKED: WinExec( */"},
+        {"CreateProcess(", "/* BLOCKED: CreateProcess( */"},
+    };
+
+    for (const auto& [pattern, replacement] : replacements) {
+        size_t pos = 0;
+        while ((pos = sanitized.find(pattern, pos)) != std::string::npos) {
+            // Check if inside a string literal or comment (simple heuristic)
+            bool inString = false;
+            for (size_t i = 0; i < pos && i < sanitized.size(); ++i) {
+                if (sanitized[i] == '"' && (i == 0 || sanitized[i-1] != '\\')) inString = !inString;
+            }
+            if (!inString) {
+                sanitized.replace(pos, pattern.size(), replacement);
+                pos += replacement.size();
+            } else {
+                pos += pattern.size();
+            }
+        }
+    }
+
+    return sanitized;
+}
+
+bool AgenticEngine::isCommandSafe(const std::string& command) {
+    if (command.empty()) return false;
+
+    // Dangerous commands that should never be executed
+    static const char* dangerousCommands[] = {
+        "rm -rf /", "del /s /q c:\\", "format ",
+        "mkfs", "dd if=/dev/zero",
+        ":(){ :|:& };:",  // Fork bomb
+        "shutdown", "halt", "poweroff",
+        "reg delete", "regedit",
+        "net user", "net localgroup",
+        nullptr
+    };
+
+    std::string lower = command;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+    for (int i = 0; dangerousCommands[i]; ++i) {
+        if (lower.find(dangerousCommands[i]) != std::string::npos) return false;
+    }
+
+    // Check for pipe to destructive commands
+    if (lower.find("| rm ") != std::string::npos ||
+        lower.find("| del ") != std::string::npos) return false;
+
+    // Check for output redirection to system files
+    if (lower.find("> /etc/") != std::string::npos ||
+        lower.find("> c:\\windows") != std::string::npos) return false;
+
+    return true;
+}
 
 std::string AgenticEngine::grepFiles(const std::string& pattern, const std::string& path) {
     std::ostringstream results;
@@ -591,7 +774,7 @@ std::string AgenticEngine::runCompiler(const std::string& sourceFile, const std:
 std::string AgenticEngine::chat(const std::string& message) {
     if (!m_inferenceEngine) return "[Error: No Inference Engine]";
     
-    RawrXD::NativeAgent agent(m_inferenceEngine);
+    RawrXD::NativeAgent agent(static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine));
     
     // Configure Agent from Engine config
     agent.SetMaxMode(m_config.maxMode);

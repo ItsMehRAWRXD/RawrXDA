@@ -22,6 +22,7 @@
 #include "../include/chain_of_thought_engine.h"
 #include "core/voice_chat.hpp"
 #include "core/voice_automation.hpp"
+#include "core/instructions_provider.hpp"
 
 // ── Unified Feature Dispatch (CLI ↔ Win32 parity) ──────────────────────────
 #include "cli/cli_feature_bridge.h"
@@ -73,6 +74,102 @@ std::mutex g_stateMutex;
 
 // Declaration for server start function
 void start_server(int port);
+
+// ============================================================================
+// INSTRUCTIONS CONTEXT (Phase 34 — Read tools.instructions.md All Lines)
+// ============================================================================
+
+void cmd_instructions(const std::string& args) {
+    auto& provider = InstructionsProvider::instance();
+
+    if (args.empty() || args == "help") {
+        std::cout << "\n\xF0\x9F\x93\x8B  INSTRUCTIONS COMMANDS:\n";
+        std::cout << "  !instructions                 Show all loaded instructions\n";
+        std::cout << "  !instructions list            List loaded instruction files\n";
+        std::cout << "  !instructions show             Show full content (all lines)\n";
+        std::cout << "  !instructions reload           Reload from disk\n";
+        std::cout << "  !instructions paths            Show search paths\n";
+        std::cout << "  !instructions load <file>      Load a specific file\n";
+        std::cout << "  !instructions json             Export as JSON\n";
+        std::cout << "  !instructions summary          Show file summary\n";
+        return;
+    }
+
+    // Lazy-load on first access
+    if (!provider.isLoaded()) {
+        auto r = provider.loadAll();
+        if (!r.success) {
+            std::cout << "\xE2\x9D\x8C Failed to load instructions: " << r.detail << "\n";
+        }
+    }
+
+    if (args == "list") {
+        auto files = provider.getAll();
+        if (files.empty()) {
+            std::cout << "\xE2\x9A\xA0 No instruction files loaded.\n";
+            return;
+        }
+        std::cout << "\n\xF0\x9F\x93\x82 Loaded instruction files (" << files.size() << "):\n";
+        for (const auto& f : files) {
+            std::cout << "  \xE2\x9C\x93 " << f.fileName
+                      << "  (" << f.lineCount << " lines, "
+                      << f.sizeBytes << " bytes)\n";
+            std::cout << "    Path: " << f.filePath << "\n";
+        }
+    }
+    else if (args == "show") {
+        std::string content = provider.getAllContent();
+        if (content.empty()) {
+            std::cout << "\xE2\x9A\xA0 No instructions content available.\n";
+        } else {
+            std::cout << "\n" << content << "\n";
+        }
+    }
+    else if (args == "reload") {
+        auto r = provider.reload();
+        if (r.success) {
+            std::cout << "\xE2\x9C\x85 Instructions reloaded (" 
+                      << provider.getLoadedCount() << " files)\n";
+        } else {
+            std::cout << "\xE2\x9D\x8C Reload failed: " << r.detail << "\n";
+        }
+    }
+    else if (args == "paths") {
+        auto paths = provider.getSearchPaths();
+        std::cout << "\n\xF0\x9F\x94\x8D Search paths (" << paths.size() << "):\n";
+        for (const auto& p : paths) {
+            bool exists = fs::exists(p);
+            std::cout << "  " << (exists ? "\xE2\x9C\x93" : "\xE2\x9C\x97")
+                      << " " << p << (exists ? "" : " (not found)") << "\n";
+        }
+    }
+    else if (args.substr(0, 5) == "load ") {
+        std::string path = args.substr(5);
+        auto r = provider.loadFile(path);
+        if (r.success) {
+            std::cout << "\xE2\x9C\x85 Loaded: " << path << "\n";
+        } else {
+            std::cout << "\xE2\x9D\x8C Failed: " << r.detail << "\n";
+        }
+    }
+    else if (args == "json") {
+        std::cout << provider.toJSON() << "\n";
+    }
+    else if (args == "summary") {
+        std::cout << provider.toJSONSummary() << "\n";
+    }
+    else {
+        // Default: show list
+        auto files = provider.getAll();
+        if (files.empty()) {
+            std::cout << "\xE2\x9A\xA0 No instruction files loaded. Use !instructions reload\n";
+        } else {
+            std::cout << "\n\xF0\x9F\x93\x8B Instructions context (" << files.size() << " files, "
+                      << provider.getAllContent().size() << " bytes total):\n\n";
+            std::cout << provider.getAllContent() << "\n";
+        }
+    }
+}
 
 // ============================================================================
 // VOICE OPERATIONS (Phase 33 — Feature Parity with Win32IDE_VoiceChat)
@@ -1856,7 +1953,14 @@ void print_help() {
     std::cout << "\n🚀 IDE & SERVER:\n";
     std::cout << "  !generate_ide [path]          Generate React web IDE\n";
     std::cout << "  !server <port>                Start backend API server\n";
-    std::cout << "\n📊 STATUS:\n";
+    std::cout << "\n� INSTRUCTIONS CONTEXT:\n";
+    std::cout << "  !instructions                 Show production instructions\n";
+    std::cout << "  !instructions list            List loaded instruction files\n";
+    std::cout << "  !instructions show            Show full content (all lines)\n";
+    std::cout << "  !instructions reload          Reload from disk\n";
+    std::cout << "  !instructions paths           Show search paths\n";
+    std::cout << "  !instructions json            Export as JSON\n";
+    std::cout << "\n�📊 STATUS:\n";
     std::cout << "  !status                       Show current status\n";
     std::cout << "  !help                         Show this help\n";
     std::cout << "  !quit                         Exit CLI\n\n";
@@ -1962,6 +2066,9 @@ void route_command(const std::string& line) {
     // Voice operations (Phase 33)
     else if (cmd == "!voice") cmd_voice(args);
     
+    // Instructions context (Phase 34)
+    else if (cmd == "!instructions") cmd_instructions(args);
+    
     // Status & info
     else if (cmd == "!status") cmd_status(args);
     else if (cmd == "!help") print_help();
@@ -2066,7 +2173,22 @@ void route_command(const std::string& line) {
 
 int main() {
     init_runtime();
-    
+
+    // Phase 34: Persistent instructions context — load at startup
+    {
+        auto& provider = InstructionsProvider::instance();
+        provider.addSearchPath(".");
+        provider.addSearchPath(".github");
+        auto r = provider.loadAll();
+        if (r.success) {
+            std::cout << "\xE2\x9C\x85 Instructions loaded: "
+                      << provider.getLoadedCount() << " files (" 
+                      << provider.getAllContent().size() << " bytes)\n";
+        } else {
+            std::cout << "\xE2\x9A\xA0 Instructions: " << r.detail << "\n";
+        }
+    }
+
     // Initialize decision tree + autonomy loop with engine pointers
     {
         auto& tree = AgenticDecisionTree::instance();

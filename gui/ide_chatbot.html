@@ -6905,6 +6905,531 @@
         transform: scale(0.9);
       }
     }
+
+    /* ================================================================
+       TOOL ACTION RENDERING — Collapsible cards for agentic tool calls
+       Shows file reads, searches, terminal commands, edits, etc.
+       Matches RawrXD dark theme with accent glow.
+       ================================================================ */
+    .tool-action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 8px 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .tool-action-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .tool-action-card:hover {
+      border-color: rgba(0, 217, 255, 0.3);
+    }
+
+    .tool-action-card.tool-status-running {
+      border-left: 3px solid var(--accent-cyan);
+      animation: toolPulse 1.5s ease-in-out infinite;
+    }
+
+    .tool-action-card.tool-status-success {
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .tool-action-card.tool-status-error {
+      border-left: 3px solid var(--accent-red);
+    }
+
+    .tool-action-card.tool-status-pending {
+      border-left: 3px solid var(--text-muted);
+    }
+
+    @keyframes toolPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 rgba(0, 217, 255, 0);
+      }
+
+      50% {
+        box-shadow: 0 0 8px rgba(0, 217, 255, 0.15);
+      }
+    }
+
+    .tool-action-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+      background: transparent;
+      transition: background 0.15s ease;
+    }
+
+    .tool-action-header:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .tool-action-chevron {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+      width: 14px;
+      text-align: center;
+    }
+
+    .tool-action-card.expanded .tool-action-chevron {
+      transform: rotate(90deg);
+    }
+
+    .tool-action-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      width: 18px;
+      text-align: center;
+    }
+
+    .tool-action-name {
+      font-weight: 600;
+      color: var(--accent-cyan);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+
+    .tool-action-target {
+      color: var(--text-secondary);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tool-action-status-icon {
+      flex-shrink: 0;
+      font-size: 12px;
+      width: 16px;
+      text-align: center;
+    }
+
+    .tool-action-duration {
+      font-size: 10px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .tool-action-body {
+      display: none;
+      padding: 0 10px 8px 32px;
+      max-height: 200px;
+      overflow-y: auto;
+      overflow-x: auto;
+    }
+
+    .tool-action-card.expanded .tool-action-body {
+      display: block;
+    }
+
+    .tool-action-body pre {
+      margin: 0;
+      padding: 6px 8px;
+      background: var(--bg-primary);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .tool-action-body .tool-params {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tool-action-body .tool-param-row {
+      display: flex;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .tool-action-body .tool-param-key {
+      color: var(--accent-purple);
+      flex-shrink: 0;
+      min-width: 60px;
+    }
+
+    .tool-action-body .tool-param-val {
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+
+    .tool-action-body .tool-result {
+      margin-top: 6px;
+      padding: 6px 8px;
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid rgba(0, 255, 136, 0.15);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .tool-action-body .tool-result.tool-result-error {
+      background: rgba(255, 51, 102, 0.05);
+      border-color: rgba(255, 51, 102, 0.15);
+    }
+
+    /* Summary line when multiple tool actions are collapsed */
+    .tool-action-summary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .tool-action-summary:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(0, 217, 255, 0.3);
+    }
+
+    .tool-action-summary .summary-icon {
+      font-size: 13px;
+    }
+
+    .tool-action-summary .summary-text {
+      flex: 1;
+    }
+
+    .tool-action-summary .summary-chevron {
+      transition: transform 0.2s ease;
+      font-size: 10px;
+    }
+
+    .tool-action-summary.expanded .summary-chevron {
+      transform: rotate(90deg);
+    }
+
+    /* Spinner for running tools */
+    .tool-spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: toolSpin 0.8s linear infinite;
+    }
+
+    @keyframes toolSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .tool-action-body::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    .tool-action-body::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 2px;
+    }
+
+    .tool-action-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    /* ================================================================
+       WORKING BUBBLES — Collapsible groups for agentic operations
+       ================================================================ */
+    .working-bubble {
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin: 6px 0;
+      overflow: hidden;
+      background: var(--bg-secondary);
+      transition: border-color 0.3s;
+    }
+
+    .working-bubble.running {
+      border-left: 3px solid var(--accent-cyan);
+    }
+
+    .working-bubble.completed {
+      border-left: 3px solid var(--accent-green, #3fb950);
+    }
+
+    .working-bubble.failed {
+      border-left: 3px solid var(--accent-red, #f85149);
+    }
+
+    .working-bubble-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .working-bubble-header:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .working-bubble-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: workingSpin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .working-bubble.completed .working-bubble-spinner,
+    .working-bubble.failed .working-bubble-spinner {
+      display: none;
+    }
+
+    .working-bubble.running .working-bubble-done-icon {
+      display: none;
+    }
+
+    .working-bubble-done-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    @keyframes workingSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .working-bubble-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .working-bubble-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .working-bubble-elapsed {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .working-bubble-chevron {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .working-bubble.expanded .working-bubble-chevron {
+      transform: rotate(90deg);
+    }
+
+    .working-bubble-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      padding: 0 12px;
+    }
+
+    .working-bubble.expanded .working-bubble-body {
+      max-height: 2000px;
+      padding: 4px 12px 10px;
+    }
+
+    .working-bubble-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 3px 0;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .working-bubble-step-icon {
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+    }
+
+    .working-bubble-step-text {
+      flex: 1;
+    }
+
+    .working-bubble-summary {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 4px 0;
+      font-style: italic;
+    }
+
+    /* ================================================================
+       SUBAGENT BUBBLES — Nested inside working bubbles
+       ================================================================ */
+    .subagent-bubble {
+      border: 1px solid #8b5cf6;
+      border-radius: 6px;
+      margin: 6px 0;
+      overflow: hidden;
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .subagent-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .subagent-header:hover {
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .subagent-icon {
+      font-size: 13px;
+    }
+
+    .subagent-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8b5cf6;
+    }
+
+    .subagent-description {
+      font-size: 11px;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .subagent-duration {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .subagent-chevron {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform 0.2s;
+    }
+
+    .subagent-bubble.expanded .subagent-chevron {
+      transform: rotate(90deg);
+    }
+
+    .subagent-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      padding: 0 10px;
+    }
+
+    .subagent-bubble.expanded .subagent-body {
+      max-height: 1500px;
+      padding: 4px 10px 8px;
+    }
+
+    .subagent-prompt {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      font-family: var(--font-mono);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    /* ================================================================
+       KEEP / UNDO BUTTONS — On code blocks
+       ================================================================ */
+    .code-btn-keep,
+    .code-btn-undo {
+      padding: 2px 10px;
+      border: none;
+      border-radius: 3px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .code-btn-keep {
+      background: var(--accent-green, #3fb950);
+      color: #fff;
+    }
+
+    .code-btn-keep:hover {
+      background: #2ea043;
+    }
+
+    .code-btn-keep.applied {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    .code-btn-undo {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .code-btn-undo:hover {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--accent-red, #f85149);
+    }
+
+    .code-btn-undo.applied {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      cursor: default;
+      opacity: 0.7;
+    }
   </style>
 </head>
 
@@ -7328,6 +7853,10 @@
             <span class="icon">&#x1F4DD;</span>
             <span>File Editor</span>
           </button>
+          <button class="tool-btn" onclick="showGitPanel()" title="Git Source Control — status, diff, commit, push">
+            <span class="icon">&#x1F500;</span>
+            <span>Git</span>
+          </button>
           <button class="tool-btn" onclick="clearChat()">
             <span class="icon">&#x1F5D1;</span>
             <span>Clear</span>
@@ -7701,6 +8230,11 @@
           <div class="toolbar-item" id="dualAgentBtn" onclick="DualAgent.toggle()"
             title="Dual Agent: OFF — Toggle Architect↔Coder pipeline" style="opacity:0.5;">
             <span>&#x1F996;</span> <span id="dualAgentLabel">Dual</span>
+          </div>
+          <div class="toolbar-item" id="agenticModeBtn" onclick="toggleAgenticMode()"
+            title="Agentic Mode: ON — AI can read/write files, run commands, use git"
+            style="opacity:1.0; color:var(--accent-green);">
+            <span>&#x1F916;</span> <span id="agenticModeLabel">Agent: ON</span>
           </div>
           <div class="toolbar-item" id="voiceToolbarBtn" onclick="RawrVoice.toggleTTS()"
             title="Toggle TTS: Read AI responses aloud">
@@ -10127,6 +10661,73 @@
           <!-- JS populates step cards here -->
         </div>
       </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- GIT SOURCE CONTROL PANEL                                      -->
+      <!-- Real git operations via subprocess on serve.py backend         -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div class="agent-panel" id="gitPanel" style="z-index:1045;display:none;">
+        <div class="agent-header">
+          <span class="agent-title">&#x1F500; Git Source Control</span>
+          <div class="debug-controls">
+            <button class="code-btn" onclick="gitRefreshStatus()">&#x1F504; Refresh</button>
+            <button class="code-btn" onclick="closeGitPanel()">&#x2715;</button>
+          </div>
+        </div>
+        <div class="agent-body" style="padding:12px;overflow-y:auto;">
+          <!-- Branch & Status -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+            <span style="color:var(--accent-green);font-weight:600;" id="gitBranch">branch: ---</span>
+            <span style="color:var(--text-muted);font-size:11px;" id="gitStatusSummary"></span>
+          </div>
+
+          <!-- Commit Message -->
+          <div style="margin-bottom:12px;">
+            <input type="text" id="gitCommitMsg" placeholder="Commit message..." style="width:100%;padding:6px 10px;background:var(--bg-input);border:1px solid var(--border);
+              color:var(--text-primary);border-radius:4px;font-size:12px;"
+              onkeydown="if(event.key==='Enter')gitCommit()">
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+            <button class="code-btn" onclick="gitStageAll()" style="flex:1;">&#x2795; Stage All</button>
+            <button class="code-btn" onclick="gitCommit()" style="flex:1;">&#x2714; Commit</button>
+            <button class="code-btn" onclick="gitPush()" style="flex:1;">&#x2B06; Push</button>
+            <button class="code-btn" onclick="gitPull()" style="flex:1;">&#x2B07; Pull</button>
+          </div>
+
+          <!-- Changes List -->
+          <div style="margin-bottom:8px;font-size:11px;color:var(--text-muted);">Changes:</div>
+          <div id="gitChangesList"
+            style="max-height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:11px;">
+            <div style="color:var(--text-muted);">Click Refresh to load...</div>
+          </div>
+
+          <!-- Diff View -->
+          <div style="margin-top:12px;">
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <button class="code-btn" onclick="gitShowDiff(false)" style="flex:1;">Unstaged Diff</button>
+              <button class="code-btn" onclick="gitShowDiff(true)" style="flex:1;">Staged Diff</button>
+            </div>
+            <pre id="gitDiffOutput" style="max-height:300px;overflow:auto;padding:8px;background:var(--bg-secondary);
+              border:1px solid var(--border);border-radius:4px;font-size:10px;color:var(--text-secondary);
+              white-space:pre-wrap;word-break:break-all;margin:0;"></pre>
+          </div>
+
+          <!-- Log -->
+          <div style="margin-top:12px;">
+            <button class="code-btn" onclick="gitShowLog()" style="width:100%;">&#x1F4CB; Show Log (last 20)</button>
+            <div id="gitLogOutput" style="max-height:250px;overflow-y:auto;margin-top:6px;font-size:10px;"></div>
+          </div>
+
+          <!-- Remotes -->
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Remotes:</div>
+            <div id="gitRemotesList" style="font-size:10px;color:var(--text-secondary);"></div>
+          </div>
+        </div>
+      </div>
+
     </aside>
 
     <!-- Terminal -->
@@ -10214,6 +10815,8 @@
       filePendingReads: 0,        // count of FileReader ops still in progress
       debug: { open: false },
       chat: { sending: false, messageCount: 0 },
+      agenticMode: true,  // Enable agentic tool-calling loop (auto-execute tool_calls from model)
+      agenticMaxIterations: 10,  // Max tool-call iterations per user message
       terminal: { history: [], index: -1, minimized: false, mode: 'local' },
       reconnectTimer: null,
       failureData: [],
@@ -10426,10 +11029,10 @@
       extensions: {},
       installed: [],
       enabled: [],
-      registryPath: 'd:\\RawrXD\\extensions\\registry.json',
-      extensionRoot: 'd:\\RawrXD\\extensions',
-      moduleStore: 'd:\\RawrXD\\scripts\\modules',
-      craftRoom: 'd:\\RawrXD\\craft_room',
+      registryPath: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\extensions\\registry.json',
+      extensionRoot: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\extensions',
+      moduleStore: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\scripts\\modules',
+      craftRoom: (window._rawrxdBasePath || 'd:\\RawrXD') + '\\craft_room',
       marketplace: {
         url: 'https://marketplace.visualstudio.com/_apis/public/gallery',
         openVsxUrl: 'https://open-vsx.org/api',
@@ -10623,6 +11226,16 @@
         this.updateUI();
       },
 
+      // Add a raw message object (for tool_calls + tool results in agentic loop)
+      addRaw: function (msg) {
+        msg.timestamp = msg.timestamp || Date.now();
+        this.messages.push(msg);
+        if (this.messages.length > this.maxContextMessages) {
+          this.messages = this.messages.slice(-this.maxContextMessages);
+        }
+        this.persist();
+      },
+
       // Build OpenAI-compatible messages array for /v1/chat/completions
       getContextForAPI: function () {
         var context = [{ role: 'system', content: this.systemPrompt }];
@@ -10669,7 +11282,11 @@
           if (j === insertIdx && fileContextMsg) {
             context.push(fileContextMsg);
           }
-          context.push({ role: msgs[j].role, content: msgs[j].content });
+          // Preserve tool_calls and tool_call_id for agentic loop
+          var msgEntry = { role: msgs[j].role, content: msgs[j].content };
+          if (msgs[j].tool_calls) msgEntry.tool_calls = msgs[j].tool_calls;
+          if (msgs[j].tool_call_id) msgEntry.tool_call_id = msgs[j].tool_call_id;
+          context.push(msgEntry);
         }
 
         // If no messages yet but we have file context, add it
@@ -11727,8 +12344,28 @@
       // Tensor hop metadata (custom extension)
       var th = buildTensorHopOptions();
       if (th) extras.tensor_hop = th;
+      // Agentic tools — provide tool definitions when agentic mode is active
+      if (State.agenticMode) {
+        extras.tools = _agenticToolDefs;
+        extras.tool_choice = 'auto';
+      }
       return extras;
     }
+
+    // ======================================================================
+    // AGENTIC TOOL DEFINITIONS — OpenAI-compatible tool schemas
+    // These are sent with every request when agentic mode is enabled
+    // ======================================================================
+    var _agenticToolDefs = [
+      { type: 'function', function: { name: 'read_file', description: 'Read the full contents of a file', parameters: { type: 'object', properties: { path: { type: 'string', description: 'Absolute file path' } }, required: ['path'] } } },
+      { type: 'function', function: { name: 'write_file', description: 'Write content to a file (creates parent directories)', parameters: { type: 'object', properties: { path: { type: 'string', description: 'Absolute file path' }, content: { type: 'string', description: 'Entire file content to write' } }, required: ['path', 'content'] } } },
+      { type: 'function', function: { name: 'list_directory', description: 'List files and folders in a directory', parameters: { type: 'object', properties: { path: { type: 'string', description: 'Directory path' } }, required: ['path'] } } },
+      { type: 'function', function: { name: 'search_files', description: 'Search for text or regex across files in a directory tree', parameters: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, path: { type: 'string', description: 'Root directory to search' }, isRegex: { type: 'boolean', description: 'Interpret query as regex' } }, required: ['query'] } } },
+      { type: 'function', function: { name: 'run_command', description: 'Execute a shell command and return stdout/stderr', parameters: { type: 'object', properties: { command: { type: 'string', description: 'Shell command to execute' }, cwd: { type: 'string', description: 'Working directory' } }, required: ['command'] } } },
+      { type: 'function', function: { name: 'git_status', description: 'Get git repository status (branch, changes, remotes)', parameters: { type: 'object', properties: { path: { type: 'string', description: 'Repository path' } } } } },
+      { type: 'function', function: { name: 'git_commit', description: 'Stage all changes and commit with a message', parameters: { type: 'object', properties: { message: { type: 'string', description: 'Commit message' } }, required: ['message'] } } },
+      { type: 'function', function: { name: 'git_push', description: 'Push commits to remote repository', parameters: { type: 'object', properties: { remote: { type: 'string', description: 'Remote name (default: origin)' }, branch: { type: 'string', description: 'Branch to push' } } } } },
+    ];
 
     // Build Ollama options object
     function buildOllamaOptions() {
@@ -11756,7 +12393,7 @@
             model: model,
             prompt: 'Reply with the word: OK',
             stream: false,
-            options: { temperature: 0.1, num_ctx: 512, top_p: 0.9, top_k: 40 },
+            options: { temperature: 0.1, num_ctx: 512, top_p: State.gen.top_p || 0.9, top_k: State.gen.top_k || 40 },
           }),
           signal: AbortSignal.timeout(15000),
         });
@@ -12575,12 +13212,27 @@
           // ==== PHASE 2: Coder — Execute Each Step ====
           addMessage('system', '⚡ **Coder** executing plan...');
 
+          // Create a single message div to collect all tool action cards
+          var coderMsgDiv = addMessage('assistant', '', { streaming: true, skipMemory: true });
+          var coderTextEl = coderMsgDiv ? coderMsgDiv.querySelector('.message-text') : null;
+          var coderFullText = '';
+
           for (var s = 0; s < plan.length; s++) {
             if (signal.aborted) break;
             var step = plan[s];
             var stepLabel = '[Step ' + (s + 1) + '/' + plan.length + '] ';
 
-            addMessage('system', stepLabel + '**' + (step.action || '').toUpperCase() + '** `' + (step.target || '') + '`');
+            // Render each step as a tool action card
+            var stepCardId = null;
+            if (typeof ToolActionRenderer !== 'undefined' && coderMsgDiv) {
+              stepCardId = ToolActionRenderer.addAction(coderMsgDiv, {
+                name: (step.action || 'execute'),
+                arguments: { target: step.target || '', description: step.description || '' },
+                status: 'running'
+              });
+            } else {
+              addMessage('system', stepLabel + '**' + (step.action || '').toUpperCase() + '** `' + (step.target || '') + '`');
+            }
 
             var coderPrompt = [
               { role: 'system', content: 'You are the Coder agent. Execute the following task precisely. Output ONLY the code or command needed. No explanations unless asked.' },
@@ -12603,11 +13255,38 @@
               var coderData = await coderRes.json();
               var coderOutput = (coderData.choices && coderData.choices[0] && coderData.choices[0].message)
                 ? coderData.choices[0].message.content : '(no output)';
-              addMessage('assistant', stepLabel + coderOutput);
+
+              coderFullText += stepLabel + coderOutput + '\n\n';
+
+              // Update tool action card to success with result
+              if (stepCardId) {
+                ToolActionRenderer.updateAction(stepCardId, {
+                  status: 'success',
+                  result: coderOutput.length > 200 ? coderOutput.substring(0, 200) + '…' : coderOutput
+                });
+              }
             } catch (e) {
-              if (e.name === 'AbortError') break;
-              addMessage('system', stepLabel + '⚠️ Coder error: ' + e.message);
+              if (e.name === 'AbortError') {
+                if (stepCardId) ToolActionRenderer.updateAction(stepCardId, { status: 'error', result: 'Aborted' });
+                break;
+              }
+              if (stepCardId) {
+                ToolActionRenderer.updateAction(stepCardId, { status: 'error', result: e.message });
+              } else {
+                addMessage('system', stepLabel + '⚠️ Coder error: ' + e.message);
+              }
             }
+          }
+
+          // Update the assistant message with full coder output
+          if (coderTextEl && coderFullText) {
+            coderTextEl.innerHTML = formatMessage(coderFullText.trim());
+            Conversation.addMessage('assistant', coderFullText.trim());
+          }
+
+          // Collapse tool actions into summary
+          if (typeof ToolActionRenderer !== 'undefined' && coderMsgDiv) {
+            ToolActionRenderer.renderSummary(coderMsgDiv);
           }
 
           addMessage('system', '✅ **DualAgent pipeline complete** (' + plan.length + ' steps executed)');
@@ -12812,6 +13491,65 @@
         logDebug('Primary backend (' + State.backend.url + ') failed: ' + e.message, 'warn');
       }
 
+      // ---- Try 1.5: RawrXD server on alternate port :8080 ----
+      if (State.backend.url.indexOf(':8080') === -1) {
+        try {
+          var altUrl = 'http://127.0.0.1:8080';
+          logDebug('Trying RawrXD server at ' + altUrl + '...', 'info');
+          var t0b = performance.now();
+          var altStatusData = null;
+          var altDetectedVia = '';
+
+          // Try /status
+          try {
+            var altRes = await fetch(altUrl + '/status', { signal: AbortSignal.timeout(3000) });
+            if (altRes.ok) { altStatusData = await altRes.json(); altDetectedVia = '/status'; }
+          } catch (_) { }
+
+          // Try /health
+          if (!altStatusData) {
+            try {
+              var altRes2 = await fetch(altUrl + '/health', { signal: AbortSignal.timeout(3000) });
+              if (altRes2.ok) {
+                var altD = await altRes2.json();
+                if (altD.status === 'ok') {
+                  altStatusData = Object.assign({}, altD, { backend: 'rawrxd-ide-server', server: 'RawrXD-IDE-Server' });
+                  altDetectedVia = '/health';
+                }
+              }
+            } catch (_) { }
+          }
+
+          if (altStatusData) {
+            var altLatency = Math.round(performance.now() - t0b);
+            State.backend.online = true;
+            State.backend.directMode = false;
+            State.backend.url = altUrl;
+            State.backend.lastPing = Date.now();
+            State.backend.serverType = altStatusData.backend || altStatusData.server || 'rawrxd-ide-server';
+            _ideServerUrl = altUrl;
+
+            if (altStatusData.capabilities) {
+              State.backend.capabilities = altStatusData.capabilities;
+            }
+
+            status.className = 'status-pill online';
+            text.textContent = 'ONLINE';
+
+            updateBackendInfo(altStatusData, altLatency);
+            updateModeBadge(true);
+            syncTitlebarStatus();
+            logDebug('Connected to ' + State.backend.serverType + ' via ' + altDetectedVia + ' on :8080 (' + altLatency + 'ms)', 'info');
+
+            await fetchModels();
+            await beaconProbeCliEndpoint();
+            return;
+          }
+        } catch (e) {
+          logDebug('Alternate :8080 also failed: ' + e.message, 'warn');
+        }
+      }
+
       // ---- Try 2: Direct Ollama fallback (default :11434) ----
       if (State.backend.ollamaDirectUrl && State.backend.ollamaDirectUrl !== State.backend.url) {
         try {
@@ -12950,6 +13688,7 @@
           if (data.models && Array.isArray(data.models)) {
             State.model.list = data.models;
             populateModelSelect(data.models);
+            if (typeof updateBridgeModelNames === 'function') updateBridgeModelNames();
             logDebug('Loaded ' + data.models.length + ' models from /models', 'info');
             return;
           }
@@ -12974,6 +13713,7 @@
           });
           State.model.list = mapped;
           populateModelSelect(mapped);
+          if (typeof updateBridgeModelNames === 'function') updateBridgeModelNames();
           logDebug('Loaded ' + mapped.length + ' models from Ollama /api/tags' + (State.backend.directMode ? ' (direct)' : ''), 'info');
           return;
         }
@@ -13088,8 +13828,12 @@
       '800b-dual': { label: '\uD83E\uDDE0 800B Dual Engine', css: 'tier-800b', color: '#ff00ff', range: '671-800B' }
     };
 
-    // Model name lookup (mirrors model_bridge_x64.asm g_ModelNames)
-    var BRIDGE_MODEL_NAMES = [
+    // Model name lookup — initially populated from model_bridge_x64.asm g_ModelNames,
+    // then dynamically updated from backend /api/model/profiles at runtime
+    var BRIDGE_MODEL_NAMES = [];
+
+    // Default bridge model names (fallback when backend is offline)
+    var _DEFAULT_BRIDGE_MODEL_NAMES = [
       'qwen2.5:1.5b', 'qwen2.5:3b', 'llama3.2:3b', 'phi-4:3.8b',
       'gemma2:7b', 'llama3.1:8b', 'qwen2.5:7b', 'mistral:7b', 'deepseek-r1:8b',
       'llama3.1:13b', 'qwen2.5:14b', 'gemma2:27b',
@@ -13098,6 +13842,21 @@
       'BigDaddyG-Q4_K_M', 'RawrXD-800B-DualEngine', 'deepseek-v3:671b-swarm',
       'mixtral-8x22b:141b', 'commandr-plus:104b-swarm'
     ];
+
+    // Populate BRIDGE_MODEL_NAMES dynamically: prefer loaded model list, then bridge profiles, then defaults
+    function updateBridgeModelNames() {
+      if (State.model.list && State.model.list.length > 0) {
+        // Use actually available models from Ollama/backend
+        BRIDGE_MODEL_NAMES = State.model.list.map(function (m) { return m.name || m; });
+      } else if (BridgeState.profiles && BridgeState.profiles.length > 0) {
+        // Use bridge profile names from /api/model/profiles
+        BRIDGE_MODEL_NAMES = BridgeState.profiles.map(function (p) { return p.name || p.model || ''; }).filter(Boolean);
+      } else {
+        BRIDGE_MODEL_NAMES = _DEFAULT_BRIDGE_MODEL_NAMES.slice();
+      }
+    }
+    // Initialize with defaults until backend connects
+    BRIDGE_MODEL_NAMES = _DEFAULT_BRIDGE_MODEL_NAMES.slice();
 
     // Fetch all 24 profiles from MASM bridge endpoint
     async function fetchBridgeProfiles() {
@@ -13795,11 +14554,28 @@
 
               // OpenAI SSE format: choices[0].delta.content
               var delta = '';
-              if (obj.choices && obj.choices[0] && obj.choices[0].delta) {
-                delta = obj.choices[0].delta.content || '';
+              var toolCalls = null;
+              var finishReason = null;
+              if (obj.choices && obj.choices[0]) {
+                var choice = obj.choices[0];
+                if (choice.delta) {
+                  delta = choice.delta.content || '';
+                  // OpenAI tool_calls in delta (agentic streaming)
+                  if (choice.delta.tool_calls) {
+                    toolCalls = choice.delta.tool_calls;
+                  }
+                }
+                if (choice.finish_reason) {
+                  finishReason = choice.finish_reason;
+                }
               } else if (obj.response) {
                 // Ollama NDJSON fallback within same parser
                 delta = obj.response;
+              }
+
+              // Yield tool_calls as special tagged objects
+              if (toolCalls) {
+                yield { __type: 'tool_calls', tool_calls: toolCalls };
               }
 
               if (delta) {
@@ -13807,6 +14583,12 @@
                 this.lastTokenTime = performance.now();
                 yield delta;
               }
+
+              // Yield finish_reason when it indicates tool usage
+              if (finishReason === 'tool_calls' || finishReason === 'function_call') {
+                yield { __type: 'finish_reason', reason: finishReason };
+              }
+
               if (obj.done) return;
             } catch (e) {
               // Skip non-JSON lines (SSE comments, empty lines)
@@ -14025,15 +14807,45 @@
 
         var data = await res.json();
         var answer = '';
+        var toolCallActions = [];
         if (data.choices && data.choices[0] && data.choices[0].message) {
           answer = data.choices[0].message.content || '';
+          // Handle non-streaming tool_calls in response
+          if (data.choices[0].message.tool_calls) {
+            var tcs = data.choices[0].message.tool_calls;
+            for (var tci = 0; tci < tcs.length; tci++) {
+              var tc = tcs[tci];
+              toolCallActions.push({
+                name: (tc.function && tc.function.name) || 'tool_call',
+                arguments: (tc.function && tc.function.arguments) || null,
+                status: 'success',
+                id: tc.id || null
+              });
+            }
+          }
         } else {
           answer = data.answer || data.response || '[No response]';
         }
 
+        // Parse embedded tool action blocks from response text
+        var parsed = ToolActionRenderer.parseToolActionsFromText(answer);
+        if (parsed.actions.length > 0) {
+          answer = parsed.cleanText;
+          toolCallActions = toolCallActions.concat(parsed.actions);
+        }
+
         // Record assistant response to conversation memory
         Conversation.addMessage('assistant', answer);
-        addMessage('assistant', answer, { latency: latency, model: model, skipMemory: true });
+        var msgDiv = addMessage('assistant', answer, { latency: latency, model: model, skipMemory: true });
+
+        // Render tool action cards if any
+        if (toolCallActions.length > 0 && msgDiv) {
+          for (var tai = 0; tai < toolCallActions.length; tai++) {
+            toolCallActions[tai].status = toolCallActions[tai].status || 'success';
+            ToolActionRenderer.addAction(msgDiv, toolCallActions[tai]);
+          }
+          ToolActionRenderer.renderSummary(msgDiv);
+        }
 
         if (el('dbgLogRequests') && el('dbgLogRequests').checked) {
           logDebug('/v1/chat/completions \u2192 ' + answer.length + ' chars in ' + latency + 'ms', 'info');
@@ -14044,12 +14856,177 @@
 
         // Phase 3: Record performance metric
         recordMetric({ latency: latency, tokens: 0, model: model, endpoint: '/v1/chat/completions', success: true });
+
+        // === AGENTIC TOOL-USE LOOP ===
+        // If model returned tool_calls AND agentic mode is on, execute them and loop
+        if (State.agenticMode && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.tool_calls) {
+          await executeAgenticToolLoop(data.choices[0].message, model, msgDiv, t0);
+        }
+
       } catch (e) {
         hideTyping();
         logDebug('OpenAI endpoint failed: ' + e.message + ', falling back to /ask', 'warn');
         recordMetric({ latency: Math.round(performance.now() - t0), tokens: 0, model: model, endpoint: '/v1/chat/completions', success: false, errorMsg: e.message });
         await sendNonStreamingLegacy(query, model, t0);
       }
+    }
+
+    // ======================================================================
+    // AGENTIC TOOL EXECUTION LOOP — Real production tool-use iteration
+    // When the model returns tool_calls, execute each tool via serve.py,
+    // feed results back as 'tool' role messages, re-query until text reply
+    // or max iterations reached.
+    // ======================================================================
+    async function executeAgenticToolLoop(assistantMsg, model, msgDiv, t0) {
+      var maxIter = State.agenticMaxIterations || 10;
+      var iteration = 0;
+      var currentToolCalls = assistantMsg.tool_calls;
+      var currentAssistantContent = assistantMsg.content || '';
+
+      // Add the assistant message with tool_calls to conversation memory
+      Conversation.addRaw({
+        role: 'assistant',
+        content: currentAssistantContent,
+        tool_calls: currentToolCalls,
+      });
+
+      while (currentToolCalls && currentToolCalls.length > 0 && iteration < maxIter) {
+        iteration++;
+        logDebug('[Agentic] Iteration ' + iteration + ': executing ' + currentToolCalls.length + ' tool call(s)', 'info');
+
+        // Execute each tool call and collect results
+        var toolResults = [];
+        for (var tci = 0; tci < currentToolCalls.length; tci++) {
+          var tc = currentToolCalls[tci];
+          var toolName = (tc.function && tc.function.name) || 'unknown';
+          var toolArgs = {};
+          try {
+            toolArgs = JSON.parse(tc.function.arguments || '{}');
+          } catch (_) {
+            toolArgs = {};
+          }
+
+          // Render running tool action card
+          var cardId = ToolActionRenderer.addAction(msgDiv, {
+            name: toolName,
+            arguments: JSON.stringify(toolArgs),
+            status: 'running',
+          });
+
+          // Execute tool via backend
+          var toolResult;
+          try {
+            var execRes = await fetch(getActiveUrl() + '/api/agent/execute-tool', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: toolName, arguments: toolArgs }),
+              signal: AbortSignal.timeout(120000),
+            });
+            toolResult = await execRes.json();
+
+            // Update card to success
+            ToolActionRenderer.updateAction(cardId, {
+              status: toolResult.error ? 'error' : 'success',
+              result: JSON.stringify(toolResult.result || toolResult, null, 2).substring(0, 2000),
+            });
+          } catch (e) {
+            toolResult = { error: e.message };
+            ToolActionRenderer.updateAction(cardId, {
+              status: 'error',
+              result: 'Error: ' + e.message,
+            });
+          }
+
+          // Format tool result message
+          var toolContent = JSON.stringify(toolResult.result || toolResult);
+          // Truncate very large tool outputs to prevent context overflow
+          if (toolContent.length > 50000) {
+            toolContent = toolContent.substring(0, 50000) + '\n...[truncated to 50KB]';
+          }
+
+          // Add tool result to conversation
+          Conversation.addRaw({
+            role: 'tool',
+            tool_call_id: tc.id || ('call_' + iteration + '_' + tci),
+            content: toolContent,
+          });
+
+          toolResults.push({
+            call_id: tc.id,
+            name: toolName,
+            result: toolContent,
+          });
+        }
+
+        // Render summary for this iteration's tools
+        ToolActionRenderer.renderSummary(msgDiv);
+
+        // Re-query model with tool results in context
+        logDebug('[Agentic] Re-querying model with ' + toolResults.length + ' tool result(s)...', 'info');
+        try {
+          var extras = buildOpenAIPayloadExtras();
+          var payload = Object.assign({
+            model: model || 'rawrxd',
+            messages: Conversation.getContextForAPI(),
+            stream: false,
+          }, extras);
+
+          var reRes = await fetch(getActiveUrl() + '/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(120000),
+          });
+
+          if (!reRes.ok) {
+            logDebug('[Agentic] Re-query failed: HTTP ' + reRes.status, 'error');
+            addMessage('system', '\u26a0\ufe0f Agentic loop: model re-query failed (HTTP ' + reRes.status + ')');
+            break;
+          }
+
+          var reData = await reRes.json();
+          var reMsg = (reData.choices && reData.choices[0] && reData.choices[0].message) || {};
+          var reContent = reMsg.content || '';
+
+          if (reMsg.tool_calls && reMsg.tool_calls.length > 0) {
+            // Model wants more tool calls — loop again
+            currentToolCalls = reMsg.tool_calls;
+            currentAssistantContent = reContent;
+            Conversation.addRaw({
+              role: 'assistant',
+              content: reContent,
+              tool_calls: reMsg.tool_calls,
+            });
+            // Show intermediate text if any
+            if (reContent) {
+              var textEl = msgDiv.querySelector('.message-text');
+              if (textEl) {
+                textEl.innerHTML = formatMessage(reContent);
+              }
+            }
+          } else {
+            // Model returned final text — display it
+            currentToolCalls = null;
+            if (reContent) {
+              Conversation.addMessage('assistant', reContent);
+              var textEl = msgDiv.querySelector('.message-text');
+              if (textEl) {
+                textEl.innerHTML = formatMessage(reContent);
+              }
+            }
+          }
+        } catch (e) {
+          logDebug('[Agentic] Re-query error: ' + e.message, 'error');
+          addMessage('system', '\u26a0\ufe0f Agentic loop error: ' + e.message);
+          break;
+        }
+      }
+
+      if (iteration >= maxIter) {
+        addMessage('system', '\u26a0\ufe0f Agentic loop reached maximum iterations (' + maxIter + '). Stopping.');
+      }
+
+      logDebug('[Agentic] Loop completed after ' + iteration + ' iteration(s)', 'info');
     }
 
     async function sendStreamingOpenAI(query, model, t0) {
@@ -14062,6 +15039,10 @@
       showStopHideSend();
       showStreamRate();
 
+      // Tool call accumulator: tracks streamed tool_calls deltas by index
+      var _toolCallAccum = {};  // index -> { id, name, arguments }
+      var _toolCardIds = {};    // index -> card element ID in DOM
+
       try {
         var fullText = '';
         var _rafPending = false;
@@ -14073,6 +15054,55 @@
           Conversation.getContextForAPI(),
           buildOpenAIPayloadExtras()
         )) {
+          // Handle tool_calls objects (tagged with __type)
+          if (token && typeof token === 'object' && token.__type === 'tool_calls') {
+            for (var ti = 0; ti < token.tool_calls.length; ti++) {
+              var tc = token.tool_calls[ti];
+              var idx = tc.index || 0;
+              if (!_toolCallAccum[idx]) {
+                _toolCallAccum[idx] = { id: '', name: '', arguments: '' };
+              }
+              // Accumulate streamed fragments
+              if (tc.id) _toolCallAccum[idx].id = tc.id;
+              if (tc.function && tc.function.name) _toolCallAccum[idx].name += tc.function.name;
+              if (tc.function && tc.function.arguments) _toolCallAccum[idx].arguments += tc.function.arguments;
+
+              // Create card on first name fragment, update on subsequent
+              if (_toolCallAccum[idx].name && !_toolCardIds[idx]) {
+                var cardId = ToolActionRenderer.addAction(msgDiv, {
+                  name: _toolCallAccum[idx].name,
+                  arguments: _toolCallAccum[idx].arguments || null,
+                  status: 'running'
+                });
+                _toolCardIds[idx] = cardId;
+              } else if (_toolCardIds[idx] && _toolCallAccum[idx].arguments) {
+                // Update arguments as they stream in (finalize on complete)
+              }
+            }
+            continue;
+          }
+
+          // Handle finish_reason for tool calls
+          if (token && typeof token === 'object' && token.__type === 'finish_reason') {
+            // Finalize all accumulated tool calls
+            var tcKeys = Object.keys(_toolCallAccum);
+            for (var fk = 0; fk < tcKeys.length; fk++) {
+              var fIdx = tcKeys[fk];
+              var finalTc = _toolCallAccum[fIdx];
+              if (_toolCardIds[fIdx]) {
+                // Parse final arguments and update card
+                var parsedArgs = null;
+                try { parsedArgs = JSON.parse(finalTc.arguments); } catch (e) { parsedArgs = finalTc.arguments; }
+                ToolActionRenderer.updateAction(_toolCardIds[fIdx], {
+                  status: 'success',
+                  result: parsedArgs ? null : finalTc.arguments
+                });
+              }
+            }
+            continue;
+          }
+
+          // Normal text token
           fullText += token;
 
           // Throttle DOM updates to once per animation frame to prevent UI freezes
@@ -14089,7 +15119,30 @@
         }
 
         textEl.classList.remove('streaming-cursor');
+
+        // Parse tool action blocks from markdown text (```tool-action ... ```)
+        var parsed = ToolActionRenderer.parseToolActionsFromText(fullText);
+        if (parsed.actions.length > 0) {
+          fullText = parsed.cleanText;
+          for (var pai = 0; pai < parsed.actions.length; pai++) {
+            parsed.actions[pai].status = parsed.actions[pai].status || 'success';
+            ToolActionRenderer.addAction(msgDiv, parsed.actions[pai]);
+          }
+        }
+
         textEl.innerHTML = formatMessage(fullText);
+
+        // Finalize any remaining tool call cards
+        var remainingKeys = Object.keys(_toolCallAccum);
+        for (var rk = 0; rk < remainingKeys.length; rk++) {
+          var rIdx = remainingKeys[rk];
+          if (_toolCardIds[rIdx]) {
+            ToolActionRenderer.updateAction(_toolCardIds[rIdx], { status: 'success' });
+          }
+        }
+
+        // Collapse tool action groups into summary if 3+ actions
+        ToolActionRenderer.renderSummary(msgDiv);
 
         // Record completed assistant response to conversation memory
         if (fullText) Conversation.addMessage('assistant', fullText);
@@ -14365,6 +15418,16 @@
       var container = document.getElementById('chatMessages');
       var time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+      // Auto-detect and extract tool action blocks from text (non-streaming path)
+      var toolActions = opts.toolActions || [];
+      if (role === 'assistant' && text && typeof ToolActionRenderer !== 'undefined') {
+        var parsed = ToolActionRenderer.parseToolActionsFromText(text);
+        if (parsed.actions.length > 0) {
+          text = parsed.cleanText;
+          toolActions = toolActions.concat(parsed.actions);
+        }
+      }
+
       var div = document.createElement('div');
       div.className = 'message ' + role;
 
@@ -14402,6 +15465,18 @@
         '</div>';
 
       container.appendChild(div);
+
+      // Render tool action cards (inserted above message text)
+      if (toolActions.length > 0 && typeof ToolActionRenderer !== 'undefined') {
+        for (var i = 0; i < toolActions.length; i++) {
+          toolActions[i].status = toolActions[i].status || 'success';
+          ToolActionRenderer.addAction(div, toolActions[i]);
+        }
+        if (toolActions.length >= 3) {
+          ToolActionRenderer.renderSummary(div);
+        }
+      }
+
       container.scrollTop = container.scrollHeight;
 
       State.chat.messageCount++;
@@ -14449,7 +15524,11 @@
         var safe = '<div class="code-block">' +
           '<div class="code-header">' +
           '<span class="code-lang">' + escHtml(block.lang) + '</span>' +
-          '<div class="code-actions"><button class="code-btn" onclick="copyCode(this)">Copy</button></div>' +
+          '<div class="code-actions">' +
+          '<button class="code-btn" onclick="copyCode(this)">Copy</button>' +
+          '<button class="code-btn-keep" onclick="keepCode(this)" title="Accept this code change">Keep</button>' +
+          '<button class="code-btn-undo" onclick="undoCode(this)" title="Revert this code change">Undo</button>' +
+          '</div>' +
           '</div>' +
           '<div class="code-content"><pre><code class="hljs language-' + escHtml(block.lang) + '">' + highlightedCode + '</code></pre></div>' +
           '</div>';
@@ -14476,8 +15555,8 @@
         return DOMPurify.sanitize(text, {
           ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li',
             'code', 'pre', 'span', 'div', 'button', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
-          ALLOWED_ATTR: ['class', 'style', 'onclick', 'title', 'data-lang'],
-          ALLOW_DATA_ATTR: false,
+          ALLOWED_ATTR: ['class', 'style', 'onclick', 'title', 'data-lang', 'data-msg', 'data-block', 'id'],
+          ALLOW_DATA_ATTR: true,
           KEEP_CONTENT: true
         });
       }
@@ -14495,6 +15574,688 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
+
+    // ======================================================================
+    // TOOL ACTION RENDERING — Collapsible cards for agentic tool use
+    // Renders file reads, searches, terminal commands, edits, etc.
+    // as visual cards inside the chat stream, matching Copilot/Cursor UX.
+    //
+    // Supports:
+    //   - OpenAI tool_calls from /v1/chat/completions SSE deltas
+    //   - Manual tool action injection from DualAgent pipeline
+    //   - Backend-sourced action events from /api/agents/* endpoints
+    //   - Inline tool action blocks in markdown (```tool-action ... ```)
+    //
+    // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
+    // ======================================================================
+
+    var ToolActionRenderer = (function () {
+      'use strict';
+
+      // ---- Icon map for known tool types ----
+      var TOOL_ICONS = {
+        'read_file': '\uD83D\uDCC4',  // 📄
+        'write_file': '\u270F\uFE0F',   // ✏️
+        'create_file': '\uD83D\uDCC3',   // 📃
+        'edit_file': '\u270F\uFE0F',   // ✏️
+        'replace_string_in_file': '\uD83D\uDD27', // 🔧
+        'delete_file': '\uD83D\uDDD1',   // 🗑
+        'file_search': '\uD83D\uDD0D',   // 🔍
+        'grep_search': '\uD83D\uDD0E',   // 🔎
+        'semantic_search': '\uD83E\uDDE0',   // 🧠
+        'run_in_terminal': '\uD83D\uDCBB',   // 💻
+        'run_command': '\uD83D\uDCBB',   // 💻
+        'list_dir': '\uD83D\uDCC2',   // 📂
+        'fetch_webpage': '\uD83C\uDF10',   // 🌐
+        'web_search': '\uD83C\uDF10',   // 🌐
+        'ask_user': '\u2753',          // ❓
+        'code_analysis': '\uD83D\uDD2C',   // 🔬
+        'disassemble': '\uD83E\uDDE9',   // 🧩
+        'hotpatch_apply': '\u26A1',          // ⚡
+        'hotpatch_memory': '\uD83E\uDDE0',   // 🧠
+        'hotpatch_byte': '\uD83D\uDD22',   // 🔢
+        'hotpatch_server': '\uD83C\uDF10',   // 🌐
+        'model_load': '\uD83E\uDD96',   // 🦖
+        'model_unload': '\u23CF\uFE0F',   // ⏏️
+        'model_quantize': '\uD83D\uDCE6',   // 📦
+        'embed_encode': '\uD83D\uDCCA',   // 📊
+        'vision_analyze': '\uD83D\uDC41',   // 👁
+        'default': '\u2699\uFE0F'    // ⚙️
+      };
+
+      // ---- Status icons ----
+      var STATUS_ICONS = {
+        'running': '<span class="tool-spinner"></span>',
+        'success': '\u2714\uFE0F',  // ✔️
+        'error': '\u2718',          // ✘
+        'pending': '\u23F3',          // ⏳
+        'skipped': '\u23ED\uFE0F'   // ⏭️
+      };
+
+      // ---- Internal state ----
+      var _toolActionId = 0;
+      var _activeGroups = {};  // msgDiv id -> { groupEl, actions[] }
+
+      /**
+       * Get the icon for a tool type.
+       */
+      function getIcon(toolName) {
+        return TOOL_ICONS[toolName] || TOOL_ICONS['default'];
+      }
+
+      /**
+       * Get a human-readable name from a tool function name.
+       */
+      function humanizeName(name) {
+        if (!name) return 'Action';
+        return name.replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+      }
+
+      /**
+       * Extract a short target/summary from tool arguments.
+       */
+      function extractTarget(toolName, args) {
+        if (!args) return '';
+        if (typeof args === 'string') {
+          try { args = JSON.parse(args); } catch (e) { return args.substring(0, 80); }
+        }
+        // Common patterns
+        if (args.filePath) return args.filePath;
+        if (args.path) return args.path;
+        if (args.filename) return args.filename;
+        if (args.query) return args.query.substring(0, 60);
+        if (args.command) return args.command.substring(0, 60);
+        if (args.url) return args.url;
+        if (args.pattern) return args.pattern;
+        // Fallback: first string value
+        var keys = Object.keys(args);
+        for (var i = 0; i < keys.length; i++) {
+          var v = args[keys[i]];
+          if (typeof v === 'string' && v.length > 0) return v.substring(0, 60);
+        }
+        return '';
+      }
+
+      /**
+       * Render a single tool action card DOM element.
+       * @param {Object} action - { name, arguments, status, result, duration_ms, id }
+       * @returns {HTMLElement} The card element
+       */
+      function renderActionCard(action) {
+        var id = 'tool-action-' + (++_toolActionId);
+        var status = action.status || 'pending';
+        var icon = getIcon(action.name);
+        var statusIcon = STATUS_ICONS[status] || STATUS_ICONS['pending'];
+        var target = extractTarget(action.name, action.arguments);
+        var durationText = action.duration_ms ? (action.duration_ms + 'ms') : '';
+
+        var card = document.createElement('div');
+        card.className = 'tool-action-card tool-status-' + status;
+        card.id = id;
+        card.dataset.toolName = action.name || '';
+        card.dataset.toolStatus = status;
+
+        // ---- Header (always visible, clickable to expand) ----
+        var header = document.createElement('div');
+        header.className = 'tool-action-header';
+        header.innerHTML =
+          '<span class="tool-action-chevron">\u25B6</span>' +
+          '<span class="tool-action-icon">' + icon + '</span>' +
+          '<span class="tool-action-name">' + escHtml(action.name || 'action') + '</span>' +
+          '<span class="tool-action-target" title="' + escHtml(target) + '">' + escHtml(target) + '</span>' +
+          '<span class="tool-action-status-icon">' + statusIcon + '</span>' +
+          '<span class="tool-action-duration">' + escHtml(durationText) + '</span>';
+
+        header.addEventListener('click', function () {
+          card.classList.toggle('expanded');
+        });
+
+        card.appendChild(header);
+
+        // ---- Body (hidden by default, shown on expand) ----
+        var body = document.createElement('div');
+        body.className = 'tool-action-body';
+
+        // Parameters
+        if (action.arguments) {
+          var args = action.arguments;
+          if (typeof args === 'string') {
+            try { args = JSON.parse(args); } catch (e) { args = null; }
+          }
+          if (args && typeof args === 'object') {
+            var paramsDiv = document.createElement('div');
+            paramsDiv.className = 'tool-params';
+            var keys = Object.keys(args);
+            for (var i = 0; i < Math.min(keys.length, 10); i++) {
+              var row = document.createElement('div');
+              row.className = 'tool-param-row';
+              var valStr = typeof args[keys[i]] === 'string' ? args[keys[i]] : JSON.stringify(args[keys[i]]);
+              if (valStr && valStr.length > 200) valStr = valStr.substring(0, 200) + '…';
+              row.innerHTML =
+                '<span class="tool-param-key">' + escHtml(keys[i]) + ':</span>' +
+                '<span class="tool-param-val">' + escHtml(valStr) + '</span>';
+              paramsDiv.appendChild(row);
+            }
+            if (keys.length > 10) {
+              var more = document.createElement('div');
+              more.className = 'tool-param-row';
+              more.innerHTML = '<span class="tool-param-key" style="color:var(--text-muted)">... ' + (keys.length - 10) + ' more params</span>';
+              paramsDiv.appendChild(more);
+            }
+            body.appendChild(paramsDiv);
+          } else if (typeof action.arguments === 'string') {
+            var pre = document.createElement('pre');
+            var argStr = action.arguments;
+            if (argStr.length > 500) argStr = argStr.substring(0, 500) + '…';
+            pre.textContent = argStr;
+            body.appendChild(pre);
+          }
+        }
+
+        // Result (if available)
+        if (action.result) {
+          var resultDiv = document.createElement('div');
+          resultDiv.className = 'tool-result' + (status === 'error' ? ' tool-result-error' : '');
+          var resultStr = typeof action.result === 'string' ? action.result : JSON.stringify(action.result, null, 2);
+          if (resultStr.length > 500) resultStr = resultStr.substring(0, 500) + '…';
+          resultDiv.textContent = resultStr;
+          body.appendChild(resultDiv);
+        }
+
+        card.appendChild(body);
+        return card;
+      }
+
+      /**
+       * Update an existing tool action card's status and result.
+       * @param {string} cardId - The card element ID
+       * @param {Object} updates - { status, result, duration_ms }
+       */
+      function updateActionCard(cardId, updates) {
+        var card = document.getElementById(cardId);
+        if (!card) return;
+
+        if (updates.status) {
+          card.className = card.className.replace(/tool-status-\w+/, 'tool-status-' + updates.status);
+          card.dataset.toolStatus = updates.status;
+          var statusEl = card.querySelector('.tool-action-status-icon');
+          if (statusEl) statusEl.innerHTML = STATUS_ICONS[updates.status] || '';
+        }
+
+        if (updates.duration_ms) {
+          var durEl = card.querySelector('.tool-action-duration');
+          if (durEl) durEl.textContent = updates.duration_ms + 'ms';
+        }
+
+        if (updates.result) {
+          var body = card.querySelector('.tool-action-body');
+          if (body) {
+            // Remove old result if any
+            var old = body.querySelector('.tool-result');
+            if (old) old.remove();
+            var resultDiv = document.createElement('div');
+            resultDiv.className = 'tool-result' + (updates.status === 'error' ? ' tool-result-error' : '');
+            var resultStr = typeof updates.result === 'string' ? updates.result : JSON.stringify(updates.result, null, 2);
+            if (resultStr.length > 500) resultStr = resultStr.substring(0, 500) + '…';
+            resultDiv.textContent = resultStr;
+            body.appendChild(resultDiv);
+          }
+        }
+      }
+
+      /**
+       * Create or get the tool action group container for a message div.
+       * The group holds all tool action cards for one assistant turn.
+       * @param {HTMLElement} msgDiv - The .message div to attach to
+       * @returns {HTMLElement} The group container element
+       */
+      function getOrCreateGroup(msgDiv) {
+        if (!msgDiv) return null;
+        var msgId = msgDiv.id || ('msg-' + Date.now());
+        if (!msgDiv.id) msgDiv.id = msgId;
+
+        if (_activeGroups[msgId]) return _activeGroups[msgId].groupEl;
+
+        var contentEl = msgDiv.querySelector('.message-content');
+        if (!contentEl) return null;
+
+        // Insert group before the message-text div
+        var textEl = contentEl.querySelector('.message-text');
+        var group = document.createElement('div');
+        group.className = 'tool-action-group';
+        group.id = 'tool-group-' + msgId;
+
+        if (textEl) {
+          contentEl.insertBefore(group, textEl);
+        } else {
+          contentEl.appendChild(group);
+        }
+
+        _activeGroups[msgId] = { groupEl: group, actions: [] };
+        return group;
+      }
+
+      /**
+       * Add a tool action card to a message's tool action group.
+       * @param {HTMLElement} msgDiv - The parent .message div
+       * @param {Object} action - { name, arguments, status, result, duration_ms }
+       * @returns {string} The card element ID for later updates
+       */
+      function addAction(msgDiv, action) {
+        var group = getOrCreateGroup(msgDiv);
+        if (!group) return null;
+
+        var card = renderActionCard(action);
+        group.appendChild(card);
+
+        var msgId = msgDiv.id;
+        if (_activeGroups[msgId]) {
+          _activeGroups[msgId].actions.push({
+            id: card.id,
+            name: action.name,
+            status: action.status || 'pending'
+          });
+        }
+
+        // Auto-scroll chat
+        var container = document.getElementById('chatMessages');
+        if (container) container.scrollTop = container.scrollHeight;
+
+        return card.id;
+      }
+
+      /**
+       * Render a collapsible summary bar for a group of tool actions.
+       * Used when finalizing the message to replace the expanded group.
+       * @param {HTMLElement} msgDiv - The parent .message div
+       */
+      function renderSummary(msgDiv) {
+        if (!msgDiv || !msgDiv.id) return;
+        var groupData = _activeGroups[msgDiv.id];
+        if (!groupData || groupData.actions.length === 0) return;
+
+        var group = groupData.groupEl;
+        var actions = groupData.actions;
+        var count = actions.length;
+        var successCount = 0;
+        var errorCount = 0;
+
+        for (var i = 0; i < actions.length; i++) {
+          var card = document.getElementById(actions[i].id);
+          if (card) {
+            var st = card.dataset.toolStatus;
+            if (st === 'success') successCount++;
+            else if (st === 'error') errorCount++;
+          }
+        }
+
+        // Only show summary if there are 3+ actions
+        if (count < 3) return;
+
+        // Build summary text
+        var summaryText = count + ' tool action' + (count !== 1 ? 's' : '') + ' completed';
+        if (errorCount > 0) summaryText += ' (' + errorCount + ' failed)';
+
+        var summary = document.createElement('div');
+        summary.className = 'tool-action-summary';
+        summary.innerHTML =
+          '<span class="summary-icon">\u2699\uFE0F</span>' +
+          '<span class="summary-text">' + escHtml(summaryText) + '</span>' +
+          '<span class="summary-chevron">\u25B6</span>';
+
+        // Collapse all cards by default, toggle on click
+        var allCards = group.querySelectorAll('.tool-action-card');
+        for (var j = 0; j < allCards.length; j++) {
+          allCards[j].style.display = 'none';
+        }
+
+        summary.addEventListener('click', function () {
+          var isExpanded = summary.classList.toggle('expanded');
+          for (var k = 0; k < allCards.length; k++) {
+            allCards[k].style.display = isExpanded ? '' : 'none';
+          }
+        });
+
+        group.insertBefore(summary, group.firstChild);
+      }
+
+      /**
+       * Parse OpenAI-format tool_calls from an SSE delta object.
+       * Returns array of tool call objects, or empty array.
+       * @param {Object} delta - The choices[0].delta object from SSE
+       * @returns {Array} [{index, id, type, function:{name, arguments}}]
+       */
+      function parseToolCallsDelta(delta) {
+        if (!delta || !delta.tool_calls) return [];
+        return delta.tool_calls.map(function (tc) {
+          return {
+            index: tc.index || 0,
+            id: tc.id || null,
+            type: tc.type || 'function',
+            name: (tc.function && tc.function.name) || null,
+            arguments: (tc.function && tc.function.arguments) || ''
+          };
+        });
+      }
+
+      /**
+       * Parse tool action blocks from markdown text.
+       * Format: ```tool-action\n{"name":"...", "arguments":{...}, "status":"...", "result":"..."}\n```
+       * Returns { cleanText, actions[] }
+       */
+      function parseToolActionsFromText(text) {
+        if (!text) return { cleanText: '', actions: [] };
+
+        var actions = [];
+        var cleanText = text.replace(/```tool-action\n([\s\S]*?)```/g, function (match, inner) {
+          try {
+            var parsed = JSON.parse(inner.trim());
+            if (Array.isArray(parsed)) {
+              actions = actions.concat(parsed);
+            } else {
+              actions.push(parsed);
+            }
+          } catch (e) {
+            // Not valid JSON — try line-by-line
+            var lines = inner.trim().split('\n');
+            for (var i = 0; i < lines.length; i++) {
+              try {
+                actions.push(JSON.parse(lines[i].trim()));
+              } catch (e2) { /* skip unparseable lines */ }
+            }
+          }
+          return ''; // Remove the block from displayed text
+        });
+
+        return { cleanText: cleanText.trim(), actions: actions };
+      }
+
+      /**
+       * Render an inline tool action message (for system/agent messages).
+       * Creates a standalone message-level tool action display.
+       * @param {Object} action - { name, arguments, status, result, duration_ms }
+       * @returns {HTMLElement} A standalone tool action div
+       */
+      function renderInlineAction(action) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'tool-action-group';
+        var card = renderActionCard(action);
+        wrapper.appendChild(card);
+        return wrapper;
+      }
+
+      /**
+       * Convenience: Add a tool action message to the chat.
+       * Works like addMessage() but specifically for tool actions.
+       * @param {Object|Array} actions - One or more tool actions
+       * @param {Object} opts - { skipMemory }
+       */
+      function addToolActionMessage(actions, opts) {
+        opts = opts || {};
+        if (!Array.isArray(actions)) actions = [actions];
+        if (actions.length === 0) return;
+
+        var container = document.getElementById('chatMessages');
+        var time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        var div = document.createElement('div');
+        div.className = 'message system';
+        div.id = 'msg-tool-' + Date.now();
+
+        div.innerHTML =
+          '<div class="message-avatar">\u2699</div>' +
+          '<div class="message-content">' +
+          '<div class="message-header">Agent <span class="message-time">' + time + '</span></div>' +
+          '<div class="tool-actions-inline"></div>' +
+          '</div>';
+
+        var inlineContainer = div.querySelector('.tool-actions-inline');
+        var group = document.createElement('div');
+        group.className = 'tool-action-group';
+
+        for (var i = 0; i < actions.length; i++) {
+          var card = renderActionCard(actions[i]);
+          group.appendChild(card);
+        }
+
+        inlineContainer.appendChild(group);
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+
+        State.chat.messageCount++;
+        document.getElementById('msgCount').textContent = State.chat.messageCount;
+        return div;
+      }
+
+      /**
+       * Finalize all tool action groups (collapse into summaries).
+       * Call after a streaming response completes.
+       */
+      function finalizeAll() {
+        var keys = Object.keys(_activeGroups);
+        for (var i = 0; i < keys.length; i++) {
+          var groupData = _activeGroups[keys[i]];
+          if (groupData && groupData.actions.length > 0) {
+            var msgDiv = document.getElementById(keys[i]);
+            if (msgDiv) renderSummary(msgDiv);
+          }
+        }
+      }
+
+      /**
+       * Clear tracking state (call on new conversation).
+       */
+      function reset() {
+        _activeGroups = {};
+        _toolActionId = 0;
+      }
+
+      // ---- Public API ----
+      return {
+        addAction: addAction,
+        updateAction: updateActionCard,
+        getOrCreateGroup: getOrCreateGroup,
+        renderSummary: renderSummary,
+        renderInlineAction: renderInlineAction,
+        addToolActionMessage: addToolActionMessage,
+        parseToolCallsDelta: parseToolCallsDelta,
+        parseToolActionsFromText: parseToolActionsFromText,
+        finalizeAll: finalizeAll,
+        reset: reset,
+        getIcon: getIcon,
+        humanizeName: humanizeName,
+        // Expose for console debugging
+        _state: function () { return { activeGroups: _activeGroups, nextId: _toolActionId }; }
+      };
+    })();
+
+    // Expose globally for engine/extension use
+    window.ToolActionRenderer = ToolActionRenderer;
+
+    // ======================================================================
+    // WORKING BUBBLE RENDERER — Collapsible groups for agentic operations
+    // Shows "Working..." bubbles that enclose tool operations until finished,
+    // with nested subagent ESP bubbles and step-by-step progress.
+    // ======================================================================
+    var WorkingBubbleRenderer = (function () {
+      var _bubbles = {};  // id -> { el, steps, state, startTime, subagents }
+      var _nextId = 1;
+
+      function _elapsed(startTime) {
+        var ms = Date.now() - startTime;
+        return ms < 1000 ? ms + 'ms' : (ms / 1000).toFixed(1) + 's';
+      }
+
+      function _makeStepHtml(icon, text) {
+        return '<div class="working-bubble-step">' +
+          '<span class="working-bubble-step-icon">' + (icon || '\u2022') + '</span>' +
+          '<span class="working-bubble-step-text">' + text + '</span>' +
+          '</div>';
+      }
+
+      function beginBubble(msgDiv, title, subtitle) {
+        var id = 'wb-' + (_nextId++);
+        var el = document.createElement('div');
+        el.className = 'working-bubble running expanded';
+        el.id = id;
+        el.innerHTML =
+          '<div class="working-bubble-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+          '<span class="working-bubble-spinner"></span>' +
+          '<span class="working-bubble-done-icon"></span>' +
+          '<span class="working-bubble-title">' + escHtml(title) + '</span>' +
+          (subtitle ? '<span class="working-bubble-subtitle">' + escHtml(subtitle) + '</span>' : '') +
+          '<span class="working-bubble-elapsed"></span>' +
+          '<span class="working-bubble-chevron">\u25B6</span>' +
+          '</div>' +
+          '<div class="working-bubble-body"></div>';
+
+        // Insert before the message text content, or at the start of the message content div
+        var contentDiv = msgDiv.querySelector('.message-content') || msgDiv;
+        contentDiv.insertBefore(el, contentDiv.firstChild);
+
+        var bubble = {
+          el: el,
+          body: el.querySelector('.working-bubble-body'),
+          elapsedSpan: el.querySelector('.working-bubble-elapsed'),
+          doneIcon: el.querySelector('.working-bubble-done-icon'),
+          steps: [],
+          subagents: {},
+          state: 'running',
+          startTime: Date.now(),
+          timer: null
+        };
+
+        // Live elapsed timer
+        bubble.timer = setInterval(function () {
+          if (bubble.state === 'running') {
+            bubble.elapsedSpan.textContent = _elapsed(bubble.startTime);
+          }
+        }, 200);
+
+        _bubbles[id] = bubble;
+        return id;
+      }
+
+      function addStep(bubbleId, icon, text) {
+        var b = _bubbles[bubbleId];
+        if (!b) return;
+        var stepHtml = _makeStepHtml(icon, text);
+        b.body.insertAdjacentHTML('beforeend', stepHtml);
+        b.steps.push(text);
+        // Auto-scroll container
+        var container = document.getElementById('chatMessages');
+        if (container) container.scrollTop = container.scrollHeight;
+      }
+
+      function endBubble(bubbleId, success) {
+        var b = _bubbles[bubbleId];
+        if (!b) return;
+        b.state = success ? 'completed' : 'failed';
+        if (b.timer) { clearInterval(b.timer); b.timer = null; }
+
+        var el = b.el;
+        el.classList.remove('running');
+        el.classList.add(b.state);
+
+        // Final elapsed
+        b.elapsedSpan.textContent = _elapsed(b.startTime);
+
+        // Done icon
+        b.doneIcon.textContent = success ? '\u2705' : '\u274C';
+
+        // Summary line
+        var summary = document.createElement('div');
+        summary.className = 'working-bubble-summary';
+        summary.textContent = 'Finished with ' + b.steps.length + ' step' + (b.steps.length !== 1 ? 's' : '');
+        b.body.appendChild(summary);
+
+        // Collapse after a short delay
+        setTimeout(function () {
+          el.classList.remove('expanded');
+        }, 1500);
+      }
+
+      function beginSubagent(bubbleId, description, prompt) {
+        var b = _bubbles[bubbleId];
+        if (!b) return null;
+        var subId = bubbleId + '-sub-' + (Object.keys(b.subagents).length + 1);
+
+        var el = document.createElement('div');
+        el.className = 'subagent-bubble expanded';
+        el.id = subId;
+        el.innerHTML =
+          '<div class="subagent-header" onclick="this.parentElement.classList.toggle(\'expanded\')">' +
+          '<span class="subagent-icon">\uD83E\uDD16</span>' +
+          '<span class="subagent-label">Subagent</span>' +
+          '<span class="subagent-description">' + escHtml(description) + '</span>' +
+          '<span class="subagent-duration"></span>' +
+          '<span class="subagent-chevron">\u25B6</span>' +
+          '</div>' +
+          '<div class="subagent-body">' +
+          (prompt ? '<div class="subagent-prompt">' + escHtml(prompt.length > 300 ? prompt.substring(0, 297) + '...' : prompt) + '</div>' : '') +
+          '</div>';
+
+        b.body.appendChild(el);
+
+        b.subagents[subId] = {
+          el: el,
+          body: el.querySelector('.subagent-body'),
+          durationSpan: el.querySelector('.subagent-duration'),
+          startTime: Date.now(),
+          steps: []
+        };
+
+        return subId;
+      }
+
+      function addSubagentStep(bubbleId, subId, icon, text) {
+        var b = _bubbles[bubbleId];
+        if (!b || !b.subagents[subId]) return;
+        var sub = b.subagents[subId];
+        var stepHtml = _makeStepHtml(icon, text);
+        sub.body.insertAdjacentHTML('beforeend', stepHtml);
+        sub.steps.push(text);
+      }
+
+      function endSubagent(bubbleId, subId, success, durationMs) {
+        var b = _bubbles[bubbleId];
+        if (!b || !b.subagents[subId]) return;
+        var sub = b.subagents[subId];
+        var dur = durationMs || (Date.now() - sub.startTime);
+        sub.durationSpan.textContent = dur < 1000 ? dur + 'ms' : (dur / 1000).toFixed(1) + 's';
+
+        // Collapse after delay
+        setTimeout(function () {
+          sub.el.classList.remove('expanded');
+        }, 800);
+
+        // Record as a step in parent bubble
+        addStep(bubbleId, '\uD83E\uDD16', 'Subagent: ' + sub.el.querySelector('.subagent-description').textContent +
+          ' (' + sub.durationSpan.textContent + ')');
+      }
+
+      function reset() {
+        Object.keys(_bubbles).forEach(function (id) {
+          var b = _bubbles[id];
+          if (b.timer) clearInterval(b.timer);
+        });
+        _bubbles = {};
+        _nextId = 1;
+      }
+
+      return {
+        beginBubble: beginBubble,
+        addStep: addStep,
+        endBubble: endBubble,
+        beginSubagent: beginSubagent,
+        addSubagentStep: addSubagentStep,
+        endSubagent: endSubagent,
+        reset: reset,
+        _state: function () { return _bubbles; }
+      };
+    })();
+
+    window.WorkingBubbleRenderer = WorkingBubbleRenderer;
 
     function showTyping() {
       var container = document.getElementById('chatMessages');
@@ -14900,7 +16661,7 @@
       if (_win32IdeUrl) return _win32IdeUrl;
       // Last resort: proxy URL (never Ollama direct)
       if (!State.backend.directMode && State.backend.online) return State.backend.url;
-      return 'http://localhost:11435';
+      return _ideServerUrl || 'http://localhost:11435';
     }
 
     // --- Render CLI output lines with color coding ---
@@ -18001,7 +19762,7 @@
               if (rest && rest.charAt(0) === '[') {
                 steps = JSON.parse(rest);
               } else {
-                steps = [{ model: State.model.current || 'llama3', prompt: rest || 'Summarize the system' }];
+                steps = [{ model: State.model.current || (State.model.list && State.model.list[0] && State.model.list[0].name) || 'rawrxd', prompt: rest || 'Summarize the system' }];
               }
               addTerminalLine('  Running chain with ' + steps.length + ' step(s)...', 'system');
               var data = await EngineAPI.chain(steps);
@@ -19554,6 +21315,51 @@
       });
     }
 
+    function keepCode(btn) {
+      if (btn.classList.contains('applied')) return;
+      var block = btn.closest('.code-block');
+      var code = block.querySelector('pre').textContent;
+      var lang = '';
+      var langSpan = block.querySelector('.code-lang');
+      if (langSpan) lang = langSpan.textContent;
+      btn.classList.add('applied');
+      btn.textContent = 'Kept \u2713';
+      // Disable the undo button sibling
+      var undoBtn = block.querySelector('.code-btn-undo');
+      if (undoBtn) { undoBtn.classList.remove('applied'); undoBtn.textContent = 'Undo'; }
+      // Notify backend via WebView2 bridge
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(JSON.stringify({
+          type: 'keepCode', code: code, language: lang
+        }));
+      }
+      // Visual feedback
+      block.style.borderLeft = '3px solid var(--accent-green, #3fb950)';
+    }
+
+    function undoCode(btn) {
+      if (btn.classList.contains('applied')) return;
+      var block = btn.closest('.code-block');
+      var code = block.querySelector('pre').textContent;
+      var lang = '';
+      var langSpan = block.querySelector('.code-lang');
+      if (langSpan) lang = langSpan.textContent;
+      btn.classList.add('applied');
+      btn.textContent = 'Undone';
+      // Reset the keep button
+      var keepBtn = block.querySelector('.code-btn-keep');
+      if (keepBtn) { keepBtn.classList.remove('applied'); keepBtn.textContent = 'Keep'; }
+      // Notify backend
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(JSON.stringify({
+          type: 'undoCode', code: code, language: lang
+        }));
+      }
+      // Visual feedback
+      block.style.borderLeft = '3px solid var(--accent-red, #f85149)';
+      block.style.opacity = '0.6';
+    }
+
     function insertSnippet(type) {
       var snippets = {
         code: '```cpp\n// Your code here\n```',
@@ -19570,7 +21376,242 @@
       State.chat.messageCount = 0;
       document.getElementById('msgCount').textContent = '0';
       Conversation.clear();
+      // Reset tool action renderer state for new conversation
+      if (typeof ToolActionRenderer !== 'undefined') {
+        ToolActionRenderer.reset();
+      }
+      if (typeof WorkingBubbleRenderer !== 'undefined') {
+        WorkingBubbleRenderer.reset();
+      }
       addWelcomeMessage();
+    }
+
+    function toggleAgenticMode() {
+      State.agenticMode = !State.agenticMode;
+      var btn = document.getElementById('agenticModeBtn');
+      var label = document.getElementById('agenticModeLabel');
+      if (State.agenticMode) {
+        label.textContent = 'Agent: ON';
+        btn.style.opacity = '1.0';
+        btn.style.color = 'var(--accent-green)';
+        btn.title = 'Agentic Mode: ON \u2014 AI can read/write files, run commands, use git';
+        logDebug('[Agentic] Mode enabled \u2014 model will auto-execute tool calls', 'info');
+      } else {
+        label.textContent = 'Agent: OFF';
+        btn.style.opacity = '0.5';
+        btn.style.color = '';
+        btn.title = 'Agentic Mode: OFF \u2014 AI responds with text only';
+        logDebug('[Agentic] Mode disabled', 'info');
+      }
+    }
+
+    // ======================================================================
+    // GIT SOURCE CONTROL PANEL — Real production git via serve.py subprocess
+    // ======================================================================
+    function showGitPanel() {
+      document.getElementById('gitPanel').style.display = 'block';
+      document.getElementById('gitPanel').classList.add('active');
+      gitRefreshStatus();
+    }
+    function closeGitPanel() {
+      document.getElementById('gitPanel').style.display = 'none';
+      document.getElementById('gitPanel').classList.remove('active');
+    }
+
+    async function _gitPost(endpoint, body) {
+      var url = getActiveUrl() + endpoint;
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {}),
+        signal: AbortSignal.timeout(30000),
+      });
+      return res.json();
+    }
+
+    async function gitRefreshStatus() {
+      var listEl = document.getElementById('gitChangesList');
+      var branchEl = document.getElementById('gitBranch');
+      var summaryEl = document.getElementById('gitStatusSummary');
+      var remotesEl = document.getElementById('gitRemotesList');
+      try {
+        listEl.innerHTML = '<div style="color:var(--accent-cyan);">Loading...</div>';
+        var data = await _gitPost('/api/git/status');
+        if (data.error) {
+          listEl.innerHTML = '<div style="color:var(--accent-red);">' + esc(data.error) + '</div>';
+          return;
+        }
+        branchEl.textContent = '\u2387 ' + (data.branch || 'detached');
+        summaryEl.textContent = data.clean ? '\u2714 clean' : data.totalChanges + ' change(s)';
+        summaryEl.style.color = data.clean ? 'var(--accent-green)' : 'var(--accent-yellow)';
+
+        // Render changes
+        if (data.changes && data.changes.length > 0) {
+          var html = '';
+          data.changes.forEach(function (c) {
+            var color = c.staged ? 'var(--accent-green)' : 'var(--accent-yellow)';
+            var icon = c.status === '?' || c.status === '??' ? '\u2753' :
+              c.status === 'A' ? '\u2795' :
+                c.status === 'D' ? '\u2796' :
+                  c.status === 'M' ? '\u270F' : '\u2022';
+            html += '<div style="padding:2px 4px;color:' + color + ';">' + icon + ' '
+              + '<span style="color:var(--text-primary);">' + esc(c.file) + '</span>'
+              + ' <span style="opacity:0.5;">[' + esc(c.status) + ']</span></div>';
+          });
+          listEl.innerHTML = html;
+        } else {
+          listEl.innerHTML = '<div style="color:var(--accent-green);">Working tree clean</div>';
+        }
+
+        // Render remotes
+        if (data.remotes && data.remotes.length > 0) {
+          var rhtml = '';
+          data.remotes.forEach(function (r) {
+            rhtml += '<div>' + esc(r.name) + ' \u2192 ' + esc(r.url) + '</div>';
+          });
+          remotesEl.innerHTML = rhtml;
+        } else {
+          remotesEl.innerHTML = '<div style="color:var(--text-muted);">No remotes configured</div>';
+        }
+      } catch (e) {
+        listEl.innerHTML = '<div style="color:var(--accent-red);">Error: ' + esc(e.message) + '</div>';
+      }
+    }
+
+    async function gitStageAll() {
+      try {
+        var data = await _gitPost('/api/git/add', { files: ['.'] });
+        if (data.ok) {
+          logDebug('[Git] Staged all files', 'info');
+          gitRefreshStatus();
+        } else {
+          logDebug('[Git] Stage failed: ' + (data.error || 'unknown'), 'error');
+        }
+      } catch (e) {
+        logDebug('[Git] Stage error: ' + e.message, 'error');
+      }
+    }
+
+    async function gitCommit() {
+      var msg = document.getElementById('gitCommitMsg').value.trim();
+      if (!msg) {
+        logDebug('[Git] Empty commit message', 'warn');
+        return;
+      }
+      try {
+        // Auto-stage all first
+        await _gitPost('/api/git/add', { files: ['.'] });
+        var data = await _gitPost('/api/git/commit', { message: msg });
+        if (data.ok) {
+          logDebug('[Git] Committed: ' + (data.hash || '') + ' \u2014 ' + msg, 'info');
+          document.getElementById('gitCommitMsg').value = '';
+          addMessage('system', '\u2714 **Git Commit:** ' + esc(msg) + (data.hash ? ' (' + data.hash + ')' : ''));
+          gitRefreshStatus();
+        } else if (data.noop) {
+          logDebug('[Git] Nothing to commit', 'info');
+          addMessage('system', '\u2139 Nothing to commit, working tree clean');
+        } else {
+          logDebug('[Git] Commit failed: ' + (data.error || 'unknown'), 'error');
+          addMessage('system', '\u274c **Git Commit Failed:** ' + esc(data.error || 'unknown'));
+        }
+      } catch (e) {
+        logDebug('[Git] Commit error: ' + e.message, 'error');
+        addMessage('system', '\u274c **Git Error:** ' + esc(e.message));
+      }
+    }
+
+    async function gitPush() {
+      try {
+        addMessage('system', '\u23F3 Pushing to remote...');
+        var data = await _gitPost('/api/git/push', {});
+        if (data.ok) {
+          logDebug('[Git] Push successful: ' + (data.output || ''), 'info');
+          addMessage('system', '\u2714 **Git Push:** Successfully pushed to ' + (data.remote || 'origin') + '/' + (data.branch || 'current'));
+        } else {
+          logDebug('[Git] Push failed: ' + (data.error || 'unknown'), 'error');
+          addMessage('system', '\u274c **Git Push Failed:** ' + esc(data.error || 'unknown'));
+        }
+      } catch (e) {
+        logDebug('[Git] Push error: ' + e.message, 'error');
+        addMessage('system', '\u274c **Git Push Error:** ' + esc(e.message));
+      }
+    }
+
+    async function gitPull() {
+      try {
+        addMessage('system', '\u23F3 Pulling from remote...');
+        var data = await _gitPost('/api/git/pull', {});
+        if (data.ok) {
+          logDebug('[Git] Pull successful: ' + (data.output || ''), 'info');
+          addMessage('system', '\u2714 **Git Pull:** ' + esc(data.output || 'Up to date'));
+          gitRefreshStatus();
+        } else {
+          logDebug('[Git] Pull failed: ' + (data.error || 'unknown'), 'error');
+          addMessage('system', '\u274c **Git Pull Failed:** ' + esc(data.error || 'unknown'));
+        }
+      } catch (e) {
+        logDebug('[Git] Pull error: ' + e.message, 'error');
+      }
+    }
+
+    async function gitShowDiff(staged) {
+      var diffEl = document.getElementById('gitDiffOutput');
+      try {
+        diffEl.textContent = 'Loading diff...';
+        var data = await _gitPost('/api/git/diff', { staged: !!staged });
+        if (data.error) {
+          diffEl.textContent = 'Error: ' + data.error;
+          diffEl.style.color = 'var(--accent-red)';
+          return;
+        }
+        var diffText = data.diff || '(no changes)';
+        // Syntax-highlight diff
+        var lines = diffText.split('\n');
+        var html = '';
+        lines.forEach(function (line) {
+          if (line.startsWith('+') && !line.startsWith('+++')) {
+            html += '<span style="color:var(--accent-green);">' + esc(line) + '</span>\n';
+          } else if (line.startsWith('-') && !line.startsWith('---')) {
+            html += '<span style="color:var(--accent-red);">' + esc(line) + '</span>\n';
+          } else if (line.startsWith('@@')) {
+            html += '<span style="color:var(--accent-cyan);">' + esc(line) + '</span>\n';
+          } else {
+            html += esc(line) + '\n';
+          }
+        });
+        diffEl.innerHTML = html;
+        diffEl.style.color = '';
+      } catch (e) {
+        diffEl.textContent = 'Error: ' + e.message;
+        diffEl.style.color = 'var(--accent-red)';
+      }
+    }
+
+    async function gitShowLog() {
+      var logEl = document.getElementById('gitLogOutput');
+      try {
+        logEl.innerHTML = '<div style="color:var(--accent-cyan);">Loading...</div>';
+        var data = await _gitPost('/api/git/log', { limit: 20 });
+        if (data.error) {
+          logEl.innerHTML = '<div style="color:var(--accent-red);">' + esc(data.error) + '</div>';
+          return;
+        }
+        if (!data.commits || data.commits.length === 0) {
+          logEl.innerHTML = '<div style="color:var(--text-muted);">No commits</div>';
+          return;
+        }
+        var html = '';
+        data.commits.forEach(function (c) {
+          html += '<div style="padding:4px 0;border-bottom:1px solid var(--border);">'
+            + '<span style="color:var(--accent-cyan);font-family:var(--font-mono);">' + esc(c.shortHash) + '</span> '
+            + '<span style="color:var(--text-primary);">' + esc(c.message) + '</span><br>'
+            + '<span style="color:var(--text-muted);font-size:9px;">' + esc(c.author) + ' \u2022 ' + esc(c.date) + '</span>'
+            + '</div>';
+        });
+        logEl.innerHTML = html;
+      } catch (e) {
+        logEl.innerHTML = '<div style="color:var(--accent-red);">Error: ' + esc(e.message) + '</div>';
+      }
     }
 
     // ======================================================================
@@ -21861,7 +23902,7 @@
           if (stepsRaw) {
             steps = JSON.parse(stepsRaw);
           } else {
-            steps = [{ model: State.model.current || 'llama3', prompt: prompt }];
+            steps = [{ model: State.model.current || (State.model.list && State.model.list[0] && State.model.list[0].name) || 'rawrxd', prompt: prompt }];
           }
           data = await EngineAPI.chain(steps);
         } else {
@@ -23654,11 +25695,12 @@
       var outputEl = document.getElementById('extPsOutput');
       if (!outputEl) return;
 
+      var basePath = ExtensionState.craftRoom ? ExtensionState.craftRoom.replace(/\\craft_room$/, '') : (window._rawrxdBasePath || 'd:\\RawrXD');
       var commands = {
         'list': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-Extension | Format-Table -AutoSize',
         'menu': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Show-ExtensionMenu',
-        'craft': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "d:\\RawrXD\\craft_room" -Recurse | Format-Table Name, Length, LastWriteTime',
-        'scan': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "d:\\RawrXD\\extensions" -Directory | ForEach-Object { Get-Extension -Name $_.Name }'
+        'craft': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "' + ExtensionState.craftRoom + '" -Recurse | Format-Table Name, Length, LastWriteTime',
+        'scan': 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; Get-ChildItem -Path "' + ExtensionState.extensionRoot + '" -Directory | ForEach-Object { Get-Extension -Name $_.Name }'
       };
 
       var cmd = commands[action];
@@ -23670,10 +25712,10 @@
         EngineAPI._cli(cmd).then(function (data) {
           outputEl.textContent = data.output || data.result || JSON.stringify(data, null, 2);
         }).catch(function (err) {
-          outputEl.textContent = 'Backend unavailable. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+          outputEl.textContent = 'Backend unavailable. Run this in PowerShell:\n\n  cd ' + basePath + '\n  ' + cmd;
         });
       } else {
-        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd ' + basePath + '\n  ' + cmd;
       }
     }
 
@@ -23689,16 +25731,17 @@
       var cmd = 'Import-Module .\\scripts\\ExtensionManager.psm1 -Force; New-Extension -Name "' + name + '" -Type ' + type + ' -AutoInstall';
       outputEl.textContent = 'Creating extension: ' + name + ' (type: ' + type + ')...\n\n  ' + cmd;
 
+      var basePath = ExtensionState.craftRoom ? ExtensionState.craftRoom.replace(/\\craft_room$/, '') : (window._rawrxdBasePath || 'd:\\RawrXD');
       if (typeof EngineAPI !== 'undefined' && EngineAPI._cli) {
         EngineAPI._cli(cmd).then(function (data) {
           outputEl.textContent = data.output || data.result || ('\u2705 Created extension: ' + name);
-          ExtensionState.install({ id: name.toLowerCase(), name: name, enabled: true, type: type.toLowerCase(), version: '1.0.0', path: 'd:\\RawrXD\\extensions\\' + name.toLowerCase() });
+          ExtensionState.install({ id: name.toLowerCase(), name: name, enabled: true, type: type.toLowerCase(), version: '1.0.0', path: ExtensionState.extensionRoot + '\\' + name.toLowerCase() });
           refreshExtPanel();
         }).catch(function (err) {
-          outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+          outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd ' + basePath + '\n  ' + cmd;
         });
       } else {
-        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd d:\\RawrXD\n  ' + cmd;
+        outputEl.textContent = 'Backend offline. Run this in PowerShell:\n\n  cd ' + basePath + '\n  ' + cmd;
       }
     }
 
@@ -26039,7 +28082,7 @@
         elements: function () {
           var ids = ['chatMessages', 'chatInput', 'modelSelect', 'terminalInput', 'backendStatus', 'cotSwitch',
             'debugPanel', 'perfPanel', 'securityPanel', 'agentDashboard', 'failurePanel', 'extensionPanel',
-            'endpointPanel', 'browserPanel', 'fileEditorPanel', 'rePanel'];
+            'endpointPanel', 'browserPanel', 'fileEditorPanel', 'gitPanel', 'rePanel'];
           var result = {};
           for (var i = 0; i < ids.length; i++) { result[ids[i]] = !!document.getElementById(ids[i]); }
           return result;
@@ -26161,13 +28204,38 @@
       function uid() { return 'mw-' + (nextId++); }
 
       function getBackendUrl() {
-        try { return (window.State && window.State.backend && window.State.backend.url) || 'http://localhost:11434'; }
-        catch (e) { return 'http://localhost:11434'; }
+        try {
+          // Prefer proxy URL (11435) which routes to all backends (GGUF, Ollama, blob, cloud)
+          if (window.State && window.State.backend && window.State.backend.url) return window.State.backend.url;
+          if (typeof _ideServerUrl !== 'undefined' && _ideServerUrl) return _ideServerUrl;
+          return 'http://localhost:11435';
+        } catch (e) { return 'http://localhost:11435'; }
+      }
+
+      function getOllamaDirectUrl() {
+        try {
+          return (window.State && window.State.backend && window.State.backend.ollamaDirectUrl) || 'http://localhost:11434';
+        } catch (e) { return 'http://localhost:11434'; }
       }
 
       function getActiveModel() {
-        try { return (window.State && window.State.model && window.State.model.active) || 'llama3.2'; }
-        catch (e) { return 'llama3.2'; }
+        try {
+          // 1) Read from main IDE model selector dropdown (single source of truth)
+          var mainSelect = document.getElementById('modelSelect');
+          if (mainSelect && mainSelect.value) return mainSelect.value;
+          // 2) Read from State.model
+          if (window.State && window.State.model) {
+            if (window.State.model.current) return window.State.model.current;
+            if (window.State.model.active) return window.State.model.active;
+            if (window.State.model.list && window.State.model.list.length > 0) {
+              var first = window.State.model.list[0];
+              return first.name || first;
+            }
+          }
+          // 3) Fallback: first model from cached model list
+          if (modelCache && modelCache.length > 0) return modelCache[0].name || modelCache[0];
+          return 'llama3.2:3b';
+        } catch (e) { return 'llama3.2:3b'; }
       }
 
       function escHtml(s) {
@@ -26707,8 +28775,8 @@
             model: model,
             messages: msgs,
             stream: true,
-            max_tokens: 4096,
-            temperature: 0.7
+            max_tokens: (window.State && window.State.gen && window.State.gen.maxTokens) || 4096,
+            temperature: (window.State && window.State.gen && window.State.gen.temperature) || 0.7
           })
         }).then(function (resp) {
           if (!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -26957,61 +29025,80 @@
         grid.innerHTML = '';
         setWindowStatus(id, 'busy', 'Swarming...');
 
-        // Get all available models
-        var url = getBackendUrl();
-        fetch(url + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
-          var models = (data.models || []).slice(0, 8);
-          if (models.length === 0) {
+        // Get all available models — two-tier: proxy /models first, then /api/tags
+        var proxyUrl = getBackendUrl();
+        var ollamaUrl = getOllamaDirectUrl();
+
+        function launchSwarmWithModels(models) {
+          var sliced = models.slice(0, 8);
+          if (sliced.length === 0) {
             grid.innerHTML = '<div style="padding:20px;color:#888;">No models available</div>';
             setWindowStatus(id, 'error', 'No models');
             return;
           }
 
-          taskCount += models.length;
+          taskCount += sliced.length;
           updateKernelStatus();
           var completed = 0;
 
-          models.forEach(function (m) {
+          sliced.forEach(function (m) {
+            var modelName = m.name || m.model || m;
             var agentId = uid();
             var card = document.createElement('div');
             card.className = 'mw-swarm-agent';
             card.id = agentId;
             card.innerHTML =
-              '<div class="mw-agent-header"><span>\u{1F916}</span><span>' + escHtml(m.name) + '</span></div>' +
-              '<div class="mw-agent-model">' + escHtml(m.name) + '</div>' +
+              '<div class="mw-agent-header"><span>\u{1F916}</span><span>' + escHtml(modelName) + '</span></div>' +
+              '<div class="mw-agent-model">' + escHtml(modelName) + '</div>' +
               '<div class="mw-agent-status">Starting...</div>' +
               '<div class="mw-agent-progress"><div class="mw-agent-progress-bar" style="width:0%"></div></div>' +
               '<div class="mw-agent-response" style="font-size:11px;color:#aaa;margin-top:4px;max-height:120px;overflow-y:auto;"></div>';
             grid.appendChild(card);
 
-            // Fire parallel request
-            swarmAgent(agentId, m.name, query, function () {
+            swarmAgent(agentId, modelName, query, function () {
               completed++;
-              if (completed >= models.length) {
-                setWindowStatus(id, 'idle', 'Swarm complete — ' + models.length + ' agents');
-                taskCount -= models.length;
+              if (completed >= sliced.length) {
+                setWindowStatus(id, 'idle', 'Swarm complete \u2014 ' + sliced.length + ' agents');
+                taskCount -= sliced.length;
                 updateKernelStatus();
               }
             });
           });
-        }).catch(function () {
-          grid.innerHTML = '<div style="padding:20px;color:#ff4444;">Failed to load models from ' + escHtml(url) + '</div>';
-          setWindowStatus(id, 'error', 'Backend error');
-        });
+        }
+
+        // Try proxy /models first
+        fetch(proxyUrl + '/models', { signal: AbortSignal.timeout(5000) })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (data) {
+            if (data.models && data.models.length > 0) { launchSwarmWithModels(data.models); return; }
+            throw new Error('empty');
+          })
+          .catch(function () {
+            // Fallback: /api/tags
+            fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(5000) })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                var models = (data.models || []).map(function (m) {
+                  return { name: m.name || m.model, type: 'ollama' };
+                });
+                launchSwarmWithModels(models);
+              })
+              .catch(function () {
+                grid.innerHTML = '<div style="padding:20px;color:#ff4444;">Failed to load models from backend</div>';
+                setWindowStatus(id, 'error', 'Backend error');
+              });
+          });
       }
 
       function swarmAgent(agentId, model, query, onDone) {
         var url = getBackendUrl();
+        var ollamaUrl = getOllamaDirectUrl();
         var statusEl = document.querySelector('#' + agentId + ' .mw-agent-status');
         var barEl = document.querySelector('#' + agentId + ' .mw-agent-progress-bar');
         var respEl = document.querySelector('#' + agentId + ' .mw-agent-response');
         if (statusEl) statusEl.textContent = 'Generating...';
 
-        fetch(url + '/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: query }], stream: true })
-        }).then(function (resp) {
+        function _pumpStream(resp) {
           var reader = resp.body.getReader();
           var decoder = new TextDecoder();
           var text = '';
@@ -27020,33 +29107,46 @@
           function pump() {
             return reader.read().then(function (res) {
               if (res.done) {
-                if (statusEl) statusEl.textContent = 'Done — ' + tokens + ' tokens';
+                if (statusEl) statusEl.textContent = 'Done \u2014 ' + tokens + ' tokens';
                 if (barEl) barEl.style.width = '100%';
                 onDone();
                 return;
               }
               var chunk = decoder.decode(res.value, { stream: true });
               chunk.split('\n').forEach(function (line) {
-                line = line.trim();
-                if (!line) return;
-                try {
-                  var j = JSON.parse(line);
-                  var d = (j.message && j.message.content) || j.response || '';
-                  if (d) {
-                    text += d;
-                    tokens++;
-                    if (respEl) respEl.textContent = text;
-                    if (barEl) barEl.style.width = Math.min(tokens, 100) + '%';
-                  }
-                } catch (e) { }
+                var d = _parseStreamChunk(line);
+                if (d) {
+                  text += d;
+                  tokens++;
+                  if (respEl) respEl.textContent = text;
+                  if (barEl) barEl.style.width = Math.min(tokens, 100) + '%';
+                }
               });
               return pump();
             });
           }
           return pump();
-        }).catch(function (e) {
-          if (statusEl) statusEl.textContent = 'Error: ' + e.message;
-          onDone();
+        }
+
+        // Try /v1/chat/completions first, fallback to /api/chat
+        fetch(url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: query }], stream: true, max_tokens: 4096 })
+        }).then(function (resp) {
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          return _pumpStream(resp);
+        }).catch(function () {
+          fetch(ollamaUrl + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: model, messages: [{ role: 'user', content: query }], stream: true })
+          }).then(function (resp) {
+            return _pumpStream(resp);
+          }).catch(function (e) {
+            if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+            onDone();
+          });
         });
       }
 
@@ -27112,10 +29212,29 @@
           });
           output.textContent += '\n$ ';
         } else if (cmd === 'models') {
-          fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (d) {
-            (d.models || []).forEach(function (m) { output.textContent += '  ' + m.name + '\n'; });
-            output.textContent += '\n$ ';
-          }).catch(function () { output.textContent += 'Error fetching models\n\n$ '; });
+          // Two-tier: proxy /models first, then /api/tags
+          var _proxyUrl = getBackendUrl();
+          var _ollamaUrl = getOllamaDirectUrl();
+          function _showModels(models) {
+            models.forEach(function (m) {
+              var name = m.name || m.model || m;
+              var tag = m.type ? ' [' + m.type + ']' : '';
+              output.textContent += '  ' + name + tag + '\n';
+            });
+            output.textContent += '\n  Total: ' + models.length + ' models\n\n$ ';
+          }
+          fetch(_proxyUrl + '/models', { signal: AbortSignal.timeout(5000) })
+            .then(function (r) { if (!r.ok) throw new Error('fail'); return r.json(); })
+            .then(function (d) {
+              if (d.models && d.models.length > 0) { _showModels(d.models); return; }
+              throw new Error('empty');
+            })
+            .catch(function () {
+              fetch(_ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(5000) })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { _showModels((d.models || []).map(function (m) { return { name: m.name || m.model, type: 'ollama' }; })); })
+                .catch(function () { output.textContent += 'Error fetching models\n\n$ '; });
+            });
         } else if (cmd === 'stats') {
           output.textContent += '  Windows: ' + Object.keys(windows).length + '\n';
           output.textContent += '  Tasks: ' + taskCount + '\n';
@@ -27148,47 +29267,100 @@
       }
 
       function populateModelSelect(select, current) {
-        fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
-          var models = data.models || [];
+        // Use same two-tier fetch as main IDE: proxy /models first (GGUF+Ollama+blob+cloud), then /api/tags fallback
+        var proxyUrl = getBackendUrl();
+        var ollamaUrl = getOllamaDirectUrl();
+
+        function fillSelect(models) {
           modelCache = models;
           select.innerHTML = '';
           models.forEach(function (m) {
             var opt = document.createElement('option');
-            opt.value = m.name;
-            opt.textContent = m.name;
-            if (m.name === current) opt.selected = true;
+            opt.value = m.name || m;
+            opt.textContent = m.name || m;
+            if ((m.name || m) === current) opt.selected = true;
             select.appendChild(opt);
           });
-        }).catch(function () { /* keep default */ });
+        }
+
+        // Try proxy /models first (includes GGUF, blob, cloud models alongside Ollama)
+        fetch(proxyUrl + '/models', { signal: AbortSignal.timeout(5000) })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (data) {
+            if (data.models && data.models.length > 0) { fillSelect(data.models); return; }
+            throw new Error('empty');
+          })
+          .catch(function () {
+            // Fallback: Ollama /api/tags
+            fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(5000) })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                var models = (data.models || []).map(function (m) {
+                  return { name: m.name || m.model, type: 'ollama', size: m.size };
+                });
+                fillSelect(models);
+              })
+              .catch(function () { /* keep default */ });
+          });
       }
 
       function loadModelList(id) {
         var list = document.getElementById(id + '-list');
         if (!list) return;
-        fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
-          var models = data.models || [];
+        var proxyUrl = getBackendUrl();
+        var ollamaUrl = getOllamaDirectUrl();
+
+        function renderModels(models) {
+          modelCache = models;
           list.innerHTML = '';
           if (models.length === 0) {
             list.innerHTML = '<div style="padding:20px;color:#666;text-align:center;">No models found</div>';
             return;
           }
           models.forEach(function (m) {
+            var name = m.name || m.model || m;
             var card = document.createElement('div');
             card.className = 'mw-model-card';
             card.onclick = function () {
               document.querySelectorAll('.mw-model-card').forEach(function (c) { c.classList.remove('selected'); });
               card.classList.add('selected');
+              // Also switch the active model in all open windows when clicked
+              if (window.State && window.State.model) window.State.model.current = name;
             };
-            var sizeGB = m.size ? (m.size / 1073741824).toFixed(1) + ' GB' : '?';
+            var sizeStr = '?';
+            if (m.size) {
+              sizeStr = typeof m.size === 'string' ? m.size : (m.size / 1073741824).toFixed(1) + ' GB';
+            }
+            var typeTag = m.type ? '<span style="color:#00d9ff;font-size:10px;margin-left:8px;">[' + escHtml(m.type) + ']</span>' : '';
             card.innerHTML =
               '<span style="font-size:18px;">\u{1F916}</span>' +
-              '<span class="mw-model-name">' + escHtml(m.name) + '</span>' +
-              '<span class="mw-model-size">' + sizeGB + '</span>';
+              '<span class="mw-model-name">' + escHtml(name) + '</span>' +
+              typeTag +
+              '<span class="mw-model-size">' + sizeStr + '</span>';
             list.appendChild(card);
           });
-        }).catch(function () {
-          list.innerHTML = '<div style="padding:20px;color:#ff4444;">Backend not reachable</div>';
-        });
+        }
+
+        // Two-tier fetch: proxy /models first (all model types), then /api/tags fallback
+        fetch(proxyUrl + '/models', { signal: AbortSignal.timeout(5000) })
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function (data) {
+            if (data.models && data.models.length > 0) { renderModels(data.models); return; }
+            throw new Error('empty');
+          })
+          .catch(function () {
+            fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(5000) })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                var models = (data.models || []).map(function (m) {
+                  return { name: m.name || m.model, type: 'ollama', size: m.size };
+                });
+                renderModels(models);
+              })
+              .catch(function () {
+                list.innerHTML = '<div style="padding:20px;color:#ff4444;">Backend not reachable</div>';
+              });
+          });
       }
 
       // ========== PERF MONITOR ==========
@@ -27210,13 +29382,35 @@
       }
 
       // ========== STREAMING HELPERS ==========
+      // Unified streaming: tries /v1/chat/completions first (OpenAI-compat), falls back to /api/chat (Ollama)
+      function _parseStreamChunk(line) {
+        line = line.trim();
+        if (!line || line === 'data: [DONE]') return '';
+        if (line.startsWith('data: ')) line = line.slice(6);
+        try {
+          var j = JSON.parse(line);
+          // OpenAI format
+          if (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) return j.choices[0].delta.content;
+          // Ollama format
+          if (j.message && j.message.content) return j.message.content;
+          // Raw
+          if (j.response) return j.response;
+        } catch (e) { }
+        return '';
+      }
+
       function streamToElement(el, model, prompt_text, onDone) {
         var url = getBackendUrl();
-        fetch(url + '/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: prompt_text }], stream: true })
-        }).then(function (resp) {
+        var msgs = [{ role: 'user', content: prompt_text }];
+        var genParams = {
+          model: model,
+          messages: msgs,
+          stream: true,
+          max_tokens: (window.State && window.State.gen && window.State.gen.maxTokens) || 4096,
+          temperature: (window.State && window.State.gen && window.State.gen.temperature) || 0.7
+        };
+
+        function _streamRead(resp) {
           var reader = resp.body.getReader();
           var decoder = new TextDecoder();
           function pump() {
@@ -27224,33 +29418,51 @@
               if (res.done) { if (onDone) onDone(); return; }
               var chunk = decoder.decode(res.value, { stream: true });
               chunk.split('\n').forEach(function (line) {
-                line = line.trim();
-                if (!line) return;
-                try {
-                  var j = JSON.parse(line);
-                  var d = (j.message && j.message.content) || j.response || '';
-                  if (d) el.textContent += d;
-                } catch (e) { }
+                var d = _parseStreamChunk(line);
+                if (d) el.textContent += d;
               });
               el.scrollTop = el.scrollHeight;
               return pump();
             });
           }
           return pump();
-        }).catch(function (e) {
-          el.textContent += '\nError: ' + e.message;
-          if (onDone) onDone();
+        }
+
+        // Try OpenAI-compat first
+        fetch(url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(genParams)
+        }).then(function (resp) {
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          return _streamRead(resp);
+        }).catch(function () {
+          // Fallback: Ollama /api/chat
+          fetch(url + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: model, messages: msgs, stream: true })
+          }).then(function (resp) {
+            return _streamRead(resp);
+          }).catch(function (e) {
+            el.textContent += '\nError: ' + e.message;
+            if (onDone) onDone();
+          });
         });
       }
 
       function streamToDiv(div, model, msgs, onDone) {
         var url = getBackendUrl();
         var text = '';
-        fetch(url + '/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: model, messages: msgs, stream: true })
-        }).then(function (resp) {
+        var genParams = {
+          model: model,
+          messages: msgs,
+          stream: true,
+          max_tokens: (window.State && window.State.gen && window.State.gen.maxTokens) || 4096,
+          temperature: (window.State && window.State.gen && window.State.gen.temperature) || 0.7
+        };
+
+        function _streamRead(resp) {
           var reader = resp.body.getReader();
           var decoder = new TextDecoder();
           function pump() {
@@ -27258,21 +29470,35 @@
               if (res.done) { if (onDone) onDone(text); return; }
               var chunk = decoder.decode(res.value, { stream: true });
               chunk.split('\n').forEach(function (line) {
-                line = line.trim();
-                if (!line) return;
-                try {
-                  var j = JSON.parse(line);
-                  var d = (j.message && j.message.content) || j.response || '';
-                  if (d) { text += d; div.textContent = text; }
-                } catch (e) { }
+                var d = _parseStreamChunk(line);
+                if (d) { text += d; div.textContent = text; }
               });
               return pump();
             });
           }
           return pump();
-        }).catch(function (e) {
-          div.textContent += '\nError: ' + e.message;
-          if (onDone) onDone(text);
+        }
+
+        // Try OpenAI-compat first
+        fetch(url + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(genParams)
+        }).then(function (resp) {
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          return _streamRead(resp);
+        }).catch(function () {
+          // Fallback: Ollama /api/chat
+          fetch(url + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: model, messages: msgs, stream: true })
+          }).then(function (resp) {
+            return _streamRead(resp);
+          }).catch(function (e) {
+            div.textContent += '\nError: ' + e.message;
+            if (onDone) onDone(text);
+          });
         });
       }
 
@@ -27439,8 +29665,11 @@
         setWindowStatus(id, 'busy', 'Benchmarking...');
 
         if (type === 'allmodels') {
-          fetch(getBackendUrl() + '/api/tags').then(function (r) { return r.json(); }).then(function (data) {
-            var models = data.models || [];
+          // Two-tier model fetch: proxy /models first, then /api/tags
+          var proxyUrl = getBackendUrl();
+          var ollamaUrl = getOllamaDirectUrl();
+
+          function benchAllModels(models) {
             var idx = 0;
             function benchNext() {
               if (idx >= models.length) {
@@ -27448,23 +29677,52 @@
                 return;
               }
               var m = models[idx++];
-              results.textContent += 'Testing ' + m.name + '... ';
+              var mName = m.name || m.model || m;
+              results.textContent += 'Testing ' + mName + '... ';
               var start = performance.now();
-              fetch(getBackendUrl() + '/api/chat', {
+              // Use /v1/chat/completions (proxy) with fallback to /api/chat
+              fetch(proxyUrl + '/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: m.name, messages: [{ role: 'user', content: 'Hello' }], stream: false })
+                body: JSON.stringify({ model: mName, messages: [{ role: 'user', content: 'Hello' }], stream: false, max_tokens: 10 })
+              }).then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
               }).then(function () {
                 var ms = (performance.now() - start).toFixed(0);
                 results.textContent += ms + 'ms\n';
                 benchNext();
-              }).catch(function (e) {
-                results.textContent += 'FAILED: ' + e.message + '\n';
-                benchNext();
+              }).catch(function () {
+                // Fallback: /api/chat
+                fetch(ollamaUrl + '/api/chat', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ model: mName, messages: [{ role: 'user', content: 'Hello' }], stream: false })
+                }).then(function () {
+                  var ms = (performance.now() - start).toFixed(0);
+                  results.textContent += ms + 'ms\n';
+                  benchNext();
+                }).catch(function (e) {
+                  results.textContent += 'FAILED: ' + e.message + '\n';
+                  benchNext();
+                });
               });
             }
             benchNext();
-          });
+          }
+
+          fetch(proxyUrl + '/models', { signal: AbortSignal.timeout(5000) })
+            .then(function (r) { if (!r.ok) throw new Error('fail'); return r.json(); })
+            .then(function (d) {
+              if (d.models && d.models.length > 0) { benchAllModels(d.models); return; }
+              throw new Error('empty');
+            })
+            .catch(function () {
+              fetch(ollamaUrl + '/api/tags', { signal: AbortSignal.timeout(5000) })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { benchAllModels((d.models || []).map(function (m) { return { name: m.name || m.model }; })); })
+                .catch(function () { results.textContent += 'Failed to fetch models\n'; setWindowStatus(id, 'error', 'No models'); });
+            });
         } else {
           // Single benchmark
           var start = performance.now();
@@ -27643,6 +29901,7 @@
   <!-- Action Item #20: Chat Command Router — exposes /p, /preset, /cot, /fix, /agent etc. -->
   <script src="ide_chat_commands.js"
     onerror="console.warn('[RawrXD] ide_chat_commands.js not found — /commands disabled')"></script>
+  <script src="/gui/rawrxd-nav.js"></script>
 </body>
 
 </html>

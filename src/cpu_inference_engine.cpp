@@ -35,6 +35,10 @@ static inline float hsum_avx_ops(__m256 v) {
 }
 
 namespace CPUOps {
+    static bool m_avx2Enabled = false;
+    static bool m_multiThreaded = false;
+    static unsigned int m_threadCount = 0;
+
     // AVX2 Vector Add: c = a + b
     void VectorAdd(const float* a, const float* b, float* c, int size) {
         int i = 0;
@@ -357,8 +361,34 @@ namespace CPUOps {
          }
     }
     
-    void EnableAVX2(bool) {}
-    void EnableMultiThreading(bool) {}
+    void EnableAVX2(bool enable) {
+        m_avx2Enabled = enable;
+        if (enable) {
+            // Verify CPU support via CPUID
+            #ifdef _MSC_VER
+            int cpuInfo[4];
+            __cpuidex(cpuInfo, 7, 0);
+            if (!(cpuInfo[1] & (1 << 5))) { // AVX2 bit in EBX
+                m_avx2Enabled = false; // CPU doesn't support AVX2
+            }
+            #else
+            __builtin_cpu_init();
+            if (!__builtin_cpu_supports("avx2")) {
+                m_avx2Enabled = false;
+            }
+            #endif
+        }
+    }
+
+    void EnableMultiThreading(bool enable) {
+        m_multiThreaded = enable;
+        if (enable && m_threadCount == 0) {
+            m_threadCount = std::thread::hardware_concurrency();
+            if (m_threadCount == 0) m_threadCount = 4; // Fallback
+        } else if (!enable) {
+            m_threadCount = 1;
+        }
+    }
     
     // AVX2 VectorScale
     void VectorScale(float* data, float scale, int size) {
@@ -402,49 +432,10 @@ namespace CPUOps {
     //   bytes 4..7   → low 4 bits of mins[0..7]
     //   bytes 8..11  → high 2 bits of scales[0..7] and mins[0..7]
     // ========================================================================
-    static void unpack_k_scales(const uint8_t scales_packed[12],
-                                 uint8_t scales_out[8], uint8_t mins_out[8]) {
-        // Low 4 bits
-        for (int i = 0; i < 4; ++i) {
-            scales_out[2*i+0] = scales_packed[i] & 0x3F;
-            scales_out[2*i+1] = scales_packed[i] >> 4; // Note: only uses bits [7:4], but we need 6 bits total
-        }
-        // Actually: the canonical llama.cpp encoding is:
-        //   scales[i] low 6 bits come from two sources.
-        // Let's use the exact ggml reference implementation logic.
-        
-        // Rewrite with exact ggml logic:
-        // bytes 0-3: pairs of 4-bit values for low nibbles of sc and m
-        //   sc[j] & 0xF for j=0..7  packed into bytes 0..3
-        //   m[j]  & 0xF for j=0..7  packed into bytes 4..7
-        //   (sc[j] >> 4) & 3  and (m[j] >> 4) & 3 packed into bytes 8..11
-        scales_out[0] = (scales_packed[0] & 0x3F);
-        scales_out[1] = (scales_packed[0] >> 6) | ((scales_packed[8] & 0x03) << 2) | ((scales_packed[1] & 0x0F) << 4 & 0); // complex
-        
-        // This is getting messy. Let's use the EXACT ggml reference decode.
-        // From ggml-quants.c dequantize_row_q4_K:
-        //
-        //   const uint8_t * scales = x[i].scales;
-        //   for (int j = 0; j < QK_K/64; ++j) {  // j = 0..3
-        //       // 2 sub-blocks per j, 32 elements each
-        //       uint8_t sc = scales[j];       // for j < 4: scale  low nibble
-        //       uint8_t m  = scales[j + 4];   // for j < 4: min    low nibble
-        //       ...
-        //   }
-        //
-        // Actually the 6-bit decode is:
-        //   for j=0..3:  sc[2j+0] = scales[j]&0xF | ((scales[j+8]&3)<<4)
-        //                sc[2j+1] = scales[j]>>4   | (((scales[j+8]>>2)&3)<<4)
-        //                 m[2j+0] = scales[j+4]&0xF | ((scales[j+8+2]&3)<<4)   wait no...
-        //
-        // The canonical decode from dequantize_row_q4_K in ggml-quants.c:
-        //   uint8_t sc, m;
-        //   get_scale_min_k4(j, x[i].scales, &sc, &m);
-        
-        // Let me just inline the get_scale_min_k4 logic exactly.
-        // I'll leave this function as a stub and inline the decode in each kernel.
-        (void)scales_packed; (void)scales_out; (void)mins_out;
-    }
+    // NOTE: This function is superseded by the canonical get_scale_min_k4() below,
+    // which is ported exactly from ggml-quants.c and handles all sub-block indices.
+    // All Q4_K dequantization uses get_scale_min_k4() directly.
+    // ========================================================================
 
     // ========================================================================
     // get_scale_min_k4 — exact port from ggml-quants.c

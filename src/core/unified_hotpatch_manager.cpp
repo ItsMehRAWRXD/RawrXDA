@@ -4,6 +4,8 @@
 #include "unified_hotpatch_manager.hpp"
 #include "../server/gguf_server_hotpatch.hpp"
 #include "live_binary_patcher.hpp"
+#include "shadow_page_detour.hpp"
+#include "sentinel_watchdog.hpp"
 #include "autonomous_workflow_engine.hpp"
 #include "workspace_reasoning_profiles.hpp"
 #include "deterministic_swarm.hpp"
@@ -888,6 +890,8 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
             "\"serverPatches\":%llu,"
             "\"ptOperations\":%llu,"
             "\"liveBinary\":%llu,"
+            "\"shadowDetours\":%llu,"
+            "\"sentinelEvents\":%llu,"
             "\"totalOps\":%llu,"
             "\"totalFailures\":%llu"
         "},"
@@ -904,7 +908,10 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
             "\"embeddingInit\":%s,"
             "\"visionInit\":%s,"
             "\"marketplaceInit\":%s,"
-            "\"rbacInit\":%s"
+            "\"rbacInit\":%s,"
+            "\"shadowInit\":%s,"
+            "\"sentinelInit\":%s,"
+            "\"sentinelActive\":%s"
         "}"
         "}",
         (unsigned long long)m_stats.memoryPatchCount.load(std::memory_order_relaxed),
@@ -912,6 +919,8 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
         (unsigned long long)m_stats.serverPatchCount.load(std::memory_order_relaxed),
         (unsigned long long)m_stats.ptOperationCount.load(std::memory_order_relaxed),
         (unsigned long long)m_stats.liveBinaryCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.shadowDetourCount.load(std::memory_order_relaxed),
+        (unsigned long long)m_stats.sentinelEventCount.load(std::memory_order_relaxed),
         (unsigned long long)m_stats.totalOperations.load(std::memory_order_relaxed),
         (unsigned long long)m_stats.totalFailures.load(std::memory_order_relaxed),
         m_workflowInit.load(std::memory_order_relaxed) ? "true" : "false",
@@ -926,8 +935,252 @@ std::string UnifiedHotpatchManager::getFullStatsJSON() const {
         m_embeddingInit.load(std::memory_order_relaxed) ? "true" : "false",
         m_visionInit.load(std::memory_order_relaxed) ? "true" : "false",
         m_marketplaceInit.load(std::memory_order_relaxed) ? "true" : "false",
-        m_rbacInit.load(std::memory_order_relaxed) ? "true" : "false");
+        m_rbacInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_shadowInit.load(std::memory_order_relaxed) ? "true" : "false",
+        m_sentinelInit.load(std::memory_order_relaxed) ? "true" : "false",
+        sentinel_is_active() ? "true" : "false");
     return std::string(buf);
+}
+
+// ===========================================================================
+// Shadow-Page Detour + Sentinel Watchdog (Layer 6)
+// ===========================================================================
+
+// ---- Shadow-Page Detour Lifecycle ----
+
+PatchResult UnifiedHotpatchManager::shadow_initialize() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_shadowInit.load()) return PatchResult::ok("Shadow-Page Detour already initialized");
+
+    PatchResult r = SelfRepairLoop::instance().initialize();
+    if (!r.success) {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+        return r;
+    }
+
+    m_shadowInit.store(true);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    emit_event(HotpatchEvent::ShadowDetourRegistered, "shadow_layer_initialized");
+    return PatchResult::ok("Shadow-Page Detour Layer 6 initialized");
+}
+
+PatchResult UnifiedHotpatchManager::shadow_shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_shadowInit.load()) return PatchResult::ok("Shadow-Page Detour not initialized");
+
+    PatchResult r = SelfRepairLoop::instance().shutdown();
+    m_shadowInit.store(false);
+    emit_event(HotpatchEvent::ShadowDetourRollbackAll, "shadow_layer_shutdown");
+    return r;
+}
+
+// ---- Shadow-Page Detour Operations ----
+
+UnifiedResult UnifiedHotpatchManager::shadow_register_detour(const char* name, void* funcAddr) {
+    uint64_t seq = next_sequence();
+
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        // Auto-initialize on first use
+        PatchResult initR = shadow_initialize();
+        if (!initR.success) {
+            return UnifiedResult::from(initR, "shadow", seq);
+        }
+    }
+
+    PatchResult r = SelfRepairLoop::instance().registerDetour(name, funcAddr);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.shadowDetourCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::ShadowDetourRegistered, name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "shadow", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::shadow_apply_patch(const char* name,
+                                                          const uint8_t* newCode, size_t codeSize) {
+    uint64_t seq = next_sequence();
+
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        PatchResult err = PatchResult::error("Shadow-Page Detour not initialized");
+        return UnifiedResult::from(err, "shadow", seq);
+    }
+
+    PatchResult r = SelfRepairLoop::instance().applyBinaryPatch(name, newCode, codeSize);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.shadowDetourCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::ShadowDetourApplied, name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "shadow", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::shadow_verify_and_patch(void* originalFn,
+                                                               const std::string& newAsmSource) {
+    uint64_t seq = next_sequence();
+
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        PatchResult err = PatchResult::error("Shadow-Page Detour not initialized");
+        return UnifiedResult::from(err, "shadow", seq);
+    }
+
+    auto camResult = SelfRepairLoop::instance().VerifyAndPatch(originalFn, newAsmSource);
+
+    PatchResult r = camResult.success
+        ? PatchResult::ok(camResult.detail)
+        : PatchResult::error(camResult.detail, camResult.errorCode);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.shadowDetourCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::ShadowDetourApplied, "verify_and_patch");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "shadow", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::shadow_rollback(const char* name) {
+    uint64_t seq = next_sequence();
+
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        PatchResult err = PatchResult::error("Shadow-Page Detour not initialized");
+        return UnifiedResult::from(err, "shadow", seq);
+    }
+
+    PatchResult r = SelfRepairLoop::instance().rollbackDetour(name);
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::ShadowDetourReverted, name);
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "shadow", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::shadow_rollback_all() {
+    uint64_t seq = next_sequence();
+
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        PatchResult err = PatchResult::error("Shadow-Page Detour not initialized");
+        return UnifiedResult::from(err, "shadow", seq);
+    }
+
+    PatchResult r = SelfRepairLoop::instance().rollbackAll();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::ShadowDetourRollbackAll, "rollback_all");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "shadow", seq);
+}
+
+UnifiedResult UnifiedHotpatchManager::shadow_verify_all() {
+    uint64_t seq = next_sequence();
+
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        PatchResult err = PatchResult::error("Shadow-Page Detour not initialized");
+        return UnifiedResult::from(err, "shadow", seq);
+    }
+
+    PatchResult r = SelfRepairLoop::instance().verifyAllDetours();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        emit_event(HotpatchEvent::ShadowDetourVerified, "all_detours_verified");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return UnifiedResult::from(r, "shadow", seq);
+}
+
+size_t UnifiedHotpatchManager::shadow_get_active_count() const {
+    if (!m_shadowInit.load(std::memory_order_relaxed)) return 0;
+    return SelfRepairLoop::instance().getActiveDetourCount();
+}
+
+HotpatchKernelStats UnifiedHotpatchManager::shadow_get_kernel_stats() const {
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        HotpatchKernelStats empty{};
+        return empty;
+    }
+    return SelfRepairLoop::instance().getKernelStats();
+}
+
+SnapshotStats UnifiedHotpatchManager::shadow_get_snapshot_stats() const {
+    if (!m_shadowInit.load(std::memory_order_relaxed)) {
+        SnapshotStats empty{};
+        return empty;
+    }
+    return SelfRepairLoop::instance().getSnapshotStats();
+}
+
+// ---- Sentinel Watchdog Operations ----
+
+PatchResult UnifiedHotpatchManager::sentinel_activate() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    SentinelWatchdog& sentinel = SentinelWatchdog::instance();
+
+    if (!sentinel.isActive()) {
+        PatchResult initR = sentinel.activate();
+        if (!initR.success) {
+            m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+            return initR;
+        }
+    }
+
+    PatchResult r = sentinel.activate();
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_sentinelInit.store(true);
+        m_stats.sentinelEventCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::SentinelActivated, "sentinel_watchdog_active");
+    } else {
+        m_stats.totalFailures.fetch_add(1, std::memory_order_relaxed);
+    }
+    return r;
+}
+
+PatchResult UnifiedHotpatchManager::sentinel_deactivate() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    SentinelWatchdog& sentinel = SentinelWatchdog::instance();
+    PatchResult r = sentinel.deactivate();
+
+    m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
+    if (r.success) {
+        m_stats.sentinelEventCount.fetch_add(1, std::memory_order_relaxed);
+        emit_event(HotpatchEvent::SentinelDeactivated, "sentinel_watchdog_paused");
+    }
+    return r;
+}
+
+PatchResult UnifiedHotpatchManager::sentinel_update_baseline() {
+    SentinelWatchdog& sentinel = SentinelWatchdog::instance();
+    return sentinel.updateBaseline();
+}
+
+SentinelStats UnifiedHotpatchManager::sentinel_get_stats() const {
+    return SentinelWatchdog::instance().getStats();
+}
+
+bool UnifiedHotpatchManager::sentinel_is_active() const {
+    return SentinelWatchdog::instance().isActive();
 }
 
 // ===========================================================================
@@ -998,7 +1251,9 @@ PatchResult UnifiedHotpatchManager::embedding_index_directory(const char* dirPat
 
     auto& eng = RawrXD::Embeddings::EmbeddingEngine::instance();
     RawrXD::Embeddings::ChunkingConfig chunkCfg;
-    return eng.indexDirectory(dirPath, chunkCfg);
+    auto er = eng.indexDirectory(dirPath, chunkCfg);
+    if (er.success) return PatchResult::ok(er.detail);
+    return PatchResult::error(er.detail, er.errorCode);
 }
 
 // ---- Vision Encoder ----

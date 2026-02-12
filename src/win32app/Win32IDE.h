@@ -11,6 +11,7 @@
 
 #include <commctrl.h>
 #include <shlobj.h>
+#include <shellapi.h>
 #include <string>
 #include <vector>
 #include <array>
@@ -33,12 +34,18 @@
 #include "Win32IDE_WebView2.h"
 #include "../modules/engine_manager.h"
 #include "../modules/codex_ultimate.h"
+#include "../modules/game_engine_manager.h"
+#include "../modules/crucible_engine.h"
+#include "../modules/copilot_gap_closer.h"
 #include "../../include/editor_engine.h"
 #include "../../include/plugin_system/win32_plugin_loader.h"
 
 #include "../modules/ExtensionLoader.hpp"
 #include "../modules/vscode_extension_api.h"
 #include "../../include/mcp_integration.h"
+#include "../core/instructions_provider.hpp"
+#include "../core/native_inference_pipeline.hpp"
+#include "../ui/tool_action_status.h"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
 #include <climits>
@@ -48,7 +55,16 @@ class MultiResponseEngine;
 class SubAgentManager;
 namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
 
+// Tier 3: File Watcher + DirectWrite (need full types for unique_ptr destructor)
+#include "IocpFileWatcher.h"
+
+// Forward declarations for DirectWrite types (avoid including <dwrite.h> in header)
+struct IDWriteFactory;
+struct IDWriteTextFormat;
+struct IDWriteTextLayout;
+
 #include "../agentic/OllamaProvider.h"
+#include "../../include/agentic/agentic_composer_ux.h"
 
 // Agent and AI IDs
 #define IDM_AGENT_BOUNDED_LOOP 4120
@@ -176,6 +192,19 @@ namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
 #define IDM_THEME_SYNTHWAVE84       3115
 #define IDM_THEME_ABYSS             3116
 #define IDM_THEME_END               3117
+
+// Tier 3: Language Mode Quick Switch (9100 range)
+#define IDM_LANGMODE_FIRST          9100
+#define IDM_LANGMODE_LAST           9199
+
+// Tier 3: Encoding Selector (9200/9300 range)
+#define IDM_ENCODING_REOPEN_FIRST   9200
+#define IDM_ENCODING_REOPEN_LAST    9249
+#define IDM_ENCODING_SAVE_FIRST     9300
+#define IDM_ENCODING_SAVE_LAST      9349
+
+// Tier 3: File changed externally — custom window message
+#define WM_FILE_CHANGED_EXTERNAL    (WM_APP + 200)
 
 // Transparency commands (3200 range — routed via handleViewCommand)
 #define IDM_TRANSPARENCY_100        3200
@@ -569,6 +598,8 @@ struct IDESettings {
     std::string eolStyle        = "LF";
     bool syntaxColoringEnabled  = true;
     bool minimapEnabled         = true;
+    bool breadcrumbsEnabled     = true;
+    bool smoothScrollEnabled    = true;
 
     // Theme
     int themeId                 = 3101; // IDM_THEME_DARK_PLUS
@@ -662,8 +693,11 @@ class Win32IDE
     friend class vscode::VSCodeExtensionAPI;
     friend void onCreateTrampoline(void* self, HWND hwnd);
     friend void deferredInitTrampoline(void* self);
+    friend void bgInitBody(void* self);
 
 public:
+    void deferredHeavyInitBody();   // SEH-safe body, called from bg thread via sehRunBgThread
+
     enum class OutputSeverity {
         Debug = 0,
         Info = 1,
@@ -803,6 +837,15 @@ public:
     bool checkFeatureLicense(const std::string& featureId) const;
     void syncLicenseWithManifest();
 
+    // ========================================================================
+    // TRANSCENDENCE ARCHITECTURE PANEL (E → Ω)
+    // ========================================================================
+    void initTranscendence();
+    void shutdownTranscendence();
+    bool handleTranscendenceCommand(int cmdId);
+    std::string handleTranscendenceEndpoint(
+        const std::string& method, const std::string& path, const std::string& body);
+
     // Comprehensive Logging System
     void initializeLogging();
     void shutdownLogging();
@@ -928,6 +971,32 @@ private:
         std::string systemPrompt;
         bool streamOutput = true;
     };
+
+    // ── Context Window Token Usage Tracking ──
+    struct ContextWindowUsage {
+        int maxTokens            = 128000;
+        int systemTokens         = 0;    // System instructions
+        int toolDefTokens        = 0;    // Tool definitions
+        int userContextTokens    = 0;    // User context / workspace info
+        int messageTokens        = 0;    // Conversation messages
+        int toolResultTokens     = 0;    // Tool call results
+
+        int totalUsed() const {
+            return systemTokens + toolDefTokens + userContextTokens +
+                   messageTokens + toolResultTokens;
+        }
+        float percentage() const {
+            return maxTokens > 0 ? (float(totalUsed()) / float(maxTokens)) * 100.0f : 0.0f;
+        }
+        bool isWarning() const { return percentage() >= 75.0f; }
+        bool isDanger()  const { return percentage() >= 90.0f; }
+    };
+
+    ContextWindowUsage m_contextUsage;
+    void updateContextWindowDisplay();
+    void setContextWindowMax(int maxTokens);
+    void addContextTokens(const std::string& category, int tokens);
+    std::string formatTokenCount(int tokens) const;
     
     bool initializeInference();
     void shutdownInference();
@@ -941,6 +1010,16 @@ private:
     std::string buildChatPrompt(const std::string& userMessage);
     void onInferenceToken(const std::string& token);
     void onInferenceComplete(const std::string& fullResponse);
+
+    // ── Native Inference Pipeline (zero-dependency local AI) ──
+    bool initNativePipeline();
+    void shutdownNativePipeline();
+    bool loadNativeModel(const std::string& ggufPath);
+    std::string generateNativeResponse(const std::string& prompt);
+    void onNativeAIToken(WPARAM wParam, LPARAM lParam);
+    void onNativeAIComplete(WPARAM wParam, LPARAM lParam);
+    void onNativeAIError();
+    void onNativeAIProgress();
 
     // Editor Operations
     void undo();
@@ -1205,6 +1284,10 @@ private:
     friend void DecompView_PaintDecomp(struct DecompViewState* state);
     friend void DecompView_PaintDisasm(struct DecompViewState* state);
     friend LRESULT CALLBACK SplitterBarProc(HWND, UINT, WPARAM, LPARAM);
+
+    // Grant Tier 1 cosmetic callbacks access to private members
+    friend LRESULT CALLBACK MinimapWndProc(HWND, UINT, WPARAM, LPARAM);
+    friend INT_PTR CALLBACK SettingsGUIProc(HWND, UINT, WPARAM, LPARAM);
 
     // Theme session persistence
     void saveSessionTheme(nlohmann::json& session);
@@ -1694,6 +1777,10 @@ private:
     bool m_nativeEngineLoaded = false;
     std::mutex m_outputMutex;
     
+    // Native Inference Pipeline — zero-dependency local AI core
+    std::unique_ptr<RawrXD::NativeInferencePipeline> m_nativePipeline;
+    bool m_nativePipelineReady = false;
+    
     // Window Procedures for Subclassing
     static LRESULT CALLBACK CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam); // Renamed to avoid overload conflict
@@ -1750,7 +1837,9 @@ private:
         std::string filePath;
         std::string displayName;
         std::string content;
-        bool modified;
+        bool modified    = false;
+        bool isPinned    = false;  // Tier3C #26: Pinned tabs
+        bool isPreview   = false;  // Tier3C #27: Preview tabs
     };
     std::vector<EditorTab> m_editorTabs;
     int m_activeTabIndex;
@@ -2060,6 +2149,9 @@ private:
     int m_currentMaxTokens;
     std::vector<std::string> m_availableModels;
     std::vector<std::pair<std::string, std::string>> m_chatHistory; // role, message
+    // Tool action status per chat message (keyed by m_chatHistory index)
+    std::map<size_t, std::vector<RawrXD::UI::ToolActionStatus>> m_chatToolActions;
+    RawrXD::UI::ToolActionAccumulator m_currentToolActions; // accumulator for current response
     static LRESULT CALLBACK SecondarySidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     // Panel (Bottom) - Terminal, Output, Problems, Debug Console
@@ -4414,4 +4506,1376 @@ private:
 
     // State
     bool m_flightRecorderInitialized = false;
+
+    // ========================================================================
+    // PHASE 34: INSTRUCTIONS CONTEXT PROVIDER
+    // Read tools.instructions.md (all lines) → context for HTTP/CLI/GUI
+    // ========================================================================
+    void initInstructionsProvider();
+    void handleInstructionsEndpoint(SOCKET client, const std::string& mode);
+    void handleInstructionsContentEndpoint(SOCKET client);
+    void handleInstructionsReloadEndpoint(SOCKET client);
+    void showInstructionsDialog();
+    std::string getInstructionsContent() const;
+    bool m_instructionsInitialized = false;
+
+    static constexpr int IDM_INSTRUCTIONS_VIEW    = 10500;
+    static constexpr int IDM_INSTRUCTIONS_RELOAD  = 10501;
+    static constexpr int IDM_INSTRUCTIONS_COPY    = 10502;
+
+    // ========================================================================
+    // PHASE 45: GAME ENGINE INTEGRATION (Unity + Unreal)
+    // Full game-engine project management, build, play, debug, profile
+    // ========================================================================
+    void initGameEngines();
+    void handleGameEngineCommand(int commandId);
+    void createGameEngineMenu(HMENU parentMenu);
+    void showGameEngineStatusDialog();
+
+    // Command handlers
+    void cmdGameEngineDetect();
+    void cmdGameEngineOpen();
+    void cmdGameEngineClose();
+    void cmdGameEngineStatus();
+    void cmdGameEngineBuild();
+    void cmdGameEnginePlay();
+    void cmdGameEngineStop();
+    void cmdGameEnginePause();
+    void cmdGameEngineCompile();
+    void cmdGameEngineProfilerStart();
+    void cmdGameEngineProfilerStop();
+    void cmdGameEngineProfilerSnapshot();
+    void cmdGameEngineDebugStart();
+    void cmdGameEngineDebugStop();
+    void cmdGameEngineBreakpoint();
+    void cmdGameEngineAISummary();
+    void cmdGameEngineAIScene();
+    void cmdGameEngineInstallations();
+    void cmdGameEngineHelp();
+
+    // Unity-specific
+    void cmdUnityCreateScript();
+    void cmdUnitySceneList();
+    void cmdUnityAssetBrowser();
+    void cmdUnityPackageManager();
+
+    // Unreal-specific
+    void cmdUnrealCreateClass();
+    void cmdUnrealCreateModule();
+    void cmdUnrealCreatePlugin();
+    void cmdUnrealGenProjectFiles();
+    void cmdUnrealLiveCoding();
+    void cmdUnrealCookContent();
+    void cmdUnrealPackageProject();
+    void cmdUnrealLevelList();
+    void cmdUnrealBlueprintList();
+
+    std::unique_ptr<RawrXD::GameEngine::GameEngineManager> m_gameEngineManager;
+    bool m_gameEnginesInitialized = false;
+
+    // ── Phase 48: The Final Crucible ──
+    void initCrucible();
+    void handleCrucibleCommand(int commandId);
+    void createCrucibleMenu(HMENU parentMenu);
+
+    // Crucible command handlers
+    void cmdCrucibleRunAll();
+    void cmdCrucibleRunShadow();
+    void cmdCrucibleRunCluster();
+    void cmdCrucibleRunSemantic();
+    void cmdCrucibleCancel();
+    void cmdCrucibleStatus();
+    void cmdCrucibleReport();
+    void cmdCrucibleExportJSON();
+    void cmdCrucibleConfig();
+    void cmdCrucibleHelp();
+
+    std::unique_ptr<RawrXD::Crucible::CrucibleEngine> m_crucibleEngine;
+    bool m_crucibleInitialized = false;
+
+    // ── Crucible Command IDs ──
+    static constexpr int IDM_CRUCIBLE_RUN_ALL       = 10700;
+    static constexpr int IDM_CRUCIBLE_RUN_SHADOW    = 10701;
+    static constexpr int IDM_CRUCIBLE_RUN_CLUSTER   = 10702;
+    static constexpr int IDM_CRUCIBLE_RUN_SEMANTIC  = 10703;
+    static constexpr int IDM_CRUCIBLE_CANCEL        = 10704;
+    static constexpr int IDM_CRUCIBLE_STATUS        = 10705;
+    static constexpr int IDM_CRUCIBLE_REPORT        = 10706;
+    static constexpr int IDM_CRUCIBLE_EXPORT_JSON   = 10707;
+    static constexpr int IDM_CRUCIBLE_CONFIG        = 10708;
+    static constexpr int IDM_CRUCIBLE_HELP          = 10709;
+
+    // ── Game Engine Command IDs ──
+    static constexpr int IDM_GAME_ENGINE_DETECT           = 10600;
+    static constexpr int IDM_GAME_ENGINE_OPEN             = 10601;
+    static constexpr int IDM_GAME_ENGINE_CLOSE            = 10602;
+    static constexpr int IDM_GAME_ENGINE_STATUS           = 10603;
+    static constexpr int IDM_GAME_ENGINE_BUILD            = 10604;
+    static constexpr int IDM_GAME_ENGINE_PLAY             = 10605;
+    static constexpr int IDM_GAME_ENGINE_STOP             = 10606;
+    static constexpr int IDM_GAME_ENGINE_PAUSE            = 10607;
+    static constexpr int IDM_GAME_ENGINE_COMPILE          = 10608;
+    static constexpr int IDM_GAME_ENGINE_PROFILER_START   = 10609;
+    static constexpr int IDM_GAME_ENGINE_PROFILER_STOP    = 10610;
+    static constexpr int IDM_GAME_ENGINE_PROFILER_SNAP    = 10611;
+    static constexpr int IDM_GAME_ENGINE_DEBUG_START      = 10612;
+    static constexpr int IDM_GAME_ENGINE_DEBUG_STOP       = 10613;
+    static constexpr int IDM_GAME_ENGINE_BREAKPOINT       = 10614;
+    static constexpr int IDM_GAME_ENGINE_AI_SUMMARY       = 10615;
+    static constexpr int IDM_GAME_ENGINE_AI_SCENE         = 10616;
+    static constexpr int IDM_GAME_ENGINE_INSTALLATIONS    = 10617;
+    static constexpr int IDM_GAME_ENGINE_HELP             = 10618;
+
+    // Unity-specific IDs
+    static constexpr int IDM_UNITY_CREATE_SCRIPT          = 10650;
+    static constexpr int IDM_UNITY_SCENE_LIST             = 10651;
+    static constexpr int IDM_UNITY_ASSET_BROWSER          = 10652;
+    static constexpr int IDM_UNITY_PACKAGE_MANAGER        = 10653;
+
+    // Unreal-specific IDs
+    static constexpr int IDM_UNREAL_CREATE_CLASS          = 10670;
+    static constexpr int IDM_UNREAL_CREATE_MODULE         = 10671;
+    static constexpr int IDM_UNREAL_CREATE_PLUGIN         = 10672;
+    static constexpr int IDM_UNREAL_GEN_PROJECT_FILES     = 10673;
+    static constexpr int IDM_UNREAL_LIVE_CODING           = 10674;
+    static constexpr int IDM_UNREAL_COOK_CONTENT          = 10675;
+    static constexpr int IDM_UNREAL_PACKAGE_PROJECT       = 10676;
+    static constexpr int IDM_UNREAL_LEVEL_LIST            = 10677;
+    static constexpr int IDM_UNREAL_BLUEPRINT_LIST        = 10678;
+
+    // ========================================================================
+    // PHASE 13: DISTRIBUTED PIPELINE ORCHESTRATOR
+    // DAG-based task scheduling, work-stealing thread pool, compute nodes
+    // ========================================================================
+    void initPipelinePanel();
+    void handlePipelineCommand(int commandId);
+    void cmdPipelineStatus();
+    void cmdPipelineSubmit();
+    void cmdPipelineCancel();
+    void cmdPipelineListNodes();
+    void cmdPipelineAddNode();
+    void cmdPipelineRemoveNode();
+    void cmdPipelineDAGView();
+    void cmdPipelineShowStats();
+    void cmdPipelineShutdown();
+    bool m_pipelinePanelInitialized = false;
+
+    static constexpr int IDM_PIPELINE_STATUS       = 11000;
+    static constexpr int IDM_PIPELINE_SUBMIT       = 11001;
+    static constexpr int IDM_PIPELINE_CANCEL       = 11002;
+    static constexpr int IDM_PIPELINE_LIST_NODES   = 11003;
+    static constexpr int IDM_PIPELINE_ADD_NODE     = 11004;
+    static constexpr int IDM_PIPELINE_REMOVE_NODE  = 11005;
+    static constexpr int IDM_PIPELINE_DAG_VIEW     = 11006;
+    static constexpr int IDM_PIPELINE_STATS        = 11007;
+    static constexpr int IDM_PIPELINE_SHUTDOWN     = 11008;
+
+    // ========================================================================
+    // PHASE 14: HOTPATCH CONTROL PLANE
+    // Patch lifecycle, version graphs, atomic transactions, rollback chains
+    // ========================================================================
+    void initHotpatchCtrlPanel();
+    void handleHotpatchCtrlCommand(int commandId);
+    void cmdHPCtrlListPatches();
+    void cmdHPCtrlPatchDetail();
+    void cmdHPCtrlValidate();
+    void cmdHPCtrlStage();
+    void cmdHPCtrlApply();
+    void cmdHPCtrlRollback();
+    void cmdHPCtrlSuspend();
+    void cmdHPCtrlAuditLog();
+    void cmdHPCtrlTxnBegin();
+    void cmdHPCtrlTxnCommit();
+    void cmdHPCtrlTxnRollback();
+    void cmdHPCtrlDepGraph();
+    void cmdHPCtrlStats();
+    bool m_hotpatchCtrlPanelInitialized = false;
+
+    static constexpr int IDM_HPCTRL_LIST_PATCHES   = 11100;
+    static constexpr int IDM_HPCTRL_PATCH_DETAIL   = 11101;
+    static constexpr int IDM_HPCTRL_VALIDATE       = 11102;
+    static constexpr int IDM_HPCTRL_STAGE          = 11103;
+    static constexpr int IDM_HPCTRL_APPLY          = 11104;
+    static constexpr int IDM_HPCTRL_ROLLBACK       = 11105;
+    static constexpr int IDM_HPCTRL_SUSPEND        = 11106;
+    static constexpr int IDM_HPCTRL_AUDIT_LOG      = 11107;
+    static constexpr int IDM_HPCTRL_TXN_BEGIN      = 11108;
+    static constexpr int IDM_HPCTRL_TXN_COMMIT     = 11109;
+    static constexpr int IDM_HPCTRL_TXN_ROLLBACK   = 11110;
+    static constexpr int IDM_HPCTRL_DEP_GRAPH      = 11111;
+    static constexpr int IDM_HPCTRL_STATS          = 11112;
+
+    // ========================================================================
+    // PHASE 15: STATIC ANALYSIS ENGINE
+    // CFG/SSA analysis, dominator trees, loop detection, optimization passes
+    // ========================================================================
+    void initStaticAnalysisPanel();
+    void handleStaticAnalysisCommand(int commandId);
+    void cmdSABuildCFG();
+    void cmdSAComputeDominators();
+    void cmdSAConvertSSA();
+    void cmdSADetectLoops();
+    void cmdSAOptimize();
+    void cmdSAFullAnalysis();
+    void cmdSAExportDOT();
+    void cmdSAExportJSON();
+    void cmdSAShowStats();
+    bool m_staticAnalysisPanelInitialized = false;
+
+    static constexpr int IDM_SA_BUILD_CFG          = 11200;
+    static constexpr int IDM_SA_COMPUTE_DOMINATORS = 11201;
+    static constexpr int IDM_SA_CONVERT_SSA        = 11202;
+    static constexpr int IDM_SA_DETECT_LOOPS       = 11203;
+    static constexpr int IDM_SA_OPTIMIZE           = 11204;
+    static constexpr int IDM_SA_FULL_ANALYSIS      = 11205;
+    static constexpr int IDM_SA_EXPORT_DOT         = 11206;
+    static constexpr int IDM_SA_EXPORT_JSON        = 11207;
+    static constexpr int IDM_SA_STATS              = 11208;
+
+    // ========================================================================
+    // PHASE 16: SEMANTIC CODE INTELLIGENCE
+    // Cross-references, type inference, symbol resolution, code navigation
+    // ========================================================================
+    void initSemanticPanel();
+    void handleSemanticCommand(int commandId);
+    void cmdSemGoToDefinition();
+    void cmdSemFindReferences();
+    void cmdSemFindImplementations();
+    void cmdSemTypeHierarchy();
+    void cmdSemCallGraph();
+    void cmdSemSearchSymbols();
+    void cmdSemFileSymbols();
+    void cmdSemFindUnused();
+    void cmdSemIndexFile();
+    void cmdSemRebuildIndex();
+    void cmdSemSaveIndex();
+    void cmdSemLoadIndex();
+    void cmdSemShowStats();
+    bool m_semanticPanelInitialized = false;
+
+    static constexpr int IDM_SEM_GO_TO_DEF         = 11300;
+    static constexpr int IDM_SEM_FIND_REFS         = 11301;
+    static constexpr int IDM_SEM_FIND_IMPLS        = 11302;
+    static constexpr int IDM_SEM_TYPE_HIERARCHY    = 11303;
+    static constexpr int IDM_SEM_CALL_GRAPH        = 11304;
+    static constexpr int IDM_SEM_SEARCH_SYMBOLS    = 11305;
+    static constexpr int IDM_SEM_FILE_SYMBOLS      = 11306;
+    static constexpr int IDM_SEM_UNUSED            = 11307;
+    static constexpr int IDM_SEM_INDEX_FILE        = 11308;
+    static constexpr int IDM_SEM_REBUILD_INDEX     = 11309;
+    static constexpr int IDM_SEM_SAVE_INDEX        = 11310;
+    static constexpr int IDM_SEM_LOAD_INDEX        = 11311;
+    static constexpr int IDM_SEM_STATS             = 11312;
+
+    // ========================================================================
+    // PHASE 17: ENTERPRISE TELEMETRY & COMPLIANCE
+    // OTLP tracing, tamper-evident audit, compliance policies, license, GDPR
+    // ========================================================================
+    void initTelemetryPanel();
+    // handleTelemetryCommand already declared above (bool version)
+    void cmdTelTraceStatus();
+    void cmdTelStartSpan();
+    void cmdTelAuditLog();
+    void cmdTelAuditVerify();
+    void cmdTelComplianceReport();
+    void cmdTelShowViolations();
+    void cmdTelLicenseStatus();
+    void cmdTelUsageMeter();
+    void cmdTelMetricsDashboard();
+    void cmdTelMetricsFlush();
+    void cmdTelExportAudit();
+    void cmdTelExportOTLP();
+    void cmdTelGDPRExport();
+    void cmdTelGDPRDelete();
+    void cmdTelSetLevel();
+    void cmdTelShowStats();
+    bool m_telemetryPanelInitialized = false;
+
+    static constexpr int IDM_TEL_TRACE_STATUS      = 11400;
+    static constexpr int IDM_TEL_START_SPAN        = 11401;
+    static constexpr int IDM_TEL_AUDIT_LOG         = 11402;
+    static constexpr int IDM_TEL_AUDIT_VERIFY      = 11403;
+    static constexpr int IDM_TEL_COMPLIANCE_REPORT = 11404;
+    static constexpr int IDM_TEL_VIOLATIONS        = 11405;
+    static constexpr int IDM_TEL_LICENSE_STATUS    = 11406;
+    static constexpr int IDM_TEL_USAGE_METER       = 11407;
+    static constexpr int IDM_TEL_METRICS_DASHBOARD = 11408;
+    static constexpr int IDM_TEL_METRICS_FLUSH     = 11409;
+    static constexpr int IDM_TEL_EXPORT_AUDIT      = 11410;
+    static constexpr int IDM_TEL_EXPORT_OTLP       = 11411;
+    static constexpr int IDM_TEL_GDPR_EXPORT       = 11412;
+    static constexpr int IDM_TEL_GDPR_DELETE       = 11413;
+    static constexpr int IDM_TEL_SET_LEVEL         = 11414;
+    static constexpr int IDM_TEL_STATS             = 11415;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Phase 49: Copilot Gap Closer (10800–10899)
+    // ════════════════════════════════════════════════════════════════════════
+
+    void initCopilotGap();
+    void handleCopilotGapCommand(int commandId);
+    void createCopilotGapMenu(HMENU parentMenu);
+
+    // General
+    void cmdGapInit();
+    void cmdGapStatus();
+    void cmdGapPerf();
+    void cmdGapHelp();
+
+    // Vector Database
+    void cmdGapVecDbInit();
+    void cmdGapVecDbInsert();
+    void cmdGapVecDbSearch();
+    void cmdGapVecDbDelete();
+    void cmdGapVecDbStatus();
+    void cmdGapVecDbBench();
+
+    // Multi-file Composer
+    void cmdGapComposerBegin();
+    void cmdGapComposerAdd();
+    void cmdGapComposerCommit();
+    void cmdGapComposerStatus();
+
+    // CRDT Engine
+    void cmdGapCrdtInit();
+    void cmdGapCrdtInsert();
+    void cmdGapCrdtDelete();
+    void cmdGapCrdtStatus();
+
+    // Git Context
+    void cmdGapGitContext();
+    void cmdGapGitBranch();
+
+    std::unique_ptr<RawrXD::CopilotGapCloser> m_copilotGap;
+    bool m_copilotGapInitialized = false;
+
+    // ── Copilot Gap Closer Command IDs ──
+    // General
+    static constexpr int IDM_GAPCLOSE_INIT              = 10800;
+    static constexpr int IDM_GAPCLOSE_STATUS            = 10801;
+    static constexpr int IDM_GAPCLOSE_PERF              = 10802;
+    static constexpr int IDM_GAPCLOSE_HELP              = 10803;
+    // Vector Database
+    static constexpr int IDM_GAPCLOSE_VECDB_INIT        = 10810;
+    static constexpr int IDM_GAPCLOSE_VECDB_INSERT      = 10811;
+    static constexpr int IDM_GAPCLOSE_VECDB_SEARCH      = 10812;
+    static constexpr int IDM_GAPCLOSE_VECDB_DELETE      = 10813;
+    static constexpr int IDM_GAPCLOSE_VECDB_STATUS      = 10814;
+    static constexpr int IDM_GAPCLOSE_VECDB_BENCH       = 10815;
+    // Composer
+    static constexpr int IDM_GAPCLOSE_COMPOSER_BEGIN    = 10820;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_ADD      = 10821;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_COMMIT   = 10822;
+    static constexpr int IDM_GAPCLOSE_COMPOSER_STATUS   = 10823;
+    // CRDT
+    static constexpr int IDM_GAPCLOSE_CRDT_INIT         = 10830;
+    static constexpr int IDM_GAPCLOSE_CRDT_INSERT       = 10831;
+    static constexpr int IDM_GAPCLOSE_CRDT_DELETE       = 10832;
+    static constexpr int IDM_GAPCLOSE_CRDT_STATUS       = 10833;
+    // Git Context
+    static constexpr int IDM_GAPCLOSE_GIT_CONTEXT       = 10840;
+    static constexpr int IDM_GAPCLOSE_GIT_BRANCH        = 10841;
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CURSOR/JB-PARITY FEATURE MODULES — Pluginable subsystems (11500–11599)
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── Telemetry Export (multi-format, audit chain, OTLP) ──
+    void initTelemetryExport();
+    void shutdownTelemetryExport();
+    bool handleTelemetryExportCommand(int commandId);
+    void cmdTelExportJSON();
+    void cmdTelExportCSV();
+    void cmdTelExportPrometheus();
+    void cmdTelExportOTLPMulti();
+    void cmdTelExportAuditLog();
+    void cmdTelExportVerifyChain();
+    void cmdTelExportAutoStart();
+    void cmdTelExportAutoStop();
+    bool m_telemetryExportInitialized = false;
+
+    static constexpr int IDM_TELEXPORT_JSON         = 11500;
+    static constexpr int IDM_TELEXPORT_CSV          = 11501;
+    static constexpr int IDM_TELEXPORT_PROMETHEUS   = 11502;
+    static constexpr int IDM_TELEXPORT_OTLP         = 11503;
+    static constexpr int IDM_TELEXPORT_AUDIT_LOG    = 11504;
+    static constexpr int IDM_TELEXPORT_VERIFY_CHAIN = 11505;
+    static constexpr int IDM_TELEXPORT_AUTO_START   = 11506;
+    static constexpr int IDM_TELEXPORT_AUTO_STOP    = 11507;
+
+    // ── Agentic Composer UX (session lifecycle, thinking, file changes) ──
+    void initAgenticComposerUX();
+    bool handleComposerUXCommand(int commandId);
+    void cmdComposerNewSession();
+    void cmdComposerEndSession();
+    void cmdComposerApproveAll();
+    void cmdComposerRejectAll();
+    void cmdComposerShowTranscript();
+    void cmdComposerShowMetrics();
+    bool m_composerUXInitialized = false;
+    RawrXD::Agentic::AgenticComposerUX m_composerUX;
+
+    static constexpr int IDM_COMPOSER_NEW_SESSION     = 11510;
+    static constexpr int IDM_COMPOSER_END_SESSION     = 11511;
+    static constexpr int IDM_COMPOSER_APPROVE_ALL     = 11512;
+    static constexpr int IDM_COMPOSER_REJECT_ALL      = 11513;
+    static constexpr int IDM_COMPOSER_SHOW_TRANSCRIPT = 11514;
+    static constexpr int IDM_COMPOSER_SHOW_METRICS    = 11515;
+
+    // ── @-Mention Context Parser (inline context assembly) ──
+    void initContextMentionParser();
+    bool handleMentionParserCommand(int commandId);
+    void cmdMentionParse();
+    void cmdMentionSuggest();
+    void cmdMentionAssembleContext();
+    void cmdMentionRegisterCustom();
+    bool m_mentionParserInitialized = false;
+
+    static constexpr int IDM_MENTION_PARSE            = 11520;
+    static constexpr int IDM_MENTION_SUGGEST          = 11521;
+    static constexpr int IDM_MENTION_ASSEMBLE_CTX     = 11522;
+    static constexpr int IDM_MENTION_REGISTER_CUSTOM  = 11523;
+
+    // ── Vision Encoder (image input, clipboard paste, drag-drop) ──
+    void initVisionEncoderUI();
+    bool handleVisionEncoderCommand(int commandId);
+    void cmdVisionLoadFile();
+    void cmdVisionPasteClipboard();
+    void cmdVisionScreenshot();
+    void cmdVisionBuildPayload();
+    bool m_visionEncoderUIInitialized = false;
+
+    static constexpr int IDM_VISION_LOAD_FILE         = 11530;
+    static constexpr int IDM_VISION_PASTE_CLIPBOARD   = 11531;
+    static constexpr int IDM_VISION_SCREENSHOT        = 11532;
+    static constexpr int IDM_VISION_BUILD_PAYLOAD     = 11533;
+
+    // ── Refactoring Engine (200+ pluginable refactorings) ──
+    void initRefactoringEngine();
+    bool handleRefactoringCommand(int commandId);
+    void cmdRefactorExtractMethod();
+    void cmdRefactorExtractVariable();
+    void cmdRefactorRenameSymbol();
+    void cmdRefactorOrganizeIncludes();
+    void cmdRefactorConvertToAuto();
+    void cmdRefactorRemoveDeadCode();
+    void cmdRefactorShowAll();
+    void cmdRefactorLoadPlugin();
+    bool m_refactoringEngineInitialized = false;
+
+    static constexpr int IDM_REFACTOR_EXTRACT_METHOD     = 11540;
+    static constexpr int IDM_REFACTOR_EXTRACT_VARIABLE   = 11541;
+    static constexpr int IDM_REFACTOR_RENAME_SYMBOL      = 11542;
+    static constexpr int IDM_REFACTOR_ORGANIZE_INCLUDES  = 11543;
+    static constexpr int IDM_REFACTOR_CONVERT_AUTO       = 11544;
+    static constexpr int IDM_REFACTOR_REMOVE_DEAD_CODE   = 11545;
+    static constexpr int IDM_REFACTOR_SHOW_ALL           = 11546;
+    static constexpr int IDM_REFACTOR_LOAD_PLUGIN        = 11547;
+
+    // ── Language Plugin (60+ language descriptors, DLL extensible) ──
+    void initLanguageRegistry();
+    bool handleLanguageCommand(int commandId);
+    void cmdLanguageDetect();
+    void cmdLanguageListAll();
+    void cmdLanguageLoadPlugin();
+    void cmdLanguageSetForFile();
+    bool m_languageRegistryInitialized = false;
+
+    static constexpr int IDM_LANG_DETECT              = 11550;
+    static constexpr int IDM_LANG_LIST_ALL            = 11551;
+    static constexpr int IDM_LANG_LOAD_PLUGIN         = 11552;
+    static constexpr int IDM_LANG_SET_FOR_FILE        = 11553;
+
+    // ── Semantic Index (cross-language, dependency graph, type hierarchy) ──
+    void initSemanticIndex();
+    bool handleSemanticIndexCommand(int commandId);
+    void cmdSemanticBuildIndex();
+    void cmdSemanticFuzzySearch();
+    void cmdSemanticFindReferences();
+    void cmdSemanticShowDependencies();
+    void cmdSemanticShowTypeHierarchy();
+    void cmdSemanticShowCallGraph();
+    void cmdSemanticFindCycles();
+    void cmdSemanticLoadPlugin();
+    bool m_semanticIndexInitialized = false;
+
+    static constexpr int IDM_SEMANTIC_BUILD_INDEX     = 11560;
+    static constexpr int IDM_SEMANTIC_FUZZY_SEARCH    = 11561;
+    static constexpr int IDM_SEMANTIC_FIND_REFS       = 11562;
+    static constexpr int IDM_SEMANTIC_SHOW_DEPS       = 11563;
+    static constexpr int IDM_SEMANTIC_TYPE_HIERARCHY  = 11564;
+    static constexpr int IDM_SEMANTIC_CALL_GRAPH      = 11565;
+    static constexpr int IDM_SEMANTIC_FIND_CYCLES     = 11566;
+    static constexpr int IDM_SEMANTIC_LOAD_PLUGIN     = 11567;
+
+    // ── Resource Generator (Docker, K8s, Terraform, CI/CD, config) ──
+    void initResourceGenerator();
+    bool handleResourceGenCommand(int commandId);
+    void cmdResourceGenerate();
+    void cmdResourceGenerateProject();
+    void cmdResourceListTemplates();
+    void cmdResourceSearchTemplates();
+    void cmdResourceLoadPlugin();
+    bool m_resourceGeneratorInitialized = false;
+
+    static constexpr int IDM_RESOURCE_GENERATE        = 11570;
+    static constexpr int IDM_RESOURCE_GEN_PROJECT     = 11571;
+    static constexpr int IDM_RESOURCE_LIST_TEMPLATES  = 11572;
+    static constexpr int IDM_RESOURCE_SEARCH          = 11573;
+    static constexpr int IDM_RESOURCE_LOAD_PLUGIN     = 11574;
+
+    // ── Cursor/JB-Parity Menu Builder ──
+    void createCursorParityMenu(HMENU parentMenu);
+    bool handleCursorParityCommand(int commandId);
+    void initAllCursorParityModules();
+
+    // ════════════════════════════════════════════════════════════════════
+    // TIER 2: HIGH VISIBILITY (Daily Friction) — Features 11–19
+    // ════════════════════════════════════════════════════════════════════
+
+    // Master lifecycle
+    void initTier2Cosmetics();
+    void shutdownTier2Cosmetics();
+    bool handleTier2Command(int commandId);
+    void renderTier2Overlays(HDC hdc);
+
+public:
+    // ── LSP Symbol Kinds (used by Outline, CodeLens, Inlay) ──
+    enum LSPSymbolKind {
+        SK_File = 1, SK_Module, SK_Namespace, SK_Package,
+        SK_Class, SK_Method, SK_Property, SK_Field,
+        SK_Constructor, SK_Enum, SK_Interface, SK_Function,
+        SK_Variable, SK_Constant, SK_String, SK_Number,
+        SK_Boolean, SK_Array, SK_Object, SK_Key,
+        SK_Null, SK_EnumMember, SK_Struct, SK_Event,
+        SK_Operator, SK_TypeParameter
+    };
+private:
+
+    // ── OutlineSymbol (enhanced outline model) ──
+    struct OutlineSymbol {
+        int kind = 0;          // LSPSymbolKind
+        std::string name;
+        int line     = 0;
+        int column   = 0;
+        int endLine  = 0;
+        std::string detail;
+        bool expanded = true;
+        std::vector<OutlineSymbol> children;
+    };
+
+    std::vector<OutlineSymbol> m_outlineSymbols;
+    std::string m_outlineFilter;
+    bool m_outlineSortByName = false;
+
+    // 15. Document Symbols Outline (enhanced)
+    void initOutlinePanel();
+    void refreshOutlineFromLSP();
+    void setOutlineFilter(const std::string& filter);
+    void setOutlineSortOrder(bool byName);
+    void filterOutlineView(const std::string& filter);
+    void sortOutlineView(bool byName);
+    void renderOutlineIcons(HDC hdc, int kind, RECT iconRect);
+    std::string symbolKindName(int kind) const;
+    std::string outlineKindToString(int kind) const;
+    COLORREF outlineKindColor(int kind) const;
+
+    // ── DiffLine / DiffHunk (Git Diff Side-by-Side) ──
+    enum class DiffLineType { Context, Added, Removed };
+
+    struct DiffLine {
+        std::string text;
+        DiffLineType type = DiffLineType::Context;
+        int lineNumber = -1;
+    };
+
+    struct DiffHunk {
+        std::string header;
+        int oldStart = 0;
+        int newStart = 0;
+        std::vector<DiffLine> lines;
+    };
+
+    // 11. Git Diff Side-by-Side
+    void initGitDiffViewer();
+    void shutdownGitDiffViewer();
+    void showGitDiffSideBySide(const std::string& filePath);
+    void closeGitDiffViewer();
+    void parseUnifiedDiff(const std::string& diff, const std::string& filePath);
+    void markDiffLines();
+    void createGitDiffPanel();
+    void populateGitDiffPane(HWND hwndRichEdit, const std::vector<DiffLine>& lines,
+                              const std::string& header);
+    void navigateDiffHunk(int direction);
+    static LRESULT CALLBACK GitDiffPanelProc(HWND, UINT, WPARAM, LPARAM);
+
+    bool m_gitDiffVisible = false;
+    HWND m_hwndGitDiffPanel = nullptr;
+    HWND m_hwndGitDiffLeft  = nullptr;
+    HWND m_hwndGitDiffRight = nullptr;
+    HFONT m_gitDiffFont     = nullptr;
+    std::vector<DiffLine> m_gitDiffLeftLines;
+    std::vector<DiffLine> m_gitDiffRightLines;
+    std::vector<DiffHunk> m_gitDiffHunks;
+    int m_gitDiffCurrentHunk = -1;
+
+    // ── TerminalProfile / TerminalTabInfo (Terminal Tabs) ──
+    struct TerminalProfile {
+        std::string name;
+        std::string shellPath;
+        std::string shellArgs;
+        std::string icon;
+        COLORREF color = RGB(204, 204, 204);
+    };
+
+    struct TerminalTabInfo {
+        int profileIndex = 0;
+        std::string title;
+        COLORREF color = RGB(204, 204, 204);
+        bool active    = true;
+        HWND hwndOutput = nullptr;
+        std::unique_ptr<Win32TerminalManager> manager;
+    };
+
+    // 12. Integrated Terminal Tabs
+    void initTerminalTabs();
+    void createTerminalTabBar();
+    void addTerminalTab(int profileIndex);
+    void closeTerminalTab(int tabIndex);
+    void switchTerminalTab(int tabIndex);
+    void showTerminalProfileMenu();
+    static LRESULT CALLBACK TerminalTabBarProc(HWND, UINT, WPARAM, LPARAM);
+
+    HWND m_hwndTerminalTabBar = nullptr;
+    int m_activeTerminalTab   = 0;
+    std::vector<TerminalProfile> m_terminalTabProfiles;
+    std::vector<TerminalTabInfo> m_terminalTabs;
+
+    // 13. Hover Documentation Tooltips
+    void initHoverTooltip();
+    void shutdownHoverTooltip();
+    void showHoverTooltip(int screenX, int screenY, const std::string& content);
+    void dismissHoverTooltip();
+    void onEditorMouseHover(int charPos);
+    static LRESULT CALLBACK HoverTooltipProc(HWND, UINT, WPARAM, LPARAM);
+
+    HWND m_hwndHoverPopup   = nullptr;
+    bool m_hoverVisible     = false;
+    std::string m_hoverContent;
+    HFONT m_hoverFont       = nullptr;
+    HFONT m_hoverBoldFont   = nullptr;
+
+    // 14. Parameter Hints (Signature Help)
+    void initSignatureHelp();
+    void shutdownSignatureHelp();
+    void triggerSignatureHelp();
+    void showSignaturePopup(int screenX, int screenY);
+    void dismissSignatureHelp();
+    void updateSignatureActiveParam(int paramIndex);
+    static LRESULT CALLBACK SignatureHelpProc(HWND, UINT, WPARAM, LPARAM);
+
+    HWND m_hwndSignaturePopup = nullptr;
+    bool m_signatureVisible   = false;
+    std::string m_signatureContent;
+    int m_signatureActiveParam = 0;
+    int m_signatureParamCount  = 0;
+    HFONT m_signatureFont      = nullptr;
+
+    // ── ReferenceResult (Find All References UI) ──
+    struct ReferenceResult {
+        std::string filePath;
+        int line     = 0;
+        int column   = 0;
+        std::string contextLine;
+    };
+
+    // ── RenameChange / RenamePreviewState (Rename Refactoring Preview) ──
+    struct RenameChange {
+        std::string filePath;
+        int line     = 0;
+        int column   = 0;
+        std::string oldText;
+        std::string newText;
+        std::string contextLine;
+        bool selected = true;
+    };
+
+    struct RenamePreviewState {
+        std::string oldName;
+        std::string newName;
+        std::vector<RenameChange> changes;
+        bool visible   = false;
+        HWND hwndPanel = nullptr;
+        HWND hwndList  = nullptr;
+        HFONT hFont    = nullptr;
+    };
+
+    // 17. Rename Refactoring Preview
+    void initRenamePreview();
+    void shutdownRenamePreview();
+    void showRenamePreview(const std::string& oldName, const std::string& newName,
+                            const std::vector<RenameChange>& changes);
+    void closeRenamePreview();
+    void applyRenameChanges();
+    void applySelectedRenames();
+    void renderRenamePreviewItem(HDC hdc, RECT itemRect, const RenameChange& change);
+    static LRESULT CALLBACK RenamePreviewProc(HWND, UINT, WPARAM, LPARAM);
+
+    RenamePreviewState m_renamePreview;
+
+    static constexpr int IDC_RENAME_PREVIEW     = 11280;
+    static constexpr int IDC_RENAME_INPUT       = 11281;
+    static constexpr int IDC_RENAME_CHECKLIST   = 11282;
+    static constexpr int IDC_RENAME_APPLY_BTN   = 11283;
+    static constexpr int IDC_RENAME_CANCEL_BTN  = 11284;
+
+    // 16. Find All References UI
+    void initReferencePanel();
+    void shutdownReferencePanel();
+    void showFindAllReferences(const std::string& symbol,
+                                const std::vector<ReferenceResult>& results);
+    void closeReferencePanel();
+    void navigateToReference(int refIndex);
+    void cmdFindAllReferences(const std::string& symbol);
+    static LRESULT CALLBACK ReferencePanelProc(HWND, UINT, WPARAM, LPARAM);
+
+    HWND m_hwndReferencePanel = nullptr;
+    HWND m_hwndReferenceTree  = nullptr;
+    bool m_referencePanelVisible = false;
+    std::string m_referenceSymbol;
+    std::vector<ReferenceResult> m_referenceResults;
+    HFONT m_referenceFont     = nullptr;
+
+    // ── CodeLensEntry ──
+    struct CodeLensEntry {
+        int line            = 0;
+        std::string symbol;
+        int referenceCount  = 0;
+        std::string text;
+    };
+
+    // 18. CodeLens (Reference Counts)
+    void initCodeLens();
+    void shutdownCodeLens();
+    void refreshCodeLens();
+    int  countSymbolReferences(const std::string& symbol);
+    void renderCodeLens(HDC hdc);
+    void toggleCodeLens();
+
+    bool m_codeLensEnabled = true;
+    std::vector<CodeLensEntry> m_codeLensEntries;
+    HFONT m_codeLensFont   = nullptr;
+
+    // ── InlayHintEntry ──
+    enum class InlayHintKind { Type, Parameter, Enum };
+
+    struct InlayHintEntry {
+        int line     = 0;
+        int column   = 0;
+        std::string text;
+        InlayHintKind kind = InlayHintKind::Type;
+    };
+
+    // 19. Inlay Type Hints
+    void initInlayHints();
+    void shutdownInlayHints();
+    void refreshInlayHints();
+    std::string inferTypeFromExpression(const std::string& expr);
+    void renderInlayHints(HDC hdc);
+    void toggleInlayHints();
+
+    bool m_inlayHintsEnabled = true;
+    std::vector<InlayHintEntry> m_inlayHintEntries;
+    HFONT m_inlayHintFont  = nullptr;
+
+    // ── Tier 2 Command IDs (11700–11799) ──
+    static constexpr int IDM_TIER2_GITDIFF           = 11700;
+    static constexpr int IDM_TIER2_GITDIFF_CLOSE     = 11701;
+    static constexpr int IDM_TIER2_GITDIFF_PREV      = 11702;
+    static constexpr int IDM_TIER2_GITDIFF_NEXT      = 11703;
+    static constexpr int IDM_TIER2_TERMINAL_NEW      = 11710;
+    static constexpr int IDM_TIER2_TERMINAL_CLOSE    = 11711;
+    static constexpr int IDM_TIER2_HOVER             = 11720;
+    static constexpr int IDM_TIER2_SIGHELP           = 11721;
+    static constexpr int IDM_TIER2_OUTLINE_REFRESH   = 11730;
+    static constexpr int IDM_TIER2_OUTLINE_FILTER    = 11731;
+    static constexpr int IDM_TIER2_OUTLINE_SORT      = 11732;
+    static constexpr int IDM_TIER2_FIND_REFS         = 11740;
+    static constexpr int IDM_TIER2_RENAME_PREVIEW    = 11750;
+    static constexpr int IDM_TIER2_CODELENS_TOGGLE   = 11760;
+    static constexpr int IDM_TIER2_CODELENS_REFRESH  = 11761;
+    static constexpr int IDM_TIER2_INLAY_TOGGLE      = 11770;
+    static constexpr int IDM_TIER2_INLAY_REFRESH     = 11771;
+
+    // ════════════════════════════════════════════════════════════════════
+    // TIER 3: POLISH (Quality of Life) — Features 31–39
+    // ════════════════════════════════════════════════════════════════════
+
+    // Master init/shutdown
+    void initTier3Polish();
+    void shutdownTier3Polish();
+    bool handleTier3Timer(UINT_PTR timerId);
+
+    // 31. Smooth Caret Animation
+    void initSmoothCaret();
+    void shutdownSmoothCaret();
+    void updateCaretTarget();
+    void onCaretAnimationTick();
+    void renderSmoothCaret(HDC hdc);
+
+    struct CaretAnimation {
+        float currentX   = 0.0f;
+        float currentY   = 0.0f;
+        float targetX    = 0.0f;
+        float targetY    = 0.0f;
+        bool  blinkOn    = true;
+        bool  animating  = false;
+        bool  enabled    = false;
+        int   blinkPhase = 0;
+    };
+    CaretAnimation m_caretAnim;
+
+    // 32. Font Ligatures (DirectWrite)
+    void initDirectWriteLigatures();
+    void shutdownDirectWriteLigatures();
+    void toggleLigatures();
+    IDWriteTextLayout* createLigatureLayout(const std::wstring& text, float maxWidth);
+
+    IDWriteFactory*    m_dwFactory     = nullptr;
+    IDWriteTextFormat* m_dwTextFormat  = nullptr;
+    bool               m_ligaturesEnabled = false;
+
+    // 33. High DPI Polish
+    void  onDpiChanged(UINT newDpi, const RECT* suggestedRect);
+    int   dpiScaleValue(int basePixels) const;
+    float getDpiScaleFactor() const;
+    float m_dpiScaleFactor = 1.0f;
+
+    // 34. Theme Toggle Animation
+    void beginThemeTransition(int targetThemeId);
+    void onThemeAnimationTick();
+    void applyThemeByIdAnimated(int themeId);
+
+    struct ThemeTransition {
+        IDETheme fromTheme;
+        IDETheme toTheme;
+        int      targetThemeId = 0;
+        UINT     elapsedMs     = 0;
+        bool     active        = false;
+    };
+    ThemeTransition m_themeTransition;
+
+    // 35. File Watcher Indicators
+    void initFileWatcher();
+    void shutdownFileWatcher();
+    void startWatchingFile(const std::string& filePath);
+    void stopWatchingFile();
+    void onExternalFileChange(const std::string& changedFile);
+    void showFileChangedToast();
+    void reloadCurrentFile();
+
+    std::unique_ptr<IocpFileWatcher> m_fileWatcher;
+    std::string                      m_watchedFilePath;
+    bool                             m_fileChangedExternally = false;
+
+    // 36. Save Status Indicator
+    void updateSaveStatusIndicator();
+    void updateTabModifiedIndicator();
+    void markFileModified();
+    void markFileSaved();
+
+    // 37. Format on Save Progress
+    void showFormatOnSaveProgress();
+    void onFormatComplete(bool success);
+    void onFormatStatusTimerExpired();
+    bool formatAndSave();
+    bool requestLSPFormat();
+    bool m_formatInProgress  = false;
+    bool m_lspFormatEnabled  = false;
+
+    // 38. Language Mode Quick Switch
+    void showLanguageModeSelector();
+
+    // 39. Encoding Selector UI
+    void showEncodingSelector();
+    void reopenWithEncoding(const char* encodingName, int codePage);
+    void saveWithEncoding(const char* encodingName, int codePage);
+    int  m_currentEncoding = 65001; // CP_UTF8
+
+    // Tier 3: Status bar click routing
+    void handleStatusBarClick(int x, int y);
+
+    // ════════════════════════════════════════════════════════════════════
+    // TIER 3: COSMETICS — Features 20–30
+    // ════════════════════════════════════════════════════════════════════
+
+    // Master lifecycle
+    void initTier3Cosmetics();
+    void shutdownTier3Cosmetics();
+    bool handleTier3CosmeticsCommand(int commandId);
+    bool handleTier3CosmeticsTimer(UINT_PTR timerId);
+
+    // Composite paint helpers (called from gutter / editor paint)
+    void paintTier3CosmeticsGutter(HDC hdc, const RECT& gutterRect);
+    void paintTier3CosmeticsEditor(HDC hdc, const RECT& editorRect);
+
+    // 20. Bracket Pair Colorization
+    void initBracketPairColorization();
+    void shutdownBracketPairColorization();
+    void toggleBracketPairColorization();
+    void applyBracketPairColors();
+    bool m_bracketPairEnabled = false;
+
+    // 21. Indentation Guides
+    void initIndentationGuides();
+    void shutdownIndentationGuides();
+    void toggleIndentationGuides();
+    void paintIndentationGuides(HDC hdc, const RECT& editorRect);
+    bool m_indentGuidesEnabled = false;
+
+    // 22. Whitespace Rendering Toggle
+    void initWhitespaceRendering();
+    void toggleWhitespaceRendering();
+    void paintWhitespaceGlyphs(HDC hdc, const RECT& editorRect);
+    bool m_whitespaceVisible = false;
+
+    // 23. Word Wrap Indicator
+    void initWordWrapIndicator();
+    void toggleWordWrapIndicator();
+    void paintWordWrapIndicators(HDC hdc, const RECT& gutterRect);
+    bool m_wordWrapIndicatorEnabled = false;
+
+    // 24. Relative Line Numbers
+    void initRelativeLineNumbers();
+    void toggleRelativeLineNumbers();
+    void paintRelativeLineNumbers(HDC hdc, RECT& rc);
+    bool m_relativeLineNumbers = false;
+
+    // 25. Zen Mode (Distraction Free)
+    void initZenMode();
+    void toggleZenMode();
+    void enterZenMode();
+    void exitZenMode();
+    bool m_zenModeActive = false;
+
+    struct ZenModePrevState {
+        bool sidebarWasVisible     = false;
+        bool statusBarWasVisible   = false;
+        bool activityBarWasVisible = false;
+        bool tabBarWasVisible      = false;
+        bool panelWasVisible       = false;
+        bool menuWasVisible        = false;
+        bool wasMaximized          = false;
+    };
+    ZenModePrevState m_zenModePrevState;
+
+    // 26. Tab Pinning
+    void pinTab(int index);
+    void unpinTab(int index);
+    void reorderTabsForPinning();
+    void rebuildTabBarFromModel();
+
+    // 27. Preview Tabs (Single Click)
+    void openPreviewTab(const std::string& filePath, const std::string& displayName);
+    void promotePreviewToFull();
+
+    // 28. Search Results in Scrollbar
+    void initScrollbarSearchMarkers();
+    void updateScrollbarSearchMarkers(const std::string& searchTerm);
+    void paintScrollbarSearchMarkers(HDC hdc, const RECT& scrollRect);
+    void clearScrollbarSearchMarkers();
+    bool m_scrollbarSearchEnabled = false;
+    std::vector<int> m_scrollSearchMatches;
+
+    // 29. Quick Fix Lightbulb
+    void initQuickFixLightbulb();
+    void shutdownQuickFixLightbulb();
+    void updateLightbulbPosition();
+    void paintLightbulb(HDC hdc, const RECT& gutterRect);
+    void onLightbulbClicked();
+    bool m_lightbulbEnabled = false;
+    bool m_lightbulbVisible = false;
+    int  m_lightbulbLine    = -1;
+
+    struct CodeAction {
+        std::string title;
+        std::string kind;   // "quickfix", "refactor", "suppress"
+        int diagnosticIndex = -1;
+    };
+    std::vector<CodeAction> requestCodeActions(int line);
+    void applyCodeAction(const CodeAction& action);
+
+    // 30. Code Folding Controls
+    void initCodeFolding();
+    void shutdownCodeFolding();
+    void toggleCodeFolding();
+    void parseFoldRegions();
+    void toggleFoldAtLine(int line);
+    void foldAll();
+    void unfoldAll();
+    void paintFoldingControls(HDC hdc, const RECT& gutterRect);
+    int  getFoldRegionAtGutterClick(int y);
+    bool m_codeFoldingEnabled = false;
+
+    struct FoldRegion {
+        int startLine       = 0;
+        int endLine         = 0;
+        int depth           = 0;
+        bool collapsed      = false;
+        std::string foldedText;
+        int foldMarkerStart = 0;
+        int foldMarkerLen   = 0;
+    };
+    std::vector<FoldRegion> m_foldRegions;
+    void foldRegion(FoldRegion& region);
+    void unfoldRegion(FoldRegion& region);
+
+    // ════════════════════════════════════════════════════════════════════
+    // TIER 1: CRITICAL COSMETIC (Mainstream Adoption) — Features 1–10
+    // ════════════════════════════════════════════════════════════════════
+
+    // Master init/shutdown/dispatch
+    void initTier1Cosmetics();
+    void shutdownTier1Cosmetics();
+    bool handleTier1Command(int commandId);
+    bool handleTier1Timer(UINT_PTR timerId);
+    bool handleTier1MouseWheel(WPARAM wParam, LPARAM lParam);
+
+    // Tier 1 Command IDs (12000–12099)
+    static constexpr int IDM_T1_SMOOTH_SCROLL_TOGGLE  = 12000;
+    static constexpr int IDM_T1_SMOOTH_SCROLL_SPEED   = 12001;
+    static constexpr int IDM_T1_MINIMAP_TOGGLE        = 12010;
+    static constexpr int IDM_T1_MINIMAP_HIGHLIGHT     = 12011;
+    static constexpr int IDM_T1_BREADCRUMBS_TOGGLE    = 12020;
+    static constexpr int IDM_T1_FUZZY_PALETTE         = 12030;
+    static constexpr int IDM_T1_FUZZY_FILES           = 12031;
+    static constexpr int IDM_T1_FUZZY_SYMBOLS         = 12032;
+    static constexpr int IDM_T1_SETTINGS_GUI          = 12040;
+    static constexpr int IDM_T1_SETTINGS_RESET        = 12042;
+    static constexpr int IDM_T1_WELCOME_SHOW          = 12050;
+    static constexpr int IDM_T1_WELCOME_CLONE         = 12051;
+    static constexpr int IDM_T1_WELCOME_OPEN_FOLDER   = 12052;
+    static constexpr int IDM_T1_WELCOME_NEW_FILE      = 12053;
+    static constexpr int IDM_T1_ICON_THEME_SET        = 12060;
+    static constexpr int IDM_T1_ICON_THEME_SETI       = 12061;
+    static constexpr int IDM_T1_ICON_THEME_MATERIAL   = 12062;
+    static constexpr int IDM_T1_TAB_DRAG_ENABLE       = 12070;
+    static constexpr int IDM_T1_SPLIT_VERTICAL        = 12080;
+    static constexpr int IDM_T1_SPLIT_HORIZONTAL      = 12081;
+    static constexpr int IDM_T1_SPLIT_GRID_2X2        = 12082;
+    static constexpr int IDM_T1_SPLIT_CLOSE           = 12083;
+    static constexpr int IDM_T1_SPLIT_FOCUS_NEXT      = 12084;
+    static constexpr int IDM_T1_UPDATE_CHECK          = 12090;
+    static constexpr int IDM_T1_UPDATE_INSTALL        = 12091;
+    static constexpr int IDM_T1_UPDATE_DISMISS        = 12092;
+    static constexpr int IDM_T1_UPDATE_RELEASE_NOTES  = 12093;
+
+    // 1. Smooth Scroll Animation
+    void initSmoothScroll();
+    void shutdownSmoothScroll();
+    bool onSmoothMouseWheel(WPARAM wParam, LPARAM lParam);
+    void onSmoothScrollTick();
+
+    struct SmoothScrollState {
+        bool  enabled    = true;
+        float velocityY  = 0.0f;
+        float currentY   = 0.0f;
+        float targetY    = 0.0f;
+        bool  animating  = false;
+    };
+    SmoothScrollState m_smoothScroll;
+
+    // 2. Minimap Enhanced (extends existing minimap)
+    void initMinimapEnhanced();
+    void paintMinimapEnhanced(HDC hdc, const RECT& rect);
+    bool m_minimapHighlightCursor = true;
+
+    // 3. Breadcrumbs (integration hooks — main code in Win32IDE_Breadcrumbs.cpp)
+    void updateBreadcrumbsOnCursorMove();
+    void updateBreadcrumbsForCursor(int line, int column);
+    int  m_breadcrumbHeight = 22;
+    HFONT m_breadcrumbFont = nullptr;
+    HWND  m_hwndBreadcrumbs = nullptr;
+
+    // 4. Command Palette Fuzzy Search
+    void initFuzzySearch();
+    void showFuzzyCommandPalette();
+    void showFuzzyPaletteWindow();
+    void showFuzzyFileFinder();
+    void showFuzzySymbolSearch();
+
+    struct FuzzyCommandEntry {
+        int         commandId = 0;
+        const char* label     = nullptr;
+        const char* category  = nullptr;
+        const char* cliAlias  = nullptr;
+    };
+    std::vector<FuzzyCommandEntry> m_fuzzyCommandLabels;
+
+    // 5. Settings GUI
+    void initSettingsGUI();
+    void showSettingsGUIDialog();
+
+    // 6. Welcome / Onboarding Page
+    void initWelcomePage();
+    void showWelcomePage();
+    void handleWelcomeCloneRepo();
+    void handleWelcomeOpenFolder();
+    void handleWelcomeNewFile();
+    bool m_showWelcomeOnStartup = true;
+    bool m_welcomePageShown     = false;
+
+    // 7. File Icon Theme Support
+    void initFileIconTheme();
+    int  getFileIconIndex(const std::string& filename) const;
+    void setFileIconTheme(const std::string& themeName);
+    void showFileIconThemeSelector();
+    HIMAGELIST  m_fileIconImageList  = nullptr;
+    std::string m_currentIconTheme   = "seti";
+
+    // 8. Drag-and-Drop File Tabs
+    void initTabDragDrop();
+    void reorderTab(int fromIndex, int toIndex);
+    void onTabDragTick();
+    static LRESULT CALLBACK TabBarDragProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    WNDPROC m_originalTabBarProc = nullptr;
+    bool    m_tabDragEnabled     = true;
+    bool    m_tabDragging        = false;
+    int     m_dragTabIndex       = -1;
+    int     m_dragInsertIndex    = -1;
+    int     m_dragStartX         = 0;
+    int     m_dragStartY         = 0;
+
+    // 9. Split Editor (Grid Layout)
+    void initSplitEditor();
+    HWND createEditorPane(HWND parent, const RECT& bounds);
+    void splitEditorVertical();
+    void splitEditorHorizontal();
+    void splitEditorGrid2x2();
+    void closeSplitEditor();
+    void focusNextSplitPane();
+    void layoutSplitPanes();
+
+    struct SplitEditorPane {
+        HWND        hwnd      = nullptr;
+        int         row       = 0;
+        int         col       = 0;
+        std::string filePath;
+    };
+    std::vector<SplitEditorPane> m_splitPanes;
+    bool m_splitEditorActive  = false;
+    int  m_splitOrientation   = 0; // 0=none, 1=vert, 2=horiz, 3=grid
+
+    // 10. Auto-Update Notification UI
+    void initAutoUpdateUI();
+    void shutdownAutoUpdateUI();
+    void checkForUpdates();
+    void showUpdateNotification();
+    void installUpdate();
+    void dismissUpdateNotification();
+    void showReleaseNotes();
+    bool        m_updateAvailable  = false;
+    bool        m_updateDismissed  = false;
+    std::string m_updateVersion;
+    std::string m_updateUrl;
+    NOTIFYICONDATAA m_trayIconData = {};
+
+    // ════════════════════════════════════════════════════════════════════════
+    // FLAGSHIP FEATURES — Product Pillars (13000–13299)
+    // ════════════════════════════════════════════════════════════════════════
+    // Three flagship product pillars that unify existing subsystems into
+    // coherent, auditable, enterprise-grade capabilities:
+    //   1. Provable AI Coding Agent   — cryptographic proof + chain-of-custody
+    //   2. AI-Native Reverse Eng IDE  — AI-powered binary analysis + vuln scan
+    //   3. Airgapped Enterprise Env   — offline licensing + compliance + DLP
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── Flagship Lifecycle ──
+    void initFlagshipFeatures();
+    void shutdownFlagshipFeatures();
+    bool handleFlagshipCommand(int commandId);
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 1. Provable AI Coding Agent (13000–13019)
+    //    Cryptographic attestation chain, Merkle-rooted proof bundles,
+    //    replay-deterministic verification, pre/post + invariant obligations.
+    //    Wires: DeterministicReplayEngine, AgentTranscript, BoundedAgentLoop.
+    // ────────────────────────────────────────────────────────────────────────
+    void initProvableAgent();
+    bool handleProvableAgentCommand(int commandId);
+    void cmdProvableShow();
+    void cmdProvableStart();
+    void cmdProvableRecord();
+    void cmdProvableVerify();
+    void cmdProvableReplay();
+    void cmdProvableExport();
+    void cmdProvableReset();
+    void cmdProvableStats();
+    bool m_provableAgentInitialized = false;
+
+public:
+    static constexpr int IDM_PROVABLE_SHOW     = 13000;
+    static constexpr int IDM_PROVABLE_START    = 13001;
+    static constexpr int IDM_PROVABLE_RECORD   = 13002;
+    static constexpr int IDM_PROVABLE_VERIFY   = 13003;
+    static constexpr int IDM_PROVABLE_REPLAY   = 13004;
+    static constexpr int IDM_PROVABLE_EXPORT   = 13005;
+    static constexpr int IDM_PROVABLE_RESET    = 13006;
+    static constexpr int IDM_PROVABLE_STATS    = 13007;
+private:
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 2. AI-Native Reverse Engineering IDE (13020–13039)
+    //    AI-powered symbol renaming, vulnerability scanning, call-graph
+    //    analysis, binary diffing, AI annotation with confidence scores.
+    //    Wires: RawrCodex, RawrReverseEngine, PDB native parser.
+    // ────────────────────────────────────────────────────────────────────────
+    void initAIReverseEngineering();
+    bool handleAIReverseEngCommand(int commandId);
+    void cmdAIREShow();
+    void cmdAIRELoad();
+    void cmdAIRERename();
+    void cmdAIREVulnScan();
+    void cmdAIREAnnotate();
+    void cmdAIRECallGraph();
+    void cmdAIREDiff();
+    void cmdAIREExport();
+    void cmdAIREStats();
+    bool m_aiReverseEngInitialized = false;
+
+public:
+    static constexpr int IDM_AIRE_SHOW         = 13020;
+    static constexpr int IDM_AIRE_LOAD         = 13021;
+    static constexpr int IDM_AIRE_AI_RENAME    = 13022;
+    static constexpr int IDM_AIRE_VULNSCAN     = 13023;
+    static constexpr int IDM_AIRE_ANNOTATE     = 13024;
+    static constexpr int IDM_AIRE_CALLGRAPH    = 13025;
+    static constexpr int IDM_AIRE_DIFF         = 13026;
+    static constexpr int IDM_AIRE_EXPORT       = 13027;
+    static constexpr int IDM_AIRE_STATS        = 13028;
+private:
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 3. Airgapped Enterprise AI Dev Environment (13040–13059)
+    //    Offline model vault, HWID-locked license validation, 9-framework
+    //    compliance (GDPR/SOX/HIPAA/PCI/ISO27001/FedRAMP/ITAR/EAR/NIST),
+    //    DLP scanning, network firewall verification, workspace encryption.
+    //    Wires: EnterpriseLicense, License_Shield, TelemetryCompliance.
+    // ────────────────────────────────────────────────────────────────────────
+    void initAirgappedEnterprise();
+    bool handleAirgappedCommand(int commandId);
+    void cmdAirgapShow();
+    void cmdAirgapCompliance();
+    void cmdAirgapModels();
+    void cmdAirgapAudit();
+    void cmdAirgapDLP();
+    void cmdAirgapFirewall();
+    void cmdAirgapLicense();
+    void cmdAirgapEncrypt();
+    void cmdAirgapExport();
+    void cmdAirgapStats();
+    bool m_airgappedEnterpriseInitialized = false;
+
+public:
+    static constexpr int IDM_AIRGAP_SHOW       = 13040;
+    static constexpr int IDM_AIRGAP_COMPLIANCE = 13041;
+    static constexpr int IDM_AIRGAP_MODELS     = 13042;
+    static constexpr int IDM_AIRGAP_AUDIT      = 13043;
+    static constexpr int IDM_AIRGAP_DLP        = 13044;
+    static constexpr int IDM_AIRGAP_FIREWALL   = 13045;
+    static constexpr int IDM_AIRGAP_LICENSE    = 13046;
+    static constexpr int IDM_AIRGAP_ENCRYPT    = 13047;
+    static constexpr int IDM_AIRGAP_EXPORT     = 13048;
+    static constexpr int IDM_AIRGAP_STATS      = 13049;
+private:
+
+    // ════════════════════════════════════════════════════════════════════
+    // TIER 5: COSMETIC FEATURES (#40-#50) — Line Ending, Network, Test
+    //         Explorer, Debug Watch, Call Stack, Marketplace, Telemetry
+    //         Dashboard, Shortcut Editor, Color Picker, Emoji, Crash
+    // ════════════════════════════════════════════════════════════════════
+
+    // Master lifecycle
+    void initTier5Cosmetics();
+    bool handleTier5Command(int commandId);
+
+    // 40. Line Ending Selector
+    void initLineEndingSelector();
+    bool handleLineEndingCommand(int commandId);
+
+    // 41. Network Panel
+    void initNetworkPanel();
+    bool handleNetworkCommand(int commandId);
+
+    // 42. Test Explorer
+    void initTestExplorer();
+    bool handleTestExplorerCommand(int commandId);
+
+    // 43. Debug Watch Format
+    void initDebugWatchFormat();
+    bool handleDebugWatchCommand(int commandId);
+
+    // 44. Call Stack Symbols
+    void initCallStackSymbols();
+    bool handleCallStackCommand(int commandId);
+
+    // 45. Marketplace
+    void initMarketplace();
+    bool handleMarketplaceCommand(int commandId);
+
+    // 46. Telemetry Dashboard
+    void initTelemetryDashboard();
+    bool handleTelemetryDashboardCommand(int commandId);
+
+    // 47. Shortcut Editor Panel
+    void initShortcutEditorPanel();
+    bool handleShortcutEditorCommand(int commandId);
+
+    // 48. Color Picker
+    void initColorPicker();
+    bool handleColorPickerCommand(int commandId);
+
+    // 49. Emoji Support
+    void initEmojiSupport();
+    bool handleEmojiCommand(int commandId);
+
+    // 50. Crash Reporter
+    void initCrashReporter();
+    bool handleCrashReporterCommand(int commandId);
+
+public:
+    // Tier 5 Command IDs (11500–11609)
+    static constexpr int IDM_LINEENDING_DETECT     = 11500;
+    static constexpr int IDM_LINEENDING_TO_LF      = 11509;
+
+    static constexpr int IDM_NETWORK_SHOW          = 11510;
+    static constexpr int IDM_NETWORK_STATUS        = 11519;
+
+    static constexpr int IDM_TESTEXPLORER_SHOW     = 11520;
+    static constexpr int IDM_TESTEXPLORER_FILTER   = 11529;
+
+    static constexpr int IDM_DBGWATCH_SHOW         = 11530;
+    static constexpr int IDM_DBGWATCH_CLEAR        = 11539;
+
+    static constexpr int IDM_CALLSTACK_CAPTURE     = 11540;
+    static constexpr int IDM_CALLSTACK_RESOLVE     = 11549;
+
+    static constexpr int IDM_MARKETPLACE_SHOW      = 11550;
+    static constexpr int IDM_MARKETPLACE_STATUS    = 11559;
+
+    static constexpr int IDM_TELDASH_SHOW          = 11560;
+    static constexpr int IDM_TELDASH_STATS         = 11569;
+
+    static constexpr int IDM_SHORTCUT_SHOW         = 11570;
+    static constexpr int IDM_SHORTCUT_LIST         = 11579;
+
+    static constexpr int IDM_COLORPICK_SCAN        = 11580;
+    static constexpr int IDM_COLORPICK_LIST        = 11589;
+
+    static constexpr int IDM_EMOJI_PICKER          = 11590;
+    static constexpr int IDM_EMOJI_TEST            = 11599;
+
+    static constexpr int IDM_CRASH_SHOW            = 11600;
+    static constexpr int IDM_CRASH_STATS           = 11609;
+private:
 };

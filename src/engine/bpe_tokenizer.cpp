@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <array>
+#include <set>
 
 bool BPETokenizer::load(const std::string& vocab_file, const std::string& merges_file) {
     // Load vocab (token -> id)
@@ -113,21 +115,97 @@ std::string BPETokenizer::decode(const std::vector<int>& tokens) {
 }
 
 std::string BPETokenizer::bytes_to_unicode(unsigned char b) {
-    // GPT-2 byte encoder
-    static const std::vector<std::string> byte_encoder = {
-        "<|endoftext|>", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@",
-        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
-        "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`",
-        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
-        "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "\u0120", "\u0121"
-    };
-    if (b < 128) return byte_encoder[b];
-    // Extended bytes... simplified fallback
-    return std::string(1, (char)b);
+    // GPT-2 byte encoder — maps each byte value to a printable Unicode character
+    // Identical logic to OpenAI's bytes_to_unicode() in encoder.py
+    static const auto table = []() {
+        std::array<uint32_t, 256> t{};
+        // Printable byte ranges that map to themselves
+        std::vector<int> printable;
+        for (int i = 33; i <= 126; ++i) printable.push_back(i);   // '!' to '~'
+        for (int i = 161; i <= 172; ++i) printable.push_back(i);  // '¡' to '¬'
+        for (int i = 174; i <= 255; ++i) printable.push_back(i);  // '®' to 'ÿ'
+
+        std::set<int> pset(printable.begin(), printable.end());
+        for (int p : printable) t[p] = static_cast<uint32_t>(p);
+
+        // Non-printable bytes (0-32, 127-160, 173) map to U+0100 onwards
+        uint32_t n = 256;
+        for (int i = 0; i < 256; ++i) {
+            if (pset.find(i) == pset.end()) {
+                t[i] = n++;
+            }
+        }
+        return t;
+    }();
+
+    // Encode the mapped codepoint as UTF-8
+    uint32_t cp = table[b];
+    std::string result;
+    if (cp < 0x80) {
+        result += static_cast<char>(cp);
+    } else if (cp < 0x800) {
+        result += static_cast<char>(0xC0 | (cp >> 6));
+        result += static_cast<char>(0x80 | (cp & 0x3F));
+    } else {
+        result += static_cast<char>(0xE0 | (cp >> 12));
+        result += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+        result += static_cast<char>(0x80 | (cp & 0x3F));
+    }
+    return result;
 }
 
-std::string BPETokenizer::bytes_to_string(const std::string& bytes) {
-    // Reverse byte encoding
-    return bytes; // Simplified - real impl handles \u0120 etc
+std::string BPETokenizer::bytes_to_string(const std::string& encoded) {
+    // Reverse GPT-2 byte encoding: decode Unicode codepoints back to raw byte values
+    static const auto reverse_table = []() {
+        std::unordered_map<uint32_t, unsigned char> rt;
+        std::vector<int> printable;
+        for (int i = 33; i <= 126; ++i) printable.push_back(i);
+        for (int i = 161; i <= 172; ++i) printable.push_back(i);
+        for (int i = 174; i <= 255; ++i) printable.push_back(i);
+
+        std::set<int> pset(printable.begin(), printable.end());
+        for (int p : printable) rt[static_cast<uint32_t>(p)] = static_cast<unsigned char>(p);
+        uint32_t n = 256;
+        for (int i = 0; i < 256; ++i) {
+            if (pset.find(i) == pset.end()) {
+                rt[n++] = static_cast<unsigned char>(i);
+            }
+        }
+        return rt;
+    }();
+
+    std::string result;
+    size_t i = 0;
+    while (i < encoded.size()) {
+        uint32_t cp = 0;
+        unsigned char c = static_cast<unsigned char>(encoded[i]);
+        size_t seqLen = 1;
+
+        // Decode UTF-8 sequence to Unicode codepoint
+        if (c < 0x80) {
+            cp = c;
+        } else if ((c & 0xE0) == 0xC0 && i + 1 < encoded.size()) {
+            cp = ((c & 0x1F) << 6) | (static_cast<unsigned char>(encoded[i + 1]) & 0x3F);
+            seqLen = 2;
+        } else if ((c & 0xF0) == 0xE0 && i + 2 < encoded.size()) {
+            cp = ((c & 0x0F) << 12) | ((static_cast<unsigned char>(encoded[i + 1]) & 0x3F) << 6)
+                 | (static_cast<unsigned char>(encoded[i + 2]) & 0x3F);
+            seqLen = 3;
+        } else if ((c & 0xF8) == 0xF0 && i + 3 < encoded.size()) {
+            cp = ((c & 0x07) << 18) | ((static_cast<unsigned char>(encoded[i + 1]) & 0x3F) << 12)
+                 | ((static_cast<unsigned char>(encoded[i + 2]) & 0x3F) << 6)
+                 | (static_cast<unsigned char>(encoded[i + 3]) & 0x3F);
+            seqLen = 4;
+        }
+
+        auto it = reverse_table.find(cp);
+        if (it != reverse_table.end()) {
+            result += static_cast<char>(it->second);
+        } else {
+            // Not in GPT-2 byte map — preserve original UTF-8 sequence
+            result.append(encoded, i, seqLen);
+        }
+        i += seqLen;
+    }
+    return result;
 }

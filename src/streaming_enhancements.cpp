@@ -362,14 +362,35 @@ std::vector<int32_t> BPETokenizer::tokenize(const std::string& text) {
         tokens.erase(tokens.begin() + bestIdx + 1);
     }
     
-    // Convert to IDs (using simple hash or just bytes if vocab not full)
-    // Assuming implicit vocab from merges or we map string -> id
+    // Convert merged tokens to IDs via vocabulary lookup
     std::vector<int32_t> result;
     for (const auto& t : tokens) {
-        // Mock ID generation for now since we don't reload full vocab map
-        int32_t id = 0; 
-        for(char c : t) id = (id << 8) | (unsigned char)c;
-        result.push_back(id & 0xFFFF); // Truncate
+        // Look up token in the vocabulary map built from merge ranks
+        // The merge file implicitly defines vocabulary: each unique piece is a token
+        bool found = false;
+        // Search merge ranks for this token as either part of a pair
+        for (const auto& entry : m_mergeRanks) {
+            if (entry.first.first == t || entry.first.second == t) {
+                // Use the rank as a stable ID mapping
+                result.push_back(static_cast<int32_t>(entry.second));
+                found = true;
+                break;
+            }
+            // Check if the merged form of the pair matches
+            std::string merged = entry.first.first + entry.first.second;
+            if (merged == t) {
+                result.push_back(static_cast<int32_t>(entry.second));
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            // Unknown token: encode as byte-level fallback
+            // Each byte maps to its value (byte-level BPE baseline)
+            for (unsigned char c : t) {
+                result.push_back(static_cast<int32_t>(c));
+            }
+        }
     }
     return result;
 }

@@ -594,6 +594,18 @@ void Win32IDE::createMenuBar(HWND hwnd)
         AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hRevEngMenu, "&RevEng");
     }
 
+    // Phase 45: Game Engine Integration (Unity + Unreal)
+    createGameEngineMenu(m_hMenu);
+
+    // Phase 48: The Final Crucible
+    createCrucibleMenu(m_hMenu);
+
+    // Phase 49: Copilot Gap Closer
+    createCopilotGapMenu(m_hMenu);
+
+    // Cursor/JB-Parity Feature Modules
+    createCursorParityMenu(m_hMenu);
+
     SetMenu(hwnd, m_hMenu);
 
 }
@@ -1183,9 +1195,10 @@ void Win32IDE::createStatusBar(HWND hwnd)
         return;
     }
 
-    int parts[] = {200, 400, -1};
-    SendMessage(m_hwndStatusBar, SB_SETPARTS, 3, (LPARAM)parts);
+    int parts[] = {200, 400, 600, -1};
+    SendMessage(m_hwndStatusBar, SB_SETPARTS, 4, (LPARAM)parts);
     SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
+    SendMessage(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)"Ctx: 0/128K  0%");
 
 }
 
@@ -4912,11 +4925,17 @@ std::string Win32IDE::buildChatPrompt(const std::string& userMessage)
     // Add system prompt if set
     if (!m_inferenceConfig.systemPrompt.empty()) {
         prompt = "<|system|>\n" + m_inferenceConfig.systemPrompt + "\n<|end|>\n";
+        m_contextUsage.systemTokens = static_cast<int>(m_inferenceConfig.systemPrompt.length()) / 4;
     }
     
     // Add user message
     prompt += "<|user|>\n" + userMessage + "\n<|end|>\n";
     prompt += "<|assistant|>\n";
+    
+    // Track message tokens and update context window
+    m_contextUsage.messageTokens += static_cast<int>(userMessage.length()) / 4;
+    m_contextUsage.maxTokens = m_inferenceConfig.contextWindow;
+    updateContextWindowDisplay();
     
     return prompt;
 }
@@ -4929,6 +4948,14 @@ void Win32IDE::onInferenceToken(const std::string& token)
     // Phase 19B: Feed token to the streaming output system
     appendStreamingToken(token);
     
+    // Update context window token count (approximate: ~4 chars per token)
+    int approxTokens = static_cast<int>(m_currentInferenceResponse.length()) / 4;
+    m_contextUsage.toolResultTokens = approxTokens;
+    // Throttle status bar updates to every ~20 tokens
+    if (approxTokens % 20 == 0) {
+        updateContextWindowDisplay();
+    }
+    
     // Update UI with partial response if streaming is enabled
     if (m_inferenceConfig.streamOutput && m_inferenceCallback) {
         m_inferenceCallback(token, false);
@@ -4939,6 +4966,10 @@ void Win32IDE::onInferenceComplete(const std::string& fullResponse)
 {
     m_inferenceRunning = false;
     m_currentInferenceResponse = fullResponse;
+    
+    // Final context window update
+    m_contextUsage.toolResultTokens = static_cast<int>(fullResponse.length()) / 4;
+    updateContextWindowDisplay();
     
     if (m_inferenceCallback) {
         m_inferenceCallback(fullResponse, true);

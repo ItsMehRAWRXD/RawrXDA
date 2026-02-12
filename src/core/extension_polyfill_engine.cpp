@@ -37,14 +37,7 @@
 #include <regex>
 #include <filesystem>
 
-// Forward declare PatchResult
-struct PatchResult {
-    bool success;
-    const char* detail;
-    int errorCode;
-    static PatchResult ok(const char* msg = "Success") { return { true, msg, 0 }; }
-    static PatchResult error(const char* msg, int code = -1) { return { false, msg, code }; }
-};
+// PatchResult provided by model_memory_hotpatch.hpp (included transitively)
 
 // ============================================================================
 // Singleton

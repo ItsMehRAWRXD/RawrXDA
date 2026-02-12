@@ -260,6 +260,9 @@ public:
     void SetMinLevel(TelemetryLevel level) { m_minLevel = level; }
     TelemetryLevel GetMinLevel() const { return m_minLevel; }
 
+    // ---- Utility (public for exporters) ----
+    static uint64_t NowMs();
+
 private:
     UnifiedTelemetryCore();
     ~UnifiedTelemetryCore();
@@ -275,8 +278,6 @@ private:
 
     // ---- ASM counter reading (platform-specific) ----
     void ReadASMGlobals(ASMCounterSet& out);
-
-    static uint64_t NowMs();
 
     // ---- State ----
     std::atomic<bool>               m_initialized{false};

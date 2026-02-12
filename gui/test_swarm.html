@@ -336,11 +336,12 @@
       // ── Section 4: Streaming ──
       const sec4 = addSection('🌊 Streaming');
       try {
+        const streamModel = models.length > 0 ? (models[0].name || models[0]) : 'rawrxd';
         const res = await fetchOk('/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'rawrxd',
+            model: streamModel,
             messages: [{ role: 'user', content: 'Count to 3' }],
             stream: true, max_tokens: 32
           })
@@ -456,6 +457,7 @@
       btn.textContent = '▶ Run All Tests';
     }
   </script>
+  <script src="/gui/rawrxd-nav.js"></script>
 </body>
 
 </html>

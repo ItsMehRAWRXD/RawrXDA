@@ -508,8 +508,94 @@ std::string ReasoningSchemaRegistry::schemaToJSON(const ReasoningSchema& schema)
     return ss.str();
 }
 
-PatchResult ReasoningSchemaRegistry::schemaFromJSON(const std::string& /*json*/,
-                                                     ReasoningSchema& /*out*/) const {
-    // Placeholder for full JSON parsing — would use manual parser
-    return PatchResult::ok("Parsed");
+PatchResult ReasoningSchemaRegistry::schemaFromJSON(const std::string& json,
+                                                     ReasoningSchema& out) const {
+    // Manual JSON parser for reasoning schema format
+    if (json.empty() || json[0] != '{') {
+        return PatchResult::error("Invalid JSON: expected '{'" , -1);
+    }
+
+    auto extractStr = [&json](const std::string& key) -> std::string {
+        std::string pat = "\"" + key + "\": \"";
+        auto pos = json.find(pat);
+        if (pos == std::string::npos) {
+            pat = "\"" + key + "\":\"";
+            pos = json.find(pat);
+        }
+        if (pos == std::string::npos) return "";
+        auto start = pos + pat.size();
+        auto end = json.find('"', start);
+        if (end == std::string::npos) return "";
+        return json.substr(start, end - start);
+    };
+
+    auto extractInt = [&json](const std::string& key) -> int {
+        std::string pat = "\"" + key + "\": ";
+        auto pos = json.find(pat);
+        if (pos == std::string::npos) {
+            pat = "\"" + key + "\":";
+            pos = json.find(pat);
+        }
+        if (pos == std::string::npos) return 0;
+        auto start = pos + pat.size();
+        return atoi(json.c_str() + start);
+    };
+
+    out.name = extractStr("name");
+    if (out.name.empty()) {
+        return PatchResult::error("Missing 'name' field", -2);
+    }
+
+    // Parse version string "M.m.p"
+    std::string verStr = extractStr("version");
+    if (!verStr.empty()) {
+        sscanf(verStr.c_str(), "%u.%u.%u",
+               &out.version.major, &out.version.minor,
+               &out.version.patch);
+    }
+
+    // Parse fields array
+    out.fields.clear();
+    size_t fieldsStart = json.find("\"fields\"");
+    if (fieldsStart != std::string::npos) {
+        size_t arrStart = json.find('[', fieldsStart);
+        size_t arrEnd = json.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            std::string fieldsJson = json.substr(arrStart, arrEnd - arrStart + 1);
+            size_t fpos = 0;
+            while ((fpos = fieldsJson.find('{', fpos)) != std::string::npos) {
+                size_t fend = fieldsJson.find('}', fpos);
+                if (fend == std::string::npos) break;
+
+                std::string entry = fieldsJson.substr(fpos, fend - fpos + 1);
+
+                SchemaField field;
+                // Extract field properties from entry
+                auto eStr = [&entry](const std::string& key) -> std::string {
+                    std::string p = "\"" + key + "\": \"";
+                    auto pp = entry.find(p);
+                    if (pp == std::string::npos) { p = "\"" + key + "\":\""; pp = entry.find(p); }
+                    if (pp == std::string::npos) return "";
+                    auto s = pp + p.size();
+                    auto e = entry.find('"', s);
+                    return (e != std::string::npos) ? entry.substr(s, e - s) : "";
+                };
+
+                field.name = eStr("name");
+                field.type = eStr("type");
+                field.defaultValue = eStr("default");
+                field.required = (entry.find("\"required\": true") != std::string::npos ||
+                                  entry.find("\"required\":true") != std::string::npos);
+                field.deprecated = (entry.find("\"deprecated\": true") != std::string::npos ||
+                                    entry.find("\"deprecated\":true") != std::string::npos);
+
+                if (!field.name.empty()) {
+                    out.fields.push_back(field);
+                }
+                fpos = fend + 1;
+            }
+        }
+    }
+
+    return PatchResult::ok("Schema parsed successfully");
 }

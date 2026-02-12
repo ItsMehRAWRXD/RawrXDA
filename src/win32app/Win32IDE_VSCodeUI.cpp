@@ -2,6 +2,7 @@
 // Activity Bar, Secondary Sidebar, Panel (Terminal/Output/Problems/Debug Console), Enhanced Status Bar
 
 #include "Win32IDE.h"
+#include "../ui/tool_action_status.h"
 #include <commctrl.h>
 #include <richedit.h>
 #include <sstream>
@@ -301,12 +302,27 @@ void Win32IDE::toggleSecondarySidebar()
 
 void Win32IDE::updateSecondarySidebarContent()
 {
-    // Update chat display with history
+    // Update chat display with history + tool action status + working bubbles
     std::string chatText;
-    for (const auto& msg : m_chatHistory) {
+    for (size_t i = 0; i < m_chatHistory.size(); ++i) {
+        const auto& msg = m_chatHistory[i];
         if (msg.first == "user") {
             chatText += "You: " + msg.second + "\r\n\r\n";
         } else {
+            // Render tool action status block before assistant message
+            auto it = m_chatToolActions.find(i);
+            if (it != m_chatToolActions.end() && !it->second.empty()) {
+                chatText += RawrXD::UI::ToolActionStatusFormatter::formatPlainTextBlock(
+                    it->second, static_cast<int>(it->second.size()));
+                chatText += "\r\n";
+            }
+
+            // Render working bubbles (plain text) if accumulator has any
+            if (m_currentToolActions.workingBubbles().size() > 0) {
+                chatText += m_currentToolActions.renderBubblesPlainText();
+                chatText += "\r\n";
+            }
+
             chatText += "Copilot: " + msg.second + "\r\n\r\n";
         }
     }
@@ -353,6 +369,17 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     }
     
     m_chatHistory.push_back({"assistant", response});
+
+    // Store accumulated tool actions for this response
+    if (m_currentToolActions.totalActions() > 0) {
+        size_t msgIdx = m_chatHistory.size() - 1;
+        m_chatToolActions[msgIdx] = m_currentToolActions.actions();
+        // Add "Finished" summary action
+        m_chatToolActions[msgIdx].push_back(
+            RawrXD::UI::ToolActionStatus::FinishedAction(m_currentToolActions.totalActions()));
+        m_currentToolActions.clear();
+    }
+
     RAWRXD_LOG_INFO("[sendCopilotMessage] Added response to history, updating UI...");
     RAWRXD_LOG_INFO("=== SEND MESSAGE END ===");
     

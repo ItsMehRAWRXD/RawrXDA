@@ -145,19 +145,7 @@
 
 #endif // QuickJS availability
 
-// ============================================================================
-// Forward: PatchResult (matches project convention)
-// ============================================================================
-#ifndef PATCHRESULT_DEFINED
-#define PATCHRESULT_DEFINED
-struct PatchResult {
-    bool success;
-    const char* detail;
-    int errorCode;
-    static PatchResult ok(const char* msg = "Success") { return { true, msg, 0 }; }
-    static PatchResult error(const char* msg, int code = -1) { return { false, msg, code }; }
-};
-#endif
+// PatchResult provided by model_memory_hotpatch.hpp (included transitively)
 
 // ============================================================================
 // VSCodeExtensionManifest — provided by vscode_extension_api.h (std::string version)

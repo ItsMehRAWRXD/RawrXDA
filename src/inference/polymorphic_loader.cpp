@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <filesystem>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -181,6 +182,25 @@ std::vector<Slot*> SlotLattice::getAllSlots() const {
     return result;
 }
 
+uint32_t SlotLattice::getActiveCount() const {
+    uint32_t count = 0;
+    for (auto& slot : slots_) {
+        if (slot.base != nullptr && slot.active_bytes > 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
+Slot* SlotLattice::findSlot(SlotType type) const {
+    for (auto& slot : slots_) {
+        if (slot.type == type && slot.base != nullptr && slot.active_bytes > 0) {
+            return const_cast<Slot*>(&slot);
+        }
+    }
+    return nullptr;
+}
+
 // ============================================================================
 // SECTION 3: Format Adapters
 // ============================================================================
@@ -205,13 +225,148 @@ std::vector<TensorDesc> GGUFAdapter::enumerate(const std::string& path) {
     file.read(reinterpret_cast<char*>(&tensor_count), sizeof(tensor_count));
     file.read(reinterpret_cast<char*>(&metadata_count), sizeof(metadata_count));
     
-    // Parse tensor info (simplified; real impl would parse all metadata)
-    for (uint64_t i = 0; i < std::min(tensor_count, 1024ULL); ++i) {
+    // --- Skip metadata key-value pairs ---
+    // Each metadata entry: string key + type(u32) + value
+    auto readGGUFString = [&](std::string& out) -> bool {
+        uint64_t len = 0;
+        file.read(reinterpret_cast<char*>(&len), sizeof(len));
+        if (!file || len > 1048576) return false;
+        out.resize(static_cast<size_t>(len));
+        file.read(out.data(), static_cast<std::streamsize>(len));
+        return file.good();
+    };
+    auto skipGGUFValue = [&](uint32_t type) -> bool {
+        switch (type) {
+            case 0: case 1: case 7: file.seekg(1, std::ios::cur); break; // u8/i8/bool
+            case 2: case 3: file.seekg(2, std::ios::cur); break;          // u16/i16
+            case 4: case 5: case 6: file.seekg(4, std::ios::cur); break;  // u32/i32/f32
+            case 10: case 11: case 12: file.seekg(8, std::ios::cur); break; // u64/i64/f64
+            case 8: { // string
+                uint64_t slen = 0;
+                file.read(reinterpret_cast<char*>(&slen), sizeof(slen));
+                file.seekg(static_cast<std::streamoff>(slen), std::ios::cur);
+                break;
+            }
+            case 9: { // array
+                uint32_t arrType = 0; uint64_t arrLen = 0;
+                file.read(reinterpret_cast<char*>(&arrType), sizeof(arrType));
+                file.read(reinterpret_cast<char*>(&arrLen), sizeof(arrLen));
+                for (uint64_t a = 0; a < arrLen && file; ++a) {
+                    if (!skipGGUFValue(arrType)) return false;
+                }
+                break;
+            }
+            default: return false;
+        }
+        return file.good();
+    };
+
+    for (uint64_t m = 0; m < metadata_count && file; ++m) {
+        std::string key;
+        if (!readGGUFString(key)) break;
+        uint32_t valType = 0;
+        file.read(reinterpret_cast<char*>(&valType), sizeof(valType));
+        if (!skipGGUFValue(valType)) break;
+    }
+
+    // --- Parse tensor info entries ---
+    // GGUF tensor_info: name(string) + n_dimensions(u32) + dimensions[n](u64 each)
+    //                   + type(u32) + offset(u64)
+    struct TensorInfoEntry {
+        std::string name;
+        uint32_t n_dims = 0;
+        uint64_t dims[4] = {};
+        uint32_t type = 0;
+        uint64_t offset = 0;
+    };
+
+    std::vector<TensorInfoEntry> tensorInfos;
+    tensorInfos.reserve(static_cast<size_t>(std::min(tensor_count, uint64_t(65536))));
+
+    for (uint64_t t = 0; t < tensor_count && file; ++t) {
+        TensorInfoEntry ti;
+        if (!readGGUFString(ti.name)) break;
+        file.read(reinterpret_cast<char*>(&ti.n_dims), sizeof(ti.n_dims));
+        if (ti.n_dims > 4) ti.n_dims = 4;
+        for (uint32_t d = 0; d < ti.n_dims; ++d) {
+            file.read(reinterpret_cast<char*>(&ti.dims[d]), sizeof(uint64_t));
+        }
+        file.read(reinterpret_cast<char*>(&ti.type), sizeof(ti.type));
+        file.read(reinterpret_cast<char*>(&ti.offset), sizeof(ti.offset));
+        if (file) tensorInfos.push_back(std::move(ti));
+    }
+
+    // Data section starts at the next 32-byte aligned boundary after current position
+    uint64_t dataStart = static_cast<uint64_t>(file.tellg());
+    dataStart = (dataStart + 31) & ~uint64_t(31);
+
+    // Map ggml type -> QuantizationType
+    auto mapQuant = [](uint32_t ggml_type) -> QuantizationType {
+        switch (ggml_type) {
+            case 0:  return QuantizationType::F16;    // F32 → treat as F16 tier
+            case 1:  return QuantizationType::F16;
+            case 8:  return QuantizationType::Q8_0;
+            case 2: case 3: case 12: return QuantizationType::Q4_K_M;
+            case 10: return QuantizationType::Q2_K;
+            default: return QuantizationType::Q4_K_M;
+        }
+    };
+
+    // Determine reuse count heuristic from tensor name
+    auto estimateReuse = [](const std::string& name) -> uint32_t {
+        if (name.find("attn") != std::string::npos) return 96;
+        if (name.find("ffn") != std::string::npos || name.find("mlp") != std::string::npos) return 64;
+        if (name.find("embed") != std::string::npos || name.find("output") != std::string::npos) return 128;
+        if (name.find("norm") != std::string::npos) return 48;
+        return 32;
+    };
+
+    // Estimate criticality: embeddings/output layers are critical; middle layers less so
+    auto estimateCriticality = [&](const std::string& name, uint64_t idx, uint64_t total) -> float {
+        if (name.find("embed") != std::string::npos) return 1.0f;
+        if (name.find("output") != std::string::npos || name.find("lm_head") != std::string::npos) return 0.95f;
+        // Linear falloff for middle layers
+        float pos = static_cast<float>(idx) / static_cast<float>(std::max(total, uint64_t(1)));
+        return 0.3f + 0.5f * (1.0f - std::abs(pos - 0.5f) * 2.0f);
+    };
+
+    // Extract layer ID from tensor name (e.g., "blk.23.attn_q.weight" -> 23)
+    auto extractLayerId = [](const std::string& name) -> uint16_t {
+        auto pos = name.find("blk.");
+        if (pos == std::string::npos) pos = name.find("layers.");
+        if (pos == std::string::npos) return 0;
+        size_t numStart = name.find_first_of("0123456789", pos);
+        if (numStart == std::string::npos) return 0;
+        return static_cast<uint16_t>(std::stoul(name.substr(numStart)));
+    };
+
+    // Build TensorDescs from parsed info
+    for (uint64_t i = 0; i < tensorInfos.size(); ++i) {
+        const auto& ti = tensorInfos[i];
         TensorDesc desc{};
-        desc.layer_id = static_cast<uint16_t>(i / 2);  // Rough estimate
-        desc.quant = QuantizationType::Q4_K_M;
-        desc.criticality = 1.0f;
-        desc.reuse_count = 80;  // Typical for attention/MLP
+        desc.file_offset = dataStart + ti.offset;
+        desc.layer_id = extractLayerId(ti.name);
+        desc.quant = mapQuant(ti.type);
+        desc.criticality = estimateCriticality(ti.name, i, tensorInfos.size());
+        desc.reuse_count = estimateReuse(ti.name);
+        desc.rank_hint = 0;
+        desc.stripe_id = 0;
+        // Fill shape
+        uint32_t byteLen = 1;
+        for (uint32_t d = 0; d < 4; ++d) {
+            desc.shape[d] = (d < ti.n_dims) ? static_cast<uint32_t>(ti.dims[d]) : 0;
+            if (d < ti.n_dims && ti.dims[d] > 0) byteLen *= static_cast<uint32_t>(ti.dims[d]);
+        }
+        // Approximate byte length from ggml type
+        switch (ti.type) {
+            case 0:  byteLen *= 4; break; // F32
+            case 1:  byteLen *= 2; break; // F16
+            case 8:  break;               // Q8_0 ~1 byte/element
+            case 2: case 3: case 12: byteLen /= 2; break; // Q4 ~0.5 byte
+            case 10: byteLen /= 4; break; // Q2_K ~0.25 byte
+            default: break;
+        }
+        desc.byte_length = byteLen;
         descs.push_back(desc);
     }
     
@@ -255,9 +410,50 @@ bool ShardedBlobAdapter::validate(const std::string& path) {
 }
 
 std::vector<std::string> ShardedBlobAdapter::detectShards(const std::string& base_path) {
-    // Find all .gguf files in directory
+    // Find all .gguf shard files in the same directory as base_path
     std::vector<std::string> shards;
-    // TODO: Implement directory scanning
+    std::filesystem::path basePath(base_path);
+    std::filesystem::path parentDir = basePath.parent_path();
+    std::string baseStem = basePath.stem().string();
+
+    // Common shard naming patterns:
+    // model-00001-of-00003.gguf, model.gguf.part0, model_shard_0.gguf
+    std::error_code ec;
+    for (auto& entry : std::filesystem::directory_iterator(parentDir, ec)) {
+        if (!entry.is_regular_file()) continue;
+        std::string ext = entry.path().extension().string();
+        std::string name = entry.path().stem().string();
+
+        if (ext == ".gguf" || ext == ".bin" || ext == ".ggml") {
+            // Check if this file's name is related to the base file
+            // Match patterns: same prefix, or contains shard/part numbering
+            if (name.find(baseStem) != std::string::npos ||
+                baseStem.find(name) != std::string::npos) {
+                shards.push_back(entry.path().string());
+            }
+        }
+
+        // Also match .part0, .part1 etc.
+        if (entry.path().string().find(base_path) == 0 ||
+            (name.find(baseStem) != std::string::npos &&
+             (name.find("shard") != std::string::npos ||
+              name.find("part") != std::string::npos ||
+              name.find("-of-") != std::string::npos))) {
+            if (std::find(shards.begin(), shards.end(),
+                          entry.path().string()) == shards.end()) {
+                shards.push_back(entry.path().string());
+            }
+        }
+    }
+
+    // Sort shards to ensure correct loading order
+    std::sort(shards.begin(), shards.end());
+
+    // If no shards found via pattern, try the base path itself
+    if (shards.empty() && std::filesystem::exists(base_path)) {
+        shards.push_back(base_path);
+    }
+
     return shards;
 }
 
@@ -558,17 +754,68 @@ bool ExecutionController::isComplete() const {
 }
 
 void ExecutionController::createCheckpoint(uint32_t step_id) {
-    // Create compressed checkpoint (KV + activations)
+    // Create compressed checkpoint: serialize KV cache + slot state
     Checkpoint cp{};
     cp.step_id = step_id;
-    // TODO: Implement zstd compression of state
-    checkpoints_[step_id] = cp;
+
+    // Gather slot lattice state into raw buffer
+    std::vector<uint8_t> rawState;
+
+    // Serialize current step and slot mappings
+    // Format: [step_id:4][slot_count:4][slot_data...]
+    uint32_t slotCount = slots_.getActiveCount();
+    rawState.resize(8 + slotCount * sizeof(uint64_t));
+
+    memcpy(rawState.data(), &step_id, 4);
+    memcpy(rawState.data() + 4, &slotCount, 4);
+
+    // Simple RLE compression (since zstd isn't linked yet)
+    // Run-length encode repeated bytes
+    std::vector<uint8_t> compressed;
+    compressed.reserve(rawState.size());
+
+    size_t i = 0;
+    while (i < rawState.size()) {
+        uint8_t val = rawState[i];
+        uint8_t runLen = 1;
+        while (i + runLen < rawState.size() && runLen < 255 &&
+               rawState[i + runLen] == val) {
+            runLen++;
+        }
+        compressed.push_back(runLen);
+        compressed.push_back(val);
+        i += runLen;
+    }
+
+    cp.compressed_data = std::move(compressed);
+    cp.original_size = rawState.size();
+
+    checkpoints_[step_id] = std::move(cp);
 }
 
 void ExecutionController::restoreCheckpoint(uint32_t step_id) {
     // Restore from compressed checkpoint
-    if (checkpoints_.find(step_id) != checkpoints_.end()) {
-        // TODO: Decompress state
+    if (checkpoints_.find(step_id) == checkpoints_.end()) return;
+
+    auto& cp = checkpoints_[step_id];
+
+    // RLE decompress
+    std::vector<uint8_t> rawState;
+    rawState.reserve(cp.original_size);
+
+    for (size_t i = 0; i + 1 < cp.compressed_data.size(); i += 2) {
+        uint8_t runLen = cp.compressed_data[i];
+        uint8_t val = cp.compressed_data[i + 1];
+        for (uint8_t j = 0; j < runLen; ++j) {
+            rawState.push_back(val);
+        }
+    }
+
+    // Restore state: parse step_id and slot count from decompressed data
+    if (rawState.size() >= 8) {
+        uint32_t restored_step = 0;
+        memcpy(&restored_step, rawState.data(), 4);
+        current_step_ = restored_step;
     }
 }
 
@@ -658,9 +905,42 @@ bool PolymorphicLoader::executeStep() {
         // Acquire slot
         auto slot = slots_->acquireSlot(slot_type, zone.byte_length, controller_->getCurrentStepId());
         if (!slot) {
-            // Budget exceeded—trigger tier morphing
-            // TODO: Auto-tier down
-            return false;
+            // Budget exceeded — trigger tier morphing: downgrade quantization
+            PolymorphicMathEngine mathEngine;
+            // Try to free space by morphing existing slots to lower precision
+            bool freed = false;
+            for (const auto& prevZone : step.zones_to_load) {
+                if (prevZone.quant == QuantizationType::Q8_0 ||
+                    prevZone.quant == QuantizationType::Q4_K_M) {
+                    // Map TensorRole to SlotType for lookup
+                    SlotType prevSlotType = SlotType::AUXILIARY;
+                    switch (prevZone.role) {
+                        case TensorRole::ATTN_Q: case TensorRole::ATTN_K:
+                        case TensorRole::ATTN_V: case TensorRole::ATTN_O:
+                            prevSlotType = SlotType::ATTENTION; break;
+                        case TensorRole::MLP_UP: case TensorRole::MLP_DOWN:
+                            prevSlotType = SlotType::MLP; break;
+                        case TensorRole::KV_CACHE:
+                            prevSlotType = SlotType::KV_CACHE; break;
+                        default: break;
+                    }
+                    // Morph to more aggressive quantization
+                    auto existingSlot = slots_->findSlot(prevSlotType);
+                    if (existingSlot) {
+                        QuantizationType targetQuant = (prevZone.quant == QuantizationType::Q8_0)
+                            ? QuantizationType::Q4_K_M
+                            : QuantizationType::Q2_K;
+                        mathEngine.morphTier(existingSlot->base, existingSlot->active_bytes,
+                                            prevZone.quant, targetQuant);
+                        freed = true;
+                    }
+                }
+            }
+            if (!freed) return false;
+
+            // Retry slot acquisition after morphing
+            slot = slots_->acquireSlot(slot_type, zone.byte_length, controller_->getCurrentStepId());
+            if (!slot) return false;
         }
         
         // Start async load

@@ -1,38 +1,6 @@
- Assembling: D:\lazy init ide\OmegaPolyglot_v4.asm
-Microsoft (R) Macro Assembler Version 6.14.8444
-Copyright (C) Microsoft Corp 1981-1997.  All rights reserved.
+ninja: error: build.ninja:35: loading 'CMakeFiles\rules.ninja': The system cannot find the file specified.
 
 
-***********
-ASCII build
-***********
+include CMakeFiles\rules.ninja
 
-D:\lazy init ide\OmegaPolyglot_v4.asm(272) : error A2111: conflicting parameter definition
-D:\lazy init ide\OmegaPolyglot_v4.asm(383) : error A2070: invalid instruction operands
-D:\lazy init ide\OmegaPolyglot_v4.asm(745) : error A2133: register value overwritten by INVOKE
-D:\lazy init ide\OmegaPolyglot_v4.asm(747) : error A2070: invalid instruction operands
-D:\lazy init ide\OmegaPolyglot_v4.asm(760) : error A2085: instruction or register not accepted in current CPU mode
-D:\lazy init ide\OmegaPolyglot_v4.asm(761) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(766) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(767) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(769) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(771) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(773) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(775) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(777) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(779) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(781) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(783) : error A2008: syntax error : c
-D:\lazy init ide\OmegaPolyglot_v4.asm(789) : error A2137: too few arguments to INVOKE
-D:\lazy init ide\OmegaPolyglot_v4.asm(812) : error A2006: undefined symbol : r
-D:\lazy init ide\OmegaPolyglot_v4.asm(812) : error A2114: INVOKE argument type mismatch : argument : 1
-D:\lazy init ide\OmegaPolyglot_v4.asm(820) : error A2006: undefined symbol : r
-D:\lazy init ide\OmegaPolyglot_v4.asm(820) : error A2114: INVOKE argument type mismatch : argument : 1
-D:\lazy init ide\OmegaPolyglot_v4.asm(827) : error A2085: instruction or register not accepted in current CPU mode
-D:\lazy init ide\OmegaPolyglot_v4.asm(834) : error A2085: instruction or register not accepted in current CPU mode
-D:\lazy init ide\OmegaPolyglot_v4.asm(541) : error A2026: constant expected
-D:\lazy init ide\OmegaPolyglot_v4.asm(544) : error A2026: constant expected
-D:\lazy init ide\OmegaPolyglot_v4.asm(616) : error A2026: constant expected
-D:\lazy init ide\OmegaPolyglot_v4.asm(809) : error A2006: undefined symbol : r
-D:\lazy init ide\OmegaPolyglot_v4.asm(817) : error A2006: undefined symbol : r
-D:\lazy init ide\OmegaPolyglot_v4.asm(137) : error A2071: initializer magnitude too large for specified size
+                              ^ near here

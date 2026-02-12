@@ -18,6 +18,8 @@
 // ---------------------------------------------------------------------------
 // PatchResult — Structured result type (no exceptions)
 // ---------------------------------------------------------------------------
+#ifndef RAWRXD_PATCHRESULT_DEFINED
+#define RAWRXD_PATCHRESULT_DEFINED
 struct PatchResult {
     bool        success;
     const char* detail;
@@ -39,6 +41,7 @@ struct PatchResult {
         return r;
     }
 };
+#endif // RAWRXD_PATCHRESULT_DEFINED
 
 // ---------------------------------------------------------------------------
 // MemoryPatchEntry — Describes one in-memory patch operation

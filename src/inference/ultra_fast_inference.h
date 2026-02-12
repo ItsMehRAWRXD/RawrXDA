@@ -107,6 +107,7 @@ public:
         float target_ratio = 3.3f;  // Reduce by 3.3x
         bool streaming = true;       // Stream processing
         size_t chunk_size = 1024*1024;  // 1MB chunks
+        float magnitude_threshold = 0.05f;  // Pruning cutoff
     };
     
     struct ReductionStats {
@@ -170,7 +171,8 @@ public:
         std::string model_path;
         size_t memory_footprint_mb;
         float expected_quality;
-        float inference_speed_multiplier;
+        float inference_speed_multiplier = 1.0f;
+        std::string quantization;  // e.g. "Q4_K_M", "Q2_K", "IQ2_XS"
     };
     
     struct HotpatchConfig {

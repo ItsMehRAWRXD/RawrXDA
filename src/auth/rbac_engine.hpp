@@ -372,7 +372,7 @@ private:
     std::unordered_map<std::string, Session>            sessions_;    // token→Session
     std::unordered_map<std::string, SSOProviderConfig>  ssoProviders_;
     ComplianceConfig                                    compliance_;
-    Stats                                               stats_;
+    mutable Stats                                       stats_;
 
     // Audit log (ring buffer for memory, flush to disk)
     static constexpr size_t MAX_AUDIT_ENTRIES = 16384;

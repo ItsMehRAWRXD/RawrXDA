@@ -345,9 +345,9 @@ LayerState ENDS
 ; ---------------------------------------------------------------------------
 .data
 ALIGN 16
-input_path          DB 260 DUP(0)      ; Input .exec path
-output_path         DB 260 DUP(0)      ; Output debug path
-error_buffer        DB 1024 DUP(0)     ; Error message buffer
+so_input_path       DB 260 DUP(0)      ; Input .exec path
+so_output_path      DB 260 DUP(0)      ; Output debug path
+so_error_buffer     DB 1024 DUP(0)     ; Error message buffer
 temp_buffer         DB 4096 DUP(0)     ; Temporary buffer
 _str_info_layers     DB "Layers: %d", 13, 10, 0
 _str_info_operators  DB "Operators: %d", 13, 10, 0
@@ -406,8 +406,8 @@ peak_memory_mb      DQ 0
 ; ---------------------------------------------------------------------------
 ; STRING TABLE (Production-grade messages)
 ; ---------------------------------------------------------------------------
-str_banner          DB "RawrXD Streaming Orchestrator v1.0",13,10,0
-str_usage           DB "Usage: stream.exe <input.exec> <output.debug>",13,10,0
+so_str_banner       DB "RawrXD Streaming Orchestrator v1.0",13,10,0
+so_str_usage        DB "Usage: stream.exe <input.exec> <output.debug>",13,10,0
 str_fatal_file      DB "FATAL: Cannot open .exec file",13,10,0
 str_fatal_vulkan    DB "FATAL: Vulkan initialization failed",13,10,0
 str_fatal_memory    DB "FATAL: Memory allocation failed",13,10,0
@@ -422,7 +422,7 @@ str_info_eviction   DB "INFO: Layer %u evicted (memory pressure: %u)",13,10,0
 str_info_prefetch_hit  DB "INFO: Prefetch hit for layer %u",13,10,0
 str_info_prefetch_miss DB "INFO: Prefetch miss for layer %u",13,10,0
 str_info_inference  DB "INFO: Executing inference...",13,10,0
-str_success         DB "SUCCESS: Streaming inference complete",13,10,0
+so_str_success      DB "SUCCESS: Streaming inference complete",13,10,0
 str_metrics_header  DB "=== Streaming Metrics ===",13,10,0
 str_metrics_layers  DB "Layers loaded: %llu",13,10,0
 str_metrics_evicted DB "Layers evicted: %llu",13,10,0
@@ -431,7 +431,7 @@ str_metrics_decompressed DB "Bytes decompressed: %llu MB",13,10,0
 str_metrics_prefetch DB "Prefetch: %llu hits, %llu misses",13,10,0
 str_metrics_memory  DB "Memory: %llu MB current, %llu MB peak",13,10,0
 str_metrics_pressure DB "Memory pressure: %u",13,10,0
-str_newline         DB 13,10,0
+so_str_newline      DB 13,10,0
 
 ; ---------------------------------------------------------------------------
 ; PROTOTYPES (Every function has implementation below)
@@ -485,20 +485,20 @@ _SO_standalone_main PROC
     
     ; Get argv[1] (input .exec file)
     mov rax, [rbx+8]                ; argv[1]
-    lea rcx, input_path
+    lea rcx, so_input_path
     mov rdx, rax
     mov r8, 260
     call strcpy_s
     
     ; Get argv[2] (output debug file)
     mov rax, [rbx+16]               ; argv[2]
-    lea rcx, output_path
+    lea rcx, so_output_path
     mov rdx, rax
     mov r8, 260
     call strcpy_s
     
     ; Phase 1: Load .exec file
-    lea rcx, input_path
+    lea rcx, so_input_path
     call LoadExecFile
     test rax, rax
     jz file_error
@@ -598,14 +598,14 @@ _SO_standalone_main PROC
     call PrintMetrics
     
     ; Success
-    lea rcx, str_success
+    lea rcx, so_str_success
     call SO_int_PrintString
     
     xor eax, eax
     jmp main_done
 
 usage_error:
-    lea rcx, str_usage
+    lea rcx, so_str_usage
     call SO_int_PrintError
     mov eax, 1
     jmp main_done
@@ -699,7 +699,7 @@ LoadExecFile PROC
     ; Read ExecHeader
     lea rdi, exec_header
     mov r8d, SIZEOF ExecHeader
-    lea r9, bytes_read
+    lea r9, so_bytes_read
     invoke ReadFile, rsi, rdi, r8, r9, 0
     
     ; Validate magic
@@ -718,7 +718,7 @@ LoadExecFile PROC
     lea rdi, layer_table
     mov r8d, SIZEOF LayerInfo
     imul r8d, ecx
-    lea r9, bytes_read
+    lea r9, so_bytes_read
     invoke ReadFile, rsi, rdi, r8, r9, 0
     
     ; Read operator table
@@ -727,7 +727,7 @@ LoadExecFile PROC
     lea rdi, operator_table
     mov r8d, SIZEOF Operator
     imul r8d, ecx
-    lea r9, bytes_read
+    lea r9, so_bytes_read
     invoke ReadFile, rsi, rdi, r8, r9, 0
     
     ; Close file
@@ -2329,7 +2329,7 @@ PrintMetrics ENDP
 ; ---------------------------------------------------------------------------
 PUBLIC SO_int_PrintBanner
 SO_int_PrintBanner PROC
-    lea rcx, str_banner
+    lea rcx, so_str_banner
     call SO_int_PrintString
     ret
 SO_int_PrintBanner ENDP
@@ -2346,7 +2346,7 @@ SO_int_PrintString PROC
     push rbx
     mov rbx, rcx
     invoke lstrlenA, rbx
-    lea r9, bytes_written
+    lea r9, so_bytes_written
     invoke WriteFile, STD_OUTPUT_HANDLE, rbx, rax, r9, 0
     pop rbx
     ret
@@ -2356,7 +2356,7 @@ SO_int_PrintError PROC
     push rbx
     mov rbx, rcx
     invoke lstrlenA, rbx
-    lea r9, bytes_written
+    lea r9, so_bytes_written
     invoke WriteFile, STD_ERROR_HANDLE, rbx, rax, r9, 0
     pop rbx
     ret
@@ -2473,8 +2473,8 @@ submit_info VkSubmitInfo <>
 arena_temp MemoryArena <>
 descriptor_sets DD 0
 physical_device_count DD 0
-bytes_written DD 0
-bytes_read DD 0
+so_bytes_written DD 0
+so_bytes_read DD 0
 
 ; Shader code buffers
 norm_shader_code DB 1024 DUP(0)

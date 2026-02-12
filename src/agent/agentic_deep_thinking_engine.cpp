@@ -1,4 +1,10 @@
 #include "agentic_deep_thinking_engine.hpp"
+#include "agentic_failure_detector.hpp"
+#include "agentic_puppeteer.hpp"
+#include "model_invoker.hpp"
+#include "telemetry_collector.hpp"
+#include "../agentic/AgentOllamaClient.h"
+#include "../core/perf_telemetry.hpp"
 #include <functional>
 #include <map>
 #include <mutex>
@@ -13,6 +19,33 @@
 #include <fstream>
 #include <sstream>
 #include <regex>
+#include <cmath>
+#include <set>
+#include <numeric>
+#include <iomanip>
+
+// ---------------------------------------------------------------------------
+// Internal: Lazily-initialized LLM client for deep thinking inference
+// ---------------------------------------------------------------------------
+static RawrXD::Agent::AgentOllamaClient& getThinkingLLM() {
+    static RawrXD::Agent::OllamaConfig cfg;
+    cfg.chat_model  = "qwen2.5-coder:14b";
+    cfg.temperature = 0.3f;
+    cfg.max_tokens  = 4096;
+    cfg.timeout_ms  = 60000;
+    static RawrXD::Agent::AgentOllamaClient client(cfg);
+    return client;
+}
+
+static AgenticFailureDetector& getFailureDetector() {
+    static AgenticFailureDetector detector;
+    return detector;
+}
+
+static AgenticPuppeteer& getPuppeteer() {
+    static AgenticPuppeteer puppeteer;
+    return puppeteer;
+}
 
 AgenticDeepThinkingEngine::AgenticDeepThinkingEngine() = default;
 
@@ -23,11 +56,17 @@ AgenticDeepThinkingEngine::~AgenticDeepThinkingEngine() {
 }
 
 AgenticDeepThinkingEngine::ThinkingResult AgenticDeepThinkingEngine::think(const ThinkingContext& context) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     auto startTime = std::chrono::high_resolution_clock::now();
     
     {
         std::lock_guard<std::mutex> lock(m_statsMutex);
         m_stats.totalThinkingRequests++;
+    }
+
+    // Track feature usage via telemetry
+    if (auto* tc = TelemetryCollector::instance()) {
+        tc->trackFeatureUsage("deep_thinking.think");
     }
 
     ThinkingResult result;
@@ -86,6 +125,11 @@ AgenticDeepThinkingEngine::ThinkingResult AgenticDeepThinkingEngine::think(const
         }
         result.finalAnswer = "Error during thinking: " + std::string(e.what());
         result.overallConfidence = 0.0f;
+
+        // Log failure to telemetry
+        if (auto* tc = TelemetryCollector::instance()) {
+            tc->trackCrash(std::string("deep_thinking_exception: ") + e.what());
+        }
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -94,7 +138,17 @@ AgenticDeepThinkingEngine::ThinkingResult AgenticDeepThinkingEngine::think(const
     {
         std::lock_guard<std::mutex> lock(m_statsMutex);
         m_stats.avgThinkingTime = (m_stats.avgThinkingTime * (m_stats.successfulThinking - 1) + result.elapsedMilliseconds)
-                                 / m_stats.successfulThinking;
+                                 / std::max(m_stats.successfulThinking, 1);
+    }
+
+    // Record overall latency in perf telemetry
+    if (auto* tc = TelemetryCollector::instance()) {
+        tc->trackPerformance("deep_thinking.total_latency_ms",
+                             static_cast<double>(result.elapsedMilliseconds), "ms");
+        tc->trackPerformance("deep_thinking.step_count",
+                             static_cast<double>(result.steps.size()), "count");
+        tc->trackPerformance("deep_thinking.overall_confidence",
+                             static_cast<double>(result.overallConfidence), "ratio");
     }
 
     return result;
@@ -229,7 +283,159 @@ std::vector<std::string> AgenticDeepThinkingEngine::findRelatedFiles(const std::
 
 std::string AgenticDeepThinkingEngine::analyzeFile(const std::string& filePath) {
     try {
-        return readFileContent(filePath, 50);
+        std::string content = readFileContent(filePath, 500);
+        if (content.empty()) {
+            return "File not found or empty: " + filePath;
+        }
+
+        // Build structural analysis
+        std::ostringstream analysis;
+        analysis << "=== File Analysis: " << filePath << " ===\n";
+
+        // File size and line count
+        int totalLines = 0;
+        int codeLines = 0;
+        int commentLines = 0;
+        int blankLines = 0;
+        int includeCount = 0;
+        int functionDefCount = 0;
+        int classDefCount = 0;
+        int todoCount = 0;
+        bool inBlockComment = false;
+
+        std::istringstream iss(content);
+        std::string line;
+        std::vector<std::string> functionNames;
+        std::vector<std::string> classNames;
+        std::vector<std::string> includeList;
+
+        while (std::getline(iss, line)) {
+            totalLines++;
+            // Trim
+            size_t first = line.find_first_not_of(" \t");
+            std::string trimmed = (first != std::string::npos) ? line.substr(first) : "";
+
+            if (trimmed.empty()) {
+                blankLines++;
+                continue;
+            }
+
+            // Block comment tracking
+            if (inBlockComment) {
+                commentLines++;
+                if (trimmed.find("*/") != std::string::npos) inBlockComment = false;
+                continue;
+            }
+            if (trimmed.find("/*") != std::string::npos) {
+                commentLines++;
+                if (trimmed.find("*/") == std::string::npos) inBlockComment = true;
+                continue;
+            }
+            if (trimmed.substr(0, 2) == "//") {
+                commentLines++;
+                // Check for TODO/FIXME
+                std::string lowerTrimmed = trimmed;
+                std::transform(lowerTrimmed.begin(), lowerTrimmed.end(), lowerTrimmed.begin(), ::tolower);
+                if (lowerTrimmed.find("todo") != std::string::npos ||
+                    lowerTrimmed.find("fixme") != std::string::npos ||
+                    lowerTrimmed.find("hack") != std::string::npos) {
+                    todoCount++;
+                }
+                continue;
+            }
+
+            codeLines++;
+
+            // Detect includes
+            if (trimmed.substr(0, 8) == "#include") {
+                includeCount++;
+                includeList.push_back(trimmed);
+            }
+
+            // Detect function definitions (heuristic: return_type name(...) {)
+            // Look for lines ending with '{' that contain '(' and ')'
+            if (trimmed.find('(') != std::string::npos &&
+                trimmed.find(')') != std::string::npos &&
+                (trimmed.back() == '{' || trimmed.back() == ')') &&
+                trimmed.find("if") == std::string::npos &&
+                trimmed.find("while") == std::string::npos &&
+                trimmed.find("for") == std::string::npos &&
+                trimmed.find("switch") == std::string::npos) {
+                functionDefCount++;
+                // Extract function name (word before '(')
+                size_t parenPos = trimmed.find('(');
+                if (parenPos > 0) {
+                    size_t nameEnd = parenPos;
+                    size_t nameStart = trimmed.find_last_of(" \t:>", nameEnd - 1);
+                    nameStart = (nameStart == std::string::npos) ? 0 : nameStart + 1;
+                    std::string fname = trimmed.substr(nameStart, nameEnd - nameStart);
+                    if (!fname.empty() && fname.length() < 80) {
+                        functionNames.push_back(fname);
+                    }
+                }
+            }
+
+            // Detect class/struct definitions
+            if ((trimmed.find("class ") == 0 || trimmed.find("struct ") == 0) &&
+                trimmed.find(';') == std::string::npos) {
+                classDefCount++;
+                std::istringstream cls(trimmed);
+                std::string keyword, name;
+                cls >> keyword >> name;
+                // Strip trailing ':' or '{'
+                while (!name.empty() && (name.back() == ':' || name.back() == '{' || name.back() == ' '))
+                    name.pop_back();
+                if (!name.empty()) classNames.push_back(name);
+            }
+        }
+
+        // Extension detection
+        std::string ext;
+        size_t dotPos = filePath.find_last_of('.');
+        if (dotPos != std::string::npos) ext = filePath.substr(dotPos);
+
+        float commentRatio = totalLines > 0 ? static_cast<float>(commentLines) / totalLines * 100.0f : 0.0f;
+        float codeRatio = totalLines > 0 ? static_cast<float>(codeLines) / totalLines * 100.0f : 0.0f;
+
+        analysis << "Type: " << ext << "\n";
+        analysis << "Lines: " << totalLines << " (code: " << codeLines
+                 << ", comments: " << commentLines
+                 << ", blank: " << blankLines << ")\n";
+        analysis << "Comment ratio: " << std::fixed << std::setprecision(1) << commentRatio << "%\n";
+        analysis << "Code density: " << std::fixed << std::setprecision(1) << codeRatio << "%\n";
+        analysis << "Includes: " << includeCount << "\n";
+        analysis << "Functions: " << functionDefCount << "\n";
+        analysis << "Classes/Structs: " << classDefCount << "\n";
+        if (todoCount > 0) {
+            analysis << "TODO/FIXME markers: " << todoCount << "\n";
+        }
+
+        if (!classNames.empty()) {
+            analysis << "Defined types: ";
+            for (size_t i = 0; i < std::min(classNames.size(), size_t(10)); ++i) {
+                if (i > 0) analysis << ", ";
+                analysis << classNames[i];
+            }
+            analysis << "\n";
+        }
+
+        if (!functionNames.empty()) {
+            analysis << "Key functions: ";
+            for (size_t i = 0; i < std::min(functionNames.size(), size_t(15)); ++i) {
+                if (i > 0) analysis << ", ";
+                analysis << functionNames[i];
+            }
+            analysis << "\n";
+        }
+
+        // Complexity heuristic
+        std::string complexity = "Low";
+        if (codeLines > 500) complexity = "High";
+        else if (codeLines > 200) complexity = "Medium";
+        if (functionDefCount > 20) complexity = "High";
+        analysis << "Complexity: " << complexity << "\n";
+
+        return analysis.str();
     } catch (const std::exception& e) {
         return std::string("Error analyzing file: ") + e.what();
     }
@@ -333,51 +539,118 @@ bool AgenticDeepThinkingEngine::evaluateAnswer(const std::string& answer, const 
 
 std::string AgenticDeepThinkingEngine::refineAnswer(const std::string& currentAnswer, const std::string& feedback) {
     if (feedback.empty()) return currentAnswer;
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
 
-    std::string refined = currentAnswer;
+    // Step 1: Validate the current answer against the failure detector
+    auto& detector = getFailureDetector();
+    auto failures = detector.detectMultipleFailures(currentAnswer);
 
-    // Parse feedback for directives
-    std::string lowerFeedback = feedback;
-    std::transform(lowerFeedback.begin(), lowerFeedback.end(), lowerFeedback.begin(), ::tolower);
-
-    // Handle common refinement requests
-    if (lowerFeedback.find("more detail") != std::string::npos ||
-        lowerFeedback.find("elaborate") != std::string::npos) {
-        refined += "\n\n[Refined with additional detail]\n";
-        refined += "Additional context based on feedback: " + feedback + "\n";
-        refined += "The original analysis has been expanded to address the request for more detail.";
-    }
-    else if (lowerFeedback.find("simplify") != std::string::npos ||
-             lowerFeedback.find("shorter") != std::string::npos) {
-        // Extract key sentences only
-        std::istringstream iss(currentAnswer);
-        std::string line;
-        std::string simplified;
-        int lineCount = 0;
-        while (std::getline(iss, line)) {
-            // Keep lines with key indicators
-            if (line.find("Based on") != std::string::npos ||
-                line.find("Result") != std::string::npos ||
-                line.find("- ") == 0 ||
-                line.find("Conclusion") != std::string::npos) {
-                simplified += line + "\n";
-                lineCount++;
+    // Step 2: If failures detected, try puppeteer auto-correction first
+    std::string baseAnswer = currentAnswer;
+    if (!failures.empty()) {
+        auto& puppeteer = getPuppeteer();
+        auto correction = puppeteer.correctResponse(currentAnswer, feedback);
+        if (correction.success && !correction.correctedOutput.empty()) {
+            baseAnswer = correction.correctedOutput;
+            {
+                std::lock_guard<std::mutex> lock(m_statsMutex);
+                m_patternFrequency["refine_puppeteer_correction"]++;
             }
-            if (lineCount >= 5) break;
         }
-        if (!simplified.empty()) refined = simplified;
-    }
-    else if (lowerFeedback.find("focus on") != std::string::npos ||
-             lowerFeedback.find("specifically") != std::string::npos) {
-        refined += "\n\n[Focused refinement]\n";
-        refined += "Addressing specific feedback: " + feedback + "\n";
-    }
-    else {
-        // General refinement: append feedback context
-        refined += "\n\n[Refined based on feedback: " + feedback.substr(0, 200) + "]\n";
     }
 
-    // Track refinement pattern
+    // Step 3: Use LLM to perform the actual refinement with full context
+    using ChatMsg = RawrXD::Agent::ChatMessage;
+    std::vector<ChatMsg> messages;
+    messages.push_back(ChatMsg{"system",
+        "You are a code analysis refinement agent. You are given a previous analysis "
+        "and user feedback. Produce an improved version that addresses the feedback "
+        "while preserving all correct information from the original. Be concrete "
+        "and reference specific code structures, files, and line numbers where possible.",
+        "", {}});
+
+    std::string userMsg = "## Previous Analysis\n" + baseAnswer
+                        + "\n\n## Feedback\n" + feedback;
+
+    // Include detected failures as context
+    if (!failures.empty()) {
+        userMsg += "\n\n## Detected Issues in Previous Answer\n";
+        for (const auto& f : failures) {
+            userMsg += "- " + f.description + " (confidence: "
+                     + std::to_string(f.confidence) + ")\n";
+        }
+    }
+
+    messages.push_back(ChatMsg{"user", userMsg, "", {}});
+
+    auto& llm = getThinkingLLM();
+    auto result = llm.ChatSync(messages);
+
+    std::string refined;
+    if (result.success && !result.response.empty()) {
+        refined = result.response;
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["refine_llm_success"]++;
+        }
+        if (auto* tc = TelemetryCollector::instance()) {
+            tc->trackPerformance("deep_thinking.refine_tokens",
+                                 static_cast<double>(result.completion_tokens), "tokens");
+            tc->trackPerformance("deep_thinking.refine_tok_per_sec",
+                                 result.tokens_per_sec, "tok/s");
+            tc->trackPerformance("deep_thinking.refine_latency_ms",
+                                 result.total_duration_ms, "ms");
+        }
+    } else {
+        // LLM unavailable — perform local structural refinement
+        refined = baseAnswer;
+        std::string lowerFeedback = feedback;
+        std::transform(lowerFeedback.begin(), lowerFeedback.end(), lowerFeedback.begin(), ::tolower);
+
+        if (lowerFeedback.find("more detail") != std::string::npos ||
+            lowerFeedback.find("elaborate") != std::string::npos) {
+            // Search codebase for additional context matching the answer content
+            auto extraContext = searchInFiles(feedback.substr(0, 60), "src");
+            refined += "\n\n[Refined with codebase evidence — "
+                     + std::to_string(extraContext.size()) + " references found]\n";
+            for (size_t i = 0; i < std::min(extraContext.size(), size_t(5)); ++i) {
+                refined += "  " + extraContext[i].first + ":" + std::to_string(extraContext[i].second) + "\n";
+            }
+        }
+        else if (lowerFeedback.find("simplify") != std::string::npos ||
+                 lowerFeedback.find("shorter") != std::string::npos) {
+            // Extract structurally meaningful lines only
+            std::istringstream iss(baseAnswer);
+            std::string line;
+            std::string simplified;
+            int keepCount = 0;
+            while (std::getline(iss, line)) {
+                if (line.find("Based on") != std::string::npos ||
+                    line.find("Result") != std::string::npos ||
+                    line.find("- ") == 0 ||
+                    line.find("Conclusion") != std::string::npos ||
+                    line.find("::") != std::string::npos) {
+                    simplified += line + "\n";
+                    keepCount++;
+                }
+                if (keepCount >= 8) break;
+            }
+            if (!simplified.empty()) refined = simplified;
+        }
+        else {
+            // Enrich with codebase matches for the feedback topic
+            auto feedbackMatches = searchInFiles(feedback.substr(0, 50), "src");
+            refined += "\n\n[Enhanced with " + std::to_string(feedbackMatches.size())
+                     + " codebase references for: " + feedback.substr(0, 80) + "]\n";
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["refine_local_fallback"]++;
+        }
+    }
+
+    // Track refinement in telemetry
     {
         std::lock_guard<std::mutex> lock(m_statsMutex);
         m_patternFrequency["refinement"]++;
@@ -477,16 +750,26 @@ std::vector<AgenticDeepThinkingEngine::ReasoningStep> AgenticDeepThinkingEngine:
     steps.push_back(step5);
     contextAccumulator += step5.content + "\n";
 
-    // Step 6 (optional): Self-Correction
+    // Step 6 (optional): Self-Correction — may iterate
+    int correctionIterations = 0;
     if (context.allowSelfCorrection) {
-        {
-            std::lock_guard<std::mutex> lock(m_statsMutex);
-            m_stats.stepFrequency[ThinkingStep::SelfCorrection]++;
+        for (int iter = 0; iter < context.maxIterations; ++iter) {
+            {
+                std::lock_guard<std::mutex> lock(m_statsMutex);
+                m_stats.stepFrequency[ThinkingStep::SelfCorrection]++;
+            }
+            auto step6 = selfCorrect(context, steps);
+            if (step6.successful) {
+                steps.push_back(step6);
+                contextAccumulator += step6.content + "\n";
+                correctionIterations++;
+            } else {
+                break;  // No more flaws detected, stop iterating
+            }
         }
-        auto step6 = selfCorrect(context, steps);
-        if (step6.successful) {
-            steps.push_back(step6);
-            contextAccumulator += step6.content + "\n";
+        if (correctionIterations > 0) {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["self_correction_iterations"] += correctionIterations;
         }
     }
 
@@ -502,64 +785,344 @@ std::vector<AgenticDeepThinkingEngine::ReasoningStep> AgenticDeepThinkingEngine:
 }
 
 AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::analyzeProblem(const ThinkingContext& context) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     ReasoningStep step;
     step.step = ThinkingStep::ProblemAnalysis;
     step.title = "Problem Analysis";
     step.successful = true;
 
-    // Identify key issues
+    // Phase 1: Local structural analysis (always available)
     auto issues = identifyKeyIssues(context.problem);
-    step.findings = issues;
+    std::string category = issues.empty() ? "General" : categorizeIssue(issues[0]);
 
-    // Categorize the problem
-    if (!issues.empty()) {
-        step.content = "Categorized as: " + categorizeIssue(issues[0]);
+    // Phase 2: Codebase context — find related files and code patterns
+    auto relatedFiles = findRelatedFiles(context.problem, 5);
+    auto codeMatches  = searchInFiles(context.problem.substr(0, 60), "src");
+
+    std::string codebaseContext;
+    if (!relatedFiles.empty()) {
+        codebaseContext += "Related files:\n";
+        for (const auto& f : relatedFiles) {
+            codebaseContext += "  " + f + "\n";
+        }
+    }
+    if (!codeMatches.empty()) {
+        codebaseContext += "Code references (" + std::to_string(codeMatches.size()) + " matches):\n";
+        for (size_t i = 0; i < std::min(codeMatches.size(), size_t(8)); ++i) {
+            codebaseContext += "  " + codeMatches[i].first + ":" + std::to_string(codeMatches[i].second) + "\n";
+        }
     }
 
-    step.confidence = 0.85f;
+    // Phase 3: LLM-driven deep analysis with codebase context
+    using ChatMsg = RawrXD::Agent::ChatMessage;
+    std::vector<ChatMsg> messages;
+    messages.push_back(ChatMsg{"system",
+        "You are a senior code analyst. Analyze the following problem in the context "
+        "of a C++20 Win32 codebase. Identify root causes, affected components, risk level, "
+        "and key areas to investigate. Be specific and technical.", "", {}});
+
+    std::string userMsg = "## Problem\n" + context.problem
+                        + "\n\nLanguage: " + context.language
+                        + "\nProject root: " + context.projectRoot
+                        + "\nCategory: " + category
+                        + "\n\n## Codebase Context\n" + codebaseContext;
+    messages.push_back(ChatMsg{"user", userMsg, "", {}});
+
+    auto& llm = getThinkingLLM();
+    auto result = llm.ChatSync(messages);
+
+    if (result.success && !result.response.empty()) {
+        step.content = result.response;
+        step.confidence = 0.90f;
+
+        // Extract key findings from LLM response (lines starting with -, *, or numbered)
+        std::istringstream iss(result.response);
+        std::string line;
+        while (std::getline(iss, line)) {
+            size_t start = line.find_first_not_of(" \t");
+            if (start == std::string::npos) continue;
+            char first = line[start];
+            if (first == '-' || first == '*' || (first >= '1' && first <= '9')) {
+                step.findings.push_back(line.substr(start));
+            }
+        }
+
+        // Track LLM analysis metrics
+        if (auto* tc = TelemetryCollector::instance()) {
+            tc->trackPerformance("deep_thinking.analysis_tokens",
+                                 static_cast<double>(result.completion_tokens), "tokens");
+            tc->trackPerformance("deep_thinking.analysis_tok_per_sec",
+                                 result.tokens_per_sec, "tok/s");
+            tc->trackPerformance("deep_thinking.analysis_latency_ms",
+                                 result.total_duration_ms, "ms");
+            tc->trackFeatureUsage("deep_thinking.analyze_problem");
+        }
+    } else {
+        // Fallback: use local structural analysis (always works offline)
+        step.content = "Category: " + category + "\n";
+        step.content += "Local issues identified: " + std::to_string(issues.size()) + "\n";
+        step.content += codebaseContext;
+        step.findings = issues;
+        step.confidence = 0.70f;  // Lower confidence without LLM
+
+        // Add file context as findings
+        for (const auto& f : relatedFiles) {
+            step.findings.push_back("Related: " + f);
+        }
+    }
+
+    // Always include the structural issues as baseline findings
+    for (const auto& issue : issues) {
+        bool alreadyPresent = false;
+        for (const auto& existing : step.findings) {
+            if (existing.find(issue) != std::string::npos) { alreadyPresent = true; break; }
+        }
+        if (!alreadyPresent) step.findings.push_back(issue);
+    }
+
     return step;
 }
 
 std::vector<std::string> AgenticDeepThinkingEngine::identifyKeyIssues(const std::string& problem) {
     std::vector<std::string> issues;
-    
-    // Split problem into sentences and extract key points
-    std::istringstream iss(problem);
-    std::string sentence;
-    while (std::getline(iss, sentence, '.')) {
-        if (!sentence.empty()) {
-            issues.push_back(sentence);
+    if (problem.empty()) return issues;
+
+    std::string lower = problem;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+    // --- Phase 1: Sentence extraction with quality filtering ---
+    // Split on sentence boundaries: '.', '!', '?', '\n', and also ';' for code-style
+    std::string delimiters = ".!?\n;";
+    size_t start = 0;
+    while (start < problem.size()) {
+        size_t end = std::string::npos;
+        for (char d : delimiters) {
+            size_t pos = problem.find(d, start);
+            if (pos != std::string::npos && (end == std::string::npos || pos < end)) {
+                end = pos;
+            }
         }
+        if (end == std::string::npos) end = problem.size();
+
+        std::string segment = problem.substr(start, end - start);
+        // Trim leading/trailing whitespace
+        size_t first = segment.find_first_not_of(" \t\r\n");
+        size_t last = segment.find_last_not_of(" \t\r\n");
+        if (first != std::string::npos && last != std::string::npos) {
+            segment = segment.substr(first, last - first + 1);
+        }
+        // Only keep meaningful segments (>8 chars, has at least 2 words)
+        if (segment.length() > 8) {
+            int wordCount = 0;
+            std::istringstream wc(segment);
+            std::string w;
+            while (wc >> w) wordCount++;
+            if (wordCount >= 2) {
+                issues.push_back(segment);
+            }
+        }
+        start = (end < problem.size()) ? end + 1 : problem.size();
+    }
+
+    // --- Phase 2: Pattern-based issue detection ---
+    // Detect error/exception patterns
+    static const std::vector<std::pair<std::string, std::string>> patterns = {
+        {"error",                 "Error condition detected"},
+        {"exception",            "Exception handling concern"},
+        {"crash",                "Crash/stability issue"},
+        {"segfault",             "Memory access violation"},
+        {"access violation",     "Memory access violation"},
+        {"null pointer",         "Null pointer dereference"},
+        {"nullptr",              "Null pointer dereference"},
+        {"memory leak",          "Memory leak concern"},
+        {"buffer overflow",      "Buffer overflow vulnerability"},
+        {"race condition",       "Threading/race condition"},
+        {"deadlock",             "Deadlock potential"},
+        {"performance",          "Performance optimization needed"},
+        {"slow",                 "Performance bottleneck"},
+        {"latency",              "Latency issue"},
+        {"linker",               "Linker/build error"},
+        {"unresolved",           "Unresolved symbol"},
+        {"undefined reference",  "Undefined reference"},
+        {"compile",              "Compilation issue"},
+        {"syntax",               "Syntax error"},
+        {"deprecated",           "Deprecated API usage"},
+        {"todo",                 "Incomplete implementation"},
+        {"fixme",                "Known defect marker"},
+        {"hack",                 "Technical debt"},
+        {"stub",                 "Stub/unfinished implementation"},
+        {"hardcoded",            "Hardcoded value concern"},
+        {"refactor",             "Refactoring opportunity"},
+    };
+
+    for (const auto& [pattern, label] : patterns) {
+        if (lower.find(pattern) != std::string::npos) {
+            // Check it's not already covered by an extracted sentence
+            bool alreadyCovered = false;
+            for (const auto& existing : issues) {
+                std::string existLower = existing;
+                std::transform(existLower.begin(), existLower.end(), existLower.begin(), ::tolower);
+                if (existLower.find(pattern) != std::string::npos) {
+                    alreadyCovered = true;
+                    break;
+                }
+            }
+            if (!alreadyCovered) {
+                issues.push_back("[Pattern] " + label);
+            }
+        }
+    }
+
+    // --- Phase 3: Code artifact extraction ---
+    // Find class names, function names, file references in the problem text
+    std::regex codeRef(R"(\b([A-Z][a-zA-Z]+(?:::[a-zA-Z_]+)+)\b)");  // e.g., ClassName::method
+    std::regex fileRef(R"(\b([a-zA-Z_][a-zA-Z0-9_]*\.(?:cpp|hpp|h|c|asm))\b)");
+    std::smatch match;
+
+    std::string searchTarget = problem;
+    while (std::regex_search(searchTarget, match, codeRef)) {
+        issues.push_back("[CodeRef] " + match[1].str());
+        searchTarget = match.suffix().str();
+    }
+
+    searchTarget = problem;
+    while (std::regex_search(searchTarget, match, fileRef)) {
+        issues.push_back("[FileRef] " + match[1].str());
+        searchTarget = match.suffix().str();
     }
 
     return issues;
 }
 
 std::string AgenticDeepThinkingEngine::categorizeIssue(const std::string& issue) {
-    if (issue.find("error") != std::string::npos || issue.find("failed") != std::string::npos) {
-        return "Error/Failure";
-    } else if (issue.find("performance") != std::string::npos || issue.find("slow") != std::string::npos) {
-        return "Performance";
-    } else if (issue.find("design") != std::string::npos || issue.find("architecture") != std::string::npos) {
-        return "Design";
-    } else if (issue.find("test") != std::string::npos || issue.find("verify") != std::string::npos) {
-        return "Testing";
+    std::string lower = issue;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+    // Priority-ordered category matching with multi-keyword support
+    struct CategoryRule {
+        const char* category;
+        std::vector<const char*> keywords;
+    };
+    static const std::vector<CategoryRule> rules = {
+        {"Security/Vulnerability",   {"vulnerability", "exploit", "injection", "overflow",
+                                      "xss", "csrf", "security", "access violation", "cve"}},
+        {"Memory/Resource",          {"memory leak", "segfault", "nullptr", "null pointer",
+                                      "double free", "use after free", "buffer", "allocation",
+                                      "resource exhaust", "oom", "out of memory"}},
+        {"Threading/Concurrency",    {"race condition", "deadlock", "mutex", "atomic",
+                                      "thread", "concurrent", "synchronization", "lock"}},
+        {"Build/Linker",             {"linker", "unresolved", "undefined reference", "lnk",
+                                      "compile error", "c2", "syntax error", "cmake"}},
+        {"Performance",              {"performance", "slow", "latency", "throughput",
+                                      "bottleneck", "optimize", "cache miss", "profil"}},
+        {"Error/Failure",            {"error", "failed", "crash", "exception", "abort",
+                                      "panic", "fatal", "assert"}},
+        {"API/Integration",          {"api", "endpoint", "http", "request", "response",
+                                      "webhook", "rest", "grpc", "protocol"}},
+        {"Data/Model",               {"model", "gguf", "tensor", "inference", "quantiz",
+                                      "weight", "token", "embedding", "layer"}},
+        {"Architecture/Design",      {"design", "architecture", "pattern", "refactor",
+                                      "decouple", "abstraction", "modular", "solid"}},
+        {"Testing/Quality",          {"test", "verify", "validate", "assert", "coverage",
+                                      "regression", "fuzz", "benchmark"}},
+        {"Documentation",            {"document", "comment", "readme", "usage", "example"}},
+        {"Technical Debt",           {"todo", "fixme", "hack", "stub", "hardcoded",
+                                      "workaround", "kludge", "deprecated"}},
+        {"UI/UX",                    {"dialog", "window", "menu", "button", "widget",
+                                      "gui", "display", "render", "layout"}},
+        {"Configuration",            {"config", "setting", "option", "flag", "toggle",
+                                      "environment", "parameter"}},
+    };
+
+    // Score each category and pick the best match
+    int bestScore = 0;
+    std::string bestCategory = "General";
+    for (const auto& rule : rules) {
+        int score = 0;
+        for (const char* kw : rule.keywords) {
+            if (lower.find(kw) != std::string::npos) {
+                score++;
+            }
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestCategory = rule.category;
+        }
     }
-    return "General";
+
+    // Track category frequency for patterns
+    {
+        std::lock_guard<std::mutex> lock(m_statsMutex);
+        m_patternFrequency["category_" + bestCategory]++;
+    }
+
+    return bestCategory;
 }
 
 AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::gatherContext(const ThinkingContext& context) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     ReasoningStep step;
     step.step = ThinkingStep::ContextGathering;
     step.title = "Context Gathering";
     step.successful = true;
 
-    // Find relevant code files
+    // Phase 1: Find relevant code files by keyword matching
     auto relatedCode = findRelevantCode(context.problem, 5);
     step.findings = relatedCode;
 
-    step.content = "Found " + std::to_string(relatedCode.size()) + " relevant code files";
-    step.confidence = 0.8f;
+    // Phase 2: Extract project structure for broader understanding
+    std::string projectRoot = context.projectRoot.empty() ? "." : context.projectRoot;
+    std::string structureInfo;
+    auto allFiles = listFilesRecursive(projectRoot, "");
+
+    // Classify files by type and directory
+    std::map<std::string, int> dirCounts;
+    std::map<std::string, int> extCounts;
+    for (const auto& f : allFiles) {
+        // Extract directory
+        size_t lastSep = f.find_last_of("/\\");
+        std::string dir = (lastSep != std::string::npos) ? f.substr(0, lastSep) : ".";
+        dirCounts[dir]++;
+
+        // Extract extension
+        size_t dotPos = f.find_last_of('.');
+        if (dotPos != std::string::npos) {
+            extCounts[f.substr(dotPos)]++;
+        }
+    }
+
+    structureInfo += "Project structure: " + std::to_string(allFiles.size()) + " files across "
+                   + std::to_string(dirCounts.size()) + " directories\n";
+    for (const auto& [ext, count] : extCounts) {
+        if (count >= 3) {
+            structureInfo += "  " + ext + ": " + std::to_string(count) + " files\n";
+        }
+    }
+
+    // Phase 3: Read first 30 lines of top-scoring files for direct context
+    for (size_t i = 0; i < std::min(relatedCode.size(), size_t(3)); ++i) {
+        // Extract file path from the code snippet (format: "path:line: content")
+        std::string snippet = relatedCode[i];
+        size_t firstColon = snippet.find(':');
+        if (firstColon != std::string::npos) {
+            std::string filePath = snippet.substr(0, firstColon);
+            std::string fileContent = readFileContent(filePath, 30);
+            if (!fileContent.empty()) {
+                step.findings.push_back("[File context: " + filePath + "]\n" + fileContent);
+            }
+        }
+    }
+
+    // Phase 4: Search for related TODO/FIXME markers
+    auto todoMatches = searchInFiles("TODO|FIXME|HACK|XXX", "src");
+    if (!todoMatches.empty()) {
+        std::string todoContext = "Found " + std::to_string(todoMatches.size()) + " TODO/FIXME markers";
+        step.findings.push_back(todoContext);
+    }
+
+    step.content = "Found " + std::to_string(relatedCode.size()) + " relevant code sections\n"
+                 + structureInfo;
+    step.confidence = relatedCode.empty() ? 0.55f : (0.75f + std::min(0.15f, relatedCode.size() * 0.03f));
 
     return step;
 }
@@ -644,25 +1207,150 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::generateHypo
     const ThinkingContext& context,
     const std::string& analysis
 ) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     ReasoningStep step;
     step.step = ThinkingStep::HypothesiGeneration;
     step.title = "Hypothesis Generation";
     step.successful = true;
 
-    auto hypotheses = brainstormSolutions(context.problem, 3);
+    // Determine hypothesis count based on problem complexity
+    int hypothesisCount = 3;
+    if (context.deepResearch) hypothesisCount = 5;
+    auto issues = identifyKeyIssues(context.problem);
+    if (issues.size() > 3) hypothesisCount = std::min(7, static_cast<int>(issues.size()) + 1);
+
+    auto hypotheses = brainstormSolutions(context.problem, hypothesisCount);
     step.findings = hypotheses;
-    step.content = "Generated " + std::to_string(hypotheses.size()) + " hypotheses";
-    step.confidence = 0.75f;
+
+    // Integrate prior analysis into content for downstream steps
+    std::string content;
+    content += "Generated " + std::to_string(hypotheses.size()) + " hypotheses";
+    if (!analysis.empty()) {
+        // Extract key analysis takeaways for hypothesis grounding
+        content += "\nGrounded in prior analysis:\n";
+        std::istringstream iss(analysis);
+        std::string line;
+        int lineCount = 0;
+        while (std::getline(iss, line) && lineCount < 5) {
+            size_t start = line.find_first_not_of(" \t");
+            if (start != std::string::npos && line.length() > 15) {
+                content += "  " + line.substr(start) + "\n";
+                lineCount++;
+            }
+        }
+    }
+    step.content = content;
+
+    // Dynamic confidence: higher if LLM-generated hypotheses matched analysis keywords
+    if (!analysis.empty() && !hypotheses.empty()) {
+        int matchCount = 0;
+        std::string lowerAnalysis = analysis;
+        std::transform(lowerAnalysis.begin(), lowerAnalysis.end(), lowerAnalysis.begin(), ::tolower);
+        for (const auto& h : hypotheses) {
+            std::string lowerH = h;
+            std::transform(lowerH.begin(), lowerH.end(), lowerH.begin(), ::tolower);
+            // Check if hypothesis references keywords from analysis
+            std::istringstream words(lowerH);
+            std::string word;
+            int wordMatches = 0;
+            while (words >> word) {
+                if (word.length() > 4 && lowerAnalysis.find(word) != std::string::npos) {
+                    wordMatches++;
+                }
+            }
+            if (wordMatches >= 2) matchCount++;
+        }
+        float groundingRatio = static_cast<float>(matchCount) / hypotheses.size();
+        step.confidence = 0.60f + (groundingRatio * 0.30f);  // 0.60-0.90 range
+    } else {
+        step.confidence = hypotheses.empty() ? 0.40f : 0.65f;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_statsMutex);
+        m_patternFrequency["hypothesis_count"] += static_cast<int>(hypotheses.size());
+    }
 
     return step;
 }
 
 std::vector<std::string> AgenticDeepThinkingEngine::brainstormSolutions(const std::string& problem, int count) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     std::vector<std::string> solutions;
-    
-    // Generate simple placeholder solutions
-    for (int i = 0; i < count; ++i) {
-        solutions.push_back("Hypothesis " + std::to_string(i + 1) + ": " + problem);
+
+    // Build a structured prompt asking the LLM to generate concrete, distinct hypotheses
+    std::string systemPrompt =
+        "You are a senior software engineer. Given a code problem, generate exactly "
+        + std::to_string(count) + " distinct, actionable hypotheses to solve it. "
+        "Each hypothesis must be a concrete, specific technical approach — not a restatement "
+        "of the problem. Format: one hypothesis per line, prefixed with 'H1:', 'H2:', etc.";
+
+    using ChatMsg = RawrXD::Agent::ChatMessage;
+    std::vector<ChatMsg> messages;
+    messages.push_back(ChatMsg{"system", systemPrompt, "", {}});
+    messages.push_back(ChatMsg{"user", problem, "", {}});
+
+    auto& llm = getThinkingLLM();
+    auto result = llm.ChatSync(messages);
+
+    if (result.success && !result.response.empty()) {
+        // Parse numbered hypotheses from LLM output
+        std::istringstream iss(result.response);
+        std::string line;
+        while (std::getline(iss, line)) {
+            // Strip leading whitespace
+            size_t start = line.find_first_not_of(" \t");
+            if (start == std::string::npos) continue;
+            line = line.substr(start);
+
+            // Accept lines starting with H1:, H2:, 1., 2., -, * etc.
+            if (line.length() > 5 &&
+                (line[0] == 'H' || line[0] == '-' || line[0] == '*' ||
+                 (line[0] >= '1' && line[0] <= '9'))) {
+                solutions.push_back(line);
+            }
+        }
+
+        // Track real LLM metrics
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["llm_brainstorm"]++;
+        }
+        if (auto* tc = TelemetryCollector::instance()) {
+            tc->trackPerformance("deep_thinking.brainstorm_tokens",
+                                 static_cast<double>(result.completion_tokens), "tokens");
+            tc->trackPerformance("deep_thinking.brainstorm_tok_per_sec",
+                                 result.tokens_per_sec, "tok/s");
+        }
+    }
+
+    // Fallback: if LLM unavailable or returned nothing, do codebase-driven analysis
+    if (solutions.empty()) {
+        // Search codebase for patterns related to the problem
+        auto codeMatches = searchInFiles(problem.substr(0, 60), "src");
+        if (!codeMatches.empty()) {
+            solutions.push_back("H1: Refactor the " + std::to_string(codeMatches.size()) +
+                " code locations matching the problem pattern for consistency");
+        }
+        auto todoMatches = searchInFiles("TODO|FIXME|HACK", "src");
+        if (!todoMatches.empty()) {
+            solutions.push_back("H2: Address " + std::to_string(todoMatches.size()) +
+                " outstanding TODO/FIXME markers that may relate to root cause");
+        }
+        auto errorMatches = searchInFiles("error|fail|exception", "src");
+        if (!errorMatches.empty()) {
+            solutions.push_back("H3: Audit " + std::to_string(errorMatches.size()) +
+                " error-handling sites for missing recovery paths");
+        }
+        // Always add at least one hypothesis
+        if (solutions.empty()) {
+            solutions.push_back("H1: Investigate the problem domain by tracing call paths from entry points");
+        }
+    }
+
+    // Clamp to requested count
+    if (static_cast<int>(solutions.size()) > count) {
+        solutions.resize(count);
     }
 
     return solutions;
@@ -682,8 +1370,21 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::runExperimen
         step.findings.push_back(result);
     }
 
-    step.content = "Tested " + std::to_string(hypotheses.size()) + " hypotheses";
-    step.confidence = 0.7f;
+    // Compute confidence based on actual evidence found across hypothesis tests
+    int supportedCount = 0;
+    for (const auto& f : step.findings) {
+        std::string lower = f;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        if (lower.find("supported") != std::string::npos ||
+            lower.find("evidence") != std::string::npos) {
+            supportedCount++;
+        }
+    }
+    float evidenceRatio = hypotheses.empty() ? 0.0f
+        : static_cast<float>(supportedCount) / hypotheses.size();
+    step.confidence = 0.5f + (evidenceRatio * 0.4f);  // Range: 0.5 (no evidence) to 0.9 (all supported)
+    step.content = "Tested " + std::to_string(hypotheses.size()) + " hypotheses, "
+                 + std::to_string(supportedCount) + " supported by evidence";
 
     return step;
 }
@@ -745,33 +1446,186 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::evaluateResu
     const std::vector<std::string>& results,
     const ThinkingContext& context
 ) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     ReasoningStep step;
     step.step = ThinkingStep::ResultEvaluation;
     step.title = "Result Evaluation";
     step.successful = true;
 
+    if (results.empty()) {
+        step.content = "No results to evaluate";
+        step.confidence = 0.0f;
+        return step;
+    }
+
+    // Score each result individually and build breakdown
     float totalScore = 0.0f;
-    for (const auto& result : results) {
-        float score = scoreResult(result, context.problem);
+    float maxScore = 0.0f;
+    float minScore = 1.0f;
+    int highQualityCount = 0;
+    int evidenceBackedCount = 0;
+    std::vector<std::pair<float, int>> scoredIndices;
+
+    for (size_t i = 0; i < results.size(); ++i) {
+        float score = scoreResult(results[i], context.problem);
         totalScore += score;
+        maxScore = std::max(maxScore, score);
+        minScore = std::min(minScore, score);
+        scoredIndices.push_back({score, static_cast<int>(i)});
+
         if (score > 0.7f) {
-            step.findings.push_back(result);
+            highQualityCount++;
+            step.findings.push_back(results[i]);
+        }
+
+        // Check if result contains file/code evidence
+        std::string lower = results[i];
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        if (lower.find(".cpp") != std::string::npos ||
+            lower.find(".hpp") != std::string::npos ||
+            lower.find("::") != std::string::npos ||
+            lower.find("evidence") != std::string::npos) {
+            evidenceBackedCount++;
         }
     }
 
-    float avgScore = results.empty() ? 0.0f : totalScore / results.size();
-    step.content = "Average score: " + std::to_string(avgScore);
-    step.confidence = avgScore;
+    // Sort by score descending to rank results
+    std::sort(scoredIndices.begin(), scoredIndices.end(),
+              [](const auto& a, const auto& b) { return a.first > b.first; });
+
+    float avgScore = totalScore / results.size();
+    float scoreRange = maxScore - minScore;
+
+    // Build detailed evaluation report
+    std::ostringstream report;
+    report << "Evaluation Summary:\n";
+    report << "  Total results: " << results.size() << "\n";
+    report << "  Average score: " << std::fixed << std::setprecision(3) << avgScore << "\n";
+    report << "  Score range: [" << minScore << ", " << maxScore << "]\n";
+    report << "  High quality (>0.7): " << highQualityCount << "/" << results.size() << "\n";
+    report << "  Evidence-backed: " << evidenceBackedCount << "/" << results.size() << "\n";
+    report << "  Top ranked results:\n";
+    for (size_t i = 0; i < std::min(scoredIndices.size(), size_t(3)); ++i) {
+        report << "    #" << (i + 1) << " (score: " << scoredIndices[i].first << "): ";
+        std::string preview = results[scoredIndices[i].second];
+        if (preview.length() > 120) preview = preview.substr(0, 120) + "...";
+        // Replace newlines for compact display
+        std::replace(preview.begin(), preview.end(), '\n', ' ');
+        report << preview << "\n";
+    }
+    step.content = report.str();
+
+    // Confidence combines average score, evidence ratio, and consistency
+    float evidenceRatio = static_cast<float>(evidenceBackedCount) / results.size();
+    float qualityRatio = static_cast<float>(highQualityCount) / results.size();
+    float consistency = 1.0f - std::min(scoreRange, 1.0f);  // Tight range = more consistent
+    step.confidence = (avgScore * 0.40f) + (evidenceRatio * 0.25f)
+                    + (qualityRatio * 0.20f) + (consistency * 0.15f);
+    step.confidence = std::clamp(step.confidence, 0.0f, 1.0f);
+
+    // Track evaluation metrics
+    if (auto* tc = TelemetryCollector::instance()) {
+        tc->trackPerformance("deep_thinking.eval_avg_score",
+                             static_cast<double>(avgScore), "score");
+        tc->trackPerformance("deep_thinking.eval_high_quality_ratio",
+                             static_cast<double>(qualityRatio), "ratio");
+        tc->trackPerformance("deep_thinking.eval_evidence_ratio",
+                             static_cast<double>(evidenceRatio), "ratio");
+    }
 
     return step;
 }
 
 float AgenticDeepThinkingEngine::scoreResult(const std::string& result, const std::string& problem) {
-    // Simple scoring - could be enhanced with ML
-    if (result.length() > 0) {
-        return 0.7f;
+    if (result.empty() || problem.empty()) return 0.0f;
+
+    // --- 1. Jaccard-style keyword overlap (0.0–0.35) ---
+    auto tokenize = [](const std::string& text) -> std::set<std::string> {
+        std::set<std::string> tokens;
+        std::istringstream iss(text);
+        std::string word;
+        while (iss >> word) {
+            if (word.length() > 2) {
+                std::string lower = word;
+                std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+                // Strip punctuation
+                while (!lower.empty() && !std::isalnum(static_cast<unsigned char>(lower.back())))
+                    lower.pop_back();
+                if (lower.length() > 2) tokens.insert(lower);
+            }
+        }
+        return tokens;
+    };
+
+    auto problemTokens = tokenize(problem);
+    auto resultTokens  = tokenize(result);
+    if (problemTokens.empty()) return 0.0f;
+
+    int intersection = 0;
+    for (const auto& t : problemTokens) {
+        if (resultTokens.count(t)) intersection++;
     }
-    return 0.0f;
+    int unionSize = static_cast<int>(problemTokens.size() + resultTokens.size()) - intersection;
+    float jaccardScore = unionSize > 0 ? static_cast<float>(intersection) / unionSize : 0.0f;
+
+    // --- 2. Evidence density: lines with concrete references (0.0–0.25) ---
+    int totalLines = 0, evidenceLines = 0;
+    std::istringstream lineStream(result);
+    std::string line;
+    while (std::getline(lineStream, line)) {
+        totalLines++;
+        std::string lower = line;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        // Lines with file paths, line numbers, code markers, or specific findings
+        if (lower.find(".cpp") != std::string::npos ||
+            lower.find(".hpp") != std::string::npos ||
+            lower.find(".h") != std::string::npos ||
+            lower.find("line ") != std::string::npos ||
+            lower.find("found") != std::string::npos ||
+            lower.find("evidence") != std::string::npos ||
+            lower.find("supported") != std::string::npos ||
+            lower.find("::") != std::string::npos) {
+            evidenceLines++;
+        }
+    }
+    float evidenceRatio = totalLines > 0
+        ? static_cast<float>(evidenceLines) / totalLines
+        : 0.0f;
+
+    // --- 3. Structural quality: has formatting, detail (0.0–0.20) ---
+    float structureScore = 0.0f;
+    if (result.find('\n') != std::string::npos) structureScore += 0.05f;
+    if (result.find("- ") != std::string::npos) structureScore += 0.05f;
+    if (result.length() > 200) structureScore += 0.05f;
+    if (result.length() > 500) structureScore += 0.05f;
+
+    // --- 4. Failure penalty: run through failure detector (0.0–-0.3) ---
+    float failurePenalty = 0.0f;
+    auto& detector = getFailureDetector();
+    auto failure = detector.detectFailure(result, problem);
+    if (failure.type != AgentFailureType::None) {
+        failurePenalty = static_cast<float>(failure.confidence) * 0.3f;
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["score_failure_penalty"]++;
+        }
+    }
+
+    // --- 5. Length penalty for very short results ---
+    float lengthPenalty = 0.0f;
+    if (result.length() < 20)  lengthPenalty = 0.3f;
+    else if (result.length() < 50)  lengthPenalty = 0.15f;
+    else if (result.length() < 100) lengthPenalty = 0.05f;
+
+    // Composite score: weighted sum, clamped to [0, 1]
+    float composite = (jaccardScore * 0.35f)
+                    + (evidenceRatio * 0.25f)
+                    + (structureScore)
+                    + 0.20f  // base score for non-empty result
+                    - failurePenalty
+                    - lengthPenalty;
+
+    return std::clamp(composite, 0.0f, 1.0f);
 }
 
 AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::selfCorrect(
@@ -795,43 +1649,248 @@ AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::selfCorrect(
 }
 
 bool AgenticDeepThinkingEngine::detectFlaws(const std::vector<ReasoningStep>& steps, std::string& flaw) {
-    // Check for low confidence steps
+    // 1. Check for low confidence steps
     for (const auto& step : steps) {
-        if (step.confidence < 0.6f) {
-            flaw = "Low confidence in " + step.title;
+        if (step.confidence < 0.5f) {
+            flaw = "Low confidence (" + std::to_string(step.confidence) + ") in " + step.title;
             return true;
         }
     }
+
+    // 2. Check for empty findings in critical steps
+    for (const auto& step : steps) {
+        if ((step.step == ThinkingStep::ProblemAnalysis ||
+             step.step == ThinkingStep::HypothesiGeneration ||
+             step.step == ThinkingStep::ExperimentationRun) &&
+            step.findings.empty()) {
+            flaw = "No findings produced in critical step: " + step.title;
+            return true;
+        }
+    }
+
+    // 3. Run failure detection on step content
+    auto& detector = getFailureDetector();
+    for (const auto& step : steps) {
+        if (!step.content.empty()) {
+            auto failure = detector.detectFailure(step.content);
+            if (failure.type != AgentFailureType::None && failure.confidence > 0.7) {
+                flaw = "Failure detected in " + step.title + ": " + failure.description
+                     + " (confidence: " + std::to_string(failure.confidence) + ")";
+                return true;
+            }
+        }
+    }
+
+    // 4. Check for contradictory findings across steps
+    std::set<std::string> supportedVerdicts, inconclusiveVerdicts;
+    for (const auto& step : steps) {
+        for (const auto& f : step.findings) {
+            std::string lower = f;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            if (lower.find("supported") != std::string::npos) supportedVerdicts.insert(f);
+            if (lower.find("inconclusive") != std::string::npos) inconclusiveVerdicts.insert(f);
+        }
+    }
+    if (!supportedVerdicts.empty() && inconclusiveVerdicts.size() > supportedVerdicts.size()) {
+        flaw = "Majority of hypotheses inconclusive (" + std::to_string(inconclusiveVerdicts.size())
+             + " vs " + std::to_string(supportedVerdicts.size()) + " supported)";
+        return true;
+    }
+
+    // 5. Check confidence trend — declining confidence across steps
+    if (steps.size() >= 3) {
+        int declineCount = 0;
+        for (size_t i = 1; i < steps.size(); ++i) {
+            if (steps[i].confidence < steps[i-1].confidence - 0.1f) declineCount++;
+        }
+        if (declineCount >= static_cast<int>(steps.size()) - 1) {
+            flaw = "Confidence declining across all steps — reasoning may be diverging";
+            return true;
+        }
+    }
+
     return false;
 }
 
-std::string AgenticDeepThinkingEngine::correctFlaw(const std::string& flaw, const std::vector<ReasoningStep>& context) {
-    return "Corrected: " + flaw;
+std::string AgenticDeepThinkingEngine::correctFlaw(const std::string& flaw, const std::vector<ReasoningStep>& steps) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
+
+    // Accumulate all findings from prior steps so the correction has full context
+    std::string accumulatedContext;
+    for (const auto& s : steps) {
+        if (!s.content.empty()) {
+            accumulatedContext += "[" + s.title + "] " + s.content + "\n";
+        }
+        for (const auto& f : s.findings) {
+            accumulatedContext += "  Finding: " + f + "\n";
+        }
+    }
+
+    // Step 1: Use AgenticPuppeteer to detect/correct the flaw pattern
+    auto& puppeteer = getPuppeteer();
+    CorrectionResult correction = puppeteer.correctResponse(flaw, accumulatedContext);
+    if (correction.success && !correction.correctedOutput.empty()) {
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["puppeteer_correction"]++;
+        }
+        return "[Puppeteer-corrected] " + correction.correctedOutput
+               + "\nDiagnostic: " + correction.diagnosticMessage;
+    }
+
+    // Step 2: If puppeteer can't fix it, ask LLM to re-analyze the flaw
+    using ChatMsg = RawrXD::Agent::ChatMessage;
+    std::vector<ChatMsg> messages;
+    messages.push_back(ChatMsg{"system",
+        "You are a code analysis self-correction agent. A prior reasoning step "
+        "had a flaw. Analyze the flaw and provide a corrected, improved analysis. "
+        "Be specific and reference concrete code structures.", "", {}});
+
+    std::string userMsg = "Detected flaw: " + flaw + "\n\nPrior context:\n" + accumulatedContext;
+    messages.push_back(ChatMsg{"user", userMsg, "", {}});
+
+    auto& llm = getThinkingLLM();
+    auto result = llm.ChatSync(messages);
+    if (result.success && !result.response.empty()) {
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["llm_flaw_correction"]++;
+        }
+        if (auto* tc = TelemetryCollector::instance()) {
+            tc->trackPerformance("deep_thinking.correction_tokens",
+                                 static_cast<double>(result.completion_tokens), "tokens");
+        }
+        return "[LLM-corrected] " + result.response;
+    }
+
+    // Step 3: Minimal fallback — re-run flaw detection to provide diagnostics
+    auto& detector = getFailureDetector();
+    auto failures = detector.detectMultipleFailures(flaw);
+    std::string fallback = "[Fallback correction] Detected " + std::to_string(failures.size()) + " issues:\n";
+    for (const auto& f : failures) {
+        fallback += " - " + f.description + " (confidence: " + std::to_string(f.confidence) + ")\n";
+    }
+    fallback += "Original flaw: " + flaw;
+    return fallback;
 }
 
 AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::synthesizeAnswer(
     const std::vector<ReasoningStep>& steps,
     const ThinkingContext& context
 ) {
+    ScopedMeasurement perf(static_cast<uint32_t>(KernelSlot::TotalInference));
     ReasoningStep step;
     step.step = ThinkingStep::FinalSynthesis;
     step.title = "Final Synthesis";
     step.successful = true;
 
-    // Compile final answer from all steps
-    std::string finalAnswer = "Based on the analysis:\n";
+    // Compile accumulated context from all reasoning steps
+    std::string stepsContext;
+    int totalFindings = 0;
+    float confidenceSum = 0.0f;
     for (const auto& s : steps) {
+        stepsContext += "### " + s.title + " (confidence: " + std::to_string(s.confidence) + ")\n";
+        stepsContext += s.content + "\n";
         if (!s.findings.empty()) {
-            finalAnswer += "- " + s.title + ": ";
-            for (const auto& finding : s.findings) {
-                finalAnswer += finding + " ";
+            stepsContext += "Findings:\n";
+            for (const auto& f : s.findings) {
+                stepsContext += "  - " + f + "\n";
+                totalFindings++;
             }
-            finalAnswer += "\n";
+        }
+        stepsContext += "\n";
+        confidenceSum += s.confidence;
+    }
+
+    // Try LLM-driven synthesis for a coherent, structured final answer
+    using ChatMsg = RawrXD::Agent::ChatMessage;
+    std::vector<ChatMsg> messages;
+    messages.push_back(ChatMsg{"system",
+        "You are a senior technical writer synthesizing code analysis results. "
+        "Given the reasoning steps below, produce a clear, structured final answer. "
+        "Include: 1) Summary of findings, 2) Root cause analysis, 3) Recommended actions "
+        "with specific file/function references, 4) Risk assessment. "
+        "Be concise but thorough. Use markdown formatting.", "", {}});
+
+    std::string userMsg = "## Problem\n" + context.problem
+                        + "\nLanguage: " + context.language
+                        + "\n\n## Reasoning Steps\n" + stepsContext;
+    messages.push_back(ChatMsg{"user", userMsg, "", {}});
+
+    auto& llm = getThinkingLLM();
+    auto result = llm.ChatSync(messages);
+
+    if (result.success && !result.response.empty()) {
+        step.content = result.response;
+
+        // Validate the synthesis through failure detection
+        auto& detector = getFailureDetector();
+        auto failure = detector.detectFailure(result.response, context.problem);
+        if (failure.type != AgentFailureType::None &&
+            failure.confidence > 0.8) {
+            // LLM synthesis has issues — apply puppeteer correction
+            auto& puppeteer = getPuppeteer();
+            auto correction = puppeteer.correctResponse(result.response, context.problem);
+            if (correction.success && !correction.correctedOutput.empty()) {
+                step.content = correction.correctedOutput;
+                {
+                    std::lock_guard<std::mutex> lock(m_statsMutex);
+                    m_patternFrequency["synthesis_puppeteer_fix"]++;
+                }
+            }
+        }
+
+        // Track synthesis metrics
+        if (auto* tc = TelemetryCollector::instance()) {
+            tc->trackPerformance("deep_thinking.synthesis_tokens",
+                                 static_cast<double>(result.completion_tokens), "tokens");
+            tc->trackPerformance("deep_thinking.synthesis_tok_per_sec",
+                                 result.tokens_per_sec, "tok/s");
+            tc->trackPerformance("deep_thinking.synthesis_latency_ms",
+                                 result.total_duration_ms, "ms");
+            tc->trackPerformance("deep_thinking.total_findings",
+                                 static_cast<double>(totalFindings), "count");
+            tc->trackFeatureUsage("deep_thinking.synthesize");
+        }
+    } else {
+        // Fallback: structured local synthesis
+        std::string finalAnswer;
+        finalAnswer += "# Analysis Summary\n\n";
+
+        // Group findings by step
+        for (const auto& s : steps) {
+            if (!s.findings.empty()) {
+                finalAnswer += "## " + s.title + "\n";
+                for (const auto& finding : s.findings) {
+                    finalAnswer += "- " + finding + "\n";
+                }
+                finalAnswer += "\n";
+            }
+        }
+
+        // Add confidence assessment
+        float avgConf = steps.empty() ? 0.0f : confidenceSum / steps.size();
+        finalAnswer += "## Confidence Assessment\n";
+        finalAnswer += "- Overall confidence: " + std::to_string(avgConf) + "\n";
+        finalAnswer += "- Total findings: " + std::to_string(totalFindings) + "\n";
+        finalAnswer += "- Steps completed: " + std::to_string(steps.size()) + "\n";
+
+        step.content = finalAnswer;
+
+        {
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_patternFrequency["synthesis_local_fallback"]++;
         }
     }
 
-    step.content = finalAnswer;
     step.confidence = calculateOverallConfidence(steps);
+
+    // Collect key findings from all steps as suggested fixes
+    for (const auto& s : steps) {
+        for (const auto& f : s.findings) {
+            step.findings.push_back(f);
+        }
+    }
 
     return step;
 }
@@ -1053,7 +2112,37 @@ std::string AgenticDeepThinkingEngine::identifyBestMatch(const std::string& quer
 }
 
 float AgenticDeepThinkingEngine::calculateStepConfidence(const ReasoningStep& step) {
-    return step.confidence;
+    // Weighted confidence: base confidence adjusted by evidence quality
+    float base = step.confidence;
+
+    // Boost for steps with concrete findings
+    float findingsBoost = 0.0f;
+    if (!step.findings.empty()) {
+        int evidenceFindings = 0;
+        for (const auto& f : step.findings) {
+            std::string lower = f;
+            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+            if (lower.find(".cpp") != std::string::npos ||
+                lower.find(".hpp") != std::string::npos ||
+                lower.find("::") != std::string::npos ||
+                lower.find("evidence") != std::string::npos ||
+                lower.find("supported") != std::string::npos ||
+                lower.find("found") != std::string::npos) {
+                evidenceFindings++;
+            }
+        }
+        float evidenceRatio = static_cast<float>(evidenceFindings) / step.findings.size();
+        findingsBoost = evidenceRatio * 0.10f;  // Up to +0.10 for evidence-backed findings
+    }
+
+    // Penalty for very short, uninformative content
+    float contentPenalty = 0.0f;
+    if (step.content.length() < 30) contentPenalty = 0.10f;
+
+    // Bonus for successful steps
+    float successBonus = step.successful ? 0.0f : -0.15f;
+
+    return std::clamp(base + findingsBoost - contentPenalty + successBonus, 0.0f, 1.0f);
 }
 
 float AgenticDeepThinkingEngine::calculateOverallConfidence(const std::vector<ReasoningStep>& steps) {
@@ -1061,10 +2150,315 @@ float AgenticDeepThinkingEngine::calculateOverallConfidence(const std::vector<Re
         return 0.0f;
     }
 
-    float totalConfidence = 0.0f;
+    // Step importance weights based on reasoning phase
+    auto getStepWeight = [](ThinkingStep s) -> float {
+        switch (s) {
+            case ThinkingStep::ProblemAnalysis:    return 1.2f;  // Foundation — critical
+            case ThinkingStep::ContextGathering:   return 1.0f;  // Supporting evidence
+            case ThinkingStep::HypothesiGeneration:return 1.1f;  // Direction of investigation
+            case ThinkingStep::ExperimentationRun: return 1.3f;  // Empirical validation — most important
+            case ThinkingStep::ResultEvaluation:   return 1.2f;  // Quality gate
+            case ThinkingStep::SelfCorrection:     return 0.8f;  // Optional improvement
+            case ThinkingStep::FinalSynthesis:     return 1.4f;  // Final output — highest weight
+            default:                               return 1.0f;
+        }
+    };
+
+    float weightedSum = 0.0f;
+    float totalWeight = 0.0f;
+    float minConfidence = 1.0f;
+    int failedSteps = 0;
+
     for (const auto& step : steps) {
-        totalConfidence += step.confidence;
+        float adjustedConf = calculateStepConfidence(step);
+        float weight = getStepWeight(step.step);
+        weightedSum += adjustedConf * weight;
+        totalWeight += weight;
+        minConfidence = std::min(minConfidence, adjustedConf);
+        if (!step.successful) failedSteps++;
     }
 
-    return totalConfidence / steps.size();
+    float weightedAvg = (totalWeight > 0.0f) ? weightedSum / totalWeight : 0.0f;
+
+    // Apply penalties for failed steps
+    float failurePenalty = static_cast<float>(failedSteps) * 0.05f;
+
+    // Apply a floor: if any step is very low, drag overall down
+    float floorPenalty = 0.0f;
+    if (minConfidence < 0.3f) floorPenalty = 0.10f;
+
+    return std::clamp(weightedAvg - failurePenalty - floorPenalty, 0.0f, 1.0f);
+}
+
+// ============================================================================
+// executeStep — Dispatch a single reasoning step by enum value
+// ============================================================================
+AgenticDeepThinkingEngine::ReasoningStep AgenticDeepThinkingEngine::executeStep(
+    ThinkingStep step,
+    const ThinkingContext& context,
+    const std::string& previousContext
+) {
+    switch (step) {
+        case ThinkingStep::ProblemAnalysis:
+            return analyzeProblem(context);
+
+        case ThinkingStep::ContextGathering:
+            return gatherContext(context);
+
+        case ThinkingStep::HypothesiGeneration:
+            return generateHypotheses(context, previousContext);
+
+        case ThinkingStep::ExperimentationRun: {
+            // Extract hypotheses from previous context (look for H1:, H2: lines)
+            std::vector<std::string> hypotheses;
+            std::istringstream iss(previousContext);
+            std::string line;
+            while (std::getline(iss, line)) {
+                size_t start = line.find_first_not_of(" \t");
+                if (start == std::string::npos) continue;
+                char first = line[start];
+                if (first == 'H' || first == '-' || first == '*' ||
+                    (first >= '1' && first <= '9')) {
+                    hypotheses.push_back(line.substr(start));
+                }
+            }
+            if (hypotheses.empty()) hypotheses.push_back(previousContext);
+            return runExperiments(context, hypotheses);
+        }
+
+        case ThinkingStep::ResultEvaluation: {
+            // Extract findings from previous context as results to evaluate
+            std::vector<std::string> results;
+            std::istringstream iss(previousContext);
+            std::string line;
+            std::string currentResult;
+            while (std::getline(iss, line)) {
+                if (!line.empty()) {
+                    currentResult += line + "\n";
+                } else if (!currentResult.empty()) {
+                    results.push_back(currentResult);
+                    currentResult.clear();
+                }
+            }
+            if (!currentResult.empty()) results.push_back(currentResult);
+            if (results.empty()) results.push_back(previousContext);
+            return evaluateResults(results, context);
+        }
+
+        case ThinkingStep::SelfCorrection: {
+            // Build steps from accumulated context to self-correct
+            std::vector<ReasoningStep> priorSteps;
+            ReasoningStep dummy;
+            dummy.step = ThinkingStep::ProblemAnalysis;
+            dummy.title = "Prior Analysis";
+            dummy.content = previousContext;
+            dummy.confidence = 0.7f;
+            dummy.successful = true;
+            priorSteps.push_back(dummy);
+            return selfCorrect(context, priorSteps);
+        }
+
+        case ThinkingStep::FinalSynthesis: {
+            // Build all prior context into steps for synthesis
+            std::vector<ReasoningStep> synthSteps;
+            ReasoningStep ctx_step;
+            ctx_step.step = ThinkingStep::ContextGathering;
+            ctx_step.title = "Accumulated Context";
+            ctx_step.content = previousContext;
+            ctx_step.confidence = 0.75f;
+            ctx_step.successful = true;
+            synthSteps.push_back(ctx_step);
+            return synthesizeAnswer(synthSteps, context);
+        }
+
+        default: {
+            // Initialization / Complete / unknown — return a pass-through step
+            ReasoningStep passthrough;
+            passthrough.step = step;
+            passthrough.title = "Step " + std::to_string(static_cast<int>(step));
+            passthrough.content = previousContext;
+            passthrough.confidence = 1.0f;
+            passthrough.successful = true;
+            return passthrough;
+        }
+    }
+}
+
+// ============================================================================
+// extractProjectStructure — Build a structural overview of the project tree
+// ============================================================================
+std::string AgenticDeepThinkingEngine::extractProjectStructure(const std::string& projectRoot) {
+    std::string root = projectRoot.empty() ? "." : projectRoot;
+    auto allFiles = listFilesRecursive(root, "");
+
+    if (allFiles.empty()) {
+        return "No files found in: " + root;
+    }
+
+    // Classify files by directory and extension
+    std::map<std::string, int> dirCounts;
+    std::map<std::string, int> extCounts;
+    int totalSourceFiles = 0;
+    int totalHeaderFiles = 0;
+    int totalAsmFiles = 0;
+    int totalOtherFiles = 0;
+    uint64_t totalSize = 0;
+
+    for (const auto& f : allFiles) {
+        // Directory
+        size_t lastSep = f.find_last_of("/\\");
+        std::string dir = (lastSep != std::string::npos) ? f.substr(0, lastSep) : ".";
+        dirCounts[dir]++;
+
+        // Extension
+        size_t dotPos = f.find_last_of('.');
+        std::string ext = (dotPos != std::string::npos) ? f.substr(dotPos) : "";
+        extCounts[ext]++;
+
+        if (ext == ".cpp" || ext == ".c" || ext == ".cc") totalSourceFiles++;
+        else if (ext == ".hpp" || ext == ".h" || ext == ".hxx") totalHeaderFiles++;
+        else if (ext == ".asm") totalAsmFiles++;
+        else totalOtherFiles++;
+
+        // File size (best effort)
+        try {
+            if (std::filesystem::exists(f)) {
+                totalSize += std::filesystem::file_size(f);
+            }
+        } catch (...) {}
+    }
+
+    std::ostringstream report;
+    report << "=== Project Structure: " << root << " ===\n";
+    report << "Total files: " << allFiles.size() << "\n";
+    report << "Total size: " << std::fixed << std::setprecision(1)
+           << (static_cast<double>(totalSize) / (1024.0 * 1024.0)) << " MB\n";
+    report << "Directories: " << dirCounts.size() << "\n";
+    report << "Source files (.cpp/.c): " << totalSourceFiles << "\n";
+    report << "Header files (.hpp/.h): " << totalHeaderFiles << "\n";
+    report << "Assembly files (.asm): " << totalAsmFiles << "\n";
+    report << "Other files: " << totalOtherFiles << "\n\n";
+
+    // Top directories by file count
+    std::vector<std::pair<std::string, int>> sortedDirs(dirCounts.begin(), dirCounts.end());
+    std::sort(sortedDirs.begin(), sortedDirs.end(),
+              [](const auto& a, const auto& b) { return a.second > b.second; });
+
+    report << "Top directories:\n";
+    for (size_t i = 0; i < std::min(sortedDirs.size(), size_t(15)); ++i) {
+        report << "  " << sortedDirs[i].first << "/ (" << sortedDirs[i].second << " files)\n";
+    }
+
+    // Extension breakdown
+    report << "\nFile types:\n";
+    std::vector<std::pair<std::string, int>> sortedExts(extCounts.begin(), extCounts.end());
+    std::sort(sortedExts.begin(), sortedExts.end(),
+              [](const auto& a, const auto& b) { return a.second > b.second; });
+    for (const auto& [ext, count] : sortedExts) {
+        if (count >= 2 && !ext.empty()) {
+            report << "  " << ext << ": " << count << "\n";
+        }
+    }
+
+    return report.str();
+}
+
+// ============================================================================
+// formatAnswer — Language-aware answer formatting with code block detection
+// ============================================================================
+std::string AgenticDeepThinkingEngine::formatAnswer(const std::string& rawAnswer, const std::string& language) {
+    if (rawAnswer.empty()) return rawAnswer;
+
+    std::string formatted;
+    formatted.reserve(rawAnswer.size() + 256);
+
+    // Determine the language tag for code blocks
+    std::string langTag = language;
+    if (langTag.empty()) langTag = m_defaultLanguage;
+    std::string lowerLang = langTag;
+    std::transform(lowerLang.begin(), lowerLang.end(), lowerLang.begin(), ::tolower);
+
+    // Normalize common language aliases
+    if (lowerLang == "c++" || lowerLang == "cxx" || lowerLang == "cc") langTag = "cpp";
+    else if (lowerLang == "javascript") langTag = "js";
+    else if (lowerLang == "typescript") langTag = "ts";
+    else if (lowerLang == "assembly" || lowerLang == "masm" || lowerLang == "nasm") langTag = "asm";
+    else if (lowerLang == "python3") langTag = "python";
+
+    // Process line-by-line to detect and format code blocks
+    std::istringstream iss(rawAnswer);
+    std::string line;
+    bool inCodeBlock = false;
+    bool needsAutoWrap = false;
+    int consecutiveCodeLines = 0;
+
+    // Heuristics for code line detection
+    auto isLikelyCodeLine = [](const std::string& l) -> bool {
+        if (l.empty()) return false;
+        std::string trimmed = l;
+        size_t start = trimmed.find_first_not_of(" \t");
+        if (start == std::string::npos) return false;
+        trimmed = trimmed.substr(start);
+
+        // Strong code indicators
+        if (trimmed.find("//") == 0) return true;
+        if (trimmed.find('#') == 0) return true;  // preprocessor
+        if (trimmed.find("return ") == 0) return true;
+        if (trimmed.find("if (") == 0 || trimmed.find("if(") == 0) return true;
+        if (trimmed.find("for (") == 0 || trimmed.find("for(") == 0) return true;
+        if (trimmed.find("while (") == 0 || trimmed.find("while(") == 0) return true;
+        if (trimmed.find("class ") == 0 || trimmed.find("struct ") == 0) return true;
+        if (trimmed.find("void ") == 0 || trimmed.find("int ") == 0 ||
+            trimmed.find("bool ") == 0 || trimmed.find("auto ") == 0) return true;
+        if (trimmed.back() == ';' || trimmed.back() == '{' || trimmed.back() == '}') return true;
+        if (trimmed.find("->") != std::string::npos) return true;
+        if (trimmed.find("::") != std::string::npos) return true;
+        return false;
+    };
+
+    while (std::getline(iss, line)) {
+        // Already in a markdown code block — pass through
+        if (line.find("```") == 0) {
+            inCodeBlock = !inCodeBlock;
+            if (needsAutoWrap && !inCodeBlock) {
+                // Close our auto-opened block
+                needsAutoWrap = false;
+            }
+            formatted += line + "\n";
+            consecutiveCodeLines = 0;
+            continue;
+        }
+
+        if (inCodeBlock) {
+            formatted += line + "\n";
+            continue;
+        }
+
+        // Detect consecutive code lines to auto-wrap
+        if (isLikelyCodeLine(line)) {
+            consecutiveCodeLines++;
+            if (consecutiveCodeLines == 3 && !needsAutoWrap) {
+                // Start auto code block — insert before the first code line
+                // (We buffered 2 lines, so re-emit them inside fence)
+                formatted += "```" + langTag + "\n";
+                needsAutoWrap = true;
+            }
+        } else {
+            if (needsAutoWrap && consecutiveCodeLines > 0) {
+                // End of code section
+                formatted += "```\n";
+                needsAutoWrap = false;
+            }
+            consecutiveCodeLines = 0;
+        }
+
+        formatted += line + "\n";
+    }
+
+    // Close any unclosed auto-block
+    if (needsAutoWrap) {
+        formatted += "```\n";
+    }
+
+    return formatted;
 }

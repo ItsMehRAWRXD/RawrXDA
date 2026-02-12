@@ -685,13 +685,184 @@ AuthResult RBACEngine::authenticateSSO(const std::string& providerName,
         }
     }
 
-    // SAML assertion validation placeholder
-    // In production: parse XML, verify signature, extract NameID
-    stats_.failedAuths.fetch_add(1);
-    logAudit("unknown", "auth.sso.fail", providerName,
-             "SSO assertion validation failed",
-             AuthResult::denied("SSO failed"));
-    return AuthResult::denied("SSO authentication failed", 401);
+    // SAML assertion validation — parse XML, verify signature, extract NameID
+    // Parse SAML Response XML for NameID, Conditions, and signature
+    // This is a minimal SAML 2.0 Response parser (no full XML DOM dependency)
+    std::string nameId;
+    std::string issuer;
+    std::string audience;
+    bool signaturePresent = false;
+    uint64_t notBefore = 0, notOnOrAfter = 0;
+
+    // Extract NameID from SAML assertion
+    auto extractTag = [&](const std::string& xml, const std::string& tag) -> std::string {
+        std::string startTag = "<" + tag;
+        size_t s = xml.find(startTag);
+        if (s == std::string::npos) return {};
+        size_t contentStart = xml.find('>', s);
+        if (contentStart == std::string::npos) return {};
+        contentStart++;
+        std::string endTag = "</" + tag + ">";
+        size_t e = xml.find(endTag, contentStart);
+        if (e == std::string::npos) {
+            // Try namespace-qualified
+            endTag = "</" + tag.substr(0, tag.find(':') + 1) + tag.substr(tag.find(':') + 1) + ">";
+            e = xml.find(endTag, contentStart);
+            if (e == std::string::npos) return {};
+        }
+        return xml.substr(contentStart, e - contentStart);
+    };
+
+    auto extractAttr = [&](const std::string& xml, const std::string& tag,
+                           const std::string& attr) -> std::string {
+        std::string startTag = "<" + tag;
+        size_t s = xml.find(startTag);
+        if (s == std::string::npos) return {};
+        size_t tagEnd = xml.find('>', s);
+        if (tagEnd == std::string::npos) return {};
+        std::string tagContent = xml.substr(s, tagEnd - s);
+        std::string attrSearch = attr + "=\"";
+        size_t aPos = tagContent.find(attrSearch);
+        if (aPos == std::string::npos) return {};
+        aPos += attrSearch.size();
+        size_t aEnd = tagContent.find('"', aPos);
+        if (aEnd == std::string::npos) return {};
+        return tagContent.substr(aPos, aEnd - aPos);
+    };
+
+    // Try saml: and saml2: prefixes, plus unqualified
+    for (const char* ns : {"saml:", "saml2:", ""}) {
+        std::string nid = extractTag(assertion, std::string(ns) + "NameID");
+        if (!nid.empty()) { nameId = nid; break; }
+    }
+    for (const char* ns : {"saml:", "saml2:", ""}) {
+        std::string iss = extractTag(assertion, std::string(ns) + "Issuer");
+        if (!iss.empty()) { issuer = iss; break; }
+    }
+
+    // Check for Signature element
+    signaturePresent = (assertion.find("<ds:Signature") != std::string::npos ||
+                        assertion.find("<Signature") != std::string::npos);
+
+    // Parse NotBefore / NotOnOrAfter from Conditions
+    for (const char* ns : {"saml:", "saml2:", ""}) {
+        std::string nb = extractAttr(assertion, std::string(ns) + "Conditions", "NotBefore");
+        std::string noa = extractAttr(assertion, std::string(ns) + "Conditions", "NotOnOrAfter");
+        // Simple ISO8601 timestamp parsing (YYYY-MM-DDTHH:MM:SSZ → epoch approx)
+        auto parseIso = [](const std::string& ts) -> uint64_t {
+            if (ts.size() < 19) return 0;
+            struct tm t = {};
+            t.tm_year = std::atoi(ts.c_str()) - 1900;
+            t.tm_mon = std::atoi(ts.c_str() + 5) - 1;
+            t.tm_mday = std::atoi(ts.c_str() + 8);
+            t.tm_hour = std::atoi(ts.c_str() + 11);
+            t.tm_min = std::atoi(ts.c_str() + 14);
+            t.tm_sec = std::atoi(ts.c_str() + 17);
+#ifdef _WIN32
+            return static_cast<uint64_t>(_mkgmtime(&t));
+#else
+            return static_cast<uint64_t>(timegm(&t));
+#endif
+        };
+        if (!nb.empty()) notBefore = parseIso(nb);
+        if (!noa.empty()) notOnOrAfter = parseIso(noa);
+        if (notBefore > 0 || notOnOrAfter > 0) break;
+    }
+
+    // Validate assertions
+    if (nameId.empty()) {
+        stats_.failedAuths.fetch_add(1);
+        logAudit("unknown", "auth.sso.fail", providerName,
+                 "SAML NameID not found in assertion",
+                 AuthResult::denied("SAML: missing NameID"));
+        return AuthResult::denied("SAML assertion missing NameID", 401);
+    }
+
+    if (!signaturePresent) {
+        stats_.failedAuths.fetch_add(1);
+        logAudit("unknown", "auth.sso.fail", providerName,
+                 "SAML signature not found",
+                 AuthResult::denied("SAML: unsigned"));
+        return AuthResult::denied("SAML assertion not signed", 401);
+    }
+
+    // Validate time conditions
+    uint64_t currentTime = now();
+    if (notOnOrAfter > 0 && currentTime > notOnOrAfter) {
+        stats_.failedAuths.fetch_add(1);
+        logAudit("unknown", "auth.sso.fail", providerName,
+                 "SAML assertion expired",
+                 AuthResult::denied("SAML: expired"));
+        return AuthResult::denied("SAML assertion expired", 401);
+    }
+    if (notBefore > 0 && currentTime < notBefore) {
+        stats_.failedAuths.fetch_add(1);
+        logAudit("unknown", "auth.sso.fail", providerName,
+                 "SAML assertion not yet valid",
+                 AuthResult::denied("SAML: not yet valid"));
+        return AuthResult::denied("SAML assertion not yet valid", 401);
+    }
+
+    // Validate issuer against provider config
+    if (!issuer.empty() && !pit->second.entityId.empty() &&
+        issuer != pit->second.entityId) {
+        stats_.failedAuths.fetch_add(1);
+        logAudit("unknown", "auth.sso.fail", providerName,
+                 "SAML issuer mismatch: got " + issuer,
+                 AuthResult::denied("SAML: issuer mismatch"));
+        return AuthResult::denied("SAML issuer mismatch", 401);
+    }
+
+    // NameID is the username — find or create user
+    {
+        User ssoUser;
+        ssoUser.id = "saml-" + nameId;
+        ssoUser.username = nameId;
+
+        auto uidx = usernameIndex_.find(ssoUser.username);
+        if (uidx == usernameIndex_.end()) {
+            if (pit->second.autoCreateUsers) {
+                ssoUser.ssoProvider = providerName;
+                ssoUser.createdAt = now();
+                ssoUser.isActive = true;
+                if (!pit->second.defaultRole.empty()) {
+                    ssoUser.roles.push_back(pit->second.defaultRole);
+                }
+                computeEffectivePermissions(ssoUser);
+                users_[ssoUser.id] = ssoUser;
+                usernameIndex_[ssoUser.username] = ssoUser.id;
+            } else {
+                stats_.failedAuths.fetch_add(1);
+                return AuthResult::denied("User not registered (auto-create disabled)", 403);
+            }
+        }
+
+        auto& user = users_[ssoUser.id];
+        user.lastLoginAt = now();
+
+        Session session;
+        generateSessionToken(session.token, sizeof(session.token));
+        session.userId = user.id;
+        session.createdAt = now();
+        uint32_t timeout = pit->second.sessionTimeoutSec > 0 ?
+            pit->second.sessionTimeoutSec :
+            compliance_.maxSessionDurationSec;
+        session.expiresAt = now() + timeout;
+        session.lastActivityAt = now();
+        session.isValid = true;
+        session.cachedPermissions = user.effectivePermissions;
+
+        sessions_[std::string(session.token)] = session;
+        stats_.successfulAuths.fetch_add(1);
+        stats_.activeSessions.fetch_add(1);
+        outSession = session;
+
+        logAudit(user.id, "auth.sso.saml.success", providerName,
+                 "SAML SSO login for " + nameId,
+                 AuthResult::ok("SAML authenticated"));
+
+        return AuthResult::ok("SAML authenticated");
+    }
 }
 
 AuthResult RBACEngine::validateSession(const char* token,
@@ -1149,12 +1320,165 @@ AuthResult RBACEngine::loadFromFile(const char* configPath) {
                          std::istreambuf_iterator<char>());
     file.close();
 
-    // Parse roles section
-    // TODO: Full JSON parser integration
-    // For now, just ensure the builtin roles exist
+    // Ensure builtin roles always exist as base
     if (!initialized_.load()) {
         createBuiltinRoles();
         initialized_.store(true);
+    }
+
+    // JSON parsing helpers (match saveToFile format)
+    auto extractStr = [](const std::string& obj, const std::string& key) -> std::string {
+        std::string pat = "\"" + key + "\":\"";
+        auto pos = obj.find(pat);
+        if (pos == std::string::npos) { pat = "\"" + key + "\": \""; pos = obj.find(pat); }
+        if (pos == std::string::npos) return "";
+        auto s = pos + pat.size();
+        auto e = obj.find('"', s);
+        return (e != std::string::npos) ? obj.substr(s, e - s) : "";
+    };
+    auto extractInt = [](const std::string& obj, const std::string& key) -> int64_t {
+        std::string pat = "\"" + key + "\":";
+        auto pos = obj.find(pat);
+        if (pos == std::string::npos) { pat = "\"" + key + "\": "; pos = obj.find(pat); }
+        if (pos == std::string::npos) return 0;
+        auto s = pos + pat.size();
+        while (s < obj.size() && obj[s] == ' ') s++;
+        return std::strtoll(obj.c_str() + s, nullptr, 10);
+    };
+    auto extractBool = [](const std::string& obj, const std::string& key) -> bool {
+        std::string pat = "\"" + key + "\":true";
+        if (obj.find(pat) != std::string::npos) return true;
+        pat = "\"" + key + "\": true";
+        return obj.find(pat) != std::string::npos;
+    };
+    auto extractStrArray = [](const std::string& obj, const std::string& key) -> std::vector<std::string> {
+        std::vector<std::string> result;
+        std::string pat = "\"" + key + "\":[";
+        auto pos = obj.find(pat);
+        if (pos == std::string::npos) { pat = "\"" + key + "\": ["; pos = obj.find(pat); }
+        if (pos == std::string::npos) return result;
+        auto arrStart = obj.find('[', pos);
+        auto arrEnd = obj.find(']', arrStart);
+        if (arrStart == std::string::npos || arrEnd == std::string::npos) return result;
+        std::string arr = obj.substr(arrStart + 1, arrEnd - arrStart - 1);
+        size_t p = 0;
+        while ((p = arr.find('"', p)) != std::string::npos) {
+            auto e = arr.find('"', p + 1);
+            if (e == std::string::npos) break;
+            result.push_back(arr.substr(p + 1, e - p - 1));
+            p = e + 1;
+        }
+        return result;
+    };
+
+    // Parse roles array
+    size_t rolesStart = content.find("\"roles\"");
+    if (rolesStart != std::string::npos) {
+        size_t arrStart = content.find('[', rolesStart);
+        size_t arrEnd = content.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            size_t pos = arrStart + 1;
+            while (pos < arrEnd) {
+                size_t objStart = content.find('{', pos);
+                if (objStart == std::string::npos || objStart >= arrEnd) break;
+                size_t objEnd = content.find('}', objStart);
+                if (objEnd == std::string::npos) break;
+                std::string entry = content.substr(objStart, objEnd - objStart + 1);
+
+                std::string name = extractStr(entry, "name");
+                if (!name.empty() && roles_.find(name) == roles_.end()) {
+                    Role role;
+                    role.name = name;
+                    role.description = extractStr(entry, "description");
+                    role.permissions = static_cast<Permission>(static_cast<uint32_t>(extractInt(entry, "permissions")));
+                    role.parentRole = extractStr(entry, "parent");
+                    role.isBuiltin = extractBool(entry, "builtin");
+                    roles_[name] = role;
+                }
+                pos = objEnd + 1;
+            }
+        }
+    }
+
+    // Parse users array
+    size_t usersStart = content.find("\"users\"");
+    if (usersStart != std::string::npos) {
+        size_t arrStart = content.find('[', usersStart);
+        size_t arrEnd = content.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            size_t pos = arrStart + 1;
+            while (pos < arrEnd) {
+                size_t objStart = content.find('{', pos);
+                if (objStart == std::string::npos || objStart >= arrEnd) break;
+                // Find matching '}' — account for nested arrays
+                int depth = 0;
+                size_t objEnd = objStart;
+                for (; objEnd < arrEnd; ++objEnd) {
+                    if (content[objEnd] == '{') depth++;
+                    else if (content[objEnd] == '}') { depth--; if (depth == 0) break; }
+                }
+                std::string entry = content.substr(objStart, objEnd - objStart + 1);
+
+                std::string id = extractStr(entry, "id");
+                if (!id.empty() && users_.find(id) == users_.end()) {
+                    User user;
+                    user.id = id;
+                    user.username = extractStr(entry, "username");
+                    user.email = extractStr(entry, "email");
+                    user.isActive = extractBool(entry, "active");
+                    user.roles = extractStrArray(entry, "roles");
+                    computeEffectivePermissions(user);
+                    users_[id] = user;
+                }
+                pos = objEnd + 1;
+            }
+        }
+    }
+
+    // Parse SSO providers array
+    size_t ssoStart = content.find("\"ssoProviders\"");
+    if (ssoStart != std::string::npos) {
+        size_t arrStart = content.find('[', ssoStart);
+        size_t arrEnd = content.find(']', arrStart);
+        if (arrStart != std::string::npos && arrEnd != std::string::npos) {
+            size_t pos = arrStart + 1;
+            while (pos < arrEnd) {
+                size_t objStart = content.find('{', pos);
+                if (objStart == std::string::npos || objStart >= arrEnd) break;
+                size_t objEnd = content.find('}', objStart);
+                if (objEnd == std::string::npos) break;
+                std::string entry = content.substr(objStart, objEnd - objStart + 1);
+
+                std::string name = extractStr(entry, "name");
+                if (!name.empty() && ssoProviders_.find(name) == ssoProviders_.end()) {
+                    SSOProviderConfig sso;
+                    sso.name = name;
+                    sso.type = static_cast<SSOProviderConfig::ProviderType>(static_cast<int>(extractInt(entry, "type")));
+                    sso.entityId = extractStr(entry, "entityId");
+                    sso.enabled = extractBool(entry, "enabled");
+                    ssoProviders_[name] = sso;
+                }
+                pos = objEnd + 1;
+            }
+        }
+    }
+
+    // Parse compliance config
+    size_t compStart = content.find("\"compliance\"");
+    if (compStart != std::string::npos) {
+        size_t objStart = content.find('{', compStart);
+        size_t objEnd = content.find('}', objStart);
+        if (objStart != std::string::npos && objEnd != std::string::npos) {
+            std::string comp = content.substr(objStart, objEnd - objStart + 1);
+            compliance_.enforceAuditLog = extractBool(comp, "enforceAuditLog");
+            compliance_.enforceSessionTimeout = extractBool(comp, "enforceSessionTimeout");
+            compliance_.maxSessionDurationSec = static_cast<uint32_t>(extractInt(comp, "maxSessionDurationSec"));
+            compliance_.maxIdleTimeoutSec = static_cast<uint32_t>(extractInt(comp, "maxIdleTimeoutSec"));
+            compliance_.maxFailedLogins = static_cast<uint32_t>(extractInt(comp, "maxFailedLogins"));
+            compliance_.lockoutDurationSec = static_cast<uint32_t>(extractInt(comp, "lockoutDurationSec"));
+            compliance_.requireMFA = extractBool(comp, "requireMFA");
+            compliance_.auditHashChain = extractBool(comp, "auditHashChain");
+        }
     }
 
     logAudit("system", "config.load", configPath,

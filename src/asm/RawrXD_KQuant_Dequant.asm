@@ -75,6 +75,28 @@ mask_3F:
 offset_32:
     DD  32.0, 32.0, 32.0, 32.0, 32.0, 32.0, 32.0, 32.0
 
+; Q5_K shift tables for extracting high bits per element
+q5k_shift_even:
+    DD  0, 2, 4, 6, 8, 10, 12, 14      ; even element bits
+q5k_shift_odd:
+    DD  1, 3, 5, 7, 9, 11, 13, 15      ; odd element bits
+
+; Mask: 1 in each dword (for isolating single bits)
+mask_one_dw:
+    DD  1, 1, 1, 1, 1, 1, 1, 1
+
+; Q2_K shift table (2 bits per element, 8 elements per pass)
+q2k_shifts:
+    DD  0, 2, 4, 6, 8, 10, 12, 14
+
+; Q2_K 2-bit mask as dwords
+mask_03_dw:
+    DD  3, 3, 3, 3, 3, 3, 3, 3
+
+; Q3_K signed offset: subtract 4 to center 0..7 → -4..3
+q3k_offset_4:
+    DD  4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0
+
 _DATA64 ENDS
 
 ; -----------------------------------------------------------------------------
@@ -329,21 +351,208 @@ KQuant_DequantizeQ5_K PROC FRAME
     .pushreg r12
     push    r13
     .pushreg r13
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
+    push    r14
+    .pushreg r14
+    push    r15
+    .pushreg r15
     .endprolog
-    
-    mov     rbx, rcx                    ; src
-    mov     r12, rdx                    ; dst
-    mov     r13, r8                     ; count
-    xor     eax, eax                    ; processed
-    
-    ; Q5_K is structurally similar to Q4_K but each quant is 5 bits
-    ; Low 4 bits from qs[], high bit from qh[]
-    ; For now: delegate to C++ kernel which is already correct
-    ; This stub returns 0 to signal "use C++ fallback"
-    
-    ; Future: full AVX2 implementation with bit merging from qh[]
-    xor     rax, rax
-    
+
+    ; RCX = src, RDX = dst, R8 = num_elements
+    ; Q5_K block: 176 bytes per 256 elements
+    ; Layout: d(fp16,2) dmin(fp16,2) scales(12) qs(128) qh(32)
+    mov     rsi, rcx                    ; src base
+    mov     rdi, rdx                    ; dst base
+    mov     r12, r8                     ; total elements
+    xor     r13d, r13d                  ; processed count
+
+@q5k_block:
+    cmp     r13, r12
+    jae     @q5k_done
+
+    ; --- Read block header ---
+    ; d (fp16 at offset 0)
+    movzx   eax, word ptr [rsi]
+    vmovd   xmm0, eax
+    vcvtph2ps xmm0, xmm0
+    vbroadcastss ymm10, xmm0           ; ymm10 = d (super-scale)
+
+    ; dmin (fp16 at offset 2)
+    movzx   eax, word ptr [rsi + 2]
+    vmovd   xmm0, eax
+    vcvtph2ps xmm0, xmm0
+    vbroadcastss ymm11, xmm0           ; ymm11 = dmin (super-min)
+
+    ; scales at offset 4, 12 bytes → 8 x 6-bit scale + 8 x 6-bit min
+    lea     rbx, [rsi + 4]              ; scales base
+    lea     r14, [rsi + 16]             ; qs base (offset 16)
+    lea     r15, [rsi + 144]            ; qh base (offset 144)
+
+    ; Process 8 sub-blocks of 32 elements each
+    xor     r8d, r8d                    ; sub-block index
+
+@q5k_sub:
+    cmp     r8d, 8
+    jae     @q5k_next_block
+
+    ; Decode 6-bit scale and min for this sub-block from packed bytes
+    ; Low 4 bits: scales[sb/2] nibble, High 2 bits: scales[8+sb/4] crumb
+    mov     ecx, r8d
+    shr     ecx, 1
+    movzx   eax, byte ptr [rbx + rcx]
+    test    r8d, 1
+    jz      @q5k_lo_nibble_s
+    shr     eax, 4
+@q5k_lo_nibble_s:
+    and     eax, 0Fh                    ; low 4 bits of scale
+    ; High 2 bits
+    mov     ecx, r8d
+    shr     ecx, 2
+    movzx   edx, byte ptr [rbx + 8 + ecx]
+    mov     ecx, r8d
+    and     ecx, 3
+    shl     ecx, 1
+    shr     edx, cl
+    and     edx, 3
+    shl     edx, 4
+    or      eax, edx                    ; full 6-bit scale
+
+    ; Convert scale → float, multiply by d
+    vcvtsi2ss xmm1, xmm1, eax
+    vmulss  xmm1, xmm1, xmm10
+    vbroadcastss ymm12, xmm1           ; ymm12 = d * scale[sb]
+
+    ; Decode 6-bit min similarly
+    mov     ecx, r8d
+    shr     ecx, 1
+    movzx   eax, byte ptr [rbx + 4 + ecx]
+    test    r8d, 1
+    jz      @q5k_lo_nibble_m
+    shr     eax, 4
+@q5k_lo_nibble_m:
+    and     eax, 0Fh
+    mov     ecx, r8d
+    shr     ecx, 2
+    movzx   edx, byte ptr [rbx + 10 + ecx]
+    mov     ecx, r8d
+    and     ecx, 3
+    shl     ecx, 1
+    shr     edx, cl
+    and     edx, 3
+    shl     edx, 4
+    or      eax, edx
+
+    vcvtsi2ss xmm2, xmm2, eax
+    vmulss  xmm2, xmm2, xmm11
+    vbroadcastss ymm13, xmm2           ; ymm13 = dmin * min[sb]
+
+    ; --- Dequantize 32 elements for this sub-block ---
+    ; qs: 16 bytes of packed nibbles (low 4 bits of each 5-bit quant)
+    ; qh: 4 bytes of packed high bits (bit 4 of each 5-bit quant)
+    mov     ecx, r8d
+    shl     ecx, 4                      ; sub-block * 16 bytes in qs
+    vmovdqu xmm3, xmmword ptr [r14 + rcx]  ; 16 bytes = 32 nibbles
+
+    ; Extract low nibbles (even elements)
+    vpand   xmm4, xmm3, xmmword ptr [mask_0F]
+    ; Extract high nibbles (odd elements)
+    vpsrlw  xmm5, xmm3, 4
+    vpand   xmm5, xmm5, xmmword ptr [mask_0F]
+
+    ; Get high bit from qh (4 bytes for 32 elements)
+    mov     ecx, r8d
+    shl     ecx, 2                      ; sub-block * 4 bytes in qh
+    mov     eax, dword ptr [r15 + rcx]  ; 32 high bits packed
+
+    ; Process first 8 elements (even nibbles, bytes 0-7 of xmm4)
+    vpmovzxbd ymm6, xmm4               ; 8 low nibbles → 8 dwords
+
+    ; Merge high bits: bit i of eax → bit 4 of element i
+    ; For elements 0-7: use bits 0,2,4,6,8,10,12,14 of eax (even indices)
+    vmovd   xmm14, eax
+    vpbroadcastd ymm14, xmm14
+    ; Shift and mask each element's high bit
+    vmovdqu ymm15, ymmword ptr [q5k_shift_even]
+    vpsrlvd ymm14, ymm14, ymm15        ; shift right by element*2
+    vpand   ymm14, ymm14, ymmword ptr [mask_one_dw]  ; isolate bit
+    vpslld  ymm14, ymm14, 4            ; shift to bit position 4
+    vpor    ymm6, ymm6, ymm14          ; merge: low4 | high_bit<<4
+
+    ; Convert to float: result = d*scale*q - dmin*min
+    vcvtdq2ps ymm6, ymm6
+    vmulps  ymm6, ymm6, ymm12
+    vsubps  ymm6, ymm6, ymm13
+    vmovups ymmword ptr [rdi], ymm6
+
+    ; Process elements 8-15 (high nibbles, bytes 0-7 of xmm5 = odd indices)
+    vpmovzxbd ymm7, xmm5
+    ; High bits for odd elements: bits 1,3,5,7,9,11,13,15
+    vmovd   xmm14, eax
+    vpbroadcastd ymm14, xmm14
+    vmovdqu ymm15, ymmword ptr [q5k_shift_odd]
+    vpsrlvd ymm14, ymm14, ymm15
+    vpand   ymm14, ymm14, ymmword ptr [mask_one_dw]
+    vpslld  ymm14, ymm14, 4
+    vpor    ymm7, ymm7, ymm14
+
+    vcvtdq2ps ymm7, ymm7
+    vmulps  ymm7, ymm7, ymm12
+    vsubps  ymm7, ymm7, ymm13
+    vmovups ymmword ptr [rdi + 32], ymm7
+
+    ; Elements 16-23 (even nibbles from upper 8 bytes of xmm4)
+    vpsrldq xmm4, xmm4, 8
+    vpmovzxbd ymm6, xmm4
+    shr     eax, 16                     ; shift to get bits 16-31
+    vmovd   xmm14, eax
+    vpbroadcastd ymm14, xmm14
+    vmovdqu ymm15, ymmword ptr [q5k_shift_even]
+    vpsrlvd ymm14, ymm14, ymm15
+    vpand   ymm14, ymm14, ymmword ptr [mask_one_dw]
+    vpslld  ymm14, ymm14, 4
+    vpor    ymm6, ymm6, ymm14
+
+    vcvtdq2ps ymm6, ymm6
+    vmulps  ymm6, ymm6, ymm12
+    vsubps  ymm6, ymm6, ymm13
+    vmovups ymmword ptr [rdi + 64], ymm6
+
+    ; Elements 24-31 (high nibbles from upper 8 bytes of xmm5)
+    vpsrldq xmm5, xmm5, 8
+    vpmovzxbd ymm7, xmm5
+    vmovd   xmm14, eax
+    vpbroadcastd ymm14, xmm14
+    vmovdqu ymm15, ymmword ptr [q5k_shift_odd]
+    vpsrlvd ymm14, ymm14, ymm15
+    vpand   ymm14, ymm14, ymmword ptr [mask_one_dw]
+    vpslld  ymm14, ymm14, 4
+    vpor    ymm7, ymm7, ymm14
+
+    vcvtdq2ps ymm7, ymm7
+    vmulps  ymm7, ymm7, ymm12
+    vsubps  ymm7, ymm7, ymm13
+    vmovups ymmword ptr [rdi + 96], ymm7
+
+    add     rdi, 128                    ; 32 floats = 128 bytes
+    inc     r8d
+    jmp     @q5k_sub
+
+@q5k_next_block:
+    add     rsi, BLOCK_Q5_K_SIZE
+    add     r13, QK_K
+    jmp     @q5k_block
+
+@q5k_done:
+    vzeroupper
+    mov     rax, r13                    ; return elements processed
+
+    pop     r15
+    pop     r14
+    pop     rdi
+    pop     rsi
     pop     r13
     pop     r12
     pop     rbx
@@ -457,24 +666,287 @@ KQuant_DequantizeQ6_K PROC FRAME
 KQuant_DequantizeQ6_K ENDP
 
 ; =============================================================================
-; Q2_K Dequantization (AVX2) - Stub (delegate to C++)
+; Q2_K Dequantization (AVX2) — Real Implementation
 ; RCX = src, RDX = dst, R8 = num_elements
-; Returns: RAX = 0 (signals: use C++ fallback)
+; Block: 84 bytes per 256 elements
+; Layout: scales[16] + d(fp16,2) + dmin(fp16,2) + qs[64]
+; Each quant is 2 bits (4 per byte), unsigned
+; result = d * scale * q - dmin * min
+; Returns: RAX = num_elements processed
 ; =============================================================================
 KQuant_DequantizeQ2_K PROC FRAME
+    push    rbx
+    .pushreg rbx
+    push    r12
+    .pushreg r12
+    push    r13
+    .pushreg r13
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
     .endprolog
-    xor     rax, rax
+
+    mov     rsi, rcx                    ; src
+    mov     rdi, rdx                    ; dst
+    mov     r12, r8                     ; total elements
+    xor     r13d, r13d                  ; processed
+
+@q2k_block:
+    cmp     r13, r12
+    jae     @q2k_done
+
+    ; scales[16] at offset 0
+    ; d (fp16) at offset 16
+    ; dmin (fp16) at offset 18
+    ; qs[64] at offset 20
+
+    ; Read d
+    movzx   eax, word ptr [rsi + 16]
+    vmovd   xmm0, eax
+    vcvtph2ps xmm0, xmm0
+    vbroadcastss ymm10, xmm0           ; ymm10 = d
+
+    ; Read dmin
+    movzx   eax, word ptr [rsi + 18]
+    vmovd   xmm0, eax
+    vcvtph2ps xmm0, xmm0
+    vbroadcastss ymm11, xmm0           ; ymm11 = dmin
+
+    ; Process 16 sub-blocks of 16 elements
+    lea     rbx, [rsi]                  ; scales base
+    lea     rcx, [rsi + 20]             ; qs base
+    xor     r8d, r8d                    ; sub-block index
+
+@q2k_sub:
+    cmp     r8d, 16
+    jae     @q2k_next_block
+
+    ; Read scale byte: low 4 bits = scale, high 4 bits = min
+    movzx   eax, byte ptr [rbx + r8]
+    mov     edx, eax
+    and     eax, 0Fh                    ; scale (low nibble)
+    shr     edx, 4                      ; min (high nibble)
+
+    ; scale_float = d * scale_int
+    vcvtsi2ss xmm1, xmm1, eax
+    vmulss  xmm1, xmm1, xmm10
+    vbroadcastss ymm12, xmm1           ; ymm12 = d * scale
+
+    ; min_float = dmin * min_int
+    vcvtsi2ss xmm2, xmm2, edx
+    vmulss  xmm2, xmm2, xmm11
+    vbroadcastss ymm13, xmm2           ; ymm13 = dmin * min
+
+    ; Read 4 bytes of packed 2-bit quants (16 values)
+    mov     ecx, r8d
+    shl     ecx, 2                      ; sub-block * 4 bytes
+    mov     eax, dword ptr [rsi + 20 + rcx]
+
+    ; Unpack first 8 quants (2 bits each from low 16 bits)
+    vmovd   xmm3, eax
+    vpbroadcastd ymm3, xmm3
+    ; Shift each dword right by 0,2,4,6,8,10,12,14 bits
+    vmovdqu ymm4, ymmword ptr [q2k_shifts]
+    vpsrlvd ymm3, ymm3, ymm4
+    vpand   ymm3, ymm3, ymmword ptr [mask_03_dw]   ; isolate 2 bits
+
+    vcvtdq2ps ymm3, ymm3
+    vmulps  ymm3, ymm3, ymm12
+    vsubps  ymm3, ymm3, ymm13
+    vmovups ymmword ptr [rdi], ymm3
+
+    ; Unpack next 8 quants (from high 16 bits)
+    shr     eax, 16
+    vmovd   xmm3, eax
+    vpbroadcastd ymm3, xmm3
+    vpsrlvd ymm3, ymm3, ymm4
+    vpand   ymm3, ymm3, ymmword ptr [mask_03_dw]
+
+    vcvtdq2ps ymm3, ymm3
+    vmulps  ymm3, ymm3, ymm12
+    vsubps  ymm3, ymm3, ymm13
+    vmovups ymmword ptr [rdi + 32], ymm3
+
+    add     rdi, 64                     ; 16 floats = 64 bytes
+    inc     r8d
+    jmp     @q2k_sub
+
+@q2k_next_block:
+    add     rsi, BLOCK_Q2_K_SIZE
+    add     r13, QK_K
+    jmp     @q2k_block
+
+@q2k_done:
+    vzeroupper
+    mov     rax, r13
+
+    pop     rdi
+    pop     rsi
+    pop     r13
+    pop     r12
+    pop     rbx
     ret
 KQuant_DequantizeQ2_K ENDP
 
 ; =============================================================================
-; Q3_K Dequantization (AVX2) - Stub (delegate to C++)
+; Q3_K Dequantization (AVX2) — Real Implementation
 ; RCX = src, RDX = dst, R8 = num_elements
-; Returns: RAX = 0 (signals: use C++ fallback)
+; Block: 110 bytes per 256 elements
+; Layout: hmask[32] + qs[64] + scales[12] + d(fp16,2)
+; Each quant: 3 bits (2 from qs[], 1 from hmask[]), signed (q - 4)
+; result = d * scale * (q - 4)
+; Returns: RAX = num_elements processed
 ; =============================================================================
 KQuant_DequantizeQ3_K PROC FRAME
+    push    rbx
+    .pushreg rbx
+    push    r12
+    .pushreg r12
+    push    r13
+    .pushreg r13
+    push    rsi
+    .pushreg rsi
+    push    rdi
+    .pushreg rdi
+    push    r14
+    .pushreg r14
+    push    r15
+    .pushreg r15
     .endprolog
-    xor     rax, rax
+
+    mov     rsi, rcx                    ; src
+    mov     rdi, rdx                    ; dst
+    mov     r12, r8                     ; total elements
+    xor     r13d, r13d                  ; processed
+
+@q3k_block:
+    cmp     r13, r12
+    jae     @q3k_done
+
+    ; Read d (fp16 at offset 108)
+    movzx   eax, word ptr [rsi + 108]
+    vmovd   xmm0, eax
+    vcvtph2ps xmm0, xmm0
+    vbroadcastss ymm10, xmm0           ; ymm10 = d
+
+    ; Prepare offset for signed: 4.0
+    vmovaps ymm14, ymmword ptr [q3k_offset_4]   ; 4.0 broadcast
+
+    ; hmask at offset 0 (32 bytes)
+    ; qs at offset 32 (64 bytes)
+    ; scales at offset 96 (12 bytes)
+    lea     rbx, [rsi]                  ; hmask base
+    lea     r14, [rsi + 32]             ; qs base
+    lea     r15, [rsi + 96]             ; scales base
+
+    ; Process 16 sub-blocks of 16 elements
+    xor     r8d, r8d
+
+@q3k_sub:
+    cmp     r8d, 16
+    jae     @q3k_next_block
+
+    ; Decode 6-bit scale for this sub-block from packed 12 bytes
+    ; Low 4 bits from first 8 bytes, high 2 bits from next 4 bytes
+    mov     ecx, r8d
+    shr     ecx, 1
+    movzx   eax, byte ptr [r15 + rcx]
+    test    r8d, 1
+    jz      @q3k_lo_nib
+    shr     eax, 4
+@q3k_lo_nib:
+    and     eax, 0Fh                    ; low 4 bits
+    ; High 2 bits
+    mov     ecx, r8d
+    shr     ecx, 2
+    movzx   edx, byte ptr [r15 + 8 + rcx]
+    mov     ecx, r8d
+    and     ecx, 3
+    shl     ecx, 1
+    shr     edx, cl
+    and     edx, 3
+    shl     edx, 4
+    or      eax, edx                    ; 6-bit scale (0..63)
+    sub     eax, 32                     ; center: signed scale (-32..31)
+
+    ; scale_float = d * scale_int
+    vcvtsi2ss xmm1, xmm1, eax
+    vmulss  xmm1, xmm1, xmm10
+    vbroadcastss ymm12, xmm1           ; ymm12 = d * scale
+
+    ; Read 8 bytes of qs (16 x 2-bit low quants)
+    mov     ecx, r8d
+    shl     ecx, 2                      ; sub-block * 4 bytes in qs
+    mov     eax, dword ptr [r14 + rcx]  ; first 4 bytes (8 x 2-bit)
+
+    ; Read high bit from hmask (2 bytes for 16 elements)
+    mov     ecx, r8d
+    shl     ecx, 1
+    movzx   edx, word ptr [rbx + rcx]  ; 16 high bits
+
+    ; Unpack first 8 elements: 2-bit from qs + 1-bit from hmask
+    vmovd   xmm3, eax
+    vpbroadcastd ymm3, xmm3
+    vmovdqu ymm4, ymmword ptr [q2k_shifts]
+    vpsrlvd ymm3, ymm3, ymm4
+    vpand   ymm3, ymm3, ymmword ptr [mask_03_dw]   ; 2-bit quants
+
+    ; Merge high bit from hmask
+    vmovd   xmm5, edx
+    vpbroadcastd ymm5, xmm5
+    vmovdqu ymm6, ymmword ptr [q5k_shift_even]
+    vpsrlvd ymm5, ymm5, ymm6
+    vpand   ymm5, ymm5, ymmword ptr [mask_one_dw]
+    vpslld  ymm5, ymm5, 2              ; high bit → position 2
+    vpor    ymm3, ymm3, ymm5           ; 3-bit quants (0..7)
+
+    ; Convert and apply: result = d * scale * (q - 4)
+    vcvtdq2ps ymm3, ymm3
+    vsubps  ymm3, ymm3, ymm14          ; q - 4
+    vmulps  ymm3, ymm3, ymm12
+    vmovups ymmword ptr [rdi], ymm3
+
+    ; Unpack next 8 elements
+    shr     eax, 16                     ; next 8 x 2-bit
+    vmovd   xmm3, eax
+    vpbroadcastd ymm3, xmm3
+    vpsrlvd ymm3, ymm3, ymm4
+    vpand   ymm3, ymm3, ymmword ptr [mask_03_dw]
+
+    shr     edx, 8                      ; high bits 8-15
+    vmovd   xmm5, edx
+    vpbroadcastd ymm5, xmm5
+    vpsrlvd ymm5, ymm5, ymm6
+    vpand   ymm5, ymm5, ymmword ptr [mask_one_dw]
+    vpslld  ymm5, ymm5, 2
+    vpor    ymm3, ymm3, ymm5
+
+    vcvtdq2ps ymm3, ymm3
+    vsubps  ymm3, ymm3, ymm14
+    vmulps  ymm3, ymm3, ymm12
+    vmovups ymmword ptr [rdi + 32], ymm3
+
+    add     rdi, 64                     ; 16 floats
+    inc     r8d
+    jmp     @q3k_sub
+
+@q3k_next_block:
+    add     rsi, BLOCK_Q3_K_SIZE
+    add     r13, QK_K
+    jmp     @q3k_block
+
+@q3k_done:
+    vzeroupper
+    mov     rax, r13
+
+    pop     r15
+    pop     r14
+    pop     rdi
+    pop     rsi
+    pop     r13
+    pop     r12
+    pop     rbx
     ret
 KQuant_DequantizeQ3_K ENDP
 

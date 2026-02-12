@@ -88,6 +88,12 @@ PUBLIC InferenceCore_SGEMM_AVX512
 PUBLIC InferenceCore_SGEMV_AVX512
 PUBLIC InferenceCore_GetStats
 
+; Aliases expected by native_speed_layer.cpp (extern "C" names)
+PUBLIC sgemm_avx2
+PUBLIC sgemv_avx2
+PUBLIC sgemm_avx512
+PUBLIC sgemv_avx512
+
 ; =============================================================================
 ;                           CODE
 ; =============================================================================
@@ -1942,6 +1948,28 @@ InferenceCore_SGEMV_AVX512 PROC FRAME
     pop     rbp
     ret
 InferenceCore_SGEMV_AVX512 ENDP
+
+; =============================================================================
+; Trampoline aliases for native_speed_layer.cpp extern "C" declarations
+; These thin wrappers forward to the full InferenceCore_* implementations.
+; Same calling convention (Microsoft x64: RCX, RDX, R8, R9 + stack).
+; =============================================================================
+
+sgemm_avx2 PROC
+    jmp InferenceCore_SGEMM_AVX2
+sgemm_avx2 ENDP
+
+sgemv_avx2 PROC
+    jmp InferenceCore_SGEMV_AVX2
+sgemv_avx2 ENDP
+
+sgemm_avx512 PROC
+    jmp InferenceCore_SGEMM_AVX512
+sgemm_avx512 ENDP
+
+sgemv_avx512 PROC
+    jmp InferenceCore_SGEMV_AVX512
+sgemv_avx512 ENDP
 
 ; =============================================================================
 END

@@ -2,6 +2,18 @@
 #include "HeadlessIDE.h"
 #include "../../include/rawrxd_version.h"
 #include "../../include/final_gauntlet.h"
+#include "../../include/crash_containment.h"
+#include "../../include/patch_rollback_ledger.h"
+#include "../../include/masm_bridge_cathedral.h"
+#include "../../include/reverse_engineered_bridge.h"
+#include "../../include/quant_hysteresis.h"
+#include "../../include/auto_update_system.h"
+#include "../../include/update_signature.h"
+#include "../../include/swarm_reconciliation.h"
+#include "../../include/quickjs_sandbox.h"
+#include "../../include/plugin_signature.h"
+#include "../../include/enterprise_stress_tests.h"
+#include "../core/enterprise_license.h"
 #include "../modules/vsix_loader.h"
 #include "../modules/memory_manager.h"
 #include "../modules/engine_manager.h"
@@ -9,6 +21,7 @@
 #include "../core/rawrxd_state_mmf.hpp"
 #include "../core/js_extension_host.hpp"
 #include "../core/model_memory_hotpatch.hpp"
+#include "../core/camellia256_bridge.hpp"
 #include <commctrl.h>
 #include <shellscalingapi.h>
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
@@ -66,38 +79,16 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
 }
 
 // ============================================================================
-// Top-level crash handler — writes crash info to file for diagnosis
+// Top-level crash handler — Cathedral Crash Containment Boundary
 // ============================================================================
-static LONG WINAPI RawrXDCrashHandler(EXCEPTION_POINTERS* ep) {
-    char msg[512];
-    snprintf(msg, sizeof(msg),
-        "CRASH: Exception 0x%08lX at address 0x%p\n",
-        ep->ExceptionRecord->ExceptionCode,
-        ep->ExceptionRecord->ExceptionAddress);
-    OutputDebugStringA(msg);
-
-    // Write crash log to file
-    HANDLE hLog = CreateFileA("rawrxd_crash.log", GENERIC_WRITE, 0, nullptr,
-                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hLog != INVALID_HANDLE_VALUE) {
-        DWORD written = 0;
-        WriteFile(hLog, msg, (DWORD)strlen(msg), &written, nullptr);
-        // Add register context
-        char regBuf[512];
-        snprintf(regBuf, sizeof(regBuf),
-            "RIP=0x%016llX RSP=0x%016llX RBP=0x%016llX\n"
-            "RAX=0x%016llX RBX=0x%016llX RCX=0x%016llX\n"
-            "RDX=0x%016llX RSI=0x%016llX RDI=0x%016llX\n",
-            ep->ContextRecord->Rip, ep->ContextRecord->Rsp, ep->ContextRecord->Rbp,
-            ep->ContextRecord->Rax, ep->ContextRecord->Rbx, ep->ContextRecord->Rcx,
-            ep->ContextRecord->Rdx, ep->ContextRecord->Rsi, ep->ContextRecord->Rdi);
-        WriteFile(hLog, regBuf, (DWORD)strlen(regBuf), &written, nullptr);
-        CloseHandle(hLog);
-    }
-
-    MessageBoxA(nullptr, msg, "RawrXD IDE — CRASH REPORT", MB_OK | MB_ICONERROR);
-    return EXCEPTION_EXECUTE_HANDLER;
-}
+// The old basic handler is replaced by the enterprise CrashContainment system:
+//   - MiniDump (dbghelp.dll dynamic load)
+//   - SelfPatch emergency rollback via PatchRollbackLedger
+//   - Full register capture (all 16 GP registers)
+//   - Patch quarantine for faulting patches
+//   - Structured crash report logging
+// Installed via RawrXD::Crash::Install() below in WinMain.
+// ============================================================================
 
 // Set Per-Monitor DPI awareness V2 for crisp rendering on high-DPI displays.
 // Must be called before any window creation. Win10 1703+.
@@ -112,7 +103,31 @@ static void ensureDpiAwareness() {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow) {
-    SetUnhandledExceptionFilter(RawrXDCrashHandler);
+    // ========================================================================
+    // CRASH CONTAINMENT — Cathedral Boundary Guard
+    // MiniDump + SelfPatch rollback + register capture + patch quarantine
+    // ========================================================================
+    {
+        CreateDirectoryA("crash_dumps", nullptr);
+
+        // Initialize the patch rollback ledger (WAL-journaled)
+        auto& ledger = RawrXD::Patch::PatchRollbackLedger::Global();
+        ledger.initialize("crash_dumps\\patch_journal.wal");
+
+        RawrXD::Crash::CrashConfig crashCfg;
+        memset(&crashCfg, 0, sizeof(crashCfg));
+        crashCfg.dumpType = RawrXD::Crash::DumpType::Normal;
+        crashCfg.dumpDirectory = "crash_dumps";
+        crashCfg.enableMiniDump = true;
+        crashCfg.enablePatchRollback = true;
+        crashCfg.enablePatchQuarantine = true;
+        crashCfg.showMessageBox = true;
+        crashCfg.terminateAfterDump = true;
+        crashCfg.onCrashCallback = nullptr;
+        crashCfg.callbackUserData = nullptr;
+        RawrXD::Crash::Install(crashCfg);
+        OutputDebugStringA("[main_win32] Cathedral crash containment boundary installed\n");
+    }
 
     // DPI awareness — before any GUI (Win32 GUI fix)
     ensureDpiAwareness();
@@ -196,6 +211,32 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 
     // Initialize managers
     VSIXLoader::GetInstance().Initialize("plugins");
+
+    // ========================================================================
+    // ENTERPRISE LICENSE ENFORCEMENT — Phase 50: HWID binding, RSA-4096 sig
+    // Must init before plugin/update systems that check feature gates.
+    // ========================================================================
+    {
+        bool licenseOk = RawrXD::EnterpriseLicense::Instance().Initialize();
+        if (licenseOk) {
+            OutputDebugStringA("[main_win32] Enterprise License System initialized\n");
+        } else {
+            OutputDebugStringA("[main_win32] Enterprise License System: init failed (non-fatal, community mode)\n");
+        }
+    }
+
+    // ========================================================================
+    // PLUGIN SIGNATURE ENFORCEMENT — Phase 50: Authenticode + RawrXD Authority
+    // Must init before VSIX loading so marketplace installs are gated.
+    // ========================================================================
+    {
+        auto& sigVerifier = RawrXD::Plugin::PluginSignatureVerifier::instance();
+        if (sigVerifier.initialize()) {
+            OutputDebugStringA("[main_win32] Plugin Signature Verifier initialized (standard policy)\n");
+        } else {
+            OutputDebugStringA("[main_win32] Plugin Signature Verifier: init failed (non-fatal)\n");
+        }
+    }
     
     // Create IDE window
     Win32IDE ide(hInstance);
@@ -259,8 +300,221 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
+    // ========================================================================
+    // PLUGIN TRUST BOUNDARY — Phase 50: QuickJS Sandbox Enforcement
+    // Limits memory, CPU, file-system, network, native calls per security tier.
+    // Must init after JS Extension Host so sandbox policies can be applied.
+    // ========================================================================
+    {
+        auto& sandbox = RawrXD::Sandbox::PluginSandbox::instance();
+        if (!sandbox.isInitialized()) {
+            RawrXD::Sandbox::SandboxResult sbResult = sandbox.initialize();
+            if (sbResult.success) {
+                OutputDebugStringA("[main_win32] Plugin Sandbox (QuickJS trust boundary) initialized\n");
+            } else {
+                char err[256];
+                snprintf(err, sizeof(err),
+                         "[main_win32] Plugin Sandbox init warning: %s (non-fatal)\n",
+                         sbResult.detail ? sbResult.detail : "unknown");
+                OutputDebugStringA(err);
+            }
+        }
+    }
+
     // Show window and force layout
     ide.showWindow();
+
+    // ========================================================================
+    // CAMELLIA-256 WORKSPACE ENCRYPTION — MASM x64 Camellia-256 Engine
+    // Initialize the Camellia-256 encryption engine (HWID-derived key)
+    // and encrypt the workspace on every IDE startup. Uses the real MASM
+    // implementation ported from E:\Backup\itsmehrawrxd-master with full
+    // 24-round Feistel, 4 S-box layers, CTR mode, and 52-subkey schedule.
+    // ========================================================================
+    {
+        auto& camellia = RawrXD::Crypto::Camellia256Bridge::instance();
+        auto camResult = camellia.initialize();
+        if (camResult.success) {
+            OutputDebugStringA("[main_win32] Camellia-256 MASM engine: OK (HWID-derived key)\n");
+
+            // Encrypt workspace directory on startup
+            char workspacePath[MAX_PATH] = {};
+            GetCurrentDirectoryA(MAX_PATH, workspacePath);
+            auto encResult = camellia.encryptWorkspace(workspacePath, false);
+            if (encResult.success) {
+                char msg[512];
+                snprintf(msg, sizeof(msg),
+                         "[main_win32] Workspace encrypted (Camellia-256 CTR): %s\n",
+                         encResult.detail ? encResult.detail : "OK");
+                OutputDebugStringA(msg);
+            } else {
+                char msg[512];
+                snprintf(msg, sizeof(msg),
+                         "[main_win32] Workspace encryption note: %s (non-fatal)\n",
+                         encResult.detail ? encResult.detail : "partial");
+                OutputDebugStringA(msg);
+            }
+        } else {
+            char err[256];
+            snprintf(err, sizeof(err),
+                     "[main_win32] Camellia-256 init warning: %s (non-fatal)\n",
+                     camResult.detail ? camResult.detail : "unknown");
+            OutputDebugStringA(err);
+        }
+    }
+
+    // ========================================================================
+    // MASM SUBSYSTEM INITIALIZATION — Cathedral Bridge
+    // Initialize all 5 Tier-2 MASM kernel modules via unified bridge.
+    // Order matters: SelfPatch → GGUF Loader → LSP Bridge → Orchestrator → QuadBuffer
+    // ========================================================================
+    {
+        OutputDebugStringA("[main_win32] Initializing MASM subsystems...\n");
+
+        HWND editor = ide.getEditor();
+
+        // 1. SelfPatch Engine — must be first (other modules depend on patching)
+        int r = asm_spengine_init(nullptr, 0);
+        if (r >= 0) {
+            OutputDebugStringA("[main_win32] SelfPatch Engine: OK\n");
+            asm_spengine_cpu_optimize();
+        } else {
+            OutputDebugStringA("[main_win32] SelfPatch Engine: FAILED (non-fatal)\n");
+        }
+
+        // 2. GGUF Vulkan Loader
+        r = asm_gguf_loader_init(nullptr, nullptr, 0);
+        if (r >= 0) {
+            OutputDebugStringA("[main_win32] GGUF Vulkan Loader: OK\n");
+        } else {
+            OutputDebugStringA("[main_win32] GGUF Vulkan Loader: FAILED (non-fatal)\n");
+        }
+
+        // 3. LSP AI Bridge
+        r = asm_lsp_bridge_init(nullptr, nullptr);
+        if (r >= 0) {
+            OutputDebugStringA("[main_win32] LSP AI Bridge: OK\n");
+        } else {
+            OutputDebugStringA("[main_win32] LSP AI Bridge: FAILED (non-fatal)\n");
+        }
+
+        // 4. Agentic Orchestrator
+        r = asm_orchestrator_init(nullptr, nullptr);
+        if (r >= 0) {
+            OutputDebugStringA("[main_win32] Agentic Orchestrator: OK\n");
+        } else {
+            OutputDebugStringA("[main_win32] Agentic Orchestrator: FAILED (non-fatal)\n");
+        }
+
+        // 5. Streaming QuadBuffer (needs editor HWND for render target)
+        r = asm_quadbuf_init(editor, 1024, 768, 0);
+        if (r >= 0) {
+            OutputDebugStringA("[main_win32] Streaming QuadBuffer: OK\n");
+        } else {
+            OutputDebugStringA("[main_win32] Streaming QuadBuffer: FAILED (non-fatal)\n");
+        }
+
+        // Initialize quant hysteresis controller with defaults
+        auto& hysteresis = RawrXD::Quant::QuantHysteresisController::Global();
+        QuantHysteresisConfig hcfg;
+        memset(&hcfg, 0, sizeof(hcfg));
+        hcfg.windowPct = 3;
+        hcfg.cooldownMs = 2000;
+        hcfg.thresholdLow = 65;
+        hcfg.thresholdHigh = 85;
+        hcfg.thresholdCritical = 88;
+        hcfg.enableCooldown = true;
+        hcfg.enableLogging = true;
+        hysteresis.configure(hcfg);
+
+        OutputDebugStringA("[main_win32] All MASM subsystems initialized\n");
+    }
+
+    // ========================================================================
+    // REVERSE-ENGINEERED MASM KERNEL INITIALIZATION
+    // Work-Stealing Scheduler + Conflict Detector + Heartbeat + INFINITY I/O
+    // Must come AFTER Tier-2 MASM subsystems (SelfPatch, GGUF, etc.)
+    // ========================================================================
+#ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
+    {
+        OutputDebugStringA("[main_win32] Initializing ReverseEngineered kernel...\n");
+
+        auto reResult = RawrXD::ReverseEngineered::InitializeAllSubsystems(
+            0,      // workerCount: auto-detect from logical cores
+            0,      // heartbeatPort: 0 = disabled for local GUI
+            256     // maxResources for deadlock detection
+        );
+
+        if (reResult.success) {
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "[main_win32] ReverseEngineered kernel: %s "
+                     "(scheduler=ON, conflict_detect=ON, GPU_DMA=ready)\n",
+                     reResult.detail);
+            OutputDebugStringA(msg);
+
+            // Verify high-res timer
+            uint64_t tick = GetHighResTick();
+            snprintf(msg, sizeof(msg),
+                     "[main_win32] High-res timer: tick=%llu\n",
+                     (unsigned long long)tick);
+            OutputDebugStringA(msg);
+        } else {
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "[main_win32] ReverseEngineered kernel: FAILED (%s) "
+                     "(non-fatal, falling back to C++ paths)\n",
+                     reResult.detail);
+            OutputDebugStringA(msg);
+        }
+    }
+#endif
+
+    // ========================================================================
+    // SWARM RECONCILIATION — Phase 50: DAG-based distributed state sync
+    // Initialize the reconciler with a local node identity derived from HWID.
+    // ========================================================================
+    {
+        auto& reconciler = RawrXD::Swarm::SwarmReconciler::instance();
+        if (!reconciler.isInitialized()) {
+            // Use enterprise HWID (uint64_t) to derive 16-byte node identity
+            uint8_t localNodeId[16] = {0};
+            uint64_t hwid = RawrXD::EnterpriseLicense::Instance().GetHardwareHash();
+            memcpy(localNodeId, &hwid, sizeof(hwid));
+            // Fill remaining bytes with deterministic derived values
+            uint64_t hwid2 = hwid ^ 0xA5A5A5A5A5A5A5A5ULL;
+            memcpy(localNodeId + 8, &hwid2, sizeof(hwid2));
+            if (reconciler.initialize(localNodeId, 0)) {
+                OutputDebugStringA("[main_win32] Swarm Reconciler initialized (DAG + VectorClock)\n");
+            } else {
+                OutputDebugStringA("[main_win32] Swarm Reconciler: init failed (non-fatal)\n");
+            }
+        }
+    }
+
+    // ========================================================================
+    // AUTO-UPDATE CHECK — Phase 50: Background manifest fetch + sig verify
+    // Non-blocking async check so we don't delay window show.
+    // ========================================================================
+    {
+        auto& updater = RawrXD::Update::AutoUpdateSystem::instance();
+        updater.setCurrentVersion(RAWRXD_VERSION_MAJOR, RAWRXD_VERSION_MINOR, RAWRXD_VERSION_PATCH, 0);
+        updater.setRepository("RawrXD", "RawrXD-ModelLoader");
+        updater.checkForUpdatesAsync([](const RawrXD::Update::UpdateCheckResult* result, void*) {
+            if (result && result->updateAvailable) {
+                char msg[256];
+                snprintf(msg, sizeof(msg),
+                         "[main_win32] Update available: v%u.%u.%u\n",
+                         result->latestVersion.major,
+                         result->latestVersion.minor,
+                         result->latestVersion.patch);
+                OutputDebugStringA(msg);
+            } else {
+                OutputDebugStringA("[main_win32] Auto-update check: up to date\n");
+            }
+        }, nullptr);
+        OutputDebugStringA("[main_win32] Auto-update check initiated (async)\n");
+    }
 
     // Force layout — SendMessage WM_SIZE with current client rect
     {
@@ -293,6 +547,72 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     ide.setEngineManager(nullptr);
     ide.setCodexUltimate(nullptr);
 
+    // ========================================================================
+    // REVERSE-ENGINEERED KERNEL SHUTDOWN — Before Tier-2 MASM shutdown
+    // ========================================================================
+#ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
+    {
+        OutputDebugStringA("[main_win32] Shutting down ReverseEngineered kernel...\n");
+        RawrXD::ReverseEngineered::ShutdownAllSubsystems();
+        OutputDebugStringA("[main_win32] ReverseEngineered kernel shutdown complete\n");
+    }
+#endif
+
+    // ========================================================================
+    // MASM SUBSYSTEM SHUTDOWN — Reverse order of initialization
+    // ========================================================================
+    {
+        OutputDebugStringA("[main_win32] Shutting down MASM subsystems...\n");
+        asm_quadbuf_shutdown();
+        asm_orchestrator_shutdown();
+        asm_lsp_bridge_shutdown();
+        asm_gguf_loader_close(nullptr);
+        asm_spengine_shutdown();
+        OutputDebugStringA("[main_win32] MASM subsystems shutdown complete\n");
+    }
+
+    // ========================================================================
+    // CAMELLIA-256 SHUTDOWN — Secure zero all key material
+    // ========================================================================
+    {
+        auto& camellia = RawrXD::Crypto::Camellia256Bridge::instance();
+        if (camellia.isInitialized()) {
+            auto camStatus = camellia.getStatus();
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "[main_win32] Camellia-256 session stats: %llu blocks enc, %llu dec, %llu files\n",
+                     camStatus.blocksEncrypted, camStatus.blocksDecrypted,
+                     camStatus.filesProcessed);
+            OutputDebugStringA(msg);
+            camellia.shutdown();
+            OutputDebugStringA("[main_win32] Camellia-256 engine shutdown (keys zeroed)\n");
+        }
+    }
+
+    // ========================================================================
+    // ENTERPRISE SUBSYSTEM SHUTDOWN — Reverse order of boot initialization
+    // Swarm → Plugin Sandbox → Plugin Signature → Enterprise License
+    // ========================================================================
+    {
+        auto& reconciler = RawrXD::Swarm::SwarmReconciler::instance();
+        if (reconciler.isInitialized()) {
+            reconciler.shutdown();
+            OutputDebugStringA("[main_win32] Swarm Reconciler shutdown\n");
+        }
+
+        auto& sandbox = RawrXD::Sandbox::PluginSandbox::instance();
+        if (sandbox.isInitialized()) {
+            sandbox.shutdown();
+            OutputDebugStringA("[main_win32] Plugin Sandbox shutdown\n");
+        }
+
+        auto& sigVerifier = RawrXD::Plugin::PluginSignatureVerifier::instance();
+        if (sigVerifier.isInitialized()) {
+            sigVerifier.shutdown();
+            OutputDebugStringA("[main_win32] Plugin Signature Verifier shutdown\n");
+        }
+    }
+
     // Shutdown cross-process state and JS extension host
     {
         auto& jsHost = JSExtensionHost::instance();
@@ -316,6 +636,25 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     try {
         delete engine_mgr;
     } catch (...) {}
+
+    // ========================================================================
+    // CRASH CONTAINMENT UNINSTALL — Cathedral teardown
+    // ========================================================================
+    {
+        auto& ledger = RawrXD::Patch::PatchRollbackLedger::Global();
+        ledger.flushJournal();
+        ledger.shutdown();
+        RawrXD::Crash::Uninstall();
+        OutputDebugStringA("[main_win32] Cathedral crash containment uninstalled\n");
+    }
+
+    // ========================================================================
+    // ENTERPRISE LICENSE SHUTDOWN — Final teardown (after all subsystems)
+    // ========================================================================
+    {
+        RawrXD::EnterpriseLicense::Instance().Shutdown();
+        OutputDebugStringA("[main_win32] Enterprise License System shutdown\n");
+    }
 
     return exitCode;
 }

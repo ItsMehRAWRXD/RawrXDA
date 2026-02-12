@@ -2,25 +2,102 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cstdio>
+#include <cstring>
+#include <mutex>
+#include <atomic>
+#include <unordered_map>
+#include <chrono>
 
-// Stub Logger if definition is missing
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+// ============================================================================
+// Logger — Structured logging with OutputDebugString + stderr
+// ============================================================================
 class Logger {
 public:
     template<typename... Args>
-    void info(Args&&...) {}
+    void info(const char* fmt, Args&&... args) {
+        logImpl("INFO", fmt, std::forward<Args>(args)...);
+    }
     template<typename... Args>
-    void debug(Args&&...) {}
+    void debug(const char* fmt, Args&&... args) {
+#ifndef NDEBUG
+        logImpl("DEBUG", fmt, std::forward<Args>(args)...);
+#else
+        (void)fmt; ((void)args, ...);
+#endif
+    }
     template<typename... Args>
-    void warn(Args&&...) {}
+    void warn(const char* fmt, Args&&... args) {
+        logImpl("WARN", fmt, std::forward<Args>(args)...);
+    }
     template<typename... Args>
-    void error(Args&&...) {}
+    void error(const char* fmt, Args&&... args) {
+        logImpl("ERROR", fmt, std::forward<Args>(args)...);
+    }
+
+private:
+    template<typename... Args>
+    void logImpl(const char* level, const char* fmt, Args&&... args) {
+        char buf[1024];
+        int off = snprintf(buf, sizeof(buf), "[%s] [ResponseParser] ", level);
+        if (off > 0 && off < (int)sizeof(buf)) {
+            snprintf(buf + off, sizeof(buf) - off, fmt, std::forward<Args>(args)...);
+        }
+        fprintf(stderr, "%s\n", buf);
+#ifdef _WIN32
+        OutputDebugStringA(buf);
+        OutputDebugStringA("\n");
+#endif
+    }
 };
 
-// Stub Metrics if definition is missing
+// ============================================================================
+// Metrics — Counter + histogram tracking with atomic operations
+// ============================================================================
 class Metrics {
 public:
-    void recordHistogram(const std::string&, double) {}
-    void incrementCounter(const std::string&) {}
+    void recordHistogram(const std::string& name, double value) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto& h = m_histograms[name];
+        h.count++;
+        h.sum += value;
+        if (value < h.min) h.min = value;
+        if (value > h.max) h.max = value;
+    }
+
+    void incrementCounter(const std::string& name) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_counters[name]++;
+    }
+
+    uint64_t getCounter(const std::string& name) const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_counters.find(name);
+        return it != m_counters.end() ? it->second : 0;
+    }
+
+    struct HistogramStats {
+        uint64_t count = 0;
+        double sum = 0.0;
+        double min = 1e18;
+        double max = -1e18;
+        double avg() const { return count > 0 ? sum / count : 0.0; }
+    };
+
+    HistogramStats getHistogram(const std::string& name) const {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_histograms.find(name);
+        return it != m_histograms.end() ? it->second : HistogramStats{};
+    }
+
+private:
+    mutable std::mutex                                   m_mutex;
+    std::unordered_map<std::string, uint64_t>            m_counters;
+    std::unordered_map<std::string, HistogramStats>      m_histograms;
 };
 
 enum class BoundaryType {

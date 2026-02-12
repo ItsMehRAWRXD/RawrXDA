@@ -72,10 +72,11 @@ void ModelInvoker::setLLMBackend(const std::string& backend,
 
     if (be == "ollama")       m_model = "mistral";
     else if (be == "claude")  m_model = "claude-3-sonnet-20240229";
-    else if (be == "openai")  m_model = "gpt-4-turbo";
+    else if (be == "openai")  m_model = "gpt-4o";
+    else if (be == "openai-turbo") m_model = "gpt-4-turbo";
 
-    fprintf(stderr, "[INFO] [ModelInvoker] Backend: %s @ %s\n",
-            backend.c_str(), endpoint.c_str());
+    fprintf(stderr, "[INFO] [ModelInvoker] Backend: %s @ %s (model: %s)\n",
+            backend.c_str(), endpoint.c_str(), m_model.c_str());
 }
 
 void ModelInvoker::setSystemPromptTemplate(const std::string& t) {
@@ -118,12 +119,57 @@ LLMResponse ModelInvoker::invoke(const InvocationParams& params) {
             llmResp = sendOllamaRequest(m_model, userMsg, params.maxTokens, params.temperature);
         else if (be == "claude")
             llmResp = sendClaudeRequest(userMsg, params.maxTokens, params.temperature);
-        else if (be == "openai")
+        else if (be == "openai" || be == "openai-turbo")
             llmResp = sendOpenAIRequest(userMsg, params.maxTokens, params.temperature);
         else {
             response.error = "Unknown backend: " + m_backend;
             m_isInvoking = false;
             return response;
+        }
+
+        // --- Fallback chain: if primary backend returned empty, try alternatives ---
+        if (llmResp.empty() && !m_apiKey.empty()) {
+            fprintf(stderr, "[WARN] [ModelInvoker] Primary backend '%s' failed, attempting fallback chain\n",
+                    be.c_str());
+
+            // Fallback 1: OpenAI GPT-4o
+            if (be != "openai") {
+                std::string savedModel = m_model;
+                m_model = "gpt-4o";
+                llmResp = sendOpenAIRequest(userMsg, params.maxTokens, params.temperature);
+                if (!llmResp.empty()) {
+                    be = "openai"; // Update for response parsing below
+                    fprintf(stderr, "[INFO] [ModelInvoker] Fallback to GPT-4o succeeded\n");
+                } else {
+                    m_model = savedModel;
+                }
+            }
+
+            // Fallback 2: GPT-4-turbo if GPT-4o also failed
+            if (llmResp.empty() && m_model != "gpt-4-turbo") {
+                std::string savedModel = m_model;
+                m_model = "gpt-4-turbo";
+                llmResp = sendOpenAIRequest(userMsg, params.maxTokens, params.temperature);
+                if (!llmResp.empty()) {
+                    be = "openai";
+                    fprintf(stderr, "[INFO] [ModelInvoker] Fallback to GPT-4-turbo succeeded\n");
+                } else {
+                    m_model = savedModel;
+                }
+            }
+
+            // Fallback 3: Ollama local
+            if (llmResp.empty() && be != "ollama" && !m_endpoint.empty()) {
+                std::string savedModel = m_model;
+                m_model = "mistral";
+                llmResp = sendOllamaRequest(m_model, userMsg, params.maxTokens, params.temperature);
+                if (!llmResp.empty()) {
+                    be = "ollama";
+                    fprintf(stderr, "[INFO] [ModelInvoker] Fallback to Ollama/mistral succeeded\n");
+                } else {
+                    m_model = savedModel;
+                }
+            }
         }
 
         if (llmResp.empty()) {

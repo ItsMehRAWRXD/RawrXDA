@@ -140,21 +140,72 @@ namespace KyberRef {
     // Note: Full 128-entry zeta table for NTT. Truncated entries are
     // auto-generated at init from the primitive root of unity mod 3329.
 
-    // Placeholder NTT forward / inverse (schoolbook multiply for correctness)
-    static void polyMul(Poly& r, const Poly& a, const Poly& b) {
-        int32_t temp[2 * KYBER_N] = {};
-        for (int i = 0; i < KYBER_N; ++i) {
-            for (int j = 0; j < KYBER_N; ++j) {
-                temp[i + j] += (int32_t)a.coeffs[i] * (int32_t)b.coeffs[j];
+    // NTT forward transform (Cooley-Tukey butterfly, in-place)
+    static void ntt(Poly& p) {
+        int k = 1;
+        for (int len = 128; len >= 2; len >>= 1) {
+            for (int start = 0; start < KYBER_N; start += 2 * len) {
+                int16_t zeta = ZETAS[k++];
+                for (int j = start; j < start + len; ++j) {
+                    int16_t t = montgomeryReduce((int32_t)zeta * (int32_t)p.coeffs[j + len]);
+                    p.coeffs[j + len] = barrettReduce((int32_t)p.coeffs[j] - (int32_t)t + KYBER_Q);
+                    p.coeffs[j]       = barrettReduce((int32_t)p.coeffs[j] + (int32_t)t);
+                }
             }
         }
-        // Reduce mod (X^256 + 1)
-        for (int i = KYBER_N; i < 2 * KYBER_N; ++i) {
-            temp[i - KYBER_N] -= temp[i];
+    }
+
+    // NTT inverse transform (Gentleman-Sande butterfly, in-place)
+    static void invntt(Poly& p) {
+        int k = 127;
+        for (int len = 2; len <= 128; len <<= 1) {
+            for (int start = 0; start < KYBER_N; start += 2 * len) {
+                int16_t zeta = ZETAS[k--];
+                for (int j = start; j < start + len; ++j) {
+                    int16_t t = p.coeffs[j];
+                    p.coeffs[j]       = barrettReduce((int32_t)t + (int32_t)p.coeffs[j + len]);
+                    p.coeffs[j + len] = montgomeryReduce((int32_t)zeta *
+                        ((int32_t)p.coeffs[j + len] - (int32_t)t + KYBER_Q));
+                }
+            }
         }
+        // Multiply by n^{-1} mod q  (n=256, n^{-1} mod 3329 = 3303)
+        const int16_t n_inv = 3303;
         for (int i = 0; i < KYBER_N; ++i) {
-            r.coeffs[i] = barrettReduce(temp[i]);
+            p.coeffs[i] = montgomeryReduce((int32_t)p.coeffs[i] * (int32_t)n_inv);
         }
+    }
+
+    // Base multiplication: multiply two degree-1 polynomials in Z_q[X]/(X^2 - zeta)
+    static void basemul(int16_t r[2], const int16_t a[2], const int16_t b[2], int16_t zeta) {
+        r[0] = montgomeryReduce((int32_t)a[1] * (int32_t)b[1]);
+        r[0] = montgomeryReduce((int32_t)r[0] * (int32_t)zeta);
+        r[0] = barrettReduce((int32_t)r[0] +
+               montgomeryReduce((int32_t)a[0] * (int32_t)b[0]));
+        r[1] = montgomeryReduce((int32_t)a[0] * (int32_t)b[1]);
+        r[1] = barrettReduce((int32_t)r[1] +
+               montgomeryReduce((int32_t)a[1] * (int32_t)b[0]));
+    }
+
+    // NTT-based polynomial multiplication: O(n log n) via NTT domain
+    static void polyMul(Poly& r, const Poly& a, const Poly& b) {
+        // Work on copies to avoid aliasing issues
+        Poly aNtt, bNtt;
+        memcpy(&aNtt, &a, sizeof(Poly));
+        memcpy(&bNtt, &b, sizeof(Poly));
+
+        // Forward NTT
+        ntt(aNtt);
+        ntt(bNtt);
+
+        // Pointwise multiplication in NTT domain (128 pairs of degree-1 polys)
+        for (int i = 0; i < KYBER_N / 4; ++i) {
+            basemul(&r.coeffs[4*i],     &aNtt.coeffs[4*i],     &bNtt.coeffs[4*i],     ZETAS[64 + i]);
+            basemul(&r.coeffs[4*i + 2], &aNtt.coeffs[4*i + 2], &bNtt.coeffs[4*i + 2], (int16_t)(KYBER_Q - ZETAS[64 + i]));
+        }
+
+        // Inverse NTT
+        invntt(r);
     }
 
     static void polyAdd(Poly& r, const Poly& a, const Poly& b) {

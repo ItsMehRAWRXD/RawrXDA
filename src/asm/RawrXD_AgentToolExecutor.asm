@@ -45,6 +45,9 @@ EXTERNDEF DiskRecovery_Abort:PROC
 EXTERNDEF DiskRecovery_Cleanup:PROC
 EXTERNDEF DiskRecovery_GetStats:PROC
 
+; Shared data from RawrXD_DiskRecoveryAgent.asm (LNK2005 fix)
+EXTERNDEF szNewLine:BYTE
+
 ; =============================================================================
 ; EXTERN — DiskKernel procs (from RawrXD_DiskKernel.asm)
 ; =============================================================================
@@ -347,8 +350,8 @@ AGENT_CONTEXT ENDS
     szGUIStatBuf         db 512 dup(0)
     szGUIStatFmt         db "Good: %I64u | Bad: %I64u | LBA: %I64u / %I64u | %d%%", 0
 
-    ; Newline
-    szNewLine            db 13, 10, 0
+    ; Newline — imported via EXTERNDEF from RawrXD_DiskRecoveryAgent.asm
+    ; szNewLine removed (LNK2005 fix)
 
     ; NanoDisk / Quantize mode strings
     szModeQuantize       db "Quantize (NanoDisk Bridge)", 13, 10

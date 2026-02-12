@@ -309,9 +309,85 @@ SandboxedTerminal::CommandResult SandboxedTerminal::executeCommand(
             m_processHandle = nullptr;
         }
 #else
-        // POSIX fallback (stub)
-        result.error = "POSIX process execution not yet implemented";
-        result.exitCode = -1;
+        // POSIX: fork/exec with pipe-based I/O capture
+        int stdout_pipe[2], stderr_pipe[2];
+        if (pipe(stdout_pipe) < 0 || pipe(stderr_pipe) < 0) {
+            result.error = "Failed to create pipes";
+            result.exitCode = -1;
+        } else {
+            pid_t pid = fork();
+            if (pid < 0) {
+                result.error = "fork() failed";
+                result.exitCode = -1;
+                close(stdout_pipe[0]); close(stdout_pipe[1]);
+                close(stderr_pipe[0]); close(stderr_pipe[1]);
+            } else if (pid == 0) {
+                // Child process
+                close(stdout_pipe[0]);
+                close(stderr_pipe[0]);
+                dup2(stdout_pipe[1], STDOUT_FILENO);
+                dup2(stderr_pipe[1], STDERR_FILENO);
+                close(stdout_pipe[1]);
+                close(stderr_pipe[1]);
+
+                // Execute in sandboxed working directory
+                if (!config.workingDirectory.empty()) {
+                    chdir(config.workingDirectory.c_str());
+                }
+                execl("/bin/sh", "sh", "-c", command.c_str(), (char*)nullptr);
+                _exit(127); // execl failed
+            } else {
+                // Parent process
+                close(stdout_pipe[1]);
+                close(stderr_pipe[1]);
+
+                // Read stdout and stderr
+                auto readPipe = [](int fd) -> std::string {
+                    std::string output;
+                    char buf[4096];
+                    ssize_t n;
+                    while ((n = read(fd, buf, sizeof(buf))) > 0) {
+                        output.append(buf, n);
+                    }
+                    close(fd);
+                    return output;
+                };
+
+                std::string rawOutput = readPipe(stdout_pipe[0]);
+                std::string rawError = readPipe(stderr_pipe[0]);
+
+                int status = 0;
+                // Wait with timeout
+                if (config.timeoutMs > 0) {
+                    auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::milliseconds(config.timeoutMs);
+                    while (std::chrono::steady_clock::now() < deadline) {
+                        int w = waitpid(pid, &status, WNOHANG);
+                        if (w > 0) break;
+                        if (w < 0) break;
+                        usleep(10000); // 10ms
+                    }
+                    // Check if still running
+                    if (waitpid(pid, &status, WNOHANG) == 0) {
+                        kill(pid, SIGKILL);
+                        waitpid(pid, &status, 0);
+                        result.timedOut = true;
+                    }
+                } else {
+                    waitpid(pid, &status, 0);
+                }
+
+                if (config.enableOutputSanitization) {
+                    result.output = sanitizeOutput(rawOutput);
+                    result.error = sanitizeOutput(rawError);
+                } else {
+                    result.output = rawOutput;
+                    result.error = rawError;
+                }
+
+                result.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+            }
+        }
 #endif
 
         auto endTime = std::chrono::steady_clock::now();

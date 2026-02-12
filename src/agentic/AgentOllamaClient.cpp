@@ -626,9 +626,110 @@ done:
 }
 
 #else
-// POSIX stubs — would use libcurl
-std::string AgentOllamaClient::MakeGetRequest(const std::string&) { return ""; }
-std::string AgentOllamaClient::MakePostRequest(const std::string&, const std::string&) { return ""; }
-bool AgentOllamaClient::MakeStreamingPost(const std::string&, const std::string&,
-    std::function<bool(const std::string&)>, ErrorCallback) { return false; }
+// POSIX implementation using libcurl or raw sockets
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+static int posix_connect(const std::string& host, int port) {
+    struct addrinfo hints{}, *result = nullptr;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    std::string portStr = std::to_string(port);
+    if (getaddrinfo(host.c_str(), portStr.c_str(), &hints, &result) != 0) return -1;
+    int sock = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (sock < 0) { freeaddrinfo(result); return -1; }
+    if (connect(sock, result->ai_addr, result->ai_addrlen) < 0) {
+        close(sock); freeaddrinfo(result); return -1;
+    }
+    freeaddrinfo(result);
+    return sock;
+}
+
+std::string AgentOllamaClient::MakeGetRequest(const std::string& path) {
+    int sock = posix_connect(m_host, m_port);
+    if (sock < 0) return "";
+
+    std::string req = "GET " + path + " HTTP/1.1\r\nHost: " + m_host + "\r\nConnection: close\r\n\r\n";
+    send(sock, req.c_str(), req.size(), 0);
+
+    std::string response;
+    char buf[4096];
+    ssize_t n;
+    while ((n = recv(sock, buf, sizeof(buf) - 1, 0)) > 0) {
+        buf[n] = '\0';
+        response += buf;
+    }
+    close(sock);
+
+    // Strip HTTP headers
+    size_t bodyStart = response.find("\r\n\r\n");
+    return (bodyStart != std::string::npos) ? response.substr(bodyStart + 4) : response;
+}
+
+std::string AgentOllamaClient::MakePostRequest(const std::string& path, const std::string& body) {
+    int sock = posix_connect(m_host, m_port);
+    if (sock < 0) return "";
+
+    std::string req = "POST " + path + " HTTP/1.1\r\nHost: " + m_host +
+        "\r\nContent-Type: application/json\r\nContent-Length: " +
+        std::to_string(body.size()) + "\r\nConnection: close\r\n\r\n" + body;
+    send(sock, req.c_str(), req.size(), 0);
+
+    std::string response;
+    char buf[4096];
+    ssize_t n;
+    while ((n = recv(sock, buf, sizeof(buf) - 1, 0)) > 0) {
+        buf[n] = '\0';
+        response += buf;
+    }
+    close(sock);
+
+    size_t bodyStart = response.find("\r\n\r\n");
+    return (bodyStart != std::string::npos) ? response.substr(bodyStart + 4) : response;
+}
+
+bool AgentOllamaClient::MakeStreamingPost(const std::string& path, const std::string& body,
+    std::function<bool(const std::string&)> on_line, ErrorCallback on_error) {
+    int sock = posix_connect(m_host, m_port);
+    if (sock < 0) {
+        if (on_error) on_error("Failed to connect");
+        return false;
+    }
+
+    std::string req = "POST " + path + " HTTP/1.1\r\nHost: " + m_host +
+        "\r\nContent-Type: application/json\r\nContent-Length: " +
+        std::to_string(body.size()) + "\r\n\r\n" + body;
+    send(sock, req.c_str(), req.size(), 0);
+
+    // Skip HTTP headers
+    std::string headerBuf;
+    char c;
+    while (recv(sock, &c, 1, 0) == 1) {
+        headerBuf += c;
+        if (headerBuf.size() >= 4 && headerBuf.substr(headerBuf.size()-4) == "\r\n\r\n") break;
+    }
+
+    // Read body line by line
+    std::string lineBuf;
+    char buf[4096];
+    ssize_t n;
+    while ((n = recv(sock, buf, sizeof(buf) - 1, 0)) > 0) {
+        for (ssize_t i = 0; i < n; ++i) {
+            if (buf[i] == '\n') {
+                if (!lineBuf.empty()) {
+                    if (!on_line(lineBuf)) { close(sock); return true; }
+                    lineBuf.clear();
+                }
+            } else if (buf[i] != '\r') {
+                lineBuf += buf[i];
+            }
+        }
+    }
+    if (!lineBuf.empty()) on_line(lineBuf);
+    close(sock);
+    return true;
+}
 #endif

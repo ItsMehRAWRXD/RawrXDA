@@ -1,86 +1,609 @@
-
-Microsoft (R) Program Maintenance Utility Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
-[  6%] Built target masm_kernels
-[  6%] Built target RawrXD-RE-Library
-[  7%] Linking CXX executable RawrEngine.exe
-[ 37%] Built target RawrEngine
-[ 38%] Built target rawrxd-monaco-gen
-[ 39%] Built target re_deobfuscator
-[ 39%] Built target re_model_reverse
-[ 40%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_extension_host.cpp.obj
-quickjs_extension_host.cpp
-[ 40%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_node_shims.cpp.obj
-quickjs_node_shims.cpp
-[ 40%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/modules/quickjs_vscode_bindings.cpp.obj
-quickjs_vscode_bindings.cpp
-[ 41%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/rawrxd_state_mmf.cpp.obj
-rawrxd_state_mmf.cpp
-[ 41%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/js_extension_host.cpp.obj
-js_extension_host.cpp
-[ 41%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/core/extension_polyfill_engine.cpp.obj
-extension_polyfill_engine.cpp
-[ 42%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/inference_core.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\inference_core.asm
-[ 42%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/FlashAttention_AVX512.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
-[ 42%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/quant_avx2.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\quant_avx2.asm
-[ 43%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/RawrXD_KQuant_Dequant.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
-[ 43%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/memory_patch.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\memory_patch.asm
-[ 43%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/byte_search.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\byte_search.asm
-[ 44%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/request_patch.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\request_patch.asm
-[ 44%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/inference_kernels.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\inference_kernels.asm
-[ 44%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/model_bridge_x64.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
-[ 45%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/RawrXD_DualAgent_Orchestrator.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
-[ 45%] Building ASM_MASM object CMakeFiles/RawrXD-Win32IDE.dir/src/asm/RawrXD_DiskRecoveryAgent.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
-[ 45%] Building RC object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/RawrXD-Win32IDE.rc.res
-Microsoft (R) Windows (R) Resource Compiler Version 10.0.10011.16384
-
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
-
-[ 46%] Linking CXX executable bin\RawrXD-Win32IDE.exe
-[100%] Built target RawrXD-Win32IDE
+[1/370] Building CXX object CMakeFiles\RawrEngine.dir\src\server\gguf_server_hotpatch.cpp.obj
+D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[2/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\model_memory_hotpatch.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[3/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\proxy_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[4/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\byte_level_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[5/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\flash_attention.cpp.obj
+[6/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_loop_state.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agentic_loop_state.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agentic_loop_state.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agentic_loop_state.cpp
+D:\rawrxd\src\agentic_loop_state.cpp(495): error C2039: 'erase': is not a member of 'nlohmann::json'
+D:\rawrxd\src\../src/nlohmann/json.hpp(13): note: see declaration of 'nlohmann::json'
+D:\rawrxd\src\agentic_loop_state.cpp(502): error C2039: 'value': is not a member of 'nlohmann::json::const_json_iterator'
+D:\rawrxd\src\../src/nlohmann/json.hpp(290): note: see declaration of 'nlohmann::json::const_json_iterator'
+D:\rawrxd\src\agentic_loop_state.cpp(502): error C2059: syntax error: ')'
+D:\rawrxd\src\agentic_loop_state.cpp(503): error C2039: 'key': is not a member of 'nlohmann::json::const_json_iterator'
+D:\rawrxd\src\../src/nlohmann/json.hpp(290): note: see declaration of 'nlohmann::json::const_json_iterator'
+D:\rawrxd\src\agentic_loop_state.cpp(638): error C2662: 'std::string AgenticLoopState::timePointToHMS(const TimePoint &)': cannot convert 'this' pointer from 'const AgenticLoopState' to 'AgenticLoopState &'
+D:\rawrxd\src\agentic_loop_state.cpp(638): note: Conversion loses qualifiers
+D:\rawrxd\src\agentic_loop_state.cpp(25): note: see declaration of 'AgenticLoopState::timePointToHMS'
+D:\rawrxd\src\agentic_loop_state.cpp(638): note: while trying to match the argument list '(const TimePoint)'
+D:\rawrxd\src\agentic_loop_state.cpp(638): error C2088: built-in operator '+' cannot be applied to an operand of type '_T'
+        with
+        [
+            _T=std::string
+        ]
+D:\rawrxd\src\agentic_loop_state.cpp(646): error C2039: 'key': is not a member of 'nlohmann::json::json_iterator'
+D:\rawrxd\src\../src/nlohmann/json.hpp(271): note: see declaration of 'nlohmann::json::json_iterator'
+D:\rawrxd\src\agentic_loop_state.cpp(646): error C2039: 'value': is not a member of 'nlohmann::json::json_iterator'
+D:\rawrxd\src\../src/nlohmann/json.hpp(271): note: see declaration of 'nlohmann::json::json_iterator'
+D:\rawrxd\src\agentic_loop_state.cpp(667): error C2039: 'ReasoningPhase': is not a member of 'AgenticLoopState'
+D:\rawrxd\src\agentic_loop_state.h(39): note: see declaration of 'AgenticLoopState'
+D:\rawrxd\src\agentic_loop_state.cpp(691): error C2039: 'IterationStatus': is not a member of 'AgenticLoopState'
+D:\rawrxd\src\agentic_loop_state.h(39): note: see declaration of 'AgenticLoopState'
+[7/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[8/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\embedding_engine.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/embedding_engine.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\embedding_engine.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\embedding_engine.cpp
+D:\rawrxd\src\core\embedding_engine.cpp(335): error C2039: 'chunkType': is not a member of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\vector_index.h(34): note: see declaration of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\embedding_engine.cpp(420): error C2039: 'chunkType': is not a member of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\vector_index.h(34): note: see declaration of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\embedding_engine.cpp(453): error C2039: 'generateFileSummary': is not a member of 'RawrXD::Embeddings::ChunkingConfig'
+D:\rawrxd\src\core\vector_index.h(58): note: see declaration of 'RawrXD::Embeddings::ChunkingConfig'
+D:\rawrxd\src\core\embedding_engine.cpp(459): error C2039: 'chunkType': is not a member of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\vector_index.h(34): note: see declaration of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\embedding_engine.cpp(468): error C2039: 'splitByFunction': is not a member of 'RawrXD::Embeddings::ChunkingConfig'
+D:\rawrxd\src\core\vector_index.h(58): note: see declaration of 'RawrXD::Embeddings::ChunkingConfig'
+D:\rawrxd\src\core\embedding_engine.cpp(473): error C2039: 'maxChunkTokens': is not a member of 'RawrXD::Embeddings::ChunkingConfig'
+D:\rawrxd\src\core\vector_index.h(58): note: see declaration of 'RawrXD::Embeddings::ChunkingConfig'
+D:\rawrxd\src\core\embedding_engine.cpp(472): error C2660: 'RawrXD::Embeddings::LanguageChunker::chunkBySlidingWindow': function does not take 3 arguments
+D:\rawrxd\src\core\embedding_engine.cpp(307): note: see declaration of 'RawrXD::Embeddings::LanguageChunker::chunkBySlidingWindow'
+D:\rawrxd\src\core\embedding_engine.cpp(472): note: while trying to match the argument list '(const std::string, const std::string, uint32_t)'
+D:\rawrxd\src\core\embedding_engine.cpp(482): error C2039: 'chunkType': is not a member of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\vector_index.h(34): note: see declaration of 'RawrXD::Embeddings::CodeChunk'
+D:\rawrxd\src\core\embedding_engine.cpp(612): error C2679: binary '=': no operator found which takes a right-hand operand of type 'const std::vector<float,std::allocator<float>> *' (or there is no acceptable conversion)
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(1544): note: could be 'std::vector<float,std::allocator<float>> &std::vector<float,std::allocator<float>>::operator =(std::initializer_list<_Ty>)'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>> &std::vector<float,std::allocator<float>>::operator =(std::initializer_list<_Ty>)': cannot convert argument 2 from 'const std::vector<float,std::allocator<float>> *' to 'std::initializer_list<_Ty>'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::initializer_list<_Ty>::initializer_list': no overloaded function could convert all the argument types
+        with
+        [
+            _Ty=float
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\initializer_list(51): note: could be 'std::initializer_list<_Ty>::initializer_list(std::initializer_list<_Ty> &&)'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::initializer_list<_Ty>::initializer_list(std::initializer_list<_Ty> &&)': cannot convert argument 1 from 'const std::vector<float,std::allocator<float>> *' to 'std::initializer_list<_Ty> &&'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Reason: cannot convert from 'const std::vector<float,std::allocator<float>> *' to 'std::initializer_list<_Ty>'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\initializer_list(51): note: or       'std::initializer_list<_Ty>::initializer_list(const std::initializer_list<_Ty> &)'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::initializer_list<_Ty>::initializer_list(const std::initializer_list<_Ty> &)': cannot convert argument 1 from 'const std::vector<float,std::allocator<float>> *' to 'const std::initializer_list<_Ty> &'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Reason: cannot convert from 'const std::vector<float,std::allocator<float>> *' to 'const std::initializer_list<_Ty>'
+        with
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: while trying to match the argument list '(const std::vector<float,std::allocator<float>> *)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(1523): note: or       'std::vector<float,std::allocator<float>> &std::vector<float,std::allocator<float>>::operator =(const std::vector<float,std::allocator<float>> &)'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>> &std::vector<float,std::allocator<float>>::operator =(const std::vector<float,std::allocator<float>> &)': cannot convert argument 2 from 'const std::vector<float,std::allocator<float>> *' to 'const std::vector<float,std::allocator<float>> &'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Reason: cannot convert from 'const std::vector<float,std::allocator<float>> *' to 'const std::vector<float,std::allocator<float>>'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>>::vector': no overloaded function could convert all the argument types
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(719): note: could be 'std::vector<float,std::allocator<float>>::vector(std::initializer_list<_Ty>,const _Alloc &)'
+        with
+        [
+            _Ty=float,
+            _Alloc=std::allocator<float>
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>>::vector(std::initializer_list<_Ty>,const _Alloc &)': cannot convert argument 1 from 'const std::vector<float,std::allocator<float>> *' to 'std::initializer_list<_Ty>'
+        with
+        [
+            _Ty=float,
+            _Alloc=std::allocator<float>
+        ]
+        and
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(692): note: or       'std::vector<float,std::allocator<float>>::vector(_Iter,_Iter,const _Alloc &)'
+        with
+        [
+            _Alloc=std::allocator<float>
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(686): note: or       'std::vector<float,std::allocator<float>>::vector(const unsigned __int64,const _Ty &,const _Alloc &)'
+        with
+        [
+            _Ty=float,
+            _Alloc=std::allocator<float>
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: while trying to match the argument list '(const std::vector<float,std::allocator<float>> *)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(798): note: or       'std::vector<float,std::allocator<float>> &std::vector<float,std::allocator<float>>::operator =(std::vector<float,std::allocator<float>> &&) noexcept'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>> &std::vector<float,std::allocator<float>>::operator =(std::vector<float,std::allocator<float>> &&) noexcept': cannot convert argument 2 from 'const std::vector<float,std::allocator<float>> *' to 'std::vector<float,std::allocator<float>> &&'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Reason: cannot convert from 'const std::vector<float,std::allocator<float>> *' to 'std::vector<float,std::allocator<float>>'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>>::vector': no overloaded function could convert all the argument types
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(719): note: could be 'std::vector<float,std::allocator<float>>::vector(std::initializer_list<_Ty>,const _Alloc &)'
+        with
+        [
+            _Ty=float,
+            _Alloc=std::allocator<float>
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: 'std::vector<float,std::allocator<float>>::vector(std::initializer_list<_Ty>,const _Alloc &)': cannot convert argument 1 from 'const std::vector<float,std::allocator<float>> *' to 'std::initializer_list<_Ty>'
+        with
+        [
+            _Ty=float,
+            _Alloc=std::allocator<float>
+        ]
+        and
+        [
+            _Ty=float
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(692): note: or       'std::vector<float,std::allocator<float>>::vector(_Iter,_Iter,const _Alloc &)'
+        with
+        [
+            _Alloc=std::allocator<float>
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(686): note: or       'std::vector<float,std::allocator<float>>::vector(const unsigned __int64,const _Ty &,const _Alloc &)'
+        with
+        [
+            _Ty=float,
+            _Alloc=std::allocator<float>
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: while trying to match the argument list '(const std::vector<float,std::allocator<float>> *)'
+D:\rawrxd\src\core\embedding_engine.cpp(612): note: while trying to match the argument list '(std::vector<float,std::allocator<float>>, const std::vector<float,std::allocator<float>> *)'
+D:\rawrxd\src\core\embedding_engine.cpp(819): error C2664: 'RawrXD::Embeddings::IndexResult RawrXD::Embeddings::HNSWIndex::insert(uint64_t,const float *)': cannot convert argument 1 from 'std::vector<float,std::allocator<float>>' to 'uint64_t'
+D:\rawrxd\src\core\embedding_engine.cpp(819): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\vector_index.h(123): note: see declaration of 'RawrXD::Embeddings::HNSWIndex::insert'
+D:\rawrxd\src\core\embedding_engine.cpp(819): note: while trying to match the argument list '(std::vector<float,std::allocator<float>>, _Ty)'
+        with
+        [
+            _Ty=RawrXD::Embeddings::CodeChunk
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(819): error C2440: 'initializing': cannot convert from '_T' to 'uint64_t'
+        with
+        [
+            _T=RawrXD::Embeddings::IndexResult
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(819): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\embedding_engine.cpp(876): error C2664: 'std::vector<std::pair<uint64_t,float>,std::allocator<std::pair<uint64_t,float>>> RawrXD::Embeddings::HNSWIndex::search(const float *,uint32_t) const': cannot convert argument 1 from 'std::vector<float,std::allocator<float>>' to 'const float *'
+D:\rawrxd\src\core\embedding_engine.cpp(876): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\vector_index.h(128): note: see declaration of 'RawrXD::Embeddings::HNSWIndex::search'
+D:\rawrxd\src\core\embedding_engine.cpp(876): note: while trying to match the argument list '(std::vector<float,std::allocator<float>>, uint32_t)'
+D:\rawrxd\src\core\embedding_engine.cpp(883): error C2039: 'getChunk': is not a member of 'RawrXD::Embeddings::HNSWIndex'
+D:\rawrxd\src\core\vector_index.h(103): note: see declaration of 'RawrXD::Embeddings::HNSWIndex'
+D:\rawrxd\src\core\embedding_engine.cpp(913): error C2664: 'std::vector<std::pair<uint64_t,float>,std::allocator<std::pair<uint64_t,float>>> RawrXD::Embeddings::HNSWIndex::search(const float *,uint32_t) const': cannot convert argument 1 from 'std::vector<float,std::allocator<float>>' to 'const float *'
+D:\rawrxd\src\core\embedding_engine.cpp(913): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\vector_index.h(128): note: see declaration of 'RawrXD::Embeddings::HNSWIndex::search'
+D:\rawrxd\src\core\embedding_engine.cpp(913): note: while trying to match the argument list '(std::vector<float,std::allocator<float>>, uint32_t)'
+D:\rawrxd\src\core\embedding_engine.cpp(917): error C2039: 'getChunk': is not a member of 'RawrXD::Embeddings::HNSWIndex'
+D:\rawrxd\src\core\vector_index.h(103): note: see declaration of 'RawrXD::Embeddings::HNSWIndex'
+D:\rawrxd\src\core\embedding_engine.cpp(978): error C2440: 'initializing': cannot convert from 'RawrXD::Embeddings::IndexResult' to 'bool'
+D:\rawrxd\src\core\embedding_engine.cpp(978): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\embedding_engine.cpp(990): error C2440: 'initializing': cannot convert from 'RawrXD::Embeddings::IndexResult' to 'bool'
+D:\rawrxd\src\core\embedding_engine.cpp(990): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\embedding_engine.cpp(1030): error C2664: 'RawrXD::Embeddings::IndexResult RawrXD::Embeddings::HNSWIndex::insert(uint64_t,const float *)': cannot convert argument 1 from 'std::vector<float,std::allocator<float>>' to 'uint64_t'
+D:\rawrxd\src\core\embedding_engine.cpp(1030): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+D:\rawrxd\src\core\vector_index.h(123): note: see declaration of 'RawrXD::Embeddings::HNSWIndex::insert'
+D:\rawrxd\src\core\embedding_engine.cpp(1030): note: while trying to match the argument list '(std::vector<float,std::allocator<float>>, _Ty)'
+        with
+        [
+            _Ty=RawrXD::Embeddings::CodeChunk
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(1030): error C2440: 'initializing': cannot convert from '_T' to 'uint64_t'
+        with
+        [
+            _T=RawrXD::Embeddings::IndexResult
+        ]
+D:\rawrxd\src\core\embedding_engine.cpp(1030): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+[9/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_backend_bridge.cpp.obj
+[10/370] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/complete_server.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\complete_server.cpp
+D:\rawrxd\src\complete_server.cpp(20): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\complete_server.cpp(20): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\complete_server.cpp(1302): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\complete_server.cpp(1302): error C2059: syntax error: ')'
+D:\rawrxd\src\complete_server.cpp(1302): error C2001: newline in constant
+D:\rawrxd\src\complete_server.cpp(1303): error C2143: syntax error: missing ';' before '}'
+D:\rawrxd\src\complete_server.cpp(1308): error C2059: syntax error: 'if'
+D:\rawrxd\src\complete_server.cpp(1309): error C2059: syntax error: 'if'
+D:\rawrxd\src\complete_server.cpp(1310): error C2059: syntax error: 'if'
+D:\rawrxd\src\complete_server.cpp(1311): error C2059: syntax error: 'if'
+D:\rawrxd\src\complete_server.cpp(1322): error C2059: syntax error: 'if'
+D:\rawrxd\src\complete_server.cpp(1322): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\complete_server.cpp(1322): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\complete_server.cpp(1329): error C2059: syntax error: 'for'
+D:\rawrxd\src\complete_server.cpp(1329): error C2143: syntax error: missing ')' before ';'
+D:\rawrxd\src\complete_server.cpp(1329): error C2143: syntax error: missing '>' before ';'
+D:\rawrxd\src\complete_server.cpp(1329): error C7568: argument list missing after assumed function template 'i'
+D:\rawrxd\src\complete_server.cpp(1329): error C2059: syntax error: '++'
+D:\rawrxd\src\complete_server.cpp(1329): error C2059: syntax error: ')'
+D:\rawrxd\src\complete_server.cpp(1329): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\complete_server.cpp(1329): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\complete_server.cpp(1337): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1337): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1337): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1337): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1337): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1337): error C2146: syntax error: missing ';' before identifier 'Q'
+D:\rawrxd\src\complete_server.cpp(1337): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1337): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1337): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1337): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1337): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1337): error C2146: syntax error: missing ';' before identifier 'K'
+D:\rawrxd\src\complete_server.cpp(1337): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1337): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1337): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1337): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1337): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1337): error C2146: syntax error: missing ';' before identifier 'V'
+D:\rawrxd\src\complete_server.cpp(1337): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1337): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1337): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1337): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1337): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1337): error C2146: syntax error: missing ';' before identifier 'O'
+D:\rawrxd\src\complete_server.cpp(1338): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1338): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1338): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1338): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1338): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1338): error C2146: syntax error: missing ';' before identifier 'seqLenM'
+D:\rawrxd\src\complete_server.cpp(1339): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1339): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1339): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1339): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1339): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1339): error C2146: syntax error: missing ';' before identifier 'seqLenN'
+D:\rawrxd\src\complete_server.cpp(1340): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1340): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1340): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1340): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1340): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1340): error C2146: syntax error: missing ';' before identifier 'headDim'
+D:\rawrxd\src\complete_server.cpp(1341): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1341): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1341): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1341): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1341): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1341): error C2146: syntax error: missing ';' before identifier 'numHeads'
+D:\rawrxd\src\complete_server.cpp(1342): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1342): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1342): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1342): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1342): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1342): error C2146: syntax error: missing ';' before identifier 'numKVHeads'
+D:\rawrxd\src\complete_server.cpp(1343): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1343): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1343): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1343): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1343): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1343): error C2146: syntax error: missing ';' before identifier 'batchSize'
+D:\rawrxd\src\complete_server.cpp(1344): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1344): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1344): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1344): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1344): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1344): error C2146: syntax error: missing ';' before identifier 'causal'
+D:\rawrxd\src\complete_server.cpp(1345): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1345): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1345): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1345): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1345): error C2371: 'RawrXD::cfg': redefinition; different basic types
+D:\rawrxd\src\complete_server.cpp(1336): note: see declaration of 'RawrXD::cfg'
+D:\rawrxd\src\complete_server.cpp(1345): error C2146: syntax error: missing ';' before identifier 'ComputeScale'
+D:\rawrxd\src\complete_server.cpp(1348): error C3927: '->': trailing return type is not allowed after a non-function declarator
+D:\rawrxd\src\complete_server.cpp(1348): error C3484: syntax error: expected '->' before the return type
+D:\rawrxd\src\complete_server.cpp(1348): error C3613: missing return type after '->' ('int' assumed)
+D:\rawrxd\src\complete_server.cpp(1348): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1348): error C2146: syntax error: missing ';' before identifier 'Forward'
+D:\rawrxd\src\complete_server.cpp(1353): error C2059: syntax error: 'for'
+D:\rawrxd\src\complete_server.cpp(1353): error C2143: syntax error: missing ')' before ';'
+D:\rawrxd\src\complete_server.cpp(1353): error C2143: syntax error: missing '>' before ';'
+D:\rawrxd\src\complete_server.cpp(1353): error C7568: argument list missing after assumed function template 'i'
+D:\rawrxd\src\complete_server.cpp(1353): error C2059: syntax error: '++'
+D:\rawrxd\src\complete_server.cpp(1353): error C2059: syntax error: ')'
+D:\rawrxd\src\complete_server.cpp(1353): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\complete_server.cpp(1353): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\complete_server.cpp(1364): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1364): error C2440: 'initializing': cannot convert from 'float *' to 'int'
+D:\rawrxd\src\complete_server.cpp(1364): note: There is no context in which this conversion is possible
+D:\rawrxd\src\complete_server.cpp(1364): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1364): error C2374: 'RawrXD::_aligned_free': redefinition; multiple initialization
+D:\rawrxd\src\complete_server.cpp(1364): note: see declaration of 'RawrXD::_aligned_free'
+D:\rawrxd\src\complete_server.cpp(1364): error C2086: 'int RawrXD::_aligned_free': redefinition
+D:\rawrxd\src\complete_server.cpp(1364): note: see declaration of 'RawrXD::_aligned_free'
+D:\rawrxd\src\complete_server.cpp(1365): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1365): error C2374: 'RawrXD::_aligned_free': redefinition; multiple initialization
+D:\rawrxd\src\complete_server.cpp(1364): note: see declaration of 'RawrXD::_aligned_free'
+D:\rawrxd\src\complete_server.cpp(1365): error C2086: 'int RawrXD::_aligned_free': redefinition
+D:\rawrxd\src\complete_server.cpp(1364): note: see declaration of 'RawrXD::_aligned_free'
+D:\rawrxd\src\complete_server.cpp(1365): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\complete_server.cpp(1365): error C2374: 'RawrXD::_aligned_free': redefinition; multiple initialization
+D:\rawrxd\src\complete_server.cpp(1364): note: see declaration of 'RawrXD::_aligned_free'
+D:\rawrxd\src\complete_server.cpp(1365): error C2086: 'int RawrXD::_aligned_free': redefinition
+D:\rawrxd\src\complete_server.cpp(1364): note: see declaration of 'RawrXD::_aligned_free'
+D:\rawrxd\src\complete_server.cpp(1367): error C2059: syntax error: 'return'
+D:\rawrxd\src\complete_server.cpp(1384): error C2653: 'CompletionServer': is not a class or namespace name
+D:\rawrxd\src\complete_server.cpp(1391): error C2653: 'CompletionServer': is not a class or namespace name
+D:\rawrxd\src\complete_server.cpp(1391): fatal error C1003: error count exceeds 100; stopping compilation
+[11/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\multi_response_engine.cpp.obj
+[12/370] Building CXX object CMakeFiles\RawrEngine.dir\src\auth\rbac_engine.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/auth/rbac_engine.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\auth\rbac_engine.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\auth\rbac_engine.cpp
+D:\rawrxd\src\auth\rbac_engine.cpp(790): error C2663: 'std::_Atomic_integral<_Ty,8>::fetch_add': no overloaded function has valid conversion for 'this' pointer
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1634): note: could be '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(790): note: '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'volatile std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(790): note: Conversion loses qualifiers
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1545): note: or       'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(790): note: 'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(790): note: Conversion loses qualifiers
+D:\rawrxd\src\auth\rbac_engine.cpp(790): note: while trying to match the argument list '(int)'
+D:\rawrxd\src\auth\rbac_engine.cpp(795): error C2663: 'std::_Atomic_integral<_Ty,8>::fetch_add': no overloaded function has valid conversion for 'this' pointer
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1634): note: could be '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(795): note: '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'volatile std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(795): note: Conversion loses qualifiers
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1545): note: or       'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(795): note: 'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(795): note: Conversion loses qualifiers
+D:\rawrxd\src\auth\rbac_engine.cpp(795): note: while trying to match the argument list '(int)'
+D:\rawrxd\src\auth\rbac_engine.cpp(807): error C2663: 'std::_Atomic_integral<_Ty,8>::fetch_add': no overloaded function has valid conversion for 'this' pointer
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1634): note: could be '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(807): note: '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'volatile std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(807): note: Conversion loses qualifiers
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1545): note: or       'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(807): note: 'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(807): note: Conversion loses qualifiers
+D:\rawrxd\src\auth\rbac_engine.cpp(807): note: while trying to match the argument list '(int)'
+D:\rawrxd\src\auth\rbac_engine.cpp(813): error C2663: 'std::_Atomic_integral<_Ty,8>::fetch_add': no overloaded function has valid conversion for 'this' pointer
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1634): note: could be '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(813): note: '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'volatile std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(813): note: Conversion loses qualifiers
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1545): note: or       'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(813): note: 'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(813): note: Conversion loses qualifiers
+D:\rawrxd\src\auth\rbac_engine.cpp(813): note: while trying to match the argument list '(int)'
+D:\rawrxd\src\auth\rbac_engine.cpp(818): error C2663: 'std::_Atomic_integral<_Ty,8>::fetch_add': no overloaded function has valid conversion for 'this' pointer
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1634): note: could be '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(818): note: '_Ty std::_Atomic_integral_facade<_Ty>::fetch_add(const _Ty) noexcept volatile': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'volatile std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(818): note: Conversion loses qualifiers
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(1545): note: or       'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(818): note: 'unsigned __int64 std::_Atomic_integral<_Ty,8>::fetch_add(const unsigned __int64,const std::memory_order) noexcept': cannot convert 'this' pointer from 'const std::atomic<unsigned __int64>' to 'std::_Atomic_integral_facade<_Ty> &'
+        with
+        [
+            _Ty=unsigned __int64
+        ]
+D:\rawrxd\src\auth\rbac_engine.cpp(818): note: Conversion loses qualifiers
+D:\rawrxd\src\auth\rbac_engine.cpp(818): note: while trying to match the argument list '(int)'
+[13/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/agentic_task_graph.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\agentic_task_graph.cpp
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xmemory(730): error C2672: 'std::construct_at': no matching overloaded function found
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(461): note: could be '_Ty *std::construct_at(_Ty *const ,_Types ...) noexcept(<expr>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xmemory(730): note: the associated constraints are not satisfied
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(459): note: 'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair': function does not take 2 arguments
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(477): note: could be 'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(_Tuple1 &,_Tuple2 &,std::integer_sequence<size_t,_Indices1...>,std::integer_sequence<size_t,_Indices2...>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(330): note: or       'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(std::piecewise_construct_t,std::tuple<_Types1...>,std::tuple<_Types2...>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(300): note: or       'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(std::pair<_Other1,_Other2> &&) noexcept(<expr>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(292): note: or       'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(const std::pair<_Other1,_Other2> &) noexcept(<expr>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(271): note: or       'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(_Other1 &&,_Other2 &&) noexcept(<expr>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(260): note: or       'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(_Ty1 &,const _Ty2 &) noexcept(<expr>)'
+        with
+        [
+            _Ty1=const uint64_t,
+            _Ty2=RawrXD::Agentic::AgenticTaskGraph::Graph
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(253): note: or       'std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>::pair(void) noexcept(<expr>)'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(459): note: while trying to match the argument list '(uint64_t, _Ty)'
+        with
+        [
+            _Ty=RawrXD::Agentic::AgenticTaskGraph::Graph
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xmemory(730): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\agentic_task_graph.cpp(72): note: see reference to function template instantiation 'std::pair<std::_List_iterator<std::_List_val<std::_List_simple_types<_Ty>>>,bool> std::_Hash<std::_Umap_traits<_Kty,RawrXD::Agentic::AgenticTaskGraph::Graph,std::_Uhash_compare<_Kty,_Hasher,_Keyeq>,_Alloc,false>>::emplace<uint64_t&,RawrXD::Agentic::AgenticTaskGraph::Graph>(uint64_t &,RawrXD::Agentic::AgenticTaskGraph::Graph &&)' being compiled
+        with
+        [
+            _Ty=std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>,
+            _Kty=uint64_t,
+            _Hasher=std::hash<uint64_t>,
+            _Keyeq=std::equal_to<uint64_t>,
+            _Alloc=std::allocator<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>>
+        ]
+D:\rawrxd\src\core\agentic_task_graph.cpp(72): note: see the first reference to 'std::_Hash<std::_Umap_traits<_Kty,_Ty,std::_Uhash_compare<_Kty,_Hasher,_Keyeq>,_Alloc,false>>::emplace' in 'RawrXD::Agentic::AgenticTaskGraph::createGraph'
+        with
+        [
+            _Kty=uint64_t,
+            _Ty=RawrXD::Agentic::AgenticTaskGraph::Graph,
+            _Hasher=std::hash<uint64_t>,
+            _Keyeq=std::equal_to<uint64_t>,
+            _Alloc=std::allocator<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>>
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xhash(618): note: see reference to function template instantiation 'std::_List_node_emplace_op2<std::allocator<std::_List_node<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>,std::_Default_allocator_traits<_Alloc>::void_pointer>>>::_List_node_emplace_op2<uint64_t&,_Ty>(_Alnode &,uint64_t &,_Ty &&)' being compiled
+        with
+        [
+            _Alloc=std::allocator<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>>,
+            _Ty=RawrXD::Agentic::AgenticTaskGraph::Graph,
+            _Alnode=std::allocator<std::_List_node<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>,std::_Default_allocator_traits<std::allocator<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>>>::void_pointer>>
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\list(595): note: see reference to function template instantiation 'void std::_Default_allocator_traits<_Alloc>::construct<_Ty,uint64_t&,RawrXD::Agentic::AgenticTaskGraph::Graph>(_Alloc &,_Objty *const ,uint64_t &,RawrXD::Agentic::AgenticTaskGraph::Graph &&)' being compiled
+        with
+        [
+            _Alloc=std::allocator<std::_List_node<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>,std::_Default_allocator_traits<std::allocator<std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>>>::void_pointer>>,
+            _Ty=std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>,
+            _Objty=std::pair<const uint64_t,RawrXD::Agentic::AgenticTaskGraph::Graph>
+        ]
+[14/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_encoder.cpp.obj
+[15/370] Building CXX object CMakeFiles\RawrEngine.dir\src\marketplace\extension_marketplace.cpp.obj
+[16/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_engine_registry.cpp.obj
+[17/370] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_hotpatch_manager.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[18/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\autonomous_subagent.cpp.obj
+[19/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_puppeteer.cpp.obj
+[20/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_failure_detector.cpp.obj
+[21/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\llm_http_client.cpp.obj
+D:\rawrxd\src\agent\llm_http_client.cpp(23): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\llm_http_client.cpp(23): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[22/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\planner.cpp.obj
+[23/370] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\model_invoker.cpp.obj
+ninja: build stopped: subcommand failed.

@@ -80,7 +80,8 @@ enum class SubsystemId : int {
     StreamingOrchestrator  = 20,
     VulkanKernel           = 21,
     DiskRecovery           = 22,
-    _Count      = 22
+    LSPDiagnostics         = 23,
+    _Count      = 23
 };
 
 // ============================================================

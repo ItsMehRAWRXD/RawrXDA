@@ -50,6 +50,10 @@ EXTERNDEF SetEvent:PROC
 EXTERNDEF ResetEvent:PROC
 EXTERNDEF PostMessageA:PROC
 
+; Shared symbols from RawrXD_DiskRecoveryAgent.asm (LNK2005 fix)
+EXTERNDEF szNewLine:BYTE
+EXTERNDEF g_hStdOut:QWORD
+
 ; =============================================================================
 ; I/O Control Codes
 ; =============================================================================
@@ -489,8 +493,8 @@ FAT32_VOLUME_CTX ENDS
     ; GPT signature
     g_GPTSignature              db "EFI PART"       ; 8 bytes
 
-    ; Newline
-    szNewLine                   db 13, 10, 0
+    ; Newline — imported via EXTERNDEF from RawrXD_DiskRecoveryAgent.asm
+    ; szNewLine removed (LNK2005 fix)
 
     ; Number format buffer header
     szNumBuf                    db 32 dup(0)
@@ -543,8 +547,8 @@ FAT32_VOLUME_CTX ENDS
     align 4096
     g_IndexRecordBuf            db 4096 dup(?)
 
-    ; Console handle cache
-    g_hStdOut                   QWORD   ?
+    ; Console handle cache — imported via EXTERNDEF from RawrXD_DiskRecoveryAgent.asm
+    ; g_hStdOut removed (LNK2005 fix)
 
     ; Kernel lock (critical section for thread safety)
     align 8

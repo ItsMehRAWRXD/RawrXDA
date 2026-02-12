@@ -130,13 +130,64 @@ int AD_SkipMetadataKV(uint64_t kvCount, intptr_t fileHandle) {
         dist.QuadPart = (LONGLONG)skipBytes;
         if (!SetFilePointerEx((HANDLE)fileHandle, dist, NULL, FILE_CURRENT)) return 0;
 #else
-        // POSIX equivalent
-        if (read((int)fileHandle, &keyLen, 8) < 8) return 0;
-        lseek((int)fileHandle, (off_t)keyLen, SEEK_CUR);
+        // POSIX equivalent — full type-switch matching Win32 path
+        if (read((int)(intptr_t)fileHandle, &keyLen, 8) < 8) return 0;
+        lseek((int)(intptr_t)fileHandle, (off_t)keyLen, SEEK_CUR);
         uint32_t valueType = 0;
-        if (read((int)fileHandle, &valueType, 4) < 4) return 0;
-        uint64_t skipBytes = 8;
-        lseek((int)fileHandle, (off_t)skipBytes, SEEK_CUR);
+        if (read((int)(intptr_t)fileHandle, &valueType, 4) < 4) return 0;
+        uint64_t skipBytes = 0;
+        switch (valueType) {
+            case 0: // uint8
+            case 1: // int8
+            case 7: // bool
+                skipBytes = 1;
+                break;
+            case 2: // uint16
+            case 3: // int16
+                skipBytes = 2;
+                break;
+            case 4: // uint32
+            case 5: // int32
+            case 6: // float32
+                skipBytes = 4;
+                break;
+            case 10: // uint64
+            case 11: // int64
+            case 12: // float64
+                skipBytes = 8;
+                break;
+            case 8: { // string: uint64_t length + data
+                uint64_t sLen = 0;
+                if (read((int)(intptr_t)fileHandle, &sLen, 8) < 8) return 0;
+                skipBytes = sLen;
+                break;
+            }
+            case 9: { // array: uint32_t elemType + uint64_t count + elements
+                uint32_t elemType = 0;
+                uint64_t elemCount = 0;
+                if (read((int)(intptr_t)fileHandle, &elemType, 4) < 4) return 0;
+                if (read((int)(intptr_t)fileHandle, &elemCount, 8) < 8) return 0;
+                if (elemType == 8) { // string array — iterate
+                    for (uint64_t e = 0; e < elemCount; e++) {
+                        uint64_t sl = 0;
+                        if (read((int)(intptr_t)fileHandle, &sl, 8) < 8) return 0;
+                        lseek((int)(intptr_t)fileHandle, (off_t)sl, SEEK_CUR);
+                    }
+                    continue;
+                }
+                uint64_t elemSize = 4;
+                switch (elemType) {
+                    case 0: case 1: case 7: elemSize = 1; break;
+                    case 2: case 3: elemSize = 2; break;
+                    case 4: case 5: case 6: elemSize = 4; break;
+                    case 10: case 11: case 12: elemSize = 8; break;
+                }
+                skipBytes = elemCount * elemSize;
+                break;
+            }
+            default: skipBytes = 8; break;
+        }
+        lseek((int)(intptr_t)fileHandle, (off_t)skipBytes, SEEK_CUR);
 #endif
     }
     return 1;
@@ -146,10 +197,100 @@ int AD_SkipMetadataKV(uint64_t kvCount, intptr_t fileHandle) {
 int AD_ParseTensorMetadata(AD_TensorInfo* tensorTable, AD_AnalysisResult* analysis,
                            intptr_t fileHandle) {
     if (!tensorTable || !analysis || fileHandle == -1) return 0;
-    // This stub provides a minimal implementation
-    // Real ASM version parses full tensor metadata from file position
     memset(analysis, 0, sizeof(AD_AnalysisResult));
-    return 1;
+    
+    // Read tensor entries from current file position
+    // GGUF tensor entry format: name_len(8) + name(N) + ndims(4) + dims(ndims*8) + type(4) + offset(8)
+    uint64_t tensorIdx = 0;
+    const uint64_t maxTensors = 32768;
+    
+    for (uint64_t t = 0; t < maxTensors; t++) {
+        // Read tensor name length
+        uint64_t nameLen = 0;
+#ifdef _WIN32
+        DWORD rd = 0;
+        if (!ReadFile((HANDLE)fileHandle, &nameLen, 8, &rd, NULL) || rd < 8) break;
+#else
+        if (read((int)fileHandle, &nameLen, 8) < 8) break;
+#endif
+        if (nameLen == 0 || nameLen > 256) break; // sentinel or invalid
+        
+        // Read tensor name
+        char nameBuf[257] = {0};
+        uint64_t toRead = (nameLen < 256) ? nameLen : 256;
+#ifdef _WIN32
+        if (!ReadFile((HANDLE)fileHandle, nameBuf, (DWORD)toRead, &rd, NULL) || rd < toRead) break;
+        if (nameLen > 256) {
+            LARGE_INTEGER skip; skip.QuadPart = (LONGLONG)(nameLen - 256);
+            SetFilePointerEx((HANDLE)fileHandle, skip, NULL, FILE_CURRENT);
+        }
+#else
+        if (read((int)fileHandle, nameBuf, (size_t)toRead) < (ssize_t)toRead) break;
+        if (nameLen > 256) lseek((int)fileHandle, (off_t)(nameLen - 256), SEEK_CUR);
+#endif
+        nameBuf[toRead] = '\0';
+        
+        // Read number of dimensions
+        uint32_t ndims = 0;
+#ifdef _WIN32
+        if (!ReadFile((HANDLE)fileHandle, &ndims, 4, &rd, NULL) || rd < 4) break;
+#else
+        if (read((int)fileHandle, &ndims, 4) < 4) break;
+#endif
+        if (ndims > 4) ndims = 4;
+        
+        // Read dimensions
+        uint64_t dims[4] = {0};
+        for (uint32_t d = 0; d < ndims; d++) {
+#ifdef _WIN32
+            if (!ReadFile((HANDLE)fileHandle, &dims[d], 8, &rd, NULL) || rd < 8) break;
+#else
+            if (read((int)fileHandle, &dims[d], 8) < 8) break;
+#endif
+        }
+        
+        // Read tensor type (GGML_TYPE)
+        uint32_t tensorType = 0;
+#ifdef _WIN32
+        if (!ReadFile((HANDLE)fileHandle, &tensorType, 4, &rd, NULL) || rd < 4) break;
+#else
+        if (read((int)fileHandle, &tensorType, 4) < 4) break;
+#endif
+        
+        // Read data offset
+        uint64_t dataOffset = 0;
+#ifdef _WIN32
+        if (!ReadFile((HANDLE)fileHandle, &dataOffset, 8, &rd, NULL) || rd < 8) break;
+#else
+        if (read((int)fileHandle, &dataOffset, 8) < 8) break;
+#endif
+        
+        // Populate tensor info
+        tensorTable[tensorIdx].name_ptr = 0; // Would need strdup in real use
+        tensorTable[tensorIdx].shape_rank = ndims;
+        for (uint32_t d = 0; d < ndims && d < 4; d++) {
+            tensorTable[tensorIdx].shape[d] = dims[d];
+        }
+        tensorTable[tensorIdx].dtype = tensorType;
+        tensorTable[tensorIdx].data_offset = dataOffset;
+        
+        // Compute parameter count
+        AD_CountParameters(&tensorTable[tensorIdx]);
+        
+        // Identify pattern (FFN/attention/embed/norm)
+        // Temporarily store name for pattern matching
+        tensorTable[tensorIdx].name_ptr = (uintptr_t)nameBuf;
+        AD_IdentifyPattern(&tensorTable[tensorIdx], analysis);
+        tensorTable[tensorIdx].name_ptr = 0;
+        
+        // Extract layer index
+        tensorTable[tensorIdx].layer_index = AD_ExtractLayerIndex(nameBuf);
+        
+        tensorIdx++;
+        analysis->tensor_count = tensorIdx;
+    }
+    
+    return (tensorIdx > 0) ? 1 : 0;
 }
 
 // ── AD_IdentifyPattern ───────────────────────────────────────────────────────
@@ -185,8 +326,56 @@ void AD_IdentifyPattern(AD_TensorInfo* tensorInfo, AD_AnalysisResult* analysis) 
 // ── AD_AnalyzeStructure ──────────────────────────────────────────────────────
 int AD_AnalyzeStructure(AD_TensorInfo* tensorTable, AD_AnalysisResult* analysis) {
     if (!tensorTable || !analysis) return 0;
-    // Placeholder: analyze tensor table and fill analysis result
-    // Real implementation iterates all tensors, calls IdentifyPattern, computes layer_count
+    
+    // Compute layer_count from maximum layer index seen
+    int32_t maxLayer = -1;
+    for (uint64_t i = 0; i < analysis->tensor_count && i < 32768; i++) {
+        if (tensorTable[i].layer_index > maxLayer) {
+            maxLayer = tensorTable[i].layer_index;
+        }
+    }
+    analysis->layer_count = (maxLayer >= 0) ? (uint32_t)(maxLayer + 1) : 0;
+    
+    // Compute total parameters across all tensors
+    uint64_t totalParams = 0;
+    for (uint64_t i = 0; i < analysis->tensor_count && i < 32768; i++) {
+        totalParams += tensorTable[i].param_count;
+    }
+    analysis->total_params = totalParams;
+    
+    // Detect model architecture from layer structure
+    // If attn_heads > 0 and ffn_blocks > 0, it's a transformer
+    // If embed_tokens > 0, it has a vocabulary embedding
+    // Compute heads_per_layer and hidden_dim estimates
+    if (analysis->layer_count > 0 && analysis->attn_heads > 0) {
+        // Attention heads per layer  
+        uint32_t headsPerLayer = analysis->attn_heads / analysis->layer_count;
+        if (headsPerLayer == 0) headsPerLayer = 1;
+        
+        // Estimate hidden dimension from first weight tensor shape
+        for (uint64_t i = 0; i < analysis->tensor_count && i < 32768; i++) {
+            if (tensorTable[i].pattern_type == AD_PATTERN_ATTENTION && 
+                tensorTable[i].shape_rank >= 2) {
+                // hidden_dim is typically shape[0] of attention weight
+                analysis->hidden_dim = (uint32_t)tensorTable[i].shape[0];
+                break;
+            }
+        }
+    }
+    
+    // Classify model size tier
+    if (totalParams >= 70000000000ULL) {
+        analysis->size_tier = 4; // 70B+
+    } else if (totalParams >= 13000000000ULL) {
+        analysis->size_tier = 3; // 13B-70B
+    } else if (totalParams >= 3000000000ULL) {
+        analysis->size_tier = 2; // 3B-13B
+    } else if (totalParams >= 500000000ULL) {
+        analysis->size_tier = 1; // 500M-3B
+    } else {
+        analysis->size_tier = 0; // <500M
+    }
+    
     return 1;
 }
 

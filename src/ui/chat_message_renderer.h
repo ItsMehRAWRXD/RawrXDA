@@ -18,6 +18,8 @@
 #include <mutex>
 #include <chrono>
 
+#include "tool_action_status.h"
+
 #ifdef _WIN32
 #include <windows.h>
 // windows.h defines ERROR macro which conflicts with our enum
@@ -108,6 +110,9 @@ struct ChatMessage {
 
     // Model info
     std::string       modelId;
+
+    // Tool action status entries (rendered inline before message body)
+    std::vector<ToolActionStatus> toolActions;
 };
 
 // ============================================================================
@@ -221,8 +226,14 @@ public:
     void setDarkMode(bool dark);
     bool isDarkMode() const { return m_darkMode; }
 
-    // CSS for the chat panel
+    // CSS for the chat panel (includes tool-action-status CSS)
     std::string generateCSS() const;
+
+    // Render tool action status block (HTML)
+    std::string renderToolActions(const std::vector<ToolActionStatus>& actions) const;
+
+    // Render tool action status block (plain text, for Win32 EDIT controls)
+    std::string renderToolActionsPlainText(const std::vector<ToolActionStatus>& actions) const;
 
     // ---- Streaming State ----
 

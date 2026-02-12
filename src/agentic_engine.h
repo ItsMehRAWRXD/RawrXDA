@@ -5,7 +5,7 @@
 #include <memory>
 #include <unordered_map>
 #include <functional>
-#include "cpu_inference_engine.h"
+#include "inference_engine.h"
 
 // Forward declarations for Keep/Undo functionality
 class AgenticFileOperations;
@@ -72,8 +72,8 @@ public:
     std::string runCompiler(const std::string& sourceFile, const std::string& target);
 
     // Core Inference Integration
-    void setInferenceEngine(RawrXD::CPUInferenceEngine* engine) { m_inferenceEngine = engine; }
-    RawrXD::CPUInferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
+    void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
+    RawrXD::InferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
 
 
     bool isModelLoaded() const { return m_inferenceEngine && m_inferenceEngine->IsModelLoaded(); }
@@ -105,7 +105,7 @@ public:
     
 private:
     std::string m_currentModelPath;
-    RawrXD::CPUInferenceEngine* m_inferenceEngine = nullptr;
+    RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
 
 
     GenerationConfig m_config;

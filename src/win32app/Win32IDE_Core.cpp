@@ -151,6 +151,33 @@ static void sehCallDeferredInit(DeferredInitFn fn, void* self) {
     }
 }
 
+// SEH wrapper for background thread body — standalone function (no C++ objects
+// with destructors allowed inside __try on MSVC, hence the trampoline pattern).
+typedef void (*BgThreadBodyFn)(void* self);
+
+static DWORD sehRunBgThread(BgThreadBodyFn fn, void* self) {
+    __try {
+        fn(self);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        DWORD code = GetExceptionCode();
+        char crashMsg[512];
+        snprintf(crashMsg, sizeof(crashMsg),
+            "[RawrXD] SEH exception 0x%08lX in background init thread — non-fatal.\n"
+            "Some subsystems may be unavailable. The IDE window remains open.\n",
+            code);
+        OutputDebugStringA(crashMsg);
+
+        // Write crash log for diagnostics
+        FILE* f = fopen("rawrxd_crash.log", "a");
+        if (f) {
+            fprintf(f, "BACKGROUND THREAD CRASH: Exception 0x%08lX\n", code);
+            fclose(f);
+        }
+        return code;
+    }
+    return 0;
+}
+
 static void deferredInitTrampoline(void* self) {
     static_cast<Win32IDE*>(self)->deferredHeavyInit();
 }
@@ -175,16 +202,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     }
 
     case WM_DPICHANGED: {
-        // Per-monitor DPI: apply suggested rect when moving between displays
+        // Tier 3 (Feature 33): Full High-DPI polish — scale fonts, UI dimensions, relayout
+        UINT newDpi = HIWORD(wParam);
         RECT* prc = reinterpret_cast<RECT*>(lParam);
-        if (prc) {
-            SetWindowPos(hwnd, nullptr, prc->left, prc->top,
-                prc->right - prc->left, prc->bottom - prc->top,
-                SWP_NOZORDER | SWP_NOACTIVATE);
-        }
-        // Recreate all fonts at the new DPI and re-layout
-        recreateFonts();
-        InvalidateRect(hwnd, nullptr, TRUE);
+        onDpiChanged(newDpi, prc);
         return 0;
     }
 
@@ -239,6 +260,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     case WM_NOTIFY: {
         NMHDR* pNMHDR = reinterpret_cast<NMHDR*>(lParam);
         if (pNMHDR) {
+            // Tier 3 (Feature 38/39): Status bar click → language/encoding selector
+            if (pNMHDR->hwndFrom == m_hwndStatusBar && pNMHDR->code == NM_CLICK) {
+                NMMOUSE* pNMMouse = reinterpret_cast<NMMOUSE*>(lParam);
+                handleStatusBarClick(pNMMouse->pt.x, pNMMouse->pt.y);
+            }
             // Handle tab bar selection change
             if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndTabBar) {
                 onTabChanged();
@@ -251,6 +277,14 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     // Debounce syntax coloring on content change
                     if (pNMHDR->code == EN_CHANGE && m_syntaxColoringEnabled) {
                         onEditorContentChanged();
+                    }
+                    // Tier 3 (Feature 36): Mark file dirty on any content change
+                    if (pNMHDR->code == EN_CHANGE) {
+                        markFileModified();
+                    }
+                    // Tier 3 (Feature 31): Update smooth caret target on selection change
+                    if (pNMHDR->code == EN_SELCHANGE) {
+                        updateCaretTarget();
                     }
                     // Dismiss ghost text when caret moves (anchor becomes stale)
                     if (pNMHDR->code == EN_SELCHANGE && m_ghostTextVisible) {
@@ -292,6 +326,13 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             }
             return result;
         }
+
+    case WM_MOUSEWHEEL:
+        // Tier 1: Smooth scroll interpolation
+        if (handleTier1MouseWheel(wParam, lParam)) {
+            return 0;
+        }
+        break;
 
     case WM_TIMER:
         if (wParam == SYNTAX_COLOR_TIMER_ID) {
@@ -347,6 +388,14 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             onRecoveryTimer();
             return 0;
         }
+        // Tier 3: Polish timers (caret animation, theme transition, format status)
+        if (handleTier3Timer(wParam)) {
+            return 0;
+        }
+        // Tier 1: Critical cosmetic timers (smooth scroll, minimap, auto-update)
+        if (handleTier1Timer(wParam)) {
+            return 0;
+        }
         break;
 
     // Phase 33: Voice Chat Global Hotkeys
@@ -369,6 +418,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         if (!m_fileModified || promptSaveChanges()) {
             DestroyWindow(hwnd);
         }
+        return 0;
+
+    // Tier 1: Auto-update notification (WM_APP+501)
+    case (WM_APP + 501):
+        showUpdateNotification();
         return 0;
 
     // Model progress update from background thread
@@ -424,6 +478,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             UpdateWindow(hwnd);
             return 0;
         }
+        // Tier 3 (Feature 35): File changed externally → show reload toast
+        if (uMsg == WM_FILE_CHANGED_EXTERNAL) {
+            showFileChangedToast();
+            return 0;
+        }
         // Handle "load downloaded model" signal from background download threads
         // (HuggingFace / URL downloads complete, m_loadedModelPath already set)
         if (uMsg == WM_APP + 201) {
@@ -476,6 +535,23 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         // Agent History replay step completion
         if (uMsg == WM_AGENT_HISTORY_REPLAY_DONE) {
             onReplayStepDone((int)wParam, (int)lParam);
+            return 0;
+        }
+        // ── Native Inference Pipeline streaming messages ──
+        if (uMsg == WM_NATIVE_AI_TOKEN) {
+            onNativeAIToken(wParam, lParam);
+            return 0;
+        }
+        if (uMsg == WM_NATIVE_AI_COMPLETE) {
+            onNativeAIComplete(wParam, lParam);
+            return 0;
+        }
+        if (uMsg == WM_NATIVE_AI_ERROR) {
+            onNativeAIError();
+            return 0;
+        }
+        if (uMsg == WM_NATIVE_AI_PROGRESS) {
+            onNativeAIProgress();
             return 0;
         }
         break;
@@ -1006,6 +1082,10 @@ void Win32IDE::onCreate(HWND hwnd) {
         SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
         SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Ln 1, Col 1");
         SendMessage(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)"UTF-8");
+
+        // Initialize context window display (Part 3)
+        m_contextUsage.maxTokens = m_settings.aiContextWindow;
+        updateContextWindowDisplay();
     }
 
     // Defer heavy init to after window is fully created
@@ -1017,12 +1097,28 @@ void Win32IDE::onCreate(HWND hwnd) {
 // This runs outside CreateWindowExA, so SEH crashes here won't prevent
 // the window from appearing.
 // ============================================================================
+// Static trampoline for SEH-protected background thread body.
+// Cannot use lambdas inside __try (MSVC C2712), so we call through here.
+// Declared as friend in Win32IDE class (external linkage) to access private members.
+void bgInitBody(void* self);
+
 void Win32IDE::deferredHeavyInit() {
     // Run heavy initialization on a background thread so the UI stays responsive.
     // Any UI updates from here must use PostMessage back to the main thread.
     std::thread([this]() {
         DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
         if (_guard.cancelled) return;
+        // Run entire body under SEH to catch access violations (e.g. dbgeng.dll crash)
+        sehRunBgThread(bgInitBody, this);
+    }).detach();
+}
+
+void bgInitBody(void* self) {
+    Win32IDE* ide = static_cast<Win32IDE*>(self);
+    ide->deferredHeavyInitBody();
+}
+
+void Win32IDE::deferredHeavyInitBody() {
         // Initialize logger
         try {
             IDELogger::getInstance().initialize("C:\\RawrXD_IDE.log");
@@ -1218,6 +1314,20 @@ void Win32IDE::deferredHeavyInit() {
             OutputDebugStringA("ERROR: VoiceAutomation init failed\n");
         }
 
+        // Initialize Tier 3: Polish (QoL) — smooth caret, ligatures, file watcher, etc.
+        try {
+            initTier3Polish();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initTier3Polish failed\n");
+        }
+
+        // Initialize Tier 1: Critical Cosmetics (smooth scroll, minimap, fuzzy palette, etc.)
+        try {
+            initTier1Cosmetics();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initTier1Cosmetics failed\n");
+        }
+
         // Initialize Phase 33: Quick-Win Systems (Shortcuts, Backups, Alerts, SLO)
         try {
             initQuickWinSystems();
@@ -1278,13 +1388,21 @@ void Win32IDE::deferredHeavyInit() {
             }
         }
 
+        // Initialize Cursor/JB-Parity Feature Modules
+        if (!isShuttingDown()) {
+            try {
+                initAllCursorParityModules();
+            } catch (...) {
+                OutputDebugStringA("ERROR: initAllCursorParityModules failed\n");
+            }
+        }
+
         OutputDebugStringA("deferredHeavyInit complete (background thread)\n");
 
         // Notify UI thread to refresh
         if (m_hwndMain && !isShuttingDown()) {
             PostMessage(m_hwndMain, WM_APP + 101, 0, 0);
         }
-    }).detach();
 }
 
 // ============================================================================
@@ -1311,6 +1429,15 @@ void Win32IDE::onDestroy() {
 
     // Shutdown Phase 29+36: VS Code Extension API + QuickJS VSIX Host
     shutdownVSCodeExtensionAPI();
+
+    // Shutdown Cursor/JB-Parity: Telemetry Export
+    shutdownTelemetryExport();
+
+    // Shutdown Tier 3: Polish (smooth caret, ligatures, file watcher)
+    shutdownTier3Polish();
+
+    // Shutdown Tier 1: Critical Cosmetics (smooth scroll, minimap, auto-update)
+    shutdownTier1Cosmetics();
 
     // Shutdown Phase 36: MCP Integration
     shutdownMCP();

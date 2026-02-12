@@ -586,14 +586,42 @@ std::vector<std::string> AgenticObservability::detectBottlenecks()
 {
     std::vector<std::string> bottlenecks;
 
-    // Find slowest operations
-    std::unordered_map<std::string, float> avgDurations;
+    // Aggregate duration metrics: sum and count per metric name
+    std::unordered_map<std::string, float> sumDurations;
+    std::unordered_map<std::string, int>   countDurations;
 
     for (const auto& metric : m_metrics) {
         if (metric.metricName.find("duration") != std::string::npos) {
-            // Calculate average
+            sumDurations[metric.metricName] += metric.value;
+            countDurations[metric.metricName]++;
         }
     }
+
+    // Compute averages and flag operations exceeding 100ms threshold
+    constexpr float BOTTLENECK_THRESHOLD_MS = 100.0f;
+
+    for (const auto& pair : sumDurations) {
+        int count = countDurations[pair.first];
+        if (count == 0) continue;
+        float avg = pair.second / static_cast<float>(count);
+        if (avg > BOTTLENECK_THRESHOLD_MS) {
+            bottlenecks.push_back(pair.first + " avg=" +
+                std::to_string(avg) + "ms (" +
+                std::to_string(count) + " samples)");
+        }
+    }
+
+    // Sort by severity (longest average first)
+    std::sort(bottlenecks.begin(), bottlenecks.end(),
+        [&](const std::string& a, const std::string& b) {
+            // Extract avg value from string for ordering
+            auto extractAvg = [](const std::string& s) -> float {
+                auto pos = s.find("avg=");
+                if (pos == std::string::npos) return 0.0f;
+                return std::stof(s.substr(pos + 4));
+            };
+            return extractAvg(a) > extractAvg(b);
+        });
 
     return bottlenecks;
 }

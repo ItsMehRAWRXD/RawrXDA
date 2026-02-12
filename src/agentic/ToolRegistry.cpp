@@ -8,9 +8,16 @@
 #include <fstream>
 
 #include "rawrxd_subsystem_api.hpp"
+#include "../core/unified_hotpatch_manager.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <poll.h>
+#include <signal.h>
 #endif
 
 // Windows <wingdi.h> defines ERROR as 0 which clashes with LogLevel::ERROR
@@ -174,33 +181,207 @@ ToolExecResult HandleExecuteCommand(const json& args) {
     result.elapsed_ms = elapsed;
     return result;
 #else
-    return ToolExecResult::error("execute_command not implemented on this platform");
+    // POSIX: fork/exec with pipe capture
+    int pipefd[2];
+    if (pipe(pipefd) != 0)
+        return ToolExecResult::error("Failed to create pipe");
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return ToolExecResult::error("fork() failed");
+    }
+
+    if (pid == 0) {
+        // Child
+        close(pipefd[0]);
+        dup2(pipefd[1], STDOUT_FILENO);
+        dup2(pipefd[1], STDERR_FILENO);
+        close(pipefd[1]);
+        execl("/bin/sh", "sh", "-c", command.c_str(), nullptr);
+        _exit(127);
+    }
+
+    // Parent
+    close(pipefd[1]);
+
+    std::string output;
+    char buffer[4096];
+    ssize_t bytesRead;
+
+    // Non-blocking read with timeout
+    struct pollfd pfd;
+    pfd.fd = pipefd[0];
+    pfd.events = POLLIN;
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
+    while (true) {
+        auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now()).count();
+        if (remaining <= 0) {
+            kill(pid, SIGKILL);
+            waitpid(pid, nullptr, 0);
+            close(pipefd[0]);
+            return ToolExecResult::error("Command timed out after " + std::to_string(timeout_ms) + "ms\n" + output, 1);
+        }
+
+        int ready = poll(&pfd, 1, static_cast<int>(std::min(remaining, (long long)1000)));
+        if (ready > 0) {
+            bytesRead = read(pipefd[0], buffer, sizeof(buffer) - 1);
+            if (bytesRead <= 0) break;
+            buffer[bytesRead] = '\0';
+            output += buffer;
+            if (output.size() > 1024 * 1024) {
+                output += "\n... [output truncated at 1MB]";
+                break;
+            }
+        } else if (ready == 0) {
+            // Check if child exited
+            int status;
+            pid_t wp = waitpid(pid, &status, WNOHANG);
+            if (wp == pid) break;
+        } else {
+            break;
+        }
+    }
+    close(pipefd[0]);
+
+    int status = 0;
+    waitpid(pid, &status, 0);
+    int exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+
+    auto end = std::chrono::high_resolution_clock::now();
+    double elapsed = std::chrono::duration<double, std::milli>(end - start).count();
+
+    ToolExecResult result;
+    result.success = (exitCode == 0);
+    result.output = output;
+    result.exit_code = exitCode;
+    result.elapsed_ms = elapsed;
+    return result;
 #endif
 }
 
 ToolExecResult HandleSearchCode(const json& args) {
     std::string query = args.value("query", "");
     std::string pattern = args.value("file_pattern", "*.*");
-    [[maybe_unused]] bool is_regex = args.value("is_regex", false);
+    bool is_regex = args.value("is_regex", false);
     if (query.empty()) return ToolExecResult::error("Missing required parameter: query");
 
-    // TODO: Wire into AVX-512 SIMD search engine (RawrXD_AVX512_PatternEngine)
-    // For now, use std::filesystem + basic string matching
     std::ostringstream results;
-    [[maybe_unused]] int matchCount = 0;
-    [[maybe_unused]] const int maxMatches = 50;
+    int matchCount = 0;
+    const int maxMatches = 50;
 
-    // This is a placeholder — the real implementation dispatches to the MASM SIMD scanner
-    results << "[search_code] query=\"" << query << "\" pattern=\"" << pattern << "\"\n";
-    results << "Note: AVX-512 accelerator pending integration. Using fallback scanner.\n";
+    // Build glob extension filter from pattern
+    std::vector<std::string> extensions;
+    if (pattern != "*.*" && pattern != "*") {
+        // Extract extension from pattern like "*.cpp" or "*.{cpp,h}"
+        auto dotPos = pattern.find('.');
+        if (dotPos != std::string::npos) {
+            std::string ext = pattern.substr(dotPos);
+            extensions.push_back(ext);
+        }
+    }
+
+    auto matchesPattern = [&](const std::filesystem::path& p) -> bool {
+        if (extensions.empty()) return true;
+        std::string ext = p.extension().string();
+        for (const auto& e : extensions) {
+            if (ext == e) return true;
+        }
+        return false;
+    };
+
+    // Recursive search through current directory
+    std::error_code ec;
+    for (auto& entry : std::filesystem::recursive_directory_iterator(".", ec)) {
+        if (!entry.is_regular_file()) continue;
+        if (!matchesPattern(entry.path())) continue;
+        if (matchCount >= maxMatches) {
+            results << "\n... (truncated at " << maxMatches << " matches)\n";
+            break;
+        }
+
+        // Read file and search for query
+        std::ifstream ifs(entry.path(), std::ios::binary);
+        if (!ifs.is_open()) continue;
+
+        std::string line;
+        int lineNum = 0;
+        while (std::getline(ifs, line)) {
+            lineNum++;
+            size_t pos = std::string::npos;
+            if (is_regex) {
+                // Simple substring match as regex fallback
+                pos = line.find(query);
+            } else {
+                pos = line.find(query);
+            }
+
+            if (pos != std::string::npos) {
+                results << entry.path().string() << ":" << lineNum << ": ";
+                // Truncate long lines
+                if (line.size() > 200) {
+                    size_t start = (pos > 80) ? pos - 80 : 0;
+                    results << "..." << line.substr(start, 200) << "...";
+                } else {
+                    results << line;
+                }
+                results << "\n";
+                matchCount++;
+                if (matchCount >= maxMatches) break;
+            }
+        }
+    }
+
+    if (matchCount == 0) {
+        results << "No matches found for \"" << query << "\"";
+        if (!extensions.empty()) results << " in " << pattern << " files";
+        results << "\n";
+    } else {
+        results << "\n" << matchCount << " match(es) found.\n";
+    }
 
     return ToolExecResult::ok(results.str());
 }
 
 ToolExecResult HandleGetDiagnostics(const json& args) {
     std::string file = args.value("file", "");
-    // TODO: Wire into LSP client diagnostic cache
-    return ToolExecResult::ok("[get_diagnostics] No diagnostics cache connected yet. Wire into LSP client.");
+
+    auto& registry = SubsystemRegistry::instance();
+
+    // Attempt to retrieve diagnostics from LSP subsystem
+    if (registry.isAvailable(SubsystemId::LSPDiagnostics)) {
+        SubsystemParams params{};
+        params.id = SubsystemId::LSPDiagnostics;
+        SubsystemResult result = registry.invoke(params);
+        if (result.success && result.detail) {
+            return ToolExecResult::ok(result.detail);
+        }
+    }
+
+    // Fallback: run compiler and parse output for diagnostics
+    if (!file.empty()) {
+        // Check if file is a C++ source — run a quick syntax check
+        std::filesystem::path p(file);
+        std::string ext = p.extension().string();
+        if (ext == ".cpp" || ext == ".hpp" || ext == ".h" || ext == ".cc") {
+            // Run cl.exe /Zs (syntax check only) to capture diagnostics
+            json execArgs;
+            execArgs["command"] = "cl.exe /Zs /EHsc /std:c++20 /W4 \"" + file + "\" 2>&1";
+            execArgs["timeout"] = 15000;
+            auto r = HandleExecuteCommand(execArgs);
+            if (!r.output.empty()) {
+                return ToolExecResult::ok("[diagnostics] " + file + ":\n" + r.output);
+            }
+        }
+    }
+
+    return ToolExecResult::ok("[get_diagnostics] No diagnostics available for: " +
+                              (file.empty() ? "(all files)" : file));
 }
 
 ToolExecResult HandleListDirectory(const json& args) {
@@ -285,9 +466,79 @@ ToolExecResult HandleApplyHotpatch(const json& args) {
     if (layer.empty() || target.empty())
         return ToolExecResult::error("Missing required parameters: layer, target");
 
-    // TODO: Dispatch to UnifiedHotpatchManager
-    return ToolExecResult::ok("[apply_hotpatch] layer=" + layer + " target=" + target +
-                              " — UnifiedHotpatchManager dispatch pending integration.");
+    auto& manager = UnifiedHotpatchManager::instance();
+    UnifiedResult ur;
+
+    if (layer == "memory") {
+        // Parse target as hex address, data as hex bytes
+        uintptr_t addr = 0;
+        sscanf(target.c_str(), "%llx", &addr);
+        if (addr == 0)
+            return ToolExecResult::error("Invalid memory address: " + target);
+
+        // Decode hex data string into byte array
+        std::vector<uint8_t> bytes;
+        for (size_t i = 0; i + 1 < data.size(); i += 2) {
+            uint8_t byte = 0;
+            sscanf(data.c_str() + i, "%2hhx", &byte);
+            bytes.push_back(byte);
+        }
+        if (bytes.empty())
+            return ToolExecResult::error("No patch data provided");
+
+        ur = manager.apply_memory_patch(reinterpret_cast<void*>(addr),
+                                         bytes.size(), bytes.data());
+    }
+    else if (layer == "byte") {
+        // target = filename, data = hex-encoded patch
+        std::vector<uint8_t> pattern, replacement;
+        // data format: "PATTERN:REPLACEMENT" in hex
+        auto colonPos = data.find(':');
+        if (colonPos == std::string::npos)
+            return ToolExecResult::error("byte layer data must be PATTERN_HEX:REPLACEMENT_HEX");
+
+        std::string patternHex = data.substr(0, colonPos);
+        std::string replaceHex = data.substr(colonPos + 1);
+
+        for (size_t i = 0; i + 1 < patternHex.size(); i += 2) {
+            uint8_t b; sscanf(patternHex.c_str() + i, "%2hhx", &b);
+            pattern.push_back(b);
+        }
+        for (size_t i = 0; i + 1 < replaceHex.size(); i += 2) {
+            uint8_t b; sscanf(replaceHex.c_str() + i, "%2hhx", &b);
+            replacement.push_back(b);
+        }
+
+        ur = manager.apply_byte_search_patch(target.c_str(), pattern, replacement);
+    }
+    else if (layer == "server") {
+        // Server patches are registered by name, not via hex data
+        // target = patch name to add/remove
+        if (data == "remove") {
+            ur = manager.remove_server_patch(target.c_str());
+        } else {
+            return ToolExecResult::error(
+                "Server patches must be registered programmatically. "
+                "Use target=name, data=remove to remove.");
+        }
+    }
+    else {
+        return ToolExecResult::error("Unknown layer: " + layer +
+                                     ". Valid: memory, byte, server");
+    }
+
+    if (!ur.result.success) {
+        return ToolExecResult::error(
+            std::string("[apply_hotpatch] ") + layer + " layer failed: " +
+            (ur.result.detail ? ur.result.detail : "unknown error"),
+            ur.result.errorCode);
+    }
+
+    std::ostringstream oss;
+    oss << "[apply_hotpatch] " << layer << " layer applied successfully"
+        << " | target=" << target
+        << " | seq=" << ur.sequenceId;
+    return ToolExecResult::ok(oss.str());
 }
 
 ToolExecResult HandleDiskRecovery(const json& args) {
@@ -472,7 +723,9 @@ json AgentToolRegistry::GetToolSchemas() const {
         // Build required array from params that don't have defaults
         json required_params = json::array();
         json params_copy = td.params_schema; // non-const copy for iteration
-        for (auto& [key, val] : params_copy) {
+        for (auto it = params_copy.begin(); it != params_copy.end(); ++it) {
+            const std::string& key = it.key();
+            auto& val = it.value();
             if (!val.contains("default")) {
                 required_params.push_back(key);
             }
@@ -636,7 +889,9 @@ bool AgentToolRegistry::ValidateArgs(
 
     // Check required parameters (those without defaults)
     json schema_copy = td.params_schema; // non-const copy for iteration
-    for (auto& [key, schema] : schema_copy) {
+    for (auto it2 = schema_copy.begin(); it2 != schema_copy.end(); ++it2) {
+        const std::string key = it2.key();
+        auto& schema = it2.value();
         if (!schema.contains("default") && !args.contains(key)) {
             error = "Missing required parameter: " + key;
             return false;

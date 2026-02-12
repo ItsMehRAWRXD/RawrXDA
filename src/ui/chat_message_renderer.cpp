@@ -121,6 +121,11 @@ RenderResult ChatMessageRenderer::renderMessage(const ChatMessage& msg) const {
     }
     html << "</div>";
 
+    // Tool action status block (rendered before body)
+    if (!msg.toolActions.empty()) {
+        html << renderToolActions(msg.toolActions);
+    }
+
     // Body: convert markdown to HTML, replacing code blocks with rendered versions
     html << "<div class=\"message-body\">";
     html << markdownToHtml(msg.rawContent);
@@ -466,6 +471,22 @@ std::vector<ActionButton> ChatMessageRenderer::generateCodeActions(
         block.code
     });
 
+    // Keep button (accept code change)
+    actions.push_back({
+        messageId + "_keep_" + std::to_string(blockIndex),
+        "Keep",
+        "keep_code",
+        block.code
+    });
+
+    // Undo button (revert code change)
+    actions.push_back({
+        messageId + "_undo_" + std::to_string(blockIndex),
+        "Undo",
+        "undo_code",
+        block.code
+    });
+
     // Apply button (for code blocks with a language)
     if (!block.language.empty() && !block.isDiff) {
         actions.push_back({
@@ -620,8 +641,10 @@ void ChatMessageRenderer::setDarkMode(bool dark) {
 }
 
 std::string ChatMessageRenderer::generateCSS() const {
+    std::string css;
+
     if (m_darkMode) {
-        return R"CSS(
+        css = R"CSS(
 :root {
     --bg: #1e1e1e;
     --fg: #d4d4d4;
@@ -760,7 +783,7 @@ blockquote {
 }
 )CSS";
     } else {
-        return R"CSS(
+        css = R"CSS(
 :root {
     --bg: #ffffff;
     --fg: #333333;
@@ -780,7 +803,6 @@ blockquote {
     --button-fg: #ffffff;
     --badge-bg: #e0e0e0;
 }
-/* ... same structure, light colors ... */
 body { background: var(--bg); color: var(--fg); font-family: 'Segoe UI', sans-serif; font-size: 13px; }
 .chat-message { margin: 8px 0; padding: 12px; border-radius: 6px; border-left: 3px solid var(--accent); }
 .role-user { background: var(--bg-message-user); }
@@ -789,6 +811,27 @@ pre { background: var(--bg-code); padding: 12px; }
 code { font-family: Consolas, monospace; font-size: 12px; }
 )CSS";
     }
+
+    // Append tool-action-status CSS (includes working bubbles, subagent, keep/undo)
+    css += ToolActionStatusFormatter::generateCSS();
+
+    return css;
+}
+
+// ============================================================================
+// Tool Action Status Rendering
+// ============================================================================
+
+std::string ChatMessageRenderer::renderToolActions(
+    const std::vector<ToolActionStatus>& actions) const {
+    return ToolActionStatusFormatter::formatHtmlBlock(actions,
+        static_cast<int>(actions.size()));
+}
+
+std::string ChatMessageRenderer::renderToolActionsPlainText(
+    const std::vector<ToolActionStatus>& actions) const {
+    return ToolActionStatusFormatter::formatPlainTextBlock(actions,
+        static_cast<int>(actions.size()));
 }
 
 // ============================================================================

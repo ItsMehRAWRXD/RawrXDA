@@ -19,6 +19,7 @@
 -- Looking for pthread_create in pthread
 -- Looking for pthread_create in pthread - not found
 -- Found Threads: TRUE
+-- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
 -- [RE] Deobfuscator MASM64 targets registered
 -- [RE] Model reverse pipeline MASM64 target registered
 -- [RE] Omega v3 MASM32 target registered
@@ -33,30 +34,17 @@
 --   Model Reverse:     model-llm-harvester.asm
 --   Security Toolkit:  RawrXD_IDE_unified.asm
 --   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
 -- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- MultiWindow Kernel DLL target enabled
+-- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
 -- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
--- Configuring done (17.2s)
-CMake Error:
-  Running
-
-   'C:/Strawberry/c/bin/ninja.exe' '-C' 'D:/rawrxd/build' '-t' 'recompact'
-
-  failed with:
-
-   ninja: error: failed recompaction: Permission denied
-
-
-
-CMake Error:
-  Running
-
-   'C:/Strawberry/c/bin/ninja.exe' '-C' 'D:/rawrxd/build' '-t' 'restat' 'build.ninja' 'D:/rawrxd/build/cmake_install.cmake' 'D:/rawrxd/build/src/reverse_engineering/cmake_install.cmake'
-
-  failed with:
-
-   ninja: error: failed recompaction: Permission denied
--- Generating done (0.2s)
-
-
-
-CMake Generate step failed.  Build files cannot be regenerated correctly.
+-- ═══════════════════════════════════════════════════════
+--  RawrXD_Gold.exe — Standalone Monolithic Deployment
+--  Build with: cmake --build . --target RawrXD-Gold
+-- ═══════════════════════════════════════════════════════
+-- Configuring done (43.5s)
+-- Generating done (0.3s)
+-- Build files have been written to: D:/rawrxd/build

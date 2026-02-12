@@ -367,10 +367,46 @@ public:
                     return DecompressBlockwise(input, input_size, output, num_elements);
                     
                 case NF4_FULL:
-                default:
-                    LogMessage(WARN, "NF4_FULL format not implemented in this module");
-                    memset(output, 0, num_elements * sizeof(float));
-                    return false;
+                default: {
+                    // NF4_FULL: simple packed nibble decompression without grouping
+                    // Format: raw packed NF4 nibbles, 2 elements per byte
+                    LogMessage(INFO, "NF4_FULL decompression: %zu elements from %zu bytes",
+                        num_elements, input_size);
+
+                    size_t packed_size = (num_elements + 1) / 2;
+                    if (input_size < packed_size) {
+                        LogMessage(ERROR, "NF4_FULL: insufficient input (%zu < %zu)",
+                            input_size, packed_size);
+                        memset(output, 0, num_elements * sizeof(float));
+                        return false;
+                    }
+
+                    const uint8_t* src = input;
+                    float* dst = output;
+
+                    // AVX2 batch path: process 32 elements (16 bytes) at a time
+                    size_t i = 0;
+#if defined(__AVX2__) || defined(_MSC_VER)
+                    for (; i + 31 < num_elements; i += 32) {
+                        for (int b = 0; b < 16; ++b) {
+                            uint8_t packed = src[i/2 + b];
+                            dst[i + b*2]     = NF4_TABLE[packed & 0x0F];
+                            dst[i + b*2 + 1] = NF4_TABLE[(packed >> 4) & 0x0F];
+                        }
+                    }
+#endif
+                    // Scalar tail
+                    for (; i < num_elements; i += 2) {
+                        uint8_t packed = src[i / 2];
+                        dst[i] = NF4_TABLE[packed & 0x0F];
+                        if (i + 1 < num_elements) {
+                            dst[i + 1] = NF4_TABLE[(packed >> 4) & 0x0F];
+                        }
+                    }
+
+                    LogMessage(INFO, "NF4_FULL decompression complete");
+                    return true;
+                }
             }
         }
         catch (const std::exception& e) {

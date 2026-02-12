@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <thread>
-#include "cpu_inference_engine.h"
+#include "inference_engine.h"
 
 // Forward declarations
 class AgenticEngine;
@@ -21,7 +21,7 @@ public:
     CompletionServer();
     ~CompletionServer();
 
-    bool Start(uint16_t port, CPUInferenceEngine* engine, std::string model_path);
+    bool Start(uint16_t port, InferenceEngine* engine, std::string model_path);
     void Stop();
 
     // Agentic integration — set before Start() or anytime
@@ -67,9 +67,73 @@ private:
     std::string HandleBackendsStatusRequest();
     std::string HandleBackendsUseRequest(const std::string& body);
 
+    // Phase 10 — Speculative Decoding API handlers
+    std::string HandleSpecDecStatusRequest();
+    std::string HandleSpecDecConfigRequest(const std::string& body);
+    std::string HandleSpecDecStatsRequest();
+    std::string HandleSpecDecGenerateRequest(const std::string& body);
+    std::string HandleSpecDecResetRequest();
+
+    // Phase 11 — Flash Attention v2 API handlers
+    std::string HandleFlashAttnStatusRequest();
+    std::string HandleFlashAttnConfigRequest();
+    std::string HandleFlashAttnBenchmarkRequest(const std::string& body);
+
+    // Phase 12 — Extreme Compression API handlers
+    std::string HandleCompressionStatusRequest();
+    std::string HandleCompressionProfilesRequest();
+    std::string HandleCompressionCompressRequest(const std::string& body);
+    std::string HandleCompressionStatsRequest();
+
+    // Phase 13 — Distributed Pipeline Orchestrator API handlers
+    std::string HandlePipelineStatusRequest();
+    std::string HandlePipelineSubmitRequest(const std::string& body);
+    std::string HandlePipelineTasksRequest();
+    std::string HandlePipelineCancelRequest(const std::string& body);
+    std::string HandlePipelineNodesRequest();
+
+    // Phase 14 — Advanced Hotpatch Control Plane API handlers
+    std::string HandleHotpatchCPStatusRequest();
+    std::string HandleHotpatchCPPatchesRequest();
+    std::string HandleHotpatchCPApplyRequest(const std::string& body);
+    std::string HandleHotpatchCPRollbackRequest(const std::string& body);
+    std::string HandleHotpatchCPAuditRequest();
+
+    // Phase 15 — Static Analysis Engine API handlers
+    std::string HandleAnalysisStatusRequest();
+    std::string HandleAnalysisFunctionsRequest();
+    std::string HandleAnalysisRunRequest(const std::string& body);
+    std::string HandleAnalysisCfgRequest(const std::string& body);
+
+    // Phase 16 — Semantic Code Intelligence API handlers
+    std::string HandleSemanticStatusRequest();
+    std::string HandleSemanticIndexRequest(const std::string& body);
+    std::string HandleSemanticSearchRequest(const std::string& body);
+    std::string HandleSemanticGotoRequest(const std::string& body);
+    std::string HandleSemanticReferencesRequest(const std::string& body);
+
+    // Phase 17 — Enterprise Telemetry & Compliance API handlers
+    std::string HandleTelemetryStatusRequest();
+    std::string HandleTelemetryAuditRequest(const std::string& body);
+    std::string HandleTelemetryComplianceRequest();
+    std::string HandleTelemetryLicenseRequest();
+    std::string HandleTelemetryMetricsRequest();
+    std::string HandleTelemetryExportRequest(const std::string& body);
+
+    // Phase 26 — ReverseEngineered Kernel API handlers
+    std::string HandleSchedulerStatusRequest();
+    std::string HandleSchedulerSubmitRequest(const std::string& body);
+    std::string HandleConflictStatusRequest();
+    std::string HandleHeartbeatStatusRequest();
+    std::string HandleHeartbeatAddRequest(const std::string& body);
+    std::string HandleGpuDmaStatusRequest();
+    std::string HandleTensorBenchRequest(const std::string& body);
+    std::string HandleTimerRequest();
+    std::string HandleCrc32Request(const std::string& body);
+
     std::atomic<bool> running_;
     std::thread server_thread_;
-    CPUInferenceEngine* engine_;
+    InferenceEngine* engine_;
     std::string model_path_;
     AgenticEngine* agentic_engine_ = nullptr;
     SubAgentManager* subagent_mgr_ = nullptr;

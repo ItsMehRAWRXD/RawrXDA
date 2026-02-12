@@ -124,18 +124,17 @@ Tmpl_Casual_Auditor     db \
 ; Mode 2: CODE — Technical review
 ; -------------------------------------------------------------------------
 ALIGN 8
-Tmpl_Code_Critic        db \
-    "Perform a rigorous code review. Analyze for:",0Dh,0Ah, \
-    "1. Logic errors and off-by-one bugs",0Dh,0Ah, \
-    "2. Memory safety issues (leaks, use-after-free, buffer overflows)",0Dh,0Ah, \
-    "3. Performance bottlenecks and algorithmic inefficiency",0Dh,0Ah, \
-    "4. Architecture violations and anti-patterns",0Dh,0Ah, \
-    "5. Missing error handling and edge cases",0Dh,0Ah,0Dh,0Ah, \
-    "CODE UNDER REVIEW:",0Dh,0Ah, \
-    "```",0Dh,0Ah, \
-    "{{CONTEXT}}",0Dh,0Ah, \
-    "```",0Dh,0Ah,0Dh,0Ah, \
-    "Be technically precise. Suggest concrete fixes with code examples.",0
+Tmpl_Code_Critic        db "Perform a rigorous code review. Analyze for:",0Dh,0Ah
+    db "1. Logic errors and off-by-one bugs",0Dh,0Ah
+    db "2. Memory safety issues (leaks, use-after-free, buffer overflows)",0Dh,0Ah
+    db "3. Performance bottlenecks and algorithmic inefficiency",0Dh,0Ah
+    db "4. Architecture violations and anti-patterns",0Dh,0Ah
+    db "5. Missing error handling and edge cases",0Dh,0Ah,0Dh,0Ah
+    db "CODE UNDER REVIEW:",0Dh,0Ah
+    db "```",0Dh,0Ah
+    db "{{CONTEXT}}",0Dh,0Ah
+    db "```",0Dh,0Ah,0Dh,0Ah
+    db "Be technically precise. Suggest concrete fixes with code examples.",0
 
 ALIGN 8
 Tmpl_Code_Auditor       db \
@@ -154,17 +153,16 @@ Tmpl_Code_Auditor       db \
 ; Mode 3: SECURITY — Vulnerability assessment
 ; -------------------------------------------------------------------------
 ALIGN 8
-Tmpl_Sec_Critic         db \
-    "SECURITY AUDIT - THREAT MODELING MODE",0Dh,0Ah, \
-    "Analyze for attack vectors:",0Dh,0Ah, \
-    "- Injection vulnerabilities (SQL, CMD, XSS)",0Dh,0Ah, \
-    "- Privilege escalation paths",0Dh,0Ah, \
-    "- Data exfiltration risks",0Dh,0Ah, \
-    "- Cryptographic weaknesses",0Dh,0Ah, \
-    "- Supply chain / dependency risks",0Dh,0Ah,0Dh,0Ah, \
-    "ATTACK SURFACE:",0Dh,0Ah, \
-    "{{CONTEXT}}",0Dh,0Ah,0Dh,0Ah, \
-    "CVSS-style severity rating required for each finding.",0
+Tmpl_Sec_Critic         db "SECURITY AUDIT - THREAT MODELING MODE",0Dh,0Ah
+    db "Analyze for attack vectors:",0Dh,0Ah
+    db "- Injection vulnerabilities (SQL, CMD, XSS)",0Dh,0Ah
+    db "- Privilege escalation paths",0Dh,0Ah
+    db "- Data exfiltration risks",0Dh,0Ah
+    db "- Cryptographic weaknesses",0Dh,0Ah
+    db "- Supply chain / dependency risks",0Dh,0Ah,0Dh,0Ah
+    db "ATTACK SURFACE:",0Dh,0Ah
+    db "{{CONTEXT}}",0Dh,0Ah,0Dh,0Ah
+    db "CVSS-style severity rating required for each finding.",0
 
 ALIGN 8
 Tmpl_Sec_Auditor        db \
@@ -181,17 +179,16 @@ Tmpl_Sec_Auditor        db \
 ; Mode 4: SHELL — Command analysis
 ; -------------------------------------------------------------------------
 ALIGN 8
-Tmpl_Shell_Critic       db \
-    "SHELL COMMAND ANALYSIS",0Dh,0Ah, \
-    "Review this command for:",0Dh,0Ah, \
-    "- Dangerous flags (rm -rf, dd, mkfs)",0Dh,0Ah, \
-    "- Injection vulnerabilities (unquoted vars)",0Dh,0Ah, \
-    "- Permission issues (sudo misuse)",0Dh,0Ah, \
-    "- Efficiency (useless cat, grep | grep)",0Dh,0Ah, \
-    "- Portability (bashisms in sh scripts)",0Dh,0Ah,0Dh,0Ah, \
-    "COMMAND:",0Dh,0Ah, \
-    "$ {{CONTEXT}}",0Dh,0Ah,0Dh,0Ah, \
-    "Suggest safer/more efficient alternatives.",0
+Tmpl_Shell_Critic       db "SHELL COMMAND ANALYSIS",0Dh,0Ah
+    db "Review this command for:",0Dh,0Ah
+    db "- Dangerous flags (rm -rf, dd, mkfs)",0Dh,0Ah
+    db "- Injection vulnerabilities (unquoted vars)",0Dh,0Ah
+    db "- Permission issues (sudo misuse)",0Dh,0Ah
+    db "- Efficiency (useless cat, grep | grep)",0Dh,0Ah
+    db "- Portability (bashisms in sh scripts)",0Dh,0Ah,0Dh,0Ah
+    db "COMMAND:",0Dh,0Ah
+    db "$ {{CONTEXT}}",0Dh,0Ah,0Dh,0Ah
+    db "Suggest safer/more efficient alternatives.",0
 
 ALIGN 8
 Tmpl_Shell_Auditor      db \
@@ -465,9 +462,8 @@ SubstringSearchCI PROC
     cmp     rdx, r13
     je      @@found             ; all chars matched
 
-    mov     al, byte ptr [rsi + rbx]
-    add     rax, rdx            ; compute haystack[rbx + rdx]
-    mov     al, byte ptr [rsi + rbx + rdx]
+    lea     rcx, [rsi + rbx]        ; base + outer offset
+    mov     al, byte ptr [rcx + rdx]  ; haystack[rbx + rdx]
     ; Case-fold haystack char
     cmp     al, 'A'
     jb      @@hc_done

@@ -9,6 +9,7 @@
 #include "gguf_loader.h" 
 
 #include "plugins/MemoryPlugin.hpp"
+#include "inference_engine.h"
 
 namespace RawrXD {
 
@@ -67,7 +68,7 @@ struct Tensor {
 };
 
 // CPU inference engine class
-class CPUInferenceEngine {
+class CPUInferenceEngine : public InferenceEngine {
 public:
     CPUInferenceEngine();
     ~CPUInferenceEngine();
@@ -125,6 +126,9 @@ public:
     // Memory management
     size_t GetMemoryUsage() const;
     void ClearCache();
+
+    // Engine identification (InferenceEngine interface)
+    const char* GetEngineName() const override { return "CPU"; }
     
     // Allow ExecutionScheduler to call private TransformerLayer
     friend class ExecutionScheduler;

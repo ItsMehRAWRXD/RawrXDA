@@ -1,0 +1,27 @@
+FROM gpt-oss:120b
+
+# CRITICAL: Enable disk streaming (the "mini HDD" mode)
+# Without mmap=true, weights attempt resident loading (60GB into 64GB = swap death)
+PARAMETER mmap true
+PARAMETER mlock false
+PARAMETER numa true
+
+# Context strictly limited to keep KV cache under 2GB
+PARAMETER num_ctx 2048
+PARAMETER num_batch 512
+
+# GPU offload (16GB VRAM holds ~40 layers of Q2_K)
+PARAMETER num_gpu 40
+PARAMETER main_gpu 0
+
+# Temperature
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER seed 42
+
+SYSTEM """
+You are a helpful assistant. Keep responses concise.
+You are operating in memory-constrained mode (64GB RAM).
+Keep responses under 500 tokens. Use concise technical language.
+Avoid repetitive explanations to conserve KV cache.
+"""

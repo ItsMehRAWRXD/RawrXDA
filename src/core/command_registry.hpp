@@ -645,6 +645,62 @@ enum CmdFlags : uint32_t {
     X(10204, VOICE_AUTO_RATE_UP,   "voice.autoRateUp",      "!voice rate_up",    BOTH, "Voice",       handleVoiceAutoRateUp,      CMD_NONE) \
     X(10205, VOICE_AUTO_RATE_DOWN, "voice.autoRateDown",    "!voice rate_down",  BOTH, "Voice",       handleVoiceAutoRateDown,    CMD_NONE) \
     X(10206, VOICE_AUTO_STOP,      "voice.autoStop",        "!voice auto_stop",  BOTH, "Voice",       handleVoiceAutoStop,        CMD_NONE) \
+    \
+    /* ═══════════════════ GAME ENGINE INTEGRATION (7001-7050) ═══════════════════ */ \
+    X(7001,  UNREAL_INIT,          "unreal.init",           "!unreal_init",      BOTH, "GameEngine",  handleUnrealInit,           CMD_ASYNC) \
+    X(7002,  UNREAL_ATTACH,        "unreal.attach",         "!unreal_attach",    BOTH, "GameEngine",  handleUnrealAttach,         CMD_ASYNC) \
+    X(7003,  UNITY_INIT,           "unity.init",            "!unity_init",       BOTH, "GameEngine",  handleUnityInit,            CMD_ASYNC) \
+    X(7004,  UNITY_ATTACH,         "unity.attach",          "!unity_attach",     BOTH, "GameEngine",  handleUnityAttach,          CMD_ASYNC) \
+    \
+    /* ═══════════════════ REVERSE ENGINEERING (8100-8150) ═══════════════════ */ \
+    X(8100,  REVENG_DISASSEMBLE,   "reveng.disassemble",    "!reveng_dis",       BOTH, "ReverseEng",  handleRevengDisassemble,    CMD_REQUIRES_FILE) \
+    X(8101,  REVENG_DECOMPILE,     "reveng.decompile",      "!reveng_decomp",    BOTH, "ReverseEng",  handleRevengDecompile,      CMD_REQUIRES_FILE) \
+    X(8102,  REVENG_FIND_VULN,     "reveng.findVulns",      "!reveng_vuln",      BOTH, "ReverseEng",  handleRevengFindVulnerabilities, CMD_REQUIRES_FILE | CMD_ASYNC) \
+    \
+    /* ═══════════════════ MODEL MANAGEMENT (11001-11050) ═══════════════════ */ \
+    X(11001, MODEL_LIST,           "model.list",            "!model_list",       BOTH, "Models",      handleModelList,            CMD_NONE) \
+    X(11002, MODEL_LOAD,           "model.load",            "!model_load",       BOTH, "Models",      handleModelLoad,            CMD_NONE) \
+    X(11003, MODEL_UNLOAD,         "model.unload",          "!model_unload",     BOTH, "Models",      handleModelUnload,          CMD_NONE) \
+    X(11004, MODEL_QUANTIZE,       "model.quantize",        "!model_quantize",   BOTH, "Models",      handleModelQuantize,        CMD_ASYNC) \
+    X(11005, MODEL_FINETUNE,       "model.finetune",        "!model_finetune",   BOTH, "Models",      handleModelFinetune,        CMD_ASYNC) \
+    \
+    /* ═══════════════════ DISK RECOVERY (11100-11150) ═══════════════════ */ \
+    X(11100, DISK_LIST_DRIVES,     "disk.listDrives",       "!disk_drives",      BOTH, "Disk",        handleDiskListDrives,       CMD_NONE) \
+    X(11101, DISK_SCAN_PARTS,      "disk.scanPartitions",   "!disk_scan",        BOTH, "Disk",        handleDiskScanPartitions,   CMD_ASYNC) \
+    \
+    /* ═══════════════════ PERFORMANCE GOVERNANCE (11200-11250) ═══════════════════ */ \
+    X(11200, GOVERNOR_STATUS,      "governor.status",       "!governor_status",  BOTH, "Governor",    handleGovernorStatus,       CMD_NONE) \
+    X(11201, GOVERNOR_POWER,       "governor.setPowerLevel","!governor_power",   BOTH, "Governor",    handleGovernorSetPowerLevel,CMD_NONE) \
+    \
+    /* ═══════════════════ MARKETPLACE & EXTENSIONS (11300-11350) ═══════════════════ */ \
+    X(11300, MARKETPLACE_LIST,     "marketplace.list",      "!marketplace_list", BOTH, "Marketplace", handleMarketplaceList,      CMD_NONE) \
+    X(11301, MARKETPLACE_INSTALL,  "marketplace.install",   "!marketplace_install",BOTH,"Marketplace",handleMarketplaceInstall,   CMD_ASYNC) \
+    \
+    /* ═══════════════════ EMBEDDINGS & VECTORS (11400-11450) ═══════════════════ */ \
+    X(11400, EMBEDDING_ENCODE,     "embedding.encode",      "!embedding_encode", BOTH, "Embedding",   handleEmbeddingEncode,      CMD_NONE) \
+    \
+    /* ═══════════════════ VISION & IMAGE ANALYSIS (11500-11550) ═══════════════════ */ \
+    X(11500, VISION_ANALYZE,       "vision.analyze",        "!vision_analyze",   BOTH, "Vision",      handleVisionAnalyzeImage,   CMD_REQUIRES_FILE) \
+    \
+    /* ═══════════════════ PROMPT ENGINE (11600-11650) ═══════════════════ */ \
+    X(11600, PROMPT_CLASSIFY,      "prompt.classify",       "!prompt_classify",  BOTH, "Prompt",      handlePromptClassifyContext,CMD_NONE) \
+    \
+    /* ═══════════════════ TIER 1: CRITICAL COSMETICS (12000-12099) ═══════════════════ */ \
+    X(12000, T1_SMOOTH_SCROLL,     "tier1.smoothScroll",    "!smooth_scroll",    BOTH, "Cosmetic",    handleTier1SmoothScrollToggle,  CMD_NONE) \
+    X(12001, T1_MINIMAP_ENHANCED,  "tier1.minimapEnhanced", "!minimap_enhanced", BOTH, "Cosmetic",    handleTier1MinimapEnhanced,     CMD_NONE) \
+    X(12010, T1_BREADCRUMBS,       "tier1.breadcrumbs",     "!breadcrumbs",      BOTH, "Cosmetic",    handleTier1BreadcrumbsToggle,   CMD_NONE) \
+    X(12020, T1_FUZZY_PALETTE,     "tier1.fuzzyPalette",    "!fuzzy",            BOTH, "Cosmetic",    handleTier1FuzzyPalette,        CMD_NONE) \
+    X(12030, T1_SETTINGS_GUI,      "tier1.settingsGUI",     "!settings_gui",     BOTH, "Cosmetic",    handleTier1SettingsGUI,         CMD_NONE) \
+    X(12040, T1_WELCOME_PAGE,      "tier1.welcomePage",     "!welcome",          BOTH, "Cosmetic",    handleTier1WelcomePage,         CMD_NONE) \
+    X(12050, T1_FILE_ICONS,        "tier1.fileIcons",       "!file_icons",       BOTH, "Cosmetic",    handleTier1FileIconTheme,       CMD_NONE) \
+    X(12060, T1_TAB_DRAG,          "tier1.tabDrag",         "!tab_drag",         BOTH, "Cosmetic",    handleTier1TabDragToggle,       CMD_NONE) \
+    X(12070, T1_SPLIT_VERT,        "tier1.splitVertical",   "!split_v",          BOTH, "Cosmetic",    handleTier1SplitVertical,       CMD_NONE) \
+    X(12071, T1_SPLIT_HORIZ,       "tier1.splitHorizontal", "!split_h",          BOTH, "Cosmetic",    handleTier1SplitHorizontal,     CMD_NONE) \
+    X(12072, T1_SPLIT_GRID,        "tier1.splitGrid",       "!split_grid",       BOTH, "Cosmetic",    handleTier1SplitGrid,           CMD_NONE) \
+    X(12073, T1_SPLIT_CLOSE,       "tier1.splitClose",      "!split_close",      BOTH, "Cosmetic",    handleTier1SplitClose,          CMD_NONE) \
+    X(12074, T1_SPLIT_FOCUS_NEXT,  "tier1.splitFocusNext",  "!split_next",       BOTH, "Cosmetic",    handleTier1SplitFocusNext,      CMD_NONE) \
+    X(12090, T1_AUTO_UPDATE,       "tier1.autoUpdate",      "!auto_update",      BOTH, "Cosmetic",    handleTier1AutoUpdateCheck,     CMD_ASYNC) \
+    X(12091, T1_UPDATE_DISMISS,    "tier1.updateDismiss",   "!update_dismiss",   BOTH, "Cosmetic",    handleTier1UpdateDismiss,       CMD_NONE) \
     /* ═══════════════════ END OF TABLE ═══════════════════ */
 
 // ============================================================================

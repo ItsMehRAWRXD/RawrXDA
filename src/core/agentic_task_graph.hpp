@@ -365,6 +365,20 @@ private:
 
         Graph() : id(0), isRunning(false), isPaused(false),
                   isCompleted(false), activeTasks(0) {}
+        Graph(Graph&& o) noexcept
+            : id(o.id), goal(std::move(o.goal)), config(std::move(o.config)),
+              tasks(std::move(o.tasks)), createdAt(o.createdAt),
+              startedAt(o.startedAt), isRunning(o.isRunning),
+              isPaused(o.isPaused), isCompleted(o.isCompleted),
+              activeTasks(o.activeTasks.load(std::memory_order_relaxed)) {}
+        Graph& operator=(Graph&& o) noexcept {
+            id = o.id; goal = std::move(o.goal); config = std::move(o.config);
+            tasks = std::move(o.tasks); createdAt = o.createdAt;
+            startedAt = o.startedAt; isRunning = o.isRunning;
+            isPaused = o.isPaused; isCompleted = o.isCompleted;
+            activeTasks.store(o.activeTasks.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            return *this;
+        }
     };
 
     // Topological sort with cycle detection

@@ -273,4 +273,209 @@ PDB_GSIHashLookup ENDP
 ; ============================================================================
 ; Export declarations for MSVC linker
 ; ============================================================================
+
+; ============================================================================
+; PDB_FuzzyScore — Tier 1 Cosmetic #4: fzf-style Fuzzy Matching Kernel
+; ============================================================================
+;
+; Implements case-insensitive subsequence matching with scoring.
+; Bonuses for: consecutive matches, word boundaries, prefix, camelCase.
+; Penalties for: target length, gaps between matches.
+;
+; RCX = pointer to query string (null-terminated, ASCII)
+; RDX = pointer to target string (null-terminated, ASCII)
+; R8  = pointer to output match positions array (DWORD[64])
+; R9D = max positions to store
+;
+; Returns:
+;   EAX = score (0 = no match, higher = better)
+;   [R8] = filled with matched character indices
+; ============================================================================
+PUBLIC PDB_FuzzyScore
+PDB_FuzzyScore PROC
+    push    rbx
+    push    rsi
+    push    rdi
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+
+    mov     rsi, rcx            ; RSI = query
+    mov     rdi, rdx            ; RDI = target
+    mov     r12, r8             ; R12 = positions output
+    mov     r13d, r9d           ; R13D = max positions
+
+    ; Compute query length
+    xor     ecx, ecx
+@@qlen_loop:
+    cmp     BYTE PTR [rsi + rcx], 0
+    je      @@qlen_done
+    inc     ecx
+    jmp     @@qlen_loop
+@@qlen_done:
+    mov     r14d, ecx           ; R14D = queryLen
+    test    ecx, ecx
+    jz      @@fz_no_match       ; empty query = no match
+
+    ; Compute target length
+    xor     ecx, ecx
+@@tlen_loop:
+    cmp     BYTE PTR [rdi + rcx], 0
+    je      @@tlen_done
+    inc     ecx
+    jmp     @@tlen_loop
+@@tlen_done:
+    mov     r15d, ecx           ; R15D = targetLen
+
+    ; Main fuzzy matching loop
+    xor     ebx, ebx            ; EBX = score accumulator
+    xor     ecx, ecx            ; ECX = query index (qi)
+    xor     edx, edx            ; EDX = target index (ti)
+    xor     r8d, r8d            ; R8D = position count
+    xor     r9d, r9d            ; R9D = consecutive match flag
+    mov     r10d, 1             ; R10D = prevWasSep (start = word boundary)
+
+@@fz_main_loop:
+    cmp     edx, r15d
+    jge     @@fz_check_complete
+    cmp     ecx, r14d
+    jge     @@fz_check_complete
+
+    ; Load and tolower query[qi]
+    movzx   eax, BYTE PTR [rsi + rcx]
+    cmp     eax, 41h            ; 'A'
+    jl      @@fz_q_lower_done
+    cmp     eax, 5Ah            ; 'Z'
+    jg      @@fz_q_lower_done
+    add     eax, 20h
+@@fz_q_lower_done:
+    mov     r11d, eax           ; R11D = tolower(query[qi])
+
+    ; Load and tolower target[ti]
+    movzx   eax, BYTE PTR [rdi + rdx]
+    ; Check if this is a separator for word boundary detection
+    push    rax
+    cmp     eax, 20h            ; space
+    je      @@fz_is_sep
+    cmp     eax, 2Eh            ; '.'
+    je      @@fz_is_sep
+    cmp     eax, 5Fh            ; '_'
+    je      @@fz_is_sep
+    cmp     eax, 3Ah            ; ':'
+    je      @@fz_is_sep
+    cmp     eax, 2Fh            ; '/'
+    je      @@fz_is_sep
+    cmp     eax, 2Dh            ; '-'
+    je      @@fz_is_sep
+    mov     r10d, 0             ; not a separator
+    jmp     @@fz_after_sep
+@@fz_is_sep:
+    mov     r10d, 1
+@@fz_after_sep:
+    pop     rax
+
+    ; tolower target char
+    cmp     eax, 41h
+    jl      @@fz_t_lower_done
+    cmp     eax, 5Ah
+    jg      @@fz_t_lower_done
+    add     eax, 20h
+@@fz_t_lower_done:
+
+    ; Compare
+    cmp     eax, r11d
+    jne     @@fz_no_char_match
+
+    ; ── MATCH ──
+    add     ebx, 10             ; base score: +10
+
+    ; Word boundary bonus
+    test    r10d, r10d
+    jz      @@fz_no_boundary
+    add     ebx, 20             ; +20 for word boundary match
+@@fz_no_boundary:
+
+    ; Consecutive match bonus
+    test    r9d, r9d
+    jz      @@fz_no_consec
+    add     ebx, 15             ; +15 for consecutive
+@@fz_no_consec:
+
+    ; Prefix bonus (first char of target)
+    test    edx, edx
+    jnz     @@fz_no_prefix
+    add     ebx, 25             ; +25 for prefix match
+@@fz_no_prefix:
+
+    ; Store position
+    cmp     r8d, r13d
+    jge     @@fz_skip_pos
+    mov     DWORD PTR [r12 + r8 * 4], edx
+    inc     r8d
+@@fz_skip_pos:
+
+    mov     r9d, 1              ; prevMatched = true
+    inc     ecx                 ; advance query
+    inc     edx                 ; advance target
+    jmp     @@fz_main_loop
+
+@@fz_no_char_match:
+    mov     r9d, 0              ; prevMatched = false
+    inc     edx                 ; advance target only
+    jmp     @@fz_main_loop
+
+@@fz_check_complete:
+    ; Must have matched all query chars
+    cmp     ecx, r14d
+    jl      @@fz_no_match
+
+    ; Length penalty: score -= targetLen / 3
+    mov     eax, r15d
+    xor     edx, edx
+    mov     ecx, 3
+    div     ecx
+    sub     ebx, eax
+
+    ; Gap penalty: sum of gaps between consecutive positions
+    cmp     r8d, 2
+    jl      @@fz_no_gap_penalty
+    xor     ecx, ecx            ; gap accumulator
+    mov     edx, 1              ; position index
+@@fz_gap_loop:
+    cmp     edx, r8d
+    jge     @@fz_gap_done
+    mov     eax, DWORD PTR [r12 + rdx * 4]
+    sub     eax, DWORD PTR [r12 + rdx * 4 - 4]
+    dec     eax                 ; gap = pos[i] - pos[i-1] - 1
+    add     ecx, eax
+    inc     edx
+    jmp     @@fz_gap_loop
+@@fz_gap_done:
+    shl     ecx, 1              ; gap * 2
+    sub     ebx, ecx
+@@fz_no_gap_penalty:
+
+    ; Ensure minimum score of 1
+    cmp     ebx, 1
+    jge     @@fz_score_ok
+    mov     ebx, 1
+@@fz_score_ok:
+    mov     eax, ebx
+    jmp     @@fz_done
+
+@@fz_no_match:
+    xor     eax, eax            ; score = 0
+
+@@fz_done:
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+PDB_FuzzyScore ENDP
+
 END

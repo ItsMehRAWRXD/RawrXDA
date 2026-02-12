@@ -75,7 +75,7 @@
 struct VSCodeExtensionManifest;
 struct VSCodeExtensionContext;
 struct VSCodeAPIResult;
-struct PatchResult;
+#include "model_memory_hotpatch.hpp"  // PatchResult full definition
 
 // ============================================================================
 // Polyfill Descriptor — Describes a runtime shim for a missing API

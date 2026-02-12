@@ -14,6 +14,10 @@
 #include <vector>
 #include <functional>
 #include <optional>
+#include <string>
+#include <map>
+#include <unordered_map>
+#include <cstdint>
 
 // Forward declarations
 
@@ -47,7 +51,21 @@ enum class KeyPurpose {
     All = 0xFF
 };
 
-Q_DECLARE_FLAGS(KeyPurposes, KeyPurpose)
+// Replaces Q_DECLARE_FLAGS(KeyPurposes, KeyPurpose)
+using KeyPurposes = uint32_t;
+
+inline constexpr KeyPurposes operator|(KeyPurpose a, KeyPurpose b) {
+    return static_cast<KeyPurposes>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+inline constexpr KeyPurposes operator|(KeyPurposes a, KeyPurpose b) {
+    return a | static_cast<uint32_t>(b);
+}
+inline constexpr KeyPurposes operator&(KeyPurposes a, KeyPurpose b) {
+    return a & static_cast<uint32_t>(b);
+}
+inline constexpr bool hasFlag(KeyPurposes flags, KeyPurpose flag) {
+    return (flags & static_cast<uint32_t>(flag)) != 0;
+}
 
 /**
  * @brief Key strength level
@@ -84,7 +102,7 @@ struct KeyMetadata {
     std::string revocationReason;
     // DateTime revocationDate;
     
-    std::anyMap customMetadata;
+    std::unordered_map<std::string, std::string> customMetadata;
     
     void* toJson() const;
     static KeyMetadata fromJson(const void*& obj);
@@ -534,5 +552,5 @@ private:
 
 } // namespace rawrxd::auth
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(rawrxd::auth::KeyPurposes)
+// Q_DECLARE_OPERATORS_FOR_FLAGS removed — operators defined inline in namespace
 

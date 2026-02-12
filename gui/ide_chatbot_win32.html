@@ -99,10 +99,47 @@
   </style>
   <!-- CDN Fallback: stubs for offline / file:// usage -->
   <script>
-    // DOMPurify fallback — passthrough if CDN failed (offline mode)
+    // DOMPurify fallback — basic HTML escaper when CDN unavailable (offline mode)
     if (typeof DOMPurify === 'undefined') {
-      console.warn('[RawrXD] DOMPurify CDN unavailable — using passthrough (XSS sanitization disabled)');
-      window.DOMPurify = { sanitize: function (html) { return html; }, version: '0.0.0-stub' };
+      console.warn('[RawrXD] DOMPurify CDN unavailable — using built-in HTML escaper');
+      window.DOMPurify = {
+        sanitize: function (html) {
+          // Strip all tags except safe inline formatting and code blocks
+          var allowed = ['b', 'i', 'em', 'strong', 'code', 'pre', 'span', 'br', 'p', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td'];
+          var div = document.createElement('div');
+          div.innerHTML = html;
+          // Remove script/style/iframe/object/embed/form elements entirely
+          var dangerous = div.querySelectorAll('script,style,iframe,object,embed,form,input,textarea,select,button,link,meta,base');
+          for (var i = dangerous.length - 1; i >= 0; i--) dangerous[i].remove();
+          // Strip event handlers from all remaining elements
+          var all = div.querySelectorAll('*');
+          for (var j = 0; j < all.length; j++) {
+            var el = all[j];
+            // Remove on* attributes (onclick, onerror, onload, etc.)
+            var attrs = el.attributes;
+            for (var k = attrs.length - 1; k >= 0; k--) {
+              if (attrs[k].name.toLowerCase().startsWith('on') || attrs[k].value.toLowerCase().trim().startsWith('javascript:')) {
+                el.removeAttribute(attrs[k].name);
+              }
+            }
+            // Sanitize href/src attributes
+            if (el.hasAttribute('href')) {
+              var href = el.getAttribute('href').toLowerCase().trim();
+              if (href.startsWith('javascript:') || href.startsWith('data:') || href.startsWith('vbscript:')) {
+                el.removeAttribute('href');
+              }
+            }
+            if (el.hasAttribute('src')) {
+              var src = el.getAttribute('src').toLowerCase().trim();
+              if (src.startsWith('javascript:') || src.startsWith('data:') || src.startsWith('vbscript:')) {
+                el.removeAttribute('src');
+              }
+            }
+          }
+          return div.innerHTML;
+        },
+        version: '0.1.0-builtin'
+      };
     }
     // highlight.js fallback — no-op if CDN failed
     if (typeof hljs === 'undefined') {
@@ -7648,6 +7685,7 @@
     </div>
   </div>
 
+  <script src="/gui/rawrxd-nav.js"></script>
 </body>
 
 </html>
