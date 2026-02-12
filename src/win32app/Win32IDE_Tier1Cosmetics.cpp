@@ -964,6 +964,9 @@ static int createSettingRow(HWND parent, int y, const char* label, const char* c
 #define SC_ENCODING        13018
 #define SC_EOLSTYLE        13019
 #define SC_FAILUREDETECTOR 13020
+#define SC_LOCALPARITY_ENABLED  13021
+#define SC_LOCALPARITY_MODELPATH 13022
+#define SC_UPDATEMANIFEST_URL   13023
 #define SC_SEARCH          13050
 #define SC_SAVE_BTN        13060
 #define SC_CANCEL_BTN      13061
@@ -1191,6 +1194,36 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
             WS_CHILD | WS_VISIBLE | WS_BORDER,
             220, y, 250, 24, hwnd, (HMENU)SC_OLLAMAURL, nullptr, nullptr);
         SendMessage(edit, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        y += 38;
+
+        // ── Local Parity (no API key) ──
+        secHdr = CreateWindowExA(0, "STATIC", "  Local Parity (no API key)",
+            WS_CHILD | WS_VISIBLE, 10, y, 460, 24, hwnd, nullptr, nullptr, nullptr);
+        SendMessage(secHdr, WM_SETFONT, (WPARAM)headerFont, TRUE);
+        y += 30;
+
+        chk = CreateWindowExA(0, "BUTTON", "Use local GGUF for completion/chat (no API key)",
+            WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+            220, y, 350, 22, hwnd, (HMENU)SC_LOCALPARITY_ENABLED, nullptr, nullptr);
+        SendMessage(chk, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        if (s_ide->m_settings.localParityEnabled)
+            SendMessage(chk, BM_SETCHECK, BST_CHECKED, 0);
+        y += 28;
+
+        CreateWindowExA(0, "STATIC", "Local model path (GGUF):",
+            WS_CHILD | WS_VISIBLE | SS_RIGHT, 10, y + 4, 200, 20, hwnd, nullptr, nullptr, nullptr);
+        edit = CreateWindowExA(0, "EDIT", s_ide->m_settings.localParityModelPath.c_str(),
+            WS_CHILD | WS_VISIBLE | WS_BORDER,
+            220, y, 250, 24, hwnd, (HMENU)SC_LOCALPARITY_MODELPATH, nullptr, nullptr);
+        SendMessage(edit, WM_SETFONT, (WPARAM)labelFont, TRUE);
+        y += 32;
+
+        CreateWindowExA(0, "STATIC", "Update manifest URL (public):",
+            WS_CHILD | WS_VISIBLE | SS_RIGHT, 10, y + 4, 200, 20, hwnd, nullptr, nullptr, nullptr);
+        edit = CreateWindowExA(0, "EDIT", s_ide->m_settings.updateManifestUrl.c_str(),
+            WS_CHILD | WS_VISIBLE | WS_BORDER,
+            220, y, 250, 24, hwnd, (HMENU)SC_UPDATEMANIFEST_URL, nullptr, nullptr);
+        SendMessage(edit, WM_SETFONT, (WPARAM)labelFont, TRUE);
         y += 40;
 
         // ── Buttons ──
@@ -1253,6 +1286,12 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
             GetWindowTextA(GetDlgItem(hwnd, SC_OLLAMAURL), buf, sizeof(buf));
             s_ide->m_settings.aiOllamaUrl = buf;
 
+            s_ide->m_settings.localParityEnabled = (SendMessage(GetDlgItem(hwnd, SC_LOCALPARITY_ENABLED), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            GetWindowTextA(GetDlgItem(hwnd, SC_LOCALPARITY_MODELPATH), buf, sizeof(buf));
+            s_ide->m_settings.localParityModelPath = buf;
+            GetWindowTextA(GetDlgItem(hwnd, SC_UPDATEMANIFEST_URL), buf, sizeof(buf));
+            s_ide->m_settings.updateManifestUrl = buf;
+
             int encSel = (int)SendMessage(GetDlgItem(hwnd, SC_ENCODING), CB_GETCURSEL, 0, 0);
             if (encSel != CB_ERR) {
                 char encBuf[64];
@@ -1274,7 +1313,7 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
         }
         if (cmd == SC_CANCEL_BTN) DestroyWindow(hwnd);
         if (cmd == SC_RESET_BTN) {
-            if (MessageBoxA(hwnd, "Reset all settings to defaults?", "Reset", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            if (MessageBoxW(hwnd, L"Reset all settings to defaults?", L"Reset", MB_YESNO | MB_ICONQUESTION) == IDYES) {
                 s_ide->applyDefaultSettings();
                 s_ide->saveSettings();
                 s_ide->appendToOutput("[Settings] Reset to defaults.\n");

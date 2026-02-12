@@ -50,6 +50,7 @@ struct BackupEntry {
     std::string backupDir;     // Directory containing this backup
     size_t fileCount;
     size_t totalBytes;
+    size_t sizeBytes = 0;      // Compatibility: same as totalBytes
     uint32_t checksum;         // CRC32 of manifest
     bool verified;             // Post-backup integrity check passed
     std::string description;
@@ -76,13 +77,14 @@ struct BackupConfig {
 struct BackupResult {
     bool success;
     const char* detail;
+    std::string message;      // Compatibility: same as detail (for .c_str() in handlers)
     BackupEntry entry;
 
     static BackupResult ok(const char* msg) {
-        return { true, msg, {} };
+        BackupResult r; r.success = true; r.detail = msg; r.message = msg ? msg : ""; return r;
     }
     static BackupResult error(const char* msg) {
-        return { false, msg, {} };
+        BackupResult r; r.success = false; r.detail = msg; r.message = msg ? msg : ""; return r;
     }
 };
 

@@ -100,6 +100,13 @@ public:
     NativeInferencePipeline(const NativeInferencePipeline&) = delete;
     NativeInferencePipeline& operator=(const NativeInferencePipeline&) = delete;
 
+    /// Process-wide singleton for use from command handlers (e.g. auto_feature_registry).
+    /// IDE may use its own instance via m_nativePipeline; this is for CLI/headless.
+    static NativeInferencePipeline& instance() {
+        static NativeInferencePipeline s;
+        return s;
+    }
+
     // ---- Lifecycle ----------------------------------------------------------
 
     /// Initialize the pipeline and all sub-systems

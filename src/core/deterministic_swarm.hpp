@@ -41,6 +41,7 @@ struct SwarmSeed {
     bool        enforceOrdering;        // Force deterministic task dispatch order
     bool        disableParallelism;     // Force sequential execution for reproducibility
     bool        fixedTimestamps;        // Use synthetic timestamps (not wall clock)
+    bool        isStrict = false;       // Compatibility: strict reproducibility mode
 
     SwarmSeed()
         : masterSeed(0),
@@ -96,12 +97,14 @@ struct SwarmTraceEntry {
 // ============================================================================
 struct SwarmTrace {
     std::string             traceId;
+    uint64_t                id = 0;             // Compatibility: hash of traceId for display
     SwarmSeed               seed;
     std::string             originalInput;
     uint64_t                originalInputHash;
     std::string             finalOutput;
     uint64_t                finalOutputHash;
     std::vector<SwarmTraceEntry> entries;
+    std::vector<SwarmTraceEntry> steps;         // Compatibility: alias/sync with entries
     double                  totalDurationMs;
     int                     agentCount;
     std::string             profileName;        // Reasoning profile used

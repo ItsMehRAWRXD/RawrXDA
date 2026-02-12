@@ -19,16 +19,16 @@
 
 // Menu command IDs (with guards to avoid redefinition from Win32IDE.cpp)
 #ifndef IDM_FILE_NEW
-#define IDM_FILE_NEW 1001
+#define IDM_FILE_NEW 2001
 #endif
 #ifndef IDM_FILE_OPEN
-#define IDM_FILE_OPEN 1002
+#define IDM_FILE_OPEN 2002
 #endif
 #ifndef IDM_FILE_SAVE
-#define IDM_FILE_SAVE 1003
+#define IDM_FILE_SAVE 2003
 #endif
 #ifndef IDM_FILE_SAVEAS
-#define IDM_FILE_SAVEAS 1004
+#define IDM_FILE_SAVEAS 2004
 #endif
 #ifndef IDM_FILE_SAVEALL
 #define IDM_FILE_SAVEALL 1005
@@ -61,7 +61,7 @@
 #define IDM_FILE_MODEL_QUICK_LOAD 1035
 #endif
 #ifndef IDM_FILE_EXIT
-#define IDM_FILE_EXIT 1099
+#define IDM_FILE_EXIT 2005
 #endif
 
 #ifndef IDM_EDIT_UNDO
@@ -287,6 +287,9 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 12000 && commandId < 12100) {
         // Tier 1: Critical Cosmetics
         return handleTier1Command(commandId);
+    } else if (commandId >= 12100 && commandId < 12200) {
+        // Tier 3: Cosmetics (#20–#30, e.g. bracket pairs, zen, fold, lightbulb)
+        return handleTier3CosmeticsCommand(commandId);
     } else if (commandId >= 13000 && commandId < 13100) {
         // Flagship Product Pillars (Provable Agent, AI RE, Airgapped Enterprise)
         return handleFlagshipCommand(commandId);

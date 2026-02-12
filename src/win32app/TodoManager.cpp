@@ -44,8 +44,8 @@ bool TodoManager::Load() {
     }
     
     try {
-        json data;
-        file >> data;
+        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        json data = json::parse(content);
         
         items_.clear();
         
@@ -268,7 +268,7 @@ bool TodoManager::StartPipeServer() {
     
     std::wstring pipeName = L"\\\\.\\pipe\\RawrXD_Todos";
     
-    pipeHandle_ = CreateNamedPipe(
+    pipeHandle_ = CreateNamedPipeW(
         pipeName.c_str(),
         PIPE_ACCESS_DUPLEX,
         PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,

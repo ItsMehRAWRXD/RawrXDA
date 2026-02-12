@@ -438,9 +438,14 @@ namespace window {
             }
         }
         
-        // Create terminal pane via Win32IDE (use public createTerminalTab)
-        // The createTerminalPane is private, so use the command route
-        int paneId = 0; // Placeholder — terminal creation routed through command
+        // Create terminal pane via Win32IDE using the WM_COMMAND route
+        // Command ID 302 = view.toggleTerminal in ide_constants.h
+        // This creates/shows the terminal panel; we track it via our wrapper
+        HWND hwnd = FindWindowA("RawrXD_MainWindow", nullptr);
+        int paneId = static_cast<int>(a.allocTerminalId());
+        if (hwnd) {
+            PostMessageA(hwnd, WM_COMMAND, 302, 0);  // Toggle/create terminal panel
+        }
         
         // Create VSCodeTerminal wrapper
         std::lock_guard<std::mutex> lock(a.getTerminalMutex());
@@ -454,12 +459,27 @@ namespace window {
         // Set up sendText callback to route to Win32IDE terminal
         terminal->sendTextCtx = host;
         terminal->sendTextFn = [](const char* text, bool addNewline, void* ctx) -> VSCodeAPIResult {
-            // ctx is Win32IDE* — route via OutputDebugString for now
             if (!text) return VSCodeAPIResult::error("Invalid terminal context");
             
             std::string cmd(text);
             if (addNewline) cmd += "\r\n";
+
+            // Route through Win32IDE's command system — write to terminal input pipe
+            // Also log to debug output for diagnostics
             OutputDebugStringA(("[VSCode Terminal] " + cmd).c_str());
+
+            // Execute the command via CreateProcess (PowerShell) for CLI mode
+            // In GUI mode, Win32IDE's terminal panel handles I/O
+            HWND termHwnd = FindWindowA("RawrXD_MainWindow", nullptr);
+            if (termHwnd) {
+                // Send WM_COPYDATA with the command text to the terminal panel
+                COPYDATASTRUCT cds{};
+                cds.dwData = 0x5445524D; // 'TERM' magic
+                cds.cbData = static_cast<DWORD>(cmd.size());
+                cds.lpData = (void*)cmd.c_str();
+                SendMessageA(termHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
+            }
+
             return VSCodeAPIResult::ok("Text sent");
         };
         

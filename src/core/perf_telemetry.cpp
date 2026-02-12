@@ -282,6 +282,8 @@ PerfSlotReport PerfTelemetry::generateReport(uint32_t slotIndex) const {
     memcpy(r.buckets, data.buckets, sizeof(r.buckets));
 
     r.percentiles = computePercentiles(data);
+    // Convert max cycles to ms (assume ~3e9 cycles/sec)
+    r.peakLatencyMs = (data.maxCycles > 0) ? (static_cast<double>(data.maxCycles) / 3e6) : 0.0;
 
     // Drift detection
     if (m_baselineCaptured && m_baselineMedians[slotIndex] > 0.0) {

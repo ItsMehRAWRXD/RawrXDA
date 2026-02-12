@@ -1,21 +1,26 @@
 #pragma once
+/**
+ * @file settings.h
+ * @brief App and Monaco settings — C++20 / Win32, no Qt.
+ * Replaces Qt QSettings/QString/QVariant with std::any and file-based persistence.
+ */
 
-#include <QString>
-#include <QVariant>
-#include <QSettings>
 #include <string>
 #include <cstdint>
+#include <any>
+#include <map>
+#include "monaco_settings.h"
 
-// App state structure for settings
+// ----------------------------------------------------------------------------
+// App state (compute / overclock) — no Qt
+// ----------------------------------------------------------------------------
 struct AppState {
-    // Compute settings
     bool enable_gpu_matmul = true;
     bool enable_gpu_attention = true;
     bool enable_cpu_gpu_compare = false;
     bool enable_detailed_quant = false;
     bool compute_settings_dirty = false;
-    
-    // Overclock settings
+
     bool enable_overclock_governor = true;
     uint32_t target_all_core_mhz = 3600;
     uint32_t boost_step_mhz = 100;
@@ -33,24 +38,29 @@ struct AppState {
     bool overclock_settings_dirty = false;
 };
 
+// ----------------------------------------------------------------------------
+// Settings — in-memory key/value + file-based Compute/Overclock/Monaco (no Qt)
+// ----------------------------------------------------------------------------
 class Settings {
 public:
     Settings();
     ~Settings();
-    
-    // Two-phase initialization: call after QApplication exists
+
     void initialize();
-    
-    // Qt-based settings (for GUI)
-    void setValue(const QString& key, const QVariant& value);
-    QVariant getValue(const QString& key, const QVariant& default_value = QVariant());
-    
-    // File-based settings (for compute/overclock)
+
+    void setValue(const std::string& key, const std::any& value);
+    std::any getValue(const std::string& key, const std::any& default_value = {});
+
     static bool LoadCompute(AppState& state, const std::string& path);
     static bool SaveCompute(const AppState& state, const std::string& path);
     static bool LoadOverclock(AppState& state, const std::string& path);
     static bool SaveOverclock(const AppState& state, const std::string& path);
-    
+
+    static bool LoadMonaco(RawrXD::MonacoSettings& settings, const std::string& path);
+    static bool SaveMonaco(const RawrXD::MonacoSettings& settings, const std::string& path);
+
+    static RawrXD::MonacoThemeColors GetThemePresetColors(RawrXD::MonacoThemePreset preset);
+
 private:
-    QSettings* settings_;
+    std::map<std::string, std::any> store_;
 };

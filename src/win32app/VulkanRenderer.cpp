@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstring>
 #include <cstdint>
+#include <cstddef>
 #include <algorithm>
 
 // ============================================================================
@@ -83,14 +84,14 @@ typedef VkResult (*PFN_vkDeviceWaitIdle)(VkDevice);
 // ============================================================================
 // VulkanRenderer — Production Vulkan backend with dynamic loading
 // ============================================================================
-class VulkanRenderer : public IRenderer {
+class VulkanRenderer : public RawrXD::IRenderer {
 public:
     VulkanRenderer() : m_vkModule(nullptr), m_initialized(false) {}
     ~VulkanRenderer() override {
         cleanup();
     }
 
-    bool initialize(HWND hwnd) override {
+    bool Initialize(HWND hwnd) override {
         m_hwnd = hwnd;
 
         // Dynamically load Vulkan runtime so the IDE still launches even
@@ -200,7 +201,7 @@ public:
         return true;
     }
 
-    void resize(UINT w, UINT h) override {
+    void Resize(UINT w, UINT h) override {
         if (!m_initialized) return;
         if (w == 0 || h == 0) return;
         if (w == m_width && h == m_height) return;
@@ -221,7 +222,7 @@ public:
         }
     }
 
-    void render() override {
+    void Render() override {
         if (!m_initialized) return;
         if (m_swapchainImages.empty()) return;
 
@@ -238,7 +239,7 @@ public:
             // Swapchain out of date — trigger resize
             RECT rc;
             GetClientRect(m_hwnd, &rc);
-            resize(static_cast<UINT>(rc.right - rc.left), static_cast<UINT>(rc.bottom - rc.top));
+            Resize(static_cast<UINT>(rc.right - rc.left), static_cast<UINT>(rc.bottom - rc.top));
             return;
         }
 
@@ -263,7 +264,10 @@ public:
         rpBeginInfo.sType = 43; // VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO
         rpBeginInfo.renderPass = m_renderPass;
         rpBeginInfo.framebuffer = m_framebuffers[imageIndex];
-        rpBeginInfo.renderArea = { {0, 0}, {m_width, m_height} };
+        rpBeginInfo.renderArea.x = 0;
+        rpBeginInfo.renderArea.y = 0;
+        rpBeginInfo.renderArea.w = static_cast<uint32_t>(m_width);
+        rpBeginInfo.renderArea.h = static_cast<uint32_t>(m_height);
         rpBeginInfo.clearValueCount = 1;
         rpBeginInfo.pClearValues = &clearVal;
 
@@ -311,16 +315,16 @@ public:
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
             RECT rc;
             GetClientRect(m_hwnd, &rc);
-            resize(static_cast<UINT>(rc.right - rc.left), static_cast<UINT>(rc.bottom - rc.top));
+            Resize(static_cast<UINT>(rc.right - rc.left), static_cast<UINT>(rc.bottom - rc.top));
         }
     }
 
-    void setClearColor(float r, float g, float b, float a) override {
+    void setClearColor(float r, float g, float b, float a) {
         m_clearColor[0] = r; m_clearColor[1] = g; m_clearColor[2] = b; m_clearColor[3] = a;
     }
 
     void updateEditorText(const std::wstring& text, const RECT& editorRect,
-                          size_t caretIndex, size_t caretLine, size_t caretColumn) override {
+                          size_t caretIndex, size_t caretLine, size_t caretColumn) {
         if (!m_initialized) return;
         // Store text rendering state for next render pass
         // Full GPU text rendering (glyph atlas + instanced quads) deferred to
@@ -331,6 +335,12 @@ public:
         m_pendingCaretLine = caretLine;
         m_pendingCaretColumn = caretColumn;
     }
+
+    void SetTransparency(float) override {}
+    void DrawText(const std::wstring&, float, float, float, uint32_t) override {}
+    void DrawRect(float, float, float, float, uint32_t) override {}
+    void BeginFrame() override {}
+    void EndFrame() override {}
 
 private:
     // ---- Resolved function pointers ----
@@ -751,6 +761,6 @@ private:
 };
 
 // Factory helper
-IRenderer* CreateVulkanRenderer() {
+RawrXD::IRenderer* CreateVulkanRenderer() {
     return new VulkanRenderer();
 }

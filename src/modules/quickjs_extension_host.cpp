@@ -22,7 +22,9 @@
 
 // ============================================================================
 // STUB MODE — QuickJS library not available
-// Provides minimal singleton + error-returning method stubs
+// Provides minimal singleton with native-only extension support.
+// JS extensions are unavailable, but native DLL extensions and VSIX unpack
+// for native components still work via Win32 LoadLibrary.
 // ============================================================================
 
 QuickJSExtensionHost& QuickJSExtensionHost::instance() {
@@ -34,22 +36,57 @@ QuickJSExtensionHost::QuickJSExtensionHost()
     : m_host(nullptr), m_mainWindow(nullptr), m_initialized(false) {}
 QuickJSExtensionHost::~QuickJSExtensionHost() {}
 
-VSCodeAPIResult QuickJSExtensionHost::initialize(Win32IDE* /*host*/, HWND /*mainWindow*/) {
-    return VSCodeAPIResult::error("QuickJS runtime not available (stub build)");
+VSCodeAPIResult QuickJSExtensionHost::initialize(Win32IDE* host, HWND mainWindow) {
+    // Even without QuickJS, store host context for native extension support
+    m_host = host;
+    m_mainWindow = mainWindow;
+    m_initialized = true;
+    OutputDebugStringA("[QuickJS] Stub mode — JS extensions unavailable, native extensions enabled");
+    return VSCodeAPIResult::ok("Initialized in native-only mode (QuickJS not linked)");
 }
 VSCodeAPIResult QuickJSExtensionHost::shutdown() {
+    m_initialized = false;
+    m_host = nullptr;
+    m_mainWindow = nullptr;
     return VSCodeAPIResult::ok("Stub shutdown");
 }
-VSCodeAPIResult QuickJSExtensionHost::installVSIX(const char*) {
-    return VSCodeAPIResult::error("QuickJS stub: installVSIX unavailable");
+VSCodeAPIResult QuickJSExtensionHost::installVSIX(const char* vsixPath) {
+    if (!vsixPath || !vsixPath[0]) {
+        return VSCodeAPIResult::error("installVSIX: null path");
+    }
+    // Check if the VSIX contains a native DLL component we can still load
+    // VSIX files are ZIP archives — check for .dll in the path
+    std::string path(vsixPath);
+    if (path.find(".dll") != std::string::npos || path.find(".DLL") != std::string::npos) {
+        HMODULE hMod = LoadLibraryA(vsixPath);
+        if (hMod) {
+            OutputDebugStringA(("[QuickJS Stub] Loaded native extension DLL: " + path).c_str());
+            return VSCodeAPIResult::ok("Native DLL extension loaded (QuickJS unavailable for JS)");
+        }
+    }
+    return VSCodeAPIResult::error("QuickJS stub: JS VSIX install unavailable — only native DLLs supported");
 }
-VSCodeAPIResult QuickJSExtensionHost::loadJSExtension(const char*, const char*, const VSCodeExtensionManifest*) {
-    return VSCodeAPIResult::error("QuickJS stub: loadJSExtension unavailable");
+VSCodeAPIResult QuickJSExtensionHost::loadJSExtension(const char* extId, const char* path, const VSCodeExtensionManifest* manifest) {
+    // Check if extension has a native entrypoint we can load without QuickJS
+    if (path) {
+        std::string p(path);
+        std::string dllPath = p + "/extension.dll";
+        if (GetFileAttributesA(dllPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            HMODULE hMod = LoadLibraryA(dllPath.c_str());
+            if (hMod) {
+                OutputDebugStringA(("[QuickJS Stub] Native component loaded for: " + std::string(extId ? extId : "unknown")).c_str());
+                return VSCodeAPIResult::ok("Native component loaded (JS runtime unavailable)");
+            }
+        }
+    }
+    return VSCodeAPIResult::error("QuickJS stub: JS extensions require QuickJS library");
 }
-VSCodeAPIResult QuickJSExtensionHost::activateExtension(const char*) {
+VSCodeAPIResult QuickJSExtensionHost::activateExtension(const char* extId) {
+    OutputDebugStringA(("[QuickJS Stub] Cannot activate JS extension: " + std::string(extId ? extId : "?")).c_str());
     return VSCodeAPIResult::error("QuickJS stub: activateExtension unavailable");
 }
-VSCodeAPIResult QuickJSExtensionHost::deactivateExtension(const char*) {
+VSCodeAPIResult QuickJSExtensionHost::deactivateExtension(const char* extId) {
+    OutputDebugStringA(("[QuickJS Stub] Deactivate request for: " + std::string(extId ? extId : "?")).c_str());
     return VSCodeAPIResult::error("QuickJS stub: deactivateExtension unavailable");
 }
 VSCodeAPIResult QuickJSExtensionHost::unloadExtension(const char*) {
@@ -61,23 +98,32 @@ VSCodeAPIResult QuickJSExtensionHost::reloadExtension(const char*) {
 QuickJSExtensionState QuickJSExtensionHost::getExtensionState(const char*) const {
     return QuickJSExtensionState::Unloaded;
 }
-bool QuickJSExtensionHost::isJSExtension(const char*) const { return false; }
+bool QuickJSExtensionHost::isJSExtension(const char* path) const {
+    // Even in stub mode, detect JS extensions to inform the user
+    if (!path) return false;
+    std::string p(path);
+    return (p.find(".js") != std::string::npos || p.find("package.json") != std::string::npos);
+}
 size_t QuickJSExtensionHost::getLoadedExtensionCount() const { return 0; }
 size_t QuickJSExtensionHost::getActiveExtensionCount() const { return 0; }
-void QuickJSExtensionHost::onActivationEvent(const char*) {}
-void QuickJSExtensionHost::onLanguageActivation(const char*) {}
+void QuickJSExtensionHost::onActivationEvent(const char* event) {
+    if (event) OutputDebugStringA(("[QuickJS Stub] Activation event ignored: " + std::string(event)).c_str());
+}
+void QuickJSExtensionHost::onLanguageActivation(const char* langId) {
+    if (langId) OutputDebugStringA(("[QuickJS Stub] Language activation ignored: " + std::string(langId)).c_str());
+}
 VSCodeAPIResult QuickJSExtensionHost::dispatchCallback(const char*, const QuickJSCallbackRef&, const char*) {
-    return VSCodeAPIResult::error("QuickJS stub");
+    return VSCodeAPIResult::error("QuickJS stub: no JS runtime for callbacks");
 }
 QuickJSHostStats QuickJSExtensionHost::getStats() const {
     QuickJSHostStats s{};
     return s;
 }
 void QuickJSExtensionHost::getStatusString(char* buf, size_t maxLen) const {
-    if (buf && maxLen > 0) snprintf(buf, maxLen, "QuickJS: STUB BUILD (not available)");
+    if (buf && maxLen > 0) snprintf(buf, maxLen, "QuickJS: STUB BUILD (native-only mode)");
 }
 void QuickJSExtensionHost::serializeStatsToJson(char* outJson, size_t maxLen) const {
-    if (outJson && maxLen > 0) snprintf(outJson, maxLen, "{\"stub\":true}");
+    if (outJson && maxLen > 0) snprintf(outJson, maxLen, "{\"stub\":true,\"native_only\":true,\"initialized\":%s}", m_initialized ? "true" : "false");
 }
 void QuickJSExtensionHost::setDefaultSandboxConfig(const QuickJSSandboxConfig& config) {
     m_defaultSandbox = config;

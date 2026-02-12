@@ -39,14 +39,14 @@ void Win32IDE::initVSCodeExtensionAPI() {
         api.registerCommand("rawrxd.openFile", [](void* ctx) {
             auto* ide = static_cast<Win32IDE*>(ctx);
             if (ide) {
-                PostMessage(ide->getMainWindow(), WM_COMMAND, MAKEWPARAM(1001, 0), 0); // IDM_FILE_OPEN
+                PostMessage(ide->getMainWindow(), WM_COMMAND, MAKEWPARAM(2002, 0), 0); // IDM_FILE_OPEN
             }
         }, this);
 
         api.registerCommand("rawrxd.saveFile", [](void* ctx) {
             auto* ide = static_cast<Win32IDE*>(ctx);
             if (ide) {
-                PostMessage(ide->getMainWindow(), WM_COMMAND, MAKEWPARAM(1002, 0), 0); // IDM_FILE_SAVE
+                PostMessage(ide->getMainWindow(), WM_COMMAND, MAKEWPARAM(2003, 0), 0); // IDM_FILE_SAVE
             }
         }, this);
 

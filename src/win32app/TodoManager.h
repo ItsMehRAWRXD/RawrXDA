@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <string>
 #include <vector>
+#include <functional>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;

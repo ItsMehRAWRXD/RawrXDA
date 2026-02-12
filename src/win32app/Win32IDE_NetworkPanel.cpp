@@ -326,7 +326,7 @@ static bool ensureNetworkPanelClass() {
     wc.lpfnWndProc   = networkPanelWndProc;
     wc.cbWndExtra    = sizeof(void*);
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(30, 30, 30));
     wc.lpszClassName  = NETWORK_PANEL_CLASS;
 
@@ -350,7 +350,7 @@ void Win32IDE::initNetworkPanel() {
 // Command Router
 // ============================================================================
 
-bool Win32IDE::handleNetworkPanelCommand(int commandId) {
+bool Win32IDE::handleNetworkCommand(int commandId) {
     if (!m_networkPanelInitialized) initNetworkPanel();
     switch (commandId) {
         case IDM_NETWORK_SHOW:       cmdNetworkShowPanel();   return true;

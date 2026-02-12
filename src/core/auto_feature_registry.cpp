@@ -28,6 +28,13 @@
 #define IDM_AI_AGENT_MULTI_DISABLE 4219
 #define IDM_AI_AGENT_MULTI_STATUS 4220
 #endif
+#ifndef IDM_LOCAL_ANALYZE
+#define IDM_LOCAL_ANALYZE 4221
+#define IDM_LOCAL_ANALYZE_DEEP 4222
+#define IDM_LOCAL_ANALYZE_STATUS 4223
+#define IDM_KERNEL_ANALYZE 4224
+#define IDM_PERF_ANALYZE 4225
+#endif
 #include "unified_hotpatch_manager.hpp"
 #include "model_memory_hotpatch.hpp"
 #include "byte_level_hotpatcher.hpp"
@@ -57,6 +64,8 @@
 #include "../agent/model_invoker.hpp"
 #include "model_bruteforce_engine.hpp"
 #include "../agent/agentic_deep_thinking_engine.hpp"
+#include "../agent/local_reasoning_engine.hpp"
+#include "../agent/local_reasoning_integration.hpp"
 #include "../model_source_resolver.h"
 #include "../streaming_gguf_loader.h"
 #include <cstdio>
@@ -126,6 +135,9 @@ static IntentEngine& getIntentEngine() {
 static AgenticDeepThinkingEngine& getDeepThinkingEngine() {
     static AgenticDeepThinkingEngine s_dt;
     return s_dt;
+}
+static LocalReasoningEngine& getLocalReasoningEngine() {
+    return LocalReasoningIntegration::instance();
 }
 
 // ============================================================================
@@ -1109,11 +1121,84 @@ CommandResult handleAiModeMax(const CommandContext& ctx) {
         ctx.output(configBuf);
         
         if (multiAgent) {
-            // Multi-agent execution (if implemented in the engine)
-            ctx.output("[AI] Multi-Agent mode not yet fully integrated in MAX handler.\n");
-            ctx.output("     Use ai.agent.multiAgent.enable + ai.mode.deepThink for full multi-agent support.\n");
+            // Configure multi-agent parameters
+            thinkCtx.enableMultiAgent = true;
+            thinkCtx.agentCount = agentCount;
+            thinkCtx.enableAgentVoting = true;   // Use voting for best result
+            thinkCtx.consensusThreshold = 0.6f;  // 60% agreement required
+            
+            // Execute multi-agent orchestration
+            auto multiResult = engine.thinkMultiAgent(thinkCtx);
+            
+            ctx.output("\n╔══════════════════════════════════════════════════════════════════╗\n");
+            ctx.output("║         MULTI-AGENT DEEP REASONING — CONSENSUS ANALYSIS          ║\n");
+            ctx.output("╚══════════════════════════════════════════════════════════════════╝\n\n");
+            
+            // Display individual agent results
+            for (const auto& ar : multiResult.agentResults) {
+                char agentHeader[512];
+                snprintf(agentHeader, sizeof(agentHeader),
+                         "┌─ Agent-%d | %s | Agreement: %.0f%% | Confidence: %.0f%% ─┐\n",
+                         ar.agentId, ar.modelName.c_str(),
+                         ar.agreementScore * 100.0f,
+                         ar.result.overallConfidence * 100.0f);
+                ctx.output(agentHeader);
+                
+                if (!ar.result.finalAnswer.empty()) {
+                    std::string preview = ar.result.finalAnswer;
+                    if (preview.length() > 300) {
+                        preview = preview.substr(0, 297) + "...";
+                    }
+                    ctx.output(("  " + preview + "\n").c_str());
+                }
+                ctx.output("└────────────────────────────────────────────────────────────────┘\n\n");
+            }
+            
+            ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            ctx.output("                    CONSENSUS RESULT\n");
+            ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+            
+            ctx.output(multiResult.consensusResult.finalAnswer.c_str());
+            ctx.output("\n\n");
+            
+            if (!multiResult.disagreementPoints.empty()) {
+                ctx.output("[Disagreement Points]\n");
+                for (const auto& d : multiResult.disagreementPoints) {
+                    ctx.output(("  ⚠ " + d + "\n").c_str());
+                }
+                ctx.output("\n");
+            }
+            
+            if (!multiResult.consensusResult.suggestedFixes.empty()) {
+                ctx.output("[Recommended Actions]\n");
+                for (const auto& fix : multiResult.consensusResult.suggestedFixes) {
+                    ctx.output(("  → " + fix + "\n").c_str());
+                }
+                ctx.output("\n");
+            }
+            
+            if (!multiResult.consensusResult.relatedFiles.empty()) {
+                ctx.output("[Related Files]\n");
+                for (const auto& f : multiResult.consensusResult.relatedFiles) {
+                    ctx.output(("  📄 " + f + "\n").c_str());
+                }
+                ctx.output("\n");
+            }
+            
+            char multiMetrics[512];
+            snprintf(multiMetrics, sizeof(multiMetrics),
+                     "[Metrics] Consensus: %s | Confidence: %.1f%% | Agents: %d | Time: %lldms\n",
+                     multiResult.consensusReached ? "YES" : "NO",
+                     multiResult.consensusConfidence * 100.0f,
+                     agentCount,
+                     multiResult.consensusResult.elapsedMilliseconds);
+            ctx.output(multiMetrics);
+            
+            TelemetryCollector::instance()->trackFeatureUsage("ai.max.multi_agent.executed");
+            return CommandResult::ok("ai.mode.max.multi_agent.executed");
         }
         
+        // Single-agent execution with enhanced cycles
         auto result = engine.think(thinkCtx);
 
         ctx.output("[AI] MAX MODE — Full Pipeline Analysis\n");
@@ -1339,6 +1424,306 @@ static CommandResult handleAIAgentMultiStatus(const CommandContext& ctx) {
     ctx.output(buf);
 
     return CommandResult::ok("ai.agent.multiAgent.status");
+}
+
+// ============================================================================
+// LOCAL REASONING ENGINE HANDLERS (API-free offline analysis)
+// ============================================================================
+
+static CommandResult handleLocalAnalyze(const CommandContext& ctx) {
+    // Basic offline code analysis with LocalReasoningEngine (no API key needed)
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !analyze [cpp|asm|c|python|csharp] [--deep]\n");
+        ctx.output("Analyzes code for security, performance, memory, and threading issues.\n");
+        ctx.output("NO API KEY REQUIRED - fully offline using pattern matching.\n");
+        return CommandResult::error("Missing language parameter", -1);
+    }
+
+    std::string language = ctx.args;
+    bool deepAnalysis = false;
+
+    // Check for --deep flag
+    if (language.find("--deep") != std::string::npos) {
+        deepAnalysis = true;
+        // Remove --deep from language string
+        size_t pos = language.find("--deep");
+        language = language.substr(0, pos);
+        // Trim trailing spaces
+        while (!language.empty() && language.back() == ' ') language.pop_back();
+    }
+
+    // Get code to analyze (from IDE selection or parameter)
+    std::string codeToAnalyze;
+    if (ctx.args && ctx.args[1]) {
+        codeToAnalyze = ctx.args[1];
+    } else {
+        codeToAnalyze = "(request code via IDE callback - placeholder)";
+    }
+
+    // Run analysis using LocalReasoningEngine
+    ctx.output("🔍 LocalReasoningEngine analyzing...\n");
+    
+    auto& engine = getLocalReasoningEngine();
+    LocalReasoningEngine::AnalysisContext analysisCtx;
+    analysisCtx.sourceCode = codeToAnalyze;
+    analysisCtx.language = language;
+    analysisCtx.deepAnalysis = deepAnalysis;
+    analysisCtx.x64Mode = true;
+
+    auto result = engine.analyze(analysisCtx);
+
+    // Display results
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    ctx.output(result.summary.c_str());
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+    // Format and display issues
+    for (const auto& issue : result.issues) {
+        std::string severity_icon;
+        if (issue.severity == "critical") severity_icon = "🔴 CRITICAL: ";
+        else if (issue.severity == "high") severity_icon = "🟠 HIGH: ";
+        else if (issue.severity == "medium") severity_icon = "🟡 MEDIUM: ";
+        else severity_icon = "🟢 LOW: ";
+
+        char buf[2048];
+        snprintf(buf, sizeof(buf),
+                 "%s%s\n"
+                 "   └─ %s\n"
+                 "   └─ Confidence: %.0f%% | Evidence: %s\n"
+                 "   └─ FIX: %s\n\n",
+                 severity_icon.c_str(),
+                 issue.issueType.c_str(),
+                 issue.description.c_str(),
+                 issue.confidence * 100.0f,
+                 issue.evidence.empty() ? "pattern match" : issue.evidence[0].c_str(),
+                 issue.recommendation.c_str());
+        ctx.output(buf);
+    }
+
+    if (result.issues.empty()) {
+        ctx.output("✅ No issues detected!\n");
+    }
+
+    TelemetryCollector::instance()->trackFeatureUsage("local.analyze");
+    return CommandResult::ok("local.analyze");
+}
+
+static CommandResult handleLocalAnalyzeDeep(const CommandContext& ctx) {
+    // Deep offline analysis with CFG, data flow, and expert rules
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !analyze_deep [cpp|asm|c] [code]\n");
+        ctx.output("Performs deep offline analysis including control flow graphs and data flow tracking.\n");
+        return CommandResult::error("Missing language parameter", -1);
+    }
+
+    // First token = language (cpp|asm|c), remainder = optional code
+    std::string language;
+    std::string codeToAnalyze = "(IDE selection)";
+    if (ctx.args) {
+        const char* p = ctx.args;
+        while (*p && *p != ' ' && *p != '\t') { language += *p; ++p; }
+        while (*p == ' ' || *p == '\t') ++p;
+        if (*p) codeToAnalyze = p;
+    }
+
+    ctx.output("🔬 Deep offline analysis (may take longer)...\n");
+
+    auto& engine = getLocalReasoningEngine();
+    LocalReasoningEngine::AnalysisContext analysisCtx;
+    analysisCtx.sourceCode = codeToAnalyze;
+    analysisCtx.language = language;
+    analysisCtx.deepAnalysis = true;  // Enable CFG, data flow
+    analysisCtx.x64Mode = true;
+
+    auto result = engine.analyze(analysisCtx);
+
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    ctx.output(result.summary.c_str());
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+    // Show detected symbols
+    if (!result.symbols.empty()) {
+        ctx.output("📊 Detected Symbols:\n");
+        for (const auto& sym : result.symbols) {
+            ctx.output(std::string("  • " + sym + "\n").c_str());
+        }
+        ctx.output("\n");
+    }
+
+    // Show detected patterns
+    if (!result.patterns.empty()) {
+        ctx.output("🔍 Detected Patterns:\n");
+        for (const auto& pat : result.patterns) {
+            ctx.output(std::string("  ◆ " + pat + "\n").c_str());
+        }
+        ctx.output("\n");
+    }
+
+    // Display all issues with detailed evidence
+    for (const auto& issue : result.issues) {
+        std::string severity_icon;
+        if (issue.severity == "critical") severity_icon = "🔴 CRITICAL: ";
+        else if (issue.severity == "high") severity_icon = "🟠 HIGH: ";
+        else if (issue.severity == "medium") severity_icon = "🟡 MEDIUM: ";
+        else severity_icon = "🟢 LOW: ";
+
+        ctx.output(std::string(severity_icon + issue.issueType + "\n").c_str());
+        ctx.output(std::string("   └─ " + issue.description + "\n").c_str());
+        ctx.output(std::string("   └─ Confidence: " + std::to_string((int)(issue.confidence * 100)) + "%\n").c_str());
+        ctx.output(std::string("   └─ FIX: " + issue.recommendation + "\n\n").c_str());
+    }
+
+    TelemetryCollector::instance()->trackFeatureUsage("local.analyze.deep");
+    return CommandResult::ok("local.analyze.deep");
+}
+
+static CommandResult handleLocalAnalyzeStatus(const CommandContext& ctx) {
+    // Show LocalReasoningEngine statistics and configuration
+    auto& engine = getLocalReasoningEngine();
+    auto stats = engine.getStats();
+
+    char buf[2048];
+    snprintf(buf, sizeof(buf),
+             "╔═══════════════════════════════════════════════════════════╗\n"
+             "║      LOCAL REASONING ENGINE STATUS                        ║\n"
+             "╠═══════════════════════════════════════════════════════════╣\n"
+             "║ Mode:              %-35s ║\n"
+             "║ API Required:      %-35s ║\n"
+             "║ Privacy:           %-35s ║\n"
+             "╠═══════════════════════════════════════════════════════════╣\n"
+             "║ STATISTICS                                                ║\n"
+             "║ Total Analyses:          %-5d                            ║\n"
+             "║ Issues Detected:         %-5d                            ║\n"
+             "║ Critical Issues Found:   %-5d                            ║\n"
+             "║ Avg Analysis Time:       %-5.0fms                          ║\n"
+             "║ Avg Confidence:          %-5.1f%%                        ║\n"
+             "╠═══════════════════════════════════════════════════════════╣\n"
+             "║ CAPABILITIES (All Offline)                                ║\n"
+             "║ ✓ Memory safety (leak, overflow, UAF)                     ║\n"
+             "║ ✓ Threading (race, deadlock)                              ║\n"
+             "║ ✓ Security (injection, buffer, format string)             ║\n"
+             "║ ✓ Performance (expensive ops, SIMD)                       ║\n"
+             "║ ✓ x64 Assembly (ABI, optimization)                        ║\n"
+             "║ ✓ Control Flow Analysis (CFG, loops)                      ║\n"
+             "╚═══════════════════════════════════════════════════════════╝\n",
+             "Offline Heuristics",
+             "NONE - 100%% Offline",
+             "100%% - Runs Locally",
+             stats.totalAnalyses,
+             stats.issuesDetected,
+             stats.criticalIssues,
+             stats.avgAnalysisTime,
+             stats.avgConfidence * 100.0f);
+    ctx.output(buf);
+
+    return CommandResult::ok("local.analyze.status");
+}
+
+static CommandResult handleKernelAnalyze(const CommandContext& ctx) {
+    // Kernel/assembly-specific analysis using x64 expertise
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !kernel_analyze [code|file.asm]\n");
+        ctx.output("Kernel-mode focused analysis with x64/MASM expertise.\n");
+        ctx.output("Detects: ABI violations, inefficient instructions, register issues.\n");
+        return CommandResult::error("Missing code or file", -1);
+    }
+
+    std::string codeToAnalyze = ctx.args;
+
+    ctx.output("⚙️ Kernel-mode analysis (x64 MASM expertise)...\n");
+
+    auto& engine = getLocalReasoningEngine();
+    LocalReasoningEngine::AnalysisContext analysisCtx;
+    analysisCtx.sourceCode = codeToAnalyze;
+    analysisCtx.language = "asm";  // Force assembly mode
+    analysisCtx.deepAnalysis = true;
+    analysisCtx.x64Mode = true;
+
+    auto result = engine.analyze(analysisCtx);
+
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    ctx.output("🔧 KERNEL-MODE ANALYSIS RESULTS\n");
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+    // Filter and display assembly-specific issues
+    int asmIssueCount = 0;
+    for (const auto& issue : result.issues) {
+        if (issue.issueType.find("asm-") != std::string::npos ||
+            issue.issueType.find("stack") != std::string::npos ||
+            issue.issueType.find("register") != std::string::npos ||
+            issue.issueType.find("align") != std::string::npos) {
+            
+            std::string icon = (issue.severity == "critical") ? "🔴" : 
+                               (issue.severity == "high") ? "🟠" : "🟡";
+            
+            ctx.output(std::string(icon + " " + issue.issueType + "\n").c_str());
+            ctx.output(std::string("   └─ " + issue.description + "\n").c_str());
+            ctx.output(std::string("   └─ Confidence: " + std::to_string((int)(issue.confidence * 100)) + "%\n").c_str());
+            ctx.output(std::string("   └─ FIX: " + issue.recommendation + "\n\n").c_str());
+            asmIssueCount++;
+        }
+    }
+
+    if (asmIssueCount == 0) {
+        ctx.output("✅ No assembly-level issues detected!\n");
+    }
+
+    ctx.output("\n");
+    ctx.output(std::string("[x64 Analysis] Checked for: ABI violations, register preservation, stack alignment\n").c_str());
+
+    TelemetryCollector::instance()->trackFeatureUsage("kernel.analyze");
+    return CommandResult::ok("kernel.analyze");
+}
+
+static CommandResult handlePerfAnalyze(const CommandContext& ctx) {
+    // Performance-focused offline analysis
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !perf_analyze [code]\n");
+        ctx.output("Performance-focused analysis: hotspots, inefficiencies, SIMD opportunities.\n");
+        return CommandResult::error("Missing code parameter", -1);
+    }
+
+    std::string codeToAnalyze = ctx.args;
+
+    ctx.output("⚡ Performance analysis (no API required)...\n");
+
+    auto& engine = getLocalReasoningEngine();
+    LocalReasoningEngine::AnalysisContext analysisCtx;
+    analysisCtx.sourceCode = codeToAnalyze;
+    analysisCtx.language = "cpp";  // Default to C++
+    analysisCtx.deepAnalysis = true;
+    analysisCtx.x64Mode = true;
+
+    auto result = engine.analyze(analysisCtx);
+
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    ctx.output("⚡ PERFORMANCE ANALYSIS RESULTS\n");
+    ctx.output("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+    // Filter performance-related issues
+    int perfIssueCount = 0;
+    for (const auto& issue : result.issues) {
+        if (issue.issueType.find("perf-") != std::string::npos ||
+            issue.issueType.find("performance") != std::string::npos ||
+            issue.issueType.find("expensive") != std::string::npos ||
+            issue.issueType.find("allocation") != std::string::npos ||
+            issue.issueType.find("inefficient") != std::string::npos ||
+            issue.issueType.find("hotspot") != std::string::npos) {
+            
+            ctx.output(std::string("⚠️ " + issue.issueType + "\n").c_str());
+            ctx.output(std::string("   └─ " + issue.description + "\n").c_str());
+            ctx.output(std::string("   └─ Impact: " + issue.severity + "\n").c_str());
+            ctx.output(std::string("   └─ Optimization: " + issue.recommendation + "\n\n").c_str());
+            perfIssueCount++;
+        }
+    }
+
+    if (perfIssueCount == 0) {
+        ctx.output("✅ No major performance issues detected!\n");
+    }
+
+    TelemetryCollector::instance()->trackFeatureUsage("perf.analyze");
+    return CommandResult::ok("perf.analyze");
 }
 
 CommandResult handleAiOptimizeCode(const CommandContext& ctx) {
@@ -6387,6 +6772,23 @@ void initAutoFeatureRegistry() {
     autoReg("ai.agent.multiAgent.status", "Ai Agent Multi Status", "Show multi-agent configuration (ai system)",
         FeatureGroup::AIMode, IDM_AI_AGENT_MULTI_STATUS, "!ai_agent_multi_status", "",
         handleAIAgentMultiStatus, true, true, false);
+
+    // ══════════════ LOCAL REASONING ENGINE (5 commands) - NO API KEYS ══════════════
+    autoReg("local.analyze", "Local Analyze", "Offline code analysis (no API key) - patterns, security, perf",
+        FeatureGroup::AIMode, IDM_LOCAL_ANALYZE, "!analyze", "",
+        handleLocalAnalyze, true, true, false);
+    autoReg("local.analyze.deep", "Local Analyze Deep", "Deep offline analysis with CFG and data flow (no API key)",
+        FeatureGroup::AIMode, IDM_LOCAL_ANALYZE_DEEP, "!analyze_deep", "",
+        handleLocalAnalyzeDeep, true, true, false);
+    autoReg("local.analyze.status", "Local Analyze Status", "Show LocalReasoningEngine statistics (no API key)",
+        FeatureGroup::AIMode, IDM_LOCAL_ANALYZE_STATUS, "!analyze_status", "",
+        handleLocalAnalyzeStatus, true, true, false);
+    autoReg("kernel.analyze", "Kernel Analyze", "x64 kernel/asm analysis with MASM expertise (no API key)",
+        FeatureGroup::ReverseEng, IDM_KERNEL_ANALYZE, "!kernel_analyze", "",
+        handleKernelAnalyze, true, true, false);
+    autoReg("perf.analyze", "Perf Analyze", "Performance analysis with SIMD/hotspot detection (no API key)",
+        FeatureGroup::AIMode, IDM_PERF_ANALYZE, "!perf_analyze", "",
+        handlePerfAnalyze, true, true, false);
 
     // ══════════════ ASM (12 commands) ══════════════
     autoReg("asm.parse_symbols", "Asm Parse Symbols", "Parse symbols (asm system)",

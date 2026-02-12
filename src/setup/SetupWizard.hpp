@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 #include <functional>
+#include <atomic>
 
 namespace rawrxd::setup {
 
@@ -130,20 +131,32 @@ enum WizardPageId {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Wizard page base (Qt-free: Win32/C++20)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+struct WizardPageBase {
+    virtual ~WizardPageBase() = default;
+    virtual void initializePage() {}
+    virtual bool isComplete() const { return true; }
+    virtual bool validatePage() { return true; }
+    void setTitle(const char*) {}
+    void setSubTitle(const char*) {}
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Introduction Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class IntroPage {public:
+class IntroPage : public WizardPageBase {
+public:
     explicit IntroPage(void* parent = nullptr);
-    
     void initializePage() override;
     bool isComplete() const override;
 
 private:
-    void* m_welcomeLabel;
-    void* m_descriptionLabel;
-    void* m_acceptTermsCheck;
-    
+    void* m_welcomeLabel = nullptr;
+    void* m_descriptionLabel = nullptr;
+    void* m_acceptTermsCheck = nullptr;
     void setupUI();
 };
 
@@ -151,19 +164,18 @@ private:
 // Hardware Detection Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class HardwarePage {public:
+class HardwarePage : public WizardPageBase {
+public:
     explicit HardwarePage(void* parent = nullptr);
     ~HardwarePage();
-    
     void initializePage() override;
     bool isComplete() const override;
     bool validatePage() override;
-    
     DetectedHardware getDetectedHardware() const { return m_hardware; }
+    void hardwareDetectionComplete(bool success);
 
-\npublic:\n    void hardwareDetectionComplete(bool success);
-
-\nprivate:\n    void startDetection();
+private:
+    void startDetection();
     void onDetectionProgress(int percent, const std::string& status);
     void onDetectionComplete(const DetectedHardware& hardware);
     void onDetectionError(const std::string& error);
@@ -192,15 +204,15 @@ private:
 // Thermal Configuration Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class ThermalPage {public:
+class ThermalPage : public WizardPageBase {
+public:
     explicit ThermalPage(void* parent = nullptr);
-    
     void initializePage() override;
     bool validatePage() override;
-    
     ThermalConfig getThermalConfig() const { return m_config; }
 
-\nprivate:\n    void onModeChanged(int index);
+private:
+    void onModeChanged(int index);
     void onAdvancedToggled(bool checked);
     void updatePreview();
 
@@ -225,22 +237,21 @@ private:
 // Security Configuration Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class SecurityPage {public:
+class SecurityPage : public WizardPageBase {
+public:
     explicit SecurityPage(void* parent = nullptr);
-    
     void initializePage() override;
     bool validatePage() override;
-    
     std::string getEntropyKey() const { return m_entropyKey; }
     bool isHardwareBindingEnabled() const { return m_hardwareBinding; }
 
-\nprivate:\n    void generateKey();
+private:
+    void generateKey();
     void importKey();
     void exportKey();
 
-private:
-    void* m_keyLabel;
-    voidEdit* m_keyDisplay;
+    void* m_keyLabel = nullptr;
+    void* m_keyDisplay = nullptr;
     void* m_generateButton;
     void* m_importButton;
     void* m_exportButton;
@@ -260,9 +271,9 @@ private:
 // Summary Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class SummaryPage {public:
+class SummaryPage : public WizardPageBase {
+public:
     explicit SummaryPage(void* parent = nullptr);
-    
     void initializePage() override;
 
 private:
@@ -279,12 +290,13 @@ private:
 // Completion Page
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class CompletePage {public:
+class CompletePage : public WizardPageBase {
+public:
     explicit CompletePage(void* parent = nullptr);
-    
     void initializePage() override;
 
-\nprivate:\n    void onInstallProgress(int percent, const std::string& status);
+private:
+    void onInstallProgress(int percent, const std::string& status);
     void onInstallComplete(bool success);
 
 private:
@@ -308,25 +320,23 @@ private:
 /**
  * @brief Main setup wizard class
  */
-class SetupWizard {public:
+class SetupWizard {
+public:
     explicit SetupWizard(void* parent = nullptr);
     ~SetupWizard();
-    
-    // Configuration access
     DetectedHardware getHardware() const;
     ThermalConfig getThermalConfig() const;
     std::string getEntropyKey() const;
     std::string getConfigPath() const { return m_configPath; }
-
-\npublic:\n    void setupComplete(bool success);
+    void setupComplete(bool success);
     void configurationSaved(const std::string& path);
-
-\npublic:\n    void saveConfiguration();
+    void saveConfiguration();
 
 protected:
-    void done(int result) override;
+    void done(int result);
 
-\nprivate:\n    void onPageChanged(int id);
+private:
+    void onPageChanged(int id);
     void onHelpRequested();
 
 private:
@@ -352,18 +362,21 @@ private:
 /**
  * @brief Background hardware detection worker
  */
-class HardwareDetector  {public:
-    explicit HardwareDetector( = nullptr);
-    
-\npublic:\n    void detect();
+class HardwareDetector {
+public:
+    explicit HardwareDetector(void* parent = nullptr);
+    void detect();
     void cancel();
-
-\npublic:\n    void progress(int percent, const std::string& status);
+    void progress(int percent, const std::string& status);
     void complete(const DetectedHardware& hardware);
     void error(const std::string& message);
 
+    std::function<void(int, const std::string&)> on_progress;
+    std::function<void(const DetectedHardware&)> on_complete;
+    std::function<void(const std::string&)> on_error;
+
 private:
-    bool m_cancelled = false;
+    std::atomic<bool> m_cancelled{false};
     
     CPUInfo detectCPU();
     std::vector<DriveInfo> detectDrives();

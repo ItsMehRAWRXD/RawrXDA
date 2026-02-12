@@ -84,15 +84,21 @@ struct CommandContext {
     uint32_t      commandId;     // IDM_* for GUI dispatch, 0 for CLI
     bool          isGui;         // true = Win32 GUI, false = CLI
     bool          isHeadless;    // true = headless/test mode
-    
+#ifdef _WIN32
+    void*         hwnd;          // Main window HWND when isGui (optional)
+#else
+    void*         hwnd;          // Unused on non-Win32
+#endif
+    void (*emitEvent)(const char* eventName, const char* payload);  // Optional telemetry/UI event
+
     // Output callback — CLI prints to stdout, GUI shows in status/panel
     void (*outputFn)(const char* text, void* userData);
     void* outputUserData;
-    
+
     void output(const char* text) const {
         if (outputFn) outputFn(text, outputUserData);
     }
-    
+
     void outputLine(const std::string& text) const {
         if (outputFn) {
             std::string line = text + "\n";

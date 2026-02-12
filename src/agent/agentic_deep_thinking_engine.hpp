@@ -42,6 +42,15 @@ public:
         bool deepResearch = false;
         bool allowSelfCorrection = true;
         int maxIterations = 5;
+        
+        // Enhanced multi-agent features
+        int cycleMultiplier = 1;           // 1x-8x multiplier for iteration depth (5x8=40, 10x8=80)
+        bool enableMultiAgent = false;     // Enable parallel multi-agent execution
+        int agentCount = 1;                // Number of parallel agents (1-8)
+        std::vector<std::string> agentModels;  // Specific models for multi-agent (empty = use default)
+        bool enableAgentDebate = false;    // Enable agents to critique each other's work
+        bool enableAgentVoting = false;    // Use voting to select best answer from multi-agent results
+        float consensusThreshold = 0.7f;   // Required agreement ratio for consensus (0.5-1.0)
     };
 
     struct ReasoningStep {
@@ -103,6 +112,24 @@ public:
     void clearMemory();
     std::vector<std::pair<std::string, int>> getMostUsedPatterns() const;
 
+    // Multi-agent execution
+    struct AgentResult {
+        int agentId;
+        std::string modelName;
+        ThinkingResult result;
+        float agreementScore;  // How much this agent agrees with others
+    };
+    
+    struct MultiAgentResult {
+        std::vector<AgentResult> agentResults;
+        ThinkingResult consensusResult;  // Merged result from all agents
+        std::vector<std::string> disagreementPoints;  // Where agents disagreed
+        float consensusConfidence;  // Overall consensus confidence
+        bool consensusReached;
+    };
+    
+    MultiAgentResult thinkMultiAgent(const ThinkingContext& context);
+    
     // Statistics
     struct ThinkingStats {
         int totalThinkingRequests = 0;
@@ -112,6 +139,12 @@ public:
         float avgConfidence = 0.0f;
         int cacheHits = 0;
         std::map<ThinkingStep, int> stepFrequency;
+        
+        // Multi-agent stats
+        int multiAgentRequests = 0;
+        int consensusReached = 0;
+        float avgConsensusConfidence = 0.0f;
+        int totalAgentsSpawned = 0;
     };
     ThinkingStats getStats() const;
     void resetStats();
@@ -161,6 +194,13 @@ private:
     std::vector<std::string> findCommonPatterns(const std::vector<std::string>& codeSnippets);
     std::string identifyBestMatch(const std::string& query, const std::vector<std::string>& candidates);
 
+    // Multi-agent coordination
+    AgentResult runSingleAgent(int agentId, const std::string& model, const ThinkingContext& context);
+    ThinkingResult mergeAgentResults(const std::vector<AgentResult>& results, const ThinkingContext& context);
+    std::vector<std::string> findDisagreements(const std::vector<AgentResult>& results);
+    float calculateAgreement(const AgentResult& a1, const AgentResult& a2);
+    AgentResult selectBestByVoting(const std::vector<AgentResult>& results);
+    
     // Confidence calculation
     float calculateStepConfidence(const ReasoningStep& step);
     float calculateOverallConfidence(const std::vector<ReasoningStep>& steps);

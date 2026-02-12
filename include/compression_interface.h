@@ -77,13 +77,12 @@ private:
 
 /**
  * @class DeflateWrapper
- * @brief Wrapper around deflate_brutal_qt.hpp (MASM-optimized deflate)
+ * @brief Wrapper around deflate_brutal_std.hpp (MASM-optimized deflate, Qt-free)
  * 
- * This class wraps the deflate decompression with Qt integration:
+ * This class wraps the deflate decompression with STL integration:
  * - MASM-optimized deflate kernels (deflate_brutal_masm.asm)
  * - Full zlib/deflate compatibility
- * - Qt-friendly error handling and logging
- * - Automatic memory management
+ * - std::vector-based API; no Qt
  * 
  * Performance characteristics:
  * - Decompression: ~450 MB/s on modern CPUs

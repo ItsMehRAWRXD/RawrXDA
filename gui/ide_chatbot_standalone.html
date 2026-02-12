@@ -9853,7 +9853,7 @@
         iframe.id = 'ghostIdeFrame';
         iframe.src = State.ghost.ideUrl;
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
-        iframe.setAttribute('allow', 'clipboard-read; clipboard-write');
+        iframe.setAttribute('allow', 'clipboard-read; clipboard-write; microphone');
         iframe.onload = function () {
           logDebug('\uD83D\uDC7B Ghost iframe loaded: ' + State.ghost.ideUrl, 'info');
           var dot = document.getElementById('ghostDot');
@@ -21576,7 +21576,7 @@
       // Create new iframe
       var iframe = document.createElement('iframe');
       iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
-      iframe.allow = 'clipboard-read; clipboard-write';
+      iframe.allow = 'clipboard-read; clipboard-write; microphone';
       iframe.referrerPolicy = 'no-referrer';
       iframe.src = url;
       iframe.style.width = '100%';

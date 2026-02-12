@@ -735,8 +735,33 @@ void Win32IDE::syncLicenseWithManifest() {
     std::vector<std::string> results;
     runFeatureSelfTests(results);
 
+    // Parse self-test results to count license status
+    for (const auto& result : results) {
+        total++;
+        // Extract feature ID from test result and check license
+        // Results are formatted as "[PASS] feature_name" or "[FAIL] feature_name"
+        size_t bracketEnd = result.find(']');
+        if (bracketEnd != std::string::npos && bracketEnd + 2 < result.size()) {
+            std::string featureId = result.substr(bracketEnd + 2);
+            // Trim whitespace
+            size_t start = featureId.find_first_not_of(" \t");
+            if (start != std::string::npos) featureId = featureId.substr(start);
+            size_t end = featureId.find_first_of(" \t\n");
+            if (end != std::string::npos) featureId = featureId.substr(0, end);
+
+            if (RawrLicense_CheckFeature(featureId.c_str()) != 0) {
+                licensed++;
+            } else {
+                unlicensed++;
+                appendToOutput("  🔒 Restricted: " + featureId + "\n",
+                              "Output", OutputSeverity::Warning);
+            }
+        }
+    }
+
     appendToOutput("🔑 License ↔ Manifest sync complete: " + 
                   std::to_string(licensed) + " licensed, " +
-                  std::to_string(unlicensed) + " restricted\n",
+                  std::to_string(unlicensed) + " restricted (of " +
+                  std::to_string(total) + " total)\n",
                   "Output", OutputSeverity::Info);
 }

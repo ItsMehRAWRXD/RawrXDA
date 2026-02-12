@@ -14,6 +14,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include <richedit.h>
 #include <sstream>
 #include <iomanip>
 #include <fstream>
@@ -308,7 +309,7 @@ static LRESULT CALLBACK crashDialogWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
         LoadLibraryW(L"Msftedit.dll");
         s_hwndCrashTrace = CreateWindowExW(
             WS_EX_CLIENTEDGE,
-            MSFTEDIT_CLASS,
+            L"RICHEDIT50W",
             L"",
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL |
             ES_MULTILINE | ES_READONLY | ES_AUTOHSCROLL | ES_AUTOVSCROLL,
@@ -493,7 +494,7 @@ static bool ensureCrashDialogClass() {
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = crashDialogWndProc;
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(37, 37, 38));
     wc.lpszClassName  = CRASH_DIALOG_CLASS;
 

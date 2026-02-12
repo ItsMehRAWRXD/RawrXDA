@@ -1,4 +1,10 @@
-
+; =============================================================================
+; RawrXD_Complete_ReverseEngineered.asm - fragment: INFINITY_Shutdown + Scheduler
+; =============================================================================
+.CODE
+INFINITY_Shutdown PROC FRAME
+    push rbx rsi rdi r12 r13 r14 r15
+free_slots:
     cmp r12d, [r15].INFINITY_STREAM_FULL.slot_count
     jge slots_freed
 

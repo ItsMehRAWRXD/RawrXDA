@@ -25,6 +25,8 @@ public:
     struct Function {
         uint64_t startAddress;
         uint64_t endAddress;
+        uint64_t entryPoint;    // Compatibility: same as startAddress
+        size_t   size;         // Compatibility: endAddress - startAddress (set by analyzer)
         std::string name;
         std::vector<Instruction> instructions;
         std::vector<uint64_t> callers;

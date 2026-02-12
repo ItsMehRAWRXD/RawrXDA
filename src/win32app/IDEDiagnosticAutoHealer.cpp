@@ -184,7 +184,7 @@ HRESULT IDEDiagnosticAutoHealer::ExecuteIDELaunch() {
     
     if (m_ideProcessId == 0) {
         OutputDebugStringW(L"[AutoHealer] Failed to launch IDE\n");
-        return E_PROCESS_CREATION_FAILED;
+        return static_cast<HRESULT>(0x80070001);  // E_PROCESS_CREATION_FAILED
     }
     
     wchar_t msg[256];
@@ -210,7 +210,7 @@ void IDEDiagnosticAutoHealer::ApplyHealing(HealingStrategy strategy) {
     
     wchar_t msg[256];
     swprintf_s(msg, 256, L"[AutoHealer] Applying healing strategy: %d (attempt %d)\n", 
-               static_cast<int>(strategy), m_healingAttempts);
+               static_cast<int>(strategy), m_healingAttempts.load());
     OutputDebugStringW(msg);
     
     switch (strategy) {

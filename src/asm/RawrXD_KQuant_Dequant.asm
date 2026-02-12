@@ -411,7 +411,7 @@ KQuant_DequantizeQ5_K PROC FRAME
     ; High 2 bits
     mov     ecx, r8d
     shr     ecx, 2
-    movzx   edx, byte ptr [rbx + 8 + ecx]
+    movzx   edx, byte ptr [rbx + 8 + rcx]
     mov     ecx, r8d
     and     ecx, 3
     shl     ecx, 1
@@ -428,7 +428,7 @@ KQuant_DequantizeQ5_K PROC FRAME
     ; Decode 6-bit min similarly
     mov     ecx, r8d
     shr     ecx, 1
-    movzx   eax, byte ptr [rbx + 4 + ecx]
+    movzx   eax, byte ptr [rbx + 4 + rcx]
     test    r8d, 1
     jz      @q5k_lo_nibble_m
     shr     eax, 4
@@ -436,7 +436,7 @@ KQuant_DequantizeQ5_K PROC FRAME
     and     eax, 0Fh
     mov     ecx, r8d
     shr     ecx, 2
-    movzx   edx, byte ptr [rbx + 10 + ecx]
+    movzx   edx, byte ptr [rbx + 10 + rcx]
     mov     ecx, r8d
     and     ecx, 3
     shl     ecx, 1

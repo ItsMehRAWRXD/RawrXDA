@@ -68,6 +68,11 @@ if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
     message(STATUS "[SDK Fix] MT      = ${_SDK_BIN}/mt.exe")
 endif()
 
+# Force Windows SDK version for VS generator (avoid 10.0.26100.0 if not installed)
+if(WIN32)
+    set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.22621.0" CACHE STRING "Windows SDK version for VS generator" FORCE)
+endif()
+
 project(RawrEngine VERSION 7.4.0 LANGUAGES C CXX)
 
 # Default to Release builds (prevents /RTC1 + /O2 clash on Ninja single-config)
@@ -178,7 +183,7 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_Snapshot.asm
         src/asm/RawrXD_Pyre_Compute.asm
         src/asm/vision_projection_kernel.asm
-        src/RawrXD_Complete_ReverseEngineered.asm
+        # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
     )
     # Mark ASM files with MASM language property
     set_source_files_properties(${ASM_KERNEL_SOURCES} PROPERTIES LANGUAGE ASM_MASM)
@@ -290,6 +295,7 @@ set(SOURCES
     src/agent/llm_http_client.cpp
     src/agent/model_invoker.cpp
     src/agent/planner.cpp
+    src/agent/eval_framework.cpp
 
     # Agent Self-Repair (MASM64 self-patching kernel bridge)
     src/agent/agent_self_repair.cpp
@@ -588,6 +594,8 @@ set(SOURCES
 
     # Phase 50: Enterprise Hardening — Auto-Update, Swarm Reconciliation, Plugin Sandbox/Signature, Stress Tests
     src/core/update_signature.cpp
+    src/core/cursor_github_parity_bridge.cpp
+    src/core/local_parity_bridge.cpp
     src/core/swarm_reconciliation.cpp
     src/core/quickjs_sandbox.cpp
     src/core/plugin_signature.cpp
@@ -1517,6 +1525,7 @@ if(WIN32)
         src/win32app/Win32IDE_RenamePreview.cpp
         src/win32app/Win32IDE_Tier2Cosmetics.cpp
         src/win32app/Win32IDE_Tier1Cosmetics.cpp
+        src/win32app/Win32IDE_Breadcrumbs.cpp
         src/win32app/Win32IDE_PlanExecutor.cpp
         src/win32app/Win32IDE_FailureDetector.cpp
         src/win32app/Win32IDE_FailureIntelligence.cpp
@@ -1664,6 +1673,7 @@ if(WIN32)
         src/agent/llm_http_client.cpp
         src/agent/model_invoker.cpp
         src/agent/planner.cpp
+        src/agent/eval_framework.cpp
         src/agent/autonomous_subagent.cpp
         src/agent/agentic_failure_detector.cpp
         src/agent/agentic_puppeteer.cpp
@@ -1893,6 +1903,34 @@ if(WIN32)
         src/core/enterprise_telemetry_compliance.cpp
         src/win32app/Win32IDE_TelemetryPanel.cpp
         src/win32app/Win32IDE_Tier3Polish.cpp
+        src/win32app/Win32IDE_Tier3Cosmetics.cpp
+        src/win32app/Win32IDE_Tier5Cosmetics.cpp
+        src/win32app/Win32IDE_CrashReporter.cpp
+        src/win32app/Win32IDE_ColorPicker.cpp
+        src/win32app/Win32IDE_EmojiSupport.cpp
+        src/win32app/Win32IDE_ShortcutEditor.cpp
+        src/win32app/Win32IDE_TelemetryDashboard.cpp
+        src/win32app/Win32IDE_MarketplacePanel.cpp
+        src/win32app/Win32IDE_TestExplorerTree.cpp
+        src/win32app/Win32IDE_NetworkPanel.cpp
+        src/core/omega_orchestrator.cpp
+        src/core/mesh_brain.cpp
+        src/core/speciator_engine.cpp
+        src/core/neural_bridge.cpp
+        src/core/self_host_engine.cpp
+        src/core/hardware_synthesizer.cpp
+        src/core/transcendence_coordinator.cpp
+        src/win32app/Win32IDE_TranscendencePanel.cpp
+        src/win32app/VulkanRenderer.cpp
+        src/win32app/OSExplorerInterceptor.cpp
+        src/win32app/Win32IDE_MCPHooks.cpp
+        src/win32app/TodoManager.cpp
+        src/win32app/IocpFileWatcher.cpp
+        src/win32app/IDEDiagnosticAutoHealer.cpp
+        src/win32app/IDEDiagnosticAutoHealer_Impl.cpp
+        src/win32app/IDEAutoHealerLauncher.cpp
+        src/win32app/ConsentPrompt.cpp
+        src/win32app/AutonomousAgent.cpp
 
         # UI Rendering — Chat message renderer + tool action status + chat panel
         src/ui/chat_message_renderer.cpp
@@ -1909,6 +1947,7 @@ if(WIN32)
 
         # Phase 50: Enterprise Hardening — Auto-Update, Swarm Reconciliation, Plugin Sandbox/Signature, Stress Tests
         src/core/update_signature.cpp
+        src/core/cursor_github_parity_bridge.cpp
         src/core/swarm_reconciliation.cpp
         src/core/quickjs_sandbox.cpp
         src/core/plugin_signature.cpp
@@ -1926,6 +1965,7 @@ if(WIN32)
         src/agentic/autonomous_background_daemon.cpp
 
         # Phase C: Long-Term Knowledge Graph (cross-session learning, decision memory)
+        src/core/sqlite3.c
         src/core/knowledge_graph_core.cpp
 
         # Phase D: Multi-Agent Conflict Resolution (merge negotiation, consensus)
@@ -1952,6 +1992,7 @@ if(WIN32)
         src/context/semantic_index.cpp
         src/ide/resource_generator.cpp
         src/win32app/Win32IDE_CursorParity.cpp
+        src/win32app/Win32IDE_GUILayoutHotpatch.cpp
 
         # ═══════════════════════════════════════════════════════════════
         # Flagship Product Pillars (Provable Agent, AI RE, Airgapped)
@@ -2348,6 +2389,7 @@ if(WIN32)
         src/agent/llm_http_client.cpp
         src/agent/model_invoker.cpp
         src/agent/planner.cpp
+        src/agent/eval_framework.cpp
         src/agent/agent_self_repair.cpp
         src/agent/agent_self_healing_orchestrator.cpp
         src/agent/DiskRecoveryAgent.cpp
@@ -2554,6 +2596,7 @@ if(WIN32)
         src/context/semantic_index.cpp
         src/ide/resource_generator.cpp
         src/win32app/Win32IDE_CursorParity.cpp
+        src/win32app/Win32IDE_GUILayoutHotpatch.cpp
 
         # ═══════════════════════════════════════════════════════════════
         # Flagship Product Pillars (Provable Agent, AI RE, Airgapped)

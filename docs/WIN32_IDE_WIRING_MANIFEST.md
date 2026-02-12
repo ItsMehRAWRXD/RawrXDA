@@ -2,6 +2,8 @@
 
 **Purpose:** Source digestion and reverse-engineering traceability. All menus, submenus, breadcrumb menus, file explorer, and UI components are explicitly labeled (ESP = Explicit, IE = In Essence/ID) for end-to-end wiring.
 
+**Auto-audit:** Run `python scripts/win32_ide_wiring_audit.py` (or `scripts\run_win32_wiring_audit.bat`) from the repo root to generate an automatic manifest of what is wired vs missing: `reports/win32_ide_wiring_manifest.json` and `reports/win32_ide_wiring_manifest.md`.
+
 ## Creation Order (onCreate)
 
 | Step | Function | ESP Label | Component | Parent |

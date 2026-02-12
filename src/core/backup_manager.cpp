@@ -266,6 +266,7 @@ BackupResult BackupManager::createBackup(BackupType type, const std::string& des
 
     entry.checksum = manifestCrc;
     entry.verified = true;
+    entry.sizeBytes = entry.totalBytes;
 
     // Save entry
     {
@@ -282,6 +283,7 @@ BackupResult BackupManager::createBackup(BackupType type, const std::string& des
     BackupResult result;
     result.success = true;
     result.detail = "Backup created successfully";
+    result.message = "Backup created successfully";
     result.entry = entry;
     return result;
 }

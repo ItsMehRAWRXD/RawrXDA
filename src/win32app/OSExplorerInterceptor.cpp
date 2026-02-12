@@ -1,8 +1,13 @@
 #include "OSExplorerInterceptor.h"
 
+#include <winsock2.h>
 #include <windows.h>
 #include <winternl.h>
 #include <psapi.h>
+#include <shlobj_core.h>
+#include <algorithm>
+#include <cctype>
+#include <string>
 #include <tlhelp32.h>
 #include <vector>
 #include <memory>
@@ -11,6 +16,21 @@
 #include <thread>
 #include <sstream>
 #include <iomanip>
+
+#ifndef LOG_FUNCTION
+#define LOG_FUNCTION() ((void)0)
+#endif
+
+// Forward declarations for hook table setup (defined later in file)
+extern void* StealthHook(void* targetFunction, void* hookFunction);
+extern void* MyCreateFileWHook;
+extern void* MyReadFileHook;
+extern void* MyWriteFileHook;
+extern void* MyRegOpenKeyExWHook;
+extern void* MyRegQueryValueExWHook;
+extern void* MyWSAConnectHook;
+extern void* MySendHook;
+extern void* MyRecvHook;
 
 // Global interceptor instance
 std::unique_ptr<OSExplorerInterceptor> g_osInterceptor = nullptr;
@@ -359,9 +379,10 @@ void FormatCallInfo(CallLogEntry* entry) {
     if (!entry) return;
     
     // Format: [Time] [ThreadID] Function(Param1, Param2, ...) = ReturnValue
+    std::string fnName = GetFunctionName(entry->apiFunction);
     char buffer[2048];
     sprintf_s(buffer, sizeof(buffer), "[%llu] [TID:%d] %s(", 
-              entry->timestamp, entry->threadID, GetFunctionName(entry->apiFunction));
+              entry->timestamp, entry->threadID, fnName.c_str());
     
     // Add parameters
     for (int i = 0; i < 8; i++) {
@@ -388,7 +409,7 @@ void FormatCallInfo(CallLogEntry* entry) {
 }
 
 // Get function name from address
-const char* GetFunctionName(void* function) {
+std::string GetFunctionName(void* function) {
     // Simple lookup table for common functions
     // In production, use symbol resolution
     
@@ -424,7 +445,7 @@ const char* GetFunctionName(void* function) {
 bool IsSensitiveFile(const std::string& path) {
     // Check for sensitive file patterns
     std::string lowerPath = path;
-    std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(), ::tolower);
+    std::transform(lowerPath.begin(), lowerPath.end(), lowerPath.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     
     if (lowerPath.find("password") != std::string::npos) return true;
     if (lowerPath.find("credential") != std::string::npos) return true;
@@ -440,7 +461,7 @@ bool IsSensitiveFile(const std::string& path) {
 bool IsSensitiveRegistryKey(const std::string& key) {
     // Check for sensitive registry patterns
     std::string lowerKey = key;
-    std::transform(lowerKey.begin(), lowerKey.end(), lowerKey.begin(), ::tolower);
+    std::transform(lowerKey.begin(), lowerKey.end(), lowerKey.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     
     if (lowerKey.find("password") != std::string::npos) return true;
     if (lowerKey.find("credential") != std::string::npos) return true;
@@ -454,7 +475,7 @@ bool IsSensitiveRegistryKey(const std::string& key) {
 bool IsSensitiveNetworkAddress(const std::string& address) {
     // Check for sensitive network patterns
     std::string lowerAddr = address;
-    std::transform(lowerAddr.begin(), lowerAddr.end(), lowerAddr.begin(), ::tolower);
+    std::transform(lowerAddr.begin(), lowerAddr.end(), lowerAddr.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     
     if (lowerAddr.find("api") != std::string::npos) return true;
     if (lowerAddr.find("auth") != std::string::npos) return true;
@@ -1361,23 +1382,3 @@ bool ResolveImports(HANDLE hProcess, void* mappedBase, void* dllData) {
 
     return true;
 }
-
-// Initialize global interceptor
-bool InitOSExplorerInterceptor(DWORD targetPID, OSInterceptorCallback callback) {
-    if (!g_osInterceptor) {
-        g_osInterceptor = std::make_unique<OSExplorerInterceptor>();
-    }
-    
-    return g_osInterceptor->Initialize(targetPID, callback);
-}
-
-// Cleanup global interceptor
-void CleanupOSExplorerInterceptor() {
-    g_osInterceptor.reset();
-}
-
-// Get global interceptor instance
-OSExplorerInterceptor* GetOSExplorerInterceptor() {
-    return g_osInterceptor.get();
-}
-

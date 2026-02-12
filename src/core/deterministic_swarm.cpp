@@ -187,6 +187,8 @@ SwarmTrace DeterministicSwarmEngine::endTrace(const std::string& finalOutput) {
     m_recording = false;
     m_stats.totalTraces.fetch_add(1, std::memory_order_relaxed);
 
+    m_activeTrace.id = fnv1a(m_activeTrace.traceId);
+    m_activeTrace.steps = m_activeTrace.entries;
     return m_activeTrace;
 }
 
@@ -316,6 +318,8 @@ bool DeterministicSwarmEngine::getTrace(const std::string& traceId,
     auto it = m_traceLibrary.find(traceId);
     if (it == m_traceLibrary.end()) return false;
     out = it->second;
+    if (out.id == 0) out.id = fnv1a(out.traceId);
+    if (out.steps.empty() && !out.entries.empty()) out.steps = out.entries;
     return true;
 }
 

@@ -5,9 +5,15 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include "../../qtapp/settings.h"  // For MonacoSettings, MonacoThemeColors, etc.
+#include "monaco_settings.h"  // C++20 Win32 — no Qt
 
 namespace RawrXD::Agentic::Monaco {
+
+using RawrXD::MonacoSettings;
+using RawrXD::MonacoThemePreset;
+using RawrXD::MonacoThemeColors;
+using RawrXD::MonacoVariantType;
+using RawrXD::GetMonacoThemePresetColors;
 
 // Monaco Editor Variant Types (matches MonacoVariantType in settings.h)
 enum class MonacoVariant {

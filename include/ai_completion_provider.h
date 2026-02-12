@@ -1,21 +1,19 @@
 /**
  * @file ai_completion_provider.h
- * @brief AI-powered code completion provider (Ollama/local LLM)
- * 
+ * @brief AI-powered code completion provider (Ollama/local LLM) — C++20, no Qt
+ *
  * Bridges between the text editor keystroke events and the local AI model
  * to provide real-time code suggestions without blocking the UI.
- * 
- * @author RawrXD Team
- * @date 2026-01-07
+ *
+ * Architecture: C++20 | Win32/STL | No Qt
  */
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QStringList>
-#include <QVector>
+#include <functional>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace RawrXD {
 
@@ -24,19 +22,17 @@ namespace RawrXD {
  * @brief Single code completion suggestion from AI model
  */
 struct AICompletion {
-    QString text;           ///< The completion text to insert
-    QString type;           ///< "function", "variable", "keyword", etc.
-    float confidence;       ///< 0.0 to 1.0 confidence score
-    QString documentation;  ///< Optional docstring
-    int ranking;            ///< Sort rank (0 = best)
-    
-    AICompletion() : confidence(0.0f), ranking(999) {}
+    std::string text;           ///< The completion text to insert
+    std::string type;           ///< "function", "variable", "keyword", etc.
+    float confidence = 0.0f;    ///< 0.0 to 1.0 confidence score
+    std::string documentation;  ///< Optional docstring
+    int ranking = 999;          ///< Sort rank (0 = best)
 };
 
 /**
  * @class AICompletionProvider
- * @brief Async AI completion engine
- * 
+ * @brief Async AI completion engine (callback-based, no Qt signals)
+ *
  * Features:
  * - Async background completion fetching (doesn't block UI)
  * - Confidence ranking and sorting
@@ -44,162 +40,76 @@ struct AICompletion {
  * - Fallback when model unavailable
  * - Latency metrics for monitoring
  */
-class AICompletionProvider : public QObject {
-    Q_OBJECT
-
+class AICompletionProvider {
 public:
-    explicit AICompletionProvider(QObject* parent = nullptr);
-    ~AICompletionProvider() override;
+    using CompletionsReadyFn = std::function<void(const std::vector<AICompletion>&)>;
+    using ErrorFn = std::function<void(const std::string&)>;
+    using LatencyFn = std::function<void(double)>;
+
+    explicit AICompletionProvider() = default;
+    ~AICompletionProvider() = default;
 
     /**
      * Request code completions asynchronously
-     * 
-     * @param prefix Text before cursor on current line
-     * @param suffix Text after cursor on current line
-     * @param filePath Current file being edited
-     * @param fileType Language/file type (cpp, python, js, etc.)
-     * @param contextLines Previous lines for context (5 lines recommended)
      */
     void requestCompletions(
-        const QString& prefix,
-        const QString& suffix,
-        const QString& filePath,
-        const QString& fileType,
-        const QStringList& contextLines
+        const std::string& prefix,
+        const std::string& suffix,
+        const std::string& filePath,
+        const std::string& fileType,
+        const std::vector<std::string>& contextLines
     );
 
-    /**
-     * Cancel any pending completion request
-     */
     void cancelPendingRequest();
 
-    /**
-     * Set model endpoint (Ollama, vLLM, etc.)
-     * Format: "http://localhost:11434" or similar
-     */
-    void setModelEndpoint(const QString& endpoint);
-
-    /**
-     * Set model name to use for completions
-     * Examples: "llama2", "mistral", "neural-chat", etc.
-     */
-    void setModel(const QString& modelName);
-
-    /**
-     * Set timeout for completion requests (milliseconds)
-     * Default: 5000ms
-     */
+    void setModelEndpoint(const std::string& endpoint);
+    void setModel(const std::string& modelName);
     void setRequestTimeout(int timeoutMs);
-
-    /**
-     * Enable/disable timeout fallback
-     * When enabled, failed requests fall back to simpler suggestions
-     */
     void setTimeoutFallback(bool enabled);
-
-    /**
-     * Set minimum confidence threshold for suggestions
-     * Range: 0.0 to 1.0 (default 0.5)
-     * Suggestions below threshold are filtered out
-     */
     void setMinConfidence(float threshold);
-
-    /**
-     * Set maximum number of suggestions to return
-     */
     void setMaxSuggestions(int count);
 
-    /**
-     * Get current model endpoint
-     */
-    QString modelEndpoint() const { return m_modelEndpoint; }
-
-    /**
-     * Get current model name
-     */
-    QString model() const { return m_modelName; }
-
-    /**
-     * Get last recorded latency in milliseconds
-     */
+    std::string modelEndpoint() const { return m_modelEndpoint; }
+    std::string model() const { return m_modelName; }
     double lastLatencyMs() const { return m_lastLatencyMs; }
-
-    /**
-     * Check if a completion request is currently pending
-     */
     bool isPending() const { return m_isPending; }
 
-signals:
-    /**
-     * Emitted when completions are ready
-     * @param completions Vector of suggestions sorted by confidence
-     */
-    void completionsReady(const QVector<AICompletion>& completions);
-
-    /**
-     * Emitted if completion request fails
-     * @param error Description of error
-     */
-    void error(const QString& error);
-
-    /**
-     * Emitted after request completes to report latency
-     * @param milliseconds Time taken for the request
-     */
-    void latencyReported(double milliseconds);
-
-private slots:
-    /**
-     * Internal: Handle completion request in background thread
-     */
-    void onCompletionRequest();
+    /** Callbacks (replace Qt signals). Set before requestCompletions. */
+    void setOnCompletionsReady(CompletionsReadyFn fn) { m_onCompletionsReady = std::move(fn); }
+    void setOnError(ErrorFn fn) { m_onError = std::move(fn); }
+    void setOnLatencyReported(LatencyFn fn) { m_onLatencyReported = std::move(fn); }
 
 private:
-    /**
-     * Format prompt for the LLM
-     */
-    QString formatPrompt(
-        const QString& prefix,
-        const QString& suffix,
-        const QString& fileType,
-        const QStringList& contextLines
+    void onCompletionRequest();
+
+    std::string formatPrompt(
+        const std::string& prefix,
+        const std::string& suffix,
+        const std::string& fileType,
+        const std::vector<std::string>& contextLines
     );
+    std::vector<AICompletion> parseCompletions(const std::string& response);
+    float extractConfidence(const std::string& suggestion);
+    std::string callModel(const std::string& prompt);
+    std::string generateFallbackCompletion(const std::string& prompt);
 
-    /**
-     * Parse LLM response into structured completions
-     */
-    QVector<AICompletion> parseCompletions(const QString& response);
-
-    /**
-     * Extract confidence scores from model response
-     */
-    float extractConfidence(const QString& suggestion);
-
-    /**
-     * Call the AI model via HTTP (Ollama/vLLM API)
-     */
-    QString callModel(const QString& prompt);
-
-    /**
-     * Generate simple fallback completion when model unavailable
-     */
-    QString generateFallbackCompletion(const QString& prompt);
-
-    // Configuration
-    QString m_modelEndpoint = "http://localhost:11434";
-    QString m_modelName = "mistral";
+    std::string m_modelEndpoint = "http://localhost:11434";
+    std::string m_modelName = "mistral";
     int m_requestTimeoutMs = 5000;
     bool m_useTimeoutFallback = true;
     float m_minConfidence = 0.5f;
     int m_maxSuggestions = 5;
 
-    // State
     bool m_isPending = false;
     double m_lastLatencyMs = 0.0;
-    QString m_lastPrefix;
-    QString m_lastSuffix;
-    QString m_lastFileType;
-    QStringList m_lastContextLines;
+    std::string m_lastPrefix;
+    std::string m_lastSuffix;
+    std::string m_lastFileType;
+    std::vector<std::string> m_lastContextLines;
+
+    CompletionsReadyFn m_onCompletionsReady;
+    ErrorFn m_onError;
+    LatencyFn m_onLatencyReported;
 };
 
 } // namespace RawrXD

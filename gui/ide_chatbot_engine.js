@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 // RawrXD IDE Chatbot — Shared Engine (auto-extracted from ide_chatbot.html)
 // This file is loaded by both the main chatbot and the Win32 themed variant.
 // ═══════════════════════════════════════════════════════════════════════
@@ -8,7 +8,7 @@ if (typeof _isFileProtocol === 'undefined') {
   var _isFileProtocol = (window.location.protocol === 'file:');
 }
 if (typeof _ideServerUrl === 'undefined') {
-  var _ideServerUrl = 'http://localhost:11435';
+  var _ideServerUrl = 'http://localhost:8080';
 }
 
 // ======================================================================
@@ -23,7 +23,7 @@ if (typeof _ideServerUrl === 'undefined') {
 var State = {
   backend: {
     online: false,
-    url: 'http://localhost:11435',
+    url: 'http://localhost:8080',
     ollamaDirectUrl: 'http://localhost:11434',  // Fallback: talk to Ollama directly
     directMode: false,                           // true = bypassing serve.py, talking to Ollama
     lastPing: 0,
@@ -108,7 +108,7 @@ var State = {
     sessionId: 0,           // monotonic session counter
     waitingForIde: false,   // true when auto-retry polling for IDE
     autoRetryTimer: null,   // setInterval handle for auto-retry
-    scanPorts: [11435, 8080, 3000, 5000, 11434], // ports to scan for IDE
+    scanPorts: [8080, 3000, 5000, 11434], // ports to scan for IDE (server.js first)
     lastScanResults: [],    // [{port, status, backend}] from last scan
   },
   // VSIX Extension Manager state
@@ -685,7 +685,7 @@ function clearConversation() {
 // Works from both file:// and http:// contexts
 // ======================================================================
 var _win32IdeDetected = false;
-var _win32IdeUrl = 'http://localhost:11435';
+var _win32IdeUrl = 'http://localhost:8080';
 var _win32IdePollTimer = null;
 
 async function probeWin32IDE() {
@@ -729,12 +729,12 @@ async function probeWin32IDE() {
     // Identify as RawrXD backend by any of these signals:
     // - Explicit backend/server fields matching known names
     // - /api/status returning {running: true} (only tool_server does this)
-    // - /health returning {status: "ok", version: ...} on :11435 (not Ollama's port)
+    // - /health returning {status: "ok", version: ...} on :8080 (not Ollama's port)
     var isRawrXD = false;
     if (data.backend === 'rawrxd-win32ide' || data.backend === 'rawrxd-tool-server') isRawrXD = true;
     else if (data.server && (data.server.indexOf('Win32IDE') >= 0 || data.server.indexOf('RawrXD') >= 0 || data.server.indexOf('ToolServer') >= 0)) isRawrXD = true;
     else if (data.running === true && data.pid) isRawrXD = true; // /api/status signature
-    else if (detectedVia === '/health' && data.status === 'ok' && data.version) isRawrXD = true; // tool_server /health on :11435
+    else if (detectedVia === '/health' && data.status === 'ok' && data.version) isRawrXD = true; // server.js /health on :8080
 
     if (isRawrXD) {
       _win32IdeDetected = true;
@@ -1631,7 +1631,7 @@ function _ghostStartAutoRetry() {
     }
     // Quick probe just the primary IDE port
     try {
-      var res = await fetch('http://localhost:11435/status', { signal: AbortSignal.timeout(1500) });
+      var res = await fetch('http://localhost:8080/status', { signal: AbortSignal.timeout(1500) });
       if (res.ok) {
         var data = await res.json();
         if (data.backend === 'rawrxd-win32ide' || (data.server && data.server.indexOf('Win32IDE') >= 0)) {
@@ -1685,7 +1685,7 @@ async function ghostIntoIDE() {
   loading.style.display = 'block';
 
   // Determine primary probe URL: prefer already-detected IDE, else default
-  var primaryUrl = _win32IdeDetected ? _win32IdeUrl : 'http://localhost:11435';
+  var primaryUrl = _win32IdeDetected ? _win32IdeUrl : 'http://localhost:8080';
   if (probeUrlSpan) probeUrlSpan.textContent = 'scanning ports...';
 
   logDebug('\uD83D\uDC7B Ghost beacon: multi-port scan starting...', 'info');
@@ -1813,7 +1813,7 @@ function ghostCloseIDE() {
   if (loading) {
     loading.style.display = 'block';
     loading.innerHTML = '<div class="ghost-spinner"></div><br>' +
-      'Beacon probing Win32 IDE at <span id="ghostProbeUrl">localhost:11435</span>...';
+      'Beacon probing Win32 IDE at <span id="ghostProbeUrl">localhost:8080</span>...';
   }
 
   // Reset ghost dot
@@ -2036,7 +2036,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (titlebar) titlebar.classList.add('active');
     var brandSpan = document.querySelector('.header-bar .brand span:last-child');
     if (brandSpan) brandSpan.textContent = '// STANDALONE v3.4';
-    logDebug('\uD83D\uDCC2 Opened from file:// — standalone mode active. Backend at localhost:11435/11434.', 'info');
+    logDebug('\uD83D\uDCC2 Opened from file:// — standalone mode active. Backend at localhost:8080/11434.', 'info');
     // Warn if localStorage is blocked in file:// mode
     if (!_localStorageAvailable) {
       logDebug('\u26A0\uFE0F localStorage blocked by browser in file:// mode — conversations won\u2019t persist across reloads', 'warn');
@@ -2154,14 +2154,14 @@ function dismissRestored() {
 function addWelcomeMessage() {
   var modeNote = _isFileProtocol
     ? '\n\n\u{1F4C2} **Standalone Mode** — Opened directly from file system. ' +
-    'Connecting to `localhost:11435` (Win32 IDE) or `localhost:11434` (Ollama).\n' +
+    'Connecting to `localhost:8080` (RawrXD server) or `localhost:11434` (Ollama).\n' +
     'Drag & drop files to attach them, or paste file paths in your message.' +
     (_win32IdeDetected ? '\n\u{1F5A5} **Win32 IDE detected** — use the `OPEN IDE` button in the titlebar to switch.' : '')
     : '';
   addMessage('system',
     '**RawrXD Agentic Interface v3.4** — Standalone + Win32IDE Bridge\n\n' +
-    'This interface connects to the RawrXD backend on `localhost:11435`. ' +
-    'If the Python server isn\u2019t running, it will automatically fall back to Ollama directly on `localhost:11434`.' + modeNote + '\n\n' +
+    'This interface connects to the RawrXD backend on `localhost:8080`. ' +
+    'If the server isn\u2019t running, it will automatically fall back to Ollama directly on `localhost:11434`.' + modeNote + '\n\n' +
     '**What\'s new in v3.4:**\n' +
     '\u2022 **Standalone Mode** — Works fully from `file:///` with no server needed for UI\n' +
     '\u2022 **Win32 IDE Bridge** — Auto-detects running IDE, syncs state, hotpatch control\n' +
@@ -2176,7 +2176,7 @@ function addWelcomeMessage() {
     '3. Type your message and press Enter\n\n' +
     '**Usage modes:**\n' +
     '\u2022 **File mode** — Double-click `gui/ide_chatbot.html` (standalone, no server required for UI)\n' +
-    '\u2022 **Served mode** — Navigate to `http://localhost:11435/gui` (served by Win32 IDE)\n' +
+    '\u2022 **Served mode** — Navigate to `http://localhost:8080` (served by RawrXD server)\n' +
     '\u2022 **Both** — Same HTML works in either context, auto-detects environment');
 }
 
@@ -2998,7 +2998,7 @@ async function connectBackend() {
   status.className = 'status-pill connecting';
   text.textContent = 'CONNECTING...';
 
-  // ---- Try 1: Primary backend (tool_server / serve.py / Win32IDE on :11435) ----
+  // ---- Try 1: Primary backend (server.js on :8080) ----
   try {
     const t0 = performance.now();
 
@@ -3112,7 +3112,7 @@ async function connectBackend() {
           State.backend.lastPing = Date.now();
           State.backend.serverType = 'ollama-direct';
           // Even in direct mode, the Win32IDE may be running for /api/read-file
-          _ideServerUrl = State.backend.url; // Keep :11435 as IDE server for file reads
+          _ideServerUrl = State.backend.url; // Keep :8080 as IDE server for file reads
 
           status.className = 'status-pill online';
           text.textContent = 'OLLAMA DIRECT';
@@ -3827,7 +3827,7 @@ async function readLocalFile(filePath) {
   // Uses _ideServerUrl (resolved during connectBackend) + window.location.origin as fallbacks.
   // Critical for file:// opens where window.location.origin is null.
   {
-    var ideServerUrl = _ideServerUrl || 'http://localhost:11435';
+    var ideServerUrl = _ideServerUrl || 'http://localhost:8080';
     var urlsToTry = [ideServerUrl];
     // Also try page origin if we're served from a server (not file://)
     if (!_isFileProtocol && window.location.origin && window.location.origin !== 'null' && window.location.origin !== ideServerUrl) {
@@ -3959,7 +3959,7 @@ async function sendMessage() {
 
 // ======================================================================
 // RawrXD Streaming Bridge — Production-grade NDJSON/SSE stream client
-// Connects to MASM serve.exe (localhost:11435) or direct Ollama (11434)
+// Connects to server.js (localhost:8080) or direct Ollama (11434)
 // Implements: AbortController, cross-chunk NDJSON buffer, token rate
 // ======================================================================
 class RawrXDStream {
@@ -4611,9 +4611,9 @@ function getOfflineResponse(q) {
   if (lower.indexOf('help') >= 0 || lower === '?') {
     return '**Offline Mode \u2014 Help**\n\nThe backend is not running. To use AI:\n\n' +
       '1. **Start Ollama** \u2014 the chatbot will connect directly on port 11434\n' +
-      '2. **Or start the Win32 IDE** \u2014 it has a built-in server on port 11435\n' +
-      '3. **Or run the Python server:**\n' +
-      '```powershell\ncd D:\\rawrxd\npython gui/serve.py\n```\n\n' +
+      '2. **Or start the RawrXD server** \u2014 `node server.js` on port 8080\n' +
+      '3. **Or run the start script:**\n' +
+      '```powershell\ncd D:\\rawrxd\nnode server.js\n```\n\n' +
       'Then click the \u26A1 button to connect.\n\n' +
       '*Note: If Ollama is running, the chatbot will automatically detect it even without the Python server.*';
   }
@@ -11083,7 +11083,7 @@ async function _probeBackendUrl(url, path) {
 async function _buildBeaconBackendList() {
   var backends = [];
   var ollamaUrl = State.backend.ollamaDirectUrl || 'http://localhost:11434';
-  var ideUrl = State.backend.url || 'http://localhost:11435';
+  var ideUrl = State.backend.url || 'http://localhost:8080';
 
   // Probe Ollama
   var ollamaOnline = await _probeBackendUrl(ollamaUrl);
@@ -11215,7 +11215,7 @@ async function switchBackend(name) {
     }
   } else if (lowerName === 'win32ide' || lowerName === 'rawrxd-win32ide' || lowerName === 'rawrxd') {
     // Switch to Win32IDE proxy mode
-    var ideUrl = State.backend.url || 'http://localhost:11435';
+    var ideUrl = State.backend.url || 'http://localhost:8080';
     var online = await _probeBackendUrl(ideUrl, '/status');
     if (online) {
       State.backend.directMode = false;
@@ -12348,7 +12348,7 @@ function feApiUrl() {
 async function feApiPost(endpoint, body) {
   var urls = [feApiUrl()];
   if (_ideServerUrl && urls.indexOf(_ideServerUrl) === -1) urls.push(_ideServerUrl);
-  if (urls.indexOf('http://localhost:11435') === -1) urls.push('http://localhost:11435');
+  if (urls.indexOf('http://localhost:8080') === -1) urls.push('http://localhost:8080');
 
   for (var i = 0; i < urls.length; i++) {
     try {

@@ -22,6 +22,7 @@
 #include <winhttp.h>
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "winhttp.lib")
 #endif
 
 namespace fs = std::filesystem;
@@ -281,19 +282,27 @@ VisionResult VisionEncoder::LoadFromBase64(const std::string& base64Data,
 
 VisionResult VisionEncoder::LoadFromURL(const std::string& url) {
 #ifdef _WIN32
-    // Parse URL components
-    URL_COMPONENTSA urlComp{};
-    urlComp.dwStructSize = sizeof(urlComp);
-    char hostBuf[256] = {};
-    char pathBuf[2048] = {};
-    urlComp.lpszHostName = hostBuf;
-    urlComp.dwHostNameLength = sizeof(hostBuf);
-    urlComp.lpszUrlPath = pathBuf;
-    urlComp.dwUrlPathLength = sizeof(pathBuf);
+    // Convert URL to wide for WinHTTP
+    std::wstring wurl;
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, url.c_str(), static_cast<int>(url.size()), nullptr, 0);
+    if (wlen > 0) {
+        wurl.resize(wlen);
+        MultiByteToWideChar(CP_UTF8, 0, url.c_str(), static_cast<int>(url.size()), &wurl[0], wlen);
+    }
+    if (wurl.empty()) {
+        wurl.assign(url.begin(), url.end());
+    }
 
-    if (!WinHttpCrackUrl(std::wstring(url.begin(), url.end()).c_str(),
-                         static_cast<DWORD>(url.size()), 0,
-                         reinterpret_cast<URL_COMPONENTSW*>(&urlComp))) {
+    URL_COMPONENTSW urlComp{};
+    urlComp.dwStructSize = sizeof(urlComp);
+    wchar_t hostBuf[256] = {};
+    wchar_t pathBuf[2048] = {};
+    urlComp.lpszHostName = hostBuf;
+    urlComp.dwHostNameLength = sizeof(hostBuf) / sizeof(wchar_t);
+    urlComp.lpszUrlPath = pathBuf;
+    urlComp.dwUrlPathLength = sizeof(pathBuf) / sizeof(wchar_t);
+
+    if (!WinHttpCrackUrl(wurl.c_str(), static_cast<DWORD>(wurl.size()), 0, &urlComp)) {
         // Manual parse fallback for simple URLs
         std::string host, path;
         bool useSSL = false;
@@ -364,6 +373,52 @@ VisionResult VisionEncoder::LoadFromURL(const std::string& url) {
         }
         
         // Decode via LoadFromMemory (handles PNG, JPEG, BMP auto-detection)
+        auto result = LoadFromMemory(imageData.data(), imageData.size());
+        if (result.success) {
+            result.image.sourceType = "url";
+            std::lock_guard<std::mutex> lock(m_statsMutex);
+            m_stats.imagesEncoded++;
+        }
+        return result;
+    } else {
+        // Use cracked URL components
+        INTERNET_PORT port = urlComp.nPort ? urlComp.nPort : (urlComp.nScheme == INTERNET_SCHEME_HTTPS ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT);
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-VisionEncoder/1.0",
+                                         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                                         WINHTTP_NO_PROXY_NAME,
+                                         WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession) return VisionResult::fail("WinHTTP session init failed");
+        HINTERNET hConnect = WinHttpConnect(hSession, urlComp.lpszHostName, port, 0);
+        if (!hConnect) { WinHttpCloseHandle(hSession); return VisionResult::fail("WinHTTP connect failed"); }
+        DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlComp.lpszUrlPath[0] ? urlComp.lpszUrlPath : L"/",
+                                                nullptr, WINHTTP_NO_REFERER,
+                                                WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+        if (!hRequest) {
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return VisionResult::fail("WinHTTP request creation failed");
+        }
+        if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                                WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+            !WinHttpReceiveResponse(hRequest, nullptr)) {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return VisionResult::fail("WinHTTP request failed");
+        }
+        std::vector<uint8_t> imageData;
+        DWORD bytesAvailable = 0;
+        while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+            std::vector<uint8_t> chunk(bytesAvailable);
+            DWORD bytesRead = 0;
+            WinHttpReadData(hRequest, chunk.data(), bytesAvailable, &bytesRead);
+            imageData.insert(imageData.end(), chunk.begin(), chunk.begin() + bytesRead);
+        }
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        if (imageData.empty()) return VisionResult::fail("Empty response from URL");
         auto result = LoadFromMemory(imageData.data(), imageData.size());
         if (result.success) {
             result.image.sourceType = "url";

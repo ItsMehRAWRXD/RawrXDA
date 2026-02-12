@@ -45,7 +45,7 @@ static std::atomic<HeadlessIDE*> g_headlessInstance{nullptr};
 // ============================================================================
 // Embedded LSP server instance (owned by HeadlessIDE init, lives in .cpp scope)
 // ============================================================================
-static std::unique_ptr<RawrXDLSPServer> g_embeddedLSP;
+static std::unique_ptr<RawrXD::LSPServer::RawrXDLSPServer> g_embeddedLSP;
 static std::mutex                       g_embeddedLSPMutex;
 
 static void headlessSignalHandler(int sig) {
@@ -547,11 +547,11 @@ HeadlessResult HeadlessIDE::initLSPClient() {
     {
         std::lock_guard<std::mutex> lk(g_embeddedLSPMutex);
         if (!g_embeddedLSP) {
-            g_embeddedLSP = std::make_unique<RawrXDLSPServer>();
+            g_embeddedLSP = std::make_unique<RawrXD::LSPServer::RawrXDLSPServer>();
         }
 
         // Configure for in-process (pipe) transport — headless owns stdio
-        ServerConfig lspConfig;
+        RawrXD::LSPServer::ServerConfig lspConfig;
         lspConfig.useStdio           = false;  // Use named pipe, not stdio
         lspConfig.pipeName           = "\\\\.\\pipe\\rawrxd-lsp-headless";
         lspConfig.enableSemanticTokens = true;
@@ -1240,11 +1240,12 @@ std::string HeadlessIDE::getLSPStatusString() const {
             auto state = g_embeddedLSP->getState();
             const char* stateStr = "Unknown";
             switch (state) {
-                case ServerState::Created:      stateStr = "Created"; break;
-                case ServerState::Initializing: stateStr = "Initializing"; break;
-                case ServerState::Running:      stateStr = "Running"; break;
-                case ServerState::ShuttingDown: stateStr = "ShuttingDown"; break;
-                case ServerState::Stopped:      stateStr = "Stopped"; break;
+                case RawrXD::LSPServer::ServerState::Created:      stateStr = "Created"; break;
+                case RawrXD::LSPServer::ServerState::Initializing: stateStr = "Initializing"; break;
+                case RawrXD::LSPServer::ServerState::Running:      stateStr = "Running"; break;
+                case RawrXD::LSPServer::ServerState::ShuttingDown: stateStr = "ShuttingDown"; break;
+                case RawrXD::LSPServer::ServerState::Stopped:      stateStr = "Stopped"; break;
+                default: break;
             }
             oss << "Embedded server state: " << stateStr << "\n";
             oss << "Indexed symbols: " << g_embeddedLSP->getIndexedSymbolCount() << "\n";

@@ -2,6 +2,7 @@
 // Hot-patches Cursor-style MCP transport layer for raw buffer visibility
 
 #include "Win32IDE_MCPHooks.h"
+#include "IDELogger.h"
 
 #include <chrono>
 #include <cstring>

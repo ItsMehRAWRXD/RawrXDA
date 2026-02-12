@@ -34,20 +34,20 @@
 #pragma comment(lib, "comctl32.lib")
 
 // ============================================================================
-// COMMAND IDs for Tier 3 Cosmetics (#20–#30)
+// COMMAND IDs for Tier 3 Cosmetics (#20–#30) — 12100–12199 (avoids Tier1 12000–12099)
 // ============================================================================
-static constexpr int IDM_T3C_BRACKET_PAIRS       = 12000;
-static constexpr int IDM_T3C_INDENT_GUIDES       = 12001;
-static constexpr int IDM_T3C_WHITESPACE_TOGGLE   = 12002;
-static constexpr int IDM_T3C_WORD_WRAP_IND       = 12003;
-static constexpr int IDM_T3C_RELATIVE_LINES      = 12004;
-static constexpr int IDM_T3C_ZEN_MODE            = 12005;
-static constexpr int IDM_T3C_PIN_TAB             = 12006;
-static constexpr int IDM_T3C_UNPIN_TAB           = 12007;
-static constexpr int IDM_T3C_CODE_FOLD_TOGGLE    = 12008;
-static constexpr int IDM_T3C_LIGHTBULB_ACTION    = 12009;
-static constexpr int IDM_T3C_FOLD_ALL            = 12010;
-static constexpr int IDM_T3C_UNFOLD_ALL          = 12011;
+static constexpr int IDM_T3C_BRACKET_PAIRS       = 12100;
+static constexpr int IDM_T3C_INDENT_GUIDES       = 12101;
+static constexpr int IDM_T3C_WHITESPACE_TOGGLE   = 12102;
+static constexpr int IDM_T3C_WORD_WRAP_IND       = 12103;
+static constexpr int IDM_T3C_RELATIVE_LINES      = 12104;
+static constexpr int IDM_T3C_ZEN_MODE            = 12105;
+static constexpr int IDM_T3C_PIN_TAB             = 12106;
+static constexpr int IDM_T3C_UNPIN_TAB           = 12107;
+static constexpr int IDM_T3C_CODE_FOLD_TOGGLE    = 12108;
+static constexpr int IDM_T3C_LIGHTBULB_ACTION    = 12109;
+static constexpr int IDM_T3C_FOLD_ALL            = 12110;
+static constexpr int IDM_T3C_UNFOLD_ALL          = 12111;
 
 // Timer IDs
 static constexpr UINT_PTR BRACKET_PAIR_TIMER_ID    = 9100;

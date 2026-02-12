@@ -302,6 +302,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                     if (m_hwndStatusBar) {
                         SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)posBuf);
                     }
+                    // Breadcrumb: update symbol path (File > Class > Method) on cursor move
+                    if (pNMHDR->code == EN_SELCHANGE) {
+                        updateBreadcrumbsOnCursorMove();
+                    }
                 }
             }
         }
@@ -472,9 +476,10 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             sehCallDeferredInit(deferredInitTrampoline, this);
             return 0;
         }
-        // Handle background init completion — refresh UI
+        // Handle background init completion — refresh UI (Tier 5 menus enabled here after initTier5Cosmetics)
         if (uMsg == WM_APP + 101) {
             applyTheme();
+            updateMenuEnableStates();
             InvalidateRect(hwnd, nullptr, TRUE);
             UpdateWindow(hwnd);
             return 0;

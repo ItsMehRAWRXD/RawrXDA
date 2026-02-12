@@ -165,19 +165,29 @@ struct LoadedVoiceProvider {
 };
 
 // ============================================================================
+// Voice Automation Mode (compatibility for auto_feature_registry)
+// ============================================================================
+enum class VoiceAutoMode : int {
+    Disabled   = 0,
+    Continuous = 1,
+    PushToTalk  = 2,
+};
+
+// ============================================================================
 // Voice Automation Configuration
 // ============================================================================
 struct VoiceAutoConfig {
-    bool        enabled           = false;    // Master toggle
-    std::string activeProviderId;             // Active provider name
-    std::string activeVoiceId;               // Active voice ID
-    float       rate              = 1.0f;    // Speech rate (0.1 - 10.0)
-    float       volume            = 0.8f;    // Volume (0.0 - 1.0)
-    float       pitch             = 1.0f;    // Pitch (0.5 - 2.0)
-    bool        speakOnStream     = true;    // Speak chunks during streaming
-    bool        interruptOnNew    = true;    // Cancel current speech for new message
-    int         maxQueueSize      = 32;      // Max queued speech requests
-    std::string pluginSearchPaths;           // Semicolon-separated DLL search paths
+    bool           enabled           = false;    // Master toggle
+    VoiceAutoMode  mode              = VoiceAutoMode::Disabled;
+    std::string    activeProviderId;             // Active provider name
+    std::string    activeVoiceId;               // Active voice ID
+    float          rate              = 1.0f;    // Speech rate (0.1 - 10.0)
+    float          volume            = 0.8f;    // Volume (0.0 - 1.0)
+    float          pitch             = 1.0f;    // Pitch (0.5 - 2.0)
+    bool           speakOnStream     = true;    // Speak chunks during streaming
+    bool           interruptOnNew    = true;    // Cancel current speech for new message
+    int            maxQueueSize      = 32;      // Max queued speech requests
+    std::string    pluginSearchPaths;           // Semicolon-separated DLL search paths
 };
 
 // ============================================================================
@@ -187,6 +197,7 @@ struct VoiceAutoMetrics {
     int64_t totalSpeechRequests   = 0;
     int64_t totalWordsSpoken      = 0;
     int64_t totalCharsSpoken      = 0;
+    int64_t totalUtterances        = 0;     // Compatibility: total speech requests
     int64_t cancelledRequests     = 0;
     int64_t errorCount            = 0;
     int64_t providersLoaded       = 0;

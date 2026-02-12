@@ -584,6 +584,9 @@ void Win32IDE::initAuditSystem() {
 }
 
 bool Win32IDE::handleAuditCommand(int commandId) {
+    // Lazy-init audit system (populates FeatureRegistry + menu wiring) on first use
+    if (!m_auditInitialized) initAuditSystem();
+
     switch (commandId) {
         case IDM_AUDIT_SHOW_DASHBOARD:  cmdAuditShowDashboard();  return true;
         case IDM_AUDIT_RUN_FULL:        cmdAuditRunFull();        return true;

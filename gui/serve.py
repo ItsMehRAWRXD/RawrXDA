@@ -1,7 +1,19 @@
 #!/usr/bin/env python3
 """
-RawrXD IDE — Agentic Interface Backend (serve.py)
-=================================================
+RawrXD IDE — Agentic Interface Backend (serve.py) [DEPRECATED]
+==============================================================
+DEPRECATED: The MASM webserver (gui/webserver.asm -> webserver.exe) exists to
+*eliminate the Python server dependency* and use pure metal for performance.
+Prefer in this order:
+  1. MASM:  Build gui/webserver.asm -> gui/webserver.exe, run from gui/ (port 3000).
+            Serves launcher + HTML with no Python; proxies API to Node/HeadlessIDE.
+  2. Node:  cd D:\\rawrxd && node server.js   (port 8080, serves launcher + HTML)
+  3. Native: RawrXD-Shell.exe --headless --model <path> --port 11435 (full agentic)
+
+This Python server is kept for legacy compatibility only. Do not rely on it
+for new features; use MASM + Node or HeadlessIDE.
+==============================================================
+
 Standalone Python HTTP server that bridges the HTML chatbot frontend
 to local Ollama and GGUF model files. Use this when the Win32IDE's
 built-in C++ server is not running.

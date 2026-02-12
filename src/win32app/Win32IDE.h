@@ -616,6 +616,11 @@ struct IDESettings {
     // Server
     bool localServerEnabled     = false;
     int localServerPort         = 11435;
+
+    // Local Parity (no API key) — same Cursor/GitHub parity via local GGUF
+    bool localParityEnabled     = false;
+    std::string localParityModelPath;
+    std::string updateManifestUrl;   // Public URL for update check (no auth)
 };
 
 // ============================================================================
@@ -1582,6 +1587,7 @@ private:
     std::string getTreeItemPath(HTREEITEM item) const;
     void loadModelFromPath(const std::string& filepath);
     static LRESULT CALLBACK FileExplorerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK FileExplorerContainerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     // Primary Sidebar (Left) - VS Code Activity Bar + Sidebar
     enum class SidebarView {
@@ -1612,6 +1618,8 @@ private:
     void newFolderInExplorer();
     void deleteItemInExplorer();
     void renameItemInExplorer();
+    void deleteItemInExplorer(const std::string& path);
+    void renameItemInExplorer(const std::string& path);
     void revealInExplorer(const std::string& filePath);
     void handleExplorerContextMenu(POINT pt);
     static LRESULT CALLBACK ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -1791,6 +1799,7 @@ private:
     static LRESULT CALLBACK SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam); // Renamed to avoid overload conflict
     WNDPROC m_oldCommandInputProc = nullptr;
     WNDPROC m_oldSidebarProc = nullptr;
+    WNDPROC m_oldFileExplorerContainerProc = nullptr;
     
     // Extension Loader
     std::unique_ptr<RawrXD::ExtensionLoader> m_extensionLoader;
@@ -1918,6 +1927,8 @@ private:
     HBRUSH m_mainWindowBrush;
     HFONT m_editorFont;
     HFONT m_hFontUI;
+    HFONT m_hFontPowerShell = nullptr;
+    HFONT m_hFontPowerShellStatus = nullptr;
     UINT  m_currentDpi = 96;
 
     // Code snippets
@@ -4756,6 +4767,8 @@ private:
     void cmdSemSaveIndex();
     void cmdSemLoadIndex();
     void cmdSemShowStats();
+    bool getEditorCursorFileLineCol(std::string& outFile, uint32_t& outLine1Based, uint32_t& outCol) const;
+    void navigateToFileLine(const std::string& filePath, uint32_t line1Based);
     bool m_semanticPanelInitialized = false;
 
     static constexpr int IDM_SEM_GO_TO_DEF         = 11300;
@@ -5830,10 +5843,20 @@ private:
     // 41. Network Panel
     void initNetworkPanel();
     bool handleNetworkCommand(int commandId);
+    void cmdNetworkShowPanel();
+    void cmdNetworkAddPort();
+    void cmdNetworkRemovePort();
+    void cmdNetworkTogglePort();
+    void cmdNetworkListPorts();
+    void cmdNetworkStatus();
 
     // 42. Test Explorer
     void initTestExplorer();
     bool handleTestExplorerCommand(int commandId);
+    void cmdTestExplorerShow();
+    void cmdTestExplorerRun();
+    void cmdTestExplorerRefresh();
+    void cmdTestExplorerFilter();
 
     // 43. Debug Watch Format
     void initDebugWatchFormat();
@@ -5846,6 +5869,12 @@ private:
     // 45. Marketplace
     void initMarketplace();
     bool handleMarketplaceCommand(int commandId);
+    void cmdMarketplaceShow();
+    void cmdMarketplaceSearch();
+    void cmdMarketplaceInstall();
+    void cmdMarketplaceUninstall();
+    void cmdMarketplaceList();
+    void cmdMarketplaceStatus();
 
     // 46. Telemetry Dashboard
     void initTelemetryDashboard();
@@ -5869,6 +5898,10 @@ private:
     // 48. Color Picker
     void initColorPicker();
     bool handleColorPickerCommand(int commandId);
+    void cmdColorPickerScan();
+    void cmdColorPickerPick();
+    void cmdColorPickerInsert();
+    void cmdColorPickerList();
 
     // 49. Emoji Support
     void initEmojiSupport();
@@ -5880,6 +5913,11 @@ private:
     // 50. Crash Reporter
     void initCrashReporter();
     bool handleCrashReporterCommand(int commandId);
+    void cmdCrashShow();
+    void cmdCrashTest();
+    void cmdCrashLog();
+    void cmdCrashClear();
+    void cmdCrashStats();
 
 public:
     // Tier 5 Command IDs (11500–11609)
@@ -5887,9 +5925,15 @@ public:
     static constexpr int IDM_LINEENDING_TO_LF      = 11509;
 
     static constexpr int IDM_NETWORK_SHOW          = 11510;
+    static constexpr int IDM_NETWORK_ADD_PORT      = 11511;
+    static constexpr int IDM_NETWORK_REMOVE_PORT   = 11512;
+    static constexpr int IDM_NETWORK_TOGGLE        = 11513;
+    static constexpr int IDM_NETWORK_LIST          = 11514;
     static constexpr int IDM_NETWORK_STATUS        = 11519;
 
     static constexpr int IDM_TESTEXPLORER_SHOW     = 11520;
+    static constexpr int IDM_TESTEXPLORER_RUN      = 11521;
+    static constexpr int IDM_TESTEXPLORER_REFRESH  = 11522;
     static constexpr int IDM_TESTEXPLORER_FILTER   = 11529;
 
     static constexpr int IDM_DBGWATCH_SHOW         = 11530;
@@ -5899,6 +5943,10 @@ public:
     static constexpr int IDM_CALLSTACK_RESOLVE     = 11549;
 
     static constexpr int IDM_MARKETPLACE_SHOW      = 11550;
+    static constexpr int IDM_MARKETPLACE_SEARCH    = 11551;
+    static constexpr int IDM_MARKETPLACE_INSTALL   = 11552;
+    static constexpr int IDM_MARKETPLACE_UNINSTALL = 11553;
+    static constexpr int IDM_MARKETPLACE_LIST      = 11554;
     static constexpr int IDM_MARKETPLACE_STATUS    = 11559;
 
     static constexpr int IDM_TELDASH_LOG           = 11565;
@@ -5914,6 +5962,8 @@ public:
     static constexpr int IDM_SHORTCUT_LIST        = 11579;
 
     static constexpr int IDM_COLORPICK_SCAN        = 11580;
+    static constexpr int IDM_COLORPICK_PICK        = 11581;
+    static constexpr int IDM_COLORPICK_INSERT      = 11582;
     static constexpr int IDM_COLORPICK_LIST        = 11589;
 
     static constexpr int IDM_EMOJI_PICKER          = 11590;
@@ -5922,9 +5972,17 @@ public:
     static constexpr int IDM_EMOJI_TEST            = 11599;
 
     static constexpr int IDM_CRASH_SHOW            = 11600;
+    static constexpr int IDM_CRASH_TEST            = 11601;
+    static constexpr int IDM_CRASH_LOG             = 11602;
+    static constexpr int IDM_CRASH_CLEAR          = 11603;
     static constexpr int IDM_CRASH_STATS           = 11609;
 
     bool m_telemetryDashboardInitialized = false;
+    bool m_crashReporterInitialized      = false;
+    bool m_colorPickerInitialized        = false;
+    bool m_networkPanelInitialized       = false;
+    bool m_testExplorerInitialized       = false;
+    bool m_marketplaceInitialized        = false;
     bool m_shortcutEditorInitialized     = false;
     bool m_emojiSupportInitialized       = false;
 private:

@@ -39,6 +39,9 @@ public:
     void setDryRunMode(bool enabled);
     void setStopOnError(bool stopOnError);
 
+    /** Autonomous retry: on plan generation failure, retry up to maxRetries with exponential backoff */
+    void setRetryPolicy(int maxRetries, int initialBackoffMs = 1000);
+
     // Callbacks (replace Qt signals)
     std::function<void(const std::string&)> onAgentThinkingStarted;
     std::function<void(const ExecutionPlan&)> onAgentGeneratedPlan;
@@ -75,4 +78,11 @@ protected:
     int m_executionStartTime = 0;
     bool m_requireApproval = true;
     bool m_stopOnError = true;
+
+    int m_maxRetries = 0;
+    int m_retryBackoffMs = 1000;
+    int m_retriesLeft = 0;
+    int m_currentRetryBackoffMs = 1000;
+    InvocationParams m_lastParams;
+    void retryPlanGeneration();
 };

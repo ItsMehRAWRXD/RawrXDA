@@ -87,8 +87,10 @@ struct SwarmNodeInfo {
     char            hostname[64];           // Human-readable name
     char            ipAddress[46];          // IPv4 or IPv6 string
     uint16_t        swarmPort;              // TCP port for swarm protocol
+    uint16_t        port;                   // Compatibility: same as swarmPort
     uint16_t        httpPort;               // HTTP status port (0 = none)
     SwarmNodeState  state;                  // Current state
+    SwarmNodeState  status;                 // Compatibility: same as state
     uint8_t         pad0[3];
     uint32_t        slotIndex;              // Index in coordinator's node table
     uint32_t        fitnessScore;           // CPUID-based fitness
@@ -102,6 +104,7 @@ struct SwarmNodeInfo {
     uint32_t        maxConcurrentTasks;     // Max parallel compiles
     uint32_t        activeTasks;            // Currently running tasks
     uint32_t        completedTasks;         // Lifetime completed
+    uint32_t        tasksCompleted;          // Compatibility: same as completedTasks
     uint32_t        failedTasks;            // Lifetime failed
     uint32_t        cpuLoadPercent;         // Last reported CPU load
     uint32_t        memUsedMB;              // Last reported memory usage
@@ -284,6 +287,7 @@ struct SwarmStats {
 // the HexMag SwarmConfig in subagent_core.h from Phase 7.
 
 struct DscConfig {
+    uint64_t    masterSeed = 0;         // Compatibility: master RNG seed for deterministic swarm
     // Network
     uint16_t    swarmPort;              // TCP port (default 11437)
     uint16_t    discoveryPort;          // UDP broadcast port (default 11436)

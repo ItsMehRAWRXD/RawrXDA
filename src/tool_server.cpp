@@ -1236,6 +1236,22 @@ private:
         }
 
         if (profileIdx < 0) {
+            // Custom model name (e.g. Ollama bigdaddyg-fast) not in MASM bridge — accept for Ollama routing
+            if (!name.empty()) {
+                g_model_loaded = true;
+                g_loaded_model = name;
+                std::string escaped;
+                for (char c : name) {
+                    if (c == '"') escaped += "\\\"";
+                    else if (c == '\\') escaped += "\\\\";
+                    else escaped += c;
+                }
+                std::string json_body = "{\"success\":true,\"message\":\"Custom model set for Ollama\","
+                    "\"name\":\"" + escaped + "\",\"bridge\":\"ollama-custom\"}";
+                std::string resp = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n";
+                resp += "Content-Length: " + std::to_string(json_body.length()) + "\r\n\r\n" + json_body;
+                return resp;
+            }
             return MakeErrorResponse(400, "Model not found. Provide 'index' (0-23) or 'name'.");
         }
 

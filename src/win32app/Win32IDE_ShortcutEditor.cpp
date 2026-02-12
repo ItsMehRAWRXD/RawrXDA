@@ -445,7 +445,7 @@ static bool ensureShortcutEditorClass() {
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = shortcutEditorWndProc;
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(30, 30, 30));
     wc.lpszClassName  = SHORTCUT_EDITOR_CLASS;
 
@@ -457,6 +457,10 @@ static bool ensureShortcutEditorClass() {
 // ============================================================================
 // Initialization
 // ============================================================================
+
+void Win32IDE::initShortcutEditorPanel() {
+    initShortcutEditor();
+}
 
 void Win32IDE::initShortcutEditor() {
     if (m_shortcutEditorInitialized) return;

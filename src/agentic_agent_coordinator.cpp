@@ -54,9 +54,7 @@ std::string AgenticAgentCoordinator::createAgent(AgentRole role)
     auto agent = std::make_unique<AgentInstance>();
     agent->agentId = agentId;
     agent->role = role;
-#ifdef RAWR_HAS_QT
     agent->reasoner = std::make_unique<AgenticIterativeReasoning>();
-#endif
     agent->state = std::make_unique<AgenticLoopState>();
     agent->isAvailable = true;
     agent->utilization = 0.0f;

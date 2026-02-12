@@ -33,6 +33,7 @@
 #include "ide/language_plugin.h"
 #include "context/semantic_index.h"
 #include "ide/resource_generator.h"
+#include "cursor_github_parity_bridge.h"
 
 // Win32-native debug logging
 #ifndef RAWRXD_LOG_INFO
@@ -101,12 +102,28 @@ static std::string showOpenDialog(HWND hwnd, const char* filter) {
 }
 
 // ============================================================================
+// Helper: UTF-8 to UTF-16 for Unicode Win32 APIs (C++20, no Qt)
+// ============================================================================
+static std::wstring utf8ToWide(const char* utf8) {
+    if (!utf8 || !*utf8) return {};
+    const std::string s(utf8);
+    const int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), out.data(), len) == 0)
+        return {};
+    return out;
+}
+
+// ============================================================================
 // Helper: Input dialog (simple Win32 prompt via MessageBox + clipboard)
 // ============================================================================
 static std::string showInputDialog(HWND hwnd, const char* title, const char* prompt) {
     // Use a simple InputBox-style approach — for production, replace with
     // a proper dialog resource. For now, use a pre-filled clipboard approach.
-    int result = MessageBoxA(hwnd, prompt, title, MB_OKCANCEL | MB_ICONQUESTION);
+    const std::wstring wprompt = utf8ToWide(prompt);
+    const std::wstring wtitle = utf8ToWide(title);
+    int result = MessageBoxW(hwnd, wprompt.c_str(), wtitle.c_str(), MB_OKCANCEL | MB_ICONQUESTION);
     if (result != IDOK) return {};
     // Return empty — caller should use default or pre-set value
     return {};
@@ -428,6 +445,7 @@ bool Win32IDE::handleVisionEncoderCommand(int commandId) {
     case IDM_VISION_PASTE_CLIPBOARD: cmdVisionPasteClipboard(); return true;
     case IDM_VISION_SCREENSHOT:      cmdVisionScreenshot(); return true;
     case IDM_VISION_BUILD_PAYLOAD:   cmdVisionBuildPayload(); return true;
+    case IDM_VISION_VIEW_GUI_HOTPATCH: cmdVisionViewIDEGUIAndHotpatch(); return true;
     default: return false;
     }
 }
@@ -1094,6 +1112,7 @@ void Win32IDE::createCursorParityMenu(HMENU parentMenu) {
     AppendMenuA(hVision, MF_STRING, IDM_VISION_PASTE_CLIPBOARD, "&Paste from Clipboard");
     AppendMenuA(hVision, MF_STRING, IDM_VISION_SCREENSHOT,      "&Screenshot");
     AppendMenuA(hVision, MF_STRING, IDM_VISION_BUILD_PAYLOAD,   "&Build Multimodal Payload");
+    AppendMenuA(hVision, MF_STRING, IDM_VISION_VIEW_GUI_HOTPATCH, "View IDE &GUI / Auto-correct");
     AppendMenuA(hParity, MF_POPUP, (UINT_PTR)hVision, "&Vision Input");
 
     AppendMenuA(hParity, MF_SEPARATOR, 0, nullptr);
@@ -1166,6 +1185,9 @@ bool Win32IDE::handleCursorParityCommand(int commandId) {
         return handleSemanticIndexCommand(commandId);
     if (commandId >= IDM_RESOURCE_GENERATE && commandId <= IDM_RESOURCE_LOAD_PLUGIN)
         return handleResourceGenCommand(commandId);
+    // Tier 5 cosmetic gaps (#40-#50): Emoji, Telemetry Dashboard, Shortcut Editor, etc.
+    if (commandId >= 11500 && commandId <= 11609)
+        return handleTier5Command(commandId);
     return false;
 }
 
@@ -1183,6 +1205,10 @@ void Win32IDE::initAllCursorParityModules() {
     initLanguageRegistry();
     initSemanticIndex();
     initResourceGenerator();
+
+    int parityCheck = RawrXD::Parity::verifyCursorParityWiring(this);
+    if (parityCheck != 0)
+        RAWRXD_LOG_WARNING("Cursor parity verification reported module index: " << parityCheck);
 
     RAWRXD_LOG_INFO("All Cursor/JB-parity modules initialized");
 }

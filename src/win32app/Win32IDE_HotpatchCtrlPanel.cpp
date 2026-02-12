@@ -101,19 +101,79 @@ void Win32IDE::cmdHPCtrlValidate() {
 }
 
 void Win32IDE::cmdHPCtrlStage() {
-    appendToOutput("[HotpatchCtrl] Stage requires a manifest ID. Select from List Patches.\n");
+    auto& cp = HotpatchControlPlane::instance();
+    auto patches = cp.getAllPatches();
+    const PatchManifest* pick = nullptr;
+    for (auto* m : patches) {
+        if (m->state == PatchLifecycleState::Validated) {
+            pick = m;
+            break;
+        }
+    }
+    if (!pick) {
+        appendToOutput("[HotpatchCtrl] No validated patch to stage. List Patches, then validate one.\n");
+        return;
+    }
+    auto result = cp.stagePatch(pick->manifestId);
+    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
+                   " (staged: " + pick->name + " v" + pick->version.toString() + ")\n");
 }
 
 void Win32IDE::cmdHPCtrlApply() {
-    appendToOutput("[HotpatchCtrl] Apply requires a manifest ID. Select a staged patch first.\n");
+    auto& cp = HotpatchControlPlane::instance();
+    auto patches = cp.getAllPatches();
+    const PatchManifest* pick = nullptr;
+    for (auto* m : patches) {
+        if (m->state == PatchLifecycleState::Staged) {
+            pick = m;
+            break;
+        }
+    }
+    if (!pick) {
+        appendToOutput("[HotpatchCtrl] No staged patch to apply. Stage a validated patch first.\n");
+        return;
+    }
+    auto result = cp.applyPatch(pick->manifestId, "IDE", "Menu Apply");
+    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
+                   " (applied: " + pick->name + " v" + pick->version.toString() + ")\n");
 }
 
 void Win32IDE::cmdHPCtrlRollback() {
-    appendToOutput("[HotpatchCtrl] Rollback requires a manifest ID. Select an applied patch.\n");
+    auto& cp = HotpatchControlPlane::instance();
+    auto patches = cp.getAllPatches();
+    const PatchManifest* pick = nullptr;
+    for (auto* m : patches) {
+        if (m->state == PatchLifecycleState::Applied) {
+            pick = m;
+            break;
+        }
+    }
+    if (!pick) {
+        appendToOutput("[HotpatchCtrl] No applied patch to roll back. Apply a patch first.\n");
+        return;
+    }
+    auto result = cp.rollbackPatch(pick->manifestId, "IDE", "Menu Rollback");
+    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
+                   " (rolled back: " + pick->name + " v" + pick->version.toString() + ")\n");
 }
 
 void Win32IDE::cmdHPCtrlSuspend() {
-    appendToOutput("[HotpatchCtrl] Suspend requires a manifest ID. Select an applied patch.\n");
+    auto& cp = HotpatchControlPlane::instance();
+    auto patches = cp.getAllPatches();
+    const PatchManifest* pick = nullptr;
+    for (auto* m : patches) {
+        if (m->state == PatchLifecycleState::Applied) {
+            pick = m;
+            break;
+        }
+    }
+    if (!pick) {
+        appendToOutput("[HotpatchCtrl] No applied patch to suspend. Apply a patch first.\n");
+        return;
+    }
+    auto result = cp.suspendPatch(pick->manifestId, "IDE", "Menu Suspend");
+    appendToOutput("[HotpatchCtrl] " + std::string(result.detail) +
+                   " (suspended: " + pick->name + " v" + pick->version.toString() + ")\n");
 }
 
 void Win32IDE::cmdHPCtrlAuditLog() {

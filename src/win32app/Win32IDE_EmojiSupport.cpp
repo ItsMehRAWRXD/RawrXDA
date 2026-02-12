@@ -16,6 +16,7 @@
 #include "Win32IDE.h"
 #include <dwrite.h>
 #include <d2d1.h>
+#include <richedit.h>
 #include <sstream>
 #include <iomanip>
 #include <vector>
@@ -177,7 +178,7 @@ static LRESULT CALLBACK emojiPickerWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
             // Also post to parent for insertion
             HWND hwndParent = GetParent(hwnd);
             if (hwndParent) {
-                PostMessageW(hwndParent, WM_COMMAND, IDM_EMOJI_INSERT, index);
+                PostMessageW(hwndParent, WM_COMMAND, Win32IDE::IDM_EMOJI_INSERT, (LPARAM)index);
             }
         }
         return 0;
@@ -214,7 +215,7 @@ static bool ensureEmojiPickerClass() {
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = emojiPickerWndProc;
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(37, 37, 38));
     wc.lpszClassName  = EMOJI_PICKER_CLASS;
 

@@ -1956,7 +1956,8 @@
     // ======================================================================
     const CONFIG = {
       ollamaUrl: 'http://localhost:11434',
-      rawrxdUrl: 'http://localhost:11435',
+      rawrxdUrl: 'http://localhost:8080',
+      proxyUrl: 'http://localhost:8080',
       maxWindows: 64,
       defaultModel: null,   // Auto-detected from backend at startup — no hardcoded model
       streamingEnabled: true,
@@ -3563,8 +3564,8 @@ At the end, provide a final answer.`;
       const buildUrls = [
         CONFIG.proxyUrl + '/api/cli',
         CONFIG.proxyUrl + '/api/build',
-        'http://localhost:11435/api/cli',
-        'http://localhost:11435/api/build',
+        'http://localhost:8080/api/cli',
+        'http://localhost:8080/api/build',
       ];
 
       let buildSuccess = false;
@@ -3641,7 +3642,7 @@ At the end, provide a final answer.`;
       // Real deployment: try backend deploy API, report stage progress
       const deployUrls = [
         CONFIG.proxyUrl + '/api/deploy',
-        'http://localhost:11435/api/deploy',
+        'http://localhost:8080/api/deploy',
         CONFIG.proxyUrl + '/api/cli',
       ];
 

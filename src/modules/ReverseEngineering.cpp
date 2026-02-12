@@ -188,34 +188,38 @@ std::vector<NativeDisassembler::Function> NativeDisassembler::AnalyzeFunctions(c
 
     Function currentFunc;
     currentFunc.startAddress = instructions.front().address;
+    currentFunc.entryPoint = currentFunc.startAddress;
     currentFunc.name = "sub_" + std::to_string(currentFunc.startAddress);
-    
+
     for (size_t i = 0; i < instructions.size(); ++i) {
         currentFunc.instructions.push_back(instructions[i]);
         // Simple heuristic for function end: ret instruction
         if (instructions[i].mnemonic.find("ret") != std::string::npos) {
             currentFunc.endAddress = instructions[i].address;
+            currentFunc.size = (currentFunc.endAddress >= currentFunc.startAddress)
+                ? (currentFunc.endAddress - currentFunc.startAddress) : 0;
             functions.push_back(currentFunc);
-            
+
             // Start next function
             if (i + 1 < instructions.size()) {
                 currentFunc = Function();
                 currentFunc.startAddress = instructions[i + 1].address;
+                currentFunc.entryPoint = currentFunc.startAddress;
                 currentFunc.name = "sub_" + std::to_string(currentFunc.startAddress);
             }
         }
     }
-    
+
     // Add last function if not ended with ret
     if (!currentFunc.instructions.empty() && !functions.empty() && functions.back().endAddress != currentFunc.instructions.back().address) {
-       // Only add if we haven't just added it
-       // Actually simpler: if currentFunc has instructions and isn't in 'functions' yet
-       // But my loop adds to 'functions' on 'ret'. 
-       // If loop finishes without 'ret', we have a dangling function.
        currentFunc.endAddress = currentFunc.instructions.back().address;
+       currentFunc.size = (currentFunc.endAddress >= currentFunc.startAddress)
+           ? (currentFunc.endAddress - currentFunc.startAddress) : 0;
        functions.push_back(currentFunc);
     } else if (functions.empty() && !currentFunc.instructions.empty()) {
         currentFunc.endAddress = currentFunc.instructions.back().address;
+        currentFunc.size = (currentFunc.endAddress >= currentFunc.startAddress)
+            ? (currentFunc.endAddress - currentFunc.startAddress) : 0;
         functions.push_back(currentFunc);
     }
     

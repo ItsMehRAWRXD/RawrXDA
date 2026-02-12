@@ -21,6 +21,8 @@
 #include <mutex>
 #include <chrono>
 #include <ctime>
+#include <fstream>
+#include <unordered_map>
 
 // ============================================================================
 // Telemetry event model
@@ -339,7 +341,7 @@ static bool ensureTelDashboardClass() {
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = telDashboardWndProc;
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(30, 30, 30));
     wc.lpszClassName  = TEL_DASHBOARD_CLASS;
 

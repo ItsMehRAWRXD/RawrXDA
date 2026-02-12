@@ -688,17 +688,17 @@ enum CmdFlags : uint32_t {
     /* ═══════════════════ TIER 1: CRITICAL COSMETICS (12000-12099) ═══════════════════ */ \
     X(12000, T1_SMOOTH_SCROLL,     "tier1.smoothScroll",    "!smooth_scroll",    BOTH, "Cosmetic",    handleTier1SmoothScrollToggle,  CMD_NONE) \
     X(12001, T1_MINIMAP_ENHANCED,  "tier1.minimapEnhanced", "!minimap_enhanced", BOTH, "Cosmetic",    handleTier1MinimapEnhanced,     CMD_NONE) \
-    X(12010, T1_BREADCRUMBS,       "tier1.breadcrumbs",     "!breadcrumbs",      BOTH, "Cosmetic",    handleTier1BreadcrumbsToggle,   CMD_NONE) \
-    X(12020, T1_FUZZY_PALETTE,     "tier1.fuzzyPalette",    "!fuzzy",            BOTH, "Cosmetic",    handleTier1FuzzyPalette,        CMD_NONE) \
-    X(12030, T1_SETTINGS_GUI,      "tier1.settingsGUI",     "!settings_gui",     BOTH, "Cosmetic",    handleTier1SettingsGUI,         CMD_NONE) \
-    X(12040, T1_WELCOME_PAGE,      "tier1.welcomePage",     "!welcome",          BOTH, "Cosmetic",    handleTier1WelcomePage,         CMD_NONE) \
-    X(12050, T1_FILE_ICONS,        "tier1.fileIcons",       "!file_icons",       BOTH, "Cosmetic",    handleTier1FileIconTheme,       CMD_NONE) \
-    X(12060, T1_TAB_DRAG,          "tier1.tabDrag",         "!tab_drag",         BOTH, "Cosmetic",    handleTier1TabDragToggle,       CMD_NONE) \
-    X(12070, T1_SPLIT_VERT,        "tier1.splitVertical",   "!split_v",          BOTH, "Cosmetic",    handleTier1SplitVertical,       CMD_NONE) \
-    X(12071, T1_SPLIT_HORIZ,       "tier1.splitHorizontal", "!split_h",          BOTH, "Cosmetic",    handleTier1SplitHorizontal,     CMD_NONE) \
-    X(12072, T1_SPLIT_GRID,        "tier1.splitGrid",       "!split_grid",       BOTH, "Cosmetic",    handleTier1SplitGrid,           CMD_NONE) \
-    X(12073, T1_SPLIT_CLOSE,       "tier1.splitClose",      "!split_close",      BOTH, "Cosmetic",    handleTier1SplitClose,          CMD_NONE) \
-    X(12074, T1_SPLIT_FOCUS_NEXT,  "tier1.splitFocusNext",  "!split_next",       BOTH, "Cosmetic",    handleTier1SplitFocusNext,      CMD_NONE) \
+    X(12020, T1_BREADCRUMBS,       "tier1.breadcrumbs",     "!breadcrumbs",      BOTH, "Cosmetic",    handleTier1BreadcrumbsToggle,   CMD_NONE) \
+    X(12030, T1_FUZZY_PALETTE,     "tier1.fuzzyPalette",    "!fuzzy",            BOTH, "Cosmetic",    handleTier1FuzzyPalette,        CMD_NONE) \
+    X(12040, T1_SETTINGS_GUI,      "tier1.settingsGUI",     "!settings_gui",     BOTH, "Cosmetic",    handleTier1SettingsGUI,         CMD_NONE) \
+    X(12050, T1_WELCOME_PAGE,      "tier1.welcomePage",     "!welcome",          BOTH, "Cosmetic",    handleTier1WelcomePage,         CMD_NONE) \
+    X(12060, T1_FILE_ICONS,        "tier1.fileIcons",       "!file_icons",       BOTH, "Cosmetic",    handleTier1FileIconTheme,       CMD_NONE) \
+    X(12070, T1_TAB_DRAG,          "tier1.tabDrag",         "!tab_drag",         BOTH, "Cosmetic",    handleTier1TabDragToggle,       CMD_NONE) \
+    X(12080, T1_SPLIT_VERT,        "tier1.splitVertical",   "!split_v",          BOTH, "Cosmetic",    handleTier1SplitVertical,       CMD_NONE) \
+    X(12081, T1_SPLIT_HORIZ,       "tier1.splitHorizontal", "!split_h",          BOTH, "Cosmetic",    handleTier1SplitHorizontal,     CMD_NONE) \
+    X(12082, T1_SPLIT_GRID,        "tier1.splitGrid",       "!split_grid",       BOTH, "Cosmetic",    handleTier1SplitGrid,           CMD_NONE) \
+    X(12083, T1_SPLIT_CLOSE,       "tier1.splitClose",      "!split_close",      BOTH, "Cosmetic",    handleTier1SplitClose,          CMD_NONE) \
+    X(12084, T1_SPLIT_FOCUS_NEXT,  "tier1.splitFocusNext",  "!split_next",       BOTH, "Cosmetic",    handleTier1SplitFocusNext,      CMD_NONE) \
     X(12090, T1_AUTO_UPDATE,       "tier1.autoUpdate",      "!auto_update",      BOTH, "Cosmetic",    handleTier1AutoUpdateCheck,     CMD_ASYNC) \
     X(12091, T1_UPDATE_DISMISS,    "tier1.updateDismiss",   "!update_dismiss",   BOTH, "Cosmetic",    handleTier1UpdateDismiss,       CMD_NONE) \
     /* ═══════════════════ END OF TABLE ═══════════════════ */

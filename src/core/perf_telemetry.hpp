@@ -165,6 +165,7 @@ struct PerfSlotReport {
     uint64_t       minCycles;
     uint64_t       maxCycles;
     double         meanCycles;
+    double         peakLatencyMs;     // maxCycles converted to ms (e.g. at ~3GHz)
     PerfPercentiles percentiles;
     uint64_t       buckets[HISTOGRAM_BUCKETS];
     bool           driftDetected;     // true if median shifted > 2× from baseline

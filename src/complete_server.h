@@ -40,6 +40,7 @@ private:
 
     // Agentic API handlers
     std::string HandleChatRequest(const std::string& body);
+    std::string HandleAgentWishRequest(const std::string& body);
     std::string HandleSubAgentRequest(const std::string& body);
     std::string HandleChainRequest(const std::string& body);
     std::string HandleSwarmRequest(const std::string& body);

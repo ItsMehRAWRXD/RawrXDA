@@ -359,7 +359,7 @@ void MonacoEditor::setVariant(MonacoVariant variant) {
 
 void MonacoEditor::setThemePreset(MonacoThemePreset preset) {
     config_.themePreset = preset;
-    config_.colors = Settings::GetThemePresetColors(preset);
+    config_.colors = GetMonacoThemePresetColors(preset);
     refreshDisplay();
 }
 
@@ -374,7 +374,7 @@ void MonacoEditor::applySettings(const MonacoSettings& settings) {
     
     // Apply theme colors
     if (settings.themePreset != MonacoThemePreset::Custom) {
-        config_.colors = Settings::GetThemePresetColors(settings.themePreset);
+        config_.colors = GetMonacoThemePresetColors(settings.themePreset);
     }
     
     // Check if variant changed
@@ -568,7 +568,7 @@ std::unique_ptr<MonacoEditor> MonacoFactory::createEditorFromSettings(const Mona
     
     // Apply theme colors based on preset
     if (settings.themePreset != MonacoThemePreset::Custom) {
-        config.colors = Settings::GetThemePresetColors(settings.themePreset);
+        config.colors = GetMonacoThemePresetColors(settings.themePreset);
     }
     
     auto editor = std::make_unique<MonacoEditor>(config);
@@ -579,7 +579,7 @@ std::unique_ptr<MonacoEditor> MonacoFactory::createEditorWithTheme(MonacoVariant
     MonacoConfig config;
     config.variant = variant;
     config.themePreset = theme;
-    config.colors = Settings::GetThemePresetColors(theme);
+    config.colors = GetMonacoThemePresetColors(theme);
     
     auto editor = std::make_unique<MonacoEditor>(config);
     return editor;
@@ -592,7 +592,7 @@ MonacoVariant MonacoFactory::recommendVariant() {
 }
 
 MonacoThemeColors MonacoFactory::getThemeColors(MonacoThemePreset preset) {
-    return Settings::GetThemePresetColors(preset);
+    return GetMonacoThemePresetColors(preset);
 }
 
 std::vector<std::string> MonacoFactory::getAvailableThemeNames() {
@@ -693,7 +693,7 @@ void MonacoIDEIntegration::applyThemeToAll(MonacoThemePreset preset) {
     
     // Update global settings
     globalSettings_.themePreset = preset;
-    globalSettings_.colors = Settings::GetThemePresetColors(preset);
+    globalSettings_.colors = GetMonacoThemePresetColors(preset);
     globalSettings_.dirty = true;
 }
 

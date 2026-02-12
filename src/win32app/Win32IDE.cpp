@@ -25,6 +25,7 @@
 #include <sstream>
 #include <ctime>
 #include <regex>
+#include <filesystem>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
@@ -55,6 +56,31 @@ static std::string ExecCmd(const char* cmd) {
     #endif
     
     return result;
+}
+
+// UTF-8 to UTF-16 for Unicode Win32 APIs (Qt removal / pure MASM C++20)
+static std::wstring utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), len) == 0)
+        return {};
+    return out;
+}
+static std::wstring utf8ToWide(const char* utf8) {
+    if (!utf8 || !*utf8) return {};
+    return utf8ToWide(std::string(utf8));
+}
+static std::string wideToUtf8(const wchar_t* wide) {
+    if (!wide || !*wide) return {};
+    const int len = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return {};
+    std::string out(static_cast<size_t>(len), '\0');
+    if (WideCharToMultiByte(CP_UTF8, 0, wide, -1, out.data(), len, nullptr, nullptr) == 0)
+        return {};
+    out.resize(out.size() - 1); // drop NUL
+    return out;
 }
 
 #define IDC_EDITOR 1001
@@ -158,12 +184,21 @@ static std::string ExecCmd(const char* cmd) {
 #define IDC_STATUS_COPILOT 1410
 #define IDC_STATUS_NOTIFICATIONS 1411
 
-#define IDM_FILE_NEW 1001
-#define IDM_FILE_OPEN 1002
-#define IDM_FILE_SAVE 1003
-#define IDM_FILE_SAVEAS 1004
+/* Menu IDs: 2001+ to avoid overlap with IDC_* (1001+) in WM_COMMAND */
+#define IDM_FILE_NEW 2001
+#define IDM_FILE_OPEN 2002
+#define IDM_FILE_SAVE 2003
+#define IDM_FILE_SAVEAS 2004
 #define IDM_FILE_LOAD_MODEL 1030
-#define IDM_FILE_EXIT 1099
+#define IDM_FILE_EXIT 2005
+
+/* Voice Automation (Tools > Voice Automation) — Phase 44 TTS; dispatched in Win32IDE_Commands 10200–10300 */
+#define IDM_VOICE_AUTO_TOGGLE    10200
+#define IDM_VOICE_AUTO_STOP      10206
+#define IDM_VOICE_AUTO_NEXT      10202
+#define IDM_VOICE_AUTO_PREV      10203
+#define IDM_VOICE_AUTO_RATE_UP   10204
+#define IDM_VOICE_AUTO_RATE_DOWN 10205
 
 #define IDM_EDIT_UNDO 2007
 #define IDM_EDIT_REDO 2008
@@ -340,274 +375,260 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
 // ESP:m_hMenu — Main menu bar; submenus File/Edit/View/Terminal/Tools/Modules/Help/Audit/Git/Agent (see Win32IDE_IELabels.h)
 void Win32IDE::createMenuBar(HWND hwnd)
 {
-    // Initialize Enhanced Status Bar info (after UI is created)
-    if (m_hwndStatusBar) {
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Autonomy: OFF");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)"Branch: None");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)"Model: None");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 4, (LPARAM)"GGUF: None");
-    }
+    if (!m_hMenu)
+        m_hMenu = CreateMenu();
+    if (!m_hMenu) return;
 
-    // File menu
+    // Status bar is initialized in onCreate after createStatusBar (see Win32IDE_Core.cpp).
+
+    // File menu (Unicode)
     HMENU hFileMenu = CreatePopupMenu();
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_NEW, "&New");
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_OPEN, "&Open");
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_SAVE, "&Save");
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, "Save &As");
-    AppendMenuA(hFileMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_LOAD_MODEL, "Load &Model (GGUF)...");
-    AppendMenuA(hFileMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_EXIT, "E&xit");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, "&File");
-    
-    // Edit menu
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_NEW, L"&New");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_OPEN, L"&Open");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVE, L"&Save");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, L"Save &As");
+    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_LOAD_MODEL, L"Load &Model (GGUF)...");
+    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
+
+    // Edit menu (Unicode)
     HMENU hEditMenu = CreatePopupMenu();
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_FIND, "&Find...\tCtrl+F");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_REPLACE, "&Replace...\tCtrl+H");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_FIND_NEXT, "Find &Next\tF3");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_FIND_PREV, "Find &Previous\tShift+F3");
-    AppendMenuA(hEditMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_SNIPPET, "Insert &Snippet...");
-    AppendMenuA(hEditMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_COPY_FORMAT, "Copy with &Formatting");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_PASTE_PLAIN, "Paste &Plain Text");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_CLIPBOARD_HISTORY, "Clipboard &History...");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hEditMenu, "&Edit");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND, L"&Find...\tCtrl+F");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_REPLACE, L"&Replace...\tCtrl+H");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND_NEXT, L"Find &Next\tF3");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND_PREV, L"Find &Previous\tShift+F3");
+    AppendMenuW(hEditMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_SNIPPET, L"Insert &Snippet...");
+    AppendMenuW(hEditMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_COPY_FORMAT, L"Copy with &Formatting");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_PASTE_PLAIN, L"Paste &Plain Text");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_CLIPBOARD_HISTORY, L"Clipboard &History...");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hEditMenu, L"&Edit");
     
-    // View menu
+    // View menu (Unicode)
     HMENU hViewMenu = CreatePopupMenu();
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_MINIMAP, "&Minimap");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_T1_BREADCRUMBS_TOGGLE, "&Breadcrumbs");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_TABS, "&Output Tabs");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_PANEL, "Output &Panel");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_MODULE_BROWSER, "Module &Browser");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_FLOATING_PANEL, "&Floating Panel");
-    AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
-    // Appearance: Theme + Transparency submenus
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_MINIMAP, L"&Minimap");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_T1_BREADCRUMBS_TOGGLE, L"&Breadcrumbs");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_TABS, L"&Output Tabs");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_PANEL, L"Output &Panel");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_MODULE_BROWSER, L"Module &Browser");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_FLOATING_PANEL, L"&Floating Panel");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     buildThemeMenu(hViewMenu);
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_THEME_EDITOR, "Theme &Picker...");
-    AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, "Use Streaming Loader (Low Memory)");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, "Enable Vulkan Renderer (experimental)");
-    AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hViewMenu, MF_STRING, IDM_TELDASH_SHOW, "Telemetry &Dashboard...");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_EMOJI_PICKER, "&Emoji Picker");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hViewMenu, "&View");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_THEME_EDITOR, L"Theme &Picker...");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, L"Use Streaming Loader (Low Memory)");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, L"Enable Vulkan Renderer (experimental)");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_TELDASH_SHOW, L"Telemetry &Dashboard...");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_EMOJI_PICKER, L"&Emoji Picker");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hViewMenu, L"&View");
 
-    // Terminal menu
+    // Terminal menu (Unicode)
     HMENU hTerminalMenu = CreatePopupMenu();
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_POWERSHELL, "&PowerShell");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_CMD, "&Command Prompt");
-    AppendMenuA(hTerminalMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_STOP, "&Stop Terminal");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_H, "Split &Horizontal\tCtrl+Shift+H");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_V, "Split &Vertical\tCtrl+Shift+V");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_CLEAR_ALL, "&Clear All Terminals");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hTerminalMenu, "&Terminal");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_POWERSHELL, L"&PowerShell");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_CMD, L"&Command Prompt");
+    AppendMenuW(hTerminalMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_STOP, L"&Stop Terminal");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_H, L"Split &Horizontal\tCtrl+Shift+H");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_V, L"Split &Vertical\tCtrl+Shift+V");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_CLEAR_ALL, L"&Clear All Terminals");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hTerminalMenu, L"&Terminal");
     
-    // Tools menu
+    // Tools menu (Unicode)
     HMENU hToolsMenu = CreatePopupMenu();
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_START, "Start &Profiling");
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_STOP, "Stop P&rofiling");
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_RESULTS, "Profile &Results...");
-    AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE_SCRIPT, "&Analyze Script");
-    AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_START, L"Start &Profiling");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_STOP, L"Stop P&rofiling");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_RESULTS, L"Profile &Results...");
+    AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE_SCRIPT, L"&Analyze Script");
+    AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
 
-    // Voice Chat submenu
+    // Voice Chat submenu (Unicode — Qt removal / pure Win32)
     HMENU hVoiceMenu = CreatePopupMenu();
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_TOGGLE_PANEL, "Show/Hide &Voice Panel\tCtrl+Shift+U");
-    AppendMenuA(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_RECORD, "&Record / Stop\tF9");
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_PTT, "&Push-to-Talk\tCtrl+Shift+V");
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_SPEAK, "Text-to-&Speech");
-    AppendMenuA(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_JOIN_ROOM, "&Join/Leave Room");
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_SHOW_DEVICES, "Audio &Devices...");
-    AppendMenuA(hVoiceMenu, MF_STRING, IDM_VOICE_METRICS, "&Metrics...");
-    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, "🎙️ &Voice Chat");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_TOGGLE_PANEL, L"Show/Hide &Voice Panel\tCtrl+Shift+U");
+    AppendMenuW(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_RECORD, L"&Record / Stop\tF9");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_PTT, L"&Push-to-Talk\tCtrl+Shift+V");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_SPEAK, L"Text-to-&Speech");
+    AppendMenuW(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_JOIN_ROOM, L"&Join/Leave Room");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_SHOW_DEVICES, L"Audio &Devices...");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_METRICS, L"&Metrics...");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, L"\uD83C\uDF99 &Voice Chat");
 
     // Voice Automation submenu (Phase 44: TTS for AI responses)
     HMENU hVoiceAutoMenu = CreatePopupMenu();
-    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10200, "Toggle Voice Automation\tCtrl+Shift+A");
-    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10206, "Stop Speaking\tEscape");
-    AppendMenuA(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10202, "Next Voice\tCtrl+Shift+]");
-    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10203, "Previous Voice\tCtrl+Shift+[");
-    AppendMenuA(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10204, "Increase Speech Rate\tCtrl+Shift+=");
-    AppendMenuA(hVoiceAutoMenu, MF_STRING, 10205, "Decrease Speech Rate\tCtrl+Shift+-");
-    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, "🔊 Voice &Automation");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_TOGGLE, L"Toggle Voice Automation\tCtrl+Shift+A");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_STOP, L"Stop Speaking\tEscape");
+    AppendMenuW(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_NEXT, L"Next Voice\tCtrl+Shift+]");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_PREV, L"Previous Voice\tCtrl+Shift+[");
+    AppendMenuW(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_UP, L"Increase Speech Rate\tCtrl+Shift+=");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_DOWN, L"Decrease Speech Rate\tCtrl+Shift+-");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, L"\uD83D\uDD0A Voice &Automation");
 
     // Backup submenu
     HMENU hBackupMenu = CreatePopupMenu();
-    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_CREATE, "&Create Backup Now\tCtrl+Shift+B");
-    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_RESTORE, "&Restore from Backup...");
-    AppendMenuA(hBackupMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_AUTO_TOGGLE, "Toggle &Auto-Backup");
-    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_LIST, "&List Backups...");
-    AppendMenuA(hBackupMenu, MF_STRING, IDM_QW_BACKUP_PRUNE, "&Prune Old Backups");
-    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hBackupMenu, "💾 &Backups");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_CREATE, L"&Create Backup Now\tCtrl+Shift+B");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_RESTORE, L"&Restore from Backup...");
+    AppendMenuW(hBackupMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_AUTO_TOGGLE, L"Toggle &Auto-Backup");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_LIST, L"&List Backups...");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_PRUNE, L"&Prune Old Backups");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hBackupMenu, L"\uD83D\uDCBE &Backups");
 
     // Alert & Monitoring submenu
     HMENU hAlertMenu = CreatePopupMenu();
-    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_TOGGLE_MONITOR, "Toggle Resource &Monitor");
-    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_RESOURCE_STATUS, "&Resource Status...");
-    AppendMenuA(hAlertMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_SHOW_HISTORY, "Alert &History...");
-    AppendMenuA(hAlertMenu, MF_STRING, IDM_QW_ALERT_DISMISS_ALL, "&Dismiss All Alerts");
-    AppendMenuA(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, "🔔 A&lerts");
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_TOGGLE_MONITOR, L"Toggle Resource &Monitor");
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_RESOURCE_STATUS, L"&Resource Status...");
+    AppendMenuW(hAlertMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_SHOW_HISTORY, L"Alert &History...");
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_DISMISS_ALL, L"&Dismiss All Alerts");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, L"\uD83D\uDD14 A&lerts");
 
-    // Shortcuts & SLO (Tier 5: IDM_SHORTCUT_SHOW opens visual shortcut editor)
-    AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_QW_SHORTCUT_EDITOR, "⌨️ &Keyboard Shortcuts...\tCtrl+K Ctrl+S");
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_SHORTCUT_SHOW, "Keyboard Shortcut &Editor...");
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, "📊 &SLO Dashboard...");
+    // Shortcuts & SLO (Tier 5)
+    AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SHORTCUT_EDITOR, L"\u2328 &Keyboard Shortcuts...\tCtrl+K Ctrl+S");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_SHORTCUT_SHOW, L"Keyboard Shortcut &Editor...");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, L"\uD83D\uDCCA &SLO Dashboard...");
 
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, "&Tools");
-    
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
+
     // Modules menu
     HMENU hModulesMenu = CreatePopupMenu();
-    AppendMenuA(hModulesMenu, MF_STRING, IDM_MODULES_REFRESH, "&Refresh List");
-    AppendMenuA(hModulesMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hModulesMenu, MF_STRING, IDM_MODULES_IMPORT, "&Import Module...");
-    AppendMenuA(hModulesMenu, MF_STRING, IDM_MODULES_EXPORT, "&Export Module...");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hModulesMenu, "&Modules");
+    AppendMenuW(hModulesMenu, MF_STRING, IDM_MODULES_REFRESH, L"&Refresh List");
+    AppendMenuW(hModulesMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hModulesMenu, MF_STRING, IDM_MODULES_IMPORT, L"&Import Module...");
+    AppendMenuW(hModulesMenu, MF_STRING, IDM_MODULES_EXPORT, L"&Export Module...");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hModulesMenu, L"&Modules");
 
     // Help menu
     HMENU hHelpMenu = CreatePopupMenu();
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_CMDREF, "Command &Reference");
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_PSDOCS, "PowerShell &Documentation");
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_SEARCH, "&Search Help...");
-    AppendMenuA(hHelpMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, "&About");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, "&Help");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_CMDREF, L"Command &Reference");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_PSDOCS, L"PowerShell &Documentation");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_SEARCH, L"&Search Help...");
+    AppendMenuW(hHelpMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, L"&Help");
 
-    // Audit menu (Phase 31 — menu wiring, stubs, dashboard)
+    // Audit menu (Phase 31 — Unicode)
     HMENU hAuditMenu = CreatePopupMenu();
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_SHOW_DASHBOARD, "Show &Dashboard\tCtrl+Shift+A");
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_FULL, "&Run Full Audit");
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_DETECT_STUBS, "Detect &Stubs");
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_CHECK_MENUS, "Check &Menu Wiring");
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_TESTS, "Run Component &Tests");
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_EXPORT_REPORT, "&Export Report...");
-    AppendMenuA(hAuditMenu, MF_STRING, IDM_AUDIT_QUICK_STATS, "&Quick Stats");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAuditMenu, "&Audit");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_SHOW_DASHBOARD, L"Show &Dashboard\tCtrl+Shift+A");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_FULL, L"&Run Full Audit");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_DETECT_STUBS, L"Detect &Stubs");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_CHECK_MENUS, L"Check &Menu Wiring");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_TESTS, L"Run Component &Tests");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_EXPORT_REPORT, L"&Export Report...");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_QUICK_STATS, L"&Quick Stats");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAuditMenu, L"&Audit");
 
     // Git menu
     HMENU hGitMenu = CreatePopupMenu();
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_STATUS, "&Status\tCtrl+G");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_COMMIT, "&Commit...\tCtrl+Shift+C");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_PUSH, "&Push");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_PULL, "P&ull");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_PANEL, "&Git Panel\tCtrl+Shift+G");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hGitMenu, "&Git");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_STATUS, L"&Status\tCtrl+G");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_COMMIT, L"&Commit...\tCtrl+Shift+C");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_PUSH, L"&Push");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_PULL, L"P&ull");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_PANEL, L"&Git Panel\tCtrl+Shift+G");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hGitMenu, L"&Git");
 
-    // Agent menu (existing agentic bridge operations)
+    // Agent menu (Unicode — Qt removal / pure Win32)
     HMENU hAgentMenu = CreatePopupMenu();
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_START_LOOP, "Start &Agent Loop");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_BOUNDED_LOOP, "&Bounded Agent (FIM Tools)\tCtrl+Shift+I");
-    // AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_INTERACTIVE, "Interactive &AI Shell Mode");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_START_LOOP, L"Start &Agent Loop");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_BOUNDED_LOOP, L"&Bounded Agent (FIM Tools)\tCtrl+Shift+I");
 
-    AppendMenuA(hAgentMenu, MF_SEPARATOR, 0, nullptr);
-    
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+
     // AI Options Submenu
     HMENU hAIOptionsMenu = CreatePopupMenu();
-    AppendMenuA(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_MAX, "&Max Mode (Thread Unlock)");
-    AppendMenuA(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_DEEP_THINK, "&Deep Thinking (CoT)");
-    AppendMenuA(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_DEEP_RESEARCH, "Deep &Research (FileSystem)");
-    AppendMenuA(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_NO_REFUSAL, "&No Refusal Mode");
-    AppendMenuA(hAgentMenu, MF_POPUP, (UINT_PTR)hAIOptionsMenu, "AI &Options");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_MAX, L"&Max Mode (Thread Unlock)");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_DEEP_THINK, L"&Deep Thinking (CoT)");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_DEEP_RESEARCH, L"Deep &Research (FileSystem)");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_NO_REFUSAL, L"&No Refusal Mode");
+    AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hAIOptionsMenu, L"AI &Options");
 
     // Context Window (Memory Plugins) Submenu
     HMENU hContextMenu = CreatePopupMenu();
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_4K, "4K (Standard)");
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_32K, "32K (Large)");
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_64K, "64K (X-Large)");
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_128K, "128K (Ultra)");
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_256K, "256K (Mega)");
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_512K, "512K (Giga)");
-    AppendMenuA(hContextMenu, MF_STRING, IDM_AI_CONTEXT_1M, "1M (Tera - Memory Plugin)");
-    AppendMenuA(hAgentMenu, MF_POPUP, (UINT_PTR)hContextMenu, "&Context Window Size");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_4K, L"4K (Standard)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_32K, L"32K (Large)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_64K, L"64K (X-Large)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_128K, L"128K (Ultra)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_256K, L"256K (Mega)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_512K, L"512K (Giga)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_1M, L"1M (Tera - Memory Plugin)");
+    AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hContextMenu, L"&Context Window Size");
 
-    AppendMenuA(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
 
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_EXECUTE_CMD, "&Execute Command...");
-    // AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_BUG_REPORT, "Generate &Bug Report");
-    // AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_CODE_SUGGEST, "Code &Suggestions");
-    
-    AppendMenuA(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_EXECUTE_CMD, L"&Execute Command...");
 
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_CONFIGURE_MODEL, "&Configure Model...");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_TOOLS, "View &Tools");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_STATUS, "View &Status");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_STOP, "&Stop Agent");
-    
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, "&Agent");
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
 
-    // Hotpatch menu (three-layer hotpatch system controls)
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_CONFIGURE_MODEL, L"&Configure Model...");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_TOOLS, L"View &Tools");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_STATUS, L"View &Status");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_STOP, L"&Stop Agent");
+
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, L"&Agent");
+
+    // Hotpatch menu (Unicode — Qt removal)
     {
         HMENU hHotpatchMenu = CreatePopupMenu();
-        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_STATUS, "&Show Hotpatch Status");
-        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_TOGGLE_ALL, "&Toggle Hotpatch System");
-        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_EVENT_LOG, "Show &Event Log");
-        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_RESET_STATS, "&Reset Statistics");
-        AppendMenuA(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_STATUS, L"&Show Hotpatch Status");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_TOGGLE_ALL, L"&Toggle Hotpatch System");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_EVENT_LOG, L"Show &Event Log");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_RESET_STATS, L"&Reset Statistics");
+        AppendMenuW(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
 
-        // Memory Layer submenu
         HMENU hMemLayerMenu = CreatePopupMenu();
-        AppendMenuA(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_APPLY, "&Apply Memory Patch...");
-        AppendMenuA(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_REVERT, "&Revert Memory Patch...");
-        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hMemLayerMenu, "&Memory Layer");
+        AppendMenuW(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_APPLY, L"&Apply Memory Patch...");
+        AppendMenuW(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_REVERT, L"&Revert Memory Patch...");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hMemLayerMenu, L"&Memory Layer");
 
-        // Byte Layer submenu
         HMENU hByteLayerMenu = CreatePopupMenu();
-        AppendMenuA(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_APPLY, "&Apply Byte Patch...");
-        AppendMenuA(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_SEARCH, "&Search && Replace Pattern...");
-        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hByteLayerMenu, "&Byte Layer");
+        AppendMenuW(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_APPLY, L"&Apply Byte Patch...");
+        AppendMenuW(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_SEARCH, L"&Search && Replace Pattern...");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hByteLayerMenu, L"&Byte Layer");
 
-        // Server Layer submenu
         HMENU hServerLayerMenu = CreatePopupMenu();
-        AppendMenuA(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_ADD, "&Add Server Patch...");
-        AppendMenuA(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_REMOVE, "&Remove Server Patch...");
-        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hServerLayerMenu, "&Server Layer");
+        AppendMenuW(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_ADD, L"&Add Server Patch...");
+        AppendMenuW(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_REMOVE, L"&Remove Server Patch...");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hServerLayerMenu, L"&Server Layer");
 
-        // Proxy submenu
         HMENU hProxyMenu = CreatePopupMenu();
-        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_BIAS, "Token &Bias Injection...");
-        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_REWRITE, "Output &Rewrite Rule...");
-        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_TERMINATE, "Stream &Termination Rule...");
-        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_VALIDATE, "Custom &Validator...");
-        AppendMenuA(hProxyMenu, MF_STRING, IDM_HOTPATCH_SHOW_PROXY_STATS, "Show Proxy &Stats");
-        AppendMenuA(hHotpatchMenu, MF_POPUP, (UINT_PTR)hProxyMenu, "&Proxy Hotpatcher");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_BIAS, L"Token &Bias Injection...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_REWRITE, L"Output &Rewrite Rule...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_TERMINATE, L"Stream &Termination Rule...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_VALIDATE, L"Custom &Validator...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_SHOW_PROXY_STATS, L"Show Proxy &Stats");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hProxyMenu, L"&Proxy Hotpatcher");
 
-        AppendMenuA(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
 
-        // Presets
-        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_SAVE, "Save Preset...");
-        AppendMenuA(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_LOAD, "Load Preset...");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_SAVE, L"Save Preset...");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_LOAD, L"Load Preset...");
 
-        AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hHotpatchMenu, "&Hotpatch");
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hHotpatchMenu, L"&Hotpatch");
     }
 
-    // Autonomy menu (gated by feature toggle)
     if (FEATURE_ENABLED("autonomy")) {
         HMENU hAutonomyMenu = CreatePopupMenu();
-        AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_TOGGLE, "&Toggle Auto Loop");
-        AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_START, "&Start Autonomy");
-        AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STOP, "Sto&p Autonomy");
-        AppendMenuA(hAutonomyMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_SET_GOAL, "Set &Goal...");
-        AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STATUS, "Show &Status");
-        AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_MEMORY, "Show &Memory Snapshot");
-        AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAutonomyMenu, "&Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_TOGGLE, L"&Toggle Auto Loop");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_START, L"&Start Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STOP, L"Sto&p Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_SET_GOAL, L"Set &Goal...");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STATUS, L"Show &Status");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_MEMORY, L"Show &Memory Snapshot");
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAutonomyMenu, L"&Autonomy");
     }
 
-    // Reverse Engineering menu (gated by feature toggle)
     if (FEATURE_ENABLED("reverseEngineering")) {
         HMENU hRevEngMenu = createReverseEngineeringMenu();
-        AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hRevEngMenu, "&RevEng");
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hRevEngMenu, L"&RevEng");
     }
 
     // Phase 45: Game Engine Integration (Unity + Unreal)
@@ -763,6 +784,9 @@ void Win32IDE::updateTitleBarText()
         SetWindowTextA(m_hwndTitleLabel, composed.c_str());
         m_lastTitleBarText = composed;
     }
+    // Keep breadcrumb bar in sync with current file (symbol path updates on cursor move)
+    if (m_hwndBreadcrumbs && m_settings.breadcrumbsEnabled)
+        updateBreadcrumbs();
 }
 
 // ============================================================================
@@ -866,26 +890,28 @@ void Win32IDE::recreateFonts() {
     setFont(m_hwndSearchResults, m_hFontUI);
     setFont(m_hwndFloatingContent, m_hFontUI);
 
-    // PowerShell panel fonts
+    // PowerShell panel fonts (store and delete previous to avoid leak on DPI change)
+    if (m_hFontPowerShell) { DeleteObject(m_hFontPowerShell); m_hFontPowerShell = nullptr; }
+    if (m_hFontPowerShellStatus) { DeleteObject(m_hFontPowerShellStatus); m_hFontPowerShellStatus = nullptr; }
     if (m_hwndPowerShellOutput) {
-        HFONT psFont = CreateFontA(
+        m_hFontPowerShell = CreateFontA(
             -dpiScale(16), 0, 0, 0, FW_NORMAL,
             FALSE, FALSE, FALSE, DEFAULT_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
         );
-        SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)psFont, TRUE);
-        if (m_hwndPowerShellInput) SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)psFont, TRUE);
-        if (m_hwndPSBtnExecute) SendMessage(m_hwndPSBtnExecute, WM_SETFONT, (WPARAM)psFont, TRUE);
+        SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)m_hFontPowerShell, TRUE);
+        if (m_hwndPowerShellInput) SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)m_hFontPowerShell, TRUE);
+        if (m_hwndPSBtnExecute) SendMessage(m_hwndPSBtnExecute, WM_SETFONT, (WPARAM)m_hFontPowerShell, TRUE);
     }
     if (m_hwndPowerShellStatusBar) {
-        HFONT psSmall = CreateFontA(
+        m_hFontPowerShellStatus = CreateFontA(
             -dpiScale(12), 0, 0, 0, FW_NORMAL,
             FALSE, FALSE, FALSE, DEFAULT_CHARSET,
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
         );
-        SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)psSmall, TRUE);
+        SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)m_hFontPowerShellStatus, TRUE);
     }
 
     // Terminal panes
@@ -1229,7 +1255,7 @@ void Win32IDE::newFile()
 {
     appendToOutput("File > New clicked\n", "Output", OutputSeverity::Info);
     if (m_fileModified) {
-        int result = MessageBoxA(m_hwndMain, "File has been modified. Save changes?", "Save", MB_YESNOCANCEL);
+        int result = MessageBoxW(m_hwndMain, L"File has been modified. Save changes?", L"Save", MB_YESNOCANCEL);
         if (result == IDCANCEL) {
             appendToOutput("File > New cancelled by user\n", "Output", OutputSeverity::Info);
             return;
@@ -1256,7 +1282,7 @@ void Win32IDE::openFile()
     METRICS.increment("file.open_total");
     appendToOutput("File > Open clicked\n", "Output", OutputSeverity::Info);
     if (m_fileModified) {
-        int result = MessageBoxA(m_hwndMain, "File has been modified. Save changes?", "Save", MB_YESNOCANCEL);
+        int result = MessageBoxW(m_hwndMain, L"File has been modified. Save changes?", L"Save", MB_YESNOCANCEL);
         if (result == IDCANCEL) {
             appendToOutput("File > Open cancelled by user\n", "Output", OutputSeverity::Info);
             return;
@@ -1267,29 +1293,30 @@ void Win32IDE::openFile()
         }
     }
 
-    OPENFILENAMEA ofn;
-    char szFile[260] = {0};
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260] = {0};
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
+    ofn.nMaxFile = (DWORD)std::size(szFile);
+    ofn.lpstrFilter = L"All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = nullptr;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-    if (GetOpenFileNameA(&ofn)) {
-        appendToOutput("Opening file: " + std::string(szFile) + "\n", "Output", OutputSeverity::Info);
+    if (GetOpenFileNameW(&ofn)) {
+        std::string pathUtf8 = wideToUtf8(szFile);
+        appendToOutput("Opening file: " + pathUtf8 + "\n", "Output", OutputSeverity::Info);
         try {
-            std::ifstream file(szFile);
+            std::ifstream file(std::filesystem::path(szFile));
             if (file) {
                 std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                 SetWindowTextA(m_hwndEditor, content.c_str());
-                m_currentFile = szFile;
+                m_currentFile = pathUtf8;
                 m_fileModified = false;
                 setCurrentDirectoryFromFile(m_currentFile);
                 updateTitleBarText();
@@ -1298,12 +1325,12 @@ void Win32IDE::openFile()
                 syncEditorToGpuSurface();
                 appendToOutput("File opened successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
             } else {
-                appendToOutput("Failed to open file: " + std::string(szFile) + "\n", "Errors", OutputSeverity::Error);
-                MessageBoxA(m_hwndMain, "Failed to open file", "Error", MB_OK | MB_ICONERROR);
+                appendToOutput("Failed to open file: " + pathUtf8 + "\n", "Errors", OutputSeverity::Error);
+                MessageBoxW(m_hwndMain, L"Failed to open file", L"Error", MB_OK | MB_ICONERROR);
             }
         } catch (const std::exception& e) {
             appendToOutput("Exception opening file: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
-            MessageBoxA(m_hwndMain, e.what(), "Error", MB_OK | MB_ICONERROR);
+            MessageBoxW(m_hwndMain, utf8ToWide(e.what()).c_str(), L"Error", MB_OK | MB_ICONERROR);
         }
     } else {
         appendToOutput("File > Open cancelled by user (no file selected)\n", "Output", OutputSeverity::Info);
@@ -1322,7 +1349,7 @@ void Win32IDE::openFile(const std::string& filePath)
     METRICS.increment("file.open_total");
     appendToOutput("Opening file: " + filePath + "\n", "Output", OutputSeverity::Info);
     try {
-        std::ifstream file(filePath);
+        std::ifstream file(std::filesystem::path(utf8ToWide(filePath)));
         if (file) {
             std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
             SetWindowTextA(m_hwndEditor, content.c_str());
@@ -1354,11 +1381,11 @@ void Win32IDE::openFile(const std::string& filePath)
             appendToOutput("File opened successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
         } else {
             appendToOutput("Failed to open file: " + filePath + "\n", "Errors", OutputSeverity::Error);
-            MessageBoxA(m_hwndMain, "Failed to open file", "Error", MB_OK | MB_ICONERROR);
+            MessageBoxW(m_hwndMain, L"Failed to open file", L"Error", MB_OK | MB_ICONERROR);
         }
     } catch (const std::exception& e) {
         appendToOutput("Exception opening file: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
-        MessageBoxA(m_hwndMain, e.what(), "Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, utf8ToWide(e.what()).c_str(), L"Error", MB_OK | MB_ICONERROR);
     }
 }
 
@@ -1375,7 +1402,7 @@ bool Win32IDE::saveFile()
     appendToOutput("Saving file: " + m_currentFile + "\n", "Output", OutputSeverity::Info);
     try {
         std::string content = getWindowText(m_hwndEditor);
-        std::ofstream file(m_currentFile);
+        std::ofstream file(std::filesystem::path(utf8ToWide(m_currentFile)));
         if (file) {
             file << content;
             m_fileModified = false;
@@ -1385,10 +1412,10 @@ bool Win32IDE::saveFile()
             return true;
         }
         appendToOutput("Failed to open file for writing: " + m_currentFile + "\n", "Errors", OutputSeverity::Error);
-        MessageBoxA(m_hwndMain, "Failed to save file", "Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Failed to save file", L"Error", MB_OK | MB_ICONERROR);
     } catch (const std::exception& e) {
         appendToOutput("Exception saving file: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
-        MessageBoxA(m_hwndMain, e.what(), "Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, utf8ToWide(e.what()).c_str(), L"Error", MB_OK | MB_ICONERROR);
     }
     return false;
 }
@@ -1396,23 +1423,23 @@ bool Win32IDE::saveFile()
 bool Win32IDE::saveFileAs()
 {
     appendToOutput("File > Save As clicked\n", "Output", OutputSeverity::Info);
-    OPENFILENAMEA ofn;
-    char szFile[260] = {0};
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260] = {0};
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
+    ofn.nMaxFile = (DWORD)std::size(szFile);
+    ofn.lpstrFilter = L"All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = nullptr;
     ofn.Flags = OFN_OVERWRITEPROMPT;
 
-    if (GetSaveFileNameA(&ofn)) {
-        m_currentFile = szFile;
+    if (GetSaveFileNameW(&ofn)) {
+        m_currentFile = wideToUtf8(szFile);
         appendToOutput("Save As: " + m_currentFile + "\n", "Output", OutputSeverity::Info);
         setCurrentDirectoryFromFile(m_currentFile);
         updateTitleBarText();
@@ -1660,7 +1687,7 @@ void Win32IDE::saveTheme(const std::string& themeName)
         file << "selection=" << std::hex << m_currentTheme.selectionColor << std::endl;
         file << "linenumber=" << std::hex << m_currentTheme.lineNumberColor << std::endl;
         file.close();
-        MessageBoxA(m_hwndMain, "Theme saved successfully", "Theme Manager", MB_OK);
+        MessageBoxW(m_hwndMain, L"Theme saved successfully", L"Theme Manager", MB_OK);
     }
 }
 
@@ -1758,6 +1785,11 @@ void Win32IDE::updateMenuEnableStates() {
     CheckMenuItem(m_hMenu, IDM_VIEW_USE_VULKAN_RENDERER, MF_BYCOMMAND | (m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED));
     // Breadcrumbs (View) — sync check with m_settings.breadcrumbsEnabled
     CheckMenuItem(m_hMenu, IDM_T1_BREADCRUMBS_TOGGLE, MF_BYCOMMAND | (m_settings.breadcrumbsEnabled ? MF_CHECKED : MF_UNCHECKED));
+
+    // Tier 5 cosmetic features — enable when corresponding module is initialized (after deferredHeavyInit)
+    EnableMenuItem(m_hMenu, IDM_TELDASH_SHOW,   (m_telemetryDashboardInitialized ? MF_BYCOMMAND|MF_ENABLED : MF_BYCOMMAND|MF_GRAYED));
+    EnableMenuItem(m_hMenu, IDM_EMOJI_PICKER,  (m_emojiSupportInitialized       ? MF_BYCOMMAND|MF_ENABLED : MF_BYCOMMAND|MF_GRAYED));
+    EnableMenuItem(m_hMenu, IDM_SHORTCUT_SHOW, (m_shortcutEditorInitialized     ? MF_BYCOMMAND|MF_ENABLED : MF_BYCOMMAND|MF_GRAYED));
 
     DrawMenuBar(m_hwndMain);
 }
@@ -1865,7 +1897,7 @@ void Win32IDE::showCommandReference()
         "ConvertTo-Json - Convert to JSON\n"
         "ConvertFrom-Json - Convert from JSON\n";
         
-    MessageBoxA(m_hwndMain, reference.c_str(), "PowerShell Reference", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(reference).c_str(), L"PowerShell Reference", MB_OK);
 }
 
 // Output / Clipboard / Minimap / Profiling implementations
@@ -2092,7 +2124,7 @@ void Win32IDE::showClipboardHistory()
         if (item.size() > 50) preview += "...";
         msg += std::to_string(i + 1) + ". " + preview + "\n";
     }
-    MessageBoxA(m_hwndMain, msg.c_str(), "Clipboard History", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Clipboard History", MB_OK);
 }
 
 void Win32IDE::clearClipboardHistory()
@@ -2289,14 +2321,14 @@ void Win32IDE::showProfileResults()
     for (auto& pr : m_profilingResults) {
         msg += pr.first + ": " + std::to_string(pr.second) + " ms\n";
     }
-    MessageBoxA(m_hwndMain, msg.c_str(), "Profiling", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Profiling", MB_OK);
 }
 
 void Win32IDE::analyzeScript()
 {
     std::string script = getWindowText(m_hwndEditor);
     if(script.empty()) {
-        MessageBoxA(m_hwndMain, "Script is empty.", "Analyze Script", MB_OK);
+        MessageBoxW(m_hwndMain, L"Script is empty.", L"Analyze Script", MB_OK);
         return;
     }
     
@@ -2400,7 +2432,7 @@ void Win32IDE::showModuleBrowser()
     for (auto& m : m_modules) {
         msg += m.name + " (" + m.version + ")" + (m.loaded?" [Loaded]":" [Available]") + "\n";
     }
-    MessageBoxA(m_hwndMain, msg.c_str(), "Module Browser", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Module Browser", MB_OK);
 }
 
 void Win32IDE::loadModule(const std::string& moduleName)
@@ -2452,20 +2484,18 @@ void Win32IDE::unloadModule(const std::string& moduleName)
 
 void Win32IDE::importModule()
 {
-    // Show file dialog to select module
-    OPENFILENAMEA ofn = {};
-    char szFile[MAX_PATH] = "";
-    
+    OPENFILENAMEW ofn = {};
+    wchar_t szFile[MAX_PATH] = L"";
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
-    ofn.lpstrFilter = "PowerShell Modules (*.psm1;*.psd1)\0*.psm1;*.psd1\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = L"PowerShell Modules (*.psm1;*.psd1)\0*.psm1;*.psd1\0All Files (*.*)\0*.*\0";
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-    ofn.lpstrTitle = "Import Module";
-    
-    if (GetOpenFileNameA(&ofn)) {
-        std::string modulePath = szFile;
+    ofn.lpstrTitle = L"Import Module";
+
+    if (GetOpenFileNameW(&ofn)) {
+        std::string modulePath = wideToUtf8(szFile);
         std::string command = "Import-Module '" + modulePath + "'\n";
         
         TerminalPane* pane = getActiveTerminalPane();
@@ -2483,7 +2513,7 @@ void Win32IDE::exportModule()
 {
     // Show dialog to select module to export
     if (m_modules.empty()) {
-        MessageBoxA(m_hwndMain, "No modules loaded. Refresh module list first.", "Export Module", MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(m_hwndMain, L"No modules loaded. Refresh module list first.", L"Export Module", MB_OK | MB_ICONINFORMATION);
         return;
     }
     
@@ -2496,25 +2526,24 @@ void Win32IDE::exportModule()
     }
     moduleList += "\nExport the first loaded module?";
     
-    if (MessageBoxA(m_hwndMain, moduleList.c_str(), "Export Module", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+    if (MessageBoxW(m_hwndMain, utf8ToWide(moduleList).c_str(), L"Export Module", MB_YESNO | MB_ICONQUESTION) == IDYES) {
         // Find first loaded module
         for (const auto& mod : m_modules) {
             if (mod.loaded) {
-                // Show save dialog
-                OPENFILENAMEA ofn = {};
-                char szFile[MAX_PATH] = "";
-                strncpy_s(szFile, (mod.name + ".psm1").c_str(), MAX_PATH);
-                
+                OPENFILENAMEW ofn = {};
+                std::wstring defaultName = utf8ToWide(mod.name + ".psm1");
+                wchar_t szFile[MAX_PATH] = L"";
+                wcsncpy_s(szFile, defaultName.c_str(), _TRUNCATE);
                 ofn.lStructSize = sizeof(ofn);
                 ofn.hwndOwner = m_hwndMain;
-                ofn.lpstrFilter = "PowerShell Module (*.psm1)\0*.psm1\0PowerShell Data (*.psd1)\0*.psd1\0";
+                ofn.lpstrFilter = L"PowerShell Module (*.psm1)\0*.psm1\0PowerShell Data (*.psd1)\0*.psd1\0";
                 ofn.lpstrFile = szFile;
                 ofn.nMaxFile = MAX_PATH;
                 ofn.Flags = OFN_OVERWRITEPROMPT;
-                ofn.lpstrTitle = "Export Module";
-                
-                if (GetSaveFileNameA(&ofn)) {
-                    std::string savePath = szFile;
+                ofn.lpstrTitle = L"Export Module";
+
+                if (GetSaveFileNameW(&ofn)) {
+                    std::string savePath = wideToUtf8(szFile);
                     std::string command = "Export-ModuleMember -Function * -Cmdlet * -Variable * -Alias * -PassThru | Out-File '" + savePath + "'\n";
                     
                     TerminalPane* pane = getActiveTerminalPane();
@@ -2554,7 +2583,7 @@ void Win32IDE::saveCodeSnippets()
 
 void Win32IDE::showPowerShellDocs()
 {
-    MessageBoxA(m_hwndMain, "Open https://learn.microsoft.com/powershell/ for full docs.", "PowerShell Docs", MB_OK);
+    MessageBoxW(m_hwndMain, L"Open https://learn.microsoft.com/powershell/ for full docs.", L"PowerShell Docs", MB_OK);
 }
 
 void Win32IDE::searchHelp(const std::string& query)
@@ -2580,18 +2609,16 @@ void Win32IDE::createFloatingPanel()
 {
     if (m_hwndFloatingPanel) return; // Already created
 
-    // Register a custom window class for the floating panel
-    WNDCLASSEXA wc = {};
-    wc.cbSize = sizeof(WNDCLASSEXA);
+    WNDCLASSEXW wc = {};
+    wc.cbSize = sizeof(WNDCLASSEXW);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = FloatingPanelProc;
     wc.hInstance = m_hInstance;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = CreateSolidBrush(RGB(30, 30, 30));
-    wc.lpszClassName = "RawrXD_FloatingPanel";
-    RegisterClassExA(&wc);
+    wc.lpszClassName = L"RawrXD_FloatingPanel";
+    RegisterClassExW(&wc);
 
-    // Position floating panel in the lower portion of the main window
     RECT rcMain;
     GetClientRect(m_hwndMain, &rcMain);
     int panelWidth = rcMain.right - rcMain.left;
@@ -2599,10 +2626,10 @@ void Win32IDE::createFloatingPanel()
     int panelX = rcMain.left;
     int panelY = rcMain.bottom - panelHeight;
 
-    m_hwndFloatingPanel = CreateWindowExA(
+    m_hwndFloatingPanel = CreateWindowExW(
         WS_EX_TOOLWINDOW,
-        "RawrXD_FloatingPanel",
-        "Panel",
+        L"RawrXD_FloatingPanel",
+        L"Panel",
         WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
         panelX, panelY, panelWidth, panelHeight,
         m_hwndMain, nullptr, m_hInstance, nullptr
@@ -2613,14 +2640,12 @@ void Win32IDE::createFloatingPanel()
         return;
     }
 
-    // Store 'this' pointer for the proc
-    SetWindowLongPtrA(m_hwndFloatingPanel, GWLP_USERDATA, (LONG_PTR)this);
+    SetWindowLongPtrW(m_hwndFloatingPanel, GWLP_USERDATA, (LONG_PTR)this);
 
-    // Create tab buttons at the top of the floating panel
-    static const char* tabLabels[] = { "Problems", "Output", "Debug Console", "Terminal" };
+    static const wchar_t* tabLabels[] = { L"Problems", L"Output", L"Debug Console", L"Terminal" };
     for (int i = 0; i < 4; i++) {
-        CreateWindowExA(
-            0, "BUTTON", tabLabels[i],
+        CreateWindowExW(
+            0, L"BUTTON", tabLabels[i],
             WS_CHILD | WS_VISIBLE | BS_FLAT | BS_PUSHBUTTON,
             5 + i * 120, 2, 115, 24,
             m_hwndFloatingPanel, (HMENU)(UINT_PTR)(7001 + i),
@@ -2628,19 +2653,17 @@ void Win32IDE::createFloatingPanel()
         );
     }
 
-    // Create the content area (a multi-line EDIT for text output)
-    m_hwndFloatingContent = CreateWindowExA(
+    m_hwndFloatingContent = CreateWindowExW(
         WS_EX_CLIENTEDGE,
-        "EDIT", "",
+        L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
         0, 28, panelWidth, panelHeight - 28,
         m_hwndFloatingPanel, nullptr, m_hInstance, nullptr
     );
 
-    // Apply dark theme to content
     if (m_hwndFloatingContent) {
-        SendMessageA(m_hwndFloatingContent, WM_SETFONT,
-                     (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+        SendMessageW(m_hwndFloatingContent, WM_SETFONT,
+                    (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
     }
 
     appendToOutput("Floating panel created\n", "Output", OutputSeverity::Info);
@@ -2668,14 +2691,11 @@ void Win32IDE::hideFloatingPanel()
 void Win32IDE::updateFloatingPanelContent(const std::string& content)
 {
     if (!m_hwndFloatingContent) return;
-
-    // Append the new content to the existing text in the floating panel
-    int textLen = GetWindowTextLengthA(m_hwndFloatingContent);
-    SendMessageA(m_hwndFloatingContent, EM_SETSEL, (WPARAM)textLen, (LPARAM)textLen);
-    SendMessageA(m_hwndFloatingContent, EM_REPLACESEL, FALSE, (LPARAM)content.c_str());
-
-    // Auto-scroll to bottom
-    SendMessageA(m_hwndFloatingContent, EM_SCROLLCARET, 0, 0);
+    std::wstring wcontent = utf8ToWide(content);
+    int textLen = GetWindowTextLengthW(m_hwndFloatingContent);
+    SendMessageW(m_hwndFloatingContent, EM_SETSEL, (WPARAM)textLen, (LPARAM)textLen);
+    SendMessageW(m_hwndFloatingContent, EM_REPLACESEL, FALSE, (LPARAM)wcontent.c_str());
+    SendMessageW(m_hwndFloatingContent, EM_SCROLLCARET, 0, 0);
 }
 
 void Win32IDE::setFloatingPanelTab(int tabIndex)
@@ -2686,33 +2706,30 @@ void Win32IDE::setFloatingPanelTab(int tabIndex)
     for (int i = 0; i < 4; i++) {
         HWND hTabBtn = GetDlgItem(m_hwndFloatingPanel, 7001 + i);
         if (hTabBtn) {
-            // Bold the active tab, normal weight for others
             if (i == tabIndex) {
-                SendMessageA(hTabBtn, BM_SETSTATE, TRUE, 0);
+                SendMessageW(hTabBtn, BM_SETSTATE, TRUE, 0);
             } else {
-                SendMessageA(hTabBtn, BM_SETSTATE, FALSE, 0);
+                SendMessageW(hTabBtn, BM_SETSTATE, FALSE, 0);
             }
         }
     }
 
-    // Update content area based on selected tab
     if (m_hwndFloatingContent) {
-        static const char* tabTitles[] = {
-            "=== Problems ===\r\n",
-            "=== Output ===\r\n",
-            "=== Debug Console ===\r\n",
-            "=== Terminal ===\r\n"
+        static const wchar_t* tabTitles[] = {
+            L"=== Problems ===\r\n",
+            L"=== Output ===\r\n",
+            L"=== Debug Console ===\r\n",
+            L"=== Terminal ===\r\n"
         };
-
         if (tabIndex >= 0 && tabIndex < 4) {
-            SetWindowTextA(m_hwndFloatingContent, tabTitles[tabIndex]);
+            SetWindowTextW(m_hwndFloatingContent, tabTitles[tabIndex]);
         }
     }
 }
 
 LRESULT CALLBACK Win32IDE::FloatingPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
     switch (uMsg) {
     case WM_PAINT: {
@@ -2813,32 +2830,31 @@ void Win32IDE::showFindDialog()
         return;
     }
     
-    m_hwndFindDialog = CreateDialogParamA(m_hInstance, MAKEINTRESOURCEA(IDD_FIND), 
+    m_hwndFindDialog = CreateDialogParamW(m_hInstance, MAKEINTRESOURCEW(IDD_FIND),
         m_hwndMain, FindDialogProc, (LPARAM)this);
-    
+
     if (!m_hwndFindDialog) {
-        // Fallback: create simple dialog programmatically
-        HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Find",
+        HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Find",
             WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
             100, 100, 400, 150, m_hwndMain, nullptr, m_hInstance, nullptr);
         m_hwndFindDialog = hwndDlg;
-        
-        CreateWindowExA(0, "STATIC", "Find what:", WS_CHILD | WS_VISIBLE,
+
+        CreateWindowExW(0, L"STATIC", L"Find what:", WS_CHILD | WS_VISIBLE,
             10, 15, 80, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-        CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", m_lastSearchText.c_str(),
-            WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22, 
+        CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", utf8ToWide(m_lastSearchText).c_str(),
+            WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22,
             hwndDlg, (HMENU)IDC_FIND_TEXT, m_hInstance, nullptr);
-        
-        CreateWindowExA(0, "BUTTON", "Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+
+        CreateWindowExW(0, L"BUTTON", L"Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             10, 45, 120, 20, hwndDlg, (HMENU)IDC_CASE_SENSITIVE, m_hInstance, nullptr);
-        CreateWindowExA(0, "BUTTON", "Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        CreateWindowExW(0, L"BUTTON", L"Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             140, 45, 100, 20, hwndDlg, (HMENU)IDC_WHOLE_WORD, m_hInstance, nullptr);
-        CreateWindowExA(0, "BUTTON", "Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        CreateWindowExW(0, L"BUTTON", L"Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             250, 45, 70, 20, hwndDlg, (HMENU)IDC_USE_REGEX, m_hInstance, nullptr);
-        
-        CreateWindowExA(0, "BUTTON", "Find Next", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+
+        CreateWindowExW(0, L"BUTTON", L"Find Next", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
             10, 80, 90, 28, hwndDlg, (HMENU)IDC_BTN_FIND_NEXT, m_hInstance, nullptr);
-        CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE,
+        CreateWindowExW(0, L"BUTTON", L"Close", WS_CHILD | WS_VISIBLE,
             110, 80, 90, 28, hwndDlg, (HMENU)IDC_BTN_CLOSE, m_hInstance, nullptr);
     }
     
@@ -2852,38 +2868,37 @@ void Win32IDE::showReplaceDialog()
         return;
     }
     
-    // Create simple replace dialog
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Replace",
+    HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Replace",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         100, 100, 400, 200, m_hwndMain, nullptr, m_hInstance, nullptr);
     m_hwndReplaceDialog = hwndDlg;
-    
-    CreateWindowExA(0, "STATIC", "Find what:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Find what:", WS_CHILD | WS_VISIBLE,
         10, 15, 80, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", m_lastSearchText.c_str(),
-        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22, 
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", utf8ToWide(m_lastSearchText).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22,
         hwndDlg, (HMENU)IDC_FIND_TEXT, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Replace with:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Replace with:", WS_CHILD | WS_VISIBLE,
         10, 45, 80, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", m_lastReplaceText.c_str(),
-        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 42, 280, 22, 
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", utf8ToWide(m_lastReplaceText).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 42, 280, 22,
         hwndDlg, (HMENU)IDC_REPLACE_TEXT, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "BUTTON", "Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+
+    CreateWindowExW(0, L"BUTTON", L"Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         10, 75, 120, 20, hwndDlg, (HMENU)IDC_CASE_SENSITIVE, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    CreateWindowExW(0, L"BUTTON", L"Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         140, 75, 100, 20, hwndDlg, (HMENU)IDC_WHOLE_WORD, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    CreateWindowExW(0, L"BUTTON", L"Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         250, 75, 70, 20, hwndDlg, (HMENU)IDC_USE_REGEX, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "BUTTON", "Find Next", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"BUTTON", L"Find Next", WS_CHILD | WS_VISIBLE,
         10, 110, 90, 28, hwndDlg, (HMENU)IDC_BTN_FIND_NEXT, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Replace", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+    CreateWindowExW(0, L"BUTTON", L"Replace", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         110, 110, 90, 28, hwndDlg, (HMENU)IDC_BTN_REPLACE, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Replace All", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Replace All", WS_CHILD | WS_VISIBLE,
         210, 110, 90, 28, hwndDlg, (HMENU)IDC_BTN_REPLACE_ALL, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Close", WS_CHILD | WS_VISIBLE,
         310, 110, 70, 28, hwndDlg, (HMENU)IDC_BTN_CLOSE, m_hInstance, nullptr);
     
     ShowWindow(m_hwndReplaceDialog, SW_SHOW);
@@ -2925,7 +2940,7 @@ void Win32IDE::replaceAll()
     int count = replaceText(m_lastSearchText, m_lastReplaceText, true, m_searchCaseSensitive, m_searchWholeWord, m_searchUseRegex);
     
     std::string msg = "Replaced " + std::to_string(count) + " occurrence(s).";
-    MessageBoxA(m_hwndMain, msg.c_str(), "Replace All", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Replace All", MB_OK | MB_ICONINFORMATION);
 }
 
 bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSensitive, bool wholeWord, bool useRegex)
@@ -3003,7 +3018,7 @@ bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSe
         } catch (const std::regex_error& e) {
             std::string msg = "Invalid regex: ";
             msg += e.what();
-            MessageBoxA(m_hwndMain, msg.c_str(), "Find", MB_OK | MB_ICONERROR);
+            MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Find", MB_OK | MB_ICONERROR);
             return false;
         }
     } else {
@@ -3071,7 +3086,7 @@ bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSe
         return true;
     }
     
-    MessageBoxA(m_hwndMain, "Text not found.", "Find", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, L"Text not found.", L"Find", MB_OK | MB_ICONINFORMATION);
     return false;
 }
 
@@ -3174,10 +3189,10 @@ INT_PTR CALLBACK Win32IDE::FindDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam
         case IDC_BTN_FIND_NEXT:
             {
                 HWND hwndFindText = GetDlgItem(hwndDlg, IDC_FIND_TEXT);
-                char buffer[256];
-                GetWindowTextA(hwndFindText, buffer, 256);
-                pThis->m_lastSearchText = buffer;
-                
+                wchar_t buffer[256];
+                GetWindowTextW(hwndFindText, buffer, 256);
+                pThis->m_lastSearchText = wideToUtf8(buffer);
+
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
@@ -3219,32 +3234,40 @@ INT_PTR CALLBACK Win32IDE::ReplaceDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPa
         {
             HWND hwndFindText = GetDlgItem(hwndDlg, IDC_FIND_TEXT);
             HWND hwndReplaceText = GetDlgItem(hwndDlg, IDC_REPLACE_TEXT);
-            char findBuffer[256], replaceBuffer[256];
-            
+
             switch (LOWORD(wParam)) {
             case IDC_BTN_FIND_NEXT:
-                GetWindowTextA(hwndFindText, findBuffer, 256);
-                pThis->m_lastSearchText = findBuffer;
+                {
+                    wchar_t wFind[256], wReplace[256];
+                    GetWindowTextW(hwndFindText, wFind, 256);
+                    pThis->m_lastSearchText = wideToUtf8(wFind);
+                }
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
                 pThis->findNext();
                 return TRUE;
             case IDC_BTN_REPLACE:
-                GetWindowTextA(hwndFindText, findBuffer, 256);
-                GetWindowTextA(hwndReplaceText, replaceBuffer, 256);
-                pThis->m_lastSearchText = findBuffer;
-                pThis->m_lastReplaceText = replaceBuffer;
+                {
+                    wchar_t wFind[256], wReplace[256];
+                    GetWindowTextW(hwndFindText, wFind, 256);
+                    GetWindowTextW(hwndReplaceText, wReplace, 256);
+                    pThis->m_lastSearchText = wideToUtf8(wFind);
+                    pThis->m_lastReplaceText = wideToUtf8(wReplace);
+                }
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
                 pThis->replaceNext();
                 return TRUE;
             case IDC_BTN_REPLACE_ALL:
-                GetWindowTextA(hwndFindText, findBuffer, 256);
-                GetWindowTextA(hwndReplaceText, replaceBuffer, 256);
-                pThis->m_lastSearchText = findBuffer;
-                pThis->m_lastReplaceText = replaceBuffer;
+                {
+                    wchar_t wFind[256], wReplace[256];
+                    GetWindowTextW(hwndFindText, wFind, 256);
+                    GetWindowTextW(hwndReplaceText, wReplace, 256);
+                    pThis->m_lastSearchText = wideToUtf8(wFind);
+                    pThis->m_lastReplaceText = wideToUtf8(wReplace);
+                }
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
@@ -3284,51 +3307,46 @@ INT_PTR CALLBACK Win32IDE::ReplaceDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPa
 
 void Win32IDE::showSnippetManager()
 {
-    // Create snippet manager dialog
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Snippet Manager",
+    HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Snippet Manager",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         100, 100, 600, 500, m_hwndMain, nullptr, m_hInstance, nullptr);
-    
-    // Snippet list (left pane)
-    CreateWindowExA(0, "STATIC", "Snippets:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Snippets:", WS_CHILD | WS_VISIBLE,
         10, 10, 150, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    
-    HWND hwndList = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "",
+
+    HWND hwndList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
         WS_CHILD | WS_VISIBLE | LBS_STANDARD | WS_VSCROLL,
         10, 35, 150, 400, hwndDlg, (HMENU)IDC_SNIPPET_LIST_DLG, m_hInstance, nullptr);
-    
-    // Populate list with snippet names
+
     for (const auto& snippet : m_codeSnippets) {
-        SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)snippet.name.c_str());
+        SendMessageW(hwndList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(snippet.name).c_str());
     }
-    
-    // Snippet details (right pane)
-    CreateWindowExA(0, "STATIC", "Name:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Name:", WS_CHILD | WS_VISIBLE,
         175, 10, 50, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
         230, 8, 350, 22, hwndDlg, (HMENU)IDC_SNIPPET_NAME, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Description:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Description:", WS_CHILD | WS_VISIBLE,
         175, 40, 70, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
         175, 60, 405, 22, hwndDlg, (HMENU)IDC_SNIPPET_DESC, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Code Template:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Code Template:", WS_CHILD | WS_VISIBLE,
         175, 90, 100, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL,
         175, 115, 405, 280, hwndDlg, (HMENU)IDC_SNIPPET_CODE, m_hInstance, nullptr);
-    
-    // Buttons
-    CreateWindowExA(0, "BUTTON", "Insert", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+
+    CreateWindowExW(0, L"BUTTON", L"Insert", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         175, 410, 90, 28, hwndDlg, (HMENU)IDC_BTN_INSERT_SNIPPET, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "New", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"New", WS_CHILD | WS_VISIBLE,
         275, 410, 90, 28, hwndDlg, (HMENU)IDC_BTN_NEW_SNIPPET, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Delete", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Delete", WS_CHILD | WS_VISIBLE,
         375, 410, 90, 28, hwndDlg, (HMENU)IDC_BTN_DELETE_SNIPPET, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Save & Close", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Save & Close", WS_CHILD | WS_VISIBLE,
         475, 410, 105, 28, hwndDlg, (HMENU)IDC_BTN_SAVE_SNIPPETS, m_hInstance, nullptr);
     
     // Message loop for dialog
@@ -3345,9 +3363,9 @@ void Win32IDE::showSnippetManager()
                     int sel = SendMessage(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel >= 0 && sel < (int)m_codeSnippets.size()) {
                         const CodeSnippet& snippet = m_codeSnippets[sel];
-                        SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, snippet.name.c_str());
-                        SetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, snippet.description.c_str());
-                        SetDlgItemTextA(hwndDlg, IDC_SNIPPET_CODE, snippet.code.c_str());
+                        SetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, utf8ToWide(snippet.name).c_str());
+                        SetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, utf8ToWide(snippet.description).c_str());
+                        SetDlgItemTextW(hwndDlg, IDC_SNIPPET_CODE, utf8ToWide(snippet.code).c_str());
                     }
                 }
                 else if (cmdId == IDC_BTN_INSERT_SNIPPET) {
@@ -3364,16 +3382,16 @@ void Win32IDE::showSnippetManager()
                     newSnippet.description = "New snippet description";
                     newSnippet.code = "// Your code here";
                     m_codeSnippets.push_back(newSnippet);
-                    SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)newSnippet.name.c_str());
+                    SendMessageW(hwndList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(newSnippet.name).c_str());
                     SendMessage(hwndList, LB_SETCURSEL, m_codeSnippets.size() - 1, 0);
-                    SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, newSnippet.name.c_str());
-                    SetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, newSnippet.description.c_str());
-                    SetDlgItemTextA(hwndDlg, IDC_SNIPPET_CODE, newSnippet.code.c_str());
+                    SetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, utf8ToWide(newSnippet.name).c_str());
+                    SetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, utf8ToWide(newSnippet.description).c_str());
+                    SetDlgItemTextW(hwndDlg, IDC_SNIPPET_CODE, utf8ToWide(newSnippet.code).c_str());
                 }
                 else if (cmdId == IDC_BTN_DELETE_SNIPPET) {
                     int sel = SendMessage(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel >= 0 && sel < (int)m_codeSnippets.size()) {
-                        if (MessageBoxA(hwndDlg, "Delete this snippet?", "Confirm", MB_YESNO) == IDYES) {
+                        if (MessageBoxW(hwndDlg, L"Delete this snippet?", L"Confirm", MB_YESNO) == IDYES) {
                             m_codeSnippets.erase(m_codeSnippets.begin() + sel);
                             SendMessage(hwndList, LB_DELETESTRING, sel, 0);
                             SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, "");
@@ -3400,7 +3418,7 @@ void Win32IDE::showSnippetManager()
                     }
                     
                     saveCodeSnippets();
-                    MessageBoxA(hwndDlg, "Snippets saved!", "Success", MB_OK);
+                    MessageBoxW(hwndDlg, L"Snippets saved!", L"Success", MB_OK);
                     running = false;
                     DestroyWindow(hwndDlg);
                 }
@@ -3425,8 +3443,8 @@ void Win32IDE::createSnippet()
     newSnippet.code = "// Code template\n";
     m_codeSnippets.push_back(newSnippet);
     
-    MessageBoxA(m_hwndMain, ("Snippet '" + newSnippet.name + "' created. Use Snippet Manager to edit.").c_str(), 
-        "Snippet Created", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide("Snippet '" + newSnippet.name + "' created. Use Snippet Manager to edit.").c_str(),
+        L"Snippet Created", MB_OK);
 }
 
 // ============================================================================
@@ -3467,6 +3485,10 @@ void Win32IDE::createFileExplorer(HWND hwndParent)
 
     // Set TreeView font
     SendMessageA(m_hwndFileTree, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+
+    // Subclass container so we receive TVN_DELETEITEM and can free lParam (std::string*)
+    SetWindowLongPtrA(m_hwndFileExplorer, GWLP_USERDATA, (LONG_PTR)this);
+    m_oldFileExplorerContainerProc = (WNDPROC)SetWindowLongPtrA(m_hwndFileExplorer, GWLP_WNDPROC, (LONG_PTR)FileExplorerContainerProc);
 
     // Populate with drive letters
     populateFileTree(nullptr, "");
@@ -3573,6 +3595,24 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
     catch (...) {
         // Silently handle errors
     }
+}
+
+LRESULT CALLBACK Win32IDE::FileExplorerContainerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    if (uMsg == WM_NOTIFY) {
+        NMHDR* pnmh = reinterpret_cast<NMHDR*>(lParam);
+        if (pnmh && pnmh->code == TVN_DELETEITEM) {
+            NMTREEVIEWA* pnmtv = reinterpret_cast<NMTREEVIEWA*>(lParam);
+            if (pnmtv->itemOld.lParam)
+                delete reinterpret_cast<std::string*>(pnmtv->itemOld.lParam);
+            return 0;
+        }
+    }
+    WNDPROC oldProc = pThis ? pThis->m_oldFileExplorerContainerProc : nullptr;
+    if (oldProc)
+        return CallWindowProcA(oldProc, hwnd, uMsg, wParam, lParam);
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }
 
 void Win32IDE::onFileTreeExpand(HTREEITEM item, const std::string& path)
@@ -3865,10 +3905,12 @@ void Win32IDE::populateFileTree()
     TreeView_DeleteAllItems(m_hwndFileExplorer);
 
     // Add root directories for model browsing
+    const char* username = getenv("USERNAME");
+    std::string userDir(username && username[0] ? username : "User");
     std::vector<std::string> modelPaths = {
         "D:\\OllamaModels",
         "C:\\OllamaModels",
-        "C:\\Users\\" + std::string(getenv("USERNAME")) + "\\OllamaModels"
+        "C:\\Users\\" + userDir + "\\OllamaModels"
     };
 
     for (const auto& path : modelPaths) {
@@ -4063,7 +4105,7 @@ void Win32IDE::onFileExplorerDoubleClick()
                     file.seekg(0, std::ios::beg);
                     
                     if (fileSize > 10 * 1024 * 1024) { // 10MB limit
-                        MessageBoxA(m_hwndMain, "File too large to open in editor (>10MB).", "File Too Large", MB_OK | MB_ICONWARNING);
+                        MessageBoxW(m_hwndMain, L"File too large to open in editor (>10MB).", L"File Too Large", MB_OK | MB_ICONWARNING);
                         return;
                     }
                     
@@ -4076,7 +4118,7 @@ void Win32IDE::onFileExplorerDoubleClick()
             }
             catch (const std::exception& e) {
                 std::string error = "Error opening file: " + std::string(e.what());
-                MessageBoxA(m_hwndMain, error.c_str(), "Error", MB_OK | MB_ICONERROR);
+                MessageBoxW(m_hwndMain, utf8ToWide(error).c_str(), L"Error", MB_OK | MB_ICONERROR);
             }
         }
     }
@@ -4118,21 +4160,28 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
     
     static constexpr int IDC_CTX_REFRESH = 50001, IDC_CTX_OPEN_EXPLORER = 50002, IDC_CTX_SET_ROOT = 50003;
     static constexpr int IDC_CTX_LOAD_MODEL = 50011, IDC_CTX_MODEL_INFO = 50012, IDC_CTX_OPEN_EDITOR = 50013, IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015;
+    static constexpr int IDC_CTX_DELETE = 50020, IDC_CTX_RENAME = 50021;
     if (isDirectory) {
-        AppendMenuA(hMenu, MF_STRING, IDC_CTX_REFRESH, "Refresh");
-        AppendMenuA(hMenu, MF_STRING, IDC_CTX_OPEN_EXPLORER, "Open in Explorer");
-        AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hMenu, MF_STRING, IDC_CTX_SET_ROOT, "Set as Root Path");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_REFRESH, L"Refresh");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_EXPLORER, L"Open in Explorer");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_SET_ROOT, L"Set as Root Path");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_DELETE, L"Delete");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_RENAME, L"Rename");
     } else {
         if (isModelFile(filePath)) {
-            AppendMenuA(hMenu, MF_STRING, IDC_CTX_LOAD_MODEL, "Load Model");
-            AppendMenuA(hMenu, MF_STRING, IDC_CTX_MODEL_INFO, "Show Model Info");
-            AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
+            AppendMenuW(hMenu, MF_STRING, IDC_CTX_LOAD_MODEL, L"Load Model");
+            AppendMenuW(hMenu, MF_STRING, IDC_CTX_MODEL_INFO, L"Show Model Info");
+            AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
         }
-        AppendMenuA(hMenu, MF_STRING, IDC_CTX_OPEN_EDITOR, "Open with Editor");
-        AppendMenuA(hMenu, MF_STRING, IDC_CTX_COPY_PATH, "Copy Path");
-        AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hMenu, MF_STRING, IDC_CTX_SHOW_EXPLORER, "Show in Explorer");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_EDITOR, L"Open with Editor");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_COPY_PATH, L"Copy Path");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_SHOW_EXPLORER, L"Show in Explorer");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_DELETE, L"Delete");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_RENAME, L"Rename");
     }
     
     POINT pt;
@@ -4148,11 +4197,11 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
         case 50015: // Show in Explorer
             ShellExecuteA(nullptr, "explore", filePath.c_str(), nullptr, nullptr, SW_SHOW);
             break;
-        case 999: // Delete from Explorer context menu
-            deleteItemInExplorer();
+        case 50020: // IDC_CTX_DELETE
+            deleteItemInExplorer(filePath);
             break;
-        case 1000: // Rename from Explorer context menu
-            renameItemInExplorer();
+        case 50021: // IDC_CTX_RENAME
+            renameItemInExplorer(filePath);
             break;
         case 50003: // Set as Root Path
             m_currentExplorerPath = filePath;
@@ -4164,7 +4213,7 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
         case 50012: // Show Model Info
             if (loadGGUFModel(filePath)) {
                 std::string info = "Model Information:\n" + getModelInfo();
-                MessageBoxA(m_hwndMain, info.c_str(), "Model Info", MB_OK | MB_ICONINFORMATION);
+                MessageBoxW(m_hwndMain, utf8ToWide(info).c_str(), L"Model Info", MB_OK | MB_ICONINFORMATION);
             }
             break;
         case 50013: // Open with Editor
@@ -4305,7 +4354,7 @@ void Win32IDE::appendChatMessage(const std::string& user, const std::string& mes
 void Win32IDE::showGitStatus()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git", MB_OK | MB_ICONWARNING);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git", MB_OK | MB_ICONWARNING);
         return;
     }
     
@@ -4321,7 +4370,7 @@ void Win32IDE::showGitStatus()
     status << "  Deleted:   " << m_gitStatus.deleted << "\n";
     status << "  Untracked: " << m_gitStatus.untracked << "\n";
     
-    MessageBoxA(m_hwndMain, status.str().c_str(), "Git Status", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(status.str()).c_str(), L"Git Status", MB_OK | MB_ICONINFORMATION);
 }
 
 void Win32IDE::updateGitStatus()
@@ -4369,7 +4418,7 @@ void Win32IDE::updateGitStatus()
 void Win32IDE::gitCommit(const std::string& message)
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git Error", MB_OK | MB_ICONERROR);
         return;
     }
     
@@ -4377,39 +4426,39 @@ void Win32IDE::gitCommit(const std::string& message)
     std::string command = "git commit -m \"" + message + "\"";
     executeGitCommand(command, output);
     
-    MessageBoxA(m_hwndMain, output.c_str(), "Git Commit", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(output).c_str(), L"Git Commit", MB_OK | MB_ICONINFORMATION);
     updateGitStatus();
 }
 
 void Win32IDE::gitPush()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git Error", MB_OK | MB_ICONERROR);
         return;
     }
     
     std::string output;
     executeGitCommand("git push", output);
     
-    MessageBoxA(m_hwndMain, 
-        output.empty() ? "Push completed successfully" : output.c_str(), 
-        "Git Push", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain,
+        utf8ToWide(output.empty() ? "Push completed successfully" : output).c_str(),
+        L"Git Push", MB_OK | MB_ICONINFORMATION);
     updateGitStatus();
 }
 
 void Win32IDE::gitPull()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git Error", MB_OK | MB_ICONERROR);
         return;
     }
     
     std::string output;
     executeGitCommand("git pull", output);
     
-    MessageBoxA(m_hwndMain, 
-        output.empty() ? "Pull completed successfully" : output.c_str(), 
-        "Git Pull", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain,
+        utf8ToWide(output.empty() ? "Pull completed successfully" : output).c_str(),
+        L"Git Pull", MB_OK | MB_ICONINFORMATION);
     updateGitStatus();
 }
 
@@ -4516,7 +4565,7 @@ bool Win32IDE::executeGitCommand(const std::string& command, std::string& output
 void Win32IDE::showGitPanel()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git", MB_OK | MB_ICONWARNING);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git", MB_OK | MB_ICONWARNING);
         return;
     }
     
@@ -4591,7 +4640,7 @@ void Win32IDE::refreshGitPanel()
 void Win32IDE::showCommitDialog()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git", MB_OK | MB_ICONWARNING);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git", MB_OK | MB_ICONWARNING);
         return;
     }
     
@@ -4621,18 +4670,18 @@ void Win32IDE::showCommitDialog()
 // ============================================================================
 
 void Win32IDE::openModel() {
-    char filename[MAX_PATH] = {0};
-    OPENFILENAMEA ofn = {0};
+    wchar_t filename[MAX_PATH] = {0};
+    OPENFILENAMEW ofn = {0};
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
-    ofn.lpstrFilter = "GGUF Models\0*.gguf\0All Files\0*.*\0";
+    ofn.lpstrFilter = L"GGUF Models\0*.gguf\0All Files\0*.*\0";
     ofn.lpstrFile = filename;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-    ofn.lpstrTitle = "Select GGUF Model";
-    
-    if (GetOpenFileNameA(&ofn)) {
-        loadModelForInference(filename);
+    ofn.lpstrTitle = L"Select GGUF Model";
+
+    if (GetOpenFileNameW(&ofn)) {
+        loadModelForInference(wideToUtf8(filename));
     }
 }
 
@@ -5084,7 +5133,7 @@ void Win32IDE::showAbout()
         RAWRXD_LICENSE "\n"
         RAWRXD_GITHUB;
     
-    MessageBoxA(m_hwndMain, aboutText.c_str(), "About RawrXD IDE", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(aboutText).c_str(), L"About RawrXD IDE", MB_OK | MB_ICONINFORMATION);
 }
 
 // ============================================================================
@@ -5125,7 +5174,7 @@ void Win32IDE::onAutonomyViewStatus() {
     if (!m_autonomyManager) return;
     std::string status = m_autonomyManager->getStatus();
     appendToOutput("Autonomy Status: " + status + "\n", "Output", OutputSeverity::Info);
-    MessageBoxA(m_hwndMain, status.c_str(), "Autonomy Status", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(status).c_str(), L"Autonomy Status", MB_OK | MB_ICONINFORMATION);
 }
 
 void Win32IDE::onAutonomyViewMemory() {
@@ -5138,7 +5187,7 @@ void Win32IDE::onAutonomyViewMemory() {
     }
     if (shown == 0) report += "<empty>\n";
     appendToOutput("Autonomy Memory Snapshot displayed\n", "Debug", OutputSeverity::Debug);
-    MessageBoxA(m_hwndMain, report.c_str(), "Autonomy Memory", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(report).c_str(), L"Autonomy Memory", MB_OK);
 }
 
 // ======================================================================
@@ -6134,8 +6183,8 @@ void Win32IDE::openModelFromHuggingFace() {
                     SetWindowTextA(hEdit, state.repoId.c_str());
                     PostMessage(hDlg, WM_COMMAND, MAKEWPARAM(201, BN_CLICKED), (LPARAM)hSearchBtn);
                 } else {
-                    MessageBoxA(hDlg, "Please select a GGUF file from the list first.",
-                                "No Selection", MB_OK | MB_ICONINFORMATION);
+                    MessageBoxW(hDlg, L"Please select a GGUF file from the list first.",
+                                L"No Selection", MB_OK | MB_ICONINFORMATION);
                 }
             }
         }
@@ -6248,14 +6297,14 @@ void Win32IDE::openModelFromOllama() {
     }
 
     if (blobs.empty()) {
-        MessageBoxA(m_hwndMain, 
-            "No Ollama GGUF blobs found.\n\n"
-            "Searched directories:\n"
-            "  - %USERPROFILE%\\.ollama\\models\\blobs\n"
-            "  - D:\\OllamaModels\\blobs\n"
-            "  - C:\\Users\\*\\.ollama\\models\\blobs\n\n"
-            "Make sure Ollama is installed and has downloaded models.",
-            "No Ollama Models Found", MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(m_hwndMain,
+            L"No Ollama GGUF blobs found.\n\n"
+            L"Searched directories:\n"
+            L"  - %USERPROFILE%\\.ollama\\models\\blobs\n"
+            L"  - D:\\OllamaModels\\blobs\n"
+            L"  - C:\\Users\\*\\.ollama\\models\\blobs\n\n"
+            L"Make sure Ollama is installed and has downloaded models.",
+            L"No Ollama Models Found", MB_OK | MB_ICONINFORMATION);
         return;
     }
 
@@ -6339,8 +6388,8 @@ void Win32IDE::openModelFromOllama() {
                     done = true;
                     continue;
                 } else {
-                    MessageBoxA(hDlg, "Please select a model from the list.",
-                                "No Selection", MB_OK | MB_ICONINFORMATION);
+                    MessageBoxW(hDlg, L"Please select a model from the list.",
+                                L"No Selection", MB_OK | MB_ICONINFORMATION);
                 }
             }
         }
@@ -6363,10 +6412,9 @@ void Win32IDE::openModelFromOllama() {
         const auto& selected = blobs[selectedIdx];
         
         if (!selected.is_valid_gguf) {
-            MessageBoxA(m_hwndMain, 
-                ("Selected blob does not have valid GGUF magic bytes:\n" + 
-                 selected.blob_path).c_str(),
-                "Invalid GGUF", MB_OK | MB_ICONWARNING);
+            MessageBoxW(m_hwndMain,
+                utf8ToWide("Selected blob does not have valid GGUF magic bytes:\n" + selected.blob_path).c_str(),
+                L"Invalid GGUF", MB_OK | MB_ICONWARNING);
             return;
         }
         
@@ -6461,14 +6509,14 @@ void Win32IDE::openModelFromURL() {
                 url = std::string(editText);
                 
                 if (url.empty()) {
-                    MessageBoxA(hDlg, "Please enter a URL.", "Empty URL", MB_OK);
+                    MessageBoxW(hDlg, L"Please enter a URL.", L"Empty URL", MB_OK);
                     continue;
                 }
                 
                 // Basic URL validation
                 if (url.find("http://") != 0 && url.find("https://") != 0) {
-                    MessageBoxA(hDlg, "URL must start with http:// or https://",
-                                "Invalid URL", MB_OK | MB_ICONWARNING);
+                    MessageBoxW(hDlg, L"URL must start with http:// or https://",
+                                L"Invalid URL", MB_OK | MB_ICONWARNING);
                     continue;
                 }
                 
@@ -6630,7 +6678,7 @@ void Win32IDE::openModelUnified() {
                 inputStr = std::string(editText);
                 
                 if (inputStr.empty()) {
-                    MessageBoxA(hDlg, "Please enter a model identifier.", "Empty Input", MB_OK);
+                    MessageBoxW(hDlg, L"Please enter a model identifier.", L"Empty Input", MB_OK);
                     continue;
                 }
                 
@@ -6639,18 +6687,18 @@ void Win32IDE::openModelUnified() {
             }
             
             if (wmId == 202) { // Browse Local
-                char filename[MAX_PATH] = {0};
-                OPENFILENAMEA ofn = {0};
+                wchar_t filename[MAX_PATH] = {0};
+                OPENFILENAMEW ofn = {0};
                 ofn.lStructSize = sizeof(ofn);
                 ofn.hwndOwner = hDlg;
-                ofn.lpstrFilter = "GGUF Models\0*.gguf\0All Files\0*.*\0";
+                ofn.lpstrFilter = L"GGUF Models\0*.gguf\0All Files\0*.*\0";
                 ofn.lpstrFile = filename;
                 ofn.nMaxFile = MAX_PATH;
                 ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-                ofn.lpstrTitle = "Select GGUF Model";
-                
-                if (GetOpenFileNameA(&ofn)) {
-                    SetWindowTextA(hEdit, filename);
+                ofn.lpstrTitle = L"Select GGUF Model";
+
+                if (GetOpenFileNameW(&ofn)) {
+                    SetWindowTextW(hEdit, filename);
                 }
             }
         }

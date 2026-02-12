@@ -165,6 +165,18 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── Directory listing for IDE file tree ──
+    if (url.pathname === '/api/list-dir') {
+        handleListDirRequest(req, res);
+        return;
+    }
+
+    // ── CLI execution endpoint (build, deploy, etc.) ──
+    if (url.pathname === '/api/cli' || url.pathname === '/api/build' || url.pathname === '/api/deploy') {
+        handleCliRequest(req, res, url.pathname);
+        return;
+    }
+
     // API endpoints
     if (url.pathname === '/api/upload') {
         handleUploadRequest(req, res);
@@ -964,6 +976,102 @@ server.on('request', (req, res) => {
 
     // Track per-endpoint hits
     serverMetrics.endpointHits[url.pathname] = (serverMetrics.endpointHits[url.pathname] || 0) + 1;
+
+    // ── /api/list-dir — real directory listing for IDE file tree ──
+    function handleListDirRequest(req, res) {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const parsed = body ? JSON.parse(body) : {};
+                const reqPath = parsed.path || '.';
+                // Resolve relative to project root, prevent traversal above it
+                const resolved = path.resolve(__dirname, reqPath);
+                if (!resolved.startsWith(__dirname)) {
+                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Path traversal blocked' }));
+                    return;
+                }
+                fs.readdir(resolved, { withFileTypes: true }, (err, dirents) => {
+                    if (err) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Directory not found: ' + reqPath, detail: err.message }));
+                        return;
+                    }
+                    const entries = dirents
+                        .filter(d => !d.name.startsWith('.'))  // hide dotfiles
+                        .map(d => {
+                            const fullPath = path.join(resolved, d.name);
+                            const isDir = d.isDirectory();
+                            const entry = { name: d.name, type: isDir ? 'directory' : 'file', path: path.relative(__dirname, fullPath).replace(/\\/g, '/') };
+                            if (!isDir) {
+                                try {
+                                    const stat = fs.statSync(fullPath);
+                                    entry.size = stat.size;
+                                    entry.modified = stat.mtime.toISOString();
+                                } catch (_) { }
+                            }
+                            return entry;
+                        })
+                        .sort((a, b) => {
+                            // Directories first, then alphabetical
+                            if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+                            return a.name.localeCompare(b.name);
+                        });
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ entries, path: reqPath, count: entries.length }));
+                });
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid JSON body', detail: e.message }));
+            }
+        });
+    }
+
+    // ── /api/cli, /api/build, /api/deploy — execute shell commands for IDE ──
+    function handleCliRequest(req, res, endpoint) {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const parsed = body ? JSON.parse(body) : {};
+                const command = parsed.command || '';
+                if (!command) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'No command provided' }));
+                    return;
+                }
+                // Restrict to safe commands (build-related only)
+                const allowedPrefixes = ['cmake', 'msbuild', 'ninja', 'nmake', 'cl ', 'ml64', 'link', 'lib ',
+                    'node ', 'npm ', 'git ', 'dir ', 'type ', 'echo ', 'deploy', 'build'];
+                const cmdLower = command.toLowerCase().trim();
+                const isSafe = allowedPrefixes.some(p => cmdLower.startsWith(p));
+                if (!isSafe) {
+                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Command not in allowlist', command, endpoint }));
+                    return;
+                }
+
+                const { exec } = require('child_process');
+                exec(command, { cwd: __dirname, timeout: 60000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+                    const exitCode = err ? (err.code || 1) : 0;
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: exitCode === 0,
+                        exitCode,
+                        stdout: stdout || '',
+                        stderr: stderr || '',
+                        command,
+                        endpoint,
+                        duration: 0  // placeholder — real timing requires hrtime wrapping
+                    }));
+                });
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Invalid request', detail: e.message }));
+            }
+        });
+    }
 
     // Track generate calls for real metrics
     if (url.pathname === '/api/generate' || url.pathname === '/v1/chat/completions' || url.pathname === '/ask') {

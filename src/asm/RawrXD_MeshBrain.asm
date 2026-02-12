@@ -59,6 +59,7 @@ PUBLIC asm_mesh_shard_hash
 PUBLIC asm_mesh_shard_bitfield
 PUBLIC asm_mesh_quorum_vote
 PUBLIC asm_mesh_topology_update
+PUBLIC asm_mesh_topology_active_count
 PUBLIC asm_mesh_get_stats
 PUBLIC asm_mesh_shutdown
 
@@ -1293,6 +1294,15 @@ asm_mesh_topology_update PROC
     pop     rbx
     ret
 asm_mesh_topology_update ENDP
+
+; =============================================================================
+; asm_mesh_topology_active_count — Return number of nodes in topology table
+; Returns: EAX = mesh_topo_count (active node count)
+; =============================================================================
+asm_mesh_topology_active_count PROC
+    mov     eax, DWORD PTR [mesh_topo_count]
+    ret
+asm_mesh_topology_active_count ENDP
 
 ; =============================================================================
 ; asm_mesh_get_stats — Return pointer to mesh brain statistics

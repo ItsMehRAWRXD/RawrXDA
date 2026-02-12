@@ -5277,7 +5277,7 @@
             </div>
             <div class="debug-section">
               <div class="debug-section-title">Backend URL</div>
-              <input type="text" id="dbgBackendUrl" value="http://localhost:11435" style="width:100%; padding:2px 4px; background:var(--win-field-bg); border:2px solid; border-color:var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
+              <input type="text" id="dbgBackendUrl" value="http://localhost:8080" style="width:100%; padding:2px 4px; background:var(--win-field-bg); border:2px solid; border-color:var(--win-btn-shadow) var(--win-btn-highlight) var(--win-btn-highlight) var(--win-btn-shadow);
                 color:var(--win-text); font-family:var(--font-mono); font-size:10px; outline:none;"
                 onchange="State.backend.url=this.value; logDebug('Backend URL changed to '+this.value,'info')">
             </div>
@@ -7312,7 +7312,7 @@
         <div class="ghost-iframe-wrap" id="ghostIframeWrap">
           <div class="ghost-loading" id="ghostLoading">
             <div class="ghost-spinner"></div><br>
-            Beacon probing Win32 IDE at <span id="ghostProbeUrl">localhost:11435</span>...
+            Beacon probing Win32 IDE at <span id="ghostProbeUrl">localhost:8080</span>...
           </div>
           <!-- iframe injected dynamically by ghostIntoIDE() -->
         </div>
@@ -7509,10 +7509,10 @@
             '<p style="margin-top:10px;"><strong>Options:</strong></p>' +
             '<ul style="margin:8px 0 8px 20px;line-height:1.8;">' +
             '<li>Use <code>ide_chatbot.html</code> instead (has engine embedded)</li>' +
-            '<li>Access via HTTP: <a href="http://localhost:11435/gui/win32">http://localhost:11435/gui/win32</a></li>' +
+            '<li>Access via HTTP: <a href="http://localhost:8080/chatbot-win32">http://localhost:8080/chatbot-win32</a></li>' +
             '<li>Extract the JS from ide_chatbot.html into <code>ide_chatbot_engine.js</code></li>' +
             '</ul>' +
-            '<p style="margin-top:10px;color:#808080;">The tool_server will serve this page with the engine embedded at <code>/gui/win32</code>.</p>' +
+            '<p style="margin-top:10px;color:#808080;">The server.js backend will serve this page at <code>/chatbot-win32</code>.</p>' +
             '</div>';
         }
       });
@@ -7537,13 +7537,13 @@
           addWelcomeMessage = function () {
             var modeNote = _isFileProtocol
               ? '\n\n📂 **Standalone Mode** — Opened directly from file system. ' +
-              'Connecting to `localhost:11435` (Win32 IDE) or `localhost:11434` (Ollama).' +
+              'Connecting to `localhost:8080` (RawrXD server) or `localhost:11434` (Ollama).' +
               (_isInsideWin32IDE ? '\n🖥 **Running inside Win32 IDE WebView2** — bridge active.' : '')
               : '';
             addMessage('system',
               '**RawrXD IDE // Win32 Classic Edition v3.4**\n\n' +
               'Windows Classic theme active. Same backend, same features.\n' +
-              'Connects to `localhost:11435` (tool server) or falls back to Ollama on `localhost:11434`.' + modeNote + '\n\n' +
+              'Connects to `localhost:8080` (RawrXD server) or falls back to Ollama on `localhost:11434`.' + modeNote + '\n\n' +
               '**Features:**\n' +
               '• Streaming chat with RawrXDStream bridge\n' +
               '• Chain-of-Thought multi-model review\n' +

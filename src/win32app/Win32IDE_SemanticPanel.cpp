@@ -5,6 +5,7 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "Win32IDE.h"
 #include "../core/semantic_code_intelligence.hpp"
+#include <richedit.h>
 #include <sstream>
 #include <iomanip>
 #include <commdlg.h>
@@ -48,24 +49,137 @@ void Win32IDE::handleSemanticCommand(int commandId) {
 }
 
 // ============================================================================
+// Helpers: editor cursor and navigate (used by Semantic commands)
+// ============================================================================
+bool Win32IDE::getEditorCursorFileLineCol(std::string& outFile, uint32_t& outLine1Based, uint32_t& outCol) const {
+    if (m_currentFile.empty() || !m_hwndEditor || !IsWindow(m_hwndEditor))
+        return false;
+    CHARRANGE sel = {};
+    SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&sel);
+    int line0 = (int)SendMessage(m_hwndEditor, EM_LINEFROMCHAR, sel.cpMin, 0);
+    int lineStart = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line0, 0);
+    outFile = m_currentFile;
+    outLine1Based = static_cast<uint32_t>(line0 + 1);
+    outCol = static_cast<uint32_t>(sel.cpMin - lineStart);
+    return true;
+}
+
+void Win32IDE::navigateToFileLine(const std::string& filePath, uint32_t line1Based) {
+    if (filePath.empty() || line1Based == 0) return;
+    if (!m_currentFile.empty() && m_currentFile != filePath)
+        openFile(filePath);
+    if (!m_hwndEditor) return;
+    int lineIdx = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, (WPARAM)(line1Based - 1), 0);
+    CHARRANGE cr = { lineIdx, lineIdx };
+    SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
+    SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
+    SetFocus(m_hwndEditor);
+}
+
+// ============================================================================
 // Command Handlers
 // ============================================================================
 
 void Win32IDE::cmdSemGoToDefinition() {
-    appendToOutput("[Semantic] Go To Definition: enter symbol name in command palette.\n");
-    // In production, this would use the cursor position from the editor
+    std::string file;
+    uint32_t line1 = 0, col = 0;
+    if (!getEditorCursorFileLineCol(file, line1, col)) {
+        appendToOutput("[Semantic] Go To Definition: open a file and place the cursor on a symbol.\n");
+        return;
+    }
+    auto& sci = SemanticCodeIntelligence::instance();
+    SourceLocation ctx = SourceLocation::make(file, line1, col);
+    const SymbolEntry* sym = sci.findSymbolAt(file, line1, col);
+    if (!sym) {
+        appendToOutput("[Semantic] No symbol at cursor. Index the file first (Semantic → Index File).\n");
+        return;
+    }
+    const SymbolEntry* def = sci.goToDefinition(sym->name, ctx);
+    if (!def) {
+        appendToOutput("[Semantic] No definition found for '" + sym->name + "'.\n");
+        return;
+    }
+    navigateToFileLine(def->definition.filePath, def->definition.line);
+    appendToOutput("[Semantic] → " + def->name + " at " + def->definition.filePath +
+                   ":" + std::to_string(def->definition.line) + "\n");
 }
 
 void Win32IDE::cmdSemFindReferences() {
-    appendToOutput("[Semantic] Find References: enter symbol name in command palette.\n");
+    std::string file;
+    uint32_t line1 = 0, col = 0;
+    if (!getEditorCursorFileLineCol(file, line1, col)) {
+        appendToOutput("[Semantic] Find References: open a file and place the cursor on a symbol.\n");
+        return;
+    }
+    auto& sci = SemanticCodeIntelligence::instance();
+    const SymbolEntry* sym = sci.findSymbolAt(file, line1, col);
+    if (!sym) {
+        appendToOutput("[Semantic] No symbol at cursor. Index the file first (Semantic → Index File).\n");
+        return;
+    }
+    std::vector<SourceLocation> refs = sci.findAllReferences(sym->symbolId);
+    if (refs.empty()) {
+        appendToOutput("[Semantic] No references found for '" + sym->name + "'.\n");
+        return;
+    }
+    std::ostringstream oss;
+    oss << "[Semantic] References for '" << sym->name << "' (" << refs.size() << "):\n";
+    for (size_t i = 0; i < refs.size() && i < 100; i++)
+        oss << "  " << refs[i].filePath << ":" << refs[i].line << ":" << refs[i].column << "\n";
+    if (refs.size() > 100) oss << "  ... and " << (refs.size() - 100) << " more\n";
+    appendToOutput(oss.str());
 }
 
 void Win32IDE::cmdSemFindImplementations() {
-    appendToOutput("[Semantic] Find Implementations: select an interface/base class.\n");
+    std::string file;
+    uint32_t line1 = 0, col = 0;
+    if (!getEditorCursorFileLineCol(file, line1, col)) {
+        appendToOutput("[Semantic] Find Implementations: place the cursor on an interface/base class.\n");
+        return;
+    }
+    auto& sci = SemanticCodeIntelligence::instance();
+    const SymbolEntry* sym = sci.findSymbolAt(file, line1, col);
+    if (!sym) {
+        appendToOutput("[Semantic] No symbol at cursor. Index the file first.\n");
+        return;
+    }
+    std::vector<const SymbolEntry*> impls = sci.findImplementations(sym->symbolId);
+    if (impls.empty()) {
+        appendToOutput("[Semantic] No implementations found for '" + sym->name + "' (or not an interface).\n");
+        return;
+    }
+    std::ostringstream oss;
+    oss << "[Semantic] Implementations of '" << sym->name << "' (" << impls.size() << "):\n";
+    for (size_t i = 0; i < impls.size() && i < 50; i++)
+        oss << "  " << impls[i]->definition.filePath << ":" << impls[i]->definition.line << " " << impls[i]->name << "\n";
+    if (impls.size() > 50) oss << "  ... and " << (impls.size() - 50) << " more\n";
+    appendToOutput(oss.str());
 }
 
 void Win32IDE::cmdSemTypeHierarchy() {
-    appendToOutput("[Semantic] Type Hierarchy: select a class to view inheritance chain.\n");
+    std::string file;
+    uint32_t line1 = 0, col = 0;
+    if (!getEditorCursorFileLineCol(file, line1, col)) {
+        appendToOutput("[Semantic] Type Hierarchy: place the cursor on a class/type.\n");
+        return;
+    }
+    auto& sci = SemanticCodeIntelligence::instance();
+    const SymbolEntry* sym = sci.findSymbolAt(file, line1, col);
+    if (!sym) {
+        appendToOutput("[Semantic] No symbol at cursor. Index the file first.\n");
+        return;
+    }
+    std::vector<const SymbolEntry*> hierarchy = sci.getTypeHierarchy(sym->symbolId);
+    if (hierarchy.empty()) {
+        appendToOutput("[Semantic] No type hierarchy for '" + sym->name + "' (or not a type).\n");
+        return;
+    }
+    std::ostringstream oss;
+    oss << "[Semantic] Type hierarchy for '" << sym->name << "' (" << hierarchy.size() << "):\n";
+    for (size_t i = 0; i < hierarchy.size() && i < 50; i++)
+        oss << "  " << hierarchy[i]->name << " @ " << hierarchy[i]->definition.filePath << ":" << hierarchy[i]->definition.line << "\n";
+    if (hierarchy.size() > 50) oss << "  ... and " << (hierarchy.size() - 50) << " more\n";
+    appendToOutput(oss.str());
 }
 
 void Win32IDE::cmdSemCallGraph() {
@@ -105,7 +219,23 @@ void Win32IDE::cmdSemSearchSymbols() {
 }
 
 void Win32IDE::cmdSemFileSymbols() {
-    appendToOutput("[Semantic] File Symbols: open a file first, then invoke.\n");
+    if (m_currentFile.empty()) {
+        appendToOutput("[Semantic] File Symbols: open a file first, then invoke.\n");
+        return;
+    }
+    auto& sci = SemanticCodeIntelligence::instance();
+    std::vector<const SymbolEntry*> syms = sci.getSymbolsInFile(m_currentFile);
+    if (syms.empty()) {
+        appendToOutput("[Semantic] No symbols in current file. Index it first (Semantic → Index File).\n");
+        return;
+    }
+    std::ostringstream oss;
+    oss << "[Semantic] Symbols in " << m_currentFile << " (" << syms.size() << "):\n";
+    for (size_t i = 0; i < syms.size() && i < 200; i++)
+        oss << "  " << syms[i]->definition.line << ":" << syms[i]->definition.column
+            << "  " << syms[i]->name << " (kind=" << static_cast<int>(syms[i]->kind) << ")\n";
+    if (syms.size() > 200) oss << "  ... and " << (syms.size() - 200) << " more\n";
+    appendToOutput(oss.str());
 }
 
 void Win32IDE::cmdSemFindUnused() {

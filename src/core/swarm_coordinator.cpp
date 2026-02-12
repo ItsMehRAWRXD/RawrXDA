@@ -314,6 +314,9 @@ bool SwarmCoordinator::getNode(uint32_t slotIndex, SwarmNodeInfo& outNode) const
     std::lock_guard<std::mutex> lock(m_nodesMutex);
     if (m_nodes[slotIndex].state == SwarmNodeState::Unknown) return false;
     outNode = m_nodes[slotIndex];
+    outNode.port = outNode.swarmPort;
+    outNode.status = outNode.state;
+    outNode.tasksCompleted = outNode.completedTasks;
     return true;
 }
 

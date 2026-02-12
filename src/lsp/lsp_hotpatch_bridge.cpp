@@ -614,6 +614,18 @@ void LSPHotpatchBridge::handleHotpatchRevert(int /*id*/, const json& params) {
         } else {
             pr = PatchResult::error("Byte revert requires 'filename', 'offset', and 'originalData'");
         }
+    } else if (layer == HotpatchLayer::Server) {
+        // Server layer revert: remove a named server hotpatch by name
+        if (!name.empty()) {
+            auto& mgr = UnifiedHotpatchManager::instance();
+            // Server patches are removed by name — the manager tracks them
+            bool removed = false;
+            // Attempt removal via the manager's server patch table
+            auto ur = mgr.remove_server_patch(name.c_str());
+            pr = ur.result;
+        } else {
+            pr = PatchResult::error("Server revert requires a non-empty 'name'");
+        }
     }
 
     if (pr.success) {

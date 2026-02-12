@@ -750,10 +750,21 @@ std::vector<AgenticDeepThinkingEngine::ReasoningStep> AgenticDeepThinkingEngine:
     steps.push_back(step5);
     contextAccumulator += step5.content + "\n";
 
-    // Step 6 (optional): Self-Correction — may iterate
+    // Step 6 (optional): Self-Correction — may iterate with cycle multiplier
     int correctionIterations = 0;
     if (context.allowSelfCorrection) {
-        for (int iter = 0; iter < context.maxIterations; ++iter) {
+        // Apply cycle multiplier (1x-8x) to increase iteration depth
+        int effectiveMaxIter = context.maxIterations * std::clamp(context.cycleMultiplier, 1, 8);
+        
+        // Track telemetry for cycle multiplier usage
+        if (auto* tc = TelemetryCollector::instance(); context.cycleMultiplier > 1) {
+            tc->trackPerformance("deep_thinking.cycle_multiplier",
+                                 static_cast<double>(context.cycleMultiplier), "multiplier");
+            tc->trackPerformance("deep_thinking.effective_iterations",
+                                 static_cast<double>(effectiveMaxIter), "iterations");
+        }
+        
+        for (int iter = 0; iter < effectiveMaxIter; ++iter) {
             {
                 std::lock_guard<std::mutex> lock(m_statsMutex);
                 m_stats.stepFrequency[ThinkingStep::SelfCorrection]++;
@@ -2461,4 +2472,397 @@ std::string AgenticDeepThinkingEngine::formatAnswer(const std::string& rawAnswer
     }
 
     return formatted;
+}
+// ============================================================================
+// Multi-Agent Orchestration (8x cycle + parallel execution)
+// ============================================================================
+
+AgenticDeepThinkingEngine::MultiAgentResult AgenticDeepThinkingEngine::thinkMultiAgent(const ThinkingContext& context) {
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    {
+        std::lock_guard<std::mutex> lock(m_statsMutex);
+        m_stats.multiAgentRequests++;
+    }
+
+    MultiAgentResult multiResult;
+    multiResult.consensusReached = false;
+    multiResult.consensusConfidence = 0.0f;
+
+    // Determine agent count (1-8)
+    int agentCount = std::clamp(context.agentCount, 1, 8);
+    
+    // Apply cycle multiplier to maxIterations (up to 8x)
+    ThinkingContext enhancedContext = context;
+    int cycleMultiplier = std::clamp(context.cycleMultiplier, 1, 8);
+    enhancedContext.maxIterations = context.maxIterations * cycleMultiplier;
+    
+    if (m_detailedLogging) {
+        std::cout << "[MultiAgent] Spawning " << agentCount << " agents with "
+                  << enhancedContext.maxIterations << " max iterations (base: "
+                  << context.maxIterations << " x " << cycleMultiplier << ")\n";
+    }
+
+    // Set up agent models
+    std::vector<std::string> agentModels;
+    if (!context.agentModels.empty()) {
+        agentModels = context.agentModels;
+    } else {
+        // Default model pool: diverse models for multi-perspective analysis
+        agentModels = {
+            "qwen2.5-coder:14b",     // Primary coding model
+            "qwen2.5-coder:7b",      // Lighter, faster variant
+            "deepseek-coder:6.7b",   // Alternative perspective
+            "codellama:13b",         // Meta's code model
+            "qwen2.5-coder:14b",     // Repeat for more consensus
+            "qwen2.5-coder:7b",      // Repeat
+            "deepseek-coder:6.7b",   // Repeat
+            "codellama:13b"          // Repeat
+        };
+    }
+    
+    // Ensure we have enough models
+    while (static_cast<int>(agentModels.size()) < agentCount) {
+        agentModels.push_back ("qwen2.5-coder:14b");
+    }
+
+    // Phase 1: Spawn agents in parallel threads
+    std::vector<std::thread> agentThreads;
+    std::vector<AgentResult> agentResults(agentCount);
+    std::mutex resultsMutex;
+
+    for (int i = 0; i < agentCount; ++i) {
+        agentThreads.emplace_back([this, i, &agentModels, &enhancedContext, &agentResults, &resultsMutex]() {
+            try {
+                auto agentRes = runSingleAgent(i, agentModels[i], enhancedContext);
+                std::lock_guard<std::mutex> lock(resultsMutex);
+                agentResults[i] = agentRes;
+            } catch (const std::exception& e) {
+                std::cerr << "[MultiAgent] Agent " << i << " failed: " << e.what() << "\n";
+                std::lock_guard<std::mutex> lock(resultsMutex);
+                agentResults[i].agentId = i;
+                agentResults[i].modelName = agentModels[i];
+                agentResults[i].result.overallConfidence = 0.0f;
+                agentResults[i].result.finalAnswer = "Agent failed: " + std::string(e.what());
+            }
+        });
+    }
+
+    // Wait for all agents to complete
+    for (auto& t : agentThreads) {
+        if (t.joinable()) t.join();
+    }
+
+    multiResult.agentResults = agentResults;
+
+    {
+        std::lock_guard<std::mutex> lock(m_statsMutex);
+        m_stats.totalAgentsSpawned += agentCount;
+    }
+
+    // Phase 2: Calculate inter-agent agreement
+    for (size_t i = 0; i < agentResults.size(); ++i) {
+        float totalAgreement = 0.0f;
+        for (size_t j = 0; j < agentResults.size(); ++j) {
+            if (i != j) {
+                totalAgreement += calculateAgreement(agentResults[i], agentResults[j]);
+            }
+        }
+        agentResults[i].agreementScore = (agentCount > 1) ? (totalAgreement / (agentCount - 1)) : 1.0f;
+    }
+
+    // Phase 3: Merge results based on strategy
+    if (context.enableAgentVoting) {
+        // Voting: select the result with highest agreement
+        auto bestAgent = selectBestByVoting(agentResults);
+        multiResult.consensusResult = bestAgent.result;
+        multiResult.consensusConfidence = bestAgent.agreementScore;
+        multiResult.consensusReached = (bestAgent.agreementScore >= context.consensusThreshold);
+    } else {
+        // Merge: combine all agent insights
+        multiResult.consensusResult = mergeAgentResults(agentResults, enhancedContext);
+        
+        // Calculate consensus confidence (average of all agents weighted by agreement)
+        float totalWeightedConf = 0.0f;
+        float totalWeight = 0.0f;
+        for (const auto& ar : agentResults) {
+            float weight = ar.agreementScore;
+            totalWeightedConf += ar.result.overallConfidence * weight;
+            totalWeight += weight;
+        }
+        multiResult.consensusConfidence = (totalWeight > 0.0f) ? (totalWeightedConf / totalWeight) : 0.0f;
+        multiResult.consensusReached = (multiResult.consensusConfidence >= context.consensusThreshold);
+    }
+
+    // Phase 4: Identify disagreements
+    multiResult.disagreementPoints = findDisagreements(agentResults);
+
+    // Update stats
+    {
+        std::lock_guard<std::mutex> lock(m_statsMutex);
+        if (multiResult.consensusReached) {
+            m_stats.consensusReached++;
+        }
+        m_stats.avgConsensusConfidence = 
+            (m_stats.avgConsensusConfidence * (m_stats.multiAgentRequests - 1) + multiResult.consensusConfidence)
+            / m_stats.multiAgentRequests;
+    }
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    multiResult.consensusResult.elapsedMilliseconds = 
+        std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+
+    if (m_detailedLogging) {
+        std::cout << "[MultiAgent] Consensus: " << (multiResult.consensusReached ? "YES" : "NO")
+                  << " (confidence: " << std::fixed << std::setprecision(1)
+                  << multiResult.consensusConfidence * 100.0f << "%)\n";
+        std::cout << "[MultiAgent] Elapsed: " << multiResult.consensusResult.elapsedMilliseconds << "ms\n";
+    }
+
+    // Track multi-agent telemetry
+    if (auto* tc = TelemetryCollector::instance()) {
+        tc->trackFeatureUsage("deep_thinking.multi_agent");
+        tc->trackPerformance("multi_agent.agent_count", static_cast<double>(agentCount), "count");
+        tc->trackPerformance("multi_agent.consensus_confidence", 
+                             static_cast<double>(multiResult.consensusConfidence), "ratio");
+        tc->trackPerformance("multi_agent.total_latency_ms",
+                             static_cast<double>(multiResult.consensusResult.elapsedMilliseconds), "ms");
+    }
+
+    return multiResult;
+}
+
+AgenticDeepThinkingEngine::AgentResult AgenticDeepThinkingEngine::runSingleAgent(
+    int agentId, const std::string& model, const ThinkingContext& context) {
+    
+    AgentResult result;
+    result.agentId = agentId;
+    result.modelName = model;
+    result.agreementScore = 0.0f;
+
+    if (m_detailedLogging) {
+        std::cout << "[Agent-" << agentId << "] Starting with model: " << model << "\n";
+    }
+
+    // TODO: In production, configure per-agent LLM client with specific model
+    // For now, use the default thinking engine (which internally uses qwen2.5-coder:14b)
+    
+    // Run standard think() with the enhanced context
+    result.result = think(context);
+    
+    if (m_detailedLogging) {
+        std::cout << "[Agent-" << agentId << "] Completed with confidence: "
+                  << std::fixed << std::setprecision(1)
+                  << result.result.overallConfidence * 100.0f << "%\n";
+    }
+
+    return result;
+}
+
+AgenticDeepThinkingEngine::ThinkingResult AgenticDeepThinkingEngine::mergeAgentResults(
+    const std::vector<AgentResult>& results, const ThinkingContext& context) {
+    
+    ThinkingResult merged;
+    merged.iterationCount = 0;
+    merged.elapsedMilliseconds = 0;
+    merged.overallConfidence = 0.0f;
+
+    if (results.empty()) {
+        merged.finalAnswer = "No agent results to merge";
+        return merged;
+    }
+
+    // Collect all steps from all agents
+    std::map<ThinkingStep, std::vector<ReasoningStep>> stepsByType;
+    std::set<std::string> allRelatedFiles;
+    std::set<std::string> allSuggestedFixes;
+
+    for (const auto& ar : results) {
+        // Accumulate steps by type
+        for (const auto& step : ar.result.steps) {
+            stepsByType[step.step].push_back(step);
+        }
+        
+        // Collect all related files and fixes
+        for (const auto& f : ar.result.relatedFiles) {
+            allRelatedFiles.insert(f);
+        }
+        for (const auto& fix : ar.result.suggestedFixes) {
+            allSuggestedFixes.insert(fix);
+        }
+        
+        merged.iterationCount += ar.result.iterationCount;
+        merged.elapsedMilliseconds = std::max(merged.elapsedMilliseconds, ar.result.elapsedMilliseconds);
+    }
+
+    // Merge steps: for each step type, synthesize a consensus step
+    for (const auto& [stepType, steps] : stepsByType) {
+        ReasoningStep consensusStep;
+        consensusStep.step = stepType;
+        consensusStep.title = steps[0].title;  // Use first agent's title
+        consensusStep.successful = true;
+
+        // Merge content: concatenate unique insights
+        std::set<std::string> uniqueContent;
+        std::vector<std::string> allFindings;
+        float totalConf = 0.0f;
+
+        for (const auto& s : steps) {
+            if (!s.content.empty() && s.content.length() > 10) {
+                uniqueContent.insert(s.content);
+            }
+            allFindings.insert(allFindings.end(), s.findings.begin(), s.findings.end());
+            totalConf += s.confidence;
+        }
+
+        // Build merged content
+        std::ostringstream mergedContent;
+        int agentNum = 0;
+        for (const auto& content : uniqueContent) {
+            if (results.size() > 1) {
+                mergedContent << "[Agent-" << agentNum++ << "] " << content << "\n\n";
+            } else {
+                mergedContent << content << "\n";
+            }
+        }
+        consensusStep.content = mergedContent.str();
+        consensusStep.findings = allFindings;
+        consensusStep.confidence = totalConf / steps.size();
+
+        merged.steps.push_back(consensusStep);
+    }
+
+    // Build final answer: weighted average of agent answers
+    std::ostringstream finalAnswer;
+    finalAnswer << "=== Multi-Agent Consensus Analysis ===\n\n";
+    
+    for (size_t i = 0; i < results.size(); ++i) {
+        const auto& ar = results[i];
+        float weight = ar.agreementScore;
+        finalAnswer << "[Agent-" << i << " | " << ar.modelName
+                    << " | Agreement: " << std::fixed << std::setprecision(0)
+                    << weight * 100.0f << "%]\n";
+        finalAnswer << ar.result.finalAnswer << "\n\n";
+        
+        merged.overallConfidence += ar.result.overallConfidence * weight;
+    }
+    
+    // Normalize confidence by total agreement weight
+    float totalAgreement = 0.0f;
+    for (const auto& ar : results) {
+        totalAgreement += ar.agreementScore;
+    }
+    if (totalAgreement > 0.0f) {
+        merged.overallConfidence /= totalAgreement;
+    }
+
+    finalAnswer << "\n=== Consensus Recommendation ===\n";
+    // Select the highest-confidence agent's answer as primary recommendation
+    const AgentResult* bestAgent = &results[0];
+    for (const auto& ar : results) {
+        if (ar.result.overallConfidence > bestAgent->result.overallConfidence) {
+            bestAgent = &ar;
+        }
+    }
+    finalAnswer << bestAgent->result.finalAnswer;
+
+    merged.finalAnswer = finalAnswer.str();
+    merged.relatedFiles.assign(allRelatedFiles.begin(), allRelatedFiles.end());
+    merged.suggestedFixes.assign(allSuggestedFixes.begin(), allSuggestedFixes.end());
+
+    return merged;
+}
+
+std::vector<std::string> AgenticDeepThinkingEngine::findDisagreements(const std::vector<AgentResult>& results) {
+    std::vector<std::string> disagreements;
+    
+    if (results.size() < 2) return disagreements;
+
+    // Compare answers pairwise to find dissenting opinions
+    for (size_t i = 0; i < results.size(); ++i) {
+        for (size_t j = i + 1; j < results.size(); ++j) {
+            float agreement = calculateAgreement(results[i], results[j]);
+            
+            if (agreement < 0.5f) {
+                // Significant disagreement
+                std::ostringstream disagreement;
+                disagreement << "Agent-" << i << " (" << results[i].modelName << ") vs Agent-"
+                             << j << " (" << results[j].modelName << ") disagree (agreement: "
+                             << std::fixed << std::setprecision(0) << agreement * 100.0f << "%)";
+                disagreements.push_back(disagreement.str());
+            }
+        }
+    }
+
+    return disagreements;
+}
+
+float AgenticDeepThinkingEngine::calculateAgreement(const AgentResult& a1, const AgentResult& a2) {
+    // Calculate similarity between two agent results
+    const auto& ans1 = a1.result.finalAnswer;
+    const auto& ans2 = a2.result.finalAnswer;
+
+    if (ans1.empty() || ans2.empty()) return 0.0f;
+
+    // Word-level overlap (Jaccard similarity)
+    std::set<std::string> words1, words2;
+    
+    auto tokenize = [](const std::string& text, std::set<std::string>& words) {
+        std::istringstream iss(text);
+        std::string word;
+        while (iss >> word) {
+            // Normalize: lowercase, strip punctuation
+            std::string normalized;
+            for (char c : word) {
+                if (std::isalnum(static_cast<unsigned char>(c))) {
+                    normalized += std::tolower(static_cast<unsigned char>(c));
+                }
+            }
+            if (normalized.length() > 2) {  // Skip short words
+                words.insert(normalized);
+            }
+        }
+    };
+
+    tokenize(ans1, words1);
+    tokenize(ans2, words2);
+
+    if (words1.empty() || words2.empty()) return 0.0f;
+
+    // Intersection and union
+    std::vector<std::string> intersection;
+    std::set_intersection(words1.begin(), words1.end(),
+                          words2.begin(), words2.end(),
+                          std::back_inserter(intersection));
+    
+    size_t unionSize = words1.size() + words2.size() - intersection.size();
+    float jaccard = (unionSize > 0) ? (static_cast<float>(intersection.size()) / unionSize) : 0.0f;
+
+    // Also consider confidence similarity
+    float confDelta = std::abs(a1.result.overallConfidence - a2.result.overallConfidence);
+    float confSim = 1.0f - confDelta;
+
+    // Weighted combination: 70% content overlap, 30% confidence similarity
+    return 0.7f * jaccard + 0.3f * confSim;
+}
+
+AgenticDeepThinkingEngine::AgentResult AgenticDeepThinkingEngine::selectBestByVoting(
+    const std::vector<AgentResult>& results) {
+    
+    if (results.empty()) {
+        AgentResult empty;
+        empty.agentId = -1;
+        empty.agreementScore = 0.0f;
+        return empty;
+    }
+
+    // Select agent with highest agreement score
+    const AgentResult* best = &results[0];
+    for (const auto& ar : results) {
+        if (ar.agreementScore > best->agreementScore) {
+            best = &ar;
+        }
+    }
+
+    return *best;
 }

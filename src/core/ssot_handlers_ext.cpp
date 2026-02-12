@@ -489,8 +489,43 @@ CommandResult handleToolsDebug(const CommandContext& ctx) {
         PostMessageA(hwnd, WM_COMMAND, 506, 0);
         return CommandResult::ok("tools.debug");
     }
-    // CLI: delegate to debug start handler
-    ctx.output("[Tools] Debug: use !debug_start <executable> to begin.\n");
+    // CLI: attempt to launch debugger on the specified executable
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !debug <executable> [args...]\n");
+        ctx.output("  Launches the executable under the Windows debugger (devenv /debugexe).\n");
+        return CommandResult::ok("tools.debug");
+    }
+
+    // Check if target exists
+    std::string target(ctx.args);
+    DWORD attr = GetFileAttributesA(target.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES) {
+        ctx.output(("[Debug] Target not found: " + target + "\n").c_str());
+        return CommandResult::error("tools.debug: target not found");
+    }
+
+    // Try devenv /debugexe first (VS2022), then fall back to WinDbg
+    std::string devenvCmd = "devenv /debugexe \"" + target + "\"";
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    if (CreateProcessA(nullptr, (LPSTR)devenvCmd.c_str(), nullptr, nullptr, FALSE,
+                       CREATE_NEW_CONSOLE, nullptr, nullptr, &si, &pi)) {
+        ctx.output(("[Debug] Launched VS debugger on: " + target + "\n").c_str());
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    } else {
+        // Fallback: WinDbg
+        std::string windbgCmd = "windbg \"" + target + "\"";
+        if (CreateProcessA(nullptr, (LPSTR)windbgCmd.c_str(), nullptr, nullptr, FALSE,
+                           CREATE_NEW_CONSOLE, nullptr, nullptr, &si, &pi)) {
+            ctx.output(("[Debug] Launched WinDbg on: " + target + "\n").c_str());
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+        } else {
+            ctx.output("[Debug] No debugger found (tried devenv, windbg).\n");
+        }
+    }
     return CommandResult::ok("tools.debug");
 }
 
@@ -507,7 +542,43 @@ CommandResult handleDecompRenameVar(const CommandContext& ctx) {
         PostMessageA(hwnd, WM_COMMAND, 8001, 0);
         return CommandResult::ok("decomp.renameVar");
     }
-    ctx.output("[Decomp] CLI rename not supported — use GUI decompiler view.\n");
+    // CLI: rename variable in decompiled output using search-replace
+    // Expected args: "<old_name> <new_name> [file]"
+    if (!ctx.args || !ctx.args[0]) {
+        ctx.output("Usage: !decomp_rename <old_name> <new_name> [file]\n");
+        ctx.output("  Renames all occurrences of old_name to new_name in decompiled output.\n");
+        return CommandResult::ok("decomp.renameVar");
+    }
+
+    // Parse arguments
+    std::istringstream iss(ctx.args);
+    std::string oldName, newName, targetFile;
+    iss >> oldName >> newName >> targetFile;
+
+    if (oldName.empty() || newName.empty()) {
+        ctx.output("[Decomp] Both old_name and new_name are required.\n");
+        return CommandResult::error("decomp.renameVar: missing arguments");
+    }
+
+    if (targetFile.empty()) targetFile = "decomp_output.c";
+
+    // Use PowerShell to perform in-file replacement
+    std::string cmd = "powershell -NoProfile -Command \"(Get-Content '" + targetFile + 
+                      "') -replace '" + oldName + "','" + newName + "' | Set-Content '" + targetFile + "'\"";
+    FILE* pipe = _popen(cmd.c_str(), "r");
+    if (pipe) {
+        char buf[256];
+        while (fgets(buf, sizeof(buf), pipe)) ctx.output(buf);
+        int rc = _pclose(pipe);
+        if (rc == 0) {
+            char msg[256];
+            snprintf(msg, sizeof(msg), "[Decomp] Renamed '%s' -> '%s' in %s\n",
+                     oldName.c_str(), newName.c_str(), targetFile.c_str());
+            ctx.output(msg);
+        } else {
+            ctx.output("[Decomp] Rename failed — check file path.\n");
+        }
+    }
     return CommandResult::ok("decomp.renameVar");
 }
 

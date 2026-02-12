@@ -341,6 +341,8 @@ void CompletionServer::HandleClient(int client_fd) {
     // === Agentic API Routes ===
     else if (method == "POST" && path == "/api/chat") {
         response_body = HandleChatRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/agent/wish") {
+        response_body = HandleAgentWishRequest(parsed_body);
     } else if (method == "POST" && path == "/api/subagent") {
         response_body = HandleSubAgentRequest(parsed_body);
     } else if (method == "POST" && path == "/api/chain") {
@@ -704,6 +706,18 @@ std::string CompletionServer::HandleChatRequest(const std::string& body) {
     }
     result += "}";
     return result;
+}
+
+std::string CompletionServer::HandleAgentWishRequest(const std::string& body) {
+    std::string wish;
+    ExtractJsonString(body, "wish", wish);
+    if (wish.empty()) ExtractJsonString(body, "prompt", wish);
+    if (wish.empty()) {
+        return R"({"error":"missing_wish","hint":"Send JSON: {\"wish\":\"your natural language request\"}"})";
+    }
+    std::string message = "Execute the following user wish. Respond with a clear plan or result: " + wish;
+    std::string chat_body = "{\"message\":\"" + EscapeJson(message) + "\"}";
+    return HandleChatRequest(chat_body);
 }
 
 std::string CompletionServer::HandleSubAgentRequest(const std::string& body) {

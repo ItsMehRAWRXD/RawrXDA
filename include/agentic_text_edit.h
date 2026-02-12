@@ -1,136 +1,78 @@
 /**
  * \file agentic_text_edit.h
- * \brief Agentic text editor with LSP completions and ghost text
+ * \brief Agentic text editor with LSP completions and ghost text — C++20, no Qt
  * \author RawrXD Team
  * \date 2025-12-07
  */
 
 #pragma once
 
-#include <QPlainTextEdit>
-#include <QTimer>
-#include "lsp_client.h"
-#include "ghost_text_renderer.h"
+// ============================================================================
+// AgenticTextEdit — Qt-free stub. Use Win32 Rich Edit / custom control in impl.
+// ============================================================================
+
+#include <functional>
+#include <string>
 
 namespace RawrXD {
+
 class AICompletionProvider;
+class LSPClient;
+class GhostTextRenderer;
 
 /**
- * \brief Enhanced text editor with LSP integration and ghost text
- * 
- * Features:
- * - Two-phase initialization (lightweight constructor + explicit initialize())
- * - LSP client integration for real-time completions
- * - Ghost text overlay for inline suggestions
- * - Tab to accept, Esc to dismiss
- * - Auto-trigger completions on typing pause (300ms debounce)
- * - Multi-language support (C++, Python, JavaScript, etc.)
+ * Enhanced text editor with LSP integration and ghost text (Qt-free).
+ * Two-phase init; LSP client; ghost text overlay; completion debounce (e.g. 300 ms).
  */
-class AgenticTextEdit : public QPlainTextEdit
-{
-    Q_OBJECT
-
+class AgenticTextEdit {
 public:
-    explicit AgenticTextEdit(QWidget* parent = nullptr);
-    ~AgenticTextEdit() override = default;
+    using CompletionAcceptedFn = std::function<void(const std::string&)>;
 
-    /**
-     * Two-phase initialization
-     * Call after QApplication is ready
-     */
+    AgenticTextEdit() = default;
+    explicit AgenticTextEdit(void* /*parent*/) {}
+    ~AgenticTextEdit() = default;
+
     void initialize();
 
-    /**
-     * Set LSP client for this editor
-     */
     void setLSPClient(LSPClient* client);
-
-    /**
-     * Get current LSP client
-     */
     LSPClient* lspClient() const { return m_lspClient; }
 
-    /**
-     * Set AI completion provider
-     */
     void setAICompletionProvider(AICompletionProvider* provider);
-
-    /**
-     * Get AI completion provider
-     */
     AICompletionProvider* aiCompletionProvider() const { return m_aiProvider; }
 
-    /**
-     * Get ghost text renderer
-     */
     GhostTextRenderer* ghostRenderer() const { return m_ghostRenderer; }
 
-    /**
-     * Set document URI (for LSP communication)
-     */
-    void setDocumentUri(const QString& uri);
+    void setDocumentUri(const std::string& uri);
+    std::string documentUri() const { return m_documentUri; }
 
-    /**
-     * Get document URI
-     */
-    QString documentUri() const { return m_documentUri; }
-
-    /**
-     * Enable/disable auto-completions
-     */
     void setAutoCompletionsEnabled(bool enabled);
-
-    /**
-     * Check if auto-completions are enabled
-     */
     bool autoCompletionsEnabled() const { return m_autoCompletionsEnabled; }
 
-    /**
-     * Set completion debounce delay (milliseconds)
-     */
     void setCompletionDelay(int ms);
 
-signals:
-    /**
-     * Emitted when ghost text is accepted
-     */
-    void completionAccepted(const QString& text);
-
-    /**
-     * Emitted when ghost text is dismissed
-     */
-    void completionDismissed();
+    void setOnCompletionAccepted(CompletionAcceptedFn fn) { m_onCompletionAccepted = std::move(fn); }
 
 protected:
-    void keyPressEvent(QKeyEvent* event) override;
-    void triggerCompletion();
-    void syncDocumentToLSP();
-    QString getCurrentLineText() const;
-    bool shouldTriggerCompletion(const QString& lineText) const;
-
-    LSPClient* m_lspClient{};
-    AICompletionProvider* m_aiProvider{};
-    GhostTextRenderer* m_ghostRenderer{};g& text);
-    void onGhostTextDismissed();
+    std::string getCurrentLineText() const;
+    bool shouldTriggerCompletion(const std::string& lineText) const;
 
 private:
     void triggerCompletion();
     void syncDocumentToLSP();
-    QString getCurrentLineText() const;
-    bool shouldTriggerCompletion(const QString& lineText) const;
 
-    LSPClient* m_lspClient{};
-    GhostTextRenderer* m_ghostRenderer{};
-    
-    QString m_documentUri;
-    QString m_languageId = "cpp";
+    LSPClient* m_lspClient = nullptr;
+    AICompletionProvider* m_aiProvider = nullptr;
+    GhostTextRenderer* m_ghostRenderer = nullptr;
+
+    std::string m_documentUri;
+    std::string m_languageId = "cpp";
     int m_documentVersion = 0;
-    
-    QTimer* m_completionTimer{};
-    int m_completionDelay = 300;  // 300ms debounce
+
+    int m_completionDelay = 300;
     bool m_autoCompletionsEnabled = true;
-    
     bool m_documentOpened = false;
+
+    CompletionAcceptedFn m_onCompletionAccepted;
 };
 
 } // namespace RawrXD

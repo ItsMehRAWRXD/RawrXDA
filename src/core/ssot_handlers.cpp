@@ -2228,16 +2228,16 @@ CommandResult handleTelemetrySnapshot(const CommandContext& ctx) {
 
 CommandResult handleTier1SmoothScrollToggle(const CommandContext& ctx)  { return delegateToGui(ctx, 12000, "tier1.smoothScroll"); }
 CommandResult handleTier1MinimapEnhanced(const CommandContext& ctx)     { return delegateToGui(ctx, 12001, "tier1.minimapEnhanced"); }
-CommandResult handleTier1BreadcrumbsToggle(const CommandContext& ctx)   { return delegateToGui(ctx, 12010, "tier1.breadcrumbs"); }
-CommandResult handleTier1FuzzyPalette(const CommandContext& ctx)        { return delegateToGui(ctx, 12020, "tier1.fuzzyPalette"); }
-CommandResult handleTier1SettingsGUI(const CommandContext& ctx)         { return delegateToGui(ctx, 12030, "tier1.settingsGUI"); }
-CommandResult handleTier1WelcomePage(const CommandContext& ctx)         { return delegateToGui(ctx, 12040, "tier1.welcomePage"); }
-CommandResult handleTier1FileIconTheme(const CommandContext& ctx)       { return delegateToGui(ctx, 12050, "tier1.fileIcons"); }
-CommandResult handleTier1TabDragToggle(const CommandContext& ctx)       { return delegateToGui(ctx, 12060, "tier1.tabDrag"); }
-CommandResult handleTier1SplitVertical(const CommandContext& ctx)       { return delegateToGui(ctx, 12070, "tier1.splitVertical"); }
-CommandResult handleTier1SplitHorizontal(const CommandContext& ctx)     { return delegateToGui(ctx, 12071, "tier1.splitHorizontal"); }
-CommandResult handleTier1SplitGrid(const CommandContext& ctx)           { return delegateToGui(ctx, 12072, "tier1.splitGrid"); }
-CommandResult handleTier1SplitClose(const CommandContext& ctx)          { return delegateToGui(ctx, 12073, "tier1.splitClose"); }
-CommandResult handleTier1SplitFocusNext(const CommandContext& ctx)      { return delegateToGui(ctx, 12074, "tier1.splitFocusNext"); }
+CommandResult handleTier1BreadcrumbsToggle(const CommandContext& ctx)   { return delegateToGui(ctx, 12020, "tier1.breadcrumbs"); }
+CommandResult handleTier1FuzzyPalette(const CommandContext& ctx)        { return delegateToGui(ctx, 12030, "tier1.fuzzyPalette"); }
+CommandResult handleTier1SettingsGUI(const CommandContext& ctx)         { return delegateToGui(ctx, 12040, "tier1.settingsGUI"); }
+CommandResult handleTier1WelcomePage(const CommandContext& ctx)         { return delegateToGui(ctx, 12050, "tier1.welcomePage"); }
+CommandResult handleTier1FileIconTheme(const CommandContext& ctx)       { return delegateToGui(ctx, 12060, "tier1.fileIcons"); }
+CommandResult handleTier1TabDragToggle(const CommandContext& ctx)       { return delegateToGui(ctx, 12070, "tier1.tabDrag"); }
+CommandResult handleTier1SplitVertical(const CommandContext& ctx)       { return delegateToGui(ctx, 12080, "tier1.splitVertical"); }
+CommandResult handleTier1SplitHorizontal(const CommandContext& ctx)     { return delegateToGui(ctx, 12081, "tier1.splitHorizontal"); }
+CommandResult handleTier1SplitGrid(const CommandContext& ctx)           { return delegateToGui(ctx, 12082, "tier1.splitGrid"); }
+CommandResult handleTier1SplitClose(const CommandContext& ctx)          { return delegateToGui(ctx, 12083, "tier1.splitClose"); }
+CommandResult handleTier1SplitFocusNext(const CommandContext& ctx)      { return delegateToGui(ctx, 12084, "tier1.splitFocusNext"); }
 CommandResult handleTier1AutoUpdateCheck(const CommandContext& ctx)     { return delegateToGui(ctx, 12090, "tier1.autoUpdate"); }
 CommandResult handleTier1UpdateDismiss(const CommandContext& ctx)       { return delegateToGui(ctx, 12091, "tier1.updateDismiss"); }

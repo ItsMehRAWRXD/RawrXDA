@@ -1,39 +1,99 @@
 #pragma once
 
-#include "../qtapp/settings.h"
+// ============================================================================
+// MonacoSettingsDialog — C++20, Win32/native. No Qt. (qtapp/settings.h removed)
+// ============================================================================
+
+#include <cstdint>
+#include <string>
 
 namespace RawrXD::UI {
 
+/** Theme preset identifiers for Monaco editor (no Qt) */
+enum class MonacoThemePreset : int {
+    Default = 0,
+    NeonCyberpunk,
+    MatrixGreen,
+    HackerRed,
+    Monokai,
+    Custom
+};
+
+/** Monaco editor settings — pure C++ (replaces Qt-based settings) */
+struct MonacoSettings {
+    int variantIndex = 0;       // Core, Neon, ESP, Minimal, Enterprise
+    int themePresetIndex = 0;   // maps to MonacoThemePreset
+    std::string fontFamily = "Consolas";
+    int fontSize = 14;
+    int fontWeight = 400;
+    bool fontLigatures = true;
+    float lineHeight = 1.5f;
+    bool wordWrap = false;
+    int tabSize = 4;
+    bool insertSpaces = true;
+    bool autoIndent = true;
+    bool bracketMatching = true;
+    bool autoClosingBrackets = true;
+    bool formatOnPaste = false;
+    bool neonEffects = false;
+    int glowIntensity = 50;
+    int scanlineDensity = 2;
+    float glitchProbability = 0.0f;
+    bool particles = false;
+    int particleCount = 30;
+    bool espMode = false;
+    bool espHighlightVariables = true;
+    bool espHighlightFunctions = true;
+    bool espWallhack = false;
+    bool minimapEnabled = true;
+    bool minimapRenderChars = true;
+    float minimapScale = 1.0f;
+    bool intellisense = true;
+    bool quickSuggestions = true;
+    int suggestDelay = 200;
+    bool parameterHints = true;
+    int renderDelay = 0;
+    bool vblankSync = false;
+    int predictiveFetch = 0;
+    bool lazyTokenization = false;
+    int lazyTokenDelay = 50;
+    uint32_t backgroundColor = 0xFF1E1E1E;
+    uint32_t foregroundColor = 0xFFD4D4D4;
+    uint32_t keywordColor = 0xFF569CD6;
+    uint32_t stringColor = 0xFFCE9178;
+    uint32_t commentColor = 0xFF6A9955;
+    uint32_t functionColor = 0xFFDCDCAA;
+    uint32_t typeColor = 0xFF4EC9B0;
+    uint32_t numberColor = 0xFFB5CEA8;
+    uint32_t glowColor = 0xFF00FF00;
+    uint32_t glowSecondaryColor = 0xFF008000;
+};
+
 /**
- * MonacoSettingsDialog - Qt Dialog for Monaco Editor Settings
- * 
- * Provides a comprehensive settings panel for:
- * - Theme selection (12+ presets + custom)
- * - Variant selection (Core, Neon, ESP, Minimal, Enterprise)
- * - Font configuration
- * - Visual effects (glow, scanlines, particles)
- * - IntelliSense settings
- * - Performance tuning
- * 
- * All changes can be previewed live and are persisted to settings file.
+ * MonacoSettingsDialog — Win32/native settings panel for Monaco Editor
+ *
+ * Provides: theme selection, variant, font, neon/ESP/minimap/IntelliSense,
+ * performance tuning. Persisted to file. No Qt.
  */
-class MonacoSettingsDialog {public:
+class MonacoSettingsDialog {
+public:
     explicit MonacoSettingsDialog(void* parent = nullptr);
-    ~MonacoSettingsDialog() override;
-    
-    // Get/Set the settings being edited
+    ~MonacoSettingsDialog();
+
     MonacoSettings getSettings() const { return settings_; }
     void setSettings(const MonacoSettings& settings);
-    
-    // Load/Save settings from/to file
+
     bool loadFromFile(const std::string& path);
     bool saveToFile(const std::string& path);
-\npublic:\n    void settingsChanged(const MonacoSettings& settings);
+
+    void settingsChanged(const MonacoSettings& settings);
     void themeChanged(MonacoThemePreset preset);
     void previewRequested(const MonacoSettings& settings);
-\nprivate:\n    void onVariantChanged(int index);
+
+private:
+    void onVariantChanged(int index);
     void onThemePresetChanged(int index);
-    void onFontFamilyChanged(const void& font);
+    void onFontFamilyChanged(int fontIndex);
     void onFontSizeChanged(int size);
     void onFontWeightChanged(int weight);
     void onColorButtonClicked();
@@ -48,7 +108,6 @@ class MonacoSettingsDialog {public:
     void onExportThemeClicked();
     void onImportThemeClicked();
 
-private:
     void setupUI();
     void createThemeTab(void* tabs);
     void createFontTab(void* tabs);
@@ -60,83 +119,64 @@ private:
     void updateUIFromSettings();
     void updateSettingsFromUI();
     void applyThemePreset(MonacoThemePreset preset);
-    
-    // Settings being edited
+
     MonacoSettings settings_;
-    MonacoSettings originalSettings_;  // For reset functionality
-    
-    // Theme tab
-    void* variantCombo_;
-    void* themePresetCombo_;
-    void* customColorsGroup_;
-    void* backgroundColorBtn_;
-    void* foregroundColorBtn_;
-    void* keywordColorBtn_;
-    void* stringColorBtn_;
-    void* commentColorBtn_;
-    void* functionColorBtn_;
-    void* typeColorBtn_;
-    void* numberColorBtn_;
-    void* glowColorBtn_;
-    void* glowSecondaryBtn_;
-    
-    // Font tab
-    voidComboBox* fontFamilyCombo_;
-    void* fontSizeSpin_;
-    void* fontWeightCombo_;
-    void* fontLigaturesCheck_;
-    void* lineHeightSpin_;
-    
-    // Editor tab
-    void* wordWrapCheck_;
-    void* tabSizeSpin_;
-    void* insertSpacesCheck_;
-    void* autoIndentCheck_;
-    void* bracketMatchingCheck_;
-    void* autoClosingBracketsCheck_;
-    void* formatOnPasteCheck_;
-    
-    // Neon effects tab
-    void* neonEffectsCheck_;
-    void* glowIntensitySlider_;
-    void* glowIntensityLabel_;
-    void* scanlineDensitySpin_;
-    void* glitchProbabilitySpin_;
-    void* particlesCheck_;
-    void* particleCountSpin_;
-    
-    // ESP mode
-    void* espModeGroup_;
-    void* espModeCheck_;
-    void* espHighlightVariablesCheck_;
-    void* espHighlightFunctionsCheck_;
-    void* espWallhackCheck_;
-    
-    // Minimap
-    void* minimapEnabledCheck_;
-    void* minimapRenderCharsCheck_;
-    void* minimapScaleSpin_;
-    
-    // IntelliSense
-    void* intellisenseCheck_;
-    void* quickSuggestionsCheck_;
-    void* suggestDelaySpin_;
-    void* parameterHintsCheck_;
-    
-    // Performance
-    void* renderDelaySpin_;
-    void* vblankSyncCheck_;
-    void* predictiveFetchSpin_;
-    void* lazyTokenizationCheck_;
-    void* lazyTokenDelaySpuin_;
-    
-    // Buttons
-    void* applyBtn_;
-    void* resetBtn_;
-    void* previewBtn_;
-    void* exportBtn_;
-    void* importBtn_;
+    MonacoSettings originalSettings_;
+
+    void* variantCombo_ = nullptr;
+    void* themePresetCombo_ = nullptr;
+    void* customColorsGroup_ = nullptr;
+    void* backgroundColorBtn_ = nullptr;
+    void* foregroundColorBtn_ = nullptr;
+    void* keywordColorBtn_ = nullptr;
+    void* stringColorBtn_ = nullptr;
+    void* commentColorBtn_ = nullptr;
+    void* functionColorBtn_ = nullptr;
+    void* typeColorBtn_ = nullptr;
+    void* numberColorBtn_ = nullptr;
+    void* glowColorBtn_ = nullptr;
+    void* glowSecondaryBtn_ = nullptr;
+    void* fontFamilyCombo_ = nullptr;
+    void* fontSizeSpin_ = nullptr;
+    void* fontWeightCombo_ = nullptr;
+    void* fontLigaturesCheck_ = nullptr;
+    void* lineHeightSpin_ = nullptr;
+    void* wordWrapCheck_ = nullptr;
+    void* tabSizeSpin_ = nullptr;
+    void* insertSpacesCheck_ = nullptr;
+    void* autoIndentCheck_ = nullptr;
+    void* bracketMatchingCheck_ = nullptr;
+    void* autoClosingBracketsCheck_ = nullptr;
+    void* formatOnPasteCheck_ = nullptr;
+    void* neonEffectsCheck_ = nullptr;
+    void* glowIntensitySlider_ = nullptr;
+    void* glowIntensityLabel_ = nullptr;
+    void* scanlineDensitySpin_ = nullptr;
+    void* glitchProbabilitySpin_ = nullptr;
+    void* particlesCheck_ = nullptr;
+    void* particleCountSpin_ = nullptr;
+    void* espModeGroup_ = nullptr;
+    void* espModeCheck_ = nullptr;
+    void* espHighlightVariablesCheck_ = nullptr;
+    void* espHighlightFunctionsCheck_ = nullptr;
+    void* espWallhackCheck_ = nullptr;
+    void* minimapEnabledCheck_ = nullptr;
+    void* minimapRenderCharsCheck_ = nullptr;
+    void* minimapScaleSpin_ = nullptr;
+    void* intellisenseCheck_ = nullptr;
+    void* quickSuggestionsCheck_ = nullptr;
+    void* suggestDelaySpin_ = nullptr;
+    void* parameterHintsCheck_ = nullptr;
+    void* renderDelaySpin_ = nullptr;
+    void* vblankSyncCheck_ = nullptr;
+    void* predictiveFetchSpin_ = nullptr;
+    void* lazyTokenizationCheck_ = nullptr;
+    void* lazyTokenDelaySpin_ = nullptr;
+    void* applyBtn_ = nullptr;
+    void* resetBtn_ = nullptr;
+    void* previewBtn_ = nullptr;
+    void* exportBtn_ = nullptr;
+    void* importBtn_ = nullptr;
 };
 
 } // namespace RawrXD::UI
-

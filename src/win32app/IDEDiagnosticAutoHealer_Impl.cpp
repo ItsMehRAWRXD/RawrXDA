@@ -420,19 +420,19 @@ void IDEDiagnosticAutoHealer::DetectAndHealFailures() {
     // Apply healing strategies in order of severity
     if (processExited) {
         OutputDebugStringW(L"[AutoHealer] HEAL: Process exited, restarting\n");
-        ApplyHealing(HealingStrategy::RestartProcess);
+        ApplyHealing(HealingStrategy::PROCESS_RESTART);
         ExecuteProcessRestart();
     } else if (windowLost) {
         OutputDebugStringW(L"[AutoHealer] HEAL: Window lost, refocusing\n");
-        ApplyHealing(HealingStrategy::RefocusWindow);
+        ApplyHealing(HealingStrategy::WINDOW_REFOCUS);
         ExecuteWindowRefocus();
     } else if (hotkeyFailed) {
         OutputDebugStringW(L"[AutoHealer] HEAL: Hotkey failed, resending\n");
-        ApplyHealing(HealingStrategy::ResendHotkey);
+        ApplyHealing(HealingStrategy::HOTKEY_RESEND);
         ExecuteHotkeyResend();
     } else if (digestTimeout) {
         OutputDebugStringW(L"[AutoHealer] HEAL: Digest timeout, reopening file\n");
-        ApplyHealing(HealingStrategy::ReopenFile);
+        ApplyHealing(HealingStrategy::FILE_REOPEN);
         ExecuteFileReopen();
     }
 }

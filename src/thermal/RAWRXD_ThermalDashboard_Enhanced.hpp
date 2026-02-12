@@ -1,10 +1,9 @@
 /**
  * @file RAWRXD_ThermalDashboard_Enhanced.hpp
- * @brief Enhanced Qt6 Thermal Dashboard with Predictive Visualization
- * 
-// REMOVED_QT:  * Adds QtCharts predicted temperature path visualization and
- * integration with PredictiveThrottling engine.
- * 
+ * @brief Enhanced Win32 Thermal Dashboard with Predictive Visualization (Qt-free)
+ *
+ * Integrates with PredictiveThrottling engine; pure C++20/Win32.
+ *
  * @copyright RawrXD IDE 2026
  */
 

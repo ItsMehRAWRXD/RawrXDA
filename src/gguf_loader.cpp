@@ -661,7 +661,7 @@ uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGM
 
 bool GGUFLoader::SetCompressionType(CompressionType type) {
     compression_type_ = type;
-    // No initialization needed - brutal_gzip and deflate_brutal_qt are header-only/static
+    // No initialization needed - brutal_gzip and deflate_brutal_std are header-only/static (Qt-free)
     return true;
 }
 

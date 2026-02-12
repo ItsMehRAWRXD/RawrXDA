@@ -3,17 +3,29 @@
  * @brief Implementation of IDE agent plugin interface
  *
  * Orchestrates full wish→plan→execute pipeline with user feedback.
+ * ActionExecutor uses simple_json::JsonValue; we convert to nlohmann::json for callbacks.
  */
 
 #include "ide_agent_bridge.hpp"
-#include "json_types.hpp"
+#include "action_executor.hpp"
 #include <chrono>
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
+
+namespace {
+    inline nlohmann::json jsonValueToNlohmann(const JsonValue& v) {
+        try {
+            return nlohmann::json::parse(v.toJsonString());
+        } catch (...) {
+            return nlohmann::json::object();
+        }
+    }
+}
 
 /**
  * @brief Constructor
@@ -41,9 +53,9 @@ IDEAgentBridge::IDEAgentBridge()
         if (self->onAgentExecutionStarted) self->onAgentExecutionStarted(totalActions);
     }, this);
 
-    m_executor->registerActionCompletedCallback([](int index, bool success, const nlohmann::json& result, void* ud) {
+    m_executor->registerActionCompletedCallback([](int index, bool success, const JsonValue& result, void* ud) {
         auto* self = static_cast<IDEAgentBridge*>(ud);
-        self->onActionCompleted(index, success, result);
+        self->onActionCompleted(index, success, jsonValueToNlohmann(result));
     }, this);
 
     m_executor->registerActionFailedCallback([](int index, const std::string& error, bool recoverable, void* ud) {
@@ -61,9 +73,9 @@ IDEAgentBridge::IDEAgentBridge()
         }
     }, this);
 
-    m_executor->registerPlanCompletedCallback([](bool success, const nlohmann::json& result, void* ud) {
+    m_executor->registerPlanCompletedCallback([](bool success, const JsonValue& result, void* ud) {
         auto* self = static_cast<IDEAgentBridge*>(ud);
-        self->onPlanCompleted(success, result);
+        self->onPlanCompleted(success, jsonValueToNlohmann(result));
     }, this);
 
     m_executor->registerUserInputNeededCallback([](const std::string& query, const std::vector<std::string>& options, void* ud) {
@@ -113,26 +125,27 @@ void IDEAgentBridge::setProjectRoot(const std::string& root)
 void IDEAgentBridge::executeWish(const std::string& wish, bool requireApproval)
 {
     if (m_isExecuting) {
-        agentError("Execution already in progress", false);
+        if (onAgentError) onAgentError("Execution already in progress", false);
         return;
     }
 
     if (wish.empty()) {
-        agentError("Wish cannot be empty", false);
+        if (onAgentError) onAgentError("Wish cannot be empty", false);
         return;
     }
 
     m_isExecuting = true;
     m_requireApproval = requireApproval;
 
-    InvocationParams params;
-    params.wish = wish;
-    params.context = buildExecutionContext();
-    params.availableTools = {"search_files", "file_edit", "run_build",
-                             "execute_tests", "commit_git", "invoke_command"};
+    m_lastParams.wish = wish;
+    m_lastParams.context = buildExecutionContext();
+    m_lastParams.availableTools = {"search_files", "file_edit", "run_build",
+                                  "execute_tests", "commit_git", "invoke_command"};
+    m_retriesLeft = m_maxRetries;
+    m_currentRetryBackoffMs = m_retryBackoffMs;
 
     fprintf(stderr, "[IDEAgentBridge] Executing wish: %s\n", wish.c_str());
-    m_invoker->invokeAsync(params);
+    m_invoker->invokeAsync(m_lastParams);
 }
 
 /**
@@ -141,20 +154,21 @@ void IDEAgentBridge::executeWish(const std::string& wish, bool requireApproval)
 void IDEAgentBridge::planWish(const std::string& wish)
 {
     if (m_isExecuting) {
-        agentError("Execution already in progress", false);
+        if (onAgentError) onAgentError("Execution already in progress", false);
         return;
     }
 
     m_isExecuting = true;
 
-    InvocationParams params;
-    params.wish = wish;
-    params.context = buildExecutionContext();
-    params.availableTools = {"search_files", "file_edit", "run_build",
-                             "execute_tests", "commit_git", "invoke_command"};
+    m_lastParams.wish = wish;
+    m_lastParams.context = buildExecutionContext();
+    m_lastParams.availableTools = {"search_files", "file_edit", "run_build",
+                                  "execute_tests", "commit_git", "invoke_command"};
+    m_retriesLeft = m_maxRetries;
+    m_currentRetryBackoffMs = m_retryBackoffMs;
 
     fprintf(stderr, "[IDEAgentBridge] Planning wish: %s\n", wish.c_str());
-    m_invoker->invokeAsync(params);
+    m_invoker->invokeAsync(m_lastParams);
 }
 
 /**
@@ -178,7 +192,7 @@ void IDEAgentBridge::rejectPlan()
 {
     m_waitingForApproval = false;
     m_isExecuting = false;
-    executionCancelled();
+    if (onExecutionCancelled) onExecutionCancelled();
     fprintf(stderr, "[IDEAgentBridge] Plan rejected by user\n");
 }
 
@@ -193,7 +207,7 @@ void IDEAgentBridge::cancelExecution()
 
     m_isExecuting = false;
     m_waitingForApproval = false;
-    executionCancelled();
+    if (onExecutionCancelled) onExecutionCancelled();
 
     fprintf(stderr, "[IDEAgentBridge] Execution cancelled\n");
 }
@@ -221,6 +235,31 @@ void IDEAgentBridge::setStopOnError(bool stopOnError)
     fprintf(stderr, "[IDEAgentBridge] Stop on error: %s\n", stopOnError ? "YES" : "NO");
 }
 
+void IDEAgentBridge::setRetryPolicy(int maxRetries, int initialBackoffMs)
+{
+    m_maxRetries = maxRetries;
+    m_retryBackoffMs = initialBackoffMs;
+    fprintf(stderr, "[IDEAgentBridge] Retry policy: maxRetries=%d, backoff=%d ms\n", maxRetries, initialBackoffMs);
+}
+
+void IDEAgentBridge::retryPlanGeneration()
+{
+    if (m_retriesLeft <= 0) return;
+
+    int backoff = m_currentRetryBackoffMs;
+    m_retriesLeft--;
+    if (m_currentRetryBackoffMs < 30000)
+        m_currentRetryBackoffMs = (m_currentRetryBackoffMs * 2 <= 30000) ? m_currentRetryBackoffMs * 2 : 30000;
+
+    fprintf(stderr, "[IDEAgentBridge] Retrying plan generation in %d ms (%d left)\n", backoff, m_retriesLeft);
+
+    std::thread([this, backoff]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
+        if (onAgentThinkingStarted) onAgentThinkingStarted(m_lastParams.wish + " (retry)");
+        m_invoker->invokeAsync(m_lastParams);
+    }).detach();
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Signal Handlers
 // ─────────────────────────────────────────────────────────────────────────
@@ -231,18 +270,22 @@ void IDEAgentBridge::setStopOnError(bool stopOnError)
 void IDEAgentBridge::onPlanGenerated(const LLMResponse& response)
 {
     if (!response.success) {
+        if (m_retriesLeft > 0) {
+            retryPlanGeneration();
+            return;
+        }
         m_isExecuting = false;
-        agentError("Failed to generate plan: " + response.error, true);
+        if (onAgentError) onAgentError("Failed to generate plan: " + response.error, true);
         return;
     }
 
     m_currentPlan = convertToExecutionPlan(response.parsedPlan);
-    agentGeneratedPlan(m_currentPlan);
+    if (onAgentGeneratedPlan) onAgentGeneratedPlan(m_currentPlan);
 
     // If user approval is required, wait
     if (m_requireApproval) {
         m_waitingForApproval = true;
-        planApprovalNeeded(m_currentPlan);
+        if (onPlanApprovalNeeded) onPlanApprovalNeeded(m_currentPlan);
     } else {
         // Auto-execute
         executeCurrentPlan();
@@ -262,7 +305,7 @@ void IDEAgentBridge::onActionCompleted(int index, bool success, const nlohmann::
         description = m_currentPlan.actions[index].value("description", std::string(""));
     }
 
-    agentExecutionProgress(index, description, success);
+    if (onAgentExecutionProgress) onAgentExecutionProgress(index, description, success);
 
     fprintf(stderr, "[IDEAgentBridge] Action %d completed: %s\n",
             index + 1, success ? "OK" : "FAILED");
@@ -277,7 +320,7 @@ void IDEAgentBridge::onActionFailed(int index, const std::string& error, bool re
 
     if (!recoverable) {
         m_isExecuting = false;
-        agentError("Unrecoverable error in action " + std::to_string(index) + ": " + error, false);
+        if (onAgentError) onAgentError("Unrecoverable error in action " + std::to_string(index) + ": " + error, false);
     }
 }
 
@@ -295,10 +338,10 @@ void IDEAgentBridge::onPlanCompleted(bool success, const nlohmann::json& result)
     if (success) {
         recordExecution(m_currentPlan.wish, true, result, elapsedMs);
         fprintf(stderr, "[INFO] [IDEAgentBridge] Plan completed successfully in %d ms\n", elapsedMs);
-        agentCompleted(result, elapsedMs);
+        if (onAgentCompleted) onAgentCompleted(result, elapsedMs);
     } else {
         recordExecution(m_currentPlan.wish, false, result, elapsedMs);
-        agentError("Plan execution failed", true);
+        if (onAgentError) onAgentError("Plan execution failed", true);
     }
 }
 
@@ -308,7 +351,7 @@ void IDEAgentBridge::onPlanCompleted(bool success, const nlohmann::json& result)
 void IDEAgentBridge::onUserInputNeeded(const std::string& query, const std::vector<std::string>& options)
 {
     fprintf(stderr, "[IDEAgentBridge] User input needed: %s\n", query.c_str());
-    userInputRequested(query, options);
+    if (onUserInputRequested) onUserInputRequested(query, options);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -348,7 +391,7 @@ ExecutionPlan IDEAgentBridge::convertToExecutionPlan(const nlohmann::json& llmPl
 void IDEAgentBridge::executeCurrentPlan()
 {
     if (m_currentPlan.actions.empty()) {
-        agentError("No plan to execute", false);
+        if (onAgentError) onAgentError("No plan to execute", false);
         m_isExecuting = false;
         return;
     }
@@ -365,7 +408,8 @@ void IDEAgentBridge::executeCurrentPlan()
     ctx.timeoutMs = 30000;
 
     m_executor->setContext(ctx);
-    m_executor->executePlan(m_currentPlan.actions, m_stopOnError);
+    JsonValue actionsJson = JsonValue::parse(m_currentPlan.actions.dump());
+    m_executor->executePlan(actionsJson, m_stopOnError);
 
     fprintf(stderr, "[IDEAgentBridge] Plan execution started with %d actions\n",
             static_cast<int>(m_currentPlan.actions.size()));

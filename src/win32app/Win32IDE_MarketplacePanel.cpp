@@ -374,7 +374,7 @@ static bool ensureMarketplaceClass() {
     wc.style         = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc   = marketplaceWndProc;
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(30, 30, 30));
     wc.lpszClassName  = MARKETPLACE_CLASS;
 

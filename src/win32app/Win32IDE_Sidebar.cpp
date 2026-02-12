@@ -30,6 +30,19 @@
 
 namespace fs = std::filesystem;
 
+namespace {
+// UTF-8 to UTF-16 for Unicode Win32 APIs (C++20, no Qt)
+static std::wstring utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), len) == 0)
+        return {};
+    return out;
+}
+} // namespace
+
 // Activity Bar constants
 constexpr int ACTIVITY_BAR_WIDTH = 48;
 constexpr int SIDEBAR_DEFAULT_WIDTH = 250;
@@ -79,7 +92,8 @@ constexpr int IDC_EXT_DETAILS = 6052;
 constexpr int IDC_EXT_INSTALL = 6053;
 constexpr int IDC_EXT_UNINSTALL = 6054;
 
-// File Explorer IDs from Win32IDE.cpp (used in FileExplorerProc)
+// File Explorer IDs from Win32IDE.cpp (used in FileExplorerProc / SidebarProc)
+constexpr int IDC_FILE_EXPLORER = 1025;
 constexpr int IDC_FILE_TREE = 1026;
 
 // ============================================================================
@@ -229,6 +243,19 @@ LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
             pThis->resizeSidebar(width, height);
         }
         return 0;
+    }
+
+    case WM_NOTIFY: {
+        if (pThis) {
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->code == TVN_DELETEITEM && pnmh->idFrom == IDC_FILE_EXPLORER) {
+                NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                if (pnmtv->itemOld.lParam)
+                    delete[] reinterpret_cast<char*>(pnmtv->itemOld.lParam);
+                return 0;
+            }
+        }
+        break;
     }
     }
 
@@ -687,51 +714,40 @@ void Win32IDE::newFolderInExplorer()
     }
 }
 
+void Win32IDE::deleteItemInExplorer(const std::string& path)
+{
+    if (path.empty()) return;
+    std::string prompt = "Delete '" + path + "'? This action cannot be undone.";
+    if (MessageBoxA(m_hwndMain, prompt.c_str(), "Confirm Delete", MB_YESNO | MB_ICONWARNING) != IDYES)
+        return;
+    try {
+        if (std::filesystem::is_directory(path)) {
+            std::filesystem::remove_all(path);
+        } else {
+            std::filesystem::remove(path);
+        }
+        if (m_hwndExplorerTree) refreshFileTree();
+        if (m_hwndFileExplorer) refreshFileExplorer();
+        appendToOutput("Deleted: " + path + "\n", "Output", OutputSeverity::Info);
+    }
+    catch (const std::exception& e) {
+        appendToOutput(std::string("Error deleting: ") + e.what() + "\n", "Output", OutputSeverity::Error);
+    }
+}
+
 void Win32IDE::deleteItemInExplorer()
 {
     HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
     if (!hSelected) return;
-
-    TVITEMA item = {};
-    char text[MAX_PATH] = {};
-    item.hItem = hSelected;
-    item.mask = TVIF_PARAM | TVIF_TEXT;
-    item.pszText = text;
-    item.cchTextMax = MAX_PATH;
-    if (!TreeView_GetItem(m_hwndExplorerTree, &item)) return;
-
     std::string fullPath = getTreeItemPath(hSelected);
-    if (fullPath.empty()) return;
-
-    std::string prompt = "Delete '" + fullPath + "'? This action cannot be undone.";
-    if (MessageBoxA(m_hwndMain, prompt.c_str(), "Confirm Delete", MB_YESNO | MB_ICONWARNING) == IDYES) {
-        try {
-            if (std::filesystem::is_directory(fullPath)) {
-                std::filesystem::remove_all(fullPath);
-            } else {
-                std::filesystem::remove(fullPath);
-            }
-            refreshFileTree();
-            appendToOutput("Deleted: " + fullPath + "\n", "Output", OutputSeverity::Info);
-        }
-        catch (const std::exception& e) {
-            appendToOutput(std::string("Error deleting: ") + e.what() + "\n", "Output", OutputSeverity::Error);
-        }
-    }
+    if (!fullPath.empty()) deleteItemInExplorer(fullPath);
 }
 
-void Win32IDE::renameItemInExplorer()
+void Win32IDE::renameItemInExplorer(const std::string& oldPath)
 {
-    HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
-    if (!hSelected) return;
-
-    std::string oldPath = getTreeItemPath(hSelected);
     if (oldPath.empty()) return;
-
-    // Use GetSaveFileName to prompt for new name
     char buffer[MAX_PATH] = {};
     strcpy_s(buffer, oldPath.c_str());
-
     OPENFILENAMEA ofn = {};
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
@@ -743,13 +759,22 @@ void Win32IDE::renameItemInExplorer()
         std::string newPath = buffer;
         try {
             std::filesystem::rename(oldPath, newPath);
-            refreshFileTree();
+            if (m_hwndExplorerTree) refreshFileTree();
+            if (m_hwndFileExplorer) refreshFileExplorer();
             appendToOutput("Renamed: " + oldPath + " -> " + newPath + "\n", "Output", OutputSeverity::Info);
         }
         catch (const std::exception& e) {
             appendToOutput(std::string("Error renaming: ") + e.what() + "\n", "Output", OutputSeverity::Error);
         }
     }
+}
+
+void Win32IDE::renameItemInExplorer()
+{
+    HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
+    if (!hSelected) return;
+    std::string oldPath = getTreeItemPath(hSelected);
+    if (!oldPath.empty()) renameItemInExplorer(oldPath);
 }
 
 void Win32IDE::revealInExplorer(const std::string& filePath)
@@ -779,15 +804,19 @@ void Win32IDE::revealInExplorer(const std::string& filePath)
 
 void Win32IDE::handleExplorerContextMenu(POINT pt)
 {
+    static constexpr int IDC_CTX_DELETE = 50020, IDC_CTX_RENAME = 50021;
     HMENU hMenu = CreatePopupMenu();
     AppendMenuA(hMenu, MF_STRING, IDC_EXPLORER_NEW_FILE, "New File");
     AppendMenuA(hMenu, MF_STRING, IDC_EXPLORER_NEW_FOLDER, "New Folder");
     AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hMenu, MF_STRING, 999, "Delete");
-    AppendMenuA(hMenu, MF_STRING, 1000, "Rename");
-    
-    TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, m_hwndMain, nullptr);
+    AppendMenuA(hMenu, MF_STRING, IDC_CTX_DELETE, "Delete");
+    AppendMenuA(hMenu, MF_STRING, IDC_CTX_RENAME, "Rename");
+    int cmd = (int)TrackPopupMenu(hMenu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.x, pt.y, 0, m_hwndMain, nullptr);
     DestroyMenu(hMenu);
+    if (cmd == IDC_CTX_DELETE) deleteItemInExplorer();
+    else if (cmd == IDC_CTX_RENAME) renameItemInExplorer();
+    else if (cmd == IDC_EXPLORER_NEW_FILE) newFileInExplorer();
+    else if (cmd == IDC_EXPLORER_NEW_FOLDER) newFolderInExplorer();
 }
 
 LRESULT CALLBACK Win32IDE::ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -1041,7 +1070,7 @@ void Win32IDE::replaceInFiles(const std::string& searchText, const std::string& 
 {
     if (searchText.empty()) return;
 
-    if (MessageBoxA(m_hwndMain, "Replace occurrences across workspace?", "Confirm Replace", MB_YESNO | MB_ICONQUESTION) != IDYES) return;
+    if (MessageBoxW(m_hwndMain, L"Replace occurrences across workspace?", L"Confirm Replace", MB_YESNO | MB_ICONQUESTION) != IDYES) return;
 
     size_t totalReplacements = 0;
     try {
@@ -1669,8 +1698,8 @@ void Win32IDE::uninstallExtension(const std::string& extensionId)
     // Optionally remove from disk
     std::string extDir = m_explorerRootPath + "\\plugins\\" + extensionId;
     if (fs::exists(extDir)) {
-        if (MessageBoxA(m_hwndMain, ("Delete extension files from disk?\n" + extDir).c_str(),
-                        "Uninstall Extension", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+        const std::wstring msg = utf8ToWide("Delete extension files from disk?\n" + extDir);
+        if (MessageBoxW(m_hwndMain, msg.c_str(), L"Uninstall Extension", MB_YESNO | MB_ICONQUESTION) == IDYES) {
             try { fs::remove_all(extDir); } catch (...) {}
         }
     }
@@ -2507,8 +2536,19 @@ LRESULT CALLBACK Win32IDE::FileExplorerProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     case WM_NOTIFY: {
         if (pThis) {
             NMHDR* pnmh = (NMHDR*)lParam;
-            if (pnmh->idFrom == IDC_FILE_TREE || pnmh->idFrom == IDC_EXPLORER_TREE) {
+            if (pnmh->idFrom == IDC_FILE_TREE || pnmh->idFrom == IDC_EXPLORER_TREE || pnmh->idFrom == IDC_FILE_EXPLORER) {
                 switch (pnmh->code) {
+                case TVN_DELETEITEM: {
+                    NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                    if (pnmtv->itemOld.lParam) {
+                        if (pnmh->idFrom == IDC_FILE_EXPLORER) {
+                            delete[] reinterpret_cast<char*>(pnmtv->itemOld.lParam);
+                        }
+                        /* IDC_FILE_TREE uses std::string* (freed in FileExplorerContainerProc); IDC_EXPLORER_TREE uses lParam as flag/index, no heap */
+                    }
+                    return 0;
+                }
+
                 case TVN_SELCHANGEDA: {
                     NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
                     if (pnmtv->itemNew.hItem) {
@@ -2650,10 +2690,8 @@ void Win32IDE::onFileTreeDoubleClick(HTREEITEM item)
         }
 
         if (ext == "gguf") {
-            int result = MessageBoxA(m_hwndMain,
-                ("Load model file?\n\n" + path).c_str(),
-                "RawrXD - Load Model",
-                MB_YESNO | MB_ICONQUESTION);
+            const std::wstring msg = utf8ToWide("Load model file?\n\n" + path);
+            int result = MessageBoxW(m_hwndMain, msg.c_str(), L"RawrXD - Load Model", MB_YESNO | MB_ICONQUESTION);
             if (result == IDYES) {
                 loadModelFromPath(path);
             }

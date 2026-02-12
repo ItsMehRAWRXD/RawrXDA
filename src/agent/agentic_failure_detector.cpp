@@ -403,6 +403,113 @@ bool AgenticFailureDetector::isEnabled() const
     return m_enabled;
 }
 
+// ---------------------------------------------------------------------------
+// Pre-execution safety (agentic/autonomous roadmap)
+// ---------------------------------------------------------------------------
+namespace {
+    const std::vector<std::string>& dangerousCommandPatterns() {
+        static const std::vector<std::string> pats = {
+            "rm -rf", "rm -r /", "rmdir /s", "del /f /s", "format ", "mkfs",
+            "shutdown", "reboot", "init 0", "init 6", "> /dev/sd", "dd if=",
+            "chmod 777", ":(){ :|:& };:", "mv / ", "> /etc", "curl | sh",
+            "wget -O- | bash", "format c:", "diskpart", "bcdedit"
+        };
+        return pats;
+    }
+
+    bool containsCi(const std::string& haystack, const std::string& needle) {
+        std::string h = haystack;
+        std::string n = needle;
+        std::transform(h.begin(), h.end(), h.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return h.find(n) != std::string::npos;
+    }
+}
+
+bool AgenticFailureDetector::validateActionBeforeExecution(const ActionSummary& action)
+{
+    if (!m_enabled || !m_enableToolValidation) return true;
+
+    if (wouldCauseDataLoss(action)) {
+        fprintf(stderr, "[AgenticFailureDetector] Blocked: action would cause data loss: %s / %s\n",
+                action.type.c_str(), action.target.c_str());
+        return false;
+    }
+
+    std::string cmd;
+    if (action.type == "invoke_command" || action.type == "run_command") {
+        cmd = action.target;
+        if (!action.params.empty()) cmd += " " + action.params;
+    } else {
+        cmd = action.target + " " + action.params;
+    }
+
+    if (isDangerousCommand(cmd)) {
+        fprintf(stderr, "[AgenticFailureDetector] Blocked: dangerous command: %.80s\n", cmd.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+bool AgenticFailureDetector::isDangerousCommand(const std::string& commandStr) const
+{
+    std::string c = commandStr;
+    std::transform(c.begin(), c.end(), c.begin(), [](unsigned char x) { return static_cast<char>(std::tolower(x)); });
+
+    for (const std::string& p : dangerousCommandPatterns()) {
+        if (containsCi(c, p)) return true;
+    }
+
+    if (c.find("format") != std::string::npos && (c.find("drive") != std::string::npos || c.find("disk") != std::string::npos))
+        return true;
+
+    return false;
+}
+
+bool AgenticFailureDetector::wouldCauseDataLoss(const ActionSummary& action) const
+{
+    std::string type = action.type;
+    std::string target = action.target;
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+
+    if (type == "file_edit") {
+        if (containsCi(action.params, "\"action\":\"delete\"") || action.params.find("delete") != std::string::npos)
+            return true;
+        if (containsCi(target, "system32") || containsCi(target, "/etc/") || containsCi(target, "/boot/"))
+            return true;
+    }
+    if (type == "file_delete" || type == "delete_file") return true;
+    if (type == "run_command" || type == "invoke_command") {
+        if (isDangerousCommand(target + " " + action.params)) return true;
+    }
+    return false;
+}
+
+std::string AgenticFailureDetector::suggestRecoveryAction(const FailureInfo& failure) const
+{
+    switch (failure.type) {
+        case AgentFailureType::Refusal:
+            return "Retry with rephrased request or different model.";
+        case AgentFailureType::Hallucination:
+            return "Verify outputs and retry with more context.";
+        case AgentFailureType::FormatViolation:
+            return "Retry; request JSON-only or structured output.";
+        case AgentFailureType::InfiniteLoop:
+            return "Stop current run; reduce max tokens or simplify task.";
+        case AgentFailureType::TokenLimitExceeded:
+            return "Increase max_tokens or summarize context and retry.";
+        case AgentFailureType::ResourceExhausted:
+            return "Reduce batch size or free GPU memory and retry.";
+        case AgentFailureType::Timeout:
+            return "Increase timeout or retry with smaller input.";
+        case AgentFailureType::SafetyViolation:
+            return "Review content; adjust prompt to avoid blocked patterns.";
+        default:
+            return "Check logs and retry; escalate if persistent.";
+    }
+}
+
 double AgenticFailureDetector::calculateConfidence(AgentFailureType type, const std::string& output)
 {
     double confidence = 0.5;

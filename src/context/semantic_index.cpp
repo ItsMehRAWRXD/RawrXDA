@@ -876,12 +876,12 @@ bool SemanticIndexEngine::LoadIndex(const std::string& filePath) {
         size_t entryEnd = symArray.find('}', searchPos);
         if (entryEnd == std::string::npos) break;
 
-        SymbolEntry sym;
+        RichSymbol sym;
         sym.id = extractStr(symArray, searchPos, "id");
         sym.name = extractStr(symArray, searchPos, "name");
         sym.kind = static_cast<SymbolKind>(extractInt(symArray, searchPos, "kind"));
-        sym.file = extractStr(symArray, searchPos, "file");
-        sym.line = extractInt(symArray, searchPos, "line");
+        sym.definition.filePath = extractStr(symArray, searchPos, "file");
+        sym.definition.startLine = extractInt(symArray, searchPos, "line");
         sym.typeSignature = extractStr(symArray, searchPos, "sig");
         sym.parentId = extractStr(symArray, searchPos, "parent");
 
@@ -911,7 +911,7 @@ bool SemanticIndexEngine::LoadIndex(const std::string& filePath) {
 
                 if (!dep.sourceFile.empty()) {
                     std::string key = dep.sourceFile + "->" + dep.targetFile;
-                    m_deps[key] = dep;
+                    m_deps.insert({key, dep});
                 }
                 dpos = dEnd + 1;
             }

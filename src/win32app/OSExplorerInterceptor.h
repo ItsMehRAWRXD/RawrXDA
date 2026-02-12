@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <thread>
+#include <atomic>
 
 // OS Interceptor structures and definitions
 
@@ -209,14 +211,14 @@ bool ResolveImports(HANDLE hProcess, void* mappedBase, void* dllData);
 
 // Utility functions
 std::string GetFunctionName(void* function);
-std::string FormatCallInfo(CallLogEntry* entry);
+void FormatCallInfo(CallLogEntry* entry);
 bool IsSensitiveFile(const std::string& path);
 bool IsSensitiveRegistryKey(const std::string& key);
 bool IsSensitiveNetworkAddress(const std::string& address);
 void* FindPattern(void* start, size_t size, const BYTE* pattern, size_t patternSize);
 
-// Constants
-const ULONGLONG OS_INTERCEPTOR_MAGIC = 0x0SINT3RC3PT0R;  // OSINT + INTERCEPTOR
+// Constants (magic: "OSINT" + "3RC3" in hex)
+const ULONGLONG OS_INTERCEPTOR_MAGIC = 0x05314E5433524333ULL;
 const DWORD OS_INTERCEPTOR_VERSION = 1;
 
 // Menu IDs
@@ -232,5 +234,3 @@ const DWORD ERROR_OSINT_INVALID_PID = 1;
 const DWORD ERROR_OSINT_ACCESS_DENIED = 2;
 const DWORD ERROR_OSINT_HOOK_FAILED = 3;
 const DWORD ERROR_OSINT_ALREADY_RUNNING = 4;
-
-#endif // OS_EXPLORER_INTERCEPTOR_H

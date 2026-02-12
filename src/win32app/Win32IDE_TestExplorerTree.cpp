@@ -239,9 +239,9 @@ static LRESULT CALLBACK testExplorerWndProc(HWND hwnd, UINT msg, WPARAM wParam, 
         int wmId = LOWORD(wParam);
         if (wmId == IDC_TE_RUN_BTN) {
             // Post run command to parent IDE
-            PostMessageW(GetParent(hwnd), WM_COMMAND, IDM_TESTEXPLORER_RUN, 0);
+            PostMessageW(GetParent(hwnd), WM_COMMAND, Win32IDE::IDM_TESTEXPLORER_RUN, 0);
         } else if (wmId == IDC_TE_REFRESH_BTN) {
-            PostMessageW(GetParent(hwnd), WM_COMMAND, IDM_TESTEXPLORER_REFRESH, 0);
+            PostMessageW(GetParent(hwnd), WM_COMMAND, Win32IDE::IDM_TESTEXPLORER_REFRESH, 0);
         } else if (wmId == IDC_TE_COLLAPSE_BTN) {
             // Collapse all
             HTREEITEM hRoot = (HTREEITEM)SendMessageW(s_hwndTestTree, TVM_GETNEXTITEM, TVGN_ROOT, 0);
@@ -315,7 +315,7 @@ static bool ensureTestExplorerClass() {
     wc.lpfnWndProc   = testExplorerWndProc;
     wc.cbWndExtra    = sizeof(void*);
     wc.hInstance      = GetModuleHandleW(nullptr);
-    wc.hCursor        = LoadCursorW(nullptr, IDC_ARROW);
+    wc.hCursor        = LoadCursorW(nullptr, (LPCWSTR)(uintptr_t)IDC_ARROW);
     wc.hbrBackground  = CreateSolidBrush(RGB(30, 30, 30));
     wc.lpszClassName  = TEST_EXPLORER_CLASS;
 
@@ -361,7 +361,7 @@ void Win32IDE::cmdTestExplorerShow() {
     }
 
     if (!ensureTestExplorerClass()) {
-        MessageBoxW(m_hwndMain, L"Failed to register test explorer class.",
+        MessageBoxW(getMainWindow(), L"Failed to register test explorer class.",
                     L"Test Explorer Error", MB_OK | MB_ICONERROR);
         return;
     }
@@ -372,7 +372,7 @@ void Win32IDE::cmdTestExplorerShow() {
         L"RawrXD — Test Explorer",
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
         CW_USEDEFAULT, CW_USEDEFAULT, 450, 600,
-        m_hwndMain, nullptr,
+        getMainWindow(), nullptr,
         GetModuleHandleW(nullptr), nullptr);
 
     if (s_hwndTestExplorer) {

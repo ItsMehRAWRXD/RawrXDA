@@ -14,6 +14,7 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+#include "../../include/local_parity_kernel.h"
 #include <richedit.h>
 #include <fstream>
 #include <sstream>
@@ -94,6 +95,11 @@ void Win32IDE::loadSettings() {
         m_settings.localServerEnabled = j.value("localServer", (int)m_settings.localServerEnabled) != 0;
         m_settings.localServerPort    = j.value("localServerPort", m_settings.localServerPort);
 
+        // Local Parity (no API key)
+        m_settings.localParityEnabled   = j.value("localParityEnabled", (int)m_settings.localParityEnabled) != 0;
+        m_settings.localParityModelPath = j.value("localParityModelPath", m_settings.localParityModelPath);
+        m_settings.updateManifestUrl    = j.value("updateManifestUrl", m_settings.updateManifestUrl);
+
         LOG_INFO("Settings loaded from " + path);
     } catch (const std::exception& e) {
         LOG_WARNING("Failed to parse settings: " + std::string(e.what()));
@@ -148,6 +154,11 @@ void Win32IDE::saveSettings() {
     j["localServer"]        = m_settings.localServerEnabled ? 1 : 0;
     j["localServerPort"]    = m_settings.localServerPort;
 
+    // Local Parity (no API key)
+    j["localParityEnabled"]   = m_settings.localParityEnabled ? 1 : 0;
+    j["localParityModelPath"] = m_settings.localParityModelPath;
+    j["updateManifestUrl"]    = m_settings.updateManifestUrl;
+
     std::string path = getSettingsFilePath();
     std::ofstream f(path);
     if (f) {
@@ -196,6 +207,10 @@ void Win32IDE::applyDefaultSettings() {
     m_settings.localServerEnabled  = false;
     m_settings.localServerPort     = 11435;
 
+    m_settings.localParityEnabled   = false;
+    m_settings.localParityModelPath = "";
+    m_settings.updateManifestUrl    = "";
+
     m_settings.uiScalePercent      = 0;   // 0 = auto (follow system DPI)
 }
 
@@ -225,6 +240,11 @@ void Win32IDE::applySettings() {
     // Minimap
     m_minimapVisible                 = m_settings.minimapEnabled;
 
+    // Smooth scroll & breadcrumbs (so Settings menu toggles take effect)
+    m_smoothScroll.enabled           = m_settings.smoothScrollEnabled;
+    if (m_hwndBreadcrumbs)
+        ShowWindow(m_hwndBreadcrumbs, m_settings.breadcrumbsEnabled ? SW_SHOW : SW_HIDE);
+
     // Theme
     if (m_settings.themeId >= IDM_THEME_DARK_PLUS && m_settings.themeId <= IDM_THEME_ABYSS) {
         applyThemeById(m_settings.themeId);
@@ -238,6 +258,11 @@ void Win32IDE::applySettings() {
         SendMessageA(m_hwndEditor, EM_SETTARGETDEVICE, 0,
                      m_settings.wordWrapEnabled ? 0 : 1);
     }
+
+    if (m_settings.localParityEnabled && !m_settings.localParityModelPath.empty())
+        LocalParity_SetModelPath(m_settings.localParityModelPath.c_str());
+    else
+        LocalParity_SetModelPath(nullptr);
 
     LOG_INFO("Settings applied");
 }

@@ -24,6 +24,13 @@ struct FailureInfo {
     int64_t sequenceNumber = 0;
 };
 
+/** Lightweight action summary for pre-execution validation (no dependency on ActionExecutor) */
+struct ActionSummary {
+    std::string type;    ///< action type string (e.g. "file_edit", "invoke_command")
+    std::string target;  ///< file path, command, or resource
+    std::string params;  ///< optional params as JSON string or key=value
+};
+
 class AgenticFailureDetector {
 public:
     AgenticFailureDetector();
@@ -31,6 +38,16 @@ public:
 
     FailureInfo detectFailure(const std::string& modelOutput, const std::string& context = "");
     std::vector<FailureInfo> detectMultipleFailures(const std::string& modelOutput);
+
+    /** Pre-execution safety: validate action before running (dangerous commands, data loss) */
+    bool validateActionBeforeExecution(const ActionSummary& action);
+    /** True if command string is considered dangerous (rm -rf, format, etc.) */
+    bool isDangerousCommand(const std::string& commandStr) const;
+    /** True if action would cause irreversible data loss without backup */
+    bool wouldCauseDataLoss(const ActionSummary& action) const;
+    /** Suggest a recovery step for the given failure (e.g. rollback, retry) */
+    std::string suggestRecoveryAction(const FailureInfo& failure) const;
+
     bool isRefusal(const std::string& output) const;
     bool isHallucination(const std::string& output) const;
     bool isFormatViolation(const std::string& output) const;

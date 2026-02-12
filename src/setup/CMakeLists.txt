@@ -25,6 +25,9 @@ set_target_properties(rawrxd_setup PROPERTIES
 
 target_link_libraries(rawrxd_setup PUBLIC
 )
+if(WIN32)
+    target_link_libraries(rawrxd_setup PRIVATE bcrypt)
+endif()
 
 target_include_directories(rawrxd_setup PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
