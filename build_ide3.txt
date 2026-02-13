@@ -1,0 +1,327 @@
+[1/272] Building ASM_MASM object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\asm\RawrXD_MultiWindow_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_MultiWindow_Kernel.asm
+
+[2/272] [MASM] Assembling RawrXD_LSP_SymbolIndex.asm (Hash Lookup, Batch FNV-1a, Prefix Scan)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_LSP_SymbolIndex.asm
+
+[3/272] [MASM] Assembling RawrXD_RefProvider.asm (Reference hash, pattern match)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RefProvider.asm
+
+[4/272] [MASM] Assembling RawrXD_GSIHash.asm (PDB hash, GSI bucket probe)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_GSIHash.asm
+
+[5/272] [MASM] Assembling RawrCodex.asm (Agentic Decision Tree, Pattern Engine)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrCodex.asm
+
+[6/272] [MASM] Assembling RawrXD_License_Shield.asm (CRC32 Integrity, Anti-Debug, Tamper Detection)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_License_Shield.asm
+
+[7/272] [MASM] Assembling RawrXD_EnterpriseLicense.asm (License Validation, HWID, Feature Gates)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_EnterpriseLicense.asm
+
+[8/272] [MASM] Assembling RawrXD_QuadBuffer_Streamer.asm (4-Buffer Ring, Zero-Copy Streaming)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_QuadBuffer_Streamer.asm
+
+[9/272] [MASM] Assembling RawrXD_VulkanBridge.asm (GPU Dispatch Shim: Init, MatMul, FlashAttn, Hotswap)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_VulkanBridge.asm
+
+[10/272] [MASM] Assembling RawrXD_PDBKernel.asm (MSF magic, PubSym scan, GUID hex)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_PDBKernel.asm
+
+[11/272] [MASM] Assembling RawrXD_RouterBridge.asm (Fast-Path Router Dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RouterBridge.asm
+
+[12/272] [MASM] Assembling RawrXD_TridentBeacon.asm (COM Trident Host, Beacon IDispatch, Ollama Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon.asm
+
+[13/272] [MASM] Assembling RawrXD_TridentBeacon_GPU.asm (IE11 Feature Control, WebGL FBO, OpenGL Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon_GPU.asm
+
+[14/272] [MASM] Assembling RawrXD_MonacoCore.asm (Gap Buffer, Tokenizer)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_MonacoCore.asm
+
+[15/272] [MASM] Assembling RawrXD_Debug_Engine.asm (Breakpoints, Watchpoints, Symbolic DynTrace)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Debug_Engine.asm
+
+[16/272] [MASM] Assembling RawrXD_StubDetector.asm (Stub Pattern Scanner)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_StubDetector.asm
+
+[17/272] [MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Swarm_Network.asm
+
+[18/272] [MASM] Assembling RawrXD_SocketResponder.asm (IOCP HTTP: /health /status /models sub-0.5ms)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SocketResponder.asm
+
+[19/272] [MASM] Assembling gpu_requantize_rocm.asm (HIP dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/gpu_requantize_rocm.asm
+
+[20/272] [MASM64] Assembling RawrXD_MetaReverse.asm (authenticity detection)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm
+
+[21/272] [MASM64] Assembling model-llm-harvester.asm (LLM weight generator)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/model_reverse/model-llm-harvester.asm
+
+[22/272] [MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_engine.asm
+
+[23/272] [MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_dll_entry.asm
+
+[24/272] [MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_phase39.asm
+
+[25/272] [MASM] Assembling requantize_q4km_to_q2k_avx512.asm (AVX-512 DQ/BW)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/requantize_q4km_to_q2k_avx512.asm
+
+[26/272] [MASM] Assembling swarm_tensor_stream.asm (CRC32C, RLE, chunks)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/swarm_tensor_stream.asm
+
+[27/272] [MASM64] Assembling RawrXD_OmegaDeobfuscator.asm (AVX-512 deobfuscation)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+
+[28/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/main_win32.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\main_win32.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[29/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/HeadlessIDE.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\HeadlessIDE.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[30/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Core.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Core.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[31/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Sidebar.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Sidebar.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[32/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PowerShellPanel.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_PowerShellPanel.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[33/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Autonomy.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Autonomy.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Autonomy.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Autonomy.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[34/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_SyntaxHighlight.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_SyntaxHighlight.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[35/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgenticBridge.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_AgenticBridge.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[36/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[37/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Commands.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Commands.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[38/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgentCommands.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_AgentCommands.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[39/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Debugger.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Debugger.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[40/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_VSCodeUI.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_VSCodeUI.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[41/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_FileOps.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_FileOps.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[42/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PowerShell.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_PowerShell.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[43/272] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+FAILED: CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Logger.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\plugin_system -ID:\rawrxd\include -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /Zi /Ob0 /Od /RTC1 -std:c++20 -MTd /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj /FdCMakeFiles\RawrXD-Win32IDE.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Logger.cpp
+cl : Command line warning D9025 : overriding '/Od' with '/O2'
+cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
+[44/272] Building CXX object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\core\multiwindow_scheduler.cpp.obj
+[45/272] Building CXX object src\reverse_engineering\CMakeFiles\RawrXD-RE-Library.dir\pe_tools\re_tools.cpp.obj
+ninja: build stopped: subcommand failed.
+

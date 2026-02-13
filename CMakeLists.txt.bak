@@ -1,0 +1,114 @@
+cmake_minimum_required(VERSION 3.20)
+project(RawrXD-Engine VERSION 7.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT MSVC)
+    add_compile_options(-O3 -march=native -Wall -fopenmp -std=gnu++20)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0602)
+else()
+    add_compile_options(/O2 /arch:AVX2 /GL /W4 /EHsc /openmp)
+endif()
+
+find_package(Threads REQUIRED)
+
+add_definitions(-DBRUTAL_COMPRESSION_ONLY)
+add_definitions(-DNOMINMAX)
+add_definitions(-DWIN32_LEAN_AND_MEAN)
+_ONLY -DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+set(SHARED_SOURCES
+    src/main.cppif(ASM_NASM)
+    src/memory_core.cppguage(ASM_NASM)
+    src/hot_patcher.cpps(-DUSE_NASM)
+    src/runtime_core.cpp
+    src/tool_registry.cpp
+    src/cpu_inference_engine.cpp
+    src/gguf_loader.cpp
+    src/engine/gguf_core.cpp
+    src/advanced_features.cpp
+    src/response_parser.cpp
+    src/streaming_gguf_loader.cpp
+    src/streaming_engine.cppne.cpp
+    src/gguf_vocab_resolver.cpp
+    src/codec/brutal_gzip.cpp
+    src/codec/compression.cpp
+    src/compression_interface.cpp
+    src/engine/core_generator.cpp   src/streaming_gguf_loader.cpp
+    src/engine/universal_generator.cpp    src/streaming_engine.cpp
+    src/engine/react_server_generator.cpp_resolver.cpp
+    src/engine/react_ide_generator.cppgzip.cpp
+    src/engine/sovereign_engines.cppsion.cpp
+    src/engine/inference_kernels.cppnterface.cpp
+    src/modules/inference_engine.cpp.cpp
+    src/engine/transformer.cppenerator.cpp
+    src/engine/bpe_tokenizer.cpptor.cpp
+    src/tokenizer_selector.cpperator.cpp
+    src/engine/sampler.cppes.cpp
+    src/unified_engine_coordinator.cpp_kernels.cpp
+    src/engine/rawr_engine.cppgine.cpp
+    src/core/model_memory_hotpatch.cpp
+    src/core/byte_level_hotpatcher.cpp
+    src/core/unified_hotpatch_manager.cpp
+    src/server/gguf_server_hotpatch.cpp   src/engine/sampler.cpp
+    src/agent/agentic_failure_detector.cpp    src/unified_engine_coordinator.cpp
+    src/agent/agentic_puppeteer.cppwr_engine.cpp
+    src/agentic_agent_coordinator.cpp
+    src/agentic_executor.cpp    src/core/byte_level_hotpatcher.cpp
+    src/agentic_iterative_reasoning.cpphotpatch_manager.cpp
+    src/agentic_loop_state.cpp
+    src/utils/diagnostics_impl.cpptor.cpp
+    src/agentic_engine.cpp
+    src/agentic_configuration.cpp   src/agentic_agent_coordinator.cpp
+    src/vsix_loader.cpp    src/agentic_executor.cpp
+)iterative_reasoning.cpp
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/modules/memory_manager.cpp")pp
+    list(APPEND SHARED_SOURCES src/modules/memory_manager.cpp)_engine.cpp
+endif()iguration.cpp
+   src/vsix_loader.cpp
+add_executable(RawrEngine ${SHARED_SOURCES}))
+
+target_include_directories(RawrEngine PRIVATE  "${CMAKE_CURRENT_SOURCE_DIR}/kernels/deflate_nasm.asm" AND ASM_NASM)
+    ${CMAKE_CURRENT_SOURCE_DIR}/srcte_nasm.asm)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)AKE_CURRENT_SOURCE_DIR}/src/modules/memory_manager.cpp")
+ist(APPEND SHARED_SOURCES src/modules/memory_manager.cpp)
+target_link_libraries(RawrEngine PRIVATE Threads::Threads)
+
+if(NOT MSVC)ne ${SHARED_SOURCES})
+    target_link_libraries(RawrEngine PRIVATE gomp)
+endif()ngine PRIVATE
+CE_DIR}/src
+if(WIN32)CURRENT_SOURCE_DIR}/src/engine
+    target_link_libraries(RawrEngine PRIVATE shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp)RCE_DIR}/include
+endif()
+
+target_compile_definitions(RawrEngine PRIVATEawrEngine PRIVATE Threads::Threads)
+    RAWER_ENGINE_VERSION="7.1.0"
+    RAWER_ENGINE_REV="7"
+    NOMINMAXwrEngine PRIVATE gomp)
+    WIN32_LEAN_AND_MEANndif()
+)
+
+
+
+
+
+
+)    OUTPUT_NAME "RawrEngine"    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin set_target_properties(RawrEngine PROPERTIES if(WIN32)
+    target_link_libraries(RawrEngine PRIVATE 
+        shlwapi psapi dbghelp comctl32 comdlg32 shell32 ole32 oleaut32 uuid winhttp
+    )
+endif()
+
+target_compile_definitions(RawrEngine PRIVATE 
+    RAWER_ENGINE_VERSION="7.1.0"
+    RAWER_ENGINE_REV="7"
+)
+
+set_target_properties(RawrEngine PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+    OUTPUT_NAME "RawrEngine"
+)

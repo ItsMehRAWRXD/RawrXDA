@@ -1,0 +1,1012 @@
+{
+  "project": {
+    "name": "RawrXD-ModelLoader",
+    "version": "1.0.13",
+    "cxx_standard": 20
+  },
+  "global": {
+    "definitions": [
+      "-DNOMINMAX",
+      "-D_WIN32_WINNT=0x0A00",
+      "-DHAVE_QT_CORE",
+      "-DQT_NO_OPENGL"
+    ],
+    "include_dirs": [
+      "include",
+      "src"
+    ],
+    "dependencies": {
+      "Qt6": "OPTIONAL",
+      "ZLIB": "OPTIONAL",
+      "CURL": "OPTIONAL",
+      "ZSTD": "OPTIONAL",
+      "CUDAToolkit": "OPTIONAL",
+      "hip": "OPTIONAL",
+      "Vulkan": "OPTIONAL",
+      "OpenSSL": "OPTIONAL",
+      "Threads": "REQUIRED"
+    }
+  },
+  "targets": [
+    {
+      "name": "ggml_interface",
+      "type": "library",
+      "sources": [],
+      "dependencies": [
+        "ggml"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-QtShell",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/main_qt.cpp",
+        "src/qtapp/MainWindow.cpp",
+        "src/qtapp/MainWindow.h",
+        "src/qtapp/ActivityBar.cpp",
+        "src/qtapp/ActivityBar.h",
+        "src/qtapp/ActivityBarButton.cpp",
+        "src/qtapp/ActivityBarButton.h",
+        "src/qtapp/TerminalWidget.cpp",
+        "src/qtapp/TerminalWidget.h",
+        "src/qtapp/TerminalManager.cpp",
+        "src/qtapp/TerminalManager.h",
+        "src/qtapp/inference_engine.hpp",
+        "src/qtapp/inference_engine.cpp",
+        "src/qtapp/transformer_inference.hpp",
+        "src/qtapp/transformer_inference.cpp",
+        "src/qtapp/bpe_tokenizer.hpp",
+        "src/qtapp/bpe_tokenizer.cpp",
+        "src/qtapp/sentencepiece_tokenizer.hpp",
+        "src/qtapp/sentencepiece_tokenizer.cpp",
+        "src/qtapp/vocabulary_loader.hpp",
+        "src/qtapp/vocabulary_loader.cpp",
+        "src/qtapp/gguf_server.hpp",
+        "src/qtapp/gguf_server.cpp",
+        "src/qtapp/inflate_deflate_cpp.cpp",
+        "src/qtapp/deflate_brutal_stub.cpp",
+        "src/qtapp/ai_switcher.hpp",
+        "src/qtapp/ai_switcher.cpp",
+        "src/qtapp/unified_backend.hpp",
+        "src/qtapp/unified_backend.cpp",
+        "src/qtapp/widgets/layer_quant_widget.hpp",
+        "src/qtapp/widgets/layer_quant_widget.cpp",
+        "src/qtapp/streaming_inference.hpp",
+        "src/qtapp/streaming_inference.cpp",
+        "src/qtapp/model_monitor.hpp",
+        "src/qtapp/model_monitor.cpp",
+        "src/qtapp/command_palette.hpp",
+        "src/qtapp/command_palette.cpp",
+        "src/qtapp/ai_chat_panel.hpp",
+        "src/qtapp/ai_chat_panel.cpp",
+        "src/qtapp/model_memory_hotpatch.hpp",
+        "src/qtapp/model_memory_hotpatch.cpp",
+        "src/qtapp/byte_level_hotpatcher.hpp",
+        "src/qtapp/byte_level_hotpatcher.cpp",
+        "src/qtapp/gguf_server_hotpatch.hpp",
+        "src/qtapp/gguf_server_hotpatch.cpp",
+        "src/qtapp/unified_hotpatch_manager.hpp",
+        "src/qtapp/unified_hotpatch_manager.cpp",
+        "src/qtapp/proxy_hotpatcher.hpp",
+        "src/qtapp/proxy_hotpatcher.cpp",
+        "src/qtapp/model_queue.hpp",
+        "src/qtapp/model_queue.cpp",
+        "src/qtapp/streaming_inference_api.hpp",
+        "src/qtapp/streaming_inference_api.cpp",
+        "src/qtapp/gpu_backend.hpp",
+        "src/qtapp/gpu_backend.cpp",
+        "src/qtapp/metrics_collector.hpp",
+        "src/qtapp/metrics_collector.cpp",
+        "src/qtapp/backup_manager.hpp",
+        "src/qtapp/backup_manager.cpp",
+        "src/qtapp/sla_manager.hpp",
+        "src/qtapp/sla_manager.cpp"
+      ],
+      "dependencies": [
+        "OpenSSL::SSL",
+        "ZLIB::ZLIB",
+        "Qt6::WebSockets",
+        "ggml_interface"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_QT_WEBSOCKETS=1",
+        "HAVE_GGML=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "self_test_gate",
+      "type": "library",
+      "sources": [
+        "src/agent/self_test.cpp",
+        "src/agent/self_test_gate.cpp",
+        "src/agent/rollback.cpp"
+      ],
+      "dependencies": [
+        "Qt6::Network"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "quant_utils",
+      "type": "library",
+      "sources": [
+        "STATIC src/qtapp/quant_utils.cpp"
+      ],
+      "dependencies": [
+        "Qt6::Core"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "production_feature_test",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/production_feature_test.cpp",
+        "src/qtapp/gpu_backend.cpp",
+        "src/qtapp/metrics_collector.cpp",
+        "src/qtapp/sla_manager.cpp"
+      ],
+      "dependencies": [
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_CUDA=1",
+        "HAVE_HIP=1",
+        "HAVE_VULKAN=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "simple_gpu_test",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/simple_gpu_test.cpp",
+        "src/qtapp/gpu_backend.cpp",
+        "src/qtapp/metrics_collector.cpp"
+      ],
+      "dependencies": [
+        "ggml",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_CUDA=1",
+        "HAVE_HIP=1",
+        "HAVE_VULKAN=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "gpu_inference_benchmark",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/gpu_inference_benchmark.cpp",
+        "src/qtapp/inference_engine.cpp",
+        "src/qtapp/gguf_loader.cpp",
+        "src/gguf_loader.cpp",
+        "src/qtapp/transformer_inference.cpp",
+        "src/qtapp/bpe_tokenizer.cpp",
+        "src/qtapp/sentencepiece_tokenizer.cpp",
+        "src/qtapp/vocabulary_loader.cpp",
+        "src/qtapp/gpu_backend.cpp",
+        "src/qtapp/metrics_collector.cpp",
+        "src/qtapp/quant_utils.cpp"
+      ],
+      "dependencies": [
+        "ggml",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_VULKAN=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "minimal_qt_test",
+      "type": "executable",
+      "sources": [
+        "src/minimal_qt_test.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "gguf_hotpatch_tester",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/gguf_hotpatch_tester.cpp",
+        "src/qtapp/inference_engine.cpp",
+        "src/qtapp/gguf_loader.cpp",
+        "src/gguf_loader.cpp",
+        "src/qtapp/transformer_inference.cpp",
+        "src/qtapp/bpe_tokenizer.cpp",
+        "src/qtapp/sentencepiece_tokenizer.cpp",
+        "src/qtapp/vocabulary_loader.cpp",
+        "src/qtapp/gpu_backend.cpp",
+        "src/qtapp/metrics_collector.cpp",
+        "src/qtapp/quant_utils.cpp"
+      ],
+      "dependencies": [
+        "ggml",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_VULKAN=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_chat_streaming",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/test_chat_streaming.cpp",
+        "src/qtapp/inference_engine.cpp",
+        "src/qtapp/gguf_loader.cpp",
+        "src/gguf_loader.cpp",
+        "src/qtapp/transformer_inference.cpp",
+        "src/qtapp/bpe_tokenizer.cpp",
+        "src/qtapp/sentencepiece_tokenizer.cpp",
+        "src/qtapp/vocabulary_loader.cpp",
+        "src/qtapp/gpu_backend.cpp",
+        "src/qtapp/metrics_collector.cpp",
+        "src/qtapp/quant_utils.cpp"
+      ],
+      "dependencies": [
+        "ggml",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_VULKAN=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-Agent",
+      "type": "executable",
+      "sources": [
+        "src/agent/agent_main.cpp",
+        "src/agent/planner.cpp",
+        "src/agent/self_patch.cpp",
+        "src/agent/sign_binary.cpp",
+        "src/agent/release_agent.cpp",
+        "src/agent/meta_learn.cpp",
+        "src/agent/hot_reload.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-Compiler",
+      "type": "executable",
+      "sources": [
+        "src/cli/rawrxd_cli_compiler.cpp"
+      ],
+      "dependencies": [
+        "masm_writers"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "rawrxd_compiler_qt",
+      "type": "library",
+      "sources": [
+        "src/compiler/rawrxd_compiler_qt.cpp"
+      ],
+      "dependencies": [
+        "masm_writers"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-Win32IDE",
+      "type": "executable",
+      "sources": [
+        "src/win32app/main_win32.cpp",
+        "src/win32app/Win32IDE.cpp",
+        "src/win32app/Win32IDE.h",
+        "src/win32app/Win32IDE_Sidebar.cpp",
+        "src/win32app/Win32IDE_VSCodeUI.cpp",
+        "src/win32app/Win32IDE_PowerShellPanel.cpp",
+        "src/win32app/Win32IDE_PowerShell.cpp",
+        "src/win32app/Win32IDE_Logger.cpp",
+        "src/win32app/TransparentRenderer.cpp",
+        "src/win32app/TransparentRenderer.h",
+        "src/win32app/Win32TerminalManager.cpp",
+        "src/win32app/Win32TerminalManager.h",
+        "src/win32app/Win32IDE_FileOps.cpp",
+        "src/win32app/Win32IDE_Commands.cpp",
+        "src/win32app/Win32IDE_Debugger.cpp",
+        "src/win32app/Win32IDE_AgenticBridge.h",
+        "src/win32app/Win32IDE_AgenticBridge.cpp",
+        "src/win32app/Win32IDE_AgentCommands.cpp",
+        "src/win32app/Win32IDE_Autonomy.h",
+        "src/win32app/Win32IDE_Autonomy.cpp",
+        "src/gguf_loader.cpp",
+        "src/gguf_vocab_resolver.cpp",
+        "src/streaming_gguf_loader.cpp",
+        "src/utils/ErrorReporter.cpp",
+        "src/utils/Diagnostics.cpp"
+      ],
+      "dependencies": [
+        "ggml"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAVE_GGML=1",
+        "_MBCS",
+        "ENABLE_VULKAN=1",
+        "ENABLE_COPILOT=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_terminal",
+      "type": "executable",
+      "sources": [
+        "src/win32app/test_terminal.cpp",
+        "src/win32app/Win32TerminalManager.cpp",
+        "src/win32app/Win32TerminalManager.h"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-Chat",
+      "type": "executable",
+      "sources": [
+        "src/win32app/main_chat.cpp",
+        "src/win32app/Win32ChatApp.cpp",
+        "src/win32app/Win32ChatApp.h",
+        "src/win32app/ContextManager.h"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-ModelLoader",
+      "type": "executable",
+      "sources": [
+        "src/main.cpp",
+        "src/gguf_loader.cpp",
+        "src/vulkan_compute.cpp",
+        "src/hf_downloader.cpp",
+        "src/gui.cpp",
+        "src/api_server.cpp",
+        "src/settings.cpp",
+        "src/telemetry.cpp",
+        "src/telemetry/ai_metrics.cpp",
+        "src/overclock_vendor.cpp",
+        "src/overclock_governor.cpp",
+        "src/baseline_profile.cpp"
+      ],
+      "dependencies": [
+        "pdh",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "_WINDOWS"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-CLI",
+      "type": "executable",
+      "sources": [
+        "src/rawrxd_cli.cpp",
+        "src/gguf_loader.cpp",
+        "src/vulkan_compute.cpp",
+        "src/hf_downloader.cpp",
+        "src/api_server.cpp",
+        "src/settings.cpp",
+        "src/telemetry.cpp",
+        "src/overclock_vendor.cpp",
+        "src/overclock_governor.cpp",
+        "src/baseline_profile.cpp"
+      ],
+      "dependencies": [
+        "pdh",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "model_loader_bench",
+      "type": "executable",
+      "sources": [
+        "src/bench_main.cpp",
+        "src/gguf_loader.cpp",
+        "src/vulkan_compute.cpp",
+        "src/settings.cpp",
+        "src/telemetry.cpp"
+      ],
+      "dependencies": [
+        "pdh",
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "rawrxd_stress",
+      "type": "executable",
+      "sources": [
+        "src/oc_stress.cpp",
+        "src/telemetry.cpp"
+      ],
+      "dependencies": [
+        "pdh"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "rawrxd_test_baseline",
+      "type": "executable",
+      "sources": [],
+      "dependencies": [
+        "pdh"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "rawrxd_test_pid",
+      "type": "executable",
+      "sources": [],
+      "dependencies": [
+        "pdh"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-IDE",
+      "type": "executable",
+      "sources": [
+        "src/ide_main.cpp",
+        "src/ide_window.cpp"
+      ],
+      "dependencies": [
+        "shell32"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [
+        "include"
+      ],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-SimpleIDE",
+      "type": "executable",
+      "sources": [
+        "src/qtapp/main_simple.cpp",
+        "src/qtapp/MainWindowSimple.cpp",
+        "src/qtapp/MainWindowSimple.h",
+        "src/editor_buffer.cpp",
+        "src/syntax_engine.cpp",
+        "src/overclock_vendor.cpp",
+        "src/overclock_governor.cpp",
+        "src/settings.cpp",
+        "src/telemetry.cpp",
+        "src/baseline_profile.cpp",
+        "src/gguf_loader.cpp",
+        "src/telemetry/ai_metrics.cpp",
+        "src/session/ai_session.cpp",
+        "src/backend/ollama_client.cpp",
+        "src/backend/websocket_server.cpp",
+        "src/backend/agentic_tools.cpp",
+        "src/tools/file_ops.cpp",
+        "src/tools/git_client.cpp",
+        "src/context/indexer.cpp",
+        "src/context/semantic_store.cpp",
+        "src/ui/split_layout.cpp",
+        "src/ui/chat_panel.cpp"
+      ],
+      "dependencies": [
+        "ws2_32"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "_CRT_SECURE_NO_WARNINGS"
+      ],
+      "include_dirs": [
+        "include"
+      ],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-Chromatic",
+      "type": "executable",
+      "sources": [
+        "src/chromatic_main.cpp",
+        "src/ui/chromatic_window.cpp"
+      ],
+      "dependencies": [
+        "d3dcompiler"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "NOMINMAX"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "stub_test",
+      "type": "executable",
+      "sources": [
+        "WIN32 src/stub_main.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_ide_main",
+      "type": "executable",
+      "sources": [
+        "WIN32 src/test_ide_main.cpp src/agentic_ide.cpp"
+      ],
+      "dependencies": [
+        "d3dcompiler"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_qmainwindow",
+      "type": "executable",
+      "sources": [
+        "WIN32 src/test_qmainwindow.cpp"
+      ],
+      "dependencies": [
+        "Qt6::Widgets"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_header",
+      "type": "executable",
+      "sources": [
+        "src/agentic_ide_test.cpp"
+      ],
+      "dependencies": [
+        "Qt6::Widgets"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "RawrXD-TestRunner",
+      "type": "executable",
+      "sources": [
+        "src/win32app/test_runner.cpp",
+        "src/win32app/Win32IDE.cpp",
+        "src/win32app/Win32IDE_Commands.cpp",
+        "src/win32app/Win32IDE_Debugger.cpp",
+        "src/win32app/Win32IDE_FileOps.cpp",
+        "src/win32app/Win32IDE_PowerShell.cpp",
+        "src/win32app/Win32IDE_PowerShellPanel.cpp",
+        "src/win32app/Win32IDE_Sidebar.cpp",
+        "src/win32app/Win32IDE_VSCodeUI.cpp",
+        "src/win32app/Win32IDE_AgenticBridge.cpp",
+        "src/win32app/Win32IDE_AgentCommands.cpp",
+        "src/win32app/Win32TerminalManager.cpp",
+        "src/win32app/TransparentRenderer.cpp",
+        "src/win32app/VulkanRenderer.cpp",
+        "src/gguf_loader.cpp",
+        "src/streaming_gguf_loader.cpp"
+      ],
+      "dependencies": [
+        "winhttp"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "NOMINMAX"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_q8_0_end2end",
+      "type": "executable",
+      "sources": [
+        "tests/bench_q8_0_end2end.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "__AVX2__=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_flash_attn",
+      "type": "executable",
+      "sources": [
+        "tests/bench_flash_attn.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "__AVX2__=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_flash_all_quant",
+      "type": "executable",
+      "sources": [
+        "tests/bench_flash_all_quant.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "__AVX2__=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_flash_asm_puppeteer",
+      "type": "executable",
+      "sources": [
+        "tests/bench_flash_asm_puppeteer.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "__AVX2__=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_deflate_godmode",
+      "type": "executable",
+      "sources": [],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "DEFLATE_GODMODE=1"
+      ],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_deflate_brutal",
+      "type": "executable",
+      "sources": [],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_deflate_neon",
+      "type": "executable",
+      "sources": [],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_deflate_brutal_arm64",
+      "type": "executable",
+      "sources": [
+        "tests/bench_deflate_brutal_arm64.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "bench_deflate_50mb",
+      "type": "executable",
+      "sources": [
+        "tests/bench_deflate_50mb.cpp"
+      ],
+      "dependencies": [
+        "brutal_gzip"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "quant_engine_test",
+      "type": "executable",
+      "sources": [
+        "tests/quant_engine_smoke.cpp"
+      ],
+      "dependencies": [
+        "quant_utils"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "quant_scalar_smoke",
+      "type": "executable",
+      "sources": [
+        "tests/quant_scalar_smoke.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "quant_correctness_tests",
+      "type": "executable",
+      "sources": [
+        "tests/quant_correctness_tests.cpp"
+      ],
+      "dependencies": [
+        "quant_utils"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_agent_coordinator",
+      "type": "executable",
+      "sources": [
+        "tests/test_agent_coordinator.cpp"
+      ],
+      "dependencies": [
+        "RawrXDOrchestration"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_agent_coordinator_integration",
+      "type": "executable",
+      "sources": [
+        "tests/test_agent_coordinator_integration.cpp",
+        "src/model_loader/model_loader.cpp",
+        "src/inference_engine_stub.cpp",
+        "src/qtapp/gguf_server.cpp",
+        "src/gguf_loader.cpp",
+        "src/qtapp/inflate_deflate_cpp.cpp"
+      ],
+      "dependencies": [
+        "brutal_gzip"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_kv_cache",
+      "type": "executable",
+      "sources": [
+        "src/test_kv_cache.cpp",
+        "src/vulkan_compute.cpp"
+      ],
+      "dependencies": [
+        "Vulkan::Vulkan"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_gguf_loader",
+      "type": "executable",
+      "sources": [
+        "tests/test_gguf_loader.cpp",
+        "src/gguf_loader.cpp",
+        "src/gguf_vocab_resolver.cpp"
+      ],
+      "dependencies": [
+        "deflate_brutal_masm"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "test_gguf_loader_simple",
+      "type": "executable",
+      "sources": [
+        "tests/test_gguf_loader_simple.cpp",
+        "src/gguf_loader.cpp",
+        "src/gguf_vocab_resolver.cpp"
+      ],
+      "dependencies": [
+        "deflate_brutal_masm"
+      ],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "brutal_gzip",
+      "type": "library",
+      "sources": [],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [
+        "HAS_BRUTAL_GZIP_MASM=1",
+        "HAS_BRUTAL_GZIP_NEON=1"
+      ],
+      "include_dirs": [
+        "include"
+      ],
+      "output_dir": "bin"
+    },
+    {
+      "name": "memory_hotpatch",
+      "type": "library",
+      "sources": [
+        "STATIC src/qtapp/model_memory_hotpatch.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    },
+    {
+      "name": "benchmark_completions",
+      "type": "executable",
+      "sources": [
+        "tests/benchmark_completions_full.cpp",
+        "src/real_time_completion_engine.cpp",
+        "src/qtapp/inference_engine.cpp",
+        "src/qtapp/gguf_loader.cpp",
+        "src/qtapp/quant_utils.cpp",
+        "src/qtapp/transformer_inference.cpp",
+        "src/qtapp/bpe_tokenizer.cpp",
+        "src/qtapp/sentencepiece_tokenizer.cpp",
+        "src/qtapp/vocabulary_loader.cpp",
+        "src/qtapp/inflate_deflate_cpp.cpp",
+        "src/gguf_loader.cpp",
+        "src/ai/memory_mapped_file.cpp",
+        "src/ai/streaming_gguf_loader_qt.cpp"
+      ],
+      "dependencies": [],
+      "compile_flags": [],
+      "link_flags": [],
+      "definitions": [],
+      "include_dirs": [],
+      "output_dir": "bin"
+    }
+  ],
+  "generated_by": "RawrXD Agentic Build System",
+  "timestamp": "2026-01-17T12:00:00Z"
+}

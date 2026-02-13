@@ -1,0 +1,62 @@
+{
+  "Version": "1.0.0",
+  "EngineName": "SourceDigestionEngine",
+  "AnalysisDepth": "Deep",
+  "EnableParallelProcessing": true,
+  "MaxThreadCount": 8,
+  "PreserveOriginalStructure": true,
+  "GenerateMetadata": true,
+  "EnableSecurityScan": true,
+  "EnableDependencyTracking": true,
+  "SupportedLanguages": [
+    "PowerShell",
+    "Python",
+    "C++",
+    "C",
+    "C#",
+    "Java",
+    "JavaScript",
+    "TypeScript",
+    "Rust",
+    "Go",
+    "Assembly",
+    "Batch",
+    "Shell",
+    "SQL",
+    "HTML",
+    "CSS",
+    "JSON",
+    "XML"
+  ],
+  "OutputFormats": [
+    "JSON",
+    "HTML",
+    "Markdown"
+  ],
+  "Logging": {
+    "Level": "INFO",
+    "FileLogging": true,
+    "ConsoleLogging": true,
+    "LogRetentionDays": 30
+  },
+  "Analysis": {
+    "MaxFileSize": 10485760,
+    "SkipBinaryFiles": false,
+    "ExtractStrings": true,
+    "IdentifyFunctions": true,
+    "DetectPackers": true,
+    "AnalyzeHeaders": true
+  },
+  "Security": {
+    "ScanForVulnerabilities": true,
+    "IdentifyHardcodedSecrets": true,
+    "DetectInjectionPoints": true,
+    "AnalyzePermissions": true
+  },
+  "Performance": {
+    "IdentifyBottlenecks": true,
+    "AnalyzeMemoryUsage": true,
+    "TrackResourceConsumption": true,
+    "DetectBlockingOperations": true
+  }
+}

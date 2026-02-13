@@ -1,0 +1,247 @@
+[1/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\deterministic_swarm.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[2/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\workspace_reasoning_profiles.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[3/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\safe_refactor_engine.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[4/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\autonomous_workflow_engine.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[5/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_schema_versioning.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[6/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cot_fallback_system.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[7/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\input_guard_slicer.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[8/767] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_fixture.cpp.obj
+[9/767] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_oracle.cpp.obj
+[10/767] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_mock_inference.cpp.obj
+[11/767] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_reporter.cpp.obj
+[12/767] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_harness.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[13/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\instructions_provider.cpp.obj
+[14/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[15/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\hotpatch_control_plane.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[16/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[17/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[18/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[19/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[20/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[21/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[22/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[23/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[24/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[25/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[26/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[27/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[28/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[29/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\static_analysis_engine.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[30/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[31/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[32/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[33/767] Building CXX object CMakeFiles\RawrEngine.dir\src\core\semantic_code_intelligence.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[34/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[35/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[36/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[37/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[38/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[39/767] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[40/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\stubs.cpp.obj
+[41/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\hot_patcher.cpp.obj
+[42/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\memory_core.cpp.obj
+[43/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\main.cpp.obj
+[44/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cpu_inference_engine.cpp.obj
+[45/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_engine.cpp.obj
+[46/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\complete_server.cpp.obj
+[47/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_history.cpp.obj
+[48/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\subagent_core.cpp.obj
+[49/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_policy.cpp.obj
+[50/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_explainability.cpp.obj
+[51/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\utils\Diagnostics.cpp.obj
+[52/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_vocab_resolver.cpp.obj
+[53/767] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\compression_interface.cpp.obj

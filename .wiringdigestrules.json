@@ -1,0 +1,108 @@
+{
+  "profiles": {
+    "default": {
+      "IncludeExtensions": [
+        "ps1",
+        "psm1",
+        "ts",
+        "js",
+        "tsx",
+        "jsx",
+        "cpp",
+        "cxx",
+        "c",
+        "h",
+        "hpp",
+        "cmake",
+        "txt",
+        "md",
+        "json",
+        "toml"
+      ],
+      "ExcludeDirectories": [
+        ".git",
+        ".vs",
+        ".vscode",
+        "node_modules",
+        "dist",
+        "build",
+        "out",
+        "bin",
+        "obj",
+        "target",
+        ".idea",
+        ".cache",
+        "__pycache__"
+      ],
+      "ExcludeConfigPath": "d:\\lazy init ide\\.wiringdigestignore",
+      "ExcludeConfigPathProfiles": {
+        "ci": "d:\\lazy init ide\\.wiringdigestignore.ci"
+      },
+      "PathMatchPrecedence": "RegexFirst",
+      "ModuleOverridePrecedence": "BaseFirst",
+      "InheritModuleOverrides": true,
+      "OverrideMode": "merge",
+      "RiskThreshold": "High",
+      "WarnOnly": true,
+      "MaxSecuritySignals": -1,
+      "MaxSecrets": -1,
+      "MaxBinaryBlobs": -1,
+      "MaxLargeFiles": -1,
+      "MaxUnusedFiles": -1
+    },
+    "ci": {
+      "RiskThreshold": "Medium",
+      "WarnOnly": false,
+      "PathMatchPrecedence": "GlobFirst",
+      "ModuleOverridePrecedence": "BaseFirst",
+      "InheritModuleOverrides": true,
+      "OverrideMode": "replace",
+      "MaxSecrets": 0,
+      "MaxBinaryBlobs": 5,
+      "MaxLargeFiles": 5,
+      "MaxUnusedFiles": 50,
+      "moduleOverrides": {
+        "plugin_craft_room": {
+          "MaxUnusedExports": 2
+        },
+        "codex_accessibility_layer": {
+          "OverrideMode": "replace",
+          "MaxSecuritySignals": 10,
+          "MaxSecrets": 0,
+          "MaxBinaryBlobs": 2,
+          "MaxLargeFiles": 2,
+          "MaxUnusedFiles": 20,
+          "PathRegex": [
+            "codex_accessibility_layer\\.psm1$"
+          ]
+        }
+      }
+    }
+  },
+  "moduleOverrides": {
+    "plugin_craft_room": {
+      "OverrideMode": "append",
+      "MaxUnusedExports": 5,
+      "ExcludePatterns": [
+        "plugin_craft_room.psm1",
+        "regex:.*plugin_craft_room\\.psm1$"
+      ],
+      "ExcludeRegex": [
+        "plugin_craft_room\\.psm1$"
+      ],
+      "PathGlobs": [
+        "**\\plugin_craft_room.psm1"
+      ]
+    }
+  },
+  "moduleOverridesProfiles": {
+    "ci": {
+      "codex_accessibility_layer": {
+        "OverrideMode": "append",
+        "PathGlobs": [
+          "**\\codex_accessibility_layer.psm1"
+        ]
+      }
+    }
+  }
+}

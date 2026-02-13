@@ -1,0 +1,32 @@
+#pragma once
+
+// ============================================================================
+// AgenticIterativeReasoning — C++20 / Win32 / MASM build (no Qt)
+// ============================================================================
+// Lightweight stub for the iterative reasoning loop. AgenticAgentCoordinator
+// compiles and runs without Qt; the reasoner is created and initialize() is
+// a no-op. Full reflection/strategy logic can be added later in pure C++20.
+// ============================================================================
+
+#include <memory>
+#include <string>
+#include <vector>
+
+class AgenticLoopState;
+class AgenticEngine;
+class InferenceEngine;
+
+/**
+ * @class AgenticIterativeReasoning
+ * @brief Stub: iterative reasoning loop (C++20, no Qt)
+ *
+ * Placeholder used by AgenticAgentCoordinator. No-op initialize();
+ * extend with reason() / strategy / reflection when needed.
+ */
+class AgenticIterativeReasoning {
+public:
+    AgenticIterativeReasoning() = default;
+    ~AgenticIterativeReasoning() = default;
+
+    void initialize(AgenticEngine* /*engine*/, AgenticLoopState* /*state*/, InferenceEngine* /*inference*/) {}
+};

@@ -1,0 +1,66 @@
+Enterprise Tokenizer Patch Instructions
+=========================================
+
+To manually apply the enterprise tokenizer improvements:
+
+1. Add to bpe_tokenizer.hpp after line "bool m_ready{false};":
+
+    // ---------- enterprise fallback ----------
+    // Greedy longest-match tokenizer (SentencePiece-compatible)
+    bool greedyLongestMatch(const QString& text, std::vector<int32_t>& ids) const;
+
+2. Add to END of bpe_tokenizer.cpp (after decode function):
+
+// ============================================================================
+// ENTERPRISE FALLBACK: Greedy Longest-Match Tokenizer
+// ============================================================================
+bool BPETokenizer::greedyLongestMatch(const QString& text, std::vector<int32_t>& ids) const
+{
+    ids.clear();
+    if (text.isEmpty()) return true;
+    
+    ids.reserve(text.length());
+    QByteArray utf8Data = text.toUtf8();
+    std::string remaining(utf8Data.constData(), utf8Data.size());
+    
+    int processedBytes = 0, unknownBytes = 0;
+    
+    while (!remaining.empty()) {
+        bool found = false;
+        size_t maxLen = std::min(remaining.size(), size_t(32));
+        
+        for (size_t len = maxLen; len > 0; --len) {
+            QString piece = QString::fromUtf8(remaining.data(), static_cast<int>(len));
+            auto it = m_vocab.find(piece);
+            if (it != m_vocab.end()) {
+                ids.push_back(it.value());
+                remaining.erase(0, len);
+                processedBytes += len;
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            ids.push_back(m_unkToken);
+            remaining.erase(0, 1);
+            unknownBytes++;
+        }
+    }
+    
+    qInfo() << "[BPE::greedyLongestMatch] text_len=" << text.length() 
+            << " tokens=" << ids.size() << " processed_bytes=" << processedBytes
+            << " unknown_bytes=" << unknownBytes;
+    
+    return true;
+}
+
+3. In encode() function, add after "if (!isReady()) return {};":
+
+    // Enterprise fallback
+    std::vector<int32_t> ids;
+    if (m_merges.isEmpty()) {
+        qInfo() << "[BPE::encode] Using greedy longest-match fallback";
+        greedyLongestMatch(text, ids);
+        return ids;
+    }

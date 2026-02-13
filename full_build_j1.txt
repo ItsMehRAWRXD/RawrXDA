@@ -1,0 +1,8 @@
+[1/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+[2/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
+[3/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_AsmSemantic.cpp.obj
+[4/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_LSP_AI_Bridge.cpp.obj
+[5/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_MultiResponse.cpp.obj
+[6/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_ExecutionGovernor.cpp.obj
+[7/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_SubAgent.cpp.obj
+[8/261] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_AgentHistory.cpp.obj

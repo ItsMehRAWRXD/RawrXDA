@@ -1,0 +1,10 @@
+## RawrXD CoT/Services — Version-pinned for reproducible deploys (Action Item #18)
+## Generated: 2026-02-11
+flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+gunicorn==21.2.0
+fastapi==0.115.0
+uvicorn==0.30.0
+pydantic==2.9.0
+httpx==0.27.0

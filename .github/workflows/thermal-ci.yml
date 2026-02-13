@@ -1,0 +1,40 @@
+name: Sovereign Thermal CI
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'src/thermal/**'
+      - 'scripts/thermal-ci.ps1'
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build & Stress Test (MASM/C++)
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    
+    - name: Enable MSVC x64 Environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
+
+    - name: Execute Thermal CI Pipeline
+      shell: powershell
+      run: |
+        Write-Host "Starting Sovereign Thermal CI..."
+        .\scripts\thermal-ci.ps1 -Clean -Verbose
+      env:
+        CI: true
+
+    - name: Sovereign Dashboard Gate
+      shell: pwsh
+      run: |
+        Write-Host "Running Sovereign Dashboard Gate (8-point validation)..."
+        .\scripts\sovereign_dashboard_gate.ps1 -Verbose
+      env:
+        CI: true

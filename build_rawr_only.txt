@@ -1,0 +1,497 @@
+[1/179] Building CXX object CMakeFiles\RawrEngine.dir\src\stubs.cpp.obj
+[2/179] Building CXX object CMakeFiles\RawrEngine.dir\src\hot_patcher.cpp.obj
+[3/179] Building CXX object CMakeFiles\RawrEngine.dir\src\memory_core.cpp.obj
+[4/179] Building CXX object CMakeFiles\RawrEngine.dir\src\main.cpp.obj
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[5/179] Building CXX object CMakeFiles\RawrEngine.dir\src\cpu_inference_engine.cpp.obj
+[6/179] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[7/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_engine.cpp.obj
+[8/179] Building CXX object CMakeFiles\RawrEngine.dir\src\subagent_core.cpp.obj
+[9/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_history.cpp.obj
+[10/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_policy.cpp.obj
+[11/179] Building CXX object CMakeFiles\RawrEngine.dir\src\utils\Diagnostics.cpp.obj
+[12/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_explainability.cpp.obj
+[13/179] Building CXX object CMakeFiles\RawrEngine.dir\src\streaming_gguf_loader.cpp.obj
+[14/179] Building CXX object CMakeFiles\RawrEngine.dir\src\compression_interface.cpp.obj
+[15/179] Building CXX object CMakeFiles\RawrEngine.dir\src\gguf_vocab_resolver.cpp.obj
+[16/179] Building CXX object CMakeFiles\RawrEngine.dir\src\gguf_loader.cpp.obj
+[17/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\inference_kernels.cpp.obj
+[18/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\gguf_core.cpp.obj
+[19/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\transformer.cpp.obj
+[20/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\bpe_tokenizer.cpp.obj
+[21/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\sampler.cpp.obj
+[22/179] Building CXX object CMakeFiles\RawrEngine.dir\src\codec\compression.cpp.obj
+[23/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\rawr_engine.cpp.obj
+[24/179] Building CXX object CMakeFiles\RawrEngine.dir\src\codec\brutal_gzip.cpp.obj
+[25/179] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\core_generator.cpp.obj
+[26/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\execution_scheduler.cpp.obj
+[27/179] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\cli_headless_systems.cpp.obj
+[28/179] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\cli_autonomy_loop.cpp.obj
+[29/179] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\agentic_decision_tree.cpp.obj
+D:\rawrxd\src\cli\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\cli\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[30/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agent_safety_contract.cpp.obj
+[31/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\confidence_gate.cpp.obj
+[32/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\deterministic_replay.cpp.obj
+[33/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\execution_governor.cpp.obj
+[34/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\multi_response_engine.cpp.obj
+[35/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\flash_attention.cpp.obj
+[36/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\model_memory_hotpatch.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[37/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_backend_bridge.cpp.obj
+[38/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\byte_level_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[39/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_engine_registry.cpp.obj
+[40/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\proxy_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[41/179] Building CXX object CMakeFiles\RawrEngine.dir\src\server\gguf_server_hotpatch.cpp.obj
+D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[42/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[43/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_hotpatch_manager.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[44/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj
+[45/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_encoder.cpp.obj
+[46/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\embedding_engine.cpp.obj
+[47/179] Building CXX object CMakeFiles\RawrEngine.dir\src\marketplace\extension_marketplace.cpp.obj
+[48/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_loop_state.cpp.obj
+[49/179] Building CXX object CMakeFiles\RawrEngine.dir\src\auth\rbac_engine.cpp.obj
+[50/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\autonomous_subagent.cpp.obj
+[51/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_failure_detector.cpp.obj
+[52/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_puppeteer.cpp.obj
+[53/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\llm_http_client.cpp.obj
+D:\rawrxd\src\agent\llm_http_client.cpp(23): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\llm_http_client.cpp(23): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[54/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_repair.cpp.obj
+D:\rawrxd\src\agent\agent_self_repair.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\agent_self_repair.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[55/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[56/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\planner.cpp.obj
+[57/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\model_invoker.cpp.obj
+[58/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[59/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[60/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\DiskRecoveryAgent.cpp.obj
+D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[61/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_decision_bridge.cpp.obj
+[62/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\production_release.cpp.obj
+[63/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\AgentToolHandlers.cpp.obj
+[64/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\universal_model_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[65/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\webrtc_signaling.cpp.obj
+[66/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_kernel_autotuner.cpp.obj
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[67/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sandbox_integration.cpp.obj
+D:\rawrxd\src\core\sandbox_integration.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sandbox_integration.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[68/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\amd_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\amd_gpu_accelerator.h(26): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\amd_gpu_accelerator.h(26): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[69/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\intel_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\intel_gpu_accelerator.h(29): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\intel_gpu_accelerator.h(29): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[70/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\arm64_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[71/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_gsi_hash.cpp.obj
+[72/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cerebras_wse_accelerator.cpp.obj
+D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[73/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_reference_provider.cpp.obj
+[74/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license_stubs.cpp.obj
+[75/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\accelerator_router.cpp.obj
+D:\rawrxd\src\core\accelerator_router.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\accelerator_router.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[76/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_native.cpp.obj
+[77/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_network_stubs.cpp.obj
+[78/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license.cpp.obj
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=const wchar_t *,
+            _Sent=const wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=const wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[79/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\analyzer_distiller_stubs.cpp.obj
+[80/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_orchestrator_stubs.cpp.obj
+[81/179] Building CXX object CMakeFiles\RawrEngine.dir\src\tool_registry.cpp.obj
+[82/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pt_driver_contract.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[83/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_worker.cpp.obj
+[84/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_coordinator.cpp.obj
+[85/179] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\swarm_orchestrator.cpp.obj
+[86/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\shortcut_manager.cpp.obj
+[87/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\voice_chat.cpp.obj
+[88/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\feature_registration.cpp.obj
+[89/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\voice_automation.cpp.obj
+[90/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\alert_system.cpp.obj
+[91/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\backup_manager.cpp.obj
+[92/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\feature_handlers.cpp.obj
+[93/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj
+[94/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_validation.cpp.obj
+[95/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj
+[96/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers_ext.cpp.obj
+[97/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_command_dispatch.cpp.obj
+[98/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\chain_of_thought_engine.cpp.obj
+[99/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_profile.cpp.obj
+[100/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_pipeline_orchestrator.cpp.obj
+[101/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\rawrxd_state_mmf.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[102/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\live_binary_patcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[103/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_cot_bridge.cpp.obj
+[104/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\traversal_strategy.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[105/179] Building CXX object CMakeFiles\RawrEngine.dir\src\vulkan_compute.cpp.obj
+[106/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\layer_contribution_scorer.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[107/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\semantic_delta_tracker.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[108/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cross_run_tensor_cache.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[109/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\convergence_controller.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[110/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sqlite3_stubs.cpp.obj
+[111/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\iterative_tensor_traversal.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[112/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\thread_pool.cpp.obj
+[113/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sqlite_wrapper.cpp.obj
+[114/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\memory_pressure_handler.cpp.obj
+[115/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\jsonrpc_parser.cpp.obj
+[116/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\transaction_journal.cpp.obj
+[117/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\agentic_transaction.cpp.obj
+[118/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\multi_file_transaction.cpp.obj
+[119/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vector_index.cpp.obj
+[120/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\model_cascade.cpp.obj
+[121/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\context_assembler.cpp.obj
+[122/179] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\chat_message_renderer.cpp.obj
+D:\rawrxd\src\ui\chat_message_renderer.cpp(11): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\ui\chat_message_renderer.cpp(11): note: 'NOMINMAX' previously declared on the command line
+[123/179] Building CXX object CMakeFiles\RawrEngine.dir\src\git\git_context.cpp.obj
+[124/179] Building CXX object CMakeFiles\RawrEngine.dir\src\lsp\diagnostic_consumer.cpp.obj
+[125/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\prompt_template_engine.cpp.obj
+[126/179] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\speculative_decoder_v2.cpp.obj
+[127/179] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\gpu_backend.cpp.obj
+[128/179] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\completion_feedback.cpp.obj
+[129/179] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\replay_telemetry_fusion.cpp.obj
+[130/179] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\kv_cache_optimizer.cpp.obj
+[131/179] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\hotpatch_telemetry_safety.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[132/179] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\speculative_decoder.cpp.obj
+[133/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_controller.cpp.obj
+[134/179] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\phase2_integration_example.cpp.obj
+D:\rawrxd\src\ui\phase2_integration_example.cpp(6): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\ui\phase2_integration_example.cpp(6): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[135/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_agent_coordinator.cpp.obj
+[136/179] Building CXX object CMakeFiles\RawrEngine.dir\src\production_config_manager.cpp.obj
+[137/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\deterministic_swarm.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[138/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\autonomous_workflow_engine.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[139/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\workspace_reasoning_profiles.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[140/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\safe_refactor_engine.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[141/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_schema_versioning.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[142/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cot_fallback_system.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[143/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\input_guard_slicer.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[144/179] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_oracle.cpp.obj
+[145/179] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_mock_inference.cpp.obj
+[146/179] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_fixture.cpp.obj
+[147/179] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_harness.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[148/179] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_reporter.cpp.obj
+[149/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[150/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\instructions_provider.cpp.obj
+[151/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\hotpatch_control_plane.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[152/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[153/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[154/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[155/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[156/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[157/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[158/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[159/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[160/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[161/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[162/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[163/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[164/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[165/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\static_analysis_engine.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[166/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[167/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[168/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[169/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[170/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[171/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[172/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[173/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\semantic_code_intelligence.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[174/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[175/179] Linking CXX static library src\reverse_engineering\RawrXD-RE-Library.lib
+[176/179] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[177/179] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\AgentOllamaClient.cpp.obj
+[178/179] Building CXX object CMakeFiles\RawrEngine.dir\src\core\native_debugger_engine.cpp.obj
+D:\rawrxd\src\core\native_debugger_engine.cpp(28): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\native_debugger_engine.cpp(28): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+D:\rawrxd\src\core\native_debugger_engine.cpp(29): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\core\native_debugger_engine.cpp(29): note: 'NOMINMAX' previously declared on the command line
+[179/179] Linking CXX executable RawrEngine.exe

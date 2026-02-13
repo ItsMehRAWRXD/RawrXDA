@@ -1,0 +1,364 @@
+# ============================================================
+# RawrXD Test Suite - Qt6 & CTest Integration
+# ============================================================
+# Comprehensive test infrastructure for RawrXD IDE components
+# - GGUF model loading and inference
+# - Agent coordination and agentic workflows
+# - Memory management and thread safety
+# - AI completions and LLM connectivity
+# - Compression and MASM integration
+
+cmake_minimum_required(VERSION 3.20)
+
+# Enable testing at test subdirectory level
+enable_testing()
+
+# Qt6 Test framework is already found in parent CMakeLists.txt
+# We just need to reference Qt6::Test component
+
+# Google Test for unit testing
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    URL_HASH SHA256=1f357c27ca988c3f7c6b4bf68a9395005ac6761f034046e9dde0896e3aba00e4
+)
+set(INSTALL_GTEST OFF CACHE BOOL "Disable gtest installation" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib." FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# Include GoogleTest module for test discovery
+include(GoogleTest)
+
+message(STATUS "Configuring test executables...")
+
+# ============================================================
+# CRITICAL: GGUF Loader Tests
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_gguf_loader.cpp")
+    add_executable(test_gguf_loader
+        test_gguf_loader.cpp
+        ${CMAKE_SOURCE_DIR}/src/gguf_loader.cpp
+        ${CMAKE_SOURCE_DIR}/src/gguf_vocab_resolver.cpp
+    )
+    target_link_libraries(test_gguf_loader PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_gguf_loader PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_gguf_loader PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_gguf_loader)
+    add_test(NAME test_gguf_loader COMMAND test_gguf_loader)
+    message(STATUS "  ✓ test_gguf_loader configured")
+endif()
+
+# ============================================================
+# CRITICAL: Agent Coordinator Tests
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_agent_coordinator.cpp")
+    add_executable(test_agent_coordinator
+        test_agent_coordinator.cpp
+    )
+    target_link_libraries(test_agent_coordinator PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_agent_coordinator PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_agent_coordinator PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_agent_coordinator)
+    add_test(NAME test_agent_coordinator COMMAND test_agent_coordinator)
+    message(STATUS "  ✓ test_agent_coordinator configured")
+endif()
+
+# ============================================================
+# CRITICAL: Quantization Correctness Tests
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/quant_correctness_tests.cpp")
+    add_executable(quant_correctness_tests
+        quant_correctness_tests.cpp
+    )
+    target_link_libraries(quant_correctness_tests PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(quant_correctness_tests PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(quant_correctness_tests PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(quant_correctness_tests)
+    add_test(NAME quant_correctness_tests COMMAND quant_correctness_tests)
+    message(STATUS "  ✓ quant_correctness_tests configured")
+endif()
+
+# ============================================================
+# AI Completions Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_completions.cpp")
+    add_executable(test_ai_completions
+        test_ai_completions.cpp
+    )
+    target_link_libraries(test_ai_completions PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        Qt6::Network
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_ai_completions PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_ai_completions PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_ai_completions)
+    add_test(NAME test_ai_completions COMMAND test_ai_completions)
+    message(STATUS "  ✓ test_ai_completions configured")
+endif()
+
+# ============================================================
+# LLM Connectivity Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_llm_connectivity.cpp")
+    add_executable(test_llm_connectivity
+        test_llm_connectivity.cpp
+    )
+    target_link_libraries(test_llm_connectivity PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        Qt6::Network
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_llm_connectivity PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_llm_connectivity PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_llm_connectivity)
+    add_test(NAME test_llm_connectivity COMMAND test_llm_connectivity)
+    message(STATUS "  ✓ test_llm_connectivity configured")
+endif()
+
+# ============================================================
+# Tool Registry Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_tool_registry.cpp")
+    add_executable(test_tool_registry
+        test_tool_registry.cpp
+    )
+    target_link_libraries(test_tool_registry PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_tool_registry PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_tool_registry PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_tool_registry)
+    add_test(NAME test_tool_registry COMMAND test_tool_registry)
+    message(STATUS "  ✓ test_tool_registry configured")
+endif()
+
+# ============================================================
+# MASM Deflate Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_deflate_masm.cpp")
+    add_executable(test_deflate_masm
+        test_deflate_masm.cpp
+    )
+    target_link_libraries(test_deflate_masm PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_deflate_masm PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_deflate_masm PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_deflate_masm)
+    add_test(NAME test_deflate_masm COMMAND test_deflate_masm)
+    message(STATUS "  ✓ test_deflate_masm configured")
+endif()
+
+# ============================================================
+# Voice Processor Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_voice_processor.cpp")
+    add_executable(test_voice_processor
+        test_voice_processor.cpp
+    )
+    target_link_libraries(test_voice_processor PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        Qt6::Multimedia
+        Qt6::Network
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_voice_processor PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_voice_processor PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_voice_processor)
+    add_test(NAME test_voice_processor COMMAND test_voice_processor)
+    message(STATUS "  ✓ test_voice_processor configured")
+endif()
+
+# ============================================================
+# Zero Retention Manager Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_zero_retention_manager.cpp")
+    add_executable(test_zero_retention_manager
+        test_zero_retention_manager.cpp
+    )
+    target_link_libraries(test_zero_retention_manager PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_zero_retention_manager PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_zero_retention_manager PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_zero_retention_manager)
+    add_test(NAME test_zero_retention_manager COMMAND test_zero_retention_manager)
+    message(STATUS "  ✓ test_zero_retention_manager configured")
+endif()
+
+# ============================================================
+# Semantic Diff Analyzer Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_semantic_diff_analyzer.cpp")
+    add_executable(test_semantic_diff_analyzer
+        test_semantic_diff_analyzer.cpp
+    )
+    target_link_libraries(test_semantic_diff_analyzer PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        Qt6::Concurrent
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_semantic_diff_analyzer PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_semantic_diff_analyzer PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_semantic_diff_analyzer)
+    add_test(NAME test_semantic_diff_analyzer COMMAND test_semantic_diff_analyzer)
+    message(STATUS "  ✓ test_semantic_diff_analyzer configured")
+endif()
+
+# ============================================================
+# AI Merge Resolver Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_merge_resolver.cpp")
+    add_executable(test_ai_merge_resolver
+        test_ai_merge_resolver.cpp
+    )
+    target_link_libraries(test_ai_merge_resolver PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        Qt6::Network
+        Qt6::Concurrent
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_ai_merge_resolver PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_ai_merge_resolver PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_ai_merge_resolver)
+    add_test(NAME test_ai_merge_resolver COMMAND test_ai_merge_resolver)
+    message(STATUS "  ✓ test_ai_merge_resolver configured")
+endif()
+
+# ============================================================
+# Sandboxed Terminal Test
+# ============================================================
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_sandboxed_terminal.cpp")
+    add_executable(test_sandboxed_terminal
+        test_sandboxed_terminal.cpp
+    )
+    target_link_libraries(test_sandboxed_terminal PRIVATE 
+        Qt6::Core
+        Qt6::Test
+        gtest
+        gtest_main
+    )
+    target_include_directories(test_sandboxed_terminal PRIVATE 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(test_sandboxed_terminal PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        AUTOMOC ON
+    )
+    gtest_discover_tests(test_sandboxed_terminal)
+    add_test(NAME test_sandboxed_terminal COMMAND test_sandboxed_terminal)
+    message(STATUS "  ✓ test_sandboxed_terminal configured")
+endif()
+
+# ============================================================
+# Test Summary
+# ============================================================
+message(STATUS "========================================")
+message(STATUS "Test Suite Configuration Complete")
+message(STATUS "To build tests: cmake --build . --target <test_name>")
+message(STATUS "To run all tests: ctest --output-on-failure")
+message(STATUS "To run specific test: ctest -R <test_name> -V")
+message(STATUS "========================================")

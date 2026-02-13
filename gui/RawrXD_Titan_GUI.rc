@@ -1,0 +1,55 @@
+// =============================================================================
+// RawrXD_Titan_GUI.rc
+// Feature 15: Control Plane - Live Parameter Editor
+// Resource Script for GUI Slider (rot_theta 006.1)
+// =============================================================================
+#include <windows.h>
+#include <commctrl.h>
+
+// Resource IDs
+#define IDD_TITAN_CONTROL       100
+#define IDC_THETA_SLIDER        1001
+#define IDC_THETA_VALUE         1002
+#define IDC_PREDICTOR_STATUS    1003
+#define IDC_GHOST_CACHE_STATS   1004
+#define IDC_FORCE_SYNC          1005
+#define IDC_ENABLE_PREDICTOR    1006
+#define IDC_ENABLE_DIRECTSTORAGE 1007
+#define IDC_ATTENTION_VARIANCE  1008
+
+// Main Control Dialog
+IDD_TITAN_CONTROL DIALOGEX 0, 0, 320, 240
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "RawrXD 800B Titan Engine - Live Control"
+FONT 9, "Segoe UI"
+BEGIN
+    // Rotary Theta Control (006.1 Logic)
+    GROUPBOX        "Rotary Embedding (Feature 15)", IDC_STATIC, 10, 10, 300, 70
+    LTEXT           "Theta (006.1):", IDC_STATIC, 20, 30, 80, 10
+    CONTROL         "", IDC_THETA_SLIDER, "msctls_trackbar32", 
+                    TBS_AUTOTICKS | TBS_BOTH | WS_TABSTOP, 100, 28, 200, 20
+    LTEXT           "0.0000", IDC_THETA_VALUE, 20, 55, 80, 10, SS_RIGHT
+    PUSHBUTTON      "Force GPU Sync", IDC_FORCE_SYNC, 220, 50, 80, 20
+    
+    // Predictor Status (Feature 18)
+    GROUPBOX        "Attention-Drift Predictor (Feature 18)", IDC_STATIC, 10, 90, 300, 80
+    CHECKBOX        "Enable Predictor", IDC_ENABLE_PREDICTOR, 20, 110, 100, 12, BS_AUTOCHECKBOX | WS_TABSTOP
+    LTEXT           "Variance:", IDC_STATIC, 20, 130, 60, 10
+    LTEXT           "0.000", IDC_ATTENTION_VARIANCE, 90, 130, 60, 10
+    LTEXT           "Status:", IDC_STATIC, 20, 150, 60, 10
+    LTEXT           "Sequential (Stride=1)", IDC_PREDICTOR_STATUS, 90, 150, 200, 10
+    
+    // Ghost Cache Stats (Feature 20)
+    GROUPBOX        "Ghost Cache (Feature 20)", IDC_STATIC, 10, 180, 150, 50
+    LTEXT           "Hits: 0", IDC_GHOST_CACHE_STATS, 20, 200, 120, 10
+    
+    // DirectStorage (Feature 19)
+    GROUPBOX        "DirectStorage (Feature 19)", IDC_STATIC, 170, 180, 140, 50
+    CHECKBOX        "Enable", IDC_ENABLE_DIRECTSTORAGE, 180, 200, 60, 12, BS_AUTOCHECKBOX | WS_TABSTOP
+END
+
+// String Table
+STRINGTABLE
+BEGIN
+    IDD_TITAN_CONTROL   "Titan Control Panel"
+END

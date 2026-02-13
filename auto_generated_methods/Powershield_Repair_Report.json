@@ -1,0 +1,275 @@
+{
+  "RepairTimestamp": "2026-01-24 06:21:53",
+  "Duration": "00:01:48.7762262",
+  "TotalTasks": 0,
+  "CompletedTasks": 0,
+  "FailedTasks": 0,
+  "SuccessRate": 0.0,
+  "ModulesRepaired": 0,
+  "ModulesStillFailing": 0,
+  "FinalValidation": {
+    "TotalModules": 50,
+    "SuccessfulImports": 49,
+    "FailedImports": 1,
+    "Details": [
+      {
+        "ModuleName": "SecurityModule",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\SecurityModule.psm1"
+      },
+      {
+        "ModuleName": "UIEnhancements",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\UIEnhancements.psm1"
+      },
+      {
+        "ModuleName": "UpdateModule",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\UpdateModule.psm1"
+      },
+      {
+        "ModuleName": "AgentTools-Secure",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\agentic-framework\\AgentTools-Secure.psm1"
+      },
+      {
+        "ModuleName": "ModelMaker",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\extensions\\ModelMaker.psm1"
+      },
+      {
+        "ModuleName": "PoshLLM",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\extensions\\PoshLLM.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-ChatBot",
+        "Status": "Failed",
+        "Error": "The running command stopped because the preference variable \"ErrorActionPreference\" or common parameter is set to Stop: The script failed due to call depth overflow.",
+        "Path": "D:\\Power\\Powershield\\extensions\\RawrXD-ChatBot.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-Editor-Advanced",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\extensions\\RawrXD-Editor-Advanced.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-Editor-Basic",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\extensions\\RawrXD-Editor-Basic.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-Editor-RichText",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\extensions\\RawrXD-Editor-RichText.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-Marketplace",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\extensions\\RawrXD-Marketplace.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-AIAgentRouter",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\RawrXD-AIAgentRouter.psm1"
+      },
+      {
+        "ModuleName": "RawrXD-AmazonQ",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\RawrXD-AmazonQ.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.AmazonQ",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\RawrXD.AmazonQ.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.GitHubCopilot",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\RawrXD.GitHubCopilot.psm1"
+      },
+      {
+        "ModuleName": "AgenticFramework",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\AgenticFramework\\AgenticFramework.psm1"
+      },
+      {
+        "ModuleName": "EditorDiagnostics",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\EditorDiagnostics\\EditorDiagnostics.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Agent",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Agent.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.AI",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.AI.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Browser",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Browser.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Core",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Core.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Git",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Git.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Logging",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Logging.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Marketplace",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Marketplace.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Scheduling",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Scheduling.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Settings",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Settings.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Terminal",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Terminal.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.UI",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.UI.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Utilities",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Utilities.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Video",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\Modules\\RawrXD.Video.psm1"
+      },
+      {
+        "ModuleName": "PoshLLM",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\PoshLLM\\PoshLLM.psm1"
+      },
+      {
+        "ModuleName": "PoshVision",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\PoshVision\\PoshVision.psm1"
+      },
+      {
+        "ModuleName": "RichTextBoxHandler",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules\\RichTextBoxHandler\\RichTextBoxHandler.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Agent",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Agent.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.AI",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.AI.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Browser",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Browser.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Editor",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Editor.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.FileOperations",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.FileOperations.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Git",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Git.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Logging",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Logging.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Marketplace",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Marketplace.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Performance",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Performance.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Security",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Security.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Settings",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Settings.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Terminal",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Terminal.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.UI",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.UI.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Utilities",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Utilities.psm1"
+      },
+      {
+        "ModuleName": "RawrXD.Video",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\Modules-Improved\\Modules\\RawrXD.Video.psm1"
+      },
+      {
+        "ModuleName": "AgentTools",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\tools\\AgentTools.psm1"
+      },
+      {
+        "ModuleName": "UIEnhancements",
+        "Status": "Success",
+        "Path": "D:\\Power\\Powershield\\tools\\UIEnhancements.psm1"
+      }
+    ]
+  },
+  "CriticalTasks": [],
+  "RepairResults": {
+    "FailedModules": [],
+    "FailureCount": 0,
+    "SuccessCount": 0,
+    "RepairedModules": []
+  }
+}

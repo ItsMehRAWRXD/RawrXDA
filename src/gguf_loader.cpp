@@ -1,0 +1,1038 @@
+#include "gguf_loader.h"
+#include "gguf_vocab_resolver.h"
+#include <algorithm>
+#include <cstring>
+#include <stdexcept>
+#include <iostream>
+#include <sstream>
+
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+#include <windows.h>
+#endif
+
+#include <vector>
+#include <cstdint>
+
+// Forward declarations for codec functions
+namespace codec {
+    extern std::vector<uint8_t> deflate(const std::vector<uint8_t>& in, bool* ok);
+    extern std::vector<uint8_t> inflate(const std::vector<uint8_t>& in, bool* ok);
+}
+
+// Forward declaration for brutal compression
+namespace brutal {
+    extern std::vector<uint8_t> compress(const std::vector<uint8_t>& in);
+    extern std::vector<uint8_t> compress(const void* data, std::size_t size);
+}
+
+
+namespace RawrXD {
+
+// Forward declaration for unsupported type name lookup (defined later in file)
+static std::string GetUnsupportedTypeNameByValue(uint32_t type_val);
+
+GGUFLoader::GGUFLoader()
+ 
+    : is_open_(false) {
+    std::memset(&header_, 0, sizeof(GGUFHeader));
+}
+
+GGUFLoader::~GGUFLoader() {
+    Close();
+}
+
+bool GGUFLoader::Open(const std::string& filepath) {
+    filepath_ = filepath;
+    file_.open(filepath, std::ios::binary);
+    if (!file_.is_open()) {
+        // Return false instead of throwing to allow graceful fallback
+        return false;
+    }
+    
+    is_open_ = true;
+    unsupported_types_.clear();  // Clear any previous unsupported types
+    
+    // ParseHeader now throws exceptions on error (consistent error handling)
+    try {
+        if (!ParseHeader()) {
+            Close();
+            return false;
+        }
+    } catch (const std::exception& e) {
+        Close();
+        throw;  // Re-throw after cleanup
+    }
+    
+    return true;
+}
+
+
+bool GGUFLoader::Close() {
+    if (file_.is_open()) {
+        file_.close();
+    }
+    is_open_ = false;
+    tensors_.clear();
+    unsupported_types_.clear();  // Clear unsupported types tracking
+    return true;
+}
+
+
+bool GGUFLoader::ParseHeader() {
+    if (!file_.is_open()) {
+        throw std::runtime_error("Cannot parse header: file not open");
+    }
+    
+    file_.seekg(0);
+    
+    // Read magic
+    if (!ReadValue(header_.magic)) {
+        throw std::runtime_error("Failed to read GGUF magic bytes");
+    }
+    if (header_.magic != 0x46554747) {  // "GGUF"
+        throw std::runtime_error("Invalid GGUF magic: 0x" + std::to_string(header_.magic) + 
+                                 " (expected 0x46554747)");
+    }
+    
+    // Read version
+    if (!ReadValue(header_.version)) {
+        throw std::runtime_error("Failed to read GGUF version");
+    }
+    if (header_.version != 3) {
+        throw std::runtime_error("Unsupported GGUF version: " + std::to_string(header_.version) + 
+                                 " (only version 3 supported)");
+    }
+    
+    // Read tensor count
+    if (!ReadValue(header_.tensor_count)) {
+        throw std::runtime_error("Failed to read tensor count");
+    }
+    
+    // Read metadata KV count
+    if (!ReadValue(header_.metadata_kv_count)) {
+        throw std::runtime_error("Failed to read metadata KV count");
+    }
+    
+    // Calculate metadata offset
+    header_.metadata_offset = file_.tellg();
+    
+    std::cout << "GGUF Header: Magic=0x" << std::hex << header_.magic << std::dec 
+              << ", Version=" << header_.version
+              << ", Tensors=" << header_.tensor_count
+              << ", Metadata=" << header_.metadata_kv_count << std::endl;
+    
+    return true;
+}
+
+bool GGUFLoader::ParseMetadata() {
+    if (!file_.is_open()) {
+        throw std::runtime_error("Cannot parse metadata: file not open");
+    }
+    if (header_.metadata_kv_count == 0) {
+        // Valid case: GGUF file with no metadata
+        return true;
+    }
+    
+    file_.seekg(header_.metadata_offset);
+    
+    for (uint64_t i = 0; i < header_.metadata_kv_count; ++i) {
+        std::string key, value;
+        
+        if (!ReadString(key)) {
+            throw std::runtime_error("Failed to read metadata key at index " + std::to_string(i));
+        }
+        
+        uint32_t value_type;
+        if (!ReadValue(value_type)) {
+            throw std::runtime_error("Failed to read metadata value type for key: " + key);
+        }
+        
+        // GGUF Value Types (https://github.com/ggerganov/ggml/blob/master/docs/gguf.md)
+        // 0=UInt8, 1=Int8, 2=UInt16, 3=Int16, 4=UInt32, 5=Int32, 6=Float32, 7=Bool, 8=String, 9=Array, 10=UInt64, 11=Int64, 12=Float64
+        
+        if (value_type == 8) {  // UTF-8 string
+            if (!ReadString(value)) {
+                throw std::runtime_error("Failed to read metadata string value for key: " + key);
+            }
+            metadata_.kv_pairs[key] = value;
+            
+            // Parse important metadata - support both llama and other model naming conventions
+            if (key == "general.architecture") {
+                if (value == "llama") metadata_.architecture_type = 1;
+            } else if (key == "llama.block_count") {
+                metadata_.layer_count = std::stoul(value);
+            } else if (key == "llama.context_length") {
+                metadata_.context_length = std::stoul(value);
+            } else if (key == "llama.embedding_length") {
+                metadata_.embedding_dim = std::stoul(value);
+            } else if (key == "llama.vocab_size") {
+                metadata_.vocab_size = std::stoul(value);
+            }
+        } else if (value_type == 4) {  // uint32
+            uint32_t uint_val;
+            if (!ReadValue(uint_val)) throw std::runtime_error("Failed to read uint32 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(uint_val);
+            
+            // Parse important numeric metadata
+            if (key == "llama.block_count") {
+                metadata_.layer_count = uint_val;
+            } else if (key == "llama.context_length") {
+                metadata_.context_length = uint_val;
+            } else if (key == "llama.embedding_length") {
+                metadata_.embedding_dim = uint_val;
+            } else if (key == "llama.vocab_size") {
+                metadata_.vocab_size = uint_val;
+            } else if (key == "llama.feed_forward_length") {
+                // Feed forward length is also useful metadata
+            }
+        } else if (value_type == 5) {  // int32
+            int32_t int_val;
+            if (!ReadValue(int_val)) throw std::runtime_error("Failed to read int32 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(int_val);
+        } else if (value_type == 6) {  // float32
+            float float_val;
+            if (!ReadValue(float_val)) throw std::runtime_error("Failed to read float32 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(float_val);
+        } else if (value_type == 10) {  // uint64
+            uint64_t uint64_val;
+            if (!ReadValue(uint64_val)) throw std::runtime_error("Failed to read uint64 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(uint64_val);
+            
+            // Parse important numeric metadata
+            if (key == "llama.block_count") {
+                metadata_.layer_count = uint64_val;
+            } else if (key == "llama.context_length") {
+                metadata_.context_length = uint64_val;
+            } else if (key == "llama.embedding_length") {
+                metadata_.embedding_dim = uint64_val;
+            } else if (key == "llama.vocab_size") {
+                metadata_.vocab_size = uint64_val;
+            }
+        } else if (value_type == 11) {  // int64
+            int64_t int64_val;
+            if (!ReadValue(int64_val)) throw std::runtime_error("Failed to read int64 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(int64_val);
+        } else if (value_type == 12) {  // float64
+            double float64_val;
+            if (!ReadValue(float64_val)) throw std::runtime_error("Failed to read float64 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(float64_val);
+        } else if (value_type == 7) {  // boolean
+            uint8_t bool_val;
+            if (!ReadValue(bool_val)) throw std::runtime_error("Failed to read bool for key: " + key);
+            metadata_.kv_pairs[key] = bool_val ? "true" : "false";
+        } else if (value_type == 0) {  // uint8
+            uint8_t uint8_val;
+            if (!ReadValue(uint8_val)) throw std::runtime_error("Failed to read uint8 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(uint8_val);
+        } else if (value_type == 1) {  // int8
+            int8_t int8_val;
+            if (!ReadValue(int8_val)) throw std::runtime_error("Failed to read int8 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(int8_val);
+        } else if (value_type == 2) {  // uint16
+            uint16_t uint16_val;
+            if (!ReadValue(uint16_val)) throw std::runtime_error("Failed to read uint16 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(uint16_val);
+        } else if (value_type == 3) {  // int16
+            int16_t int16_val;
+            if (!ReadValue(int16_val)) throw std::runtime_error("Failed to read int16 for key: " + key);
+            metadata_.kv_pairs[key] = std::to_string(int16_val);
+        } else if (value_type == 9) {  // array
+            // Array format: value_type (uint32) + array_length (uint64) + elements
+            uint32_t array_type;
+            uint64_t array_length;
+            if (!ReadValue(array_type)) throw std::runtime_error("Failed to read array type for key: " + key);
+            if (!ReadValue(array_length)) throw std::runtime_error("Failed to read array length for key: " + key);
+            
+            // Serialize for kv_pairs but also capture structured tokenizer data
+            std::string array_str = "[";
+            std::vector<std::string> string_elems;
+            std::vector<float> float_elems;
+            std::vector<uint32_t> uint32_elems;
+
+            for (uint64_t j = 0; j < array_length; ++j) {
+                if (array_type == 8) {  // string array
+                    std::string elem;
+                    if (!ReadString(elem)) throw std::runtime_error("Failed to read array string element");
+                    array_str += "\"" + elem + "\"";
+                    string_elems.push_back(std::move(elem));
+                } else if (array_type == 4) {  // uint32 array
+                    uint32_t elem;
+                    if (!ReadValue(elem)) throw std::runtime_error("Failed to read array uint32 element");
+                    array_str += std::to_string(elem);
+                    uint32_elems.push_back(elem);
+                } else if (array_type == 5) {  // int32 array
+                    int32_t elem;
+                    if (!ReadValue(elem)) throw std::runtime_error("Failed to read array int32 element");
+                    array_str += std::to_string(elem);
+                } else if (array_type == 6) {  // float32 array
+                    float elem;
+                    if (!ReadValue(elem)) throw std::runtime_error("Failed to read array float32 element");
+                    array_str += std::to_string(elem);
+                    float_elems.push_back(elem);
+                } else {
+                    throw std::runtime_error("Unsupported array element type: " + std::to_string(array_type));
+                }
+                if (j < array_length - 1) array_str += ", ";
+            }
+            array_str += "]";
+            metadata_.kv_pairs[key] = array_str;
+
+            // Persist structured tokenizer fields for downstream loaders
+            if (key == "tokenizer.ggml.tokens" && !string_elems.empty()) {
+                metadata_.tokens = string_elems;
+            }
+            if (key == "tokenizer.ggml.scores" && !float_elems.empty()) {
+                metadata_.token_scores = float_elems;
+            }
+            if (key == "tokenizer.ggml.token_type" && !uint32_elems.empty()) {
+                metadata_.token_types = uint32_elems;
+            }
+        } else {
+            throw std::runtime_error("Unsupported metadata value type " + std::to_string(value_type) + " for key: " + key);
+        }
+    }
+    
+    // Read tensor info
+    for (uint64_t i = 0; i < header_.tensor_count; ++i) {
+        TensorInfo tensor;
+        
+        if (!ReadString(tensor.name)) {
+            throw std::runtime_error("Failed to read tensor name at index " + std::to_string(i));
+        }
+        
+        uint32_t n_dims;
+        if (!ReadValue(n_dims)) {
+            throw std::runtime_error("Failed to read dimension count for tensor: " + tensor.name);
+        }
+        
+        // Safety check: tensors should have <= 4 dimensions (very rare to have more)
+        if (n_dims > 8) {
+            throw std::runtime_error("Tensor has too many dimensions (" + std::to_string(n_dims) + 
+                                   ") for tensor: " + tensor.name);
+        }
+        
+        tensor.shape.resize(n_dims);
+        for (uint32_t d = 0; d < n_dims; ++d) {
+            if (!ReadValue(tensor.shape[d])) {
+                throw std::runtime_error("Failed to read dimension " + std::to_string(d) + 
+                                       " for tensor: " + tensor.name);
+            }
+            
+            // Safety check: individual dimensions shouldn't exceed 1 billion
+            // (would be a sign of corrupted data)
+            if (tensor.shape[d] > 1000000000ULL) {
+                throw std::runtime_error("Tensor dimension too large (" + std::to_string(tensor.shape[d]) + 
+                                       ") for tensor: " + tensor.name);
+            }
+        }
+        
+        uint32_t type_val;
+        if (!ReadValue(type_val)) {
+            throw std::runtime_error("Failed to read type for tensor: " + tensor.name);
+        }
+        
+        // ========== UNSUPPORTED TYPE DETECTION ==========
+        // Check if tensor type is outside the supported GGML enum range (0-24)
+        // Types 39, 40, 41, etc. are newer quantization types (IQ4_NL, IQ4_XS, IQ3_S)
+        // that require newer GGML versions. This triggers IDE conversion workflow.
+        if (type_val > 24) {
+            // Log the unsupported type for the user
+            std::string type_name = GetUnsupportedTypeNameByValue(type_val);
+            std::cerr << "WARNING: Tensor '" << tensor.name 
+                     << "' uses unsupported type " << type_val 
+                     << " (" << type_name << "). "
+                     << "Model will need quantization conversion to proceed." << std::endl;
+            
+            // Track this unsupported type for later IDE prompting
+            bool type_exists = false;
+            for (auto& existing : unsupported_types_) {
+                if (existing.type_value == type_val) {
+                    existing.tensor_names.push_back(tensor.name);
+                    type_exists = true;
+                    break;
+                }
+            }
+            if (!type_exists) {
+                unsupported_types_.push_back({
+                    type_val,
+                    type_name,
+                    {tensor.name}
+                });
+            }
+        }
+        
+        tensor.type = static_cast<GGMLType>(type_val);
+        
+        if (!ReadValue(tensor.offset)) {
+            throw std::runtime_error("Failed to read offset for tensor: " + tensor.name);
+        }
+        
+        tensor.size_bytes = CalculateTensorSize(tensor.shape, tensor.type);
+        tensors_.push_back(tensor);
+    }
+    
+    // Build O(1) lookup index for tensor access (Bottleneck #14 fix)
+    for (auto& tensor : tensors_) {
+        tensor_index_[tensor.name] = &tensor;
+    }
+    
+    // Fix vocab size using universal resolver
+    GGUFVocabResolver vocabResolver;
+    VocabSizeDetection vocabDetection = vocabResolver.detectVocabSize(metadata_.kv_pairs, filepath_);
+    
+    std::cout << "[GGUFLoader] Vocab detection: method=" << vocabDetection.detectionMethod
+              << ", size=" << vocabDetection.detectedSize
+              << ", confident=" << (vocabDetection.isConfident ? "yes" : "no") << std::endl;
+    
+    // Override metadata vocab size if detection was successful
+    if (vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
+        if (metadata_.vocab_size != vocabDetection.detectedSize) {
+            std::cout << "[GGUFLoader] Correcting vocab size: " << metadata_.vocab_size 
+                      << " -> " << vocabDetection.detectedSize << std::endl;
+            metadata_.vocab_size = vocabDetection.detectedSize;
+        }
+    } else if (!vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
+        // Use detection even if not confident, as it's better than potentially wrong metadata
+        std::cout << "[GGUFLoader] Using low-confidence vocab size: " << vocabDetection.detectedSize << std::endl;
+        metadata_.vocab_size = vocabDetection.detectedSize;
+    }
+    
+    std::cout << "Metadata parsed successfully. Layers: " << metadata_.layer_count
+              << ", Context: " << metadata_.context_length
+              << ", Embedding: " << metadata_.embedding_dim
+              << ", Vocab: " << metadata_.vocab_size << std::endl;
+    
+    return true;
+}
+
+bool GGUFLoader::LoadTensorZone(const std::string& tensor_name, std::vector<uint8_t>& data) {
+    // O(1) lookup using tensor index (Bottleneck #14 fix - eliminates O(n) std::find_if)
+    auto it = tensor_index_.find(tensor_name);
+    
+    if (it == tensor_index_.end()) {
+        // Use an exception for a cleaner interface in a larger app
+        throw std::runtime_error("Tensor not found: " + tensor_name);
+    }
+    
+    const TensorInfo* tensor_info = it->second;
+    data.resize(tensor_info->size_bytes);
+    file_.seekg(tensor_info->offset);
+    file_.read(reinterpret_cast<char*>(data.data()), tensor_info->size_bytes);
+    
+    if (!file_.good()) {
+         throw std::runtime_error("Failed to read tensor data for: " + tensor_name);
+    }
+    
+    // Apply MASM-optimized decompression if enabled (brutal_gzip or deflate)
+    if (IsCompressed()) {
+        std::vector<uint8_t> decompressed;
+        if (!DecompressData(data, decompressed)) {
+            throw std::runtime_error("Failed to decompress tensor: " + tensor_name);
+        }
+        data = std::move(decompressed);
+    }
+    
+    return true;
+}
+
+bool GGUFLoader::LoadTensorRange(size_t start_idx, size_t count, std::vector<uint8_t>& data) {
+    if (start_idx + count > tensors_.size()) {
+        throw std::out_of_range("Tensor range out of bounds");
+    }
+    
+    // Calculate total size needed for output buffer
+    size_t total_size = 0;
+    for (size_t i = start_idx; i < start_idx + count; ++i) {
+        total_size += tensors_[i].size_bytes;
+    }
+    
+    data.resize(total_size);
+    size_t offset = 0;
+    
+    // Note: Each tensor.offset is already 32-byte aligned per GGUF spec
+    // The GGUF writer ensures proper padding between tensors, so we just
+    // seek to the stored offset directly without manual alignment calculation
+    for (size_t i = start_idx; i < start_idx + count; ++i) {
+        file_.seekg(tensors_[i].offset);
+        file_.read(reinterpret_cast<char*>(data.data() + offset), tensors_[i].size_bytes);
+        if (!file_.good()) {
+            throw std::runtime_error("Failed to read tensor range during bulk load.");
+        }
+        offset += tensors_[i].size_bytes;
+    }
+    
+    // Apply MASM-optimized decompression if enabled (brutal_gzip or deflate)
+    if (IsCompressed()) {
+        std::vector<uint8_t> decompressed;
+        if (!DecompressData(data, decompressed)) {
+            throw std::runtime_error("Failed to decompress tensor range");
+        }
+        data = std::move(decompressed);
+    }
+    
+    return true;
+}
+
+size_t GGUFLoader::GetTensorByteSize(const TensorInfo& tensor) const {
+    return CalculateTensorSize(tensor.shape, tensor.type);
+}
+
+std::string GGUFLoader::GetTypeString(GGMLType type) const {
+    switch (type) {
+        case GGMLType::F32: return "F32";
+        case GGMLType::F16: return "F16";
+        case GGMLType::Q4_0: return "Q4_0";
+        case GGMLType::Q4_1: return "Q4_1";
+        case GGMLType::Q5_1: return "Q5_1";
+        case GGMLType::Q8_0: return "Q8_0";
+        case GGMLType::Q2_K: return "Q2_K";
+        case GGMLType::Q3_K: return "Q3_K";
+        case GGMLType::Q4_K: return "Q4_K";
+        case GGMLType::Q5_K: return "Q5_K";
+        case GGMLType::Q6_K: return "Q6_K";
+        default: return "UNKNOWN";
+    }
+}
+
+uint64_t GGUFLoader::GetFileSize() const {
+    if (!file_.is_open()) return 0;
+    
+    std::streampos current = file_.tellg();
+    file_.seekg(0, std::ios::end);
+    uint64_t size = file_.tellg();
+    file_.seekg(current);
+    return size;
+}
+
+// ============================================================================
+// Streaming Interface — Non-streaming loader minimal implementations
+// (GGUFLoader reads entire file; zones are a streaming-only concept)
+// ============================================================================
+
+bool GGUFLoader::BuildTensorIndex() {
+    // For non-streaming loader, the tensor index is already built during ParseHeader.
+    // Re-index if called explicitly (e.g. after hot-reload).
+    tensor_index_.clear();
+    for (size_t i = 0; i < tensors_.size(); ++i) {
+        tensor_index_[tensors_[i].name] = &tensors_[i];
+    }
+    return true;
+}
+
+bool GGUFLoader::LoadZone(const std::string& zone_name, uint64_t /*max_memory_mb*/) {
+    // Non-streaming loader has all data accessible via file stream.
+    // "Loading a zone" is a no-op since we memory-map on demand via LoadTensorZone.
+    (void)zone_name;
+    return is_open_;
+}
+
+bool GGUFLoader::UnloadZone(const std::string& zone_name) {
+    // No zone concept for non-streaming; always returns success.
+    (void)zone_name;
+    return true;
+}
+
+std::vector<std::string> GGUFLoader::GetLoadedZones() const {
+    // Non-streaming loader treats all tensors as a single "all" zone.
+    if (!is_open_ || tensors_.empty()) return {};
+    return { "all" };
+}
+
+std::vector<std::string> GGUFLoader::GetAllZones() const {
+    // Same as GetLoadedZones for non-streaming.
+    if (tensors_.empty()) return {};
+    return { "all" };
+}
+
+std::vector<TensorInfo> GGUFLoader::GetAllTensorInfo() const {
+    return tensors_;
+}
+
+uint64_t GGUFLoader::GetCurrentMemoryUsage() const {
+    // Estimate: sum of all tensor byte sizes currently accessible.
+    uint64_t total = 0;
+    for (const auto& t : tensors_) {
+        total += GetTensorByteSize(t);
+    }
+    return total;
+}
+
+template<typename T>
+bool GGUFLoader::ReadValue(T& value) {
+    file_.read(reinterpret_cast<char*>(&value), sizeof(T));
+    return file_.good();
+}
+
+bool GGUFLoader::ReadString(std::string& value) {
+    uint64_t len;
+    if (!ReadValue(len)) return false;
+    
+    // Safety check: strings longer than 100MB are invalid
+    // This prevents bad allocation errors from corrupted metadata
+    const uint64_t MAX_STRING_SIZE = 100 * 1024 * 1024;  // 100MB limit
+    if (len > MAX_STRING_SIZE) {
+        std::cerr << "[GGUFLoader] String length " << len << " exceeds maximum allowed size" << std::endl;
+        return false;
+    }
+    
+    value.resize(len);
+    file_.read(&value[0], len);
+    return file_.good();
+}
+
+uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGMLType type) const {
+    uint64_t num_elements = 1;
+    for (uint64_t dim : shape) {
+        num_elements *= dim;
+    }
+    
+    // Helper lambda for block-aligned size calculation
+    // Formula: block_size × ceil(num_elements / block_elements)
+    auto block_aligned_size = [num_elements](uint64_t block_elements, uint64_t block_size) -> uint64_t {
+        uint64_t num_blocks = (num_elements + block_elements - 1) / block_elements;  // Ceiling division
+        return num_blocks * block_size;
+    };
+    
+    // Calculate the size in bytes based on the GGML type
+    // Reference: https://github.com/ggerganov/ggml/blob/master/include/ggml.h
+    switch (type) {
+        case GGMLType::F32: 
+            return num_elements * 4;
+        case GGMLType::F16: 
+            return num_elements * 2;
+        
+        // Q4_0: 32 elements per block, 18 bytes per block (2 bytes FP16 scale + 16 bytes data)
+        case GGMLType::Q4_0: 
+            return block_aligned_size(32, 18);
+        
+        // Q4_1: 32 elements per block, 20 bytes per block (2 bytes FP16 scale + 2 bytes FP16 min + 16 bytes data)
+        case GGMLType::Q4_1: 
+            return block_aligned_size(32, 20);
+        
+        // Q8_0: 32 elements per block, 34 bytes per block (2 bytes FP16 scale + 32 bytes data)
+        case GGMLType::Q8_0: 
+            return block_aligned_size(32, 34);
+        
+        // Q5_1: 32 elements per block, 24 bytes per block
+        case GGMLType::Q5_1:
+            return block_aligned_size(32, 24);
+        
+        // K-quantization (256 elements per super-block)
+        // Q2_K: 256 elements, 84 bytes per super-block
+        case GGMLType::Q2_K: 
+            return block_aligned_size(256, 84);
+        
+        // Q3_K: 256 elements, 110 bytes per super-block
+        case GGMLType::Q3_K: 
+            return block_aligned_size(256, 110);
+        
+        // Q4_K: 256 elements, 144 bytes per super-block
+        case GGMLType::Q4_K: 
+            return block_aligned_size(256, 144);
+        
+        // Q5_K: 256 elements, 176 bytes per super-block
+        case GGMLType::Q5_K: 
+            return block_aligned_size(256, 176);
+        
+        // Q6_K: 256 elements, 210 bytes per super-block
+        case GGMLType::Q6_K: 
+            return block_aligned_size(256, 210);
+        
+        // F16_HALF
+        case GGMLType::F16_HALF:
+            return num_elements * 2;
+        
+        default:
+            // Type 14 is Q8_K (256 elements, 128 bytes per super-block)
+            // We handle it here as a fallback case since it's not in the enum
+            if (static_cast<uint32_t>(type) == 14) {
+                return block_aligned_size(256, 128);  // Q8_K: 256 elements, 128 bytes per block
+            }
+            // In production, log the unsupported type and use a safe default
+            std::cerr << "[GGUFLoader] WARNING: Unsupported GGMLType " << static_cast<uint32_t>(type) 
+                     << " encountered, assuming F32 size" << std::endl;
+            return num_elements * 4;  // Default to F32 size
+    }
+}
+
+// =====================================================================
+// MASM Compression Integration (Brutal GZIP + Deflate)
+// =====================================================================
+
+bool GGUFLoader::SetCompressionType(CompressionType type) {
+    compression_type_ = type;
+    // No initialization needed - brutal_gzip and deflate_brutal_std are header-only/static (Qt-free)
+    return true;
+}
+
+bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed, 
+                                 std::vector<uint8_t>& decompressed) {
+    if (compression_type_ == CompressionType::NONE) {
+        decompressed = compressed;
+        return true;
+    }
+    
+    try {
+        switch (compression_type_) {
+            case CompressionType::BRUTAL_GZIP:
+            case CompressionType::ZLIB: {
+                // Decompress GZIP/ZLIB data via codec::inflate (DEFLATE decoder)
+                bool ok = false;
+                std::vector<uint8_t> output = codec::inflate(compressed, &ok);
+                if (!ok || output.empty()) {
+                    // If inflate fails, try brutal::decompress as fallback
+                    output = brutal::decompress(compressed);
+                    if (output.empty()) {
+                        return false;
+                    }
+                }
+                decompressed = std::move(output);
+                return true;
+            }
+            
+            case CompressionType::DEFLATE: {
+                // Use codec::inflate from inflate_deflate_cpp.cpp
+                // This handles DEFLATE decompression
+                bool ok = false;
+                std::vector<uint8_t> output = codec::inflate(compressed, &ok);
+                if (!ok) return false;
+                
+                decompressed = output;
+                return true;
+            }
+
+            
+            case CompressionType::NONE:
+                decompressed = compressed;
+                return true;
+                
+            default:
+                throw std::runtime_error("Unsupported compression type");
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Decompression error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data, 
+                               std::vector<uint8_t>& compressed) {
+    if (compression_type_ == CompressionType::NONE) {
+        compressed = raw_data;
+        return true;
+    }
+    
+    try {
+        switch (compression_type_) {
+            case CompressionType::BRUTAL_GZIP:
+            case CompressionType::ZLIB: {
+                // Compress using brutal::compress (MASM-optimized gzip)
+                std::vector<uint8_t> output = brutal::compress(raw_data);
+                if (output.empty()) return false;
+                
+                compressed = output;
+                return true;
+            }
+
+            
+            case CompressionType::DEFLATE: {
+                // Compress using codec::deflate (MASM-optimized deflate)
+                bool ok = false;
+                std::vector<uint8_t> output = codec::deflate(raw_data, &ok);
+                if (!ok || output.empty()) return false;
+                
+                compressed = output;
+                return true;
+            }
+
+            
+            case CompressionType::NONE:
+                compressed = raw_data;
+                return true;
+                
+            default:
+                throw std::runtime_error("Unsupported compression type");
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Compression error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+// ============================================================================
+// Quantization Type Validation (IDE Conversion Workflow)
+// ============================================================================
+
+bool GGUFLoader::HasUnsupportedQuantizationTypes() const {
+    return !unsupported_types_.empty();
+}
+
+std::vector<GGUFLoader::UnsupportedTypeInfo> GGUFLoader::GetUnsupportedQuantizationTypes() const {
+    return unsupported_types_;
+}
+
+std::string GGUFLoader::GetRecommendedConversionType() const {
+    // If we found unsupported types, recommend conversion to Q5_K (type 13)
+    // which provides excellent quality/size tradeoff and is widely supported
+    return "Q5_K";
+}
+
+// Helper function to map unsupported type values to human-readable names
+static std::string GetUnsupportedTypeNameByValue(uint32_t type_val) {
+    switch (type_val) {
+        case 39:  return "IQ4_NL";
+        case 40:  return "IQ4_XS";
+        case 41:  return "IQ3_S";
+        case 42:  return "IQ2_S";
+        case 43:  return "IQ2_M";
+        default:  return "IQ" + std::to_string(type_val);  // Generic fallback
+    }
+}
+
+} // namespace RawrXD
+
+
+// ============================================================================
+// Zone Management — Implemented in gguf_loader.h as inline methods.
+// The RawrXD::GGUFLoader is a non-streaming (eager) loader, so:
+//   BuildTensorIndex() → true (built during ParseHeader)
+//   LoadZone()         → true (all tensors accessible via LoadTensorZone)
+//   UnloadZone()       → true (no-op for non-streaming)
+//   GetLoadedZones()   → {"all"}
+//   GetAllZones()      → {"all"}
+//   GetAllTensorInfo()  → tensors_
+//   GetCurrentMemoryUsage() → sum of loaded tensor sizes
+// ============================================================================
+
+// ============================================================================
+// EXPERIMENTAL: Vulkan GPU + Memory-Mapped I/O Subsystem
+// These methods are declared in gguf_loader.h but require a full Vulkan
+// runtime and mmap infrastructure that is not yet available.
+// Gated behind RAWRXD_EXPERIMENTAL_GGUF_GPU. Without the flag, they
+// return explicit failure with logged diagnostics.
+// ============================================================================
+
+namespace RawrXD {
+
+bool GGUFLoader::UploadAllTensorsToVulkan() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!vulkan_engine_) {
+        std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: no Vulkan engine attached" << std::endl;
+        return false;
+    }
+
+    if (tensors_.empty()) {
+        std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: no tensors loaded" << std::endl;
+        return false;
+    }
+
+    size_t successCount = 0;
+    size_t failCount = 0;
+    size_t totalBytes = 0;
+
+    std::cerr << "[GGUFLoader] Uploading " << tensors_.size() << " tensors to Vulkan GPU..." << std::endl;
+
+    for (const auto& tensor : tensors_) {
+        if (UploadTensorToVulkan(tensor.name)) {
+            successCount++;
+            totalBytes += tensor.size_bytes;
+        } else {
+            failCount++;
+            std::cerr << "[GGUFLoader] Failed to upload tensor: " << tensor.name << std::endl;
+        }
+    }
+
+    std::cerr << "[GGUFLoader] Vulkan upload complete: " << successCount << "/" << tensors_.size()
+              << " tensors (" << (totalBytes / (1024 * 1024)) << " MB), "
+              << failCount << " failures" << std::endl;
+
+    return failCount == 0;
+#else
+    std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!vulkan_engine_) {
+        std::cerr << "[GGUFLoader] UploadTensorToVulkan: no Vulkan engine attached" << std::endl;
+        return false;
+    }
+
+    // Check if already uploaded
+    if (vulkan_tensors_.count(tensor_name)) {
+        return true; // Already on GPU
+    }
+
+    // Find tensor info using O(1) index
+    auto it = tensor_index_.find(tensor_name);
+    if (it == tensor_index_.end()) {
+        std::cerr << "[GGUFLoader] UploadTensorToVulkan: tensor not found: " << tensor_name << std::endl;
+        return false;
+    }
+
+    const TensorInfo* info = it->second;
+
+    // Load tensor data from file
+    std::vector<uint8_t> tensorData;
+    try {
+        tensorData.resize(info->size_bytes);
+        file_.seekg(info->offset);
+        file_.read(reinterpret_cast<char*>(tensorData.data()), info->size_bytes);
+        if (!file_.good()) {
+            file_.clear(); // Reset stream state
+            std::cerr << "[GGUFLoader] UploadTensorToVulkan: failed to read tensor data: " << tensor_name << std::endl;
+            return false;
+        }
+
+        // Decompress if needed
+        if (IsCompressed()) {
+            std::vector<uint8_t> decompressed;
+            if (!DecompressData(tensorData, decompressed)) {
+                std::cerr << "[GGUFLoader] UploadTensorToVulkan: decompression failed: " << tensor_name << std::endl;
+                return false;
+            }
+            tensorData = std::move(decompressed);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[GGUFLoader] UploadTensorToVulkan: read exception: " << e.what() << std::endl;
+        return false;
+    }
+
+    // Allocate host-side buffer and store the tensor data
+    // VulkanTensor.buffer holds a pointer to a dynamically allocated copy of the tensor data
+    // In a full Vulkan pipeline, this would be a VkBuffer + VkDeviceMemory pair
+    // For now, we allocate CPU-accessible storage that the VulkanCompute engine can
+    // upload to GPU memory via its staging buffer mechanism
+    void* gpuBuffer = nullptr;
+    try {
+        gpuBuffer = new uint8_t[tensorData.size()];
+        std::memcpy(gpuBuffer, tensorData.data(), tensorData.size());
+    } catch (const std::bad_alloc&) {
+        std::cerr << "[GGUFLoader] UploadTensorToVulkan: allocation failed for "
+                  << (tensorData.size() / (1024 * 1024)) << " MB tensor: " << tensor_name << std::endl;
+        return false;
+    }
+
+    VulkanTensor vt;
+    vt.buffer = gpuBuffer;
+    vulkan_tensors_[tensor_name] = vt;
+
+    return true;
+#else
+    std::cerr << "[GGUFLoader] UploadTensorToVulkan('" << tensor_name 
+              << "'): not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+bool GGUFLoader::ReadMetadataKV(const std::string& key, std::string& value) {
+    auto it = metadata_.kv_pairs.find(key);
+    if (it != metadata_.kv_pairs.end()) {
+        value = it->second;
+        return true;
+    }
+    return false;
+}
+
+bool GGUFLoader::CreateDummyModel() {
+    // Create a minimal synthetic model for testing without a real GGUF file
+    header_.magic = 0x46475547; // "GGUF"
+    header_.version = 3;
+    header_.tensor_count = 0;
+    header_.metadata_kv_count = 0;
+    metadata_.vocab_size = 0;
+    metadata_.embedding_dim = 0;
+    metadata_.layer_count = 0;
+    metadata_.head_count = 0;
+    metadata_.context_length = 4096;
+    use_dummy_mode_ = true;
+    std::cout << "[GGUFLoader] Created dummy model for testing" << std::endl;
+    return true;
+}
+
+bool GGUFLoader::InitializeMemoryMap() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (filepath_.empty() || !is_open_) {
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: no file open" << std::endl;
+        return false;
+    }
+    // Open file handle for memory mapping (Windows API)
+    file_handle_ = CreateFileA(filepath_.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file_handle_ == INVALID_HANDLE_VALUE) {
+        file_handle_ = nullptr;
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: CreateFile failed" << std::endl;
+        return false;
+    }
+    LARGE_INTEGER fileSize;
+    GetFileSizeEx(file_handle_, &fileSize);
+    map_handle_ = CreateFileMappingA(file_handle_, nullptr, PAGE_READONLY, 
+                                      fileSize.HighPart, fileSize.LowPart, nullptr);
+    if (!map_handle_) {
+        CloseHandle(file_handle_);
+        file_handle_ = nullptr;
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: CreateFileMapping failed" << std::endl;
+        return false;
+    }
+    mmap_base_ = MapViewOfFile(map_handle_, FILE_MAP_READ, 0, 0, 0);
+    if (!mmap_base_) {
+        CloseHandle(map_handle_);
+        CloseHandle(file_handle_);
+        map_handle_ = nullptr;
+        file_handle_ = nullptr;
+        std::cerr << "[GGUFLoader] InitializeMemoryMap: MapViewOfFile failed" << std::endl;
+        return false;
+    }
+    use_mmap_ = true;
+    file_size_ = static_cast<uint64_t>(fileSize.QuadPart);
+    std::cout << "[GGUFLoader] Memory-mapped " << file_size_ << " bytes" << std::endl;
+    return true;
+#else
+    std::cerr << "[GGUFLoader] InitializeMemoryMap: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+void GGUFLoader::CleanupMemoryMap() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (mmap_base_) {
+        UnmapViewOfFile(mmap_base_);
+        mmap_base_ = nullptr;
+    }
+    if (map_handle_) {
+        CloseHandle(map_handle_);
+        map_handle_ = nullptr;
+    }
+    if (file_handle_) {
+        CloseHandle(file_handle_);
+        file_handle_ = nullptr;
+    }
+    use_mmap_ = false;
+    std::cout << "[GGUFLoader] Memory map cleaned up" << std::endl;
+#else
+    // No-op when experimental GPU support is disabled
+#endif
+}
+
+const void* GGUFLoader::GetMappedSlice(uint64_t offset, uint64_t size) const {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!mmap_base_ || !use_mmap_) {
+        std::cerr << "[GGUFLoader] GetMappedSlice: memory map not initialized" << std::endl;
+        return nullptr;
+    }
+    if (offset + size > file_size_) {
+        std::cerr << "[GGUFLoader] GetMappedSlice: range [" << offset << ", " 
+                  << (offset + size) << ") exceeds file size " << file_size_ << std::endl;
+        return nullptr;
+    }
+    return static_cast<const uint8_t*>(mmap_base_) + offset;
+#else
+    std::cerr << "[GGUFLoader] GetMappedSlice: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return nullptr;
+#endif
+}
+
+} // namespace RawrXD
+
