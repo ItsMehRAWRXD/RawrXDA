@@ -5,7 +5,6 @@
 #include <vector>
 #include <mutex>
 #include <unordered_map>
-#include <functional>
 #include <nlohmann/json.hpp>
 #include <cstdint>
 
@@ -55,10 +54,11 @@ public:
     void setEnabled(bool enable);
     bool isEnabled() const;
 
-    // Callbacks (replace Qt signals)
-    std::function<void(FailureType, const std::string&)> onFailureDetected;
-    std::function<void(const std::string&)> onCorrectionApplied;
-    std::function<void(FailureType, const std::string&)> onCorrectionFailed;
+    // Callbacks (replace Qt signals) — raw function pointers, no std::function
+    void (*onFailureDetected)(FailureType type, const char* detail, void* ctx) = nullptr;
+    void (*onCorrectionApplied)(const char* correctedOutput, void* ctx) = nullptr;
+    void (*onCorrectionFailed)(FailureType type, const char* diagnostic, void* ctx) = nullptr;
+    void* callbackContext = nullptr;  // Opaque user context for all callbacks
 
 protected:
     std::string applyRefusalBypass(const std::string& response);

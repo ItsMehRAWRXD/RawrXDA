@@ -27,6 +27,7 @@
 #include "../agent_explainability.h"
 #include "../agent_policy.h"
 #include "../agentic/AgentOllamaClient.h"
+#include "../core/enterprise_license.h"
 #include "../../include/lsp/RawrXD_LSPServer.h"
 
 #include <iostream>
@@ -402,7 +403,9 @@ HeadlessResult HeadlessIDE::initEngines() {
     // In headless mode we attempt to load them, but failure is non-fatal
     if (!m_engineManager) {
         m_engineManager = new EngineManager();
-        try { m_engineManager->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive"); } catch (...) {}
+        if (RawrXD::EnterpriseLicense::Instance().Is800BUnlocked() || RawrXD::g_800B_Unlocked) {
+            try { m_engineManager->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive"); } catch (...) {}
+        }
         try { m_engineManager->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate"); } catch (...) {}
         try { m_engineManager->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler"); } catch (...) {}
     }

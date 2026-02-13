@@ -297,6 +297,9 @@ set(SOURCES
     src/agent/planner.cpp
     src/agent/eval_framework.cpp
 
+    # LocalReasoningEngine — API-free static analysis + pattern detection (no Qt, no API key)
+    src/agent/local_reasoning_engine.cpp
+
     # Agent Self-Repair (MASM64 self-patching kernel bridge)
     src/agent/agent_self_repair.cpp
     src/agent/agent_self_healing_orchestrator.cpp
@@ -315,6 +318,7 @@ set(SOURCES
     src/agentic/RawrXD_ToolRegistry.cpp
     src/agentic/ToolRegistry.cpp
     src/agentic/RawrXD_AgentLoop.cpp
+    src/agentic/agentic_executor.cpp
 
     # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
     src/core/auto_repair_orchestrator.cpp
@@ -1581,6 +1585,7 @@ if(WIN32)
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agentic/ToolRegistry.cpp
         src/agentic/RawrXD_AgentLoop.cpp
+        src/agentic/agentic_executor.cpp
 
         # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
         src/core/auto_repair_orchestrator.cpp
@@ -1677,6 +1682,9 @@ if(WIN32)
         src/agent/autonomous_subagent.cpp
         src/agent/agentic_failure_detector.cpp
         src/agent/agentic_puppeteer.cpp
+
+        # LocalReasoningEngine — API-free static analysis + pattern detection
+        src/agent/local_reasoning_engine.cpp
 
         # Agent Self-Repair — MASM64 self-patching kernel bridge
         src/agent/agent_self_repair.cpp
@@ -1782,7 +1790,7 @@ if(WIN32)
         # NOTE: shared_feature_dispatch.cpp REMOVED — duplicated by unified_command_dispatch.cpp
         src/core/feature_registration.cpp
         src/core/feature_handlers.cpp
-        src/core/auto_feature_registry.cpp
+        # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
         src/core/intent_engine.cpp
         src/core/missing_handler_stubs.cpp
         src/core/model_training_pipeline.cpp
@@ -2072,6 +2080,9 @@ if(WIN32)
 
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
         src/win32app/RawrXD-Win32IDE.rc)
+
+    # Win32 IDE links sovereign_engines.cpp — avoid duplicate register_sovereign_engines in stubs
+    target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_SOVEREIGN_ENGINES=1)
 
     # =========================================================================
     # Phase 36: QuickJS Static Library (embedded JS runtime)
@@ -2377,6 +2388,7 @@ if(WIN32)
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agentic/ToolRegistry.cpp
         src/agentic/RawrXD_AgentLoop.cpp
+        src/agentic/agentic_executor.cpp
 
         # ── Autonomous Repair Orchestrator + Agent Memory Indexer ──────
         src/core/auto_repair_orchestrator.cpp
@@ -2390,6 +2402,7 @@ if(WIN32)
         src/agent/model_invoker.cpp
         src/agent/planner.cpp
         src/agent/eval_framework.cpp
+        src/agent/local_reasoning_engine.cpp
         src/agent/agent_self_repair.cpp
         src/agent/agent_self_healing_orchestrator.cpp
         src/agent/DiskRecoveryAgent.cpp
@@ -2456,7 +2469,9 @@ if(WIN32)
         src/core/alert_system.cpp
         src/core/feature_registration.cpp
         src/core/feature_handlers.cpp
-        src/core/auto_feature_registry.cpp
+        # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
+        # auto_feature_registry requires: TelemetryCollector, LayerOffloadManager, EngineRegistry,
+        # ReverseEngineering, AgenticDeepThinkingEngine, DiagnosticConsumer, etc.
         src/core/intent_engine.cpp
         src/core/missing_handler_stubs.cpp
         src/core/model_training_pipeline.cpp

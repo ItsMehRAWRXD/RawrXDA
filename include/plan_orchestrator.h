@@ -1,190 +1,110 @@
 /**
- * \file plan_orchestrator.h
- * \brief AI-driven multi-file edit coordinator with planning and execution
- * \author RawrXD Team
- * \date 2025-12-07
+ * plan_orchestrator.h — C++20, no Qt. AI-driven multi-file edit coordinator.
  */
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QVector>
-#include <QMap>
-#include <QJsonDocument>
+#include <string>
+#include <vector>
+#include <map>
+#include <functional>
 
 namespace RawrXD {
 
 class LSPClient;
 class InferenceEngine;
 
-/**
- * \brief Represents a single edit task in a multi-file refactoring plan
- */
 struct EditTask {
-    QString filePath;           // Absolute path to file
-    int startLine;              // Start line (0-indexed)
-    int endLine;                // End line (0-indexed)
-    QString operation;          // "replace", "insert", "delete", "rename"
-    QString oldText;            // Text to replace (for "replace")
-    QString newText;            // Replacement text (for "replace", "insert")
-    QString symbolName;         // Symbol name (for "rename")
-    QString newSymbolName;      // New symbol name (for "rename")
-    QString description;        // Human-readable description
-    int priority = 0;           // Execution priority (higher first)
+    std::string filePath;
+    int startLine = 0;
+    int endLine = 0;
+    std::string operation;
+    std::string oldText;
+    std::string newText;
+    std::string symbolName;
+    std::string newSymbolName;
+    std::string description;
+    int priority = 0;
 };
 
-/**
- * \brief Planning result with tasks and metadata
- */
 struct PlanningResult {
-    QVector<EditTask> tasks;    // List of edit tasks
-    QString planDescription;    // Overall plan description
-    QStringList affectedFiles;  // List of files to be modified
-    int estimatedChanges = 0;   // Estimated number of changes
-    bool success = false;       // Planning success flag
-    QString errorMessage;       // Error message if planning failed
+    std::vector<EditTask> tasks;
+    std::string planDescription;
+    std::vector<std::string> affectedFiles;
+    int estimatedChanges = 0;
+    bool success = false;
+    std::string errorMessage;
 };
 
-/**
- * \brief Execution result for a multi-file edit session
- */
 struct ExecutionResult {
-    int successCount = 0;       // Number of successful edits
-    int failureCount = 0;       // Number of failed edits
-    QStringList successfulFiles; // Files successfully edited
-    QStringList failedFiles;    // Files that failed to edit
-    QString errorMessage;       // Error message if execution failed
-    bool success = false;       // Overall execution success
+    int successCount = 0;
+    int failureCount = 0;
+    std::vector<std::string> successfulFiles;
+    std::vector<std::string> failedFiles;
+    std::string errorMessage;
+    bool success = false;
 };
 
-/**
- * \brief AI-driven multi-file edit orchestrator
- * 
- * Features:
- * - Generates edit plans from natural language prompts
- * - Uses InferenceEngine to analyze codebase and create task lists
- * - Executes multi-file edits via LSP workspace/applyEdit
- * - Provides rollback on failure
- * - Supports atomic multi-file refactoring
- * - Two-phase initialization pattern
- */
-class PlanOrchestrator : public QObject
+class PlanOrchestrator
 {
-    Q_OBJECT
-
 public:
-    explicit PlanOrchestrator(QObject* parent = nullptr);
-    ~PlanOrchestrator() override = default;
+    using PlanningStartedFn   = std::function<void(const std::string& prompt)>;
+    using PlanningCompletedFn = std::function<void(const PlanningResult&)>;
+    using ExecutionStartedFn  = std::function<void(int taskCount)>;
+    using TaskExecutedFn      = std::function<void(int taskIndex, bool success, const std::string& description)>;
+    using ExecutionCompletedFn = std::function<void(const ExecutionResult&)>;
+    using ErrorOccurredFn     = std::function<void(const std::string&)>;
 
-    /**
-     * Two-phase initialization
-     * Call after QApplication is ready
-     */
+    PlanOrchestrator() = default;
+    ~PlanOrchestrator() = default;
+
+    void setOnPlanningStarted(PlanningStartedFn f)     { m_onPlanningStarted = std::move(f); }
+    void setOnPlanningCompleted(PlanningCompletedFn f)   { m_onPlanningCompleted = std::move(f); }
+    void setOnExecutionStarted(ExecutionStartedFn f)    { m_onExecutionStarted = std::move(f); }
+    void setOnTaskExecuted(TaskExecutedFn f)            { m_onTaskExecuted = std::move(f); }
+    void setOnExecutionCompleted(ExecutionCompletedFn f) { m_onExecutionCompleted = std::move(f); }
+    void setOnErrorOccurred(ErrorOccurredFn f)          { m_onErrorOccurred = std::move(f); }
+
     void initialize();
-
-    /**
-     * Set LSP client for workspace edits
-     */
     void setLSPClient(LSPClient* client);
-
-    /**
-     * Set inference engine for AI planning
-     */
     void setInferenceEngine(InferenceEngine* engine);
 
-    /**
-     * Generate edit plan from user prompt
-     * 
-     * @param prompt Natural language refactoring request
-     * @param workspaceRoot Root directory of workspace
-     * @param contextFiles Optional list of files to analyze for context
-     * @return Planning result with task list
-     */
-    PlanningResult generatePlan(const QString& prompt, 
-                                 const QString& workspaceRoot,
-                                 const QStringList& contextFiles = QStringList());
+    PlanningResult generatePlan(const std::string& prompt,
+                                const std::string& workspaceRoot,
+                                const std::vector<std::string>& contextFiles = {});
 
-    /**
-     * Execute edit plan
-     * 
-     * @param plan Planning result from generatePlan()
-     * @param dryRun If true, simulate execution without making changes
-     * @return Execution result with success/failure counts
-     */
     ExecutionResult executePlan(const PlanningResult& plan, bool dryRun = false);
+    ExecutionResult planAndExecute(const std::string& prompt,
+                                   const std::string& workspaceRoot,
+                                   bool dryRun = false);
 
-    /**
-     * Generate and execute plan in one call
-     * 
-     * @param prompt Natural language refactoring request
-     * @param workspaceRoot Root directory of workspace
-     * @param dryRun If true, simulate execution without making changes
-     * @return Execution result
-     */
-    ExecutionResult planAndExecute(const QString& prompt,
-                                    const QString& workspaceRoot,
-                                    bool dryRun = false);
-
-    /**
-     * Get current workspace root
-     */
-    QString workspaceRoot() const { return m_workspaceRoot; }
-
-    /**
-     * Set workspace root directory
-     */
-    void setWorkspaceRoot(const QString& root);
-
-signals:
-    /**
-     * Emitted when planning starts
-     */
-    void planningStarted(const QString& prompt);
-
-    /**
-     * Emitted when planning completes
-     */
-    void planningCompleted(const PlanningResult& result);
-
-    /**
-     * Emitted when execution starts
-     */
-    void executionStarted(int taskCount);
-
-    /**
-     * Emitted for each task execution
-     */
-    void taskExecuted(int taskIndex, bool success, const QString& description);
-
-    /**
-     * Emitted when execution completes
-     */
-    void executionCompleted(const ExecutionResult& result);
-
-    /**
-     * Emitted on error
-     */
-    void errorOccurred(const QString& error);
+    std::string workspaceRoot() const { return m_workspaceRoot; }
+    void setWorkspaceRoot(const std::string& root);
 
 private:
-    QString buildPlanningPrompt(const QString& userPrompt, const QStringList& contextFiles);
-    PlanningResult parsePlanningResponse(const QString& response);
+    std::string buildPlanningPrompt(const std::string& userPrompt, const std::vector<std::string>& contextFiles);
+    PlanningResult parsePlanningResponse(const std::string& response);
     bool executeTask(const EditTask& task, bool dryRun);
     bool applyReplace(const EditTask& task, bool dryRun);
     bool applyInsert(const EditTask& task, bool dryRun);
     bool applyDelete(const EditTask& task, bool dryRun);
     bool applyRename(const EditTask& task, bool dryRun);
-    QStringList gatherContextFiles(const QString& workspaceRoot, int maxFiles = 50);
-    QString readFileContent(const QString& filePath);
-    bool writeFileContent(const QString& filePath, const QString& content);
+    std::vector<std::string> gatherContextFiles(const std::string& workspaceRoot, int maxFiles = 50);
+    std::string readFileContent(const std::string& filePath);
+    bool writeFileContent(const std::string& filePath, const std::string& content);
 
-    LSPClient* m_lspClient{};
-    InferenceEngine* m_inferenceEngine{};
-    QString m_workspaceRoot;
-    
-    QMap<QString, QString> m_originalFileContents;  // Backup for rollback
+    LSPClient* m_lspClient = nullptr;
+    InferenceEngine* m_inferenceEngine = nullptr;
+    std::string m_workspaceRoot;
+    std::map<std::string, std::string> m_originalFileContents;
     bool m_initialized = false;
+
+    PlanningStartedFn   m_onPlanningStarted;
+    PlanningCompletedFn m_onPlanningCompleted;
+    ExecutionStartedFn  m_onExecutionStarted;
+    TaskExecutedFn      m_onTaskExecuted;
+    ExecutionCompletedFn m_onExecutionCompleted;
+    ErrorOccurredFn     m_onErrorOccurred;
 };
 
 } // namespace RawrXD

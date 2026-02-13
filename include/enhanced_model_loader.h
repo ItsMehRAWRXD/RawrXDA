@@ -1,10 +1,11 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <memory>
-#include <optional>
+// C++20, no Qt. Multi-format model loader; callbacks replace signals.
+
+#include <string>
 #include <vector>
+#include <memory>
+#include <functional>
 #include "format_router.h"
 #include "hf_downloader.h"
 #include "ollama_proxy.h"
@@ -12,60 +13,49 @@
 class GGUFServer;
 class InferenceEngine;
 
-/**
- * @class EnhancedModelLoader
- * @brief Multi-format model loader with routing, caching, and error handling
- * 
- * Supports:
- * - Local GGUF files
- * - HuggingFace Hub downloads
- * - Ollama remote inference
- * - MASM-compressed models with automatic decompression
- */
-class EnhancedModelLoader : public QObject {
-    Q_OBJECT
-
+class EnhancedModelLoader
+{
 public:
-    explicit EnhancedModelLoader(QObject* parent = nullptr);
-    ~EnhancedModelLoader() override;
+    using ModelLoadedFn    = std::function<void(const std::string& path)>;
+    using LoadingProgressFn = std::function<void(int percent)>;
+    using LoadingStageFn   = std::function<void(const std::string& stage)>;
+    using ServerStartedFn  = std::function<void(uint16_t port)>;
+    using ServerStoppedFn  = std::function<void()>;
+    using ErrorFn          = std::function<void(const std::string&)>;
 
-    // Main loading interface (supports all formats)
-    bool loadModel(const QString& modelInput);
-    bool loadModelAsync(const QString& modelInput);
-    
-    // Format-specific loaders
-    bool loadGGUFLocal(const QString& modelPath);
-    bool loadHFModel(const QString& repoId);
-    bool loadOllamaModel(const QString& modelName);
-    bool loadCompressedModel(const QString& compressedPath);
+    EnhancedModelLoader() = default;
+    ~EnhancedModelLoader();
 
-    // Server management
-    bool startServer(quint16 port = 11434);
+    void setOnModelLoaded(ModelLoadedFn f)      { m_onModelLoaded = std::move(f); }
+    void setOnLoadingProgress(LoadingProgressFn f) { m_onLoadingProgress = std::move(f); }
+    void setOnLoadingStage(LoadingStageFn f)   { m_onLoadingStage = std::move(f); }
+    void setOnServerStarted(ServerStartedFn f) { m_onServerStarted = std::move(f); }
+    void setOnServerStopped(ServerStoppedFn f) { m_onServerStopped = std::move(f); }
+    void setOnError(ErrorFn f)                 { m_onError = std::move(f); }
+
+    bool loadModel(const std::string& modelInput);
+    bool loadModelAsync(const std::string& modelInput);
+
+    bool loadGGUFLocal(const std::string& modelPath);
+    bool loadHFModel(const std::string& repoId);
+    bool loadOllamaModel(const std::string& modelName);
+    bool loadCompressedModel(const std::string& compressedPath);
+
+    bool startServer(uint16_t port = 11434);
     void stopServer();
     bool isServerRunning() const;
 
-    // Status queries
-    QString getModelInfo() const;
-    quint16 getServerPort() const;
-    QString getServerUrl() const;
-    QString getLastError() const { return m_lastError; }
+    std::string getModelInfo() const;
+    uint16_t getServerPort() const { return m_port; }
+    std::string getServerUrl() const;
+    std::string getLastError() const { return m_lastError; }
     ModelFormat getLoadedFormat() const { return m_loadedFormat; }
 
-signals:
-    void modelLoaded(const QString& path);
-    void loadingProgress(int percent);
-    void loadingStage(const QString& stage);
-    void serverStarted(quint16 port);
-    void serverStopped();
-    void error(const QString& message);
-
 private:
-    bool decompressAndLoad(const QString& compressedPath, CompressionType compression);
-    
-    void logLoadStart(const QString& input, ModelFormat format);
-    void logLoadSuccess(const QString& input, ModelFormat format, qint64 durationMs);
-    void logLoadError(const QString& input, ModelFormat format, const QString& error);
-    
+    bool decompressAndLoad(const std::string& compressedPath, CompressionType compression);
+    void logLoadStart(const std::string& input, ModelFormat format);
+    void logLoadSuccess(const std::string& input, ModelFormat format, int64_t durationMs);
+    void logLoadError(const std::string& input, ModelFormat format, const std::string& error);
     bool setupTempDirectory();
     void cleanupTempFiles();
 
@@ -75,11 +65,17 @@ private:
     std::unique_ptr<HFDownloader> m_hfDownloader;
     std::unique_ptr<OllamaProxy> m_ollamaProxy;
 
-    QString m_modelPath;
-    QString m_lastError;
+    std::string m_modelPath;
+    std::string m_lastError;
     ModelFormat m_loadedFormat = ModelFormat::UNKNOWN;
-    quint16 m_port = 11434;
-    
+    uint16_t m_port = 11434;
     std::string m_tempDirectory;
     std::vector<std::string> m_tempFiles;
+
+    ModelLoadedFn    m_onModelLoaded;
+    LoadingProgressFn m_onLoadingProgress;
+    LoadingStageFn   m_onLoadingStage;
+    ServerStartedFn  m_onServerStarted;
+    ServerStoppedFn  m_onServerStopped;
+    ErrorFn          m_onError;
 };

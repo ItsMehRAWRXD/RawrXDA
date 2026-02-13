@@ -5,6 +5,7 @@
 #include "Win32IDE_AgenticBridge.h"
 #include "ModelConnection.h"
 #include "IDELogger.h"
+#include "../core/enterprise_license.h"
 #include <sstream>
 #include <algorithm>
 
@@ -508,6 +509,37 @@ void Win32IDE::handleAgentCommand(int commandId) {
             
             // Check active item
             CheckMenuItem(m_hMenu, commandId, MF_CHECKED);
+            break;
+        }
+
+        // --- Titan Kernel & 800B Dual-Engine ---
+        case IDM_AI_TITAN_TOGGLE: {
+            m_useTitanKernel = !m_useTitanKernel;
+            CheckMenuItem(m_hMenu, IDM_AI_TITAN_TOGGLE, m_useTitanKernel ? MF_CHECKED : MF_UNCHECKED);
+            appendToOutput(std::string("Titan Kernel ") + (m_useTitanKernel ? "ENABLED" : "DISABLED") + "\n", "Output", OutputSeverity::Info);
+            break;
+        }
+        case IDM_AI_800B_STATUS: {
+            bool unlocked = RawrXD::EnterpriseLicense::is800BUnlocked();
+            std::string msg = unlocked ? "800B Dual-Engine: UNLOCKED (Enterprise)" : "800B Dual-Engine: locked (requires Enterprise license)";
+            appendToOutput(msg + "\n", "Output", OutputSeverity::Info);
+            break;
+        }
+        // --- Multi-Agent ---
+        case IDM_AI_AGENT_MULTI_ENABLE: {
+            m_multiAgentEnabled = true;
+            appendToOutput("Multi-Agent mode ENABLED\n", "Output", OutputSeverity::Info);
+            if (m_agenticBridge) { /* propagate if bridge supports it */ }
+            break;
+        }
+        case IDM_AI_AGENT_MULTI_DISABLE: {
+            m_multiAgentEnabled = false;
+            appendToOutput("Multi-Agent mode DISABLED\n", "Output", OutputSeverity::Info);
+            break;
+        }
+        case IDM_AI_AGENT_MULTI_STATUS: {
+            std::string st = m_multiAgentEnabled ? "Multi-Agent: ENABLED" : "Multi-Agent: DISABLED";
+            appendToOutput(st + "\n", "Output", OutputSeverity::Info);
             break;
         }
 

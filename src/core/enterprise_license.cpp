@@ -122,7 +122,12 @@ bool EnterpriseLicense::Initialize() {
                       << std::endl;
             break;
     }
-    
+
+    // When license has DualEngine800B, set g_800B_Unlocked for ASM/kernel path
+    if (HasFeatureMask(LicenseFeature::DualEngine800B)) {
+        (void)Enterprise_Unlock800BDualEngine();
+    }
+
     return true;
 }
 

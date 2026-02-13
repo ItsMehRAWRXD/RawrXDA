@@ -1,44 +1,38 @@
 #pragma once
 
-#include <QObject>
-#include <QMap>
-#include <QVariant>
-#include <QStringList>
-#include <QJsonObject>
+// C++20, no Qt. Persistent memory space for agent conversations/preferences.
 
-// Manages persistent memory space for agent conversations/preferences.
-class MemorySpaceManager : public QObject
+#include <string>
+#include <map>
+#include <vector>
+
+class MemorySpaceManager
 {
-    Q_OBJECT
 public:
     static MemorySpaceManager& instance();
 
-    bool isEnabled() const;
-    void setEnabled(bool enabled);
+    bool isEnabled() const { return m_enabled; }
+    void setEnabled(bool enabled) { m_enabled = enabled; }
 
-    qint64 limitBytes() const;
-    void setLimitBytes(qint64 bytes);
+    int64_t limitBytes() const { return m_limitBytes; }
+    void setLimitBytes(int64_t bytes) { m_limitBytes = bytes; }
 
-    // Persist the in-memory map to disk, enforcing size limits.
-    void persist(const QMap<QString, QVariant>& memoryMap);
+    void persist(const std::map<std::string, std::string>& memoryMap);
+    std::map<std::string, std::string> loadMemory() const;
 
-    // Load the stored memory into a simple string map.
-    QMap<QString, QString> loadMemory() const;
-
-    // Utility helpers for UI/ops.
-    QStringList listKeys() const;
-    bool deleteKey(const QString& key);
+    std::vector<std::string> listKeys() const;
+    bool deleteKey(const std::string& key);
     void clearAll();
-    qint64 currentSizeBytes() const;
+    int64_t currentSizeBytes() const;
 
 private:
-    MemorySpaceManager();
-    QString memoryFilePath() const;
-    QString settingsFilePath() const;
-    QJsonObject readJson() const;
-    bool writeJson(const QJsonObject& obj) const;
+    MemorySpaceManager() = default;
+    std::string memoryFilePath() const;
+    std::string settingsFilePath() const;
+    std::string readJson() const;
+    bool writeJson(const std::string& json) const;
     void ensureConfig();
 
     bool m_enabled = false;
-    qint64 m_limitBytes = 134217728; // Default 128 MB
+    int64_t m_limitBytes = 134217728;
 };

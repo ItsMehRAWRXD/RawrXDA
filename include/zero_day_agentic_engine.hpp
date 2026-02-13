@@ -1,44 +1,41 @@
 #pragma once
-#include <QObject>
-#include <QJsonObject>
+
+// C++20, no Qt. Enterprise autonomous agent facade; callbacks replace signals.
+
+#include <string>
 #include <memory>
 #include <atomic>
+#include <functional>
 
 class UniversalModelRouter;
 class ToolRegistry;
-
-namespace RawrXD {
-class PlanOrchestrator;
-}
+namespace RawrXD { class PlanOrchestrator; }
 class Logger;
 class Metrics;
 
-/**
- * Enterprise-grade autonomous agent facade built on existing RawrXD systems.
- * Thread-safe, RAII, and instrumentation-ready. Uses synchronous PlanOrchestrator
- * and ToolRegistry while emitting Qt-friendly streaming signals.
- */
-class ZeroDayAgenticEngine : public QObject {
-    Q_OBJECT
+class ZeroDayAgenticEngine
+{
 public:
+    using AgentStreamFn  = std::function<void(const std::string& token)>;
+    using AgentCompleteFn = std::function<void(const std::string& summary)>;
+    using AgentErrorFn   = std::function<void(const std::string& error)>;
+
     explicit ZeroDayAgenticEngine(UniversalModelRouter* router,
                                   ToolRegistry* tools,
-                                  RawrXD::PlanOrchestrator* planner,
-                                  QObject* parent = nullptr);
+                                  RawrXD::PlanOrchestrator* planner);
     ~ZeroDayAgenticEngine();
 
-    // Fire-and-forget mission start. Runs asynchronously without blocking UI.
-    void startMission(const QString& userGoal);
+    void setOnAgentStream(AgentStreamFn f)   { m_onStream = std::move(f); }
+    void setOnAgentComplete(AgentCompleteFn f) { m_onComplete = std::move(f); }
+    void setOnAgentError(AgentErrorFn f)     { m_onError = std::move(f); }
 
-    // Graceful abort; safe from any thread.
+    void startMission(const std::string& userGoal);
     void abortMission();
-
-signals:
-    void agentStream(const QString& token);
-    void agentComplete(const QString& summary);
-    void agentError(const QString& error);
 
 private:
     struct Impl;
     std::unique_ptr<Impl> d;
+    AgentStreamFn   m_onStream;
+    AgentCompleteFn m_onComplete;
+    AgentErrorFn    m_onError;
 };

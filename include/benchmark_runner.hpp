@@ -1,80 +1,64 @@
 /**
- * \file benchmark_runner.hpp
- * \brief Background thread runner for benchmark execution with real tests
- * \author RawrXD Team
- * \date 2025-12-13
+ * benchmark_runner.hpp — C++20, no Qt. Background benchmark execution; callbacks replace signals.
  */
 
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QThread>
-#include <vector>
 #include <string>
+#include <vector>
 #include <memory>
+#include <functional>
 
 class InferenceEngine;
 class RealTimeCompletionEngine;
 
-/**
- * @brief Benchmark result for a single test
- */
 struct BenchmarkTestResult {
     std::string testName;
-    bool passed;
-    double avgLatencyMs;
-    double minLatencyMs;
-    double maxLatencyMs;
-    double p95LatencyMs;
-    double p99LatencyMs;
-    double medianLatencyMs;
-    size_t totalRequests;
-    size_t successfulRequests;
-    double successRate;
-    double throughputReqSec;
+    bool passed = false;
+    double avgLatencyMs = 0;
+    double minLatencyMs = 0;
+    double maxLatencyMs = 0;
+    double p95LatencyMs = 0;
+    double p99LatencyMs = 0;
+    double medianLatencyMs = 0;
+    size_t totalRequests = 0;
+    size_t successfulRequests = 0;
+    double successRate = 0;
+    double throughputReqSec = 0;
     std::string notes;
 };
 
-/**
- * @brief Runs benchmarks in a background thread
- */
-class BenchmarkRunner : public QObject {
-    Q_OBJECT
-
+class BenchmarkRunner
+{
 public:
-    explicit BenchmarkRunner(QObject* parent = nullptr);
+    using StartedFn = std::function<void()>;
+    using TestStartedFn = std::function<void(const std::string& testName)>;
+    using ProgressFn = std::function<void(int current, int total)>;
+    using TestCompletedFn = std::function<void(const std::string& testName, bool passed, double latencyMs)>;
+    using FinishedFn = std::function<void(int passed, int total, double executionTimeSec)>;
+    using ErrorFn = std::function<void(const std::string&)>;
+    using LogMessageFn = std::function<void(const std::string& message, int level)>;
+
+    BenchmarkRunner() = default;
     ~BenchmarkRunner();
 
-    // Start a benchmark run
+    void setOnStarted(StartedFn f) { m_onStarted = std::move(f); }
+    void setOnTestStarted(TestStartedFn f) { m_onTestStarted = std::move(f); }
+    void setOnProgress(ProgressFn f) { m_onProgress = std::move(f); }
+    void setOnTestCompleted(TestCompletedFn f) { m_onTestCompleted = std::move(f); }
+    void setOnFinished(FinishedFn f) { m_onFinished = std::move(f); }
+    void setOnError(ErrorFn f) { m_onError = std::move(f); }
+    void setOnLogMessage(LogMessageFn f) { m_onLogMessage = std::move(f); }
+
     void runBenchmarks(const std::vector<std::string>& selectedTests,
-                       const QString& modelPath,
-                       bool gpuEnabled,
-                       bool verbose);
-
-    // Stop current run
+                      const std::string& modelPath,
+                      bool gpuEnabled,
+                      bool verbose);
     void stop();
-
-    // Get results
     const std::vector<BenchmarkTestResult>& getResults() const;
 
-signals:
-    // Progress signals
-    void started();
-    void testStarted(const QString& testName);
-    void progress(int current, int total);
-    void testCompleted(const QString& testName, bool passed, double latencyMs);
-    void finished(int passed, int total, double executionTimeSec);
-    void error(const QString& errorMessage);
-
-    // Logging signals
-    void logMessage(const QString& message, int level);  // 0=DEBUG, 1=INFO, 2=SUCCESS, 3=WARNING, 4=ERROR
-
-private slots:
-    void executeRun();
-
 private:
-    // Test implementations
+    void executeRun();
     bool testColdStart(BenchmarkTestResult& result);
     bool testWarmCache(BenchmarkTestResult& result);
     bool testRapidFire(BenchmarkTestResult& result);
@@ -83,25 +67,26 @@ private:
     bool testMultiLine(BenchmarkTestResult& result);
     bool testGPUAcceleration(BenchmarkTestResult& result);
     bool testMemory(BenchmarkTestResult& result);
-
-    // Helper methods
     BenchmarkTestResult calculateStats(const std::string& name,
                                        const std::vector<double>& latencies,
                                        size_t successful,
                                        size_t total);
+    void log(const std::string& message, int level);
 
-    void log(const QString& message, int level);
-
-    // State
     std::vector<std::string> selectedTests_;
-    QString modelPath_;
-    bool gpuEnabled_;
-    bool verbose_;
-    bool shouldStop_;
-
+    std::string modelPath_;
+    bool gpuEnabled_ = false;
+    bool verbose_ = false;
+    bool shouldStop_ = false;
     std::vector<BenchmarkTestResult> results_;
     std::unique_ptr<InferenceEngine> engine_;
     std::unique_ptr<RealTimeCompletionEngine> completionEngine_;
-};
 
-// End of benchmark_runner.hpp
+    StartedFn       m_onStarted;
+    TestStartedFn   m_onTestStarted;
+    ProgressFn      m_onProgress;
+    TestCompletedFn m_onTestCompleted;
+    FinishedFn      m_onFinished;
+    ErrorFn         m_onError;
+    LogMessageFn    m_onLogMessage;
+};

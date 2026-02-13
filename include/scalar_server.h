@@ -1,42 +1,34 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
+// C++20, no Qt. TCP server for scalar inference; use Win32 SOCKET or platform API in impl.
 
-// Forward declarations
-class QTcpServer;
-class QTcpSocket;
-class TransformerBlockScalar;
-class InferenceEngine;
+#include <string>
+#include <memory>
+#include <functional>
 
-class ScalarServer : public QObject
+struct ScalarServerImpl;  // Opaque; impl uses SOCKET / Win32 or POSIX
+
+class ScalarServer
 {
-    Q_OBJECT
-
 public:
-    explicit ScalarServer(QObject *parent = nullptr);
+    ScalarServer();
     ~ScalarServer();
-    
-    bool startServer(quint16 port = 8080);
+
+    bool startServer(uint16_t port = 8080);
     void stopServer();
-    bool loadModel(const QString &modelPath);
-    
-    quint16 getPort() const;
+    bool loadModel(const std::string& modelPath);
+
+    uint16_t getPort() const;
     bool isRunning() const;
 
-private slots:
-    void handleNewConnection();
-    void handleClientData(QTcpSocket *clientSocket);
-
 private:
-    void handleInferenceRequest(QTcpSocket *clientSocket, const QJsonObject &request);
-    void handleChatRequest(QTcpSocket *clientSocket, const QJsonObject &request);
-    void handleAnalyzeRequest(QTcpSocket *clientSocket, const QJsonObject &request);
-    
-    void sendJsonResponse(QTcpSocket *clientSocket, const QJsonObject &response);
-    void sendErrorResponse(QTcpSocket *clientSocket, const QString &error);
-    
-    QTcpServer *m_server;
-    TransformerBlockScalar *m_transformerBlock;
-    InferenceEngine *m_inferenceEngine;
+    void handleNewConnection();
+    void handleClientData(void* clientSocket);  // SOCKET or platform handle
+    void handleInferenceRequest(void* clientSocket, const std::string& requestJson);
+    void handleChatRequest(void* clientSocket, const std::string& requestJson);
+    void handleAnalyzeRequest(void* clientSocket, const std::string& requestJson);
+    void sendJsonResponse(void* clientSocket, const std::string& responseJson);
+    void sendErrorResponse(void* clientSocket, const std::string& error);
+
+    std::unique_ptr<ScalarServerImpl> m_impl;
 };

@@ -15,7 +15,13 @@
 #include <nlohmann/json.hpp>
 #include <commdlg.h>
 #include <richedit.h>
+#ifndef CP_UNICODE
+#define CP_UNICODE 1200  // Unicode code page for Richedit EM_GETTEXTLENGTHEX/EM_SETTEXTEX
+#endif
 #include <commctrl.h>
+#ifndef TRACKBAR_CLASSW
+#define TRACKBAR_CLASSW L"msctls_trackbar32"
+#endif
 #include <shlobj.h>
 #include <shellapi.h>
 #include <iostream>
@@ -457,7 +463,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_JOIN_ROOM, L"&Join/Leave Room");
     AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_SHOW_DEVICES, L"Audio &Devices...");
     AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_METRICS, L"&Metrics...");
-    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, L"\uD83C\uDF99 &Voice Chat");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, L"&Voice Chat");
 
     // Voice Automation submenu (Phase 44: TTS for AI responses)
     HMENU hVoiceAutoMenu = CreatePopupMenu();
@@ -469,7 +475,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_UP, L"Increase Speech Rate\tCtrl+Shift+=");
     AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_DOWN, L"Decrease Speech Rate\tCtrl+Shift+-");
-    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, L"\uD83D\uDD0A Voice &Automation");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, L"Voice &Automation");
 
     // Backup submenu
     HMENU hBackupMenu = CreatePopupMenu();
@@ -479,7 +485,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_AUTO_TOGGLE, L"Toggle &Auto-Backup");
     AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_LIST, L"&List Backups...");
     AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_PRUNE, L"&Prune Old Backups");
-    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hBackupMenu, L"\uD83D\uDCBE &Backups");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hBackupMenu, L"&Backups");
 
     // Alert & Monitoring submenu
     HMENU hAlertMenu = CreatePopupMenu();
@@ -488,13 +494,13 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hAlertMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_SHOW_HISTORY, L"Alert &History...");
     AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_DISMISS_ALL, L"&Dismiss All Alerts");
-    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, L"\uD83D\uDD14 A&lerts");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, L"A&lerts");
 
     // Shortcuts & SLO (Tier 5)
     AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SHORTCUT_EDITOR, L"\u2328 &Keyboard Shortcuts...\tCtrl+K Ctrl+S");
     AppendMenuW(hToolsMenu, MF_STRING, IDM_SHORTCUT_SHOW, L"Keyboard Shortcut &Editor...");
-    AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, L"\uD83D\uDCCA &SLO Dashboard...");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, L"&SLO Dashboard...");
 
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
 
@@ -560,6 +566,14 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_512K, L"512K (Giga)");
     AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_1M, L"1M (Tera - Memory Plugin)");
     AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hContextMenu, L"&Context Window Size");
+
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_TITAN_TOGGLE, L"Use &Titan Kernel");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_800B_STATUS, L"800B Dual-Engine &Status");
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_AGENT_MULTI_ENABLE, L"Multi-Agent: &Enable");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_AGENT_MULTI_DISABLE, L"Multi-Agent: &Disable");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_AGENT_MULTI_STATUS, L"Multi-Agent: &Status");
 
     AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
 
@@ -650,7 +664,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
 void Win32IDE::createToolbar(HWND hwnd)
 {
 
-    m_hwndToolbar = CreateWindowExA(0, TOOLBARCLASSNAMEA, nullptr,
+    m_hwndToolbar = CreateWindowExW(0, TOOLBARCLASSNAMEW, nullptr,
                                    WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT,
                                    0, 0, 0, 0, hwnd, nullptr, m_hInstance, nullptr);
 
@@ -670,21 +684,21 @@ void Win32IDE::createToolbar(HWND hwnd)
 void Win32IDE::createTitleBarControls()
 {
     DWORD labelStyle = WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX;
-    m_hwndTitleLabel = CreateWindowExA(0, "STATIC", "RawrXD IDE", labelStyle,
+    m_hwndTitleLabel = CreateWindowExW(0, L"STATIC", L"RawrXD IDE", labelStyle,
                                       0, 0, 200, 24, m_hwndToolbar, (HMENU)IDC_TITLE_TEXT, m_hInstance, nullptr);
 
     DWORD buttonStyle = WS_CHILD | WS_VISIBLE | BS_FLAT;
-    auto createButton = [&](HWND& target, int controlId, const char* caption) {
-        target = CreateWindowExA(0, "BUTTON", caption, buttonStyle,
-                                 0, 0, 32, 24, m_hwndToolbar, (HMENU)controlId, m_hInstance, nullptr);
+    auto createButton = [&](HWND& target, int controlId, const wchar_t* caption) {
+        target = CreateWindowExW(0, L"BUTTON", caption, buttonStyle,
+                                0, 0, 32, 24, m_hwndToolbar, (HMENU)controlId, m_hInstance, nullptr);
     };
 
-    createButton(m_hwndBtnGitHub, IDC_BTN_GITHUB, "GH");
-    createButton(m_hwndBtnMicrosoft, IDC_BTN_MICROSOFT, "MS");
-    createButton(m_hwndBtnSettings, IDC_BTN_SETTINGS, "Gear");
-    createButton(m_hwndBtnMinimize, IDC_BTN_MINIMIZE, "-");
-    createButton(m_hwndBtnMaximize, IDC_BTN_MAXIMIZE, "[]");
-    createButton(m_hwndBtnClose, IDC_BTN_CLOSE, "X");
+    createButton(m_hwndBtnGitHub, IDC_BTN_GITHUB, L"GH");
+    createButton(m_hwndBtnMicrosoft, IDC_BTN_MICROSOFT, L"MS");
+    createButton(m_hwndBtnSettings, IDC_BTN_SETTINGS, L"Gear");
+    createButton(m_hwndBtnMinimize, IDC_BTN_MINIMIZE, L"-");
+    createButton(m_hwndBtnMaximize, IDC_BTN_MAXIMIZE, L"[]");
+    createButton(m_hwndBtnClose, IDC_BTN_CLOSE, L"X");
 
     RECT client{};
     GetClientRect(m_hwndMain, &client);
@@ -781,7 +795,7 @@ void Win32IDE::updateTitleBarText()
 
     std::string composed = fileName + "  •  " + projectFolder;
     if (composed != m_lastTitleBarText) {
-        SetWindowTextA(m_hwndTitleLabel, composed.c_str());
+        SetWindowTextW(m_hwndTitleLabel, utf8ToWide(composed).c_str());
         m_lastTitleBarText = composed;
     }
     // Keep breadcrumb bar in sync with current file (symbol path updates on cursor move)
@@ -863,14 +877,13 @@ void Win32IDE::recreateFonts() {
     // Apply editor font
     if (m_hwndEditor && m_editorFont) {
         SendMessage(m_hwndEditor, WM_SETFONT, (WPARAM)m_editorFont, TRUE);
-        // Also update CHARFORMAT for RichEdit
-        CHARFORMAT2A cf;
+        CHARFORMAT2W cf;
         memset(&cf, 0, sizeof(cf));
         cf.cbSize = sizeof(cf);
         cf.dwMask = CFM_FACE | CFM_SIZE;
-        cf.yHeight = dpiScale(16) * 15; // twips (1pt = 20 twips, height/96*72*20)
-        strcpy(cf.szFaceName, "Consolas");
-        SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+        cf.yHeight = dpiScale(16) * 15;
+        wcscpy_s(cf.szFaceName, L"Consolas");
+        SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
     }
 
     // Apply UI font to all known UI controls
@@ -917,13 +930,13 @@ void Win32IDE::recreateFonts() {
     // Terminal panes
     for (auto& pane : m_terminalPanes) {
         if (pane.hwnd) {
-            CHARFORMAT2A tcf;
+            CHARFORMAT2W tcf;
             memset(&tcf, 0, sizeof(tcf));
             tcf.cbSize = sizeof(tcf);
             tcf.dwMask = CFM_FACE | CFM_SIZE;
-            tcf.yHeight = dpiScale(9) * 20; // 9pt in twips
-            strcpy(tcf.szFaceName, "Consolas");
-            SendMessage(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
+            tcf.yHeight = dpiScale(9) * 20;
+            wcscpy_s(tcf.szFaceName, L"Consolas");
+            SendMessageW(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
         }
     }
 
@@ -938,7 +951,7 @@ void Win32IDE::recreateFonts() {
 void Win32IDE::createEditor(HWND hwnd)
 {
 
-    m_hwndEditor = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
+    m_hwndEditor = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
                                   WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
                                   0, 0, 0, 0, hwnd, (HMENU)IDC_EDITOR, m_hInstance, nullptr);
     if (!m_hwndEditor) {
@@ -946,60 +959,47 @@ void Win32IDE::createEditor(HWND hwnd)
         return;
     }
 
-    // Create DPI-scaled fonts for editor and UI
     m_currentDpi = getDpi();
     recreateFonts();
 
-    // Set default font and colors via CHARFORMAT
-    CHARFORMAT2A cf;
+    CHARFORMAT2W cf;
     memset(&cf, 0, sizeof(cf));
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
-    cf.yHeight = dpiScale(11) * 20; // points → twips, DPI-scaled
-    cf.crTextColor = RGB(212, 212, 212); // Light gray text (VS Code style)
-    strcpy(cf.szFaceName, "Consolas");
-    SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    cf.yHeight = dpiScale(11) * 20;
+    cf.crTextColor = RGB(212, 212, 212);
+    wcscpy_s(cf.szFaceName, L"Consolas");
+    SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
-    // Set default format for new text typed by user
-    SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
-    
-    // Set background color to dark
+    SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
+
     SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, RGB(30, 30, 30));
-
-    // Enable editing
     SendMessage(m_hwndEditor, EM_SETREADONLY, FALSE, 0);
-
-    // Set event mask to get notifications
     SendMessage(m_hwndEditor, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_SCROLL);
-
-    // Set text limit to a large value
     SendMessage(m_hwndEditor, EM_EXLIMITTEXT, 0, 0x7FFFFFFE);
 
-    // Set welcome text so the editor is visually alive
-    const char* welcomeText =
-        "// ============================================\r\n"
-        "// RawrXD IDE - Native Win32 AI Development\r\n"
-        "// ============================================\r\n"
-        "//\r\n"
-        "// Welcome! The editor is ready.\r\n"
-        "//\r\n"
-        "// Shortcuts:\r\n"
-        "//   Ctrl+N   New File\r\n"
-        "//   Ctrl+O   Open File\r\n"
-        "//   Ctrl+S   Save\r\n"
-        "//   Ctrl+F   Find\r\n"
-        "//   Ctrl+B   Toggle Sidebar\r\n"
-        "//   Ctrl+Shift+P   Command Palette\r\n"
-        "//\r\n"
-        "// Start typing or open a file to begin.\r\n"
-        "\r\n";
-    SetWindowTextA(m_hwndEditor, welcomeText);
+    static const wchar_t welcomeText[] =
+        L"// ============================================\r\n"
+        L"// RawrXD IDE - Native Win32 AI Development\r\n"
+        L"// ============================================\r\n"
+        L"//\r\n"
+        L"// Welcome! The editor is ready.\r\n"
+        L"//\r\n"
+        L"// Shortcuts:\r\n"
+        L"//   Ctrl+N   New File\r\n"
+        L"//   Ctrl+O   Open File\r\n"
+        L"//   Ctrl+S   Save\r\n"
+        L"//   Ctrl+F   Find\r\n"
+        L"//   Ctrl+B   Toggle Sidebar\r\n"
+        L"//   Ctrl+Shift+P   Command Palette\r\n"
+        L"//\r\n"
+        L"// Start typing or open a file to begin.\r\n"
+        L"\r\n";
+    SetWindowTextW(m_hwndEditor, welcomeText);
 
-    // Re-apply CHARFORMAT after setting text
-    SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
-    // Place caret at end
-    int textLen = GetWindowTextLengthA(m_hwndEditor);
+    int textLen = GetWindowTextLengthW(m_hwndEditor);
     SendMessage(m_hwndEditor, EM_SETSEL, textLen, textLen);
 
     initializeEditorSurface();
@@ -1031,7 +1031,7 @@ void Win32IDE::createTerminal(HWND hwnd)
     }
 
     // Create command input
-    m_hwndCommandInput = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    m_hwndCommandInput = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                                         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                                         0, 0, 0, 0, hwnd, (HMENU)IDC_COMMAND_INPUT, m_hInstance, nullptr);
     if (m_hwndCommandInput) {
@@ -1043,7 +1043,7 @@ void Win32IDE::createTerminal(HWND hwnd)
 
 int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, const std::string& name)
 {
-    HWND hwnd = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
+    HWND hwnd = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
                                 WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
                                 0, 0, 0, 0, m_hwndMain, nullptr, m_hInstance, nullptr);
 
@@ -1055,14 +1055,14 @@ int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, cons
     // Apply dark theme to terminal pane
     SendMessage(hwnd, EM_SETBKGNDCOLOR, 0, RGB(30, 30, 30));
 
-    CHARFORMAT2A cf;
+    CHARFORMAT2W cf;
     memset(&cf, 0, sizeof(cf));
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
-    cf.yHeight = 180; // 9 points
-    cf.crTextColor = RGB(204, 204, 204); // Light gray terminal text
-    strcpy(cf.szFaceName, "Consolas");
-    SendMessage(hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    cf.yHeight = 180;
+    cf.crTextColor = RGB(204, 204, 204);
+    wcscpy_s(cf.szFaceName, L"Consolas");
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
     int paneId = m_nextTerminalId++;
     TerminalPane pane;
@@ -1229,7 +1229,7 @@ void Win32IDE::clearAllTerminals()
 void Win32IDE::createStatusBar(HWND hwnd)
 {
 
-    m_hwndStatusBar = CreateWindowExA(0, STATUSCLASSNAMEA, "",
+    m_hwndStatusBar = CreateWindowExW(0, STATUSCLASSNAMEW, L"",
                                      WS_CHILD | WS_VISIBLE,
                                      0, 0, 0, 0, hwnd, (HMENU)IDC_STATUS_BAR, m_hInstance, nullptr);
     if (!m_hwndStatusBar) {
@@ -1239,8 +1239,8 @@ void Win32IDE::createStatusBar(HWND hwnd)
 
     int parts[] = {200, 400, 600, -1};
     SendMessage(m_hwndStatusBar, SB_SETPARTS, 4, (LPARAM)parts);
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)"Ctx: 0/128K  0%");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Ready");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"Ctx: 0/128K  0%");
 
 }
 
@@ -1266,11 +1266,11 @@ void Win32IDE::newFile()
         }
     }
 
-    SetWindowTextA(m_hwndEditor, "");
+    setWindowText(m_hwndEditor, "");
     m_currentFile.clear();
     m_fileModified = false;
     updateTitleBarText();
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"New file");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"New file");
     updateMenuEnableStates();
     syncEditorToGpuSurface();
     appendToOutput("New file created successfully\n", "Output", OutputSeverity::Info);
@@ -1312,15 +1312,19 @@ void Win32IDE::openFile()
         std::string pathUtf8 = wideToUtf8(szFile);
         appendToOutput("Opening file: " + pathUtf8 + "\n", "Output", OutputSeverity::Info);
         try {
-            std::ifstream file(std::filesystem::path(szFile));
-            if (file) {
-                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                SetWindowTextA(m_hwndEditor, content.c_str());
+            std::ifstream inStream(std::filesystem::path(szFile), std::ios::binary);
+            if (inStream) {
+                inStream.seekg(0, std::ios::end);
+                const std::streamsize size = inStream.tellg();
+                inStream.seekg(0, std::ios::beg);
+                std::string content(static_cast<size_t>(size), '\0');
+                if (size > 0) inStream.read(&content[0], size);
+                setWindowText(m_hwndEditor, content);
                 m_currentFile = pathUtf8;
                 m_fileModified = false;
                 setCurrentDirectoryFromFile(m_currentFile);
                 updateTitleBarText();
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File opened");
+                SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File opened");
                 updateMenuEnableStates();
                 syncEditorToGpuSurface();
                 appendToOutput("File opened successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
@@ -1352,29 +1356,27 @@ void Win32IDE::openFile(const std::string& filePath)
         std::ifstream file(std::filesystem::path(utf8ToWide(filePath)));
         if (file) {
             std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            SetWindowTextA(m_hwndEditor, content.c_str());
+            setWindowText(m_hwndEditor, content);
             m_currentFile = filePath;
             m_fileModified = false;
             setCurrentDirectoryFromFile(m_currentFile);
             updateTitleBarText();
 
-            // Add or activate tab for this file
             std::string displayName = extractLeafName(filePath);
             if (m_hwndTabBar) {
                 addTab(filePath, displayName);
             }
 
-            // Re-apply theme colors after loading new text
-            CHARFORMAT2A cf;
+            CHARFORMAT2W cf;
             memset(&cf, 0, sizeof(cf));
             cf.cbSize = sizeof(cf);
             cf.dwMask = CFM_COLOR | CFM_FACE | CFM_SIZE;
             cf.crTextColor = m_currentTheme.textColor;
             cf.yHeight = 220;
-            strcpy(cf.szFaceName, "Consolas");
-            SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+            wcscpy_s(cf.szFaceName, L"Consolas");
+            SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File opened");
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File opened");
             updateMenuEnableStates();
             updateLineNumbers();
             syncEditorToGpuSurface();
@@ -1407,7 +1409,7 @@ bool Win32IDE::saveFile()
             file << content;
             m_fileModified = false;
             updateTitleBarText();
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File saved");
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File saved");
             appendToOutput("File saved successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
             return true;
         }
@@ -1456,7 +1458,7 @@ void Win32IDE::startPowerShell()
     stopTerminal();
     if (pane->manager->start(Win32TerminalManager::PowerShell)) {
         appendText(pane->hwnd, "PowerShell started...\n");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"PowerShell");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"PowerShell");
         updateMenuEnableStates();
         appendToOutput("PowerShell started...\n", "Output", OutputSeverity::Info);
     }
@@ -1469,7 +1471,7 @@ void Win32IDE::startCommandPrompt()
     stopTerminal();
     if (pane->manager->start(Win32TerminalManager::CommandPrompt)) {
         appendText(pane->hwnd, "Command Prompt started...\n");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"CMD");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"CMD");
         updateMenuEnableStates();
         appendToOutput("Command Prompt started...\n", "Output", OutputSeverity::Info);
     }
@@ -1481,7 +1483,7 @@ void Win32IDE::stopTerminal()
     if (!pane || !pane->manager || !pane->manager->isRunning()) return;
     pane->manager->stop();
     appendText(pane->hwnd, "\nTerminal stopped.\n");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Stopped");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"Stopped");
     updateMenuEnableStates();
     appendToOutput("Terminal stopped.\n", "Output", OutputSeverity::Info);
 }
@@ -1491,7 +1493,7 @@ void Win32IDE::executeCommand()
     std::string command = getWindowText(m_hwndCommandInput);
     if (command.empty()) return;
 
-    SetWindowTextA(m_hwndCommandInput, "");
+    SetWindowTextW(m_hwndCommandInput, L"");
     
     // Command Parsing
     if (command[0] == '/' || command[0] == '!') {
@@ -1616,16 +1618,31 @@ void Win32IDE::onTerminalError(int paneId, const std::string& error)
 
 std::string Win32IDE::getWindowText(HWND hwnd)
 {
-    int length = GetWindowTextLengthA(hwnd);
-    std::string text(length + 1, '\0');
-    GetWindowTextA(hwnd, &text[0], length + 1);
-    text.resize(length);
-    return text;
+    int length = GetWindowTextLengthW(hwnd);
+    if (length <= 0) return {};
+    std::wstring wtext(length + 1, L'\0');
+    GetWindowTextW(hwnd, &wtext[0], length + 1);
+    wtext.resize(length);
+    return wideToUtf8(wtext.c_str());
+}
+
+// UTF-8 byte offset <-> UTF-16 character index for Rich Edit
+static int utf8ByteOffsetToCharIndex(const std::string& utf8, int byteOffset) {
+    if (byteOffset <= 0 || utf8.empty()) return 0;
+    if (byteOffset >= (int)utf8.size()) byteOffset = (int)utf8.size();
+    std::wstring w = utf8ToWide(utf8.substr(0, byteOffset));
+    return (int)w.size();
+}
+static int charIndexToUtf8ByteOffset(const std::string& utf8, int charIndex) {
+    if (charIndex <= 0 || utf8.empty()) return 0;
+    std::wstring w = utf8ToWide(utf8);
+    if (charIndex >= (int)w.size()) return (int)utf8.size();
+    return (int)wideToUtf8(w.substr(0, charIndex).c_str()).size();
 }
 
 void Win32IDE::setWindowText(HWND hwnd, const std::string& text)
 {
-    SetWindowTextA(hwnd, text.c_str());
+    SetWindowTextW(hwnd, utf8ToWide(text).c_str());
     if (hwnd == m_hwndEditor) {
         syncEditorToGpuSurface();
     }
@@ -1633,20 +1650,18 @@ void Win32IDE::setWindowText(HWND hwnd, const std::string& text)
 
 void Win32IDE::appendText(HWND hwnd, const std::string& text)
 {
-    // Get current text length
     GETTEXTLENGTHEX gtl;
     gtl.flags = GTL_DEFAULT;
-    gtl.codepage = CP_ACP;
+    gtl.codepage = CP_UNICODE;
     LONG length = SendMessage(hwnd, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
 
-    // Set selection to end
     SendMessage(hwnd, EM_SETSEL, length, length);
 
-    // Replace selection with new text
+    std::wstring wtext = utf8ToWide(text);
     SETTEXTEX st;
     st.flags = ST_DEFAULT;
-    st.codepage = CP_ACP;
-    SendMessage(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)text.c_str());
+    st.codepage = CP_UNICODE;
+    SendMessageW(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)wtext.c_str());
 
     if (hwnd == m_hwndEditor) {
         syncEditorToGpuSurface();
@@ -1710,26 +1725,25 @@ void Win32IDE::applyTheme()
     if (m_hwndEditor) {
         SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, m_currentTheme.backgroundColor);
 
-        CHARFORMAT2 cf;
+        CHARFORMAT2W cf;
         ZeroMemory(&cf, sizeof(cf));
         cf.cbSize = sizeof(cf);
         cf.dwMask = CFM_COLOR;
         cf.crTextColor = m_currentTheme.textColor;
         cf.dwEffects = 0;
-        SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
+        SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
     }
 
-    // 3. Terminal panes: background + text
     for (auto& pane : m_terminalPanes) {
         if (!pane.hwnd) continue;
         SendMessage(pane.hwnd, EM_SETBKGNDCOLOR, 0, m_currentTheme.panelBg);
-        CHARFORMAT2 tcf;
+        CHARFORMAT2W tcf;
         ZeroMemory(&tcf, sizeof(tcf));
         tcf.cbSize = sizeof(tcf);
         tcf.dwMask = CFM_COLOR;
         tcf.crTextColor = m_currentTheme.panelFg;
         tcf.dwEffects = 0;
-        SendMessage(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
+        SendMessageW(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
     }
 
     // 4. Deep apply to all surfaces (sidebar, activity bar, tabs, status bar, panels)
@@ -1908,40 +1922,37 @@ void Win32IDE::createOutputTabs()
     RECT client{}; GetClientRect(m_hwndMain, &client);
     int tabBarHeight = 24;
 
-    m_hwndOutputTabs = CreateWindowExA(0, WC_TABCONTROLA, "",
+    m_hwndOutputTabs = CreateWindowExW(0, WC_TABCONTROLW, L"",
         WS_CHILD | WS_VISIBLE | TCS_TABS,
         0, 0, client.right - 150, tabBarHeight,
         m_hwndMain, (HMENU)IDC_OUTPUT_TABS, m_hInstance, nullptr);
 
-    // LOGGING AS REQUESTED
     char logBuf[256];
     sprintf_s(logBuf, "OutputTabs HWND created: %p (Parent: %p)", m_hwndOutputTabs, m_hwndMain);
     LOG_INFO(std::string(logBuf));
 
-    // Add severity filter dropdown
-    m_hwndSeverityFilter = CreateWindowExA(0, "COMBOBOX", "",
+    m_hwndSeverityFilter = CreateWindowExW(0, L"COMBOBOX", L"",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
         client.right - 145, 2, 140, 100,
         m_hwndMain, (HMENU)IDC_SEVERITY_FILTER, m_hInstance, nullptr);
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"All Messages");
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"Info & Above");
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"Warnings & Errors");
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"Errors Only");
-    SendMessageA(m_hwndSeverityFilter, CB_SETCURSEL, m_severityFilterLevel, 0);
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"All Messages");
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Info & Above");
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Warnings & Errors");
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Errors Only");
+    SendMessage(m_hwndSeverityFilter, CB_SETCURSEL, m_severityFilterLevel, 0);
 
-    struct TabDef { const char* text; int id; const char* key; };
-    TabDef defs[] = {
-        {"Output", IDC_OUTPUT_EDIT_GENERAL, "Output"},
-        {"Errors", IDC_OUTPUT_EDIT_ERRORS,  "Errors"},
-        {"Debug",  IDC_OUTPUT_EDIT_DEBUG,   "Debug"},
-        {"Find Results", IDC_OUTPUT_EDIT_FIND, "Find Results"}
+    static const struct { const wchar_t* text; int id; const char* key; } defs[] = {
+        {L"Output", IDC_OUTPUT_EDIT_GENERAL, "Output"},
+        {L"Errors", IDC_OUTPUT_EDIT_ERRORS,  "Errors"},
+        {L"Debug",  IDC_OUTPUT_EDIT_DEBUG,   "Debug"},
+        {L"Find Results", IDC_OUTPUT_EDIT_FIND, "Find Results"}
     };
 
     for (int i = 0; i < 4; ++i) {
-        TCITEMA tie{}; tie.mask = TCIF_TEXT; tie.pszText = const_cast<char*>(defs[i].text);
+        TCITEMW tie{}; tie.mask = TCIF_TEXT; tie.pszText = const_cast<wchar_t*>(defs[i].text);
         TabCtrl_InsertItem(m_hwndOutputTabs, i, &tie);
 
-        HWND hEdit = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
+        HWND hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
             WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
             0, tabBarHeight, client.right, m_outputTabHeight - tabBarHeight,
             m_hwndMain, (HMENU)(INT_PTR)defs[i].id, m_hInstance, nullptr);
@@ -1970,8 +1981,8 @@ void Win32IDE::addOutputTab(const std::string& name)
     if (m_outputWindows.find(name) != m_outputWindows.end()) return;
     RECT client{}; GetClientRect(m_hwndMain, &client);
     int tabBarHeight = 24;
-    HWND hEdit = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+    HWND hEdit = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
         0, tabBarHeight, client.right, m_outputTabHeight - tabBarHeight,
         m_hwndMain, nullptr, m_hInstance, nullptr);
@@ -2016,7 +2027,7 @@ void Win32IDE::clearOutput(const std::string& tabName)
     std::string target = tabName.empty() ? m_activeOutputTab : tabName;
     auto it = m_outputWindows.find(target);
     if (it != m_outputWindows.end()) {
-        SetWindowTextA(it->second, "");
+        SetWindowTextW(it->second, L"");
     }
 }
 
@@ -2027,18 +2038,19 @@ void Win32IDE::formatOutput(const std::string& text, COLORREF color, const std::
     if (it == m_outputWindows.end()) return;
     
     HWND hwnd = it->second;
-    GETTEXTLENGTHEX gtl{}; gtl.flags = GTL_DEFAULT; gtl.codepage = CP_ACP;
+    GETTEXTLENGTHEX gtl{}; gtl.flags = GTL_DEFAULT; gtl.codepage = CP_UNICODE;
     LONG len = SendMessage(hwnd, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
     SendMessage(hwnd, EM_SETSEL, len, len);
-    
-    CHARFORMAT2A cf{};
+
+    CHARFORMAT2W cf{};
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_COLOR;
     cf.crTextColor = color;
-    SendMessage(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
-    
-    SETTEXTEX st{}; st.flags = ST_SELECTION; st.codepage = CP_ACP;
-    SendMessage(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)text.c_str());
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+
+    std::wstring wtext = utf8ToWide(text);
+    SETTEXTEX st{}; st.flags = ST_SELECTION; st.codepage = CP_UNICODE;
+    SendMessageW(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)wtext.c_str());
 }
 
 void Win32IDE::copyWithFormatting()
@@ -2048,9 +2060,11 @@ void Win32IDE::copyWithFormatting()
     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&range);
     if (range.cpMax <= range.cpMin) return;
     LONG len = range.cpMax - range.cpMin;
-    std::vector<char> buffer(len + 1); TEXTRANGEA tr; tr.chrg = range; tr.lpstrText = buffer.data();
-    SendMessage(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
-    std::string text(buffer.data());
+    std::vector<wchar_t> buffer(len + 1);
+    TEXTRANGEW tr{}; tr.chrg = range; tr.lpstrText = buffer.data();
+    SendMessageW(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
+    buffer[len] = L'\0';
+    std::string text = wideToUtf8(buffer.data());
     m_clipboardHistory.insert(m_clipboardHistory.begin(), text);
     if (m_clipboardHistory.size() > MAX_CLIPBOARD_HISTORY) m_clipboardHistory.resize(MAX_CLIPBOARD_HISTORY);
     if (OpenClipboard(m_hwndMain)) {
@@ -2148,14 +2162,14 @@ void Win32IDE::createMinimap()
     int minimapY = editorRect.top;
     int minimapHeight = editorRect.bottom - editorRect.top;
     
-    m_hwndMinimap = CreateWindowExA(
-        0, "STATIC", "",
+    m_hwndMinimap = CreateWindowExW(
+        0, L"STATIC", L"",
         WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
         minimapX, minimapY, m_minimapWidth, minimapHeight,
         m_hwndMain, nullptr, m_hInstance, nullptr);
     
     if (m_hwndMinimap) {
-        SetWindowLongPtrA(m_hwndMinimap, GWLP_USERDATA, (LONG_PTR)this);
+        SetWindowLongPtrW(m_hwndMinimap, GWLP_USERDATA, (LONG_PTR)this);
     }
     
     updateMinimap();
@@ -2165,18 +2179,13 @@ void Win32IDE::updateMinimap()
 {
     if (!m_hwndMinimap || !m_minimapVisible || !m_hwndEditor) return;
     
-    // Get editor content
-    int textLen = GetWindowTextLengthA(m_hwndEditor);
-    if (textLen == 0) {
+    std::string text = getWindowText(m_hwndEditor);
+    if (text.empty()) {
         m_minimapLines.clear();
         InvalidateRect(m_hwndMinimap, nullptr, TRUE);
         return;
     }
-    
-    std::string text(textLen + 1, '\0');
-    GetWindowTextA(m_hwndEditor, &text[0], textLen + 1);
-    text.resize(textLen);
-    
+
     // Split into lines for minimap rendering
     m_minimapLines.clear();
     m_minimapLineStarts.clear();
@@ -2947,21 +2956,17 @@ bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSe
 {
     if (!m_hwndEditor || searchText.empty()) return false;
     
-    // Get editor text
-    int textLen = GetWindowTextLengthA(m_hwndEditor);
-    if (textLen == 0) return false;
-    
-    std::string editorText(textLen + 1, 0);
-    GetWindowTextA(m_hwndEditor, &editorText[0], textLen + 1);
-    editorText.resize(textLen);
-    
-    // Get current selection to start search from there
+    std::string editorText = getWindowText(m_hwndEditor);
+    if (editorText.empty()) return false;
+    int textLen = (int)editorText.size();
+
     CHARRANGE selection;
     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&selection);
-    
-    int startPos = forward ? selection.cpMax : selection.cpMin - 1;
-    if (startPos < 0) startPos = 0;
-    if (startPos >= textLen) startPos = textLen - 1;
+
+    int startChar = forward ? selection.cpMax : selection.cpMin - 1;
+    if (startChar < 0) startChar = 0;
+    int startPos = charIndexToUtf8ByteOffset(editorText, startChar);
+    if (startPos >= textLen) startPos = textLen > 0 ? textLen - 1 : 0;
     
     size_t foundPos = std::string::npos;
     size_t foundLen = searchText.length();
@@ -3077,9 +3082,8 @@ bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSe
     }
     
     if (foundPos != std::string::npos) {
-        // Select found text
-        selection.cpMin = (LONG)foundPos;
-        selection.cpMax = (LONG)(foundPos + foundLen);
+        selection.cpMin = (LONG)utf8ByteOffsetToCharIndex(editorText, (int)foundPos);
+        selection.cpMax = (LONG)utf8ByteOffsetToCharIndex(editorText, (int)(foundPos + foundLen));
         SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&selection);
         SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
         m_lastFoundPos = foundPos;
@@ -3097,15 +3101,10 @@ int Win32IDE::replaceText(const std::string& searchText, const std::string& repl
     int replaceCount = 0;
     
     if (all) {
-        // Replace all occurrences
-        // Get editor text
-        int textLen = GetWindowTextLengthA(m_hwndEditor);
-        if (textLen == 0) return 0;
-        
-        std::string editorText(textLen + 1, 0);
-        GetWindowTextA(m_hwndEditor, &editorText[0], textLen + 1);
-        editorText.resize(textLen);
-        
+        std::string editorText = getWindowText(m_hwndEditor);
+        if (editorText.empty()) return 0;
+        int textLen = (int)editorText.size();
+
         std::string result;
         size_t pos = 0;
         
@@ -3126,7 +3125,7 @@ int Win32IDE::replaceText(const std::string& searchText, const std::string& repl
         
         if (replaceCount > 0) {
             result.append(editorText, pos, std::string::npos);
-            SetWindowTextA(m_hwndEditor, result.c_str());
+            setWindowText(m_hwndEditor, result);
             m_fileModified = true;
             updateLineNumbers();
         }
@@ -3150,7 +3149,7 @@ int Win32IDE::replaceText(const std::string& searchText, const std::string& repl
             }
             
             if (cmpSelected == cmpSearch) {
-                SendMessage(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)replaceText.c_str());
+                SendMessageW(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)utf8ToWide(replaceText).c_str());
                 m_fileModified = true;
                 replaceCount = 1;
                 
@@ -3394,9 +3393,9 @@ void Win32IDE::showSnippetManager()
                         if (MessageBoxW(hwndDlg, L"Delete this snippet?", L"Confirm", MB_YESNO) == IDYES) {
                             m_codeSnippets.erase(m_codeSnippets.begin() + sel);
                             SendMessage(hwndList, LB_DELETESTRING, sel, 0);
-                            SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, "");
-                            SetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, "");
-                            SetDlgItemTextA(hwndDlg, IDC_SNIPPET_CODE, "");
+                            SetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, L"");
+                            SetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, L"");
+                            SetDlgItemTextW(hwndDlg, IDC_SNIPPET_CODE, L"");
                         }
                     }
                 }
@@ -3404,17 +3403,17 @@ void Win32IDE::showSnippetManager()
                     // Update current snippet before saving
                     int sel = SendMessage(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel >= 0 && sel < (int)m_codeSnippets.size()) {
-                        char buffer[1024];
-                        GetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, buffer, 1024);
-                        m_codeSnippets[sel].name = buffer;
-                        GetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, buffer, 1024);
-                        m_codeSnippets[sel].description = buffer;
-                        
+                        wchar_t buffer[1024];
+                        GetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, buffer, 1024);
+                        m_codeSnippets[sel].name = wideToUtf8(buffer);
+                        GetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, buffer, 1024);
+                        m_codeSnippets[sel].description = wideToUtf8(buffer);
+
                         HWND hwndCode = GetDlgItem(hwndDlg, IDC_SNIPPET_CODE);
-                        int len = GetWindowTextLengthA(hwndCode);
-                        std::vector<char> codeBuffer(len + 1);
-                        GetWindowTextA(hwndCode, codeBuffer.data(), len + 1);
-                        m_codeSnippets[sel].code = codeBuffer.data();
+                        int len = GetWindowTextLengthW(hwndCode);
+                        std::vector<wchar_t> codeBuffer(len + 1);
+                        GetWindowTextW(hwndCode, codeBuffer.data(), len + 1);
+                        m_codeSnippets[sel].code = wideToUtf8(codeBuffer.data());
                     }
                     
                     saveCodeSnippets();
@@ -3457,38 +3456,32 @@ void Win32IDE::createFileExplorer(HWND hwndParent)
         return; // Already created
     }
 
-    // Create sidebar panel
-    m_hwndFileExplorer = CreateWindowExA(
-        0,
-        "STATIC",
-        "File Explorer",
+    m_hwndFileExplorer = CreateWindowExW(
+        0, L"STATIC", L"File Explorer",
         WS_CHILD | WS_VISIBLE | WS_BORDER,
         0, 30, m_sidebarWidth, 500,
         hwndParent,
         (HMENU)IDC_FILE_EXPLORER,
-        GetModuleHandleA(nullptr),
+        GetModuleHandle(nullptr),
         nullptr
     );
 
-    // Create TreeView control for file navigation
-    m_hwndFileTree = CreateWindowExA(
+    m_hwndFileTree = CreateWindowExW(
         WS_EX_CLIENTEDGE,
-        WC_TREEVIEWA,
-        "",
+        WC_TREEVIEWW,
+        L"",
         WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_LINESATROOT | TVS_HASBUTTONS,
         5, 5, m_sidebarWidth - 10, 490,
         m_hwndFileExplorer,
         (HMENU)IDC_FILE_TREE,
-        GetModuleHandleA(nullptr),
+        GetModuleHandle(nullptr),
         nullptr
     );
 
-    // Set TreeView font
-    SendMessageA(m_hwndFileTree, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+    SendMessage(m_hwndFileTree, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
 
-    // Subclass container so we receive TVN_DELETEITEM and can free lParam (std::string*)
-    SetWindowLongPtrA(m_hwndFileExplorer, GWLP_USERDATA, (LONG_PTR)this);
-    m_oldFileExplorerContainerProc = (WNDPROC)SetWindowLongPtrA(m_hwndFileExplorer, GWLP_WNDPROC, (LONG_PTR)FileExplorerContainerProc);
+    SetWindowLongPtrW(m_hwndFileExplorer, GWLP_USERDATA, (LONG_PTR)this);
+    m_oldFileExplorerContainerProc = (WNDPROC)SetWindowLongPtrW(m_hwndFileExplorer, GWLP_WNDPROC, (LONG_PTR)FileExplorerContainerProc);
 
     // Populate with drive letters
     populateFileTree(nullptr, "");
@@ -3500,14 +3493,13 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
         return;
     }
 
-    // If no parent, add drives
     if (!parentItem) {
-        TVINSERTSTRUCTA tvis = {};
+        TVINSERTSTRUCTW tvis = {};
         tvis.hParent = TVI_ROOT;
         tvis.hInsertAfter = TVI_LAST;
         tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
 
-        // Add all available drives
+        wchar_t buf[MAX_PATH];
         for (char drive = 'C'; drive <= 'Z'; ++drive) {
             std::string drivePath = std::string(1, drive) + ":";
             DWORD drives = GetLogicalDrives();
@@ -3515,18 +3507,19 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
 
             if (drives & (1 << driveNum)) {
                 std::string displayName = drivePath + "\\";
-                tvis.item.pszText = (LPSTR)displayName.c_str();
+                MultiByteToWideChar(CP_ACP, 0, displayName.c_str(), -1, buf, MAX_PATH);
+                tvis.item.pszText = buf;
                 tvis.item.lParam = (LPARAM) new std::string(drivePath);
 
-                HTREEITEM driveItem = (HTREEITEM)SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
+                HTREEITEM driveItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
                 m_treeItemPaths[driveItem] = drivePath;
 
-                // Add a dummy child so expand button appears
-                TVINSERTSTRUCTA dummyVis = {};
+                TVINSERTSTRUCTW dummyVis = {};
                 dummyVis.hParent = driveItem;
                 dummyVis.item.mask = TVIF_TEXT;
-                dummyVis.item.pszText = (LPSTR)"...";
-                SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                static wchar_t s_ellipsis[] = L"...";
+                dummyVis.item.pszText = s_ellipsis;
+                SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
             }
         }
         return;
@@ -3544,12 +3537,12 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
             return;
         }
 
-        TVINSERTSTRUCTA tvis = {};
+        TVINSERTSTRUCTW tvis = {};
         tvis.hParent = parentItem;
         tvis.hInsertAfter = TVI_LAST;
         tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
 
-        // Clear dummy items
+        wchar_t wbuf[MAX_PATH];
         HTREEITEM hChild = TreeView_GetChild(m_hwndFileTree, parentItem);
         while (hChild) {
             HTREEITEM hNext = TreeView_GetNextSibling(m_hwndFileTree, hChild);
@@ -3563,29 +3556,28 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
             }
 
             std::string fullPath = path + "\\" + findData.cFileName;
+            MultiByteToWideChar(CP_ACP, 0, findData.cFileName, -1, wbuf, MAX_PATH);
 
             if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                // It's a folder
-                tvis.item.pszText = findData.cFileName;
+                tvis.item.pszText = wbuf;
                 tvis.item.lParam = (LPARAM) new std::string(fullPath);
 
-                HTREEITEM folderItem = (HTREEITEM)SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
+                HTREEITEM folderItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
                 m_treeItemPaths[folderItem] = fullPath;
 
-                // Add dummy child
-                TVINSERTSTRUCTA dummyVis = {};
+                TVINSERTSTRUCTW dummyVis = {};
                 dummyVis.hParent = folderItem;
                 dummyVis.item.mask = TVIF_TEXT;
-                dummyVis.item.pszText = (LPSTR)"...";
-                SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                static wchar_t s_ellipsis2[] = L"...";
+                dummyVis.item.pszText = s_ellipsis2;
+                SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
             }
             else if (strlen(findData.cFileName) > 5 &&
                      strcmp(findData.cFileName + strlen(findData.cFileName) - 5, ".gguf") == 0) {
-                // It's a GGUF file
-                tvis.item.pszText = findData.cFileName;
+                tvis.item.pszText = wbuf;
                 tvis.item.lParam = (LPARAM) new std::string(fullPath);
 
-                HTREEITEM fileItem = (HTREEITEM)SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
+                HTREEITEM fileItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
                 m_treeItemPaths[fileItem] = fullPath;
             }
         } while (FindNextFileA(findHandle, &findData));
@@ -3760,8 +3752,8 @@ bool Win32IDE::loadGGUFModel(const std::string& filepath)
     appendToOutput(info, "Output", OutputSeverity::Info);
     
     // Update status bar
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-        (LPARAM)("Model: " + std::string(filepath)).c_str());
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0,
+        (LPARAM)utf8ToWide("Model: " + std::string(filepath)).c_str());
 
     // Auto-activate Copilot panel and send welcome message
     if (m_hwndSecondarySidebar && m_hwndCopilotChatOutput) {
@@ -3859,11 +3851,10 @@ void Win32IDE::createFileExplorer()
 {
     if (!m_hwndSidebar) return;
 
-    // Create file explorer tree view control
-    m_hwndFileExplorer = CreateWindowExA(
+    m_hwndFileExplorer = CreateWindowExW(
         WS_EX_CLIENTEDGE,
-        WC_TREEVIEWA,
-        "",
+        WC_TREEVIEWW,
+        L"",
         WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
         5, 30, m_sidebarWidth - 10, 400,
         m_hwndSidebar,
@@ -3935,19 +3926,19 @@ void Win32IDE::populateFileTree()
 
 HTREEITEM Win32IDE::addTreeItem(HTREEITEM hParent, const std::string& text, const std::string& fullPath, bool isDirectory)
 {
-    TVINSERTSTRUCTA tvins = {};
+    TVINSERTSTRUCTW tvins = {};
     tvins.hParent = hParent;
     tvins.hInsertAfter = TVI_LAST;
     tvins.item.mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-    
-    // Allocate memory for the full path (will be freed when item is deleted)
+
     char* pathData = new char[fullPath.length() + 1];
     strcpy_s(pathData, fullPath.length() + 1, fullPath.c_str());
-    
-    tvins.item.pszText = const_cast<char*>(text.c_str());
+
+    wchar_t wbuf[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, text.c_str(), -1, wbuf, MAX_PATH);
+    tvins.item.pszText = wbuf;
     tvins.item.lParam = reinterpret_cast<LPARAM>(pathData);
-    
-    // Set appropriate icon
+
     if (isDirectory) {
         tvins.item.iImage = 0;
         tvins.item.iSelectedImage = 0;
@@ -3958,8 +3949,8 @@ HTREEITEM Win32IDE::addTreeItem(HTREEITEM hParent, const std::string& text, cons
         tvins.item.iImage = 1;
         tvins.item.iSelectedImage = 1;
     }
-    
-    return TreeView_InsertItem(m_hwndFileExplorer, &tvins);
+
+    return (HTREEITEM)SendMessageW(m_hwndFileExplorer, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 }
 
 void Win32IDE::scanDirectory(const std::string& dirPath, HTREEITEM hParent)
@@ -4029,23 +4020,23 @@ void Win32IDE::expandTreeNode(HTREEITEM hItem)
     // Check if this node has been expanded before
     HTREEITEM hChild = TreeView_GetChild(m_hwndFileExplorer, hItem);
     if (hChild) {
-        TVITEMA item = {};
+        TVITEMW item = {};
         item.hItem = hChild;
         item.mask = TVIF_TEXT | TVIF_PARAM;
-        char buffer[MAX_PATH];
+        wchar_t buffer[MAX_PATH];
         item.pszText = buffer;
         item.cchTextMax = MAX_PATH;
-        
-        if (TreeView_GetItem(m_hwndFileExplorer, &item)) {
-            if (strcmp(item.pszText, "Loading...") == 0) {
+
+        if (SendMessageW(m_hwndFileExplorer, TVM_GETITEM, 0, (LPARAM)&item)) {
+            if (wcscmp(item.pszText, L"Loading...") == 0) {
                 // Remove the dummy item
                 TreeView_DeleteItem(m_hwndFileExplorer, hChild);
                 
                 // Get the full path and scan the directory
-                TVITEMA parentItem = {};
+                TVITEMW parentItem = {};
                 parentItem.hItem = hItem;
                 parentItem.mask = TVIF_PARAM;
-                if (TreeView_GetItem(m_hwndFileExplorer, &parentItem) && parentItem.lParam) {
+                if (SendMessageW(m_hwndFileExplorer, TVM_GETITEM, 0, (LPARAM)&parentItem) && parentItem.lParam) {
                     std::string dirPath = reinterpret_cast<char*>(parentItem.lParam);
                     scanDirectory(dirPath, hItem);
                 }
@@ -4059,11 +4050,11 @@ std::string Win32IDE::getSelectedFilePath()
     HTREEITEM hSelected = TreeView_GetSelection(m_hwndFileExplorer);
     if (!hSelected) return "";
     
-    TVITEMA item = {};
+    TVITEMW item = {};
     item.hItem = hSelected;
     item.mask = TVIF_PARAM;
-    
-    if (TreeView_GetItem(m_hwndFileExplorer, &item) && item.lParam) {
+
+    if (SendMessageW(m_hwndFileExplorer, TVM_GETITEM, 0, (LPARAM)&item) && item.lParam) {
         return std::string(reinterpret_cast<char*>(item.lParam));
     }
     
@@ -4110,7 +4101,7 @@ void Win32IDE::onFileExplorerDoubleClick()
                     }
                     
                     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                    SetWindowTextA(m_hwndEditor, content.c_str());
+                    setWindowText(m_hwndEditor, content);
                     m_currentFile = filePath;
                     updateTitleBarText();
                     file.close();
@@ -4137,7 +4128,7 @@ void Win32IDE::loadModelFromExplorer(const std::string& filePath)
             filename = filename.substr(lastSlash + 1);
         }
         
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)("Model: " + filename).c_str());
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide("Model: " + filename).c_str());
     } else {
         appendToOutput("❌ Failed to load model: " + filePath, "Errors", OutputSeverity::Error);
     }
@@ -4221,7 +4212,7 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
                 std::ifstream file(filePath);
                 if (file.is_open()) {
                     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                    SetWindowTextA(m_hwndEditor, content.c_str());
+                    setWindowText(m_hwndEditor, content);
                     m_currentFile = filePath;
                     updateTitleBarText();
                 }
@@ -4312,7 +4303,7 @@ void Win32IDE::toggleChatMode()
         appendToOutput("Type your messages in the command input. Use /exit-chat to return to terminal mode.", "Output", OutputSeverity::Info);
         
         // Update status bar
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Chat Mode");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"Chat Mode");
         
         // Clear existing chat display and show instructions
         appendChatMessage("System", "Chat mode activated! You can now talk with the loaded model.");
@@ -4320,7 +4311,7 @@ void Win32IDE::toggleChatMode()
     } else {
         // Exiting chat mode
         appendToOutput("🔧 Chat Mode OFF - Returned to terminal mode", "Output", OutputSeverity::Info);
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Terminal Mode");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"Terminal Mode");
         appendChatMessage("System", "Chat mode deactivated. Returned to terminal mode.");
     }
 }
@@ -4571,20 +4562,19 @@ void Win32IDE::showGitPanel()
     
     // Create Git panel if it doesn't exist
     if (!m_hwndGitPanel || !IsWindow(m_hwndGitPanel)) {
-        m_hwndGitPanel = CreateWindowExA(WS_EX_TOOLWINDOW, "STATIC", "Git Panel",
+        m_hwndGitPanel = CreateWindowExW(WS_EX_TOOLWINDOW, L"STATIC", L"Git Panel",
             WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX,
             200, 100, 600, 500, m_hwndMain, nullptr, m_hInstance, nullptr);
         
         // Branch and status info
-        m_hwndGitStatusText = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+        m_hwndGitStatusText = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
             WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY,
             10, 10, 580, 60, m_hwndGitPanel, nullptr, m_hInstance, nullptr);
-        
-        // Changed files list
-        CreateWindowExA(0, "STATIC", "Changed Files:", WS_CHILD | WS_VISIBLE,
+
+        CreateWindowExW(0, L"STATIC", L"Changed Files:", WS_CHILD | WS_VISIBLE,
             10, 80, 120, 20, m_hwndGitPanel, nullptr, m_hInstance, nullptr);
-        
-        m_hwndGitFileList = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "",
+
+        m_hwndGitFileList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
             WS_CHILD | WS_VISIBLE | LBS_STANDARD | LBS_EXTENDEDSEL | WS_VSCROLL,
             10, 105, 280, 300, m_hwndGitPanel, nullptr, m_hInstance, nullptr);
     }
@@ -4607,7 +4597,7 @@ void Win32IDE::refreshGitPanel()
     statusText += "Untracked: " + std::to_string(m_gitStatus.untracked);
     
     if (m_hwndGitStatusText) {
-        SetWindowTextA(m_hwndGitStatusText, statusText.c_str());
+        SetWindowTextW(m_hwndGitStatusText, utf8ToWide(statusText).c_str());
     }
     
     // Update file list
@@ -4632,7 +4622,7 @@ void Win32IDE::refreshGitPanel()
             }
             
             displayText += file.path;
-            SendMessageA(m_hwndGitFileList, LB_ADDSTRING, 0, (LPARAM)displayText.c_str());
+            SendMessageW(m_hwndGitFileList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(displayText).c_str());
         }
     }
 }
@@ -4644,22 +4634,21 @@ void Win32IDE::showCommitDialog()
         return;
     }
     
-    // Simple commit dialog using InputBox-style approach
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Git Commit",
+    HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Git Commit",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         150, 150, 500, 200, m_hwndMain, nullptr, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Commit Message:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Commit Message:", WS_CHILD | WS_VISIBLE,
         10, 10, 120, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    
-    m_hwndCommitDialog = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+
+    m_hwndCommitDialog = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY,
         10, 35, 470, 100, hwndDlg, nullptr, m_hInstance, nullptr);
-    
-    HWND hwndCommitBtn = CreateWindowExA(0, "BUTTON", "Commit", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+
+    CreateWindowExW(0, L"BUTTON", L"Commit", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         10, 145, 100, 30, hwndDlg, (HMENU)1, m_hInstance, nullptr);
-    
-    HWND hwndCancelBtn = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"BUTTON", L"Cancel", WS_CHILD | WS_VISIBLE,
         120, 145, 100, 30, hwndDlg, (HMENU)2, m_hInstance, nullptr);
     
     SetFocus(m_hwndCommitDialog);
@@ -5201,23 +5190,20 @@ void Win32IDE::createChatPanel() {
         return;
     }
 
-    // Create secondary sidebar container (right side)
-    m_hwndSecondarySidebar = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "STATIC", "",
+    m_hwndSecondarySidebar = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"STATIC", L"",
         WS_CHILD | WS_VISIBLE,
         0, 0, 300, 600,
         m_hwndMain, (HMENU)IDC_SECONDARY_SIDEBAR, m_hInstance, nullptr);
-    
+
     if (!m_hwndSecondarySidebar) {
         return;
     }
-    // Subclass sidebar to receive messages
     SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_USERDATA, (LONG_PTR)this);
     m_oldSidebarProc = (WNDPROC)SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProc);
-    
-    // Create header with title
-    m_hwndSecondarySidebarHeader = CreateWindowExA(
-        0, "STATIC", "AI Chat",
+
+    m_hwndSecondarySidebarHeader = CreateWindowExW(
+        0, L"STATIC", L"AI Chat",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 5, 290, 25,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
@@ -5229,15 +5215,13 @@ void Win32IDE::createChatPanel() {
         SendMessage(m_hwndSecondarySidebarHeader, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
     
-    // Model Selection Label
-    CreateWindowExA(0, "STATIC", "Model:",
+    CreateWindowExW(0, L"STATIC", L"Model:",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 35, 50, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
-    
-    // Model Selector Combobox
-    m_hwndModelSelector = CreateWindowExA(
-        0, "COMBOBOX", "",
+
+    m_hwndModelSelector = CreateWindowExW(
+        0, L"COMBOBOX", L"",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWN | CBS_AUTOHSCROLL,
         60, 35, 235, 200,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_SEND_BTN, m_hInstance, nullptr);
@@ -5247,41 +5231,34 @@ void Win32IDE::createChatPanel() {
         populateModelSelector();
     }
     
-    // Max Tokens Label
-    CreateWindowExA(0, "STATIC", "Max Tokens:",
+    CreateWindowExW(0, L"STATIC", L"Max Tokens:",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 60, 80, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
-    
-    // Max Tokens Label (value display)
-    m_hwndMaxTokensLabel = CreateWindowExA(0, "STATIC", "512",
+
+    m_hwndMaxTokensLabel = CreateWindowExW(0, L"STATIC", L"512",
         WS_CHILD | WS_VISIBLE | SS_RIGHT,
         245, 60, 50, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
-    
-    // Max Tokens Slider
-    m_hwndMaxTokensSlider = CreateWindowExA(
-        0, "TRACKBAR_CLASS", "",
+
+    m_hwndMaxTokensSlider = CreateWindowExW(
+        0, TRACKBAR_CLASSW, L"",
         WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS,
         5, 80, 290, 25,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CLEAR_BTN, m_hInstance, nullptr);
 
-    // --- NEW: Context Window Slider ---
-    // Context Label
-    CreateWindowExA(0, "STATIC", "Context:",
+    CreateWindowExW(0, L"STATIC", L"Context:",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 110, 80, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
 
-    // Context Value Label
-    m_hwndContextLabel = CreateWindowExA(0, "STATIC", "4K",
+    m_hwndContextLabel = CreateWindowExW(0, L"STATIC", L"4K",
         WS_CHILD | WS_VISIBLE | SS_RIGHT,
         245, 110, 50, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
 
-    // Context Slider (0-6 steps: 4k, 32k, 64k, 128k, 256k, 512k, 1M)
-    m_hwndContextSlider = CreateWindowExA(
-        0, "TRACKBAR_CLASS", "",
+    m_hwndContextSlider = CreateWindowExW(
+        0, TRACKBAR_CLASSW, L"",
         WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS,
         5, 130, 290, 25,
         m_hwndSecondarySidebar, (HMENU)IDC_AI_CONTEXT_SLIDER, m_hInstance, nullptr);
@@ -5301,44 +5278,42 @@ void Win32IDE::createChatPanel() {
         m_currentMaxTokens = 512;
     }
 
-    // Context Window Selection (4k to 1M)
-    CreateWindowExA(0, "STATIC", "Context (Mem):",
+    CreateWindowExW(0, L"STATIC", L"Context (Mem):",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 110, 100, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
 
-    HWND hContextCombo = CreateWindowExA(
-        0, "COMBOBOX", "",
+    HWND hContextCombo = CreateWindowExW(
+        0, L"COMBOBOX", L"",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
         110, 108, 185, 300,
-        m_hwndSecondarySidebar, (HMENU)4200, m_hInstance, nullptr); // ID 4200 for Context
-    
+        m_hwndSecondarySidebar, (HMENU)4200, m_hInstance, nullptr);
+
     if (hContextCombo) {
         SendMessage(hContextCombo, WM_SETFONT, (WPARAM)hFont, TRUE);
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"2048 (Standard)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"4096 (4k)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"32768 (32k)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"65536 (64k)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"131072 (128k)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"262144 (256k)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"524288 (512k)");
-        SendMessageA(hContextCombo, CB_ADDSTRING, 0, (LPARAM)"1048576 (1M)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"2048 (Standard)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"4096 (4k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"32768 (32k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"65536 (64k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"131072 (128k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"262144 (256k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"524288 (512k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"1048576 (1M)");
         SendMessage(hContextCombo, CB_SETCURSEL, 0, 0);
     }
-    
-    // --- Mode Toggles ---
+
     int toggleY = 140;
     int toggleX = 5;
-    
-    m_hwndChkMaxMode = CreateWindowExA(0, "BUTTON", "Max Mode", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+
+    m_hwndChkMaxMode = CreateWindowExW(0, L"BUTTON", L"Max Mode", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                       toggleX, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_MAX_MODE, m_hInstance, nullptr);
-    m_hwndChkDeepThink = CreateWindowExA(0, "BUTTON", "Deep Think", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    m_hwndChkDeepThink = CreateWindowExW(0, L"BUTTON", L"Deep Think", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                        toggleX + 150, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_DEEP_THINK, m_hInstance, nullptr);
-    
+
     toggleY += 25;
-    m_hwndChkDeepResearch = CreateWindowExA(0, "BUTTON", "Deep Research", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    m_hwndChkDeepResearch = CreateWindowExW(0, L"BUTTON", L"Deep Research", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                           toggleX, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_DEEP_RESEARCH, m_hInstance, nullptr);
-    m_hwndChkNoRefusal = CreateWindowExA(0, "BUTTON", "No Refusal", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    m_hwndChkNoRefusal = CreateWindowExW(0, L"BUTTON", L"No Refusal", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                        toggleX + 150, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_NO_REFUSAL, m_hInstance, nullptr);
 
     if (m_hwndChkMaxMode) SendMessage(m_hwndChkMaxMode, WM_SETFONT, (WPARAM)hFont, TRUE);
@@ -5346,42 +5321,38 @@ void Win32IDE::createChatPanel() {
     if (m_hwndChkDeepResearch) SendMessage(m_hwndChkDeepResearch, WM_SETFONT, (WPARAM)hFont, TRUE);
     if (m_hwndChkNoRefusal) SendMessage(m_hwndChkNoRefusal, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-    // Chat Output Textbox (Moved down further)
-    m_hwndCopilotChatOutput = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+    m_hwndCopilotChatOutput = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
         5, 200, 290, 210,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_OUTPUT, m_hInstance, nullptr);
-    
+
     if (m_hwndCopilotChatOutput) {
         SendMessage(m_hwndCopilotChatOutput, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
-    
-    // Chat Input Textbox
-    m_hwndCopilotChatInput = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+
+    m_hwndCopilotChatInput = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
         5, 415, 290, 85,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_INPUT, m_hInstance, nullptr);
-    
+
     if (m_hwndCopilotChatInput) {
         SendMessage(m_hwndCopilotChatInput, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
-    
-    // Send Button
-    m_hwndCopilotSendBtn = CreateWindowExA(
-        0, "BUTTON", "Send",
+
+    m_hwndCopilotSendBtn = CreateWindowExW(
+        0, L"BUTTON", L"Send",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         5, 505, 140, 30,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_SEND_BTN, m_hInstance, nullptr);
-    
+
     if (m_hwndCopilotSendBtn) {
         SendMessage(m_hwndCopilotSendBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
-    
-    // Clear Button
-    m_hwndCopilotClearBtn = CreateWindowExA(
-        0, "BUTTON", "Clear",
+
+    m_hwndCopilotClearBtn = CreateWindowExW(
+        0, L"BUTTON", L"Clear",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         150, 505, 140, 30,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CLEAR_BTN, m_hInstance, nullptr);
@@ -5427,7 +5398,7 @@ void Win32IDE::populateModelSelector() {
     
     // Populate combobox
     for (const auto& model : m_availableModels) {
-        SendMessageA(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)model.c_str());
+        SendMessageW(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(model).c_str());
     }
     
     // Set first item as selected
@@ -5443,10 +5414,9 @@ void Win32IDE::HandleCopilotSend() {
 
     if (!m_hwndCopilotChatInput || !m_hwndCopilotChatOutput) return;
 
-    // Get input text
-    char inputBuffer[2048] = {0};
-    GetWindowTextA(m_hwndCopilotChatInput, inputBuffer, sizeof(inputBuffer) - 1);
-    std::string userMessage(inputBuffer);
+    wchar_t inputBuffer[2048] = {0};
+    GetWindowTextW(m_hwndCopilotChatInput, inputBuffer, 2047);
+    std::string userMessage = wideToUtf8(inputBuffer);
     
     if (userMessage.empty()) {
         LOG_WARNING("Empty message - ignoring");
@@ -5462,26 +5432,25 @@ void Win32IDE::HandleCopilotSend() {
     // Display user message
     std::string displayText = "\n> User: " + userMessage + "\n";
     
-    // Append to output
-    int len = GetWindowTextLengthA(m_hwndCopilotChatOutput);
+    int len = GetWindowTextLengthW(m_hwndCopilotChatOutput);
     if (len > 0) {
         SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, len, len);
     }
-    SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)displayText.c_str());
+    SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(displayText).c_str());
     
     // Clear input
-    SetWindowTextA(m_hwndCopilotChatInput, "");
+    SetWindowTextW(m_hwndCopilotChatInput, L"");
     
     // Generate response asynchronously
     auto onResponse = [this](const std::string& response, bool complete) {
         if (!m_hwndCopilotChatOutput) return;
         
         std::string displayResp = "AI: " + response + (complete ? "\n" : "");
-        int len = GetWindowTextLengthA(m_hwndCopilotChatOutput);
+        int len = GetWindowTextLengthW(m_hwndCopilotChatOutput);
         if (len > 0) {
             SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, len, len);
         }
-        SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)displayResp.c_str());
+        SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(displayResp).c_str());
     };
     
     // Set model override temporarily
@@ -5495,8 +5464,8 @@ void Win32IDE::HandleCopilotSend() {
 void Win32IDE::HandleCopilotClear() {
     if (!m_hwndCopilotChatOutput || !m_hwndCopilotChatInput) return;
 
-    SetWindowTextA(m_hwndCopilotChatOutput, "Welcome to RawrXD AI Chat!\n\nSelect a model and type your message to begin.");
-    SetWindowTextA(m_hwndCopilotChatInput, "");
+    SetWindowTextW(m_hwndCopilotChatOutput, L"Welcome to RawrXD AI Chat!\n\nSelect a model and type your message to begin.");
+    SetWindowTextW(m_hwndCopilotChatInput, L"");
     m_chatHistory.clear();
 
 }
@@ -5513,9 +5482,9 @@ void Win32IDE::HandleCopilotStreamUpdate(const char* token, size_t length) {
 
     if (chunk.empty()) return;
 
-    int currentLen = GetWindowTextLengthA(m_hwndCopilotChatOutput);
-    SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, currentLen, currentLen);
-    SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)chunk.c_str());
+    int currentLen = GetWindowTextLengthW(m_hwndCopilotChatOutput);
+    SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, currentLen, currentLen);
+    SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(chunk).c_str());
     SendMessage(m_hwndCopilotChatOutput, WM_VSCROLL, SB_BOTTOM, 0);
 }
 
@@ -5533,7 +5502,7 @@ void Win32IDE::onMaxTokensChanged(int newValue) {
     
     // Update label
     if (m_hwndMaxTokensLabel) {
-        SetWindowTextA(m_hwndMaxTokensLabel, std::to_string(newValue).c_str());
+        SetWindowTextW(m_hwndMaxTokensLabel, utf8ToWide(std::to_string(newValue)).c_str());
     }
 
 }
@@ -5547,17 +5516,15 @@ void Win32IDE::onMaxTokensChanged(int newValue) {
 void Win32IDE::createLineNumberGutter(HWND hwndParent) {
     if (!hwndParent) return;
     
-    // Create the line number gutter window as a child of the parent
-    m_hwndLineNumbers = CreateWindowExA(
-        0, "STATIC", "",
+    m_hwndLineNumbers = CreateWindowExW(
+        0, L"STATIC", L"",
         WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
         0, 0, 50, 100,
         hwndParent, nullptr, m_hInstance, nullptr);
     
     if (m_hwndLineNumbers) {
-        SetPropA(m_hwndLineNumbers, "IDE_PTR", (HANDLE)this);
-        // Subclass for custom painting
-        m_oldLineNumberProc = (WNDPROC)SetWindowLongPtrA(m_hwndLineNumbers, GWLP_WNDPROC, (LONG_PTR)LineNumberProc);
+        SetPropW(m_hwndLineNumbers, L"IDE_PTR", (HANDLE)this);
+        m_oldLineNumberProc = (WNDPROC)SetWindowLongPtrW(m_hwndLineNumbers, GWLP_WNDPROC, (LONG_PTR)LineNumberProc);
     }
 }
 
@@ -5575,15 +5542,14 @@ void Win32IDE::paintLineNumbers(HDC hdc, RECT& rc) {
     int lineCount = (int)SendMessage(m_hwndEditor, EM_GETLINECOUNT, 0, 0);
     
     // Get the editor font metrics
-    HFONT hFont = m_editorFont ? m_editorFont : (HFONT)GetStockObject(ANSI_FIXED_FONT);
+    HFONT hFont = m_editorFont ? m_editorFont : (HFONT)GetStockObject(SYSTEM_FIXED_FONT);
     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
     
-    TEXTMETRICA tm;
-    GetTextMetricsA(hdc, &tm);
+    TEXTMETRICW tm;
+    GetTextMetricsW(hdc, &tm);
     int lineHeight = tm.tmHeight + tm.tmExternalLeading;
     if (lineHeight <= 0) lineHeight = 16;
     
-    // Dark theme colors
     SetBkColor(hdc, RGB(30, 30, 30));
     SetTextColor(hdc, RGB(133, 133, 133));
     
@@ -5594,27 +5560,26 @@ void Win32IDE::paintLineNumbers(HDC hdc, RECT& rc) {
     int visibleLines = (rc.bottom - rc.top) / lineHeight + 1;
     
     for (int i = 0; i < visibleLines && (firstVisibleLine + i) < lineCount; i++) {
-        int lineNum = firstVisibleLine + i + 1; // 1-based
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%4d", lineNum);
+        int lineNum = firstVisibleLine + i + 1;
+        wchar_t buf[16];
+        swprintf_s(buf, L"%4d", lineNum);
         
         RECT lineRect = {rc.left, i * lineHeight, rc.right - 4, (i + 1) * lineHeight};
         
-        // Highlight current line number
         if (lineNum == m_currentLine) {
             SetTextColor(hdc, RGB(200, 200, 200));
         } else {
             SetTextColor(hdc, RGB(133, 133, 133));
         }
         
-        DrawTextA(hdc, buf, -1, &lineRect, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+        DrawTextW(hdc, buf, -1, &lineRect, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
     }
     
     SelectObject(hdc, hOldFont);
 }
 
 LRESULT CALLBACK Win32IDE::LineNumberProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
+    Win32IDE* ide = (Win32IDE*)GetPropW(hwnd, L"IDE_PTR");
     
     if (uMsg == WM_PAINT) {
         PAINTSTRUCT ps;
@@ -5633,17 +5598,17 @@ LRESULT CALLBACK Win32IDE::LineNumberProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
     }
     
     if (ide && ide->m_oldLineNumberProc) {
-        return CallWindowProcA(ide->m_oldLineNumberProc, hwnd, uMsg, wParam, lParam);
+        return CallWindowProcW(ide->m_oldLineNumberProc, hwnd, uMsg, wParam, lParam);
     }
-    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
 // --- Editor Tab Bar ---
 void Win32IDE::createTabBar(HWND hwndParent) {
     if (!hwndParent) return;
     
-    m_hwndTabBar = CreateWindowExA(
-        0, WC_TABCONTROLA, "",
+    m_hwndTabBar = CreateWindowExW(
+        0, WC_TABCONTROLW, L"",
         WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK | TCS_TOOLTIPS,
         0, 0, 800, 28,
         hwndParent, nullptr, m_hInstance, nullptr);
@@ -5665,15 +5630,13 @@ void Win32IDE::addTab(const std::string& filePath, const std::string& displayNam
     
     m_editorTabs.push_back(tab);
     
-    // Add to the Win32 tab control
     if (m_hwndTabBar) {
-        TCITEMA tci = {};
+        std::wstring displayW = utf8ToWide(tab.displayName);
+        TCITEMW tci = {};
         tci.mask = TCIF_TEXT;
-        tci.pszText = const_cast<char*>(tab.displayName.c_str());
+        tci.pszText = const_cast<wchar_t*>(displayW.c_str());
         int index = (int)SendMessage(m_hwndTabBar, TCM_GETITEMCOUNT, 0, 0);
-        SendMessageA(m_hwndTabBar, TCM_INSERTITEMA, index, (LPARAM)&tci);
-        
-        // Activate the new tab
+        SendMessageW(m_hwndTabBar, TCM_INSERTITEMW, index, (LPARAM)&tci);
         SendMessage(m_hwndTabBar, TCM_SETCURSEL, index, 0);
         m_activeTabIndex = index;
     }
@@ -5686,11 +5649,7 @@ void Win32IDE::onTabChanged() {
     if (newIndex >= 0 && newIndex < (int)m_editorTabs.size() && newIndex != m_activeTabIndex) {
         // Save current tab content
         if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size()) {
-            int len = GetWindowTextLengthA(m_hwndEditor);
-            std::string content(len + 1, '\0');
-            GetWindowTextA(m_hwndEditor, &content[0], len + 1);
-            content.resize(len);
-            m_editorTabs[m_activeTabIndex].content = content;
+            m_editorTabs[m_activeTabIndex].content = getWindowText(m_hwndEditor);
         }
 
         // Stash annotations for the outgoing tab
@@ -5701,7 +5660,7 @@ void Win32IDE::onTabChanged() {
         const auto& tab = m_editorTabs[newIndex];
         
         // Load tab content into editor
-        SetWindowTextA(m_hwndEditor, tab.content.c_str());
+        setWindowText(m_hwndEditor, tab.content);
         
         // Update current file path
         m_currentFile = tab.filePath;
@@ -5715,7 +5674,7 @@ void Win32IDE::onTabChanged() {
         
         // Update status bar
         if (m_hwndStatusBar) {
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)tab.displayName.c_str());
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(tab.displayName).c_str());
         }
         
         // Update line numbers
@@ -5757,7 +5716,7 @@ void Win32IDE::removeTab(int index) {
     if (m_editorTabs.empty()) {
         m_activeTabIndex = -1;
         m_currentFile.clear();
-        SetWindowTextA(m_hwndEditor, "");
+        setWindowText(m_hwndEditor, "");
     } else if (index <= m_activeTabIndex) {
         m_activeTabIndex = std::max(0, m_activeTabIndex - 1);
         SendMessage(m_hwndTabBar, TCM_SETCURSEL, m_activeTabIndex, 0);
@@ -5793,7 +5752,7 @@ LRESULT CALLBACK Win32IDE::CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             if (!ide->m_powerShellCommandHistory.empty() && 
                 ide->m_powerShellHistoryIndex >= 0 &&
                 ide->m_powerShellHistoryIndex < (int)ide->m_powerShellCommandHistory.size()) {
-                SetWindowTextA(hwnd, ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex].c_str());
+                SetWindowTextW(hwnd, utf8ToWide(ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex]).c_str());
                 SendMessage(hwnd, EM_SETSEL, -1, -1); // cursor to end
             }
         }
@@ -5806,10 +5765,10 @@ LRESULT CALLBACK Win32IDE::CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam,
             ide->navigatePowerShellHistoryDown();
             if (ide->m_powerShellHistoryIndex >= 0 &&
                 ide->m_powerShellHistoryIndex < (int)ide->m_powerShellCommandHistory.size()) {
-                SetWindowTextA(hwnd, ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex].c_str());
+                SetWindowTextW(hwnd, utf8ToWide(ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex]).c_str());
                 SendMessage(hwnd, EM_SETSEL, -1, -1);
             } else {
-                SetWindowTextA(hwnd, "");
+                SetWindowTextW(hwnd, L"");
             }
         }
         return 0;
@@ -5891,7 +5850,7 @@ bool Win32IDE::resolveAndLoadModel(const std::string& input) {
 
     // For remote sources, resolve with progress reporting
     appendToOutput("Resolving model source (this may involve downloading)...\n", "Output", OutputSeverity::Info);
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)("Resolving: " + input).c_str());
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide("Resolving: " + input).c_str());
 
     // Progress callback that writes to the output panel
     auto progressCallback = [this](const RawrXD::ModelDownloadProgress& prog) {
@@ -5917,7 +5876,7 @@ bool Win32IDE::resolveAndLoadModel(const std::string& input) {
                      prog.filename.c_str());
         }
         if (m_hwndStatusBar) {
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)buf);
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(buf).c_str());
         }
     };
 
@@ -5942,7 +5901,7 @@ bool Win32IDE::resolveAndLoadModel(const std::string& input) {
         std::string err = "Failed to resolve model source: " + resolved.error_message;
         appendToOutput(err + "\n", "Errors", OutputSeverity::Error);
         ErrorReporter::report(err, m_hwndMain);
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Model resolution failed");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Model resolution failed");
         METRICS.increment("model.resolve_failures");
         return false;
     }
@@ -5992,9 +5951,9 @@ void Win32IDE::openModelFromHuggingFace() {
     // We'll create a modeless dialog with CreateWindowEx
     
     // Simple approach: use an edit control dialog
-    HWND hDlg = CreateWindowExA(
+    HWND hDlg = CreateWindowExW(
         WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
-        "STATIC", "Load from HuggingFace",
+        L"STATIC", L"Load from HuggingFace",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         CW_USEDEFAULT, CW_USEDEFAULT, 520, 340,
         m_hwndMain, nullptr, m_hInstance, nullptr);
@@ -6004,51 +5963,43 @@ void Win32IDE::openModelFromHuggingFace() {
         return;
     }
 
-    // Set dark background
-    SetClassLongPtrA(hDlg, GCLP_HBRBACKGROUND, (LONG_PTR)CreateSolidBrush(RGB(30, 30, 30)));
+    SetClassLongPtrW(hDlg, GCLP_HBRBACKGROUND, (LONG_PTR)CreateSolidBrush(RGB(30, 30, 30)));
     
-    // Label
-    HWND hLabel = CreateWindowExA(0, "STATIC",
-        "Enter HuggingFace repo ID (e.g., TheBloke/Llama-2-7B-GGUF)\n"
-        "or search term (e.g., 'llama 7b gguf'):",
+    HWND hLabel = CreateWindowExW(0, L"STATIC",
+        L"Enter HuggingFace repo ID (e.g., TheBloke/Llama-2-7B-GGUF)\n"
+        L"or search term (e.g., 'llama 7b gguf'):",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         16, 16, 480, 42, hDlg, nullptr, m_hInstance, nullptr);
     SendMessage(hLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
     
-    // Edit control for repo ID
-    HWND hEdit = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    HWND hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
         16, 64, 480, 26, hDlg, (HMENU)101, m_hInstance, nullptr);
     SendMessage(hEdit, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
     SetFocus(hEdit);
     
-    // Info label for results
-    HWND hInfoLabel = CreateWindowExA(0, "STATIC",
-        "Available GGUF files will appear below after Search.",
+    HWND hInfoLabel = CreateWindowExW(0, L"STATIC",
+        L"Available GGUF files will appear below after Search.",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         16, 100, 480, 20, hDlg, (HMENU)103, m_hInstance, nullptr);
     SendMessage(hInfoLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
 
-    // Listbox for GGUF file selection
-    HWND hList = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "",
+    HWND hList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_HASSTRINGS,
         16, 124, 480, 120, hDlg, (HMENU)102, m_hInstance, nullptr);
     SendMessage(hList, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
 
-    // Search button
-    HWND hSearchBtn = CreateWindowExA(0, "BUTTON", "Search / List Files",
+    HWND hSearchBtn = CreateWindowExW(0, L"BUTTON", L"Search / List Files",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         16, 256, 150, 30, hDlg, (HMENU)201, m_hInstance, nullptr);
     SendMessage(hSearchBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
 
-    // Download & Load button
-    HWND hLoadBtn = CreateWindowExA(0, "BUTTON", "Download && Load",
+    HWND hLoadBtn = CreateWindowExW(0, L"BUTTON", L"Download && Load",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         180, 256, 150, 30, hDlg, (HMENU)202, m_hInstance, nullptr);
     SendMessage(hLoadBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
 
-    // Cancel button
-    HWND hCancelBtn = CreateWindowExA(0, "BUTTON", "Cancel",
+    HWND hCancelBtn = CreateWindowExW(0, L"BUTTON", L"Cancel",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         346, 256, 150, 30, hDlg, (HMENU)IDCANCEL, m_hInstance, nullptr);
     SendMessage(hCancelBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
@@ -6093,15 +6044,15 @@ void Win32IDE::openModelFromHuggingFace() {
             }
             
             if (wmId == 201) { // Search button
-                char editText[512] = {0};
-                GetWindowTextA(hEdit, editText, sizeof(editText));
-                std::string input(editText);
+                wchar_t editText[512] = {0};
+                GetWindowTextW(hEdit, editText, 512);
+                std::string input = wideToUtf8(editText);
                 
                 if (input.empty()) continue;
                 
                 // Clear listbox
                 SendMessage(hList, LB_RESETCONTENT, 0, 0);
-                SetWindowTextA(hInfoLabel, "Searching HuggingFace...");
+                SetWindowTextW(hInfoLabel, L"Searching HuggingFace...");
                 UpdateWindow(hDlg);
                 
                 state.repoId = input;
@@ -6116,24 +6067,24 @@ void Win32IDE::openModelFromHuggingFace() {
                             auto searchResults = m_modelResolver->SearchHuggingFace(input, 10);
                             if (!searchResults.empty()) {
                                 // Show search results in the listbox
-                                SetWindowTextA(hInfoLabel, "Search results (select a repo):");
+                                SetWindowTextW(hInfoLabel, L"Search results (select a repo):");
                                 for (const auto& result : searchResults) {
                                     std::string entry = result.repo_id + " (" + 
                                         std::to_string(result.gguf_files.size()) + " GGUF files, " +
                                         std::to_string(result.downloads) + " downloads)";
-                                    SendMessageA(hList, LB_ADDSTRING, 0, (LPARAM)entry.c_str());
+                                    SendMessageW(hList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(entry).c_str());
                                 }
                                 // Store repo IDs for selection
                                 state.ggufFiles.clear(); // These are repo results, not file results
                             } else {
-                                SetWindowTextA(hInfoLabel, "No results found. Try a different search term.");
+                                SetWindowTextW(hInfoLabel, L"No results found. Try a different search term.");
                             }
                         } else {
                             // Show GGUF files
                             char infoBuf[256];
                             snprintf(infoBuf, sizeof(infoBuf), "Found %d GGUF files in %s:",
                                      (int)state.ggufFiles.size(), input.c_str());
-                            SetWindowTextA(hInfoLabel, infoBuf);
+                            SetWindowTextW(hInfoLabel, utf8ToWide(infoBuf).c_str());
                             
                             for (const auto& file : state.ggufFiles) {
                                 char fileLine[512];
@@ -6151,10 +6102,10 @@ void Win32IDE::openModelFromHuggingFace() {
                         }
                     } catch (const std::exception& e) {
                         std::string errMsg = "HuggingFace API error: " + std::string(e.what());
-                        SetWindowTextA(hInfoLabel, errMsg.c_str());
+                        SetWindowTextW(hInfoLabel, utf8ToWide(errMsg).c_str());
                     }
                 } else {
-                    SetWindowTextA(hInfoLabel, "ModelSourceResolver not initialized!");
+                    SetWindowTextW(hInfoLabel, L"ModelSourceResolver not initialized!");
                 }
                 
                 UpdateWindow(hDlg);
@@ -6180,7 +6131,7 @@ void Win32IDE::openModelFromHuggingFace() {
                         state.repoId = selStr;
                     }
                     // Re-search for GGUF files in this repo
-                    SetWindowTextA(hEdit, state.repoId.c_str());
+                    SetWindowTextW(hEdit, utf8ToWide(state.repoId).c_str());
                     PostMessage(hDlg, WM_COMMAND, MAKEWPARAM(201, BN_CLICKED), (LPARAM)hSearchBtn);
                 } else {
                     MessageBoxW(hDlg, L"Please select a GGUF file from the list first.",
@@ -6234,7 +6185,7 @@ void Win32IDE::openModelFromHuggingFace() {
                              (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)));
                 }
                 if (m_hwndStatusBar) {
-                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)buf);
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(buf).c_str());
                 }
             };
 
@@ -6249,8 +6200,7 @@ void Win32IDE::openModelFromHuggingFace() {
                     PostMessage(m_hwndMain, WM_APP + 201, 0, 0); // Signal: load downloaded model
                 } else {
                     if (m_hwndStatusBar) {
-                        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-                                    (LPARAM)"HuggingFace download failed");
+                        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"HuggingFace download failed");
                     }
                 }
             } catch (const std::exception& e) {
@@ -6258,8 +6208,7 @@ void Win32IDE::openModelFromHuggingFace() {
                 OutputDebugStringA(e.what());
                 OutputDebugStringA("\n");
                 if (m_hwndStatusBar) {
-                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-                                (LPARAM)"HuggingFace download exception");
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"HuggingFace download exception");
                 }
             }
         }).detach();
@@ -6283,7 +6232,7 @@ void Win32IDE::openModelFromOllama() {
     }
 
     appendToOutput("Scanning for Ollama GGUF blobs...\n", "Output", OutputSeverity::Info);
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Scanning Ollama blobs...");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Scanning Ollama blobs...");
     
     // Find all Ollama blobs with valid GGUF magic
     std::vector<RawrXD::OllamaBlobInfo> blobs;
@@ -6562,7 +6511,7 @@ void Win32IDE::openModelFromURL() {
                              (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)));
                 }
                 if (m_hwndStatusBar) {
-                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)buf);
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(buf).c_str());
                 }
             };
 
@@ -6575,8 +6524,7 @@ void Win32IDE::openModelFromURL() {
                     PostMessage(m_hwndMain, WM_APP + 201, 0, 0);
                 } else {
                     if (m_hwndStatusBar) {
-                        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-                                    (LPARAM)"URL download failed");
+                        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"URL download failed");
                     }
                 }
             } catch (const std::exception& e) {
@@ -6584,8 +6532,7 @@ void Win32IDE::openModelFromURL() {
                 OutputDebugStringA(e.what());
                 OutputDebugStringA("\n");
                 if (m_hwndStatusBar) {
-                    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-                                (LPARAM)"URL download exception");
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"URL download exception");
                 }
             }
         }).detach();

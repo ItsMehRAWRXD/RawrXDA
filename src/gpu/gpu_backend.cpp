@@ -1,5 +1,6 @@
 #include "gpu_backend.h"
 #include <cstdio>
+#include <cstdint>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

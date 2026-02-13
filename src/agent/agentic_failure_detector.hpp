@@ -6,7 +6,6 @@
 #include <mutex>
 #include <unordered_map>
 #include <chrono>
-#include <functional>
 #include <cstdint>
 
 enum class AgentFailureType {
@@ -78,10 +77,11 @@ public:
     void setEnabled(bool enable);
     bool isEnabled() const;
 
-    // Callbacks (replace Qt signals)
-    std::function<void(AgentFailureType, const std::string&)> onFailureDetected;
-    std::function<void(const std::vector<FailureInfo>&)> onMultipleFailuresDetected;
-    std::function<void(AgentFailureType, double)> onHighConfidenceDetection;
+    // Callbacks (replace Qt signals) — raw function pointers, no std::function
+    void (*onFailureDetected)(AgentFailureType type, const char* description, void* ctx) = nullptr;
+    void (*onMultipleFailuresDetected)(const FailureInfo* failures, size_t count, void* ctx) = nullptr;
+    void (*onHighConfidenceDetection)(AgentFailureType type, double confidence, void* ctx) = nullptr;
+    void* callbackContext = nullptr;  // Opaque user context for all callbacks
 
 private:
     void initializePatterns();

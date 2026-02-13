@@ -99,7 +99,7 @@ CorrectionResult AgenticPuppeteer::correctResponse(const std::string& originalRe
     m_stats.failuresDetected++;
     m_stats.failureTypeCount[static_cast<int>(failure)]++;
 
-    if (onFailureDetected) onFailureDetected(failure, diagnoseFailure(originalResponse));
+    if (onFailureDetected) onFailureDetected(failure, diagnoseFailure(originalResponse).c_str(), callbackContext);
 
     // Apply appropriate correction
     std::string corrected;
@@ -128,11 +128,11 @@ CorrectionResult AgenticPuppeteer::correctResponse(const std::string& originalRe
 
     if (corrected != originalResponse && !corrected.empty()) {
         m_stats.successfulCorrections++;
-        if (onCorrectionApplied) onCorrectionApplied(corrected);
+        if (onCorrectionApplied) onCorrectionApplied(corrected.c_str(), callbackContext);
         return CorrectionResult::ok(corrected, failure);
     } else {
         m_stats.failedCorrections++;
-        if (onCorrectionFailed) onCorrectionFailed(failure, "Could not generate correction");
+        if (onCorrectionFailed) onCorrectionFailed(failure, "Could not generate correction", callbackContext);
         return CorrectionResult::error(failure, "Correction generation failed");
     }
 }

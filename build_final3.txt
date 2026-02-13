@@ -1,112 +1,542 @@
-ninja: warning: premature end of file; recovering
-[1/302] Building CXX object src\reverse_engineering\CMakeFiles\RawrXD-RE-Library.dir\pe_tools\re_tools.cpp.obj
-[2/302] Building CXX object CMakeFiles\RawrEngine.dir\src\stubs.cpp.obj
-[3/302] Building CXX object CMakeFiles\RawrEngine.dir\src\memory_core.cpp.obj
-[4/302] Building CXX object CMakeFiles\RawrEngine.dir\src\main.cpp.obj
-D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[5/302] Building CXX object CMakeFiles\RawrEngine.dir\src\hot_patcher.cpp.obj
-[6/302] Building CXX object CMakeFiles\RawrEngine.dir\src\cpu_inference_engine.cpp.obj
-[7/302] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
-D:\rawrxd\src\complete_server.cpp(17): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\complete_server.cpp(17): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[8/302] Building CXX object CMakeFiles\RawrEngine.dir\src\subagent_core.cpp.obj
-[9/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_engine.cpp.obj
-[10/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_history.cpp.obj
-[11/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_policy.cpp.obj
-[12/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_explainability.cpp.obj
-[13/302] Building CXX object CMakeFiles\RawrEngine.dir\src\streaming_gguf_loader.cpp.obj
-[14/302] Building CXX object CMakeFiles\RawrEngine.dir\src\utils\Diagnostics.cpp.obj
-[15/302] Building CXX object CMakeFiles\RawrEngine.dir\src\gguf_loader.cpp.obj
-[16/302] Building CXX object CMakeFiles\RawrEngine.dir\src\gguf_vocab_resolver.cpp.obj
-[17/302] Building CXX object CMakeFiles\RawrEngine.dir\src\compression_interface.cpp.obj
-[18/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\inference_kernels.cpp.obj
-[19/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\gguf_core.cpp.obj
-[20/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\transformer.cpp.obj
-[21/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\sampler.cpp.obj
-[22/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\bpe_tokenizer.cpp.obj
-[23/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\rawr_engine.cpp.obj
-[24/302] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\core_generator.cpp.obj
-[25/302] Building CXX object CMakeFiles\RawrEngine.dir\src\codec\compression.cpp.obj
-[26/302] Building CXX object CMakeFiles\RawrEngine.dir\src\codec\brutal_gzip.cpp.obj
-[27/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\execution_scheduler.cpp.obj
-[28/302] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\cli_autonomy_loop.cpp.obj
-[29/302] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\agentic_decision_tree.cpp.obj
-D:\rawrxd\src\cli\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\cli\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[30/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agent_safety_contract.cpp.obj
-[31/302] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\cli_headless_systems.cpp.obj
-[32/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\confidence_gate.cpp.obj
-[33/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\deterministic_replay.cpp.obj
-[34/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\multi_response_engine.cpp.obj
-[35/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\execution_governor.cpp.obj
-[36/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\flash_attention.cpp.obj
-[37/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_engine_registry.cpp.obj
-[38/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_backend_bridge.cpp.obj
-[39/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\model_memory_hotpatch.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[40/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\byte_level_hotpatcher.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[41/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_hotpatch_manager.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[42/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\proxy_hotpatcher.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[43/302] Building CXX object CMakeFiles\RawrEngine.dir\src\server\gguf_server_hotpatch.cpp.obj
-D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[44/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
-D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[45/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\DiskRecoveryAgent.cpp.obj
-D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[46/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_decision_bridge.cpp.obj
-[47/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\production_release.cpp.obj
-[48/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\universal_model_hotpatcher.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[49/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_kernel_autotuner.cpp.obj
-D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[50/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\webrtc_signaling.cpp.obj
-[51/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\amd_gpu_accelerator.cpp.obj
-D:\rawrxd\src\core\amd_gpu_accelerator.h(26): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\amd_gpu_accelerator.h(26): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[52/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sandbox_integration.cpp.obj
-D:\rawrxd\src\core\sandbox_integration.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\sandbox_integration.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[53/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\intel_gpu_accelerator.cpp.obj
-D:\rawrxd\src\core\intel_gpu_accelerator.h(29): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\intel_gpu_accelerator.h(29): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[54/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\arm64_gpu_accelerator.cpp.obj
-D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[55/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cerebras_wse_accelerator.cpp.obj
-D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[56/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\accelerator_router.cpp.obj
-D:\rawrxd\src\core\accelerator_router.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\accelerator_router.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[57/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_gsi_hash.cpp.obj
-[58/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_native.cpp.obj
-[59/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_reference_provider.cpp.obj
-[60/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license_stubs.cpp.obj
-[61/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license.cpp.obj
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
-D:\rawrxd\src\core\enterprise_license.cpp(301): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+[0/1] Re-running CMake...
+-- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
+-- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- [Build Paths] MSVC CRT: C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717
+-- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
+-- MASM64 enabled: ASM kernels will be compiled
+-- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
+-- [RE] Deobfuscator MASM64 targets registered
+-- [RE] Model reverse pipeline MASM64 target registered
+-- [RE] Omega v3 MASM32 target registered
+-- [RE] Reverser compiler NASM targets registered
+-- [RE] Reverse Engineering Suite configured:
+--   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
+--   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
+--   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
+--   Deobfuscator:      3 ASM files + 1 INC + build/test
+--   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
+--   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
+--   Model Reverse:     model-llm-harvester.asm
+--   Security Toolkit:  RawrXD_IDE_unified.asm
+--   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
+-- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- MultiWindow Kernel DLL target enabled
+-- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
+-- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
+-- ═══════════════════════════════════════════════════════
+--  RawrXD_Gold.exe — Standalone Monolithic Deployment
+--  Build with: cmake --build . --target RawrXD-Gold
+-- ═══════════════════════════════════════════════════════
+-- [CI] self_test_gate target available (cmake --build . --target self_test_gate)
+-- [CI] RAWR_ASAN=OFF
+-- Configuring done (0.4s)
+-- Generating done (0.2s)
+-- Build files have been written to: D:/rawrxd/build
+[1/2] Cleaning all built files...
+Cleaning... 64 files.
+
+[1/1] [CI Gate] Building RawrXD-Win32IDE + RawrXD-Gold (compile + link check)
+FAILED: CMakeFiles/self_test_gate D:/rawrxd/build/CMakeFiles/self_test_gate 
+C:\WINDOWS\system32\cmd.exe /C "cd /D D:\rawrxd\build && "C:\Program Files\CMake\bin\cmake.exe" --build D:/rawrxd/build --config Release --target RawrXD-Win32IDE && "C:\Program Files\CMake\bin\cmake.exe" --build D:/rawrxd/build --config Release --target RawrXD-Gold"
+[1/400] Building ASM_MASM object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\asm\RawrXD_MultiWindow_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_MultiWindow_Kernel.asm
+
+[2/400] [MASM] Assembling RawrXD_Camellia256_Auth.asm (Encrypt-then-MAC, HMAC-SHA256, RCM2 Format)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Camellia256_Auth.asm
+
+[3/400] [MASM] Assembling RawrXD_AgenticOrchestrator.asm (23-Handler VTable, SPSC Queue, Metrics)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_AgenticOrchestrator.asm
+
+[4/400] [MASM] Assembling RawrXD_EnterpriseLicense.asm (License Validation, HWID, Feature Gates)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_EnterpriseLicense.asm
+
+[5/400] [MASM] Assembling RawrXD_MonacoCore.asm (Gap Buffer, Tokenizer)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_MonacoCore.asm
+
+[6/400] [MASM] Assembling RawrXD_KQuant_Kernel.asm (Q4_K AVX2+AVX-512 Dequant, CPUID Dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_KQuant_Kernel.asm
+
+[7/400] [MASM] Assembling RawrXD_LSP_SymbolIndex.asm (Hash Lookup, Batch FNV-1a, Prefix Scan)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_LSP_SymbolIndex.asm
+
+[8/400] [MASM] Assembling RawrXD_GGUF_Vulkan_Loader.asm (GGUF v3, FNV-1a, Tensor Staging, GGML Types)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_GGUF_Vulkan_Loader.asm
+
+[9/400] [MASM] Assembling RawrXD_License_Shield.asm (CRC32 Integrity, Anti-Debug, Tamper Detection)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_License_Shield.asm
+
+[10/400] [MASM] Assembling RawrXD_HardwareSynthesizer.asm (Dataflow, GEMM Spec, Verilog Gen)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_HardwareSynthesizer.asm
+
+[11/400] [MASM] Assembling RawrXD_LSP_AI_Bridge.asm (Symbol Ranking, Weight Fusion, Kind Boost)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_LSP_AI_Bridge.asm
+
+[12/400] [MASM] Assembling RawrXD_Debug_Engine.asm (Breakpoints, Watchpoints, Symbolic DynTrace)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Debug_Engine.asm
+
+[13/400] [MASM] Assembling RawrCodex.asm (Agentic Decision Tree, Pattern Engine)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrCodex.asm
+
+[14/400] [MASM] Assembling RawrXD_GSIHash.asm (PDB hash, GSI bucket probe)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_GSIHash.asm
+
+[15/400] [MASM] Assembling RawrXD_Camellia256.asm (Camellia-256 CTR Encrypt, 24-Round Feistel, HWID Key)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Camellia256.asm
+
+[16/400] [MASM] Assembling RawrXD_NeuralBridge.asm (EEG FFT, Intent Classify, Phosphene HUD)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_NeuralBridge.asm
+
+[17/400] [MASM] Assembling RawrXD_OmegaOrchestrator.asm (Task DAG, Agents, Pipeline, Self-Improve)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_OmegaOrchestrator.asm
+
+[18/400] [MASM] Assembling RawrXD_PDBKernel.asm (MSF magic, PubSym scan, GUID hex)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_PDBKernel.asm
+
+[19/400] [MASM] Assembling RawrXD_PerfCounters.asm (RDTSC Cycle Histograms, 64 Slots)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_PerfCounters.asm
+
+[20/400] [MASM] Assembling RawrXD_QuadBuffer_Streamer.asm (4-Buffer Ring, Zero-Copy Streaming)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_QuadBuffer_Streamer.asm
+
+[21/400] [MASM] Assembling RawrXD_RefProvider.asm (Reference hash, pattern match)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RefProvider.asm
+
+[22/400] [MASM] Assembling RawrXD_RouterBridge.asm (Fast-Path Router Dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RouterBridge.asm
+
+[23/400] [MASM] Assembling RawrXD_SelfHost_Engine.asm (Self-Compile, uASM, Atomic Swap)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SelfHost_Engine.asm
+
+[24/400] [MASM] Assembling RawrXD_SelfPatch_Engine.asm (Hotpatch Table, Code Caves, CPUID Optimize, Quant Switch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SelfPatch_Engine.asm
+
+[25/400] [MASM] Assembling RawrXD_Streaming_QuadBuffer.asm (SPSC Ring, GDI BitBlt, 60 FPS Render)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Streaming_QuadBuffer.asm
+
+[26/400] [MASM] Assembling RawrXD_StubDetector.asm (Stub Pattern Scanner)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_StubDetector.asm
+
+[27/400] [MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Swarm_Network.asm
+
+[28/400] [MASM] Assembling RawrXD_TridentBeacon.asm (COM Trident Host, Beacon IDispatch, Ollama Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon.asm
+
+[29/400] [MASM] Assembling RawrXD_SocketResponder.asm (IOCP HTTP: /health /status /models sub-0.5ms)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SocketResponder.asm
+
+[30/400] [MASM] Assembling RawrXD_TridentBeacon_GPU.asm (IE11 Feature Control, WebGL FBO, OpenGL Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon_GPU.asm
+
+[31/400] [MASM] Assembling swarm_tensor_stream.asm (CRC32C, RLE, chunks)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/swarm_tensor_stream.asm
+
+[32/400] [MASM] Assembling requantize_q4km_to_q2k_avx512.asm (AVX-512 DQ/BW)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/requantize_q4km_to_q2k_avx512.asm
+
+[33/400] [MASM] Assembling RawrXD_VulkanBridge.asm (GPU Dispatch Shim: Init, MatMul, FlashAttn, Hotswap)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_VulkanBridge.asm
+
+[34/400] [MASM] Assembling gpu_requantize_rocm.asm (HIP dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/gpu_requantize_rocm.asm
+
+[35/400] [MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_dll_entry.asm
+
+[36/400] [MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_engine.asm
+
+[37/400] [MASM64] Assembling RawrXD_MetaReverse.asm (authenticity detection)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm
+
+[38/400] [MASM] Assembling RawrXD_Watchdog.asm (.text HMAC-SHA256 Integrity, PE Parser, Tamper Detect)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Watchdog.asm
+
+[39/400] [MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_phase39.asm
+
+[40/400] [MASM64] Assembling RawrXD_OmegaDeobfuscator.asm (AVX-512 deobfuscation)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+
+[41/400] [MASM64] Assembling model-llm-harvester.asm (LLM weight generator)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/model_reverse/model-llm-harvester.asm
+
+[42/400] [MASM] Assembling RawrXD_Speciator.asm (Genome, Crossover, Mutation, Speciation)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Speciator.asm
+
+[43/400] [MASM] Assembling RawrXD_MeshBrain.asm (CRDT, ZKP, DHT, FedAvg, Gossip)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_MeshBrain.asm
+
+[44/400] Building CXX object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\core\multiwindow_scheduler.cpp.obj
+[45/400] Building CXX object src\reverse_engineering\CMakeFiles\RawrXD-RE-Library.dir\pe_tools\re_tools.cpp.obj
+[46/400] Linking CXX shared library bin\RawrXD_MultiWindow_Kernel.dll
+[47/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Autonomy.cpp.obj
+[48/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
+[49/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativePipeline.cpp.obj
+[50/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+[51/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+[52/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
+[53/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
+[54/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+[55/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
+[56/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+[57/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+[58/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
+[59/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+[60/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+[61/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+[62/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[63/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Annotations.cpp.obj
+[64/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+[65/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[66/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+[67/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
+[68/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Session.cpp.obj
+[69/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier2Cosmetics.cpp.obj
+[70/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
+[71/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Breadcrumbs.cpp.obj
+[72/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier1Cosmetics.cpp.obj
+[73/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
+[74/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_OutlinePanel.cpp.obj
+[75/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
+[76/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_RenamePreview.cpp.obj
+[77/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+[78/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32TerminalManager.cpp.obj
+[79/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
+[80/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
+[81/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\stubs.cpp.obj
+[82/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BackendSwitcher.cpp.obj
+[83/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LLMRouter.cpp.obj
+[84/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
+[85/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\plugin_system\win32_plugin_loader.cpp.obj
+[86/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TransparentRenderer.cpp.obj
+[87/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+[88/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ExecutionGovernor.cpp.obj
+[89/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AsmSemantic.cpp.obj
+[90/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
+[91/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MultiResponse.cpp.obj
+[92/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DiffEngine.cpp.obj
+[93/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\config\IDEConfig.cpp.obj
+[94/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentPanel.cpp.obj
+[95/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSP_AI_Bridge.cpp.obj
+[96/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OllamaProvider.cpp.obj
+[97/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DiskRecovery.cpp.obj
+[98/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentHistory.cpp.obj
+[99/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\BoundedAgentLoop.cpp.obj
+[100/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OrchestratorBridge.cpp.obj
+[101/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\subagent_core.cpp.obj
+[102/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentOrchestrator.cpp.obj
+[103/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SubAgent.cpp.obj
+[104/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj
+[105/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[106/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_memory_indexer.cpp.obj
+[107/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[108/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\RawrXD_AgentLoop.cpp.obj
+[109/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Plugins.cpp.obj
+[110/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\DiskRecoveryAgent.cpp.obj
+[111/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\ErrorReporter.cpp.obj
+[112/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_engine.cpp.obj
+[113/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentToolHandlers.cpp.obj
+[114/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\RawrXD_ToolRegistry.cpp.obj
+[115/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_executor.cpp.obj
+[116/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\hot_patcher.cpp.obj
+[117/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\Diagnostics.cpp.obj
+[118/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_transaction.cpp.obj
+[119/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\ToolRegistry.cpp.obj
+[120/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_vocab_resolver.cpp.obj
+[121/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\memory_core.cpp.obj
+[122/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\compression_interface.cpp.obj
+[123/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_loader.cpp.obj
+[124/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\engine_manager.cpp.obj
+[125/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\inference_kernels.cpp.obj
+[126/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\transformer.cpp.obj
+[127/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_explainability.cpp.obj
+[128/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_history.cpp.obj
+[129/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\codec\compression.cpp.obj
+[130/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_policy.cpp.obj
+[131/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\streaming_gguf_loader.cpp.obj
+[132/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\sampler.cpp.obj
+[133/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\codec\brutal_gzip.cpp.obj
+[134/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\rawr_engine.cpp.obj
+[135/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\pyre_compute.cpp.obj
+[136/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\gguf_core.cpp.obj
+[137/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\bpe_tokenizer.cpp.obj
+[138/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\camellia256_bridge.cpp.obj
+[139/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cpu_inference_engine.cpp.obj
+[140/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_license.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\enterprise_license.cpp(306): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
         with
         [
             _Elem=wchar_t,
             _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
             _Alloc=std::allocator<char>
         ]
-D:\rawrxd\src\core\enterprise_license.cpp(301): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+D:\rawrxd\src\core\enterprise_license.cpp(306): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
         with
         [
             _Size_type=unsigned __int64,
@@ -114,7 +544,7 @@ C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.
             _Sent=const wchar_t *,
             _Size=unsigned __int64
         ]
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
         with
         [
             _OutIt=char *,
@@ -122,419 +552,1068 @@ C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.
             _InIt=const wchar_t *,
             _SizeTy=unsigned __int64
         ]
-[62/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_coordinator.cpp.obj
-[63/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_network_stubs.cpp.obj
-[64/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_worker.cpp.obj
-[65/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\analyzer_distiller_stubs.cpp.obj
-[66/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_orchestrator_stubs.cpp.obj
-[67/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pt_driver_contract.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[68/302] Building CXX object CMakeFiles\RawrEngine.dir\src\tool_registry.cpp.obj
-[69/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\voice_chat.cpp.obj
-[70/302] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\swarm_orchestrator.cpp.obj
-[71/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\shortcut_manager.cpp.obj
-[72/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\voice_automation.cpp.obj
-[73/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\backup_manager.cpp.obj
-[74/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\alert_system.cpp.obj
-[75/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\rawrxd_state_mmf.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[76/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\chain_of_thought_engine.cpp.obj
-[77/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\live_binary_patcher.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[78/302] Building CXX object CMakeFiles\RawrEngine.dir\src\vulkan_compute.cpp.obj
-[79/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\traversal_strategy.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[80/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\layer_contribution_scorer.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[81/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\semantic_delta_tracker.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[82/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cross_run_tensor_cache.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[83/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\convergence_controller.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[84/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\iterative_tensor_traversal.cpp.obj
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
-D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
-[85/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sqlite3_stubs.cpp.obj
-[86/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\thread_pool.cpp.obj
-[87/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sqlite_wrapper.cpp.obj
-[88/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\memory_pressure_handler.cpp.obj
-[89/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\jsonrpc_parser.cpp.obj
-[90/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\transaction_journal.cpp.obj
-[91/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\multi_file_transaction.cpp.obj
-[92/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\model_cascade.cpp.obj
-[93/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vector_index.cpp.obj
-[94/302] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\context_assembler.cpp.obj
-[95/302] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\chat_message_renderer.cpp.obj
-D:\rawrxd\src\ui\chat_message_renderer.cpp(11): warning C4005: 'NOMINMAX': macro redefinition
-D:\rawrxd\src\ui\chat_message_renderer.cpp(11): note: 'NOMINMAX' previously declared on the command line
-[96/302] Building CXX object CMakeFiles\RawrEngine.dir\src\lsp\diagnostic_consumer.cpp.obj
-[97/302] Building CXX object CMakeFiles\RawrEngine.dir\src\git\git_context.cpp.obj
-[98/302] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\speculative_decoder_v2.cpp.obj
-[99/302] Building CXX object CMakeFiles\RawrEngine.dir\src\core\prompt_template_engine.cpp.obj
-[100/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_core.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\inference_core.asm
-[101/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\FlashAttention_AVX512.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
-[102/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\quant_avx2.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\quant_avx2.asm
-[103/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
-[104/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\memory_patch.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\memory_patch.asm
-[105/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\byte_search.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\byte_search.asm
-[106/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\request_patch.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\request_patch.asm
-[107/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_kernels.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\inference_kernels.asm
-[108/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\model_bridge_x64.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
-[109/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
-[110/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
-[111/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\disk_recovery_scsi.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
-[112/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
-[113/302] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\completion_feedback.cpp.obj
-[114/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
-[115/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
-[116/302] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
-[117/302] Building CXX object CMakeFiles\rawrxd-monaco-gen.dir\src\monaco_gen.cpp.obj
-[118/302] Building CXX object CMakeFiles\rawrxd-monaco-gen.dir\src\engine\react_ide_generator.cpp.obj
-[119/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
-[120/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
-[121/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
-[122/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
-[123/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
-[124/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
-[125/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
-[126/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
-[127/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
-[128/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
-[129/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
-[130/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
-[131/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
-[132/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
-[133/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Autonomy.cpp.obj
-[134/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
-[135/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
-[136/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Annotations.cpp.obj
-[137/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Session.cpp.obj
-[138/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
-[139/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
-[140/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
-[141/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
-[142/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
-[143/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
-[144/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
-[145/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
-[146/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
-[147/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BackendSwitcher.cpp.obj
-[148/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
-[149/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LLMRouter.cpp.obj
-[150/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
-[151/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AsmSemantic.cpp.obj
-[152/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSP_AI_Bridge.cpp.obj
-[153/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MultiResponse.cpp.obj
-[154/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ExecutionGovernor.cpp.obj
-[155/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SubAgent.cpp.obj
-[156/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentHistory.cpp.obj
-[157/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentPanel.cpp.obj
-[158/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32TerminalManager.cpp.obj
-[159/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TransparentRenderer.cpp.obj
-[160/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\plugin_system\win32_plugin_loader.cpp.obj
-[161/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\config\IDEConfig.cpp.obj
-[162/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\stubs.cpp.obj
-[163/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Plugins.cpp.obj
-[164/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\subagent_core.cpp.obj
-[165/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_engine.cpp.obj
-[166/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\BoundedAgentLoop.cpp.obj
-[167/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentToolHandlers.cpp.obj
-[168/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DiffEngine.cpp.obj
-[169/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OllamaProvider.cpp.obj
-[170/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\DiskRecoveryAgent.cpp.obj
-[171/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_history.cpp.obj
-[172/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_explainability.cpp.obj
-[173/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_policy.cpp.obj
-[174/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\ErrorReporter.cpp.obj
-[175/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\engine_manager.cpp.obj
-[176/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\memory_core.cpp.obj
-[177/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cpu_inference_engine.cpp.obj
-[178/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\hot_patcher.cpp.obj
-[179/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\streaming_gguf_loader.cpp.obj
-[180/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\Diagnostics.cpp.obj
-[181/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_vocab_resolver.cpp.obj
-[182/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_loader.cpp.obj
-[183/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\compression_interface.cpp.obj
-[184/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\gguf_core.cpp.obj
-[185/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\inference_kernels.cpp.obj
-[186/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\model_source_resolver.cpp.obj
-[187/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\transformer.cpp.obj
-[188/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\sampler.cpp.obj
-[189/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\bpe_tokenizer.cpp.obj
-[190/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\rawr_engine.cpp.obj
-[191/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\core_generator.cpp.obj
-[192/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\codec\compression.cpp.obj
-[193/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\codec\brutal_gzip.cpp.obj
-[194/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\gpu_backend_bridge.cpp.obj
-[195/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\streaming_engine_registry.cpp.obj
-[196/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_license.cpp.obj
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
-D:\rawrxd\src\core\enterprise_license.cpp(301): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+[141/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\watchdog_service.cpp.obj
+[142/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgenticNavigator.cpp.obj
+[143/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\sovereign_engines.cpp.obj
+[144/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\model_source_resolver.cpp.obj
+[145/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\flash_attention.cpp.obj
+[146/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\gpu_backend_bridge.cpp.obj
+[147/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\execution_governor.cpp.obj
+[148/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_speed_layer.cpp.obj
+[149/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\streaming_engine_registry.cpp.obj
+[150/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_inference_pipeline.cpp.obj
+[151/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\core_generator.cpp.obj
+[152/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\local_ai_core.cpp.obj
+[153/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\multi_response_engine.cpp.obj
+[154/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_safety_contract.cpp.obj
+[155/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_memory_hotpatch.cpp.obj
+[156/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\execution_scheduler.cpp.obj
+[157/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_coordinator.cpp.obj
+[158/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\server\gguf_server_hotpatch.cpp.obj
+[159/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_replay.cpp.obj
+[160/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\proxy_hotpatcher.cpp.obj
+[161/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\byte_level_hotpatcher.cpp.obj
+[162/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\confidence_gate.cpp.obj
+[163/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sentinel_watchdog.cpp.obj
+[164/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shadow_page_detour.cpp.obj
+[165/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pt_driver_contract.cpp.obj
+[166/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_worker.cpp.obj
+[167/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[168/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\eval_framework.cpp.obj
+[169/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_repair.cpp.obj
+[170/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[171/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_hotpatch_manager.cpp.obj
+[172/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\llm_http_client.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
         with
         [
             _Elem=wchar_t,
-            _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
             _Alloc=std::allocator<char>
         ]
-D:\rawrxd\src\core\enterprise_license.cpp(301): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
         with
         [
             _Size_type=unsigned __int64,
-            _Iter=const wchar_t *,
-            _Sent=const wchar_t *,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
             _Size=unsigned __int64
         ]
-C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
         with
         [
             _OutIt=char *,
             _Size=unsigned __int64,
-            _InIt=const wchar_t *,
+            _InIt=wchar_t *,
             _SizeTy=unsigned __int64
         ]
-[197/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\flash_attention.cpp.obj
-[198/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\multi_response_engine.cpp.obj
-[199/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\execution_scheduler.cpp.obj
-[200/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\execution_governor.cpp.obj
-[201/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_replay.cpp.obj
-[202/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_safety_contract.cpp.obj
-[203/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\confidence_gate.cpp.obj
-[204/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_coordinator.cpp.obj
-[205/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_worker.cpp.obj
-[206/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmPanel.cpp.obj
-[207/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DualAgentPanel.cpp.obj
-[208/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
-[209/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativeDebugPanel.cpp.obj
-[210/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_memory_hotpatch.cpp.obj
-[211/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\byte_level_hotpatcher.cpp.obj
-[212/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_hotpatch_manager.cpp.obj
-[213/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\proxy_hotpatcher.cpp.obj
-[214/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\server\gguf_server_hotpatch.cpp.obj
-[215/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pt_driver_contract.cpp.obj
-[216/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
-[217/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vsix_loader_win32.cpp.obj
-[218/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchPanel.cpp.obj
-[219/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\codex_ultimate.cpp.obj
-[220/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vscode_extension_api.cpp.obj
-[221/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_decision_bridge.cpp.obj
-[222/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeExtAPI.cpp.obj
-[223/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\production_release.cpp.obj
-[224/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_hotpatcher.cpp.obj
-[225/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quantum_safe_transport.cpp.obj
-[226/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\adaptive_pipeline_parallel.cpp.obj
-[227/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\webrtc_signaling.cpp.obj
-[228/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_merger.cpp.obj
-[229/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\gpu_kernel_autotuner.cpp.obj
-[230/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sandbox_integration.cpp.obj
-[231/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\amd_gpu_accelerator.cpp.obj
-[232/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intel_gpu_accelerator.cpp.obj
-[233/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\arm64_gpu_accelerator.cpp.obj
-[234/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cerebras_wse_accelerator.cpp.obj
-[235/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_gsi_hash.cpp.obj
-[236/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_reference_provider.cpp.obj
-[237/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\accelerator_router.cpp.obj
-[238/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_WebView2.cpp.obj
-[239/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MonacoThemes.cpp.obj
-[240/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\RawrXD_LSPServer.cpp.obj
-[241/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPServer.cpp.obj
-[242/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\hotpatch_symbol_provider.cpp.obj
-[243/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\lsp_hotpatch_bridge.cpp.obj
-[244/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\MonacoCoreEngine.cpp.obj
-[245/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\monaco_core_stubs.cpp.obj
-[246/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\gguf_diagnostic_provider.cpp.obj
-[247/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\WebView2EditorEngine.cpp.obj
-[248/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\RichEditEditorEngine.cpp.obj
-[249/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\EditorEngineFactory.cpp.obj
-[250/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_native.cpp.obj
-[251/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_lsp_bridge.cpp.obj
-[252/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EditorEngine.cpp.obj
-[253/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_registry.cpp.obj
-[254/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PDBSymbols.cpp.obj
-[255/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\menu_auditor.cpp.obj
-[256/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_discovery.cpp.obj
-[257/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\final_gauntlet.cpp.obj
-[258/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AuditDashboard.cpp.obj
-[259/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_chat.cpp.obj
-[260/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Gauntlet.cpp.obj
-[261/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_automation.cpp.obj
-[262/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceChat.cpp.obj
-[263/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shortcut_manager.cpp.obj
-[264/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceAutomation.cpp.obj
-[265/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\backup_manager.cpp.obj
-[266/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\alert_system.cpp.obj
-[267/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cli\swarm_orchestrator.cpp.obj
-[268/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_QuickWins.cpp.obj
-[269/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\chain_of_thought_engine.cpp.obj
-[270/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Telemetry.cpp.obj
-[271/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\mcp_integration.cpp.obj
-[272/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCP.cpp.obj
-[273/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlightRecorder.cpp.obj
-[274/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_node_shims.cpp.obj
-[275/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_extension_host.cpp.obj
-[276/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\rawrxd_state_mmf.cpp.obj
-[277/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_vscode_bindings.cpp.obj
-[278/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\extension_polyfill_engine.cpp.obj
-[279/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\js_extension_host.cpp.obj
-[280/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\live_binary_patcher.cpp.obj
-[281/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\inference_core.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\inference_core.asm
-[282/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\FlashAttention_AVX512.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
-[283/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\quant_avx2.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\quant_avx2.asm
-[284/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
-[285/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\memory_patch.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\memory_patch.asm
-[286/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\byte_search.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\byte_search.asm
-[287/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\request_patch.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\request_patch.asm
-[288/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\inference_kernels.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\inference_kernels.asm
-[289/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\model_bridge_x64.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
-[290/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
-[291/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
-[292/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\disk_recovery_scsi.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
-[293/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
-[294/302] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\vulkan_compute.cpp.obj
-[295/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
-[296/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
-[297/302] Building RC object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\RawrXD-Win32IDE.rc.res
-[298/302] Linking CXX static library src\reverse_engineering\RawrXD-RE-Library.lib
-[299/302] Linking CXX executable RawrEngine.exe
-[300/302] Linking CXX executable bin\rawrxd-monaco-gen.exe
-[301/302] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
-Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
- Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
-[302/302] Linking CXX executable bin\RawrXD-Win32IDE.exe
-EXIT_CODE=0
+[173/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\autonomous_subagent.cpp.obj
+[174/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_failure_detector.cpp.obj
+[175/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\planner.cpp.obj
+[176/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativeDebugPanel.cpp.obj
+[177/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_bruteforce_engine.cpp.obj
+[178/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DualAgentPanel.cpp.obj
+[179/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_puppeteer.cpp.obj
+[180/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\model_invoker.cpp.obj
+[181/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_hotpatcher.cpp.obj
+[182/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
+[183/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\production_release.cpp.obj
+[184/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmPanel.cpp.obj
+[185/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vsix_loader_win32.cpp.obj
+[186/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchPanel.cpp.obj
+[187/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\local_reasoning_engine.cpp.obj
+[188/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_reference_provider.cpp.obj
+[189/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_gsi_hash.cpp.obj
+[190/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sandbox_integration.cpp.obj
+[191/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\codex_ultimate.cpp.obj
+[192/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\gpu_kernel_autotuner.cpp.obj
+[193/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_decision_bridge.cpp.obj
+[194/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quantum_safe_transport.cpp.obj
+[195/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\webrtc_signaling.cpp.obj
+[196/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\monaco_core_stubs.cpp.obj
+[197/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\arm64_gpu_accelerator.cpp.obj
+[198/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\adaptive_pipeline_parallel.cpp.obj
+[199/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intel_gpu_accelerator.cpp.obj
+[200/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cerebras_wse_accelerator.cpp.obj
+[201/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_merger.cpp.obj
+[202/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\accelerator_router.cpp.obj
+[203/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\amd_gpu_accelerator.cpp.obj
+[204/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\MonacoCoreEngine.cpp.obj
+[205/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_native.cpp.obj
+[206/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\WebView2EditorEngine.cpp.obj
+[207/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\gguf_diagnostic_provider.cpp.obj
+[208/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\EditorEngineFactory.cpp.obj
+[209/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\RichEditEditorEngine.cpp.obj
+[210/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\hotpatch_symbol_provider.cpp.obj
+[211/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeExtAPI.cpp.obj
+[212/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\lsp_hotpatch_bridge.cpp.obj
+[213/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\menu_auditor.cpp.obj
+[214/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vscode_extension_api.cpp.obj
+[215/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_registry.cpp.obj
+[216/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_lsp_bridge.cpp.obj
+[217/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_discovery.cpp.obj
+[218/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_registration.cpp.obj
+[219/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\final_gauntlet.cpp.obj
+[220/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\RawrXD_LSPServer.cpp.obj
+[221/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_chat.cpp.obj
+[222/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shortcut_manager.cpp.obj
+[223/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_WebView2.cpp.obj
+[224/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\backup_manager.cpp.obj
+[225/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\alert_system.cpp.obj
+[226/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EditorEngine.cpp.obj
+[227/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MonacoThemes.cpp.obj
+[228/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPServer.cpp.obj
+[229/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intent_engine.cpp.obj
+[230/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_automation.cpp.obj
+[231/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PDBSymbols.cpp.obj
+[232/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AuditDashboard.cpp.obj
+[233/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceChat.cpp.obj
+[234/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_handlers.cpp.obj
+[235/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_training_pipeline.cpp.obj
+[236/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceAutomation.cpp.obj
+[237/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_validation.cpp.obj
+[238/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentOllamaClient.cpp.obj
+[239/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_command_dispatch.cpp.obj
+[240/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers.cpp.obj
+[241/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers_ext.cpp.obj
+[242/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\rawrxd_state_mmf.cpp.obj
+[243/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cli\swarm_orchestrator.cpp.obj
+[244/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Gauntlet.cpp.obj
+[245/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_QuickWins.cpp.obj
+[246/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\missing_handler_stubs.cpp.obj
+[247/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\live_binary_patcher.cpp.obj
+[248/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\chain_of_thought_engine.cpp.obj
+[249/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_node_shims.cpp.obj
+[250/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_vscode_bindings.cpp.obj
+[251/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\vulkan_compute.cpp.obj
+[252/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\extension_polyfill_engine.cpp.obj
+[253/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\workspace_reasoning_profiles.cpp.obj
+[254/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_swarm.cpp.obj
+[255/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_profile.cpp.obj
+[256/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\js_extension_host.cpp.obj
+[257/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\autonomous_workflow_engine.cpp.obj
+[258/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\input_guard_slicer.cpp.obj
+[259/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_schema_versioning.cpp.obj
+[260/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlightRecorder.cpp.obj
+[261/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Telemetry.cpp.obj
+[262/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cot_fallback_system.cpp.obj
+[263/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\mcp_integration.cpp.obj
+[264/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_agent_coordinator.cpp.obj
+[265/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_embedding_cache.cpp.obj
+[266/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_token_gate.cpp.obj
+[267/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_quantized_encoder.cpp.obj
+[268/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_kv_isolation.cpp.obj
+[269/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_extension_host.cpp.obj
+[270/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_gpu_staging.cpp.obj
+[271/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\safe_refactor_engine.cpp.obj
+[272/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCP.cpp.obj
+[273/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\production_config_manager.cpp.obj
+[274/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_encoder.cpp.obj
+[275/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj
+[276/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_loop_state.cpp.obj
+[277/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\auth\rbac_engine.cpp.obj
+[278/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\marketplace\extension_marketplace.cpp.obj
+[279/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\copilot_gap_closer.cpp.obj
+[280/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vector_index.cpp.obj
+[281/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\embedding_engine.cpp.obj
+[282/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\transaction_journal.cpp.obj
+[283/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\instructions_provider.cpp.obj
+[284/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\game_engine_manager.cpp.obj
+[285/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_feature_registry.cpp.obj
+[286/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\unity_engine_integration.cpp.obj
+[287/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+[288/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\unreal_engine_integration.cpp.obj
+[289/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\crucible_engine.cpp.obj
+[290/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\hotpatch_control_plane.cpp.obj
+[291/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\semantic_code_intelligence.cpp.obj
+[292/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\code_linter.cpp.obj
+[293/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\static_analysis_engine.cpp.obj
+[294/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Instructions.cpp.obj
+[295/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PipelinePanel.cpp.obj
+[296/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+[297/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CopilotGapPanel.cpp.obj
+[298/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchCtrlPanel.cpp.obj
+[299/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GameEnginePanel.cpp.obj
+[300/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CruciblePanel.cpp.obj
+[301/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SemanticPanel.cpp.obj
+[302/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\omega_orchestrator.cpp.obj
+[303/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\neural_bridge.cpp.obj
+[304/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\speciator_engine.cpp.obj
+[305/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\mesh_brain.cpp.obj
+[306/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryPanel.cpp.obj
+[307/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Polish.cpp.obj
+[308/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\hardware_synthesizer.cpp.obj
+[309/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier5Cosmetics.cpp.obj
+[310/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StaticAnalysisPanel.cpp.obj
+[311/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\self_host_engine.cpp.obj
+[312/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Cosmetics.cpp.obj
+[313/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\transcendence_coordinator.cpp.obj
+[314/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\VulkanRenderer.cpp.obj
+[315/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EmojiSupport.cpp.obj
+[316/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CrashReporter.cpp.obj
+[317/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MarketplacePanel.cpp.obj
+[318/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ShortcutEditor.cpp.obj
+[319/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryDashboard.cpp.obj
+[320/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\ConsentPrompt.cpp.obj
+[321/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\OSExplorerInterceptor.cpp.obj
+[322/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ColorPicker.cpp.obj
+[323/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quant_hysteresis.cpp.obj
+[324/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\crash_containment.cpp.obj
+[325/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCPHooks.cpp.obj
+[326/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDEDiagnosticAutoHealer_Impl.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer_Impl.cpp(587): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer_Impl.cpp(587): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'DiagnosticUtils::ReadDigestFile'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[327/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IocpFileWatcher.cpp.obj
+[328/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\patch_rollback_ledger.cpp.obj
+[329/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NetworkPanel.cpp.obj
+[330/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\masm_stress_harness.cpp.obj
+[331/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cursor_github_parity_bridge.cpp.obj
+[332/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TodoManager.cpp.obj
+[333/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\tool_action_status.cpp.obj
+[334/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDEAutoHealerLauncher.cpp.obj
+[335/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\update_signature.cpp.obj
+[336/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TestExplorerTree.cpp.obj
+[337/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDEDiagnosticAutoHealer.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.cpp(499): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.cpp(499): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'DiagnosticUtils::ReadDigestFile'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[338/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_reconciliation.cpp.obj
+[339/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\convergence_stress_harness.cpp.obj
+[340/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_stress_tests.cpp.obj
+[341/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\chat_panel.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\ui\chat_panel.cpp(47): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\ui\chat_panel.cpp(47): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::UI::ChatPanel::getInput'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[342/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quickjs_sandbox.cpp.obj
+[343/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\plugin_signature.cpp.obj
+[344/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_update_system.cpp.obj
+[345/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\knowledge_graph_core.cpp.obj
+[346/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\AutonomousAgent.cpp.obj
+[347/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\perf_telemetry.cpp.obj
+[348/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_conflict_resolver.cpp.obj
+[349/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_verification_loop.cpp.obj
+[350/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\chat_message_renderer.cpp.obj
+[351/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\autonomous_debugger.cpp.obj
+[352/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TranscendencePanel.cpp.obj
+[353/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_communicator.cpp.obj
+[354/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\context\context_mention_parser.cpp.obj
+[355/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_background_daemon.cpp.obj
+[356/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_composer_ux.cpp.obj
+[357/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[358/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[359/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[360/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[361/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[362/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[363/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[364/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[365/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[366/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[367/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[368/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\telemetry\telemetry_export.cpp.obj
+[369/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\telemetry\UnifiedTelemetryCore.cpp.obj
+[370/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[371/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[372/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[373/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[374/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[375/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[376/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[377/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[378/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\native_speed_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\native_speed_kernels.asm
+
+[379/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\DirectML_Bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\DirectML_Bridge.asm
+
+[380/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[381/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Hotpatch_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Hotpatch_Kernel.asm
+
+[382/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\vision_projection_kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\vision_projection_kernel.asm
+
+[383/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Pyre_Compute.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+
+[384/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Snapshot.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Snapshot.asm
+
+[385/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ide\resource_generator.cpp.obj
+[386/400] Building RC object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\RawrXD-Win32IDE.rc.res
+[387/400] Linking CXX static library src\reverse_engineering\RawrXD-RE-Library.lib
+[388/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\multimodal_engine\vision_encoder.cpp.obj
+[389/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ide\refactoring_plugin.cpp.obj
+[390/400] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[391/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ide\language_plugin.cpp.obj
+[392/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GUILayoutHotpatch.cpp.obj
+[393/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\context\semantic_index.cpp.obj
+[394/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlagshipFeatures.cpp.obj
+[395/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CursorParity.cpp.obj
+[396/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ProvableAgent.cpp.obj
+[397/400] Building C object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sqlite3.c.obj
+[398/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AIReverseEngineering.cpp.obj
+[399/400] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AirgappedEnterprise.cpp.obj
+[400/400] Linking CXX executable bin\RawrXD-Win32IDE.exe
+FAILED: bin/RawrXD-Win32IDE.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1950 --intdir=CMakeFiles\RawrXD-Win32IDE.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp  /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1120) with the following output:
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAuditCheckMenus(struct CommandContext const &)" (?handleAuditCheckMenus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAuditDetectStubs(struct CommandContext const &)" (?handleAuditDetectStubs@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAuditExportReport(struct CommandContext const &)" (?handleAuditExportReport@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAuditQuickStats(struct CommandContext const &)" (?handleAuditQuickStats@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAuditRunFull(struct CommandContext const &)" (?handleAuditRunFull@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAuditRunTests(struct CommandContext const &)" (?handleAuditRunTests@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAutonomyMemory(struct CommandContext const &)" (?handleAutonomyMemory@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleAutonomyStatus(struct CommandContext const &)" (?handleAutonomyStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditCopyFormat(struct CommandContext const &)" (?handleEditCopyFormat@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditFindNext(struct CommandContext const &)" (?handleEditFindNext@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditFindPrev(struct CommandContext const &)" (?handleEditFindPrev@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditPastePlain(struct CommandContext const &)" (?handleEditPastePlain@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditSnippet(struct CommandContext const &)" (?handleEditSnippet@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleFileExit(struct CommandContext const &)" (?handleFileExit@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleFileRecentClear(struct CommandContext const &)" (?handleFileRecentClear@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleGauntletExport(struct CommandContext const &)" (?handleGauntletExport@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleGauntletRun(struct CommandContext const &)" (?handleGauntletRun@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHelpSearch(struct CommandContext const &)" (?handleHelpSearch@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchByteSearch(struct CommandContext const &)" (?handleHotpatchByteSearch@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchPresetLoad(struct CommandContext const &)" (?handleHotpatchPresetLoad@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchPresetSave(struct CommandContext const &)" (?handleHotpatchPresetSave@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchProxyBias(struct CommandContext const &)" (?handleHotpatchProxyBias@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchProxyRewrite(struct CommandContext const &)" (?handleHotpatchProxyRewrite@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchProxyTerminate(struct CommandContext const &)" (?handleHotpatchProxyTerminate@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchProxyValidate(struct CommandContext const &)" (?handleHotpatchProxyValidate@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchResetStats(struct CommandContext const &)" (?handleHotpatchResetStats@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchServerRemove(struct CommandContext const &)" (?handleHotpatchServerRemove@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleHotpatchToggleAll(struct CommandContext const &)" (?handleHotpatchToggleAll@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbCacheClear(struct CommandContext const &)" (?handlePdbCacheClear@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbEnable(struct CommandContext const &)" (?handlePdbEnable@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbExports(struct CommandContext const &)" (?handlePdbExports@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbFetch(struct CommandContext const &)" (?handlePdbFetch@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbIatStatus(struct CommandContext const &)" (?handlePdbIatStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbImports(struct CommandContext const &)" (?handlePdbImports@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbLoad(struct CommandContext const &)" (?handlePdbLoad@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbResolve(struct CommandContext const &)" (?handlePdbResolve@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handlePdbStatus(struct CommandContext const &)" (?handlePdbStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwAlertResourceStatus(struct CommandContext const &)" (?handleQwAlertResourceStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwBackupAutoToggle(struct CommandContext const &)" (?handleQwBackupAutoToggle@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwBackupCreate(struct CommandContext const &)" (?handleQwBackupCreate@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwBackupList(struct CommandContext const &)" (?handleQwBackupList@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwBackupPrune(struct CommandContext const &)" (?handleQwBackupPrune@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwBackupRestore(struct CommandContext const &)" (?handleQwBackupRestore@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwShortcutEditor(struct CommandContext const &)" (?handleQwShortcutEditor@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwShortcutReset(struct CommandContext const &)" (?handleQwShortcutReset@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleQwSloDashboard(struct CommandContext const &)" (?handleQwSloDashboard@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmBuildCmake(struct CommandContext const &)" (?handleSwarmBuildCmake@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmBuildSources(struct CommandContext const &)" (?handleSwarmBuildSources@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmCacheClear(struct CommandContext const &)" (?handleSwarmCacheClear@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmCacheStatus(struct CommandContext const &)" (?handleSwarmCacheStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmCancelBuild(struct CommandContext const &)" (?handleSwarmCancelBuild@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmRemoveNode(struct CommandContext const &)" (?handleSwarmRemoveNode@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmResetStats(struct CommandContext const &)" (?handleSwarmResetStats@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmStartBuild(struct CommandContext const &)" (?handleSwarmStartBuild@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmStartHybrid(struct CommandContext const &)" (?handleSwarmStartHybrid@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmStartLeader(struct CommandContext const &)" (?handleSwarmStartLeader@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmStartWorker(struct CommandContext const &)" (?handleSwarmStartWorker@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmWorkerConnect(struct CommandContext const &)" (?handleSwarmWorkerConnect@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmWorkerDisconnect(struct CommandContext const &)" (?handleSwarmWorkerDisconnect@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleSwarmWorkerStatus(struct CommandContext const &)" (?handleSwarmWorkerStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleTelemetryClear(struct CommandContext const &)" (?handleTelemetryClear@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleTelemetryExportCsv(struct CommandContext const &)" (?handleTelemetryExportCsv@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleTelemetryExportJson(struct CommandContext const &)" (?handleTelemetryExportJson@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleTelemetrySnapshot(struct CommandContext const &)" (?handleTelemetrySnapshot@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleTelemetryToggle(struct CommandContext const &)" (?handleTelemetryToggle@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleTerminalSplitCode(struct CommandContext const &)" (?handleTerminalSplitCode@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleThemeAbyss(struct CommandContext const &)" (?handleThemeAbyss@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleThemeDracula(struct CommandContext const &)" (?handleThemeDracula@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleThemeHighContrast(struct CommandContext const &)" (?handleThemeHighContrast@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleThemeLightPlus(struct CommandContext const &)" (?handleThemeLightPlus@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleThemeMonokai(struct CommandContext const &)" (?handleThemeMonokai@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleThemeNord(struct CommandContext const &)" (?handleThemeNord@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewFloatingPanel(struct CommandContext const &)" (?handleViewFloatingPanel@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewMinimap(struct CommandContext const &)" (?handleViewMinimap@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewModuleBrowser(struct CommandContext const &)" (?handleViewModuleBrowser@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewOutputPanel(struct CommandContext const &)" (?handleViewOutputPanel@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewOutputTabs(struct CommandContext const &)" (?handleViewOutputTabs@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewSidebar(struct CommandContext const &)" (?handleViewSidebar@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewTerminal(struct CommandContext const &)" (?handleViewTerminal@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewThemeEditor(struct CommandContext const &)" (?handleViewThemeEditor@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceJoinRoom(struct CommandContext const &)" (?handleVoiceJoinRoom@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceModeContinuous(struct CommandContext const &)" (?handleVoiceModeContinuous@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceModeDisabled(struct CommandContext const &)" (?handleVoiceModeDisabled@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyAll(struct CommandContext const &)" (?handleDecompCopyAll@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompCopyLine(struct CommandContext const &)" (?handleDecompCopyLine@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompFindRefs(struct CommandContext const &)" (?handleDecompFindRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompGotoAddr(struct CommandContext const &)" (?handleDecompGotoAddr@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompGotoDef(struct CommandContext const &)" (?handleDecompGotoDef@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleDecompRenameVar(struct CommandContext const &)" (?handleDecompRenameVar@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditGotoLine(struct CommandContext const &)" (?handleEditGotoLine@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditMulticursorAdd(struct CommandContext const &)" (?handleEditMulticursorAdd@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleEditMulticursorRemove(struct CommandContext const &)" (?handleEditMulticursorRemove@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleFileCloseFolder(struct CommandContext const &)" (?handleFileCloseFolder@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleFileCloseTab(struct CommandContext const &)" (?handleFileCloseTab@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleFileNewWindow(struct CommandContext const &)" (?handleFileNewWindow@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleFileOpenFolder(struct CommandContext const &)" (?handleFileOpenFolder@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleToolsBuild(struct CommandContext const &)" (?handleToolsBuild@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleToolsCommandPalette(struct CommandContext const &)" (?handleToolsCommandPalette@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleToolsDebug(struct CommandContext const &)" (?handleToolsDebug@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleToolsExtensions(struct CommandContext const &)" (?handleToolsExtensions@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleToolsSettings(struct CommandContext const &)" (?handleToolsSettings@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleToolsTerminal(struct CommandContext const &)" (?handleToolsTerminal@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewToggleFullscreen(struct CommandContext const &)" (?handleViewToggleFullscreen@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewToggleOutput(struct CommandContext const &)" (?handleViewToggleOutput@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewToggleSidebar(struct CommandContext const &)" (?handleViewToggleSidebar@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewToggleTerminal(struct CommandContext const &)" (?handleViewToggleTerminal@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewZoomIn(struct CommandContext const &)" (?handleViewZoomIn@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewZoomOut(struct CommandContext const &)" (?handleViewZoomOut@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleViewZoomReset(struct CommandContext const &)" (?handleViewZoomReset@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoNextVoice(struct CommandContext const &)" (?handleVoiceAutoNextVoice@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoPrevVoice(struct CommandContext const &)" (?handleVoiceAutoPrevVoice@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoRateDown(struct CommandContext const &)" (?handleVoiceAutoRateDown@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoRateUp(struct CommandContext const &)" (?handleVoiceAutoRateUp@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoSettings(struct CommandContext const &)" (?handleVoiceAutoSettings@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoStop(struct CommandContext const &)" (?handleVoiceAutoStop@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+ssot_handlers_ext.cpp.obj : error LNK2005: "struct CommandResult __cdecl handleVoiceAutoToggle(struct CommandContext const &)" (?handleVoiceAutoToggle@@YA?AUCommandResult@@AEBUCommandContext@@@Z) already defined in auto_feature_registry.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::ApplyHealing(enum HealingStrategy)" (?ApplyHealing@IDEDiagnosticAutoHealer@@AEAAXW4HealingStrategy@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::DiagnosticThreadProc(void)" (?DiagnosticThreadProc@IDEDiagnosticAutoHealer@@AEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::EmitBeacon(enum BeaconStage,long,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?EmitBeacon@IDEDiagnosticAutoHealer@@AEAAXW4BeaconStage@@JAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::ExecuteFileReopen(void)" (?ExecuteFileReopen@IDEDiagnosticAutoHealer@@AEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::ExecuteHotkeyResend(void)" (?ExecuteHotkeyResend@IDEDiagnosticAutoHealer@@AEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: long __cdecl IDEDiagnosticAutoHealer::ExecuteIDELaunch(void)" (?ExecuteIDELaunch@IDEDiagnosticAutoHealer@@AEAAJXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::ExecuteMessageRepost(void)" (?ExecuteMessageRepost@IDEDiagnosticAutoHealer@@AEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::ExecuteProcessRestart(void)" (?ExecuteProcessRestart@IDEDiagnosticAutoHealer@@AEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: void __cdecl IDEDiagnosticAutoHealer::ExecuteWindowRefocus(void)" (?ExecuteWindowRefocus@IDEDiagnosticAutoHealer@@AEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "struct HWND__ * __cdecl DiagnosticUtils::FindIDEMainWindow(unsigned long)" (?FindIDEMainWindow@DiagnosticUtils@@YAPEAUHWND__@@K@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl IDEDiagnosticAutoHealer::GenerateDiagnosticReport(void)" (?GenerateDiagnosticReport@IDEDiagnosticAutoHealer@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "private: class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > __cdecl BeaconStorage::GetBeaconFilePath(void)const " (?GetBeaconFilePath@BeaconStorage@@AEBA?AV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@XZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: static class BeaconStorage & __cdecl BeaconStorage::Instance(void)" (?Instance@BeaconStorage@@SAAEAV1@XZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: static class IDEDiagnosticAutoHealer & __cdecl IDEDiagnosticAutoHealer::Instance(void)" (?Instance@IDEDiagnosticAutoHealer@@SAAEAV1@XZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "unsigned long __cdecl DiagnosticUtils::LaunchIDEProcess(class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > const &)" (?LaunchIDEProcess@DiagnosticUtils@@YAKAEBV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: struct BeaconCheckpoint __cdecl BeaconStorage::LoadLastCheckpoint(void)" (?LoadLastCheckpoint@BeaconStorage@@QEAA?AUBeaconCheckpoint@@XZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "void __cdecl DiagnosticUtils::LogDiagnostic(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?LogDiagnostic@DiagnosticUtils@@YAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "void __cdecl DiagnosticUtils::LogHealing(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,bool)" (?LogHealing@DiagnosticUtils@@YAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "bool __cdecl DiagnosticUtils::OpenFileInEditor(struct HWND__ *,class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > const &)" (?OpenFileInEditor@DiagnosticUtils@@YA_NPEAUHWND__@@AEBV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl DiagnosticUtils::ReadDigestFile(class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > const &)" (?ReadDigestFile@DiagnosticUtils@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@3@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: void __cdecl BeaconStorage::SaveCheckpoint(enum BeaconStage,long,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?SaveCheckpoint@BeaconStorage@@QEAAXW4BeaconStage@@JAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "bool __cdecl DiagnosticUtils::SendHotkey(struct HWND__ *,unsigned int,bool,bool,bool)" (?SendHotkey@DiagnosticUtils@@YA_NPEAUHWND__@@I_N11@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: void __cdecl IDEDiagnosticAutoHealer::StartFullDiagnostic(void)" (?StartFullDiagnostic@IDEDiagnosticAutoHealer@@QEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "public: void __cdecl IDEDiagnosticAutoHealer::StopDiagnostic(void)" (?StopDiagnostic@IDEDiagnosticAutoHealer@@QEAAXXZ) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "bool __cdecl DiagnosticUtils::TerminateProcessGracefully(unsigned long)" (?TerminateProcessGracefully@DiagnosticUtils@@YA_NK@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+IDEDiagnosticAutoHealer_Impl.cpp.obj : error LNK2005: "bool __cdecl DiagnosticUtils::VerifyDigestFileCreated(class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > const &)" (?VerifyDigestFileCreated@DiagnosticUtils@@YA_NAEBV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@@Z) already defined in IDEDiagnosticAutoHealer.cpp.obj
+
+model_llm_harvester.obj : error LNK2005: main already defined in IDEAutoHealerLauncher.cpp.obj
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol INFINITY_Shutdown referenced in function "void __cdecl RawrXD::ReverseEngineered::ShutdownAllSubsystems(void)" (?ShutdownAllSubsystems@ReverseEngineered@RawrXD@@YAXXZ)
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol Scheduler_Initialize referenced in function "struct RawrXD::ReverseEngineered::SubsystemResult __cdecl RawrXD::ReverseEngineered::InitializeAllSubsystems(unsigned int,unsigned short,unsigned int)" (?InitializeAllSubsystems@ReverseEngineered@RawrXD@@YA?AUSubsystemResult@12@IGI@Z)
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol Scheduler_Shutdown referenced in function "struct RawrXD::ReverseEngineered::SubsystemResult __cdecl RawrXD::ReverseEngineered::InitializeAllSubsystems(unsigned int,unsigned short,unsigned int)" (?InitializeAllSubsystems@ReverseEngineered@RawrXD@@YA?AUSubsystemResult@12@IGI@Z)
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol ConflictDetector_Initialize referenced in function "struct RawrXD::ReverseEngineered::SubsystemResult __cdecl RawrXD::ReverseEngineered::InitializeAllSubsystems(unsigned int,unsigned short,unsigned int)" (?InitializeAllSubsystems@ReverseEngineered@RawrXD@@YA?AUSubsystemResult@12@IGI@Z)
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol Heartbeat_Initialize referenced in function "struct RawrXD::ReverseEngineered::SubsystemResult __cdecl RawrXD::ReverseEngineered::InitializeAllSubsystems(unsigned int,unsigned short,unsigned int)" (?InitializeAllSubsystems@ReverseEngineered@RawrXD@@YA?AUSubsystemResult@12@IGI@Z)
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol Heartbeat_Shutdown referenced in function "void __cdecl RawrXD::ReverseEngineered::ShutdownAllSubsystems(void)" (?ShutdownAllSubsystems@ReverseEngineered@RawrXD@@YAXXZ)
+
+main_win32.cpp.obj : error LNK2019: unresolved external symbol GetHighResTick referenced in function WinMain
+
+Win32IDE_Settings.cpp.obj : error LNK2019: unresolved external symbol LocalParity_SetModelPath referenced in function "private: void __cdecl Win32IDE::applySettings(void)" (?applySettings@Win32IDE@@AEAAXXZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl RawrXD::Agent::FIMPromptBuilder::FIMPromptBuilder(void)" (??0FIMPromptBuilder@Agent@RawrXD@@QEAA@XZ) referenced in function "public: __cdecl RawrXD::Agent::AgentOrchestrator::AgentOrchestrator(void)" (??0AgentOrchestrator@Agent@RawrXD@@QEAA@XZ)
+
+OrchestratorBridge.cpp.obj : error LNK2001: unresolved external symbol "public: __cdecl RawrXD::Agent::FIMPromptBuilder::FIMPromptBuilder(void)" (??0FIMPromptBuilder@Agent@RawrXD@@QEAA@XZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::Agent::FIMBuildResult __cdecl RawrXD::Agent::FIMPromptBuilder::Build(struct RawrXD::Agent::EditorContext const &)const " (?Build@FIMPromptBuilder@Agent@RawrXD@@QEBA?AUFIMBuildResult@23@AEBUEditorContext@23@@Z) referenced in function "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::Agent::AgentOrchestrator::RequestCompletion(struct RawrXD::Agent::EditorContext const &)" (?RequestCompletion@AgentOrchestrator@Agent@RawrXD@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBUEditorContext@23@@Z)
+
+OrchestratorBridge.cpp.obj : error LNK2001: unresolved external symbol "public: struct RawrXD::Agent::FIMBuildResult __cdecl RawrXD::Agent::FIMPromptBuilder::Build(struct RawrXD::Agent::EditorContext const &)const " (?Build@FIMPromptBuilder@Agent@RawrXD@@QEBA?AUFIMBuildResult@23@AEBUEditorContext@23@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: static int __cdecl RawrXD::Agent::FIMPromptBuilder::EstimateTokens(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?EstimateTokens@FIMPromptBuilder@Agent@RawrXD@@SAHAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z) referenced in function "public: struct RawrXD::Agent::AgentSession __cdecl RawrXD::Agent::AgentOrchestrator::RunAgentLoop(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?RunAgentLoop@AgentOrchestrator@Agent@RawrXD@@QEAA?AUAgentSession@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@6@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: struct SubsystemResult __cdecl SubsystemRegistry::invoke(struct SubsystemParams const &)" (?invoke@SubsystemRegistry@@QEAA?AUSubsystemResult@@AEBUSubsystemParams@@@Z) referenced in function "private: void __cdecl RawrXD::Agent::AgentOrchestrator::TriggerAutoBuild(struct RawrXD::Agent::AgentSession &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?TriggerAutoBuild@AgentOrchestrator@Agent@RawrXD@@AEAAXAEAUAgentSession@23@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@std@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: struct SubsystemResult __cdecl SubsystemRegistry::invoke(struct SubsystemParams const &)" (?invoke@SubsystemRegistry@@QEAA?AUSubsystemResult@@AEBUSubsystemParams@@@Z)
+
+feature_handlers.cpp.obj : error LNK2001: unresolved external symbol "public: struct SubsystemResult __cdecl SubsystemRegistry::invoke(struct SubsystemParams const &)" (?invoke@SubsystemRegistry@@QEAA?AUSubsystemResult@@AEBUSubsystemParams@@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "private: __cdecl SubsystemRegistry::SubsystemRegistry(void)" (??0SubsystemRegistry@@AEAA@XZ) referenced in function "public: static class SubsystemRegistry & __cdecl SubsystemRegistry::instance(void)" (?instance@SubsystemRegistry@@SAAEAV1@XZ)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "private: __cdecl SubsystemRegistry::SubsystemRegistry(void)" (??0SubsystemRegistry@@AEAA@XZ)
+
+feature_handlers.cpp.obj : error LNK2001: unresolved external symbol "private: __cdecl SubsystemRegistry::SubsystemRegistry(void)" (??0SubsystemRegistry@@AEAA@XZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl AgenticObservability::AgenticObservability(void)" (??0AgenticObservability@@QEAA@XZ) referenced in function "class AgenticObservability & __cdecl GetObservability(void)" (?GetObservability@@YAAEAVAgenticObservability@@XZ)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: __cdecl AgenticObservability::AgenticObservability(void)" (??0AgenticObservability@@QEAA@XZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl AgenticObservability::~AgenticObservability(void)" (??1AgenticObservability@@QEAA@XZ) referenced in function "void __cdecl `class AgenticObservability & __cdecl GetObservability(void)'::`2'::`dynamic atexit destructor for 'instance''(void)" (??__Finstance@?1??GetObservability@@YAAEAVAgenticObservability@@XZ@YAXXZ)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: __cdecl AgenticObservability::~AgenticObservability(void)" (??1AgenticObservability@@QEAA@XZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::logInfo(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?logInfo@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0AEBVjson@nlohmann@@@Z) referenced in function "public: __cdecl RawrXD::Agent::AgentOrchestrator::AgentOrchestrator(void)" (??0AgentOrchestrator@Agent@RawrXD@@QEAA@XZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::logError(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?logError@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0AEBVjson@nlohmann@@@Z) referenced in function "private: bool __cdecl RawrXD::Agent::AgentOrchestrator::RunOneRound(struct RawrXD::Agent::AgentSession &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?RunOneRound@AgentOrchestrator@Agent@RawrXD@@AEAA_NAEAUAgentSession@23@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@std@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl AgenticObservability::logError(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?logError@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0AEBVjson@nlohmann@@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::incrementCounter(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,int,class nlohmann::json const &)" (?incrementCounter@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@HAEBVjson@nlohmann@@@Z) referenced in function "private: void __cdecl RawrXD::Agent::AgentOrchestrator::ExecuteToolCalls(struct RawrXD::Agent::InferenceResult const &,struct RawrXD::Agent::AgentSession &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?ExecuteToolCalls@AgentOrchestrator@Agent@RawrXD@@AEAAXAEBUInferenceResult@23@AEAUAgentSession@23@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@std@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl AgenticObservability::incrementCounter(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,int,class nlohmann::json const &)" (?incrementCounter@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@HAEBVjson@nlohmann@@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::setGauge(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,float,class nlohmann::json const &)" (?setGauge@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@MAEBVjson@nlohmann@@@Z) referenced in function "public: struct RawrXD::Agent::AgentSession __cdecl RawrXD::Agent::AgentOrchestrator::RunAgentLoop(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?RunAgentLoop@AgentOrchestrator@Agent@RawrXD@@QEAA?AUAgentSession@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@6@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::recordHistogram(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,float,class nlohmann::json const &)" (?recordHistogram@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@MAEBVjson@nlohmann@@@Z) referenced in function "private: void __cdecl RawrXD::Agent::AgentOrchestrator::ExecuteToolCalls(struct RawrXD::Agent::InferenceResult const &,struct RawrXD::Agent::AgentSession &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?ExecuteToolCalls@AgentOrchestrator@Agent@RawrXD@@AEAAXAEBUInferenceResult@23@AEAUAgentSession@23@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@std@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl AgenticObservability::recordHistogram(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,float,class nlohmann::json const &)" (?recordHistogram@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@MAEBVjson@nlohmann@@@Z)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl AgenticObservability::TimingGuard::~TimingGuard(void)" (??1TimingGuard@AgenticObservability@@QEAA@XZ) referenced in function "public: __cdecl std::unique_ptr<class AgenticObservability::TimingGuard,struct std::default_delete<class AgenticObservability::TimingGuard> >::~unique_ptr<class AgenticObservability::TimingGuard,struct std::default_delete<class AgenticObservability::TimingGuard> >(void)" (??1?$unique_ptr@VTimingGuard@AgenticObservability@@U?$default_delete@VTimingGuard@AgenticObservability@@@std@@@std@@QEAA@XZ)
+
+AgentOrchestrator.cpp.obj : error LNK2019: unresolved external symbol "public: class std::unique_ptr<class AgenticObservability::TimingGuard,struct std::default_delete<class AgenticObservability::TimingGuard> > __cdecl AgenticObservability::measureDuration(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?measureDuration@AgenticObservability@@QEAA?AV?$unique_ptr@VTimingGuard@AgenticObservability@@U?$default_delete@VTimingGuard@AgenticObservability@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@@Z) referenced in function "public: struct RawrXD::Agent::AgentSession __cdecl RawrXD::Agent::AgentOrchestrator::RunAgentLoop(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::function<void __cdecl(struct RawrXD::Agent::AgentStep const &)>)" (?RunAgentLoop@AgentOrchestrator@Agent@RawrXD@@QEAA?AUAgentSession@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$function@$$A6AXAEBUAgentStep@Agent@RawrXD@@@Z@6@@Z)
+
+OrchestratorBridge.cpp.obj : error LNK2019: unresolved external symbol "public: static void __cdecl RawrXD::Agent::DiskRecoveryToolHandler::RegisterTools(class RawrXD::Agent::AgentToolRegistry &)" (?RegisterTools@DiskRecoveryToolHandler@Agent@RawrXD@@SAXAEAVAgentToolRegistry@23@@Z) referenced in function "private: void __cdecl RawrXD::Agent::OrchestratorBridge::WireToolHandlers(void)" (?WireToolHandlers@OrchestratorBridge@Agent@RawrXD@@AEAAXXZ)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: bool __cdecl SubsystemRegistry::isAvailable(enum SubsystemId)const " (?isAvailable@SubsystemRegistry@@QEBA_NW4SubsystemId@@@Z) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleGetCoverage(class nlohmann::json const &)" (?HandleGetCoverage@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+feature_handlers.cpp.obj : error LNK2001: unresolved external symbol "public: bool __cdecl SubsystemRegistry::isAvailable(enum SubsystemId)const " (?isAvailable@SubsystemRegistry@@QEBA_NW4SubsystemId@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::logDebug(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?logDebug@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0AEBVjson@nlohmann@@@Z) referenced in function "public: struct RawrXD::Agent::ToolExecResult __cdecl RawrXD::Agent::AgentToolRegistry::Dispatch(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?Dispatch@AgentToolRegistry@Agent@RawrXD@@QEAA?AUToolExecResult@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::logWarn(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?logWarn@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@0AEBVjson@nlohmann@@@Z) referenced in function "public: struct RawrXD::Agent::ToolExecResult __cdecl RawrXD::Agent::AgentToolRegistry::Dispatch(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?Dispatch@AgentToolRegistry@Agent@RawrXD@@QEAA?AUToolExecResult@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl AgenticObservability::startSpan(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?startSpan@AgenticObservability@@QEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@0@Z) referenced in function "public: struct RawrXD::Agent::ToolExecResult __cdecl RawrXD::Agent::AgentToolRegistry::Dispatch(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?Dispatch@AgentToolRegistry@Agent@RawrXD@@QEAA?AUToolExecResult@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticObservability::endSpan(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,bool,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,int)" (?endSpan@AgenticObservability@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_N0H@Z) referenced in function "public: struct RawrXD::Agent::ToolExecResult __cdecl RawrXD::Agent::AgentToolRegistry::Dispatch(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class nlohmann::json const &)" (?Dispatch@AgentToolRegistry@Agent@RawrXD@@QEAA?AUToolExecResult@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::~DiskRecoveryAsmAgent(void)" (??1DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAA@XZ) referenced in function "void __cdecl `struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)'::`2'::`dynamic atexit destructor for 'agent''(void)" (??__Fagent@?1??HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z@YAXXZ)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: class RawrXD::Recovery::DiskRecoveryAsmAgent & __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::operator=(class RawrXD::Recovery::DiskRecoveryAsmAgent &&)" (??4DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAAAEAV012@$$QEAV012@@Z) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: int __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::FindDrive(void)" (?FindDrive@DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAAHXZ) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::Recovery::AsmRecoveryResult __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::Initialize(int)" (?Initialize@DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAA?AUAsmRecoveryResult@23@H@Z) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::Recovery::AsmRecoveryResult __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::ExtractEncryptionKey(void)" (?ExtractEncryptionKey@DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAA?AUAsmRecoveryResult@23@XZ) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::Recovery::AsmRecoveryResult __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::RunRecovery(void)" (?RunRecovery@DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAA?AUAsmRecoveryResult@23@XZ) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::Abort(void)" (?Abort@DiskRecoveryAsmAgent@Recovery@RawrXD@@QEAAXXZ) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+ToolRegistry.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::Recovery::AsmRecoveryStats __cdecl RawrXD::Recovery::DiskRecoveryAsmAgent::GetStats(void)const " (?GetStats@DiskRecoveryAsmAgent@Recovery@RawrXD@@QEBA?AUAsmRecoveryStats@23@XZ) referenced in function "struct RawrXD::Agent::ToolExecResult __cdecl `anonymous namespace'::HandleDiskRecovery(class nlohmann::json const &)" (?HandleDiskRecovery@?A0x15d8db21@@YA?AUToolExecResult@Agent@RawrXD@@AEBVjson@nlohmann@@@Z)
+
+pyre_compute.cpp.obj : error LNK2019: unresolved external symbol "public: struct PatchResult __cdecl RawrXD::LayerOffloadManager::ensureLayerResident(unsigned int)" (?ensureLayerResident@LayerOffloadManager@RawrXD@@QEAA?AUPatchResult@@I@Z) referenced in function "public: struct PatchResult __cdecl PyreGraph::forward(unsigned int const *,unsigned int,float *)" (?forward@PyreGraph@@QEAA?AUPatchResult@@PEBIIPEAM@Z)
+
+pyre_compute.cpp.obj : error LNK2019: unresolved external symbol "public: struct PatchResult __cdecl RawrXD::LayerOffloadManager::prefetchLayer(unsigned int)" (?prefetchLayer@LayerOffloadManager@RawrXD@@QEAA?AUPatchResult@@I@Z) referenced in function "public: struct PatchResult __cdecl PyreGraph::forward(unsigned int const *,unsigned int,float *)" (?forward@PyreGraph@@QEAA?AUPatchResult@@PEBIIPEAM@Z)
+
+pyre_compute.cpp.obj : error LNK2019: unresolved external symbol "public: struct PatchResult __cdecl RawrXD::LayerOffloadManager::releaseLayer(unsigned int)" (?releaseLayer@LayerOffloadManager@RawrXD@@QEAA?AUPatchResult@@I@Z) referenced in function "public: struct PatchResult __cdecl PyreGraph::forward(unsigned int const *,unsigned int,float *)" (?forward@PyreGraph@@QEAA?AUPatchResult@@PEBIIPEAM@Z)
+
+pyre_compute.cpp.obj : error LNK2019: unresolved external symbol "public: bool __cdecl RawrXD::LayerOffloadManager::shouldSkipLayer(unsigned int)const " (?shouldSkipLayer@LayerOffloadManager@RawrXD@@QEBA_NI@Z) referenced in function "public: struct PatchResult __cdecl PyreGraph::forward(unsigned int const *,unsigned int,float *)" (?forward@PyreGraph@@QEAA?AUPatchResult@@PEBIIPEAM@Z)
+
+pyre_compute.cpp.obj : error LNK2019: unresolved external symbol "public: static class RawrXD::LayerOffloadManager & __cdecl RawrXD::LayerOffloadManager::instance(void)" (?instance@LayerOffloadManager@RawrXD@@SAAEAV12@XZ) referenced in function "public: struct PatchResult __cdecl PyreGraph::forward(unsigned int const *,unsigned int,float *)" (?forward@PyreGraph@@QEAA?AUPatchResult@@PEBIIPEAM@Z)
+
+sovereign_engines.cpp.obj : error LNK2019: unresolved external symbol "public: static void __cdecl EngineRegistry::register_engine(class Engine *)" (?register_engine@EngineRegistry@@SAXPEAVEngine@@@Z) referenced in function "void __cdecl register_sovereign_engines(void)" (?register_sovereign_engines@@YAXXZ)
+
+brutal_gzip.cpp.obj : error LNK2019: unresolved external symbol deflate_brutal_masm referenced in function "class std::vector<unsigned char,class std::allocator<unsigned char> > __cdecl brutal::compress(class std::vector<unsigned char,class std::allocator<unsigned char> > const &)" (?compress@brutal@@YA?AV?$vector@EV?$allocator@E@std@@@std@@AEBV23@@Z)
+
+model_bruteforce_engine.cpp.obj : error LNK2019: unresolved external symbol "public: static class TelemetryCollector * __cdecl TelemetryCollector::instance(void)" (?instance@TelemetryCollector@@SAPEAV1@XZ) referenced in function "public: class std::vector<struct RawrXD::ModelProbeResult,class std::allocator<struct RawrXD::ModelProbeResult> > __cdecl RawrXD::ModelBruteForceEngine::BruteForceAll(struct RawrXD::BruteForceScanConfig const &,class std::function<void __cdecl(struct RawrXD::BruteForceScanProgress const &)>)" (?BruteForceAll@ModelBruteForceEngine@RawrXD@@QEAA?AV?$vector@UModelProbeResult@RawrXD@@V?$allocator@UModelProbeResult@RawrXD@@@std@@@std@@AEBUBruteForceScanConfig@2@V?$function@$$A6AXAEBUBruteForceScanProgress@RawrXD@@@Z@4@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2001: unresolved external symbol "public: static class TelemetryCollector * __cdecl TelemetryCollector::instance(void)" (?instance@TelemetryCollector@@SAPEAV1@XZ)
+
+model_bruteforce_engine.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl TelemetryCollector::trackFeatureUsage(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::unordered_map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct JsonValue,struct std::hash<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,struct std::equal_to<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct JsonValue> > > const &)" (?trackFeatureUsage@TelemetryCollector@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$unordered_map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UJsonValue@@U?$hash@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@U?$equal_to@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UJsonValue@@@std@@@2@@3@@Z) referenced in function "public: class std::vector<struct RawrXD::ModelProbeResult,class std::allocator<struct RawrXD::ModelProbeResult> > __cdecl RawrXD::ModelBruteForceEngine::BruteForceAll(struct RawrXD::BruteForceScanConfig const &,class std::function<void __cdecl(struct RawrXD::BruteForceScanProgress const &)>)" (?BruteForceAll@ModelBruteForceEngine@RawrXD@@QEAA?AV?$vector@UModelProbeResult@RawrXD@@V?$allocator@UModelProbeResult@RawrXD@@@std@@@std@@AEBUBruteForceScanConfig@2@V?$function@$$A6AXAEBUBruteForceScanProgress@RawrXD@@@Z@4@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2001: unresolved external symbol "public: void __cdecl TelemetryCollector::trackFeatureUsage(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::unordered_map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct JsonValue,struct std::hash<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,struct std::equal_to<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct JsonValue> > > const &)" (?trackFeatureUsage@TelemetryCollector@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$unordered_map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UJsonValue@@U?$hash@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@U?$equal_to@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UJsonValue@@@std@@@2@@3@@Z)
+
+feature_handlers.cpp.obj : error LNK2019: unresolved external symbol "public: char const * __cdecl SubsystemRegistry::getSwitchName(enum SubsystemId)const " (?getSwitchName@SubsystemRegistry@@QEBAPEBDW4SubsystemId@@@Z) referenced in function "public: int __cdecl SubsystemAgentBridge::enumerateCapabilities(struct SubsystemAgentBridge::SubsystemCapability *,int)const " (?enumerateCapabilities@SubsystemAgentBridge@@QEBAHPEAUSubsystemCapability@1@H@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<struct RawrXD::ReverseEngineering::NativeDisassembler::Instruction,class std::allocator<struct RawrXD::ReverseEngineering::NativeDisassembler::Instruction> > __cdecl RawrXD::ReverseEngineering::NativeDisassembler::DisassembleX64(unsigned char const *,unsigned __int64,unsigned __int64)" (?DisassembleX64@NativeDisassembler@ReverseEngineering@RawrXD@@SA?AV?$vector@UInstruction@NativeDisassembler@ReverseEngineering@RawrXD@@V?$allocator@UInstruction@NativeDisassembler@ReverseEngineering@RawrXD@@@std@@@std@@PEBE_K1@Z) referenced in function "struct CommandResult __cdecl handleAsmShowCallGraph(struct CommandContext const &)" (?handleAsmShowCallGraph@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<struct RawrXD::ReverseEngineering::NativeDisassembler::Function,class std::allocator<struct RawrXD::ReverseEngineering::NativeDisassembler::Function> > __cdecl RawrXD::ReverseEngineering::NativeDisassembler::AnalyzeFunctions(class std::vector<struct RawrXD::ReverseEngineering::NativeDisassembler::Instruction,class std::allocator<struct RawrXD::ReverseEngineering::NativeDisassembler::Instruction> > const &)" (?AnalyzeFunctions@NativeDisassembler@ReverseEngineering@RawrXD@@SA?AV?$vector@UFunction@NativeDisassembler@ReverseEngineering@RawrXD@@V?$allocator@UFunction@NativeDisassembler@ReverseEngineering@RawrXD@@@std@@@std@@AEBV?$vector@UInstruction@NativeDisassembler@ReverseEngineering@RawrXD@@V?$allocator@UInstruction@NativeDisassembler@ReverseEngineering@RawrXD@@@std@@@5@@Z) referenced in function "struct CommandResult __cdecl handleAsmShowCallGraph(struct CommandContext const &)" (?handleAsmShowCallGraph@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,class std::allocator<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > __cdecl RawrXD::ReverseEngineering::NativeDisassembler::ExtractStrings(unsigned char const *,unsigned __int64)" (?ExtractStrings@NativeDisassembler@ReverseEngineering@RawrXD@@SA?AV?$vector@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$allocator@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@@std@@PEBE_K@Z) referenced in function "struct CommandResult __cdecl handleAsmFindLabelRefs(struct CommandContext const &)" (?handleAsmFindLabelRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::unordered_map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,unsigned __int64,struct std::hash<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,struct std::equal_to<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,unsigned __int64> > > __cdecl RawrXD::ReverseEngineering::NativeDisassembler::AnalyzeImports(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?AnalyzeImports@NativeDisassembler@ReverseEngineering@RawrXD@@SA?AV?$unordered_map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_KU?$hash@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@U?$equal_to@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_K@std@@@2@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@5@@Z) referenced in function "struct CommandResult __cdecl handleAsmParseSymbols(struct CommandContext const &)" (?handleAsmParseSymbols@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::unordered_map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,unsigned __int64,struct std::hash<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,struct std::equal_to<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,unsigned __int64> > > __cdecl RawrXD::ReverseEngineering::NativeDisassembler::AnalyzeExports(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?AnalyzeExports@NativeDisassembler@ReverseEngineering@RawrXD@@SA?AV?$unordered_map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_KU?$hash@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@U?$equal_to@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@_K@std@@@2@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@5@@Z) referenced in function "struct CommandResult __cdecl handleAsmParseSymbols(struct CommandContext const &)" (?handleAsmParseSymbols@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static struct RawrXD::ReverseEngineering::BinaryAnalyzer::BinaryInfo __cdecl RawrXD::ReverseEngineering::BinaryAnalyzer::AnalyzePE(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?AnalyzePE@BinaryAnalyzer@ReverseEngineering@RawrXD@@SA?AUBinaryInfo@123@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z) referenced in function "struct CommandResult __cdecl handleAsmShowSections(struct CommandContext const &)" (?handleAsmShowSections@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::ReverseEngineering::BinaryAnalyzer::GenerateReport(struct RawrXD::ReverseEngineering::BinaryAnalyzer::BinaryInfo const &)" (?GenerateReport@BinaryAnalyzer@ReverseEngineering@RawrXD@@SA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBUBinaryInfo@123@@Z) referenced in function "struct CommandResult __cdecl handleRevengAnalyze(struct CommandContext const &)" (?handleRevengAnalyze@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<unsigned char,class std::allocator<unsigned char> > __cdecl RawrXD::ReverseEngineering::BinaryAnalyzer::ExtractSection(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?ExtractSection@BinaryAnalyzer@ReverseEngineering@RawrXD@@SA?AV?$vector@EV?$allocator@E@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@5@0@Z) referenced in function "struct CommandResult __cdecl handleAsmFindLabelRefs(struct CommandContext const &)" (?handleAsmFindLabelRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<struct RawrXD::ReverseEngineering::RECodex::Pattern,class std::allocator<struct RawrXD::ReverseEngineering::RECodex::Pattern> > __cdecl RawrXD::ReverseEngineering::RECodex::GetMalwarePatterns(void)" (?GetMalwarePatterns@RECodex@ReverseEngineering@RawrXD@@SA?AV?$vector@UPattern@RECodex@ReverseEngineering@RawrXD@@V?$allocator@UPattern@RECodex@ReverseEngineering@RawrXD@@@std@@@std@@XZ) referenced in function "struct CommandResult __cdecl handleRevengDetectVulns(struct CommandContext const &)" (?handleRevengDetectVulns@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<struct RawrXD::ReverseEngineering::RECodex::Pattern,class std::allocator<struct RawrXD::ReverseEngineering::RECodex::Pattern> > __cdecl RawrXD::ReverseEngineering::RECodex::GetCompilerPatterns(void)" (?GetCompilerPatterns@RECodex@ReverseEngineering@RawrXD@@SA?AV?$vector@UPattern@RECodex@ReverseEngineering@RawrXD@@V?$allocator@UPattern@RECodex@ReverseEngineering@RawrXD@@@std@@@std@@XZ) referenced in function "struct CommandResult __cdecl handleRevengTypeRecovery(struct CommandContext const &)" (?handleRevengTypeRecovery@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::vector<struct std::pair<unsigned __int64,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<unsigned __int64,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > > > > __cdecl RawrXD::ReverseEngineering::RECodex::ScanForPatterns(unsigned char const *,unsigned __int64,class std::vector<struct RawrXD::ReverseEngineering::RECodex::Pattern,class std::allocator<struct RawrXD::ReverseEngineering::RECodex::Pattern> > const &)" (?ScanForPatterns@RECodex@ReverseEngineering@RawrXD@@SA?AV?$vector@U?$pair@_KV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@std@@V?$allocator@U?$pair@_KV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@std@@@2@@std@@PEBE_KAEBV?$vector@UPattern@RECodex@ReverseEngineering@RawrXD@@V?$allocator@UPattern@RECodex@ReverseEngineering@RawrXD@@@std@@@5@@Z) referenced in function "struct CommandResult __cdecl handleRevengDetectVulns(struct CommandContext const &)" (?handleRevengDetectVulns@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl RawrXD::ReverseEngineering::RECodex::AnalyzeWithAI(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?AnalyzeWithAI@RECodex@ReverseEngineering@RawrXD@@SA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV45@0@Z) referenced in function "struct CommandResult __cdecl handleDecompFindRefs(struct CommandContext const &)" (?handleDecompFindRefs@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: static struct RawrXD::ReverseEngineering::NativeCompiler::CompileResult __cdecl RawrXD::ReverseEngineering::NativeCompiler::CompileToNative(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,struct RawrXD::ReverseEngineering::NativeCompiler::CompileOptions const &)" (?CompileToNative@NativeCompiler@ReverseEngineering@RawrXD@@SA?AUCompileResult@123@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBUCompileOptions@123@@Z) referenced in function "struct CommandResult __cdecl handleRevengCompile(struct CommandContext const &)" (?handleRevengCompile@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl TelemetryCollector::trackPerformance(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,double,class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &)" (?trackPerformance@TelemetryCollector@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@N0@Z) referenced in function "struct CommandResult __cdecl handleAiModeDeepResearch(struct CommandContext const &)" (?handleAiModeDeepResearch@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: class std::unordered_map<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >,struct JsonValue,struct std::hash<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,struct std::equal_to<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > >,class std::allocator<struct std::pair<class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const ,struct JsonValue> > > __cdecl TelemetryCollector::getAllTelemetryData(void)const " (?getAllTelemetryData@TelemetryCollector@@QEBA?AV?$unordered_map@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UJsonValue@@U?$hash@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@U?$equal_to@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@2@V?$allocator@U?$pair@$$CBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@UJsonValue@@@std@@@2@@std@@XZ) referenced in function "struct CommandResult __cdecl handleQwSloDashboard(struct CommandContext const &)" (?handleQwSloDashboard@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl AgenticDeepThinkingEngine::AgenticDeepThinkingEngine(void)" (??0AgenticDeepThinkingEngine@@QEAA@XZ) referenced in function "class AgenticDeepThinkingEngine & __cdecl getDeepThinkingEngine(void)" (?getDeepThinkingEngine@@YAAEAVAgenticDeepThinkingEngine@@XZ)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: __cdecl AgenticDeepThinkingEngine::~AgenticDeepThinkingEngine(void)" (??1AgenticDeepThinkingEngine@@QEAA@XZ) referenced in function "void __cdecl `class AgenticDeepThinkingEngine & __cdecl getDeepThinkingEngine(void)'::`2'::`dynamic atexit destructor for 's_dt''(void)" (??__Fs_dt@?1??getDeepThinkingEngine@@YAAEAVAgenticDeepThinkingEngine@@XZ@YAXXZ)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: struct AgenticDeepThinkingEngine::ThinkingResult __cdecl AgenticDeepThinkingEngine::think(struct AgenticDeepThinkingEngine::ThinkingContext const &)" (?think@AgenticDeepThinkingEngine@@QEAA?AUThinkingResult@1@AEBUThinkingContext@1@@Z) referenced in function "struct CommandResult __cdecl handleAiModeDeepResearch(struct CommandContext const &)" (?handleAiModeDeepResearch@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticDeepThinkingEngine::saveThinkingResult(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,struct AgenticDeepThinkingEngine::ThinkingResult const &)" (?saveThinkingResult@AgenticDeepThinkingEngine@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBUThinkingResult@1@@Z) referenced in function "struct CommandResult __cdecl handleAiModeDeepResearch(struct CommandContext const &)" (?handleAiModeDeepResearch@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl AgenticDeepThinkingEngine::clearMemory(void)" (?clearMemory@AgenticDeepThinkingEngine@@QEAAXXZ) referenced in function "struct CommandResult __cdecl handleAiModeDeepThink(struct CommandContext const &)" (?handleAiModeDeepThink@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: struct AgenticDeepThinkingEngine::MultiAgentResult __cdecl AgenticDeepThinkingEngine::thinkMultiAgent(struct AgenticDeepThinkingEngine::ThinkingContext const &)" (?thinkMultiAgent@AgenticDeepThinkingEngine@@QEAA?AUMultiAgentResult@1@AEBUThinkingContext@1@@Z) referenced in function "struct CommandResult __cdecl handleAiModeMax(struct CommandContext const &)" (?handleAiModeMax@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+auto_feature_registry.cpp.obj : error LNK2019: unresolved external symbol "public: struct AgenticDeepThinkingEngine::ThinkingStats __cdecl AgenticDeepThinkingEngine::getStats(void)const " (?getStats@AgenticDeepThinkingEngine@@QEBA?AUThinkingStats@1@XZ) referenced in function "struct CommandResult __cdecl handleAIAgentMultiStatus(struct CommandContext const &)" (?handleAIAgentMultiStatus@@YA?AUCommandResult@@AEBUCommandContext@@@Z)
+
+code_linter.cpp.obj : error LNK2019: unresolved external symbol "public: static class RawrXD::LSP::DiagnosticConsumer & __cdecl RawrXD::LSP::DiagnosticConsumer::Global(void)" (?Global@DiagnosticConsumer@LSP@RawrXD@@SAAEAV123@XZ) referenced in function "public: struct LintResult __cdecl CodeLinter::lintSource(char const *,unsigned int,enum Language,char const *)" (?lintSource@CodeLinter@@QEAA?AULintResult@@PEBDIW4Language@@0@Z)
+
+code_linter.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::LSP::DiagResult __cdecl RawrXD::LSP::DiagnosticConsumer::publishDiagnostics(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,class std::vector<struct RawrXD::LSP::Diagnostic,class std::allocator<struct RawrXD::LSP::Diagnostic> > const &)" (?publishDiagnostics@DiagnosticConsumer@LSP@RawrXD@@QEAA?AUDiagResult@23@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV?$vector@UDiagnostic@LSP@RawrXD@@V?$allocator@UDiagnostic@LSP@RawrXD@@@std@@@6@@Z) referenced in function "public: struct LintResult __cdecl CodeLinter::lintSource(char const *,unsigned int,enum Language,char const *)" (?lintSource@CodeLinter@@QEAA?AULintResult@@PEBDIW4Language@@0@Z)
+
+Win32IDE_Tier5Cosmetics.cpp.obj : error LNK2019: unresolved external symbol "private: void __cdecl Win32IDE::initLineEndingSelector(void)" (?initLineEndingSelector@Win32IDE@@AEAAXXZ) referenced in function "private: void __cdecl Win32IDE::initTier5Cosmetics(void)" (?initTier5Cosmetics@Win32IDE@@AEAAXXZ)
+
+Win32IDE_Tier5Cosmetics.cpp.obj : error LNK2019: unresolved external symbol "private: bool __cdecl Win32IDE::handleLineEndingCommand(int)" (?handleLineEndingCommand@Win32IDE@@AEAA_NH@Z) referenced in function "private: bool __cdecl Win32IDE::handleTier5Command(int)" (?handleTier5Command@Win32IDE@@AEAA_NH@Z)
+
+Win32IDE_Tier5Cosmetics.cpp.obj : error LNK2019: unresolved external symbol "private: void __cdecl Win32IDE::initDebugWatchFormat(void)" (?initDebugWatchFormat@Win32IDE@@AEAAXXZ) referenced in function "private: void __cdecl Win32IDE::initTier5Cosmetics(void)" (?initTier5Cosmetics@Win32IDE@@AEAAXXZ)
+
+Win32IDE_Tier5Cosmetics.cpp.obj : error LNK2019: unresolved external symbol "private: bool __cdecl Win32IDE::handleDebugWatchCommand(int)" (?handleDebugWatchCommand@Win32IDE@@AEAA_NH@Z) referenced in function "private: bool __cdecl Win32IDE::handleTier5Command(int)" (?handleTier5Command@Win32IDE@@AEAA_NH@Z)
+
+Win32IDE_Tier5Cosmetics.cpp.obj : error LNK2019: unresolved external symbol "private: void __cdecl Win32IDE::initCallStackSymbols(void)" (?initCallStackSymbols@Win32IDE@@AEAAXXZ) referenced in function "private: void __cdecl Win32IDE::initTier5Cosmetics(void)" (?initTier5Cosmetics@Win32IDE@@AEAAXXZ)
+
+Win32IDE_Tier5Cosmetics.cpp.obj : error LNK2019: unresolved external symbol "private: bool __cdecl Win32IDE::handleCallStackCommand(int)" (?handleCallStackCommand@Win32IDE@@AEAA_NH@Z) referenced in function "private: bool __cdecl Win32IDE::handleTier5Command(int)" (?handleTier5Command@Win32IDE@@AEAA_NH@Z)
+
+mesh_brain.cpp.obj : error LNK2019: unresolved external symbol asm_mesh_crdt_lookup referenced in function "public: bool __cdecl MeshBrain::getCRDT(unsigned __int64,unsigned __int64 &)const " (?getCRDT@MeshBrain@@QEBA_N_KAEA_K@Z)
+
+mesh_brain.cpp.obj : error LNK2019: unresolved external symbol asm_mesh_topology_remove referenced in function "public: struct PatchResult __cdecl MeshBrain::removePeer(unsigned __int64 const * const)" (?removePeer@MeshBrain@@QEAA?AUPatchResult@@QEB_K@Z)
+
+mesh_brain.cpp.obj : error LNK2019: unresolved external symbol asm_mesh_topology_count referenced in function "public: class std::vector<struct MeshNodeInfo,class std::allocator<struct MeshNodeInfo> > __cdecl MeshBrain::getAllPeers(void)const " (?getAllPeers@MeshBrain@@QEBA?AV?$vector@UMeshNodeInfo@@V?$allocator@UMeshNodeInfo@@@std@@@std@@XZ)
+
+mesh_brain.cpp.obj : error LNK2019: unresolved external symbol asm_mesh_topology_list referenced in function "public: class std::vector<struct MeshNodeInfo,class std::allocator<struct MeshNodeInfo> > __cdecl MeshBrain::getAllPeers(void)const " (?getAllPeers@MeshBrain@@QEBA?AV?$vector@UMeshNodeInfo@@V?$allocator@UMeshNodeInfo@@@std@@@std@@XZ)
+
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 80 unresolved externals
+
+
+
+ninja: build stopped: subcommand failed.
+
+ninja: build stopped: subcommand failed.

@@ -107,6 +107,11 @@ struct IDWriteTextLayout;
 #define IDM_AI_MODE_DEEP_RESEARCH 4202
 #define IDM_AI_MODE_NO_REFUSAL 4203
 
+// Engine / 800B Dual-Engine & Titan (4220–4239)
+#define IDM_ENGINE_UNLOCK_800B 4220
+#define IDM_ENGINE_LOAD_800B   4221
+#define IDM_TITAN_TOGGLE       4230
+
 // AI Mode Toggle IDs (Controls)
 #define IDC_AI_MAX_MODE 5001
 #define IDC_AI_DEEP_THINK 5002
@@ -143,6 +148,8 @@ struct IDWriteTextLayout;
 #define IDM_AI_AGENT_MULTI_ENABLE 4218
 #define IDM_AI_AGENT_MULTI_DISABLE 4219
 #define IDM_AI_AGENT_MULTI_STATUS 4220
+#define IDM_AI_TITAN_TOGGLE       4221
+#define IDM_AI_800B_STATUS        4222
 
 // Reverse Engineering IDs
 #define IDM_REVENG_ANALYZE 4300
@@ -746,6 +753,7 @@ public:
 
     // Agentic Framework
     std::unique_ptr<AgenticBridge> m_agenticBridge;
+    bool m_multiAgentEnabled = false;  // Multi-agent orchestration toggle
     void initializeAgenticBridge();
     void initializeAutonomy();
     void onAgentStartLoop();
@@ -1754,6 +1762,7 @@ private:
     std::vector<RawrXD::TensorInfo> m_modelTensors;
     bool m_useStreamingLoader; // preference to use streaming loader to minimize memory
     bool m_useVulkanRenderer; // preference to use Vulkan renderer if enabled
+    bool m_useTitanKernel = true; // use Titan ASM/DLL inference when available (menu-togglable)
     
     // Unified Model Source Resolver (HuggingFace, Ollama blobs, HTTP, local files)
     std::unique_ptr<RawrXD::ModelSourceResolver> m_modelResolver;

@@ -208,7 +208,7 @@ std::vector<FailureInfo> AgenticFailureDetector::detectMultipleFailures(const st
     m_sequenceNumber++;
     
     if (!failures.empty()) {
-        if (onMultipleFailuresDetected) onMultipleFailuresDetected(failures);
+        if (onMultipleFailuresDetected) onMultipleFailuresDetected(failures.data(), failures.size(), callbackContext);
     }
     
     return failures;

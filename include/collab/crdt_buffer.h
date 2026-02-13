@@ -1,38 +1,31 @@
 #ifndef CRDT_BUFFER_H
 #define CRDT_BUFFER_H
 
-#include <QObject>
-#include <QString>
+// C++20, no Qt. CRDT text buffer; callbacks replace signals.
 
-// CRDT text buffer → conflict-free multi-user edits
-class CRDTBuffer : public QObject
+#include <string>
+#include <functional>
+
+class CRDTBuffer
 {
-    Q_OBJECT
-
 public:
-    explicit CRDTBuffer(QObject *parent = nullptr);
+    using TextChangedFn    = std::function<void(const std::string& newText)>;
+    using OperationGeneratedFn = std::function<void(const std::string& operation)>;
 
-    // Apply remote operation
-    void applyRemoteOperation(const QString &operation);
+    CRDTBuffer() = default;
 
-    // Get current text
-    QString getText() const;
+    void setOnTextChanged(TextChangedFn f)         { m_onTextChanged = std::move(f); }
+    void setOnOperationGenerated(OperationGeneratedFn f) { m_onOperationGenerated = std::move(f); }
 
-    // Insert text at position
-    void insertText(int position, const QString &text);
-
-    // Delete text from position
+    void applyRemoteOperation(const std::string& operation);
+    std::string getText() const { return m_text; }
+    void insertText(int position, const std::string& text);
     void deleteText(int position, int length);
 
-signals:
-    // Emitted when text changes
-    void textChanged(const QString &newText);
-
-    // Emitted when operation needs to be sent to other clients
-    void operationGenerated(const QString &operation);
-
 private:
-    QString m_text;
+    std::string m_text;
+    TextChangedFn    m_onTextChanged;
+    OperationGeneratedFn m_onOperationGenerated;
 };
 
 #endif // CRDT_BUFFER_H

@@ -220,6 +220,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         bool licenseOk = RawrXD::EnterpriseLicense::Instance().Initialize();
         if (licenseOk) {
             OutputDebugStringA("[main_win32] Enterprise License System initialized\n");
+            // Attempt 800B dual-engine unlock when license has DualEngine800B feature
+            if (RawrXD::Enterprise_Unlock800BDualEngine() != 0) {
+                OutputDebugStringA("[main_win32] 800B Dual-Engine unlocked (licensed)\n");
+            }
         } else {
             OutputDebugStringA("[main_win32] Enterprise License System: init failed (non-fatal, community mode)\n");
         }
@@ -247,8 +251,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     }
     
     // Initialize engine manager (safe — LoadEngine may fail for missing DLLs)
+    // 800B dual-engine load gated by enterprise unlock (g_800B_Unlocked)
     auto* engine_mgr = new EngineManager();
-    try { engine_mgr->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive"); } catch (...) {}
+    if (RawrXD::g_800B_Unlocked) {
+        try { engine_mgr->LoadEngine("engines/800b-5drive/800b_engine.dll", "800b-5drive"); } catch (...) {}
+    }
     try { engine_mgr->LoadEngine("engines/codex-ultimate/codex.dll", "codex-ultimate"); } catch (...) {}
     try { engine_mgr->LoadEngine("engines/rawrxd-compiler/compiler.dll", "rawrxd-compiler"); } catch (...) {}
     

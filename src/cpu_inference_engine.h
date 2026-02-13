@@ -115,6 +115,10 @@ public:
     bool IsDeepThinking() const { return m_deepThinking; }
     bool IsDeepResearch() const { return m_deepResearch; }
 
+    // Titan assembly engine (RawrXD_Interconnect / static ASM) — toggable
+    void SetUseTitanAssembly(bool use) { m_useTitanAssembly = use; }
+    bool IsTitanAssemblyEnabled() const { return m_useTitanAssembly; }
+
     // Performance settings
     void SetThreadCount(int threads) { m_threadCount = threads; }
     int GetThreadCount() const { return m_threadCount; }
@@ -186,6 +190,7 @@ private:
     bool m_maxMode = false;
     bool m_deepThinking = false;
     bool m_deepResearch = false;
+    bool m_useTitanAssembly = true;  // Use Titan ASM when available; toggle via SetUseTitanAssembly
 
     // Model weights and Data
     std::unordered_map<std::string, Tensor> m_weights;
