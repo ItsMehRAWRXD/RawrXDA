@@ -1221,6 +1221,17 @@ if(MSVC)
         VERBATIM
     )
 
+    # Brutal GZip deflate (stub returns nullptr for fallback)
+    set(ASM_DEFLATE_BRUTAL_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/gpu_masm/deflate_brutal_masm.asm")
+    set(ASM_DEFLATE_BRUTAL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/deflate_brutal_masm.obj")
+    add_custom_command(
+        OUTPUT ${ASM_DEFLATE_BRUTAL_OBJ}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_DEFLATE_BRUTAL_OBJ} ${ASM_DEFLATE_BRUTAL_SRC}
+        DEPENDS ${ASM_DEFLATE_BRUTAL_SRC}
+        COMMENT "[MASM] Assembling deflate_brutal_masm.asm"
+        VERBATIM
+    )
+
     # Collect all MASM objects
     set(MASM_OBJECTS
         ${ASM_REQUANTIZE_OBJ}
@@ -1262,6 +1273,7 @@ if(MSVC)
         ${ASM_NEURALBRIDGE_OBJ}
         ${ASM_OMEGA_OBJ}
         ${ASM_PERFCOUNTERS_OBJ}
+        ${ASM_DEFLATE_BRUTAL_OBJ}
     )
 
     # Link MASM objects into RawrEngine
@@ -1584,8 +1596,18 @@ if(WIN32)
         src/agentic/AgenticNavigator.cpp
         src/agentic/RawrXD_ToolRegistry.cpp
         src/agentic/ToolRegistry.cpp
+        src/tool_registry.cpp
         src/agentic/RawrXD_AgentLoop.cpp
         src/agentic/agentic_executor.cpp
+        src/agentic/FIMPromptBuilder.cpp
+        src/agentic_observability.cpp
+        src/core/rawrxd_subsystem_api.cpp
+        src/core/subsystem_mode_stubs.cpp
+        src/core/local_parity_bridge.cpp
+        src/core/layer_offload_manager.cpp
+        src/runtime_core.cpp
+        src/agent/telemetry_collector.cpp
+        src/win32app/reverse_engineered_stubs.cpp
 
         # T6: Autonomous Repair Orchestrator + Agent Memory Indexer
         src/core/auto_repair_orchestrator.cpp
@@ -1594,10 +1616,26 @@ if(WIN32)
         # T5: Agentic Transaction Layer (multi-step command execute/rollback)
         src/agentic/agentic_transaction.cpp
 
-        # Disk Recovery Agent (C++ implementation)
-        # ToolRegistry.cpp now included — DiskRecoveryToolHandler unlocked.
+        # AgenticObservability + SubsystemRegistry (required by AgentOrchestrator, ToolRegistry, feature_handlers)
+        src/agentic_observability.cpp
+        src/core/rawrxd_subsystem_api.cpp
+
+        # TelemetryCollector (required by model_bruteforce_engine)
+        src/agent/telemetry_collector.cpp
+
+        # EngineRegistry (required by sovereign_engines)
+        src/runtime_core.cpp
+
+        # ToolRegistry::inject_tools (required by runtime_core process_prompt)
+        src/tool_registry.cpp
+
+        # Mesh ASM stubs (asm_mesh_crdt_lookup etc. not in RawrXD_MeshBrain.asm)
+        src/core/mesh_brain_asm_stubs.cpp
+
+        # Disk Recovery Agent (C++ implementation) + Tool handler + ASM wrapper
         src/agent/DiskRecoveryAgent.cpp
-        # src/agentic/DiskRecoveryToolHandler.cpp  # Deferred: needs ToolRegistry.cpp
+        src/agentic/DiskRecoveryAgent.cpp
+        src/agentic/DiskRecoveryToolHandler.cpp
         src/agent_history.cpp
         src/agent_policy.cpp
         src/agent_explainability.cpp
@@ -1638,6 +1676,9 @@ if(WIN32)
         src/core/deterministic_replay.cpp
         src/core/confidence_gate.cpp
         
+        # Layer Offload Manager (required by pyre_compute)
+        src/core/layer_offload_manager.cpp
+
         # Native speed layer + local AI core (zero-dependency inference)
         src/core/native_speed_layer.cpp
         src/core/local_ai_core.cpp
@@ -1901,6 +1942,7 @@ if(WIN32)
         # Phase 15: Static Analysis Engine
         src/core/static_analysis_engine.cpp
         src/core/code_linter.cpp
+        src/lsp/diagnostic_consumer.cpp
         src/win32app/Win32IDE_StaticAnalysisPanel.cpp
 
         # Phase 16: Semantic Code Intelligence
@@ -1923,6 +1965,7 @@ if(WIN32)
         src/win32app/Win32IDE_NetworkPanel.cpp
         src/core/omega_orchestrator.cpp
         src/core/mesh_brain.cpp
+        src/core/mesh_brain_asm_stubs.cpp
         src/core/speciator_engine.cpp
         src/core/neural_bridge.cpp
         src/core/self_host_engine.cpp
@@ -1935,8 +1978,8 @@ if(WIN32)
         src/win32app/TodoManager.cpp
         src/win32app/IocpFileWatcher.cpp
         src/win32app/IDEDiagnosticAutoHealer.cpp
-        src/win32app/IDEDiagnosticAutoHealer_Impl.cpp
-        src/win32app/IDEAutoHealerLauncher.cpp
+        # IDEDiagnosticAutoHealer_Impl.cpp excluded (duplicate DiagnosticUtils)
+        # IDEAutoHealerLauncher.cpp excluded (defines main, conflicts with ASM)
         src/win32app/ConsentPrompt.cpp
         src/win32app/AutonomousAgent.cpp
 
@@ -2178,10 +2221,11 @@ if(WIN32)
         add_dependencies(RawrXD-Win32IDE re_deobfuscator)
         target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_DEOBF_OBJECTS})
     endif()
-    if(TARGET re_model_reverse)
-        add_dependencies(RawrXD-Win32IDE re_model_reverse)
-        target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_MODEL_OBJECTS})
-    endif()
+    # Skip RE_MODEL_OBJECTS (model_llm_harvester.asm) — it defines main() and conflicts with WinMain
+    # if(TARGET re_model_reverse)
+    #     add_dependencies(RawrXD-Win32IDE re_model_reverse)
+    #     target_link_libraries(RawrXD-Win32IDE PRIVATE ${RE_MODEL_OBJECTS})
+    # endif()
     
     target_include_directories(RawrXD-Win32IDE PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src

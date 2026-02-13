@@ -88,3 +88,13 @@ secrets.txt
 
 # Nested repos (not submodules)
 itsmehrawrxd-master/
+
+# Non-IDE directories (extracted/cached/external)
+OrganizedPiProject/
+Cursor_Source_Extracted/
+Extracted_Chat_Agent_Features/
+Cursor_Reverse_Engineered_Fork/
+Fixed_Reverse_Engineered/
+Consolidated_Modules_*/
+*.exe.WebView2/
+build_universal/

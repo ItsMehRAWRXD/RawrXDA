@@ -14,6 +14,17 @@
 #include "Win32IDE.h"
 
 // ============================================================================
+// Stub implementations for Tier 5 features (40, 43, 44)
+// ============================================================================
+
+void Win32IDE::initLineEndingSelector() { /* stub: line ending selector not yet implemented */ }
+bool Win32IDE::handleLineEndingCommand(int) { return false; }
+void Win32IDE::initDebugWatchFormat() { /* stub: debug watch format not yet implemented */ }
+bool Win32IDE::handleDebugWatchCommand(int) { return false; }
+void Win32IDE::initCallStackSymbols() { /* stub: call stack symbols not yet implemented */ }
+bool Win32IDE::handleCallStackCommand(int) { return false; }
+
+// ============================================================================
 // Initialize all Tier 5 features
 // ============================================================================
 

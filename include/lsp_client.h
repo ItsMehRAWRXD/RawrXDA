@@ -1,20 +1,19 @@
 /**
  * \file lsp_client.h
- * \brief Language Server Protocol client with streaming completions
+ * \brief Language Server Protocol client — Qt-free C++20/Win32
  * \author RawrXD Team
  * \date 2025-12-07
+ *
+ * Pure STL/Win32 implementation. Use lsp_client_unified.cpp for full LSP.
  */
 
 #pragma once
 
-#include <QObject>
-#include <QProcess>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QString>
-#include <QMap>
-#include <QTimer>
+#include <string>
+#include <vector>
+#include <map>
 #include <functional>
+#include <cstdint>
 
 namespace RawrXD {
 
@@ -22,191 +21,87 @@ namespace RawrXD {
  * \brief LSP server configuration
  */
 struct LSPServerConfig {
-    QString language;           // "cpp", "python", "javascript", etc.
-    QString command;            // "clangd", "pylsp", "typescript-language-server"
-    QStringList arguments;      // Server-specific args
-    QString workspaceRoot;      // Workspace root directory
-    bool autoStart = true;      // Auto-start on initialization
+    std::string language;              // "cpp", "python", "javascript", etc.
+    std::string command;               // "clangd", "pylsp", etc.
+    std::vector<std::string> arguments;
+    std::string workspaceRoot;
+    bool autoStart = true;
 };
 
 /**
  * \brief Completion item from LSP server
  */
 struct CompletionItem {
-    QString label;              // Display label
-    QString insertText;         // Text to insert
-    QString detail;             // Additional details
-    QString documentation;      // Documentation string
-    int kind = 1;              // CompletionItemKind (1=Text, 2=Method, 3=Function, etc.)
-    QString sortText;          // Sort order
-    QString filterText;        // Filter text
-    int score = 0;             // Relevance score (computed)
+    std::string label;
+    std::string insertText;
+    std::string detail;
+    std::string documentation;
+    int kind = 1;
+    std::string sortText;
+    std::string filterText;
+    int score = 0;
 };
 
 /**
  * \brief LSP diagnostic message
  */
 struct Diagnostic {
-    int line;                  // Line number (0-indexed)
-    int column;                // Column number (0-indexed)
-    int severity;              // 1=Error, 2=Warning, 3=Info, 4=Hint
-    QString message;           // Diagnostic message
-    QString source;            // Source (e.g., "clangd")
+    int line = 0;
+    int column = 0;
+    int severity = 1;  // 1=Error, 2=Warning, 3=Info, 4=Hint
+    std::string message;
+    std::string source;
 };
 
 /**
- * \brief LSP client for language server integration
- * 
- * Features:
- * - Multi-language support (C++, Python, TypeScript, etc.)
- * - Real-time completions with streaming
- * - Inline ghost-text preview
- * - Diagnostics (errors/warnings)
- * - Go-to-definition, hover, formatting
- * - Incremental document sync
- * - Multi-file context awareness
+ * \brief LSP client base — Qt-free, uses std types
  */
-class LSPClient : public QObject
-{
-    Q_OBJECT
-
+class LSPClient {
 public:
-    explicit LSPClient(const LSPServerConfig& config, QObject* parent = nullptr);
-    ~LSPClient() override;
+    explicit LSPClient(const LSPServerConfig& config) : m_config(config) {}
+    virtual ~LSPClient() = default;
 
-    /**
-     * Two-phase initialization - call after QApplication ready
-     */
-    void initialize();
+    virtual void initialize() {}
+    virtual bool startServer() { return false; }
+    virtual void stopServer() {}
+    virtual bool isRunning() const { return m_serverRunning; }
 
-    /**
-     * Start the LSP server process
-     */
-    bool startServer();
+    virtual void openDocument(const std::string&, const std::string&, const std::string&) {}
+    virtual void closeDocument(const std::string&) {}
+    virtual void updateDocument(const std::string&, const std::string&, int) {}
 
-    /**
-     * Stop the LSP server
-     */
-    void stopServer();
+    virtual void requestCompletions(const std::string&, int, int) {}
+    virtual void requestHover(const std::string&, int, int) {}
+    virtual void requestDefinition(const std::string&, int, int) {}
+    virtual void formatDocument(const std::string&) {}
+    virtual std::vector<Diagnostic> getDiagnostics(const std::string&) const { return {}; }
 
-    /**
-     * Check if server is running
-     */
-    bool isRunning() const { return m_serverRunning; }
+    // Default in lsp_client_default.cpp; full impl in lsp_client_incremental.cpp (Myers diff)
+    virtual void sendIncrementalUpdate(const std::string& uri, int64_t version,
+                                       const std::string& oldContent,
+                                       const std::string& newContent);
+    virtual void cancelRequest(const std::string& id);
 
-    /**
-     * Open document for tracking
-     */
-    void openDocument(const QString& uri, const QString& languageId, const QString& text);
+    struct Position { int line; int character; };
+    Position offsetToPosition(const std::string& text, int offset) {
+        int line = 0, col = 0;
+        for (int i = 0; i < offset && i < static_cast<int>(text.size()); ++i) {
+            if (text[static_cast<size_t>(i)] == '\n') { ++line; col = 0; }
+            else { ++col; }
+        }
+        return {line, col};
+    }
 
-    /**
-     * Close document
-     */
-    void closeDocument(const QString& uri);
+protected:
+    virtual void sendNotification(const std::string& method, const std::string& paramsJson) { (void)method; (void)paramsJson; }
 
-    /**
-     * Update document content (incremental sync)
-     */
-    void updateDocument(const QString& uri, const QString& text, int version);
-
-    /**
-     * Request completions at cursor position
-     * \param uri Document URI
-     * \param line Line number (0-indexed)
-     * \param character Column number (0-indexed)
-     */
-    void requestCompletions(const QString& uri, int line, int character);
-
-    /**
-     * Request hover information
-     */
-    void requestHover(const QString& uri, int line, int character);
-
-    /**
-     * Request go-to-definition
-     */
-    void requestDefinition(const QString& uri, int line, int character);
-
-    /**
-     * Format document
-     */
-    void formatDocument(const QString& uri);
-
-    /**
-     * Get current diagnostics for document
-     */
-    QVector<Diagnostic> getDiagnostics(const QString& uri) const;
-
-signals:
-    /**
-     * Server initialized and ready
-     */
-    void serverReady();
-
-    /**
-     * Completions received
-     */
-    void completionsReceived(const QString& uri, int line, int character, const QVector<CompletionItem>& items);
-
-    /**
-     * Hover information received
-     */
-    void hoverReceived(const QString& uri, const QString& markdown);
-
-    /**
-     * Definition location received
-     */
-    void definitionReceived(const QString& uri, int line, int character);
-
-    /**
-     * Diagnostics updated
-     */
-    void diagnosticsUpdated(const QString& uri, const QVector<Diagnostic>& diagnostics);
-
-    /**
-     * Format edits received
-     */
-    void formatEditsReceived(const QString& uri, const QString& formattedText);
-
-    /**
-     * Server error occurred
-     */
-    void serverError(const QString& error);
-
-private slots:
-    void onServerReadyRead();
-    void onServerError(QProcess::ProcessError error);
-    void onServerFinished(int exitCode, QProcess::ExitStatus status);
-
-private:
-    void sendMessage(const QJsonObject& message);
-    void processMessage(const QJsonObject& message);
-    void handleInitializeResponse(const QJsonObject& result);
-    void handleCompletionResponse(const QJsonObject& result, int requestId);
-    void handleHoverResponse(const QJsonObject& result, int requestId);
-    void handleDefinitionResponse(const QJsonObject& result, int requestId);
-    void handleDiagnostics(const QJsonObject& params);
-    
-    QString buildDocumentUri(const QString& filePath) const;
-    
     LSPServerConfig m_config;
-    QProcess* m_serverProcess{};
     bool m_serverRunning = false;
     bool m_initialized = false;
     int m_nextRequestId = 1;
-    
-    QByteArray m_receiveBuffer;
-    QMap<QString, int> m_documentVersions;  // uri -> version
-    QMap<QString, QVector<Diagnostic>> m_diagnostics;  // uri -> diagnostics
-    
-    // Request tracking
-    struct PendingRequest {
-        QString type;  // "completion", "hover", "definition", etc.
-        QString uri;
-        int line;
-        int character;
-    };
-    QMap<int, PendingRequest> m_pendingRequests;
+    std::map<std::string, int> m_documentVersions;
+    std::map<std::string, std::vector<Diagnostic>> m_diagnostics;
+    std::map<std::string, bool> m_pendingCancellations;
 };
 
 } // namespace RawrXD

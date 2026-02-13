@@ -1,8 +1,8 @@
 // lsp_client_unified.cpp - SINGLE CONSOLIDATED LSP IMPLEMENTATION
 // Replaces: lsp_client.cpp, language_server_integration.cpp, lsp_client_v2.cpp
 // Status: ZERO CONFLICTS - FULL LSP 3.17 SUPPORT
+// Qt-free: uses std types, Win32 pipes; lsp_client.h not needed (own types)
 
-#include "lsp_client.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>

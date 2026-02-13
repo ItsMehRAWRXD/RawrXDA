@@ -1,33 +1,9 @@
 #pragma once
 // telemetry_collector.hpp – Qt-free telemetry (C++20 / Win32)
+#include "../json_types.hpp"
 #include <cstdint>
 #include <mutex>
 #include <string>
-#include <unordered_map>
-#include <variant>
-#include <vector>
-
-// Lightweight JSON-like value for telemetry metadata (no nlohmann dependency)
-struct JsonValue {
-    enum Type { Null, Bool, Int, Double, String, Array, Object };
-    Type type = Null;
-
-    bool        boolVal   = false;
-    int64_t     intVal    = 0;
-    double      doubleVal = 0.0;
-    std::string strVal;
-    std::vector<JsonValue>                          arrVal;
-    std::unordered_map<std::string, JsonValue>      objVal;
-
-    JsonValue() = default;
-    JsonValue(bool v)               : type(Bool),   boolVal(v) {}
-    JsonValue(int v)                : type(Int),    intVal(v) {}
-    JsonValue(int64_t v)            : type(Int),    intVal(v) {}
-    JsonValue(double v)             : type(Double), doubleVal(v) {}
-    JsonValue(const char* v)        : type(String), strVal(v ? v : "") {}
-    JsonValue(const std::string& v) : type(String), strVal(v) {}
-};
-using JsonObject = std::unordered_map<std::string, JsonValue>;
 
 /**
  * Privacy-respecting telemetry for feature usage and crash analysis.

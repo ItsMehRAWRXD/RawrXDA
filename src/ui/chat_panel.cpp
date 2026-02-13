@@ -3,6 +3,11 @@
 #include "ui/tool_action_status.h"
 #include <string>
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 namespace RawrXD {
 namespace UI {
 
@@ -42,9 +47,15 @@ void ChatPanel::appendMessage(const std::string& who, const std::string& text) {
 std::string ChatPanel::getInput() const {
     if (!m_input) return {};
     int len = GetWindowTextLengthW(m_input);
-    std::wstring buf(len+1, L'\0');
+    if (len <= 0) return {};
+    std::wstring buf(len + 1, L'\0');
     GetWindowTextW(m_input, buf.data(), (int)buf.size());
-    return std::string(buf.begin(), buf.end());
+    int utf8Len = WideCharToMultiByte(CP_UTF8, 0, buf.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (utf8Len <= 0) return {};
+    std::string result(utf8Len, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, buf.c_str(), -1, result.data(), utf8Len, nullptr, nullptr);
+    result.resize(utf8Len - 1);  // Exclude null terminator
+    return result;
 }
 
 void ChatPanel::clearInput() {

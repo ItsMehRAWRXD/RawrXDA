@@ -8,7 +8,6 @@
 
 #include "telemetry_collector.hpp"
 #include "process_utils.hpp"
-#include "../json_types.hpp"
 #include <cstdio>
 #include <chrono>
 #include <filesystem>
