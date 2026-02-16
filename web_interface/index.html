@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1117">
+    <link rel="manifest" href="manifest.json">
+    <title>RawrXD Agentic IDE — Web</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --success: #238636;
+            --warning: #f0883e;
+            --error: #f85149;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container { display: flex; height: 100vh; }
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .logo {
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            user-select: none;
+        }
+        .nav-item:hover, .nav-item.active { background: var(--bg-tertiary); }
+        .nav-item svg { width: 16px; height: 16px; fill: currentColor; }
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .header {
+            height: 48px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            gap: 12px;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
+        .status-dot.connected { background: var(--success); }
+        .model-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+        .model-selector span { font-size: 12px; color: var(--text-secondary); }
+        select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: inherit;
+            padding: 4px 8px;
+            border-radius: 6px;
+            outline: none;
+            max-width: 380px;
+        }
+        .view {
+            flex: 1;
+            display: none;
+            min-height: 0;
+        }
+        .view.active { display: flex; flex-direction: column; }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            line-height: 1.6;
+            font-size: 14px;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+        }
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--bg-secondary);
+        }
+        .message.system {
+            align-self: center;
+            background: var(--bg-tertiary);
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-style: dashed;
+            max-width: 95%;
+        }
+        .input-container {
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            align-items: flex-end;
+        }
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-family: inherit;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            min-height: 24px;
+            max-height: 200px;
+        }
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        button:hover { background: var(--accent-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .tool-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .tool-btn:hover { background: var(--border); color: var(--text-primary); }
+        .streaming-cursor { display: inline-block; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        .code-block {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            position: relative;
+        }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .copy-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            background: var(--bg-tertiary);
+        }
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+            align-self: center;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .settings-modal.active { display: flex; }
+        .settings-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 500px;
+            max-width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .settings-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .settings-header h3 { font-size: 16px; }
+        .settings-body { padding: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: inherit;
+            border-radius: 6px;
+        }
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+            user-select: none;
+        }
+        .mode-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .panel {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .kv {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 8px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+        .k { color: var(--text-secondary); }
+        .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .message { max-width: 95%; }
+            select { max-width: 220px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">🦖 RawrXD Web</div>
+            <div class="nav-item active" onclick="switchTab('chat', event)">
+                <svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Z"/></svg>
+                Chat
+            </div>
+            <div class="nav-item" onclick="switchTab('agent', event)">
+                <svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .707.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.707.707L10.293 7.5H4.5Z"/></svg>
+                Agent
+            </div>
+            <div class="nav-item" onclick="switchTab('tools', event)">
+                <svg viewBox="0 0 16 16"><path d="M4.5 0A2.5 2.5 0 0 0 2 2.5v11A2.5 2.5 0 0 0 4.5 16h7a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 11.5 0h-7ZM4 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5V4H4V2.5ZM4 5h8v1H4V5Zm0 2h8v1H4V7Zm0 2h8v1H4V9Zm0 2h8v1H4v-1Z"/></svg>
+                Tools
+            </div>
+            <div class="nav-item" onclick="toggleSettings()">
+                <svg viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492ZM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0Z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319Z"/></svg>
+                Settings
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="header">
+                <div class="model-selector">
+                    <span>Model:</span>
+                    <select id="modelSelect" onchange="changeModel(this.value)">
+                        <option value="">(disconnected)</option>
+                    </select>
+                </div>
+                <div class="connection-status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </header>
+
+            <section class="view active" id="viewChat">
+                <div class="chat-container" id="chatContainer">
+                    <div class="message system">
+                        Welcome to RawrXD Web. Connect to your RawrEngine backend to begin.
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <div class="toolbar">
+                        <button class="tool-btn" onclick="insertContext('@file')">@File</button>
+                        <button class="tool-btn" onclick="insertContext('@code')">@Code</button>
+                        <button class="tool-btn" onclick="insertContext('@terminal')">@Terminal</button>
+                        <button class="tool-btn" onclick="setMode('ask')">Ask</button>
+                        <button class="tool-btn" onclick="setMode('plan')">Plan</button>
+                        <button class="tool-btn" onclick="setMode('full')">Full</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <textarea id="userInput" placeholder="Message RawrXD Agent..." rows="1" onkeydown="handleKeydown(event)"></textarea>
+                        <div class="spinner" id="spinner"></div>
+                        <button onclick="sendMessage()" id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view" id="viewAgent">
+                <div class="panel">
+                    <div class="card">
+                        <div class="kv">
+                            <div class="k">Backend URL</div><div class="mono" id="agentApiUrl"></div>
+                            <div class="k">Auth</div><div class="mono" id="agentAuthMode"></div>
+                            <div class="k">Mode</div><div class="mono" id="agentMode"></div>
+                            <div class="k">Model</div><div class="mono" id="agentModel"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="kv">
+                            <div class="k">Status</div><div class="mono" id="agentStatusJson">(not loaded)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="view" id="viewTools">
+                <div class="panel">
+                    <div class="card">
+                        <div class="kv">
+                            <div class="k">Tools</div><div class="mono" id="toolsCount">0</div>
+                        </div>
+                    </div>
+                    <div class="card" id="toolsList"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h3>Connection Settings</h3>
+                <button onclick="toggleSettings()">✕</button>
+            </div>
+            <div class="settings-body">
+                <div class="form-group">
+                    <label>RawrEngine URL</label>
+                    <input type="text" id="apiUrl" value="http://localhost:23959" placeholder="http://localhost:23959">
+                </div>
+                <div class="form-group">
+                    <label>API Key (optional)</label>
+                    <input type="password" id="apiKey" placeholder="Enter API key">
+                </div>
+                <div class="form-group">
+                    <label>Agent Mode</label>
+                    <div class="mode-tabs">
+                        <div class="mode-tab active" onclick="setAgentMode('ask', this)">Ask</div>
+                        <div class="mode-tab" onclick="setAgentMode('plan', this)">Plan</div>
+                        <div class="mode-tab" onclick="setAgentMode('full', this)">Full</div>
+                    </div>
+                </div>
+                <button onclick="saveSettings()" style="width: 100%;">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // RawrXD Web Interface — Universal Access Client
+        // Zero dependencies, vanilla JS, connects to RawrEngine HTTP API
+
+        const state = {
+            apiUrl: localStorage.getItem('rawrxd_api_url') || 'http://localhost:23959',
+            apiKey: localStorage.getItem('rawrxd_api_key') || '',
+            currentModel: localStorage.getItem('rawrxd_model') || '',
+            agentMode: localStorage.getItem('rawrxd_agent_mode') || 'ask',
+            isStreaming: false,
+            conversation: [],
+            tools: [],
+            isConnected: false,
+            lastStatus: null
+        };
+
+        function getAuthHeaders() {
+            const h = {};
+            if (state.apiKey) h['X-API-Key'] = state.apiKey;
+            return h;
+        }
+
+        // Auto-resize textarea
+        const textarea = document.getElementById('userInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+
+        function handleKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        async function checkConnection() {
+            try {
+                const res = await fetch(`${state.apiUrl}/status`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('status not ok');
+                const data = await res.json().catch(() => null);
+                setConnected(true);
+                state.lastStatus = data;
+                updateAgentPanel();
+                await Promise.all([loadModels(), loadTools()]);
+                return true;
+            } catch (e) {
+                setConnected(false);
+                return false;
+            }
+        }
+
+        function setConnected(connected) {
+            state.isConnected = connected;
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (connected) {
+                dot.classList.add('connected');
+                text.textContent = 'Connected';
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        async function loadModels() {
+            try {
+                const res = await fetch(`${state.apiUrl}/v1/models`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('models not ok');
+                const data = await res.json();
+                const select = document.getElementById('modelSelect');
+                select.innerHTML = '';
+                const models = Array.isArray(data.models) ? data.models : [];
+                if (!models.length) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = '(no models)';
+                    select.appendChild(opt);
+                    return;
+                }
+                for (const model of models) {
+                    const id = (model && model.id) ? model.id : String(model);
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = id;
+                    if (id === state.currentModel) opt.selected = true;
+                    select.appendChild(opt);
+                }
+                if (!state.currentModel) {
+                    state.currentModel = models[0].id || String(models[0]);
+                    localStorage.setItem('rawrxd_model', state.currentModel);
+                }
+                updateAgentPanel();
+            } catch (e) {
+                // keep selector as-is
+            }
+        }
+
+        async function loadTools() {
+            try {
+                const res = await fetch(`${state.apiUrl}/api/tools`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('tools not ok');
+                const data = await res.json();
+                state.tools = data.tools || [];
+                renderTools();
+            } catch (e) {
+                state.tools = [];
+                renderTools();
+            }
+        }
+
+        function changeModel(model) {
+            state.currentModel = model || '';
+            localStorage.setItem('rawrxd_model', state.currentModel);
+            updateAgentPanel();
+            fetch(`${state.apiUrl}/api/agentic/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({ model: state.currentModel })
+            }).catch(() => {});
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message || state.isStreaming) return;
+
+            input.value = '';
+            input.style.height = 'auto';
+
+            addMessage(message, 'user');
+            state.conversation.push({ role: 'user', content: message });
+
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('sendBtn').disabled = true;
+            state.isStreaming = true;
+
+            try {
+                if (state.agentMode === 'plan') {
+                    await handlePlanMode(message);
+                } else if (state.agentMode === 'full') {
+                    await handleFullAgent(message);
+                } else {
+                    await handleChat(message);
+                }
+            } catch (e) {
+                addMessage('Error: ' + (e && e.message ? e.message : String(e)), 'system');
+            } finally {
+                state.isStreaming = false;
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+
+        function safeTextToHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function formatInline(text) {
+            // `inline code`
+            text = text.replace(/`([^`]+)`/g, (m, code) => {
+                return '<code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px; font-family: monospace;">' + safeTextToHtml(code) + '</code>';
+            });
+            // **bold**
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // lists (- item)
+            text = text.replace(/(^|\n)\s*[-*]\s+(.+?)(?=\n|$)/g, (m, p1, item) => {
+                return p1 + '• ' + item;
+            });
+            // newlines
+            return text.replace(/\n/g, '<br>');
+        }
+
+        function formatContent(rawText) {
+            const text = rawText == null ? '' : String(rawText);
+            const codeFence = /```(\w+)?\n([\s\S]*?)```/g;
+            let out = '';
+            let last = 0;
+            let match;
+            while ((match = codeFence.exec(text)) !== null) {
+                const before = text.slice(last, match.index);
+                out += formatInline(safeTextToHtml(before));
+                const lang = match[1] || 'text';
+                const code = match[2] || '';
+                out += '<div class="code-block">' +
+                    '<div class="code-header">' +
+                    '<span>' + safeTextToHtml(lang) + '</span>' +
+                    '<button class="copy-btn" onclick="copyCode(this)">Copy</button>' +
+                    '</div>' +
+                    '<pre>' + safeTextToHtml(code.trim()) + '</pre>' +
+                    '</div>';
+                last = match.index + match[0].length;
+            }
+            out += formatInline(safeTextToHtml(text.slice(last)));
+            return out;
+        }
+
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').textContent;
+            navigator.clipboard.writeText(code).catch(() => {});
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+
+        function addMessage(content, role) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = formatContent(content);
+            container.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function insertContext(type) {
+            const input = document.getElementById('userInput');
+            input.value += type + ' ';
+            input.focus();
+        }
+
+        function setMode(mode) {
+            state.agentMode = mode;
+            localStorage.setItem('rawrxd_agent_mode', mode);
+            addMessage(`Switched to ${mode.toUpperCase()} mode`, 'system');
+            updateAgentPanel();
+        }
+
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('active');
+            if (modal.classList.contains('active')) {
+                document.getElementById('apiUrl').value = state.apiUrl;
+                document.getElementById('apiKey').value = state.apiKey;
+                syncModeTabs();
+            }
+        }
+
+        function syncModeTabs() {
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            const idx = state.agentMode === 'plan' ? 1 : (state.agentMode === 'full' ? 2 : 0);
+            document.querySelectorAll('.mode-tab')[idx].classList.add('active');
+        }
+
+        function saveSettings() {
+            state.apiUrl = document.getElementById('apiUrl').value.trim() || 'http://localhost:23959';
+            state.apiKey = document.getElementById('apiKey').value;
+            localStorage.setItem('rawrxd_api_url', state.apiUrl);
+            localStorage.setItem('rawrxd_api_key', state.apiKey);
+            toggleSettings();
+            checkConnection();
+            updateAgentPanel();
+        }
+
+        function switchTab(tab, ev) {
+            if (ev && ev.preventDefault) ev.preventDefault();
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (ev && ev.target) {
+                const item = ev.target.closest('.nav-item');
+                if (item) item.classList.add('active');
+            }
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById('view' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (target) target.classList.add('active');
+            renderTools();
+            updateAgentPanel();
+        }
+
+        function setAgentMode(mode, el) {
+            state.agentMode = mode;
+            localStorage.setItem('rawrxd_agent_mode', mode);
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            updateAgentPanel();
+        }
+
+        function updateAgentPanel() {
+            document.getElementById('agentApiUrl').textContent = state.apiUrl;
+            document.getElementById('agentAuthMode').textContent = state.apiKey ? 'X-API-Key (set)' : 'none';
+            document.getElementById('agentMode').textContent = state.agentMode;
+            document.getElementById('agentModel').textContent = state.currentModel || '(default)';
+            document.getElementById('agentStatusJson').textContent = state.lastStatus ? JSON.stringify(state.lastStatus) : '(unknown)';
+        }
+
+        function renderTools() {
+            const tools = Array.isArray(state.tools) ? state.tools : [];
+            document.getElementById('toolsCount').textContent = String(tools.length);
+            const list = document.getElementById('toolsList');
+            list.innerHTML = '';
+            if (!tools.length) {
+                list.innerHTML = '<div class="mono" style="color: var(--text-secondary);">No tools reported by backend.</div>';
+                return;
+            }
+            for (const t of tools) {
+                const row = document.createElement('div');
+                row.className = 'mono';
+                const name = (t && (t.name || t.id)) ? (t.name || t.id) : String(t);
+                const desc = (t && t.description) ? t.description : '';
+                row.style.padding = '8px 0';
+                row.style.borderBottom = '1px solid var(--border)';
+                row.innerHTML = '<div><strong>' + safeTextToHtml(name) + '</strong></div>' +
+                    (desc ? '<div style="color: var(--text-secondary); margin-top: 4px;">' + safeTextToHtml(desc) + '</div>' : '');
+                list.appendChild(row);
+            }
+        }
+
+        async function handleChat(message) {
+            const response = await fetch(`${state.apiUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                    model: state.currentModel,
+                    messages: state.conversation,
+                    message: message,
+                    stream: true
+                })
+            });
+
+            if (!response.ok) throw new Error('Chat request failed');
+
+            const ct = (response.headers.get('content-type') || '').toLowerCase();
+            const msgDiv = addMessage('', 'assistant');
+            let content = '';
+
+            // Non-streaming JSON fallback
+            if (ct.includes('application/json')) {
+                const data = await response.json();
+                content = data.response || data.answer || data.reply || JSON.stringify(data);
+                state.conversation.push({ role: 'assistant', content: content });
+                msgDiv.innerHTML = formatContent(content);
+                return;
+            }
+
+            // Streaming (SSE-ish) parsing
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split(/\r?\n/);
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    const payload = line.slice(5).trim();
+                    if (!payload || payload === '[DONE]') continue;
+                    try {
+                        const data = JSON.parse(payload);
+                        const delta = data?.choices?.[0]?.delta?.content;
+                        const token = data?.token;
+                        const text = delta || token || data?.response || '';
+                        if (text) {
+                            content += text;
+                            msgDiv.innerHTML = formatContent(content) + '<span class="streaming-cursor">▊</span>';
+                            scrollToBottom();
+                        }
+                    } catch (e) {
+                        // ignore parse errors
+                    }
+                }
+            }
+            state.conversation.push({ role: 'assistant', content: content });
+            msgDiv.innerHTML = formatContent(content);
+        }
+
+        async function handlePlanMode(message) {
+            const res = await fetch(`${state.apiUrl}/api/agent/wish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                    wish: message,
+                    mode: 'plan',
+                    model: state.currentModel
+                })
+            });
+            if (!res.ok) throw new Error('Plan request failed');
+            const data = await res.json();
+            const plan = Array.isArray(data.plan) ? data.plan : [];
+            if (plan.length) {
+                addMessage('**Plan:**\n' + plan.map((step, i) => `${i+1}. ${step}`).join('\n'), 'assistant');
+                if (data.requires_confirmation) {
+                    addMessage('Type "execute" to run this plan.', 'system');
+                }
+            } else {
+                addMessage(data.response || data.result || 'No plan returned.', 'assistant');
+            }
+        }
+
+        async function handleFullAgent(message) {
+            const res = await fetch(`${state.apiUrl}/api/agent/wish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                    wish: message,
+                    mode: 'full',
+                    model: state.currentModel,
+                    auto_execute: true
+                })
+            });
+            if (!res.ok) throw new Error('Agent request failed');
+            const data = await res.json();
+            if (data.response) {
+                addMessage(data.response, 'assistant');
+            } else if (data.result) {
+                addMessage(data.result, 'assistant');
+            }
+            if (Array.isArray(data.tool_calls) && data.tool_calls.length) {
+                for (const call of data.tool_calls) {
+                    addMessage(`Executing: ${call.tool}(${JSON.stringify(call.params || {})})`, 'system');
+                }
+            }
+        }
+
+        function initFromStorage() {
+            document.getElementById('apiUrl').value = state.apiUrl;
+            document.getElementById('apiKey').value = state.apiKey;
+            updateAgentPanel();
+            syncModeTabs();
+        }
+
+        // Initialize
+        initFromStorage();
+        checkConnection();
+        setInterval(checkConnection, 5000);
+
+        // Service Worker for PWA support (best-effort; requires https or localhost)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
+
