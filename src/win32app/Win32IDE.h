@@ -118,6 +118,7 @@ struct IDWriteTextLayout;
 #define IDC_AI_DEEP_THINK 5002
 #define IDC_AI_DEEP_RESEARCH 5003
 #define IDC_AI_NO_REFUSAL 5004
+#define IDC_SOURCEFILE_DROPDOWN 65001
 
 // Plan Approval Dialog Controls
 #define IDC_PLAN_LIST          7001
@@ -917,6 +918,8 @@ private:
     void createSidebar(HWND hwnd);
     void createTitleBarControls();
     void layoutTitleBar(int width);
+    void refreshSourceFileDropdown();
+    void onSourceFileDropdownSelection();
     void updateTitleBarText();
     std::string extractLeafName(const std::string& path) const;
     void setCurrentDirectoryFromFile(const std::string& filePath);
@@ -1881,12 +1884,17 @@ private:
     HMENU m_hMenu;
     HWND m_hwndToolbar;
     HWND m_hwndTitleLabel;
+    HWND m_hwndSourceFileDropdown = nullptr;
     HWND m_hwndBtnMinimize;
     HWND m_hwndBtnMaximize;
     HWND m_hwndBtnClose;
     HWND m_hwndBtnGitHub;
     HWND m_hwndBtnMicrosoft;
     HWND m_hwndBtnSettings;
+    std::vector<std::string> m_sourceFileDisplayPaths;
+    std::vector<std::string> m_sourceFileAbsolutePaths;
+    std::string m_sourceRegistryRoot;
+    bool m_sourceRegistryInitialized = false;
     std::string m_lastTitleBarText;
 
     // Per-pane terminal managers replace the previous single manager

@@ -805,6 +805,7 @@ void Win32IDE::onSize(int width, int height) {
     // Toolbar
     if (m_hwndToolbar) {
         MoveWindow(m_hwndToolbar, 0, 0, width, TOOLBAR_HEIGHT, TRUE);
+        layoutTitleBar(width);
     }
 
     // Activity bar (far left)
@@ -1659,6 +1660,18 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
             }
         }
         return; // Don't route editor notifications through the command system
+    }
+
+    // Source-file dropdown bridge: every indexed source entry maps to openFile(path)
+    if (hwndCtl == m_hwndSourceFileDropdown) {
+        if (codeNotify == CBN_DROPDOWN) {
+            refreshSourceFileDropdown();
+            return;
+        }
+        if (codeNotify == CBN_SELCHANGE) {
+            onSourceFileDropdownSelection();
+            return;
+        }
     }
 
     // First try the unified command router

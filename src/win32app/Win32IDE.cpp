@@ -30,8 +30,10 @@
 #include <algorithm>
 #include <sstream>
 #include <ctime>
+#include <cctype>
 #include <regex>
 #include <filesystem>
+#include <unordered_set>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
@@ -87,6 +89,98 @@ static std::string wideToUtf8(const wchar_t* wide) {
         return {};
     out.resize(out.size() - 1); // drop NUL
     return out;
+}
+
+static std::string toLowerAscii(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return value;
+}
+
+static std::string normalizePathForCompare(std::string path) {
+    std::replace(path.begin(), path.end(), '/', '\\');
+    return toLowerAscii(path);
+}
+
+static bool shouldSkipSourceRegistryDirectory(const std::filesystem::path& dirPath) {
+    static const std::unordered_set<std::string> kSkipDirs = {
+        ".git", ".hg", ".svn", ".idea", ".vscode", ".cursor",
+        "node_modules", "__pycache__", ".venv", "venv", "env",
+        "build", "dist", "out", "bin", "obj", ".vs"
+    };
+    const std::string name = toLowerAscii(dirPath.filename().string());
+    return kSkipDirs.find(name) != kSkipDirs.end();
+}
+
+static bool isSourceLikeFile(const std::filesystem::path& filePath) {
+    static const std::unordered_set<std::string> kExts = {
+        ".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".ipp", ".inl",
+        ".asm", ".s", ".inc",
+        ".cs", ".java", ".go", ".rs",
+        ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+        ".py",
+        ".ps1", ".psm1", ".psd1",
+        ".sql"
+    };
+    static const std::unordered_set<std::string> kFileNames = {
+        "cmakelists.txt", "makefile", "dockerfile", "meson.build", "build.gradle"
+    };
+
+    const std::string ext = toLowerAscii(filePath.extension().string());
+    if (!ext.empty() && kExts.find(ext) != kExts.end()) {
+        return true;
+    }
+    const std::string name = toLowerAscii(filePath.filename().string());
+    return kFileNames.find(name) != kFileNames.end();
+}
+
+static std::filesystem::path detectSourceRegistryRootPath(
+    const std::string& currentDirectory,
+    const std::string& gitRepoPath
+) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+
+    if (!gitRepoPath.empty()) {
+        fs::path gitRoot(gitRepoPath);
+        if (fs::exists(gitRoot, ec)) {
+            return fs::absolute(gitRoot, ec);
+        }
+    }
+
+    fs::path start;
+    if (!currentDirectory.empty()) {
+        start = fs::path(currentDirectory);
+    } else {
+        start = fs::current_path(ec);
+    }
+    if (start.empty()) {
+        return {};
+    }
+    if (!fs::is_directory(start, ec)) {
+        start = start.parent_path();
+    }
+    if (start.empty()) {
+        return {};
+    }
+
+    fs::path probe = fs::absolute(start, ec);
+    if (probe.empty()) {
+        return start;
+    }
+
+    while (!probe.empty()) {
+        if (fs::exists(probe / ".git", ec)) {
+            return probe;
+        }
+        fs::path parent = probe.parent_path();
+        if (parent == probe) {
+            break;
+        }
+        probe = parent;
+    }
+    return fs::absolute(start, ec);
 }
 
 #define IDC_EDITOR 1001
@@ -712,6 +806,18 @@ void Win32IDE::createTitleBarControls()
     createButton(m_hwndBtnMaximize, IDC_BTN_MAXIMIZE, L"[]");
     createButton(m_hwndBtnClose, IDC_BTN_CLOSE, L"X");
 
+    m_hwndSourceFileDropdown = CreateWindowExW(
+        0, L"COMBOBOX", L"",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL,
+        0, 0, 320, 260,
+        m_hwndToolbar, (HMENU)IDC_SOURCEFILE_DROPDOWN, m_hInstance, nullptr);
+
+    if (m_hwndSourceFileDropdown) {
+        HFONT dropdownFont = m_hFontUI ? m_hFontUI : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        SendMessageW(m_hwndSourceFileDropdown, WM_SETFONT, (WPARAM)dropdownFont, TRUE);
+        refreshSourceFileDropdown();
+    }
+
     RECT client{};
     GetClientRect(m_hwndMain, &client);
     layoutTitleBar(client.right - client.left);
@@ -729,6 +835,7 @@ void Win32IDE::layoutTitleBar(int width)
     int y = (toolbarHeight - controlHeight) / 2;
     int padding = 6;
     int x = width - padding;
+    int left = padding;
 
     auto placeButton = [&](HWND hwnd, int controlWidth) {
         if (!hwnd) return;
@@ -744,17 +851,169 @@ void Win32IDE::layoutTitleBar(int width)
     placeButton(m_hwndBtnMicrosoft, 40);
     placeButton(m_hwndBtnGitHub, 40);
 
+    if (m_hwndSourceFileDropdown) {
+        int desiredWidth = (std::max)(260, width / 3);
+        desiredWidth = (std::min)(560, desiredWidth);
+        int maxAllowed = x - padding - 180;
+        int comboWidth = (std::max)(220, (std::min)(desiredWidth, maxAllowed));
+        int comboDropHeight = controlHeight + dpiScale(280);
+        if (maxAllowed > 180) {
+            ShowWindow(m_hwndSourceFileDropdown, SW_SHOW);
+            MoveWindow(m_hwndSourceFileDropdown, left, y, comboWidth, comboDropHeight, TRUE);
+            left += comboWidth + padding;
+        } else {
+            ShowWindow(m_hwndSourceFileDropdown, SW_HIDE);
+        }
+    }
+
     if (m_hwndTitleLabel) {
         int availableRight = x;
-        int labelWidth = (std::min)(420, availableRight - padding * 2);
-        if (labelWidth < 160) {
-            labelWidth = (std::max)(availableRight - padding * 2, 120);
+        int availableLeft = left;
+        int availableWidth = availableRight - availableLeft;
+        if (availableWidth < 120) {
+            ShowWindow(m_hwndTitleLabel, SW_HIDE);
+            return;
         }
-        int labelX = (std::max)(padding, (width - labelWidth) / 2);
-        if (labelX + labelWidth > availableRight) {
-            labelX = (std::max)(padding, availableRight - labelWidth);
-        }
+        ShowWindow(m_hwndTitleLabel, SW_SHOW);
+        int labelWidth = (std::min)(520, availableWidth);
+        int labelX = availableLeft + (availableWidth - labelWidth) / 2;
         MoveWindow(m_hwndTitleLabel, labelX, y, labelWidth, controlHeight, TRUE);
+    }
+}
+
+void Win32IDE::refreshSourceFileDropdown()
+{
+    if (!m_hwndSourceFileDropdown) {
+        return;
+    }
+
+    namespace fs = std::filesystem;
+    const fs::path rootPath = detectSourceRegistryRootPath(m_currentDirectory, m_gitRepoPath);
+    if (rootPath.empty()) {
+        return;
+    }
+
+    std::error_code ec;
+    fs::path normalizedRoot = fs::weakly_canonical(rootPath, ec);
+    if (ec || normalizedRoot.empty()) {
+        ec.clear();
+        normalizedRoot = fs::absolute(rootPath, ec);
+    }
+    if (normalizedRoot.empty()) {
+        return;
+    }
+    m_sourceRegistryRoot = normalizedRoot.string();
+
+    std::vector<std::pair<std::string, std::string>> indexedFiles;
+    indexedFiles.reserve(4096);
+
+    const size_t kMaxIndexedFiles = 24000;
+    fs::recursive_directory_iterator it(normalizedRoot, fs::directory_options::skip_permission_denied, ec);
+    fs::recursive_directory_iterator end;
+    for (; it != end; it.increment(ec)) {
+        if (ec) {
+            ec.clear();
+            continue;
+        }
+        const fs::directory_entry& entry = *it;
+        if (entry.is_directory(ec)) {
+            if (!ec && shouldSkipSourceRegistryDirectory(entry.path())) {
+                it.disable_recursion_pending();
+            }
+            ec.clear();
+            continue;
+        }
+        if (!entry.is_regular_file(ec)) {
+            ec.clear();
+            continue;
+        }
+        const fs::path absolutePath = entry.path();
+        if (!isSourceLikeFile(absolutePath)) {
+            continue;
+        }
+
+        fs::path relativePath = fs::relative(absolutePath, normalizedRoot, ec);
+        if (ec) {
+            ec.clear();
+            relativePath = absolutePath.filename();
+        }
+
+        indexedFiles.emplace_back(relativePath.generic_string(), absolutePath.string());
+        if (indexedFiles.size() >= kMaxIndexedFiles) {
+            break;
+        }
+    }
+
+    std::sort(indexedFiles.begin(), indexedFiles.end(),
+        [](const auto& a, const auto& b) {
+            return toLowerAscii(a.first) < toLowerAscii(b.first);
+        });
+
+    const std::string currentNormalized = normalizePathForCompare(m_currentFile);
+    SendMessageW(m_hwndSourceFileDropdown, WM_SETREDRAW, FALSE, 0);
+    SendMessageW(m_hwndSourceFileDropdown, CB_RESETCONTENT, 0, 0);
+    m_sourceFileDisplayPaths.clear();
+    m_sourceFileAbsolutePaths.clear();
+    m_sourceFileDisplayPaths.reserve(indexedFiles.size());
+    m_sourceFileAbsolutePaths.reserve(indexedFiles.size());
+
+    int selectedIndex = -1;
+    for (size_t i = 0; i < indexedFiles.size(); ++i) {
+        const std::string& displayPath = indexedFiles[i].first;
+        const std::string& absolutePath = indexedFiles[i].second;
+        const std::string dropdownLabel = "#Sourcefile -> " + displayPath;
+        m_sourceFileDisplayPaths.push_back(displayPath);
+        m_sourceFileAbsolutePaths.push_back(absolutePath);
+        SendMessageW(m_hwndSourceFileDropdown, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(dropdownLabel).c_str());
+        if (selectedIndex < 0 && !currentNormalized.empty() &&
+            normalizePathForCompare(absolutePath) == currentNormalized) {
+            selectedIndex = static_cast<int>(i);
+        }
+    }
+
+    if (selectedIndex >= 0) {
+        SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, selectedIndex, 0);
+    } else if (!m_sourceFileDisplayPaths.empty()) {
+        SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, 0, 0);
+    }
+
+    SendMessageW(m_hwndSourceFileDropdown, WM_SETREDRAW, TRUE, 0);
+    InvalidateRect(m_hwndSourceFileDropdown, nullptr, TRUE);
+
+    m_sourceRegistryInitialized = true;
+    if (m_hwndStatusBar) {
+        std::string status = "Source index: " + std::to_string(m_sourceFileDisplayPaths.size()) + " files";
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)status.c_str());
+    }
+}
+
+void Win32IDE::onSourceFileDropdownSelection()
+{
+    if (!m_hwndSourceFileDropdown) {
+        return;
+    }
+
+    int selectedIndex = (int)SendMessageW(m_hwndSourceFileDropdown, CB_GETCURSEL, 0, 0);
+    if (selectedIndex < 0 || selectedIndex >= (int)m_sourceFileAbsolutePaths.size()) {
+        return;
+    }
+
+    const std::string selectedPath = m_sourceFileAbsolutePaths[(size_t)selectedIndex];
+    if (selectedPath.empty()) {
+        return;
+    }
+    if (!m_currentFile.empty() &&
+        normalizePathForCompare(selectedPath) == normalizePathForCompare(m_currentFile)) {
+        return;
+    }
+
+    openFile(selectedPath);
+    setCurrentDirectoryFromFile(selectedPath);
+    updateTitleBarText();
+
+    if (m_hwndStatusBar) {
+        std::string status = "Opened: " + m_sourceFileDisplayPaths[(size_t)selectedIndex];
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)status.c_str());
     }
 }
 
@@ -810,6 +1069,22 @@ void Win32IDE::updateTitleBarText()
         SetWindowTextW(m_hwndTitleLabel, utf8ToWide(composed).c_str());
         m_lastTitleBarText = composed;
     }
+
+    if (m_hwndSourceFileDropdown && !m_currentFile.empty() && !m_sourceFileAbsolutePaths.empty()) {
+        const std::string currentNormalized = normalizePathForCompare(m_currentFile);
+        int currentSelection = (int)SendMessageW(m_hwndSourceFileDropdown, CB_GETCURSEL, 0, 0);
+        int expectedSelection = -1;
+        for (size_t i = 0; i < m_sourceFileAbsolutePaths.size(); ++i) {
+            if (normalizePathForCompare(m_sourceFileAbsolutePaths[i]) == currentNormalized) {
+                expectedSelection = (int)i;
+                break;
+            }
+        }
+        if (expectedSelection >= 0 && expectedSelection != currentSelection) {
+            SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, expectedSelection, 0);
+        }
+    }
+
     // Keep breadcrumb bar in sync with current file (symbol path updates on cursor move)
     if (m_hwndBreadcrumbs && m_settings.breadcrumbsEnabled)
         updateBreadcrumbs();
