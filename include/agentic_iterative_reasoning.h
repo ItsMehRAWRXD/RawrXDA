@@ -31,5 +31,18 @@ public:
     AgenticIterativeReasoning() = default;
     ~AgenticIterativeReasoning() = default;
 
-    void initialize(AgenticEngine* /*engine*/, AgenticLoopState* /*state*/, InferenceEngine* /*inference*/) {}
+    void initialize(AgenticEngine* engine, AgenticLoopState* state, InferenceEngine* inference) {
+        m_engine = engine;
+        m_state = state;
+        m_inference = inference;
+        m_initialized = true;
+    }
+
+    bool isInitialized() const { return m_initialized; }
+
+private:
+    AgenticEngine* m_engine = nullptr;
+    AgenticLoopState* m_state = nullptr;
+    InferenceEngine* m_inference = nullptr;
+    bool m_initialized = false;
 };

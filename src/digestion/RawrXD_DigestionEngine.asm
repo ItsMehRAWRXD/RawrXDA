@@ -32,7 +32,6 @@ RunDigestionEngine PROC FRAME
 
     ; Stub: real AVX-512 digestion pipeline not yet implemented.
     ; Return ERROR_CALL_NOT_IMPLEMENTED (120) so callers don't assume success.
-    ; Signal "not implemented" so callers can safely fallback.
     mov     eax, 120        ; ERROR_CALL_NOT_IMPLEMENTED
     jmp     done
 
