@@ -7,12 +7,12 @@
 #include <unordered_map>
 
 #define IDM_SRCFILE_BASE 60000
-#define IDM_SRCFILE_COUNT 3467
-#define IDM_SRCFILE_MAX  63466
+#define IDM_SRCFILE_COUNT 3488
+#define IDM_SRCFILE_MAX  63487
 
 // Returns true if cmdId is a source-file menu item
 inline bool IsSourceFileCommand(UINT cmdId) {
-    return cmdId >= 60000 && cmdId <= 63466;
+    return cmdId >= 60000 && cmdId <= 63487;
 }
 
 // Get the relative file path for a source-file command ID
@@ -22,5 +22,5 @@ const wchar_t* GetSourceFilePath(UINT cmdId);
 HMENU BuildSourceFileMenu();
 
 // Total source files registered
-constexpr int SRCFILE_TOTAL = 3467;
+constexpr int SRCFILE_TOTAL = 3488;
 
