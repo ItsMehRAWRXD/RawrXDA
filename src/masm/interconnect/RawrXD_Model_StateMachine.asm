@@ -29,7 +29,6 @@ ModelState_Transition ENDP
 
 ModelState_AcquireInstance PROC FRAME
     ; Returns a stable mock instance pointer (non-null, valid after return).
-    ; Previously returned [rsp] which was invalid after return (stack address).
     lea rax, ModelState_Instance
     ret
 ModelState_AcquireInstance ENDP
