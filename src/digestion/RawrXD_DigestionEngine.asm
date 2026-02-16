@@ -30,8 +30,10 @@ RunDigestionEngine PROC FRAME
     test    r13, r13
     jz      invalid_arg
 
-    ; TODO: real AVX-512 digestion pipeline will go here
-    xor     eax, eax        ; S_DIGEST_OK = 0
+    ; TODO: real AVX-512 digestion pipeline will go here.
+    ; IMPORTANT: Do not return success for a stub implementation.
+    ; Signal "not implemented" so callers can safely fallback.
+    mov     eax, 120        ; ERROR_CALL_NOT_IMPLEMENTED
     jmp     done
 
 invalid_arg:

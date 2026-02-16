@@ -19,8 +19,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <unordered_set>
 #include <sstream>
 #include <vector>
 
@@ -64,6 +66,117 @@ std::string Trim(const std::string& value) {
         --end;
     }
     return value.substr(start, end - start);
+}
+
+std::string GetHeaderValue(const std::string& headers, const std::string& headerNameLower) {
+    // Very small, case-insensitive header lookup (headers must include CRLF line breaks).
+    // headerNameLower must be lowercase, without trailing ':' (e.g. "origin", "x-api-key").
+    const std::string needle = "\r\n" + headerNameLower + ":";
+    std::string lower = ToLower(headers);
+    size_t pos = lower.find(needle);
+    if (pos == std::string::npos) {
+        // Also allow match at start of headers block.
+        const std::string needleStart = headerNameLower + ":";
+        if (lower.rfind(needleStart, 0) != 0) return "";
+        pos = 0;
+    } else {
+        pos += 2; // skip leading CRLF
+    }
+
+    size_t colon = headers.find(':', pos);
+    if (colon == std::string::npos) return "";
+    size_t lineEnd = headers.find("\r\n", colon);
+    if (lineEnd == std::string::npos) lineEnd = headers.size();
+    std::string value = headers.substr(colon + 1, lineEnd - (colon + 1));
+    return Trim(value);
+}
+
+bool StartsWith(const std::string& value, const std::string& prefix) {
+    return value.size() >= prefix.size() && value.compare(0, prefix.size(), prefix) == 0;
+}
+
+std::vector<std::string> SplitCsv(const std::string& input) {
+    std::vector<std::string> out;
+    std::string cur;
+    for (char c : input) {
+        if (c == ',') {
+            std::string t = Trim(cur);
+            if (!t.empty()) out.push_back(t);
+            cur.clear();
+        } else {
+            cur.push_back(c);
+        }
+    }
+    std::string t = Trim(cur);
+    if (!t.empty()) out.push_back(t);
+    return out;
+}
+
+bool IsTruthyEnv(const char* v) {
+    if (!v) return false;
+    std::string s = ToLower(Trim(v));
+    return s == "1" || s == "true" || s == "yes" || s == "on";
+}
+
+bool IsLoopbackClient(SocketType client) {
+    sockaddr_in addr{};
+    socklen_t len = sizeof(addr);
+    if (getpeername(client, reinterpret_cast<sockaddr*>(&addr), &len) != 0) {
+        return false;
+    }
+    uint32_t ip = ntohl(addr.sin_addr.s_addr);
+    return (ip >> 24) == 127; // 127.0.0.0/8
+}
+
+bool IsOriginAllowed(const std::string& origin, const std::vector<std::string>& allowed) {
+    if (origin.empty()) return false;
+    if (origin == "null") return false;
+    for (const auto& a : allowed) {
+        if (a == "*") return true;
+        if (origin == a) return true;
+    }
+    // Always allow local dev origins (any port).
+    if (StartsWith(origin, "http://localhost") || StartsWith(origin, "http://127.0.0.1") ||
+        StartsWith(origin, "https://localhost") || StartsWith(origin, "https://127.0.0.1")) {
+        return true;
+    }
+    return false;
+}
+
+std::string ExtractBearerToken(const std::string& authHeader) {
+    // Accept: "Bearer <token>" (case-insensitive "bearer")
+    std::string v = Trim(authHeader);
+    std::string lower = ToLower(v);
+    const std::string prefix = "bearer ";
+    if (StartsWith(lower, prefix)) {
+        return Trim(v.substr(prefix.size()));
+    }
+    return v;
+}
+
+bool ExtractJsonString(const std::string& body, const std::string& key, std::string& out);
+
+bool ExtractLastUserMessageFromMessages(const std::string& body, std::string& out) {
+    // Best-effort extraction for OpenAI-style payloads:
+    // { "messages": [ { "role":"user", "content":"..." }, ... ] }
+    // This does not fully parse JSON; it is intentionally tiny and resilient.
+    std::string lower = ToLower(body);
+    size_t pos = lower.rfind("\"role\":\"user\"");
+    if (pos == std::string::npos) {
+        pos = lower.rfind("\"role\": \"user\"");
+    }
+    if (pos == std::string::npos) return false;
+
+    // Search forward from role position for "content"
+    size_t contentKey = lower.find("\"content\"", pos);
+    if (contentKey == std::string::npos) return false;
+    // Use existing string extractor on a slice starting at contentKey
+    std::string slice = body.substr(contentKey);
+    std::string content;
+    if (!ExtractJsonString(slice, "content", content)) return false;
+    if (content.empty()) return false;
+    out = content;
+    return true;
 }
 
 bool ExtractJsonString(const std::string& body, const std::string& key, std::string& out) {
@@ -113,6 +226,19 @@ bool ExtractJsonNumber(const std::string& body, const std::string& key, std::str
     if (start == pos) return false;
     out = body.substr(start, pos - start);
     return true;
+}
+
+bool ExtractJsonBool(const std::string& body, const std::string& key, bool& out) {
+    const std::string pattern = "\"" + key + "\"";
+    auto pos = body.find(pattern);
+    if (pos == std::string::npos) return false;
+    pos = body.find(':', pos + pattern.size());
+    if (pos == std::string::npos) return false;
+    ++pos;
+    while (pos < body.size() && std::isspace(static_cast<unsigned char>(body[pos]))) ++pos;
+    if (pos + 4 <= body.size() && body.compare(pos, 4, "true") == 0) { out = true; return true; }
+    if (pos + 5 <= body.size() && body.compare(pos, 5, "false") == 0) { out = false; return true; }
+    return false;
 }
 
 std::string EscapeJson(const std::string& value) {
@@ -171,7 +297,31 @@ std::string BuildResponse(int status, const std::string& body, const std::vector
 
 } // namespace
 
-CompletionServer::CompletionServer() : running_(false), engine_(nullptr) {}
+CompletionServer::CompletionServer() : running_(false), engine_(nullptr) {
+    // Universal Access defaults (can be overridden via env).
+    cors_allowed_origins_ = {
+        "http://localhost",
+        "http://127.0.0.1",
+        "https://rawrxd.local",
+        "app://rawrxd"
+    };
+
+    if (const char* envOrigins = std::getenv("RAWRXD_CORS_ORIGINS")) {
+        auto parsed = SplitCsv(envOrigins);
+        if (!parsed.empty()) cors_allowed_origins_ = std::move(parsed);
+    }
+
+    if (const char* envKeys = std::getenv("RAWRXD_API_KEYS")) {
+        for (const auto& k : SplitCsv(envKeys)) {
+            if (!k.empty()) api_keys_.insert(k);
+        }
+    }
+
+    require_auth_ = IsTruthyEnv(std::getenv("RAWRXD_REQUIRE_AUTH"));
+    if (const char* envModel = std::getenv("RAWRXD_MODEL_ID")) {
+        selected_model_id_ = Trim(envModel);
+    }
+}
 
 CompletionServer::~CompletionServer() {
     Stop();
@@ -307,19 +457,32 @@ void CompletionServer::HandleClient(int client_fd) {
     ParseRequest(data, method, path, parsed_body);
     parsed_body = body;
 
-    std::vector<std::string> response_headers = {
-        "Content-Type: application/json",
-        "Access-Control-Allow-Origin: *",
-        "Access-Control-Allow-Methods: GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers: Content-Type"
+    const std::string origin = GetHeaderValue(headers, "origin");
+    const bool corsAllowed = IsOriginAllowed(origin, cors_allowed_origins_);
+    const bool isLoopback = IsLoopbackClient(client);
+
+    auto addCorsHeaders = [&](std::vector<std::string>& outHeaders) {
+        if (!corsAllowed) return;
+        outHeaders.push_back(std::string("Access-Control-Allow-Origin: ") + origin);
+        outHeaders.push_back("Access-Control-Allow-Credentials: true");
+        outHeaders.push_back("Vary: Origin");
     };
+
+    std::vector<std::string> response_headers = { "Content-Type: application/json" };
+    addCorsHeaders(response_headers);
+    response_headers.push_back("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    response_headers.push_back("Access-Control-Allow-Headers: Content-Type, X-API-Key, Authorization");
 
     std::string response_body;
     int status = 200;
 
     if (method == "OPTIONS") {
+        // CORS preflight
         status = 204;
         response_body.clear();
+        if (corsAllowed) {
+            response_headers.push_back("Access-Control-Max-Age: 86400");
+        }
     } else if (method == "GET" && path == "/status") {
         bool model_loaded = engine_ && engine_->IsModelLoaded();
         std::string escaped_path = EscapeJson(model_path_);
@@ -331,18 +494,59 @@ void CompletionServer::HandleClient(int client_fd) {
                         ",\"subagents\":" + (subagent_mgr_ ? "true" : "false") +
                         ",\"capabilities\":{\"completion\":true,\"streaming\":true"
                         ",\"chat\":true,\"subagent\":true,\"chain\":true,\"swarm\":true}}";
-    } else if (method == "POST" && path == "/complete") {
+    } else {
+        // Auth gate (never blocks preflight; /status always public)
+        const bool isPublic = (path == "/status" || path == "/v1/models");
+        const bool authConfigured = require_auth_ || !api_keys_.empty();
+        if (authConfigured && !isPublic && !isLoopback) {
+            std::string apiKey = GetHeaderValue(headers, "x-api-key");
+            if (apiKey.empty()) {
+                apiKey = ExtractBearerToken(GetHeaderValue(headers, "authorization"));
+            }
+            if (apiKey.empty()) {
+                status = 401;
+                response_body = R"({"error":"api_key_required"})";
+                std::string response = BuildResponse(status, response_body, response_headers);
+                send(client, response.c_str(), static_cast<int>(response.size()), 0);
+                CloseSocket(client);
+                return;
+            }
+            if (api_keys_.find(apiKey) == api_keys_.end()) {
+                status = 403;
+                response_body = R"({"error":"invalid_api_key"})";
+                std::string response = BuildResponse(status, response_body, response_headers);
+                send(client, response.c_str(), static_cast<int>(response.size()), 0);
+                CloseSocket(client);
+                return;
+            }
+        }
+    }
+
+    if (method == "POST" && path == "/complete") {
         response_body = HandleCompleteRequest(parsed_body);
     } else if (method == "POST" && path == "/complete/stream") {
-        HandleCompleteStreamRequest(static_cast<int>(client), parsed_body);
+        HandleCompleteStreamRequest(static_cast<int>(client), headers, parsed_body);
         CloseSocket(client);
         return;
     }
     // === Agentic API Routes ===
     else if (method == "POST" && path == "/api/chat") {
+        // Streaming support: if request includes `"stream": true`
+        bool stream = false;
+        if (ExtractJsonBool(parsed_body, "stream", stream) && stream) {
+            HandleChatStreamRequest(static_cast<int>(client), headers, parsed_body);
+            CloseSocket(client);
+            return;
+        }
         response_body = HandleChatRequest(parsed_body);
     } else if (method == "POST" && path == "/api/agent/wish") {
         response_body = HandleAgentWishRequest(parsed_body);
+    } else if (method == "GET" && path == "/v1/models") {
+        response_body = HandleV1ModelsRequest();
+    } else if (method == "GET" && path == "/api/tools") {
+        response_body = HandleToolsRequest();
+    } else if (method == "POST" && path == "/api/agentic/config") {
+        response_body = HandleAgenticConfigRequest(parsed_body);
     } else if (method == "POST" && path == "/api/subagent") {
         response_body = HandleSubAgentRequest(parsed_body);
     } else if (method == "POST" && path == "/api/chain") {
@@ -545,7 +749,7 @@ std::string CompletionServer::HandleCompleteRequest(const std::string& body) {
     return std::string("{\"completion\":\"") + escaped + "\"}";
 }
 
-void CompletionServer::HandleCompleteStreamRequest(int client_fd, const std::string& body) {
+void CompletionServer::HandleCompleteStreamRequest(int client_fd, const std::string& reqHeaders, const std::string& body) {
     SocketType client = static_cast<SocketType>(client_fd);
     
     std::string buffer;
@@ -569,15 +773,22 @@ void CompletionServer::HandleCompleteStreamRequest(int client_fd, const std::str
         max_tokens = std::max(0, std::stoi(max_tokens_raw));
     }
 
+    const std::string origin = GetHeaderValue(reqHeaders, "origin");
+    const bool corsAllowed = IsOriginAllowed(origin, cors_allowed_origins_);
+
     // SSE headers
     std::ostringstream oss;
     oss << "HTTP/1.1 200 OK\r\n";
     oss << "Content-Type: text/event-stream\r\n";
     oss << "Cache-Control: no-cache\r\n";
     oss << "Connection: close\r\n";
-    oss << "Access-Control-Allow-Origin: *\r\n";
+    if (corsAllowed) {
+        oss << "Access-Control-Allow-Origin: " << origin << "\r\n";
+        oss << "Access-Control-Allow-Credentials: true\r\n";
+        oss << "Vary: Origin\r\n";
+    }
     oss << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
-    oss << "Access-Control-Allow-Headers: Content-Type\r\n";
+    oss << "Access-Control-Allow-Headers: Content-Type, X-API-Key, Authorization\r\n";
     oss << "\r\n";
 
     std::string headers = oss.str();
@@ -686,6 +897,7 @@ std::string CompletionServer::HandleChatRequest(const std::string& body) {
     std::string message;
     ExtractJsonString(body, "message", message);
     if (message.empty()) ExtractJsonString(body, "prompt", message);
+    if (message.empty()) ExtractLastUserMessageFromMessages(body, message);
     if (message.empty()) {
         return R"({"error":"missing_message"})";
     }
@@ -708,6 +920,120 @@ std::string CompletionServer::HandleChatRequest(const std::string& body) {
     return result;
 }
 
+void CompletionServer::HandleChatStreamRequest(int client_fd, const std::string& reqHeaders, const std::string& body) {
+    SocketType client = static_cast<SocketType>(client_fd);
+
+    const std::string origin = GetHeaderValue(reqHeaders, "origin");
+    const bool corsAllowed = IsOriginAllowed(origin, cors_allowed_origins_);
+
+    // SSE headers (OpenAI-style streaming)
+    std::ostringstream oss;
+    oss << "HTTP/1.1 200 OK\r\n";
+    oss << "Content-Type: text/event-stream\r\n";
+    oss << "Cache-Control: no-cache\r\n";
+    oss << "Connection: close\r\n";
+    if (corsAllowed) {
+        oss << "Access-Control-Allow-Origin: " << origin << "\r\n";
+        oss << "Access-Control-Allow-Credentials: true\r\n";
+        oss << "Vary: Origin\r\n";
+    }
+    oss << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+    oss << "Access-Control-Allow-Headers: Content-Type, X-API-Key, Authorization\r\n";
+    oss << "\r\n";
+
+    std::string headerStr = oss.str();
+    if (send(client, headerStr.c_str(), static_cast<int>(headerStr.size()), 0) < 0) {
+        return;
+    }
+
+    if (!agentic_engine_) {
+        std::string event = "data: {\"error\":\"agentic_engine_not_available\"}\r\n\r\n";
+        send(client, event.c_str(), static_cast<int>(event.size()), 0);
+        return;
+    }
+
+    std::string message;
+    ExtractJsonString(body, "message", message);
+    if (message.empty()) ExtractJsonString(body, "prompt", message);
+    if (message.empty()) ExtractLastUserMessageFromMessages(body, message);
+    if (message.empty()) {
+        std::string event = "data: {\"error\":\"missing_message\"}\r\n\r\n";
+        send(client, event.c_str(), static_cast<int>(event.size()), 0);
+        return;
+    }
+
+    std::string full;
+    full = agentic_engine_->chatStream(message, [&](const std::string& token) {
+        std::string escaped = EscapeJson(token);
+        std::string data = "data: {\"choices\":[{\"delta\":{\"content\":\"" + escaped + "\"}}]}\r\n\r\n";
+        int r = send(client, data.c_str(), static_cast<int>(data.size()), 0);
+        if (r < 0) {
+            // Client disconnected; callback continues, but socket is gone.
+        }
+    });
+
+    // End marker
+    std::string done = "data: [DONE]\r\n\r\n";
+    send(client, done.c_str(), static_cast<int>(done.size()), 0);
+}
+
+std::string CompletionServer::HandleV1ModelsRequest() {
+    // Web client expects: { "models": [ { "id": "..." } ] }
+    std::string id;
+    if (!selected_model_id_.empty()) {
+        id = selected_model_id_;
+    } else if (!model_path_.empty()) {
+        size_t slash = model_path_.find_last_of("/\\");
+        id = (slash == std::string::npos) ? model_path_ : model_path_.substr(slash + 1);
+    } else if (backend_mgr_) {
+        id = backend_mgr_->getActiveBackendName();
+    } else {
+        id = "rawrxd-default";
+    }
+
+    bool loaded = engine_ && engine_->IsModelLoaded();
+    return std::string("{\"models\":[{\"id\":\"") + EscapeJson(id) +
+           "\",\"loaded\":" + (loaded ? "true" : "false") + "}]}";
+}
+
+std::string CompletionServer::HandleToolsRequest() {
+    // Minimal registry for Web UI discovery.
+    std::vector<std::pair<std::string, std::string>> tools;
+    tools.push_back({"status", "GET /status — readiness & capabilities"});
+    tools.push_back({"chat", "POST /api/chat — agentic chat (supports stream=true)"});
+    tools.push_back({"agent_wish", "POST /api/agent/wish — ask/plan/full wish execution"});
+    tools.push_back({"complete_stream", "POST /complete/stream — SSE code completion"});
+    if (subagent_mgr_) {
+        tools.push_back({"subagent", "POST /api/subagent — spawn sub-agent"});
+        tools.push_back({"chain", "POST /api/chain — prompt chain"});
+        tools.push_back({"swarm", "POST /api/swarm — HexMag swarm"});
+        tools.push_back({"agents", "GET /api/agents — list agents"});
+        tools.push_back({"agents_status", "GET /api/agents/status — agent status"});
+    }
+    if (policy_engine_) {
+        tools.push_back({"policies", "GET/POST /api/policies — policy engine"});
+    }
+    if (backend_mgr_) {
+        tools.push_back({"backends", "GET /api/backends — list backends"});
+        tools.push_back({"backends_use", "POST /api/backends/use — switch backend"});
+    }
+
+    std::string json = "{\"tools\":[";
+    for (size_t i = 0; i < tools.size(); ++i) {
+        if (i) json += ",";
+        json += "{\"name\":\"" + EscapeJson(tools[i].first) + "\",\"description\":\"" + EscapeJson(tools[i].second) + "\"}";
+    }
+    json += "]}";
+    return json;
+}
+
+std::string CompletionServer::HandleAgenticConfigRequest(const std::string& body) {
+    std::string model;
+    ExtractJsonString(body, "model", model);
+    selected_model_id_ = model;
+    return std::string("{\"success\":true,\"model\":\"") + EscapeJson(selected_model_id_) + "\"}";
+}
+
 std::string CompletionServer::HandleAgentWishRequest(const std::string& body) {
     std::string wish;
     ExtractJsonString(body, "wish", wish);
@@ -715,9 +1041,64 @@ std::string CompletionServer::HandleAgentWishRequest(const std::string& body) {
     if (wish.empty()) {
         return R"({"error":"missing_wish","hint":"Send JSON: {\"wish\":\"your natural language request\"}"})";
     }
-    std::string message = "Execute the following user wish. Respond with a clear plan or result: " + wish;
-    std::string chat_body = "{\"message\":\"" + EscapeJson(message) + "\"}";
-    return HandleChatRequest(chat_body);
+
+    std::string mode;
+    ExtractJsonString(body, "mode", mode);
+    mode = ToLower(Trim(mode));
+
+    if (mode == "plan") {
+        if (!agentic_engine_) {
+            return R"({"error":"agentic_engine_not_available"})";
+        }
+        std::string planText = agentic_engine_->planTask(wish);
+
+        // Parse into steps (supports "1. ..." and "- ...")
+        std::vector<std::string> steps;
+        std::istringstream iss(planText);
+        std::string line;
+        while (std::getline(iss, line)) {
+            std::string t = Trim(line);
+            if (t.empty()) continue;
+            // remove leading bullets / numbering
+            if (t.size() > 2 && std::isdigit(static_cast<unsigned char>(t[0])) && t[1] == '.') {
+                t = Trim(t.substr(2));
+            } else if (StartsWith(t, "- ") || StartsWith(t, "* ")) {
+                t = Trim(t.substr(2));
+            }
+            if (!t.empty()) steps.push_back(t);
+        }
+
+        std::string json = "{\"plan\":[";
+        for (size_t i = 0; i < steps.size(); ++i) {
+            if (i) json += ",";
+            json += "\"" + EscapeJson(steps[i]) + "\"";
+        }
+        json += "],\"requires_confirmation\":false}";
+        return json;
+    }
+
+    if (!agentic_engine_) {
+        return R"({"error":"agentic_engine_not_available"})";
+    }
+
+    // Default/full mode: execute and return a response string.
+    std::string prompt = "Execute the following user wish. Respond with a clear result.\n\nWish: " + wish;
+    std::string response = agentic_engine_->chat(prompt);
+
+    // Optional tool dispatch (best-effort)
+    std::string toolResult;
+    bool hadToolCall = false;
+    if (subagent_mgr_) {
+        hadToolCall = subagent_mgr_->dispatchToolCall("api", response, toolResult);
+    }
+
+    std::string json = "{\"response\":\"" + EscapeJson(response) + "\"";
+    json += ",\"tool_calls\":[]";
+    if (hadToolCall) {
+        json += ",\"tool_result\":\"" + EscapeJson(toolResult) + "\"";
+    }
+    json += "}";
+    return json;
 }
 
 std::string CompletionServer::HandleSubAgentRequest(const std::string& body) {

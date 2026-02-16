@@ -93,6 +93,8 @@ public:
     void updateConfig(const GenerationConfig& config);
     // CLI/Native compat
     std::string chat(const std::string& message);
+    // Streaming compat: invokes callback per token and returns full text.
+    std::string chatStream(const std::string& message, const std::function<void(const std::string&)>& onToken);
 
     // SubAgent / Chaining / Swarm — thin wrappers for use from the engine
     // The full implementation lives in SubAgentManager; these are convenience

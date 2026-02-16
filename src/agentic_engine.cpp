@@ -791,6 +791,26 @@ std::string AgenticEngine::chat(const std::string& message) {
     return response;
 }
 
+std::string AgenticEngine::chatStream(const std::string& message, const std::function<void(const std::string&)>& onToken) {
+    if (!m_inferenceEngine) return "[Error: No Inference Engine]";
+
+    RawrXD::NativeAgent agent(static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine));
+
+    agent.SetMaxMode(m_config.maxMode);
+    agent.SetDeepThink(m_config.deepThinking);
+    agent.SetDeepResearch(m_config.deepResearch);
+    agent.SetNoRefusal(m_config.noRefusal);
+
+    std::string response;
+    agent.SetOutputCallback([&](const std::string& token) {
+        response += token;
+        if (onToken) onToken(token);
+    });
+
+    agent.Ask(message);
+    return response;
+}
+
 // ============================================================================
 // SubAgent / Chaining / Swarm — convenience wrappers
 // These use the engine's own chat() to run sub-tasks. For the full
