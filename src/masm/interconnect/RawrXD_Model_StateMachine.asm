@@ -23,8 +23,9 @@ ModelState_Transition PROC FRAME
 ModelState_Transition ENDP
 
 ModelState_AcquireInstance PROC FRAME
-    ; Returns mock instance pointer
-    lea rax, [rsp] ; Invalid but non-null for now
+    ; FIXED: Return nullptr instead of invalid stack pointer
+    ; TODO: Implement heap allocation when real state management is added
+    xor rax, rax    ; Return nullptr (safe stub)
     ret
 ModelState_AcquireInstance ENDP
 
