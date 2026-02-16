@@ -207,9 +207,9 @@ std::vector<SettingsManager::Keybinding> SettingsManager::getKeybindingsByKeys(c
     std::vector<Keybinding> results;
     auto allBindings = listKeybindings();
     
-    for (const auto& kb : allBindings) {
-        if (kb.keys == keys) {
-            results.push_back(kb);
+    for (const auto& binding : allBindings) {
+        if (binding.keys == keys) {
+            results.push_back(binding);
         }
     }
 
@@ -637,22 +637,22 @@ SettingsManager::Theme SettingsManager::deserializeTheme(const json& data) const
     return theme;
 }
 
-json SettingsManager::serializeKeybinding(const Keybinding& kb) const {
+json SettingsManager::serializeKeybinding(const Keybinding& keybinding) const {
     json j;
-    j["command"] = kb.command;
-    j["keys"] = kb.keys;
-    j["description"] = kb.description;
-    j["enabled"] = kb.enabled;
+    j["command"] = keybinding.command;
+    j["keys"] = keybinding.keys;
+    j["description"] = keybinding.description;
+    j["enabled"] = keybinding.enabled;
     return j;
 }
 
 SettingsManager::Keybinding SettingsManager::deserializeKeybinding(const json& data) const {
-    Keybinding kb;
-    kb.command = data.value("command", "");
-    kb.keys = data.value("keys", "");
-    kb.description = data.value("description", "");
-    kb.enabled = data.value("enabled", true);
-    return kb;
+    Keybinding keybinding;
+    keybinding.command = data.value("command", "");
+    keybinding.keys = data.value("keys", "");
+    keybinding.description = data.value("description", "");
+    keybinding.enabled = data.value("enabled", true);
+    return keybinding;
 }
 
 json SettingsManager::serializeModel(const ModelConfig& model) const {

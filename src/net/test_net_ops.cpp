@@ -2,7 +2,6 @@
 // Regression testing for MASM networking routines
 
 #include "net_masm_bridge.h"
-#include <iostream>
 #include <cstring>
 #include <cassert>
 

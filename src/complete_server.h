@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string>
 #include <thread>
+#include <unordered_set>
+#include <vector>
 #include "inference_engine.h"
 
 // Forward declarations
@@ -36,10 +38,11 @@ private:
     void Run(uint16_t port);
     void HandleClient(int client_fd);
     std::string HandleCompleteRequest(const std::string& body);
-    void HandleCompleteStreamRequest(int client_fd, const std::string& body);
+    void HandleCompleteStreamRequest(int client_fd, const std::string& headers, const std::string& body);
 
     // Agentic API handlers
     std::string HandleChatRequest(const std::string& body);
+    void HandleChatStreamRequest(int client_fd, const std::string& headers, const std::string& body);
     std::string HandleAgentWishRequest(const std::string& body);
     std::string HandleSubAgentRequest(const std::string& body);
     std::string HandleChainRequest(const std::string& body);
@@ -48,6 +51,11 @@ private:
     std::string HandleAgentsStatusRequest();
     std::string HandleHistoryRequest(const std::string& path, const std::string& body);
     std::string HandleReplayRequest(const std::string& body);
+    
+    // Universal Access compatibility endpoints (Web client)
+    std::string HandleV1ModelsRequest();
+    std::string HandleToolsRequest();
+    std::string HandleAgenticConfigRequest(const std::string& body);
 
     // Phase 7 — Policy API handlers
     std::string HandlePoliciesRequest(const std::string& path, const std::string& body);
@@ -142,6 +150,12 @@ private:
     PolicyEngine* policy_engine_ = nullptr;
     ExplainabilityEngine* explain_engine_ = nullptr;
     AIBackendManager* backend_mgr_ = nullptr;
+
+    // Universal Access: CORS + API key auth config
+    std::vector<std::string> cors_allowed_origins_;
+    std::unordered_set<std::string> api_keys_;
+    bool require_auth_ = false;
+    std::string selected_model_id_;
 };
 
 } // namespace RawrXD

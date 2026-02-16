@@ -371,8 +371,8 @@ class ChatbotEngine {
     [hashtable]$KnowledgeBase
     [System.Collections.ArrayList]$ConversationHistory
     
-    ChatbotEngine([hashtable]$kb) {
-        $this.KnowledgeBase = $kb
+    ChatbotEngine([hashtable]$knowledgeBase) {
+        $this.KnowledgeBase = $knowledgeBase
         $this.ConversationHistory = [System.Collections.ArrayList]::new()
     }
     
