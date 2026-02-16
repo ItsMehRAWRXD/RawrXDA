@@ -1,0 +1,27 @@
+# RawrXD Backend Only Container
+# Lightweight Python backend for web interface
+
+FROM python:3.11-slim
+
+ENV RAWRXD_HOST=0.0.0.0
+ENV RAWRXD_PORT=23959
+
+WORKDIR /opt/rawrxd
+
+# Install dependencies
+COPY Ship/requirements.txt /opt/rawrxd/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt || true
+
+# Copy backend files
+COPY Ship/ /opt/rawrxd/backend/
+COPY backend/ /opt/rawrxd/backend/
+
+# Expose backend port
+EXPOSE 23959
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:23959/status')"
+
+# Run backend
+CMD ["python3", "-m", "backend.rawr_engine"]
