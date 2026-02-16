@@ -42,7 +42,10 @@ param(
     [int]$Port = 8080,
     
     [Parameter(Mandatory=$false)]
-    [switch]$DigestFirst
+    [switch]$DigestFirst,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$UseExternalAPIFallback
 )
 
 Set-StrictMode -Version Latest
@@ -58,10 +61,13 @@ class EnhancedChatbot {
     [System.Collections.ArrayList]$ConversationHistory
     [bool]$HasDigestedKB
     [string]$KBPath
+    [bool]$UseExternalAPIFallback
     
-    EnhancedChatbot() {
+    EnhancedChatbot([bool]$useExternalAPIFallback = $false) {
+        $this.UseExternalAPIFallback = $useExternalAPIFallback
         $this.ConversationHistory = [System.Collections.ArrayList]::new()
-        $this.KBPath = "D:\lazy init ide\data\knowledge_base.json"
+        $projectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..") -ErrorAction SilentlyContinue).Path }
+        $this.KBPath = if ($projectRoot) { Join-Path $projectRoot "data" "knowledge_base.json" } else { (Join-Path "D:\lazy init ide" "data" "knowledge_base.json") }
         $this.HasDigestedKB = $false
         
         $this.LoadDigestedKnowledgeBase()
@@ -250,6 +256,19 @@ class EnhancedChatbot {
             $manualResults = $this.SearchManualKB($question)
             if ($manualResults.Count -gt 0) {
                 $answer = $manualResults[0].Answer
+            }
+        }
+        
+        # Fallback: External API (OpenAI/Anthropic) when enabled
+        if ($answer -eq "" -and $this.UseExternalAPIFallback) {
+            try {
+                $provider = if ($env:ANTHROPIC_API_KEY) { "anthropic" } else { "openai" }
+                $extResult = & "$PSScriptRoot\RawrXD_Drive.ps1" -Action api -Prompt $question 2>&1
+                if ($extResult -and $extResult -notmatch "error|required") {
+                    $answer = "🌐 **External API ($provider):**`n`n$extResult"
+                }
+            } catch {
+                # Continue to GetNoMatchResponse
             }
         }
         
@@ -498,6 +517,9 @@ class EnhancedChatbot {
     [string] GetNoMatchResponse([string]$question) {
         $response = "`n❓ **I couldn't find a direct match for that.**`n`n"
         
+        if ($this.UseExternalAPIFallback) {
+            $response += "💡 **Tip:** Set OPENAI_API_KEY or ANTHROPIC_API_KEY and use -UseExternalAPIFallback for frontier model fallback.`n`n"
+        }
         if ($this.HasDigestedKB) {
             $response += "Try rephrasing with keywords like:`n"
             $response += "  • swarm, deploy, agents`n"
@@ -555,7 +577,8 @@ Type 'help' for commands or ask your question!
 # ═══════════════════════════════════════════════════════════════════════════════
 
 function Start-InteractiveChatbot {
-    $chatbot = [EnhancedChatbot]::new()
+    param([bool]$UseExternalAPIFallback = $false)
+    $chatbot = [EnhancedChatbot]::new($UseExternalAPIFallback)
     
     Write-Host $chatbot.GetGreeting() -ForegroundColor Cyan
     
@@ -606,8 +629,8 @@ function Start-InteractiveChatbot {
 # SINGLE QUESTION MODE
 # ═══════════════════════════════════════════════════════════════════════════════
 
-function Start-SingleQuestionMode([string]$question) {
-    $chatbot = [EnhancedChatbot]::new()
+function Start-SingleQuestionMode([string]$question, [bool]$UseExternalAPIFallback = $false) {
+    $chatbot = [EnhancedChatbot]::new($UseExternalAPIFallback)
     
     Write-Host "`n🤖 Question: $question`n" -ForegroundColor Cyan
     $answer = $chatbot.ProcessQuestion($question)
@@ -619,8 +642,8 @@ function Start-SingleQuestionMode([string]$question) {
 # API MODE
 # ═══════════════════════════════════════════════════════════════════════════════
 
-function Start-APIMode([int]$port) {
-    $chatbot = [EnhancedChatbot]::new()
+function Start-APIMode([int]$port, [bool]$UseExternalAPIFallback = $false) {
+    $chatbot = [EnhancedChatbot]::new($UseExternalAPIFallback)
     
     Write-Host "`n╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Magenta
     Write-Host "║         Enhanced Chatbot API Server                              ║" -ForegroundColor Magenta
@@ -698,11 +721,11 @@ if ($DigestFirst) {
 # Execute based on mode
 switch ($Mode) {
     "interactive" {
-        Start-InteractiveChatbot
+        Start-InteractiveChatbot -UseExternalAPIFallback $UseExternalAPIFallback
     }
     "single-question" {
         if ($Question) {
-            Start-SingleQuestionMode -question $Question
+            Start-SingleQuestionMode -question $Question -UseExternalAPIFallback $UseExternalAPIFallback
         }
         else {
             Write-Error "Question parameter required for single-question mode"
@@ -710,6 +733,6 @@ switch ($Mode) {
         }
     }
     "api" {
-        Start-APIMode -port $Port
+        Start-APIMode -port $Port -UseExternalAPIFallback $UseExternalAPIFallback
     }
 }
