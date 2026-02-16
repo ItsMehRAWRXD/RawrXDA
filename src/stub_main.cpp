@@ -1,15 +1,13 @@
 #include <windows.h>
-#include <cstdio>
-#include <fstream>
+#include "logging/logger.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // Log to file
-    std::ofstream log("D:\\temp\\stub_test.log");
-    log << "STUB: WinMain entered\n"; log.flush();
+    Logger logger("StubMain", "logs/");
+    logger.info("STUB: WinMain entered");
     
     MessageBoxA(nullptr, "Stub main reached!", "SUCCESS", MB_OK);
     
-    log << "STUB: MessageBox shown\n"; log.flush();
+    logger.info("STUB: MessageBox shown");
     
     return 0;
 }

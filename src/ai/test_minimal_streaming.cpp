@@ -4,36 +4,36 @@
  */
 
 #include "streaming_gguf_loader_qt.h"
-#include <iostream>
+#include "logging/logger.h"
 #include <string>
 
 int main(int argc, char* argv[]) {
-    std::cout << "=== Minimal StreamingGGUFLoaderQt Test ===" << std::endl;
+    Logger logger("TestMinimalStreaming");
+    logger.info("=== Minimal StreamingGGUFLoaderQt Test ===");
     
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <gguf-file>" << std::endl;
-        std::cerr << "Example: " << argv[0] << " D:\\temp\\RawrXD-agentic-ide-production\\RawrXD-ModelLoader\\phi-3-mini.gguf" << std::endl;
+        logger.error("Usage: {} <gguf-file>", argv[0]);
         return 1;
     }
     
     std::string modelPath = argv[1];
-    std::cout << "Loading: " << modelPath << std::endl;
+    logger.info("Loading: {}", modelPath);
     
     StreamingGGUFLoaderQt loader;
     
     if (!loader.loadModel(modelPath)) {
-        std::cerr << "FAILED: " << loader.getLastError() << std::endl;
+        logger.error("FAILED: {}", loader.getLastError());
         return 1;
     }
     
-    std::cout << "\nSUCCESS!" << std::endl;
-    std::cout << "Model: " << loader.getModelName() << std::endl;
-    std::cout << "Architecture: " << loader.getModelArchitecture() << std::endl;
-    std::cout << "Tensors: " << loader.getTensorCount() << std::endl;
-    std::cout << "Metadata: " << loader.getMetadataCount() << std::endl;
+    logger.info("SUCCESS!");
+    logger.info("Model: {}", loader.getModelName());
+    logger.info("Architecture: {}", loader.getModelArchitecture());
+    logger.info("Tensors: {}", loader.getTensorCount());
+    logger.info("Metadata: {}", loader.getMetadataCount());
     
     auto stats = loader.getMemoryStats();
-    std::cout << "File size: " << (stats.totalFileSize / 1024 / 1024) << " MB" << std::endl;
+    logger.info("File size: {} MB", stats.totalFileSize / 1024 / 1024);
     
     return 0;
 }
