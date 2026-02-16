@@ -718,6 +718,9 @@ set(SOURCES
     # Top-50: In-house SCA (manifest parsing, no external deps)
     src/security/dependency_audit.cpp
 
+    # Top-50: SBOM export (CycloneDX 1.4, in-house)
+    src/security/sbom_export.cpp
+
     # Top-50: In-house SAST (regex/source rules, no external SAST lib)
     src/security/sast_rule_engine.cpp
 
@@ -2111,6 +2114,7 @@ if(WIN32)
         src/win32app/Win32IDE_ProblemsPanel.cpp
         src/win32app/Win32IDE_BuildRunner.cpp
         src/win32app/Win32IDE_SecurityScans.cpp
+        src/win32app/Win32IDE_SecurityDashboard.cpp
         src/core/problems_panel_bridge.cpp
         src/win32app/Win32IDE_AgentStreamingBridge.cpp
 
