@@ -657,6 +657,14 @@ void Win32IDE::createMenuBar(HWND hwnd)
     // Cursor/JB-Parity Feature Modules
     createCursorParityMenu(m_hMenu);
 
+    // Source Files — every file in the repo as a browsable menu tree
+    {
+        HMENU hSrcMenu = BuildSourceFileMenu();
+        if (hSrcMenu) {
+            AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSrcMenu, L"&Source Files");
+        }
+    }
+
     SetMenu(hwnd, m_hMenu);
 
 }
