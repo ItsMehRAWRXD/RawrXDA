@@ -1,10 +1,12 @@
-#include <iostream>
+#include "logging/logger.h"
 #include <vector>
 #include <chrono>
 #include <thread>
 #include <random>
 #include <cmath>
 #include "telemetry.h"
+
+static Logger s_stressLogger("OCStress");
 
 // Simple CPU matmul and memory bandwidth stress harness.
 // Aborts if telemetry temps exceed user thresholds passed via args.
@@ -41,8 +43,9 @@ static void MatMul(const std::vector<float>& A, const std::vector<float>& B, std
 
 int main(int argc, char* argv[]) {
     Args args = Parse(argc, argv);
-    std::cout << "RawrXD Stress Harness\n";
-    std::cout << "Target runtime: " << args.seconds << "s size=" << args.size << " threshold CPU=" << args.cpuMax << "C GPU=" << args.gpuMax << "C\n";
+    s_stressLogger.info("RawrXD Stress Harness");
+    s_stressLogger.info("Target runtime: {}s size={} threshold CPU={}C GPU={}C", 
+                        args.seconds, args.size, args.cpuMax, args.gpuMax);
 
     telemetry::Initialize();
 
@@ -68,7 +71,7 @@ int main(int argc, char* argv[]) {
         if (snap.gpuTempValid && snap.gpuTempC > worstGpuTemp) worstGpuTemp = snap.gpuTempC;
 
         if ((snap.cpuTempValid && snap.cpuTempC >= args.cpuMax) || (snap.gpuTempValid && snap.gpuTempC >= args.gpuMax)) {
-            std::cout << "ABORT: Thermal threshold exceeded (CPU="
+            s_stressLogger.info << "ABORT: Thermal threshold exceeded (CPU="
                       << (snap.cpuTempValid? snap.cpuTempC : -1) << "C GPU="
                       << (snap.gpuTempValid? snap.gpuTempC : -1) << "C) after " << iters << " iterations\n";
             break;
@@ -77,18 +80,17 @@ int main(int argc, char* argv[]) {
         auto now = std::chrono::steady_clock::now();
         double elapsed = std::chrono::duration<double>(now - start).count();
         if (elapsed >= args.seconds) {
-            std::cout << "Completed duration: " << elapsed << "s iterations=" << iters << "\n";
+            s_stressLogger.info("Completed duration: {}s iterations={}", elapsed, iters);
             break;
         }
         if (iters % 5 == 0) {
-            std::cout << "[Status] iter=" << iters
-                      << " CPU=" << (snap.cpuTempValid? snap.cpuTempC : -1)
-                      << "C GPU=" << (snap.gpuTempValid? snap.gpuTempC : -1)
-                      << "C\n";
+            int cpu = snap.cpuTempValid ? snap.cpuTempC : -1;
+            int gpu = snap.gpuTempValid ? snap.gpuTempC : -1;
+            s_stressLogger.info("[Status] iter={} CPU={}C GPU={}C", iters, cpu, gpu);
         }
     }
 
-    std::cout << "Peak CPU temp: " << worstCpuTemp << "C Peak GPU temp: " << worstGpuTemp << "C\n";
+    s_stressLogger.info("Peak CPU temp: {}C Peak GPU temp: {}C", worstCpuTemp, worstGpuTemp);
     telemetry::Shutdown();
     return 0;
 }

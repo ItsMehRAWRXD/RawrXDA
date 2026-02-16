@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 param(
-    [ValidateSet('enhanced','voice','digest','validate','api','parallel','')]
+    [ValidateSet('enhanced','voice','digest','validate','api','parallel','soak','')]
     [string]$Action = 'enhanced',
     [switch]$EnableVoice,
     [switch]$EnableExternalAPI,
@@ -8,7 +8,9 @@ param(
     [string]$Prompt = "",
     [string[]]$Tasks = @(),
     [string]$Provider = "openai",
-    [int]$MaxParallel = 3
+    [int]$MaxParallel = 3,
+    [double]$Hours = 0,
+    [int]$Iterations = 0
 )
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
@@ -66,6 +68,9 @@ if (-not (Test-Path $kbPath) -or $DigestFirst) {
     & "$PSScriptRoot\source_digester.ps1" -Operation digest 2>$null
 }
 
+function Write-SoakLog { param($obj) $line = $obj | ConvertTo-Json -Compress; Add-Content -Path $script:SoakLogPath -Value $line -Encoding UTF8 }
+function Get-Platform { $p = 'unknown'; if ($env:OSTYPE -match 'linux') { $p = 'linux' } elseif ($env:OSTYPE -match 'darwin') { $p = 'macos' } elseif ($IsWindows -or $env:OS -eq 'Windows_NT') { $p = 'windows' }; if ($env:DOCKER) { $p = "docker-$p" }; $p }
+
 switch ($Action) {
     'enhanced' {
         if ($EnableExternalAPI) { & "$PSScriptRoot\ide_chatbot_enhanced.ps1" -Mode interactive -UseExternalAPIFallback }
@@ -88,6 +93,35 @@ switch ($Action) {
     'parallel' {
         if ($Tasks.Count -eq 0) { $Tasks = @("Analyze src/", "Analyze scripts/") }
         Invoke-MultiAgent -tasks $Tasks -maxP $MaxParallel
+    }
+    'soak' {
+        $script:SoakLogPath = Join-Path $script:Root "data" "soak_evidence_$(Get-Date -Format 'yyyyMMdd_HHmmss').jsonl"
+        $dataDir = Split-Path $script:SoakLogPath -Parent
+        if (-not (Test-Path $dataDir)) { New-Item -ItemType Directory -Path $dataDir -Force | Out-Null }
+        $platform = Get-Platform
+        $end = if ($Hours -gt 0) { (Get-Date).AddHours($Hours) } elseif ($Iterations -gt 0) { $null } else { (Get-Date).AddMinutes(5) }
+        $i = 0
+        Write-SoakLog @{ts=(Get-Date -Format 'o');platform=$platform;event='start';actions=@('validate','parallel')}
+        & "$PSScriptRoot\source_digester.ps1" -Operation digest 2>$null
+        while ($true) {
+            $i++
+            foreach ($act in @('validate','parallel')) {
+                $sw = [System.Diagnostics.Stopwatch]::StartNew()
+                $ok = $true
+                try {
+                    if ($act -eq 'validate') {
+                        $vp = Join-Path $script:Root "VALIDATE_REVERSE_ENGINEERING.ps1"
+                        if (Test-Path $vp) { & $vp 2>&1 | Out-Null } else { $ok = $false }
+                    } else { Invoke-MultiAgent -tasks @("Analyze src/","Analyze scripts/") -maxP 2 2>&1 | Out-Null }
+                } catch { $ok = $false }
+                $sw.Stop()
+                Write-SoakLog @{ts=(Get-Date -Format 'o');platform=$platform;action=$act;ok=$ok;elapsedMs=$sw.ElapsedMilliseconds;iter=$i}
+            }
+            if ($end -and (Get-Date) -ge $end) { break }
+            if ($Iterations -gt 0 -and $i -ge $Iterations) { break }
+            Start-Sleep -Seconds 30
+        }
+        Write-SoakLog @{ts=(Get-Date -Format 'o');platform=$platform;event='end';iterations=$i}
     }
     '' { & "$PSScriptRoot\ide_chatbot_enhanced.ps1" -Mode interactive }
 }
