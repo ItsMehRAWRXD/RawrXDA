@@ -84,10 +84,9 @@ int main(int argc, char* argv[]) {
             break;
         }
         if (iters % 5 == 0) {
-            s_stressLogger.info << "[Status] iter=" << iters
-                      << " CPU=" << (snap.cpuTempValid? snap.cpuTempC : -1)
-                      << "C GPU=" << (snap.gpuTempValid? snap.gpuTempC : -1)
-                      << "C\n";
+            int cpu = snap.cpuTempValid ? snap.cpuTempC : -1;
+            int gpu = snap.gpuTempValid ? snap.gpuTempC : -1;
+            s_stressLogger.info("[Status] iter={} CPU={}C GPU={}C", iters, cpu, gpu);
         }
     }
 
