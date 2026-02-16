@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  rawrxd-backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "127.0.0.1:23959:23959"
+    environment:
+      - RAWRXD_HOST=0.0.0.0
+      - RAWRXD_PORT=23959
+      - RAWRXD_REQUIRE_AUTH=${RAWRXD_REQUIRE_AUTH:-0}
+      - RAWRXD_API_KEYS=${RAWRXD_API_KEYS:-}
+      - RAWRXD_CORS_ORIGINS=${RAWRXD_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
+      - RAWRXD_MODELS=${RAWRXD_MODELS:-rawrxd-local,rawrxd-plan,rawrxd-full}
+      - RAWRXD_DEFAULT_MODEL=${RAWRXD_DEFAULT_MODEL:-rawrxd-local}
+    restart: unless-stopped
+
+  rawrxd-web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    ports:
+      - "127.0.0.1:8088:80"
+    depends_on:
+      - rawrxd-backend
+    restart: unless-stopped

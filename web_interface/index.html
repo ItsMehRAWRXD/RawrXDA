@@ -401,9 +401,33 @@
 
         const DEFAULT_API_URL = "http://localhost:23959";
 
+        function isValidApiUrl(value) {
+            if (!value) {
+                return false;
+            }
+            try {
+                const parsed = new URL(value);
+                return parsed.protocol === "http:" || parsed.protocol === "https:";
+            } catch {
+                return false;
+            }
+        }
+
+        function getQueryOverride() {
+            const params = new URLSearchParams(window.location.search);
+            const api = params.get("api");
+            const key = params.get("key");
+            return {
+                apiUrl: isValidApiUrl(api) ? api : "",
+                apiKey: key || ""
+            };
+        }
+
+        const queryOverride = getQueryOverride();
+
         const state = {
-            apiUrl: localStorage.getItem("rawrxd_api_url") || DEFAULT_API_URL,
-            apiKey: localStorage.getItem("rawrxd_api_key") || "",
+            apiUrl: queryOverride.apiUrl || localStorage.getItem("rawrxd_api_url") || DEFAULT_API_URL,
+            apiKey: queryOverride.apiKey || localStorage.getItem("rawrxd_api_key") || "",
             currentModel: localStorage.getItem("rawrxd_model") || "",
             agentMode: localStorage.getItem("rawrxd_mode") || "ask",
             isStreaming: false,
@@ -823,6 +847,13 @@
         }
 
         function initialize() {
+            if (queryOverride.apiUrl) {
+                localStorage.setItem("rawrxd_api_url", queryOverride.apiUrl);
+            }
+            if (queryOverride.apiKey) {
+                localStorage.setItem("rawrxd_api_key", queryOverride.apiKey);
+            }
+
             document.getElementById("apiUrl").value = state.apiUrl;
             document.getElementById("apiKey").value = state.apiKey;
             document.querySelectorAll(".mode-tab").forEach((tab) => {

@@ -59,6 +59,16 @@ cmake .. -DENABLE_QT=OFF -DUSE_AVX512=ON -DRAWRXD_BUILD_CLI=ON
 cmake --build . --config Release
 ```
 
+## 🌐 Universal Access (Local-Only)
+
+Run the full API + web experience locally without hosted infrastructure:
+
+- Linux/macOS: `./wrapper/launch-local.sh --open-browser`
+- Windows: `.\wrapper\launch-local.ps1 --open-browser`
+- Docker local profile: `docker compose -f docker-compose.local.yml up --build`
+
+Detailed guide: `docs/LOCAL_UNIVERSAL_ACCESS.md`
+
 ## 🏗️ Build Targets
 
 | Target | Description |
