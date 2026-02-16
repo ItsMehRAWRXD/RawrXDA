@@ -20,25 +20,26 @@ NeonFabricInitialize_ASM PROC
 NeonFabricInitialize_ASM ENDP
 
 BitmaskBroadcast_ASM PROC
-    ; RCX = bitmask ptr, RDX = shards, R8 = value
-    mov rax, 1  ; Return success
+    ; STUB: RCX = bitmask ptr, RDX = shards, R8 = value
+    mov rax, 0xC0000001  ; STATUS_NOT_IMPLEMENTED
     ret
 BitmaskBroadcast_ASM ENDP
 
 VulkanCreateFSMBuffer_ASM PROC
-    ; RCX = device, RDX = size, R8 = ppBuffer
-    mov rax, 0
+    ; STUB: RCX = device, RDX = size, R8 = ppBuffer
+    mov rax, 0xC0000001  ; STATUS_NOT_IMPLEMENTED
     ret
 VulkanCreateFSMBuffer_ASM ENDP
 
 VulkanFSMUpdate_ASM PROC
-    ; RCX = buffer, RDX = offset, R8 = value
-    mov rax, 1
+    ; STUB: RCX = buffer, RDX = offset, R8 = value
+    mov rax, 0xC0000001  ; STATUS_NOT_IMPLEMENTED
     ret
 VulkanFSMUpdate_ASM ENDP
 
 NeonFabricShutdown_ASM PROC
-    xor rax, rax
+    ; STUB: Shutdown always succeeds (no-op is safe)
+    xor rax, rax         ; STATUS_SUCCESS
     ret
 NeonFabricShutdown_ASM ENDP
 
