@@ -12,10 +12,10 @@ struct Args {
 };
 
 void PrintUsage(const char* exe) {
-    std::cout << "Usage: " << exe << " [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]\n";
-    std::cout << "Examples:\n";
-    std::cout << "  " << exe << " --name RawrXD-IDE --template minimal --out .\\rawrxd-ide\n";
-    std::cout << "  " << exe << " --template full --out D:\\apps\\rawrxd-ide\n";
+    s_monacoLogger.info( "Usage: " << exe << " [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]\n";
+    s_monacoLogger.info( "Examples:\n";
+    s_monacoLogger.info( "  " << exe << " --name RawrXD-IDE --template minimal --out .\\rawrxd-ide\n";
+    s_monacoLogger.info( "  " << exe << " --template full --out D:\\apps\\rawrxd-ide\n";
 }
 
 bool ParseArgs(int argc, char** argv, Args& args) {
@@ -65,10 +65,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::cout << "Monaco IDE generated at: " << args.output_dir << "\n";
-    std::cout << "Next steps:\n";
-    std::cout << "  cd " << args.output_dir << "\\" << args.name << "\n";
-    std::cout << "  npm install\n";
-    std::cout << "  npm run dev\n";
+    s_monacoLogger.info( "Monaco IDE generated at: " << args.output_dir << "\n";
+    s_monacoLogger.info( "Next steps:\n";
+    s_monacoLogger.info( "  cd " << args.output_dir << "\\" << args.name << "\n";
+    s_monacoLogger.info( "  npm install\n";
+    s_monacoLogger.info( "  npm run dev\n";
     return 0;
 }
