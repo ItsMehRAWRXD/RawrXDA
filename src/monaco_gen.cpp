@@ -12,10 +12,10 @@ struct Args {
 };
 
 void PrintUsage(const char* exe) {
-    s_monacoLogger.info( "Usage: " << exe << " [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]\n";
-    s_monacoLogger.info( "Examples:\n";
-    s_monacoLogger.info( "  " << exe << " --name RawrXD-IDE --template minimal --out .\\rawrxd-ide\n";
-    s_monacoLogger.info( "  " << exe << " --template full --out D:\\apps\\rawrxd-ide\n";
+    s_monacoLogger.info("Usage: {} [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]", exe);
+    s_monacoLogger.info("Examples:");
+    s_monacoLogger.info("  {} --name RawrXD-IDE --template minimal --out .\\rawrxd-ide", exe);
+    s_monacoLogger.info("  {} --template full --out D:\\apps\\rawrxd-ide", exe);
 }
 
 bool ParseArgs(int argc, char** argv, Args& args) {
