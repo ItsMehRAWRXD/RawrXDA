@@ -1521,6 +1521,7 @@ if(WIN32)
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/IDELogger.h
         src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_SourceFilePicker.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_Debugger.cpp
         src/win32app/Win32IDE_AgenticBridge.h
@@ -2295,6 +2296,7 @@ if(WIN32)
         src/win32app/Win32IDE_PowerShell.cpp
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_SourceFilePicker.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_Debugger.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
