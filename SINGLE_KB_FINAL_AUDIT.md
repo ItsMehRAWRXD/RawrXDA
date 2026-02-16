@@ -1,111 +1,94 @@
-# Single KB Final Audit — Remediation Complete
+# SINGLE_KB_FINAL_AUDIT
 
-**Branch:** cursor/rawrxd-universal-access-dc41  
-**Date:** 2026-02-16  
-**Status:** ✅ All critical and medium-risk findings remediated
-
----
-
-## Executive Summary
-
-Full audit of "single KB" identifiers and ~1KB source files across the codebase. Critical unsafe stubs fixed, medium-risk stubs documented, and hardcoded paths replaced with environment-aware defaults.
+Date: 2026-02-16  
+Branches: `cursor/final-kb-audit-bd84`, `cursor/rawrxd-universal-access-dc41`  
+Status: Remediation complete for high-priority findings
 
 ---
 
-## Critical Findings — Remediated
+## Scope and interpretation
 
-### 1. Unsafe Stub Pointer Return ✅ FIXED
+Because "single KB" can be interpreted two ways, this audit uses both:
 
-**File:** `src/masm/interconnect/RawrXD_Model_StateMachine.asm` (lines 25–28)
+1. **Strict single-KiB:** `size == 1024` bytes  
+2. **Single-KiB band:** `1024 <= size < 2048` bytes
 
-**Issue:** `ModelState_AcquireInstance` returned `lea rax, [rsp]` — a stack address invalid after return. Callers could dereference freed stack memory.
+## Audit summary
 
-**Fix:** Return `xor rax, rax` (NULL). Callers must check for null before use.
+- Files in single-KiB band: **624**
+- Files at exactly 1024 bytes: **3**
+- Code-like files in single-KiB band: **374**
+- Files with stub/TODO/placeholder indicators in single-KiB band: **80**
+- Suspicious code files (non-doc) in single-KiB band: **44**
+- Files in single-KiB band that are >=80% NUL bytes: **23**
 
-```asm
-ModelState_AcquireInstance PROC FRAME
-    ; Stub: return NULL until real instance allocation is implemented.
-    xor rax, rax
-    ret
-ModelState_AcquireInstance ENDP
-```
+Top extensions in the single-KiB band:
 
-### 2. False-Success Digestion Stub ✅ FIXED
-
-**File:** `src/digestion/RawrXD_DigestionEngine.asm` (lines 33–35)
-
-**Issue:** TODO path returned `S_DIGEST_OK` (0) for non-null args without performing digestion. Callers would assume success.
-
-**Fix:** Return `ERROR_CALL_NOT_IMPLEMENTED` (120) so callers know the pipeline is not implemented.
-
-```asm
-    ; Stub: real AVX-512 digestion pipeline not yet implemented.
-    mov     eax, 120        ; ERROR_CALL_NOT_IMPLEMENTED
-```
+- `.h` (93), `.comp` (68), `.md` (65), `.cpp` (62), `.png` (46), `.ps1` (40), `.asm` (40)
 
 ---
 
-## Medium-Risk Items — Documented
+## Strict single-KiB inventory (exactly 1024 bytes)
 
-### 3. Stubbed Vulkan Fabric
+| File | Size | SHA-256 | Audit result |
+|---|---:|---|---|
+| `src/ggml-vulkan/vulkan-shaders/add_id.comp` | 1024 | `9cb609f88d7da55dfbcf030fe4a782f1cb2076a0bb3408ca1258661a28cabd33` | Valid compute shader source |
+| `3rdparty/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp` | 1024 | `9cb609f88d7da55dfbcf030fe4a782f1cb2076a0bb3408ca1258661a28cabd33` | Byte-identical vendored mirror |
+| `src/visualization/VISUALIZATION_FOLDER_AUDIT.md` | 1024 | `4cfc9e106645c061e37e934b7e7c4e062d880eddaf9616e98737970d488fc63d` | Documentation-only; no executable risk |
 
-**Files:** `src/agentic/CMakeLists.txt`, `src/agentic/vulkan/NEON_VULKAN_FABRIC_STUB.asm`
-
-**Status:** Intentional stub documented. All exports return success (0/1) as no-ops. No security defect; replace with real impl for GPU path.
-
-### 4. No-Op Iterative Reasoner
-
-**File:** `include/agentic_iterative_reasoning.h`
-
-**Status:** Intentional stub documented. `initialize()` is no-op; add `reason()`/strategy for full multi-step reflection.
-
-### 5. Reverse-Engineered Fallback Stubs
-
-**File:** `CMakeLists.txt` line 1610 — `src/win32app/reverse_engineered_stubs.cpp`
-
-**Status:** Linked in Win32 target by design. Stubs allow build to succeed; full implementations to be integrated.
+**Strict 1 KiB verdict:** no direct runtime/security defect found in the three exact-1-KiB files.
 
 ---
 
-## Hardcoded Path Remediation
+## Findings in the expanded single-KiB band (1-2 KiB)
 
-### Scripts Updated
+### High (remediated)
+
+1. **Stack address returned as a persistent instance handle** — FIXED
+   - Was: `src/masm/interconnect/RawrXD_Model_StateMachine.asm:25-28` returned `lea rax, [rsp]`
+   - Now: returns `xor rax, rax` (NULL). Callers must check for null.
+
+2. **Digestion engine stub returns success while real pipeline is TODO** — FIXED
+   - Was: `src/digestion/RawrXD_DigestionEngine.asm:33-35` returned S_DIGEST_OK for non-null args
+   - Now: returns `ERROR_CALL_NOT_IMPLEMENTED` (120).
+
+### Medium (documented)
+
+3. **Agentic Vulkan fabric wired to stub** — Intentional; documented in stub.
+4. **Iterative reasoning object is no-op placeholder** — Intentional; documented in header.
+5. **Reverse-engineered bridge fallback stubs linked in Win32** — By design.
+6. **NUL-padded asm artifacts** — Quarantine or clean in separate pass.
+
+### Low
+
+7. **Exact-1-KiB shader duplication** across `src` and vendored `3rdparty` trees — Low risk.
+
+---
+
+## Remediation applied
 
 | File | Change |
 |------|--------|
-| `VALIDATE_REVERSE_ENGINEERING.ps1` | `$ProjectRoot = $env:LAZY_INIT_IDE_ROOT ?? $PSScriptRoot` |
-| `scripts/RawrXD-IDE-Bridge.ps1` | `$ScanPath`, `$TodoStoragePath` use env or `$PSScriptRoot` |
-| `config/env.paths.json` | Notes updated for portability |
-| `docs/TODO_MANAGER_QUICK_REFERENCE.md` | Example uses `data/todos.json` |
-
-**Remaining:** `auto_generated_methods/` and `Test-ProductionReadiness.ps1` contain many `D:/lazy init ide` defaults. These are parameter defaults; callers can override. Full migration in separate pass.
-
----
-
-## Exact 1 KiB Files (Strict)
-
-Three files are exactly 1024 bytes. No runtime/security defect:
-
-1. Vulkan shader(s) — byte-identical `add_id.comp`
-2. Audit doc — text
+| `src/masm/interconnect/RawrXD_Model_StateMachine.asm` | Return NULL instead of [rsp] |
+| `src/digestion/RawrXD_DigestionEngine.asm` | Return ERROR_CALL_NOT_IMPLEMENTED (120) |
+| `src/agentic/vulkan/NEON_VULKAN_FABRIC_STUB.asm` | Audit note added |
+| `include/agentic_iterative_reasoning.h` | Stub documentation added |
+| `VALIDATE_REVERSE_ENGINEERING.ps1` | Use $env:LAZY_INIT_IDE_ROOT or $PSScriptRoot |
+| `scripts/RawrXD-IDE-Bridge.ps1` | Portable paths |
+| `config/env.paths.json` | Portability note |
 
 ---
 
-## Metrics
+## Priority remediation plan (remaining)
 
-| Category | Count | Status |
-|----------|-------|--------|
-| Critical fixes | 2 | ✅ Done |
-| Medium-risk docs | 3 | ✅ Done |
-| Path fixes | 4 | ✅ Done |
-| Files modified | 10 | — |
+1. **Quarantine or clean NUL-padded asm placeholders**
+2. **Add CI policy checks for small-file quality**
+3. **Path migration:** Add $env:LAZY_INIT_IDE_ROOT to remaining auto_generated_methods scripts
 
 ---
 
-## Recommendations
+## Final verdict
 
-1. **ModelState_AcquireInstance:** Implement real instance allocation when Model State Machine is completed.
-2. **RunDigestionEngine:** Implement AVX-512 pipeline; remove ERROR_CALL_NOT_IMPLEMENTED return.
-3. **NEON_VULKAN_FABRIC:** Replace stub with production assembly when validated.
-4. **AgenticIterativeReasoning:** Add `reason()` and strategy methods for multi-step reflection.
-5. **Path migration:** Add `$env:LAZY_INIT_IDE_ROOT` fallback to remaining auto_generated_methods scripts.
+- **Exact 1 KiB files:** no direct execution defects.
+- **High-priority stubs:** remediated (ModelState, Digestion).
+- **Medium-risk stubs:** documented; replace with real impl when ready.
