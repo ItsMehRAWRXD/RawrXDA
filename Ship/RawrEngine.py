@@ -567,6 +567,36 @@ class RawrEngineHandler(BaseHTTPRequestHandler):
         self._json(HTTPStatus.NOT_FOUND, {"error": f"Unknown endpoint: {path}"})
 
 
+# Embeddable start/stop API — used by IDE chat panel to launch the server
+# in a background thread (same interface as the old Ship/chat_server.py)
+_embedded_server = None
+_embedded_thread = None
+
+
+def start_server(port: int = 23959, host: str = "127.0.0.1") -> bool:
+    global _embedded_server, _embedded_thread
+    try:
+        _embedded_server = ReusableThreadingHTTPServer((host, port), RawrEngineHandler)
+        _embedded_thread = threading.Thread(target=_embedded_server.serve_forever, daemon=True)
+        _embedded_thread.start()
+        return True
+    except Exception:
+        return False
+
+
+def stop_server() -> None:
+    global _embedded_server, _embedded_thread
+    if _embedded_server:
+        _embedded_server.shutdown()
+        _embedded_server.server_close()
+        _embedded_server = None
+        _embedded_thread = None
+
+
+def is_server_running() -> bool:
+    return _embedded_server is not None
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="RawrEngine local universal access server")
     parser.add_argument("--host", default=os.getenv("RAWRXD_HOST", "127.0.0.1"), help="Bind host")

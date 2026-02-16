@@ -1,70 +1,18 @@
-# RawrXD Universal Access — Dual-Surface Deployment
-# Backend API + Web UI (optionally full IDE via noVNC)
+# Consolidated into the root docker-compose.yml — use from repo root:
+#   docker-compose up -d                    # HTTP
+#   docker-compose --profile ssl up -d      # HTTPS
+#   docker-compose --profile desktop up -d  # noVNC IDE
+#   docker-compose --profile soak up -d     # soak tests
 
-version: '3.8'
+version: "3.8"
 
 services:
   rawrxd-backend:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.backend
-    container_name: rawrxd-backend
-    ports:
-      - "23959:23959"
-    volumes:
-      - models:/opt/rawrxd/models:ro
-      - workspace:/workspace
-    environment:
-      - RAWRXD_HOST=0.0.0.0
-      - RAWRXD_PORT=23959
-      - RAWRXD_MODEL_PATH=/opt/rawrxd/models
-    networks:
-      - rawrxd-net
-    restart: unless-stopped
+    extends:
+      file: ../docker-compose.yml
+      service: rawrxd-backend
 
   rawrxd-web:
-    image: nginx:alpine
-    container_name: rawrxd-web
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ../web_interface:/usr/share/nginx/html:ro
-      # Use nginx-http-only.conf for dev (no SSL); nginx.conf for production (requires ssl/cert.pem, ssl/key.pem)
-      - ./nginx-http-only.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - rawrxd-backend
-    networks:
-      - rawrxd-net
-    restart: unless-stopped
-
-  # Optional: Full IDE via browser (noVNC)
-  rawrxd-desktop:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.full
-    container_name: rawrxd-desktop
-    ports:
-      - "8080:8080"
-      - "23960:23959"
-    volumes:
-      - models:/opt/rawrxd/models:ro
-    environment:
-      - VNC_PASSWORD=${VNC_PASSWORD:-rawrxd}
-    profiles:
-      - desktop
-    networks:
-      - rawrxd-net
-
-volumes:
-  models:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${MODEL_PATH:-./models}
-  workspace:
-
-networks:
-  rawrxd-net:
-    driver: bridge
+    extends:
+      file: ../docker-compose.yml
+      service: rawrxd-web
