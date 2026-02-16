@@ -6,6 +6,9 @@
 
 #include "sandbox_integration.h"
 
+#include "logging/logger.h"
+static Logger s_logger("sandbox_integration");
+
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -46,10 +49,7 @@ SandboxResult SandboxManager::initialize() {
 
     m_initialized.store(true, std::memory_order_release);
 
-    std::cout << "[SANDBOX] Windows Sandbox Manager initialized.\n"
-              << "  Job Object isolation: supported\n"
-              << "  Restricted tokens: supported\n"
-              << "  AppContainer: supported (Win10+)\n";
+    s_logger.info("[SANDBOX] Windows Sandbox Manager initialized.\n");
 
     return SandboxResult::ok("Sandbox manager initialized");
 }
@@ -85,7 +85,7 @@ void SandboxManager::shutdown() {
     }
 
     m_initialized.store(false);
-    std::cout << "[SANDBOX] Shutdown complete.\n";
+    s_logger.info("[SANDBOX] Shutdown complete.\n");
 }
 
 // ============================================================================
@@ -132,7 +132,7 @@ SandboxResult SandboxManager::createSandbox(const SandboxConfig& config, std::st
         r = configureAppContainer(inst);
         if (!r.success) {
             // AppContainer is best-effort on older Windows
-            std::cout << "[SANDBOX] Warning: AppContainer not available, using restricted token\n";
+            s_logger.info("[SANDBOX] Warning: AppContainer not available, using restricted token\n");
         }
     }
 
@@ -149,9 +149,7 @@ SandboxResult SandboxManager::createSandbox(const SandboxConfig& config, std::st
         m_eventCb(id.c_str(), SandboxState::Ready, m_eventData);
     }
 
-    std::cout << "[SANDBOX] Created sandbox '" << id << "' type=" << static_cast<int>(config.type)
-              << " memLimit=" << (config.memoryLimitBytes / (1024*1024)) << "MB"
-              << " cpuRate=" << (config.cpuRateLimit / 100) << "%\n";
+    s_logger.info("[SANDBOX] Created sandbox '");
 
     return SandboxResult::ok("Sandbox created");
 }
@@ -283,7 +281,7 @@ SandboxResult SandboxManager::launchInSandbox(const std::string& sandboxId,
         m_eventCb(sandboxId.c_str(), SandboxState::Running, m_eventData);
     }
 
-    std::cout << "[SANDBOX] Launched PID " << pi.dwProcessId << " in sandbox '" << sandboxId << "'\n";
+    s_logger.info("[SANDBOX] Launched PID ");
     return SandboxResult::ok("Process launched in sandbox");
 }
 
@@ -731,12 +729,12 @@ SandboxResult SandboxManager::applyPolicies(SandboxInstance& inst) {
     if (flags & static_cast<uint8_t>(SandboxPolicy::AllowGPU)) {
         // GPU access requires DX12/Vulkan device access
         // In AppContainer, this needs explicit capability grants
-        std::cout << "[SANDBOX] GPU access allowed for '" << inst.sandboxId << "'\n";
+        s_logger.info("[SANDBOX] GPU access allowed for '");
     }
 
     if (flags & static_cast<uint8_t>(SandboxPolicy::DenyRegistry)) {
         // Enforced via restricted token + AppContainer
-        std::cout << "[SANDBOX] Registry access denied for '" << inst.sandboxId << "'\n";
+        s_logger.info("[SANDBOX] Registry access denied for '");
     }
 
     return SandboxResult::ok("Policies applied");
@@ -776,7 +774,7 @@ void SandboxManager::monitorThread() {
                 if (inst.config.timeoutMs > 0) {
                     uint64_t elapsed = now - inst.createdAtMs;
                     if (elapsed > inst.config.timeoutMs) {
-                        std::cout << "[SANDBOX] Timeout kill: '" << id << "'\n";
+                        s_logger.info("[SANDBOX] Timeout kill: '");
                         TerminateProcess(inst.hProcess, 2);
                         inst.state = SandboxState::Inactive;
                         m_stats.timeoutKills.fetch_add(1, std::memory_order_relaxed);

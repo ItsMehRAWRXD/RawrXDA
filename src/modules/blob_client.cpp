@@ -38,7 +38,7 @@ public:
                 fs::copy_file(source_path, local_path, fs::copy_options::overwrite_existing);
                 return true;
             } catch (const fs::filesystem_error& e) {
-                std::cerr << "Error copying file: " << e.what() << std::endl;
+                s_logger.error( "Error copying file: " << e.what() << std::endl;
                 return false;
             }
         } else {
@@ -92,7 +92,7 @@ public:
                     }
                 }
             } catch (const fs::filesystem_error& e) {
-                std::cerr << "Error listing directory: " << e.what() << std::endl;
+                s_logger.error( "Error listing directory: " << e.what() << std::endl;
             }
         } else {
             // Cloud storage list (original implementation)
