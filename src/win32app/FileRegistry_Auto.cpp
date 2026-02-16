@@ -5,6 +5,7 @@
 // ============================================================================
 
 #include "FileRegistry_Auto.h"
+#include "SourceFileRegistry.h"
 #include "logging/logger.h"
 #include <windows.h>
 #include <map>
@@ -111,37 +112,26 @@ void FileRegistry::registerAllFiles() {
 // ============================================================================
 
 HMENU FileRegistry::createFileMenu() {
-    HMENU rootMenu = CreateMenu();
-    
-    // Create submenus for each category
-    std::vector<std::string> categories;
-    for (const auto& pair : g_categorizedFiles) {
-        categories.push_back(pair.first);
-    }
-    std::sort(categories.begin(), categories.end());
-    
-    for (const auto& category : categories) {
-        HMENU categoryMenu = CreatePopupMenu();
-        const auto& files = g_categorizedFiles[category];
-        
-        for (const auto& file : files) {
-            std::wstring wDisplayName(file.displayName.begin(), file.displayName.end());
-            AppendMenuW(categoryMenu, MF_STRING, file.commandId, wDisplayName.c_str());
-        }
-        
-        std::wstring wCategory(category.begin(), category.end());
-        AppendMenuW(rootMenu, MF_POPUP, (UINT_PTR)categoryMenu, wCategory.c_str());
-        
-        s_logger.debug("Created menu category: {} ({} files)", category, files.size());
-    }
-    
-    s_logger.info("File menu created with {} categories, {} total files", 
-                  categories.size(), g_fileRegistry.size());
-    
-    return rootMenu;
+    // Delegate to the auto-generated SourceFileRegistry which has the
+    // complete 3467-file table built by scripts/generate_source_menu.py.
+    // This avoids maintaining two separate file lists.
+    HMENU menu = BuildSourceFileMenu();
+    s_logger.info("File menu created via SourceFileRegistry ({} files)", SRCFILE_TOTAL);
+    return menu;
 }
 
 std::string FileRegistry::getFilePath(UINT commandId) {
+    // Check the SourceFileRegistry first (has all 3467 entries)
+    if (IsSourceFileCommand(commandId)) {
+        const wchar_t* wpath = GetSourceFilePath(commandId);
+        if (wpath) {
+            int len = WideCharToMultiByte(CP_UTF8, 0, wpath, -1, nullptr, 0, nullptr, nullptr);
+            std::string result(len - 1, '\0');
+            WideCharToMultiByte(CP_UTF8, 0, wpath, -1, &result[0], len, nullptr, nullptr);
+            return result;
+        }
+    }
+    // Fallback to runtime-registered entries
     for (const auto& entry : g_fileRegistry) {
         if (entry.commandId == commandId) {
             return entry.path;
@@ -163,7 +153,8 @@ std::vector<FileEntry> FileRegistry::getFilesByCategory(const std::string& categ
 }
 
 int FileRegistry::getFileCount() {
-    return static_cast<int>(g_fileRegistry.size());
+    // Include SourceFileRegistry's compile-time entries + any runtime-registered ones
+    return SRCFILE_TOTAL + static_cast<int>(g_fileRegistry.size());
 }
 
 std::vector<std::string> FileRegistry::getCategories() {
