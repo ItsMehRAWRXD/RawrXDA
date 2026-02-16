@@ -37,7 +37,7 @@ function Enable-OptimizedLoading {
 Enable-OptimizedLoading
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ScanPath = "D:\\lazy init ide\\src",
+    [string]$ScanPath = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }) "src"),
 
     [Parameter(Mandatory=$false)]
     [string[]]$Extensions = @("*.ps1", "*.psm1", "*.cpp", "*.h", "*.asm", "*.cs", "*.py", "*.js", "*.ts"),
@@ -49,7 +49,7 @@ param(
     [switch]$AutoAssign,
 
     [Parameter(Mandatory=$false)]
-    [string]$TodoStoragePath = "D:\\lazy init ide\\data\\todos.json",
+    [string]$TodoStoragePath = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }) "data\todos.json"),
 
     [Parameter(Mandatory=$false)]
     [switch]$StartServer,

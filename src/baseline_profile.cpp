@@ -2,7 +2,6 @@
 #include "gui.h"
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 
 namespace baseline_profile {
 

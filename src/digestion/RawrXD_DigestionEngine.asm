@@ -22,7 +22,7 @@ RunDigestionEngine PROC FRAME
     push    r15
     .endprolog
 
-    ; For now, just validate a couple of obvious bad cases
+    ; Validate inputs
     mov     r12, rcx        ; szSource
     mov     r13, rdx        ; szOutput
     test    r12, r12
@@ -30,9 +30,8 @@ RunDigestionEngine PROC FRAME
     test    r13, r13
     jz      invalid_arg
 
-    ; FIXED: Return not-implemented instead of false success
-    ; TODO: real AVX-512 digestion pipeline will go here
-    mov     eax, 0xC0000001 ; STATUS_NOT_IMPLEMENTED
+    ; Stub: real AVX-512 digestion pipeline not yet implemented.
+    mov     eax, 120        ; ERROR_CALL_NOT_IMPLEMENTED
     jmp     done
 
 invalid_arg:

@@ -1,38 +1,39 @@
 #include <deque>
 #include <string>
+#include "logging/logger.h"
 
-struct MemoryPlugin {
+struct MemoryPluginStore {
     std::deque<std::string> history;
-    size_t max_tokens;
+    size_t max_tokens = 0;
 };
 
-void mem_init(MemoryPlugin& m, size_t tokens){
-    m.max_tokens=tokens;
+void mem_init(MemoryPluginStore& m, size_t tokens) {
+    m.max_tokens = tokens;
 }
 
-void mem_push(MemoryPlugin& m,const std::string& s){
+void mem_push(MemoryPluginStore& m, const std::string& s) {
     m.history.push_back(s);
     // Simple count-based eviction for now, should be token based
-    while(m.history.size() > 100) // arbitrary limit for example if token counting isn't implemented here
+    while (m.history.size() > 100)
         m.history.pop_front();
 }
 
-std::string mem_pack(const MemoryPlugin& m){
+std::string mem_pack(const MemoryPluginStore& m) {
     std::string out;
-    for(auto& s:m.history) out+=s+"\n";
+    for (const auto& s : m.history) out += s + "\n";
     return out;
 }
 
 namespace MemoryPlugins {
-    void init(size_t tokens) {
-        // Reserve memory pool based on expected token count
-        // Each token requires ~128 bytes for KV cache + embedding state
-        size_t estimatedBytes = tokens * 128;
-        // Log initialization for diagnostics
-        std::string msg = "MemoryPlugins initialized: " + std::to_string(tokens) + 
-                         " tokens (" + std::to_string(estimatedBytes / (1024*1024)) + " MB reserved)";
-        // Store in history for memory plugin consumers
-        MemoryStore m;
-        m.history.push_back(msg);
-    }
+
+static Logger s_logger("MemoryPlugins");
+
+void init(size_t tokens) {
+    // Reserve memory pool based on expected token count
+    // Each token requires ~128 bytes for KV cache + embedding state
+    size_t estimatedBytes = tokens * 128;
+    s_logger.info("MemoryPlugins initialized: {} tokens ({} MB reserved)",
+                  tokens, estimatedBytes / (1024 * 1024));
 }
+
+} // namespace MemoryPlugins

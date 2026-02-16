@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <cstdlib>
 #include <csignal>
 #include <vector>
 #include <thread>
@@ -56,12 +57,21 @@ int main(int argc, char** argv) {
     // unified_command_dispatch.cpp — reads COMMAND_TABLE at startup.
 
     std::string model_path;
-    uint16_t port = 8080;
+    uint16_t port = 23959;
     bool enable_http = true;
     bool enable_repl = true;
     std::string history_dir = "./history";
     std::string policy_dir = "./policies";
     std::string engine_type = "cpu";   // "cpu" or "dml"
+
+    if (const char* envPort = std::getenv("RAWRXD_PORT")) {
+        try {
+            int p = std::stoi(envPort);
+            if (p > 0 && p < 65536) port = static_cast<uint16_t>(p);
+        } catch (...) {
+            // ignore invalid env var
+        }
+    }
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -83,7 +93,7 @@ int main(int argc, char** argv) {
             std::cout << R"(
 Usage: RawrEngine [options]
   --model <path>    Path to GGUF model file
-  --port <port>     HTTP server port (default: 8080)
+  --port <port>     HTTP server port (default: 23959)
   --engine <type>   Inference engine: cpu (default) or dml (DirectML GPU)
   --no-http         Disable HTTP server
   --no-repl         Disable interactive REPL
