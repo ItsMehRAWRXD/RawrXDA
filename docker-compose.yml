@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   rawrxd-backend:
@@ -39,7 +39,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.full
     ports:
-      - "8080:8080"  # noVNC
+      - "8080:8080"    # noVNC
       - "23960:23959"  # Backend API (mapped to avoid conflict)
     volumes:
       - models:/opt/rawrxd/models:ro
