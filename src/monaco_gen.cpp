@@ -55,13 +55,13 @@ int main(int argc, char** argv) {
     } else if (args.template_name == "agentic") {
         success = generator.GenerateAgenticIDE(args.name, args.output_dir);
     } else {
-        std::cerr << "Unknown template: " << args.template_name << "\n";
+        s_monacoLogger.error("Unknown template: {}", args.template_name);
         PrintUsage(argv[0]);
         return 1;
     }
 
     if (!success) {
-        std::cerr << "Failed to generate Monaco IDE output.\n";
+        s_monacoLogger.error("Failed to generate Monaco IDE output");
         return 1;
     }
 
