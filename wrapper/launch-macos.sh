@@ -1,11 +1,11 @@
 #!/bin/bash
-# RawrXD macOS Launcher - Universal Binary wrapper
-# Supports Intel (Wine) and Apple Silicon (Rosetta + Wine/CrossOver).
+# RawrXD macOS Launcher — Universal Binary wrapper
+# Supports both Intel (Wine) and Apple Silicon (Rosetta + Wine)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WINE_PREFIX="${WINE_PREFIX:-$SCRIPT_DIR/.wine_rawrxd}"
+WINE_PREFIX="$SCRIPT_DIR/.wine_rawrxd"
 IDE_PATH="${IDE_PATH:-$SCRIPT_DIR/../RawrXD-Win32IDE.exe}"
 ARCH="$(uname -m)"
 WINE_BIN=""
@@ -18,30 +18,30 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 log() { echo -e "${GREEN}[RawrXD]${NC} $1"; }
-warn() { echo -e "${YELLOW}[Warning]${NC} $1"; }
 info() { echo -e "${BLUE}[Info]${NC} $1"; }
-error() { echo -e "${RED}[Error]${NC} $1"; }
+warn() { echo -e "${YELLOW}[Warning]${NC} $1"; }
 
 check_rosetta() {
-    if [[ "$ARCH" == "arm64" ]]; then
-        if ! pgrep -q oahd >/dev/null 2>&1; then
-            log "Rosetta 2 not detected. Installing ..."
+    if [ "$ARCH" = "arm64" ]; then
+        if ! /usr/bin/pgrep -q "oahd"; then
+            log "Installing Rosetta 2..."
             /usr/sbin/softwareupdate --install-rosetta --agree-to-license
         fi
-        info "Apple Silicon detected - running through Rosetta-compatible Wine."
+        info "Apple Silicon detected — using Rosetta 2"
     fi
 }
 
 check_wine() {
-    if [[ -d "/Applications/CrossOver.app" ]]; then
+    # Check for CrossOver (commercial, better performance)
+    if [ -d "/Applications/CrossOver.app" ]; then
         WINE_BIN="/Applications/CrossOver.app/Contents/SharedSupport/CrossOver/bin/wine"
-        info "Using CrossOver for better compatibility."
-    elif command -v wine64 >/dev/null 2>&1; then
+        info "Using CrossOver for better performance"
+    elif command -v wine64 &> /dev/null; then
         WINE_BIN="wine64"
-    elif command -v wine >/dev/null 2>&1; then
+    elif command -v wine &> /dev/null; then
         WINE_BIN="wine"
     else
-        error "Wine was not found."
+        echo -e "${RED}Wine not found.${NC}"
         echo "Install options:"
         echo "  1. brew install --cask wine-stable"
         echo "  2. brew install --cask crossover (recommended)"
@@ -51,22 +51,22 @@ check_wine() {
 
 setup_environment() {
     export WINEPREFIX="$WINE_PREFIX"
-    export WINEDEBUG=-all
-    export WINEHIGHDPI=1
-    export __GL_THREADED_OPTIMIZATIONS=1
     export DYLD_FALLBACK_LIBRARY_PATH="/usr/lib:/opt/X11/lib:${DYLD_FALLBACK_LIBRARY_PATH:-}"
+
+    # macOS-specific optimizations
+    export WINEDEBUG=-all
+    export __GL_THREADED_OPTIMIZATIONS=1
+
+    # HiDPI support
+    export WINEHIGHDPI=1
 }
 
 create_app_bundle() {
-    local app_bundle="$SCRIPT_DIR/RawrXD.app"
-    if [[ -d "$app_bundle" ]]; then
-        return
-    fi
+    local APP_BUNDLE="$SCRIPT_DIR/RawrXD.app"
+    log "Creating macOS App Bundle..."
+    mkdir -p "$APP_BUNDLE/Contents/"{MacOS,Resources}
 
-    log "Creating macOS app bundle ..."
-    mkdir -p "$app_bundle/Contents/MacOS" "$app_bundle/Contents/Resources"
-
-    cat > "$app_bundle/Contents/Info.plist" <<'EOF'
+    cat > "$APP_BUNDLE/Contents/Info.plist" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -89,56 +89,66 @@ create_app_bundle() {
 </plist>
 EOF
 
-    cat > "$app_bundle/Contents/MacOS/rawrxd-launcher" <<EOF
+    cat > "$APP_BUNDLE/Contents/MacOS/rawrxd-launcher" << EOF
 #!/bin/bash
 cd "$SCRIPT_DIR"
 exec "$SCRIPT_DIR/launch-macos.sh" "\$@"
 EOF
-    chmod +x "$app_bundle/Contents/MacOS/rawrxd-launcher"
+    chmod +x "$APP_BUNDLE/Contents/MacOS/rawrxd-launcher"
 
-    if [[ -f "$SCRIPT_DIR/rawrxd.icns" ]]; then
-        cp "$SCRIPT_DIR/rawrxd.icns" "$app_bundle/Contents/Resources/"
+    # Icon (optional)
+    if [ -f "$SCRIPT_DIR/rawrxd.icns" ]; then
+        cp "$SCRIPT_DIR/rawrxd.icns" "$APP_BUNDLE/Contents/Resources/"
     fi
 
-    log "App bundle created at $app_bundle"
-}
-
-backend_only() {
-    log "Starting RawrEngine backend (macOS native Python) ..."
-    cd "$SCRIPT_DIR/.."
-
-    if [[ -f "RawrEngine.py" ]]; then
-        exec python3 RawrEngine.py
-    elif [[ -f "Ship/chat_server.py" ]]; then
-        exec python3 Ship/chat_server.py
-    else
-        error "Backend entrypoint not found."
-        exit 1
-    fi
+    log "App bundle created at $APP_BUNDLE"
 }
 
 launch() {
-    local ide_args=("$@")
-    if [[ ! -f "$IDE_PATH" ]]; then
-        error "IDE executable not found at $IDE_PATH"
+    if [ ! -f "$IDE_PATH" ]; then
+        echo -e "${RED}IDE not found at $IDE_PATH${NC}"
         exit 1
     fi
 
-    log "Starting RawrXD on macOS ($ARCH) ..."
-    create_app_bundle
-    "$WINE_BIN" "$IDE_PATH" "${ide_args[@]}"
-}
+    log "Starting RawrXD on macOS ($ARCH)..."
 
-main() {
-    if [[ "${1:-}" == "--backend-only" ]]; then
-        backend_only
-        exit 0
+    local APP_BUNDLE="$SCRIPT_DIR/RawrXD.app"
+    if [ ! -d "$APP_BUNDLE" ]; then
+        create_app_bundle
     fi
 
+    "$WINE_BIN" "$IDE_PATH" "$@"
+}
+
+backend_only() {
+    log "Starting RawrEngine backend (macOS native)..."
+    cd "$SCRIPT_DIR/.."
+
+    export RAWRXD_HOST="${RAWRXD_HOST:-0.0.0.0}"
+    export RAWRXD_PORT="${RAWRXD_PORT:-23959}"
+
+    if [ -x "./RawrEngine" ]; then
+        exec ./RawrEngine --port "$RAWRXD_PORT"
+    fi
+
+    if [ -f "RawrEngine.py" ]; then
+        exec python3 RawrEngine.py
+    elif [ -f "Ship/RawrEngine.py" ]; then
+        exec python3 Ship/RawrEngine.py
+    elif [ -f "Ship/chat_server.py" ]; then
+        exec python3 Ship/chat_server.py --port "$RAWRXD_PORT"
+    else
+        echo -e "${RED}Backend not found${NC}"
+        exit 1
+    fi
+}
+
+if [ "${1:-}" = "--backend-only" ]; then
+    backend_only
+else
     check_rosetta
     check_wine
     setup_environment
     launch "$@"
-}
+fi
 
-main "$@"

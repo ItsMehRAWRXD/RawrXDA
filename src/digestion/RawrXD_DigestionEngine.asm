@@ -30,9 +30,9 @@ RunDigestionEngine PROC FRAME
     test    r13, r13
     jz      invalid_arg
 
-    ; FIXED: Return not-implemented instead of false success
-    ; TODO: real AVX-512 digestion pipeline will go here
-    mov     eax, 0xC0000001 ; STATUS_NOT_IMPLEMENTED
+    ; TODO: real AVX-512 digestion pipeline will go here.
+    ; Do not return success for the stub path: force caller fallback.
+    mov     eax, 120        ; ERROR_CALL_NOT_IMPLEMENTED
     jmp     done
 
 invalid_arg:

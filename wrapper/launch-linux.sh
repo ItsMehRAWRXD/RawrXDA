@@ -1,11 +1,11 @@
 #!/bin/bash
-# RawrXD Linux Launcher - Wine-based Bootable Space
-# Runs RawrXD-Win32IDE.exe without code changes.
+# RawrXD Linux Launcher — Wine-based Bootable Space
+# Runs RawrXD-Win32IDE.exe without code changes
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WINE_PREFIX="${WINE_PREFIX:-$SCRIPT_DIR/.wine_rawrxd}"
+WINE_PREFIX="$SCRIPT_DIR/.wine_rawrxd"
 IDE_PATH="${IDE_PATH:-$SCRIPT_DIR/../RawrXD-Win32IDE.exe}"
 BACKEND_ONLY="${BACKEND_ONLY:-0}"
 
@@ -20,114 +20,124 @@ warn() { echo -e "${YELLOW}[Warning]${NC} $1"; }
 error() { echo -e "${RED}[Error]${NC} $1"; }
 
 check_dependencies() {
-    if [[ "$BACKEND_ONLY" == "1" ]]; then
-        if ! command -v python3 >/dev/null 2>&1; then
-            error "Python3 is required for backend-only mode."
+    if [ "$BACKEND_ONLY" = "1" ]; then
+        if command -v "./RawrEngine" &>/dev/null; then
+            return
+        fi
+        if ! command -v python3 &> /dev/null; then
+            error "Python3 required for backend-only mode"
             exit 1
         fi
         return
     fi
 
-    if ! command -v wine >/dev/null 2>&1 && ! command -v wine64 >/dev/null 2>&1; then
-        error "Wine is not installed. Install with:"
+    if ! command -v wine &> /dev/null; then
+        error "Wine not installed. Install with:"
         echo "  Ubuntu/Debian: sudo apt install wine64"
         echo "  Fedora: sudo dnf install wine"
         echo "  Arch: sudo pacman -S wine"
         exit 1
     fi
 
-    if command -v vulkaninfo >/dev/null 2>&1; then
-        log "Vulkan detected - GPU acceleration available."
+    # Check Vulkan support for GPU acceleration
+    if command -v vulkaninfo &> /dev/null; then
+        log "Vulkan detected — GPU acceleration available"
     else
-        warn "Vulkan not detected - falling back to CPU rendering."
+        warn "Vulkan not detected — falling back to CPU"
     fi
 }
 
 setup_wine_prefix() {
-    if [[ ! -d "$WINE_PREFIX" ]]; then
-        log "Initializing Wine prefix at $WINE_PREFIX ..."
-        mkdir -p "$WINE_PREFIX"
-        WINEARCH=win64 WINEPREFIX="$WINE_PREFIX" winecfg /v win10 >/dev/null 2>&1 || true
-
-        if command -v winetricks >/dev/null 2>&1; then
-            log "Installing VC++ runtime via winetricks ..."
-            WINEPREFIX="$WINE_PREFIX" winetricks -q vcrun2022 >/dev/null 2>&1 || warn "winetricks vcrun2022 failed; continuing."
+    if [ ! -d "$WINE_PREFIX" ]; then
+        log "Initializing Wine prefix..."
+        WINEARCH=win64 WINEPREFIX="$WINE_PREFIX" winecfg -v win10 &> /dev/null || true
+        # Install dependencies via winetricks if available
+        if command -v winetricks &> /dev/null; then
+            log "Installing VC++ runtime..."
+            WINEPREFIX="$WINE_PREFIX" winetricks -q vcrun2022 &> /dev/null || true
         fi
     fi
 }
 
 launch_backend() {
-    log "Starting RawrEngine backend (Linux native) ..."
+    log "Starting RawrEngine backend (Linux native)..."
     cd "$SCRIPT_DIR/.."
 
-    export RAWRXD_BACKEND_ONLY=1
     export RAWRXD_HOST="${RAWRXD_HOST:-0.0.0.0}"
     export RAWRXD_PORT="${RAWRXD_PORT:-23959}"
 
-    if [[ -f "RawrEngine.py" ]]; then
+    if [ -x "./RawrEngine" ]; then
+        exec ./RawrEngine --port "$RAWRXD_PORT"
+    fi
+
+    if [ -f "RawrEngine.py" ]; then
         exec python3 RawrEngine.py
-    elif [[ -f "backend/rawr_engine.py" ]]; then
+    elif [ -f "backend/rawr_engine.py" ]; then
         exec python3 backend/rawr_engine.py
-    elif [[ -f "Ship/chat_server.py" ]]; then
-        exec python3 Ship/chat_server.py
+    elif [ -f "Ship/RawrEngine.py" ]; then
+        exec python3 Ship/RawrEngine.py
+    elif [ -f "Ship/chat_server.py" ]; then
+        exec python3 Ship/chat_server.py --port "$RAWRXD_PORT"
     else
-        error "RawrEngine backend entrypoint not found."
+        error "RawrEngine not found"
         exit 1
     fi
 }
 
 launch_ide() {
-    if [[ ! -f "$IDE_PATH" ]]; then
-        error "IDE executable not found at: $IDE_PATH"
+    if [ ! -f "$IDE_PATH" ]; then
+        error "IDE not found at $IDE_PATH"
         exit 1
     fi
 
-    log "Launching RawrXD IDE via Wine ..."
+    log "Launching RawrXD IDE via Wine..."
     export WINEPREFIX="$WINE_PREFIX"
     export WINEARCH=win64
-    export WINEDEBUG=-all
+
+    # Optimize Wine for performance
+    export WINEDEBUG=-all  # Disable debug output
     export __GL_THREADED_OPTIMIZATIONS=1
     export MESA_GLTHREAD=true
 
-    wine "$IDE_PATH" "$@" 2>&1 | tee "$SCRIPT_DIR/rawrxd_wine.log"
+    # Launch IDE
+    if command -v tee &>/dev/null; then
+        wine "$IDE_PATH" "$@" 2>&1 | tee "$SCRIPT_DIR/rawrxd_wine.log"
+    else
+        wine "$IDE_PATH" "$@"
+    fi
 }
 
 main() {
-    log "RawrXD Universal Access - Linux Wrapper v1.0"
+    log "RawrXD Universal Access — Linux Wrapper v1.0"
 
-    local ide_args=()
+    # Parse args
     while [[ $# -gt 0 ]]; do
-        case "$1" in
+        case $1 in
             --backend-only)
                 BACKEND_ONLY=1
                 shift
                 ;;
             --help|-h)
-                echo "Usage: $0 [options] [-- <ide args>]"
+                echo "Usage: $0 [options]"
                 echo "  --backend-only  Run only the HTTP backend (no GUI)"
                 echo "  --help          Show this help"
                 exit 0
                 ;;
-            --)
-                shift
-                ide_args+=("$@")
-                break
-                ;;
             *)
-                ide_args+=("$1")
-                shift
+                break
                 ;;
         esac
     done
 
     check_dependencies
 
-    if [[ "$BACKEND_ONLY" == "1" ]]; then
+    if [ "$BACKEND_ONLY" = "1" ]; then
         launch_backend
     else
         setup_wine_prefix
-        launch_ide "${ide_args[@]}"
+        launch_ide "$@"
     fi
 }
 
 main "$@"
+

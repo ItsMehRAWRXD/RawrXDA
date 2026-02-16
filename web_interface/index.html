@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0d1117">
     <link rel="manifest" href="manifest.json">
-    <title>RawrXD Agentic IDE - Web</title>
+    <title>RawrXD Agentic IDE — Web</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -22,7 +22,7 @@
             --error: #f85149;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             height: 100vh;
@@ -66,7 +66,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 16px;
-            gap: 16px;
+            gap: 12px;
         }
         .connection-status {
             display: flex;
@@ -78,6 +78,28 @@
         }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
         .status-dot.connected { background: var(--success); }
+        .model-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+        .model-selector span { font-size: 12px; color: var(--text-secondary); }
+        select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: inherit;
+            padding: 4px 8px;
+            border-radius: 6px;
+            outline: none;
+            max-width: 380px;
+        }
+        .view {
+            flex: 1;
+            display: none;
+            min-height: 0;
+        }
+        .view.active { display: flex; flex-direction: column; }
         .chat-container {
             flex: 1;
             overflow-y: auto;
@@ -99,7 +121,7 @@
         .message.user {
             align-self: flex-end;
             background: var(--accent);
-            color: #ffffff;
+            color: #fff;
             border-color: var(--accent);
         }
         .message.assistant {
@@ -112,6 +134,7 @@
             font-size: 12px;
             color: var(--text-secondary);
             border-style: dashed;
+            max-width: 95%;
         }
         .input-container {
             padding: 16px;
@@ -141,7 +164,7 @@
         }
         button {
             background: var(--accent);
-            color: #ffffff;
+            color: #fff;
             border: none;
             padding: 8px 16px;
             border-radius: 6px;
@@ -165,32 +188,6 @@
             color: var(--text-secondary);
         }
         .tool-btn:hover { background: var(--border); color: var(--text-primary); }
-        .tool-btn.active {
-            color: #ffffff;
-            border-color: var(--accent);
-            background: color-mix(in srgb, var(--accent) 40%, var(--bg-tertiary));
-        }
-        .model-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
-        }
-        .model-selector span {
-            color: var(--text-secondary);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-        select {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            color: inherit;
-            padding: 4px 8px;
-            border-radius: 6px;
-            outline: none;
-            max-width: 320px;
-        }
         .streaming-cursor { display: inline-block; animation: blink 1s infinite; }
         @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
         .code-block {
@@ -199,7 +196,7 @@
             border-radius: 6px;
             padding: 12px;
             margin: 8px 0;
-            font-family: "SFMono-Regular", Consolas, monospace;
+            font-family: 'SFMono-Regular', Consolas, monospace;
             font-size: 12px;
             overflow-x: auto;
             position: relative;
@@ -218,10 +215,6 @@
             font-size: 11px;
             background: var(--bg-tertiary);
         }
-        .code-block pre {
-            margin: 0;
-            white-space: pre-wrap;
-        }
         .spinner {
             width: 16px;
             height: 16px;
@@ -230,17 +223,14 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
             display: none;
-            margin-bottom: 8px;
+            align-self: center;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .settings-modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -262,7 +252,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 12px;
         }
+        .settings-header h3 { font-size: 16px; }
         .settings-body { padding: 16px; }
         .form-group { margin-bottom: 16px; }
         .form-group label {
@@ -299,18 +291,40 @@
         .mode-tab.active {
             background: var(--accent);
             border-color: var(--accent);
-            color: #ffffff;
+            color: #fff;
         }
+        .panel {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .kv {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 8px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+        .k { color: var(--text-secondary); }
+        .mono { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
         @media (max-width: 768px) {
             .sidebar { display: none; }
             .message { max-width: 95%; }
+            select { max-width: 220px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <aside class="sidebar">
-            <div class="logo">RawrXD Web</div>
+            <div class="logo">🦖 RawrXD Web</div>
             <div class="nav-item active" onclick="switchTab('chat', event)">
                 <svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Z"/></svg>
                 Chat
@@ -334,7 +348,7 @@
                 <div class="model-selector">
                     <span>Model:</span>
                     <select id="modelSelect" onchange="changeModel(this.value)">
-                        <option value="">Loading...</option>
+                        <option value="">(disconnected)</option>
                     </select>
                 </div>
                 <div class="connection-status">
@@ -343,27 +357,58 @@
                 </div>
             </header>
 
-            <div class="chat-container" id="chatContainer">
-                <div class="message system">
-                    Welcome to RawrXD Web. Connect to your RawrEngine backend to begin.
+            <section class="view active" id="viewChat">
+                <div class="chat-container" id="chatContainer">
+                    <div class="message system">
+                        Welcome to RawrXD Web. Connect to your RawrEngine backend to begin.
+                    </div>
                 </div>
-            </div>
 
-            <div class="input-container">
-                <div class="toolbar">
-                    <button class="tool-btn" onclick="insertContext('@file')">@File</button>
-                    <button class="tool-btn" onclick="insertContext('@code')">@Code</button>
-                    <button class="tool-btn" onclick="insertContext('@terminal')">@Terminal</button>
-                    <button class="tool-btn active" data-mode="ask" onclick="setMode('ask', this)">Ask</button>
-                    <button class="tool-btn" data-mode="plan" onclick="setMode('plan', this)">Plan</button>
-                    <button class="tool-btn" data-mode="full" onclick="setMode('full', this)">Full</button>
+                <div class="input-container">
+                    <div class="toolbar">
+                        <button class="tool-btn" onclick="insertContext('@file')">@File</button>
+                        <button class="tool-btn" onclick="insertContext('@code')">@Code</button>
+                        <button class="tool-btn" onclick="insertContext('@terminal')">@Terminal</button>
+                        <button class="tool-btn" onclick="setMode('ask')">Ask</button>
+                        <button class="tool-btn" onclick="setMode('plan')">Plan</button>
+                        <button class="tool-btn" onclick="setMode('full')">Full</button>
+                    </div>
+                    <div class="input-wrapper">
+                        <textarea id="userInput" placeholder="Message RawrXD Agent..." rows="1" onkeydown="handleKeydown(event)"></textarea>
+                        <div class="spinner" id="spinner"></div>
+                        <button onclick="sendMessage()" id="sendBtn">Send</button>
+                    </div>
                 </div>
-                <div class="input-wrapper">
-                    <textarea id="userInput" placeholder="Message RawrXD Agent..." rows="1" onkeydown="handleKeydown(event)"></textarea>
-                    <div class="spinner" id="spinner"></div>
-                    <button onclick="sendMessage()" id="sendBtn">Send</button>
+            </section>
+
+            <section class="view" id="viewAgent">
+                <div class="panel">
+                    <div class="card">
+                        <div class="kv">
+                            <div class="k">Backend URL</div><div class="mono" id="agentApiUrl"></div>
+                            <div class="k">Auth</div><div class="mono" id="agentAuthMode"></div>
+                            <div class="k">Mode</div><div class="mono" id="agentMode"></div>
+                            <div class="k">Model</div><div class="mono" id="agentModel"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="kv">
+                            <div class="k">Status</div><div class="mono" id="agentStatusJson">(not loaded)</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <section class="view" id="viewTools">
+                <div class="panel">
+                    <div class="card">
+                        <div class="kv">
+                            <div class="k">Tools</div><div class="mono" id="toolsCount">0</div>
+                        </div>
+                    </div>
+                    <div class="card" id="toolsList"></div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -371,7 +416,7 @@
         <div class="settings-content">
             <div class="settings-header">
                 <h3>Connection Settings</h3>
-                <button onclick="toggleSettings()">X</button>
+                <button onclick="toggleSettings()">✕</button>
             </div>
             <div class="settings-body">
                 <div class="form-group">
@@ -385,9 +430,9 @@
                 <div class="form-group">
                     <label>Agent Mode</label>
                     <div class="mode-tabs">
-                        <div class="mode-tab active" data-mode="ask" onclick="setAgentMode('ask', this)">Ask</div>
-                        <div class="mode-tab" data-mode="plan" onclick="setAgentMode('plan', this)">Plan</div>
-                        <div class="mode-tab" data-mode="full" onclick="setAgentMode('full', this)">Full</div>
+                        <div class="mode-tab active" onclick="setAgentMode('ask', this)">Ask</div>
+                        <div class="mode-tab" onclick="setAgentMode('plan', this)">Plan</div>
+                        <div class="mode-tab" onclick="setAgentMode('full', this)">Full</div>
                     </div>
                 </div>
                 <button onclick="saveSettings()" style="width: 100%;">Connect</button>
@@ -396,341 +441,214 @@
     </div>
 
     <script>
-        // RawrXD Web Interface - Universal Access Client
-        // Zero dependencies, vanilla JS, connects to RawrEngine HTTP API.
-
-        const DEFAULT_API_URL = "http://localhost:23959";
-
-        function isValidApiUrl(value) {
-            if (!value) {
-                return false;
-            }
-            try {
-                const parsed = new URL(value);
-                return parsed.protocol === "http:" || parsed.protocol === "https:";
-            } catch {
-                return false;
-            }
-        }
-
-        function getQueryOverride() {
-            const params = new URLSearchParams(window.location.search);
-            const api = params.get("api");
-            const key = params.get("key");
-            return {
-                apiUrl: isValidApiUrl(api) ? api : "",
-                apiKey: key || ""
-            };
-        }
-
-        const queryOverride = getQueryOverride();
+        // RawrXD Web Interface — Universal Access Client
+        // Zero dependencies, vanilla JS, connects to RawrEngine HTTP API
 
         const state = {
-            apiUrl: queryOverride.apiUrl || localStorage.getItem("rawrxd_api_url") || DEFAULT_API_URL,
-            apiKey: queryOverride.apiKey || localStorage.getItem("rawrxd_api_key") || "",
-            currentModel: localStorage.getItem("rawrxd_model") || "",
-            agentMode: localStorage.getItem("rawrxd_mode") || "ask",
+            apiUrl: localStorage.getItem('rawrxd_api_url') || 'http://localhost:23959',
+            apiKey: localStorage.getItem('rawrxd_api_key') || '',
+            currentModel: localStorage.getItem('rawrxd_model') || '',
+            agentMode: localStorage.getItem('rawrxd_agent_mode') || 'ask',
             isStreaming: false,
             conversation: [],
             tools: [],
-            connected: false
+            isConnected: false,
+            lastStatus: null
         };
 
-        const textarea = document.getElementById("userInput");
-        textarea.addEventListener("input", function () {
-            this.style.height = "auto";
-            this.style.height = Math.min(this.scrollHeight, 200) + "px";
+        function getAuthHeaders() {
+            const h = {};
+            if (state.apiKey) h['X-API-Key'] = state.apiKey;
+            return h;
+        }
+
+        // Auto-resize textarea
+        const textarea = document.getElementById('userInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
         });
 
-        function getHeaders(extra = {}) {
-            return {
-                ...(state.apiKey ? { "X-API-Key": state.apiKey } : {}),
-                ...extra
-            };
-        }
-
-        function withTimeout(ms, promise) {
-            return Promise.race([
-                promise,
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), ms))
-            ]);
-        }
-
-        function safeJson(response) {
-            return response.text().then((text) => {
-                if (!text) {
-                    return {};
-                }
-                try {
-                    return JSON.parse(text);
-                } catch {
-                    return { raw: text };
-                }
-            });
-        }
-
         function handleKeydown(e) {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
             }
         }
 
         async function checkConnection() {
-            const statusDot = document.getElementById("statusDot");
-            const statusText = document.getElementById("statusText");
             try {
-                const response = await withTimeout(5000, fetch(`${state.apiUrl}/status`, {
-                    method: "GET",
-                    headers: getHeaders()
-                }));
-                if (!response.ok) {
-                    throw new Error(`Status HTTP ${response.status}`);
-                }
-
-                statusDot.classList.add("connected");
-                statusText.textContent = "Connected";
-
-                if (!state.connected) {
-                    await Promise.allSettled([loadModels(), loadTools()]);
-                    addMessage("Connected to RawrEngine backend.", "system");
-                }
-                state.connected = true;
+                const res = await fetch(`${state.apiUrl}/status`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('status not ok');
+                const data = await res.json().catch(() => null);
+                setConnected(true);
+                state.lastStatus = data;
+                updateAgentPanel();
+                await Promise.all([loadModels(), loadTools()]);
                 return true;
-            } catch (error) {
-                statusDot.classList.remove("connected");
-                statusText.textContent = "Disconnected";
-                state.connected = false;
+            } catch (e) {
+                setConnected(false);
                 return false;
+            }
+        }
+
+        function setConnected(connected) {
+            state.isConnected = connected;
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (connected) {
+                dot.classList.add('connected');
+                text.textContent = 'Connected';
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = 'Disconnected';
             }
         }
 
         async function loadModels() {
             try {
-                const response = await fetch(`${state.apiUrl}/v1/models`, {
-                    headers: getHeaders()
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const data = await safeJson(response);
-                const select = document.getElementById("modelSelect");
+                const res = await fetch(`${state.apiUrl}/v1/models`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('models not ok');
+                const data = await res.json();
+                const select = document.getElementById('modelSelect');
+                select.innerHTML = '';
                 const models = Array.isArray(data.models) ? data.models : [];
-
-                select.innerHTML = "";
-
                 if (!models.length) {
-                    const opt = document.createElement("option");
-                    opt.value = "";
-                    opt.textContent = "No models available";
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = '(no models)';
                     select.appendChild(opt);
                     return;
                 }
-
-                models.forEach((model) => {
-                    const id = model.id || model.name || String(model);
-                    const option = document.createElement("option");
-                    option.value = id;
-                    option.textContent = id;
-                    option.selected = id === state.currentModel;
-                    select.appendChild(option);
-                });
-
-                if (!state.currentModel) {
-                    state.currentModel = models[0].id || models[0].name || String(models[0]);
-                    localStorage.setItem("rawrxd_model", state.currentModel);
+                for (const model of models) {
+                    const id = (model && model.id) ? model.id : String(model);
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = id;
+                    if (id === state.currentModel) opt.selected = true;
+                    select.appendChild(opt);
                 }
-                select.value = state.currentModel;
-            } catch (error) {
-                console.error("Failed to load models:", error);
-                const select = document.getElementById("modelSelect");
-                select.innerHTML = "<option value=\"\">Model load failed</option>";
+                if (!state.currentModel) {
+                    state.currentModel = models[0].id || String(models[0]);
+                    localStorage.setItem('rawrxd_model', state.currentModel);
+                }
+                updateAgentPanel();
+            } catch (e) {
+                // keep selector as-is
             }
         }
 
         async function loadTools() {
             try {
-                const response = await fetch(`${state.apiUrl}/api/tools`, {
-                    headers: getHeaders()
-                });
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const data = await safeJson(response);
-                state.tools = Array.isArray(data.tools) ? data.tools : [];
-            } catch {
+                const res = await fetch(`${state.apiUrl}/api/tools`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error('tools not ok');
+                const data = await res.json();
+                state.tools = data.tools || [];
+                renderTools();
+            } catch (e) {
                 state.tools = [];
+                renderTools();
             }
         }
 
-        async function changeModel(model) {
-            state.currentModel = model;
-            localStorage.setItem("rawrxd_model", model);
-            try {
-                await fetch(`${state.apiUrl}/api/agentic/config`, {
-                    method: "POST",
-                    headers: getHeaders({ "Content-Type": "application/json" }),
-                    body: JSON.stringify({ model })
-                });
-            } catch (error) {
-                addMessage(`Failed to update model: ${error.message}`, "system");
-            }
+        function changeModel(model) {
+            state.currentModel = model || '';
+            localStorage.setItem('rawrxd_model', state.currentModel);
+            updateAgentPanel();
+            fetch(`${state.apiUrl}/api/agentic/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({ model: state.currentModel })
+            }).catch(() => {});
         }
 
         async function sendMessage() {
-            const input = document.getElementById("userInput");
+            const input = document.getElementById('userInput');
             const message = input.value.trim();
-            if (!message || state.isStreaming) {
-                return;
-            }
+            if (!message || state.isStreaming) return;
 
-            input.value = "";
-            input.style.height = "auto";
+            input.value = '';
+            input.style.height = 'auto';
 
-            addMessage(message, "user");
-            state.conversation.push({ role: "user", content: message });
+            addMessage(message, 'user');
+            state.conversation.push({ role: 'user', content: message });
 
-            document.getElementById("spinner").style.display = "block";
-            document.getElementById("sendBtn").disabled = true;
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('sendBtn').disabled = true;
             state.isStreaming = true;
 
             try {
-                if (state.agentMode === "plan") {
+                if (state.agentMode === 'plan') {
                     await handlePlanMode(message);
-                } else if (state.agentMode === "full") {
+                } else if (state.agentMode === 'full') {
                     await handleFullAgent(message);
                 } else {
-                    await handleChat();
+                    await handleChat(message);
                 }
-            } catch (error) {
-                addMessage(`Error: ${error.message}`, "system");
+            } catch (e) {
+                addMessage('Error: ' + (e && e.message ? e.message : String(e)), 'system');
             } finally {
                 state.isStreaming = false;
-                document.getElementById("spinner").style.display = "none";
-                document.getElementById("sendBtn").disabled = false;
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('sendBtn').disabled = false;
             }
         }
 
-        async function handleChat() {
-            const response = await fetch(`${state.apiUrl}/api/chat`, {
-                method: "POST",
-                headers: getHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify({
-                    model: state.currentModel,
-                    messages: state.conversation,
-                    stream: true
-                })
-            });
-
-            if (!response.ok) {
-                const body = await safeJson(response);
-                throw new Error(body.error || `Chat request failed (${response.status})`);
-            }
-            if (!response.body) {
-                throw new Error("Streaming response body unavailable");
-            }
-
-            const msgDiv = addMessage("", "assistant");
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let sseBuffer = "";
-            let content = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {
-                    break;
-                }
-
-                sseBuffer += decoder.decode(value, { stream: true });
-
-                let newlineIndex = sseBuffer.indexOf("\n");
-                while (newlineIndex !== -1) {
-                    const line = sseBuffer.slice(0, newlineIndex).trim();
-                    sseBuffer = sseBuffer.slice(newlineIndex + 1);
-
-                    if (line.startsWith("data:")) {
-                        const payload = line.slice(5).trim();
-                        if (!payload || payload === "[DONE]") {
-                            newlineIndex = sseBuffer.indexOf("\n");
-                            continue;
-                        }
-                        try {
-                            const data = JSON.parse(payload);
-                            const delta = data.choices?.[0]?.delta?.content;
-                            if (typeof delta === "string") {
-                                content += delta;
-                                msgDiv.innerHTML = `${formatContent(content)}<span class="streaming-cursor">▊</span>`;
-                                scrollToBottom();
-                            }
-                        } catch (error) {
-                            console.error("Failed to parse SSE payload:", error);
-                        }
-                    }
-                    newlineIndex = sseBuffer.indexOf("\n");
-                }
-            }
-
-            state.conversation.push({ role: "assistant", content });
-            msgDiv.innerHTML = formatContent(content || "(No content returned)");
+        function safeTextToHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
         }
 
-        async function handlePlanMode(message) {
-            const response = await fetch(`${state.apiUrl}/api/agent/wish`, {
-                method: "POST",
-                headers: getHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify({
-                    wish: message,
-                    mode: "plan",
-                    model: state.currentModel
-                })
+        function formatInline(text) {
+            // `inline code`
+            text = text.replace(/`([^`]+)`/g, (m, code) => {
+                return '<code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px; font-family: monospace;">' + safeTextToHtml(code) + '</code>';
             });
-            if (!response.ok) {
-                const body = await safeJson(response);
-                throw new Error(body.error || `Plan request failed (${response.status})`);
-            }
-            const data = await safeJson(response);
-            if (Array.isArray(data.plan) && data.plan.length) {
-                addMessage(`**Plan:**\n${data.plan.map((step, i) => `${i + 1}. ${step}`).join("\n")}`, "assistant");
-                if (data.requires_confirmation) {
-                    addMessage("Type \"execute\" to run this plan.", "system");
-                }
-                return;
-            }
-            addMessage(data.response || "No plan returned.", "assistant");
+            // **bold**
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // lists (- item)
+            text = text.replace(/(^|\n)\s*[-*]\s+(.+?)(?=\n|$)/g, (m, p1, item) => {
+                return p1 + '• ' + item;
+            });
+            // newlines
+            return text.replace(/\n/g, '<br>');
         }
 
-        async function handleFullAgent(message) {
-            const response = await fetch(`${state.apiUrl}/api/agent/wish`, {
-                method: "POST",
-                headers: getHeaders({ "Content-Type": "application/json" }),
-                body: JSON.stringify({
-                    wish: message,
-                    mode: "full",
-                    model: state.currentModel,
-                    auto_execute: true
-                })
-            });
-            if (!response.ok) {
-                const body = await safeJson(response);
-                throw new Error(body.error || `Full agent request failed (${response.status})`);
+        function formatContent(rawText) {
+            const text = rawText == null ? '' : String(rawText);
+            const codeFence = /```(\w+)?\n([\s\S]*?)```/g;
+            let out = '';
+            let last = 0;
+            let match;
+            while ((match = codeFence.exec(text)) !== null) {
+                const before = text.slice(last, match.index);
+                out += formatInline(safeTextToHtml(before));
+                const lang = match[1] || 'text';
+                const code = match[2] || '';
+                out += '<div class="code-block">' +
+                    '<div class="code-header">' +
+                    '<span>' + safeTextToHtml(lang) + '</span>' +
+                    '<button class="copy-btn" onclick="copyCode(this)">Copy</button>' +
+                    '</div>' +
+                    '<pre>' + safeTextToHtml(code.trim()) + '</pre>' +
+                    '</div>';
+                last = match.index + match[0].length;
             }
-            const data = await safeJson(response);
-            if (data.response) {
-                addMessage(data.response, "assistant");
-            } else {
-                addMessage("Agent completed without textual output.", "assistant");
-            }
-            if (Array.isArray(data.tool_calls)) {
-                data.tool_calls.forEach((call) => {
-                    addMessage(`Executing: ${call.tool}(${JSON.stringify(call.params || {})})`, "system");
-                });
-            }
+            out += formatInline(safeTextToHtml(text.slice(last)));
+            return out;
+        }
+
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').textContent;
+            navigator.clipboard.writeText(code).catch(() => {});
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
         }
 
         function addMessage(content, role) {
-            const container = document.getElementById("chatContainer");
-            const div = document.createElement("div");
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
             div.className = `message ${role}`;
             div.innerHTML = formatContent(content);
             container.appendChild(div);
@@ -738,144 +656,227 @@
             return div;
         }
 
-        function formatContent(text) {
-            const raw = typeof text === "string" ? text : String(text ?? "");
-            const codeBlocks = [];
-
-            let withTokens = raw.replace(/```(\w+)?\n([\s\S]*?)```/g, (_match, lang, code) => {
-                const token = `@@CODEBLOCK_${codeBlocks.length}@@`;
-                codeBlocks.push({ token, lang: lang || "text", code: code.trimEnd() });
-                return token;
-            });
-
-            withTokens = escapeHtml(withTokens);
-            withTokens = withTokens.replace(/`([^`\n]+)`/g, "<code style=\"background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px; font-family: monospace;\">$1</code>");
-            withTokens = withTokens.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-            withTokens = withTokens.replace(/^\s*[-*]\s+(.+)$/gm, "• $1");
-            withTokens = withTokens.replace(/\n/g, "<br>");
-
-            codeBlocks.forEach((block) => {
-                const rendered = `<div class="code-block">
-                    <div class="code-header">
-                        <span>${escapeHtml(block.lang)}</span>
-                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-                    </div>
-                    <pre>${escapeHtml(block.code)}</pre>
-                </div>`;
-                withTokens = withTokens.replace(escapeHtml(block.token), rendered);
-            });
-
-            return withTokens;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement("div");
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        async function copyCode(btn) {
-            const code = btn.closest(".code-block").querySelector("pre").textContent;
-            try {
-                await navigator.clipboard.writeText(code);
-                btn.textContent = "Copied!";
-            } catch {
-                btn.textContent = "Copy failed";
-            }
-            setTimeout(() => {
-                btn.textContent = "Copy";
-            }, 2000);
-        }
-
         function scrollToBottom() {
-            const container = document.getElementById("chatContainer");
+            const container = document.getElementById('chatContainer');
             container.scrollTop = container.scrollHeight;
         }
 
         function insertContext(type) {
-            const input = document.getElementById("userInput");
-            const spacer = input.value && !input.value.endsWith(" ") ? " " : "";
-            input.value += `${spacer}${type} `;
-            input.dispatchEvent(new Event("input"));
+            const input = document.getElementById('userInput');
+            input.value += type + ' ';
             input.focus();
         }
 
-        function setMode(mode, triggerElement) {
+        function setMode(mode) {
             state.agentMode = mode;
-            localStorage.setItem("rawrxd_mode", mode);
-            document.querySelectorAll(".tool-btn[data-mode]").forEach((button) => {
-                button.classList.toggle("active", button.dataset.mode === mode);
-            });
-            if (triggerElement) {
-                triggerElement.blur();
-            }
-            setAgentMode(mode, document.querySelector(`.mode-tab[data-mode="${mode}"]`));
-            addMessage(`Switched to ${mode.toUpperCase()} mode`, "system");
+            localStorage.setItem('rawrxd_agent_mode', mode);
+            addMessage(`Switched to ${mode.toUpperCase()} mode`, 'system');
+            updateAgentPanel();
         }
 
         function toggleSettings() {
-            document.getElementById("settingsModal").classList.toggle("active");
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('active');
+            if (modal.classList.contains('active')) {
+                document.getElementById('apiUrl').value = state.apiUrl;
+                document.getElementById('apiKey').value = state.apiKey;
+                syncModeTabs();
+            }
         }
 
-        async function saveSettings() {
-            state.apiUrl = document.getElementById("apiUrl").value.trim() || DEFAULT_API_URL;
-            state.apiKey = document.getElementById("apiKey").value.trim();
+        function syncModeTabs() {
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            const idx = state.agentMode === 'plan' ? 1 : (state.agentMode === 'full' ? 2 : 0);
+            document.querySelectorAll('.mode-tab')[idx].classList.add('active');
+        }
 
-            localStorage.setItem("rawrxd_api_url", state.apiUrl);
-            localStorage.setItem("rawrxd_api_key", state.apiKey);
-
+        function saveSettings() {
+            state.apiUrl = document.getElementById('apiUrl').value.trim() || 'http://localhost:23959';
+            state.apiKey = document.getElementById('apiKey').value;
+            localStorage.setItem('rawrxd_api_url', state.apiUrl);
+            localStorage.setItem('rawrxd_api_key', state.apiKey);
             toggleSettings();
-            const ok = await checkConnection();
-            if (!ok) {
-                addMessage("Unable to connect with the current settings.", "system");
-            }
-        }
-
-        function switchTab(tab, evt) {
-            document.querySelectorAll(".nav-item").forEach((el) => el.classList.remove("active"));
-            evt.currentTarget.classList.add("active");
-            addMessage(`Switched to ${tab.toUpperCase()} tab`, "system");
-        }
-
-        function setAgentMode(mode, element) {
-            state.agentMode = mode;
-            localStorage.setItem("rawrxd_mode", mode);
-            document.querySelectorAll(".mode-tab").forEach((tab) => tab.classList.remove("active"));
-            if (element) {
-                element.classList.add("active");
-            }
-        }
-
-        function initialize() {
-            if (queryOverride.apiUrl) {
-                localStorage.setItem("rawrxd_api_url", queryOverride.apiUrl);
-            }
-            if (queryOverride.apiKey) {
-                localStorage.setItem("rawrxd_api_key", queryOverride.apiKey);
-            }
-
-            document.getElementById("apiUrl").value = state.apiUrl;
-            document.getElementById("apiKey").value = state.apiKey;
-            document.querySelectorAll(".mode-tab").forEach((tab) => {
-                tab.classList.toggle("active", tab.dataset.mode === state.agentMode);
-            });
-            document.querySelectorAll(".tool-btn[data-mode]").forEach((button) => {
-                button.classList.toggle("active", button.dataset.mode === state.agentMode);
-            });
-
-            setInterval(checkConnection, 5000);
             checkConnection();
+            updateAgentPanel();
+        }
 
-            // PWA Service Worker
-            const isSecureContext = location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1";
-            if ("serviceWorker" in navigator && isSecureContext) {
-                navigator.serviceWorker.register("./sw.js").catch((error) => {
-                    console.warn("Service worker registration failed:", error);
-                });
+        function switchTab(tab, ev) {
+            if (ev && ev.preventDefault) ev.preventDefault();
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (ev && ev.target) {
+                const item = ev.target.closest('.nav-item');
+                if (item) item.classList.add('active');
+            }
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const target = document.getElementById('view' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (target) target.classList.add('active');
+            renderTools();
+            updateAgentPanel();
+        }
+
+        function setAgentMode(mode, el) {
+            state.agentMode = mode;
+            localStorage.setItem('rawrxd_agent_mode', mode);
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            updateAgentPanel();
+        }
+
+        function updateAgentPanel() {
+            document.getElementById('agentApiUrl').textContent = state.apiUrl;
+            document.getElementById('agentAuthMode').textContent = state.apiKey ? 'X-API-Key (set)' : 'none';
+            document.getElementById('agentMode').textContent = state.agentMode;
+            document.getElementById('agentModel').textContent = state.currentModel || '(default)';
+            document.getElementById('agentStatusJson').textContent = state.lastStatus ? JSON.stringify(state.lastStatus) : '(unknown)';
+        }
+
+        function renderTools() {
+            const tools = Array.isArray(state.tools) ? state.tools : [];
+            document.getElementById('toolsCount').textContent = String(tools.length);
+            const list = document.getElementById('toolsList');
+            list.innerHTML = '';
+            if (!tools.length) {
+                list.innerHTML = '<div class="mono" style="color: var(--text-secondary);">No tools reported by backend.</div>';
+                return;
+            }
+            for (const t of tools) {
+                const row = document.createElement('div');
+                row.className = 'mono';
+                const name = (t && (t.name || t.id)) ? (t.name || t.id) : String(t);
+                const desc = (t && t.description) ? t.description : '';
+                row.style.padding = '8px 0';
+                row.style.borderBottom = '1px solid var(--border)';
+                row.innerHTML = '<div><strong>' + safeTextToHtml(name) + '</strong></div>' +
+                    (desc ? '<div style="color: var(--text-secondary); margin-top: 4px;">' + safeTextToHtml(desc) + '</div>' : '');
+                list.appendChild(row);
             }
         }
 
-        initialize();
+        async function handleChat(message) {
+            const response = await fetch(`${state.apiUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                    model: state.currentModel,
+                    messages: state.conversation,
+                    message: message,
+                    stream: true
+                })
+            });
+
+            if (!response.ok) throw new Error('Chat request failed');
+
+            const ct = (response.headers.get('content-type') || '').toLowerCase();
+            const msgDiv = addMessage('', 'assistant');
+            let content = '';
+
+            // Non-streaming JSON fallback
+            if (ct.includes('application/json')) {
+                const data = await response.json();
+                content = data.response || data.answer || data.reply || JSON.stringify(data);
+                state.conversation.push({ role: 'assistant', content: content });
+                msgDiv.innerHTML = formatContent(content);
+                return;
+            }
+
+            // Streaming (SSE-ish) parsing
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split(/\r?\n/);
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    const payload = line.slice(5).trim();
+                    if (!payload || payload === '[DONE]') continue;
+                    try {
+                        const data = JSON.parse(payload);
+                        const delta = data?.choices?.[0]?.delta?.content;
+                        const token = data?.token;
+                        const text = delta || token || data?.response || '';
+                        if (text) {
+                            content += text;
+                            msgDiv.innerHTML = formatContent(content) + '<span class="streaming-cursor">▊</span>';
+                            scrollToBottom();
+                        }
+                    } catch (e) {
+                        // ignore parse errors
+                    }
+                }
+            }
+            state.conversation.push({ role: 'assistant', content: content });
+            msgDiv.innerHTML = formatContent(content);
+        }
+
+        async function handlePlanMode(message) {
+            const res = await fetch(`${state.apiUrl}/api/agent/wish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                    wish: message,
+                    mode: 'plan',
+                    model: state.currentModel
+                })
+            });
+            if (!res.ok) throw new Error('Plan request failed');
+            const data = await res.json();
+            const plan = Array.isArray(data.plan) ? data.plan : [];
+            if (plan.length) {
+                addMessage('**Plan:**\n' + plan.map((step, i) => `${i+1}. ${step}`).join('\n'), 'assistant');
+                if (data.requires_confirmation) {
+                    addMessage('Type "execute" to run this plan.', 'system');
+                }
+            } else {
+                addMessage(data.response || data.result || 'No plan returned.', 'assistant');
+            }
+        }
+
+        async function handleFullAgent(message) {
+            const res = await fetch(`${state.apiUrl}/api/agent/wish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                body: JSON.stringify({
+                    wish: message,
+                    mode: 'full',
+                    model: state.currentModel,
+                    auto_execute: true
+                })
+            });
+            if (!res.ok) throw new Error('Agent request failed');
+            const data = await res.json();
+            if (data.response) {
+                addMessage(data.response, 'assistant');
+            } else if (data.result) {
+                addMessage(data.result, 'assistant');
+            }
+            if (Array.isArray(data.tool_calls) && data.tool_calls.length) {
+                for (const call of data.tool_calls) {
+                    addMessage(`Executing: ${call.tool}(${JSON.stringify(call.params || {})})`, 'system');
+                }
+            }
+        }
+
+        function initFromStorage() {
+            document.getElementById('apiUrl').value = state.apiUrl;
+            document.getElementById('apiKey').value = state.apiKey;
+            updateAgentPanel();
+            syncModeTabs();
+        }
+
+        // Initialize
+        initFromStorage();
+        checkConnection();
+        setInterval(checkConnection, 5000);
+
+        // Service Worker for PWA support (best-effort; requires https or localhost)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>
+
