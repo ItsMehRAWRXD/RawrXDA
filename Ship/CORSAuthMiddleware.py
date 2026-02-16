@@ -17,7 +17,21 @@ from threading import Lock
 from typing import Iterable, Optional
 from urllib.parse import urlparse
 
-from flask import Flask, Response, jsonify, make_response, request
+try:
+    from flask import Flask, Response, jsonify, make_response, request
+    HAS_FLASK = True
+except ImportError:
+    HAS_FLASK = False
+
+    class Response:  # type: ignore[no-redef]
+        """Stub so type annotations don't break without Flask."""
+        pass
+
+    class _FakeFlask:
+        """Stub so UniversalAccessGateway.init_app doesn't crash at import time."""
+        pass
+
+    Flask = _FakeFlask  # type: ignore[misc,assignment]
 
 logger = logging.getLogger(__name__)
 

@@ -357,8 +357,14 @@
                     <button class="tool-btn" onclick="toolListFiles()">Files</button>
                     <button class="tool-btn" onclick="toolReadFile()">Read</button>
                     <button class="tool-btn" onclick="toolWriteFile()">Write</button>
+                    <button class="tool-btn" onclick="toolMkdir()">New Folder</button>
+                    <button class="tool-btn" onclick="toolRename()">Rename</button>
+                    <button class="tool-btn" onclick="toolDelete()">Delete</button>
                     <button class="tool-btn" onclick="toolSearch()">Search</button>
                     <button class="tool-btn" onclick="toolRunCommand()">Run</button>
+                    <button class="tool-btn" onclick="toolGitStatus()">Git Status</button>
+                    <button class="tool-btn" onclick="toolGitDiff()">Git Diff</button>
+                    <button class="tool-btn" onclick="toolGitBranches()">Git Branches</button>
                     <button class="tool-btn active" data-mode="ask" onclick="setMode('ask', this)">Ask</button>
                     <button class="tool-btn" data-mode="plan" onclick="setMode('plan', this)">Plan</button>
                     <button class="tool-btn" data-mode="full" onclick="setMode('full', this)">Full</button>
@@ -912,6 +918,51 @@
             }
         }
 
+        async function toolMkdir() {
+            const path = prompt("Directory path to create", "");
+            if (!path) return;
+            try {
+                const data = await apiRequest("/api/fs/mkdir", {
+                    method: "POST",
+                    body: { path, parents: true }
+                });
+                addMessage(`Created directory \`${data.path}\``, "system");
+            } catch (error) {
+                addMessage(`Create directory failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolRename() {
+            const src = prompt("Source path", "");
+            if (!src) return;
+            const dst = prompt("Destination path", "");
+            if (!dst) return;
+            try {
+                const data = await apiRequest("/api/fs/rename", {
+                    method: "POST",
+                    body: { src, dst }
+                });
+                addMessage(`Renamed \`${data.from}\` to \`${data.to}\``, "system");
+            } catch (error) {
+                addMessage(`Rename failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolDelete() {
+            const path = prompt("Path to delete", "");
+            if (!path) return;
+            const recursive = confirm("Recursive delete? (required for non-empty folders)");
+            try {
+                const data = await apiRequest("/api/fs/delete", {
+                    method: "POST",
+                    body: { path, recursive }
+                });
+                addMessage(`Deleted \`${data.path}\` (${data.type})`, "system");
+            } catch (error) {
+                addMessage(`Delete failed: ${error.message}`, "system");
+            }
+        }
+
         async function toolSearch() {
             const query = prompt("Search query", "");
             if (!query) return;
@@ -952,6 +1003,44 @@
                 addMessage(`**Command:** \`${command}\`\n\`\`\`text\n${output.trim()}\n\`\`\``, "assistant");
             } catch (error) {
                 addMessage(`Command failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolGitStatus() {
+            try {
+                const data = await apiRequest("/api/git/status?cwd=.");
+                const output = [data.stdout || "(no output)", data.stderr ? `\n[stderr]\n${data.stderr}` : ""].join("\n");
+                addMessage(`**Git Status**\n\`\`\`text\n${output.trim()}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Git status failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolGitDiff() {
+            const targetPath = prompt("Optional file path for diff (leave empty for full diff)", "") || "";
+            const staged = confirm("Show staged diff?");
+            const query = new URLSearchParams({ cwd: ".", staged: staged ? "1" : "0" });
+            if (targetPath) {
+                query.set("path", targetPath);
+            }
+            try {
+                const data = await apiRequest(`/api/git/diff?${query.toString()}`);
+                const output = [data.stdout || "(no diff)", data.stderr ? `\n[stderr]\n${data.stderr}` : ""].join("\n");
+                addMessage(`**Git Diff**\n\`\`\`text\n${output.trim()}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Git diff failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolGitBranches() {
+            try {
+                const data = await apiRequest("/api/git/branches?cwd=.");
+                const branches = (data.branches || [])
+                    .map((branch) => `${branch.current ? "*" : " "} ${branch.name} ${branch.hash} ${branch.subject}`)
+                    .join("\n");
+                addMessage(`**Git Branches**\n\`\`\`text\n${branches || "(no branches)"}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Git branches failed: ${error.message}`, "system");
             }
         }
 
