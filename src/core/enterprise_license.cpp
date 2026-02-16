@@ -26,6 +26,9 @@
 #include <vector>
 #include <algorithm>
 
+#include "logging/logger.h"
+static Logger s_logger("enterprise_license");
+
 namespace RawrXD {
 
 // ============================================================================
@@ -46,12 +49,12 @@ bool EnterpriseLicense::Initialize() {
         return true;  // Already initialized
     }
     
-    std::cout << "[EnterpriseLicense] v2 — Initializing defense shield..." << std::endl;
+    s_logger.info("[EnterpriseLicense] v2 — Initializing defense shield...");
 
     // ---- Phase 1: Shield Defense (5-layer anti-tamper) ----
     int32_t shieldResult = Shield_InitializeDefense();
     if (shieldResult == 0) {
-        std::cerr << "[EnterpriseLicense] SHIELD TAMPER DETECTED — defense layers failed"
+        s_logger.error( "[EnterpriseLicense] SHIELD TAMPER DETECTED — defense layers failed"
                   << std::endl;
         // Don't abort — set tampered state but continue (silent degradation)
         m_initialized = true;
@@ -61,17 +64,17 @@ bool EnterpriseLicense::Initialize() {
         return true;  // "Initialized" but tampered — community mode, degraded
     }
 
-    std::cout << "[EnterpriseLicense] Shield defense: ALL LAYERS PASSED" << std::endl;
+    s_logger.info("[EnterpriseLicense] Shield defense: ALL LAYERS PASSED");
 
     // ---- Phase 2: License System Init ----
-    std::cout << "[EnterpriseLicense] Initializing license subsystem..." << std::endl;
+    s_logger.info("[EnterpriseLicense] Initializing license subsystem...");
     
     int64_t result = Enterprise_InitLicenseSystem();
     
     if (result != 0) {
-        std::cerr << "[EnterpriseLicense] License init failed with status: 0x"
+        s_logger.error( "[EnterpriseLicense] License init failed with status: 0x"
                   << std::hex << result << std::dec << std::endl;
-        std::cerr << "[EnterpriseLicense] Continuing in Community mode (non-fatal)" 
+        s_logger.error( "[EnterpriseLicense] Continuing in Community mode (non-fatal)" 
                   << std::endl;
         // Non-fatal: community mode still works
     }
@@ -90,36 +93,24 @@ bool EnterpriseLicense::Initialize() {
     // Log what we got
     switch (newState) {
         case LicenseState::ValidEnterprise:
-            std::cout << "[EnterpriseLicense] Enterprise license ACTIVE"
-                      << " — Features: 0x" << std::hex << GetFeatureMask() 
-                      << std::dec << std::endl;
-            std::cout << "[EnterpriseLicense] 800B Dual-Engine: "
-                      << (HasFeatureMask(LicenseFeature::DualEngine800B) ? "UNLOCKED" : "locked")
-                      << std::endl;
-            std::cout << "[EnterpriseLicense] Max Model: " << GetMaxModelSizeGB() 
-                      << "GB | Max Context: " << GetMaxContextLength() << " tokens"
-                      << std::endl;
+            s_logger.info("[EnterpriseLicense] Enterprise license ACTIVE");
+            s_logger.info("[EnterpriseLicense] 800B Dual-Engine: ");
+            s_logger.info("[EnterpriseLicense] Max Model: ");
             break;
         case LicenseState::ValidTrial:
-            std::cout << "[EnterpriseLicense] Trial license active (limited features)"
-                      << std::endl;
+            s_logger.info("[EnterpriseLicense] Trial license active (limited features)");
             break;
         case LicenseState::Expired:
-            std::cout << "[EnterpriseLicense] License EXPIRED — running Community mode"
-                      << std::endl;
+            s_logger.info("[EnterpriseLicense] License EXPIRED — running Community mode");
             break;
         case LicenseState::HardwareMismatch:
-            std::cout << "[EnterpriseLicense] Hardware mismatch — running Community mode"
-                      << std::endl;
+            s_logger.info("[EnterpriseLicense] Hardware mismatch — running Community mode");
             break;
         case LicenseState::Tampered:
-            std::cout << "[EnterpriseLicense] TAMPER DETECTED — degraded Community mode"
-                      << std::endl;
+            s_logger.info("[EnterpriseLicense] TAMPER DETECTED — degraded Community mode");
             break;
         default:
-            std::cout << "[EnterpriseLicense] No valid license — Community mode"
-                      << " (models limited to " << GetMaxModelSizeGB() << "GB)" 
-                      << std::endl;
+            s_logger.info("[EnterpriseLicense] No valid license — Community mode");
             break;
     }
 
@@ -149,7 +140,7 @@ void EnterpriseLicense::Shutdown() {
         notifyStateChange(oldState, LicenseState::Invalid);
     }
     
-    std::cout << "[EnterpriseLicense] License subsystem shut down" << std::endl;
+    s_logger.info("[EnterpriseLicense] License subsystem shut down");
 }
 
 // ============================================================================
@@ -256,28 +247,27 @@ uint32_t EnterpriseLicense::GetShieldState() const {
 bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize,
                                         const void* signature) {
     if (!m_initialized) {
-        std::cerr << "[EnterpriseLicense] Cannot install — system not initialized" 
+        s_logger.error( "[EnterpriseLicense] Cannot install — system not initialized" 
                   << std::endl;
         return false;
     }
     
     if (!licenseBlob || blobSize == 0 || !signature) {
-        std::cerr << "[EnterpriseLicense] Invalid license data (null or zero-size)" 
+        s_logger.error( "[EnterpriseLicense] Invalid license data (null or zero-size)" 
                   << std::endl;
         return false;
     }
     
     LicenseState oldState = GetState();
     
-    std::cout << "[EnterpriseLicense] Installing license (" << blobSize 
-              << " bytes)..." << std::endl;
+    s_logger.info("[EnterpriseLicense] Installing license (");
     
     int64_t result = Enterprise_InstallLicense(licenseBlob, 
                                                 static_cast<uint64_t>(blobSize),
                                                 signature);
     
     if (result != 0) {
-        std::cerr << "[EnterpriseLicense] License installation failed: 0x"
+        s_logger.error( "[EnterpriseLicense] License installation failed: 0x"
                   << std::hex << result << std::dec << std::endl;
         return false;
     }
@@ -285,11 +275,10 @@ bool EnterpriseLicense::InstallLicense(const void* licenseBlob, size_t blobSize,
     LicenseState newState = GetState();
     m_lastState = newState;
     
-    std::cout << "[EnterpriseLicense] License installed successfully!" << std::endl;
-    std::cout << "[EnterpriseLicense] Edition: " << GetEditionName() << std::endl;
-    std::cout << "[EnterpriseLicense] Features: " << GetFeatureString() << std::endl;
-    std::cout << "[EnterpriseLicense] Max Model: " << GetMaxModelSizeGB() 
-              << "GB | Max Context: " << GetMaxContextLength() << " tokens" << std::endl;
+    s_logger.info("[EnterpriseLicense] License installed successfully!");
+    s_logger.info("[EnterpriseLicense] Edition: ");
+    s_logger.info("[EnterpriseLicense] Features: ");
+    s_logger.info("[EnterpriseLicense] Max Model: ");
     
     if (oldState != newState) {
         notifyStateChange(oldState, newState);
@@ -306,13 +295,13 @@ bool EnterpriseLicense::InstallLicenseFromFile(const std::wstring& path) {
     std::string narrowPath(path.begin(), path.end());
     std::ifstream file(narrowPath.c_str(), std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        std::cerr << "[EnterpriseLicense] Cannot open license file" << std::endl;
+        s_logger.error( "[EnterpriseLicense] Cannot open license file" << std::endl;
         return false;
     }
 
     auto fileSize = static_cast<size_t>(file.tellg());
     if (fileSize <= RSA_SIG_SIZE) {
-        std::cerr << "[EnterpriseLicense] License file too small (need > "
+        s_logger.error( "[EnterpriseLicense] License file too small (need > "
                   << RSA_SIG_SIZE << " bytes, got " << fileSize << ")" << std::endl;
         return false;
     }
@@ -326,9 +315,7 @@ bool EnterpriseLicense::InstallLicenseFromFile(const std::wstring& path) {
     const void* blob = data.data();
     const void* sig  = data.data() + blobSize;
 
-    std::cout << "[EnterpriseLicense] Loading license from file (" 
-              << blobSize << " byte blob + " << RSA_SIG_SIZE << " byte signature)"
-              << std::endl;
+    s_logger.info("[EnterpriseLicense] Loading license from file (");
 
     return InstallLicense(blob, blobSize, sig);
 }
@@ -407,13 +394,12 @@ extern "C" {
 
 void EnterpriseLog(const char* message) {
     if (message) {
-        std::cout << "[EnterpriseLicense:ASM] " << message << std::endl;
+        s_logger.info("[EnterpriseLicense:ASM] ");
     }
 }
 
 void EnterpriseStateChanged(uint32_t oldState, uint32_t newState) {
-    std::cout << "[EnterpriseLicense] State transition: "
-              << oldState << " -> " << newState << std::endl;
+    s_logger.info("[EnterpriseLicense] State transition: ");
 }
 
 } // extern "C"

@@ -4,51 +4,54 @@
 #include "memory_plugin.hpp"
 #include <iostream>
 
+#include "logging/logger.h"
+static Logger s_logger("simple_test");
+
 int main() {
-    std::cout << "=== RawrXD Missing Logic Implementation Test ===" << std::endl;
+    s_logger.info("=== RawrXD Missing Logic Implementation Test ===");
     
     // Test CPU Inference Engine Advanced Features
-    std::cout << "\n1. Testing CPU Inference Engine Advanced Features:" << std::endl;
+    s_logger.info("\n1. Testing CPU Inference Engine Advanced Features:");
     CPUInference::CPUInferenceEngine engine;
     
     engine.SetMaxMode(true);
-    std::cout << "   ✓ Max Mode enabled" << std::endl;
+    s_logger.info("   ✓ Max Mode enabled");
     
     engine.SetDeepThinking(true);
-    std::cout << "   ✓ Deep Thinking enabled" << std::endl;
+    s_logger.info("   ✓ Deep Thinking enabled");
     
     engine.SetDeepResearch(true);
-    std::cout << "   ✓ Deep Research enabled" << std::endl;
+    s_logger.info("   ✓ Deep Research enabled");
     
     engine.SetContextLimit(32768);
-    std::cout << "   ✓ Context scaling to 32k" << std::endl;
+    s_logger.info("   ✓ Context scaling to 32k");
     
     engine.SetContextLimit(1048576);
-    std::cout << "   ✓ Context scaling to 1M" << std::endl;
+    s_logger.info("   ✓ Context scaling to 1M");
     
     // Test Memory Plugins
-    std::cout << "\n2. Testing Memory Plugins:" << std::endl;
+    s_logger.info("\n2. Testing Memory Plugins:");
     auto stdPlugin = std::make_shared<StandardMemoryPlugin>();
     engine.RegisterMemoryPlugin(stdPlugin);
-    std::cout << "   ✓ Standard Memory Plugin registered" << std::endl;
+    s_logger.info("   ✓ Standard Memory Plugin registered");
     
     auto largePlugin = std::make_shared<LargeContextPlugin>();
     engine.RegisterMemoryPlugin(largePlugin);
-    std::cout << "   ✓ Large Context Plugin registered" << std::endl;
+    s_logger.info("   ✓ Large Context Plugin registered");
     
     // Test Multi-Engine System
-    std::cout << "\n3. Testing Multi-Engine System:" << std::endl;
+    s_logger.info("\n3. Testing Multi-Engine System:");
     RawrXD::MultiEngineSystem multiEngine;
     
     auto drives = multiEngine.GetDriveInfo();
-    std::cout << "   ✓ 5-drive setup configured" << std::endl;
+    s_logger.info("   ✓ 5-drive setup configured");
     
     multiEngine.DistributeModel("test_model");
-    std::cout << "   ✓ Model distribution across drives" << std::endl;
+    s_logger.info("   ✓ Model distribution across drives");
     
-    std::cout << "\n=== ALL TESTS COMPLETED ===" << std::endl;
-    std::cout << "All missing logic has been successfully implemented!" << std::endl;
-    std::cout << "The engine/agent/IDE can now perform real inference rather than just simulating it." << std::endl;
+    s_logger.info("\n=== ALL TESTS COMPLETED ===");
+    s_logger.info("All missing logic has been successfully implemented!");
+    s_logger.info("The engine/agent/IDE can now perform real inference rather than just simulating it.");
     
     return 0;
 }

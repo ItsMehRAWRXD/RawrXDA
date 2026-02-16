@@ -8,6 +8,9 @@
 #include <cstdlib>
 #include <memory>
 
+#include "logging/logger.h"
+static Logger s_logger("overclock_vendor");
+
 namespace overclock_vendor {
 
 static std::string g_lastError;
@@ -45,18 +48,18 @@ bool DetectAdrenalinCLI(AppState& st) {
 bool ApplyCpuOffsetMhz(int offset) {
     std::lock_guard<std::mutex> guard(g_lock);
     // Real implementation would invoke vendor tool or driver API if available.
-    std::cout << "[vendor] Request CPU offset=" << offset << " MHz" << std::endl;
+    s_logger.info("[vendor] Request CPU offset=");
     const char* ryzenCliEnv = std::getenv("RYZEN_MASTER_CLI");
     if (ryzenCliEnv && std::filesystem::exists(ryzenCliEnv)) {
         std::string cmd = std::string(ryzenCliEnv) + " --set-core-offset " + std::to_string(offset);
-        std::cout << "[vendor] Executing: " << cmd << std::endl;
+        s_logger.info("[vendor] Executing: ");
         FILE* pipe = _popen(cmd.c_str(), "r");
         if (!pipe) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "failed_to_execute_ryzen_cli"; return false; }
         std::array<char, 256> buf{};
         std::string out;
         while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
         int rc = _pclose(pipe);
-        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "ryzen_cli_failed:" + std::to_string(rc); std::cerr << out; return false; }
+        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "ryzen_cli_failed:" + std::to_string(rc); s_logger.error( out; return false; }
         { std::lock_guard<std::mutex> guard(g_lock); g_lastError.clear(); }
         return true;
     }
@@ -72,7 +75,7 @@ bool ApplyCpuOffsetMhz(int offset) {
             std::string out;
             while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
             int rc = _pclose(pipe);
-            if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "rm_cli_failed:" + std::to_string(rc); std::cerr << out; return false; }
+            if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "rm_cli_failed:" + std::to_string(rc); s_logger.error( out; return false; }
             { std::lock_guard<std::mutex> guard(g_lock); g_lastError.clear(); }
             return true;
         }
@@ -83,13 +86,13 @@ bool ApplyCpuOffsetMhz(int offset) {
 
 bool ApplyCpuTargetAllCoreMhz(int mhz) {
     std::lock_guard<std::mutex> guard(g_lock);
-    std::cout << "[vendor] Request CPU all-core target=" << mhz << " MHz (simulation)" << std::endl;
+    s_logger.info("[vendor] Request CPU all-core target=");
     return true;
 }
 
 bool ApplyGpuClockOffsetMhz(int offset) {
     std::lock_guard<std::mutex> guard(g_lock);
-    std::cout << "[vendor] Request GPU offset=" << offset << " MHz" << std::endl;
+    s_logger.info("[vendor] Request GPU offset=");
     const char* adrenalinEnv = std::getenv("ADRENALIN_CLI");
     if (adrenalinEnv && std::filesystem::exists(adrenalinEnv)) {
         std::string cmd = std::string(adrenalinEnv) + " --set-gpu-offset " + std::to_string(offset);
@@ -99,7 +102,7 @@ bool ApplyGpuClockOffsetMhz(int offset) {
         std::string out;
         while (fgets(buf.data(), (int)buf.size(), pipe)) out += buf.data();
         int rc = _pclose(pipe);
-        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "adrenalin_cli_failed:" + std::to_string(rc); std::cerr << out; return false; }
+        if (rc != 0) { std::lock_guard<std::mutex> guard(g_lock); g_lastError = "adrenalin_cli_failed:" + std::to_string(rc); s_logger.error( out; return false; }
         { std::lock_guard<std::mutex> guard(g_lock); g_lastError.clear(); }
         return true;
     }
@@ -112,7 +115,7 @@ bool ApplyGpuClockOffsetMhz(int offset) {
         FILE* pipe = _popen(cmd.c_str(), "r");
         if (!pipe) {
             g_lastError = "failed_to_execute_nvidia_smi";
-            std::cerr << "[vendor] Failed to execute nvidia-smi" << std::endl;
+            s_logger.error( "[vendor] Failed to execute nvidia-smi" << std::endl;
             return false;
         }
         std::array<char, 256> buf{};
@@ -121,10 +124,10 @@ bool ApplyGpuClockOffsetMhz(int offset) {
         int rc = _pclose(pipe);
         if (rc != 0) {
             g_lastError = "nvidia_smi_lgc_failed:" + std::to_string(rc);
-            std::cerr << "[vendor] nvidia-smi lock graphics clocks failed: " << out << std::endl;
+            s_logger.error( "[vendor] nvidia-smi lock graphics clocks failed: " << out << std::endl;
             return false;
         }
-        std::cout << "[vendor] NVIDIA GPU clock offset applied: +" << offset << " MHz" << std::endl;
+        s_logger.info("[vendor] NVIDIA GPU clock offset applied: +");
         g_lastError.clear();
         return true;
     }
@@ -158,10 +161,10 @@ bool ApplyGpuClockOffsetMhz(int offset) {
         int rc = _pclose(pipe);
         if (rc != 0) {
             g_lastError = "amd_smi_overdrive_failed:" + std::to_string(rc);
-            std::cerr << "[vendor] AMD overdrive set failed: " << out << std::endl;
+            s_logger.error( "[vendor] AMD overdrive set failed: " << out << std::endl;
             return false;
         }
-        std::cout << "[vendor] AMD GPU overdrive set to " << odPercent << "%" << std::endl;
+        s_logger.info("[vendor] AMD GPU overdrive set to ");
         g_lastError.clear();
         return true;
     }

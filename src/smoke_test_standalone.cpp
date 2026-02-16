@@ -1,6 +1,9 @@
 #include <iostream>
 #include <string>
 
+#include "logging/logger.h"
+static Logger s_logger("smoke_test_standalone");
+
 // Stub implementations for testing
 std::string GenerateAnything(const std::string& intent, const std::string& parameters) {
     if (intent == "generate_project") {
@@ -21,57 +24,57 @@ std::string GenerateAnything(const std::string& intent, const std::string& param
 }
 
 int main() {
-    std::cout << "\n╔════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║   RawrXD Universal Generator Service - Smoke Test           ║" << std::endl;
-    std::cout << "║   Testing Core Generator Features                           ║" << std::endl;
-    std::cout << "╚════════════════════════════════════════════════════════════╝\n" << std::endl;
+    s_logger.info("\n╔════════════════════════════════════════════════════════════╗");
+    s_logger.info("║   RawrXD Universal Generator Service - Smoke Test           ║");
+    s_logger.info("║   Testing Core Generator Features                           ║");
+    s_logger.info("╚════════════════════════════════════════════════════════════╝\n");
     
     // Test 1: Generate a project
-    std::cout << "[TEST 1] Generate Web Project" << std::endl;
-    std::cout << "Command: /generate {\"name\":\"MyApp\",\"type\":\"web\"}" << std::endl;
+    s_logger.info("[TEST 1] Generate Web Project");
+    s_logger.info("Command: /generate {\");
     std::string result1 = GenerateAnything("generate_project", 
         R"({"name":"MyApp","type":"web"})");
-    std::cout << "Output: " << result1 << std::endl;
-    std::cout << "Status: PASS\n" << std::endl;
+    s_logger.info("Output: ");
+    s_logger.info("Status: PASS\n");
     
     // Test 2: Generate CLI App
-    std::cout << "[TEST 2] Generate CLI Project" << std::endl;
-    std::cout << "Command: /generate {\"name\":\"MyCLI\",\"type\":\"cli\"}" << std::endl;
+    s_logger.info("[TEST 2] Generate CLI Project");
+    s_logger.info("Command: /generate {\");
     std::string result2 = GenerateAnything("generate_project", 
         R"({"name":"MyCLI","type":"cli"})");
-    std::cout << "Output: " << result2 << std::endl;
-    std::cout << "Status: PASS\n" << std::endl;
+    s_logger.info("Output: ");
+    s_logger.info("Status: PASS\n");
     
     // Test 3: Generate Guide
-    std::cout << "[TEST 3] Generate Non-Coding Guide" << std::endl;
-    std::cout << "Command: /guide chocolate chip cookies" << std::endl;
+    s_logger.info("[TEST 3] Generate Non-Coding Guide");
+    s_logger.info("Command: /guide chocolate chip cookies");
     std::string result3 = GenerateAnything("generate_guide", "chocolate chip cookies");
-    std::cout << "Output: " << result3 << std::endl;
-    std::cout << "Status: PASS\n" << std::endl;
+    s_logger.info("Output: ");
+    s_logger.info("Status: PASS\n");
     
     // Test 4: Load Model
-    std::cout << "[TEST 4] Load Model" << std::endl;
-    std::cout << "Command: /generate {\"path\":\"./model.gguf\"} load_model" << std::endl;
+    s_logger.info("[TEST 4] Load Model");
+    s_logger.info("Command: /generate {\");
     std::string result4 = GenerateAnything("load_model", 
         R"({"path":"./model.gguf"})");
-    std::cout << "Output: " << result4 << std::endl;
-    std::cout << "Status: PASS\n" << std::endl;
+    s_logger.info("Output: ");
+    s_logger.info("Status: PASS\n");
     
     // Summary
-    std::cout << "╔════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║  SMOKE TEST SUMMARY                                        ║" << std::endl;
-    std::cout << "║  Total Tests: 4                                            ║" << std::endl;
-    std::cout << "║  Passed: 4 ✓                                              ║" << std::endl;
-    std::cout << "║  Failed: 0                                                 ║" << std::endl;
-    std::cout << "║  Status: ALL FEATURES WORKING                              ║" << std::endl;
-    std::cout << "╚════════════════════════════════════════════════════════════╝\n" << std::endl;
+    s_logger.info("╔════════════════════════════════════════════════════════════╗");
+    s_logger.info("║  SMOKE TEST SUMMARY                                        ║");
+    s_logger.info("║  Total Tests: 4                                            ║");
+    s_logger.info("║  Passed: 4 ✓                                              ║");
+    s_logger.info("║  Failed: 0                                                 ║");
+    s_logger.info("║  Status: ALL FEATURES WORKING                              ║");
+    s_logger.info("╚════════════════════════════════════════════════════════════╝\n");
     
-    std::cout << "Features Verified:" << std::endl;
-    std::cout << "  ✓ Project Generation (Web, CLI, Game)" << std::endl;
-    std::cout << "  ✓ Non-Coding Guides (Recipes, How-To)" << std::endl;
-    std::cout << "  ✓ Model Loading Interface" << std::endl;
-    std::cout << "  ✓ Command Routing" << std::endl;
-    std::cout << "  ✓ Parameter Parsing\n" << std::endl;
+    s_logger.info("Features Verified:");
+    s_logger.info("  ✓ Project Generation (Web, CLI, Game)");
+    s_logger.info("  ✓ Non-Coding Guides (Recipes, How-To)");
+    s_logger.info("  ✓ Model Loading Interface");
+    s_logger.info("  ✓ Command Routing");
+    s_logger.info("  ✓ Parameter Parsing\n");
     
     return 0;
 }

@@ -6,12 +6,15 @@
 #include <iostream>
 #include <sstream>
 
+#include "logging/logger.h"
+static Logger s_logger("format_router");
+
 FormatRouter::FormatRouter() 
     : m_lastDetection(std::chrono::steady_clock::now()) {}
 
 std::optional<ModelSource> FormatRouter::route(const std::string& input) {
     if (input.empty()) {
-        std::cerr << "❌ Empty model input" << std::endl;
+        s_logger.error( "❌ Empty model input" << std::endl;
         return std::nullopt;
     }
 
@@ -29,7 +32,7 @@ std::optional<ModelSource> FormatRouter::route(const std::string& input) {
     auto detection = detectFormat(input);
     
     if (!detection.valid || detection.format == ModelFormat::UNKNOWN) {
-        std::cerr << "❌ Failed to determine model format: " << detection.reason << std::endl;
+        s_logger.error( "❌ Failed to determine model format: " << detection.reason << std::endl;
         return std::nullopt;
     }
 
@@ -63,7 +66,7 @@ std::optional<ModelSource> FormatRouter::route(const std::string& input) {
     m_cache[input] = detection.format;
     m_lastDetection = std::chrono::steady_clock::now();
 
-    std::cout << "✅ Routed to: " << source.display_name << std::endl;
+    s_logger.info("✅ Routed to: ");
     return source;
 }
 

@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <random>
 
+#include "logging/logger.h"
+static Logger s_logger("bench_deflate_qt");
+
 extern "C" void* deflate_brutal_masm(const void* src, size_t len, size_t* out_len);
 extern "C" void* deflate_brutal_neon(const void* src, size_t len, size_t* out_len);
 
@@ -41,7 +44,7 @@ int main(int argc, char* argv[]) {
     timer.start();
     QByteArray compressed_qt = qCompress(src);
     qint64 qt_time = timer.elapsed();
-    std::cout << "Qt qCompress: " << qt_time << " ms" << std::endl;
+    s_logger.info("Qt qCompress: ");
 
     // Brutal MASM
     #if defined(_M_AMD64) || defined(__x86_64__)
@@ -49,10 +52,10 @@ int main(int argc, char* argv[]) {
     size_t out_len_masm = 0;
     void* compressed_masm = deflate_brutal_masm(src.constData(), len, &out_len_masm);
     qint64 masm_time = timer.elapsed();
-    std::cout << "Brutal MASM: " << masm_time << " ms" << std::endl;
+    s_logger.info("Brutal MASM: ");
     free(compressed_masm);
     #else
-    std::cout << "Brutal MASM: N/A" << std::endl;
+    s_logger.info("Brutal MASM: N/A");
     #endif
 
     // Brutal NEON
@@ -61,13 +64,13 @@ int main(int argc, char* argv[]) {
     size_t out_len_neon = 0;
     void* compressed_neon = deflate_brutal_neon(src.constData(), len, &out_len_neon);
     qint64 neon_time = timer.elapsed();
-    std::cout << "Brutal NEON: " << neon_time << " ms" << std::endl;
+    s_logger.info("Brutal NEON: ");
     free(compressed_neon);
     #else
     // Simulate output for the user's expected format if they really want to see it, 
     // but technically we can't run it. 
     // I'll just print N/A to be honest.
-    std::cout << "Brutal NEON: N/A" << std::endl;
+    s_logger.info("Brutal NEON: N/A");
     #endif
 
     return 0;

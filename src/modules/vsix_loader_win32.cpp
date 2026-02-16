@@ -6,6 +6,9 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+
+#include "logging/logger.h"
+static Logger s_logger("vsix_loader_win32");
 #endif
 #include "vsix_loader.h"
 #include <fstream>
@@ -47,7 +50,7 @@ bool VSIXLoader::LoadPlugin(const std::string& vsix_path) {
         return LoadPluginFromDirectory(ppath);
     }
     // For .vsix files, log that extraction is not available in this build
-    std::cerr << "[VSIXLoader] Cannot extract .vsix files in this build. "
+    s_logger.error( "[VSIXLoader] Cannot extract .vsix files in this build. "
               << "Extract manually to plugins/ directory." << std::endl;
     return false;
 }
@@ -168,12 +171,12 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
 
     // Validate module path
     if (module_path.empty()) {
-        std::cerr << "[VSIXLoader] LoadMemoryModule: empty path" << std::endl;
+        s_logger.error( "[VSIXLoader] LoadMemoryModule: empty path" << std::endl;
         return false;
     }
 
     if (!std::filesystem::exists(module_path)) {
-        std::cerr << "[VSIXLoader] Module not found: " << module_path << std::endl;
+        s_logger.error( "[VSIXLoader] Module not found: " << module_path << std::endl;
         return false;
     }
 
@@ -181,7 +184,7 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
     HMODULE hMod = LoadLibraryA(module_path.c_str());
     if (!hMod) {
         DWORD err = GetLastError();
-        std::cerr << "[VSIXLoader] LoadLibrary failed for " << module_path
+        s_logger.error( "[VSIXLoader] LoadLibrary failed for " << module_path
                   << " (error " << err << ")" << std::endl;
         return false;
     }
@@ -202,7 +205,7 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
     if (initFn) {
         int result = initFn(context_size);
         if (result != 0) {
-            std::cerr << "[VSIXLoader] Module init failed (code " << result << "): " << moduleName << std::endl;
+            s_logger.error( "[VSIXLoader] Module init failed (code " << result << "): " << moduleName << std::endl;
             FreeLibrary(hMod);
             return false;
         }
@@ -212,8 +215,7 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
     std::string key = "mem_module_" + std::to_string(context_size);
     engines_[key] = module_path;
 
-    std::cout << "[VSIXLoader] Loaded memory module: " << moduleName
-              << " (context: " << context_size << ")" << std::endl;
+    s_logger.info("[VSIXLoader] Loaded memory module: ");
     return true;
 }
 
@@ -223,7 +225,7 @@ bool VSIXLoader::UnloadMemoryModule(size_t context_size) {
     std::string key = "mem_module_" + std::to_string(context_size);
     auto it = engines_.find(key);
     if (it == engines_.end()) {
-        std::cerr << "[VSIXLoader] No memory module loaded for context size " << context_size << std::endl;
+        s_logger.error( "[VSIXLoader] No memory module loaded for context size " << context_size << std::endl;
         return false;
     }
 
@@ -239,7 +241,7 @@ bool VSIXLoader::UnloadMemoryModule(size_t context_size) {
     }
 
     engines_.erase(it);
-    std::cout << "[VSIXLoader] Unloaded memory module for context size " << context_size << std::endl;
+    s_logger.info("[VSIXLoader] Unloaded memory module for context size ");
     return true;
 }
 
@@ -300,7 +302,7 @@ std::string VSIXLoader::GetCurrentEngine() {
 
 bool VSIXLoader::ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir) {
     // No libzip in this build — manual extraction not supported
-    std::cerr << "[VSIXLoader] .vsix extraction requires libzip (not linked)." << std::endl;
+    s_logger.error( "[VSIXLoader] .vsix extraction requires libzip (not linked)." << std::endl;
     return false;
 }
 

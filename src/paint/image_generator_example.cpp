@@ -1,13 +1,16 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#include "logging/logger.h"
+static Logger s_logger("image_generator_example");
+
 #include "image_generator.h"
 #include <iostream>
 
 using namespace ig;
 
 int main() {
-    std::cout << "=== Image Generator Example ===\n\n";
+    s_logger.info("=== Image Generator Example ===\n\n");
 
     // Create canvas
     const int WIDTH = 1024;
@@ -16,7 +19,7 @@ int main() {
     canvas.clear(Color::rgb(0.08f, 0.09f, 0.11f));
 
     // Background gradient
-    std::cout << "1. Rendering gradient background...\n";
+    s_logger.info("1. Rendering gradient background...\n");
     auto bg = create_layer(WIDTH, HEIGHT);
     LinearGradient grad(0, 0, WIDTH, HEIGHT);
     grad.add_stop(0.0f, Color::rgb(0.10f, 0.15f, 0.35f));
@@ -31,7 +34,7 @@ int main() {
     canvas.composite(bg);
 
     // Perlin noise fog
-    std::cout << "2. Adding Perlin noise fog layer...\n";
+    s_logger.info("2. Adding Perlin noise fog layer...\n");
     auto fog = create_layer(WIDTH, HEIGHT);
     Perlin2D perlin(42);
 
@@ -45,7 +48,7 @@ int main() {
     canvas.composite(fog);
 
     // Draw shapes
-    std::cout << "3. Drawing shapes...\n";
+    s_logger.info("3. Drawing shapes...\n");
     fill_rect(canvas, 60, HEIGHT - 160, 320, 100, Color::rgba(0.9f, 0.5f, 0.2f, 0.8f));
     fill_circle(canvas, 860.0f, 160.0f, 90.0f, Color::rgba(0.2f, 0.7f, 0.9f, 0.85f));
     line_aa(canvas, 80.0f, 80.0f, 920.0f, 540.0f, Color::rgba(1.0f, 0.95f, 0.3f, 0.9f));
@@ -56,7 +59,7 @@ int main() {
     fill_polygon(canvas, poly, Color::rgba(0.6f, 0.2f, 0.7f, 0.75f));
 
     // Radial highlight
-    std::cout << "4. Adding radial highlight...\n";
+    s_logger.info("4. Adding radial highlight...\n");
     RadialGradient radial(860.0f, 160.0f, 140.0f);
     radial.add_stop(0.0f, Color::rgba(1.0f, 1.0f, 1.0f, 0.35f));
     radial.add_stop(1.0f, Color::rgba(1.0f, 1.0f, 1.0f, 0.0f));
@@ -68,25 +71,25 @@ int main() {
     }
 
     // Save as BMP
-    std::cout << "5. Exporting as BMP...\n";
+    s_logger.info("5. Exporting as BMP...\n");
     const std::string bmp_out = "output.bmp";
     if (!write_bmp(canvas, bmp_out)) {
-        std::cerr << "Failed to write " << bmp_out << "\n";
+        s_logger.error( "Failed to write " << bmp_out << "\n";
         return 1;
     }
-    std::cout << "✓ Wrote " << bmp_out << "\n";
+    s_logger.info("✓ Wrote ");
 
     // Save as PNG (requires stb_image_write)
-    std::cout << "6. Exporting as PNG...\n";
+    s_logger.info("6. Exporting as PNG...\n");
     const std::string png_out = "output.png";
     if (!write_png(canvas, png_out)) {
-        std::cerr << "Failed to write " << png_out << "\n";
+        s_logger.error( "Failed to write " << png_out << "\n";
         return 1;
     }
-    std::cout << "✓ Wrote " << png_out << "\n";
+    s_logger.info("✓ Wrote ");
 
     // Create a gradient showcase
-    std::cout << "7. Creating gradient showcase...\n";
+    s_logger.info("7. Creating gradient showcase...\n");
     Canvas gradient_demo(512, 512);
     gradient_demo.clear(Color::white());
 
@@ -115,12 +118,12 @@ int main() {
     }
 
     if (write_bmp(gradient_demo, "gradients.bmp")) {
-        std::cout << "✓ Wrote gradients.bmp\n";
+        s_logger.info("✓ Wrote gradients.bmp\n");
     }
     if (write_png(gradient_demo, "gradients.png")) {
-        std::cout << "✓ Wrote gradients.png\n";
+        s_logger.info("✓ Wrote gradients.png\n");
     }
 
-    std::cout << "\n=== Complete! ===\n";
+    s_logger.info("\n=== Complete! ===\n");
     return 0;
 }

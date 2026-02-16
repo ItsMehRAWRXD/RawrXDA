@@ -2,6 +2,9 @@
 #include <iostream>
 #include <mutex>
 
+#include "logging/logger.h"
+static Logger s_logger("diagnostics_impl");
+
 // Define static members
 std::ofstream Diagnostics::s_logFile;
 Diagnostics::LogLevel Diagnostics::s_minLevel = Diagnostics::LogLevel::Info;

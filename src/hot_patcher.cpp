@@ -2,6 +2,9 @@
 #include <iomanip>
 #include <psapi.h>
 
+#include "logging/logger.h"
+static Logger s_logger("hot_patcher");
+
 HotPatcher::~HotPatcher() {
     for (auto& [name, record] : patches_) {
         if (record.active) {
@@ -12,7 +15,7 @@ HotPatcher::~HotPatcher() {
 
 bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address, const std::vector<unsigned char>& new_opcodes) {
     if (patches_.find(patch_name) != patches_.end()) {
-        std::cerr << "[PATCH] Error: Patch '" << patch_name << "' already exists.\n";
+        s_logger.error( "[PATCH] Error: Patch '" << patch_name << "' already exists.\n";
         return false;
     }
 
@@ -22,7 +25,7 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
     // 1. UNLOCK MEMORY
     // We must change the page protection to Read-Write-Execute
     if (!VirtualProtect(target_address, size, PAGE_EXECUTE_READWRITE, &old_protect)) {
-        std::cerr << "[PATCH] Critical: Failed to unlock memory at " << target_address << "\n";
+        s_logger.error( "[PATCH] Critical: Failed to unlock memory at " << target_address << "\n";
         return false;
     }
 
@@ -46,7 +49,7 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
     record.active = true;
     patches_[patch_name] = record;
 
-    std::cout << "[PATCH] Successfully applied '" << patch_name << "' at " << target_address << "\n";
+    s_logger.info("[PATCH] Successfully applied '");
     return true;
 }
 
@@ -71,7 +74,7 @@ bool HotPatcher::RevertPatch(const std::string& patch_name) {
     VirtualProtect(record.target_address, record.size, old_protect, &old_protect);
 
     record.active = false;
-    std::cout << "[PATCH] Reverted '" << patch_name << "'\n";
+    s_logger.info("[PATCH] Reverted '");
     return true;
 }
 
@@ -82,9 +85,9 @@ void* HotPatcher::GetFunctionAddress(const std::string& module_name, const std::
 }
 
 void HotPatcher::ListPatches() {
-    std::cout << "=== Active HotPatches ===\n";
+    s_logger.info("=== Active HotPatches ===\n");
     for (const auto& [name, record] : patches_) {
-        std::cout << (record.active ? "[ON]  " : "[OFF] ") 
+        s_logger.info( (record.active ? "[ON]  " : "[OFF] ") 
                   << name << " @ " << record.target_address << "\n";
     }
 }
@@ -100,16 +103,16 @@ bool HotPatcher::ScanAndPatch(const std::string& patch_name,
                                const std::vector<unsigned char>& signature, 
                                const std::vector<unsigned char>& replacement) {
     if (signature.empty()) {
-        std::cerr << "[PATCH] ScanAndPatch: empty signature for '" << patch_name << "'\n";
+        s_logger.error( "[PATCH] ScanAndPatch: empty signature for '" << patch_name << "'\n";
         return false;
     }
     if (signature.size() != replacement.size()) {
-        std::cerr << "[PATCH] ScanAndPatch: signature and replacement size mismatch ("
+        s_logger.error( "[PATCH] ScanAndPatch: signature and replacement size mismatch ("
                   << signature.size() << " vs " << replacement.size() << ") for '" << patch_name << "'\n";
         return false;
     }
     if (patches_.find(patch_name) != patches_.end()) {
-        std::cerr << "[PATCH] ScanAndPatch: patch '" << patch_name << "' already exists\n";
+        s_logger.error( "[PATCH] ScanAndPatch: patch '" << patch_name << "' already exists\n";
         return false;
     }
 
@@ -147,8 +150,7 @@ bool HotPatcher::ScanAndPatch(const std::string& patch_name,
                     if (memcmp(regionBase + i, signature.data(), signature.size()) == 0) {
                         // Found exact match — apply patch via ApplyPatch
                         void* target = regionBase + i;
-                        std::cout << "[PATCH] ScanAndPatch: found signature for '" << patch_name 
-                                  << "' at " << target << " (scanned " << scanCount << " bytes)\n";
+                        s_logger.info("[PATCH] ScanAndPatch: found signature for '");
                         return ApplyPatch(patch_name, target, replacement);
                     }
                 }
@@ -158,7 +160,7 @@ bool HotPatcher::ScanAndPatch(const std::string& patch_name,
         addr = static_cast<unsigned char*>(mbi.BaseAddress) + mbi.RegionSize;
     }
 
-    std::cerr << "[PATCH] ScanAndPatch: signature not found for '" << patch_name 
+    s_logger.error( "[PATCH] ScanAndPatch: signature not found for '" << patch_name 
               << "' after scanning " << scanCount << " bytes\n";
     return false;
 }

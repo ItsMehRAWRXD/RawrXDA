@@ -15,6 +15,9 @@
 #include <sstream>
 #include <cstdint>
 
+#include "logging/logger.h"
+static Logger s_logger("flash_attention");
+
 namespace RawrXD {
 
 // ============================================================================
@@ -26,11 +29,7 @@ bool FlashAttentionEngine::Initialize() {
         EnterpriseFeature::FlashAttention);
 
     if (!m_licensed) {
-        std::cout << "[FlashAttention] License check FAILED — "
-                  << "FEATURE_FLASH_ATTENTION (0x40) not enabled.\n"
-                  << "[FlashAttention] Upgrade to Pro tier for Flash Attention.\n"
-                  << "[FlashAttention] Current edition: "
-                  << EnterpriseLicense::Instance().GetEditionName() << std::endl;
+        s_logger.info("[FlashAttention] License check FAILED — ");
         m_ready = false;
         return false;
     }
@@ -40,22 +39,14 @@ bool FlashAttentionEngine::Initialize() {
     m_hasAVX512 = (avxResult == 1);
 
     if (!m_hasAVX512) {
-        std::cout << "[FlashAttention] AVX-512 check FAILED — "
-                  << "CPU does not support AVX-512F+BW+VL or OS XSAVE is disabled.\n"
-                  << "[FlashAttention] Flash Attention requires AVX-512. "
-                  << "Falling back to AVX2 inference kernels." << std::endl;
+        s_logger.info("[FlashAttention] AVX-512 check FAILED — ");
         m_ready = false;
         return false;
     }
 
     // Step 3: Report tile configuration
     FlashAttentionTileConfig tileCfg = GetTileConfig();
-    std::cout << "[FlashAttention] AVX-512 kernel initialized.\n"
-              << "  Tile M:         " << tileCfg.tileM << "\n"
-              << "  Tile N:         " << tileCfg.tileN << "\n"
-              << "  Head Dim:       " << tileCfg.headDim << "\n"
-              << "  Scratch bytes:  " << tileCfg.scratchBytes << "\n"
-              << "  License:        Pro tier (0x40)" << std::endl;
+    s_logger.info("[FlashAttention] AVX-512 kernel initialized.\n");
 
     m_ready = true;
     return true;
@@ -66,14 +57,14 @@ bool FlashAttentionEngine::Initialize() {
 // ============================================================================
 int32_t FlashAttentionEngine::Forward(FlashAttentionConfig& cfg) {
     if (!m_ready) {
-        std::cerr << "[FlashAttention] Forward called but engine not ready. "
+        s_logger.error( "[FlashAttention] Forward called but engine not ready. "
                   << "Call Initialize() first." << std::endl;
         return -2;
     }
 
     // Validate pointer alignment (ZMM requires 64-byte alignment)
     if (!ValidateAlignment(cfg)) {
-        std::cerr << "[FlashAttention] ERROR: Q/K/V/O pointers are not "
+        s_logger.error( "[FlashAttention] ERROR: Q/K/V/O pointers are not "
                   << "64-byte aligned. Use _aligned_malloc(size, 64)." << std::endl;
         return -3;
     }
@@ -81,21 +72,21 @@ int32_t FlashAttentionEngine::Forward(FlashAttentionConfig& cfg) {
     // Validate dimensions
     if (cfg.seqLenM <= 0 || cfg.seqLenN <= 0 || cfg.headDim <= 0 ||
         cfg.numHeads <= 0 || cfg.numKVHeads <= 0 || cfg.batchSize <= 0) {
-        std::cerr << "[FlashAttention] ERROR: Invalid dimensions in config."
+        s_logger.error( "[FlashAttention] ERROR: Invalid dimensions in config."
                   << std::endl;
         return -4;
     }
 
     // Validate headDim is a multiple of 16 (ZMM register width in floats)
     if (cfg.headDim % 16 != 0) {
-        std::cerr << "[FlashAttention] ERROR: headDim (" << cfg.headDim
+        s_logger.error( "[FlashAttention] ERROR: headDim (" << cfg.headDim
                   << ") must be a multiple of 16 for AVX-512." << std::endl;
         return -5;
     }
 
     // Validate GQA: numHeads must be divisible by numKVHeads
     if (cfg.numHeads % cfg.numKVHeads != 0) {
-        std::cerr << "[FlashAttention] ERROR: numHeads (" << cfg.numHeads
+        s_logger.error( "[FlashAttention] ERROR: numHeads (" << cfg.numHeads
                   << ") must be divisible by numKVHeads (" << cfg.numKVHeads
                   << ") for GQA." << std::endl;
         return -6;

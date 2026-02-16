@@ -18,6 +18,9 @@
 #include <fstream>
 #include <cstring>
 
+#include "logging/logger.h"
+static Logger s_logger("replay_harness");
+
 namespace fs = std::filesystem;
 
 // ============================================================================
@@ -82,7 +85,7 @@ bool ReplayHarness::startRecording(const RecordingConfig& config) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_recording) {
-        std::cerr << "[ReplayHarness] ERROR: Recording already in progress\n";
+        s_logger.error( "[ReplayHarness] ERROR: Recording already in progress\n";
         return false;
     }
 
@@ -92,7 +95,7 @@ bool ReplayHarness::startRecording(const RecordingConfig& config) {
     // Snapshot pre-fix repo state
     std::string snapshotBefore = (fs::path(config.fixtureOutputDir) / "snapshot_before").string();
     if (!snapshotDirectory(config.repoPath, snapshotBefore)) {
-        std::cerr << "[ReplayHarness] ERROR: Failed to snapshot " << config.repoPath << "\n";
+        s_logger.error( "[ReplayHarness] ERROR: Failed to snapshot " << config.repoPath << "\n";
         return false;
     }
 
@@ -108,7 +111,7 @@ bool ReplayHarness::startRecording(const RecordingConfig& config) {
     m_recording->journalSessionId   = sessionId;
     m_recording->startTime          = std::chrono::steady_clock::now();
 
-    std::cout << "[ReplayHarness] Recording started: " << config.fixtureId << "\n";
+    s_logger.info("[ReplayHarness] Recording started: ");
     return true;
 }
 
@@ -118,7 +121,7 @@ ReplayFixture ReplayHarness::stopRecording(const std::vector<FixtureTarget>& tar
     ReplayFixture fixture;
 
     if (!m_recording) {
-        std::cerr << "[ReplayHarness] ERROR: No active recording\n";
+        s_logger.error( "[ReplayHarness] ERROR: No active recording\n";
         fixture.id = "__NO_RECORDING__";
         return fixture;
     }
@@ -157,8 +160,7 @@ ReplayFixture ReplayHarness::stopRecording(const std::vector<FixtureTarget>& tar
     // Save fixture.json
     fixture.save(config.fixtureOutputDir);
 
-    std::cout << "[ReplayHarness] Recording stopped. Fixture saved to: "
-              << config.fixtureOutputDir << " (" << durationMs << "ms)\n";
+    s_logger.info("[ReplayHarness] Recording stopped. Fixture saved to: ");
 
     m_recording.reset();
     return fixture;
@@ -224,8 +226,7 @@ OracleVerdict ReplayHarness::executeReplay(const ReplayFixture& fixture,
         return OracleVerdict::failed("Failed to load journal: " + fixture.journalPath);
     }
 
-    std::cout << "[ReplayHarness] Loaded " << mock.totalRecorded()
-              << " recorded inferences for '" << fixture.id << "'\n";
+    s_logger.info("[ReplayHarness] Loaded ");
 
     // 3. Run the orchestrator with mock inference
     //
@@ -260,13 +261,13 @@ OracleVerdict ReplayHarness::executeReplay(const ReplayFixture& fixture,
         MockInferenceResult result = mock.generate(prompt);
 
         if (!result.found) {
-            std::cerr << "[ReplayHarness] WARNING: Mock exhausted at target '"
+            s_logger.error( "[ReplayHarness] WARNING: Mock exhausted at target '"
                       << target.id << "'\n";
             break;
         }
 
         if (!result.promptAligned) {
-            std::cerr << "[ReplayHarness] DEVIATION: " << result.mismatchDetail << "\n";
+            s_logger.error( "[ReplayHarness] DEVIATION: " << result.mismatchDetail << "\n";
         }
 
         // In full integration: apply the response as a fix to tempDir
@@ -300,7 +301,7 @@ void ReplayHarness::teardownReplayEnvironment(const std::string& tempDir) {
     std::error_code ec;
     fs::remove_all(tempDir, ec);
     if (ec) {
-        std::cerr << "[ReplayHarness] WARNING: Failed to clean up temp dir: "
+        s_logger.error( "[ReplayHarness] WARNING: Failed to clean up temp dir: "
                   << tempDir << " (" << ec.message() << ")\n";
     }
 }
@@ -336,7 +337,7 @@ BatchResult ReplayHarness::runAll(const std::string& manifestPath) {
         fs::path manifestDir = fs::path(effectivePath).parent_path();
         std::string fixtureDir = (manifestDir / entry.path).string();
 
-        std::cout << "[ReplayHarness] Running fixture: " << entry.id << " ... ";
+        s_logger.info("[ReplayHarness] Running fixture: ");
 
         auto entryStart = std::chrono::steady_clock::now();
 
@@ -350,10 +351,10 @@ BatchResult ReplayHarness::runAll(const std::string& manifestPath) {
             verdict = replay(fixture);
             if (verdict.pass) {
                 batch.passed++;
-                std::cout << "PASS";
+                s_logger.info("PASS");
             } else {
                 batch.failed++;
-                std::cout << "FAIL: " << verdict.failureReason;
+                s_logger.info("FAIL: ");
             }
         }
 
@@ -361,7 +362,7 @@ BatchResult ReplayHarness::runAll(const std::string& manifestPath) {
         double entryMs = static_cast<double>(
             std::chrono::duration_cast<std::chrono::milliseconds>(entryEnd - entryStart).count());
 
-        std::cout << " (" << entryMs << "ms)\n";
+        s_logger.info(" (");
 
         BatchResult::Entry e;
         e.fixtureId  = entry.id;
@@ -437,12 +438,7 @@ BatchResult ReplayHarness::runTagged(const std::string& manifestPath,
 }
 
 bool ReplayHarness::runAsSelfTestGate(const std::string& manifestPath) {
-    std::cout << "\n"
-              << "================================================================\n"
-              << "  RawrXD Replay Harness — Self-Test Gate\n"
-              << "  Engine: " << REPLAY_ENGINE_VERSION << "\n"
-              << "  Schema: v" << REPLAY_JOURNAL_SCHEMA_VERSION << "\n"
-              << "================================================================\n\n";
+    s_logger.info("\n");
 
     BatchResult batch = runAll(manifestPath);
 
@@ -452,11 +448,11 @@ bool ReplayHarness::runAsSelfTestGate(const std::string& manifestPath) {
     // Write JSON report
     ReplayReporter::writeBatchJson(batch, "replay_results.json");
 
-    std::cout << "\n";
+    s_logger.info("\n");
     if (batch.allPassed()) {
-        std::cout << "REPLAY GATE: PASSED (" << batch.passed << "/" << batch.total << ")\n";
+        s_logger.info("REPLAY GATE: PASSED (");
     } else {
-        std::cout << "REPLAY GATE: FAILED (" << batch.failed << " failures)\n";
+        s_logger.info("REPLAY GATE: FAILED (");
     }
 
     return batch.allPassed();
