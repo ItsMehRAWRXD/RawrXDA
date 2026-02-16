@@ -61,7 +61,8 @@ class EnhancedChatbot {
     
     EnhancedChatbot() {
         $this.ConversationHistory = [System.Collections.ArrayList]::new()
-        $this.KBPath = "D:\lazy init ide\data\knowledge_base.json"
+        $projectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..") -ErrorAction SilentlyContinue).Path }
+        $this.KBPath = if ($projectRoot) { Join-Path $projectRoot "data" "knowledge_base.json" } else { (Join-Path "D:\lazy init ide" "data" "knowledge_base.json") }
         $this.HasDigestedKB = $false
         
         $this.LoadDigestedKnowledgeBase()
