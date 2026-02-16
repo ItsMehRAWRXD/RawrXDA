@@ -14,6 +14,9 @@
 #include "core/semantic_code_intelligence.hpp"
 #include "core/enterprise_telemetry_compliance.hpp"
 
+#include "logging/logger.h"
+static Logger s_logger("complete_server");
+
 // Phase 26: ReverseEngineered MASM Kernel Bridge
 #include "../include/reverse_engineered_bridge.h"
 
@@ -348,7 +351,7 @@ void CompletionServer::Run(uint16_t port) {
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "[CompletionServer] WSAStartup failed." << std::endl;
+        s_logger.error( "[CompletionServer] WSAStartup failed." << std::endl;
         running_ = false;
         return;
     }
@@ -356,7 +359,7 @@ void CompletionServer::Run(uint16_t port) {
 
     SocketType server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == kInvalidSocket) {
-        std::cerr << "[CompletionServer] Failed to create socket." << std::endl;
+        s_logger.error( "[CompletionServer] Failed to create socket." << std::endl;
         running_ = false;
 #ifdef _WIN32
         WSACleanup();
@@ -377,7 +380,7 @@ void CompletionServer::Run(uint16_t port) {
 #endif
 
     if (bind(server_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        std::cerr << "[CompletionServer] Failed to bind port " << port << "." << std::endl;
+        s_logger.error( "[CompletionServer] Failed to bind port " << port << "." << std::endl;
         CloseSocket(server_fd);
         running_ = false;
 #ifdef _WIN32
@@ -387,7 +390,7 @@ void CompletionServer::Run(uint16_t port) {
     }
 
     if (listen(server_fd, 8) != 0) {
-        std::cerr << "[CompletionServer] Failed to listen." << std::endl;
+        s_logger.error( "[CompletionServer] Failed to listen." << std::endl;
         CloseSocket(server_fd);
         running_ = false;
 #ifdef _WIN32
@@ -396,7 +399,7 @@ void CompletionServer::Run(uint16_t port) {
         return;
     }
 
-    std::cout << "[CompletionServer] Listening on port " << port << "..." << std::endl;
+    s_logger.info("[CompletionServer] Listening on port ");
 
     while (running_) {
         sockaddr_in client_addr{};

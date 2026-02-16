@@ -272,7 +272,7 @@ static void ggml_check_sycl() try {
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -307,7 +307,7 @@ GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {
     return;
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -357,7 +357,7 @@ ggml_backend_sycl_buffer_free_buffer(ggml_backend_buffer_t buffer) try {
     delete ctx;
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -399,7 +399,7 @@ ggml_backend_sycl_buffer_init_tensor(ggml_backend_buffer_t buffer,
     return GGML_STATUS_SUCCESS;
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -427,7 +427,7 @@ static void ggml_backend_sycl_buffer_set_tensor(ggml_backend_buffer_t buffer,
 #endif
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -449,7 +449,7 @@ static void ggml_backend_sycl_buffer_get_tensor(ggml_backend_buffer_t buffer,
             .wait()));
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -522,7 +522,7 @@ ggml_backend_sycl_buffer_cpy_tensor(ggml_backend_buffer_t buffer,
     return false;
     GGML_UNUSED(buffer);
 } catch (const sycl::exception & exc) {
-    std::cerr << exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
+    s_logger.error( exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 
@@ -541,7 +541,7 @@ static void ggml_backend_sycl_buffer_clear(ggml_backend_buffer_t buffer,
                                     .wait()));
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -627,7 +627,7 @@ ggml_backend_sycl_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft,
     return ggml_backend_buffer_init(buft, ggml_backend_sycl_buffer_interface, ctx, size);
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -804,7 +804,7 @@ struct ggml_backend_sycl_split_buffer_context {
         }
     }
     catch (sycl::exception const &exc) {
-      std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+      s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
                 << ", line:" << __LINE__ << std::endl;
       std::exit(1);
     }
@@ -905,7 +905,7 @@ ggml_backend_sycl_split_buffer_init_tensor(ggml_backend_buffer_t buffer,
     return GGML_STATUS_SUCCESS;
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -961,7 +961,7 @@ ggml_backend_sycl_split_buffer_set_tensor(ggml_backend_buffer_t buffer,
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -1017,7 +1017,7 @@ ggml_backend_sycl_split_buffer_get_tensor(ggml_backend_buffer_t buffer,
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -1965,7 +1965,7 @@ static dpct::err0 ggml_sycl_cpy_tensor_2d(void *dst,
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2101,7 +2101,7 @@ inline void ggml_sycl_op_mul_mat_sycl(
     GGML_UNUSED(src1_padded_row_size);
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2442,7 +2442,7 @@ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_ten
                 try {
                     quantize_row_q8_1_sycl<quantize_f>(dev[i].src1_ddf, dev[i].src1_ddq, ne10, nrows1, src1_padded_col_size, stream);
                 } catch (sycl::exception const &exc) {
-                    std::cerr << "Quantize_row_q8_1_sycl error" << exc.what() << "Exception caught at file:" << __FILE__
+                    s_logger.error( "Quantize_row_q8_1_sycl error" << exc.what() << "Exception caught at file:" << __FILE__
                               << ", line:" << __LINE__ << std::endl;
                     std::exit(1);
                 }
@@ -2540,7 +2540,7 @@ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_ten
                             quantize_row_q8_1_sycl<quantize_q8_1>(src1_ddf_i, src1_ddq_i, ne10, src1_ncols,
                                                                   src1_padded_col_size, stream);
                         } catch (const sycl::exception & exc) {
-                            std::cerr << "Quantize_row_q8_1_sycl error" << exc.what()
+                            s_logger.error( "Quantize_row_q8_1_sycl error" << exc.what()
                                       << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
                             std::exit(1);
                         }
@@ -2613,7 +2613,7 @@ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_ten
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2679,7 +2679,7 @@ static void ggml_sycl_mul_mat_vec_p021(ggml_backend_sycl_context & ctx, const gg
     ggml_mul_mat_p021_f16_f32_sycl(src0_ddq, src1_ddf, dst_ddf, ne00, ne01, ne02, ne12, main_stream);
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2720,7 +2720,7 @@ static void ggml_sycl_mul_mat_vec_nc(ggml_backend_sycl_context & ctx, const ggml
     ggml_mul_mat_vec_nc_f16_f32_sycl(src0_ddq, src1_ddf, dst_ddf, ne00, ne01, row_stride_x, ne02, ne12, channel_stride_x,channel_stride_y, main_stream);
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2993,7 +2993,7 @@ static void ggml_sycl_mul_mat_batched_sycl(ggml_backend_sycl_context & ctx, cons
         }
     }
 } catch (const sycl::exception & exc) {
-    std::cerr << exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
+    s_logger.error( exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 
@@ -3597,7 +3597,7 @@ static void ggml_sycl_mul_mat_id(ggml_backend_sycl_context & ctx,
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -3669,7 +3669,7 @@ static void ggml_sycl_set_main_device(const int main_device) try {
     }
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -3946,8 +3946,8 @@ static bool ggml_sycl_compute_forward(ggml_backend_sycl_context & ctx, struct gg
 
     return true;
 } catch (sycl::exception & e) {
-    std::cerr << e.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
-    std::cerr << "Error OP "<<ggml_op_name(dst->op)<< std::endl;
+    s_logger.error( e.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
+    s_logger.error( "Error OP "<<ggml_op_name(dst->op)<< std::endl;
     std::exit(1);
 }
 
@@ -3960,7 +3960,7 @@ GGML_API void ggml_backend_sycl_get_device_description(int device, char *descrip
     snprintf(description, description_size, "%s", prop.get_name());
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -3984,7 +3984,7 @@ void ggml_backend_sycl_get_device_memory(int device, size_t *free,
         dpct::dev_mgr::instance().get_device(device).get_memory_info(*free, *total)));
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -4023,7 +4023,7 @@ static void ggml_backend_sycl_set_tensor_async(ggml_backend_t backend,
         (stream)->memcpy((char *)tensor->data + offset, data, size)));
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -4044,7 +4044,7 @@ static void ggml_backend_sycl_get_tensor_async(ggml_backend_t backend,
         data, (const char *)tensor->data + offset, size)));
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -4074,7 +4074,7 @@ static bool ggml_backend_sycl_cpy_tensor_async(ggml_backend_t backend,
     return false;
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -4088,7 +4088,7 @@ static void ggml_backend_sycl_synchronize(ggml_backend_t backend) try {
     GGML_UNUSED(backend);
 }
 catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -4220,7 +4220,7 @@ try
 }
 catch (sycl::exception const &exc)
 {
-    std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+    s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
               << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
@@ -4234,7 +4234,7 @@ static void ggml_backend_sycl_event_wait(ggml_backend_t backend, ggml_backend_ev
     } else
         GGML_ABORT("fatal error");
 } catch (sycl::exception const& exc) {
-    std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+    s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
               << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
@@ -4687,7 +4687,7 @@ static void ggml_backend_sycl_device_event_free(ggml_backend_dev_t dev, ggml_bac
 
   delete event;
 } catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -4700,7 +4700,7 @@ static void ggml_backend_sycl_device_event_synchronize(ggml_backend_dev_t dev, g
   sycl::event *sycl_event = static_cast<sycl::event *>(event->context);
   SYCL_CHECK(CHECK_TRY_ERROR(sycl_event->wait()));
 } catch (sycl::exception const &exc) {
-  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }

@@ -35,6 +35,9 @@
 #include <cstring>
 #include <cstdlib>
 
+#include "logging/logger.h"
+static Logger s_logger("rawrxd_cli_compiler");
+
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
@@ -395,23 +398,22 @@ public:
                 std::string(Color::get(Color::Green)) + "✓" + Color::get(Color::Reset) :
                 std::string(Color::get(Color::Red)) + "✗" + Color::get(Color::Reset);
             
-            std::cout << "[" << m_completedFiles << "/" << m_totalFiles << "] "
-                      << status << " " << file;
+            s_logger.info("[");
             
             if (errors > 0 || warnings > 0) {
-                std::cout << " (";
+                s_logger.info(" (");
                 if (errors > 0) {
-                    std::cout << Color::get(Color::Red) << errors << " error" 
+                    s_logger.info( Color::get(Color::Red) << errors << " error" 
                               << (errors > 1 ? "s" : "") << Color::get(Color::Reset);
                 }
-                if (errors > 0 && warnings > 0) std::cout << ", ";
+                if (errors > 0 && warnings > 0) s_logger.info(", ");
                 if (warnings > 0) {
-                    std::cout << Color::get(Color::Yellow) << warnings << " warning" 
+                    s_logger.info( Color::get(Color::Yellow) << warnings << " warning" 
                               << (warnings > 1 ? "s" : "") << Color::get(Color::Reset);
                 }
-                std::cout << ")";
+                s_logger.info(")");
             }
-            std::cout << std::endl;
+            s_logger.info( std::endl;
         }
     }
     
@@ -419,7 +421,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_style == OutputStyle::Human) {
             if (m_isTerminal) clearLine();
-            std::cout << msg << std::endl;
+            s_logger.info( msg << std::endl;
         }
     }
     
@@ -428,20 +430,20 @@ private:
         int percent = m_totalFiles > 0 ? 
             (m_completedFiles * 100 / m_totalFiles) : 0;
         
-        std::cout << "\r[";
+        s_logger.info("\r[");
         int barWidth = 30;
         int filled = barWidth * percent / 100;
         for (int i = 0; i < barWidth; i++) {
-            if (i < filled) std::cout << "█";
-            else if (i == filled) std::cout << "▓";
-            else std::cout << "░";
+            if (i < filled) s_logger.info("█");
+            else if (i == filled) s_logger.info("▓");
+            else s_logger.info("░");
         }
-        std::cout << "] " << percent << "% " << m_currentFile;
+        s_logger.info("] ");
         std::cout.flush();
     }
     
     void clearLine() {
-        std::cout << "\r" << std::string(m_terminalWidth, ' ') << "\r";
+        s_logger.info("\r");
     }
     
     OutputStyle m_style;
@@ -570,13 +572,13 @@ public:
                 
                 // Try NASM first
                 std::string asmCmd = "nasm -f " + asmFormat + " \"" + asmFile + "\" -o \"" + objFile + "\"";
-                if (options.verbose) std::cout << "[ASM] " << asmCmd << "\n";
+                if (options.verbose) s_logger.info("[ASM] ");
                 if (std::system(asmCmd.c_str()) == 0) {
                     assembled = true;
                 } else {
                     // Try MASM (ml64) on Windows
                     asmCmd = "ml64 /nologo /c /Fo\"" + objFile + "\" \"" + asmFile + "\"";
-                    if (options.verbose) std::cout << "[ASM] " << asmCmd << "\n";
+                    if (options.verbose) s_logger.info("[ASM] ");
                     if (std::system(asmCmd.c_str()) == 0) {
                         assembled = true;
                     }
@@ -618,7 +620,7 @@ public:
                             " /OUT:\"" + outputFile + "\" \"" + objFile + "\"" + libs;
                     }
                     
-                    if (options.verbose) std::cout << "[LINK] " << linkCmd << "\n";
+                    if (options.verbose) s_logger.info("[LINK] ");
                     if (std::system(linkCmd.c_str()) == 0) {
                         linked = true;
                     } else {
@@ -632,7 +634,7 @@ public:
                         for (const auto& libPath : options.libraryPaths) gccLink += " -L\"" + libPath + "\"";
                         for (const auto& lib : options.libraries) gccLink += " -l\"" + lib + "\"";
                         
-                        if (options.verbose) std::cout << "[LINK] " << gccLink << "\n";
+                        if (options.verbose) s_logger.info("[LINK] ");
                         if (std::system(gccLink.c_str()) == 0) {
                             linked = true;
                         } else {
@@ -845,7 +847,7 @@ private:
             return false;
         }
 
-        if (options.verbose) std::cout << "[System] " << cmd << "\n";
+        if (options.verbose) s_logger.info("[System] ");
         return (std::system(cmd.c_str()) == 0);
     }
 
@@ -1254,7 +1256,7 @@ public:
                         found = true;
                         if (opt.hasValue) {
                             if (i + 1 >= argc) {
-                                std::cerr << "Error: " << arg << " requires a value\n";
+                                s_logger.error( "Error: " << arg << " requires a value\n";
                                 return false;
                             }
                             m_values[opt.longName] = argv[++i];
@@ -1289,7 +1291,7 @@ public:
                 }
                 
                 if (!found) {
-                    std::cerr << "Error: Unknown option " << arg << "\n";
+                    s_logger.error( "Error: Unknown option " << arg << "\n";
                     return false;
                 }
             } else {
@@ -1320,47 +1322,47 @@ public:
     }
     
     void showHelp() const {
-        std::cout << Color::get(Color::Bold) << "USAGE:" << Color::get(Color::Reset) << "\n";
-        std::cout << "    " << m_program << " [OPTIONS] <input-files>...\n\n";
+        s_logger.info( Color::get(Color::Bold) << "USAGE:" << Color::get(Color::Reset) << "\n";
+        s_logger.info("    ");
         
-        std::cout << Color::get(Color::Bold) << "DESCRIPTION:" << Color::get(Color::Reset) << "\n";
-        std::cout << "    " << m_description << "\n\n";
+        s_logger.info( Color::get(Color::Bold) << "DESCRIPTION:" << Color::get(Color::Reset) << "\n";
+        s_logger.info("    ");
         
-        std::cout << Color::get(Color::Bold) << "OPTIONS:" << Color::get(Color::Reset) << "\n";
+        s_logger.info( Color::get(Color::Bold) << "OPTIONS:" << Color::get(Color::Reset) << "\n";
         
         for (const auto& opt : m_options) {
-            std::cout << "    ";
+            s_logger.info("    ");
             if (!opt.shortName.empty()) {
-                std::cout << Color::get(Color::Green) << opt.shortName << Color::get(Color::Reset);
-                if (!opt.longName.empty()) std::cout << ", ";
+                s_logger.info( Color::get(Color::Green) << opt.shortName << Color::get(Color::Reset);
+                if (!opt.longName.empty()) s_logger.info(", ");
             }
             if (!opt.longName.empty()) {
-                std::cout << Color::get(Color::Green) << opt.longName << Color::get(Color::Reset);
+                s_logger.info( Color::get(Color::Green) << opt.longName << Color::get(Color::Reset);
             }
             if (opt.hasValue) {
-                std::cout << " <" << opt.valueName << ">";
+                s_logger.info(" <");
             }
-            std::cout << "\n";
-            std::cout << "            " << opt.description;
+            s_logger.info("\n");
+            s_logger.info("            ");
             if (!opt.defaultValue.empty()) {
-                std::cout << " [default: " << opt.defaultValue << "]";
+                s_logger.info(" [default: ");
             }
-            std::cout << "\n";
+            s_logger.info("\n");
         }
         
-        std::cout << "\n" << Color::get(Color::Bold) << "EXAMPLES:" << Color::get(Color::Reset) << "\n";
-        std::cout << "    " << m_program << " main.eon                    # Compile to executable\n";
-        std::cout << "    " << m_program << " -o app main.eon lib.eon     # Multiple files\n";
-        std::cout << "    " << m_program << " -O3 -t x64 main.eon         # Optimized for x64\n";
-        std::cout << "    " << m_program << " -f dll -o mylib.dll lib.eon # Create DLL\n";
-        std::cout << "    " << m_program << " --emit-asm main.eon         # Output assembly\n";
-        std::cout << "    " << m_program << " -j4 src/*.eon               # Parallel compilation\n";
+        s_logger.info("\n");
+        s_logger.info("    ");
+        s_logger.info("    ");
+        s_logger.info("    ");
+        s_logger.info("    ");
+        s_logger.info("    ");
+        s_logger.info("    ");
     }
     
     void showVersion() const {
-        std::cout << "RawrXD Compiler v" << VERSION << "\n";
-        std::cout << "Build: " << BUILD_DATE << " " << BUILD_TIME << "\n";
-        std::cout << "Copyright (c) 2024-2026 RawrXD IDE Project\n";
+        s_logger.info("RawrXD Compiler v");
+        s_logger.info("Build: ");
+        s_logger.info("Copyright (c) 2024-2026 RawrXD IDE Project\n");
     }
     
 private:
@@ -1386,7 +1388,7 @@ public:
     void run() {
         m_running = true;
         
-        std::cout << Color::get(Color::Cyan) << "👁 Watch mode started. Press Ctrl+C to exit.\n" 
+        s_logger.info( Color::get(Color::Cyan) << "👁 Watch mode started. Press Ctrl+C to exit.\n" 
                   << Color::get(Color::Reset);
         
         // Initial compilation
@@ -1410,7 +1412,7 @@ public:
                     if (lastModified[file] != modTime) {
                         lastModified[file] = modTime;
                         changed = true;
-                        std::cout << Color::get(Color::Yellow) << "File changed: " << file 
+                        s_logger.info( Color::get(Color::Yellow) << "File changed: " << file 
                                   << Color::get(Color::Reset) << "\n";
                     }
                 }
@@ -1455,11 +1457,11 @@ private:
             endTime - startTime).count();
         
         if (stats.errorCount == 0) {
-            std::cout << Color::get(Color::Green) << "✓ Build succeeded" 
+            s_logger.info( Color::get(Color::Green) << "✓ Build succeeded" 
                       << Color::get(Color::Reset) << " (" 
                       << Utils::formatTime(stats.totalTimeMs) << ")\n";
         } else {
-            std::cout << Color::get(Color::Red) << "✗ Build failed" 
+            s_logger.info( Color::get(Color::Red) << "✗ Build failed" 
                       << Color::get(Color::Reset) << " with " 
                       << stats.errorCount << " error(s)\n";
         }
@@ -1489,16 +1491,16 @@ private:
                 break;
         }
         
-        std::cout << Color::get(color) << icon << Color::get(Color::Reset) << " ";
+        s_logger.info( Color::get(color) << icon << Color::get(Color::Reset) << " ";
         if (!diag.file.empty()) {
-            std::cout << Color::get(Color::Bold) << diag.file << Color::get(Color::Reset);
+            s_logger.info( Color::get(Color::Bold) << diag.file << Color::get(Color::Reset);
             if (diag.line > 0) {
-                std::cout << ":" << diag.line;
-                if (diag.column > 0) std::cout << ":" << diag.column;
+                s_logger.info(":");
+                if (diag.column > 0) s_logger.info(":");
             }
-            std::cout << ": ";
+            s_logger.info(": ");
         }
-        std::cout << Color::get(color) << diag.message << Color::get(Color::Reset) << "\n";
+        s_logger.info( Color::get(color) << diag.message << Color::get(Color::Reset) << "\n";
     }
     
     CompileOptions m_options;
@@ -1547,22 +1549,21 @@ public:
                 break;
         }
         
-        std::cout << Color::get(Color::Bold);
+        s_logger.info( Color::get(Color::Bold);
         if (!diag.file.empty()) {
-            std::cout << diag.file;
+            s_logger.info( diag.file;
             if (diag.line > 0) {
-                std::cout << ":" << diag.line;
-                if (diag.column > 0) std::cout << ":" << diag.column;
+                s_logger.info(":");
+                if (diag.column > 0) s_logger.info(":");
             }
-            std::cout << ": ";
+            s_logger.info(": ");
         }
         
-        std::cout << Color::get(color) << severity << ": " 
+        s_logger.info( Color::get(color) << severity << ": " 
                   << Color::get(Color::Reset) << diag.message << "\n";
         
         for (const auto& suggestion : diag.suggestions) {
-            std::cout << "    " << Color::get(Color::Green) << "hint: " 
-                      << Color::get(Color::Reset) << suggestion << "\n";
+            s_logger.info("    ");
         }
     }
     
@@ -1571,59 +1572,46 @@ public:
     }
     
     void summary(const BuildStats& stats) override {
-        std::cout << "\n";
+        s_logger.info("\n");
         
         if (stats.failedFiles == 0) {
-            std::cout << Color::get(Color::BrightGreen) << "✓ Build succeeded!" 
+            s_logger.info( Color::get(Color::BrightGreen) << "✓ Build succeeded!" 
                       << Color::get(Color::Reset);
         } else {
-            std::cout << Color::get(Color::BrightRed) << "✗ Build failed!" 
+            s_logger.info( Color::get(Color::BrightRed) << "✗ Build failed!" 
                       << Color::get(Color::Reset);
         }
         
-        std::cout << "\n\n";
-        std::cout << "  Files:     " << stats.compiledFiles << "/" << stats.totalFiles << " compiled\n";
-        std::cout << "  Errors:    " << stats.errorCount << "\n";
-        std::cout << "  Warnings:  " << stats.warningCount << "\n";
-        std::cout << "  Time:      " << Utils::formatTime(stats.totalTimeMs) << "\n";
+        s_logger.info("\n\n");
+        s_logger.info("  Files:     ");
+        s_logger.info("  Errors:    ");
+        s_logger.info("  Warnings:  ");
+        s_logger.info("  Time:      ");
     }
 };
 
 class JsonFormatter : public OutputFormatter {
 public:
     void begin() override {
-        std::cout << "{\"diagnostics\":[";
+        s_logger.info("{\");
         m_first = true;
     }
     
     void end() override {
-        std::cout << "]}\n";
+        s_logger.info("]}\n");
     }
     
     void diagnostic(const Diagnostic& diag) override {
-        if (!m_first) std::cout << ",";
+        if (!m_first) s_logger.info(",");
         m_first = false;
         
-        std::cout << "{"
-                  << "\"severity\":" << static_cast<int>(diag.severity) << ","
-                  << "\"message\":\"" << Utils::escapeJson(diag.message) << "\","
-                  << "\"file\":\"" << Utils::escapeJson(diag.file) << "\","
-                  << "\"line\":" << diag.line << ","
-                  << "\"column\":" << diag.column
-                  << "}";
+        s_logger.info("{");
     }
     
     void result(const CompileResult& result) override {}
     
     void summary(const BuildStats& stats) override {
-        std::cout << ",\"summary\":{"
-                  << "\"success\":" << (stats.failedFiles == 0 ? "true" : "false") << ","
-                  << "\"totalFiles\":" << stats.totalFiles << ","
-                  << "\"compiledFiles\":" << stats.compiledFiles << ","
-                  << "\"errors\":" << stats.errorCount << ","
-                  << "\"warnings\":" << stats.warningCount << ","
-                  << "\"timeMs\":" << stats.totalTimeMs
-                  << "}";
+        s_logger.info(",\");
     }
     
 private:
@@ -1633,34 +1621,22 @@ private:
 class XmlFormatter : public OutputFormatter {
 public:
     void begin() override {
-        std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-        std::cout << "<build>\n<diagnostics>\n";
+        s_logger.info("<?xml version=\");
+        s_logger.info("<build>\n<diagnostics>\n");
     }
     
     void end() override {
-        std::cout << "</diagnostics>\n</build>\n";
+        s_logger.info("</diagnostics>\n</build>\n");
     }
     
     void diagnostic(const Diagnostic& diag) override {
-        std::cout << "<diagnostic "
-                  << "severity=\"" << static_cast<int>(diag.severity) << "\" "
-                  << "file=\"" << Utils::escapeXml(diag.file) << "\" "
-                  << "line=\"" << diag.line << "\" "
-                  << "column=\"" << diag.column << "\">"
-                  << Utils::escapeXml(diag.message)
-                  << "</diagnostic>\n";
+        s_logger.info("<diagnostic ");
     }
     
     void result(const CompileResult& result) override {}
     
     void summary(const BuildStats& stats) override {
-        std::cout << "<summary "
-                  << "success=\"" << (stats.failedFiles == 0 ? "true" : "false") << "\" "
-                  << "total=\"" << stats.totalFiles << "\" "
-                  << "compiled=\"" << stats.compiledFiles << "\" "
-                  << "errors=\"" << stats.errorCount << "\" "
-                  << "warnings=\"" << stats.warningCount << "\" "
-                  << "timeMs=\"" << stats.totalTimeMs << "\"/>\n";
+        s_logger.info("<summary ");
     }
 };
 
@@ -1716,9 +1692,9 @@ public:
         // Check for input files
         const auto& inputs = parser.getPositional();
         if (inputs.empty()) {
-            std::cerr << Color::get(Color::Red) << "Error: " << Color::get(Color::Reset)
+            s_logger.error( Color::get(Color::Red) << "Error: " << Color::get(Color::Reset)
                       << "No input files specified\n";
-            std::cerr << "Use --help for usage information\n";
+            s_logger.error( "Use --help for usage information\n";
             return 1;
         }
         
@@ -1776,8 +1752,7 @@ public:
             // Setup signal handler
 #ifndef _WIN32
             signal(SIGINT, [](int) {
-                std::cout << "\n" << Color::get(Color::Cyan) 
-                          << "Stopping watch mode..." << Color::get(Color::Reset) << "\n";
+                s_logger.info("\n");
                 exit(0);
             });
 #endif
@@ -1792,14 +1767,14 @@ public:
     
 private:
     void printBanner() {
-        std::cout << Color::get(Color::Cyan);
-        std::cout << R"(
+        s_logger.info( Color::get(Color::Cyan);
+        s_logger.info( R"(
   ╦═╗╔═╗╦ ╦╦═╗═╗ ╦╔╦╗  ╔═╗╔═╗╔╦╗╔═╗╦╦  ╔═╗╦═╗
   ╠╦╝╠═╣║║║╠╦╝╔╩╦╝ ║║  ║  ║ ║║║║╠═╝║║  ║╣ ╠╦╝
   ╩╚═╩ ╩╚╩╝╩╚═╩ ╚══╩╝  ╚═╝╚═╝╩ ╩╩  ╩╩═╝╚═╝╩╚═
 )";
-        std::cout << Color::get(Color::Reset);
-        std::cout << "  Version " << VERSION << " - Built " << BUILD_DATE << "\n\n";
+        s_logger.info( Color::get(Color::Reset);
+        s_logger.info("  Version ");
     }
     
     int compile(const CompileOptions& options) {
@@ -1877,11 +1852,7 @@ private:
                 
                 // Print additional info
                 if (options.verbose && options.outputStyle == OutputStyle::Human) {
-                    std::cout << "  Time: " << Utils::formatTime(result.compilationTimeMs)
-                              << ", Input: " << Utils::formatSize(result.inputSize)
-                              << ", Output: " << Utils::formatSize(result.outputSize)
-                              << ", Tokens: " << result.tokenCount
-                              << ", AST Nodes: " << result.astNodeCount << "\n";
+                    s_logger.info("  Time: ");
                 }
                 
                 // Emit IR/ASM if requested
@@ -1889,7 +1860,7 @@ private:
                     std::string irFile = fs::path(file).stem().string() + ".ir";
                     Utils::writeFile(irFile, result.irDump);
                     if (options.verbose) {
-                        std::cout << "  IR written to: " << irFile << "\n";
+                        s_logger.info("  IR written to: ");
                     }
                 }
                 
@@ -1897,7 +1868,7 @@ private:
                     std::string asmFile = fs::path(file).stem().string() + ".s";
                     Utils::writeFile(asmFile, result.asmDump);
                     if (options.verbose) {
-                        std::cout << "  Assembly written to: " << asmFile << "\n";
+                        s_logger.info("  Assembly written to: ");
                     }
                 }
             }
@@ -1912,12 +1883,10 @@ private:
         
         // Print timing summary
         if (options.showTimings && options.outputStyle == OutputStyle::Human) {
-            std::cout << "\n" << Color::get(Color::Bold) << "Timing Summary:" 
-                      << Color::get(Color::Reset) << "\n";
-            std::cout << "  Total time: " << Utils::formatTime(stats.totalTimeMs) << "\n";
+            s_logger.info("\n");
+            s_logger.info("  Total time: ");
             if (stats.compiledFiles > 0) {
-                std::cout << "  Average per file: " 
-                          << Utils::formatTime(stats.totalTimeMs / stats.compiledFiles) << "\n";
+                s_logger.info("  Average per file: ");
             }
         }
         

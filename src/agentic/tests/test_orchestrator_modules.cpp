@@ -25,6 +25,9 @@
 #include <functional>
 #include <filesystem>
 
+#include "logging/logger.h"
+static Logger s_logger("test_orchestrator_modules");
+
 // Module headers under test
 #include "ToolRegistry.h"
 #include "FIMPromptBuilder.h"
@@ -54,7 +57,7 @@ static std::vector<TestResult> g_results;
 
 #define TEST_ASSERT(cond, name) do { \
     if (!(cond)) { \
-        std::cerr << "  FAIL: " << name << " (" #cond ")" << std::endl; \
+        s_logger.error( "  FAIL: " << name << " (" #cond ")" << std::endl; \
         g_testsFailed++; \
         g_results.push_back({false, name, #cond, 0}); \
         return; \
@@ -63,7 +66,7 @@ static std::vector<TestResult> g_results;
 
 #define TEST_ASSERT_EQ(a, b, name) do { \
     if ((a) != (b)) { \
-        std::cerr << "  FAIL: " << name << " (expected=" << (b) << " got=" << (a) << ")" << std::endl; \
+        s_logger.error( "  FAIL: " << name << " (expected=" << (b) << " got=" << (a) << ")" << std::endl; \
         g_testsFailed++; \
         g_results.push_back({false, name, "mismatch", 0}); \
         return; \
@@ -71,13 +74,13 @@ static std::vector<TestResult> g_results;
 } while(0)
 
 #define TEST_PASS(name) do { \
-    std::cout << "  PASS: " << name << std::endl; \
+    s_logger.info("  PASS: "); \
     g_testsPassed++; \
     g_results.push_back({true, name, "", 0}); \
 } while(0)
 
 #define TEST_SKIP(name, reason) do { \
-    std::cout << "  SKIP: " << name << " (" << reason << ")" << std::endl; \
+    s_logger.info("  SKIP: "); \
     g_testsSkipped++; \
 } while(0)
 
@@ -515,15 +518,15 @@ void test_disk_recovery_tool_missing_action() {
 // ==========================================================================
 
 int main() {
-    std::cout << "========================================" << std::endl;
-    std::cout << "  RawrXD Orchestrator Module Tests" << std::endl;
-    std::cout << "  Regression Suite v1.0" << std::endl;
-    std::cout << "========================================" << std::endl;
+    s_logger.info("========================================");
+    s_logger.info("  RawrXD Orchestrator Module Tests");
+    s_logger.info("  Regression Suite v1.0");
+    s_logger.info("========================================");
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
     // § 1. ToolRegistry
-    std::cout << "\n--- ToolRegistry Tests ---" << std::endl;
+    s_logger.info("\n--- ToolRegistry Tests ---");
     test_xmacro_enum_count();
     test_registry_singleton();
     test_registry_list_tools();
@@ -536,7 +539,7 @@ int main() {
     test_registry_system_prompt();
 
     // § 2. FIMPromptBuilder
-    std::cout << "\n--- FIMPromptBuilder Tests ---" << std::endl;
+    s_logger.info("\n--- FIMPromptBuilder Tests ---");
     test_fim_build_basic();
     test_fim_build_empty_content();
     test_fim_build_invalid_cursor();
@@ -545,19 +548,19 @@ int main() {
     test_fim_prefix_ratio();
 
     // § 3. AgentOllamaClient
-    std::cout << "\n--- AgentOllamaClient Tests ---" << std::endl;
+    s_logger.info("\n--- AgentOllamaClient Tests ---");
     test_ollama_config_defaults();
     test_ollama_client_construction();
     test_ollama_cancel_before_stream();
 
     // § 4. AgentOrchestrator
-    std::cout << "\n--- AgentOrchestrator Tests ---" << std::endl;
+    s_logger.info("\n--- AgentOrchestrator Tests ---");
     test_orchestrator_construction();
     test_orchestrator_config();
     test_orchestrator_cancel();
 
     // § 5. DiskRecoveryAgent
-    std::cout << "\n--- DiskRecoveryAgent Tests ---" << std::endl;
+    s_logger.info("\n--- DiskRecoveryAgent Tests ---");
     test_recovery_agent_construction();
     test_recovery_agent_stats_uninitialized();
     test_recovery_agent_abort_safe();
@@ -566,12 +569,12 @@ int main() {
     test_recovery_result_factories();
 
     // § 6. ToolExecResult
-    std::cout << "\n--- ToolExecResult Tests ---" << std::endl;
+    s_logger.info("\n--- ToolExecResult Tests ---");
     test_tool_exec_result_ok();
     test_tool_exec_result_error();
 
     // § 7. Disk Recovery Tool Integration
-    std::cout << "\n--- Disk Recovery Tool Integration ---" << std::endl;
+    s_logger.info("\n--- Disk Recovery Tool Integration ---");
     test_disk_recovery_tool_stats_action();
     test_disk_recovery_tool_invalid_action();
     test_disk_recovery_tool_missing_action();
@@ -580,12 +583,10 @@ int main() {
     auto elapsed = std::chrono::duration<double, std::milli>(endTime - startTime).count();
 
     // Summary
-    std::cout << "\n========================================" << std::endl;
-    std::cout << "  Results: " << g_testsPassed << " passed, "
-              << g_testsFailed << " failed, "
-              << g_testsSkipped << " skipped" << std::endl;
-    std::cout << "  Elapsed: " << elapsed << " ms" << std::endl;
-    std::cout << "========================================" << std::endl;
+    s_logger.info("\n========================================");
+    s_logger.info("  Results: ");
+    s_logger.info("  Elapsed: ");
+    s_logger.info("========================================");
 
     return g_testsFailed > 0 ? 1 : 0;
 }

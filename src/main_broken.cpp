@@ -7,6 +7,9 @@
 #include <iomanip>
 #include <thread>
 
+#include "logging/logger.h"
+static Logger s_logger("main_broken");
+
 #include "vsix_loader.h"
 #include "memory_core.h"
 #include "hot_patcher.h"
@@ -31,16 +34,16 @@
 #define COLOR_MAGENTA "\033[35m"
 
 void PrintBanner() {
-    std::cout << COLOR_MAGENTA << R"(
+    s_logger.info( COLOR_MAGENTA << R"(
     ____  ___ _       _____  ____     _  ______ 
    / __ \/   | |     / / __ \/ __ \   | |/ /__ \
   / /_/ / /| | | /| / / /_/ / /_/ /   |   /__/ /
  / _, _/ ___ | |/ |/ / _, _/ _, _/   /   |  / / 
 /_/ |_/_/  |_|__/|__/_/ |_/_/ |_|   /_/|_| /_/  
     )" << COLOR_RESET << std::endl;
-    std::cout << COLOR_CYAN << "    REV 7.0 - ULTIMATE FINAL IMPLEMENTATION\n" << COLOR_RESET;
-    std::cout << "    Zero Simulation | Native Memory | Live Patching | Real Logic\n\n";
-    std::cout << "Type " << COLOR_YELLOW << "/help" << COLOR_RESET << " for commands\n" << std::endl;
+    s_logger.info( COLOR_CYAN << "    REV 7.0 - ULTIMATE FINAL IMPLEMENTATION\n" << COLOR_RESET;
+    s_logger.info("    Zero Simulation | Native Memory | Live Patching | Real Logic\n\n");
+    s_logger.info("Type ");
 }
 
 std::vector<std::string> SplitArgs(const std::string& input) {
@@ -55,12 +58,12 @@ std::vector<std::string> SplitArgs(const std::string& input) {
 
 // Demo security function for hotpatching
 __declspec(noinline) bool SecurityCheck() {
-    std::cout << "[SECURITY] Verifying License Key...\n";
+    s_logger.info("[SECURITY] Verifying License Key...\n");
     return false;
 }
 
 static void SignalHandlerFunc(int signal) {
-    std::cout << "\n[ENGINE] Caught signal " << signal << ". Flushing memory...\n";
+    s_logger.info("\n[ENGINE] Caught signal ");
     if (GlobalContext::Get().memory) GlobalContext::Get().memory->Wipe();
     exit(0);
 }
@@ -78,7 +81,7 @@ int main(int argc, char** argv) {
     // Initialize core runtime
     init_runtime();
 
-    std::cout << "[SYSTEM] Universal Generator Service Ready." << std::endl;
+    s_logger.info("[SYSTEM] Universal Generator Service Ready.");
 
     // Initialize Global Context
     GlobalContext& ctx = GlobalContext::Get();
@@ -95,7 +98,7 @@ int main(int argc, char** argv) {
 
     // Default memory allocation
     if (!ctx.memory->Allocate(ContextTier::TIER_32K)) {
-        std::cerr << COLOR_RED << "[FATAL] Failed to allocate default memory context\n" << COLOR_RESET;
+        s_logger.error( COLOR_RED << "[FATAL] Failed to allocate default memory context\n" << COLOR_RESET;
         return 1;
     }
 
@@ -112,7 +115,7 @@ int main(int argc, char** argv) {
     }
 
     if (gui_mode) {
-         std::cout << "[SYSTEM] Starting Win32 IDE Environment...\n";
+         s_logger.info("[SYSTEM] Starting Win32 IDE Environment...\n");
          IDEWindow ide;
          if (ide.Initialize(GetModuleHandle(NULL))) {
              // Message Pump
@@ -122,7 +125,7 @@ int main(int argc, char** argv) {
                  DispatchMessage(&msg);
              }
          } else {
-             std::cerr << "Failed to initialize IDE Window.\n";
+             s_logger.error( "Failed to initialize IDE Window.\n";
              return 1;
          }
     } else {
@@ -142,7 +145,7 @@ int main(int argc, char** argv) {
 
         // Start Shell
         g_shell->Start(agent, memory_manager, &loader, nullptr, 
-            [](const std::string& s) { std::cout << s; },
+            [](const std::string& s) { s_logger.info( s; },
             [](const std::string& s) { /* Input callback */ }
         );
         
@@ -155,14 +158,14 @@ int main(int argc, char** argv) {
         delete memory_manager;
     }
 
-    std::cout << "\n[ENGINE] Shutting down...\n";
+    s_logger.info("\n[ENGINE] Shutting down...\n");
     if (ctx.memory) ctx.memory->Wipe();
     return 0;
 }
     std::string input;
     while (true) {
         float util = ctx.memory->GetUtilizationPercentage();
-        std::cout << COLOR_GREEN << "Rawr[" << std::fixed << std::setprecision(1) << util << "%]> " << COLOR_RESET;
+        s_logger.info( COLOR_GREEN << "Rawr[" << std::fixed << std::setprecision(1) << util << "%]> " << COLOR_RESET;
         
         if (!std::getline(std::cin, input)) break;
         if (input.empty()) continue;
@@ -174,32 +177,31 @@ int main(int argc, char** argv) {
         if (cmd[0] == '!') {
             if (cmd == "!plugin") {
                 if (args.size() < 2) {
-                    std::cout << loader.GetCLIHelp() << "\n";
+                    s_logger.info( loader.GetCLIHelp() << "\n";
                     continue;
                 }
                 std::string sub = args[1];
                 
                 if (sub == "load" && args.size() > 2) {
                     if (loader.LoadPlugin(args[2])) 
-                        std::cout << COLOR_GREEN << "[OK] Plugin loaded\n" << COLOR_RESET;
+                        s_logger.info( COLOR_GREEN << "[OK] Plugin loaded\n" << COLOR_RESET;
                     else 
-                        std::cout << COLOR_RED << "[ERR] Load failed\n" << COLOR_RESET;
+                        s_logger.info( COLOR_RED << "[ERR] Load failed\n" << COLOR_RESET;
                 }
                 else if (sub == "list") {
                     auto plugins = loader.GetLoadedPlugins();
-                    std::cout << "Loaded (" << plugins.size() << "):\n";
+                    s_logger.info("Loaded (");
                     for(auto* p : plugins) {
-                        std::cout << "  " << (p->enabled ? "[*]" : "[ ]") 
-                                  << " " << p->id << " v" << p->version << "\n";
+                        s_logger.info("  ");
                     }
                 }
                 else if (sub == "help" && args.size() > 2) {
-                    std::cout << loader.GetPluginHelp(args[2]) << "\n";
+                    s_logger.info( loader.GetPluginHelp(args[2]) << "\n";
                 }
             }
             else if (cmd == "!memory") {
                 if (args.size() < 2) {
-                    std::cout << "Usage: !memory <load|status|unload> [size]\n";
+                    s_logger.info("Usage: !memory <load|status|unload> [size]\n");
                     continue;
                 }
                 std::string sub = args[1];
@@ -215,18 +217,17 @@ int main(int argc, char** argv) {
                     else if (sz == "1m") tier = ContextTier::TIER_1M;
                     
                     if (ctx.memory->Reallocate(tier)) {
-                        std::cout << COLOR_GREEN << "[OK] Memory: " << ctx.memory->GetTierName() 
+                        s_logger.info( COLOR_GREEN << "[OK] Memory: " << ctx.memory->GetTierName() 
                                   << " (" << ctx.memory->GetCapacity() << " tokens)\n" << COLOR_RESET;
                     }
                 }
                 else if (sub == "status") {
-                    std::cout << "Tier: " << ctx.memory->GetTierName() << "\n";
-                    std::cout << "Usage: " << ctx.memory->GetUsage() << "/" << ctx.memory->GetCapacity() 
-                              << " (" << ctx.memory->GetUtilizationPercentage() << "%)\n";
+                    s_logger.info("Tier: ");
+                    s_logger.info("Usage: ");
                 }
                 else if (sub == "unload") {
                     ctx.memory->Deallocate();
-                    std::cout << "[OK] Memory released\n";
+                    s_logger.info("[OK] Memory released\n");
                 }
             }
             else if (cmd == "!patch") {
@@ -243,8 +244,8 @@ int main(int argc, char** argv) {
         else if (cmd[0] == '+') {
             if (cmd == "+generate") {
                 if (args.size() < 3) {
-                    std::cout << "Usage: +generate <project_name> <language> [output_dir]\n";
-                    std::cout << "Example: +generate my_app cpp\n";
+                    s_logger.info("Usage: +generate <project_name> <language> [output_dir]\n");
+                    s_logger.info("Example: +generate my_app cpp\n");
                     continue;
                 }
                 
@@ -277,15 +278,15 @@ int main(int argc, char** argv) {
                 bool success = gen.Generate(project_name, lang, output_dir);
                 
                 if (success) {
-                    std::cout << COLOR_GREEN << "✓ Generated " << project_name << " in " << output_dir.string() << "\n" << COLOR_RESET;
+                    s_logger.info( COLOR_GREEN << "✓ Generated " << project_name << " in " << output_dir.string() << "\n" << COLOR_RESET;
                 } else {
-                    std::cout << COLOR_RED << "✗ Failed to generate project\n" << COLOR_RESET;
+                    s_logger.info( COLOR_RED << "✗ Failed to generate project\n" << COLOR_RESET;
                 }
             }
             else if (cmd == "+generate-from-template") {
                 if (args.size() < 3) {
-                    std::cout << "Usage: +generate-from-template <template_name> <project_name> [output_dir]\n";
-                    std::cout << "Example: +generate-from-template web-app my_website\n";
+                    s_logger.info("Usage: +generate-from-template <template_name> <project_name> [output_dir]\n");
+                    s_logger.info("Example: +generate-from-template web-app my_website\n");
                     continue;
                 }
                 
@@ -297,30 +298,30 @@ int main(int argc, char** argv) {
                 bool success = gen.GenerateFromTemplate(template_name, project_name, output_dir);
                 
                 if (success) {
-                    std::cout << COLOR_GREEN << "✓ Generated " << project_name << " from template " << template_name << "\n" << COLOR_RESET;
+                    s_logger.info( COLOR_GREEN << "✓ Generated " << project_name << " from template " << template_name << "\n" << COLOR_RESET;
                 } else {
-                    std::cout << COLOR_RED << "✗ Failed to generate from template\n" << COLOR_RESET;
+                    s_logger.info( COLOR_RED << "✗ Failed to generate from template\n" << COLOR_RESET;
                 }
             }
             else if (cmd == "+list-languages") {
                 CoreGenerator& gen = CoreGenerator::GetInstance();
                 auto languages = gen.ListLanguages();
-                std::cout << "Supported languages (" << languages.size() << "):\n";
+                s_logger.info("Supported languages (");
                 for (const auto& lang : languages) {
-                    std::cout << "  • " << lang << "\n";
+                    s_logger.info("  • ");
                 }
             }
             else if (cmd == "+list-templates") {
                 CoreGenerator& gen = CoreGenerator::GetInstance();
                 auto tmpl_list = gen.ListTemplates();
-                std::cout << "Available templates (" << tmpl_list.size() << "):\n";
+                s_logger.info("Available templates (");
                 for (const auto& tmpl : tmpl_list) {
-                    std::cout << "  • " << tmpl << "\n";
+                    s_logger.info("  • ");
                 }
             }
             else if (cmd == "+generate-with-tests") {
                 if (args.size() < 3) {
-                    std::cout << "Usage: +generate-with-tests <project_name> <language> [output_dir]\n";
+                    s_logger.info("Usage: +generate-with-tests <project_name> <language> [output_dir]\n");
                     continue;
                 }
                 
@@ -340,14 +341,14 @@ int main(int argc, char** argv) {
                 bool success = gen.GenerateWithTests(project_name, lang, output_dir);
                 
                 if (success) {
-                    std::cout << COLOR_GREEN << "✓ Generated " << project_name << " with tests\n" << COLOR_RESET;
+                    s_logger.info( COLOR_GREEN << "✓ Generated " << project_name << " with tests\n" << COLOR_RESET;
                 } else {
-                    std::cout << COLOR_RED << "✗ Failed to generate project with tests\n" << COLOR_RESET;
+                    s_logger.info( COLOR_RED << "✗ Failed to generate project with tests\n" << COLOR_RESET;
                 }
             }
             else if (cmd == "+generate-with-ci") {
                 if (args.size() < 3) {
-                    std::cout << "Usage: +generate-with-ci <project_name> <language> [output_dir]\n";
+                    s_logger.info("Usage: +generate-with-ci <project_name> <language> [output_dir]\n");
                     continue;
                 }
                 
@@ -367,14 +368,14 @@ int main(int argc, char** argv) {
                 bool success = gen.GenerateWithCI(project_name, lang, output_dir);
                 
                 if (success) {
-                    std::cout << COLOR_GREEN << "✓ Generated " << project_name << " with CI/CD\n" << COLOR_RESET;
+                    s_logger.info( COLOR_GREEN << "✓ Generated " << project_name << " with CI/CD\n" << COLOR_RESET;
                 } else {
-                    std::cout << COLOR_RED << "✗ Failed to generate project with CI\n" << COLOR_RESET;
+                    s_logger.info( COLOR_RED << "✗ Failed to generate project with CI\n" << COLOR_RESET;
                 }
             }
             else if (cmd == "+generate-with-docker") {
                 if (args.size() < 3) {
-                    std::cout << "Usage: +generate-with-docker <project_name> <language> [output_dir]\n";
+                    s_logger.info("Usage: +generate-with-docker <project_name> <language> [output_dir]\n");
                     continue;
                 }
                 
@@ -395,20 +396,20 @@ int main(int argc, char** argv) {
                 bool success = gen.GenerateWithDocker(project_name, lang, output_dir);
                 
                 if (success) {
-                    std::cout << COLOR_GREEN << "✓ Generated " << project_name << " with Docker\n" << COLOR_RESET;
+                    s_logger.info( COLOR_GREEN << "✓ Generated " << project_name << " with Docker\n" << COLOR_RESET;
                 } else {
-                    std::cout << COLOR_RED << "✗ Failed to generate project with Docker\n" << COLOR_RESET;
+                    s_logger.info( COLOR_RED << "✗ Failed to generate project with Docker\n" << COLOR_RESET;
                 }
             }
             else {
-                std::cout << "Unknown generator command: " << cmd << "\n";
-                std::cout << "Try +list-languages or +list-templates\n";
+                s_logger.info("Unknown generator command: ");
+                s_logger.info("Try +list-languages or +list-templates\n");
             }
         }
         // AGENT COMMANDS (/)
         else if (cmd[0] == '/') {
             if (cmd == "/help") {
-                std::cout << R"(
+                s_logger.info( R"(
 === RAWER ENGINE COMMANDS ===
 
 MEMORY:
@@ -437,17 +438,17 @@ Any other input is added to context memory.
             }
             else if (cmd == "/hack") {
                 if (SecurityCheck()) {
-                    std::cout << COLOR_GREEN << "[ACCESS GRANTED] Premium Unlocked\n" << COLOR_RESET;
+                    s_logger.info( COLOR_GREEN << "[ACCESS GRANTED] Premium Unlocked\n" << COLOR_RESET;
                 } else {
-                    std::cout << COLOR_RED << "[ACCESS DENIED] Invalid License\n" << COLOR_RESET;
-                    std::cout << "Tip: Try /hotpatch\n";
+                    s_logger.info( COLOR_RED << "[ACCESS DENIED] Invalid License\n" << COLOR_RESET;
+                    s_logger.info("Tip: Try /hotpatch\n");
                 }
             }
             else if (cmd == "/hotpatch") {
                 void* addr = (void*)&SecurityCheck;
                 std::vector<unsigned char> payload = {0xB0, 0x01, 0xC3}; // mov al,1; ret
                 if (g_patcher->ApplyPatch("LicenseBypass", addr, payload)) {
-                    std::cout << COLOR_CYAN << "[PATCH] Security neutralized\n" << COLOR_RESET;
+                    s_logger.info( COLOR_CYAN << "[PATCH] Security neutralized\n" << COLOR_RESET;
                 }
             }
             else if (cmd == "/unpatch") {
@@ -455,7 +456,7 @@ Any other input is added to context memory.
             }
             else if (cmd == "/clear") {
                 g_memory->Wipe();
-                std::cout << "[OK] Context wiped\n";
+                s_logger.info("[OK] Context wiped\n");
             }
             else if (cmd == "/exit") {
                 break;
@@ -463,13 +464,13 @@ Any other input is added to context memory.
             else if (cmd == "/plan" && args.size() > 1) {
                 std::string task;
                 for (size_t i = 1; i < args.size(); i++) task += args[i] + " ";
-                std::cout << "[PLAN] Analyzing: " << task << "\n";
-                std::cout << "[PLAN] Context available: " << g_memory->GetCapacity() << " tokens\n";
+                s_logger.info("[PLAN] Analyzing: ");
+                s_logger.info("[PLAN] Context available: ");
                 // Plan generation would interface with inference here
             }
             else {
                 if (!loader.ExecuteCommand(cmd)) {
-                    std::cout << "[AGENT] Unknown command: " << cmd << "\n";
+                    s_logger.info("[AGENT] Unknown command: ");
                 }
             }
         }
@@ -478,12 +479,12 @@ Any other input is added to context memory.
             g_memory->PushContext(input);
             // In full implementation, this would trigger inference
             if (g_memory->GetUtilizationPercentage() > 90.0f) {
-                std::cout << COLOR_YELLOW << "[WARN] Context window critical\n" << COLOR_RESET;
+                s_logger.info( COLOR_YELLOW << "[WARN] Context window critical\n" << COLOR_RESET;
             }
         }
     }
 
-    std::cout << "\n[ENGINE] Shutting down...\n";
+    s_logger.info("\n[ENGINE] Shutting down...\n");
     if (g_memory) g_memory->Wipe();
     return 0;
 }
