@@ -52,6 +52,24 @@ DEFAULT_MODELS = [
     "rawrxd-full",
 ]
 
+# Cross-platform model directories for GGUF/Ollama scanning
+_MODEL_DIRS: list[str] = []
+if os.name == "nt":
+    _MODEL_DIRS = [
+        os.path.expandvars(r"%USERPROFILE%\.ollama\models"),
+        r"D:\OllamaModels",
+        r"D:\models",
+        r"C:\models",
+    ]
+else:
+    _MODEL_DIRS = [
+        os.path.expanduser("~/.ollama/models"),
+        "/opt/models",
+        "./models",
+    ]
+if os.environ.get("RAWRXD_MODEL_PATH"):
+    _MODEL_DIRS.insert(0, os.environ["RAWRXD_MODEL_PATH"])
+
 DEFAULT_TOOLS = [
     {"id": "file_reader", "name": "file_reader", "description": "Read project files"},
     {"id": "code_edit", "name": "code_edit", "description": "Apply code edits"},
@@ -146,10 +164,71 @@ def _build_tool_calls(prompt: str) -> list[dict[str, Any]]:
     return calls
 
 
+def _query_ollama(model: str, messages: list[dict[str, Any]]) -> str | None:
+    """Try to proxy a request to Ollama on localhost:11434. Returns None on failure."""
+    import urllib.request
+    import urllib.error
+
+    prompt_parts: list[str] = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        prompt_parts.append(f"<|{role}|>\n{content}")
+    prompt_parts.append("<|assistant|>")
+    prompt = "\n".join(prompt_parts)
+
+    try:
+        payload = json.dumps({"model": model or "llama3.2:3b", "prompt": prompt, "stream": False})
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=payload.encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            answer = data.get("response", "").strip()
+            return answer if answer else None
+    except Exception:
+        return None
+
+
+def _scan_model_dirs() -> list[dict[str, Any]]:
+    """Scan configured directories for GGUF/BIN/SafeTensors model files."""
+    found: list[dict[str, Any]] = []
+    for dir_path in _MODEL_DIRS:
+        if not os.path.isdir(dir_path):
+            continue
+        for root, _dirs, files in os.walk(dir_path):
+            for fname in files:
+                ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+                is_blob = fname.startswith("sha256-") and "blobs" in root.lower()
+                if ext in {"gguf", "bin", "safetensors"} or is_blob:
+                    fpath = os.path.join(root, fname)
+                    try:
+                        size = os.path.getsize(fpath)
+                    except OSError:
+                        continue
+                    found.append({"id": fname, "path": fpath, "type": ext or "ollama", "size_bytes": size})
+    return found
+
+
 def _build_response(prompt: str, model: str, mode: str) -> str:
     cleaned = prompt.strip()
     if not cleaned:
         return f"RawrEngine local mode is ready on model '{model}'."
+
+    # Try Ollama backend first for a real AI response
+    messages = [{"role": "user", "content": cleaned}]
+    if mode == "plan":
+        messages.insert(0, {"role": "system", "content": "Break the task into numbered steps. Return only the steps."})
+    elif mode == "full":
+        messages.insert(0, {"role": "system", "content": "You are an AI coding agent. Execute the request step by step."})
+    ollama_answer = _query_ollama(model, messages)
+    if ollama_answer:
+        return ollama_answer
+
+    # Fallback: structured local response
     if mode == "plan":
         return f"Generated an execution plan for: {cleaned}"
     if mode == "full":
@@ -372,7 +451,11 @@ class RawrEngineHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/v1/models":
-            models = [{"id": model} for model in STATE.models]
+            models = [{"id": m} for m in STATE.models]
+            # Append any GGUF/Ollama models found on disk
+            for scanned in _scan_model_dirs():
+                if scanned["id"] not in STATE.models:
+                    models.append({"id": scanned["id"], "type": scanned["type"]})
             self._json(HTTPStatus.OK, {"object": "list", "models": models})
             return
 

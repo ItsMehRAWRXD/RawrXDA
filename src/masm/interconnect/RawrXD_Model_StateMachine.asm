@@ -23,8 +23,10 @@ ModelState_Transition PROC FRAME
 ModelState_Transition ENDP
 
 ModelState_AcquireInstance PROC FRAME
-    ; Returns mock instance pointer
-    lea rax, [rsp] ; Invalid but non-null for now
+    ; Returns NULL to signal "no instance available" — callers must
+    ; check for NULL before use.  The old lea rax,[rsp] returned a
+    ; dangling stack pointer that became invalid after return.
+    xor rax, rax
     ret
 ModelState_AcquireInstance ENDP
 
