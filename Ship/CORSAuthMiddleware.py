@@ -7,8 +7,16 @@ Adds cross-origin support and API key validation to RawrEngine
 import functools
 import secrets
 from typing import Optional, Callable
-from flask import Flask, request, jsonify, make_response, Response
 import logging
+
+try:
+    from flask import Flask, request, jsonify, make_response, Response
+    HAS_FLASK = True
+except ImportError:
+    HAS_FLASK = False
+    # Provide type stubs so class definitions don't break
+    class Response:  # type: ignore[no-redef]
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +36,7 @@ class UniversalAccessGateway:
         self.request_count = 0
         self.active_sessions = {}
         
-    def init_app(self, app: Flask):
+    def init_app(self, app):
         """Register with Flask application"""
         
         @app.before_request
