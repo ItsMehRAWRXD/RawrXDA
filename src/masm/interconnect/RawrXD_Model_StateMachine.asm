@@ -10,6 +10,11 @@ OPTION WIN64:3
 include \masm64\include64\windows.inc
 include \masm64\include64\kernel32.inc
 
+.DATA
+; Stable storage to avoid returning stack addresses.
+; The interconnect expects a non-null handle-like pointer.
+ModelState_Instance dq 0
+
 .CODE
 
 ModelState_Initialize PROC FRAME
@@ -23,10 +28,9 @@ ModelState_Transition PROC FRAME
 ModelState_Transition ENDP
 
 ModelState_AcquireInstance PROC FRAME
-    ; Stub: return NULL until real instance allocation is implemented.
-    ; Callers must check for null before use. Previously returned [rsp] which
-    ; was invalid after return (stack address).
-    xor rax, rax
+    ; Returns a stable mock instance pointer (non-null, valid after return).
+    ; Previously returned [rsp] which was invalid after return (stack address).
+    lea rax, ModelState_Instance
     ret
 ModelState_AcquireInstance ENDP
 

@@ -46,7 +46,7 @@ Top extensions in the single-KiB band:
 
 1. **Stack address returned as a persistent instance handle** — FIXED
    - Was: `src/masm/interconnect/RawrXD_Model_StateMachine.asm:25-28` returned `lea rax, [rsp]`
-   - Now: returns `xor rax, rax` (NULL). Callers must check for null.
+   - Now: returns stable `ModelState_Instance` pointer (valid after return).
 
 2. **Digestion engine stub returns success while real pipeline is TODO** — FIXED
    - Was: `src/digestion/RawrXD_DigestionEngine.asm:33-35` returned S_DIGEST_OK for non-null args
