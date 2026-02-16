@@ -21,6 +21,28 @@ This audit identifies all references to "kb" (kilobyte) throughout the RawrXD ID
 
 ---
 
+## Special Focus: "Single KB" References
+
+The audit specifically searched for anything related to "a single KB" - here are the key findings:
+
+### Exactly 1KB (1024 bytes)
+- **Files exactly 1024 bytes**: 3 files identified
+- **Assembly buffers**: Multiple 1024-byte allocations in assembly code
+- **PE alignment**: 1024-byte section alignment constants
+
+### "Single KB" Context References
+- **Guard pages**: One 4KB page (`src/asm/rawrxd_cot_engine.asm:169`)
+- **Single DLL**: Zero external dependencies, single 256KB DLL (`Ship/DELIVERY_SUMMARY.md:365`)
+- **Standalone executable**: Single 2.5KB executable (`TITAN_BUILD_REPORT.md:246`)
+
+### Common "1KB" Allocations
+- Buffer sizes: 1024-byte buffers used throughout assembly code
+- Lookup tables: 256 × 4-byte entries = 1024 bytes (common pattern)
+- File headers: First 1024 bytes read for analysis
+- Memory structures: BFT/Gossip state structures (1024 bytes each)
+
+---
+
 ## 1. PowerShell Scripts Using `/1KB` Pattern
 
 ### 1.1 Build Scripts
@@ -154,6 +176,10 @@ This audit identifies all references to "kb" (kilobyte) throughout the RawrXD ID
 
 ### 3.1 Summary Statistics
 - **Total files ~1KB (900-1100 bytes)**: 155 files (excluding 3rdparty and test_output)
+- **Files exactly 1024 bytes**: 3 files
+  - `./src/ggml-vulkan/vulkan-shaders/add_id.comp`
+  - `./src/visualization/VISUALIZATION_FOLDER_AUDIT.md`
+  - `./3rdparty/ggml/src/ggml-vulkan/vulkan-shaders/add_id.comp`
 - **Categories**: Configuration, headers, build scripts, CMake files, test fixtures
 
 ### 3.2 Key Categories
@@ -320,13 +346,52 @@ This audit identifies all references to "kb" (kilobyte) throughout the RawrXD ID
 | `docs/MMF-QUICKSTART.md` | `stats.averageTensorSize / 1KB` | Tensor size display |
 | Various C++ files | `constexpr size_t KB = 1024;` | KB constant definition |
 
-### 4.2 PowerShell KB Constant
+### 4.2 Assembly Code Using 1024 Bytes
+
+| File | Line | Usage |
+|------|------|-------|
+| `src/asm/RawrXD_SourceEdit_Kernel.asm` | 119 | Temp path buffers (1024 bytes each) |
+| `src/asm/RawrXD_Hotpatch_Kernel.asm` | 98 | Prologue backup storage (1024 bytes) |
+| `src/asm/RawrXD_NanoQuant_Engine.asm` | 518, 911 | Float arrays (256 elements × 4 = 1024 bytes) |
+| `src/asm/RawrXD_KQuant_Kernel.asm` | 452 | Output buffer (256 floats × 4 = 1024 bytes) |
+| `src/asm/RawrXD_Debug_Engine.asm` | 167 | CRC-32 lookup table (256 × 4 = 1024 bytes) |
+| `src/direct_io/nvme_thermal_stressor.asm` | 117, 300 | Temperature query output buffer (1024 bytes) |
+| `model-llm-harvester.asm` | 103 | Weight buffer (256 weights × 4 = 1024 bytes) |
+| `RawrXD_IDE_unified.asm` | 6268 | Entry table scan (256 entries × 4 = 1024 bytes) |
+
+### 4.3 PE/COFF Alignment Constants
+
+| File | Constant | Value |
+|------|----------|-------|
+| `src/reverse_engineering/omega_suite/v7/CodexUltimate.asm` | `IMAGE_SCN_ALIGN_1024BYTES` | `00B000000h` |
+| `src/reverse_engineering/omega_suite/v7/CodexAIReverseEngine.asm` | `IMAGE_SCN_ALIGN_1024BYTES` | `00B000000h` |
+| `src/omega_pro_maximum.asm` | `SCN_ALIGN_1024BYTES` | `00B00000h` |
+| `CodexUltimate.asm` | `IMAGE_SCN_ALIGN_1024BYTES` | `00B000000h` |
+| `CodexAIReverseEngine.asm` | `IMAGE_SCN_ALIGN_1024BYTES` | `00B000000h` |
+
+### 4.4 WebView2 Size Limits
+
+| File | Context |
+|------|---------|
+| `Ship/webview2/WebView2.idl` | HTML content size limit: 2 MB (2 × 1024 × 1024 bytes) |
+| `Ship/webview2/lib_manual/*/Microsoft.Web.WebView2.*.xml` | Same 2MB limit documentation |
+
+### 4.5 PowerShell KB Constant
 
 PowerShell has built-in `1KB` constant = 1024 bytes, used throughout scripts for:
 - File size formatting
 - Memory calculations
 - Progress reporting
 - Size validation
+
+### 4.6 Other 1024-Byte Buffers
+
+| File | Line | Purpose |
+|------|------|---------|
+| `docs/PHASE5_IMPLEMENTATION_COMPLETE.md` | 209-213 | BFT state, Gossip state, gRPC server (1024 bytes each) |
+| `src/COMPILER_ENGINE_COMPLETION_REPORT.md` | 448 | Detailed error message buffer (1024 bytes) |
+| `ReverseEngineeringEngine.ps1` | 509 | File header analysis (first 1024 bytes) |
+| `src/core/sqlite3.c` | 57765 | 1KB file with 2K page size edge case |
 
 ---
 
