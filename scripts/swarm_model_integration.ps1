@@ -30,11 +30,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$script:SwarmRoot = "D:\lazy init ide"
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
+$script:SwarmRoot = Get-RawrXDRoot
 $script:ModelMakerScript = Join-Path $SwarmRoot "scripts\model_maker_zero_dep.ps1"
 $script:PromptEngineScript = Join-Path $SwarmRoot "scripts\system_prompt_engine.ps1"
 $script:SelfDigestScript = Join-Path $SwarmRoot "scripts\model_self_digest.ps1"
-$script:ModelOutputPath = "D:\OllamaModels\swarm_models"
+$script:ModelOutputPath = Join-Path $SwarmRoot "models" "swarm_models"
 $script:SwarmConfigPath = Join-Path $SwarmRoot "logs\swarm_config"
 
 # ═══════════════════════════════════════════════════════════════════════════════

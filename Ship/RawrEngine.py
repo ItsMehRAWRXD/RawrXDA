@@ -25,10 +25,15 @@ Security and CORS behavior are controlled through environment variables:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import ipaddress
 import json
 import os
+import platform
 import re
+import shutil
+import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -36,7 +41,7 @@ from dataclasses import dataclass, field
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Iterable
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 DEFAULT_ALLOWED_ORIGINS = [
@@ -71,13 +76,41 @@ if os.environ.get("RAWRXD_MODEL_PATH"):
     _MODEL_DIRS.insert(0, os.environ["RAWRXD_MODEL_PATH"])
 
 DEFAULT_TOOLS = [
-    {"id": "file_reader", "name": "file_reader", "description": "Read project files"},
+    {"id": "fs_list", "name": "fs_list", "description": "List workspace files"},
+    {"id": "file_reader", "name": "file_reader", "description": "Read workspace files"},
+    {"id": "file_writer", "name": "file_writer", "description": "Write workspace files"},
+    {"id": "fs_mkdir", "name": "fs_mkdir", "description": "Create workspace directories"},
+    {"id": "fs_rename", "name": "fs_rename", "description": "Rename files and directories"},
+    {"id": "fs_delete", "name": "fs_delete", "description": "Delete files and directories"},
+    {"id": "search", "name": "search", "description": "Search workspace content"},
+    {"id": "git_status", "name": "git_status", "description": "Inspect git working tree status"},
+    {"id": "git_diff", "name": "git_diff", "description": "Inspect git diffs"},
+    {"id": "git_commit", "name": "git_commit", "description": "Create git commits"},
     {"id": "code_edit", "name": "code_edit", "description": "Apply code edits"},
     {"id": "terminal_exec", "name": "terminal_exec", "description": "Run shell commands"},
     {"id": "planner", "name": "planner", "description": "Build execution plans"},
 ]
 
 PUBLIC_PATHS = {"/status", "/health", "/healthz"}
+
+WORKSPACE_ROOT = os.path.abspath(os.getenv("RAWRXD_WORKSPACE_ROOT", os.getcwd()))
+IGNORE_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "out",
+}
+MAX_LIST_ITEMS = int(os.getenv("RAWRXD_MAX_LIST_ITEMS", "2000"))
+MAX_FILE_READ_BYTES = int(os.getenv("RAWRXD_MAX_FILE_READ_BYTES", str(1024 * 1024)))
+MAX_SEARCH_RESULTS = int(os.getenv("RAWRXD_MAX_SEARCH_RESULTS", "300"))
+MAX_TERMINAL_TIMEOUT_S = int(os.getenv("RAWRXD_MAX_TERMINAL_TIMEOUT_S", "60"))
+MAX_GIT_TIMEOUT_S = int(os.getenv("RAWRXD_MAX_GIT_TIMEOUT_S", "60"))
 
 
 def _bool_env(name: str, default: bool) -> bool:
@@ -213,6 +246,418 @@ def _scan_model_dirs() -> list[dict[str, Any]]:
     return found
 
 
+def _normalize_relpath(path: str) -> str:
+    return path.replace("\\", "/")
+
+
+def _resolve_workspace_path(raw_path: str | None) -> str:
+    candidate = (raw_path or ".").strip() or "."
+    if os.path.isabs(candidate):
+        resolved = os.path.abspath(candidate)
+    else:
+        resolved = os.path.abspath(os.path.join(WORKSPACE_ROOT, candidate))
+
+    try:
+        within_workspace = os.path.commonpath([WORKSPACE_ROOT, resolved]) == WORKSPACE_ROOT
+    except ValueError:
+        within_workspace = False
+    if not within_workspace:
+        raise ValueError("Path escapes workspace root")
+    return resolved
+
+
+def _workspace_relpath(abs_path: str) -> str:
+    rel = os.path.relpath(abs_path, WORKSPACE_ROOT)
+    if rel == ".":
+        return "."
+    return _normalize_relpath(rel)
+
+
+def _list_workspace(path: str, depth: int = 2, include_hidden: bool = False) -> dict[str, Any]:
+    target = _resolve_workspace_path(path)
+    if not os.path.exists(target):
+        raise FileNotFoundError(f"Path not found: {path}")
+    if not os.path.isdir(target):
+        raise NotADirectoryError(f"Not a directory: {path}")
+
+    root_depth = target.rstrip(os.sep).count(os.sep)
+    items: list[dict[str, Any]] = []
+
+    for root, dirs, files in os.walk(target):
+        current_depth = root.rstrip(os.sep).count(os.sep) - root_depth
+
+        filtered_dirs: list[str] = []
+        for directory in sorted(dirs):
+            if directory in IGNORE_DIRS:
+                continue
+            if not include_hidden and directory.startswith("."):
+                continue
+            filtered_dirs.append(directory)
+        dirs[:] = filtered_dirs
+
+        if current_depth >= depth:
+            dirs[:] = []
+
+        for directory in dirs:
+            abs_dir = os.path.join(root, directory)
+            items.append({"type": "dir", "path": _workspace_relpath(abs_dir)})
+            if len(items) >= MAX_LIST_ITEMS:
+                return {
+                    "root": _workspace_relpath(target),
+                    "count": len(items),
+                    "truncated": True,
+                    "items": items,
+                }
+
+        for filename in sorted(files):
+            if not include_hidden and filename.startswith("."):
+                continue
+            abs_file = os.path.join(root, filename)
+            try:
+                size = os.path.getsize(abs_file)
+            except OSError:
+                continue
+            items.append({"type": "file", "path": _workspace_relpath(abs_file), "size_bytes": size})
+            if len(items) >= MAX_LIST_ITEMS:
+                return {
+                    "root": _workspace_relpath(target),
+                    "count": len(items),
+                    "truncated": True,
+                    "items": items,
+                }
+
+    return {"root": _workspace_relpath(target), "count": len(items), "truncated": False, "items": items}
+
+
+def _read_workspace_file(path: str) -> dict[str, Any]:
+    target = _resolve_workspace_path(path)
+    if not os.path.exists(target):
+        raise FileNotFoundError(f"File not found: {path}")
+    if not os.path.isfile(target):
+        raise IsADirectoryError(f"Not a file: {path}")
+
+    size = os.path.getsize(target)
+    truncated = size > MAX_FILE_READ_BYTES
+    with open(target, "rb") as handle:
+        data = handle.read(MAX_FILE_READ_BYTES)
+    content = data.decode("utf-8", errors="replace")
+    return {
+        "path": _workspace_relpath(target),
+        "size_bytes": size,
+        "truncated": truncated,
+        "content": content,
+    }
+
+
+def _write_workspace_file(path: str, content: str) -> dict[str, Any]:
+    target = _resolve_workspace_path(path)
+    parent = os.path.dirname(target)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    encoded = content.encode("utf-8")
+    with open(target, "wb") as handle:
+        handle.write(encoded)
+    return {"path": _workspace_relpath(target), "size_bytes": len(encoded)}
+
+
+def _mkdir_workspace(path: str, parents: bool = True) -> dict[str, Any]:
+    target = _resolve_workspace_path(path)
+    if os.path.exists(target):
+        if not os.path.isdir(target):
+            raise FileExistsError(f"Path exists and is not a directory: {path}")
+        return {"path": _workspace_relpath(target), "created": False}
+
+    if parents:
+        os.makedirs(target, exist_ok=True)
+    else:
+        os.mkdir(target)
+    return {"path": _workspace_relpath(target), "created": True}
+
+
+def _rename_workspace(src_path: str, dst_path: str) -> dict[str, Any]:
+    src = _resolve_workspace_path(src_path)
+    dst = _resolve_workspace_path(dst_path)
+    if not os.path.exists(src):
+        raise FileNotFoundError(f"Source path not found: {src_path}")
+    if os.path.exists(dst):
+        raise FileExistsError(f"Destination already exists: {dst_path}")
+    dst_parent = os.path.dirname(dst)
+    if dst_parent:
+        os.makedirs(dst_parent, exist_ok=True)
+    os.replace(src, dst)
+    return {"from": _workspace_relpath(src), "to": _workspace_relpath(dst)}
+
+
+def _delete_workspace(path: str, recursive: bool = False) -> dict[str, Any]:
+    target = _resolve_workspace_path(path)
+    if not os.path.exists(target):
+        raise FileNotFoundError(f"Path not found: {path}")
+    if os.path.isfile(target):
+        os.remove(target)
+        return {"path": _workspace_relpath(target), "deleted": True, "type": "file"}
+    if os.path.isdir(target):
+        if recursive:
+            shutil.rmtree(target)
+        else:
+            os.rmdir(target)
+        return {"path": _workspace_relpath(target), "deleted": True, "type": "dir"}
+    raise ValueError(f"Unsupported path type: {path}")
+
+
+def _iter_searchable_files(base_path: str, include_hidden: bool, file_glob: str) -> Iterable[str]:
+    for root, dirs, files in os.walk(base_path):
+        dirs[:] = [
+            d for d in sorted(dirs)
+            if d not in IGNORE_DIRS and (include_hidden or not d.startswith("."))
+        ]
+        for filename in sorted(files):
+            if not include_hidden and filename.startswith("."):
+                continue
+            if file_glob and not fnmatch.fnmatch(filename, file_glob):
+                continue
+            yield os.path.join(root, filename)
+
+
+def _search_workspace(
+    query: str,
+    *,
+    path: str = ".",
+    regex: bool = False,
+    case_sensitive: bool = False,
+    include_hidden: bool = False,
+    file_glob: str = "*",
+    max_results: int = MAX_SEARCH_RESULTS,
+) -> dict[str, Any]:
+    if not query:
+        raise ValueError("Search query is required")
+
+    target_root = _resolve_workspace_path(path)
+    if not os.path.isdir(target_root):
+        raise NotADirectoryError(f"Not a directory: {path}")
+
+    flags = 0 if case_sensitive else re.IGNORECASE
+    compiled = re.compile(query, flags) if regex else None
+
+    results: list[dict[str, Any]] = []
+    scanned_files = 0
+
+    for file_path in _iter_searchable_files(target_root, include_hidden, file_glob):
+        scanned_files += 1
+        try:
+            if os.path.getsize(file_path) > MAX_FILE_READ_BYTES * 3:
+                continue
+            with open(file_path, "r", encoding="utf-8", errors="replace") as handle:
+                for line_number, line in enumerate(handle, start=1):
+                    haystack = line if case_sensitive else line.lower()
+                    needle = query if case_sensitive else query.lower()
+                    if compiled:
+                        match = compiled.search(line)
+                    else:
+                        index = haystack.find(needle)
+                        match = None if index < 0 else (index, index + len(needle))
+                    if match is None:
+                        continue
+                    if isinstance(match, tuple):
+                        column = match[0] + 1
+                    else:
+                        column = match.start() + 1
+                    results.append(
+                        {
+                            "path": _workspace_relpath(file_path),
+                            "line": line_number,
+                            "column": column,
+                            "preview": line.rstrip("\n"),
+                        }
+                    )
+                    if len(results) >= max_results:
+                        return {
+                            "query": query,
+                            "root": _workspace_relpath(target_root),
+                            "scanned_files": scanned_files,
+                            "count": len(results),
+                            "truncated": True,
+                            "results": results,
+                        }
+        except OSError:
+            continue
+
+    return {
+        "query": query,
+        "root": _workspace_relpath(target_root),
+        "scanned_files": scanned_files,
+        "count": len(results),
+        "truncated": False,
+        "results": results,
+    }
+
+
+def _exec_command(command: str, cwd: str = ".", timeout_s: int = 20) -> dict[str, Any]:
+    if not command.strip():
+        raise ValueError("Command is required")
+
+    run_cwd = _resolve_workspace_path(cwd)
+    timeout = max(1, min(int(timeout_s), MAX_TERMINAL_TIMEOUT_S))
+    start = time.time()
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=run_cwd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+        return {
+            "command": command,
+            "cwd": _workspace_relpath(run_cwd),
+            "exit_code": completed.returncode,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+            "duration_ms": duration_ms,
+            "timed_out": False,
+        }
+    except subprocess.TimeoutExpired as exc:
+        duration_ms = int((time.time() - start) * 1000)
+        return {
+            "command": command,
+            "cwd": _workspace_relpath(run_cwd),
+            "exit_code": -1,
+            "stdout": exc.stdout or "",
+            "stderr": (exc.stderr or "") + f"\nCommand timed out after {timeout}s",
+            "duration_ms": duration_ms,
+            "timed_out": True,
+        }
+
+
+def _run_git(args: list[str], cwd: str = ".", timeout_s: int = 20) -> dict[str, Any]:
+    run_cwd = _resolve_workspace_path(cwd)
+    timeout = max(1, min(int(timeout_s), MAX_GIT_TIMEOUT_S))
+    start = time.time()
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=run_cwd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        duration_ms = int((time.time() - start) * 1000)
+        return {
+            "cwd": _workspace_relpath(run_cwd),
+            "args": args,
+            "exit_code": completed.returncode,
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+            "duration_ms": duration_ms,
+            "timed_out": False,
+        }
+    except FileNotFoundError as exc:
+        raise RuntimeError("git executable not found") from exc
+    except subprocess.TimeoutExpired as exc:
+        duration_ms = int((time.time() - start) * 1000)
+        return {
+            "cwd": _workspace_relpath(run_cwd),
+            "args": args,
+            "exit_code": -1,
+            "stdout": exc.stdout or "",
+            "stderr": (exc.stderr or "") + f"\nGit command timed out after {timeout}s",
+            "duration_ms": duration_ms,
+            "timed_out": True,
+        }
+
+
+def _git_status(cwd: str = ".") -> dict[str, Any]:
+    result = _run_git(["status", "--short", "--branch"], cwd=cwd)
+    result["command"] = "git status --short --branch"
+    return result
+
+
+def _git_diff(cwd: str = ".", path: str = "", staged: bool = False) -> dict[str, Any]:
+    args = ["diff"]
+    if staged:
+        args.append("--staged")
+    if path.strip():
+        abs_path = _resolve_workspace_path(path)
+        args.extend(["--", abs_path])
+    result = _run_git(args, cwd=cwd)
+    result["command"] = "git " + " ".join(args)
+    return result
+
+
+def _git_log(cwd: str = ".", limit: int = 20) -> dict[str, Any]:
+    clamped_limit = max(1, min(int(limit), 100))
+    pretty = "%h\t%an\t%ad\t%s"
+    result = _run_git(["log", f"-n{clamped_limit}", f"--pretty=format:{pretty}", "--date=short"], cwd=cwd)
+    result["command"] = "git log"
+    commits: list[dict[str, str]] = []
+    for line in result.get("stdout", "").splitlines():
+        parts = line.split("\t", 3)
+        if len(parts) != 4:
+            continue
+        commits.append({"hash": parts[0], "author": parts[1], "date": parts[2], "subject": parts[3]})
+    result["commits"] = commits
+    return result
+
+
+def _git_branches(cwd: str = ".") -> dict[str, Any]:
+    result = _run_git(["branch", "--list", "--verbose"], cwd=cwd)
+    result["command"] = "git branch --list --verbose"
+    branches: list[dict[str, Any]] = []
+    for line in result.get("stdout", "").splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        current = line.lstrip().startswith("*")
+        payload = stripped[1:].strip() if current else stripped
+        parts = payload.split(maxsplit=2)
+        if len(parts) >= 2:
+            branches.append(
+                {
+                    "name": parts[0],
+                    "hash": parts[1],
+                    "subject": parts[2] if len(parts) > 2 else "",
+                    "current": current,
+                }
+            )
+    result["branches"] = branches
+    return result
+
+
+def _git_commit(cwd: str = ".", message: str = "", add_all: bool = False) -> dict[str, Any]:
+    if not message.strip():
+        raise ValueError("Commit message is required")
+    if add_all:
+        stage_result = _run_git(["add", "."], cwd=cwd)
+        if stage_result["exit_code"] != 0:
+            return {"status": "error", "stage": stage_result}
+    result = _run_git(["commit", "-m", message], cwd=cwd)
+    result["command"] = "git commit"
+    return result
+
+
+def _git_checkout(cwd: str = ".", branch: str = "", create: bool = False) -> dict[str, Any]:
+    if not branch.strip():
+        raise ValueError("Branch name is required")
+    args = ["checkout"]
+    if create:
+        args.append("-b")
+    args.append(branch)
+    result = _run_git(args, cwd=cwd)
+    result["command"] = "git " + " ".join(args)
+    return result
+
+
+def _system_info() -> dict[str, Any]:
+    return {
+        "workspace_root": WORKSPACE_ROOT,
+        "platform": platform.platform(),
+        "python_version": sys.version.split()[0],
+        "models_configured": len(STATE.models),
+        "model_dirs": _MODEL_DIRS,
+    }
+
+
 def _build_response(prompt: str, model: str, mode: str) -> str:
     cleaned = prompt.strip()
     if not cleaned:
@@ -323,6 +768,9 @@ class RawrEngineHandler(BaseHTTPRequestHandler):
     def _path(self) -> str:
         return self.path.split("?", 1)[0]
 
+    def _query_params(self) -> dict[str, list[str]]:
+        return parse_qs(urlparse(self.path).query)
+
     def _headers_lc(self) -> dict[str, str]:
         return {key.lower(): value for key, value in self.headers.items()}
 
@@ -402,6 +850,7 @@ class RawrEngineHandler(BaseHTTPRequestHandler):
             "require_auth": STATE.require_auth,
             "active_sessions": len(STATE.active_sessions),
             "current_model": STATE.current_model,
+            "workspace_root": WORKSPACE_ROOT,
         }
 
     def _stream_chat(self, response_text: str, model: str) -> None:
@@ -461,6 +910,72 @@ class RawrEngineHandler(BaseHTTPRequestHandler):
 
         if path == "/api/tools":
             self._json(HTTPStatus.OK, {"tools": STATE.tools})
+            return
+
+        if path == "/api/system/info":
+            self._json(HTTPStatus.OK, _system_info())
+            return
+
+        if path == "/api/fs/list":
+            query = self._query_params()
+            rel_path = query.get("path", ["."])[0]
+            depth_raw = query.get("depth", ["2"])[0]
+            include_hidden = query.get("hidden", ["0"])[0] in {"1", "true", "yes"}
+            try:
+                depth = max(0, min(int(depth_raw), 10))
+                listing = _list_workspace(rel_path, depth=depth, include_hidden=include_hidden)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, listing)
+            return
+
+        if path == "/api/git/status":
+            query = self._query_params()
+            cwd = query.get("cwd", ["."])[0]
+            try:
+                status = _git_status(cwd=cwd)
+            except (ValueError, OSError, RuntimeError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, status)
+            return
+
+        if path == "/api/git/diff":
+            query = self._query_params()
+            cwd = query.get("cwd", ["."])[0]
+            target_path = query.get("path", [""])[0]
+            staged = query.get("staged", ["0"])[0] in {"1", "true", "yes"}
+            try:
+                diff_result = _git_diff(cwd=cwd, path=target_path, staged=staged)
+            except (ValueError, OSError, RuntimeError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, diff_result)
+            return
+
+        if path == "/api/git/log":
+            query = self._query_params()
+            cwd = query.get("cwd", ["."])[0]
+            limit_raw = query.get("limit", ["20"])[0]
+            try:
+                limit = int(limit_raw)
+                log_result = _git_log(cwd=cwd, limit=limit)
+            except (TypeError, ValueError, OSError, RuntimeError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, log_result)
+            return
+
+        if path == "/api/git/branches":
+            query = self._query_params()
+            cwd = query.get("cwd", ["."])[0]
+            try:
+                branch_result = _git_branches(cwd=cwd)
+            except (ValueError, OSError, RuntimeError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, branch_result)
             return
 
         self._json(HTTPStatus.NOT_FOUND, {"error": f"Unknown endpoint: {path}"})
@@ -564,7 +1079,182 @@ class RawrEngineHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if path == "/api/fs/read":
+            rel_path = str(payload.get("path", "")).strip()
+            if not rel_path:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Missing 'path'"})
+                return
+            try:
+                result = _read_workspace_file(rel_path)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, result)
+            return
+
+        if path == "/api/fs/write":
+            rel_path = str(payload.get("path", "")).strip()
+            if not rel_path:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Missing 'path'"})
+                return
+            content = payload.get("content", "")
+            if not isinstance(content, str):
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "'content' must be a string"})
+                return
+            try:
+                result = _write_workspace_file(rel_path, content)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, {"status": "ok", **result})
+            return
+
+        if path == "/api/fs/mkdir":
+            rel_path = str(payload.get("path", "")).strip()
+            if not rel_path:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Missing 'path'"})
+                return
+            parents = bool(payload.get("parents", True))
+            try:
+                result = _mkdir_workspace(rel_path, parents=parents)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, {"status": "ok", **result})
+            return
+
+        if path == "/api/fs/rename":
+            src = str(payload.get("src", "")).strip()
+            dst = str(payload.get("dst", "")).strip()
+            if not src or not dst:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Missing 'src' or 'dst'"})
+                return
+            try:
+                result = _rename_workspace(src, dst)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, {"status": "ok", **result})
+            return
+
+        if path == "/api/fs/delete":
+            rel_path = str(payload.get("path", "")).strip()
+            if not rel_path:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Missing 'path'"})
+                return
+            recursive = bool(payload.get("recursive", False))
+            try:
+                result = _delete_workspace(rel_path, recursive=recursive)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, {"status": "ok", **result})
+            return
+
+        if path == "/api/search":
+            query = str(payload.get("query") or payload.get("pattern") or "").strip()
+            rel_path = str(payload.get("path", ".")).strip() or "."
+            use_regex = bool(payload.get("regex"))
+            case_sensitive = bool(payload.get("case_sensitive"))
+            include_hidden = bool(payload.get("include_hidden"))
+            file_glob = str(payload.get("file_glob", "*")).strip() or "*"
+            max_results_raw = payload.get("max_results", MAX_SEARCH_RESULTS)
+            try:
+                max_results = max(1, min(int(max_results_raw), MAX_SEARCH_RESULTS))
+            except (TypeError, ValueError):
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Invalid max_results"})
+                return
+            try:
+                result = _search_workspace(
+                    query,
+                    path=rel_path,
+                    regex=use_regex,
+                    case_sensitive=case_sensitive,
+                    include_hidden=include_hidden,
+                    file_glob=file_glob,
+                    max_results=max_results,
+                )
+            except re.error as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": f"Invalid regex: {exc}"})
+                return
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, result)
+            return
+
+        if path == "/api/terminal/exec":
+            command = str(payload.get("command", "")).strip()
+            cwd = str(payload.get("cwd", ".")).strip() or "."
+            timeout_raw = payload.get("timeout_s", 20)
+            try:
+                timeout_s = int(timeout_raw)
+            except (TypeError, ValueError):
+                self._json(HTTPStatus.BAD_REQUEST, {"error": "Invalid timeout_s"})
+                return
+            try:
+                result = _exec_command(command, cwd=cwd, timeout_s=timeout_s)
+            except (ValueError, OSError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, result)
+            return
+
+        if path == "/api/git/commit":
+            cwd = str(payload.get("cwd", ".")).strip() or "."
+            message = str(payload.get("message", "")).strip()
+            add_all = bool(payload.get("add_all", False))
+            try:
+                result = _git_commit(cwd=cwd, message=message, add_all=add_all)
+            except (ValueError, OSError, RuntimeError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, result)
+            return
+
+        if path == "/api/git/checkout":
+            cwd = str(payload.get("cwd", ".")).strip() or "."
+            branch = str(payload.get("branch", "")).strip()
+            create = bool(payload.get("create", False))
+            try:
+                result = _git_checkout(cwd=cwd, branch=branch, create=create)
+            except (ValueError, OSError, RuntimeError) as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+                return
+            self._json(HTTPStatus.OK, result)
+            return
+
         self._json(HTTPStatus.NOT_FOUND, {"error": f"Unknown endpoint: {path}"})
+
+
+# Embeddable start/stop API — used by IDE chat panel to launch the server
+# in a background thread (same interface as the old Ship/chat_server.py)
+_embedded_server = None
+_embedded_thread = None
+
+
+def start_server(port: int = 23959, host: str = "127.0.0.1") -> bool:
+    global _embedded_server, _embedded_thread
+    try:
+        _embedded_server = ReusableThreadingHTTPServer((host, port), RawrEngineHandler)
+        _embedded_thread = threading.Thread(target=_embedded_server.serve_forever, daemon=True)
+        _embedded_thread.start()
+        return True
+    except Exception:
+        return False
+
+
+def stop_server() -> None:
+    global _embedded_server, _embedded_thread
+    if _embedded_server:
+        _embedded_server.shutdown()
+        _embedded_server.server_close()
+        _embedded_server = None
+        _embedded_thread = None
+
+
+def is_server_running() -> bool:
+    return _embedded_server is not None
 
 
 def parse_args() -> argparse.Namespace:
@@ -582,7 +1272,12 @@ def main() -> int:
 
     server = ReusableThreadingHTTPServer((args.host, args.port), RawrEngineHandler)
     print(f"[RawrEngine] Local server listening on http://{args.host}:{args.port}")
-    print("[RawrEngine] Endpoints: /status /v1/models /api/chat /api/agent/wish /api/tools")
+    print(
+        "[RawrEngine] Endpoints: /status /v1/models /api/chat /api/agent/wish "
+        "/api/tools /api/fs/list /api/fs/read /api/fs/write /api/fs/mkdir /api/fs/rename /api/fs/delete "
+        "/api/search /api/terminal/exec /api/git/status /api/git/diff /api/git/log /api/git/branches "
+        "/api/git/commit /api/git/checkout"
+    )
 
     try:
         server.serve_forever()

@@ -12,6 +12,9 @@
 #include <future>
 #include <filesystem>
 
+#include "logging/logger.h"
+static Logger s_logger("agentic_core");
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -291,15 +294,15 @@ public:
         if (!config.workspaceRoot.empty()) {
             std::error_code ec;
             if (!std::filesystem::exists(config.workspaceRoot, ec)) {
-                std::cerr << "[AgenticCore] WARNING: workspace root does not exist: "
+                s_logger.error( "[AgenticCore] WARNING: workspace root does not exist: "
                           << config.workspaceRoot << std::endl;
             }
         }
 
         m_ready = true;
-        std::cout << "[AgenticCore] Initialized with workspace: " << config.workspaceRoot << std::endl;
+        s_logger.info("[AgenticCore] Initialized with workspace: ");
         if (!config.modelPath.empty()) {
-            std::cout << "[AgenticCore] Model: " << config.modelPath << std::endl;
+            s_logger.info("[AgenticCore] Model: ");
         }
         m_taskCount = 0;
         m_totalLatencyMs = 0.0;
@@ -310,10 +313,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_ready) {
             m_ready = false;
-            std::cout << "[AgenticCore] Shutdown (processed " << m_taskCount.load()
-                      << " tasks, avg " 
-                      << (m_taskCount > 0 ? m_totalLatencyMs / m_taskCount : 0.0)
-                      << "ms)" << std::endl;
+            s_logger.info("[AgenticCore] Shutdown (processed ");
         }
     }
     
@@ -338,8 +338,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         m_cancelled = false;
         
-        std::cout << "[AgenticCore] Executing " << taskTypeName(type) << ": "
-                  << instruction.substr(0, 80) << std::endl;
+        s_logger.info("[AgenticCore] Executing ");
         
         // Route to real handler based on task type
         switch (type) {
@@ -364,8 +363,7 @@ public:
         m_taskCount.fetch_add(1, std::memory_order_relaxed);
         m_totalLatencyMs += result.latencyMs;
         
-        std::cout << "[AgenticCore] Task " << (result.success ? "OK" : "FAIL")
-                  << " (" << result.latencyMs << "ms)" << std::endl;
+        s_logger.info("[AgenticCore] Task ");
         return result;
     }
     
@@ -400,7 +398,7 @@ public:
     
     void cancelCurrentTask() override {
         m_cancelled = true;
-        std::cout << "[AgenticCore] Task cancellation requested" << std::endl;
+        s_logger.info("[AgenticCore] Task cancellation requested");
     }
     
     std::string getStatus() const override {

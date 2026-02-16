@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <mutex>
 
+#include "logging/logger.h"
+static Logger s_logger("editorwidget");
+
 namespace EditorWidget {
 
 class EditorWidgetImpl : public IEditorWidget {
@@ -46,7 +49,7 @@ public:
         }
         
         rebuildLineIndex();
-        std::cout << "[EditorWidget] Applied " << edits.size() << " edits" << std::endl;
+        s_logger.info("[EditorWidget] Applied ");
     }
     
     Position getCursorPosition() const override {
@@ -77,8 +80,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         m_currentCompletion = completion;
         m_hasCompletion = true;
-        std::cout << "[EditorWidget] Showing inline completion (" 
-                  << completion.confidence << " confidence)" << std::endl;
+        s_logger.info("[EditorWidget] Showing inline completion (");
     }
     
     void dismissInlineCompletion() override {

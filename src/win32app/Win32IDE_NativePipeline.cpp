@@ -15,26 +15,29 @@
 #include <cstdio>
 #include <sstream>
 
+#include "logging/logger.h"
+static Logger s_logger("Win32IDE_NativePipeline");
+
 // Win32-native debug logging
 #ifndef RAWRXD_LOG_INFO
 #define RAWRXD_LOG_INFO(msg) do { \
     std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
     OutputDebugStringA(_oss.str().c_str()); \
-    std::cout << _oss.str(); \
+    s_logger.info( _oss.str(); \
 } while(0)
 #endif
 #ifndef RAWRXD_LOG_WARNING
 #define RAWRXD_LOG_WARNING(msg) do { \
     std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
     OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
+    s_logger.error( _oss.str(); \
 } while(0)
 #endif
 #ifndef RAWRXD_LOG_ERROR
 #define RAWRXD_LOG_ERROR(msg) do { \
     std::ostringstream _oss; _oss << "[ERROR] " << msg << "\n"; \
     OutputDebugStringA(_oss.str().c_str()); \
-    std::cerr << _oss.str(); \
+    s_logger.error( _oss.str(); \
 } while(0)
 #endif
 

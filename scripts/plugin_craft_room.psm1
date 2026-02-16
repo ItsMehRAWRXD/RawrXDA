@@ -20,11 +20,14 @@
 
 param()
 
+# Single-root path resolver
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-$script:CraftRoomRoot = "D:\lazy init ide\craft_room"
+$script:CraftRoomRoot = Join-Path (Get-RawrXDRoot) "craft_room"
 $script:PluginTemplatesDir = Join-Path $script:CraftRoomRoot "templates"
 $script:PluginOutputDir = Join-Path $script:CraftRoomRoot "plugins"
 $script:PluginRegistry = @{}

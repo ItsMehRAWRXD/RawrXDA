@@ -21,16 +21,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Single-root path resolver
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
 # Resolve project root
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir -or $ScriptDir -eq "") {
     $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 }
-if (-not $ScriptDir -or $ScriptDir -eq "") { $ScriptDir = "D:\rawrxd\scripts" }
-$ProjectRoot = Split-Path -Parent $ScriptDir
-if (-not $ProjectRoot -or $ProjectRoot -eq "" -or $ProjectRoot -eq [System.IO.Path]::GetPathRoot($ProjectRoot)) {
-    $ProjectRoot = "D:\rawrxd"
-}
+if (-not $ScriptDir -or $ScriptDir -eq "") { $ScriptDir = (Join-Path (Get-RawrXDRoot) "scripts") }
+$ProjectRoot = Get-RawrXDRoot
 if ($SrcRoot -eq "") { $SrcRoot = Join-Path $ProjectRoot "src" }
 
 $AuditScript = Join-Path $ProjectRoot "scripts\audit_command_table.py"

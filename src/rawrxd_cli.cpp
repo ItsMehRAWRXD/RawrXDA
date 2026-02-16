@@ -21,6 +21,9 @@
 #include <chrono>
 #include <sstream>
 
+#include "logging/logger.h"
+static Logger s_logger("rawrxd_cli");
+
 using namespace std::chrono_literals;
 
 struct AppState {
@@ -62,7 +65,7 @@ void EnsureDirectories() {
 }
 
 void PrintBanner() {
-    std::cout << R"(
+    s_logger.info( R"(
 ╔══════════════════════════════════════════════════════════════╗
 ║                    RawrXD AI Shell v6.0                      ║
 ║                                                              ║
@@ -128,7 +131,7 @@ int main(int argc, char** argv) {
             state.engine_manager->SwitchEngine(engine_id);
         }
         else if (arg == "--help") {
-            std::cout << R"(
+            s_logger.info( R"(
 RawrXD CLI v6.0 - Ultimate AI Shell
 
 Usage:
@@ -217,7 +220,7 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     // Load model
     while (!state.loaded_model) {
         if (state.model_path.empty()) {
-            std::cout << "Enter model path (GGUF/Blob): ";
+            s_logger.info("Enter model path (GGUF/Blob): ");
             std::getline(std::cin, state.model_path);
             if (state.model_path.empty()) continue;
         }
@@ -228,12 +231,12 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
         if (!state.model_path.empty() && state.model_path.back() == '"') 
             state.model_path.pop_back();
         
-        std::cout << "[Loading] " << state.model_path << "..." << std::endl;
+        s_logger.info("[Loading] ");
         if (state.inference_engine->loadModel(state.model_path).has_value()) {
             state.loaded_model = true;
-            std::cout << "[Success] Model loaded: " << state.model_path << std::endl;
+            s_logger.info("[Success] Model loaded: ");
         } else {
-            std::cerr << "[Error] Failed to load model: " << state.model_path << std::endl;
+            s_logger.error( "[Error] Failed to load model: " << state.model_path << std::endl;
             state.model_path.clear();
         }
     }
@@ -257,13 +260,13 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     // Initialize API server
     state.api_server = std::make_unique<APIServer>(state);
     state.api_server->Start(11434);
-    std::cout << "[API] Server started on http://localhost:11434" << std::endl;
+    s_logger.info("[API] Server started on http://localhost:11434");
     
     // Initialize governor if requested
     if (state.enable_overclock_governor) {
         state.governor = std::make_unique<OverclockGovernor>();
         state.governor->Start(state);
-        std::cout << "[Governor] Started" << std::endl;
+        s_logger.info("[Governor] Started");
     }
     
     // Initialize Codex Ultimate
@@ -282,7 +285,7 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     state.shell->Start(state.agent_engine.get(), state.memory_manager.get(), state.vsix_loader.get(),
                       nullptr, // React generator not needed in CLI
                       [](const std::string& output) {
-                          std::cout << output;
+                          s_logger.info( output;
                       },
                       [](const std::string& input) {
                           // Input handling is done by shell
@@ -290,16 +293,12 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     );
     
     // Main loop
-    std::cout << "\n=== RawrXD Interactive AI Shell v6.0 Ready ===\n";
-    std::cout << "Model: " << state.model_path << "\n";
-    std::cout << "Context: " << state.context_size / 1024 << "K\n";
-    std::cout << "Engine: " << state.engine_manager->GetCurrentEngine() << "\n";
-    std::cout << "Modes: " << (state.enable_max_mode ? "Max " : "") 
-              << (state.enable_deep_thinking ? "Thinking " : "")
-              << (state.enable_deep_research ? "Research " : "")
-              << (state.enable_no_refusal ? "NoRefusal " : "")
-              << (state.enable_autocorrect ? "AutoCorrect " : "") << "\n";
-    std::cout << "Type /help for commands, /exit to quit\n\n";
+    s_logger.info("\n=== RawrXD Interactive AI Shell v6.0 Ready ===\n");
+    s_logger.info("Model: ");
+    s_logger.info("Context: ");
+    s_logger.info("Engine: ");
+    s_logger.info("Modes: ");
+    s_logger.info("Type /help for commands, /exit to quit\n\n");
     
     // Run shell
     while (state.shell->IsRunning()) {
@@ -309,12 +308,12 @@ For more help: https://github.com/ItsMehRAWRXD/RawrXD/wiki
     // Cleanup
     if (state.governor) {
         state.governor->Stop();
-        std::cout << "[Governor] Stopped\n";
+        s_logger.info("[Governor] Stopped\n");
     }
     
     state.api_server->Stop();
-    std::cout << "[API] Stopped\n";
+    s_logger.info("[API] Stopped\n");
     
-    std::cout << "\n[Shutdown] RawrXD terminated gracefully.\n";
+    s_logger.info("\n[Shutdown] RawrXD terminated gracefully.\n");
     return 0;
 }

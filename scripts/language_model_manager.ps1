@@ -59,8 +59,17 @@ param(
     [string[]]$LanguageList,
     
     [Parameter(Mandatory=$false)]
-    [string]$CompilerPath = "D:\lazy init ide\compilers"
+    [string]$CompilerPath = ""
 )
+
+# Single-root path resolver
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
+# Default compiler path under single root
+if (-not $CompilerPath -or -not $CompilerPath.Trim()) {
+    $CompilerPath = Join-Path (Get-RawrXDRoot) "compilers"
+}
+$CompilerPath = Resolve-RawrXDPath $CompilerPath
 
 # Import the language-model registry module
 Import-Module "$PSScriptRoot\language_model_registry.psm1" -Force

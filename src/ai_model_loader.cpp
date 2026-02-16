@@ -6,6 +6,9 @@
 #include <iostream>
 #include <cstring>
 
+#include "logging/logger.h"
+static Logger s_logger("ai_model_loader");
+
 namespace AIModelLoader {
 
 static const uint32_t GGUF_MAGIC = 0x46475547; // "GGUF" in little-endian
@@ -112,10 +115,7 @@ public:
         result.success = true;
         result.info = m_info;
         
-        std::cout << "[ModelLoader] Loaded: " << m_info.name 
-                  << " (" << m_info.architecture << ", " 
-                  << m_info.layerCount << " layers, "
-                  << (m_info.fileSizeBytes / (1024*1024)) << " MB)" << std::endl;
+        s_logger.info("[ModelLoader] Loaded: ");
         
         return result;
     }
@@ -124,7 +124,7 @@ public:
         if (m_loaded) {
             m_loaded = false;
             m_info = ModelInfo{};
-            std::cout << "[ModelLoader] Model unloaded" << std::endl;
+            s_logger.info("[ModelLoader] Model unloaded");
         }
     }
     

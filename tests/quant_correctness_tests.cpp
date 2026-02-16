@@ -19,6 +19,9 @@
 #include <iostream>
 #include <random>
 
+#include "logging/logger.h"
+static Logger s_logger("quant_correctness_tests");
+
 // Test result structure
 struct TestResult {
     QString name;
@@ -409,9 +412,9 @@ TestResult testEmptyInput() {
 int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     
-    std::cout << "========================================\n";
-    std::cout << "Quantization Correctness Test Suite\n";
-    std::cout << "========================================\n\n";
+    s_logger.info("========================================\n");
+    s_logger.info("Quantization Correctness Test Suite\n");
+    s_logger.info("========================================\n\n");
     
     QVector<TestResult> results;
     
@@ -429,25 +432,24 @@ int main(int argc, char** argv) {
     int failed = 0;
     
     for (const TestResult& r : results) {
-        std::cout << "[" << (r.passed ? "PASS" : "FAIL") << "] " 
-                  << r.name.toStdString();
+        s_logger.info("[");
         
         if (r.passed && (r.maxError > 0 || r.avgError > 0)) {
-            std::cout << " (max_err=" << r.maxError << ", avg_err=" << r.avgError << ")";
+            s_logger.info(" (max_err=");
         }
         
-        std::cout << "\n";
+        s_logger.info("\n");
         
         if (!r.passed && !r.error.isEmpty()) {
-            std::cout << "       Error: " << r.error.toStdString() << "\n";
+            s_logger.info("       Error: ");
         }
         
         if (r.passed) passed++; else failed++;
     }
     
-    std::cout << "\n========================================\n";
-    std::cout << "Results: " << passed << " passed, " << failed << " failed\n";
-    std::cout << "========================================\n";
+    s_logger.info("\n========================================\n");
+    s_logger.info("Results: ");
+    s_logger.info("========================================\n");
     
     return (failed == 0) ? 0 : 1;
 }

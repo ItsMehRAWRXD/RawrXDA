@@ -16,6 +16,9 @@
 
 #include "watchdog_service.hpp"
 
+#include "logging/logger.h"
+static Logger s_logger("watchdog_service");
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -86,11 +89,7 @@ WatchdogResult WatchdogService::initialize() {
     WatchdogStatusInfo info = {};
     asm_watchdog_get_status(&info);
 
-    std::cout << "[Watchdog] Initialized — .text section at 0x"
-              << std::hex << info.textBase << std::dec
-              << " (" << (info.textSize / 1024) << " KB)"
-              << " — baseline HMAC captured"
-              << std::endl;
+    s_logger.info("[Watchdog] Initialized — .text section at 0x");
 
     return WatchdogResult::ok("Initialized");
 }
@@ -130,9 +129,7 @@ WatchdogResult WatchdogService::startPeriodicVerification(uint32_t intervalMs) {
 
     m_running.store(true);
 
-    std::cout << "[Watchdog] Periodic verification started (every "
-              << intervalMs << " ms, thread " << threadId << ")"
-              << std::endl;
+    s_logger.info("[Watchdog] Periodic verification started (every ");
 
     return WatchdogResult::ok("Periodic verification started");
 }
@@ -154,7 +151,7 @@ WatchdogResult WatchdogService::stopPeriodicVerification() {
         if (waitResult == WAIT_TIMEOUT) {
             // Force terminate as last resort
             TerminateThread(m_threadHandle, 1);
-            std::cerr << "[Watchdog] Warning: thread did not exit gracefully, terminated"
+            s_logger.error( "[Watchdog] Warning: thread did not exit gracefully, terminated"
                       << std::endl;
         }
         CloseHandle(m_threadHandle);
@@ -162,7 +159,7 @@ WatchdogResult WatchdogService::stopPeriodicVerification() {
     }
 
     m_running.store(false);
-    std::cout << "[Watchdog] Periodic verification stopped" << std::endl;
+    s_logger.info("[Watchdog] Periodic verification stopped");
 
     return WatchdogResult::ok("Stopped");
 }
@@ -199,7 +196,7 @@ void WatchdogService::threadLoop() {
 
         if (result == 1) {
             // TAMPER DETECTED
-            std::cerr << "[Watchdog] *** TAMPER DETECTED *** .text section has been modified!"
+            s_logger.error( "[Watchdog] *** TAMPER DETECTED *** .text section has been modified!"
                       << std::endl;
 
             // Dispatch callback
@@ -221,7 +218,7 @@ void WatchdogService::threadLoop() {
             // (e.g., terminate the process) or may just log/alert.
         }
         else if (result < 0) {
-            std::cerr << "[Watchdog] Verification error: code " << result << std::endl;
+            s_logger.error( "[Watchdog] Verification error: code " << result << std::endl;
         }
         // result == 0 means OK, no output needed
     }
@@ -261,7 +258,7 @@ WatchdogResult WatchdogService::shutdown() {
     if (m_initialized.load()) {
         asm_watchdog_shutdown();
         m_initialized.store(false);
-        std::cout << "[Watchdog] Shutdown — keying material zeroed" << std::endl;
+        s_logger.info("[Watchdog] Shutdown — keying material zeroed");
     }
 
     return WatchdogResult::ok("Shutdown complete");

@@ -25,7 +25,7 @@ function Invoke-FastLoad {
     $result = Get-Content -Path $Path -Raw -AsByteStream -ReadCount 800
     $sw.Stop()
     
-    Write-Host "⚡ FastLoad: $(.ElapsedMilliseconds)ms" -ForegroundColor Green
+    Write-Host "⚡ FastLoad: $($sw.ElapsedMilliseconds)ms" -ForegroundColor Green
     return $result
 }
 
@@ -68,10 +68,18 @@ $ErrorActionPreference = 'Stop'
 # ============================================================================
 
 # Pattern engine (PowerShell backend)
-$patternModulePath = "C:\\Users\\HiH8e\\Documents\\PowerShell\\Modules\\RawrXD_PatternBridge\\RawrXD_PatternBridge.psm1"
-if (-not (Test-Path $patternModulePath)) {
-    throw "Pattern bridge module not found at $patternModulePath"
+$patternModuleCandidates = @(
+    $env:RAWRXD_PATTERN_MODULE_PATH
+    (Join-Path $PSScriptRoot "RawrXD_PatternBridge.psm1")
+    (Join-Path $PSScriptRoot "RawrXD_PatternBridge\RawrXD_PatternBridge.psm1")
+    (Join-Path (Split-Path $PSScriptRoot -Parent) "modules\RawrXD_PatternBridge\RawrXD_PatternBridge.psm1")
+) | Where-Object { $_ -and (Test-Path $_) }
+
+if (@($patternModuleCandidates).Count -eq 0) {
+    throw "Pattern bridge module not found. Set RAWRXD_PATTERN_MODULE_PATH or place RawrXD_PatternBridge.psm1 under scripts/."
 }
+
+$patternModulePath = @($patternModuleCandidates)[0]
 Import-Module $patternModulePath -Force
 
 # Todo manager

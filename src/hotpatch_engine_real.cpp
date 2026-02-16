@@ -6,6 +6,9 @@
 #include <cstring>
 #include <sstream>
 
+#include "logging/logger.h"
+static Logger s_logger("hotpatch_engine_real");
+
 // Real HotPatcher Implementation using Win32 memory APIs
 
 // Global patch registry
@@ -23,7 +26,7 @@ void ensure_lock() {
 
 // Destructor: Restore all patches
 HotPatcher::~HotPatcher() {
-    std::cout << "[HOTPATCHER] Destroyed, " << g_active_patches.size() << " patches managed\n";
+    s_logger.info("[HOTPATCHER] Destroyed, ");
 }
 
 // Core: Apply a patch to an address
@@ -35,14 +38,14 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
         // Validate inputs
         if (!target_address || new_opcodes.empty()) {
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] ERROR: Invalid patch parameters\n";
+            s_logger.info("[HOTPATCHER] ERROR: Invalid patch parameters\n");
             return false;
         }
         
         // Check if patch already exists
         if (g_active_patches.find(patch_name) != g_active_patches.end()) {
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] WARNING: Patch '" << patch_name << "' already exists\n";
+            s_logger.info("[HOTPATCHER] WARNING: Patch '");
             return false;
         }
         
@@ -50,7 +53,7 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
         std::vector<unsigned char> original_bytes(new_opcodes.size());
         if (!ReadProcessMemory(GetCurrentProcess(), target_address, original_bytes.data(), new_opcodes.size(), nullptr)) {
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] ERROR: Failed to read original bytes\n";
+            s_logger.info("[HOTPATCHER] ERROR: Failed to read original bytes\n");
             return false;
         }
         
@@ -58,7 +61,7 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
         DWORD old_protect = 0;
         if (!VirtualProtect(target_address, new_opcodes.size(), PAGE_EXECUTE_READWRITE, &old_protect)) {
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] ERROR: VirtualProtect failed\n";
+            s_logger.info("[HOTPATCHER] ERROR: VirtualProtect failed\n");
             return false;
         }
         
@@ -66,7 +69,7 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
         if (!WriteProcessMemory(GetCurrentProcess(), target_address, (void*)new_opcodes.data(), new_opcodes.size(), nullptr)) {
             VirtualProtect(target_address, new_opcodes.size(), old_protect, nullptr);
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] ERROR: WriteProcessMemory failed\n";
+            s_logger.info("[HOTPATCHER] ERROR: WriteProcessMemory failed\n");
             return false;
         }
         
@@ -88,7 +91,7 @@ bool HotPatcher::ApplyPatch(const std::string& patch_name, void* target_address,
         g_active_patches[patch_name] = record;
         
         LeaveCriticalSection(&g_patch_lock);
-        std::cout << "[HOTPATCHER] Applied patch '" << patch_name << "' at address (thread-safe)\n";
+        s_logger.info("[HOTPATCHER] Applied patch '");
         return true;
     }
     catch (...) {
@@ -105,7 +108,7 @@ bool HotPatcher::RevertPatch(const std::string& patch_name) {
     auto it = g_active_patches.find(patch_name);
     if (it == g_active_patches.end()) {
         LeaveCriticalSection(&g_patch_lock);
-        std::cout << "[HOTPATCHER] WARNING: Patch '" << patch_name << "' not found\n";
+        s_logger.info("[HOTPATCHER] WARNING: Patch '");
         return false;
     }
     
@@ -116,7 +119,7 @@ bool HotPatcher::RevertPatch(const std::string& patch_name) {
         DWORD old_protect = 0;
         if (!VirtualProtect(record.target_address, record.size, PAGE_EXECUTE_READWRITE, &old_protect)) {
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] ERROR: VirtualProtect failed on revert\n";
+            s_logger.info("[HOTPATCHER] ERROR: VirtualProtect failed on revert\n");
             return false;
         }
         
@@ -124,7 +127,7 @@ bool HotPatcher::RevertPatch(const std::string& patch_name) {
         if (!WriteProcessMemory(GetCurrentProcess(), record.target_address, (void*)record.original_bytes.data(), record.size, nullptr)) {
             VirtualProtect(record.target_address, record.size, old_protect, nullptr);
             LeaveCriticalSection(&g_patch_lock);
-            std::cout << "[HOTPATCHER] ERROR: WriteProcessMemory failed on revert\n";
+            s_logger.info("[HOTPATCHER] ERROR: WriteProcessMemory failed on revert\n");
             return false;
         }
         
@@ -139,7 +142,7 @@ bool HotPatcher::RevertPatch(const std::string& patch_name) {
         g_active_patches.erase(it);
         
         LeaveCriticalSection(&g_patch_lock);
-        std::cout << "[HOTPATCHER] Reverted patch '" << patch_name << "'\n";
+        s_logger.info("[HOTPATCHER] Reverted patch '");
         return true;
     }
     catch (...) {
@@ -152,17 +155,17 @@ bool HotPatcher::RevertPatch(const std::string& patch_name) {
 void* HotPatcher::GetFunctionAddress(const std::string& module_name, const std::string& function_name) {
     HMODULE module = GetModuleHandleA(module_name.c_str());
     if (!module) {
-        std::cout << "[HOTPATCHER] ERROR: Module '" << module_name << "' not found\n";
+        s_logger.info("[HOTPATCHER] ERROR: Module '");
         return nullptr;
     }
     
     void* addr = (void*)GetProcAddress(module, function_name.c_str());
     if (!addr) {
-        std::cout << "[HOTPATCHER] ERROR: Function '" << function_name << "' not found\n";
+        s_logger.info("[HOTPATCHER] ERROR: Function '");
         return nullptr;
     }
     
-    std::cout << "[HOTPATCHER] Function found at address (thread-safe)\n";
+    s_logger.info("[HOTPATCHER] Function found at address (thread-safe)\n");
     return addr;
 }
 
@@ -172,14 +175,12 @@ void HotPatcher::ListPatches() {
     EnterCriticalSection(&g_patch_lock);
     
     if (g_active_patches.empty()) {
-        std::cout << "[HOTPATCHER] No active patches\n";
+        s_logger.info("[HOTPATCHER] No active patches\n");
     } else {
-        std::cout << "[HOTPATCHER] Active patches (" << g_active_patches.size() << "):\n";
+        s_logger.info("[HOTPATCHER] Active patches (");
         for (const auto& pair : g_active_patches) {
             const PatchRecord& record = pair.second;
-            std::cout << "  - " << pair.first 
-                      << " at 0x" << std::hex << (uintptr_t)record.target_address << std::dec
-                      << " (" << record.size << " bytes)\n";
+            s_logger.info("  - ");
         }
     }
     

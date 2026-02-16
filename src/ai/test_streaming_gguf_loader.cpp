@@ -8,26 +8,29 @@
 #include <string>
 #include <chrono>
 
+#include "logging/logger.h"
+static Logger s_logger("test_streaming_gguf_loader");
+
 void printMemoryStats(const StreamingGGUFLoaderQt::MemoryStats& stats) {
-    std::cout << "\n📊 Memory Statistics:" << std::endl;
-    std::cout << "  Total file size: " << (stats.totalFileSize / 1024 / 1024) << " MB" << std::endl;
-    std::cout << "  Total tensors: " << stats.totalTensorsCount << std::endl;
-    std::cout << "  Loaded tensors: " << stats.loadedTensorsCount << std::endl;
+    s_logger.info("\n📊 Memory Statistics:");
+    s_logger.info("  Total file size: ");
+    s_logger.info("  Total tensors: ");
+    s_logger.info("  Loaded tensors: ");
 }
 
 int main(int argc, char* argv[]) {
-    std::cout << "🧪 StreamingGGUFLoaderQt Test Program\n" << std::endl;
+    s_logger.info("🧪 StreamingGGUFLoaderQt Test Program\n");
     
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <path-to-gguf-file>" << std::endl;
-        std::cerr << "\nExample:" << std::endl;
-        std::cerr << "  " << argv[0] << " phi-3-mini.gguf" << std::endl;
-        std::cerr << "  " << argv[0] << " tinyllama-test.gguf" << std::endl;
+        s_logger.error( "Usage: " << argv[0] << " <path-to-gguf-file>" << std::endl;
+        s_logger.error( "\nExample:" << std::endl;
+        s_logger.error( "  " << argv[0] << " phi-3-mini.gguf" << std::endl;
+        s_logger.error( "  " << argv[0] << " tinyllama-test.gguf" << std::endl;
         return 1;
     }
     
     std::string modelPath = argv[1];
-    std::cout << "📁 Loading model: " << modelPath << "\n" << std::endl;
+    s_logger.info("📁 Loading model: ");
     
     // Create loader
     StreamingGGUFLoaderQt loader;
@@ -42,45 +45,45 @@ int main(int argc, char* argv[]) {
     auto loadTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     
     if (!success) {
-        std::cerr << "❌ Failed to load model!" << std::endl;
-        std::cerr << "   Error: " << loader.getLastError() << std::endl;
+        s_logger.error( "❌ Failed to load model!" << std::endl;
+        s_logger.error( "   Error: " << loader.getLastError() << std::endl;
         return 1;
     }
     
-    std::cout << "\n✅ Model loaded successfully in " << loadTime.count() << " ms\n" << std::endl;
+    s_logger.info("\n✅ Model loaded successfully in ");
     
     // Print model info
-    std::cout << "📋 Model Information:" << std::endl;
-    std::cout << "  Name: " << loader.getModelName() << std::endl;
-    std::cout << "  Architecture: " << loader.getModelArchitecture() << std::endl;
-    std::cout << "  Context Length: " << loader.getModelContextLength() << std::endl;
-    std::cout << "  Tensor Count: " << loader.getTensorCount() << std::endl;
-    std::cout << "  Metadata Count: " << loader.getMetadataCount() << std::endl;
+    s_logger.info("📋 Model Information:");
+    s_logger.info("  Name: ");
+    s_logger.info("  Architecture: ");
+    s_logger.info("  Context Length: ");
+    s_logger.info("  Tensor Count: ");
+    s_logger.info("  Metadata Count: ");
     
     // Print memory stats
     printMemoryStats(loader.getMemoryStats());
     
     // Print some metadata keys
-    std::cout << "\n🔑 Sample Metadata Keys:" << std::endl;
+    s_logger.info("\n🔑 Sample Metadata Keys:");
     auto keys = loader.getAllMetadataKeys();
     int count = 0;
     for (const auto& key : keys) {
-        std::cout << "  - " << key << std::endl;
+        s_logger.info("  - ");
         if (++count >= 10) {
-            std::cout << "  ... (" << (keys.size() - 10) << " more)" << std::endl;
+            s_logger.info("  ... (");
             break;
         }
     }
     
     // Test tensor access (without loading - just verify it exists)
-    std::cout << "\n🔍 Testing tensor access..." << std::endl;
+    s_logger.info("\n🔍 Testing tensor access...");
     if (loader.getTensorCount() > 0) {
-        std::cout << "  ✓ Tensors are indexed and ready for on-demand loading" << std::endl;
-        std::cout << "  ℹ Actual tensor data will be loaded only when requested" << std::endl;
+        s_logger.info("  ✓ Tensors are indexed and ready for on-demand loading");
+        s_logger.info("  ℹ Actual tensor data will be loaded only when requested");
     }
     
-    std::cout << "\n✨ All tests passed! Memory-mapped loading works correctly." << std::endl;
-    std::cout << "💡 This model can now be used without loading entire file into RAM." << std::endl;
+    s_logger.info("\n✨ All tests passed! Memory-mapped loading works correctly.");
+    s_logger.info("💡 This model can now be used without loading entire file into RAM.");
     
     return 0;
 }

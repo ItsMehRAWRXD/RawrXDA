@@ -354,6 +354,17 @@
                     <button class="tool-btn" onclick="insertContext('@file')">@File</button>
                     <button class="tool-btn" onclick="insertContext('@code')">@Code</button>
                     <button class="tool-btn" onclick="insertContext('@terminal')">@Terminal</button>
+                    <button class="tool-btn" onclick="toolListFiles()">Files</button>
+                    <button class="tool-btn" onclick="toolReadFile()">Read</button>
+                    <button class="tool-btn" onclick="toolWriteFile()">Write</button>
+                    <button class="tool-btn" onclick="toolMkdir()">New Folder</button>
+                    <button class="tool-btn" onclick="toolRename()">Rename</button>
+                    <button class="tool-btn" onclick="toolDelete()">Delete</button>
+                    <button class="tool-btn" onclick="toolSearch()">Search</button>
+                    <button class="tool-btn" onclick="toolRunCommand()">Run</button>
+                    <button class="tool-btn" onclick="toolGitStatus()">Git Status</button>
+                    <button class="tool-btn" onclick="toolGitDiff()">Git Diff</button>
+                    <button class="tool-btn" onclick="toolGitBranches()">Git Branches</button>
                     <button class="tool-btn active" data-mode="ask" onclick="setMode('ask', this)">Ask</button>
                     <button class="tool-btn" data-mode="plan" onclick="setMode('plan', this)">Plan</button>
                     <button class="tool-btn" data-mode="full" onclick="setMode('full', this)">Full</button>
@@ -467,6 +478,55 @@
                     return { raw: text };
                 }
             });
+        }
+
+        async function apiRequest(path, options = {}) {
+            const method = options.method || "GET";
+            const headers = getHeaders(options.body ? { "Content-Type": "application/json" } : {});
+            const response = await withTimeout(
+                options.timeoutMs || 20000,
+                fetch(`${state.apiUrl}${path}`, {
+                    method,
+                    headers,
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                })
+            );
+
+            const parsed = await safeJson(response);
+            if (!response.ok) {
+                throw new Error(parsed.error || `${method} ${path} failed (${response.status})`);
+            }
+            return parsed;
+        }
+
+        function extensionToLang(path) {
+            const ext = path.split(".").pop()?.toLowerCase() || "";
+            const map = {
+                js: "javascript",
+                ts: "typescript",
+                jsx: "javascript",
+                tsx: "typescript",
+                py: "python",
+                cpp: "cpp",
+                cc: "cpp",
+                c: "c",
+                h: "c",
+                hpp: "cpp",
+                cs: "csharp",
+                go: "go",
+                rs: "rust",
+                java: "java",
+                json: "json",
+                md: "markdown",
+                yml: "yaml",
+                yaml: "yaml",
+                sh: "bash",
+                ps1: "powershell",
+                sql: "sql",
+                html: "html",
+                css: "css"
+            };
+            return map[ext] || "text";
         }
 
         function handleKeydown(e) {
@@ -800,6 +860,190 @@
             input.focus();
         }
 
+        async function toolListFiles() {
+            const path = prompt("Workspace path to list", ".");
+            if (path === null) return;
+            try {
+                const data = await apiRequest(`/api/fs/list?path=${encodeURIComponent(path)}&depth=2`);
+                const preview = (data.items || [])
+                    .slice(0, 120)
+                    .map((item) => `${item.type === "dir" ? "[D]" : "[F]"} ${item.path}`)
+                    .join("\n");
+                addMessage(
+                    `**Workspace** \`${data.root || path}\` (${data.count || 0} items)\n\`\`\`text\n${preview || "(empty)"}\n\`\`\`${data.truncated ? "\n_Truncated output_" : ""}`,
+                    "assistant"
+                );
+            } catch (error) {
+                addMessage(`List files failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolReadFile() {
+            const path = prompt("File path to read", "");
+            if (!path) return;
+            try {
+                const data = await apiRequest("/api/fs/read", {
+                    method: "POST",
+                    body: { path }
+                });
+                const lang = extensionToLang(data.path || path);
+                addMessage(
+                    `**Read** \`${data.path || path}\` (${data.size_bytes || 0} bytes)\n\`\`\`${lang}\n${data.content || ""}\n\`\`\`${data.truncated ? "\n_Truncated output_" : ""}`,
+                    "assistant"
+                );
+            } catch (error) {
+                addMessage(`Read file failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolWriteFile() {
+            const path = prompt("File path to write", "");
+            if (!path) return;
+
+            const draft = document.getElementById("userInput").value;
+            let content = draft;
+            if (!content) {
+                content = prompt("File content (single-line prompt). Tip: paste multi-line into message box first.", "");
+                if (content === null) return;
+            }
+
+            try {
+                const data = await apiRequest("/api/fs/write", {
+                    method: "POST",
+                    body: { path, content }
+                });
+                addMessage(`Wrote \`${data.path}\` (${data.size_bytes} bytes)`, "system");
+            } catch (error) {
+                addMessage(`Write file failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolMkdir() {
+            const path = prompt("Directory path to create", "");
+            if (!path) return;
+            try {
+                const data = await apiRequest("/api/fs/mkdir", {
+                    method: "POST",
+                    body: { path, parents: true }
+                });
+                addMessage(`Created directory \`${data.path}\``, "system");
+            } catch (error) {
+                addMessage(`Create directory failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolRename() {
+            const src = prompt("Source path", "");
+            if (!src) return;
+            const dst = prompt("Destination path", "");
+            if (!dst) return;
+            try {
+                const data = await apiRequest("/api/fs/rename", {
+                    method: "POST",
+                    body: { src, dst }
+                });
+                addMessage(`Renamed \`${data.from}\` to \`${data.to}\``, "system");
+            } catch (error) {
+                addMessage(`Rename failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolDelete() {
+            const path = prompt("Path to delete", "");
+            if (!path) return;
+            const recursive = confirm("Recursive delete? (required for non-empty folders)");
+            try {
+                const data = await apiRequest("/api/fs/delete", {
+                    method: "POST",
+                    body: { path, recursive }
+                });
+                addMessage(`Deleted \`${data.path}\` (${data.type})`, "system");
+            } catch (error) {
+                addMessage(`Delete failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolSearch() {
+            const query = prompt("Search query", "");
+            if (!query) return;
+            const path = prompt("Search path", ".") || ".";
+            try {
+                const data = await apiRequest("/api/search", {
+                    method: "POST",
+                    body: { query, path, regex: false, case_sensitive: false, max_results: 120 }
+                });
+                const preview = (data.results || [])
+                    .slice(0, 120)
+                    .map((hit) => `${hit.path}:${hit.line}:${hit.column}  ${hit.preview}`)
+                    .join("\n");
+                addMessage(
+                    `**Search** \`${query}\` in \`${data.root || path}\` (${data.count || 0} hits)\n\`\`\`text\n${preview || "(no matches)"}\n\`\`\`${data.truncated ? "\n_Truncated results_" : ""}`,
+                    "assistant"
+                );
+            } catch (error) {
+                addMessage(`Search failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolRunCommand() {
+            const command = prompt("Shell command to run", "");
+            if (!command) return;
+            const cwd = prompt("Working directory (relative to workspace)", ".") || ".";
+            try {
+                const data = await apiRequest("/api/terminal/exec", {
+                    method: "POST",
+                    body: { command, cwd, timeout_s: 30 }
+                });
+                const output = [
+                    `exit=${data.exit_code} duration=${data.duration_ms}ms cwd=${data.cwd}`,
+                    "",
+                    data.stdout || "",
+                    data.stderr ? `\n[stderr]\n${data.stderr}` : ""
+                ].join("\n");
+                addMessage(`**Command:** \`${command}\`\n\`\`\`text\n${output.trim()}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Command failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolGitStatus() {
+            try {
+                const data = await apiRequest("/api/git/status?cwd=.");
+                const output = [data.stdout || "(no output)", data.stderr ? `\n[stderr]\n${data.stderr}` : ""].join("\n");
+                addMessage(`**Git Status**\n\`\`\`text\n${output.trim()}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Git status failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolGitDiff() {
+            const targetPath = prompt("Optional file path for diff (leave empty for full diff)", "") || "";
+            const staged = confirm("Show staged diff?");
+            const query = new URLSearchParams({ cwd: ".", staged: staged ? "1" : "0" });
+            if (targetPath) {
+                query.set("path", targetPath);
+            }
+            try {
+                const data = await apiRequest(`/api/git/diff?${query.toString()}`);
+                const output = [data.stdout || "(no diff)", data.stderr ? `\n[stderr]\n${data.stderr}` : ""].join("\n");
+                addMessage(`**Git Diff**\n\`\`\`text\n${output.trim()}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Git diff failed: ${error.message}`, "system");
+            }
+        }
+
+        async function toolGitBranches() {
+            try {
+                const data = await apiRequest("/api/git/branches?cwd=.");
+                const branches = (data.branches || [])
+                    .map((branch) => `${branch.current ? "*" : " "} ${branch.name} ${branch.hash} ${branch.subject}`)
+                    .join("\n");
+                addMessage(`**Git Branches**\n\`\`\`text\n${branches || "(no branches)"}\n\`\`\``, "assistant");
+            } catch (error) {
+                addMessage(`Git branches failed: ${error.message}`, "system");
+            }
+        }
+
         function setMode(mode, triggerElement) {
             state.agentMode = mode;
             localStorage.setItem("rawrxd_mode", mode);
@@ -834,7 +1078,15 @@
         function switchTab(tab, evt) {
             document.querySelectorAll(".nav-item").forEach((el) => el.classList.remove("active"));
             evt.currentTarget.classList.add("active");
-            addMessage(`Switched to ${tab.toUpperCase()} tab`, "system");
+            if (tab === "tools") {
+                addMessage("Tools tab active: use Files/Read/Write/Search/Run controls.", "system");
+                return;
+            }
+            if (tab === "agent") {
+                addMessage(`Agent tab active in ${state.agentMode.toUpperCase()} mode`, "system");
+                return;
+            }
+            addMessage("Chat tab active", "system");
         }
 
         function setAgentMode(mode, element) {

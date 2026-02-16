@@ -1,5 +1,8 @@
 #include "NeonFabric.hpp"
 
+#include "logging/logger.h"
+static Logger s_logger("NeonFabric");
+
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -33,13 +36,13 @@ bool NeonFabric::initialize(const FabricConfig& config) {
         INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE,
         0, sizeof(FabricControlBlock), L"RawrXD_NeonFabric_ControlBlock");
     if (!hMapFile) {
-        std::cerr << "[NeonFabric] Failed to create shared memory: " << GetLastError() << std::endl;
+        s_logger.error( "[NeonFabric] Failed to create shared memory: " << GetLastError() << std::endl;
         return false;
     }
     s_controlBlock = static_cast<FabricControlBlock*>(
         MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(FabricControlBlock)));
     if (!s_controlBlock) {
-        std::cerr << "[NeonFabric] Failed to map control block: " << GetLastError() << std::endl;
+        s_logger.error( "[NeonFabric] Failed to map control block: " << GetLastError() << std::endl;
         CloseHandle(hMapFile);
         return false;
     }
@@ -71,9 +74,9 @@ bool NeonFabric::initialize(const FabricConfig& config) {
             if (VulkanManager::createContext(ctx, config.shardSize)) {
                 s_vulkanContexts.push_back(ctx);
                 s_controlBlock->shardAssignments[i] = s_controlBlock->processId;
-                std::cout << "[NeonFabric] Vulkan context created for shard " << i << std::endl;
+                s_logger.info("[NeonFabric] Vulkan context created for shard ");
             } else {
-                std::cerr << "[NeonFabric] WARNING: Failed to create Vulkan context for shard " << i << std::endl;
+                s_logger.error( "[NeonFabric] WARNING: Failed to create Vulkan context for shard " << i << std::endl;
                 s_vulkanContexts.push_back(VulkanContext{});  // Empty placeholder
             }
         }
@@ -83,8 +86,7 @@ bool NeonFabric::initialize(const FabricConfig& config) {
     // 3. Pre-allocate shard mapping slots
     s_mappedShards.resize(config.maxShards, nullptr);
 
-    std::cout << "[NeonFabric] Initialized with " << config.maxShards << " shards, "
-              << "Vulkan=" << (config.enableVulkan ? "ON" : "OFF") << std::endl;
+    s_logger.info("[NeonFabric] Initialized with ");
     
     s_initialized = true;
     return true;
@@ -117,7 +119,7 @@ void NeonFabric::shutdown() {
         s_controlBlock = nullptr;
     }
     
-    std::cout << "[NeonFabric] Shutdown complete" << std::endl;
+    s_logger.info("[NeonFabric] Shutdown complete");
     s_initialized = false;
 }
 
@@ -146,7 +148,7 @@ void* NeonFabric::mapShard(uint32_t shardId) {
 #endif
 
     if (!mapped) {
-        std::cerr << "[NeonFabric] Failed to map shard " << shardId << std::endl;
+        s_logger.error( "[NeonFabric] Failed to map shard " << shardId << std::endl;
         return nullptr;
     }
 
@@ -160,7 +162,7 @@ void* NeonFabric::mapShard(uint32_t shardId) {
         s_controlBlock->shardBaseAddresses[shardId] = reinterpret_cast<uint64_t>(mapped);
     }
 
-    std::cout << "[NeonFabric] Mapped shard " << shardId << " at " << mapped << std::endl;
+    s_logger.info("[NeonFabric] Mapped shard ");
     return mapped;
 }
 
@@ -210,7 +212,7 @@ bool NeonFabric::synchronize() {
     const uint32_t maxSpins = 10000000;  // ~10 second timeout at typical spin rates
     while (s_controlBlock->readyBarrier < s_controlBlock->barrierTarget) {
         if (++spinCount > maxSpins) {
-            std::cerr << "[NeonFabric] Barrier synchronization timed out" << std::endl;
+            s_logger.error( "[NeonFabric] Barrier synchronization timed out" << std::endl;
             return false;
         }
         YieldProcessor();
