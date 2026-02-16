@@ -53,11 +53,11 @@ static void seedDefaultBindings() {
     seeded = true;
 
     auto add = [](const char* cmd, const char* desc, const char* key, const char* cat) {
-        KeyBinding kb;
-        kb.command = cmd; kb.description = desc;
-        kb.keyCombination = key; kb.category = cat;
-        kb.isDefault = true; kb.isCustom = false;
-        s_keyBindings.push_back(kb);
+        KeyBinding binding;
+        binding.command = cmd; binding.description = desc;
+        binding.keyCombination = key; binding.category = cat;
+        binding.isDefault = true; binding.isCustom = false;
+        s_keyBindings.push_back(binding);
     };
 
     // File
@@ -220,28 +220,28 @@ static void refreshShortcutList() {
     SendMessageW(s_hwndShortcutList, LVM_DELETEALLITEMS, 0, 0);
 
     for (int i = 0; i < (int)s_keyBindings.size(); ++i) {
-        auto& kb = s_keyBindings[i];
+        auto& binding = s_keyBindings[i];
         wchar_t buf[256];
 
         // Col 0: Command
-        MultiByteToWideChar(CP_UTF8, 0, kb.command.c_str(), -1, buf, 255);
+        MultiByteToWideChar(CP_UTF8, 0, binding.command.c_str(), -1, buf, 255);
         SE_InsertItemW(s_hwndShortcutList, i, buf);
 
         // Col 1: Description
-        MultiByteToWideChar(CP_UTF8, 0, kb.description.c_str(), -1, buf, 255);
+        MultiByteToWideChar(CP_UTF8, 0, binding.description.c_str(), -1, buf, 255);
         SE_SetItemTextW(s_hwndShortcutList, i, 1, buf);
 
         // Col 2: Key Combination
-        MultiByteToWideChar(CP_UTF8, 0, kb.keyCombination.c_str(), -1, buf, 255);
+        MultiByteToWideChar(CP_UTF8, 0, binding.keyCombination.c_str(), -1, buf, 255);
         SE_SetItemTextW(s_hwndShortcutList, i, 2, buf);
 
         // Col 3: Category
-        MultiByteToWideChar(CP_UTF8, 0, kb.category.c_str(), -1, buf, 255);
+        MultiByteToWideChar(CP_UTF8, 0, binding.category.c_str(), -1, buf, 255);
         SE_SetItemTextW(s_hwndShortcutList, i, 3, buf);
 
         // Col 4: Source
         SE_SetItemTextW(s_hwndShortcutList, i, 4,
-                        kb.isCustom ? L"Custom" : L"Default");
+                        binding.isCustom ? L"Custom" : L"Default");
     }
 }
 
@@ -375,10 +375,10 @@ static LRESULT CALLBACK shortcutEditorWndProc(HWND hwnd, UINT msg, WPARAM wParam
             if (fout.is_open()) {
                 fout << "[\n";
                 for (size_t i = 0; i < s_keyBindings.size(); ++i) {
-                    auto& kb = s_keyBindings[i];
-                    fout << "  {\"command\":\"" << kb.command
-                         << "\",\"key\":\"" << kb.keyCombination
-                         << "\",\"source\":\"" << (kb.isCustom ? "custom" : "default")
+                    auto& binding = s_keyBindings[i];
+                    fout << "  {\"command\":\"" << binding.command
+                         << "\",\"key\":\"" << binding.keyCombination
+                         << "\",\"source\":\"" << (binding.isCustom ? "custom" : "default")
                          << "\"}";
                     if (i + 1 < s_keyBindings.size()) fout << ",";
                     fout << "\n";
@@ -551,8 +551,8 @@ void Win32IDE::cmdShortcutEditorReset() {
     // Force re-seed by clearing the static flag via a trick:
     // We re-add all defaults
     seedDefaultBindings();
-    for (auto& kb : s_keyBindings) {
-        kb.isCustom = false;
+    for (auto& binding : s_keyBindings) {
+        binding.isCustom = false;
     }
     refreshShortcutList();
     appendToOutput("[ShortcutEditor] All keybindings reset to defaults.\n");
@@ -571,13 +571,13 @@ void Win32IDE::cmdShortcutEditorSave() {
 
     fout << "[\n";
     for (size_t i = 0; i < s_keyBindings.size(); ++i) {
-        auto& kb = s_keyBindings[i];
+        auto& binding = s_keyBindings[i];
         fout << "  {\n"
-             << "    \"command\": \"" << kb.command << "\",\n"
-             << "    \"key\": \"" << kb.keyCombination << "\",\n"
-             << "    \"description\": \"" << kb.description << "\",\n"
-             << "    \"category\": \"" << kb.category << "\",\n"
-             << "    \"custom\": " << (kb.isCustom ? "true" : "false") << "\n"
+             << "    \"command\": \"" << binding.command << "\",\n"
+             << "    \"key\": \"" << binding.keyCombination << "\",\n"
+             << "    \"description\": \"" << binding.description << "\",\n"
+             << "    \"category\": \"" << binding.category << "\",\n"
+             << "    \"custom\": " << (binding.isCustom ? "true" : "false") << "\n"
              << "  }";
         if (i + 1 < s_keyBindings.size()) fout << ",";
         fout << "\n";
@@ -599,20 +599,20 @@ void Win32IDE::cmdShortcutEditorList() {
         << "╠══════════════════════════════════════════════════════════════╣\n";
 
     std::string lastCat;
-    for (auto& kb : s_keyBindings) {
-        if (kb.category != lastCat) {
+    for (auto& binding : s_keyBindings) {
+        if (binding.category != lastCat) {
             char catLine[80];
             snprintf(catLine, sizeof(catLine), "║  ── %s ──                                               ║\n",
-                     kb.category.c_str());
+                     binding.category.c_str());
             oss << catLine;
-            lastCat = kb.category;
+            lastCat = binding.category;
         }
 
         char line[128];
         snprintf(line, sizeof(line), "║  %-20s  %-16s  %s%-10s ║\n",
-                 kb.description.c_str(), kb.keyCombination.c_str(),
-                 kb.isCustom ? "★ " : "  ",
-                 kb.isCustom ? "Custom" : "");
+                 binding.description.c_str(), binding.keyCombination.c_str(),
+                 binding.isCustom ? "★ " : "  ",
+                 binding.isCustom ? "Custom" : "");
         oss << line;
     }
 

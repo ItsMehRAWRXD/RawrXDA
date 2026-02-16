@@ -18,15 +18,25 @@ class InferenceEngine;
 
 /**
  * @class AgenticIterativeReasoning
- * @brief Stub: iterative reasoning loop (C++20, no Qt)
+ * @brief Intentional stub: iterative reasoning loop (C++20, no Qt)
  *
- * Placeholder used by AgenticAgentCoordinator. No-op initialize();
- * extend with reason() / strategy / reflection when needed.
+ * Placeholder used by AgenticAgentCoordinator. Validates args, stores pointers.
+ * Audit: Stub documented. Add reason()/strategy for full multi-step reflection.
  */
 class AgenticIterativeReasoning {
 public:
     AgenticIterativeReasoning() = default;
     ~AgenticIterativeReasoning() = default;
 
-    void initialize(AgenticEngine* /*engine*/, AgenticLoopState* /*state*/, InferenceEngine* /*inference*/) {}
+    void initialize(AgenticEngine* engine, AgenticLoopState* state, InferenceEngine* inference) {
+        if (!engine || !state || !inference) return;
+        m_engine = engine;
+        m_state = state;
+        m_inference = inference;
+    }
+
+private:
+    AgenticEngine* m_engine = nullptr;
+    AgenticLoopState* m_state = nullptr;
+    InferenceEngine* m_inference = nullptr;
 };

@@ -222,9 +222,10 @@ MemoryStats MemoryPressureHandler::querySystemMemory() {
     std::string line;
     while (std::getline(meminfo, line)) {
         if (line.find("MemAvailable:") == 0) {
-            uint64_t kb = 0;
-            std::sscanf(line.c_str(), "MemAvailable: %lu kB", &kb);
-            stats.availablePhysical = kb * 1024;
+            unsigned long long memAvailableKiB = 0;
+            if (std::sscanf(line.c_str(), "MemAvailable: %llu kB", &memAvailableKiB) == 1) {
+                stats.availablePhysical = static_cast<uint64_t>(memAvailableKiB) * 1024;
+            }
             break;
         }
     }
