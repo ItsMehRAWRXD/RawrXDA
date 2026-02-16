@@ -1,9 +1,11 @@
 #include "tool_registry_init.hpp"
 #include "tool_registry.h"
 #include "engine_iface.h"
-#include <iostream>
+#include "logging/logger.h"
 #include <string>
 #include <sstream>
+
+static Logger s_registryLogger("ToolRegistry");
 
 // ============================================================================
 // register_rawr_inference — Registers the RAWR inference tool with ToolRegistry.
@@ -36,7 +38,7 @@ void register_rawr_inference() {
         return "[rawr_inference] No inference engine available — load a GGUF model first";
     });
 
-    std::cout << "[REGISTRY] Registered RAWR inference tool (routes to EngineRegistry)\n";
+    s_registryLogger.info("Registered RAWR inference tool (routes to EngineRegistry)");
 }
 
 // ============================================================================
@@ -48,13 +50,13 @@ void register_sovereign_engines() {
     // Check if engines are already registered (real module may have beaten us)
     Engine* existing = EngineRegistry::get("engine_800b");
     if (existing) {
-        std::cout << "[REGISTRY] Engine800B already registered by engine module\n";
+        s_registryLogger.info("Engine800B already registered by engine module");
         return;
     }
 
     existing = EngineRegistry::get("sovereign_small");
     if (existing) {
-        std::cout << "[REGISTRY] SovereignSmall already registered by engine module\n";
+        s_registryLogger.info("SovereignSmall already registered by engine module");
         return;
     }
 
@@ -70,6 +72,5 @@ void register_sovereign_engines() {
                "Rebuild with -DRAWR_ENGINE_MODULE=ON to enable SovereignSmall.";
     });
 
-    std::cout << "[REGISTRY] register_sovereign_engines — engine module not linked, "
-                 "diagnostic tools registered\n";
+    s_registryLogger.warn("register_sovereign_engines: engine module not linked, diagnostic tools registered");
 }

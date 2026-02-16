@@ -2,9 +2,11 @@
 // Manages chat sessions and message history
 
 #include "chatpanel.h"
-#include <iostream>
+#include "logging/logger.h"
 #include <chrono>
 #include <mutex>
+
+static Logger s_chatPanelLogger("ChatPanel");
 
 namespace ChatPanel {
 
@@ -26,7 +28,7 @@ public:
         m_session.messages.push_back(userMsg);
         m_session.updatedAt = userMsg.timestamp;
         
-        std::cout << "[ChatPanel] User: " << text.substr(0, 80) << std::endl;
+        s_chatPanelLogger.info("User: {}", text.substr(0, 80));
         
         // Notify listeners
         if (m_onMessage) {
@@ -38,7 +40,7 @@ public:
         std::lock_guard<std::mutex> lock(m_mutex);
         m_session.messages.clear();
         m_session.updatedAt = currentTimestamp();
-        std::cout << "[ChatPanel] History cleared" << std::endl;
+        s_chatPanelLogger.info("History cleared");
     }
     
     std::vector<Message> getHistory() const override {
