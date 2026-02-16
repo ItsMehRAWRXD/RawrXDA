@@ -4,6 +4,9 @@
 #include <cstring>
 #include <windows.h>
 #include <psapi.h>
+
+#include "logging/logger.h"
+static Logger s_logger("memory_manager_real");
 #pragma comment(lib, "psapi.lib")
 
 // Real Memory Manager Implementation
@@ -41,7 +44,7 @@ public:
     void SetContextSize(unsigned long long size) {
         EnterCriticalSection(&m_cs);
         m_context_size_limit = size;
-        std::cout << "[MEMORY] Context size set to " << size << " bytes\n";
+        s_logger.info("[MEMORY] Context size set to ");
         LeaveCriticalSection(&m_cs);
     }
     
@@ -100,7 +103,7 @@ public:
                 m_blocks.push_back(block);
                 m_total_allocated += context_data.size();
                 
-                std::cout << "[MEMORY] Context processed: " << context_data.size() << " bytes\n";
+                s_logger.info("[MEMORY] Context processed: ");
                 
                 // Note: In production, this would be freed after processing
             }
@@ -126,7 +129,7 @@ extern "C" {
     void memory_manager_init() {
         if (!g_memory_mgr) {
             g_memory_mgr = new MemoryManagerReal();
-            std::cout << "[MEMORY MANAGER] Initialized\n";
+            s_logger.info("[MEMORY MANAGER] Initialized\n");
         }
     }
     

@@ -14,6 +14,9 @@
 #include <mutex>
 #include <atomic>
 
+#include "logging/logger.h"
+static Logger s_logger("rawrxd_system");
+
 namespace RawrXD {
 
 class RawrXDSystem {
@@ -53,7 +56,7 @@ public:
     bool initialize() {
         if (initialized) return true;
         
-        std::cout << "Initializing RawrXD System..." << std::endl;
+        s_logger.info("Initializing RawrXD System...");
         
         // Initialize runtime core
         init_runtime();
@@ -75,7 +78,7 @@ public:
         // Start system thread
         system_thread = std::thread(&RawrXDSystem::system_loop, this);
         
-        std::cout << "RawrXD System initialized successfully!" << std::endl;
+        s_logger.info("RawrXD System initialized successfully!");
         return true;
     }
     
@@ -90,7 +93,7 @@ public:
         hot_patcher.shutdown();
         memory_core.shutdown();
         
-        std::cout << "RawrXD System shutdown complete." << std::endl;
+        s_logger.info("RawrXD System shutdown complete.");
     }
     
     bool load_model(const std::string& source, const std::string& model_name) {
@@ -114,13 +117,13 @@ public:
         }
         
         if (model_path.empty()) {
-            std::cerr << "Failed to get model path for: " << model_name << std::endl;
+            s_logger.error( "Failed to get model path for: " << model_name << std::endl;
             return false;
         }
         
         // Load GGUF model
         if (!gguf_loader.Load(model_path)) {
-            std::cerr << "Failed to load GGUF model: " << model_path << std::endl;
+            s_logger.error( "Failed to load GGUF model: " << model_path << std::endl;
             return false;
         }
         
@@ -130,7 +133,7 @@ public:
         // Set active engine
         set_engine("RawrXD-AVX512");
         
-        std::cout << "Model loaded successfully: " << model_path << std::endl;
+        s_logger.info("Model loaded successfully: ");
         return true;
     }
     
@@ -206,7 +209,7 @@ private:
         if (!models.empty()) {
             load_model("blob", "");
         } else {
-            std::cout << "No default model found in D:\\ollamamodels" << std::endl;
+            s_logger.info("No default model found in D:\\ollamamodels");
         }
     }
     

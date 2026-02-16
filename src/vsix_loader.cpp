@@ -3,6 +3,9 @@
 #include <sstream>
 #include <algorithm>
 #include <shlwapi.h>
+
+#include "logging/logger.h"
+static Logger s_logger("vsix_loader");
 #pragma comment(lib, "shlwapi.lib")
 #include <zip.h>
 
@@ -122,7 +125,7 @@ bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::path& plugin_dir
         for (const auto& [cmd, handler] : manifest["command_handlers"].items()) {
             RegisterCommand(cmd, [handler]() {
                 // Execute handler (simplified)
-                std::cout << "Executing: " << handler << std::endl;
+                s_logger.info("Executing: ");
             });
         }
     }

@@ -11,6 +11,9 @@
 #include <functional>
 #include <unordered_map>
 
+#include "logging/logger.h"
+static Logger s_logger("codex_integration");
+
 #ifdef _WIN32
 #include <windows.h>
 #include <dbghelp.h>
@@ -136,9 +139,7 @@ AnalysisResult analyzeBinary(const std::string& filePath) {
     
     file.close();
     
-    std::cout << "[Codex] Analyzed: " << filePath << " (" << result.architecture 
-              << ", .text=" << result.textSectionSize 
-              << ", strings=" << result.stringCount << ")" << std::endl;
+    s_logger.info("[Codex] Analyzed: ");
     
     return result;
 }

@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <windows.h>
 
+#include "logging/logger.h"
+static Logger s_logger("IDEConfig");
+
 // ============================================================================
 // IDEConfig — Load / Save / Defaults
 // ============================================================================
@@ -102,7 +105,7 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
 
     std::ifstream file(configPath);
     if (!file.is_open()) {
-        std::cerr << "[IDEConfig] Config file not found: " << configPath
+        s_logger.error( "[IDEConfig] Config file not found: " << configPath
                   << " — using defaults." << std::endl;
         return false;
     }
@@ -132,12 +135,11 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
         };
 
         flatten("", json);
-        std::cout << "[IDEConfig] Loaded " << m_values.size() << " config keys from: "
-                  << configPath << std::endl;
+        s_logger.info("[IDEConfig] Loaded ");
         return true;
 
     } catch (const std::exception& e) {
-        std::cerr << "[IDEConfig] Error parsing config: " << e.what() << std::endl;
+        s_logger.error( "[IDEConfig] Error parsing config: " << e.what() << std::endl;
         return false;
     }
 }
@@ -201,7 +203,7 @@ bool IDEConfig::saveToFile(const std::string& configPath) const
         return true;
 
     } catch (const std::exception& e) {
-        std::cerr << "[IDEConfig] Error saving config: " << e.what() << std::endl;
+        s_logger.error( "[IDEConfig] Error saving config: " << e.what() << std::endl;
         return false;
     }
 }
@@ -305,8 +307,7 @@ void IDEConfig::applyEnvironmentOverrides()
         DWORD len = GetEnvironmentVariableA(mapping.envVar, buf, sizeof(buf));
         if (len > 0 && len < sizeof(buf)) {
             m_values[mapping.configKey] = std::string(buf, len);
-            std::cout << "[IDEConfig] Env override: " << mapping.envVar
-                      << " -> " << mapping.configKey << " = " << buf << std::endl;
+            s_logger.info("[IDEConfig] Env override: ");
         }
     }
 }

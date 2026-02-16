@@ -9,6 +9,9 @@
 #include <iostream>
 #include <algorithm>
 
+#include "logging/logger.h"
+static Logger s_logger("realtime_analyzer");
+
 // Real-time analyzer with multi-dimensional analysis
 class RealTimeAnalyzer {
 public:
@@ -388,7 +391,7 @@ extern "C" {
     void InitRealTimeAnalyzer() {
         if (!g_analyzer) {
             g_analyzer = new RealTimeAnalyzer();
-            std::cout << "[ANALYZER] Real-time code analysis initialized\n";
+            s_logger.info("[ANALYZER] Real-time code analysis initialized\n");
         }
     }
     
