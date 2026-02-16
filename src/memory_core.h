@@ -3,7 +3,6 @@
 #include <string>
 #include <mutex>
 #include <memory>
-#include <iostream>
 
 // Defined Context Tiers (Token Counts)
 enum class ContextTier : size_t {

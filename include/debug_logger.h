@@ -1,32 +1,28 @@
 #pragma once
 
-#include <memory>
-#include <fstream>
-#include <cstdio>
-#include <cstdarg>
+#include "logging/logger.h"
 
+// DebugLogger facade that delegates to the centralized Logger.
+// Replaces the old file-based stub with structured logging.
 class DebugLogger {
 public:
     static DebugLogger& getInstance() {
-        static DebugLogger instance;  // No file yet - just a stub
+        static DebugLogger instance;
         return instance;
     }
     
-    void init(const char* path) {
-        if (!m_file) {
-            m_file = std::make_unique<std::ofstream>(path, std::ios::app);
-        }
+    void init(const char* /*path*/) {
+        // Initialization is handled by the centralized Logger.
+        // The path parameter is retained for API compatibility.
     }
     
     void log(const char* message) {
-        if (m_file && m_file->is_open()) {
-            *m_file << message << std::flush;
-        }
+        m_logger.debug(message);
     }
     
 private:
-    DebugLogger() = default;
-    std::unique_ptr<std::ofstream> m_file;
+    DebugLogger() : m_logger("DebugLogger") {}
+    Logger m_logger;
 };
 
 #define DEBUG_LOG(msg) DebugLogger::getInstance().log(msg)

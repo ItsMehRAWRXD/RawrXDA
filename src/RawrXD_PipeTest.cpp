@@ -1,38 +1,27 @@
+// RawrXD_PipeTest.cpp - Named pipe client test harness
 #include "RawrXD_PipeClient.h"
-#include <iostream>
-#include <iomanip>
+#include "logging/logger.h"
+#include <string>
 
 int main() {
+    Logger logger("PipeTest");
 
+    RawrXD::PipeClient client("RawrXD_PatternBridge");
 
-    try {
-        RawrXD::PipeClient client("RawrXD_PatternBridge");
-
-
-        if (!client.// Connect removed) {
-            
-            return 1;
-        }
-
-
-        if (client.Ping()) {
-            
-        } else {
-            
-        }
-
-        std::string testText = "BUG: This is a test memory leak in the C++ client harness";
-
-
-        auto result = client.Classify(testText);
-
-
-        client;
-    }
-    catch (const std::exception& e) {
-        
+    if (!client.Connect()) {
+        logger.error("Failed to connect to RawrXD_PatternBridge pipe");
         return 1;
     }
+
+    if (client.Ping()) {
+        logger.info("Ping succeeded");
+    } else {
+        logger.warn("Ping failed");
+    }
+
+    std::string testText = "Test pattern classification via named pipe";
+    auto result = client.Classify(testText);
+    logger.info("Classification result received");
 
     return 0;
 }

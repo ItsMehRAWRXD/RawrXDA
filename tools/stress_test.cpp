@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <iostream>
 #include <vector>
 #include <thread>
 #include <string>
@@ -7,8 +6,10 @@
 #include <atomic>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include "logging/logger.h"
 #pragma comment(lib, "ws2_32.lib")
 
+static Logger s_logger("StressTest");
 std::atomic<int> success{0}, failed{0};
 
 void TestRequest(const std::string& host, int port, int id) {
@@ -35,7 +36,7 @@ int main(int argc, char* argv[]) {
     int port = argc > 2 ? atoi(argv[2]) : 11434;
     int threads = argc > 3 ? atoi(argv[3]) : 10;
     
-    std::cout << "Stress Test: " << host << ":" << port << " (" << threads << " threads)\n";
+    s_logger.info("Stress Test: {}:{} ({} threads)", host, port, threads);
     
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<std::thread> pool;
@@ -44,7 +45,7 @@ int main(int argc, char* argv[]) {
     auto end = std::chrono::high_resolution_clock::now();
     
     double sec = std::chrono::duration<double>(end - start).count();
-    std::cout << "Success: " << success << " Failed: " << failed << "\n";
-    std::cout << "Time: " << sec << "s (" << threads/sec << " req/s)\n";
+    s_logger.info("Success: {} Failed: {}", success.load(), failed.load());
+    s_logger.info("Time: {}s ({} req/s)", sec, static_cast<double>(threads) / sec);
     return failed > 0 ? 1 : 0;
 }
