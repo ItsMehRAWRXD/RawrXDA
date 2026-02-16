@@ -23,8 +23,10 @@ ModelState_Transition PROC FRAME
 ModelState_Transition ENDP
 
 ModelState_AcquireInstance PROC FRAME
-    ; Returns mock instance pointer
-    lea rax, [rsp] ; Invalid but non-null for now
+    ; Stub: return NULL until real instance allocation is implemented.
+    ; Callers must check for null before use. Previously returned [rsp] which
+    ; was invalid after return (stack address).
+    xor rax, rax
     ret
 ModelState_AcquireInstance ENDP
 

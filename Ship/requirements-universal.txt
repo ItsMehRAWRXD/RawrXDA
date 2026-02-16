@@ -1,0 +1,2 @@
+# RawrEngine / Universal Access backend
+flask>=2.0.0

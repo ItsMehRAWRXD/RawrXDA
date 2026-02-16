@@ -6,7 +6,7 @@
     Checks all components are in place and operational
 #>
 
-$ProjectRoot = "d:\lazy init ide"
+$ProjectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { $PSScriptRoot }
 $TestResults = @{
     Passed = 0
     Failed = 0

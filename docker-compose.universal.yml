@@ -1,0 +1,45 @@
+# RawrXD Universal Access — Run from repo root:
+#   docker-compose -f docker-compose.universal.yml up -d
+
+version: '3.8'
+
+services:
+  rawrxd-backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: rawrxd-backend
+    ports:
+      - "23959:23959"
+    volumes:
+      - rawrxd-models:/opt/rawrxd/models:ro
+      - workspace:/workspace
+    environment:
+      - RAWRXD_HOST=0.0.0.0
+      - RAWRXD_PORT=23959
+      - RAWRXD_MODEL_PATH=/opt/rawrxd/models
+    networks:
+      - rawrxd-net
+    restart: unless-stopped
+
+  rawrxd-web:
+    image: nginx:alpine
+    container_name: rawrxd-web
+    ports:
+      - "80:80"
+    volumes:
+      - ./web_interface:/usr/share/nginx/html:ro
+      - ./docker/nginx-http-only.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - rawrxd-backend
+    networks:
+      - rawrxd-net
+    restart: unless-stopped
+
+volumes:
+  rawrxd-models:
+  workspace:
+
+networks:
+  rawrxd-net:
+    driver: bridge
