@@ -66,12 +66,14 @@ launch_backend() {
     export RAWRXD_HOST=0.0.0.0
     export RAWRXD_PORT=23959
     
-    if [ -f "RawrEngine.py" ]; then
-        exec python3 RawrEngine.py
-    elif [ -f "backend/rawr_engine.py" ]; then
+    if [ -f "backend/rawr_engine.py" ]; then
         exec python3 backend/rawr_engine.py
+    elif [ -f "RawrEngine.py" ]; then
+        exec python3 RawrEngine.py
+    elif [ -f "backend/rawrxd_backend.py" ]; then
+        exec python3 backend/rawrxd_backend.py
     else
-        error "RawrEngine not found"
+        error "RawrEngine not found. Expected backend/rawr_engine.py"
         exit 1
     fi
 }

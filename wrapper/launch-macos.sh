@@ -124,10 +124,14 @@ backend_only() {
     log "Starting RawrEngine backend (macOS native Python)..."
     cd "$SCRIPT_DIR/.."
     
-    if [ -f "RawrEngine.py" ]; then
+    if [ -f "backend/rawr_engine.py" ]; then
+        exec python3 backend/rawr_engine.py
+    elif [ -f "RawrEngine.py" ]; then
         exec python3 RawrEngine.py
+    elif [ -f "backend/rawrxd_backend.py" ]; then
+        exec python3 backend/rawrxd_backend.py
     else
-        echo -e "${RED}Backend not found${NC}"
+        echo -e "${RED}Backend not found. Expected backend/rawr_engine.py${NC}"
         exit 1
     fi
 }
