@@ -30,6 +30,7 @@
 #include "../model_source_resolver.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
+#include "SourceFileRegistry.h"
 #include "Win32IDE_SubAgent.h"
 #include "Win32IDE_WebView2.h"
 #include "../modules/engine_manager.h"

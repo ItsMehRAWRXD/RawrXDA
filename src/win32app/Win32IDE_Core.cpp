@@ -1667,6 +1667,19 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
         return;
     }
     
+    // Source File menu items — open the selected file in the editor
+    if (IsSourceFileCommand(static_cast<UINT>(id))) {
+        const wchar_t* wpath = GetSourceFilePath(static_cast<UINT>(id));
+        if (wpath) {
+            int len = WideCharToMultiByte(CP_UTF8, 0, wpath, -1, nullptr, 0, nullptr, nullptr);
+            std::string filePath(len - 1, '\0');
+            WideCharToMultiByte(CP_UTF8, 0, wpath, -1, &filePath[0], len, nullptr, nullptr);
+            openFile(filePath);
+            LOG_INFO("Source Files: opened " + filePath);
+        }
+        return;
+    }
+
     // ── UNIFIED DISPATCH — The ONE AND ONLY command path ────────────────
     // All commands live in COMMAND_TABLE (command_registry.hpp).
     // No legacy fallback. No dual routing. Drift is structurally impossible.
