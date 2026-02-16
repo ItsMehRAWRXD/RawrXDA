@@ -44,11 +44,11 @@ REQUIRE_AUTH = os.environ.get("RAWRXD_REQUIRE_AUTH", "0") == "1"
 # Cross-platform model directories
 MODEL_DIRS = []
 if sys.platform == "win32":
+    home_dir = os.path.expanduser("~")
     MODEL_DIRS = [
-        r"D:\OllamaModels",
-        r"D:\models",
-        r"C:\models",
-        os.path.expanduser(r"~\.ollama\models"),
+        os.path.join(home_dir, "OllamaModels"),
+        os.path.join(home_dir, "models"),
+        os.path.join(home_dir, ".ollama", "models"),
     ]
 else:
     MODEL_DIRS = [
@@ -60,6 +60,10 @@ else:
 # Allow override via environment
 if os.environ.get("RAWRXD_MODEL_PATH"):
     MODEL_DIRS.insert(0, os.environ["RAWRXD_MODEL_PATH"])
+
+# Optional multi-directory override (comma-separated paths).
+if os.environ.get("RAWRXD_MODEL_DIRS"):
+    MODEL_DIRS = [p.strip() for p in os.environ["RAWRXD_MODEL_DIRS"].split(",") if p.strip()] + MODEL_DIRS
 
 # State
 cached_models = []
