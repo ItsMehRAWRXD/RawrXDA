@@ -30,7 +30,7 @@ bool ParseArgs(int argc, char** argv, Args& args) {
         } else if (arg == "--help" || arg == "-h") {
             return false;
         } else {
-            std::cerr << "Unknown argument: " << arg << "\n";
+            s_monacoLogger.error("Unknown argument: {}", arg);
             return false;
         }
     }
