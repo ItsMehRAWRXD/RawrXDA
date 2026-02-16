@@ -85,8 +85,17 @@ def print_help() -> None:
               /list [path]
               /read <path>
               /write <path> <content...>
+              /mkdir <path>
+              /mv <src> <dst>
+              /rm <path> [--recursive]
               /search <query> [path]
               /exec <shell command...>
+              /git-status [cwd]
+              /git-diff [path]
+              /git-log [limit]
+              /git-branches
+              /git-commit <message> [--add-all]
+              /git-checkout <branch> [--create]
               /quit
             """
         ).strip()
@@ -222,6 +231,29 @@ def execute_command(state: CliState, raw_line: str) -> bool:
             content = " ".join(args[1:])
             response = state.request("POST", "/api/fs/write", {"path": path, "content": content})
             print_json(response)
+        elif cmd == "mkdir":
+            if not args:
+                print("Usage: /mkdir <path>")
+                return True
+            response = state.request("POST", "/api/fs/mkdir", {"path": args[0], "parents": True})
+            print_json(response)
+        elif cmd in {"mv", "rename"}:
+            if len(args) != 2:
+                print("Usage: /mv <src> <dst>")
+                return True
+            response = state.request("POST", "/api/fs/rename", {"src": args[0], "dst": args[1]})
+            print_json(response)
+        elif cmd in {"rm", "delete"}:
+            if not args:
+                print("Usage: /rm <path> [--recursive]")
+                return True
+            recursive = "--recursive" in args or "-r" in args
+            target = next((arg for arg in args if not arg.startswith("-")), "")
+            if not target:
+                print("Usage: /rm <path> [--recursive]")
+                return True
+            response = state.request("POST", "/api/fs/delete", {"path": target, "recursive": recursive})
+            print_json(response)
         elif cmd == "search":
             if not args:
                 print("Usage: /search <query> [path]")
@@ -240,6 +272,77 @@ def execute_command(state: CliState, raw_line: str) -> bool:
             print(f"exit={response.get('exit_code')} duration={response.get('duration_ms')}ms")
             if response.get("stdout"):
                 print(response["stdout"])
+            if response.get("stderr"):
+                print(response["stderr"], file=sys.stderr)
+        elif cmd == "git-status":
+            cwd = args[0] if args else "."
+            response = state.request("GET", f"/api/git/status?{urllib.parse.urlencode({'cwd': cwd})}")
+            print(response.get("stdout", ""))
+            if response.get("stderr"):
+                print(response["stderr"], file=sys.stderr)
+        elif cmd == "git-diff":
+            query: dict[str, str] = {"cwd": "."}
+            if args:
+                query["path"] = args[0]
+            response = state.request("GET", f"/api/git/diff?{urllib.parse.urlencode(query)}")
+            print(response.get("stdout", ""))
+            if response.get("stderr"):
+                print(response["stderr"], file=sys.stderr)
+        elif cmd == "git-log":
+            limit = args[0] if args else "20"
+            response = state.request("GET", f"/api/git/log?{urllib.parse.urlencode({'limit': limit})}")
+            commits = response.get("commits", [])
+            if commits:
+                for commit in commits:
+                    print(f"{commit['hash']} {commit['date']} {commit['author']}  {commit['subject']}")
+            else:
+                print(response.get("stdout", ""))
+            if response.get("stderr"):
+                print(response["stderr"], file=sys.stderr)
+        elif cmd == "git-branches":
+            response = state.request("GET", "/api/git/branches")
+            branches = response.get("branches", [])
+            if branches:
+                for branch in branches:
+                    marker = "*" if branch.get("current") else " "
+                    print(f"{marker} {branch.get('name')} {branch.get('hash')} {branch.get('subject')}")
+            else:
+                print(response.get("stdout", ""))
+            if response.get("stderr"):
+                print(response["stderr"], file=sys.stderr)
+        elif cmd == "git-commit":
+            if not args:
+                print("Usage: /git-commit <message> [--add-all]")
+                return True
+            add_all = "--add-all" in args
+            message_parts = [arg for arg in args if not arg.startswith("--")]
+            message = " ".join(message_parts).strip()
+            if not message:
+                print("Usage: /git-commit <message> [--add-all]")
+                return True
+            response = state.request(
+                "POST",
+                "/api/git/commit",
+                {"message": message, "cwd": ".", "add_all": add_all},
+            )
+            print(response.get("stdout", ""))
+            if response.get("stderr"):
+                print(response["stderr"], file=sys.stderr)
+        elif cmd == "git-checkout":
+            if not args:
+                print("Usage: /git-checkout <branch> [--create]")
+                return True
+            create = "--create" in args
+            branch = next((arg for arg in args if not arg.startswith("--")), "")
+            if not branch:
+                print("Usage: /git-checkout <branch> [--create]")
+                return True
+            response = state.request(
+                "POST",
+                "/api/git/checkout",
+                {"branch": branch, "create": create, "cwd": "."},
+            )
+            print(response.get("stdout", ""))
             if response.get("stderr"):
                 print(response["stderr"], file=sys.stderr)
         else:
