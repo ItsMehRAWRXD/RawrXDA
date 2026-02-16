@@ -1,0 +1,20 @@
+# RawrXD Backend Container (Universal Access)
+# Runs the RawrEngine-compatible HTTP API on port 23959
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV RAWRXD_HOST=0.0.0.0
+ENV RAWRXD_PORT=23959
+
+RUN apt-get update && \
+    apt-get install -y python3 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/rawrxd
+COPY Ship/ /opt/rawrxd/backend/
+
+EXPOSE 23959
+
+CMD ["python3", "/opt/rawrxd/backend/RawrEngine.py"]
+
