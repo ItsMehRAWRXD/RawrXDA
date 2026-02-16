@@ -30,8 +30,9 @@ RunDigestionEngine PROC FRAME
     test    r13, r13
     jz      invalid_arg
 
+    ; FIXED: Return not-implemented instead of false success
     ; TODO: real AVX-512 digestion pipeline will go here
-    xor     eax, eax        ; S_DIGEST_OK = 0
+    mov     eax, 0xC0000001 ; STATUS_NOT_IMPLEMENTED
     jmp     done
 
 invalid_arg:

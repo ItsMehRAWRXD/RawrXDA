@@ -1,15 +1,10 @@
-#include <windows.h>
-#include <cstdio>
-#include <fstream>
+// CONSOLIDATED: stub_main.cpp merged into src/main.cpp
+// This file now redirects to the real main implementation
+// All Win32 WinMain functionality is in src/win32app/Win32IDE.cpp
+
+#include "win32app/Win32IDE.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // Log to file
-    std::ofstream log("D:\\temp\\stub_test.log");
-    log << "STUB: WinMain entered\n"; log.flush();
-    
-    MessageBoxA(nullptr, "Stub main reached!", "SUCCESS", MB_OK);
-    
-    log << "STUB: MessageBox shown\n"; log.flush();
-    
-    return 0;
+    // Launch real Win32 IDE
+    return Win32IDE_Main(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 }
