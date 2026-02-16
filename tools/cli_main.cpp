@@ -1,22 +1,24 @@
 #include <windows.h>
-#include <iostream>
 #include <string>
 #include <vector>
+#include "logging/logger.h"
+
+static Logger s_logger("CLI");
 
 void PrintHelp() {
-    std::cout << "RawrXD Agent v1.0 (Qt-Free)\n";
-    std::cout << "USAGE: RawrXD_CLI [OPTIONS]\n\n";
-    std::cout << "OPTIONS:\n";
-    std::cout << "  --help, -h      Show help\n";
-    std::cout << "  --version, -v   Show version\n";
-    std::cout << "  --list, -l      List models\n";
-    std::cout << "  --port <n>      Server port\n";
-    std::cout << "  --host <ip>     Bind address\n";
+    s_logger.info("RawrXD Agent v1.0 (Qt-Free)");
+    s_logger.info("USAGE: RawrXD_CLI [OPTIONS]");
+    s_logger.info("OPTIONS:");
+    s_logger.info("  --help, -h      Show help");
+    s_logger.info("  --version, -v   Show version");
+    s_logger.info("  --list, -l      List models");
+    s_logger.info("  --port <n>      Server port");
+    s_logger.info("  --host <ip>     Bind address");
 }
 
 void PrintVersion() {
-    std::cout << "RawrXD Agent v1.0.0 (Qt-Free Build)\n";
-    std::cout << "Architecture: x64\n";
+    s_logger.info("RawrXD Agent v1.0.0 (Qt-Free Build)");
+    s_logger.info("Architecture: x64");
 }
 
 int main(int argc, char* argv[]) {
@@ -29,10 +31,10 @@ int main(int argc, char* argv[]) {
     if (arg == "--help" || arg == "-h") { PrintHelp(); return 0; }
     if (arg == "--version" || arg == "-v") { PrintVersion(); return 0; }
     if (arg == "--list" || arg == "-l") { 
-        std::cout << "Available models:\n  - gpt-oss:120b\n  - llama3\n"; 
+        s_logger.info("Available models:\n  - gpt-oss:120b\n  - llama3");
         return 0; 
     }
     
-    std::cout << "Starting RawrXD Agent...\n";
+    s_logger.info("Starting RawrXD Agent...");
     return 0;
 }

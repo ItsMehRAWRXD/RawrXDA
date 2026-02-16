@@ -23,9 +23,9 @@ public:
     void PollIO();
 
 private:
-    IDirectIOBackend* io_backend_ = nullptr;
+    std::unique_ptr<IDirectIOBackend> io_backend_;
     bool use_ioring_ = false;
-    void* ring_buffer_ptr_ = nullptr;
+    std::unique_ptr<std::byte[]> ring_buffer_;
     size_t ring_buffer_size_ = 0;
 };
 

@@ -1,6 +1,5 @@
 #include "compression_interface.h"
 #include "codec/compression.h"
-#include <iostream>
 
 BrutalGzipWrapper::BrutalGzipWrapper() {
     thread_count_ = 1;

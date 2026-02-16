@@ -1,6 +1,5 @@
 // src/direct_io/sovereign_bootstrap.cpp
 #include "direct_io_ring.h"
-#include <iostream>
 #include <vector>
 
 extern "C" void GenerateGhostKeyPair(void* priv, void* pub);

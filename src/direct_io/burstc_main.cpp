@@ -1,5 +1,4 @@
 // src/direct_io/burstc_main.cpp
-#include <iostream>
 #include <vector>
 #include <string>
 #include <fstream>

@@ -1,12 +1,13 @@
 #pragma once
-#include <iostream>
 #include <string>
+#include "logging/logger.h"
 
-// Simple debug logger stub
+// Debug logger facade wrapping the centralized Logger
 class DebugLogger {
 public:
     static void log(const std::string& msg) {
-        std::cout << "[DEBUG] " << msg << std::endl;
+        static Logger s_logger("DebugLogger");
+        s_logger.debug(msg);
     }
 };
 
