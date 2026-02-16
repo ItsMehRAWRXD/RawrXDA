@@ -51,6 +51,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ENHANCED CHATBOT ENGINE - WITH SOURCE CODE KNOWLEDGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -66,8 +68,8 @@ class EnhancedChatbot {
     EnhancedChatbot([bool]$useExternalAPIFallback = $false) {
         $this.UseExternalAPIFallback = $useExternalAPIFallback
         $this.ConversationHistory = [System.Collections.ArrayList]::new()
-        $projectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..") -ErrorAction SilentlyContinue).Path }
-        $this.KBPath = if ($projectRoot) { Join-Path $projectRoot "data" "knowledge_base.json" } else { (Join-Path "D:\lazy init ide" "data" "knowledge_base.json") }
+        $projectRoot = Get-RawrXDRoot
+        $this.KBPath = Resolve-RawrXDPath (Join-Path $projectRoot "data" "knowledge_base.json")
         $this.HasDigestedKB = $false
         
         $this.LoadDigestedKnowledgeBase()
@@ -108,12 +110,12 @@ class EnhancedChatbot {
 
 **Quick Command:**
 ``````powershell
-.\swarm_control.ps1 -Operation deploy -TargetDirectory "D:\target\path" -SwarmSize 5
+.\swarm_control.ps1 -Operation deploy -TargetDirectory (Join-Path (Get-RawrXDRoot) "target") -SwarmSize 5
 ``````
 
 **What happens:**
 1. Creates 5 AI agents
-2. Sends them to D:\target\path
+2. Sends them to <project-root>\target
 3. They analyze the directory structure
 4. Execute assigned tasks (code analysis, file processing, etc.)
 5. Report results back
