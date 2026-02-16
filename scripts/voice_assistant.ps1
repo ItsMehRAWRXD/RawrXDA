@@ -104,7 +104,8 @@ class VoiceAssistant {
     }
     
     [void] LoadDigestedKB() {
-        $kbPath = "D:\lazy init ide\data\knowledge_base.json"
+        $projectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..") -ErrorAction SilentlyContinue).Path }
+        $kbPath = if ($projectRoot) { Join-Path $projectRoot "data" "knowledge_base.json" } else { (Join-Path "D:\lazy init ide" "data" "knowledge_base.json") }
         
         if (Test-Path $kbPath) {
             try {
