@@ -6,6 +6,9 @@
 
 #include "gpu_kernel_autotuner.h"
 
+#include "logging/logger.h"
+static Logger s_logger("gpu_kernel_autotuner");
+
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -69,13 +72,7 @@ AutotuneResult GPUKernelAutoTuner::initialize() {
 
     m_initialized.store(true, std::memory_order_release);
 
-    std::cout << "[AUTOTUNER] Initialized for " << m_gpu.deviceName << "\n"
-              << "  Vendor class: " << static_cast<int>(m_gpu.vendorClass) << "\n"
-              << "  Compute Units: " << m_gpu.computeUnits << "\n"
-              << "  Wavefront: " << m_gpu.wavefrontSize << "\n"
-              << "  VRAM: " << (m_gpu.vramBytes / (1024*1024)) << " MB\n"
-              << "  Peak FP16: " << m_gpu.peakTFLOPS_FP16() << " TFLOPS\n"
-              << "  Cache entries: " << m_tuneCache.size() << "\n";
+    s_logger.info("[AUTOTUNER] Initialized for ");
 
     return AutotuneResult::ok("GPU kernel auto-tuner initialized");
 }
@@ -84,7 +81,7 @@ void GPUKernelAutoTuner::shutdown() {
     if (!m_initialized.load()) return;
     saveTuneCache("rawrxd_tune_cache.json");
     m_initialized.store(false);
-    std::cout << "[AUTOTUNER] Shutdown.\n";
+    s_logger.info("[AUTOTUNER] Shutdown.\n");
 }
 
 // ============================================================================
@@ -245,11 +242,7 @@ AutotuneResult GPUKernelAutoTuner::detectGPU() {
 
     FreeLibrary(hDXGI);
 
-    std::cout << "[AUTOTUNER] Detected GPU: " << m_gpu.deviceName
-              << " (VendorID=0x" << std::hex << m_gpu.vendorId
-              << " DeviceID=0x" << m_gpu.deviceId << std::dec
-              << " VRAM=" << (m_gpu.vramBytes / (1024*1024)) << "MB"
-              << " CUs=" << m_gpu.computeUnits << ")\n";
+    s_logger.info("[AUTOTUNER] Detected GPU: ");
 
     return AutotuneResult::ok("GPU detected");
 }
@@ -388,8 +381,7 @@ AutotuneResult GPUKernelAutoTuner::tuneForModelLayer(const char* layerName,
     // Tune RMSNorm
     auto r4 = tuneKernel(KernelType::RMSNorm, 1, hiddenDim, 1, TuneStrategy::Heuristic);
 
-    std::cout << "[AUTOTUNER] Tuned layer '" << layerName << "': hidden=" << hiddenDim
-              << " heads=" << headCount << " kvHeads=" << kvHeadCount << "\n";
+    s_logger.info("[AUTOTUNER] Tuned layer '");
 
     return AutotuneResult::ok("Model layer tuning complete");
 }
@@ -426,7 +418,7 @@ AutotuneResult GPUKernelAutoTuner::tuneAllKernels(TuneStrategy strategy) {
         total += 5;
     }
 
-    std::cout << "[AUTOTUNER] Bulk tuning complete: " << total << " kernel configs tuned.\n";
+    s_logger.info("[AUTOTUNER] Bulk tuning complete: ");
     AutotuneResult r = AutotuneResult::ok("All kernels tuned");
     r.configsTested = total;
     return r;
@@ -877,7 +869,7 @@ bool GPUKernelAutoTuner::loadTuneCache(const char* path) {
         }
     }
 
-    std::cout << "[AUTOTUNER] Loaded " << m_tuneCache.size() << " cached tune entries from " << path << "\n";
+    s_logger.info("[AUTOTUNER] Loaded ");
     return true;
 }
 
@@ -897,7 +889,7 @@ bool GPUKernelAutoTuner::saveTuneCache(const char* path) const {
           << entry.bestThroughput << "\n";
     }
 
-    std::cout << "[AUTOTUNER] Saved " << m_tuneCache.size() << " tune entries to " << path << "\n";
+    s_logger.info("[AUTOTUNER] Saved ");
     return true;
 }
 

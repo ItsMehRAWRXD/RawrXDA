@@ -16,6 +16,9 @@
 
 #include "cli_headless_systems.h"
 
+#include "logging/logger.h"
+static Logger s_logger("cli_headless_systems");
+
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -172,7 +175,7 @@ bool cli_headless_init(AgenticEngine* engine, SubAgentManager* subAgentMgr) {
     g_historyRecorder = new AgentHistoryRecorder("rawrxd_history");
     g_historyRecorder->setLogCallback([](int level, const std::string& msg) {
         if (level >= 2) {
-            std::cerr << "[History] " << msg << "\n";
+            s_logger.error( "[History] " << msg << "\n";
         }
     });
 
@@ -182,7 +185,7 @@ bool cli_headless_init(AgenticEngine* engine, SubAgentManager* subAgentMgr) {
     g_policyEngine->load();
     g_policyEngine->setLogCallback([](int level, const std::string& msg) {
         if (level >= 2) {
-            std::cerr << "[Policy] " << msg << "\n";
+            s_logger.error( "[Policy] " << msg << "\n";
         }
     });
 
@@ -274,9 +277,9 @@ bool cli_gate_check(int actionClass, int riskTier,
         confidence);
 
     if (safetyResult.verdict == ContractVerdict::Denied) {
-        std::cout << "🛡️ Safety DENIED: " << safetyResult.reason << "\n";
+        s_logger.info("🛡️ Safety DENIED: ");
         if (!safetyResult.suggestion.empty()) {
-            std::cout << "   Suggestion: " << safetyResult.suggestion << "\n";
+            s_logger.info("   Suggestion: ");
         }
         return false;
     }
@@ -290,15 +293,12 @@ bool cli_gate_check(int actionClass, int riskTier,
         description);
 
     if (confResult.decision == ConfidenceDecision::Abort) {
-        std::cout << "🎯 Confidence ABORT: " << confResult.reason
-                  << " (confidence=" << confResult.rawConfidence
-                  << ", threshold=" << confResult.effectiveThreshold << ")\n";
+        s_logger.info("🎯 Confidence ABORT: ");
         return false;
     }
 
     if (confResult.decision == ConfidenceDecision::Escalate) {
-        std::cout << "⚠️  Confidence ESCALATE (auto-approved in headless): "
-                  << confResult.reason << "\n";
+        s_logger.info("⚠️  Confidence ESCALATE (auto-approved in headless): ");
     }
 
     // Record in replay journal
@@ -331,60 +331,56 @@ void cmd_safety(const std::string& args) {
     auto [sub, rest] = splitFirst(args);
 
     if (sub == "status" || sub.empty()) {
-        std::cout << "\n" << safety.getStatusString() << "\n";
+        s_logger.info("\n");
 
         auto stats = safety.getStats();
-        std::cout << "🛡️  Safety Contract Status:\n";
-        std::cout << "  Total checks:     " << stats.totalChecks << "\n";
-        std::cout << "  Allowed:          " << stats.totalAllowed << "\n";
-        std::cout << "  Denied:           " << stats.totalDenied << "\n";
-        std::cout << "  Escalated:        " << stats.totalEscalated << "\n";
-        std::cout << "  Rollbacks:        " << stats.totalRollbacks << "\n";
-        std::cout << "  Violations:       " << stats.totalViolations << "\n";
-        std::cout << "  Budget exceeded:  " << stats.budgetExceeded << "\n";
-        std::cout << "  Risk blocked:     " << stats.riskBlocked << "\n";
-        std::cout << "  Rate limited:     " << stats.rateLimited << "\n";
-        std::cout << "  Max risk seen:    " << safetyRiskTierToString(stats.maxRiskSeen) << "\n";
-        std::cout << "  Max allowed risk: " << safetyRiskTierToString(safety.getMaxAllowedRisk()) << "\n\n";
+        s_logger.info("🛡️  Safety Contract Status:\n");
+        s_logger.info("  Total checks:     ");
+        s_logger.info("  Allowed:          ");
+        s_logger.info("  Denied:           ");
+        s_logger.info("  Escalated:        ");
+        s_logger.info("  Rollbacks:        ");
+        s_logger.info("  Violations:       ");
+        s_logger.info("  Budget exceeded:  ");
+        s_logger.info("  Risk blocked:     ");
+        s_logger.info("  Rate limited:     ");
+        s_logger.info("  Max risk seen:    ");
+        s_logger.info("  Max allowed risk: ");
 
     } else if (sub == "reset") {
         safety.resetBudget();
-        std::cout << "✅ Intent budget reset to defaults\n";
+        s_logger.info("✅ Intent budget reset to defaults\n");
 
     } else if (sub == "rollback") {
         if (rest == "all") {
             safety.rollbackAll();
-            std::cout << "✅ All rollbacks executed\n";
+            s_logger.info("✅ All rollbacks executed\n");
         } else {
             bool ok = safety.rollbackLast();
-            std::cout << (ok ? "✅ Last action rolled back\n" : "❌ No rollback available\n");
+            s_logger.info( (ok ? "✅ Last action rolled back\n" : "❌ No rollback available\n");
         }
 
     } else if (sub == "violations") {
         auto violations = safety.getViolations();
         if (violations.empty()) {
-            std::cout << "✅ No violations recorded\n";
+            s_logger.info("✅ No violations recorded\n");
             return;
         }
-        std::cout << "🚨 Violations (" << violations.size() << "):\n";
+        s_logger.info("🚨 Violations (");
         for (const auto& v : violations) {
-            std::cout << "  [" << v.id << "] "
-                      << violationTypeToString(v.type) << " — "
-                      << actionClassToString(v.attemptedAction) << " (risk="
-                      << safetyRiskTierToString(v.riskTier) << ")\n";
-            std::cout << "       " << v.description << "\n";
+            s_logger.info("  [");
+            s_logger.info("       ");
             if (v.wasEscalated) {
-                std::cout << "       Escalated → "
-                          << (v.userApproved ? "approved" : "denied") << "\n";
+                s_logger.info("       Escalated → ");
             }
         }
 
     } else if (sub == "block") {
         if (rest.empty()) {
-            std::cout << "Usage: !safety block <action_class>\n";
-            std::cout << "  Classes: ReadFile, SearchCode, QueryModel, WriteFile, EditFile,\n";
-            std::cout << "           CreateFile, DeleteFile, RunCommand, RunBuild, RunTest,\n";
-            std::cout << "           InstallPackage, NetworkRequest, ModifyModel, PatchMemory, ...\n";
+            s_logger.info("Usage: !safety block <action_class>\n");
+            s_logger.info("  Classes: ReadFile, SearchCode, QueryModel, WriteFile, EditFile,\n");
+            s_logger.info("           CreateFile, DeleteFile, RunCommand, RunBuild, RunTest,\n");
+            s_logger.info("           InstallPackage, NetworkRequest, ModifyModel, PatchMemory, ...\n");
             return;
         }
         // Map string to ActionClass
@@ -406,15 +402,15 @@ void cmd_safety(const std::string& args) {
         else if (rest == "SearchCode")     ac = ActionClass::SearchCode;
         else if (rest == "QueryModel")     ac = ActionClass::QueryModel;
         else {
-            std::cout << "❌ Unknown action class: " << rest << "\n";
+            s_logger.info("❌ Unknown action class: ");
             return;
         }
         safety.blockActionClass(ac);
-        std::cout << "✅ Blocked: " << rest << "\n";
+        s_logger.info("✅ Blocked: ");
 
     } else if (sub == "unblock") {
         if (rest.empty()) {
-            std::cout << "Usage: !safety unblock <action_class>\n";
+            s_logger.info("Usage: !safety unblock <action_class>\n");
             return;
         }
         ActionClass ac = ActionClass::Unknown;
@@ -430,16 +426,16 @@ void cmd_safety(const std::string& args) {
         else if (rest == "PatchMemory")    ac = ActionClass::PatchMemory;
         else if (rest == "ProcessKill")    ac = ActionClass::ProcessKill;
         else {
-            std::cout << "❌ Unknown action class: " << rest << "\n";
+            s_logger.info("❌ Unknown action class: ");
             return;
         }
         safety.unblockActionClass(ac);
-        std::cout << "✅ Unblocked: " << rest << "\n";
+        s_logger.info("✅ Unblocked: ");
 
     } else if (sub == "risk") {
         if (rest.empty()) {
-            std::cout << "Current max risk: " << safetyRiskTierToString(safety.getMaxAllowedRisk()) << "\n";
-            std::cout << "Usage: !safety risk <None|Low|Medium|High|Critical>\n";
+            s_logger.info("Current max risk: ");
+            s_logger.info("Usage: !safety risk <None|Low|Medium|High|Critical>\n");
             return;
         }
         SafetyRiskTier tier = SafetyRiskTier::Medium;
@@ -449,27 +445,27 @@ void cmd_safety(const std::string& args) {
         else if (rest == "High")     tier = SafetyRiskTier::High;
         else if (rest == "Critical") tier = SafetyRiskTier::Critical;
         else {
-            std::cout << "❌ Unknown risk tier: " << rest << "\n";
+            s_logger.info("❌ Unknown risk tier: ");
             return;
         }
         safety.setMaxAllowedRisk(tier);
-        std::cout << "✅ Max allowed risk: " << safetyRiskTierToString(tier) << "\n";
+        s_logger.info("✅ Max allowed risk: ");
 
     } else if (sub == "budget") {
         auto budget = safety.getBudget();
-        std::cout << "\n📊 Intent Budget:\n";
-        std::cout << "  File writes:     " << budget.usedFileWrites << " / " << budget.maxFileWrites << "\n";
-        std::cout << "  File deletes:    " << budget.usedFileDeletes << " / " << budget.maxFileDeletes << "\n";
-        std::cout << "  Command runs:    " << budget.usedCommandRuns << " / " << budget.maxCommandRuns << "\n";
-        std::cout << "  Build runs:      " << budget.usedBuildRuns << " / " << budget.maxBuildRuns << "\n";
-        std::cout << "  Network reqs:    " << budget.usedNetworkRequests << " / " << budget.maxNetworkRequests << "\n";
-        std::cout << "  Model mods:      " << budget.usedModelModifications << " / " << budget.maxModelModifications << "\n";
-        std::cout << "  Process kills:   " << budget.usedProcessKills << " / " << budget.maxProcessKills << "\n";
-        std::cout << "  Total actions:   " << budget.usedTotalActions << " / " << budget.maxTotalActions << "\n";
-        std::cout << "  Actions/min:     " << budget.actionsThisMinute << " / " << budget.maxActionsPerMinute << "\n\n";
+        s_logger.info("\n📊 Intent Budget:\n");
+        s_logger.info("  File writes:     ");
+        s_logger.info("  File deletes:    ");
+        s_logger.info("  Command runs:    ");
+        s_logger.info("  Build runs:      ");
+        s_logger.info("  Network reqs:    ");
+        s_logger.info("  Model mods:      ");
+        s_logger.info("  Process kills:   ");
+        s_logger.info("  Total actions:   ");
+        s_logger.info("  Actions/min:     ");
 
     } else {
-        std::cout << "Usage: !safety <status|reset|rollback|rollback_all|violations|block|unblock|risk|budget>\n";
+        s_logger.info("Usage: !safety <status|reset|rollback|rollback_all|violations|block|unblock|risk|budget>\n");
     }
 }
 
@@ -482,30 +478,29 @@ void cmd_confidence(const std::string& args) {
     auto [sub, rest] = splitFirst(args);
 
     if (sub == "status" || sub.empty()) {
-        std::cout << "\n" << gate.getStatusString() << "\n";
+        s_logger.info("\n");
 
         auto stats = gate.getStats();
-        std::cout << "🎯 Confidence Gate Status:\n";
-        std::cout << "  Policy:            " << gatePolicyToString(stats.currentPolicy) << "\n";
-        std::cout << "  Enabled:           " << (gate.isEnabled() ? "yes" : "no") << "\n";
-        std::cout << "  Total evaluations: " << stats.totalEvaluations << "\n";
-        std::cout << "  Executed:          " << stats.totalExecuted << "\n";
-        std::cout << "  Escalated:         " << stats.totalEscalated << "\n";
-        std::cout << "  Aborted:           " << stats.totalAborted << "\n";
-        std::cout << "  Deferred:          " << stats.totalDeferred << "\n";
-        std::cout << "  Overridden:        " << stats.totalOverridden << "\n";
-        std::cout << "  Avg confidence:    " << std::fixed << std::setprecision(3)
-                  << stats.avgConfidence << "\n";
-        std::cout << "  Min confidence:    " << stats.minConfidence << "\n";
-        std::cout << "  Max confidence:    " << stats.maxConfidence << "\n";
-        std::cout << "  Recent avg:        " << stats.recentAvgConfidence << "\n";
-        std::cout << "  Overall trend:     " << confidenceTrendToString(stats.overallTrend) << "\n";
-        std::cout << "  Self-abort:        " << (gate.isSelfAbortTriggered() ? "⚠️ TRIGGERED" : "inactive") << "\n\n";
+        s_logger.info("🎯 Confidence Gate Status:\n");
+        s_logger.info("  Policy:            ");
+        s_logger.info("  Enabled:           ");
+        s_logger.info("  Total evaluations: ");
+        s_logger.info("  Executed:          ");
+        s_logger.info("  Escalated:         ");
+        s_logger.info("  Aborted:           ");
+        s_logger.info("  Deferred:          ");
+        s_logger.info("  Overridden:        ");
+        s_logger.info("  Avg confidence:    ");
+        s_logger.info("  Min confidence:    ");
+        s_logger.info("  Max confidence:    ");
+        s_logger.info("  Recent avg:        ");
+        s_logger.info("  Overall trend:     ");
+        s_logger.info("  Self-abort:        ");
 
     } else if (sub == "policy") {
         if (rest.empty()) {
-            std::cout << "Current policy: " << gatePolicyToString(gate.getPolicy()) << "\n";
-            std::cout << "Usage: !confidence policy <strict|normal|relaxed|disabled>\n";
+            s_logger.info("Current policy: ");
+            s_logger.info("Usage: !confidence policy <strict|normal|relaxed|disabled>\n");
             return;
         }
         GatePolicy pol = GatePolicy::Normal;
@@ -514,11 +509,11 @@ void cmd_confidence(const std::string& args) {
         else if (rest == "relaxed")  pol = GatePolicy::Relaxed;
         else if (rest == "disabled") pol = GatePolicy::Disabled;
         else {
-            std::cout << "❌ Unknown policy: " << rest << "\n";
+            s_logger.info("❌ Unknown policy: ");
             return;
         }
         gate.setPolicy(pol);
-        std::cout << "✅ Confidence gate policy: " << gatePolicyToString(pol) << "\n";
+        s_logger.info("✅ Confidence gate policy: ");
 
     } else if (sub == "threshold") {
         // Parse: <execute> <escalate> <abort>
@@ -526,61 +521,60 @@ void cmd_confidence(const std::string& args) {
         float exec_t, esc_t, abort_t;
         if (!(iss >> exec_t >> esc_t >> abort_t)) {
             auto thresholds = gate.getThresholds();
-            std::cout << "Current thresholds:\n";
-            std::cout << "  Execute:  " << thresholds.executeThreshold << "\n";
-            std::cout << "  Escalate: " << thresholds.escalateThreshold << "\n";
-            std::cout << "  Abort:    " << thresholds.abortThreshold << "\n";
-            std::cout << "Usage: !confidence threshold <execute> <escalate> <abort>\n";
+            s_logger.info("Current thresholds:\n");
+            s_logger.info("  Execute:  ");
+            s_logger.info("  Escalate: ");
+            s_logger.info("  Abort:    ");
+            s_logger.info("Usage: !confidence threshold <execute> <escalate> <abort>\n");
             return;
         }
         gate.setExecuteThreshold(exec_t);
         gate.setEscalateThreshold(esc_t);
         gate.setAbortThreshold(abort_t);
-        std::cout << "✅ Thresholds set: execute=" << exec_t
-                  << " escalate=" << esc_t << " abort=" << abort_t << "\n";
+        s_logger.info("✅ Thresholds set: execute=");
 
     } else if (sub == "history") {
         auto history = gate.getHistory(20);
         if (history.empty()) {
-            std::cout << "No confidence evaluations recorded yet.\n";
+            s_logger.info("No confidence evaluations recorded yet.\n");
             return;
         }
-        std::cout << "\n🎯 Recent Confidence Evaluations (last " << history.size() << "):\n";
-        std::cout << std::setw(6) << "Seq" << std::setw(10) << "Conf"
+        s_logger.info("\n🎯 Recent Confidence Evaluations (last ");
+        s_logger.info( std::setw(6) << "Seq" << std::setw(10) << "Conf"
                   << std::setw(12) << "Decision" << std::setw(16) << "Action" << "\n";
-        std::cout << std::string(44, '-') << "\n";
+        s_logger.info( std::string(44, '-') << "\n";
         for (const auto& h : history) {
-            std::cout << std::setw(6) << h.sequenceId
+            s_logger.info( std::setw(6) << h.sequenceId
                       << std::setw(10) << std::fixed << std::setprecision(3) << h.confidence
                       << std::setw(12) << confidenceDecisionToString(h.decision)
                       << std::setw(16) << actionClassToString(h.actionClass) << "\n";
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "trend") {
         auto trend = gate.analyzeTrend();
         double slope = gate.getTrendSlope();
         float recentAvg = gate.getRecentAverage(50);
-        std::cout << "\n📈 Confidence Trend:\n";
-        std::cout << "  Trend:      " << confidenceTrendToString(trend) << "\n";
-        std::cout << "  Slope:      " << std::fixed << std::setprecision(4) << slope << "\n";
-        std::cout << "  Recent avg: " << std::setprecision(3) << recentAvg << "\n";
-        std::cout << "  Degrading:  " << (gate.isConfidenceDegrading() ? "⚠️ YES" : "no") << "\n\n";
+        s_logger.info("\n📈 Confidence Trend:\n");
+        s_logger.info("  Trend:      ");
+        s_logger.info("  Slope:      ");
+        s_logger.info("  Recent avg: ");
+        s_logger.info("  Degrading:  ");
 
     } else if (sub == "selfabort") {
-        std::cout << "Self-abort threshold:  " << gate.getSelfAbortThreshold() << " consecutive low actions\n";
-        std::cout << "Self-abort triggered:  " << (gate.isSelfAbortTriggered() ? "⚠️ YES" : "no") << "\n";
+        s_logger.info("Self-abort threshold:  ");
+        s_logger.info("Self-abort triggered:  ");
         if (gate.isSelfAbortTriggered()) {
-            std::cout << "  Use '!confidence reset' to clear self-abort state.\n";
+            s_logger.info("  Use '!confidence reset' to clear self-abort state.\n");
         }
 
     } else if (sub == "reset") {
         gate.reset();
         gate.resetSelfAbort();
-        std::cout << "✅ Confidence gate reset\n";
+        s_logger.info("✅ Confidence gate reset\n");
 
     } else {
-        std::cout << "Usage: !confidence <status|policy|threshold|history|trend|selfabort|reset>\n";
+        s_logger.info("Usage: !confidence <status|policy|threshold|history|trend|selfabort|reset>\n");
     }
 }
 
@@ -593,100 +587,96 @@ void cmd_replay(const std::string& args) {
     auto [sub, rest] = splitFirst(args);
 
     if (sub == "status" || sub.empty()) {
-        std::cout << "\n" << replay.getStatusString() << "\n";
+        s_logger.info("\n");
 
         auto stats = replay.getStats();
-        std::cout << "📼 Replay Journal Status:\n";
-        std::cout << "  State:              " << replayStateToString(stats.state) << "\n";
-        std::cout << "  Total records:      " << stats.totalRecords << "\n";
-        std::cout << "  In memory:          " << stats.recordsInMemory << "\n";
-        std::cout << "  Flushed to disk:    " << stats.recordsFlushedToDisk << "\n";
-        std::cout << "  Total sessions:     " << stats.totalSessions << "\n";
-        std::cout << "  Active session:     " << stats.activeSessionId << "\n";
-        std::cout << "  Current sequence:   " << stats.currentSequenceId << "\n";
-        std::cout << "  Memory usage:       " << (stats.memoryUsageBytes / 1024) << " KB\n";
-        std::cout << "  Disk usage:         " << (stats.diskUsageBytes / 1024) << " KB\n\n";
+        s_logger.info("📼 Replay Journal Status:\n");
+        s_logger.info("  State:              ");
+        s_logger.info("  Total records:      ");
+        s_logger.info("  In memory:          ");
+        s_logger.info("  Flushed to disk:    ");
+        s_logger.info("  Total sessions:     ");
+        s_logger.info("  Active session:     ");
+        s_logger.info("  Current sequence:   ");
+        s_logger.info("  Memory usage:       ");
+        s_logger.info("  Disk usage:         ");
 
     } else if (sub == "last") {
         int count = parseInt(rest, 10);
         auto records = replay.getLastN(static_cast<uint64_t>(count));
         if (records.empty()) {
-            std::cout << "No records in journal.\n";
+            s_logger.info("No records in journal.\n");
             return;
         }
-        std::cout << "\n📼 Last " << records.size() << " Actions:\n";
-        std::cout << std::string(80, '-') << "\n";
+        s_logger.info("\n📼 Last ");
+        s_logger.info( std::string(80, '-') << "\n";
         for (const auto& r : records) {
-            std::cout << "[" << std::setw(6) << r.sequenceId << "] "
-                      << std::setw(20) << std::left << replayActionTypeToString(r.type) << " "
-                      << std::setw(10) << std::left << r.category << " ";
+            s_logger.info("[");
             if (!r.action.empty()) {
                 std::string truncAction = r.action.substr(0, 40);
                 if (r.action.size() > 40) truncAction += "...";
-                std::cout << truncAction;
+                s_logger.info( truncAction;
             }
-            std::cout << "\n";
+            s_logger.info("\n");
             if (!r.input.empty()) {
                 std::string truncInput = r.input.substr(0, 60);
                 if (r.input.size() > 60) truncInput += "...";
-                std::cout << "          in:  " << truncInput << "\n";
+                s_logger.info("          in:  ");
             }
             if (r.durationMs > 0) {
-                std::cout << "          dur: " << formatDuration(r.durationMs) << "\n";
+                s_logger.info("          dur: ");
             }
         }
-        std::cout << std::string(80, '-') << "\n\n";
+        s_logger.info( std::string(80, '-') << "\n\n";
 
     } else if (sub == "session") {
         auto sessionId = replay.getActiveSessionId();
         auto snapshot = replay.getSessionSnapshot(sessionId);
-        std::cout << "\n📼 Current Session:\n";
-        std::cout << "  Session ID:     " << snapshot.sessionId << "\n";
-        std::cout << "  Label:          " << snapshot.sessionLabel << "\n";
-        std::cout << "  Action count:   " << snapshot.actionCount << "\n";
-        std::cout << "  Start:          " << snapshot.startTime << "\n";
-        std::cout << "  Duration:       " << formatDuration(snapshot.totalDurationMs) << "\n";
-        std::cout << "  Agent queries:  " << snapshot.agentQueries << "\n";
-        std::cout << "  Commands run:   " << snapshot.commandsRun << "\n";
-        std::cout << "  Files modified: " << snapshot.filesModified << "\n";
-        std::cout << "  Safety denials: " << snapshot.safetyDenials << "\n";
-        std::cout << "  Gov. timeouts:  " << snapshot.governorTimeouts << "\n";
-        std::cout << "  Errors:         " << snapshot.errors << "\n\n";
+        s_logger.info("\n📼 Current Session:\n");
+        s_logger.info("  Session ID:     ");
+        s_logger.info("  Label:          ");
+        s_logger.info("  Action count:   ");
+        s_logger.info("  Start:          ");
+        s_logger.info("  Duration:       ");
+        s_logger.info("  Agent queries:  ");
+        s_logger.info("  Commands run:   ");
+        s_logger.info("  Files modified: ");
+        s_logger.info("  Safety denials: ");
+        s_logger.info("  Gov. timeouts:  ");
+        s_logger.info("  Errors:         ");
 
     } else if (sub == "sessions") {
         auto sessions = replay.getAllSessions();
         if (sessions.empty()) {
-            std::cout << "No sessions recorded.\n";
+            s_logger.info("No sessions recorded.\n");
             return;
         }
-        std::cout << "\n📼 All Sessions (" << sessions.size() << "):\n";
+        s_logger.info("\n📼 All Sessions (");
         for (const auto& s : sessions) {
-            std::cout << "  [" << s.sessionId << "] " << s.sessionLabel
-                      << " (" << s.actionCount << " actions, "
-                      << formatDuration(s.totalDurationMs) << ")\n";
+            s_logger.info("  [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "checkpoint") {
         std::string label = rest.empty() ? "cli-checkpoint" : rest;
         uint64_t id = replay.recordCheckpoint(label);
-        std::cout << "✅ Checkpoint inserted: " << label << " (seq=" << id << ")\n";
+        s_logger.info("✅ Checkpoint inserted: ");
 
     } else if (sub == "export") {
         if (rest.empty()) {
-            std::cout << "Usage: !replay export <filepath>\n";
+            s_logger.info("Usage: !replay export <filepath>\n");
             return;
         }
         auto sessionId = replay.getActiveSessionId();
         bool ok = replay.exportSession(sessionId, rest);
-        std::cout << (ok ? "✅ Session exported to: " : "❌ Export failed: ") << rest << "\n";
+        s_logger.info( (ok ? "✅ Session exported to: " : "❌ Export failed: ") << rest << "\n";
 
     } else if (sub == "filter") {
         if (rest.empty()) {
-            std::cout << "Usage: !replay filter <type>\n";
-            std::cout << "  Types: AgentQuery, AgentResponse, AgentToolCall, CommandExecution,\n";
-            std::cout << "         FileWrite, ModelInference, SafetyCheck, SafetyDenial,\n";
-            std::cout << "         GovernorSubmit, GovernorTimeout, Checkpoint, ...\n";
+            s_logger.info("Usage: !replay filter <type>\n");
+            s_logger.info("  Types: AgentQuery, AgentResponse, AgentToolCall, CommandExecution,\n");
+            s_logger.info("         FileWrite, ModelInference, SafetyCheck, SafetyDenial,\n");
+            s_logger.info("         GovernorSubmit, GovernorTimeout, Checkpoint, ...\n");
             return;
         }
         // Build filter
@@ -707,33 +697,33 @@ void cmd_replay(const std::string& args) {
         else if (rest == "Checkpoint")     filter.filterType = ReplayActionType::Checkpoint;
         else if (rest == "ModelHotpatch")  filter.filterType = ReplayActionType::ModelHotpatch;
         else {
-            std::cout << "❌ Unknown action type: " << rest << "\n";
+            s_logger.info("❌ Unknown action type: ");
             return;
         }
 
         auto records = replay.filter(filter);
-        std::cout << "\n📼 Filtered: " << rest << " (" << records.size() << " records)\n";
+        s_logger.info("\n📼 Filtered: ");
         for (const auto& r : records) {
-            std::cout << "  [" << r.sequenceId << "] " << r.action;
-            if (r.durationMs > 0) std::cout << " (" << formatDuration(r.durationMs) << ")";
-            std::cout << "\n";
+            s_logger.info("  [");
+            if (r.durationMs > 0) s_logger.info(" (");
+            s_logger.info("\n");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "start") {
         replay.startRecording();
-        std::cout << "✅ Recording started\n";
+        s_logger.info("✅ Recording started\n");
 
     } else if (sub == "pause") {
         replay.pauseRecording();
-        std::cout << "⏸️  Recording paused\n";
+        s_logger.info("⏸️  Recording paused\n");
 
     } else if (sub == "stop") {
         replay.stopRecording();
-        std::cout << "⏹️  Recording stopped\n";
+        s_logger.info("⏹️  Recording stopped\n");
 
     } else {
-        std::cout << "Usage: !replay <status|last|session|sessions|checkpoint|export|filter|start|pause|stop>\n";
+        s_logger.info("Usage: !replay <status|last|session|sessions|checkpoint|export|filter|start|pause|stop>\n");
     }
 }
 
@@ -746,26 +736,26 @@ void cmd_governor(const std::string& args) {
     auto [sub, rest] = splitFirst(args);
 
     if (sub == "status" || sub.empty()) {
-        std::cout << "\n" << governor.getStatusString() << "\n";
+        s_logger.info("\n");
 
         auto stats = governor.getStats();
-        std::cout << "⚙️  Execution Governor Status:\n";
-        std::cout << "  Initialized:    " << (governor.isInitialized() ? "yes" : "no") << "\n";
-        std::cout << "  Active tasks:   " << stats.activeTaskCount << "\n";
-        std::cout << "  Peak concurrent:" << stats.peakConcurrent << "\n";
-        std::cout << "  Total submitted:" << stats.totalSubmitted << "\n";
-        std::cout << "  Completed:      " << stats.totalCompleted << "\n";
-        std::cout << "  Timed out:      " << stats.totalTimedOut << "\n";
-        std::cout << "  Killed:         " << stats.totalKilled << "\n";
-        std::cout << "  Cancelled:      " << stats.totalCancelled << "\n";
-        std::cout << "  Failed:         " << stats.totalFailed << "\n";
-        std::cout << "  Rollbacks:      " << stats.totalRollbacks << "\n";
-        std::cout << "  Avg duration:   " << formatDuration(stats.avgTaskDurationMs) << "\n";
-        std::cout << "  Longest task:   " << formatDuration(static_cast<double>(stats.longestTaskMs)) << "\n\n";
+        s_logger.info("⚙️  Execution Governor Status:\n");
+        s_logger.info("  Initialized:    ");
+        s_logger.info("  Active tasks:   ");
+        s_logger.info("  Peak concurrent:");
+        s_logger.info("  Total submitted:");
+        s_logger.info("  Completed:      ");
+        s_logger.info("  Timed out:      ");
+        s_logger.info("  Killed:         ");
+        s_logger.info("  Cancelled:      ");
+        s_logger.info("  Failed:         ");
+        s_logger.info("  Rollbacks:      ");
+        s_logger.info("  Avg duration:   ");
+        s_logger.info("  Longest task:   ");
 
     } else if (sub == "run") {
         if (rest.empty()) {
-            std::cout << "Usage: !governor run <command> [--timeout <ms>]\n";
+            s_logger.info("Usage: !governor run <command> [--timeout <ms>]\n");
             return;
         }
 
@@ -788,7 +778,7 @@ void cmd_governor(const std::string& args) {
             return;
         }
 
-        std::cout << "⚙️  Submitting to governor: " << command << " (timeout=" << timeout << "ms)\n";
+        s_logger.info("⚙️  Submitting to governor: ");
 
         auto taskId = governor.submitCommand(command, timeout,
                                              GovernorRiskTier::Medium,
@@ -802,25 +792,24 @@ void cmd_governor(const std::string& args) {
         // Wait synchronously for result
         auto result = governor.waitForTask(taskId, timeout + 5000);
 
-        std::cout << "\n─── Governor Result ───\n";
+        s_logger.info("\n─── Governor Result ───\n");
         if (result.timedOut) {
-            std::cout << "⏰ TIMED OUT after " << formatDuration(result.durationMs) << "\n";
+            s_logger.info("⏰ TIMED OUT after ");
             replay.recordGovernorEvent(ReplayActionType::GovernorTimeout,
                                        "Timed out: " + command, taskId);
         } else if (result.cancelled) {
-            std::cout << "🚫 CANCELLED\n";
+            s_logger.info("🚫 CANCELLED\n");
         } else {
-            std::cout << "Exit code: " << result.exitCode << "\n";
+            s_logger.info("Exit code: ");
             replay.recordGovernorEvent(ReplayActionType::GovernorComplete,
                                        "Completed: " + command, taskId);
         }
         if (!result.output.empty()) {
-            std::cout << result.output;
-            if (result.output.back() != '\n') std::cout << "\n";
+            s_logger.info( result.output;
+            if (result.output.back() != '\n') s_logger.info("\n");
         }
-        std::cout << "Duration: " << formatDuration(result.durationMs)
-                  << " (" << result.bytesRead << " bytes captured)\n";
-        std::cout << "───────────────────────\n\n";
+        s_logger.info("Duration: ");
+        s_logger.info("───────────────────────\n\n");
 
         // Record in history
         if (g_historyRecorder) {
@@ -835,43 +824,42 @@ void cmd_governor(const std::string& args) {
     } else if (sub == "tasks") {
         auto descriptions = governor.getActiveTaskDescriptions();
         if (descriptions.empty()) {
-            std::cout << "No active tasks.\n";
+            s_logger.info("No active tasks.\n");
             return;
         }
-        std::cout << "⚙️  Active Tasks (" << descriptions.size() << "):\n";
+        s_logger.info("⚙️  Active Tasks (");
         for (size_t i = 0; i < descriptions.size(); i++) {
-            std::cout << "  [" << i << "] " << descriptions[i] << "\n";
+            s_logger.info("  [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "kill") {
         if (rest.empty()) {
-            std::cout << "Usage: !governor kill <task_id>\n";
+            s_logger.info("Usage: !governor kill <task_id>\n");
             return;
         }
         auto taskId = static_cast<GovernorTaskId>(parseInt(rest, 0));
         bool ok = governor.killTask(taskId);
-        std::cout << (ok ? "✅ Task killed" : "❌ Task not found or already complete")
+        s_logger.info( (ok ? "✅ Task killed" : "❌ Task not found or already complete")
                   << " (id=" << taskId << ")\n";
 
     } else if (sub == "kill_all") {
         governor.killAll();
-        std::cout << "✅ All tasks killed\n";
+        s_logger.info("✅ All tasks killed\n");
 
     } else if (sub == "wait") {
         if (rest.empty()) {
-            std::cout << "Usage: !governor wait <task_id>\n";
+            s_logger.info("Usage: !governor wait <task_id>\n");
             return;
         }
         auto taskId = static_cast<GovernorTaskId>(parseInt(rest, 0));
-        std::cout << "⏳ Waiting for task " << taskId << "...\n";
+        s_logger.info("⏳ Waiting for task ");
         auto result = governor.waitForTask(taskId, 60000);
-        std::cout << "Exit: " << result.exitCode << " Duration: "
-                  << formatDuration(result.durationMs) << "\n";
-        if (!result.output.empty()) std::cout << result.output << "\n";
+        s_logger.info("Exit: ");
+        if (!result.output.empty()) s_logger.info( result.output << "\n";
 
     } else {
-        std::cout << "Usage: !governor <status|run|tasks|kill|kill_all|wait>\n";
+        s_logger.info("Usage: !governor <status|run|tasks|kill|kill_all|wait>\n");
     }
 }
 
@@ -881,117 +869,108 @@ void cmd_governor(const std::string& args) {
 
 void cmd_multi_response(const std::string& args) {
     if (!g_multiResponse) {
-        std::cout << "❌ MultiResponseEngine not initialized\n";
+        s_logger.info("❌ MultiResponseEngine not initialized\n");
         return;
     }
     auto [sub, rest] = splitFirst(args);
 
     if (sub == "templates") {
         auto templates = g_multiResponse->getAllTemplates();
-        std::cout << "\n📝 Response Templates:\n";
+        s_logger.info("\n📝 Response Templates:\n");
         for (const auto& t : templates) {
-            std::cout << "  [" << static_cast<int>(t.id) << "] " << t.name
-                      << " (" << t.shortLabel << ") "
-                      << (t.enabled ? "✅" : "❌")
-                      << " temp=" << t.temperature
-                      << " max=" << t.maxTokens << "\n";
+            s_logger.info("  [");
             if (t.description[0] != '\0') {
-                std::cout << "      " << t.description << "\n";
+                s_logger.info("      ");
             }
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "stats") {
         auto stats = g_multiResponse->getStats();
-        std::cout << "\n📊 Multi-Response Stats:\n";
-        std::cout << "  Total sessions:     " << stats.totalSessions << "\n";
-        std::cout << "  Responses generated: " << stats.totalResponsesGenerated << "\n";
-        std::cout << "  Preferences recorded:" << stats.totalPreferencesRecorded << "\n";
-        std::cout << "  Errors:             " << stats.errorCount << "\n";
-        std::cout << "  Preference counts:  ";
+        s_logger.info("\n📊 Multi-Response Stats:\n");
+        s_logger.info("  Total sessions:     ");
+        s_logger.info("  Responses generated: ");
+        s_logger.info("  Preferences recorded:");
+        s_logger.info("  Errors:             ");
+        s_logger.info("  Preference counts:  ");
         const char* names[] = { "Strategic", "Grounded", "Creative", "Concise" };
         for (int i = 0; i < 4; i++) {
-            std::cout << names[i] << "=" << stats.preferenceCount[i];
-            if (i < 3) std::cout << ", ";
+            s_logger.info( names[i] << "=" << stats.preferenceCount[i];
+            if (i < 3) s_logger.info(", ");
         }
-        std::cout << "\n  Avg latency:        ";
+        s_logger.info("\n  Avg latency:        ");
         for (int i = 0; i < 4; i++) {
-            std::cout << names[i] << "=" << formatDuration(stats.avgLatencyMs[i]);
-            if (i < 3) std::cout << ", ";
+            s_logger.info( names[i] << "=" << formatDuration(stats.avgLatencyMs[i]);
+            if (i < 3) s_logger.info(", ");
         }
-        std::cout << "\n\n";
+        s_logger.info("\n\n");
 
     } else if (sub == "toggle") {
         if (rest.empty()) {
-            std::cout << "Usage: !multi toggle <0|1|2|3>\n";
-            std::cout << "  0=Strategic, 1=Grounded, 2=Creative, 3=Concise\n";
+            s_logger.info("Usage: !multi toggle <0|1|2|3>\n");
+            s_logger.info("  0=Strategic, 1=Grounded, 2=Creative, 3=Concise\n");
             return;
         }
         int id = parseInt(rest, -1);
         if (id < 0 || id > 3) {
-            std::cout << "❌ Invalid template ID (0-3)\n";
+            s_logger.info("❌ Invalid template ID (0-3)\n");
             return;
         }
         auto tmpl = g_multiResponse->getTemplate(static_cast<ResponseTemplateId>(id));
         g_multiResponse->setTemplateEnabled(static_cast<ResponseTemplateId>(id), !tmpl.enabled);
-        std::cout << "✅ " << tmpl.name << " → "
-                  << (!tmpl.enabled ? "enabled" : "disabled") << "\n";
+        s_logger.info("✅ ");
 
     } else if (sub == "prefer") {
         if (rest.empty()) {
-            std::cout << "Usage: !multi prefer <index 0-3> [reason]\n";
+            s_logger.info("Usage: !multi prefer <index 0-3> [reason]\n");
             return;
         }
         auto [idxStr, reason] = splitFirst(rest);
         int idx = parseInt(idxStr, -1);
         if (idx < 0 || idx > 3) {
-            std::cout << "❌ Invalid response index (0-3)\n";
+            s_logger.info("❌ Invalid response index (0-3)\n");
             return;
         }
         auto* session = g_multiResponse->getLatestSession();
         if (!session) {
-            std::cout << "❌ No multi-response session available. Run !multi <prompt> first.\n";
+            s_logger.info("❌ No multi-response session available. Run !multi <prompt> first.\n");
             return;
         }
         auto result = g_multiResponse->setPreference(session->sessionId, idx, reason);
-        std::cout << (result.success ? "✅" : "❌") << " " << result.detail << "\n";
+        s_logger.info( (result.success ? "✅" : "❌") << " " << result.detail << "\n";
 
     } else if (sub == "recommend") {
         std::string rec = g_multiResponse->getRecommendedTemplate();
-        std::cout << "🎯 Recommended template: " << rec << "\n";
+        s_logger.info("🎯 Recommended template: ");
 
     } else if (sub == "compare") {
         auto* session = g_multiResponse->getLatestSession();
         if (!session || session->responses.empty()) {
-            std::cout << "❌ No multi-response session to compare. Run !multi <prompt> first.\n";
+            s_logger.info("❌ No multi-response session to compare. Run !multi <prompt> first.\n");
             return;
         }
-        std::cout << "\n" << std::string(80, '=') << "\n";
-        std::cout << "Multi-Response Comparison — Prompt: \"" 
-                  << session->prompt.substr(0, 60) << "\"\n";
-        std::cout << std::string(80, '=') << "\n";
+        s_logger.info("\n");
+        s_logger.info("Multi-Response Comparison — Prompt: \");
+        s_logger.info( std::string(80, '=') << "\n";
         for (const auto& resp : session->responses) {
             if (!resp.complete && !resp.error) continue;
-            std::cout << "\n── [" << resp.index << "] " << resp.templateName
-                      << " (" << resp.tokenCount << " tokens, "
-                      << formatDuration(resp.latencyMs) << ") ";
-            if (resp.error) std::cout << "❌ ERROR: " << resp.errorDetail;
-            std::cout << " ──\n";
+            s_logger.info("\n── [");
+            if (resp.error) s_logger.info("❌ ERROR: ");
+            s_logger.info(" ──\n");
             if (!resp.content.empty()) {
                 // Truncate for display
                 std::string display = resp.content;
                 if (display.size() > 500) {
                     display = display.substr(0, 500) + "\n... [truncated]";
                 }
-                std::cout << display << "\n";
+                s_logger.info( display << "\n";
             }
         }
-        std::cout << std::string(80, '=') << "\n";
+        s_logger.info( std::string(80, '=') << "\n";
         if (session->preferredIndex >= 0) {
-            std::cout << "✅ Preferred: [" << session->preferredIndex << "] "
-                      << session->responses[session->preferredIndex].templateName << "\n";
+            s_logger.info("✅ Preferred: [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (!sub.empty()) {
         // Treat everything as a prompt
@@ -1005,29 +984,27 @@ void cmd_multi_response(const std::string& args) {
         }
 
         int maxResp = g_multiResponse->getMaxChainResponses();
-        std::cout << "🔀 Generating " << maxResp << " responses...\n\n";
+        s_logger.info("🔀 Generating ");
 
         auto sessionId = g_multiResponse->startSession(prompt, maxResp);
 
         // Per-response callback for live display
         auto perCb = [](const GeneratedResponse& resp, void* /*userData*/) {
-            std::cout << "  [" << resp.index << "] " << resp.templateName << ": "
-                      << resp.tokenCount << " tokens, "
-                      << static_cast<int>(resp.latencyMs) << "ms";
-            if (resp.error) std::cout << " ❌ " << resp.errorDetail;
-            else std::cout << " ✅";
-            std::cout << "\n";
+            s_logger.info("  [");
+            if (resp.error) s_logger.info(" ❌ ");
+            else s_logger.info(" ✅");
+            s_logger.info("\n");
         };
 
         auto result = g_multiResponse->generateAll(sessionId, perCb, nullptr);
 
         if (!result.success) {
-            std::cout << "❌ Generation failed: " << result.detail << "\n";
+            s_logger.info("❌ Generation failed: ");
             return;
         }
 
-        std::cout << "\n✅ All responses generated. Use !multi compare to review.\n";
-        std::cout << "   Use !multi prefer <0-3> to record your preference.\n\n";
+        s_logger.info("\n✅ All responses generated. Use !multi compare to review.\n");
+        s_logger.info("   Use !multi prefer <0-3> to record your preference.\n\n");
 
         // Record in history
         if (g_historyRecorder) {
@@ -1037,13 +1014,13 @@ void cmd_multi_response(const std::string& args) {
         }
 
     } else {
-        std::cout << "Usage: !multi <prompt>        Generate multi-style responses\n";
-        std::cout << "       !multi compare         Compare last responses\n";
-        std::cout << "       !multi prefer <0-3>    Record preference\n";
-        std::cout << "       !multi templates       Show all templates\n";
-        std::cout << "       !multi toggle <0-3>    Toggle template on/off\n";
-        std::cout << "       !multi recommend       Show recommended template\n";
-        std::cout << "       !multi stats           Show generation stats\n";
+        s_logger.info("Usage: !multi <prompt>        Generate multi-style responses\n");
+        s_logger.info("       !multi compare         Compare last responses\n");
+        s_logger.info("       !multi prefer <0-3>    Record preference\n");
+        s_logger.info("       !multi templates       Show all templates\n");
+        s_logger.info("       !multi toggle <0-3>    Toggle template on/off\n");
+        s_logger.info("       !multi recommend       Show recommended template\n");
+        s_logger.info("       !multi stats           Show generation stats\n");
     }
 }
 
@@ -1053,7 +1030,7 @@ void cmd_multi_response(const std::string& args) {
 
 void cmd_history(const std::string& args) {
     if (!g_historyRecorder) {
-        std::cout << "❌ AgentHistoryRecorder not initialized\n";
+        s_logger.info("❌ AgentHistoryRecorder not initialized\n");
         return;
     }
     auto [sub, rest] = splitFirst(args);
@@ -1064,90 +1041,85 @@ void cmd_history(const std::string& args) {
         q.limit = count;
         auto events = g_historyRecorder->query(q);
         if (events.empty()) {
-            std::cout << "No history events.\n";
+            s_logger.info("No history events.\n");
             return;
         }
-        std::cout << "\n📜 Agent History (last " << events.size() << "):\n";
-        std::cout << std::string(80, '-') << "\n";
+        s_logger.info("\n📜 Agent History (last ");
+        s_logger.info( std::string(80, '-') << "\n";
         for (const auto& e : events) {
-            std::cout << "[" << std::setw(6) << e.id << "] "
-                      << std::setw(20) << std::left << e.eventType
-                      << (e.success ? "✅" : "❌") << " ";
-            if (!e.agentId.empty()) std::cout << "agent=" << e.agentId << " ";
-            if (e.durationMs > 0) std::cout << "(" << e.durationMs << "ms) ";
-            std::cout << "\n";
+            s_logger.info("[");
+            if (!e.agentId.empty()) s_logger.info("agent=");
+            if (e.durationMs > 0) s_logger.info("(");
+            s_logger.info("\n");
             if (!e.description.empty()) {
                 std::string desc = e.description.substr(0, 70);
                 if (e.description.size() > 70) desc += "...";
-                std::cout << "       " << desc << "\n";
+                s_logger.info("       ");
             }
             if (!e.success && !e.errorMessage.empty()) {
-                std::cout << "       ❌ " << e.errorMessage.substr(0, 60) << "\n";
+                s_logger.info("       ❌ ");
             }
         }
-        std::cout << std::string(80, '-') << "\n\n";
+        s_logger.info( std::string(80, '-') << "\n\n";
 
     } else if (sub == "session") {
         auto timeline = g_historyRecorder->getSessionTimeline(g_historyRecorder->sessionId());
-        std::cout << "\n📜 Session Timeline (" << timeline.size() << " events):\n";
+        s_logger.info("\n📜 Session Timeline (");
         for (const auto& e : timeline) {
-            std::cout << "  [" << e.id << "] " << e.eventType
-                      << (e.success ? " ✅" : " ❌") << " " << e.description.substr(0, 50) << "\n";
+            s_logger.info("  [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "agent") {
         if (rest.empty()) {
-            std::cout << "Usage: !history agent <agent_id>\n";
+            s_logger.info("Usage: !history agent <agent_id>\n");
             return;
         }
         auto timeline = g_historyRecorder->getAgentTimeline(rest);
         if (timeline.empty()) {
-            std::cout << "No events for agent: " << rest << "\n";
+            s_logger.info("No events for agent: ");
             return;
         }
-        std::cout << "\n📜 Agent Timeline: " << rest << " (" << timeline.size() << " events)\n";
+        s_logger.info("\n📜 Agent Timeline: ");
         for (const auto& e : timeline) {
-            std::cout << "  [" << e.id << "] " << e.eventType
-                      << (e.success ? " ✅" : " ❌");
-            if (e.durationMs > 0) std::cout << " (" << e.durationMs << "ms)";
-            std::cout << "\n";
+            s_logger.info("  [");
+            if (e.durationMs > 0) s_logger.info(" (");
+            s_logger.info("\n");
             if (!e.description.empty()) {
-                std::cout << "       " << e.description.substr(0, 60) << "\n";
+                s_logger.info("       ");
             }
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "type") {
         if (rest.empty()) {
-            std::cout << "Usage: !history type <event_type>\n";
-            std::cout << "  Types: agent_spawn, agent_complete, agent_fail, tool_invoke,\n";
-            std::cout << "         chain_start, chain_step, chain_complete, swarm_start,\n";
-            std::cout << "         swarm_task, swarm_complete, chat_request, chat_response, ...\n";
+            s_logger.info("Usage: !history type <event_type>\n");
+            s_logger.info("  Types: agent_spawn, agent_complete, agent_fail, tool_invoke,\n");
+            s_logger.info("         chain_start, chain_step, chain_complete, swarm_start,\n");
+            s_logger.info("         swarm_task, swarm_complete, chat_request, chat_response, ...\n");
             return;
         }
         auto events = g_historyRecorder->getEventsByType(rest, 50);
-        std::cout << "\n📜 Events of type '" << rest << "' (" << events.size() << "):\n";
+        s_logger.info("\n📜 Events of type '");
         for (const auto& e : events) {
-            std::cout << "  [" << e.id << "] " << (e.success ? "✅" : "❌") << " "
-                      << e.description.substr(0, 60) << "\n";
+            s_logger.info("  [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "stats") {
-        std::cout << "\n" << g_historyRecorder->getStatsSummary() << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "flush") {
         g_historyRecorder->flush();
-        std::cout << "✅ Events flushed to disk\n";
+        s_logger.info("✅ Events flushed to disk\n");
 
     } else if (sub == "clear") {
         g_historyRecorder->clear();
-        std::cout << "✅ In-memory events cleared\n";
+        s_logger.info("✅ In-memory events cleared\n");
 
     } else if (sub == "export") {
         if (rest.empty()) {
-            std::cout << "Usage: !history export <filepath>\n";
+            s_logger.info("Usage: !history export <filepath>\n");
             return;
         }
         auto events = g_historyRecorder->allEvents();
@@ -1156,13 +1128,13 @@ void cmd_history(const std::string& args) {
         if (out.is_open()) {
             out << json;
             out.close();
-            std::cout << "✅ Exported " << events.size() << " events to: " << rest << "\n";
+            s_logger.info("✅ Exported ");
         } else {
-            std::cout << "❌ Failed to write: " << rest << "\n";
+            s_logger.info("❌ Failed to write: ");
         }
 
     } else {
-        std::cout << "Usage: !history <show|session|agent|type|stats|flush|clear|export>\n";
+        s_logger.info("Usage: !history <show|session|agent|type|stats|flush|clear|export>\n");
     }
 }
 
@@ -1172,141 +1144,127 @@ void cmd_history(const std::string& args) {
 
 void cmd_explain(const std::string& args) {
     if (!g_explainEngine) {
-        std::cout << "❌ ExplainabilityEngine not initialized\n";
+        s_logger.info("❌ ExplainabilityEngine not initialized\n");
         return;
     }
     auto [sub, rest] = splitFirst(args);
 
     if (sub == "agent") {
         if (rest.empty()) {
-            std::cout << "Usage: !explain agent <agent_id>\n";
+            s_logger.info("Usage: !explain agent <agent_id>\n");
             return;
         }
         auto trace = g_explainEngine->traceAgent(rest);
-        std::cout << "\n" << trace.toJSON() << "\n";
-        std::cout << "\n🔍 Agent Trace: " << trace.rootAgentId << "\n";
-        std::cout << "  Nodes: " << trace.nodeCount
-                  << " Failures: " << trace.failureCount
-                  << " Policies: " << trace.policyFireCount
-                  << " Duration: " << trace.totalDurationMs << "ms\n";
-        std::cout << "  Result: " << (trace.overallSuccess ? "✅" : "❌") << "\n";
+        s_logger.info("\n");
+        s_logger.info("\n🔍 Agent Trace: ");
+        s_logger.info("  Nodes: ");
+        s_logger.info("  Result: ");
         if (!trace.summary.empty()) {
-            std::cout << "  Summary: " << trace.summary << "\n";
+            s_logger.info("  Summary: ");
         }
         for (const auto& node : trace.nodes) {
-            std::cout << "    [" << node.eventId << "] " << node.eventType
-                      << " " << (node.success ? "✅" : "❌")
-                      << " " << node.description.substr(0, 50) << "\n";
+            s_logger.info("    [");
             if (!node.policyId.empty()) {
-                std::cout << "      Policy: " << node.policyName << " → " << node.policyEffect << "\n";
+                s_logger.info("      Policy: ");
             }
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "chain") {
         if (rest.empty()) {
-            std::cout << "Usage: !explain chain <parent_id>\n";
+            s_logger.info("Usage: !explain chain <parent_id>\n");
             return;
         }
         auto trace = g_explainEngine->traceChain(rest);
-        std::cout << "\n🔗 Chain Trace: " << trace.rootAgentId << "\n";
-        std::cout << "  Nodes: " << trace.nodeCount << " Duration: " << trace.totalDurationMs << "ms\n";
-        if (!trace.summary.empty()) std::cout << "  " << trace.summary << "\n";
+        s_logger.info("\n🔗 Chain Trace: ");
+        s_logger.info("  Nodes: ");
+        if (!trace.summary.empty()) s_logger.info("  ");
         for (const auto& node : trace.nodes) {
-            std::cout << "    [" << node.eventId << "] " << node.eventType
-                      << " " << (node.success ? "✅" : "❌")
-                      << " " << node.description.substr(0, 50) << "\n";
+            s_logger.info("    [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "swarm") {
         if (rest.empty()) {
-            std::cout << "Usage: !explain swarm <parent_id>\n";
+            s_logger.info("Usage: !explain swarm <parent_id>\n");
             return;
         }
         auto trace = g_explainEngine->traceSwarm(rest);
-        std::cout << "\n🐝 Swarm Trace: " << trace.rootAgentId << "\n";
-        std::cout << "  Nodes: " << trace.nodeCount << " Duration: " << trace.totalDurationMs << "ms\n";
-        if (!trace.summary.empty()) std::cout << "  " << trace.summary << "\n";
+        s_logger.info("\n🐝 Swarm Trace: ");
+        s_logger.info("  Nodes: ");
+        if (!trace.summary.empty()) s_logger.info("  ");
         for (const auto& node : trace.nodes) {
-            std::cout << "    [" << node.eventId << "] " << node.eventType
-                      << " " << (node.success ? "✅" : "❌")
-                      << " " << node.description.substr(0, 50) << "\n";
+            s_logger.info("    [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "failures") {
         auto failures = g_explainEngine->explainFailures();
         if (failures.empty()) {
-            std::cout << "✅ No failures to explain in current session.\n";
+            s_logger.info("✅ No failures to explain in current session.\n");
             return;
         }
-        std::cout << "\n🔍 Failure Attributions (" << failures.size() << "):\n";
+        s_logger.info("\n🔍 Failure Attributions (");
         for (const auto& f : failures) {
-            std::cout << "  [" << f.failureEventId << "] " << f.failureType
-                      << " agent=" << f.agentId << "\n";
-            std::cout << "    Error: " << f.errorMessage.substr(0, 60) << "\n";
-            std::cout << "    Strategy: " << f.correctionStrategy;
+            s_logger.info("  [");
+            s_logger.info("    Error: ");
+            s_logger.info("    Strategy: ");
             if (f.wasRetried) {
-                std::cout << " → retry " << (f.retrySucceeded ? "✅" : "❌");
+                s_logger.info(" → retry ");
             }
-            std::cout << "\n";
+            s_logger.info("\n");
             if (!f.policyId.empty()) {
-                std::cout << "    Policy: " << f.policyName << " — " << f.policyRationale << "\n";
+                s_logger.info("    Policy: ");
             }
             if (f.historicalSuccessRate >= 0) {
-                std::cout << "    Historical success rate: " << std::fixed
-                          << std::setprecision(1) << (f.historicalSuccessRate * 100) << "% ("
-                          << f.historicalOccurrences << " occurrences)\n";
+                s_logger.info("    Historical success rate: ");
             }
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "policies") {
         auto attrs = g_explainEngine->explainPolicies();
         if (attrs.empty()) {
-            std::cout << "No policy firings in current session.\n";
+            s_logger.info("No policy firings in current session.\n");
             return;
         }
-        std::cout << "\n📜 Policy Attributions (" << attrs.size() << "):\n";
+        s_logger.info("\n📜 Policy Attributions (");
         for (const auto& p : attrs) {
-            std::cout << "  " << p.policyName << " (priority=" << p.policyPriority << ")\n";
-            std::cout << "    Trigger: " << p.triggerEventType;
-            if (!p.triggerPattern.empty()) std::cout << " pattern=" << p.triggerPattern;
-            if (p.triggerFailureRate > 0) std::cout << " failRate=" << p.triggerFailureRate;
-            std::cout << "\n";
-            std::cout << "    Effect: " << p.effectDescription << "\n";
-            std::cout << "    Applied " << p.policyAppliedCount << " times"
-                      << " est.improvement=" << std::fixed << std::setprecision(1)
-                      << (p.estimatedImprovement * 100) << "%\n";
+            s_logger.info("  ");
+            s_logger.info("    Trigger: ");
+            if (!p.triggerPattern.empty()) s_logger.info(" pattern=");
+            if (p.triggerFailureRate > 0) s_logger.info(" failRate=");
+            s_logger.info("\n");
+            s_logger.info("    Effect: ");
+            s_logger.info("    Applied ");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "session") {
         auto explanation = g_explainEngine->explainSession();
-        std::cout << "\n📊 Session Explanation:\n";
-        std::cout << "  Events:    " << explanation.totalEvents << "\n";
-        std::cout << "  Agents:    " << explanation.agentSpawns << "\n";
-        std::cout << "  Chains:    " << explanation.chainExecutions << "\n";
-        std::cout << "  Swarms:    " << explanation.swarmExecutions << "\n";
-        std::cout << "  Failures:  " << explanation.failures << "\n";
-        std::cout << "  Retries:   " << explanation.retries << "\n";
-        std::cout << "  Policies:  " << explanation.policyFirings << "\n";
+        s_logger.info("\n📊 Session Explanation:\n");
+        s_logger.info("  Events:    ");
+        s_logger.info("  Agents:    ");
+        s_logger.info("  Chains:    ");
+        s_logger.info("  Swarms:    ");
+        s_logger.info("  Failures:  ");
+        s_logger.info("  Retries:   ");
+        s_logger.info("  Policies:  ");
         if (!explanation.narrative.empty()) {
-            std::cout << "\n  Narrative:\n  " << explanation.narrative << "\n";
+            s_logger.info("\n  Narrative:\n  ");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "snapshot") {
         if (rest.empty()) {
-            std::cout << "Usage: !explain snapshot <filepath>\n";
+            s_logger.info("Usage: !explain snapshot <filepath>\n");
             return;
         }
         bool ok = g_explainEngine->exportSnapshot(rest);
-        std::cout << (ok ? "✅ Snapshot exported to: " : "❌ Export failed: ") << rest << "\n";
+        s_logger.info( (ok ? "✅ Snapshot exported to: " : "❌ Export failed: ") << rest << "\n";
 
     } else {
-        std::cout << "Usage: !explain <agent|chain|swarm|failures|policies|session|snapshot>\n";
+        s_logger.info("Usage: !explain <agent|chain|swarm|failures|policies|session|snapshot>\n");
     }
 }
 
@@ -1316,7 +1274,7 @@ void cmd_explain(const std::string& args) {
 
 void cmd_policy(const std::string& args) {
     if (!g_policyEngine) {
-        std::cout << "❌ PolicyEngine not initialized\n";
+        s_logger.info("❌ PolicyEngine not initialized\n");
         return;
     }
     auto [sub, rest] = splitFirst(args);
@@ -1324,23 +1282,21 @@ void cmd_policy(const std::string& args) {
     if (sub == "list" || sub.empty()) {
         auto policies = g_policyEngine->getAllPolicies();
         if (policies.empty()) {
-            std::cout << "No policies defined. Use !policy suggest to generate suggestions.\n";
+            s_logger.info("No policies defined. Use !policy suggest to generate suggestions.\n");
             return;
         }
-        std::cout << "\n📜 Policies (" << policies.size() << "):\n";
+        s_logger.info("\n📜 Policies (");
         for (const auto& p : policies) {
-            std::cout << "  " << (p.enabled ? "✅" : "❌") << " [" << p.id.substr(0, 8) << "] "
-                      << p.name << " (v" << p.version << ", priority=" << p.priority
-                      << ", applied=" << p.appliedCount << ")\n";
+            s_logger.info("  ");
             if (!p.description.empty()) {
-                std::cout << "     " << p.description.substr(0, 60) << "\n";
+                s_logger.info("     ");
             }
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "show") {
         if (rest.empty()) {
-            std::cout << "Usage: !policy show <policy_id>\n";
+            s_logger.info("Usage: !policy show <policy_id>\n");
             return;
         }
         const auto* p = g_policyEngine->getPolicy(rest);
@@ -1352,43 +1308,43 @@ void cmd_policy(const std::string& args) {
             }
         }
         if (!p) {
-            std::cout << "❌ Policy not found: " << rest << "\n";
+            s_logger.info("❌ Policy not found: ");
             return;
         }
-        std::cout << "\n" << p->toJSON() << "\n\n";
+        s_logger.info("\n");
 
     } else if (sub == "enable") {
-        if (rest.empty()) { std::cout << "Usage: !policy enable <id>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy enable <id>\n"); return; }
         bool ok = g_policyEngine->setEnabled(rest, true);
-        std::cout << (ok ? "✅ Policy enabled" : "❌ Policy not found") << "\n";
+        s_logger.info( (ok ? "✅ Policy enabled" : "❌ Policy not found") << "\n";
 
     } else if (sub == "disable") {
-        if (rest.empty()) { std::cout << "Usage: !policy disable <id>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy disable <id>\n"); return; }
         bool ok = g_policyEngine->setEnabled(rest, false);
-        std::cout << (ok ? "✅ Policy disabled" : "❌ Policy not found") << "\n";
+        s_logger.info( (ok ? "✅ Policy disabled" : "❌ Policy not found") << "\n";
 
     } else if (sub == "remove") {
-        if (rest.empty()) { std::cout << "Usage: !policy remove <id>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy remove <id>\n"); return; }
         bool ok = g_policyEngine->removePolicy(rest);
-        std::cout << (ok ? "✅ Policy removed" : "❌ Policy not found") << "\n";
+        s_logger.info( (ok ? "✅ Policy removed" : "❌ Policy not found") << "\n";
 
     } else if (sub == "heuristics") {
         g_policyEngine->computeHeuristics();
         auto heuristics = g_policyEngine->getAllHeuristics();
         if (heuristics.empty()) {
-            std::cout << "No heuristics computed (need more history data).\n";
+            s_logger.info("No heuristics computed (need more history data).\n");
             return;
         }
-        std::cout << "\n📊 Computed Heuristics (" << heuristics.size() << "):\n";
-        std::cout << std::setw(25) << std::left << "Key"
+        s_logger.info("\n📊 Computed Heuristics (");
+        s_logger.info( std::setw(25) << std::left << "Key"
                   << std::setw(8) << "Total"
                   << std::setw(8) << "Pass"
                   << std::setw(8) << "Fail"
                   << std::setw(10) << "Rate"
                   << std::setw(10) << "Avg ms" << "\n";
-        std::cout << std::string(69, '-') << "\n";
+        s_logger.info( std::string(69, '-') << "\n";
         for (const auto& h : heuristics) {
-            std::cout << std::setw(25) << std::left << h.key
+            s_logger.info( std::setw(25) << std::left << h.key
                       << std::setw(8) << h.totalEvents
                       << std::setw(8) << h.successCount
                       << std::setw(8) << h.failCount
@@ -1396,66 +1352,63 @@ void cmd_policy(const std::string& args) {
                       << (h.successRate * 100) << "%"
                       << std::setw(10) << static_cast<int>(h.avgDurationMs) << "\n";
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "suggest") {
-        std::cout << "🧠 Analyzing history for policy suggestions...\n";
+        s_logger.info("🧠 Analyzing history for policy suggestions...\n");
         g_policyEngine->computeHeuristics();
         auto suggestions = g_policyEngine->generateSuggestions();
         if (suggestions.empty()) {
-            std::cout << "No suggestions at this time (need more diverse history data).\n";
+            s_logger.info("No suggestions at this time (need more diverse history data).\n");
             return;
         }
-        std::cout << "\n💡 Policy Suggestions (" << suggestions.size() << "):\n";
+        s_logger.info("\n💡 Policy Suggestions (");
         for (const auto& s : suggestions) {
-            std::cout << "  [" << s.id.substr(0, 8) << "] " << s.proposedPolicy.name << "\n";
-            std::cout << "    " << s.rationale << "\n";
-            std::cout << "    Est. improvement: " << std::fixed << std::setprecision(1)
-                      << (s.estimatedImprovement * 100) << "% ("
-                      << s.supportingEvents << " supporting events)\n";
-            std::cout << "    State: " << s.stateString() << "\n";
+            s_logger.info("  [");
+            s_logger.info("    ");
+            s_logger.info("    Est. improvement: ");
+            s_logger.info("    State: ");
         }
-        std::cout << "\n  Use !policy accept <id> or !policy reject <id>\n\n";
+        s_logger.info("\n  Use !policy accept <id> or !policy reject <id>\n\n");
 
     } else if (sub == "accept") {
-        if (rest.empty()) { std::cout << "Usage: !policy accept <suggestion_id>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy accept <suggestion_id>\n"); return; }
         bool ok = g_policyEngine->acceptSuggestion(rest);
-        std::cout << (ok ? "✅ Suggestion accepted and policy activated"
+        s_logger.info( (ok ? "✅ Suggestion accepted and policy activated"
                         : "❌ Suggestion not found") << "\n";
 
     } else if (sub == "reject") {
-        if (rest.empty()) { std::cout << "Usage: !policy reject <suggestion_id>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy reject <suggestion_id>\n"); return; }
         bool ok = g_policyEngine->rejectSuggestion(rest);
-        std::cout << (ok ? "✅ Suggestion rejected" : "❌ Suggestion not found") << "\n";
+        s_logger.info( (ok ? "✅ Suggestion rejected" : "❌ Suggestion not found") << "\n";
 
     } else if (sub == "pending") {
         auto pending = g_policyEngine->getPendingSuggestions();
         if (pending.empty()) {
-            std::cout << "No pending suggestions.\n";
+            s_logger.info("No pending suggestions.\n");
             return;
         }
-        std::cout << "\n💡 Pending Suggestions (" << pending.size() << "):\n";
+        s_logger.info("\n💡 Pending Suggestions (");
         for (const auto& s : pending) {
-            std::cout << "  [" << s.id.substr(0, 8) << "] " << s.proposedPolicy.name
-                      << " — " << s.rationale.substr(0, 50) << "\n";
+            s_logger.info("  [");
         }
-        std::cout << "\n";
+        s_logger.info("\n");
 
     } else if (sub == "export") {
-        if (rest.empty()) { std::cout << "Usage: !policy export <filepath>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy export <filepath>\n"); return; }
         bool ok = g_policyEngine->exportToFile(rest);
-        std::cout << (ok ? "✅ Policies exported to: " : "❌ Export failed: ") << rest << "\n";
+        s_logger.info( (ok ? "✅ Policies exported to: " : "❌ Export failed: ") << rest << "\n";
 
     } else if (sub == "import") {
-        if (rest.empty()) { std::cout << "Usage: !policy import <filepath>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !policy import <filepath>\n"); return; }
         int count = g_policyEngine->importFromFile(rest);
-        std::cout << "✅ Imported " << count << " policies from: " << rest << "\n";
+        s_logger.info("✅ Imported ");
 
     } else if (sub == "stats") {
-        std::cout << "\n" << g_policyEngine->getStatsSummary() << "\n";
+        s_logger.info("\n");
 
     } else {
-        std::cout << "Usage: !policy <list|show|enable|disable|remove|heuristics|suggest|accept|reject|pending|export|import|stats>\n";
+        s_logger.info("Usage: !policy <list|show|enable|disable|remove|heuristics|suggest|accept|reject|pending|export|import|stats>\n");
     }
 }
 
@@ -1466,10 +1419,10 @@ void cmd_policy(const std::string& args) {
 void cmd_tools(const std::string& args) {
     std::string toolList = ToolRegistry::list_tools();
     if (toolList.empty()) {
-        std::cout << "No tools registered.\n";
+        s_logger.info("No tools registered.\n");
         return;
     }
-    std::cout << "\n🔧 Registered Tools:\n" << toolList << "\n";
+    s_logger.info("\n🔧 Registered Tools:\n");
 }
 
 // ============================================================================
@@ -1482,7 +1435,7 @@ void cmd_model(const std::string& args) {
 
     if (sub == "load" || sub == "model_load") {
         if (rest.empty()) {
-            std::cout << "Usage: !model_load <path_to_gguf>\n";
+            s_logger.info("Usage: !model_load <path_to_gguf>\n");
             return;
         }
 
@@ -1493,7 +1446,7 @@ void cmd_model(const std::string& args) {
             return;
         }
 
-        std::cout << "[Model] Analyzing model: " << rest << "\n";
+        s_logger.info("[Model] Analyzing model: ");
         bool ok = hotpatcher.analyzeModel(rest);
         if (ok) {
             auto layers = hotpatcher.getLayerInfo();
@@ -1501,13 +1454,12 @@ void cmd_model(const std::string& args) {
             uint64_t totalSize = 0;
             for (const auto& l : layers) totalSize += l.sizeBytes;
 
-            std::cout << "✅ Model analyzed successfully\n";
-            std::cout << "  File: " << rest << "\n";
-            std::cout << "  Layers: " << layers.size() << "\n";
-            std::cout << "  Parameters: " << std::fixed << std::setprecision(1)
-                      << (totalParams / 1e9) << "B\n";
-            std::cout << "  Total size: " << (totalSize / (1024ULL * 1024ULL)) << " MB\n";
-            std::cout << "  Size tier: " << hotpatcher.getModelSizeTier() << "\n";
+            s_logger.info("✅ Model analyzed successfully\n");
+            s_logger.info("  File: ");
+            s_logger.info("  Layers: ");
+            s_logger.info("  Parameters: ");
+            s_logger.info("  Total size: ");
+            s_logger.info("  Size tier: ");
 
             cli_record_action(
                 static_cast<int>(ReplayActionType::AgentToolCall),
@@ -1516,14 +1468,14 @@ void cmd_model(const std::string& args) {
                 std::to_string(totalParams) + " params",
                 0, 1.0f, 0.0);
         } else {
-            std::cout << "❌ Failed to analyze model: " << rest << "\n";
+            s_logger.info("❌ Failed to analyze model: ");
         }
 
     } else if (sub == "plan" || sub == "model_plan") {
-        std::cout << "[Model] Computing optimal quantization plan...\n";
+        s_logger.info("[Model] Computing optimal quantization plan...\n");
         auto plan = hotpatcher.computeQuantPlan();
         if (plan.empty()) {
-            std::cout << "❌ No plan computed. Load a model first with !model_load <path>\n";
+            s_logger.info("❌ No plan computed. Load a model first with !model_load <path>\n");
             return;
         }
         int64_t totalSavings = 0;
@@ -1532,12 +1484,11 @@ void cmd_model(const std::string& args) {
             totalSavings += d.savingsBytes;
             if (d.qualityImpact > maxQualityImpact) maxQualityImpact = d.qualityImpact;
         }
-        std::cout << "✅ Quantization plan computed:\n";
-        std::cout << "  Target layers: " << plan.size() << "\n";
-        std::cout << "  Estimated VRAM savings: " << (totalSavings / (1024LL * 1024LL)) << " MB\n";
-        std::cout << "  Max quality impact: " << std::fixed << std::setprecision(2)
-                  << (maxQualityImpact * 100.0f) << "%\n";
-        std::cout << "\n  Plan JSON:\n" << hotpatcher.quantPlanToJson(plan) << "\n";
+        s_logger.info("✅ Quantization plan computed:\n");
+        s_logger.info("  Target layers: ");
+        s_logger.info("  Estimated VRAM savings: ");
+        s_logger.info("  Max quality impact: ");
+        s_logger.info("\n  Plan JSON:\n");
 
     } else if (sub == "surgery" || sub == "model_surgery") {
         // Gate check — model surgery is a high-risk mutation
@@ -1547,10 +1498,10 @@ void cmd_model(const std::string& args) {
             return;
         }
 
-        std::cout << "[Model] Computing and applying quantization plan (model surgery)...\n";
+        s_logger.info("[Model] Computing and applying quantization plan (model surgery)...\n");
         auto plan = hotpatcher.computeQuantPlan();
         if (plan.empty()) {
-            std::cout << "❌ No plan computed. Load a model first.\n";
+            s_logger.info("❌ No plan computed. Load a model first.\n");
             return;
         }
 
@@ -1569,9 +1520,7 @@ void cmd_model(const std::string& args) {
                     case SurgeryOp::MergeShards:     opStr = "Merge";      break;
                     case SurgeryOp::CompressKVCache: opStr = "Compress";   break;
                 }
-                std::cout << "\r  [" << opStr << "] Layer " << layerIdx << "/"
-                          << totalLayers << " " << std::fixed << std::setprecision(1)
-                          << (progress * 100.0f) << "%   " << std::flush;
+                s_logger.info("\r  [");
             },
             nullptr);
 
@@ -1579,12 +1528,12 @@ void cmd_model(const std::string& args) {
         auto result = hotpatcher.applyQuantPlan(plan);
         double elapsed = nowEpochMs() - startMs;
 
-        std::cout << "\n";
+        s_logger.info("\n");
         if (result.success) {
-            std::cout << "✅ Model surgery completed in " << formatDuration(elapsed) << "\n";
-            std::cout << "  Layers modified: " << result.layersAffected << "\n";
-            std::cout << "  Memory saved: " << (result.memorySavedBytes / (1024LL * 1024LL)) << " MB\n";
-            std::cout << "  Detail: " << result.detail << "\n";
+            s_logger.info("✅ Model surgery completed in ");
+            s_logger.info("  Layers modified: ");
+            s_logger.info("  Memory saved: ");
+            s_logger.info("  Detail: ");
 
             cli_record_action(
                 static_cast<int>(ReplayActionType::AgentToolCall),
@@ -1592,73 +1541,55 @@ void cmd_model(const std::string& args) {
                 "Surgery completed: " + std::to_string(result.layersAffected) + " layers",
                 0, 1.0f, elapsed);
         } else {
-            std::cout << "❌ Model surgery failed: " << result.detail << "\n";
+            s_logger.info("❌ Model surgery failed: ");
         }
 
     } else if (sub == "pressure" || sub == "pressure_auto") {
         hotpatcher.enableAutoPressureResponse(true);
-        std::cout << "✅ Automatic VRAM pressure response ENABLED\n";
-        std::cout << "  The hotpatcher will now automatically requantize/evict layers\n";
-        std::cout << "  when VRAM pressure reaches critical thresholds.\n";
+        s_logger.info("✅ Automatic VRAM pressure response ENABLED\n");
+        s_logger.info("  The hotpatcher will now automatically requantize/evict layers\n");
+        s_logger.info("  when VRAM pressure reaches critical thresholds.\n");
 
         auto budget = hotpatcher.getVRAMBudget();
-        std::cout << "\n  Current VRAM Budget:\n";
-        std::cout << "    Total RAM:     " << (budget.totalRAM / (1024ULL * 1024ULL)) << " MB\n";
-        std::cout << "    Available RAM: " << (budget.availableRAM / (1024ULL * 1024ULL)) << " MB\n";
-        std::cout << "    Pressure:      " << static_cast<int>(budget.pressure)
-                  << " (" << (budget.pressure == VRAMPressure::Low ? "Low" :
-                              budget.pressure == VRAMPressure::Normal ? "Normal" :
-                              budget.pressure == VRAMPressure::High ? "High" :
-                              budget.pressure == VRAMPressure::Critical ? "Critical" : "Emergency") << ")\n";
-        std::cout << "    GPU accel:     " << (budget.gpuAccelEnabled ? "YES" : "NO") << "\n";
+        s_logger.info("\n  Current VRAM Budget:\n");
+        s_logger.info("    Total RAM:     ");
+        s_logger.info("    Available RAM: ");
+        s_logger.info("    Pressure:      ");
+        s_logger.info("    GPU accel:     ");
 
     } else if (sub == "status" || sub.empty()) {
-        std::cout << "[Model Hotpatcher] " << hotpatcher.toJson() << "\n";
+        s_logger.info("[Model Hotpatcher] ");
         auto budget = hotpatcher.getVRAMBudget();
-        std::cout << "\n  VRAM: " << (budget.availableRAM / (1024ULL * 1024ULL))
-                  << "/" << (budget.totalRAM / (1024ULL * 1024ULL)) << " MB\n";
+        s_logger.info("\n  VRAM: ");
 
     } else if (sub == "layers") {
         auto layers = hotpatcher.getLayerInfo();
         if (layers.empty()) {
-            std::cout << "No layers loaded. Use !model_load <path> first.\n";
+            s_logger.info("No layers loaded. Use !model_load <path> first.\n");
             return;
         }
-        std::cout << "\n📊 Model Layers (" << layers.size() << "):\n";
+        s_logger.info("\n📊 Model Layers (");
         for (const auto& l : layers) {
             std::string state = l.evicted ? "⚪" : "🟢";
-            std::cout << "  " << state << " [" << std::setw(3) << l.index << "] "
-                      << std::setw(30) << std::left << l.name
-                      << " Q" << static_cast<int>(l.quantType)
-                      << " " << std::setw(8) << std::right << (l.sizeBytes / 1024) << " KB"
-                      << (l.loadedInVRAM ? " [GPU]" : l.loadedInRAM ? " [RAM]" : " [DISK]")
-                      << "\n";
+            s_logger.info("  ");
         }
 
     } else if (sub == "evict") {
-        if (rest.empty()) { std::cout << "Usage: !model evict <layer_index>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !model evict <layer_index>\n"); return; }
         uint32_t idx = static_cast<uint32_t>(parseInt(rest, -1));
         auto r = hotpatcher.evictLayer(idx);
-        std::cout << (r.success ? "✅ Layer evicted: " : "❌ Failed to evict layer: ")
+        s_logger.info( (r.success ? "✅ Layer evicted: " : "❌ Failed to evict layer: ")
                   << r.detail << "\n";
 
     } else if (sub == "reload") {
-        if (rest.empty()) { std::cout << "Usage: !model reload <layer_index>\n"; return; }
+        if (rest.empty()) { s_logger.info("Usage: !model reload <layer_index>\n"); return; }
         uint32_t idx = static_cast<uint32_t>(parseInt(rest, -1));
         auto r = hotpatcher.reloadLayer(idx);
-        std::cout << (r.success ? "✅ Layer reloaded: " : "❌ Failed to reload layer: ")
+        s_logger.info( (r.success ? "✅ Layer reloaded: " : "❌ Failed to reload layer: ")
                   << r.detail << "\n";
 
     } else {
-        std::cout << "Usage: !model <load|plan|surgery|pressure|status|layers|evict|reload>\n"
-                  << "  !model_load <path>      — Analyze GGUF model\n"
-                  << "  !model_plan             — Compute quantization plan\n"
-                  << "  !model_surgery          — Apply streaming requantization\n"
-                  << "  !pressure_auto          — Enable auto VRAM pressure response\n"
-                  << "  !model status           — Show hotpatcher status\n"
-                  << "  !model layers           — List loaded layers\n"
-                  << "  !model evict <idx>      — Evict layer from VRAM\n"
-                  << "  !model reload <idx>     — Reload evicted layer\n";
+        s_logger.info("Usage: !model <load|plan|surgery|pressure|status|layers|evict|reload>\n");
     }
 }
 
@@ -1684,13 +1615,13 @@ void cmd_swarm_orchestrator(const std::string& args) {
                                      : RawrXD::Swarm::NodeRole::Worker;
             auto r = swarm.initialize(role, "0.0.0.0");
             if (!r.success) {
-                std::cout << "❌ Failed to initialize swarm: " << r.detail << "\n";
+                s_logger.info("❌ Failed to initialize swarm: ");
                 return;
             }
         }
 
         auto r = swarm.joinSwarm(rest);
-        std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";
+        s_logger.info( (r.success ? "✅ " : "❌ ") << r.detail << "\n";
 
         cli_record_action(
             static_cast<int>(ReplayActionType::AgentToolCall),
@@ -1699,19 +1630,19 @@ void cmd_swarm_orchestrator(const std::string& args) {
 
     } else if (sub == "status" || sub == "swarm_status" || sub.empty()) {
         if (!swarm.isRunning()) {
-            std::cout << "[Swarm] Not initialized. Use !swarm_join to start.\n";
+            s_logger.info("[Swarm] Not initialized. Use !swarm_join to start.\n");
             return;
         }
-        std::cout << "\n🌐 Swarm Topology:\n" << swarm.topologyToJson() << "\n";
+        s_logger.info("\n🌐 Swarm Topology:\n");
 
     } else if (sub == "distribute" || sub == "swarm_distribute") {
         if (!swarm.isRunning()) {
-            std::cout << "❌ Swarm not initialized. Use !swarm_join first.\n";
+            s_logger.info("❌ Swarm not initialized. Use !swarm_join first.\n");
             return;
         }
         auto [modelPath, layerStr] = splitFirst(rest);
         if (modelPath.empty()) {
-            std::cout << "Usage: !swarm_distribute <model_path> <total_layers>\n";
+            s_logger.info("Usage: !swarm_distribute <model_path> <total_layers>\n");
             return;
         }
 
@@ -1723,9 +1654,9 @@ void cmd_swarm_orchestrator(const std::string& args) {
         }
 
         uint32_t totalLayers = static_cast<uint32_t>(parseInt(layerStr, 128));
-        std::cout << "[Swarm] Distributing " << totalLayers << " layers from " << modelPath << "...\n";
+        s_logger.info("[Swarm] Distributing ");
         auto r = swarm.distributeModel(modelPath, totalLayers);
-        std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";
+        s_logger.info( (r.success ? "✅ " : "❌ ") << r.detail << "\n";
 
         cli_record_action(
             static_cast<int>(ReplayActionType::AgentToolCall),
@@ -1734,7 +1665,7 @@ void cmd_swarm_orchestrator(const std::string& args) {
 
     } else if (sub == "rebalance" || sub == "swarm_rebalance") {
         if (!swarm.isRunning()) {
-            std::cout << "❌ Swarm not initialized.\n";
+            s_logger.info("❌ Swarm not initialized.\n");
             return;
         }
 
@@ -1745,17 +1676,17 @@ void cmd_swarm_orchestrator(const std::string& args) {
             return;
         }
 
-        std::cout << "[Swarm] Rebalancing...\n";
+        s_logger.info("[Swarm] Rebalancing...\n");
         auto r = swarm.rebalance();
-        std::cout << (r.success ? "✅ " : "❌ ") << r.detail << "\n";
+        s_logger.info( (r.success ? "✅ " : "❌ ") << r.detail << "\n";
 
     } else if (sub == "nodes" || sub == "swarm_nodes") {
         if (!swarm.isRunning()) {
-            std::cout << "[Swarm] Not initialized.\n";
+            s_logger.info("[Swarm] Not initialized.\n");
             return;
         }
         auto nodes = swarm.getNodeList();
-        std::cout << "\n🖥  Swarm Nodes (" << nodes.size() << "):\n";
+        s_logger.info("\n🖥  Swarm Nodes (");
         for (const auto& n : nodes) {
             const char* stateStr = "Unknown";
             switch (n.state) {
@@ -1765,50 +1696,32 @@ void cmd_swarm_orchestrator(const std::string& args) {
                 case RawrXD::Swarm::NodeState::Overloaded: stateStr = "OVERLOADED"; break;
                 case RawrXD::Swarm::NodeState::Failed:     stateStr = "FAILED";     break;
             }
-            std::cout << "  " << (n.state == RawrXD::Swarm::NodeState::Active ? "🟢" : "🔴")
-                      << " " << n.nodeId << " [" << stateStr << "]"
-                      << " VRAM=" << (n.freeVRAM / (1024ULL*1024ULL)) << "/"
-                      << (n.totalVRAM / (1024ULL*1024ULL)) << "MB"
-                      << " GPU=" << (n.gpuAccel ? "YES" : "NO")
-                      << " layers=" << n.hostedLayers.size() << "\n";
+            s_logger.info("  ");
         }
 
     } else if (sub == "shards" || sub == "swarm_shards") {
         if (!swarm.isRunning()) {
-            std::cout << "[Swarm] Not initialized.\n";
+            s_logger.info("[Swarm] Not initialized.\n");
             return;
         }
         auto shards = swarm.getShardList();
-        std::cout << "\n📦 Layer Shards (" << shards.size() << "):\n";
+        s_logger.info("\n📦 Layer Shards (");
         for (const auto& s : shards) {
-            std::cout << "  " << (s.resident ? "🟢" : "⚪")
-                      << " Layers " << s.layerStart << "-" << s.layerEnd
-                      << " → " << s.nodeId
-                      << " Q" << static_cast<int>(s.quant)
-                      << " " << (s.sizeBytes / (1024ULL * 1024ULL)) << "MB"
-                      << " refs=" << s.refCount << "\n";
+            s_logger.info("  ");
         }
 
     } else if (sub == "leave" || sub == "swarm_leave") {
         if (!swarm.isRunning()) {
-            std::cout << "[Swarm] Not initialized.\n";
+            s_logger.info("[Swarm] Not initialized.\n");
             return;
         }
         swarm.leaveSwarm();
-        std::cout << "✅ Left the swarm\n";
+        s_logger.info("✅ Left the swarm\n");
 
     } else if (sub == "stats" || sub == "swarm_stats") {
-        std::cout << "\n📊 Swarm Statistics:\n" << swarm.statsToJson() << "\n";
+        s_logger.info("\n📊 Swarm Statistics:\n");
 
     } else {
-        std::cout << "Usage: !swarm <join|status|distribute|rebalance|nodes|shards|leave|stats>\n"
-                  << "  !swarm_join [ip]                — Join swarm or become coordinator\n"
-                  << "  !swarm_status                   — Show topology\n"
-                  << "  !swarm_distribute <model> <n>   — Distribute model layers\n"
-                  << "  !swarm_rebalance                — Rebalance by VRAM pressure\n"
-                  << "  !swarm nodes                    — List swarm nodes\n"
-                  << "  !swarm shards                   — List layer shards\n"
-                  << "  !swarm leave                    — Leave swarm\n"
-                  << "  !swarm stats                    — Show network stats\n";
+        s_logger.info("Usage: !swarm <join|status|distribute|rebalance|nodes|shards|leave|stats>\n");
     }
 }

@@ -19,6 +19,9 @@
 #include <filesystem>
 #include <cstring>
 
+#include "logging/logger.h"
+static Logger s_logger("model_source_resolver");
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
@@ -45,7 +48,7 @@ ModelSourceResolver::ModelSourceResolver()
     try {
         fs::create_directories(m_cacheDir);
     } catch (const std::exception& e) {
-        std::cerr << "[ModelSourceResolver] Warning: Could not create cache dir: " 
+        s_logger.error( "[ModelSourceResolver] Warning: Could not create cache dir: " 
                   << m_cacheDir << " (" << e.what() << ")" << std::endl;
     }
 }
@@ -123,8 +126,8 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
     result.original_input = input;
     result.source_type = DetectSourceType(input);
 
-    std::cout << "[ModelSourceResolver] Resolving: " << input << std::endl;
-    std::cout << "[ModelSourceResolver] Detected source: " << SourceTypeToString(result.source_type) << std::endl;
+    s_logger.info("[ModelSourceResolver] Resolving: ");
+    s_logger.info("[ModelSourceResolver] Detected source: ");
 
     switch (result.source_type) {
         case GGUFConstants::ModelSourceType::LOCAL_FILE: {
@@ -133,19 +136,19 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             
             if (!fs::exists(path)) {
                 result.error_message = "File not found: " + path;
-                std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+                s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
                 return result;
             }
 
             if (!ValidateGGUFMagic(path)) {
                 result.error_message = "File is not a valid GGUF file (bad magic bytes): " + path;
-                std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+                s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
                 return result;
             }
 
             result.success = true;
             result.local_path = path;
-            std::cout << "[ModelSourceResolver] ✅ Local file validated: " << path << std::endl;
+            s_logger.info("[ModelSourceResolver] ✅ Local file validated: ");
             break;
         }
 
@@ -194,7 +197,7 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             if (!specific_file.empty()) {
                 std::string cached_path = cache_subdir + "/" + specific_file;
                 if (fs::exists(cached_path) && ValidateGGUFMagic(cached_path)) {
-                    std::cout << "[ModelSourceResolver] ✅ Found in cache: " << cached_path << std::endl;
+                    s_logger.info("[ModelSourceResolver] ✅ Found in cache: ");
                     result.success = true;
                     result.local_path = cached_path;
                     result.hf_filename = specific_file;
@@ -207,7 +210,7 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
                 auto files = GetHuggingFaceGGUFFiles(repo_id);
                 if (files.empty()) {
                     result.error_message = "No GGUF files found in HuggingFace repo: " + repo_id;
-                    std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+                    s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
                     return result;
                 }
 
@@ -226,7 +229,7 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
                     }
                 }
                 
-                std::cout << "[ModelSourceResolver] Selected GGUF: " << specific_file << std::endl;
+                s_logger.info("[ModelSourceResolver] Selected GGUF: ");
             }
 
             result.hf_filename = specific_file;
@@ -235,13 +238,13 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             std::string local_path = DownloadFromHuggingFace(repo_id, specific_file, progress);
             if (local_path.empty()) {
                 result.error_message = "Failed to download from HuggingFace: " + repo_id + "/" + specific_file;
-                std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+                s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
                 return result;
             }
 
             result.success = true;
             result.local_path = local_path;
-            std::cout << "[ModelSourceResolver] ✅ Downloaded from HF: " << local_path << std::endl;
+            s_logger.info("[ModelSourceResolver] ✅ Downloaded from HF: ");
             break;
         }
 
@@ -252,14 +255,13 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             OllamaBlobInfo blob = ResolveOllamaBlob(model_name);
             if (!blob.is_valid_gguf) {
                 result.error_message = "No valid GGUF blob found for Ollama model: " + model_name;
-                std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+                s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
                 return result;
             }
 
             result.success = true;
             result.local_path = blob.blob_path;
-            std::cout << "[ModelSourceResolver] ✅ Ollama blob resolved: " << blob.blob_path 
-                      << " (" << (blob.size_bytes / (1024*1024)) << " MB)" << std::endl;
+            s_logger.info("[ModelSourceResolver] ✅ Ollama blob resolved: ");
             break;
         }
 
@@ -269,7 +271,7 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             std::string cached_path = m_cacheDir + "/" + filename;
             
             if (fs::exists(cached_path) && ValidateGGUFMagic(cached_path)) {
-                std::cout << "[ModelSourceResolver] ✅ Found in cache: " << cached_path << std::endl;
+                s_logger.info("[ModelSourceResolver] ✅ Found in cache: ");
                 result.success = true;
                 result.local_path = cached_path;
                 return result;
@@ -279,13 +281,13 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             std::string local_path = DownloadFromURL(input, progress);
             if (local_path.empty()) {
                 result.error_message = "Failed to download from URL: " + input;
-                std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+                s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
                 return result;
             }
 
             result.success = true;
             result.local_path = local_path;
-            std::cout << "[ModelSourceResolver] ✅ Downloaded from URL: " << local_path << std::endl;
+            s_logger.info("[ModelSourceResolver] ✅ Downloaded from URL: ");
             break;
         }
 
@@ -309,7 +311,7 @@ ResolvedModelPath ModelSourceResolver::Resolve(const std::string& input,
             }
 
             result.error_message = "Cannot determine model source type for: " + input;
-            std::cerr << "[ModelSourceResolver] " << result.error_message << std::endl;
+            s_logger.error( "[ModelSourceResolver] " << result.error_message << std::endl;
             break;
         }
     }
@@ -328,11 +330,11 @@ std::vector<HFModelInfo> ModelSourceResolver::SearchHuggingFace(const std::strin
                     + "&filter=gguf&limit=" + std::to_string(limit) 
                     + "&sort=downloads&direction=-1";
     
-    std::cout << "[ModelSourceResolver] Searching HF: " << query << std::endl;
+    s_logger.info("[ModelSourceResolver] Searching HF: ");
     
     std::string response = WinHTTPGet(url, m_hfToken);
     if (response.empty()) {
-        std::cerr << "[ModelSourceResolver] No response from HuggingFace API" << std::endl;
+        s_logger.error( "[ModelSourceResolver] No response from HuggingFace API" << std::endl;
         return results;
     }
 
@@ -353,7 +355,7 @@ std::vector<HFModelInfo> ModelSourceResolver::SearchHuggingFace(const std::strin
         }
     }
     
-    std::cout << "[ModelSourceResolver] Found " << results.size() << " HF models" << std::endl;
+    s_logger.info("[ModelSourceResolver] Found ");
     return results;
 }
 
@@ -365,7 +367,7 @@ HFModelInfo ModelSourceResolver::GetHuggingFaceModelInfo(const std::string& repo
     std::string response = WinHTTPGet(url, m_hfToken);
     
     if (response.empty()) {
-        std::cerr << "[ModelSourceResolver] Failed to fetch HF model info: " << repo_id << std::endl;
+        s_logger.error( "[ModelSourceResolver] Failed to fetch HF model info: " << repo_id << std::endl;
         return info;
     }
     
@@ -430,8 +432,7 @@ HFModelInfo ModelSourceResolver::GetHuggingFaceModelInfo(const std::string& repo
         }
     }
     
-    std::cout << "[ModelSourceResolver] HF model " << repo_id << ": " 
-              << info.gguf_files.size() << " GGUF files" << std::endl;
+    s_logger.info("[ModelSourceResolver] HF model ");
     return info;
 }
 
@@ -450,7 +451,7 @@ std::string ModelSourceResolver::DownloadFromHuggingFace(const std::string& repo
     try {
         fs::create_directories(cache_subdir);
     } catch (...) {
-        std::cerr << "[ModelSourceResolver] Failed to create cache dir: " << cache_subdir << std::endl;
+        s_logger.error( "[ModelSourceResolver] Failed to create cache dir: " << cache_subdir << std::endl;
         return "";
     }
     
@@ -458,7 +459,7 @@ std::string ModelSourceResolver::DownloadFromHuggingFace(const std::string& repo
     
     // Check if already downloaded and valid
     if (fs::exists(output_path) && ValidateGGUFMagic(output_path)) {
-        std::cout << "[ModelSourceResolver] Using cached file: " << output_path << std::endl;
+        s_logger.info("[ModelSourceResolver] Using cached file: ");
         if (progress) {
             ModelDownloadProgress p;
             p.source_url = url;
@@ -473,13 +474,13 @@ std::string ModelSourceResolver::DownloadFromHuggingFace(const std::string& repo
         return output_path;
     }
     
-    std::cout << "[ModelSourceResolver] Downloading from HF: " << url << std::endl;
+    s_logger.info("[ModelSourceResolver] Downloading from HF: ");
     
     if (WinHTTPDownload(url, output_path, progress, m_hfToken)) {
         if (ValidateGGUFMagic(output_path)) {
             return output_path;
         } else {
-            std::cerr << "[ModelSourceResolver] Downloaded file is not valid GGUF" << std::endl;
+            s_logger.error( "[ModelSourceResolver] Downloaded file is not valid GGUF" << std::endl;
             fs::remove(output_path);
         }
     }
@@ -501,7 +502,7 @@ std::vector<OllamaBlobInfo> ModelSourceResolver::FindOllamaBlobs() {
             continue;
         }
         
-        std::cout << "[ModelSourceResolver] Scanning Ollama blobs: " << blobDir << std::endl;
+        s_logger.info("[ModelSourceResolver] Scanning Ollama blobs: ");
         
         try {
             for (const auto& entry : fs::directory_iterator(blobDir)) {
@@ -525,13 +526,12 @@ std::vector<OllamaBlobInfo> ModelSourceResolver::FindOllamaBlobs() {
                 blob.is_valid_gguf = ValidateGGUFMagic(path);
                 
                 if (blob.is_valid_gguf) {
-                    std::cout << "[ModelSourceResolver]   Found GGUF blob: " << filename 
-                              << " (" << (size / (1024*1024)) << " MB)" << std::endl;
+                    s_logger.info("[ModelSourceResolver]   Found GGUF blob: ");
                     results.push_back(blob);
                 }
             }
         } catch (const std::exception& e) {
-            std::cerr << "[ModelSourceResolver] Error scanning " << blobDir << ": " << e.what() << std::endl;
+            s_logger.error( "[ModelSourceResolver] Error scanning " << blobDir << ": " << e.what() << std::endl;
         }
     }
     
@@ -574,7 +574,7 @@ OllamaBlobInfo ModelSourceResolver::ResolveOllamaBlob(const std::string& model_n
     OllamaBlobInfo result;
     result.model_name = model_name;
     
-    std::cout << "[ModelSourceResolver] Resolving Ollama model: " << model_name << std::endl;
+    s_logger.info("[ModelSourceResolver] Resolving Ollama model: ");
     
     // Extract base name (strip :tag)
     std::string baseName = model_name;
@@ -610,7 +610,7 @@ OllamaBlobInfo ModelSourceResolver::ResolveOllamaBlob(const std::string& model_n
                         result.blob_path = path;
                         result.size_bytes = entry.file_size();
                         result.is_valid_gguf = true;
-                        std::cout << "[ModelSourceResolver] ✅ Found GGUF: " << path << std::endl;
+                        s_logger.info("[ModelSourceResolver] ✅ Found GGUF: ");
                         return result;
                     }
                 }
@@ -633,7 +633,7 @@ OllamaBlobInfo ModelSourceResolver::ResolveOllamaBlob(const std::string& model_n
             continue;
         }
         
-        std::cout << "[ModelSourceResolver] Searching blobs: " << blobDir << std::endl;
+        s_logger.info("[ModelSourceResolver] Searching blobs: ");
         
         try {
             for (const auto& entry : fs::directory_iterator(blobDir)) {
@@ -662,10 +662,9 @@ OllamaBlobInfo ModelSourceResolver::ResolveOllamaBlob(const std::string& model_n
         result.blob_path = candidates[0].path;
         result.size_bytes = candidates[0].size;
         result.is_valid_gguf = true;
-        std::cout << "[ModelSourceResolver] ✅ Found blob: " << result.blob_path 
-                  << " (" << (result.size_bytes / (1024*1024)) << " MB)" << std::endl;
+        s_logger.info("[ModelSourceResolver] ✅ Found blob: ");
     } else {
-        std::cerr << "[ModelSourceResolver] ✗ No valid GGUF blob found for: " << model_name << std::endl;
+        s_logger.error( "[ModelSourceResolver] ✗ No valid GGUF blob found for: " << model_name << std::endl;
     }
     
     return result;
@@ -686,7 +685,7 @@ std::string ModelSourceResolver::DownloadFromURL(const std::string& url,
     
     // Check cache
     if (fs::exists(output_path) && ValidateGGUFMagic(output_path)) {
-        std::cout << "[ModelSourceResolver] Using cached: " << output_path << std::endl;
+        s_logger.info("[ModelSourceResolver] Using cached: ");
         if (progress) {
             ModelDownloadProgress p;
             p.source_url = url;
@@ -701,13 +700,13 @@ std::string ModelSourceResolver::DownloadFromURL(const std::string& url,
         return output_path;
     }
     
-    std::cout << "[ModelSourceResolver] Downloading: " << url << std::endl;
+    s_logger.info("[ModelSourceResolver] Downloading: ");
     
     if (WinHTTPDownload(url, output_path, progress)) {
         if (ValidateGGUFMagic(output_path)) {
             return output_path;
         }
-        std::cerr << "[ModelSourceResolver] Downloaded file is not valid GGUF" << std::endl;
+        s_logger.error( "[ModelSourceResolver] Downloaded file is not valid GGUF" << std::endl;
         fs::remove(output_path);
     }
     
@@ -819,7 +818,7 @@ std::string ModelSourceResolver::WinHTTPGet(const std::string& url, const std::s
     
     auto urlComp = ParseURL(url);
     if (urlComp.host.empty()) {
-        std::cerr << "[ModelSourceResolver] Failed to parse URL: " << url << std::endl;
+        s_logger.error( "[ModelSourceResolver] Failed to parse URL: " << url << std::endl;
         return result;
     }
     
@@ -880,7 +879,7 @@ std::string ModelSourceResolver::WinHTTPGet(const std::string& url, const std::s
                        WINHTTP_NO_HEADER_INDEX);
     
     if (statusCode != 200) {
-        std::cerr << "[ModelSourceResolver] HTTP " << statusCode << " from: " << url << std::endl;
+        s_logger.error( "[ModelSourceResolver] HTTP " << statusCode << " from: " << url << std::endl;
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
@@ -918,7 +917,7 @@ bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::str
     
     auto urlComp = ParseURL(url);
     if (urlComp.host.empty()) {
-        std::cerr << "[ModelSourceResolver] Failed to parse download URL: " << url << std::endl;
+        s_logger.error( "[ModelSourceResolver] Failed to parse download URL: " << url << std::endl;
         m_downloading = false;
         return false;
     }
@@ -965,7 +964,7 @@ bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::str
     if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
                             WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
         DWORD err = GetLastError();
-        std::cerr << "[ModelSourceResolver] WinHTTP send failed, error: " << err << std::endl;
+        s_logger.error( "[ModelSourceResolver] WinHTTP send failed, error: " << err << std::endl;
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
@@ -1002,7 +1001,7 @@ bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::str
                        WINHTTP_NO_HEADER_INDEX);
     
     if (statusCode != 200) {
-        std::cerr << "[ModelSourceResolver] Download HTTP " << statusCode << " from: " << url << std::endl;
+        s_logger.error( "[ModelSourceResolver] Download HTTP " << statusCode << " from: " << url << std::endl;
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
@@ -1013,7 +1012,7 @@ bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::str
     // Open output file
     std::ofstream outFile(output_path, std::ios::binary);
     if (!outFile.is_open()) {
-        std::cerr << "[ModelSourceResolver] Failed to open output: " << output_path << std::endl;
+        s_logger.error( "[ModelSourceResolver] Failed to open output: " << output_path << std::endl;
         WinHttpCloseHandle(hRequest);
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
@@ -1033,7 +1032,7 @@ bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::str
     
     do {
         if (m_cancelRequested.load()) {
-            std::cout << "[ModelSourceResolver] Download cancelled" << std::endl;
+            s_logger.info("[ModelSourceResolver] Download cancelled");
             success = false;
             break;
         }
@@ -1101,14 +1100,14 @@ bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::str
 #else
 // Non-Windows stubs
 std::string ModelSourceResolver::WinHTTPGet(const std::string& url, const std::string& auth_token) {
-    std::cerr << "[ModelSourceResolver] WinHTTP not available on this platform" << std::endl;
+    s_logger.error( "[ModelSourceResolver] WinHTTP not available on this platform" << std::endl;
     return "";
 }
 
 bool ModelSourceResolver::WinHTTPDownload(const std::string& url, const std::string& output_path,
                                            DownloadProgressCallback progress,
                                            const std::string& auth_token) {
-    std::cerr << "[ModelSourceResolver] WinHTTP not available on this platform" << std::endl;
+    s_logger.error( "[ModelSourceResolver] WinHTTP not available on this platform" << std::endl;
     return false;
 }
 #endif

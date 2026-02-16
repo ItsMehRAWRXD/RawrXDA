@@ -14,6 +14,9 @@
 #include "gguf_dml_bridge.h"
 #include "streaming_engine_registry.h"
 
+#include "logging/logger.h"
+static Logger s_logger("dml_streaming_integration");
+
 #include <iostream>
 #include <sstream>
 #include <cstring>
@@ -60,7 +63,7 @@ extern "C" int64_t DML_Engine_Init(uint64_t maxVRAM, uint64_t maxRAM) {
     if (!dmlCompute.isInitialized()) {
         auto r = dmlCompute.initialize();
         if (!r.success) {
-            std::cerr << "[DML-Stream] DML init failed: " << r.detail << std::endl;
+            s_logger.error( "[DML-Stream] DML init failed: " << r.detail << std::endl;
             state.lastError.store(r.errorCode);
             return -1;
         }
@@ -91,14 +94,12 @@ extern "C" int64_t DML_Engine_Init(uint64_t maxVRAM, uint64_t maxRAM) {
                                    const char* tensorName, void* ud) {
         if (total > 0 && current % 50 == 0) {
             float pct = (float)current / total * 100.0f;
-            std::cout << "[DML-Stream] Loading: " << current << "/" << total
-                      << " (" << (int)pct << "%) " << tensorName << std::endl;
+            s_logger.info("[DML-Stream] Loading: ");
         }
     });
 
     state.initialized.store(true);
-    std::cout << "[DML-Stream] Engine initialized, usable VRAM="
-              << (usableVRAM / (1024 * 1024)) << "MB" << std::endl;
+    s_logger.info("[DML-Stream] Engine initialized, usable VRAM=");
 
     return 0;
 }
@@ -129,7 +130,7 @@ extern "C" int64_t DML_Engine_Shutdown() {
     state.activeSlotCount = 0;
     state.initialized.store(false);
 
-    std::cout << "[DML-Stream] Engine shutdown complete" << std::endl;
+    s_logger.info("[DML-Stream] Engine shutdown complete");
     return 0;
 }
 
@@ -155,7 +156,7 @@ extern "C" int64_t DML_Engine_LoadModel(const wchar_t* path, uint32_t formatHint
     }
 
     if (slotIdx == UINT32_MAX) {
-        std::cerr << "[DML-Stream] No free model slots (max 2 models)" << std::endl;
+        s_logger.error( "[DML-Stream] No free model slots (max 2 models)" << std::endl;
         return -2;
     }
 
@@ -170,7 +171,7 @@ extern "C" int64_t DML_Engine_LoadModel(const wchar_t* path, uint32_t formatHint
     }
 
     if (!r.success) {
-        std::cerr << "[DML-Stream] Model load failed: " << r.detail << std::endl;
+        s_logger.error( "[DML-Stream] Model load failed: " << r.detail << std::endl;
         state.lastError.store(r.errorCode);
         return r.errorCode;
     }
@@ -210,12 +211,7 @@ extern "C" int64_t DML_Engine_LoadModel(const wchar_t* path, uint32_t formatHint
     // Set as active session in DML compute
     state.dmlCompute->setActiveSession(sessionId);
 
-    std::cout << "[DML-Stream] Model loaded to slot " << slotIdx
-              << " session=" << sessionId
-              << " layers=" << slot.numLayers
-              << " streaming=" << (slot.streamingMode ? "yes" : "no")
-              << " VRAM=" << (slot.vramUsed / (1024 * 1024)) << "MB"
-              << std::endl;
+    s_logger.info("[DML-Stream] Model loaded to slot ");
 
     return 0;
 }
@@ -544,7 +540,7 @@ void registerDMLStreamingEngine(StreamingEngineRegistry& registry) {
 
     registry.registerEngine(desc);
 
-    std::cout << "[DML-Stream] Registered 'DirectML-DualInference' engine" << std::endl;
+    s_logger.info("[DML-Stream] Registered 'DirectML-DualInference' engine");
 }
 
 } // namespace DML

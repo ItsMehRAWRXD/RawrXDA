@@ -949,6 +949,8 @@ private:
     void saveRecentFiles();
     void clearRecentFiles();
     std::string getFileDialogPath(bool isSave = false);
+    std::string getCurrentFilePath() const { return m_currentFile; }
+    void showSourceFilePicker();
     
     // GGUF Model operations
     bool loadGGUFModel(const std::string& filepath);

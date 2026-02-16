@@ -17,6 +17,9 @@
 
 #include "intel_gpu_accelerator.h"
 
+#include "logging/logger.h"
+static Logger s_logger("intel_gpu_accelerator");
+
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -272,12 +275,7 @@ IntelAccelResult IntelGPUAccelerator::initialize(IntelGPUBackend preferredBacken
 
 success:
     m_initialized.store(true, std::memory_order_release);
-    std::cout << "[INTEL-GPU] Initialized: " << m_gpuName << "\n"
-              << "  Architecture: " << static_cast<int>(m_arch) << "\n"
-              << "  Backend: " << getBackendName() << "\n"
-              << "  EUs: " << m_euCount << "\n"
-              << "  VRAM: " << (m_vramBytes / (1024 * 1024)) << " MB\n"
-              << "  Features: 0x" << std::hex << m_intelFeatures << std::dec << "\n";
+    s_logger.info("[INTEL-GPU] Initialized: ");
 
     return IntelAccelResult::ok("Intel GPU accelerator initialized");
 }
@@ -315,7 +313,7 @@ void IntelGPUAccelerator::shutdown() {
     m_gpuEnabled.store(false, std::memory_order_release);
     m_initialized.store(false, std::memory_order_release);
 
-    std::cout << "[INTEL-GPU] Shutdown complete.\n";
+    s_logger.info("[INTEL-GPU] Shutdown complete.\n");
 }
 
 // ============================================================================

@@ -24,6 +24,9 @@
 #include <numeric>
 #include <iomanip>
 
+#include "logging/logger.h"
+static Logger s_logger("agentic_deep_thinking_engine");
+
 // ---------------------------------------------------------------------------
 // Internal: Lazily-initialized LLM client for deep thinking inference
 // ---------------------------------------------------------------------------
@@ -118,7 +121,7 @@ AgenticDeepThinkingEngine::ThinkingResult AgenticDeepThinkingEngine::think(const
         m_thinkingCache[cacheKey] = result;
 
     } catch (const std::exception& e) {
-        std::cerr << "[DeepThinking] Error during thinking: " << e.what() << std::endl;
+        s_logger.error( "[DeepThinking] Error during thinking: " << e.what() << std::endl;
         {
             std::lock_guard<std::mutex> lock(m_statsMutex);
             m_stats.failedThinking++;
@@ -1938,7 +1941,7 @@ std::vector<std::string> AgenticDeepThinkingEngine::listFilesRecursive(const std
             } catch (...) { continue; }
         }
     } catch (const std::exception& e) {
-        std::cerr << "[DeepThinking] listFilesRecursive error: " << e.what() << std::endl;
+        s_logger.error( "[DeepThinking] listFilesRecursive error: " << e.what() << std::endl;
     }
     return files;
 }
@@ -2498,9 +2501,7 @@ AgenticDeepThinkingEngine::MultiAgentResult AgenticDeepThinkingEngine::thinkMult
     enhancedContext.maxIterations = context.maxIterations * cycleMultiplier;
     
     if (m_detailedLogging) {
-        std::cout << "[MultiAgent] Spawning " << agentCount << " agents with "
-                  << enhancedContext.maxIterations << " max iterations (base: "
-                  << context.maxIterations << " x " << cycleMultiplier << ")\n";
+        s_logger.info("[MultiAgent] Spawning ");
     }
 
     // Set up agent models
@@ -2538,7 +2539,7 @@ AgenticDeepThinkingEngine::MultiAgentResult AgenticDeepThinkingEngine::thinkMult
                 std::lock_guard<std::mutex> lock(resultsMutex);
                 agentResults[i] = agentRes;
             } catch (const std::exception& e) {
-                std::cerr << "[MultiAgent] Agent " << i << " failed: " << e.what() << "\n";
+                s_logger.error( "[MultiAgent] Agent " << i << " failed: " << e.what() << "\n";
                 std::lock_guard<std::mutex> lock(resultsMutex);
                 agentResults[i].agentId = i;
                 agentResults[i].modelName = agentModels[i];
@@ -2613,10 +2614,8 @@ AgenticDeepThinkingEngine::MultiAgentResult AgenticDeepThinkingEngine::thinkMult
         std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 
     if (m_detailedLogging) {
-        std::cout << "[MultiAgent] Consensus: " << (multiResult.consensusReached ? "YES" : "NO")
-                  << " (confidence: " << std::fixed << std::setprecision(1)
-                  << multiResult.consensusConfidence * 100.0f << "%)\n";
-        std::cout << "[MultiAgent] Elapsed: " << multiResult.consensusResult.elapsedMilliseconds << "ms\n";
+        s_logger.info("[MultiAgent] Consensus: ");
+        s_logger.info("[MultiAgent] Elapsed: ");
     }
 
     // Track multi-agent telemetry
@@ -2641,7 +2640,7 @@ AgenticDeepThinkingEngine::AgentResult AgenticDeepThinkingEngine::runSingleAgent
     result.agreementScore = 0.0f;
 
     if (m_detailedLogging) {
-        std::cout << "[Agent-" << agentId << "] Starting with model: " << model << "\n";
+        s_logger.info("[Agent-");
     }
 
     // TODO: In production, configure per-agent LLM client with specific model
@@ -2651,9 +2650,7 @@ AgenticDeepThinkingEngine::AgentResult AgenticDeepThinkingEngine::runSingleAgent
     result.result = think(context);
     
     if (m_detailedLogging) {
-        std::cout << "[Agent-" << agentId << "] Completed with confidence: "
-                  << std::fixed << std::setprecision(1)
-                  << result.result.overallConfidence * 100.0f << "%\n";
+        s_logger.info("[Agent-");
     }
 
     return result;

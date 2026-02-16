@@ -9,6 +9,9 @@
 #include "production_release.h"
 #include "enterprise_license.h"
 
+#include "logging/logger.h"
+static Logger s_logger("production_release");
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -92,7 +95,7 @@ ReleaseResult ProductionReleaseEngine::stripDebugSymbols(const std::string& exeP
     uint32_t symbolsRemoved = 0;
     if (!stripSymbolsFromPE(outputPath, outputPath, symbolsRemoved)) {
         // Fallback: just report the copy
-        std::cout << "[PRODUCTION] Warning: editbin not found, using manual strip\n";
+        s_logger.info("[PRODUCTION] Warning: editbin not found, using manual strip\n");
     }
 
     // Get new size
@@ -263,7 +266,7 @@ bool ProductionReleaseEngine::generateInstallerScript(const InstallerConfig& con
     ofs << "SectionEnd\n";
 
     ofs.close();
-    std::cout << "[PRODUCTION] Installer script generated: " << outputNsi << "\n";
+    s_logger.info("[PRODUCTION] Installer script generated: ");
     return true;
 }
 
@@ -324,8 +327,7 @@ UpdateInfo ProductionReleaseEngine::checkForUpdate(UpdateChannel channel) {
     }
 
     // Use WinHTTP to check for updates
-    std::cout << "[UPDATER] Checking for updates on " << channelStr
-              << " channel from " << m_updateServerUrl << "\n";
+    s_logger.info("[UPDATER] Checking for updates on ");
 
 #ifdef _WIN32
     // Build check URL
@@ -386,9 +388,9 @@ UpdateInfo ProductionReleaseEngine::checkForUpdate(UpdateChannel channel) {
                             std::string sizeStr = extract("size");
                             if (!sizeStr.empty()) info.fileSize = std::stoull(sizeStr);
                             info.mandatory = (extract("mandatory") == "true");
-                            std::cout << "[UPDATER] Update available: " << newVersion << "\n";
+                            s_logger.info("[UPDATER] Update available: ");
                         } else {
-                            std::cout << "[UPDATER] No update available (current: " << m_currentVersion << ")\n";
+                            s_logger.info("[UPDATER] No update available (current: ");
                         }
                     }
                     WinHttpCloseHandle(hRequest);
@@ -411,8 +413,7 @@ ReleaseResult ProductionReleaseEngine::downloadUpdate(const UpdateInfo& update,
 
     m_stats.updateDownloads.fetch_add(1, std::memory_order_relaxed);
 
-    std::cout << "[UPDATER] Downloading " << update.version
-              << " (" << (update.fileSize / (1024*1024)) << "MB) to " << destPath << "\n";
+    s_logger.info("[UPDATER] Downloading ");
 
 #ifdef _WIN32
     if (update.downloadUrl.empty()) {
@@ -518,7 +519,7 @@ ReleaseResult ProductionReleaseEngine::downloadUpdate(const UpdateInfo& update,
                         DeleteFileA(destPath.c_str());
                         return ReleaseResult::error("Checksum verification failed");
                     }
-                    std::cout << "[UPDATER] SHA-256 verified OK\n";
+                    s_logger.info("[UPDATER] SHA-256 verified OK\n");
                 }
                 BCryptDestroyHash(hHash);
             }
@@ -526,7 +527,7 @@ ReleaseResult ProductionReleaseEngine::downloadUpdate(const UpdateInfo& update,
         }
     }
 
-    std::cout << "[UPDATER] Download complete: " << totalDownloaded << " bytes\n";
+    s_logger.info("[UPDATER] Download complete: ");
     return ReleaseResult::ok("Update downloaded and verified", update.fileSize, totalDownloaded);
 #else
     return ReleaseResult::error("Update download not supported on this platform");
@@ -534,7 +535,7 @@ ReleaseResult ProductionReleaseEngine::downloadUpdate(const UpdateInfo& update,
 }
 
 ReleaseResult ProductionReleaseEngine::applyUpdate(const std::string& updatePath) {
-    std::cout << "[UPDATER] Applying update from " << updatePath << "\n";
+    s_logger.info("[UPDATER] Applying update from ");
 
 #ifdef _WIN32
     // Verify the update file exists
@@ -551,12 +552,12 @@ ReleaseResult ProductionReleaseEngine::applyUpdate(const std::string& updatePath
     // 1. Rename current exe to .bak (atomic on NTFS)
     if (MoveFileExA(currentPath.c_str(), backupPath.c_str(),
                      MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
-        std::cout << "[UPDATER] Current exe backed up to " << backupPath << "\n";
+        s_logger.info("[UPDATER] Current exe backed up to ");
     } else {
         // Current exe may be locked — schedule replacement on reboot
         if (MoveFileExA(updatePath.c_str(), currentPath.c_str(),
                          MOVEFILE_DELAY_UNTIL_REBOOT | MOVEFILE_REPLACE_EXISTING)) {
-            std::cout << "[UPDATER] Scheduled replacement on next reboot\n";
+            s_logger.info("[UPDATER] Scheduled replacement on next reboot\n");
             return ReleaseResult::ok("Update scheduled for next reboot", 0, 0);
         }
         return ReleaseResult::error("Failed to backup current executable");
@@ -580,7 +581,7 @@ ReleaseResult ProductionReleaseEngine::applyUpdate(const std::string& updatePath
                         0, nullptr, nullptr, &si, &pi)) {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-        std::cout << "[UPDATER] Update applied — new process launched\n";
+        s_logger.info("[UPDATER] Update applied — new process launched\n");
         return ReleaseResult::ok("Update applied — restarting", 0, 0);
     }
 
@@ -640,9 +641,9 @@ bool ProductionReleaseEngine::enforceGate(const std::string& featureName) const 
             if (!allowed) {
                 stats.licenseDenials.fetch_add(1, std::memory_order_relaxed);
                 if (gate.hardGate) {
-                    std::cerr << "[LICENSE] BLOCKED: " << gate.upgradeMessage << "\n";
+                    s_logger.error( "[LICENSE] BLOCKED: " << gate.upgradeMessage << "\n";
                 } else {
-                    std::cerr << "[LICENSE] WARNING: " << gate.upgradeMessage << "\n";
+                    s_logger.error( "[LICENSE] WARNING: " << gate.upgradeMessage << "\n";
                 }
                 return !gate.hardGate; // Soft gate still allows
             }
@@ -670,8 +671,7 @@ void ProductionReleaseEngine::refreshLicense() {
     auto& license = RawrXD::EnterpriseLicense::Instance();
     m_currentLicenseFlags = license.GetFeatureMask();
 
-    std::cout << "[LICENSE] Refreshed. Flags: 0x" << std::hex << m_currentLicenseFlags
-              << std::dec << "\n";
+    s_logger.info("[LICENSE] Refreshed. Flags: 0x");
 }
 
 // ============================================================================
@@ -686,8 +686,7 @@ bool ProductionReleaseEngine::loadManifest(const std::string& manifestPath) {
     oss << ifs.rdbuf();
     m_manifestJson = oss.str();
 
-    std::cout << "[PRODUCTION] Feature manifest loaded: " << manifestPath
-              << " (" << m_manifestJson.size() << " bytes)\n";
+    s_logger.info("[PRODUCTION] Feature manifest loaded: ");
     return true;
 }
 

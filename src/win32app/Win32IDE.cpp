@@ -399,6 +399,10 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit");
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
 
+    HMENU hSourcefileMenu = CreatePopupMenu();
+    AppendMenuW(hSourcefileMenu, MF_STRING, 1040, L"Open Source File...");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSourcefileMenu, L"#&Sourcefile");
+
     // Edit menu (Unicode)
     HMENU hEditMenu = CreatePopupMenu();
     AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND, L"&Find...\tCtrl+F");

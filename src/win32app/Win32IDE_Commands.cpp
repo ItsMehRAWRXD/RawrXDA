@@ -63,6 +63,9 @@
 #ifndef IDM_FILE_EXIT
 #define IDM_FILE_EXIT 2005
 #endif
+#ifndef IDM_SOURCEFILE_OPEN_PICKER
+#define IDM_SOURCEFILE_OPEN_PICKER 1040
+#endif
 
 #ifndef IDM_EDIT_UNDO
 #define IDM_EDIT_UNDO 2001
@@ -468,7 +471,9 @@ void Win32IDE::handleFileCommand(int commandId) {
                 PostQuitMessage(0);
             }
             break;
-            
+        case IDM_SOURCEFILE_OPEN_PICKER:
+            showSourceFilePicker();
+            break;
         default:
             // Handle recent files (IDM_FILE_RECENT_BASE to IDM_FILE_RECENT_BASE + 9)
             if (commandId >= IDM_FILE_RECENT_BASE && commandId < IDM_FILE_RECENT_CLEAR) {

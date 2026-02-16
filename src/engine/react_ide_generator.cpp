@@ -3,6 +3,9 @@
 #include <sstream>
 #include <iostream>
 
+#include "logging/logger.h"
+static Logger s_logger("react_ide_generator");
+
 // ╔════════════════════════════════════════════════════════════════════════════╗
 // ║  RAW-STRING DISCIPLINE — READ BEFORE EDITING THIS FILE                   ║
 // ║                                                                          ║
@@ -808,7 +811,7 @@ import { Terminal, Bot, Clock, Shield, Eye, Zap, GitBranch, Layers } from 'lucid
 
 function App() {
   const { connect, isConnected, logs, agenticReady } = useEngineStore();
-  const [code, setCode] = useState('// RawrXD Monaco IDE\n#include <iostream>\n\nint main() {\n    std::cout << "Hello, RawrXD" << std::endl;\n    return 0;\n}\n');
+  const [code, setCode] = useState('// RawrXD Monaco IDE\n#include <iostream>\n\nint main() {\n    s_logger.info("Hello, RawrXD");\n    return 0;\n}\n');
   const [status, setStatus] = useState({
     ready: false,
     model_loaded: false,
@@ -1217,14 +1220,14 @@ void ReactIDEGenerator::CreateDirectoryStructure(const std::filesystem::path& ba
 bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& template_name,
                                    const std::filesystem::path& output_dir) {
     if (templates.find(template_name) == templates.end()) {
-        std::cerr << "Template not found: " << template_name << std::endl;
+        s_logger.error( "Template not found: " << template_name << std::endl;
         return false;
     }
 
     const auto& tmpl = templates[template_name];
     std::filesystem::path project_path = output_dir / name;
     
-    std::cout << "Genering " << name << " using " << template_name << " template..." << std::endl;
+    s_logger.info("Genering ");
 
     CreateDirectoryStructure(project_path);
 
@@ -1337,8 +1340,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 )");
 
-    std::cout << "Project generated successfully at: " << project_path.string() << std::endl;
-    std::cout << "Run 'npm install' and 'npm run dev' to start." << std::endl;
+    s_logger.info("Project generated successfully at: ");
+    s_logger.info("Run 'npm install' and 'npm run dev' to start.");
 
     return true;
 }
@@ -1884,7 +1887,7 @@ export const CompilerPanel: React.FC = () => {
 };
 )");
 
-    std::cout << "[ReactIDE] C++ language configuration overlaid for: " << name << std::endl;
+    s_logger.info("[ReactIDE] C++ language configuration overlaid for: ");
     return true;
 }
 
@@ -2181,7 +2184,7 @@ export const CompilerPanel: React.FC = () => {
 };
 )");
 
-    std::cout << "[ReactIDE] Rust language configuration overlaid for: " << name << std::endl;
+    s_logger.info("[ReactIDE] Rust language configuration overlaid for: ");
     return true;
 }
 
@@ -2506,7 +2509,7 @@ export const CompilerPanel: React.FC = () => {
 };
 )");
 
-    std::cout << "[ReactIDE] Python language configuration overlaid for: " << name << std::endl;
+    s_logger.info("[ReactIDE] Python language configuration overlaid for: ");
     return true;
 }
 
@@ -2694,7 +2697,7 @@ export const LanguageSwitcher: React.FC<Props> = ({ currentLanguage, onLanguageC
 };
 )");
 
-    std::cout << "[ReactIDE] Multi-language configuration overlaid for: " << name << std::endl;
+    s_logger.info("[ReactIDE] Multi-language configuration overlaid for: ");
     return true;
 }
 
@@ -2914,7 +2917,7 @@ npx vitest --coverage   # With coverage report
 - `components.test.tsx` — Component smoke/render tests
 )");
 
-    std::cout << "[ReactIDE] Test suite generated for: " << name << std::endl;
+    s_logger.info("[ReactIDE] Test suite generated for: ");
     return true;
 }
 
@@ -3109,7 +3112,7 @@ export default [
   ]
 })");
 
-    std::cout << "[ReactIDE] CI/CD pipeline generated for: " << name << std::endl;
+    s_logger.info("[ReactIDE] CI/CD pipeline generated for: ");
     return true;
 }
 
@@ -3391,7 +3394,7 @@ networks:
   rawrxd-net:
 )");
 
-    std::cout << "[ReactIDE] Docker containerization generated for: " << name << std::endl;
+    s_logger.info("[ReactIDE] Docker containerization generated for: ");
     return true;
 }
 

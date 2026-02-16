@@ -12,6 +12,9 @@
 #include <future> 
 #include <cstring>
 #include <algorithm>
+
+#include "logging/logger.h"
+static Logger s_logger("cpu_inference_engine");
 // #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <immintrin.h>
@@ -877,13 +880,13 @@ CPUInferenceEngine::CPUInferenceEngine()
     
     // Explicit Logic: Load Assembly Engine
 #ifdef RAWRXD_STATIC_ASM
-    std::cout << "[Titan] Linking Static Assembly Engine..." << std::endl;
+    s_logger.info("[Titan] Linking Static Assembly Engine...");
     fnTitan_Initialize = &Titan_Initialize;
     fnTitan_LoadModel = &Titan_LoadModel;
     fnTitan_RunInferenceStep = &Titan_RunInferenceStep;
     
     fnTitan_Initialize(&m_pTitanContext);
-    std::cout << "[Titan] Static Assembly Engine Initialized." << std::endl;
+    s_logger.info("[Titan] Static Assembly Engine Initialized.");
     m_hTitanDLL = nullptr;
 #else
     HMODULE hDll = LoadLibraryA("RawrXD_Interconnect.dll");
@@ -896,11 +899,11 @@ CPUInferenceEngine::CPUInferenceEngine()
         
         if (fnTitan_Initialize) {
             fnTitan_Initialize(&m_pTitanContext);
-            std::cout << "[Titan] Assembly Engine Initialized." << std::endl;
+            s_logger.info("[Titan] Assembly Engine Initialized.");
         }
     } else {
         // Fallback to internal CPU ops only
-        std::cout << "[Titan] RawrXD_Interconnect.dll not found. Using Pure C++ Fallback." << std::endl;
+        s_logger.info("[Titan] RawrXD_Interconnect.dll not found. Using Pure C++ Fallback.");
         m_hTitanDLL = nullptr;
     }
 #endif
@@ -920,11 +923,11 @@ CPUInferenceEngine::~CPUInferenceEngine() {
 bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
     // If Titan is active, try loading there first
     if (m_pTitanContext && fnTitan_LoadModel) {
-        std::cout << "[Titan] Loading model via Assembly Engine: " << model_path << std::endl;
+        s_logger.info("[Titan] Loading model via Assembly Engine: ");
         fnTitan_LoadModel(m_pTitanContext, model_path.c_str());
     }
 
-    std::cout << "Loading model from: " << model_path << std::endl;
+    s_logger.info("Loading model from: ");
     if (!m_loader->Open(model_path)) return false;
     try {
         if (!m_loader->ParseHeader()) return false;
@@ -991,18 +994,18 @@ void CPUInferenceEngine::InitKVCache() {
     // Use memory plugins for large contexts (1M+ tokens)
     size_t layer_elements = (size_t)m_contextSize * m_embeddingDim;
     
-    std::cout << "[CPUInferenceEngine] Allocating KV Cache for " << m_contextSize << " tokens..." << std::endl;
+    s_logger.info("[CPUInferenceEngine] Allocating KV Cache for ");
     
     // For very large contexts, use memory plugin optimization
     if (m_contextSize > 32768) {
-        std::cout << "[CPUInferenceEngine] Using memory plugin optimization for large context" << std::endl;
+        s_logger.info("[CPUInferenceEngine] Using memory plugin optimization for large context");
         
         // Find appropriate memory plugin
         for (auto& plugin : m_memoryPlugins) {
             if (plugin->GetMaxContext() >= m_contextSize) {
                 if (plugin->Configure(m_contextSize)) {
                     plugin->Optimize();
-                    std::cout << "[CPUInferenceEngine] Active Memory Manager: " << plugin->GetName() << std::endl;
+                    s_logger.info("[CPUInferenceEngine] Active Memory Manager: ");
                     break;
                 }
             }
@@ -1018,7 +1021,7 @@ void CPUInferenceEngine::InitKVCache() {
             memset(layer.keys.data(), 0, layer_elements * sizeof(float));
             memset(layer.values.data(), 0, layer_elements * sizeof(float));
         } catch (const std::bad_alloc& e) {
-            std::cerr << "[CPUInferenceEngine] FATAL: Failed to allocate KV cache for context " << m_contextSize << std::endl;
+            s_logger.error( "[CPUInferenceEngine] FATAL: Failed to allocate KV cache for context " << m_contextSize << std::endl;
             // Fallback to smaller context
             m_contextSize = 2048;
             layer_elements = (size_t)m_contextSize * m_embeddingDim;
@@ -1026,7 +1029,7 @@ void CPUInferenceEngine::InitKVCache() {
             layer.values.resize(layer_elements);
         }
     }
-    std::cout << "[CPUInferenceEngine] KV Cache Allocation Complete." << std::endl;
+    s_logger.info("[CPUInferenceEngine] KV Cache Allocation Complete.");
     m_currentPos = 0;
 }
 
@@ -1303,7 +1306,7 @@ void CPUInferenceEngine::GenerateStreaming(const std::vector<int32_t>& input_tok
              }
         } else {
             // Fallback debugging
-            // std::cerr << "Output weights not found!" << std::endl;
+            // s_logger.error( "Output weights not found!" << std::endl;
         }
         
         std::string s = (next_id >= 0 && next_id < m_vocab.size()) ? m_vocab[next_id] : "";
@@ -1577,30 +1580,30 @@ void CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>& gradients
 void CPUInferenceEngine::RegisterMemoryPlugin(std::shared_ptr<IMemoryPlugin> plugin) {
     if (plugin) {
         m_memoryPlugins.push_back(plugin);
-        std::cout << "[CPUInferenceEngine] Registered memory plugin: " << plugin->GetName() << std::endl;
+        s_logger.info("[CPUInferenceEngine] Registered memory plugin: ");
     }
 }
 
 void CPUInferenceEngine::SetContextLimit(size_t limit) {
     m_contextLimit = limit;
-    std::cout << "[CPUInferenceEngine] Context limit set to " << limit << " tokens." << std::endl;
+    s_logger.info("[CPUInferenceEngine] Context limit set to ");
     
     // Find best plugin
     for (auto& plugin : m_memoryPlugins) {
         if (plugin->GetMaxContext() >= limit) {
             if (plugin->Configure(limit)) {
                 plugin->Optimize();
-                std::cout << "[CPUInferenceEngine] Active Memory Manager: " << plugin->GetName() << std::endl;
+                s_logger.info("[CPUInferenceEngine] Active Memory Manager: ");
                 return;
             }
         }
     }
-    std::cout << "[CPUInferenceEngine] Warning: No plugin supports this context size. Using default fallback." << std::endl;
+    s_logger.info("[CPUInferenceEngine] Warning: No plugin supports this context size. Using default fallback.");
 }
 
 void CPUInferenceEngine::SetMaxMode(bool enabled) { 
     m_maxMode = enabled; 
-    std::cout << "[CPUInferenceEngine] Max Mode " << (enabled ? "enabled" : "disabled") << std::endl;
+    s_logger.info("[CPUInferenceEngine] Max Mode ");
     
     if (enabled) {
         SetThreadCount(std::thread::hardware_concurrency());
@@ -1612,7 +1615,7 @@ void CPUInferenceEngine::SetMaxMode(bool enabled) {
 
 void CPUInferenceEngine::SetDeepThinking(bool enabled) { 
     m_deepThinking = enabled; 
-    std::cout << "[CPUInferenceEngine] Deep Thinking " << (enabled ? "enabled" : "disabled") << std::endl;
+    s_logger.info("[CPUInferenceEngine] Deep Thinking ");
     
     if (enabled && m_contextLimit < 65536) {
         SetContextLimit(65536);
@@ -1621,7 +1624,7 @@ void CPUInferenceEngine::SetDeepThinking(bool enabled) {
 
 void CPUInferenceEngine::SetDeepResearch(bool enabled) { 
     m_deepResearch = enabled; 
-    std::cout << "[CPUInferenceEngine] Deep Research " << (enabled ? "enabled" : "disabled") << std::endl;
+    s_logger.info("[CPUInferenceEngine] Deep Research ");
     
     if (enabled && m_contextLimit < 1048576) {
         SetContextLimit(1048576);
@@ -1647,7 +1650,7 @@ void CPUInferenceEngine::DequantizeTensor(const std::vector<uint8_t>& src, float
 // ============================================================================
 
 void CPUInferenceEngine::SetContextSize(size_t size) {
-    std::cout << "[CPUInferenceEngine] SetContextSize: " << m_contextLimit << " -> " << size << std::endl;
+    s_logger.info("[CPUInferenceEngine] SetContextSize: ");
     SetContextLimit(size);  // Delegate to the primary context management method
 }
 
@@ -1692,7 +1695,7 @@ void CPUInferenceEngine::DeallocateTensor(float* ptr) {
             return;
         }
     }
-    std::cerr << "[CPUInferenceEngine] DeallocateTensor: pointer not found in memory pool" << std::endl;
+    s_logger.error( "[CPUInferenceEngine] DeallocateTensor: pointer not found in memory pool" << std::endl;
 }
 
 } // namespace RawrXD

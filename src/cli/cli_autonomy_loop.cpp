@@ -13,6 +13,9 @@
 #include "../subagent_core.h"
 #include "../reverse_engineering/RawrCodex.hpp"
 
+#include "logging/logger.h"
+static Logger s_logger("cli_autonomy_loop");
+
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -82,9 +85,7 @@ void CLIAutonomyLoop::start() {
     m_loopThread = std::thread(&CLIAutonomyLoop::loopFunction, this);
 
     m_state.store(AutonomyLoopState::Running);
-    std::cout << "🤖 [AUTONOMY] Background loop started (tick="
-              << m_config.tickIntervalMs << "ms, rate=" 
-              << m_config.maxActionsPerMinute << "/min)\n";
+    s_logger.info("🤖 [AUTONOMY] Background loop started (tick=");
 }
 
 void CLIAutonomyLoop::stop() {
@@ -99,14 +100,14 @@ void CLIAutonomyLoop::stop() {
 
     m_state.store(AutonomyLoopState::Idle);
     emitEvent(AutonomyEvent::LoopStopped, "Autonomy loop stopped");
-    std::cout << "⏹️  [AUTONOMY] Loop stopped\n";
+    s_logger.info("⏹️  [AUTONOMY] Loop stopped\n");
 }
 
 void CLIAutonomyLoop::pause() {
     if (m_state.load() != AutonomyLoopState::Running) return;
     m_state.store(AutonomyLoopState::Paused);
     emitEvent(AutonomyEvent::LoopPaused, "Autonomy loop paused");
-    std::cout << "⏸️  [AUTONOMY] Loop paused\n";
+    s_logger.info("⏸️  [AUTONOMY] Loop paused\n");
 }
 
 void CLIAutonomyLoop::resume() {
@@ -114,7 +115,7 @@ void CLIAutonomyLoop::resume() {
     m_state.store(AutonomyLoopState::Running);
     m_consecutiveFailures = 0;
     emitEvent(AutonomyEvent::LoopResumed, "Autonomy loop resumed");
-    std::cout << "▶️  [AUTONOMY] Loop resumed\n";
+    s_logger.info("▶️  [AUTONOMY] Loop resumed\n");
 }
 
 AutonomyLoopState CLIAutonomyLoop::getState() const {
@@ -140,8 +141,7 @@ void CLIAutonomyLoop::loopFunction() {
 
         // Check consecutive failure limit
         if (m_consecutiveFailures >= m_config.maxConsecutiveFailures) {
-            std::cout << "⚠️  [AUTONOMY] Max consecutive failures reached ("
-                      << m_consecutiveFailures << ") — pausing loop\n";
+            s_logger.info("⚠️  [AUTONOMY] Max consecutive failures reached (");
             pause();
             continue;
         }
@@ -151,7 +151,7 @@ void CLIAutonomyLoop::loopFunction() {
             m_stats.rateLimitHits++;
             emitEvent(AutonomyEvent::RateLimited, "Rate limit exceeded");
             if (m_config.verboseTracing) {
-                std::cout << "🚦 [AUTONOMY] Rate limited, skipping tick\n";
+                s_logger.info("🚦 [AUTONOMY] Rate limited, skipping tick\n");
             }
             continue;
         }
@@ -226,13 +226,12 @@ void CLIAutonomyLoop::loopFunction() {
             emitEvent(AutonomyEvent::CorrectionApplied,
                       std::string(outcome.summary ? outcome.summary : "Correction applied"));
 
-            std::cout << "✅ [AUTONOMY:Tick" << record.tickId << "] "
-                      << outcome.summary << " (" << tickMs << "ms)\n";
+            s_logger.info("✅ [AUTONOMY:Tick");
 
             // Print trace in verbose mode
             if (m_config.verboseTracing) {
                 for (const auto& t : outcome.traceLog) {
-                    std::cout << "    " << t << "\n";
+                    s_logger.info("    ");
                 }
             }
         } else if (outcome.finalVerdict == NodeVerdict::Escalate) {
@@ -240,8 +239,7 @@ void CLIAutonomyLoop::loopFunction() {
             emitEvent(AutonomyEvent::Escalation,
                       ctx.escalationReason.empty() ? "Escalated to user" : ctx.escalationReason);
 
-            std::cout << "⚠️  [AUTONOMY:Tick" << record.tickId << "] ESCALATION: "
-                      << ctx.escalationReason << "\n";
+            s_logger.info("⚠️  [AUTONOMY:Tick");
 
             // Save for manual !auto_patch
             {
@@ -256,7 +254,7 @@ void CLIAutonomyLoop::loopFunction() {
         } else if (outcome.finalVerdict == NodeVerdict::Skip) {
             // Output was healthy, no action needed
             if (m_config.verboseTracing) {
-                std::cout << "🟢 [AUTONOMY:Tick" << record.tickId << "] Output healthy, no action\n";
+                s_logger.info("🟢 [AUTONOMY:Tick");
             }
         } else {
             m_consecutiveFailures++;
@@ -264,8 +262,7 @@ void CLIAutonomyLoop::loopFunction() {
             emitEvent(AutonomyEvent::CorrectionFailed,
                       std::string(outcome.summary ? outcome.summary : "Correction failed"));
 
-            std::cout << "❌ [AUTONOMY:Tick" << record.tickId << "] "
-                      << outcome.summary << " (consecutive=" << m_consecutiveFailures << ")\n";
+            s_logger.info("❌ [AUTONOMY:Tick");
 
             // Save for manual !auto_patch
             {
@@ -361,7 +358,7 @@ std::string CLIAutonomyLoop::runSSALift(const std::string& binaryPath,
         // Print anomaly trace
         for (const auto& t : ctx.traceLog) {
             if (t.find("[SSA:ANOMALY]") != std::string::npos) {
-                std::cout << "⚠️  " << t << "\n";
+                s_logger.info("⚠️  ");
             }
         }
         return ctx.ssaLiftResult;
@@ -395,14 +392,14 @@ DecisionOutcome CLIAutonomyLoop::autoPatch() {
 
     if (outcome.success) {
         m_hasLastFailure = false; // Clear on success
-        std::cout << "✅ [AUTO_PATCH] Correction applied: " << outcome.summary << "\n";
+        s_logger.info("✅ [AUTO_PATCH] Correction applied: ");
     } else {
-        std::cout << "❌ [AUTO_PATCH] Correction failed: " << outcome.summary << "\n";
+        s_logger.info("❌ [AUTO_PATCH] Correction failed: ");
     }
 
     // Print trace
     for (const auto& t : outcome.traceLog) {
-        std::cout << "    " << t << "\n";
+        s_logger.info("    ");
     }
 
     return outcome;

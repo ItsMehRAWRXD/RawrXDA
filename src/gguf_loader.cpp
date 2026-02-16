@@ -6,6 +6,9 @@
 #include <iostream>
 #include <sstream>
 
+#include "logging/logger.h"
+static Logger s_logger("gguf_loader");
+
 #ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
 #include <windows.h>
 #endif
@@ -116,10 +119,7 @@ bool GGUFLoader::ParseHeader() {
     // Calculate metadata offset
     header_.metadata_offset = file_.tellg();
     
-    std::cout << "GGUF Header: Magic=0x" << std::hex << header_.magic << std::dec 
-              << ", Version=" << header_.version
-              << ", Tensors=" << header_.tensor_count
-              << ", Metadata=" << header_.metadata_kv_count << std::endl;
+    s_logger.info("GGUF Header: Magic=0x");
     
     return true;
 }
@@ -338,7 +338,7 @@ bool GGUFLoader::ParseMetadata() {
         if (type_val > 24) {
             // Log the unsupported type for the user
             std::string type_name = GetUnsupportedTypeNameByValue(type_val);
-            std::cerr << "WARNING: Tensor '" << tensor.name 
+            s_logger.error( "WARNING: Tensor '" << tensor.name 
                      << "' uses unsupported type " << type_val 
                      << " (" << type_name << "). "
                      << "Model will need quantization conversion to proceed." << std::endl;
@@ -380,27 +380,21 @@ bool GGUFLoader::ParseMetadata() {
     GGUFVocabResolver vocabResolver;
     VocabSizeDetection vocabDetection = vocabResolver.detectVocabSize(metadata_.kv_pairs, filepath_);
     
-    std::cout << "[GGUFLoader] Vocab detection: method=" << vocabDetection.detectionMethod
-              << ", size=" << vocabDetection.detectedSize
-              << ", confident=" << (vocabDetection.isConfident ? "yes" : "no") << std::endl;
+    s_logger.info("[GGUFLoader] Vocab detection: method=");
     
     // Override metadata vocab size if detection was successful
     if (vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
         if (metadata_.vocab_size != vocabDetection.detectedSize) {
-            std::cout << "[GGUFLoader] Correcting vocab size: " << metadata_.vocab_size 
-                      << " -> " << vocabDetection.detectedSize << std::endl;
+            s_logger.info("[GGUFLoader] Correcting vocab size: ");
             metadata_.vocab_size = vocabDetection.detectedSize;
         }
     } else if (!vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
         // Use detection even if not confident, as it's better than potentially wrong metadata
-        std::cout << "[GGUFLoader] Using low-confidence vocab size: " << vocabDetection.detectedSize << std::endl;
+        s_logger.info("[GGUFLoader] Using low-confidence vocab size: ");
         metadata_.vocab_size = vocabDetection.detectedSize;
     }
     
-    std::cout << "Metadata parsed successfully. Layers: " << metadata_.layer_count
-              << ", Context: " << metadata_.context_length
-              << ", Embedding: " << metadata_.embedding_dim
-              << ", Vocab: " << metadata_.vocab_size << std::endl;
+    s_logger.info("Metadata parsed successfully. Layers: ");
     
     return true;
 }
@@ -571,7 +565,7 @@ bool GGUFLoader::ReadString(std::string& value) {
     // This prevents bad allocation errors from corrupted metadata
     const uint64_t MAX_STRING_SIZE = 100 * 1024 * 1024;  // 100MB limit
     if (len > MAX_STRING_SIZE) {
-        std::cerr << "[GGUFLoader] String length " << len << " exceeds maximum allowed size" << std::endl;
+        s_logger.error( "[GGUFLoader] String length " << len << " exceeds maximum allowed size" << std::endl;
         return false;
     }
     
@@ -649,7 +643,7 @@ uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGM
                 return block_aligned_size(256, 128);  // Q8_K: 256 elements, 128 bytes per block
             }
             // In production, log the unsupported type and use a safe default
-            std::cerr << "[GGUFLoader] WARNING: Unsupported GGMLType " << static_cast<uint32_t>(type) 
+            s_logger.error( "[GGUFLoader] WARNING: Unsupported GGMLType " << static_cast<uint32_t>(type) 
                      << " encountered, assuming F32 size" << std::endl;
             return num_elements * 4;  // Default to F32 size
     }
@@ -710,7 +704,7 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
                 throw std::runtime_error("Unsupported compression type");
         }
     } catch (const std::exception& e) {
-        std::cerr << "Decompression error: " << e.what() << std::endl;
+        s_logger.error( "Decompression error: " << e.what() << std::endl;
         return false;
     }
 }
@@ -754,7 +748,7 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
                 throw std::runtime_error("Unsupported compression type");
         }
     } catch (const std::exception& e) {
-        std::cerr << "Compression error: " << e.what() << std::endl;
+        s_logger.error( "Compression error: " << e.what() << std::endl;
         return false;
     }
 }
@@ -817,12 +811,12 @@ namespace RawrXD {
 bool GGUFLoader::UploadAllTensorsToVulkan() {
 #ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
     if (!vulkan_engine_) {
-        std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: no Vulkan engine attached" << std::endl;
+        s_logger.error( "[GGUFLoader] UploadAllTensorsToVulkan: no Vulkan engine attached" << std::endl;
         return false;
     }
 
     if (tensors_.empty()) {
-        std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: no tensors loaded" << std::endl;
+        s_logger.error( "[GGUFLoader] UploadAllTensorsToVulkan: no tensors loaded" << std::endl;
         return false;
     }
 
@@ -830,7 +824,7 @@ bool GGUFLoader::UploadAllTensorsToVulkan() {
     size_t failCount = 0;
     size_t totalBytes = 0;
 
-    std::cerr << "[GGUFLoader] Uploading " << tensors_.size() << " tensors to Vulkan GPU..." << std::endl;
+    s_logger.error( "[GGUFLoader] Uploading " << tensors_.size() << " tensors to Vulkan GPU..." << std::endl;
 
     for (const auto& tensor : tensors_) {
         if (UploadTensorToVulkan(tensor.name)) {
@@ -838,17 +832,17 @@ bool GGUFLoader::UploadAllTensorsToVulkan() {
             totalBytes += tensor.size_bytes;
         } else {
             failCount++;
-            std::cerr << "[GGUFLoader] Failed to upload tensor: " << tensor.name << std::endl;
+            s_logger.error( "[GGUFLoader] Failed to upload tensor: " << tensor.name << std::endl;
         }
     }
 
-    std::cerr << "[GGUFLoader] Vulkan upload complete: " << successCount << "/" << tensors_.size()
+    s_logger.error( "[GGUFLoader] Vulkan upload complete: " << successCount << "/" << tensors_.size()
               << " tensors (" << (totalBytes / (1024 * 1024)) << " MB), "
               << failCount << " failures" << std::endl;
 
     return failCount == 0;
 #else
-    std::cerr << "[GGUFLoader] UploadAllTensorsToVulkan: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    s_logger.error( "[GGUFLoader] UploadAllTensorsToVulkan: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
     return false;
 #endif
 }
@@ -856,7 +850,7 @@ bool GGUFLoader::UploadAllTensorsToVulkan() {
 bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
 #ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
     if (!vulkan_engine_) {
-        std::cerr << "[GGUFLoader] UploadTensorToVulkan: no Vulkan engine attached" << std::endl;
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: no Vulkan engine attached" << std::endl;
         return false;
     }
 
@@ -868,7 +862,7 @@ bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
     // Find tensor info using O(1) index
     auto it = tensor_index_.find(tensor_name);
     if (it == tensor_index_.end()) {
-        std::cerr << "[GGUFLoader] UploadTensorToVulkan: tensor not found: " << tensor_name << std::endl;
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: tensor not found: " << tensor_name << std::endl;
         return false;
     }
 
@@ -882,7 +876,7 @@ bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
         file_.read(reinterpret_cast<char*>(tensorData.data()), info->size_bytes);
         if (!file_.good()) {
             file_.clear(); // Reset stream state
-            std::cerr << "[GGUFLoader] UploadTensorToVulkan: failed to read tensor data: " << tensor_name << std::endl;
+            s_logger.error( "[GGUFLoader] UploadTensorToVulkan: failed to read tensor data: " << tensor_name << std::endl;
             return false;
         }
 
@@ -890,13 +884,13 @@ bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
         if (IsCompressed()) {
             std::vector<uint8_t> decompressed;
             if (!DecompressData(tensorData, decompressed)) {
-                std::cerr << "[GGUFLoader] UploadTensorToVulkan: decompression failed: " << tensor_name << std::endl;
+                s_logger.error( "[GGUFLoader] UploadTensorToVulkan: decompression failed: " << tensor_name << std::endl;
                 return false;
             }
             tensorData = std::move(decompressed);
         }
     } catch (const std::exception& e) {
-        std::cerr << "[GGUFLoader] UploadTensorToVulkan: read exception: " << e.what() << std::endl;
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: read exception: " << e.what() << std::endl;
         return false;
     }
 
@@ -910,7 +904,7 @@ bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
         gpuBuffer = new uint8_t[tensorData.size()];
         std::memcpy(gpuBuffer, tensorData.data(), tensorData.size());
     } catch (const std::bad_alloc&) {
-        std::cerr << "[GGUFLoader] UploadTensorToVulkan: allocation failed for "
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: allocation failed for "
                   << (tensorData.size() / (1024 * 1024)) << " MB tensor: " << tensor_name << std::endl;
         return false;
     }
@@ -921,7 +915,7 @@ bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
 
     return true;
 #else
-    std::cerr << "[GGUFLoader] UploadTensorToVulkan('" << tensor_name 
+    s_logger.error( "[GGUFLoader] UploadTensorToVulkan('" << tensor_name 
               << "'): not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
     return false;
 #endif
@@ -948,14 +942,14 @@ bool GGUFLoader::CreateDummyModel() {
     metadata_.head_count = 0;
     metadata_.context_length = 4096;
     use_dummy_mode_ = true;
-    std::cout << "[GGUFLoader] Created dummy model for testing" << std::endl;
+    s_logger.info("[GGUFLoader] Created dummy model for testing");
     return true;
 }
 
 bool GGUFLoader::InitializeMemoryMap() {
 #ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
     if (filepath_.empty() || !is_open_) {
-        std::cerr << "[GGUFLoader] InitializeMemoryMap: no file open" << std::endl;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: no file open" << std::endl;
         return false;
     }
     // Open file handle for memory mapping (Windows API)
@@ -963,7 +957,7 @@ bool GGUFLoader::InitializeMemoryMap() {
                                nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file_handle_ == INVALID_HANDLE_VALUE) {
         file_handle_ = nullptr;
-        std::cerr << "[GGUFLoader] InitializeMemoryMap: CreateFile failed" << std::endl;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: CreateFile failed" << std::endl;
         return false;
     }
     LARGE_INTEGER fileSize;
@@ -973,7 +967,7 @@ bool GGUFLoader::InitializeMemoryMap() {
     if (!map_handle_) {
         CloseHandle(file_handle_);
         file_handle_ = nullptr;
-        std::cerr << "[GGUFLoader] InitializeMemoryMap: CreateFileMapping failed" << std::endl;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: CreateFileMapping failed" << std::endl;
         return false;
     }
     mmap_base_ = MapViewOfFile(map_handle_, FILE_MAP_READ, 0, 0, 0);
@@ -982,15 +976,15 @@ bool GGUFLoader::InitializeMemoryMap() {
         CloseHandle(file_handle_);
         map_handle_ = nullptr;
         file_handle_ = nullptr;
-        std::cerr << "[GGUFLoader] InitializeMemoryMap: MapViewOfFile failed" << std::endl;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: MapViewOfFile failed" << std::endl;
         return false;
     }
     use_mmap_ = true;
     file_size_ = static_cast<uint64_t>(fileSize.QuadPart);
-    std::cout << "[GGUFLoader] Memory-mapped " << file_size_ << " bytes" << std::endl;
+    s_logger.info("[GGUFLoader] Memory-mapped ");
     return true;
 #else
-    std::cerr << "[GGUFLoader] InitializeMemoryMap: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    s_logger.error( "[GGUFLoader] InitializeMemoryMap: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
     return false;
 #endif
 }
@@ -1010,7 +1004,7 @@ void GGUFLoader::CleanupMemoryMap() {
         file_handle_ = nullptr;
     }
     use_mmap_ = false;
-    std::cout << "[GGUFLoader] Memory map cleaned up" << std::endl;
+    s_logger.info("[GGUFLoader] Memory map cleaned up");
 #else
     // No-op when experimental GPU support is disabled
 #endif
@@ -1019,17 +1013,17 @@ void GGUFLoader::CleanupMemoryMap() {
 const void* GGUFLoader::GetMappedSlice(uint64_t offset, uint64_t size) const {
 #ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
     if (!mmap_base_ || !use_mmap_) {
-        std::cerr << "[GGUFLoader] GetMappedSlice: memory map not initialized" << std::endl;
+        s_logger.error( "[GGUFLoader] GetMappedSlice: memory map not initialized" << std::endl;
         return nullptr;
     }
     if (offset + size > file_size_) {
-        std::cerr << "[GGUFLoader] GetMappedSlice: range [" << offset << ", " 
+        s_logger.error( "[GGUFLoader] GetMappedSlice: range [" << offset << ", " 
                   << (offset + size) << ") exceeds file size " << file_size_ << std::endl;
         return nullptr;
     }
     return static_cast<const uint8_t*>(mmap_base_) + offset;
 #else
-    std::cerr << "[GGUFLoader] GetMappedSlice: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    s_logger.error( "[GGUFLoader] GetMappedSlice: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
     return nullptr;
 #endif
 }

@@ -17,6 +17,9 @@
 #include <cctype>
 #include <cstring>
 
+#include "logging/logger.h"
+static Logger s_logger("local_reasoning_engine");
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <DbgHelp.h>
@@ -73,7 +76,7 @@ LocalReasoningEngine::AnalysisResult LocalReasoningEngine::analyze(const Analysi
 
     } catch (const std::exception& e) {
         if (m_verbose) {
-            std::cerr << "[LocalReasoning] Analysis error: " << e.what() << "\n";
+            s_logger.error( "[LocalReasoning] Analysis error: " << e.what() << "\n";
         }
         result.summary = std::string("Analysis error: ") + e.what();
         result.overallConfidence = 0.0f;
@@ -98,26 +101,26 @@ LocalReasoningEngine::AnalysisResult LocalReasoningEngine::performAnalysisPasses
     std::vector<CodeIssue> cumulativeIssues;
 
     // Pass 1: Syntax & Structure Scan
-    if (m_verbose) std::cout << "[LocalReasoning] Pass 1: Syntax Scan\n";
+    if (m_verbose) s_logger.info("[LocalReasoning] Pass 1: Syntax Scan\n");
     auto syntaxIssues = scanSyntaxStructure(context.sourceCode, context.language);
     cumulativeIssues.insert(cumulativeIssues.end(), syntaxIssues.begin(), syntaxIssues.end());
     result.passesCompleted++;
 
     // Pass 2: Pattern Matching (Bug patterns)
-    if (m_verbose) std::cout << "[LocalReasoning] Pass 2: Pattern Matching\n";
+    if (m_verbose) s_logger.info("[LocalReasoning] Pass 2: Pattern Matching\n");
     auto patternIssues = detectCommonPatterns(context.sourceCode);
     cumulativeIssues.insert(cumulativeIssues.end(), patternIssues.begin(), patternIssues.end());
     result.passesCompleted++;
 
     // Pass 3: Rule-based Analysis (Expert system)
-    if (m_verbose) std::cout << "[LocalReasoning] Pass 3: Rule Application\n";
+    if (m_verbose) s_logger.info("[LocalReasoning] Pass 3: Rule Application\n");
     auto ruleIssues = applyRules(context.sourceCode, m_customRules);
     cumulativeIssues.insert(cumulativeIssues.end(), ruleIssues.begin(), ruleIssues.end());
     result.passesCompleted++;
 
     // Pass 4: Assembly Analysis (if enabled)
     if (context.includeAssembly && (context.language == "asm" || context.language == "masm")) {
-        if (m_verbose) std::cout << "[LocalReasoning] Pass 4: x64 Assembly Analysis\n";
+        if (m_verbose) s_logger.info("[LocalReasoning] Pass 4: x64 Assembly Analysis\n");
         auto asmIssues = analyzeAssembly(context.sourceCode);
         cumulativeIssues.insert(cumulativeIssues.end(), asmIssues.begin(), asmIssues.end());
         result.passesCompleted++;
@@ -125,7 +128,7 @@ LocalReasoningEngine::AnalysisResult LocalReasoningEngine::performAnalysisPasses
 
     // Pass 5: Deep Analysis (if enabled) - CFG, data flow
     if (context.deepAnalysis) {
-        if (m_verbose) std::cout << "[LocalReasoning] Pass 5: Deep Analysis (CFG)\n";
+        if (m_verbose) s_logger.info("[LocalReasoning] Pass 5: Deep Analysis (CFG)\n");
         auto cfg = buildControlFlowGraph(context.sourceCode);
         if (detectInfiniteLoop(cfg)) {
             CodeIssue issue;

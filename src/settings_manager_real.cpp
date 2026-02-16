@@ -5,6 +5,9 @@
 #include <filesystem>
 #include <mutex>
 
+#include "logging/logger.h"
+static Logger s_logger("settings_manager_real");
+
 SettingsManager::SettingsManager(const std::string& configPath)
     : m_configPath(configPath) {
     loadDefaults();
@@ -539,7 +542,7 @@ bool SettingsManager::importFromFile(const std::string& filePath) {
 }
 
 void SettingsManager::printAllSettings() const {
-    std::cout << m_settings.dump(2) << std::endl;
+    s_logger.info( m_settings.dump(2) << std::endl;
 }
 
 void SettingsManager::loadDefaults() {
@@ -688,7 +691,7 @@ bool SettingsManager::readFromDisk() {
             return true;
         }
     } catch (const std::exception& e) {
-        std::cerr << "[SettingsManager] Error reading config: " << e.what() << std::endl;
+        s_logger.error( "[SettingsManager] Error reading config: " << e.what() << std::endl;
     }
 
     return false;
@@ -705,7 +708,7 @@ bool SettingsManager::writeToDisk() {
         m_dirty = false;
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "[SettingsManager] Error writing config: " << e.what() << std::endl;
+        s_logger.error( "[SettingsManager] Error writing config: " << e.what() << std::endl;
         return false;
     }
 }

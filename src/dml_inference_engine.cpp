@@ -19,6 +19,9 @@
 #include "core/gguf_dml_bridge.h"
 #include "ai_backend.h"
 
+#include "logging/logger.h"
+static Logger s_logger("dml_inference_engine");
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -125,7 +128,7 @@ bool DMLInferenceEngine::LoadModel(const std::string& modelPath) {
     if (!dmlCompute.isInitialized()) {
         auto r = dmlCompute.initialize();
         if (!r.success) {
-            std::cerr << "[DMLEngine] DML init failed: " << r.detail << std::endl;
+            s_logger.error( "[DMLEngine] DML init failed: " << r.detail << std::endl;
             return false;
         }
     }
@@ -139,7 +142,7 @@ bool DMLInferenceEngine::LoadModel(const std::string& modelPath) {
     // Open GGUF model
     auto r = bridge.openModel(modelPath.c_str(), m_sessionId);
     if (!r.success) {
-        std::cerr << "[DMLEngine] openModel failed: " << r.detail << std::endl;
+        s_logger.error( "[DMLEngine] openModel failed: " << r.detail << std::endl;
         return false;
     }
 
@@ -156,7 +159,7 @@ bool DMLInferenceEngine::LoadModel(const std::string& modelPath) {
 
     // Load tokenizer from GGUF file
     if (!loadTokenizer(modelPath)) {
-        std::cerr << "[DMLEngine] Tokenizer load failed (continuing with limited tokenizer)"
+        s_logger.error( "[DMLEngine] Tokenizer load failed (continuing with limited tokenizer)"
                   << std::endl;
     }
 
@@ -164,7 +167,7 @@ bool DMLInferenceEngine::LoadModel(const std::string& modelPath) {
     if (config.estimatedVRAM <= bridge.getVRAMBudget(m_sessionId)) {
         auto r2 = bridge.loadAllTensors(m_sessionId);
         if (!r2.success) {
-            std::cerr << "[DMLEngine] Full load failed, using streaming: " << r2.detail
+            s_logger.error( "[DMLEngine] Full load failed, using streaming: " << r2.detail
                       << std::endl;
             bridge.loadFixedTensors(m_sessionId);
         }
@@ -177,12 +180,7 @@ bool DMLInferenceEngine::LoadModel(const std::string& modelPath) {
 
     m_modelLoaded.store(true);
 
-    std::cout << "[DMLEngine] Model loaded: " << modelPath
-              << " arch=" << m_architecture
-              << " layers=" << m_numLayers
-              << " vocab=" << m_vocabSize
-              << " hidden=" << m_embeddingDim
-              << std::endl;
+    s_logger.info("[DMLEngine] Model loaded: ");
 
     return true;
 }
@@ -191,17 +189,17 @@ bool DMLInferenceEngine::LoadSecondModel(const std::string& modelPath) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (!m_modelLoaded.load()) {
-        std::cerr << "[DMLEngine] No primary model loaded" << std::endl;
+        s_logger.error( "[DMLEngine] No primary model loaded" << std::endl;
         return false;
     }
 
     auto r = m_ggufBridge->loadSecondModel(modelPath.c_str(), m_sessionId + 1);
     if (!r.success) {
-        std::cerr << "[DMLEngine] Second model load failed: " << r.detail << std::endl;
+        s_logger.error( "[DMLEngine] Second model load failed: " << r.detail << std::endl;
         return false;
     }
 
-    std::cout << "[DMLEngine] Second model loaded: " << modelPath << std::endl;
+    s_logger.info("[DMLEngine] Second model loaded: ");
     return true;
 }
 
@@ -298,10 +296,7 @@ bool DMLInferenceEngine::loadTokenizer(const std::string& ggufPath) {
 
     if (m_tokenizer.loaded) {
         m_vocabSize = (int)m_tokenizer.vocab.size();
-        std::cout << "[DMLEngine] Tokenizer loaded: " << m_vocabSize << " tokens"
-                  << " BOS=" << m_tokenizer.bosToken
-                  << " EOS=" << m_tokenizer.eosToken
-                  << std::endl;
+        s_logger.info("[DMLEngine] Tokenizer loaded: ");
     }
 
     return m_tokenizer.loaded;
@@ -472,7 +467,7 @@ std::vector<int32_t> DMLInferenceEngine::Generate(const std::vector<int32_t>& in
         );
 
         if (!r.success) {
-            std::cerr << "[DMLEngine] Forward pass failed at step " << step
+            s_logger.error( "[DMLEngine] Forward pass failed at step " << step
                       << ": " << r.detail << std::endl;
             break;
         }
