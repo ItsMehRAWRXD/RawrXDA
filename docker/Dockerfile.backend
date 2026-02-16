@@ -1,0 +1,27 @@
+# RawrXD Backend — Python HTTP API for Universal Access
+# Runs RawrEngine HTTP API on port 23959
+
+FROM python:3.11-slim
+
+ENV RAWRXD_HOST=0.0.0.0
+ENV RAWRXD_PORT=23959
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/opt/rawrxd
+
+WORKDIR /opt/rawrxd
+
+# Install Flask for HTTP API
+RUN pip install --no-cache-dir flask
+
+# Copy backend (Ship contains RawrEngine.py and CORSAuthMiddleware.py)
+COPY Ship/ /opt/rawrxd/
+
+# Use Ship as Python path
+ENV PYTHONPATH=/opt/rawrxd
+
+EXPOSE 23959
+
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:23959/status')" || exit 1
+
+CMD ["python3", "/opt/rawrxd/RawrEngine.py"]
