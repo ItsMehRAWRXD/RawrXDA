@@ -74,6 +74,8 @@ models/*.bin
 tmp/
 temp/
 *.tmp
+soak_logs/
+soak_evidence*.json
 
 # Python
 __pycache__/
@@ -98,3 +100,4 @@ Fixed_Reverse_Engineered/
 Consolidated_Modules_*/
 *.exe.WebView2/
 build_universal/
+itsmehrawrxd-master.zip
