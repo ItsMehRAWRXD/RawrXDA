@@ -7,6 +7,7 @@
 #>
 
 $ProjectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { $PSScriptRoot }
+if (-not $ProjectRoot) { $ProjectRoot = "d:\lazy init ide" }
 $TestResults = @{
     Passed = 0
     Failed = 0

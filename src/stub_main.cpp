@@ -1,13 +1,6 @@
-#include <windows.h>
-#include "logging/logger.h"
+// CONSOLIDATED: stub_main.cpp redirects to real main implementation
+#include "win32app/Win32IDE.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    Logger logger("StubMain", "logs/");
-    logger.info("STUB: WinMain entered");
-    
-    MessageBoxA(nullptr, "Stub main reached!", "SUCCESS", MB_OK);
-    
-    logger.info("STUB: MessageBox shown");
-    
-    return 0;
+    return Win32IDE_Main(hInstance, hPrevInstance, lpCmdLine, nCmdShow);
 }
