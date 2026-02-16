@@ -18,6 +18,7 @@
 #include <memory>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <thread>
 #include <mutex>
 #include <atomic>
@@ -217,6 +218,10 @@ struct IDWriteTextLayout;
 
 // Tier 3: File changed externally — custom window message
 #define WM_FILE_CHANGED_EXTERNAL    (WM_APP + 200)
+
+// Universal Sourcefile dropdown — workspace index ready
+// lParam: heap pointer to payload allocated on background thread, freed on UI thread.
+#define WM_SOURCEFILE_INDEX_READY   (WM_APP + 700)
 
 // Transparency commands (3200 range — routed via handleViewCommand)
 #define IDM_TRANSPARENCY_100        3200
@@ -917,6 +922,9 @@ private:
     void createTitleBarControls();
     void layoutTitleBar(int width);
     void updateTitleBarText();
+    void startSourceFileIndexingAsync();
+    void onSourceFileIndexReady(void* payloadPtr);
+    void syncSourceFileDropdownSelection();
     std::string extractLeafName(const std::string& path) const;
     void setCurrentDirectoryFromFile(const std::string& filePath);
     void createEditor(HWND hwnd);
@@ -1878,6 +1886,8 @@ private:
     HMENU m_hMenu;
     HWND m_hwndToolbar;
     HWND m_hwndTitleLabel;
+    HWND m_hwndSourceFileLabel = nullptr;
+    HWND m_hwndSourceFileCombo = nullptr;
     HWND m_hwndBtnMinimize;
     HWND m_hwndBtnMaximize;
     HWND m_hwndBtnClose;
@@ -1889,6 +1899,17 @@ private:
     // Per-pane terminal managers replace the previous single manager
     std::string m_currentFile;
     bool m_fileModified;
+
+    // Workspace Sourcefile dropdown state
+    struct SourceFileEntry {
+        std::string display;
+        std::string fullPath;
+    };
+    std::vector<SourceFileEntry> m_sourceFileEntries;
+    std::unordered_map<std::string, int> m_sourceFileIndexByPathKey; // normalized key -> combo index
+    std::atomic<bool> m_sourceFileIndexing{false};
+    std::atomic<bool> m_sourceFileIndexReady{false};
+    bool m_sourceFileDropdownInternalChange = false;
     
     // Multi-terminal support
     std::vector<TerminalPane> m_terminalPanes;
