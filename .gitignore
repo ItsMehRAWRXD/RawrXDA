@@ -74,6 +74,8 @@ models/*.bin
 tmp/
 temp/
 *.tmp
+soak_logs/
+soak_evidence*.json
 
 # Python
 __pycache__/

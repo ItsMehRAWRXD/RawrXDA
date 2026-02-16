@@ -33,6 +33,23 @@ services:
       - rawrxd-net
     restart: unless-stopped
 
+  soak-test:
+    image: python:3.11-slim
+    depends_on:
+      - rawrxd-backend
+    environment:
+      - DOCKER=1
+      - RAWRXD_HOST=http://rawrxd-backend:23959
+      - SOAK_ITERATIONS=${SOAK_ITERATIONS:-100}
+      - SOAK_HOURS=${SOAK_HOURS:-0}
+      - SOAK_LOG_DIR=/soak_logs
+    volumes:
+      - ./scripts/soak_cross_platform.py:/soak/soak_cross_platform.py:ro
+      - soak_logs:/soak_logs
+    entrypoint: ["python3", "/soak/soak_cross_platform.py"]
+    profiles:
+      - soak
+
   # Optional: Full IDE via browser (noVNC)
   rawrxd-desktop:
     build:
@@ -51,6 +68,7 @@ services:
       - rawrxd-net
 
 volumes:
+  soak_logs:
   models:
     driver: local
     driver_opts:
