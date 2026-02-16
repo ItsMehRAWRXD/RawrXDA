@@ -31,7 +31,9 @@ RunDigestionEngine PROC FRAME
     jz      invalid_arg
 
     ; TODO: real AVX-512 digestion pipeline will go here
-    xor     eax, eax        ; S_DIGEST_OK = 0
+    ; Return S_DIGEST_NOT_IMPLEMENTED (0x80004001 = E_NOTIMPL) so callers
+    ; know this is a stub and don't treat it as a successful digestion.
+    mov     eax, 080004001h ; E_NOTIMPL — stub, not yet implemented
     jmp     done
 
 invalid_arg:
