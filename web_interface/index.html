@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1117">
+    <title>RawrXD Agentic IDE — Web</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --success: #238636;
+            --warning: #f0883e;
+            --error: #f85149;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container { display: flex; height: 100vh; }
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .logo {
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+        .nav-item:hover, .nav-item.active { background: var(--bg-tertiary); }
+        .nav-item svg { width: 16px; height: 16px; fill: currentColor; }
+        .main { flex: 1; display: flex; flex-direction: column; }
+        .header {
+            height: 48px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
+        .status-dot.connected { background: var(--success); }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--bg-secondary);
+        }
+        .message.system {
+            align-self: center;
+            background: var(--bg-tertiary);
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-style: dashed;
+        }
+        .input-container {
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-family: inherit;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            min-height: 24px;
+            max-height: 200px;
+        }
+        button {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        button:hover { background: var(--accent-hover); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .tool-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 4px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .tool-btn:hover { background: var(--border); color: var(--text-primary); }
+        .model-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: inherit;
+            padding: 4px 8px;
+            border-radius: 6px;
+            outline: none;
+        }
+        .streaming-cursor { display: inline-block; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        .code-block {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            position: relative;
+        }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .copy-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            background: var(--bg-tertiary);
+        }
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .settings-modal.active { display: flex; }
+        .settings-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .settings-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .settings-body { padding: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: inherit;
+            border-radius: 6px;
+        }
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .mode-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .message { max-width: 95%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">🦖 RawrXD Web</div>
+            <div class="nav-item active" onclick="switchTab('chat')">
+                <svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Z"/></svg>
+                Chat
+            </div>
+            <div class="nav-item" onclick="switchTab('agent')">
+                <svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM4.5 7.5a.5.5 0 0 0 0 1h5.793l-2.147 2.146a.5.5 0 0 0 .707.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.707.707L10.293 7.5H4.5Z"/></svg>
+                Agent
+            </div>
+            <div class="nav-item" onclick="switchTab('tools')">
+                <svg viewBox="0 0 16 16"><path d="M4.5 0A2.5 2.5 0 0 0 2 2.5v11A2.5 2.5 0 0 0 4.5 16h7a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 11.5 0h-7ZM4 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5V4H4V2.5ZM4 5h8v1H4V5Zm0 2h8v1H4V7Zm0 2h8v1H4V9Zm0 2h8v1H4v-1Z"/></svg>
+                Tools
+            </div>
+            <div class="nav-item" onclick="toggleSettings()">
+                <svg viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492ZM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0Z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319Z"/></svg>
+                Settings
+            </div>
+        </aside>
+        
+        <main class="main">
+            <header class="header">
+                <div class="model-selector">
+                    <span>Model:</span>
+                    <select id="modelSelect" onchange="changeModel(this.value)">
+                        <option>Loading...</option>
+                    </select>
+                </div>
+                <div class="connection-status">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </header>
+            
+            <div class="chat-container" id="chatContainer">
+                <div class="message system">
+                    Welcome to RawrXD Web. Connect to your RawrEngine backend to begin.
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <div class="toolbar">
+                    <button class="tool-btn" onclick="insertContext('@file')">@File</button>
+                    <button class="tool-btn" onclick="insertContext('@code')">@Code</button>
+                    <button class="tool-btn" onclick="insertContext('@terminal')">@Terminal</button>
+                    <button class="tool-btn" onclick="setMode('ask')">Ask</button>
+                    <button class="tool-btn" onclick="setMode('plan')">Plan</button>
+                    <button class="tool-btn" onclick="setMode('full')">Full</button>
+                </div>
+                <div class="input-wrapper">
+                    <textarea id="userInput" placeholder="Message RawrXD Agent..." rows="1" onkeydown="handleKeydown(event)"></textarea>
+                    <div class="spinner" id="spinner"></div>
+                    <button onclick="sendMessage()" id="sendBtn">Send</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h3>Connection Settings</h3>
+                <button onclick="toggleSettings()">✕</button>
+            </div>
+            <div class="settings-body">
+                <div class="form-group">
+                    <label>RawrEngine URL</label>
+                    <input type="text" id="apiUrl" value="http://localhost:23959" placeholder="http://localhost:23959">
+                </div>
+                <div class="form-group">
+                    <label>API Key (optional)</label>
+                    <input type="password" id="apiKey" placeholder="Enter API key">
+                </div>
+                <div class="form-group">
+                    <label>Agent Mode</label>
+                    <div class="mode-tabs">
+                        <div class="mode-tab active" onclick="setAgentMode('ask', this)">Ask</div>
+                        <div class="mode-tab" onclick="setAgentMode('plan', this)">Plan</div>
+                        <div class="mode-tab" onclick="setAgentMode('full', this)">Full</div>
+                    </div>
+                </div>
+                <button onclick="saveSettings()" style="width: 100%;">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // RawrXD Web Interface — Universal Access Client
+        // Zero dependencies, vanilla JS, connects to RawrEngine HTTP API
+        
+        const state = {
+            apiUrl: localStorage.getItem('rawrxd_api_url') || 'http://localhost:23959',
+            apiKey: localStorage.getItem('rawrxd_api_key') || '',
+            currentModel: '',
+            agentMode: 'ask',
+            isStreaming: false,
+            conversation: [],
+            tools: []
+        };
+        
+        // Auto-resize textarea
+        const textarea = document.getElementById('userInput');
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+        
+        function handleKeydown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        async function checkConnection() {
+            try {
+                const res = await fetch(`${state.apiUrl}/status`, {
+                    headers: state.apiKey ? {'X-API-Key': state.apiKey} : {}
+                });
+                if (res.ok) {
+                    document.getElementById('statusDot').classList.add('connected');
+                    document.getElementById('statusText').textContent = 'Connected';
+                    loadModels();
+                    loadTools();
+                    return true;
+                }
+            } catch (e) {}
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('statusText').textContent = 'Disconnected';
+            return false;
+        }
+        
+        async function loadModels() {
+            try {
+                const res = await fetch(`${state.apiUrl}/v1/models`, {
+                    headers: state.apiKey ? {'X-API-Key': state.apiKey} : {}
+                });
+                const data = await res.json();
+                const select = document.getElementById('modelSelect');
+                select.innerHTML = '';
+                data.models?.forEach(model => {
+                    const opt = document.createElement('option');
+                    opt.value = model.id;
+                    opt.textContent = model.id;
+                    if (model.id === state.currentModel) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                if (!state.currentModel && data.models?.length) {
+                    state.currentModel = data.models[0].id;
+                }
+            } catch (e) {
+                console.error('Failed to load models:', e);
+            }
+        }
+        
+        async function loadTools() {
+            try {
+                const res = await fetch(`${state.apiUrl}/api/tools`, {
+                    headers: state.apiKey ? {'X-API-Key': state.apiKey} : {}
+                });
+                const data = await res.json();
+                state.tools = data.tools || [];
+            } catch (e) {}
+        }
+        
+        function changeModel(model) {
+            state.currentModel = model;
+            fetch(`${state.apiUrl}/api/agentic/config`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(state.apiKey && {'X-API-Key': state.apiKey})
+                },
+                body: JSON.stringify({model: model})
+            });
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message || state.isStreaming) return;
+            
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Add user message
+            addMessage(message, 'user');
+            state.conversation.push({role: 'user', content: message});
+            
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('sendBtn').disabled = true;
+            state.isStreaming = true;
+            
+            try {
+                if (state.agentMode === 'plan') {
+                    await handlePlanMode(message);
+                } else if (state.agentMode === 'full') {
+                    await handleFullAgent(message);
+                } else {
+                    await handleChat(message);
+                }
+            } catch (e) {
+                addMessage('Error: ' + e.message, 'system');
+            } finally {
+                state.isStreaming = false;
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+        
+        async function handleChat(message) {
+            const response = await fetch(`${state.apiUrl}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(state.apiKey && {'X-API-Key': state.apiKey})
+                },
+                body: JSON.stringify({
+                    model: state.currentModel,
+                    messages: state.conversation,
+                    stream: true
+                })
+            });
+            
+            if (!response.ok) throw new Error('Chat request failed');
+            
+            const msgDiv = addMessage('', 'assistant');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let content = '';
+            
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.choices?.[0]?.delta?.content) {
+                                content += data.choices[0].delta.content;
+                                msgDiv.innerHTML = formatContent(content) + '<span class="streaming-cursor">▊</span>';
+                                scrollToBottom();
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+            
+            state.conversation.push({role: 'assistant', content: content});
+            msgDiv.innerHTML = formatContent(content);
+        }
+        
+        async function handlePlanMode(message) {
+            const res = await fetch(`${state.apiUrl}/api/agent/wish`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(state.apiKey && {'X-API-Key': state.apiKey})
+                },
+                body: JSON.stringify({
+                    wish: message,
+                    mode: 'plan',
+                    model: state.currentModel
+                })
+            });
+            
+            const data = await res.json();
+            if (data.plan) {
+                addMessage('**Plan:**\n' + data.plan.map((step, i) => `${i+1}. ${step}`).join('\n'), 'assistant');
+                if (data.requires_confirmation) {
+                    addMessage('Type "execute" to run this plan.', 'system');
+                }
+            }
+        }
+        
+        async function handleFullAgent(message) {
+            const res = await fetch(`${state.apiUrl}/api/agent/wish`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(state.apiKey && {'X-API-Key': state.apiKey})
+                },
+                body: JSON.stringify({
+                    wish: message,
+                    mode: 'full',
+                    model: state.currentModel,
+                    auto_execute: true
+                })
+            });
+            
+            const data = await res.json();
+            if (data.response) {
+                addMessage(data.response, 'assistant');
+            }
+            if (data.tool_calls) {
+                data.tool_calls.forEach(call => {
+                    addMessage(`🔧 Executing: ${call.tool}(${JSON.stringify(call.params)})`, 'system');
+                });
+            }
+        }
+        
+        function addMessage(content, role) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.innerHTML = role === 'streaming' ? content : formatContent(content);
+            container.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+        
+        function formatContent(text) {
+            // Format code blocks
+            text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                return `<div class="code-block">
+                    <div class="code-header">
+                        <span>${lang || 'text'}</span>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                    <pre>${escapeHtml(code.trim())}</pre>
+                </div>`;
+            });
+            
+            // Format inline code
+            text = text.replace(/`([^`]+)`/g, '<code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 3px; font-family: monospace;">$1</code>');
+            
+            // Format bold
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Format lists
+            text = text.replace(/^\s*[-*]\s+(.+)$/gm, '• $1<br>');
+            
+            return text;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function copyCode(btn) {
+            const code = btn.closest('.code-block').querySelector('pre').textContent;
+            navigator.clipboard.writeText(code);
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+        
+        function scrollToBottom() {
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function insertContext(type) {
+            const input = document.getElementById('userInput');
+            input.value += type + ' ';
+            input.focus();
+        }
+        
+        function setMode(mode) {
+            state.agentMode = mode;
+            addMessage(`Switched to ${mode.toUpperCase()} mode`, 'system');
+        }
+        
+        function toggleSettings() {
+            document.getElementById('settingsModal').classList.toggle('active');
+        }
+        
+        function saveSettings() {
+            state.apiUrl = document.getElementById('apiUrl').value;
+            state.apiKey = document.getElementById('apiKey').value;
+            localStorage.setItem('rawrxd_api_url', state.apiUrl);
+            localStorage.setItem('rawrxd_api_key', state.apiKey);
+            toggleSettings();
+            checkConnection();
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.target.closest('.nav-item').classList.add('active');
+            // Tab switching logic here
+        }
+        
+        function setAgentMode(mode, el) {
+            state.agentMode = mode;
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+        }
+        
+        // Initialize
+        setInterval(checkConnection, 5000);
+        checkConnection();
+        
+        // Service Worker for PWA support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:text/javascript;base64,' + btoa(`
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+            `)).catch(() => {});
+        }
+    </script>
+</body>
+</html>
