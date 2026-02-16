@@ -1,6 +1,9 @@
 #include "memory_mapped_file.h"
 #include <stdexcept>
 
+#include "logging/logger.h"
+static Logger s_logger("memory_mapped_file");
+
 MemoryMappedFile::MemoryMappedFile(MemoryMappedFile&& other) noexcept 
     : fileHandle(other.fileHandle), mappingHandle(other.mappingHandle), 
       mappedData(other.mappedData), fileSize(other.fileSize), filePath(std::move(other.filePath)) {
@@ -36,7 +39,7 @@ bool MemoryMappedFile::Open(const std::string& path) {
     
     if (fileHandle == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
-        std::cerr << "[MemoryMappedFile] Failed to open file: " << path 
+        s_logger.error( "[MemoryMappedFile] Failed to open file: " << path 
                   << " (Error: " << error << ")" << std::endl;
         return false;
     }
@@ -44,14 +47,14 @@ bool MemoryMappedFile::Open(const std::string& path) {
     // Get file size using GetFileSizeEx for large file support (>4GB)
     LARGE_INTEGER fileSizeLI;
     if (!GetFileSizeEx(fileHandle, &fileSizeLI)) {
-        std::cerr << "[MemoryMappedFile] Failed to get file size for: " << path << std::endl;
+        s_logger.error( "[MemoryMappedFile] Failed to get file size for: " << path << std::endl;
         Close();
         return false;
     }
     fileSize = static_cast<size_t>(fileSizeLI.QuadPart);
     
     if (fileSize == 0) {
-        std::cerr << "[MemoryMappedFile] File is empty: " << path << std::endl;
+        s_logger.error( "[MemoryMappedFile] File is empty: " << path << std::endl;
         Close();
         return false;
     }
@@ -62,7 +65,7 @@ bool MemoryMappedFile::Open(const std::string& path) {
     
     if (mappingHandle == nullptr) {
         DWORD error = GetLastError();
-        std::cerr << "[MemoryMappedFile] Failed to create file mapping for: " << path 
+        s_logger.error( "[MemoryMappedFile] Failed to create file mapping for: " << path 
                   << " (Error: " << error << ")" << std::endl;
         Close();
         return false;
@@ -74,14 +77,13 @@ bool MemoryMappedFile::Open(const std::string& path) {
     
     if (mappedData == nullptr) {
         DWORD error = GetLastError();
-        std::cerr << "[MemoryMappedFile] Failed to map view of file: " << path 
+        s_logger.error( "[MemoryMappedFile] Failed to map view of file: " << path 
                   << " (Error: " << error << ")" << std::endl;
         Close();
         return false;
     }
     
-    std::cout << "[MemoryMappedFile] Successfully mapped: " << path 
-              << " (" << (fileSize / 1024 / 1024) << " MB)" << std::endl;
+    s_logger.info("[MemoryMappedFile] Successfully mapped: ");
     return true;
 }
 
@@ -89,7 +91,7 @@ void MemoryMappedFile::Close() {
     if (mappedData != nullptr) {
         if (!UnmapViewOfFile(mappedData)) {
             DWORD error = GetLastError();
-            std::cerr << "[MemoryMappedFile] Failed to unmap view (Error: " << error << ")" << std::endl;
+            s_logger.error( "[MemoryMappedFile] Failed to unmap view (Error: " << error << ")" << std::endl;
         }
         mappedData = nullptr;
     }
@@ -97,7 +99,7 @@ void MemoryMappedFile::Close() {
     if (mappingHandle != nullptr) {
         if (!CloseHandle(mappingHandle)) {
             DWORD error = GetLastError();
-            std::cerr << "[MemoryMappedFile] Failed to close mapping handle (Error: " << error << ")" << std::endl;
+            s_logger.error( "[MemoryMappedFile] Failed to close mapping handle (Error: " << error << ")" << std::endl;
         }
         mappingHandle = nullptr;
     }
@@ -105,7 +107,7 @@ void MemoryMappedFile::Close() {
     if (fileHandle != INVALID_HANDLE_VALUE) {
         if (!CloseHandle(fileHandle)) {
             DWORD error = GetLastError();
-            std::cerr << "[MemoryMappedFile] Failed to close file handle (Error: " << error << ")" << std::endl;
+            s_logger.error( "[MemoryMappedFile] Failed to close file handle (Error: " << error << ")" << std::endl;
         }
         fileHandle = INVALID_HANDLE_VALUE;
     }
