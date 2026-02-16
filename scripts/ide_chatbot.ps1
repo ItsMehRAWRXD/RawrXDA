@@ -45,6 +45,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # KNOWLEDGE BASE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -60,19 +62,19 @@ To send a swarm to a specific directory:
 
 **METHOD 1: Using Swarm Control Script**
 ```powershell
-.\swarm_control.ps1 -Operation deploy -TargetDirectory "D:\target\path" -SwarmSize 5
+.\swarm_control.ps1 -Operation deploy -TargetDirectory (Join-Path (Get-RawrXDRoot) "target") -SwarmSize 5
 ```
 
 **METHOD 2: Programmatic Approach**
 ```powershell
 Import-Module .\SwarmManager.psm1
-`$swarm = New-Swarm -Size 5 -WorkingDirectory "D:\target\path"
+`$swarm = New-Swarm -Size 5 -WorkingDirectory (Join-Path (Get-RawrXDRoot) "target")
 Start-Swarm -Swarm `$swarm -Task "Your task description"
 ```
 
 **METHOD 3: Using Model Agent Station**
 ```powershell
-.\model_agent_making_station.ps1 -Operation deploy-swarm -Directory "D:\target\path" -Agents 5 -Task "analyze code"
+.\model_agent_making_station.ps1 -Operation deploy-swarm -Directory (Join-Path (Get-RawrXDRoot) "target") -Agents 5 -Task "analyze code"
 ```
 
 **What they'll do:**
@@ -340,23 +342,23 @@ This reduces model size while maintaining performance.
 **Key File Locations:**
 
 Scripts:
-- D:\lazy init ide\scripts\todo_manager.ps1
-- D:\lazy init ide\scripts\model_agent_making_station.ps1
-- D:\lazy init ide\scripts\autonomous_finetune_bench.ps1
-- D:\lazy init ide\scripts\swarm_control.ps1
+- <project-root>\scripts\todo_manager.ps1
+- <project-root>\scripts\model_agent_making_station.ps1
+- <project-root>\scripts\autonomous_finetune_bench.ps1
+- <project-root>\scripts\swarm_control.ps1
 
 Modules:
-- D:\lazy init ide\scripts\TodoManager.psm1
-- D:\lazy init ide\scripts\Advanced-Model-Operations.psm1
+- <project-root>\scripts\TodoManager.psm1
+- <project-root>\scripts\Advanced-Model-Operations.psm1
 
 Data:
-- D:\lazy init ide\data\todos.json
-- D:\lazy init ide\data\models\
-- D:\lazy init ide\logs\
+- <project-root>\data\todos.json
+- <project-root>\data\models\
+- <project-root>\logs\
 
 Win32 Integration:
-- D:\lazy init ide\src\win32app\Win32IDE.cpp
-- D:\lazy init ide\src\win32app\TodoManager.h/cpp
+- <project-root>\src\win32app\Win32IDE.cpp
+- <project-root>\src\win32app\TodoManager.h/cpp
 "@
             }
         }

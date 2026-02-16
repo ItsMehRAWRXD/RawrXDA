@@ -5,6 +5,8 @@
 
 #Requires -Version 7.0
 
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
 
 # ============================================================================
 # 800B OPTIMIZED LOADING
@@ -37,7 +39,7 @@ function Enable-OptimizedLoading {
 Enable-OptimizedLoading
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ScanPath = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }) "src"),
+    [string]$ScanPath = (Join-Path (Get-RawrXDRoot) "src"),
 
     [Parameter(Mandatory=$false)]
     [string[]]$Extensions = @("*.ps1", "*.psm1", "*.cpp", "*.h", "*.asm", "*.cs", "*.py", "*.js", "*.ts"),
@@ -49,7 +51,7 @@ param(
     [switch]$AutoAssign,
 
     [Parameter(Mandatory=$false)]
-    [string]$TodoStoragePath = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }) "data\todos.json"),
+    [string]$TodoStoragePath = (Join-Path (Get-RawrXDRoot) "data" "todos.json"),
 
     [Parameter(Mandatory=$false)]
     [switch]$StartServer,
@@ -68,10 +70,12 @@ $ErrorActionPreference = 'Stop'
 # ============================================================================
 
 # Pattern engine (PowerShell backend)
-$patternModulePath = "C:\\Users\\HiH8e\\Documents\\PowerShell\\Modules\\RawrXD_PatternBridge\\RawrXD_PatternBridge.psm1"
-if (-not (Test-Path $patternModulePath)) {
-    throw "Pattern bridge module not found at $patternModulePath"
+$patternModulePath = if ($env:RAWRXD_PATTERN_BRIDGE_MODULE) { $env:RAWRXD_PATTERN_BRIDGE_MODULE } else { "" }
+if (-not $patternModulePath) {
+    $patternModulePath = Join-Path (Get-RawrXDRoot) "scripts" "RawrXD_PatternBridge.psm1"
 }
+$patternModulePath = Resolve-RawrXDPath $patternModulePath
+if (-not (Test-Path $patternModulePath)) { throw "Pattern bridge module not found at $patternModulePath" }
 Import-Module $patternModulePath -Force
 
 # Todo manager
