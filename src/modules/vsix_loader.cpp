@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <iostream>
 #include <shlwapi.h>
+
+#include "logging/logger.h"
+static Logger s_logger("vsix_loader");
 #pragma comment(lib, "shlwapi.lib")
 #include <zip.h> // Ensure you have libzip or similar
 
@@ -123,7 +126,7 @@ bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::path& plugin_dir
         for (const auto& [cmd, handler] : manifest["command_handlers"].items()) {
             RegisterCommand(cmd, [handler]() {
                 // Execute handler (simplified)
-                std::cout << "Executing: " << handler << std::endl;
+                s_logger.info("Executing: ");
             });
         }
     }
@@ -555,7 +558,7 @@ bool VSIXLoader::SwitchEngine(const std::string& engine_id) {
     if (it != engines_.end()) {
         current_engine_id_ = engine_id;
         // Load the engine (simplified - in reality would load DLL)
-        std::cout << "Switched to engine: " << engine_id << std::endl;
+        s_logger.info("Switched to engine: ");
         return true;
     }
     return false;

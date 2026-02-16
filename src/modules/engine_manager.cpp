@@ -4,6 +4,9 @@
 #include <fstream>
 #include <cstdlib>
 
+#include "logging/logger.h"
+static Logger s_logger("engine_manager");
+
 std::unique_ptr<EngineManager> g_engine_manager;
 
 EngineManager::EngineManager() {
@@ -69,7 +72,7 @@ bool EngineManager::SwitchEngine(const std::string& engine_id) {
     auto it = engines_.find(engine_id);
     if (it != engines_.end() && it->second->loaded) {
         current_engine_id_ = engine_id;
-        std::cout << "Switched to engine: " << engine_id << std::endl;
+        s_logger.info("Switched to engine: ");
         return true;
     }
     return false;
@@ -97,19 +100,19 @@ EngineInfo* EngineManager::GetEngine(const std::string& engine_id) {
 
 bool EngineManager::Load800BModel(const std::string& model_name) {
     if (current_engine_id_ != "800b-5drive") {
-        std::cerr << "Error: Current engine doesn't support 800B models" << std::endl;
+        s_logger.error( "Error: Current engine doesn't support 800B models" << std::endl;
         return false;
     }
     
     // Verify 5-drive setup
     if (!VerifyDriveSetup()) {
-        std::cerr << "Error: 5-drive setup not properly configured" << std::endl;
+        s_logger.error( "Error: 5-drive setup not properly configured" << std::endl;
         return false;
     }
     
     auto drives = GetDrivePaths();
     if (drives.size() != 5) {
-        std::cerr << "Error: Expected 5 drives, found " << drives.size() << std::endl;
+        s_logger.error( "Error: Expected 5 drives, found " << drives.size() << std::endl;
         return false;
     }
     
@@ -118,7 +121,7 @@ bool EngineManager::Load800BModel(const std::string& model_name) {
     for (size_t i = 0; i < 5; i++) {
         std::string part_path = drives[i] + "/" + model_name + ".part" + std::to_string(i);
         if (!std::filesystem::exists(part_path)) {
-            std::cerr << "Error: Model part not found: " << part_path << std::endl;
+            s_logger.error( "Error: Model part not found: " << part_path << std::endl;
             return false;
         }
         model_parts.push_back(part_path);
@@ -133,7 +136,7 @@ bool EngineManager::Load800BModel(const std::string& model_name) {
         output << input.rdbuf();
     }
     
-    std::cout << "Successfully loaded 800B model: " << model_name << std::endl;
+    s_logger.info("Successfully loaded 800B model: ");
     return true;
 }
 
@@ -147,7 +150,7 @@ bool EngineManager::Setup5DriveLayout(const std::string& base_dir) {
         std::filesystem::create_directories(drive_path);
     }
     
-    std::cout << "5-drive layout created at: " << base_dir << std::endl;
+    s_logger.info("5-drive layout created at: ");
     return true;
 }
 
@@ -223,7 +226,7 @@ bool EngineManager::RegisterCompiler(const std::string& compiler_id, const std::
 
 bool EngineManager::CompileWithEngine(const std::string& engine_id, const std::string& source_file) {
     if (engine_id != "rawrxd-compiler") {
-        std::cerr << "Error: Only rawrxd-compiler engine supports compilation" << std::endl;
+        s_logger.error( "Error: Only rawrxd-compiler engine supports compilation" << std::endl;
         return false;
     }
     

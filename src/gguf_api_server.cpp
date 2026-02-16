@@ -21,6 +21,9 @@
 #include <winhttp.h>
 #include <random>
 
+#include "logging/logger.h"
+static Logger s_logger("gguf_api_server");
+
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winhttp.lib")
 #pragma warning(disable : 4996)
@@ -67,13 +70,13 @@ public:
     bool Start() {
         WSADATA wsa_data;
         if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
-            std::cerr << "WSAStartup failed\n";
+            s_logger.error( "WSAStartup failed\n";
             return false;
         }
         
         listen_socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (listen_socket_ == INVALID_SOCKET) {
-            std::cerr << "socket failed\n";
+            s_logger.error( "socket failed\n";
             WSACleanup();
             return false;
         }
@@ -84,14 +87,14 @@ public:
         server_addr.sin_port = htons(port_);
         
         if (bind(listen_socket_, (sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-            std::cerr << "bind failed\n";
+            s_logger.error( "bind failed\n";
             closesocket(listen_socket_);
             WSACleanup();
             return false;
         }
         
         if (listen(listen_socket_, SOMAXCONN) == SOCKET_ERROR) {
-            std::cerr << "listen failed\n";
+            s_logger.error( "listen failed\n";
             closesocket(listen_socket_);
             WSACleanup();
             return false;
@@ -100,7 +103,7 @@ public:
         running_ = true;
         server_thread_ = std::thread(&SimpleHTTPServer::ServerLoop, this);
         
-        std::cout << "HTTP Server listening on port " << port_ << std::endl;
+        s_logger.info("HTTP Server listening on port ");
         return true;
     }
     
@@ -392,67 +395,66 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    std::cout << "\n";
-    std::cout << "╔════════════════════════════════════════════════════════╗\n";
-    std::cout << "║      GGUF API Server - Real Model Inference            ║\n";
-    std::cout << "║  HTTP Server for Ollama-compatible Model Serving       ║\n";
-    std::cout << "╚════════════════════════════════════════════════════════╝\n\n";
+    s_logger.info("\n");
+    s_logger.info("╔════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║      GGUF API Server - Real Model Inference            ║\n");
+    s_logger.info("║  HTTP Server for Ollama-compatible Model Serving       ║\n");
+    s_logger.info("╚════════════════════════════════════════════════════════╝\n\n");
     
-    std::cout << "[1/4] Verifying model file...\n";
+    s_logger.info("[1/4] Verifying model file...\n");
     if (!fs::exists(model_path)) {
-        std::cerr << "ERROR: Model not found at " << model_path << std::endl;
+        s_logger.error( "ERROR: Model not found at " << model_path << std::endl;
         return 1;
     }
     auto file_size = fs::file_size(model_path) / (1024.0 * 1024 * 1024);
-    std::cout << "  ✓ Found: " << fs::path(model_path).filename().string() 
-              << " (" << file_size << "GB)\n\n";
+    s_logger.info("  ✓ Found: ");
     
-    std::cout << "[2/4] Initializing Vulkan GPU backend...\n";
-    std::cout << "  ✓ AMD Radeon RX 7800 XT detected\n";
-    std::cout << "  ✓ Vulkan 1.4.328.1\n";
-    std::cout << "  ✓ 16GB VRAM available\n";
-    std::cout << "  ✓ GPU context initialized\n\n";
+    s_logger.info("[2/4] Initializing Vulkan GPU backend...\n");
+    s_logger.info("  ✓ AMD Radeon RX 7800 XT detected\n");
+    s_logger.info("  ✓ Vulkan 1.4.328.1\n");
+    s_logger.info("  ✓ 16GB VRAM available\n");
+    s_logger.info("  ✓ GPU context initialized\n\n");
     
-    std::cout << "[3/4] Loading GGUF model into VRAM...\n";
-    std::cout << "  ✓ Model path: " << model_path << "\n";
-    std::cout << "  ✓ Quantization: Q4_K_M\n";
-    std::cout << "  ⏳ Loading model into GPU VRAM (this may take a minute)...\n";
+    s_logger.info("[3/4] Loading GGUF model into VRAM...\n");
+    s_logger.info("  ✓ Model path: ");
+    s_logger.info("  ✓ Quantization: Q4_K_M\n");
+    s_logger.info("  ⏳ Loading model into GPU VRAM (this may take a minute)...\n");
     
     try {
         g_engine = std::make_unique<InferenceEngine>();
         if (!g_engine->loadModel(model_path)) {
-            std::cerr << "  ✗ Failed to load model\n";
+            s_logger.error( "  ✗ Failed to load model\n";
             return 1;
         }
-        std::cout << "  ✓ Model loaded successfully into GPU VRAM\n";
-        std::cout << "  ✓ Ready for inference requests\n\n";
+        s_logger.info("  ✓ Model loaded successfully into GPU VRAM\n");
+        s_logger.info("  ✓ Ready for inference requests\n\n");
     } catch (const std::exception& e) {
-        std::cerr << "  ✗ Error loading model: " << e.what() << "\n";
+        s_logger.error( "  ✗ Error loading model: " << e.what() << "\n";
         return 1;
     }
     
-    std::cout << "[4/4] Starting HTTP API Server...\n";
+    s_logger.info("[4/4] Starting HTTP API Server...\n");
     SimpleHTTPServer server(port);
     if (!server.Start()) {
-        std::cerr << "Failed to start server\n";
+        s_logger.error( "Failed to start server\n";
         return 1;
     }
     
-    std::cout << "\n";
-    std::cout << "╔════════════════════════════════════════════════════════╗\n";
-    std::cout << "║         Server Ready for Inference Requests            ║\n";
-    std::cout << "╚════════════════════════════════════════════════════════╝\n\n";
+    s_logger.info("\n");
+    s_logger.info("╔════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║         Server Ready for Inference Requests            ║\n");
+    s_logger.info("╚════════════════════════════════════════════════════════╝\n\n");
     
-    std::cout << "API Endpoints:\n";
-    std::cout << "  GET  http://localhost:" << port << "/api/tags\n";
-    std::cout << "  POST http://localhost:" << port << "/api/generate\n";
-    std::cout << "  GET  http://localhost:" << port << "/metrics\n\n";
+    s_logger.info("API Endpoints:\n");
+    s_logger.info("  GET  http://localhost:");
+    s_logger.info("  POST http://localhost:");
+    s_logger.info("  GET  http://localhost:");
     
-    std::cout << "Example usage:\n";
-    std::cout << "  curl -X GET http://localhost:" << port << "/api/tags\n";
-    std::cout << "  curl -X POST -d '{\"prompt\":\"Hello\"}' http://localhost:" << port << "/api/generate\n\n";
+    s_logger.info("Example usage:\n");
+    s_logger.info("  curl -X GET http://localhost:");
+    s_logger.info("  curl -X POST -d '{\");
     
-    std::cout << "Running... Press Ctrl+C to exit.\n\n";
+    s_logger.info("Running... Press Ctrl+C to exit.\n\n");
     
     // Keep running
     while (true) {

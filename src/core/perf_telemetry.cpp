@@ -10,6 +10,9 @@
 
 #include "perf_telemetry.hpp"
 
+#include "logging/logger.h"
+static Logger s_logger("perf_telemetry");
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -74,8 +77,7 @@ PerfResult PerfTelemetry::initialize() {
     registerDefaultKernels();
     m_initialized = true;
 
-    std::cout << "[PerfTelemetry] Initialized — " << MAX_PERF_SLOTS
-              << " measurement slots available" << std::endl;
+    s_logger.info("[PerfTelemetry] Initialized — ");
 
     return PerfResult::ok("Initialized");
 }
@@ -331,8 +333,7 @@ void PerfTelemetry::captureBaseline() {
     }
     m_baselineCaptured = true;
 
-    std::cout << "[PerfTelemetry] Baseline captured across " << getActiveSlotCount()
-              << " active slots" << std::endl;
+    s_logger.info("[PerfTelemetry] Baseline captured across ");
 }
 
 bool PerfTelemetry::checkDrift(uint32_t slotIndex, double threshold) const {

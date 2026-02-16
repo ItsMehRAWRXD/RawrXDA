@@ -3,6 +3,9 @@
 #include <string>
 #include "../cpu_inference_engine.h"
 
+#include "logging/logger.h"
+static Logger s_logger("Titan_Bridge");
+
 // Define the Titan Context structure matching the ASM alignment
 struct TitanContext {
     CPUInference::CPUInferenceEngine* engine;
@@ -36,9 +39,9 @@ extern "C" {
         bool result = ctx->engine->LoadModel(std::string(path));
         
         if (result) {
-            std::cout << "[Titan] Model loaded: " << path << std::endl;
+            s_logger.info("[Titan] Model loaded: ");
         } else {
-            std::cerr << "[Titan] Failed to load model: " << path << std::endl;
+            s_logger.error( "[Titan] Failed to load model: " << path << std::endl;
             // Clean up on failure
             delete ctx->engine;
             ctx->engine = nullptr;
@@ -62,14 +65,14 @@ extern "C" {
         TitanContext* ctx = (TitanContext*)lpParam;
         if (!ctx || !ctx->engine) return 1;
         
-        std::cout << "[Titan] Inference Thread Started." << std::endl;
+        s_logger.info("[Titan] Inference Thread Started.");
         
         // Main Loop
         while (!ctx->shouldExit) {
             // Check for prompt from Pipe Server (via global g_InputState)
             if (g_InputState == 1) {
                  std::string prompt(g_InputBuffer);
-                 std::cout << "[Titan] Processing Prompt: " << prompt << std::endl;
+                 s_logger.info("[Titan] Processing Prompt: ");
 
                  // Real Inference Pass
                  std::vector<int32_t> tokens = ctx->engine->Tokenize(prompt);

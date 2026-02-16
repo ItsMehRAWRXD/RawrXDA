@@ -13,6 +13,9 @@
 #include <sstream>
 #include <cstring>
 
+#include "logging/logger.h"
+static Logger s_logger("replay_reporter");
+
 using json = nlohmann::json;
 
 // ============================================================================
@@ -21,39 +24,34 @@ using json = nlohmann::json;
 
 void ReplayReporter::printVerdict(const std::string& fixtureId,
                                   const OracleVerdict& verdict) {
-    std::cout << "  " << passFailTag(verdict.pass) << " " << fixtureId;
+    s_logger.info("  ");
 
     if (verdict.pass) {
-        std::cout << " — " << formatPercent(verdict.successRate)
-                  << " match, " << verdict.matchedFiles << " files"
-                  << ", " << formatDuration(verdict.replayDurationMs);
+        s_logger.info(" — ");
     } else {
-        std::cout << " — " << verdict.failureReason;
+        s_logger.info(" — ");
     }
 
     if (verdict.sequenceDeviations > 0) {
-        std::cout << " [" << verdict.sequenceDeviations << " deviations]";
+        s_logger.info(" [");
     }
 
-    std::cout << "\n";
+    s_logger.info("\n");
 }
 
 void ReplayReporter::printBatchSummary(const BatchResult& batch) {
-    std::cout << "────────────────────────────────────────────────────\n";
-    std::cout << "  Replay Harness Results\n";
-    std::cout << "────────────────────────────────────────────────────\n";
+    s_logger.info("────────────────────────────────────────────────────\n");
+    s_logger.info("  Replay Harness Results\n");
+    s_logger.info("────────────────────────────────────────────────────\n");
 
     for (const auto& entry : batch.entries) {
         printVerdict(entry.fixtureId, entry.verdict);
     }
 
-    std::cout << "────────────────────────────────────────────────────\n";
-    std::cout << "  Total: " << batch.total
-              << "  Passed: " << batch.passed
-              << "  Failed: " << batch.failed
-              << "  Skipped: " << batch.skipped << "\n";
-    std::cout << "  Duration: " << formatDuration(batch.totalDurationMs) << "\n";
-    std::cout << "────────────────────────────────────────────────────\n";
+    s_logger.info("────────────────────────────────────────────────────\n");
+    s_logger.info("  Total: ");
+    s_logger.info("  Duration: ");
+    s_logger.info("────────────────────────────────────────────────────\n");
 }
 
 // ============================================================================
