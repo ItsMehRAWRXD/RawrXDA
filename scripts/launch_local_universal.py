@@ -31,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--web-port", type=int, default=8088, help="Web bind port")
     parser.add_argument("--backend-only", action="store_true", help="Start backend only")
     parser.add_argument("--web-only", action="store_true", help="Start web only")
+    parser.add_argument("--cli", action="store_true", help="Launch local CLI after startup")
     parser.add_argument("--open-browser", action="store_true", help="Open browser after startup")
     parser.add_argument("--ready-timeout", type=float, default=20.0, help="Seconds to wait for services")
     return parser.parse_args()
@@ -60,6 +61,13 @@ def build_web_command(args: argparse.Namespace) -> list[str]:
         "--directory",
         str(web_dir),
     ]
+
+
+def build_cli_command(backend_url: str) -> list[str]:
+    cli_path = ROOT / "Ship" / "rawrxd_cli_local.py"
+    if not cli_path.exists():
+        raise FileNotFoundError("CLI entrypoint not found at Ship/rawrxd_cli_local.py")
+    return [sys.executable, str(cli_path), "--api-url", backend_url]
 
 
 def wait_for_http(url: str, timeout_s: float) -> bool:
@@ -131,6 +139,12 @@ def main() -> int:
 
         if args.open_browser and not args.backend_only:
             webbrowser.open(launch_url, new=2)
+
+        if args.cli and not args.web_only:
+            cli_cmd = build_cli_command(backend_url)
+            print(f"[local-launch] opening CLI: {' '.join(cli_cmd)}")
+            subprocess.run(cli_cmd, cwd=str(ROOT), check=False)
+            return 0
 
         print("[local-launch] press Ctrl+C to stop")
         while True:
