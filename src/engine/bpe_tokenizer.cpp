@@ -5,6 +5,9 @@
 #include <array>
 #include <set>
 
+// SCAFFOLD_107: BPE tokenizer (tiktoken)
+
+
 bool BPETokenizer::load(const std::string& vocab_file, const std::string& merges_file) {
     // Load vocab (token -> id)
     std::ifstream vf(vocab_file);

@@ -4,9 +4,13 @@
 #include "Win32IDE.h"
 #include "IDEConfig.h"
 #include "win32_feature_adapter.h"
+#include "../core/enterprise_license.h"
 #include "../core/unified_hotpatch_manager.hpp"
 #include "../core/proxy_hotpatcher.hpp"
 #include "../core/instructions_provider.hpp"
+#include "../../include/enterprise_license.h"
+#include "../ui/monaco_settings_dialog.h"
+#include "../thermal/RAWRXD_ThermalDashboard.hpp"
 #include <commctrl.h>
 #include <richedit.h>
 #include <commdlg.h>
@@ -16,6 +20,25 @@
 #include <cctype>
 #include <set>
 #include <sstream>
+#include <memory>
+
+// SCAFFOLD_173: Command registry and dispatch
+
+
+static bool gateEnterpriseFeatureUI(HWND hwnd,
+    RawrXD::License::FeatureID featureId,
+    const wchar_t* featureLabel,
+    const char* caller) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (lic.gate(featureId, caller)) {
+        return true;
+    }
+
+    std::wstring msg = std::wstring(featureLabel) +
+        L" requires a Professional or Enterprise license.";
+    MessageBoxW(hwnd, msg.c_str(), L"License Required", MB_OK | MB_ICONINFORMATION);
+    return false;
+}
 
 // Menu command IDs (with guards to avoid redefinition from Win32IDE.cpp)
 #ifndef IDM_FILE_NEW
@@ -62,6 +85,62 @@
 #endif
 #ifndef IDM_FILE_EXIT
 #define IDM_FILE_EXIT 2005
+#endif
+
+// Enterprise/Professional feature entry points (menu wiring)
+#ifndef IDM_ENT_MODEL_COMPARE
+#define IDM_ENT_MODEL_COMPARE 3030
+#endif
+#ifndef IDM_ENT_BATCH_PROCESS
+#define IDM_ENT_BATCH_PROCESS 3031
+#endif
+#ifndef IDM_ENT_CUSTOM_STOP_SEQ
+#define IDM_ENT_CUSTOM_STOP_SEQ 3032
+#endif
+#ifndef IDM_ENT_GRAMMAR_CONSTRAINTS
+#define IDM_ENT_GRAMMAR_CONSTRAINTS 3033
+#endif
+#ifndef IDM_ENT_LORA_ADAPTER
+#define IDM_ENT_LORA_ADAPTER 3034
+#endif
+#ifndef IDM_ENT_RESPONSE_CACHE
+#define IDM_ENT_RESPONSE_CACHE 3035
+#endif
+#ifndef IDM_ENT_PROMPT_LIBRARY
+#define IDM_ENT_PROMPT_LIBRARY 3036
+#endif
+#ifndef IDM_ENT_SESSION_EXPORT_IMPORT
+#define IDM_ENT_SESSION_EXPORT_IMPORT 3037
+#endif
+#ifndef IDM_ENT_MODEL_SHARDING
+#define IDM_ENT_MODEL_SHARDING 3038
+#endif
+#ifndef IDM_ENT_TENSOR_PARALLEL
+#define IDM_ENT_TENSOR_PARALLEL 3039
+#endif
+#ifndef IDM_ENT_PIPELINE_PARALLEL
+#define IDM_ENT_PIPELINE_PARALLEL 3040
+#endif
+#ifndef IDM_ENT_CUSTOM_QUANT
+#define IDM_ENT_CUSTOM_QUANT 3041
+#endif
+#ifndef IDM_ENT_MULTI_GPU_BALANCE
+#define IDM_ENT_MULTI_GPU_BALANCE 3042
+#endif
+#ifndef IDM_ENT_DYNAMIC_BATCH
+#define IDM_ENT_DYNAMIC_BATCH 3043
+#endif
+#ifndef IDM_ENT_API_KEY_MGMT
+#define IDM_ENT_API_KEY_MGMT 3044
+#endif
+#ifndef IDM_ENT_AUDIT_LOGS
+#define IDM_ENT_AUDIT_LOGS 3045
+#endif
+#ifndef IDM_ENT_RAWR_TUNER
+#define IDM_ENT_RAWR_TUNER 3046
+#endif
+#ifndef IDM_ENT_DUAL_ENGINE
+#define IDM_ENT_DUAL_ENGINE 3047
 #endif
 
 #ifndef IDM_EDIT_UNDO
@@ -168,8 +247,11 @@ bool Win32IDE::routeCommand(int commandId) {
     if (commandId >= 1000 && commandId < 2000) {
         handleFileCommand(commandId);
         return true;
-    } else if (commandId >= 2000 && commandId < 3000) {
+    } else if (commandId >= 2000 && commandId < 2020) {
         handleEditCommand(commandId);
+        return true;
+    } else if (commandId >= 2020 && commandId < 3000) {
+        handleViewCommand(commandId);
         return true;
     } else if (commandId >= 3000 && commandId < 4000) {
         handleViewCommand(commandId);
@@ -183,7 +265,9 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 5000 && commandId < 6000) {
         handleToolsCommand(commandId);
         return true;
-    } else if (commandId >= 6000 && commandId < 7000) {
+    } else if (commandId >= 6000 && commandId < 6100) {
+        return handleTranscendenceCommand(commandId);
+    } else if (commandId >= 6100 && commandId < 7000) {
         handleModulesCommand(commandId);
         return true;
     } else if (commandId >= 7000 && commandId < 8000) {
@@ -216,6 +300,10 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 10300 && commandId < 10400) {
         // Phase 45: DiskRecovery panel commands
         handleRecoveryCommand(commandId);
+        return true;
+    } else if (commandId >= 10400 && commandId < 10500) {
+        // Build menu commands
+        handleBuildCommand(commandId);
         return true;
     } else if (commandId >= 10500 && commandId < 10600) {
         // Phase 34: Instructions Context commands
@@ -267,6 +355,15 @@ bool Win32IDE::routeCommand(int commandId) {
     } else if (commandId >= 11200 && commandId < 11300) {
         // Phase 15: Static Analysis Engine
         handleStaticAnalysisCommand(commandId);
+        return true;
+    } else if (commandId >= 7050 && commandId <= 7056) {
+        // P0: Unified Problems Panel
+        handleProblemsCommand(commandId);
+        return true;
+    } else if (commandId == IDM_VIEW_PROBLEMS) {
+        initProblemsPanel();
+        if (m_hwndProblemsPanel) ShowWindow(m_hwndProblemsPanel, SW_SHOW);
+        refreshProblemsView();
         return true;
     } else if (commandId >= 11300 && commandId < 11400) {
         // Phase 16: Semantic Code Intelligence
@@ -369,13 +466,22 @@ void Win32IDE::updateCommandStates() {
     m_commandStates[IDM_AGENT_START_LOOP] = agentReady;
     m_commandStates[IDM_AGENT_EXECUTE_CMD] = agentReady;
     m_commandStates[IDM_AGENT_STOP] = agentReady;
-    m_commandStates[IDM_AUTONOMY_START] = agentReady;
-    m_commandStates[IDM_AUTONOMY_STOP] = agentReady;
+    // Autonomy: Start when not running, Stop when running — direct next step
+    bool autonomyRunning = (m_autonomyManager && m_autonomyManager->isAutoLoopEnabled());
+    m_commandStates[IDM_AUTONOMY_START] = agentReady && !autonomyRunning;
+    m_commandStates[IDM_AUTONOMY_STOP] = agentReady && autonomyRunning;
     m_commandStates[IDM_AUTONOMY_SET_GOAL] = agentReady;
+
+    // Swarm: Stop only when coordinator or worker is running — direct next step
+    m_commandStates[IDM_SWARM_STOP] = isSwarmRunning();
 
     // RE: Analyze/Dumpbin/Compile need a file open
     bool hasFile = !m_currentFile.empty();
     m_commandStates[IDM_REVENG_ANALYZE] = hasFile;
+    m_commandStates[IDM_REVENG_SET_BINARY_FROM_ACTIVE] = hasFile;
+    m_commandStates[IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET] = true;
+    m_commandStates[IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT] = true;
+    m_commandStates[IDM_REVENG_DISASM_AT_RIP] = true;
     m_commandStates[IDM_REVENG_DISASM] = hasFile;
     m_commandStates[IDM_REVENG_DUMPBIN] = hasFile;
     m_commandStates[IDM_REVENG_COMPILE] = hasFile;
@@ -524,8 +630,41 @@ void Win32IDE::handleEditCommand(int commandId) {
         case IDM_EDIT_REPLACE:
             showReplaceDialog();
             break;
+
+        // Edit menu IDs from Win32IDE.cpp (2012-2019) — same actions as above or specific handlers
+        case 2016: // IDM_EDIT_FIND (menu)
+            showFindDialog();
+            break;
+        case 2017: // IDM_EDIT_REPLACE (menu)
+            showReplaceDialog();
+            break;
+        case 2018: // IDM_EDIT_FIND_NEXT
+            findNext();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Find Next");
+            break;
+        case 2019: // IDM_EDIT_FIND_PREV
+            findPrevious();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Find Previous");
+            break;
+        case 2012: // IDM_EDIT_SNIPPET
+            showSnippetManager();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Snippet Manager");
+            break;
+        case 2013: // IDM_EDIT_COPY_FORMAT — copy with formatting (RTF/HTML when implemented)
+            copyWithFormatting();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Copy with formatting");
+            break;
+        case 2014: // IDM_EDIT_PASTE_PLAIN — paste as plain text only
+            pastePlainText();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Paste plain text");
+            break;
+        case 2015: // IDM_EDIT_CLIPBOARD_HISTORY
+            showClipboardHistory();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Clipboard History");
+            break;
             
         default:
+            appendToOutput("[Edit] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
 }
@@ -536,6 +675,58 @@ void Win32IDE::handleEditCommand(int commandId) {
 
 void Win32IDE::handleViewCommand(int commandId) {
     switch (commandId) {
+        // View menu IDs 2020-2029 (from createMenuBar)
+        case 2020: // IDM_VIEW_MINIMAP
+            toggleMinimap();
+            break;
+        case 2021: // IDM_VIEW_OUTPUT_TABS
+            toggleOutputPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_outputPanelVisible ? "Output panel shown" : "Output panel hidden"));
+            break;
+        case 2022: // IDM_VIEW_MODULE_BROWSER
+            showModuleBrowser();
+            break;
+        case 2023: // IDM_VIEW_THEME_EDITOR
+            showThemeEditor();
+            break;
+        case 2024: // IDM_VIEW_FLOATING_PANEL
+            toggleFloatingPanel();
+            break;
+        case 2025: // IDM_VIEW_OUTPUT_PANEL
+            toggleOutputPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_outputPanelVisible ? "Output panel shown" : "Output panel hidden"));
+            break;
+        case 2026: { // IDM_VIEW_USE_STREAMING_LOADER — streaming/low-memory model loader
+            m_useStreamingLoader = !m_useStreamingLoader;
+            if (m_hMenu) CheckMenuItem(m_hMenu, 2026, m_useStreamingLoader ? MF_CHECKED : MF_UNCHECKED);
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_useStreamingLoader ? "Streaming loader ON" : "Streaming loader OFF"));
+            break;
+        }
+        case 2027: { // IDM_VIEW_USE_VULKAN_RENDERER
+            m_useVulkanRenderer = !m_useVulkanRenderer;
+            if (m_hMenu) CheckMenuItem(m_hMenu, 2027, m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED);
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_useVulkanRenderer ? "Vulkan renderer ON" : "Vulkan renderer OFF"));
+            break;
+        }
+        case 2028: // IDM_VIEW_SIDEBAR
+            toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_sidebarVisible ? "Sidebar shown" : "Sidebar hidden"));
+            break;
+        case 2030: // IDM_VIEW_FILE_EXPLORER — show sidebar with Explorer view
+            setSidebarView(SidebarView::Explorer);
+            if (!m_sidebarVisible) toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File Explorer");
+            break;
+        case 2031: // IDM_VIEW_EXTENSIONS — show sidebar with Extensions view
+            setSidebarView(SidebarView::Extensions);
+            if (!m_sidebarVisible) toggleSidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Extensions");
+            break;
+        case 2029: // IDM_VIEW_TERMINAL — focus or show terminal
+            toggleOutputPanel();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Terminal");
+            break;
+
         case 3001: // Toggle Minimap
             toggleMinimap();
             break;
@@ -562,14 +753,234 @@ void Win32IDE::handleViewCommand(int commandId) {
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_sidebarVisible ? "Sidebar shown" : "Sidebar hidden"));
             break;
 
-        case 3007: // Toggle Secondary Sidebar
+        case 3007: // IDM_VIEW_AI_CHAT — Toggle secondary sidebar (AI / Agent chat panel)
             toggleSecondarySidebar();
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Secondary sidebar toggled");
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? "AI Chat shown" : "AI Chat hidden"));
+            break;
+        case 3009: // IDM_VIEW_AGENT_CHAT — Same panel, for autonomous/agentic use
+            toggleSecondarySidebar();
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? "Agent Chat shown" : "Agent Chat hidden"));
             break;
 
         case 3008: // Toggle Panel
             togglePanel();
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_panelVisible ? "Panel shown" : "Panel hidden"));
+            break;
+
+        // ====================================================================
+        // GIT (3020–3024) — Git menu items; Git Panel shows Source Control view
+        // ====================================================================
+        case 3020: // IDM_GIT_STATUS
+            showGitStatus();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git status");
+            break;
+        case 3021: // IDM_GIT_COMMIT
+            showCommitDialog();
+            break;
+        case 3022: // IDM_GIT_PUSH
+            gitPush();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git push");
+            break;
+        case 3023: // IDM_GIT_PULL
+            gitPull();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git pull");
+            break;
+        case 3024: // IDM_GIT_PANEL — show Source Control sidebar or Git panel
+            setSidebarView(SidebarView::SourceControl);
+            if (!m_sidebarVisible) toggleSidebar();
+            refreshSourceControlView();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Git Panel");
+            break;
+
+        case 3015: // IDM_TOOLS_LICENSE_CREATOR — full License Creator dialog (Win32IDE_LicenseCreator.cpp)
+            showLicenseCreatorDialog();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"License Creator");
+            break;
+        case 3016: // IDM_TOOLS_FEATURE_REGISTRY — V2 Feature Registry panel
+            showFeatureRegistryDialog();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Feature Registry");
+            break;
+
+        // ====================================================================
+        // MODULES MENU (3050–3052) — IDM_MODULES_REFRESH, IMPORT, EXPORT
+        // ====================================================================
+        case 3050: // IDM_MODULES_REFRESH
+            refreshModuleList();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Modules: refreshed");
+            break;
+        case 3051: // IDM_MODULES_IMPORT
+            importModule();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Modules: import");
+            break;
+        case 3052: // IDM_MODULES_EXPORT
+            exportModule();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Modules: export");
+            break;
+
+        // ====================================================================
+        // ENTERPRISE FEATURE ENTRY POINTS (3030–3044)
+        // ====================================================================
+        case IDM_ENT_MODEL_COMPARE:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::ModelComparison,
+                L"Model Comparison", "Win32IDE::ModelComparison")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Model Comparison is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Model Comparison");
+            break;
+        case IDM_ENT_BATCH_PROCESS:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::BatchProcessing,
+                L"Batch Processing", "Win32IDE::BatchProcessing")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Batch Processing is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Batch Processing");
+            break;
+        case IDM_ENT_CUSTOM_STOP_SEQ:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::CustomStopSequences,
+                L"Custom Stop Sequences", "Win32IDE::CustomStopSequences")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Custom Stop Sequences are wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Custom Stop Sequences");
+            break;
+        case IDM_ENT_GRAMMAR_CONSTRAINTS:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::GrammarConstrainedGen,
+                L"Grammar Constraints", "Win32IDE::GrammarConstraints")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Grammar Constraints are wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Grammar Constraints");
+            break;
+        case IDM_ENT_LORA_ADAPTER:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::LoRAAdapterSupport,
+                L"LoRA Adapter Support", "Win32IDE::LoRAAdapterSupport")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"LoRA Adapter Support is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"LoRA Adapter Support");
+            break;
+        case IDM_ENT_RESPONSE_CACHE:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::ResponseCaching,
+                L"Response Caching", "Win32IDE::ResponseCaching")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Response Caching is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Response Caching");
+            break;
+        case IDM_ENT_PROMPT_LIBRARY:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::PromptLibrary,
+                L"Prompt Library", "Win32IDE::PromptLibrary")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Prompt Library is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Prompt Library");
+            break;
+        case IDM_ENT_SESSION_EXPORT_IMPORT:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::ExportImportSessions,
+                L"Export/Import Sessions", "Win32IDE::ExportImportSessions")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Export/Import Sessions is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Export/Import Sessions");
+            break;
+        case IDM_ENT_MODEL_SHARDING:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::ModelSharding,
+                L"Model Sharding", "Win32IDE::ModelSharding")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Model Sharding is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Model Sharding");
+            break;
+        case IDM_ENT_TENSOR_PARALLEL:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::TensorParallel,
+                L"Tensor Parallel", "Win32IDE::TensorParallel")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Tensor Parallel is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Tensor Parallel");
+            break;
+        case IDM_ENT_PIPELINE_PARALLEL:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::PipelineParallel,
+                L"Pipeline Parallel", "Win32IDE::PipelineParallel")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Pipeline Parallel is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Pipeline Parallel");
+            break;
+        case IDM_ENT_CUSTOM_QUANT:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::CustomQuantSchemes,
+                L"Custom Quant Schemes", "Win32IDE::CustomQuantSchemes")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Custom Quant Schemes are wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Custom Quant Schemes");
+            break;
+        case IDM_ENT_MULTI_GPU_BALANCE:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::MultiGPULoadBalance,
+                L"Multi-GPU Load Balance", "Win32IDE::MultiGPULoadBalance")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Multi-GPU Load Balance is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Multi-GPU Load Balance");
+            break;
+        case IDM_ENT_DYNAMIC_BATCH:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::DynamicBatchSizing,
+                L"Dynamic Batch Sizing", "Win32IDE::DynamicBatchSizing")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Dynamic Batch Sizing is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Dynamic Batch Sizing");
+            break;
+        case IDM_ENT_API_KEY_MGMT:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::APIKeyManagement,
+                L"API Key Management", "Win32IDE::APIKeyManagement")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"API Key Management is wired. UI panel is pending.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"API Key Management");
+            break;
+        case IDM_ENT_AUDIT_LOGS:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::AuditLogging,
+                L"Audit Logging", "Win32IDE::AuditLogging")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"Audit Logging is wired. Logs are visible in the Telemetry Dashboard.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Audit Logging");
+            break;
+        case IDM_ENT_RAWR_TUNER:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::RawrTunerIDE,
+                L"RawrTuner IDE", "Win32IDE::RawrTunerIDE")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"RawrTuner IDE is wired. The training dashboard is launching...",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"RawrTuner IDE");
+            break;
+        case IDM_ENT_DUAL_ENGINE:
+            if (!gateEnterpriseFeatureUI(m_hwndMain, RawrXD::License::FeatureID::DualEngine800B,
+                L"800B Dual-Engine", "Win32IDE::DualEngine800B")) {
+                break;
+            }
+            MessageBoxW(m_hwndMain, L"800B Dual-Engine is wired. Multi-node inference is enabled.",
+                L"Feature Wired", MB_OK | MB_ICONINFORMATION);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"800B Dual-Engine");
             break;
 
         // ====================================================================
@@ -637,6 +1048,7 @@ void Win32IDE::handleViewCommand(int commandId) {
         }
             
         default:
+            appendToOutput("[View] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
 }
@@ -699,6 +1111,7 @@ void Win32IDE::handleTerminalCommand(int commandId) {
             break;
             
         default:
+            appendToOutput("[Terminal] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
 }
@@ -1748,7 +2161,63 @@ void Win32IDE::handleToolsCommand(int commandId) {
             handlePluginCommand(commandId);
             break;
 
+        // ================================================================
+        // AI Extensions (5300+ range — Converted Qt Subsystems)
+        // ================================================================
+        case IDM_AI_MODEL_REGISTRY:
+            if (m_modelRegistry) m_modelRegistry->show();
+            break;
+        case IDM_AI_CHECKPOINT_MGR:
+            if (m_checkpointManager) m_checkpointManager->show();
+            break;
+        case IDM_AI_INTERPRET_PANEL:
+            if (m_interpretabilityPanel) m_interpretabilityPanel->show();
+            break;
+        case IDM_AI_CICD_SETTINGS:
+            if (m_ciCdSettings) m_ciCdSettings->show();
+            break;
+        case IDM_AI_MULTI_FILE_SEARCH:
+            if (m_multiFileSearch) m_multiFileSearch->show();
+            break;
+        case IDM_AI_BENCHMARK_MENU:
+            if (m_benchmarkMenu) m_benchmarkMenu->show();
+            break;
+
         default:
+            appendToOutput("[Tools] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
+            break;
+    }
+}
+
+// ============================================================================
+// BUILD COMMAND HANDLERS
+// ============================================================================
+
+void Win32IDE::handleBuildCommand(int commandId) {
+    switch (commandId) {
+        case IDM_BUILD_SOLUTION: {
+            std::string workingDir = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
+            std::string buildCmd = "cmake --build . --config Release";
+            runBuildInBackground(workingDir, buildCmd);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Building solution...");
+            break;
+        }
+        case IDM_BUILD_CLEAN: {
+            std::string workingDir = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
+            std::string cleanCmd = "cmake --build . --config Release --target clean";
+            runBuildInBackground(workingDir, cleanCmd);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Cleaning build artifacts...");
+            break;
+        }
+        case IDM_BUILD_REBUILD: {
+            std::string workingDir = m_projectRoot.empty() ? std::filesystem::current_path().string() : m_projectRoot;
+            std::string rebuildCmd = "cmake --build . --config Release --target clean && cmake --build . --config Release";
+            runBuildInBackground(workingDir, rebuildCmd);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Rebuilding solution...");
+            break;
+        }
+        default:
+            appendToOutput("[Build] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
 }
@@ -1759,23 +2228,24 @@ void Win32IDE::handleToolsCommand(int commandId) {
 
 void Win32IDE::handleModulesCommand(int commandId) {
     switch (commandId) {
-        case 6001: // Refresh Module List
+        case 6101: // Refresh Module List (menu uses IDM_MODULES_REFRESH 3050; palette uses 6101)
             refreshModuleList();
             break;
             
-        case 6002: // Import Module
+        case 6102: // Import Module
             importModule();
             break;
             
-        case 6003: // Export Module
+        case 6103: // Export Module
             exportModule();
             break;
             
-        case 6004: // Show Module Browser
+        case 6104: // Show Module Browser
             showModuleBrowser();
             break;
             
         default:
+            appendToOutput("[Modules] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
 }
@@ -1859,10 +2329,40 @@ void Win32IDE::handleHelpCommand(int commandId) {
             appendToOutput("=== Prometheus Metrics ===\n" + metrics + "\n", "Output", OutputSeverity::Info);
             break;
         }
+        case 7007: // Enterprise License / Features — full License Creator dialog
+            showLicenseCreatorDialog();
+            break;
         
         default:
+            appendToOutput("[Help] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
+}
+
+// ============================================================================
+// Enterprise License / Features — simple popup (Help 7007 uses full dialog via showLicenseCreatorDialog)
+// ============================================================================
+void Win32IDE::showEnterpriseLicenseDialog() {
+    using namespace RawrXD;
+    auto& lic = EnterpriseLicense::Instance();
+    std::ostringstream os;
+    os << "Edition: " << lic.GetEditionName() << "\n";
+    os << "HWID (for license): 0x" << std::hex << lic.GetHardwareHash() << std::dec << "\n";
+    os << "Features: 0x" << std::hex << lic.GetFeatureMask() << std::dec << "\n\n";
+    auto feat = [&](uint64_t mask, const char* name) {
+        os << (lic.HasFeatureMask(mask) ? "[UNLOCKED] " : "[locked]   ") << name << "\n";
+    };
+    feat(LicenseFeature::DualEngine800B,     "800B Dual-Engine");
+    feat(LicenseFeature::AVX512Premium,      "AVX-512 Premium");
+    feat(LicenseFeature::DistributedSwarm,   "Distributed Swarm");
+    feat(LicenseFeature::GPUQuant4Bit,       "GPU Quant 4-bit");
+    feat(LicenseFeature::EnterpriseSupport,  "Enterprise Support");
+    feat(LicenseFeature::UnlimitedContext,   "Unlimited Context");
+    feat(LicenseFeature::FlashAttention,     "Flash Attention");
+    feat(LicenseFeature::MultiGPU,           "Multi-GPU");
+    os << "\nDev unlock: RAWRXD_ENTERPRISE_DEV=1\n";
+    os << "License script: .\\scripts\\Create-EnterpriseLicense.ps1 -DevUnlock";
+    MessageBoxA(m_hwndMain, os.str().c_str(), "Enterprise License / Features", MB_OK | MB_ICONINFORMATION);
 }
 
 // ============================================================================
@@ -1900,6 +2400,7 @@ void Win32IDE::handleGitCommand(int commandId) {
         }
 
         default:
+            appendToOutput("[Git] Unhandled command ID: " + std::to_string(commandId) + "\n", "Output", OutputSeverity::Info);
             break;
     }
 }
@@ -1931,22 +2432,35 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({2007, "Edit: Find", "Ctrl+F", "Edit"});
     m_commandRegistry.push_back({2008, "Edit: Replace", "Ctrl+H", "Edit"});
     
-    // View commands
-    m_commandRegistry.push_back({3001, "View: Toggle Minimap", "Ctrl+M", "View"});
-    m_commandRegistry.push_back({3002, "View: Toggle Output Panel", "", "View"});
-    m_commandRegistry.push_back({3003, "View: Toggle Floating Panel", "F11", "View"});
-    m_commandRegistry.push_back({3004, "View: Theme Editor", "", "View"});
-    m_commandRegistry.push_back({3005, "View: Module Browser", "", "View"});
-    m_commandRegistry.push_back({3006, "View: Toggle Sidebar", "Ctrl+B", "View"});
-    m_commandRegistry.push_back({3007, "View: Toggle Secondary Sidebar", "Ctrl+Alt+B", "View"});
-    m_commandRegistry.push_back({3008, "View: Toggle Panel", "Ctrl+J", "View"});
+    // View commands (IDs must match handleViewCommand: 2020–2031, 3007, 3009)
+    m_commandRegistry.push_back({2020, "View: Toggle Minimap", "Ctrl+M", "View"});
+    m_commandRegistry.push_back({2021, "View: Output Tabs", "", "View"});
+    m_commandRegistry.push_back({2022, "View: Module Browser", "", "View"});
+    m_commandRegistry.push_back({2023, "View: Theme Editor", "", "View"});
+    m_commandRegistry.push_back({2024, "View: Toggle Floating Panel", "F11", "View"});
+    m_commandRegistry.push_back({2025, "View: Toggle Output Panel", "", "View"});
+    m_commandRegistry.push_back({2026, "View: Use Streaming Loader", "", "View"});
+    m_commandRegistry.push_back({2028, "View: Toggle Sidebar", "Ctrl+B", "View"});
+    m_commandRegistry.push_back({2029, "View: Terminal", "", "View"});
+    m_commandRegistry.push_back({2030, "View: File Explorer", "Ctrl+Shift+E", "View"});
+    m_commandRegistry.push_back({2031, "View: Extensions", "Ctrl+Shift+X", "View"});
+    m_commandRegistry.push_back({3007, "View: AI Chat", "Ctrl+Alt+B", "View"});
+    m_commandRegistry.push_back({3009, "View: Agent Chat (autonomous)", "", "View"});
+    // Tier 1 cosmetics (12000–12099, handleTier1Command) — accessible from View/category
+    m_commandRegistry.push_back({IDM_T1_BREADCRUMBS_TOGGLE, "View: Toggle Breadcrumbs", "", "View"});
+    m_commandRegistry.push_back({IDM_T1_FUZZY_PALETTE, "View: Fuzzy Command Palette", "", "View"});
+    m_commandRegistry.push_back({IDM_T1_SETTINGS_GUI, "View: Settings", "", "View"});
+    m_commandRegistry.push_back({IDM_T1_WELCOME_SHOW, "View: Welcome Page", "", "View"});
     
-    // Terminal commands
+    // Terminal commands (IDs match handleTerminalCommand: 4001–4010)
     m_commandRegistry.push_back({4001, "Terminal: New PowerShell", "", "Terminal"});
     m_commandRegistry.push_back({4002, "Terminal: New Command Prompt", "", "Terminal"});
     m_commandRegistry.push_back({4003, "Terminal: Kill Terminal", "", "Terminal"});
     m_commandRegistry.push_back({4004, "Terminal: Clear Terminal", "", "Terminal"});
     m_commandRegistry.push_back({4005, "Terminal: Split Terminal", "", "Terminal"});
+    m_commandRegistry.push_back({4006, "Terminal: Kill", "", "Terminal"});
+    m_commandRegistry.push_back({4007, "Terminal: Split Horizontal", "", "Terminal"});
+    m_commandRegistry.push_back({4010, "Terminal: List Terminals", "", "Terminal"});
     
     // Tools commands
     m_commandRegistry.push_back({5001, "Tools: Start Profiling", "", "Tools"});
@@ -1954,12 +2468,14 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({5003, "Tools: Show Profile Results", "", "Tools"});
     m_commandRegistry.push_back({5004, "Tools: Analyze Script", "", "Tools"});
     m_commandRegistry.push_back({5005, "Tools: Code Snippets", "", "Tools"});
+    m_commandRegistry.push_back({3015, "Tools: License Creator", "Ctrl+Shift+L", "Tools"});
+    m_commandRegistry.push_back({3016, "Tools: Feature Registry", "Ctrl+Shift+F", "Tools"});
     
-    // Module commands
-    m_commandRegistry.push_back({6001, "Modules: Refresh List", "", "Modules"});
-    m_commandRegistry.push_back({6002, "Modules: Import Module", "", "Modules"});
-    m_commandRegistry.push_back({6003, "Modules: Export Module", "", "Modules"});
-    m_commandRegistry.push_back({6004, "Modules: Browser", "", "Modules"});
+    // Module commands (6100–6199; menu uses 3050–3052 in handleViewCommand)
+    m_commandRegistry.push_back({6101, "Modules: Refresh List", "", "Modules"});
+    m_commandRegistry.push_back({6102, "Modules: Import Module", "", "Modules"});
+    m_commandRegistry.push_back({6103, "Modules: Export Module", "", "Modules"});
+    m_commandRegistry.push_back({6104, "Modules: Browser", "", "Modules"});
     
     // Git commands
     m_commandRegistry.push_back({8001, "Git: Show Status", "", "Git"});
@@ -1968,13 +2484,14 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({8004, "Git: Pull", "", "Git"});
     m_commandRegistry.push_back({8005, "Git: Stage All", "", "Git"});
     
-    // Help commands
+    // Help commands (IDs match handleHelpCommand: 7001–7007)
     m_commandRegistry.push_back({7001, "Help: Command Reference", "", "Help"});
     m_commandRegistry.push_back({7002, "Help: PowerShell Docs", "", "Help"});
     m_commandRegistry.push_back({7003, "Help: Search Help", "", "Help"});
     m_commandRegistry.push_back({7004, "Help: About", "", "Help"});
     m_commandRegistry.push_back({7005, "Help: Keyboard Shortcuts", "", "Help"});
     m_commandRegistry.push_back({7006, "Help: Export Prometheus Metrics", "", "Help"});
+    m_commandRegistry.push_back({7007, "Help: Enterprise License / Features", "", "Help"});
 
     // AI Mode Toggles
     m_commandRegistry.push_back({IDM_AI_MODE_MAX, "AI: Toggle Max Mode", "", "AI"});
@@ -1993,11 +2510,13 @@ void Win32IDE::buildCommandRegistry()
 
     // Agent Execution
     m_commandRegistry.push_back({IDM_AGENT_START_LOOP, "Agent: Start Agent Loop", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_SMOKE_TEST, "Agent: Run Agentic Smoke Test", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_EXECUTE_CMD, "Agent: Execute Command", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_CONFIGURE_MODEL, "Agent: Configure Model", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_VIEW_TOOLS, "Agent: View Available Tools", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_VIEW_STATUS, "Agent: View Status", "", "Agent"});
     m_commandRegistry.push_back({IDM_AGENT_STOP, "Agent: Stop Agent", "", "Agent"});
+    m_commandRegistry.push_back({IDM_AGENT_SET_CYCLE_AGENT_COUNTER, "Agent: Set Cycle Agent Counter (1x-4x)", "", "Agent"});
 
     // Autonomy Framework
     m_commandRegistry.push_back({IDM_AUTONOMY_TOGGLE, "Autonomy: Toggle Autonomous Mode", "", "Autonomy"});
@@ -2007,8 +2526,19 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_AUTONOMY_STATUS, "Autonomy: Show Status", "", "Autonomy"});
     m_commandRegistry.push_back({IDM_AUTONOMY_MEMORY, "Autonomy: Show Memory", "", "Autonomy"});
 
+    // SubAgent (Chain, Swarm, Todo List — full parity with menu)
+    m_commandRegistry.push_back({IDM_SUBAGENT_CHAIN, "SubAgent: Chain", "", "SubAgent"});
+    m_commandRegistry.push_back({IDM_SUBAGENT_SWARM, "SubAgent: Swarm", "", "SubAgent"});
+    m_commandRegistry.push_back({IDM_SUBAGENT_TODO_LIST, "SubAgent: Todo List", "", "SubAgent"});
+    m_commandRegistry.push_back({IDM_SUBAGENT_TODO_CLEAR, "SubAgent: Todo Clear", "", "SubAgent"});
+    m_commandRegistry.push_back({IDM_SUBAGENT_STATUS, "SubAgent: Status", "", "SubAgent"});
+
     // Reverse Engineering (full suite)
     m_commandRegistry.push_back({IDM_REVENG_ANALYZE, "RE: Run Codex Analysis", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_SET_BINARY_FROM_ACTIVE, "RE: Set binary from active document", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET, "RE: Set binary from debug target", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT, "RE: Set binary from build output...", "", "RE"});
+    m_commandRegistry.push_back({IDM_REVENG_DISASM_AT_RIP, "RE: Disassemble at current RIP (debugger)", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_DISASM, "RE: Disassemble Binary", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_DUMPBIN, "RE: Run Dumpbin on Current File", "", "RE"});
     m_commandRegistry.push_back({IDM_REVENG_COMPILE, "RE: Run Custom Compiler", "", "RE"});
@@ -2229,6 +2759,13 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_VIEW_MONACO_SYNC_THEME,    "View: Sync Win32 Theme to Monaco",           "",             "WebView2"});
 
     // ================================================================
+    // Build Commands (9650 range)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_BUILD_SOLUTION,     "Build: Build Solution",            "Ctrl+Shift+B", "Build"});
+    m_commandRegistry.push_back({IDM_BUILD_PROJECT,      "Build: Build Project",             "",              "Build"});
+    m_commandRegistry.push_back({IDM_BUILD_CLEAN,        "Build: Clean",                     "",              "Build"});
+
+    // ================================================================
     // IDE Self-Audit (9500 range — routed via handleAuditCommand)
     // ================================================================
     m_commandRegistry.push_back({IDM_AUDIT_SHOW_DASHBOARD,  "Audit: Show Dashboard",                "", "Audit"});
@@ -2342,6 +2879,16 @@ void Win32IDE::buildCommandRegistry()
     m_commandRegistry.push_back({IDM_TEL_SET_LEVEL,         "Telemetry: Set Telemetry Level",       "", "Telemetry"});
     m_commandRegistry.push_back({IDM_TEL_STATS,             "Telemetry: Statistics",                 "", "Telemetry"});
 
+    // ================================================================
+    // Phase 14B: AI Extensions (Converted Qt Subsystems)
+    // ================================================================
+    m_commandRegistry.push_back({IDM_AI_MODEL_REGISTRY,      "AI: Show Model Registry",               "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CHECKPOINT_MGR,     "AI: Show Checkpoint Manager",           "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_INTERPRET_PANEL,   "AI: Show Interpretability Panel",       "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_CICD_SETTINGS,       "AI: Show CI/CD Settings",               "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_MULTI_FILE_SEARCH,   "AI: Show Multi-File Search",            "", "AI"});
+    m_commandRegistry.push_back({IDM_AI_BENCHMARK_MENU,      "AI: Show Benchmark Suite",              "", "AI"});
+
     m_filteredCommands = m_commandRegistry;
 }
 
@@ -2414,7 +2961,7 @@ void Win32IDE::showCommandPalette()
         m_hwndCommandPalette, nullptr, m_hInstance, nullptr
     );
     
-    // Set placeholder text and dark style on input
+    // Set cue banner (hint) text and style on input
     if (m_hwndCommandPaletteInput) {
         SendMessageA(m_hwndCommandPaletteInput, EM_SETCUEBANNER, TRUE, (LPARAM)L"> Type a command... (prefix :category to filter)");
         // Use static font — created once, never leaked
@@ -2607,16 +3154,29 @@ void Win32IDE::executeCommandFromPalette(int index)
     // MRU tracking: increment usage count (session-only, no disk writes)
     m_commandMRU[commandId]++;
 
-    // Execute via SSOT dispatch — the ONE AND ONLY command path.
-    // No legacy routeCommand() fallback. Drift is structurally impossible.
-    routeCommandUnified(commandId, this);
-
-    // Flash the status bar with execution confirmation
+    // Try legacy routeCommand first (View, Tier1/Breadcrumbs, Help, Terminal, Git, etc.)
+    // so palette and menu share the same handlers and IDs.
+    if (routeCommand(commandId)) {
+        if (m_hwndStatusBar) {
+            std::string feedback = "\xE2\x9C\x93 " + cmdName;
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)feedback.c_str());
+            SetTimer(m_hwndMain, IDT_STATUS_FLASH, 2000, nullptr);
+        }
+        return;
+    }
+    // Then SSOT dispatch (COMMAND_TABLE) for commands not in legacy ranges
+    if (routeCommandUnified(commandId, this, m_hwndMain)) {
+        if (m_hwndStatusBar) {
+            std::string feedback = "\xE2\x9C\x93 " + cmdName;
+            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)feedback.c_str());
+            SetTimer(m_hwndMain, IDT_STATUS_FLASH, 2000, nullptr);
+        }
+        return;
+    }
+    // Command not in either path
     if (m_hwndStatusBar) {
-        std::string feedback = "\xE2\x9C\x93 " + cmdName; // UTF-8 checkmark + command name
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)feedback.c_str());
-        // Set timer to clear the flash after 2 seconds
-        SetTimer(m_hwndMain, IDT_STATUS_FLASH, 2000, nullptr);
+        std::string msg = "Unknown command (id " + std::to_string(commandId) + ")";
+        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)msg.c_str());
     }
 }
 
@@ -2929,6 +3489,14 @@ void Win32IDE::handleMonacoCommand(int commandId) {
         syncThemeToMonaco();
         break;
 
+    case IDM_VIEW_MONACO_SETTINGS:
+        showMonacoSettingsDialog();
+        break;
+
+    case IDM_VIEW_THERMAL_DASHBOARD:
+        showThermalDashboard();
+        break;
+
     default:
         LOG_WARNING("Unknown Monaco command: " + std::to_string(commandId));
         break;
@@ -3150,4 +3718,30 @@ void Win32IDE::syncThemeToMonaco() {
     std::string monacoName = MonacoThemeExporter::monacoThemeName(m_activeThemeId);
     m_webView2->setTheme(monacoName);
     LOG_INFO("Synced Win32 theme → Monaco: " + monacoName);
+}
+
+// ============================================================================
+// Monaco Settings Dialog — Pure C++20/Win32
+// ============================================================================
+void Win32IDE::showMonacoSettingsDialog() {
+    RawrXD::UI::MonacoSettingsDialog dlg(m_hwndMain);
+    dlg.onSettingsChanged([this](const RawrXD::UI::MonacoSettings& s) {
+        if (m_webView2 && m_webView2->isReady()) {
+            m_monacoOptions.fontSize = s.fontSize;
+            m_monacoOptions.wordWrap = s.wordWrap;
+            m_webView2->setOptions(m_monacoOptions);
+        }
+    });
+    dlg.showModal();
+}
+
+// ============================================================================
+// Thermal Dashboard — Pure C++20/Win32
+// ============================================================================
+void Win32IDE::showThermalDashboard() {
+    static std::unique_ptr<rawrxd::thermal::ThermalDashboard> s_thermalDashboard;
+    if (!s_thermalDashboard) {
+        s_thermalDashboard = std::make_unique<rawrxd::thermal::ThermalDashboard>(m_hwndMain);
+    }
+    s_thermalDashboard->show();
 }

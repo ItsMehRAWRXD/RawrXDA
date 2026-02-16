@@ -30,6 +30,9 @@
 #include <vector>
 #include <atomic>
 
+// SCAFFOLD_234: WebView2 and nupkg
+
+
 // Forward declaration
 struct IDETheme;
 

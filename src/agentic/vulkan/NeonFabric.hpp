@@ -75,6 +75,9 @@ private:
     static std::vector<void*> s_mappedShards;
     static std::vector<VulkanContext> s_vulkanContexts;
     static bool s_initialized;
+#ifdef _WIN32
+    static HANDLE s_hMapFile;  // Shared memory handle — must be closed on shutdown
+#endif
 };
 
 } // namespace RawrXD::Agentic::Vulkan

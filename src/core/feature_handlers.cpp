@@ -18,8 +18,10 @@
 #include "../agent/agentic_failure_detector.hpp"
 #include "../agent/agentic_puppeteer.hpp"
 #include "../server/gguf_server_hotpatch.hpp"
+#include "context_deterioration_hotpatch.hpp"
 #include "subsystem_agent_bridge.hpp"
 #include "native_debugger_engine.h"
+#include "execution_governor.h"
 #include "../agentic/AgentOllamaClient.h"
 #include <windows.h>
 #include <shellapi.h>
@@ -783,27 +785,44 @@ CommandResult handleAgentMemoryExport(const CommandContext& ctx) {
 
 CommandResult handleAgentConfigure(const CommandContext& ctx) {
     auto& orchestrator = AutoRepairOrchestrator::instance();
+    auto stats = orchestrator.getStats();
+    std::lock_guard<std::mutex> lock(g_backendCfg.mtx);
     std::ostringstream oss;
     oss << "=== Agent Configuration ===\n"
-        << "  Running:  " << (orchestrator.isRunning() ? "yes" : "no") << "\n"
-        << "  Paused:   " << (orchestrator.isPaused() ? "yes" : "no") << "\n"
-        << "  Sentinel: " << (SentinelWatchdog::instance().isActive() ? "ACTIVE" : "inactive") << "\n"
-        << "\nUse !agent_loop to start, !agent_stop to pause.\n";
+        << "  Running:   " << (orchestrator.isRunning() ? "yes" : "no") << "\n"
+        << "  Paused:    " << (orchestrator.isPaused() ? "yes" : "no") << "\n"
+        << "  Sentinel:  " << (SentinelWatchdog::instance().isActive() ? "ACTIVE" : "inactive") << "\n"
+        << "  Backend:   " << g_backendCfg.activeBackend << "\n"
+        << "  Model:     " << (g_backendCfg.activeModel.empty() ? "(none)" : g_backendCfg.activeModel) << "\n"
+        << "  Connected: " << (g_backendCfg.connected ? "yes" : "no") << "\n"
+        << "  Anomalies: " << stats.anomaliesDetected << "  Repairs: " << stats.repairsAttempted << "\n"
+        << "\nUse !agent_loop to start, !agent_stop to pause, !engine <name> to switch backend.\n";
     ctx.output(oss.str().c_str());
     return CommandResult::ok("agent.configure");
 }
 
 CommandResult handleAgentViewTools(const CommandContext& ctx) {
-    ctx.output("=== Available Agent Tools ===\n"
-               "  1. AutoRepairOrchestrator  — anomaly detection + self-repair\n"
-               "  2. AgenticFailureDetector  — refusal/hallucination/timeout detection\n"
-               "  3. AgenticPuppeteer        — auto-correction engine\n"
-               "  4. SentinelWatchdog         — integrity monitoring\n"
-               "  5. UnifiedHotpatchManager   — 3-layer hotpatch coordinator\n"
-               "  6. ProxyHotpatcher          — token bias / output rewrite\n"
-               "  7. RefusalBypassPuppeteer   — prompt reframing\n"
-               "  8. HallucinationCorrector   — fact-check correction\n"
-               "  9. FormatEnforcerPuppeteer  — JSON/markdown enforcement\n");
+    auto& orch = AutoRepairOrchestrator::instance();
+    auto& sentinel = SentinelWatchdog::instance();
+    auto& hotpatch = UnifiedHotpatchManager::instance();
+    auto& proxy = ProxyHotpatcher::instance();
+    auto orchStats = orch.getStats();
+    const auto& hotStats = hotpatch.getStats();
+    const auto& proxyStats = proxy.getStats();
+    std::ostringstream oss;
+    oss << "=== Available Agent Tools (with status) ===\n"
+        << "  1. AutoRepairOrchestrator  " << (orch.isRunning() ? "RUNNING" : "stopped")
+        << "  anomalies=" << orchStats.anomaliesDetected << " repairs=" << orchStats.repairsAttempted << "\n"
+        << "  2. AgenticFailureDetector  — refusal/hallucination/timeout detection\n"
+        << "  3. AgenticPuppeteer        — auto-correction engine\n"
+        << "  4. SentinelWatchdog        " << (sentinel.isActive() ? "ACTIVE" : "inactive")
+        << "  violations=" << sentinel.getViolationCount() << "\n"
+        << "  5. UnifiedHotpatchManager   patches=" << hotStats.totalOperations.load() << "\n"
+        << "  6. ProxyHotpatcher         biases=" << proxyStats.biasesApplied.load() << " rewrites=" << proxyStats.rewritesApplied.load() << "\n"
+        << "  7. RefusalBypassPuppeteer  — prompt reframing\n"
+        << "  8. HallucinationCorrector  — fact-check correction\n"
+        << "  9. FormatEnforcerPuppeteer — JSON/markdown enforcement\n";
+    ctx.output(oss.str().c_str());
     return CommandResult::ok("agent.viewTools");
 }
 
@@ -1421,6 +1440,12 @@ CommandResult handleHotpatchStatus(const CommandContext& ctx) {
         << "  Unified Total: " << stats.totalOperations.load() << " applied, "
         << stats.totalFailures.load() << " failures\n"
         << "  Sentinel:      " << (SentinelWatchdog::instance().isActive() ? "ACTIVE" : "inactive") << "\n";
+    auto& ctxHotpatch = ContextDeteriorationHotpatch::instance();
+    const auto& ctxStats = ctxHotpatch.getStats();
+    oss << "  Context Deterioration: " << (ctxHotpatch.isEnabled() ? "ON (100% quality)" : "OFF")
+        << " | preparations=" << ctxStats.preparationsTotal.load()
+        << " mitigations=" << ctxStats.mitigationsApplied.load()
+        << " tokens_saved=" << ctxStats.tokensSaved.load() << "\n";
     ctx.output(oss.str().c_str());
     return CommandResult::ok("hotpatch.status");
 }
@@ -1547,12 +1572,8 @@ CommandResult handleHotpatchServer(const CommandContext& ctx) {
         patch.name = _strdup(name.c_str());
         patch.transform = nullptr;  // identity transform
         patch.hit_count = 0;
-        bool ok = server.addPatch(patch);
-        if (ok) {
-            ctx.output(("[ServerPatch] Registered: " + name + "\n").c_str());
-        } else {
-            ctx.output(("[ServerPatch] Registration failed: " + name + "\n").c_str());
-        }
+        server.add_patch(patch);
+        ctx.output(("[ServerPatch] Registered: " + name + "\n").c_str());
     } else {
         ctx.output("[ServerPatch] Unknown subcommand. Use: add, remove, clear\n");
     }
@@ -2233,14 +2254,19 @@ CommandResult handleReplay(const CommandContext& ctx) {
 }
 
 CommandResult handleGovernor(const CommandContext& ctx) {
+    std::ostringstream oss;
+    // Phase 10A: Execution Governor (task rate limit & safety)
+    ExecutionGovernor& execGov = ExecutionGovernor::instance();
+    if (!execGov.isInitialized()) execGov.init();
+    oss << execGov.getStatusString() << "\n\n";
+    // Sentinel Watchdog (integrity monitoring)
     auto& sentinel = SentinelWatchdog::instance();
     auto sentStats = sentinel.getStats();
-    std::ostringstream oss;
-    oss << "=== Governor Status ===\n"
-        << "  Sentinel active:    " << (sentinel.isActive() ? "YES" : "no") << "\n"
-        << "  Violation count:    " << sentinel.getViolationCount() << "\n"
-        << "  Integrity checks:   " << sentStats.totalChecks << "\n"
-        << "  Lockdowns:          " << sentStats.lockdownsTriggered << "\n";
+    oss << "=== Sentinel Watchdog ===\n"
+        << "  Active:    " << (sentinel.isActive() ? "YES" : "no") << "\n"
+        << "  Violations: " << sentinel.getViolationCount() << "\n"
+        << "  Checks:    " << sentStats.totalChecks << "\n"
+        << "  Lockdowns:  " << sentStats.lockdownsTriggered << "\n";
     ctx.output(oss.str().c_str());
     return CommandResult::ok("headless.governor");
 }
@@ -2395,7 +2421,6 @@ CommandResult handleServerStart(const CommandContext& ctx) {
 }
 
 CommandResult handleServerStop(const CommandContext& ctx) {
-    (void)ctx;
     std::lock_guard<std::mutex> lock(g_serverProc.mtx);
     if (!g_serverProc.hProcess) {
         ctx.output("[Server] No tracked server process.\n");
@@ -2890,15 +2915,45 @@ CommandResult handleHelpAbout(const CommandContext& ctx) {
 
 CommandResult handleHelpDocs(const CommandContext& ctx) {
     const char* url = "https://rawrxd.dev/docs";
-    ctx.output("Documentation: ");
-    ctx.output(url);
-    ctx.output("\n");
-    // Attempt to open in default browser
-    HINSTANCE result = ShellExecuteA(nullptr, "open", url, nullptr, nullptr, SW_SHOWNORMAL);
-    if (reinterpret_cast<intptr_t>(result) > 32) {
-        ctx.output("[Help] Opened in default browser.\n");
+    std::string docsPath;
+    {
+        char exePath[MAX_PATH] = {};
+        if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0) {
+            std::string exeDir(exePath);
+            size_t last = exeDir.find_last_of("\\/");
+            if (last != std::string::npos) exeDir.resize(last + 1);
+            const char* candidates[] = { "..\\docs", "..\\..\\docs", "docs" };
+            for (const char* rel : candidates) {
+                std::string tryPath = exeDir + rel;
+                DWORD att = GetFileAttributesA(tryPath.c_str());
+                if (att != INVALID_FILE_ATTRIBUTES && (att & FILE_ATTRIBUTE_DIRECTORY)) {
+                    docsPath = tryPath;
+                    break;
+                }
+            }
+        }
+    }
+    if (!docsPath.empty()) {
+        ctx.output("Documentation: opening local docs folder\n");
+        HINSTANCE result = ShellExecuteA(nullptr, "open", docsPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        if (reinterpret_cast<intptr_t>(result) > 32) {
+            ctx.output("[Help] Opened docs folder in Explorer. See IDE_DOCUMENTATION_INDEX.md for index.\n");
+        } else {
+            ctx.output("[Help] Could not open folder. Visit: ");
+            ctx.output(url);
+            ctx.output("\n");
+            ShellExecuteA(nullptr, "open", url, nullptr, nullptr, SW_SHOWNORMAL);
+        }
     } else {
-        ctx.output("[Help] Could not open browser. Visit URL manually.\n");
+        ctx.output("Documentation: ");
+        ctx.output(url);
+        ctx.output("\n");
+        HINSTANCE result = ShellExecuteA(nullptr, "open", url, nullptr, nullptr, SW_SHOWNORMAL);
+        if (reinterpret_cast<intptr_t>(result) > 32) {
+            ctx.output("[Help] Opened in default browser.\n");
+        } else {
+            ctx.output("[Help] Could not open browser. Visit URL manually.\n");
+        }
     }
     return CommandResult::ok("help.docs");
 }

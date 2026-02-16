@@ -27,6 +27,12 @@
 #define RAWRXD_MKDIR(p) _mkdir(p)
 #else
 #include <sys/stat.h>
+
+// SCAFFOLD_099: agentic_task_graph executor_agenticLoop
+
+
+// SCAFFOLD_071: AgenticTaskGraph DAG execution
+
 #define RAWRXD_MKDIR(p) mkdir(p, 0755)
 #endif
 

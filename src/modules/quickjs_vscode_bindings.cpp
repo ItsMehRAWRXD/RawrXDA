@@ -187,13 +187,17 @@ static void jsCommandTrampoline(void* ctx) {
     if (!binding) return;
 
     auto& host = QuickJSExtensionHost::instance();
+    auto& api = vscode::VSCodeExtensionAPI::instance();
+    const char* args = api.getCurrentCommandArgs();
+
     // Create a callback ref and dispatch into the extension's event loop
-    auto ref = std::make_shared<QuickJSCallbackRef>();
-    ref->jsFunction = binding->callback;
-    ref->ctx = binding->ctx;
-    ref->extensionId = binding->extensionId;
-    ref->disposed.store(false);
-    host.dispatchCallback(binding->extensionId, ref);
+    QuickJSCallbackRef ref;
+    ref.jsFunction = binding->callback;
+    ref.ctx = binding->ctx;
+    ref.extensionId = binding->extensionId;
+    ref.disposed = false;
+
+    host.dispatchCallback(binding->extensionId, ref, args);
 }
 
 static JSValue js_commands_registerCommand(JSContext* ctx, JSValueConst this_val,
@@ -244,8 +248,17 @@ static JSValue js_commands_executeCommand(JSContext* ctx, JSValueConst this_val,
     const char* cmdId = JS_ToCString(ctx, argv[0]);
     if (!cmdId) return JS_ThrowTypeError(ctx, "commands.executeCommand: invalid command ID");
 
+    const char* argsJson = nullptr;
+    if (argc >= 2) {
+        JSValue json = JS_JSONStringify(ctx, argv[1], JS_UNDEFINED, JS_UNDEFINED);
+        argsJson = JS_ToCString(ctx, json);
+        JS_FreeValue(ctx, json);
+    }
+
     auto& api = vscode::VSCodeExtensionAPI::instance();
-    auto result = api.executeCommand(cmdId);
+    auto result = api.executeCommand(cmdId, argsJson);
+
+    if (argsJson) JS_FreeCString(ctx, argsJson);
     JS_FreeCString(ctx, cmdId);
 
     return resultToPromise(ctx, result);

@@ -1,6 +1,6 @@
 #pragma once
 
-// C++20, no Qt. GGUF inference engine stub; QString → std::string.
+// C++20, no Qt. GGUF inference engine (IDE build variant; full implementation linked in benchmark/inference build). QString → std::string.
 
 #include <string>
 #include <vector>
@@ -12,15 +12,19 @@ class GGUFLoader;
 class VulkanCompute;
 class TransformerBlockScalar;
 
+enum class InferenceMode : uint8_t { STANDARD, METADATA_ONLY, LAZY_PAGED };
+
 class InferenceEngine
 {
 public:
     InferenceEngine() = default;
+    explicit InferenceEngine(void*) : InferenceEngine() {}
     ~InferenceEngine();
 
     bool Initialize(const std::string& model_path);
     bool isModelLoaded() const;
     std::string modelPath() const;
+    InferenceMode inferenceMode() const { return InferenceMode::STANDARD; }
     void Cleanup();
 
     std::vector<int32_t> tokenize(const std::string& text);

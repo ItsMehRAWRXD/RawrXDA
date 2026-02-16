@@ -163,7 +163,7 @@ private:
     void FeedForward(const float* input, float* output, int dim);
     
     // Transformer layer
-    void TransformerLayer(const float* input, float* output, int layer_idx, int seq_len);
+    void TransformerLayer(const float* input, float* output, int layer_idx, int seq_len, uint32_t deviceId = 0);
     
     // Apply Norm Helper
     void ApplyNorm(const std::string& name, float* data);

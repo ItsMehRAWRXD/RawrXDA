@@ -60,6 +60,7 @@
 class MultiResponseEngine;
 class SubAgentManager;
 class AgentHistoryRecorder;
+class AgenticEngine;
 
 // ============================================================================
 // Headless initialization result
@@ -107,6 +108,10 @@ struct HeadlessConfig {
     bool            enableServer   = true;   // --no-server: disable HTTP
     int             maxTokens      = 2048;
     float           temperature    = 0.7f;
+    std::string     ollamaHost     = "127.0.0.1";
+    int             ollamaPort     = 11434;
+    std::string     workingDir;             // --dir <path>
+    bool            listModelsOnly = false; // --list: list Ollama models and exit
 };
 
 // ============================================================================
@@ -257,6 +262,7 @@ private:
     HeadlessResult initPhase12();
     HeadlessResult initHotpatch();
     HeadlessResult initInstructions();
+    HeadlessResult initAgentic();
 
     // ---- Run modes ----
     int runServerMode();
@@ -268,6 +274,9 @@ private:
     void processReplCommand(const std::string& input);
     void printReplHelp();
     void printReplPrompt();
+
+    // ---- Tool execution (parity with Win32 Agent > Run Tool; used by /api/tool and /run-tool) ----
+    bool executeToolRepl(const std::string& toolName, const std::string& argsJson, std::string& outResult);
 
     // ---- HTTP server (delegating to Win32IDE_LocalServer logic) ----
     void serverLoop();
@@ -319,6 +328,10 @@ private:
     // Real subsystem instances (owned by HeadlessIDE)
     std::unique_ptr<MultiResponseEngine> m_multiResponse;
     std::unique_ptr<AgentHistoryRecorder> m_historyRecorder;
+
+    // Agentic stack (101% parity with Win32 — chat, tool dispatch, subagent, chain, swarm)
+    std::unique_ptr<AgenticEngine>     m_agenticEngine;
+    std::unique_ptr<SubAgentManager>   m_subAgentManager;
 
     // Failure detection counters
     uint64_t                          m_failureDetections = 0;

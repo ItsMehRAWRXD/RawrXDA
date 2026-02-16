@@ -4,6 +4,11 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
 #include "memory_core.h"
 #include "cpu_inference_engine.h"
 #include "complete_server.h"
@@ -30,11 +35,28 @@
 // Phase 20: CLI headless systems (for ! commands dispatch)
 #include "cli_headless_systems.h"
 
+// Phase 19: CLI Autonomy Loop — headless autonomous agentic loop (parity with Win32 IDE)
+#include "cli/cli_autonomy_loop.h"
+#include "cli/deep_iteration_engine.h"
+
 // Phase 26: ReverseEngineered MASM Kernel — Scheduler, Heartbeat, Deadlock, GPU DMA, Tensor
 #include "../include/reverse_engineered_bridge.h"
 
+// Phase 51: Security — Dork Scanner + Universal Dorker
+#include "security/RawrXD_GoogleDork_Scanner.h"
+#include "security/RawrXD_Universal_Dorker.h"
+
 // Phase 33: Voice Chat Engine
 #include "core/voice_chat.hpp"
+
+// Enterprise License & Feature Manager
+#include "core/enterprise_license.h"
+#include "enterprise_feature_manager.hpp"
+#include "enterprise/support_tier.h"
+#include "enterprise/multi_gpu.h"
+
+// Agentic Autonomous: Operation mode + Model selection + parallel cap
+#include "agentic_autonomous_config.h"
 
 void SignalHandler(int signal) {
     std::cout << "\n[ENGINE] Exiting...\n";
@@ -43,6 +65,16 @@ void SignalHandler(int signal) {
 
 int main(int argc, char** argv) {
     std::signal(SIGINT, SignalHandler);
+#ifdef RAWRXD_PURE_CLI
+    std::cout << R"(
+╔══════════════════════════════════════════════════════════════╗
+║           RawrXD CLI — Pure CLI (101% Win32 IDE Parity)       ║
+║  Full chat + agentic autonomous • Same engine as Win32 GUI   ║
+║  Default port 23959 — Win32 IDE connects to this server      ║
+║  /chat • /agent • /wish • /subagent • /chain • /swarm        ║
+╚══════════════════════════════════════════════════════════════╝
+)" << std::endl;
+#else
     std::cout << R"(
 ╔══════════════════════════════════════════════════════════════╗
 ║              RawrXD Engine v7.5 — Agentic Core               ║
@@ -51,22 +83,33 @@ int main(int argc, char** argv) {
 ║  Phase 21: Distributed Swarm Inference • AVX-512 Requant     ║
 ╚══════════════════════════════════════════════════════════════╝
 )" << std::endl;
+#endif
 
     // Command registration is automatic via static AutoRegistrar in
     // unified_command_dispatch.cpp — reads COMMAND_TABLE at startup.
 
     std::string model_path;
+#if defined(RAWRXD_PURE_CLI)
+    uint16_t port = 23959;  // Win32 IDE expects this port for /api/chat and /api/tool
+#else
     uint16_t port = 8080;
+#endif
     bool enable_http = true;
     bool enable_repl = true;
     std::string history_dir = "./history";
     std::string policy_dir = "./policies";
     std::string engine_type = "cpu";   // "cpu" or "dml"
+    bool list_models_only = false;
+    std::string work_dir;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "--model" && i + 1 < argc) {
             model_path = argv[++i];
+        } else if (arg == "--list" || arg == "-l") {
+            list_models_only = true;
+        } else if (arg == "--dir" && i + 1 < argc) {
+            work_dir = argv[++i];
         } else if (arg == "--port" && i + 1 < argc) {
             port = static_cast<uint16_t>(std::stoi(argv[++i]));
         } else if (arg == "--engine" && i + 1 < argc) {
@@ -80,10 +123,10 @@ int main(int argc, char** argv) {
         } else if (arg == "--policy-dir" && i + 1 < argc) {
             policy_dir = argv[++i];
         } else if (arg == "--help") {
-            std::cout << R"(
-Usage: RawrEngine [options]
+            std::cout << R"HELP(
+Usage: RawrEngine [options]  (or RawrXD_CLI for pure CLI build)
   --model <path>    Path to GGUF model file
-  --port <port>     HTTP server port (default: 8080)
+  --port <port>     HTTP port (default 23959 for RawrXD_CLI, 8080 for RawrEngine)
   --engine <type>   Inference engine: cpu (default) or dml (DirectML GPU)
   --no-http         Disable HTTP server
   --no-repl         Disable interactive REPL
@@ -91,11 +134,14 @@ Usage: RawrEngine [options]
   --policy-dir <d>  Directory for policy storage (default: ./policies)
   --help            Show this help
 
+  Pure CLI (RawrXD_CLI): port 23959 by default - Win32 IDE connects for chat + Agent > Run Tool.
+
 HTTP API Endpoints:
   GET  /status                Server & model status
   POST /complete              Single completion
   POST /complete/stream       SSE streaming completion
-  POST /api/chat              Agentic chat
+  POST /api/chat              Agentic chat (Win32 IDE AI Chat panel)
+  POST /api/tool              Run tool (Win32 IDE Agent > Run Tool)
   POST /api/subagent          Spawn a sub-agent
   POST /api/chain             Execute a prompt chain
   POST /api/swarm             Launch a HexMag swarm
@@ -114,6 +160,8 @@ HTTP API Endpoints:
   GET  /api/backends          List all backends (Phase 8B)
   GET  /api/backends/status   Active backend status (Phase 8B)
   POST /api/backends/use      Switch active backend (Phase 8B)
+  GET  /api/agentic/config    Agentic operation + model selection config
+  POST /api/agentic/config   Set operationMode, modelSelectionMode, perModelInstances, maxModelsInParallel, cycleAgentCounter
   GET  /api/gpu/status          GPU acceleration status (Phase 25)
   POST /api/gpu/toggle          Toggle GPU on/off (Phase 25)
   GET  /api/gpu/features        AMD GPU features (Phase 25)
@@ -126,12 +174,22 @@ HTTP API Endpoints:
   GET  /api/sandbox/list        List sandboxes (Phase 24)
   POST /api/sandbox/create      Create sandbox (Phase 24)
   GET  /api/release/status      Production release status (Phase 22)
+  GET  /api/security/dork/status   Dork scanner + Universal Dorker status (Phase 51)
+  POST /api/security/dork/scan    Run Google Dork scan (body: dork or file) (Phase 51)
+  POST /api/security/dork/universal  Universal PHP dorks + hotpatch markers (Phase 51)
+  GET  /api/security/dashboard    Security dashboard summary (Phase 51)
 
-REPL Commands:
+REPL Commands (chat + agentic = Win32 IDE parity):
+  /chat <message>           Chat (GGUF or Ollama)
+  /agent <prompt> [N]       Agentic loop (chat + tools, max N cycles)
+  /wish <natural lang>      Execute user wish
   /subagent <prompt>        Spawn a sub-agent
   /chain <step1> | <step2>  Run a prompt chain
   /swarm <p1> | <p2> ...    Run a HexMag swarm
   /agents                   List active agents
+  /tools                    List available agent tools (Win32 parity)
+  /run-tool <name> [json]   Execute tool by name (e.g. /run-tool list_dir {})
+  /smoke                    Run agentic smoke test (Win32 parity)
   /status                   Show system status
   /history [agent_id]       Show event history (Phase 5)
   /replay <agent_id>        Replay an agent run (Phase 5)
@@ -159,10 +217,81 @@ REPL Commands:
   /webrtc                  WebRTC signaling status (Phase 20)
   /sandbox list|create     Manage sandboxes (Phase 24)
   /release                 Production release status (Phase 22)
+
+  Enterprise License:
+  /license                 License dashboard (edition, features, limits)
+  /license audit           Full enterprise feature audit report
+  /license unlock          Dev unlock (needs RAWRXD_ENTERPRISE_DEV=1)
+  /license hwid            Show hardware ID for this machine
+  /license install <file>  Install a .rawrlic license file
+  /license features        List all enterprise features with status
   exit                      Quit
-)" << std::endl;
+)HELP" << std::endl;
             return 0;
         }
+    }
+
+    // --list: list Ollama models and exit (production CLI parity)
+    if (list_models_only) {
+        std::string host = "localhost";
+        int ollama_port = 11434;
+        const char* e = std::getenv("OLLAMA_HOST");
+        if (e && e[0]) {
+            std::string u = e;
+            size_t p = u.find("://");
+            if (p != std::string::npos) u = u.substr(p + 3);
+            size_t c = u.rfind(':');
+            if (c != std::string::npos && c + 1 < u.size()) {
+                host = u.substr(0, c);
+                ollama_port = std::stoi(u.substr(c + 1));
+            } else {
+                host = u;
+            }
+        }
+        std::vector<std::string> names;
+        if (OllamaListModelsSync(host, ollama_port, names)) {
+            std::cout << "Ollama models at " << host << ":" << ollama_port << ":\n";
+            if (names.empty()) std::cout << "  (none — run 'ollama pull <model>' to add models)\n";
+            else for (const auto& n : names) std::cout << "  " << n << "\n";
+        } else {
+            std::cout << "Could not reach Ollama at " << host << ":" << ollama_port << ". Start Ollama or set OLLAMA_HOST.\n";
+        }
+        return 0;
+    }
+
+    // --dir: set working directory for tool execution (production CLI parity)
+    if (!work_dir.empty()) {
+#ifdef _WIN32
+        if (_chdir(work_dir.c_str()) != 0) {
+            std::cerr << "[CLI] Failed to change directory to: " << work_dir << "\n";
+        } else {
+            std::cout << "[CLI] Working directory: " << work_dir << "\n";
+        }
+#else
+        if (chdir(work_dir.c_str()) != 0) {
+            std::cerr << "[CLI] Failed to change directory to: " << work_dir << "\n";
+        } else {
+            std::cout << "[CLI] Working directory: " << work_dir << "\n";
+        }
+#endif
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Enterprise License System — initialize FIRST (gates engine registration)
+    // ═══════════════════════════════════════════════════════════════════
+    {
+        auto& license = RawrXD::EnterpriseLicense::Instance();
+        license.Initialize();
+
+        auto& featureMgr = EnterpriseFeatureManager::Instance();
+        featureMgr.Initialize();
+
+        std::cout << "[SYSTEM] License: " << license.GetEditionName()
+                  << " | Max Model: " << license.GetMaxModelSizeGB() << "GB"
+                  << " | Max Context: " << license.GetMaxContextLength() << " tokens"
+                  << " | 800B Dual-Engine: "
+                  << (license.Is800BUnlocked() ? "UNLOCKED" : "locked (requires Enterprise license)")
+                  << "\n";
     }
 
     // Create inference engine based on --engine flag
@@ -238,6 +367,28 @@ REPL Commands:
         }
     });
     std::cout << "[SYSTEM] Explainability engine: ready (Phase 8A)\n";
+
+    // Initialize headless CLI subsystems (safety, confidence, replay, governor, multi-response)
+    if (cli_headless_init(&agentEngine, &subAgentMgr)) {
+        std::cout << "[SYSTEM] Headless CLI subsystems: initialized (Phase 10)\n";
+    } else {
+        std::cout << "[SYSTEM] Headless CLI subsystems: init failed (optional)\n";
+    }
+
+    // Wire CLIAutonomyLoop for headless autonomous agentic parity with Win32 IDE
+    {
+        auto& autonomyLoop = CLIAutonomyLoop::instance();
+        autonomyLoop.setAgenticEngine(&agentEngine);
+        autonomyLoop.setSubAgentManager(&subAgentMgr);
+        auto& deepIter = DeepIterationEngine::instance();
+        deepIter.setAgenticEngine(&agentEngine);
+        deepIter.setSubAgentManager(&subAgentMgr);
+        deepIter.setChatProvider([&agentEngine](const std::string& msg, const std::string&) {
+            return agentEngine.chat(msg);
+        });
+        std::cout << "[SYSTEM] Autonomy Loop: ready (use /autonomy start for autonomous agentic mode)\n";
+        std::cout << "[SYSTEM] Deep Iteration: ready (use /deep-iterate <path> [max] for audit→code cycles)\n";
+    }
 
     // Initialize AI backend manager (Phase 8B)
     AIBackendManager backendMgr;
@@ -380,14 +531,21 @@ REPL Commands:
             std::cout << "RawrXD> ";
             std::getline(std::cin, input);
             if (input == "exit" || input == "/exit") break;
+            if (input.empty()) continue;
 
             if (input == "/help") {
-                std::cout << "Commands:\n"
-                          << "  /chat <message>         Chat with the agentic engine\n"
+                std::cout << "Commands (full parity with Win32 IDE — chat + agentic autonomous):\n"
+                          << "  /chat <message>         Chat (GGUF or Ollama if no model loaded)\n"
+                          << "  /chat /model:<name> <m> Chat using Ollama model <name>\n"
+                          << "  /wish <natural lang>    Execute user wish (same as API /api/agent/wish)\n"
+                          << "  /agent <prompt> [N]     Agentic loop: chat + tools until done (max N cycles, default 10)\n"
                           << "  /subagent <prompt>      Spawn a sub-agent\n"
                           << "  /chain <s1> | <s2> ...  Run a sequential chain\n"
                           << "  /swarm <p1> | <p2> ...  Run a HexMag swarm\n"
                           << "  /agents                 List all sub-agents\n"
+                          << "  /tools                  List available agent tools (Win32 parity)\n"
+                          << "  /run-tool <name> [json]  Execute tool by name (e.g. /run-tool list_dir {})\n"
+                          << "  /smoke                  Run agentic smoke test (Win32 parity)\n"
                           << "  /status                 System status\n"
                           << "  /todo                   Show todo list\n"
                           << "  /history [agent_id]     Event history (Phase 5)\n"
@@ -421,6 +579,33 @@ REPL Commands:
                           << "  /sandbox list           List active sandboxes (Phase 24)\n"
                           << "  /sandbox create         Create a new sandbox (Phase 24)\n"
                           << "  /release                 Production release status (Phase 22)\n"
+                          << "  /security                Security dashboard (Phase 51)\n"
+                          << "  /dork status             Dork scanner + Universal Dorker status (Phase 51)\n"
+                          << "\n  Autonomy (background agentic loop — parity with Win32 IDE):\n"
+                          << "  /autonomy start          Start autonomous loop (poll→detect→decide→act→verify)\n"
+                          << "  /autonomy stop           Stop autonomous loop\n"
+                          << "  /autonomy pause          Pause autonomy loop\n"
+                          << "  /autonomy resume         Resume paused autonomy loop\n"
+                          << "  /autonomy status         Show autonomy loop state and stats\n"
+                          << "\n  Deep Iteration (audit→code cycles, beyond Copilot/Cursor):\n"
+                          << "  /deep-iterate <path> [max] [--write]  Run audit→code cycles; --write saves result to file\n"
+                          << "  /deep-status                Show deep iteration stats\n"
+                          << "  /deep-config [key=value]    Get/set: max_iterations, convergence_window, min_complexity, max_tokens\n"
+                          << "\n  Agentic Autonomous:\n"
+                          << "  /agentic                 Show operation + model config\n"
+                          << "  /agentic mode <Agent|Plan|Debug|Ask>  Set operation mode\n"
+                          << "  /models                  Show model selection + cap + cycle\n"
+                          << "  /models mode <Auto|MAX|multiple>  Set model selection mode\n"
+                          << "  /models per-model <1-4>  Instances per model (when multiple)\n"
+                          << "  /models cap <1-40>       Max models in parallel (cap 40)\n"
+                          << "  /models cycle <1-4>      Cycle agent counter (1x-4x)\n"
+                          << "\n  Enterprise License:\n"
+                          << "  /license                 License dashboard (edition + features)\n"
+                          << "  /license audit           Full enterprise feature audit\n"
+                          << "  /license unlock          Dev unlock (RAWRXD_ENTERPRISE_DEV=1)\n"
+                          << "  /license hwid            Show hardware ID\n"
+                          << "  /license install <file>  Install .rawrlic license file\n"
+                          << "  /license features        List all 8 enterprise features\n"
                           << "\n  Phase 20 — Model Surgery:\n"
                           << "  !model_load <path>       Analyze GGUF model (Phase 20)\n"
                           << "  !model_plan              Compute optimal quant plan (Phase 20)\n"
@@ -460,22 +645,176 @@ REPL Commands:
                           << "  exit                    Quit\n\n";
             }
             else if (input.substr(0, 5) == "/chat" || (input[0] != '/' && !input.empty())) {
-                std::string msg = (input.substr(0, 5) == "/chat") ? input.substr(6) : input;
+                std::string raw = (input.substr(0, 5) == "/chat") ? input.substr(5) : input;
+                while (!raw.empty() && (raw[0] == ' ' || raw[0] == '\t')) raw.erase(0, 1);
+                std::string modelOverride;
+                if (raw.size() >= 7 && raw.substr(0, 7) == "/model:") {
+                    size_t sp = raw.find(' ', 7);
+                    if (sp != std::string::npos) {
+                        modelOverride = raw.substr(7, sp - 7);
+                        raw = raw.substr(sp);
+                        while (!raw.empty() && (raw[0] == ' ' || raw[0] == '\t')) raw.erase(0, 1);
+                    } else {
+                        modelOverride = raw.substr(7);
+                        raw.clear();
+                    }
+                }
+                std::string msg = raw;
+                if (msg.empty()) {
+                    std::cout << "[ERROR] Empty message. Use: /chat <message> or /chat /model:llama3.2 <message>\n";
+                } else {
+                    auto doChat = [&](const std::string& message) -> std::string {
+                        if (agentEngine.isModelLoaded() && modelOverride.empty()) {
+                            return agentEngine.chat(message);
+                        }
+                        if (!modelOverride.empty() || backendMgr.getActiveId() == "ollama") {
+                            std::string host = "localhost";
+                            int port = 11434;
+                            const char* envHost = std::getenv("OLLAMA_HOST");
+                            if (envHost && envHost[0]) {
+                                std::string u = envHost;
+                                size_t p = u.find("://");
+                                if (p != std::string::npos) u = u.substr(p + 3);
+                                size_t c = u.rfind(':');
+                                if (c != std::string::npos && c + 1 < u.size()) {
+                                    host = u.substr(0, c);
+                                    port = std::stoi(u.substr(c + 1));
+                                } else {
+                                    host = u;
+                                }
+                            } else if (backendMgr.getActiveId() == "ollama") {
+                                auto cfg = backendMgr.getActiveBackend();
+                                std::string ep = cfg.endpoint;
+                                size_t p = ep.find("://");
+                                if (p != std::string::npos) ep = ep.substr(p + 3);
+                                size_t c = ep.rfind(':');
+                                if (c != std::string::npos && c + 1 < ep.size()) {
+                                    host = ep.substr(0, c);
+                                    port = std::stoi(ep.substr(c + 1));
+                                }
+                            }
+                            std::string ollamaModel = modelOverride.empty() ? backendMgr.getActiveBackend().model : modelOverride;
+                            if (ollamaModel.empty()) ollamaModel = "llama3.2";
+                            std::string response;
+                            if (OllamaGenerateSync(host, port, ollamaModel, message, response)) {
+                                return response;
+                            }
+                            return "[Ollama error: start Ollama or check OLLAMA_HOST / backend]";
+                        }
+                        if (agentEngine.isModelLoaded()) {
+                            return agentEngine.chat(message);
+                        }
+                        return "";
+                    };
+                    historyRecorder.recordChatRequest(msg);
+                    auto chatStart = std::chrono::steady_clock::now();
+                    std::string response = doChat(msg);
+                    auto chatEnd = std::chrono::steady_clock::now();
+                    int chatMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(chatEnd - chatStart).count();
+                    historyRecorder.recordChatResponse(response, chatMs);
+                    if (response.empty()) {
+                        std::cout << "[ERROR] No model loaded. Use --model <gguf> or /chat /model:llama3.2 <msg> or /backend use ollama\n";
+                    } else {
+                        std::cout << response << "\n";
+                        auto operationMode = RawrXD::AgenticAutonomousConfig::instance().getOperationMode();
+                        bool allowTools = (operationMode != RawrXD::AgenticOperationMode::Ask && operationMode != RawrXD::AgenticOperationMode::Plan);
+                        if (allowTools) {
+                            std::string toolResult;
+                            if (subAgentMgr.dispatchToolCall("repl", response, toolResult)) {
+                                std::cout << "\n[Tool Result]\n" << toolResult << "\n";
+                            }
+                        }
+                    }
+                }
+            }
+            else if (input.substr(0, 6) == "/wish ") {
+                std::string wish = input.substr(6);
+                std::string msg = "Execute the following user wish. Respond with a clear plan or result: " + wish;
                 if (agentEngine.isModelLoaded()) {
                     historyRecorder.recordChatRequest(msg);
                     auto chatStart = std::chrono::steady_clock::now();
                     std::string response = agentEngine.chat(msg);
                     auto chatEnd = std::chrono::steady_clock::now();
-                    int chatMs = (int)std::chrono::duration_cast<std::chrono::milliseconds>(chatEnd - chatStart).count();
-                    historyRecorder.recordChatResponse(response, chatMs);
+                    historyRecorder.recordChatResponse(response, (int)std::chrono::duration_cast<std::chrono::milliseconds>(chatEnd - chatStart).count());
                     std::cout << response << "\n";
-                    // Auto-dispatch any tool calls in the response
                     std::string toolResult;
                     if (subAgentMgr.dispatchToolCall("repl", response, toolResult)) {
                         std::cout << "\n[Tool Result]\n" << toolResult << "\n";
                     }
                 } else {
-                    std::cout << "[ERROR] No model loaded.\n";
+                    std::string host = "localhost";
+                    int port = 11434;
+                    const char* envHost = std::getenv("OLLAMA_HOST");
+                    if (envHost && envHost[0]) {
+                        std::string u = envHost;
+                        size_t p = u.find("://"); if (p != std::string::npos) u = u.substr(p + 3);
+                        size_t c = u.rfind(':'); if (c != std::string::npos && c + 1 < u.size()) { host = u.substr(0, c); port = std::stoi(u.substr(c + 1)); } else { host = u; }
+                    } else {
+                        auto cfg = backendMgr.getActiveBackend();
+                        if (cfg.type == AIBackendType::Ollama && !cfg.endpoint.empty()) {
+                            std::string ep = cfg.endpoint;
+                            size_t p = ep.find("://"); if (p != std::string::npos) ep = ep.substr(p + 3);
+                            size_t c = ep.rfind(':'); if (c != std::string::npos && c + 1 < ep.size()) { host = ep.substr(0, c); port = std::stoi(ep.substr(c + 1)); }
+                        }
+                    }
+                    std::string model = backendMgr.getActiveBackend().model;
+                    if (model.empty()) model = "llama3.2";
+                    std::string response;
+                    if (OllamaGenerateSync(host, port, model, msg, response)) {
+                        std::cout << response << "\n";
+                    } else {
+                        std::cout << "[ERROR] Ollama unavailable. Start Ollama or use /backend use ollama and pull a model.\n";
+                    }
+                }
+            }
+            else if (input.substr(0, 7) == "/agent " || input == "/agent") {
+                std::string prompt;
+                int maxIter = 10;
+                if (input.size() > 7) {
+                    prompt = input.substr(7);
+                    size_t lastSpace = prompt.rfind(' ');
+                    if (lastSpace != std::string::npos) {
+                        try {
+                            int n = std::stoi(prompt.substr(lastSpace + 1));
+                            if (n >= 1 && n <= 50) { maxIter = n; prompt = prompt.substr(0, lastSpace); }
+                        } catch (...) {}
+                    }
+                }
+                if (prompt.empty()) {
+                    std::cout << "Usage: /agent <prompt> [max_iterations]. Runs agentic loop (chat + tool dispatch until done, like Win32 Agent menu).\n";
+                } else {
+                    auto operationMode = RawrXD::AgenticAutonomousConfig::instance().getOperationMode();
+                    bool allowTools = (operationMode != RawrXD::AgenticOperationMode::Ask && operationMode != RawrXD::AgenticOperationMode::Plan);
+                    std::cout << "[Agent] Loop for up to " << maxIter << " iterations (tools " << (allowTools ? "ON" : "off") << ")...\n";
+                    std::string currentPrompt = prompt;
+                    for (int i = 0; i < maxIter; i++) {
+                        std::string response;
+                        if (agentEngine.isModelLoaded()) {
+                            response = agentEngine.chat(currentPrompt);
+                        } else {
+                            std::string host = "localhost"; int port = 11434;
+                            const char* e = std::getenv("OLLAMA_HOST");
+                            if (e && e[0]) {
+                                std::string u = e; size_t p = u.find("://"); if (p != std::string::npos) u = u.substr(p + 3);
+                                size_t c = u.rfind(':'); if (c != std::string::npos && c + 1 < u.size()) { host = u.substr(0, c); port = std::stoi(u.substr(c + 1)); } else { host = u; }
+                            } else {
+                                auto cfg = backendMgr.getActiveBackend();
+                                if (cfg.type == AIBackendType::Ollama && !cfg.endpoint.empty()) {
+                                    std::string ep = cfg.endpoint; size_t p = ep.find("://"); if (p != std::string::npos) ep = ep.substr(p + 3);
+                                    size_t c = ep.rfind(':'); if (c != std::string::npos && c + 1 < ep.size()) { host = ep.substr(0, c); port = std::stoi(ep.substr(c + 1)); }
+                                }
+                            }
+                            std::string model = backendMgr.getActiveBackend().model; if (model.empty()) model = "llama3.2";
+                            if (!OllamaGenerateSync(host, port, model, currentPrompt, response)) response = "[Ollama error]";
+                        }
+                        std::cout << "\n[Cycle " << (i + 1) << "]\n" << response << "\n";
+                        if (!allowTools) break;
+                        std::string toolResult;
+                        if (!subAgentMgr.dispatchToolCall("repl", response, toolResult)) break;
+                        std::cout << "\n[Tool Result]\n" << toolResult << "\n";
+                        currentPrompt = "Observation from tool execution:\n" + toolResult + "\n\nContinue toward the goal: " + prompt;
+                    }
+                    std::cout << "[Agent] Done.\n";
                 }
             }
             else if (input.substr(0, 10) == "/subagent ") {
@@ -521,6 +860,78 @@ REPL Commands:
                 std::string result = subAgentMgr.executeSwarm("repl", prompts);
                 std::cout << "[Swarm Result]\n" << result << "\n";
             }
+            else if (input == "/tools") {
+                std::cout << "Available Agent Tools (101% Win32 parity):\n\n";
+                std::cout << "  • shell, powershell     — Run terminal commands\n";
+                std::cout << "  • read_file, write_file, list_dir — File operations\n";
+                std::cout << "  • runSubagent           — Spawn sub-agent\n";
+                std::cout << "  • manage_todo_list      — Todo list management\n";
+                std::cout << "  • chain                 — Sequential prompt chain\n";
+                std::cout << "  • hexmag_swarm          — Parallel swarm execution\n";
+                std::cout << "  • bulk_fix              — Bulk autonomous fix\n\n";
+                std::cout << "Model outputs TOOL:<name>:{...} to invoke. Example: TOOL:read_file:{\"path\":\"file.txt\"}\n";
+                std::cout << "HTTP API: POST /api/tool with {\"tool\":\"read_file\"|\"run_command\"|...}\n\n";
+            }
+            else if ((input.size() > 10 && input.substr(0, 10) == "/run-tool ") ||
+                     (input.size() > 9 && input.substr(0, 9) == "run-tool ")) {
+                size_t nameStart = (input[0] == '/') ? 10 : 9;
+                size_t sp = input.find(' ', nameStart);
+                std::string toolName = (sp != std::string::npos) ? input.substr(nameStart, sp - nameStart) : input.substr(nameStart);
+                std::string jsonArgs = (sp != std::string::npos && sp + 1 < input.size()) ? input.substr(sp + 1) : "{}";
+                if (toolName.empty()) {
+                    std::cout << "Usage: /run-tool <name> [json]. Example: /run-tool list_dir {}\n";
+                } else {
+                    std::string fakeOutput = "TOOL:" + toolName + ":" + jsonArgs;
+                    std::string toolResult;
+                    if (subAgentMgr.dispatchToolCall("repl-run-tool", fakeOutput, toolResult)) {
+                        std::cout << "[Tool " << toolName << "] " << toolResult << "\n";
+                    } else {
+                        std::cout << "[Tool " << toolName << "] Not dispatched. Try: read_file, write_file, list_dir, shell, powershell.\n";
+                    }
+                }
+            }
+            else if (input == "/smoke") {
+                std::string smokePrompt = "SMOKE TEST: Create a file named 'agent_smoke_test.txt' in the current working directory. "
+                    "Content should be 'RawrXD Agentic Smoke Test Successful at ' + [Current Timestamp]. "
+                    "After creating the file, run 'dir' or 'ls' to verify it exists and output the result. "
+                    "Finally, read the file back to confirm content integrity.";
+                std::cout << "[Smoke] Running agentic smoke test (same as Win32 Agent > Run Smoke Test)...\n";
+                std::cout << "[Smoke] Goal: Verify multi-step tools (filesystem + shell).\n\n";
+                if (!agentEngine.isModelLoaded()) {
+                    std::cout << "[Smoke] Hint: No GGUF loaded — using Ollama. Ensure 'ollama serve' is running.\n\n";
+                }
+                auto operationMode = RawrXD::AgenticAutonomousConfig::instance().getOperationMode();
+                bool allowTools = (operationMode != RawrXD::AgenticOperationMode::Ask && operationMode != RawrXD::AgenticOperationMode::Plan);
+                std::string currentPrompt = smokePrompt;
+                for (int i = 0; i < 10; i++) {
+                    std::string response;
+                    if (agentEngine.isModelLoaded()) {
+                        response = agentEngine.chat(currentPrompt);
+                    } else {
+                        std::string host = "localhost"; int port = 11434;
+                        const char* e = std::getenv("OLLAMA_HOST");
+                        if (e && e[0]) {
+                            std::string u = e; size_t p = u.find("://"); if (p != std::string::npos) u = u.substr(p + 3);
+                            size_t c = u.rfind(':'); if (c != std::string::npos && c + 1 < u.size()) { host = u.substr(0, c); port = std::stoi(u.substr(c + 1)); } else { host = u; }
+                        } else {
+                            auto cfg = backendMgr.getActiveBackend();
+                            if (cfg.type == AIBackendType::Ollama && !cfg.endpoint.empty()) {
+                                std::string ep = cfg.endpoint; size_t p = ep.find("://"); if (p != std::string::npos) ep = ep.substr(p + 3);
+                                size_t c = ep.rfind(':'); if (c != std::string::npos && c + 1 < ep.size()) { host = ep.substr(0, c); port = std::stoi(ep.substr(c + 1)); }
+                            }
+                        }
+                        std::string model = backendMgr.getActiveBackend().model; if (model.empty()) model = "llama3.2";
+                        if (!OllamaGenerateSync(host, port, model, currentPrompt, response)) response = "[Ollama error: start ollama serve]";
+                    }
+                    std::cout << "\n[Cycle " << (i + 1) << "]\n" << response << "\n";
+                    if (!allowTools) break;
+                    std::string toolResult;
+                    if (!subAgentMgr.dispatchToolCall("smoke", response, toolResult)) break;
+                    std::cout << "\n[Tool Result]\n" << toolResult << "\n";
+                    currentPrompt = "Observation from tool execution:\n" + toolResult + "\n\nContinue toward the goal: " + smokePrompt;
+                }
+                std::cout << "[Smoke] Done. Check agent_smoke_test.txt for verification.\n\n";
+            }
             else if (input == "/agents") {
                 auto agents = subAgentMgr.getAllSubAgents();
                 if (agents.empty()) {
@@ -535,6 +946,94 @@ REPL Commands:
             else if (input == "/status") {
                 std::cout << "Model loaded: " << (agentEngine.isModelLoaded() ? "yes" : "no") << "\n";
                 std::cout << subAgentMgr.getStatusSummary() << "\n";
+            }
+            // ── Autonomy Loop (parity with Win32 IDE Autonomy: Start/Stop) ──
+            else if (input == "/autonomy start") {
+                CLIAutonomyLoop::instance().start();
+            }
+            else if (input == "/autonomy stop") {
+                CLIAutonomyLoop::instance().stop();
+            }
+            else if (input == "/autonomy pause") {
+                CLIAutonomyLoop::instance().pause();
+            }
+            else if (input == "/autonomy resume") {
+                CLIAutonomyLoop::instance().resume();
+            }
+            else if (input == "/autonomy status") {
+                std::cout << CLIAutonomyLoop::instance().getStatusString() << "\n";
+                std::cout << CLIAutonomyLoop::instance().getDetailedStatus() << "\n";
+            }
+            // Deep Iteration: audit→code→audit cycles (beyond Copilot/Cursor)
+            else if (input.substr(0, 14) == "/deep-iterate ") {
+                std::string args = input.substr(14);
+                std::string path;
+                int maxIter = 10;
+                bool writeBack = false;
+                std::istringstream argStream(args);
+                std::string tok;
+                while (argStream >> tok) {
+                    if (tok == "--write") writeBack = true;
+                    else if (!tok.empty() && tok[0] >= '0' && tok[0] <= '9')
+                        maxIter = std::max(1, std::min(50, std::stoi(tok)));
+                    else if (path.empty()) path = tok;
+                }
+                if (path.empty()) {
+                    std::cout << "[ERROR] Usage: /deep-iterate <path> [max_iter] [--write]\n";
+                } else {
+                    if (writeBack) std::cout << "[Deep Iteration] Write-back enabled: results will be saved to " << path << "\n";
+                    std::cout << "[Deep Iteration] Running " << maxIter << " audit→code cycles on " << path << "...\n";
+                    auto cfg = DeepIterationEngine::instance().getConfig();
+                    cfg.maxIterations = maxIter;
+                    cfg.writeResultToFile = writeBack;
+                    DeepIterationEngine::instance().setConfig(cfg);
+                    std::string finalCode;
+                    bool ok = DeepIterationEngine::instance().run(path, "", &finalCode);
+                    std::cout << "[Deep Iteration] " << (ok ? "Completed" : "Stopped") << ". "
+                              << DeepIterationEngine::instance().getStatusString() << "\n";
+                }
+            }
+            else if (input == "/deep-status") {
+                std::cout << DeepIterationEngine::instance().getStatusString() << "\n";
+                const auto& st = DeepIterationEngine::instance().getStats();
+                std::cout << "  Iterations: " << st.totalIterations.load()
+                          << " | Audits: " << st.auditsRun.load()
+                          << " | Code phases: " << st.codePhasesRun.load()
+                          << " | Verifications: " << st.verificationsRun.load()
+                          << " | Findings: " << st.findingsTotal.load()
+                          << " | Changes: " << st.changesApplied.load()
+                          << " | Converged: " << st.convergenceCount.load()
+                          << " | Complexity rejects: " << st.complexityRejects.load() << "\n";
+            }
+            else if (input.substr(0, 12) == "/deep-config ") {
+                std::string rest = input.substr(12);
+                while (!rest.empty() && (rest[0] == ' ' || rest[0] == '\t')) rest.erase(0, 1);
+                auto cfg = DeepIterationEngine::instance().getConfig();
+                if (rest.empty()) {
+                    std::cout << "Deep Iteration Config:\n"
+                              << "  max_iterations=" << cfg.maxIterations
+                              << " convergence_window=" << cfg.convergenceWindow
+                              << " min_complexity=" << cfg.minComplexityPreservation
+                              << " max_tokens_per_phase=" << cfg.maxTokensPerPhase
+                              << " write_result=" << (cfg.writeResultToFile ? "1" : "0") << "\n";
+                } else {
+                    size_t eq = rest.find('=');
+                    if (eq != std::string::npos) {
+                        std::string key = rest.substr(0, eq);
+                        std::string val = rest.substr(eq + 1);
+                        while (!key.empty() && (key.back() == ' ' || key.back() == '\t')) key.pop_back();
+                        while (!val.empty() && (val[0] == ' ' || val[0] == '\t')) val.erase(0, 1);
+                        if (key == "max_iterations") cfg.maxIterations = std::max(1, std::min(50, std::stoi(val)));
+                        else if (key == "convergence_window") cfg.convergenceWindow = std::max(1, std::min(20, std::stoi(val)));
+                        else if (key == "min_complexity") cfg.minComplexityPreservation = std::max(0.0f, std::min(1.0f, std::stof(val)));
+                        else if (key == "max_tokens") cfg.maxTokensPerPhase = std::max(256, std::min(32768, std::stoi(val)));
+                        else if (key == "write_result") cfg.writeResultToFile = (val == "1" || val == "true" || val == "yes");
+                        DeepIterationEngine::instance().setConfig(cfg);
+                        std::cout << "[Deep Config] Set " << key << " = " << val << "\n";
+                    } else {
+                        std::cout << "[ERROR] Usage: /deep-config [key=value]\n";
+                    }
+                }
             }
             else if (input == "/todo") {
                 auto todos = subAgentMgr.getTodoList();
@@ -894,6 +1393,84 @@ REPL Commands:
             else if (input == "/release") {
                 std::cout << "[Release] " << releaseEngine.toJson() << "\n";
             }
+            // ── Phase 51: Security (Dork Scanner + Universal Dorker) ──
+            else if (input == "/security") {
+                using namespace RawrXD::Security;
+                int db = 0, ub = 0;
+                { RawrXD::Security::GoogleDorkScanner sc(DorkScannerConfig{}); if (sc.initialize()) db = sc.getBuiltinDorkCount(); }
+                ub = RawrXD::Security::UniversalPhpDorker::GetBuiltinCount();
+                std::cout << "[Security] phase=51 dorkScanner.builtinDorkCount=" << db
+                          << " universalDorker.builtinDorkCount=" << ub
+                          << " endpoints=/api/security/dork/status,/api/security/dork/scan,/api/security/dork/universal,/api/security/dashboard\n";
+            }
+            else if (input == "/dork status") {
+                using namespace RawrXD::Security;
+                DorkScannerConfig def = {};
+                def.threadCount = 4; def.delayMs = 1500; def.maxIterations = 100;
+                int builtin = 0;
+                { RawrXD::Security::GoogleDorkScanner sc(def); if (sc.initialize()) builtin = sc.getBuiltinDorkCount(); }
+                int universalCount = RawrXD::Security::UniversalPhpDorker::GetBuiltinCount();
+                std::cout << "[Dork] builtinDorkCount=" << builtin << " universalBuiltinDorkCount=" << universalCount
+                          << " defaultThreadCount=4 delayMs=1500 maxIterations=100\n";
+            }
+            // ── Agentic Autonomous: Operation mode (Agent/Plan/Debug/Ask) + Model selection ──
+            else if (input == "/agentic") {
+                auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                std::cout << "[Agentic] " << cfg.toDisplayString() << "\n";
+                std::cout << "  Operation: Agent (full) | Plan | Debug | Ask\n";
+                std::cout << "  /agentic mode <Agent|Plan|Debug|Ask>\n";
+            }
+            else if (input.substr(0, 12) == "/agentic mode ") {
+                std::string modeStr = input.substr(12);
+                auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                cfg.setOperationModeFromString(modeStr);
+                std::cout << "[Agentic] Operation mode set to: "
+                          << RawrXD::to_string(cfg.getOperationMode()) << "\n";
+            }
+            else if (input == "/models") {
+                auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                std::cout << "[Models] " << cfg.toDisplayString() << "\n";
+                std::cout << "  Mode: Auto | MAX | UseMultipleModels\n";
+                std::cout << "  Per-model instances: 1-4, global cap: 1-40, cycle: 1x-4x\n";
+                std::cout << "  /models mode <Auto|MAX|multiple> | /models per-model <1-4> | cap <1-40> | cycle <1-4>\n";
+            }
+            else if (input.substr(0, 12) == "/models mode ") {
+                std::string modeStr = input.substr(12);
+                auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                cfg.setModelSelectionModeFromString(modeStr);
+                std::cout << "[Models] Model selection set to: "
+                          << RawrXD::to_string(cfg.getModelSelectionMode()) << "\n";
+            }
+            else if (input.substr(0, 17) == "/models per-model ") {
+                try {
+                    int n = std::stoi(input.substr(17));
+                    auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                    cfg.setPerModelInstanceCount(n);
+                    std::cout << "[Models] Per-model instances: " << cfg.getPerModelInstanceCount() << "\n";
+                } catch (...) {
+                    std::cout << "[Models] Usage: /models per-model <1-4>\n";
+                }
+            }
+            else if (input.substr(0, 11) == "/models cap ") {
+                try {
+                    int n = std::stoi(input.substr(11));
+                    auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                    cfg.setMaxModelsInParallel(n);
+                    std::cout << "[Models] Max models in parallel: " << cfg.getMaxModelsInParallel() << "\n";
+                } catch (...) {
+                    std::cout << "[Models] Usage: /models cap <1-40>\n";
+                }
+            }
+            else if (input.substr(0, 13) == "/models cycle ") {
+                try {
+                    int n = std::stoi(input.substr(13));
+                    auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+                    cfg.setCycleAgentCounter(n);
+                    std::cout << "[Models] Cycle agent counter: " << cfg.getCycleAgentCounter() << "x\n";
+                } catch (...) {
+                    std::cout << "[Models] Usage: /models cycle <1-4>\n";
+                }
+            }
             // ── Phase 20: Model Hotpatcher ! Commands ──
             else if (input.substr(0, 12) == "!model_load ") {
                 cmd_model("load " + input.substr(12));
@@ -1217,6 +1794,121 @@ REPL Commands:
                 }
             }
 #endif
+            // ═══════════════════════════════════════════════════════════
+            // Enterprise License REPL Commands
+            // ═══════════════════════════════════════════════════════════
+            else if (input == "/license" || input == "/lic") {
+                std::cout << EnterpriseFeatureManager::Instance().GenerateDashboard();
+            }
+            else if (input == "/license audit" || input == "/lic audit") {
+                std::cout << EnterpriseFeatureManager::Instance().GenerateAuditReport();
+            }
+            else if (input == "/license unlock" || input == "/lic unlock") {
+                bool ok = EnterpriseFeatureManager::Instance().DevUnlock();
+                if (ok) {
+                    std::cout << "[License] All enterprise features unlocked!\n";
+                    std::cout << EnterpriseFeatureManager::Instance().GenerateDashboard();
+                } else {
+                    std::cout << "[License] Dev unlock failed. Set RAWRXD_ENTERPRISE_DEV=1 and restart.\n";
+                }
+            }
+            else if (input == "/license hwid" || input == "/lic hwid") {
+                std::cout << "[License] HWID: " << EnterpriseFeatureManager::Instance().GetHWIDString() << "\n";
+            }
+            else if (input.rfind("/license install ", 0) == 0) {
+                std::string path = input.substr(17);
+                bool ok = EnterpriseFeatureManager::Instance().InstallLicenseFromFile(path);
+                if (ok) {
+                    std::cout << "[License] License installed successfully!\n";
+                    std::cout << EnterpriseFeatureManager::Instance().GenerateDashboard();
+                } else {
+                    std::cout << "[License] Install failed. Check file path and format.\n";
+                }
+            }
+            else if (input == "/license features" || input == "/lic features") {
+                auto statuses = EnterpriseFeatureManager::Instance().GetFeatureStatuses();
+                std::cout << "\nEnterprise Features (" << EnterpriseFeatureManager::Instance().GetEditionName() << "):\n";
+                for (const auto& s : statuses) {
+                    std::cout << "  [" << (s.active ? "ACTIVE" : "LOCKED") << "] "
+                              << s.name << " (0x" << std::hex << s.mask << std::dec << ")\n";
+                }
+                std::cout << "\n";
+            }
+            // ═══════════════════════════════════════════════════════════
+            // Per-Feature Status Commands
+            // ═══════════════════════════════════════════════════════════
+            else if (input == "/800b") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x01);
+                std::cout << "[800B Dual-Engine] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                if (active) {
+                    std::cout << "  Max model size: " << RawrXD::EnterpriseLicense::Instance().GetMaxModelSizeGB() << " GB\n";
+                    std::cout << "  800B unlocked: " << (RawrXD::EnterpriseLicense::Instance().Is800BUnlocked() ? "Yes" : "No") << "\n";
+                } else {
+                    std::cout << "  Requires: Enterprise license\n";
+                }
+            }
+            else if (input == "/avx512") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x02);
+                std::cout << "[AVX-512 Premium] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                if (active) {
+                    std::cout << "  Premium AVX-512 kernels enabled for inference and quantization\n";
+                } else {
+                    std::cout << "  Requires: Pro or Enterprise license\n";
+                }
+            }
+            else if (input == "/swarm") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x04);
+                std::cout << "[Distributed Swarm] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                if (active) {
+                    std::cout << "  Distributed inference orchestrator is available\n";
+                } else {
+                    std::cout << "  Requires: Enterprise license\n";
+                }
+            }
+            else if (input == "/gpuquant") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x08);
+                std::cout << "[GPU Quant 4-bit] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                if (active) {
+                    std::cout << "  GPU-accelerated Q4_0/Q4_K quantization enabled\n";
+                } else {
+                    std::cout << "  Requires: Pro or Enterprise license\n";
+                }
+            }
+            else if (input == "/support") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x10);
+                std::cout << "[Enterprise Support] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                if (active) {
+                    std::cout << RawrXD::Enterprise::SupportTierManager::Instance().GenerateStatusReport();
+                } else {
+                    std::cout << "  Requires: Enterprise license\n";
+                }
+            }
+            else if (input == "/context") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x20);
+                std::cout << "[Unlimited Context] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                std::cout << "  Max context: " << RawrXD::EnterpriseLicense::Instance().GetMaxContextLength() << " tokens\n";
+                if (!active) {
+                    std::cout << "  (Community limit: 32K — upgrade for 200K)\n";
+                }
+            }
+            else if (input == "/flashattn") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x40);
+                std::cout << "[Flash Attention] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                if (active) {
+                    std::cout << "  Flash Attention v2 MASM kernels enabled\n";
+                } else {
+                    std::cout << "  Requires: Pro or Enterprise license\n";
+                }
+            }
+            else if (input == "/multigpu") {
+                bool active = RawrXD::EnterpriseLicense::isFeatureEnabled(0x80);
+                std::cout << "[Multi-GPU] Status: " << (active ? "ACTIVE" : "LOCKED") << "\n";
+                auto& mgr = RawrXD::Enterprise::MultiGPUManager::Instance();
+                std::cout << mgr.GenerateStatusReport();
+                if (mgr.GetDeviceCount() > 1) {
+                    std::cout << mgr.GenerateTopologyReport();
+                }
+            }
             else {
                 std::cout << "Unknown command. Type /help for commands.\n";
             }
@@ -1237,6 +1929,16 @@ REPL Commands:
         std::cout << "[SYSTEM] ReverseEngineered kernel shutdown complete\n";
     }
 #endif
+
+    // Stop autonomy loop before shutdown
+    CLIAutonomyLoop::instance().stop();
+
+    // Shutdown headless CLI subsystems
+    cli_headless_shutdown();
+
+    // Shutdown enterprise subsystems
+    EnterpriseFeatureManager::Instance().Shutdown();
+    RawrXD::EnterpriseLicense::Instance().Shutdown();
 
     server.Stop();
     return 0;

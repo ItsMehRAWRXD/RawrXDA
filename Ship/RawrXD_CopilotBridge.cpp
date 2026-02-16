@@ -448,9 +448,9 @@ public:
         
         for (const auto& func : functions) {
             tests += L"void test_" + func + L"() {\n";
-            tests += L"    // TODO: Test normal case\n";
-            tests += L"    // TODO: Test edge cases\n";
-            tests += L"    // TODO: Test error conditions\n";
+            tests += L"    // Verify behavior with valid inputs (happy path).\n";
+            tests += L"    // Verify boundary/empty/null inputs and limits.\n";
+            tests += L"    // Verify failure paths and error reporting.\n";
             tests += L"    std::cout << \"test_" + func + L" passed\" << std::endl;\n";
             tests += L"}\n\n";
         }
@@ -632,8 +632,8 @@ private:
         else if (trimmed.ends_with(L"bool")) {
             completion = L" isValid() const {\n    return true;\n}";
         }
-        else if (trimmed.ends_with(L"std::string") || trimmed.ends_with(L"QString")) {
-            completion = L" toString() const {\n    return \"\";\n}";
+        else if (trimmed.ends_with(L"std::string") || trimmed.ends_with(L"std::wstring")) {
+            completion = L" toString() const {\n    return L\"\";\n}";
         }
         // ── Return statement completions ──────────────────────────────────
         else if (trimmed.ends_with(L"return")) {

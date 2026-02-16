@@ -18,11 +18,21 @@
 #include "Win32IDE_SubAgent.h"
 #include "Win32IDE.h"
 #include "IDEConfig.h"
+#include "../../include/feature_flags_runtime.h"
 #include <sstream>
 #include <chrono>
 #include <fstream>
 #include <algorithm>
 #include <cassert>
+
+// SCAFFOLD_059: SubAgentManager todo list sync
+
+
+// SCAFFOLD_058: SubAgentManager swarm execution
+
+
+// SCAFFOLD_057: SubAgentManager chain execution
+
 
 // ============================================================================
 // Factory: create a SubAgentManager with IDELogger + METRICS callbacks
@@ -381,6 +391,10 @@ void Win32IDE::onSubAgentStatus() {
 
 void Win32IDE::appendStreamingToken(const std::string& token) {
     if (token.empty()) return;
+    if (!RawrXD::Flags::FeatureFlagsRuntime::Instance().isEnabled(
+            RawrXD::License::FeatureID::TokenStreaming)) {
+        return;
+    }
 
     {
         std::lock_guard<std::mutex> lock(m_streamingOutputMutex);
@@ -709,7 +723,7 @@ extern "C" int RawrLicense_CheckFeature(const char* featureId);
 #else
 extern "C" __attribute__((weak)) int RawrLicense_CheckFeature(const char* featureId) {
     (void)featureId;
-    return 1; // Stub: all features licensed when no license module is linked
+    return 1; // No license module linked: all features enabled
 }
 #endif
 

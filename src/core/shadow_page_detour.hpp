@@ -28,7 +28,9 @@
 #ifndef RAWRXD_SHADOW_PAGE_DETOUR_HPP
 #define RAWRXD_SHADOW_PAGE_DETOUR_HPP
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include "model_memory_hotpatch.hpp"
 #include "camellia256_bridge.hpp"

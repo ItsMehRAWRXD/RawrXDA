@@ -34,6 +34,180 @@
 #include <filesystem>
 #include <winhttp.h>
 
+// SCAFFOLD_001: Main window creation and message loop
+
+
+// SCAFFOLD_323: Hotpatch/Semantic/Pipeline/Crucible log
+
+
+// SCAFFOLD_322: Command default logging (unhandled ID)
+
+
+// SCAFFOLD_174: routeCommandUnified and unknown ID
+
+
+// SCAFFOLD_015: Copilot Send/Clear button handlers
+
+
+// SCAFFOLD_366: testFindPatternRVAParity
+
+
+// SCAFFOLD_365: killTerminal and timeout
+
+
+// SCAFFOLD_364: DetachedThreadGuard and shutdown
+
+
+// SCAFFOLD_363: appendToOutput and severity
+
+
+// SCAFFOLD_362: utf8ToWide / wideToUtf8
+
+
+// SCAFFOLD_361: setFont helper for controls
+
+
+// SCAFFOLD_360: DPI scale helper
+
+
+// SCAFFOLD_329: CheckpointManager listCheckpoints API
+
+
+// SCAFFOLD_324: Loading... tree UX comments
+
+
+// SCAFFOLD_271: Error count and warning count
+
+
+// SCAFFOLD_260: Module browser (if present)
+
+
+// SCAFFOLD_248: Snippet and template insertion
+
+
+// SCAFFOLD_246: LoadMemoryPlugin legacy
+
+
+// SCAFFOLD_202: License activation dialog and key path
+
+
+// SCAFFOLD_186: Audit detect stubs and report
+
+
+// SCAFFOLD_178: Command palette filtering and run
+
+
+// SCAFFOLD_177: PowerShell output and execute
+
+
+// SCAFFOLD_176: Terminal kill and split
+
+
+// SCAFFOLD_170: New file and default content
+
+
+// SCAFFOLD_169: Save/Save As and modified flag
+
+
+// SCAFFOLD_167: Tier 3 (DirectWrite if present)
+
+
+// SCAFFOLD_163: Clipboard history panel
+
+
+// SCAFFOLD_162: Snippet list and insertion
+
+
+// SCAFFOLD_161: Monaco/WebView editor migration (future)
+
+
+// SCAFFOLD_160: Inline AI suggestion overlay (future)
+
+
+// SCAFFOLD_159: Selection and clipboard
+
+
+// SCAFFOLD_158: Undo/redo stack
+
+
+// SCAFFOLD_157: Language mode from file extension
+
+
+// SCAFFOLD_156: EOL and encoding detection
+
+
+// SCAFFOLD_155: Indentation and tab/space
+
+
+// SCAFFOLD_154: Split code viewer
+
+
+// SCAFFOLD_153: Code folding (if present)
+
+
+// SCAFFOLD_152: Minimap (if present)
+
+
+// SCAFFOLD_151: Line numbers and caret
+
+
+// SCAFFOLD_116: Ollama model override and selection
+
+
+// SCAFFOLD_115: generateResponse sync path
+
+
+// SCAFFOLD_082: generateResponseAsync and streaming
+
+
+// SCAFFOLD_076: Agent memory store/recall/export
+
+
+// SCAFFOLD_050: License dialogs (info, activation)
+
+
+// SCAFFOLD_049: Checkpoint manager show and list
+
+
+// SCAFFOLD_033: Transcendence panel and endpoints
+
+
+// SCAFFOLD_023: Output panel and severity tabs
+
+
+// SCAFFOLD_022: Terminal pane creation and split
+
+
+// SCAFFOLD_014: Model selector combobox population
+
+
+// SCAFFOLD_013: Go to line dialog
+
+
+// SCAFFOLD_012: Find/Replace dialog and options
+
+
+// SCAFFOLD_011: Menu bar and accelerator table
+
+
+// SCAFFOLD_010: Font and DPI scaling application
+
+
+// SCAFFOLD_009: File explorer tree and refresh
+
+
+// SCAFFOLD_008: Command palette creation and filtering
+
+
+// SCAFFOLD_007: Status bar and parts layout
+
+
+// SCAFFOLD_006: Tab bar and document switching
+
+
+// SCAFFOLD_005: Editor control and RichEdit integration
+
+
 #pragma comment(lib, "winhttp.lib")
 
 #pragma comment(lib, "comdlg32.lib")
@@ -399,6 +573,13 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit");
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
 
+    // Build menu (Unicode)
+    HMENU hBuildMenu = CreatePopupMenu();
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_SOLUTION, L"&Build Solution\tCtrl+B");
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_CLEAN, L"&Clean");
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_REBUILD, L"Re&build");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hBuildMenu, L"&Build");
+
     // Edit menu (Unicode)
     HMENU hEditMenu = CreatePopupMenu();
     AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND, L"&Find...\tCtrl+F");
@@ -427,6 +608,8 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, L"Use Streaming Loader (Low Memory)");
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, L"Enable Vulkan Renderer (experimental)");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_AGENT_PANEL, L"Agent &Panel");
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hViewMenu, MF_STRING, IDM_TELDASH_SHOW, L"Telemetry &Dashboard...");
     AppendMenuW(hViewMenu, MF_STRING, IDM_EMOJI_PICKER, L"&Emoji Picker");
@@ -503,6 +686,25 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, L"&SLO Dashboard...");
 
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
+
+    // Build menu
+    HMENU hBuildMenu = CreatePopupMenu();
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_SOLUTION, L"Build &Solution");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hBuildMenu, L"&Build");
+
+    // Build menu
+    HMENU hBuildMenu = CreatePopupMenu();
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_SOLUTION, L"Build &Solution\tCtrl+Shift+B");
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_PROJECT, L"Build &Project");
+    AppendMenuW(hBuildMenu, MF_STRING, IDM_BUILD_CLEAN, L"&Clean");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hBuildMenu, L"&Build");
+
+    // Security menu (Top-50 P0 — SAST, Secrets, SCA)
+    HMENU hSecurityMenu = CreatePopupMenu();
+    AppendMenuW(hSecurityMenu, MF_STRING, IDM_SECURITY_SCAN_SECRETS, L"Scan for &Secrets");
+    AppendMenuW(hSecurityMenu, MF_STRING, IDM_SECURITY_SCAN_SAST, L"Run &SAST Scan");
+    AppendMenuW(hSecurityMenu, MF_STRING, IDM_SECURITY_SCAN_DEPENDENCIES, L"Scan &Dependencies (SCA)");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSecurityMenu, L"Secu&rity");
 
     // Modules menu
     HMENU hModulesMenu = CreatePopupMenu();
@@ -622,6 +824,7 @@ void Win32IDE::createMenuBar(HWND hwnd)
 
         AppendMenuW(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
 
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SET_TARGET_TPS, L"Set target &TPS...");
         AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_SAVE, L"Save Preset...");
         AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_LOAD, L"Load Preset...");
 

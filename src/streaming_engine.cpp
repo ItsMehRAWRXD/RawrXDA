@@ -1,4 +1,5 @@
 #include "streaming_engine.h"
+#include "license_enforcement.h"
 #include <chrono>
 #include <sstream>
 #include <algorithm>
@@ -25,6 +26,12 @@ void StreamingEngine::startStream(
     std::function<void(const std::string&)> onError,
     std::function<void()> onStreamEnd
 ) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::TokenStreaming, __FUNCTION__)) {
+        if (onError) onError("[LICENSE] TokenStreaming feature requires Professional license or higher");
+        return;
+    }
+    
     std::lock_guard<std::mutex> lock(m_bufferMutex);
     
     m_onCompletion = onCompletion;
@@ -45,6 +52,11 @@ void StreamingEngine::startStream(
 }
 
 void StreamingEngine::feedChunk(const std::string& chunk) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::TokenStreaming, __FUNCTION__)) {
+        return;
+    }
+    
     if (chunk.empty()) return;
 
     // Record time to first chunk
@@ -94,6 +106,11 @@ void StreamingEngine::feedChunk(const std::string& chunk) {
 }
 
 void StreamingEngine::endStream() {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::TokenStreaming, __FUNCTION__)) {
+        return;
+    }
+    
     {
         std::lock_guard<std::mutex> lock(m_bufferMutex);
         if (!m_chunkBuffer.empty()) {
@@ -181,6 +198,11 @@ void StreamingEngine::reset() {
 }
 
 void StreamingEngine::processChunk(const StreamChunk& chunk) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::TokenStreaming, __FUNCTION__)) {
+        return;
+    }
+    
     if (!m_parser) return;
 
     // Parse chunk using response parser to detect boundaries
@@ -228,6 +250,12 @@ bool HTTPStreamingClient::openStream(
     const std::vector<std::pair<std::string, std::string>>& headers,
     const std::string& body
 ) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::TokenStreaming, __FUNCTION__)) {
+        m_lastError = "[LICENSE] TokenStreaming feature requires Professional license or higher";
+        return false;
+    }
+    
     if (m_logger) {
         m_logger->info("HTTPStreamingClient", "Opening stream to: " + url);
     }
@@ -260,6 +288,11 @@ bool HTTPStreamingClient::openStream(
 }
 
 void HTTPStreamingClient::closeStream() {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::TokenStreaming, __FUNCTION__)) {
+        return;
+    }
+    
     if (m_logger) {
         m_logger->info("HTTPStreamingClient", "Closing stream");
     }

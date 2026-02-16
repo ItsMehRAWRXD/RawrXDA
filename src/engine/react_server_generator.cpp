@@ -4,6 +4,9 @@
 #include <sstream>
 #include <iostream>
 
+// SCAFFOLD_285: React server generator
+
+
 namespace RawrXD {
 
 static void write_file(const std::filesystem::path& path, const std::string& content) {

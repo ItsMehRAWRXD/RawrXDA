@@ -9,6 +9,20 @@
 #include <atomic>
 #include <queue>
 
+// Forward declarations for quantum integration
+namespace RawrXD::Agent {
+    class QuantumProductionOrchestrator;
+    class QuantumAutonomousTodoSystem;
+    class QuantumDynamicTimeManager;
+}
+
+extern "C" {
+    // MASM acceleration for AI completion
+    void __stdcall masm_completion_accelerator(const char* context, char* completions, size_t buffer_size);
+    void __stdcall masm_confidence_calculator(const char* completion, float* confidence);
+    void __stdcall masm_semantic_analyzer(const char* code_context, void* analysis_result);
+}
+
 /**
  * @class AICompletionProvider
  * @brief Real-time code completion engine with local model inference
@@ -30,6 +44,15 @@ public:
         std::string type;  // "function", "keyword", "variable", etc.
         std::string detail;// Additional info
         int sortText;      // Sort priority
+        
+        // Quantum enhancements
+        float productionReadiness = 0.0f;  // How production-ready is this completion
+        float quantumOptimizationScore = 0.0f;  // Quantum-calculated optimization potential
+        bool requiresAudit = false;  // Whether this completion needs production audit
+        std::vector<std::string> suggestedImprovements;  // Auto-generated improvement suggestions
+        bool generatedByQuantumSystem = false;  // Track quantum vs traditional generation
+        
+        CompletionSuggestion() : confidence(0.0f), priority(0), sortText(0) {}
     };
 
     struct CompletionContext {
@@ -42,12 +65,48 @@ public:
         std::string language;
         std::string currentFile;
         std::string projectRoot;
+        
+        // Quantum context enhancements
+        float codeComplexity = 0.5f;  // Calculated complexity of current context
+        bool isProductionCritical = false;  // Whether this is production-critical code
+        bool enableQuantumMode = true;  // Use quantum-enhanced completions
+        bool enableAutonomousMode = false;  // Allow autonomous code generation
+        int maxAgentCount = 3;  // Maximum agents for complex completions
+        float qualityThreshold = 0.8f;  // Minimum quality for suggestions
+        
+        // Performance context
+        float currentSystemLoad = 0.5f;
+        bool preferSpeed = false;  // Prioritize speed over quality
+        bool preferQuality = true;  // Prioritize quality over speed
+        
+        CompletionContext() = default;
     };
 
     struct InferenceParams {
         int maxNewTokens = 32;
         float temperature = 0.3f;  // Lower for deterministic completions
         float topP = 0.95f;
+        int topK = 50;
+        float repetitionPenalty = 1.1f;
+        bool stopOnNewline = true;
+        int timeoutMs = 5000;  // 5 second timeout
+        
+        // Quantum enhancement parameters
+        bool useQuantumOptimization = true;
+        bool enableMasmAcceleration = true;
+        bool enableMultiAgent = false;  // Use multiple agents for complex completions
+        int agentCount = 1;  // Number of agents (1-8)
+        bool enableConsensus = false;  // Use consensus between agents
+        float consensusThreshold = 0.7f;  // Minimum agreement for consensus
+        
+        // Quality control
+        bool enforceProductionStandards = false;
+        float minConfidenceThreshold = 0.5f;
+        bool filterLowQuality = true;
+        bool generateImprovementSuggestions = true;
+        
+        InferenceParams() = default;
+    };
         int topK = 40;
         bool useBeamSearch = false;
         int beamWidth = 3;

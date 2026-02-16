@@ -9,6 +9,9 @@
 #include <sstream>
 #include <cstring>
 
+// SCAFFOLD_267: Subsystem health monitor
+
+
 namespace RawrXD {
 namespace Health {
 

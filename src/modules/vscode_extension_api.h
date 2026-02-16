@@ -1359,7 +1359,7 @@ namespace vscode {
                                                     Disposable* outDisposable);
 
         // Execute a registered command
-        VSCodeAPIResult executeCommand(const char* commandId);
+        VSCodeAPIResult executeCommand(const char* commandId, const char* argsJson = nullptr);
 
         // Execute a command with arguments (JSON-encoded)
         VSCodeAPIResult executeCommandWithArgs(const char* commandId,
@@ -1689,7 +1689,8 @@ namespace vscode {
         // ---- Command Registry (routed to vscode::commands) ----
         VSCodeAPIResult registerCommand(const char* commandId,
                                          void (*handler)(void* ctx), void* ctx);
-        VSCodeAPIResult executeCommand(const char* commandId);
+        VSCodeAPIResult executeCommand(const char* commandId, const char* argsJson = nullptr);
+        const char* getCurrentCommandArgs() const;
         size_t getCommandCount() const;
 
         // ---- Provider Registry (routed to vscode::languages) ----

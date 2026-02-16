@@ -17,6 +17,22 @@
 #include <fstream>
 #include <algorithm>
 #include <memory>
+#include <filesystem>
+
+// SCAFFOLD_054: AgenticBridge DispatchModelToolCalls
+
+
+// SCAFFOLD_053: AgenticBridge LoadModel and model override
+
+
+// SCAFFOLD_052: AgenticBridge StartAgentLoop / StopAgentLoop
+
+
+// SCAFFOLD_051: AgenticBridge ExecuteAgentCommand
+
+
+// SCAFFOLD_020: Agentic bridge initialization
+
 
 // Global shared instances to persist across UI reloads if needed
 static std::shared_ptr<RawrXD::CPUInferenceEngine> g_cpuEngine = nullptr;
@@ -243,18 +259,36 @@ bool AgenticBridge::StartAgentLoop(const std::string& initialPrompt, int maxIter
     }
 
     m_agentLoopRunning = true;
+    std::string currentPrompt = initialPrompt;
+    bool success = true;
 
-    AgentResponse response = ExecuteAgentCommand(initialPrompt);
+    for (int i = 0; i < maxIterations && m_agentLoopRunning; ++i) {
+        LOG_INFO("Agent loop cycle " + std::to_string(i + 1) + " / " + std::to_string(maxIterations));
+        
+        AgentResponse response = ExecuteAgentCommand(currentPrompt);
 
-    if (m_outputCallback) {
-        m_outputCallback("Agent Response", response.content);
-        if (!response.rawOutput.empty()) {
-            m_outputCallback("Agent Debug", response.rawOutput);
+        if (m_outputCallback) {
+            std::string iterationTitle = "Agent [Cycle " + std::to_string(i + 1) + "]";
+            m_outputCallback(iterationTitle, response.content);
+        }
+
+        // Check for tool results appended to the response (ExecuteAgentCommand does this)
+        size_t toolResultPos = response.content.find("[Tool Execution Result]");
+        if (toolResultPos != std::string::npos) {
+            // Found tool results, feed them back into the model
+            currentPrompt = "Observation from tool execution:\n" + 
+                           response.content.substr(toolResultPos);
+            // Optionally add a reminder to the agent to continue
+            currentPrompt += "\n\nContinue toward the goal: " + initialPrompt;
+        } else {
+            // No tool results, agent likely finished or reached a terminal state
+            LOG_INFO("Agent loop completed: No further tool calls detected.");
+            break;
         }
     }
 
     m_agentLoopRunning = false;
-    return true;
+    return success;
 }
 
 void AgenticBridge::StopAgentLoop() {
@@ -302,7 +336,13 @@ std::string AgenticBridge::GetAgentStatus() {
 void AgenticBridge::SetModel(const std::string& modelName) {
     m_modelName = modelName;
     LOG_INFO("Model set to: " + modelName);
-    if (g_cpuEngine) g_cpuEngine->LoadModel(modelName);
+    // Only load as GGUF path when it looks like a file path (agentic autonomous: Ollama tags are valid, don't LoadModel)
+    if (g_cpuEngine && !modelName.empty()) {
+        bool isPath = modelName.find_first_of("/\\") != std::string::npos
+                   || modelName.size() > 4 && modelName.compare(modelName.size() - 5, 5, ".gguf") == 0;
+        if (isPath)
+            g_cpuEngine->LoadModel(modelName);
+    }
 }
 
 void AgenticBridge::SetOllamaServer(const std::string& serverUrl) {
@@ -525,6 +565,13 @@ std::string AgenticBridge::ResolveFrameworkPath() {
 }
 
 std::string AgenticBridge::ResolveToolsModulePath() {
+    std::string base = ResolveFrameworkPath();
+    if (base.empty() || base == "Agentic-Framework.ps1") return "";
+    std::filesystem::path p(base);
+    if (p.has_parent_path()) {
+        p = p.parent_path() / "Tools" / "AgentTools.ps1";
+        if (std::filesystem::exists(p)) return p.string();
+    }
     return "";
 }
 

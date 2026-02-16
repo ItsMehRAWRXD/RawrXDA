@@ -170,7 +170,7 @@ static GauntletResult test_GapBuffer_Stress() {
     }
 
     // Insert 500 lines (will exceed initial 256 bytes and force resizes)
-    const char* line = "Line XXXX: The quick brown fox jumps.\n";
+    const char* line = "Line 0000: The quick brown fox jumps.\n";
     uint32_t lineLen = static_cast<uint32_t>(strlen(line));
     uint32_t totalInserted = 0;
 

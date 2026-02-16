@@ -34,6 +34,12 @@
 // Real backend integration
 #include "backend/agentic_tools.h"
 
+// SCAFFOLD_180: Tool server HTTP and capabilities
+
+
+// SCAFFOLD_096: tool_server capabilities and agentic
+
+
 // Standalone tool server InferenceEngine — validates model file exists on disk.
 // When compiled with the full inference pipeline, replace this class with the
 // real InferenceEngine from inference_engine.h via RAWR_HAS_INFERENCE define.
@@ -842,7 +848,7 @@ private:
             }
         }
         
-        // Fallback to stub implementation
+        // Fallback: local tool implementation (read_file, write_file, list_directory, etc.)
         std::string path = ExtractJsonValue(body, "path");
         if (path.empty()) path = ExtractJsonValue(body, "command");
 
@@ -901,6 +907,29 @@ private:
                     _pclose(pipe);
                     result = ToolResult::Success(out);
                 }
+            }
+        }
+        else if (tool == "get_cwd") {
+            try {
+                result = ToolResult::Success(std::filesystem::current_path().string());
+            } catch (const std::exception& e) {
+                result = ToolResult::Error(e.what());
+            }
+        }
+        else if (tool == "search_files") {
+            std::string dir = path.empty() ? "." : path;
+            std::string pattern = ExtractJsonValue(body, "pattern");
+            if (pattern.empty()) pattern = ExtractJsonValue(body, "content");
+            try {
+                std::string out;
+                for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+                    std::string name = entry.path().filename().string();
+                    if (pattern.empty() || name.find(pattern) != std::string::npos)
+                        out += entry.path().string() + "\n";
+                }
+                result = ToolResult::Success(out.empty() ? "(no matches)" : out);
+            } catch (const std::exception& e) {
+                result = ToolResult::Error(e.what());
             }
         }
         else {

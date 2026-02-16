@@ -1,6 +1,6 @@
-// digestion_engine_stub.cpp
-// Production implementation for RawrXD_DigestionEngine_Avx512
-// Full source code analysis with function extraction, dependency mapping, and metrics
+// digestion_engine_stub.cpp — IDE build: production implementation (filename retained for link).
+// RawrXD_DigestionEngine_Avx512: full source analysis, function extraction, dependency mapping,
+// line/comment/stub/TODO metrics, JSON report. Not a no-op stub.
 
 #include <windows.h>
 #include <cwchar>
@@ -12,6 +12,9 @@
 #include <set>
 #include <regex>
 #include <algorithm>
+
+// SCAFFOLD_240: digestion_engine_stub production
+
 
 // Helper to convert wide to UTF-8
 static std::string wideToUtf8(const wchar_t* src) {
@@ -57,7 +60,7 @@ static std::string detectLanguage(const std::string& filepath) {
     return "unknown";
 }
 
-// Stub implementation - write a minimal digestion report
+// Production implementation: full source analysis, line/comment/stub/TODO metrics, JSON report
 extern "C" DWORD __stdcall RawrXD_DigestionEngine_Avx512(
     LPCWSTR wszSource,
     LPCWSTR wszOutput,

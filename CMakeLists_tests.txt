@@ -1,46 +1,28 @@
+# AgentHotPatcher tests — C++20, no Qt.
+# test_agent_hot_patcher.cpp and test_agent_hot_patcher_integration.cpp are Qt-free.
 cmake_minimum_required(VERSION 3.16)
 project(AgentHotPatcherTests LANGUAGES CXX)
 
-# Find required Qt packages
-find_package(Qt6 REQUIRED COMPONENTS Core Test)
-
-# Enable automatic moc, uic, and rcc
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
-
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# Unit Tests
+# Unit tests (C++20, no Qt Test)
 add_executable(test_agent_hot_patcher
     test_agent_hot_patcher.cpp
     src/agent/agent_hot_patcher.cpp
 )
 
-target_link_libraries(test_agent_hot_patcher
-    Qt6::Core
-    Qt6::Test
-)
-
-# Integration Tests
+# Integration tests (C++20, no Qt)
 add_executable(test_agent_hot_patcher_integration
     test_agent_hot_patcher_integration.cpp
     src/agent/agent_hot_patcher.cpp
 )
 
-target_link_libraries(test_agent_hot_patcher_integration
-    Qt6::Core
-)
-
-# Compiler-specific options
 if(MSVC)
     target_compile_options(test_agent_hot_patcher PRIVATE /W4)
     target_compile_options(test_agent_hot_patcher_integration PRIVATE /W4)
@@ -49,6 +31,5 @@ else()
     target_compile_options(test_agent_hot_patcher_integration PRIVATE -Wall -Wextra -pedantic)
 endif()
 
-# Add tests to CTest
 add_test(NAME AgentHotPatcher_UnitTest COMMAND test_agent_hot_patcher)
 add_test(NAME AgentHotPatcher_IntegrationTest COMMAND test_agent_hot_patcher_integration)

@@ -2,6 +2,9 @@
 #include <cstdio>
 #include <algorithm>
 
+// SCAFFOLD_124: KV cache optimizer
+
+
 KVCacheOptimizer::KVCacheOptimizer()
     : m_cacheSizeLimit(32000)    // Default limit: 32k tokens
     , m_slidingWindowSize(1000)  // Default sliding window size

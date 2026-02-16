@@ -95,10 +95,16 @@ void Win32IDE::loadSettings() {
         m_settings.localServerEnabled = j.value("localServer", (int)m_settings.localServerEnabled) != 0;
         m_settings.localServerPort    = j.value("localServerPort", m_settings.localServerPort);
 
+        // Display / UX toggles
+        m_settings.breadcrumbsEnabled  = j.value("breadcrumbs", (int)m_settings.breadcrumbsEnabled) != 0;
+        m_settings.smoothScrollEnabled  = j.value("smoothScroll", (int)m_settings.smoothScrollEnabled) != 0;
+
         // Local Parity (no API key)
         m_settings.localParityEnabled   = j.value("localParityEnabled", (int)m_settings.localParityEnabled) != 0;
         m_settings.localParityModelPath = j.value("localParityModelPath", m_settings.localParityModelPath);
         m_settings.updateManifestUrl    = j.value("updateManifestUrl", m_settings.updateManifestUrl);
+
+        m_settings.agentTerminalIsolated = j.value("agentTerminalIsolated", (int)m_settings.agentTerminalIsolated) != 0;
 
         LOG_INFO("Settings loaded from " + path);
     } catch (const std::exception& e) {
@@ -154,10 +160,17 @@ void Win32IDE::saveSettings() {
     j["localServer"]        = m_settings.localServerEnabled ? 1 : 0;
     j["localServerPort"]    = m_settings.localServerPort;
 
+    // Display / UX toggles
+    j["breadcrumbs"]        = m_settings.breadcrumbsEnabled ? 1 : 0;
+    j["smoothScroll"]       = m_settings.smoothScrollEnabled ? 1 : 0;
+
     // Local Parity (no API key)
     j["localParityEnabled"]   = m_settings.localParityEnabled ? 1 : 0;
     j["localParityModelPath"] = m_settings.localParityModelPath;
     j["updateManifestUrl"]    = m_settings.updateManifestUrl;
+
+    // Agent terminal isolation (Top-001)
+    j["agentTerminalIsolated"] = m_settings.agentTerminalIsolated ? 1 : 0;
 
     std::string path = getSettingsFilePath();
     std::ofstream f(path);
@@ -207,9 +220,13 @@ void Win32IDE::applyDefaultSettings() {
     m_settings.localServerEnabled  = false;
     m_settings.localServerPort     = 11435;
 
+    m_settings.breadcrumbsEnabled   = true;
+    m_settings.smoothScrollEnabled  = true;
+
     m_settings.localParityEnabled   = false;
     m_settings.localParityModelPath = "";
     m_settings.updateManifestUrl    = "";
+    m_settings.agentTerminalIsolated = true;  // Default: isolate agent to avoid interrupting user
 
     m_settings.uiScalePercent      = 0;   // 0 = auto (follow system DPI)
 }
@@ -242,8 +259,17 @@ void Win32IDE::applySettings() {
 
     // Smooth scroll & breadcrumbs (so Settings menu toggles take effect)
     m_smoothScroll.enabled           = m_settings.smoothScrollEnabled;
-    if (m_hwndBreadcrumbs)
+    if (m_hwndBreadcrumbs) {
         ShowWindow(m_hwndBreadcrumbs, m_settings.breadcrumbsEnabled ? SW_SHOW : SW_HIDE);
+        if (m_settings.breadcrumbsEnabled)
+            updateBreadcrumbs(); // restart content when re-enabled from Settings
+    }
+    // Layout so editor resizes when breadcrumb bar visibility changes
+    if (m_hwndMain && IsWindow(m_hwndMain)) {
+        RECT rc;
+        if (GetClientRect(m_hwndMain, &rc))
+            onSize(rc.right, rc.bottom);
+    }
 
     // Theme
     if (m_settings.themeId >= IDM_THEME_DARK_PLUS && m_settings.themeId <= IDM_THEME_ABYSS) {
@@ -268,8 +294,27 @@ void Win32IDE::applySettings() {
 }
 
 // ============================================================================
-// SETTINGS DIALOG — multi-tab UI
+// SETTINGS DIALOG — summary view + "Open full Settings" to property-grid UI
 // ============================================================================
+
+static WNDPROC s_oldSettingsSummaryProc = nullptr;
+
+LRESULT CALLBACK SettingsSummaryWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+        if (msg == WM_COMMAND && LOWORD(wp) == 1000) {
+            Win32IDE* ide = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+            if (ide) {
+                ide->showSettingsGUIDialog();
+            }
+            DestroyWindow(hwnd);
+            return 0;
+        }
+        if (msg == WM_COMMAND && LOWORD(wp) == 1002) {
+            DestroyWindow(hwnd);
+            return 0;
+        }
+        return s_oldSettingsSummaryProc ? CallWindowProcA(s_oldSettingsSummaryProc, hwnd, msg, wp, lp)
+                                       : DefWindowProcA(hwnd, msg, wp, lp);
+}
 
 void Win32IDE::showSettingsDialog() {
     // Build settings summary text for a simple dialog
@@ -334,22 +379,20 @@ void Win32IDE::showSettingsDialog() {
         CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas");
     SendMessageA(hEdit, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-    // Add Save & Close buttons
-    HWND hSave = CreateWindowExA(0, "BUTTON", "Save",
+    // Open full Settings (property-grid dialog), Save (no-op for read-only summary), Close
+    HWND hFull = CreateWindowExA(0, "BUTTON", "Open full Settings...",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        350, 520, 80, 30, hDlg, (HMENU)1001, m_hInstance, nullptr);
+        10, 520, 180, 30, hDlg, (HMENU)1000, m_hInstance, nullptr);
     HWND hClose = CreateWindowExA(0, "BUTTON", "Close",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         440, 520, 80, 30, hDlg, (HMENU)1002, m_hInstance, nullptr);
 
-    SendMessageA(hSave, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessageA(hFull, WM_SETFONT, (WPARAM)hFont, TRUE);
     SendMessageA(hClose, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+    SetWindowLongPtrA(hDlg, GWLP_USERDATA, (LONG_PTR)this);
+    s_oldSettingsSummaryProc = (WNDPROC)SetWindowLongPtrA(hDlg, GWLP_WNDPROC, (LONG_PTR)SettingsSummaryWndProc);
 
     ShowWindow(hDlg, SW_SHOW);
     UpdateWindow(hDlg);
-
-    // Note: In production, this would be a proper DialogBoxParam with full
-    // tab control (General, AI, Editor, Theme, Shortcuts tabs).
-    // For now, we display read-only summary + save/close.
-    // The settings are editable through the JSON file directly.
 }

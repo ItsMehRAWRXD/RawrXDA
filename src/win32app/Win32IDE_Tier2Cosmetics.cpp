@@ -29,6 +29,18 @@
 #include <functional>
 #include <regex>
 
+// SCAFFOLD_166: Tier 2 cosmetics and fonts
+
+
+// SCAFFOLD_165: Git diff inline or side-by-side
+
+
+// SCAFFOLD_164: Reference tree and symbol list
+
+
+// SCAFFOLD_025: Git diff panel and hunk display
+
+
 #pragma comment(lib, "comctl32.lib")
 
 // ============================================================================

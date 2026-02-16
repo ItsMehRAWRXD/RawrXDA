@@ -28,6 +28,8 @@ cmake --build . --config Release 2>&1 | Tee build.log
 - Capture full output (will Tee to build.log)
 - Categorize errors by type
 
+**After a successful build:** Run `.\Verify-Build.ps1 -BuildDir "D:\rawrxd\build"` from repo root to verify Qt-free binary and source (7/7).
+
 ---
 
 ## 📋 TODO #2: Fix Missing Includes (30 minutes)
@@ -75,11 +77,14 @@ InferenceEngine(const std::string& path);  // Remove parent entirely
 InferenceEngine(const std::string& path, std::shared_ptr<IObserver> observer = nullptr);  // Real type
 ```
 
-**Which files:**
-- QuantumAuthUI.cpp/hpp
-- MainWindow.cpp/h
-- digestion_gui_widget.cpp
-- All UI widget files
+**Which files (void* parent — Win32: treat as HWND; all now have HWND comments):**
+- ExtensionPanel: include/extension_panel.h, src/extension_panel.cpp
+- SetupWizard: src/setup/SetupWizard.hpp (IntroPage, HardwarePage, ThermalPage, SecurityPage, SummaryPage, CompletePage, SetupWizard, HardwareDetector)
+- QuantumAuthUI: src/auth/QuantumAuthUI.hpp (EntropyVisualizer, IntroductionPage, AlgorithmSelectionPage, KeyPurposePage, KeyNamingPage, EntropyCollectionPage, KeyVerificationPage, EnrollmentPage, CompletionPage, KeyGenerationWizard, KeyManagerDialog)
+- Thermal: src/thermal/thermal_dashboard_plugin.hpp, thermal_dashboard_plugin.cpp, RAWRXD_ThermalDashboard_Enhanced.hpp/.cpp, plugin_loader.hpp, EnhancedDynamicLoadBalancer.hpp/.cpp
+- OrchestrationUI: src/orchestration/OrchestrationUI.h
+- MainWindow: src/mainwindow.cpp
+- ZeroDayAgenticEngine: src/zero_day_agentic_engine.hpp
 
 **How to fix:**
 - Remove `void* parent` parameter entirely
@@ -209,9 +214,9 @@ Once build succeeds:
 ## ✅ Done When
 
 - ✅ Build runs with 0 errors
-- ✅ RawrXD_IDE.exe created (~45-60 MB)
-- ✅ dumpbin shows zero Qt imports
-- ✅ Can launch IDE
+- ✅ RawrXD-Win32IDE.exe or RawrXD_Agent_GUI.exe created
+- ✅ **Verify-Build.ps1 passes 7/7** (run from repo root: `.\Verify-Build.ps1 -BuildDir "D:\rawrxd\build"`) — replaces manual dumpbin Qt check
+- ✅ Can launch IDE / agent
 - ✅ Can load models
 - ✅ Can run inference
 

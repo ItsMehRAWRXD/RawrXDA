@@ -47,6 +47,15 @@ Makefile
 *.swp
 *.swo
 *~
+*.bak
+
+# Wine rawrxd-space prefix (Mac/Linux wrapper)
+.rawrxd/
+*.clean
+
+# Wine rawrxd-space prefix (Mac/Linux wrapper)
+.rawrxd/
+wrapper/rawrxd-space.env
 
 # OS
 .DS_Store

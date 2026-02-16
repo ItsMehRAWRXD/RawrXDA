@@ -14,6 +14,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+
+// SCAFFOLD_283: Resource generator
+
 #endif
 
 namespace RawrXD {

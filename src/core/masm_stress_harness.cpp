@@ -8,7 +8,9 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "masm_stress_harness.h"
 #include "masm_bridge_cathedral.h"
 

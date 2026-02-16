@@ -5,6 +5,8 @@
 // ============================================================================
 
 #include "gpu_kernel_autotuner.h"
+#include "enterprise_license.h"
+#include "../../include/enterprise_license.h"
 
 #include <iostream>
 #include <sstream>
@@ -59,6 +61,12 @@ GPUKernelAutoTuner::~GPUKernelAutoTuner() { shutdown(); }
 // ============================================================================
 
 AutotuneResult GPUKernelAutoTuner::initialize() {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::CustomQuantSchemes,
+            "GPUKernelAutoTuner::initialize")) {
+        return AutotuneResult::error("Custom Quant Schemes require an Enterprise license");
+    }
+
     if (m_initialized.load()) return AutotuneResult::ok("Already initialized");
 
     auto r = detectGPU();

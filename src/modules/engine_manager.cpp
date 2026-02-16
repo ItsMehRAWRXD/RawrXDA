@@ -4,6 +4,12 @@
 #include <fstream>
 #include <cstdlib>
 
+// SCAFFOLD_255: engine_manager and compiler registration
+
+
+// SCAFFOLD_125: engine_manager and compiler registration
+
+
 std::unique_ptr<EngineManager> g_engine_manager;
 
 EngineManager::EngineManager() {

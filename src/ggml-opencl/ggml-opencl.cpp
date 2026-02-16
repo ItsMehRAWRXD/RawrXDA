@@ -4222,6 +4222,15 @@ static_assert(sizeof(block_q4_0) == sizeof(ggml_fp16_t) + QK4_0 / 2,
 #include <math.h>
 #ifdef __cplusplus
 #include "half.hpp"
+
+// SCAFFOLD_337: final_gauntlet XXXX→0000
+
+
+// SCAFFOLD_251: Extension host process (if any)
+
+
+// SCAFFOLD_216: Secure credential store (future)
+
 #endif
 
 static void dump_tensor(ggml_backend_t backend, const struct ggml_tensor * tensor) {

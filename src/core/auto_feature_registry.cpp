@@ -277,11 +277,11 @@ static LocalReasoningEngine& getLocalReasoningEngine() {
 #define IDM_AGENT_MEMORY_VIEW                         4107
 #define IDM_AGENT_MEMORY_CLEAR                        4108
 #define IDM_AGENT_MEMORY_EXPORT                       4109
-#define IDM_SUBAGENT_CHAIN                            4110
-#define IDM_SUBAGENT_SWARM                            4111
-#define IDM_SUBAGENT_TODO_LIST                        4112
-#define IDM_SUBAGENT_TODO_CLEAR                       4113
-#define IDM_SUBAGENT_STATUS                           4114
+#define IDM_SUBAGENT_CHAIN                            4111
+#define IDM_SUBAGENT_SWARM                            4112
+#define IDM_SUBAGENT_TODO_LIST                        4113
+#define IDM_SUBAGENT_TODO_CLEAR                       4114
+#define IDM_SUBAGENT_STATUS                           4115
 #define IDM_AGENT_BOUNDED_LOOP                        4120
 #define IDM_AUTONOMY_TOGGLE                           4150
 #define IDM_AUTONOMY_START                            4151
@@ -1457,7 +1457,8 @@ static CommandResult handleLocalAnalyze(const CommandContext& ctx) {
     if (ctx.args && ctx.args[1]) {
         codeToAnalyze = ctx.args[1];
     } else {
-        codeToAnalyze = "(request code via IDE callback - placeholder)";
+        ctx.output("No code provided. Pass code as second argument or invoke from IDE with selection.\n");
+        return CommandResult::error("No code provided", -1);
     }
 
     // Run analysis using LocalReasoningEngine
@@ -1945,19 +1946,39 @@ CommandResult handleAuditCheckMenus(const CommandContext& ctx) {
 }
 
 CommandResult handleAuditDetectStubs(const CommandContext& ctx) {
-    ctx.output("[Audit] Scanning for remaining stubs...\n");
-    // Run grep for autoStub in source tree
-    FILE* pipe = _popen("findstr /s /n \"autoStub\" src\\*.cpp src\\*.hpp 2>NUL", "r");
+    ctx.output("[Audit] Scanning for stubs and placeholder patterns...\n");
+    int autoStubCount = 0;
+    int notImplCount = 0;
+    int placeholderCount = 0;
+
+    FILE* pipe = _popen("findstr /s /n /i \"autoStub\" src\\*.cpp src\\*.hpp Ship\\*.cpp Ship\\*.hpp 2>NUL", "r");
     if (pipe) {
-        char line[512]; int count = 0;
-        while (fgets(line, sizeof(line), pipe)) count++;
+        char line[512];
+        while (fgets(line, sizeof(line), pipe)) autoStubCount++;
         _pclose(pipe);
-        char buf[128];
-        snprintf(buf, sizeof(buf), "[Audit] Found %d autoStub() references.\n", count);
-        ctx.output(buf);
-    } else {
-        ctx.output("[Audit] findstr not available.\n");
     }
+    pipe = _popen("findstr /s /n /i \"not implemented\" src\\*.cpp src\\*.hpp 2>NUL", "r");
+    if (pipe) {
+        char line[512];
+        while (fgets(line, sizeof(line), pipe)) notImplCount++;
+        _pclose(pipe);
+    }
+    pipe = _popen("findstr /s /n \"(void)this\" src\\*.cpp 2>NUL", "r");
+    if (pipe) {
+        char line[512];
+        while (fgets(line, sizeof(line), pipe)) placeholderCount++;
+        _pclose(pipe);
+    }
+
+    char buf[256];
+    snprintf(buf, sizeof(buf), "  autoStub refs:      %d (expect 0)\n", autoStubCount);
+    ctx.output(buf);
+    snprintf(buf, sizeof(buf), "  \"not implemented\":  %d\n", notImplCount);
+    ctx.output(buf);
+    snprintf(buf, sizeof(buf), "  (void) placeholders: %d (some may be intentional)\n", placeholderCount);
+    ctx.output(buf);
+    snprintf(buf, sizeof(buf), "[Audit] Stub scan complete. Pass if autoStub=0.\n");
+    ctx.output(buf);
     return CommandResult::ok("audit.detectStubs");
 }
 
@@ -4349,17 +4370,14 @@ CommandResult handleSubagentSwarm(const CommandContext& ctx) {
 
 CommandResult handleSubagentTodoClear(const CommandContext& ctx) {
     auto* tc = TelemetryCollector::instance();
-    tc->trackFeatureUsage("subagent.todoClear");
-    ctx.output("[SubAgent] Todo list cleared.\n");
-    return CommandResult::ok("subagent.todoClear");
+    if (tc) tc->trackFeatureUsage("subagent.todoClear");
+    return handleSubAgentTodoClear(ctx);
 }
 
 CommandResult handleSubagentTodoList(const CommandContext& ctx) {
     auto* tc = TelemetryCollector::instance();
-    tc->trackFeatureUsage("subagent.todoList");
-    ctx.output("[SubAgent] Todo list:\n");
-    ctx.output("  (query TelemetryCollector for tracked items)\n");
-    return CommandResult::ok("subagent.todoList");
+    if (tc) tc->trackFeatureUsage("subagent.todoList");
+    return handleSubAgentTodoList(ctx);
 }
 
 CommandResult handleSwarmAddNode(const CommandContext& ctx) {

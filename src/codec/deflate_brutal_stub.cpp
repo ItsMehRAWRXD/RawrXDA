@@ -1,4 +1,4 @@
-// deflate_brutal_stub.cpp — No-zlib stub for deflate_brutal_masm when MASM version is not linked.
+// deflate_brutal_stub.cpp — No-zlib production implementation of deflate_brutal_masm when MASM version is not linked.
 // Use this for targets (e.g. RawrXD-Win32IDE) that do not link zlib or the ASM deflate.
 // Callers get nullptr / empty result; compression is skipped.
 

@@ -1,0 +1,423 @@
+[1/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\auto_repair_orchestrator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/auto_repair_orchestrator.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\auto_repair_orchestrator.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\auto_repair_orchestrator.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[2/399] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agent/agent_self_healing_orchestrator.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agent\agent_self_healing_orchestrator.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[3/399] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agent/agentic_hotpatch_orchestrator.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agent\agentic_hotpatch_orchestrator.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[4/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\byte_level_hotpatcher.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/byte_level_hotpatcher.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\byte_level_hotpatcher.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\byte_level_hotpatcher.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(35): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(35): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(51): error C2065: 'patch': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(51): error C2065: 'patch': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(69): error C2065: 'patch': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(69): error C2065: 'patch': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(69): error C2065: 'patch': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(69): error C2660: 'memcpy': function does not take 1 arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vcruntime_string.h(43): note: see declaration of 'memcpy'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(69): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(280): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(280): error C2086: 'int ByteSearchResult': redefinition
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): note: see declaration of 'ByteSearchResult'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(280): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(281): error C2143: syntax error: missing ';' before '{'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(281): error C2447: '{': missing function header (old-style formal list?)
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(338): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(381): error C2065: 'mutation': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(381): error C2050: switch expression not integral
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(382): error C2653: 'ByteMutation': is not a class or namespace name
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(382): error C2065: 'XOR': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(382): error C2131: expression did not evaluate to a constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(382): note: a non-constant (sub-)expression was encountered
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(385): error C2065: 'param': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(389): error C2653: 'ByteMutation': is not a class or namespace name
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(389): error C2065: 'Rotate': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(389): error C2131: expression did not evaluate to a constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(389): note: a non-constant (sub-)expression was encountered
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(392): error C2065: 'param': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(399): error C2653: 'ByteMutation': is not a class or namespace name
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(399): error C2065: 'Swap': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(399): error C2131: expression did not evaluate to a constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(399): note: a non-constant (sub-)expression was encountered
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(408): error C2653: 'ByteMutation': is not a class or namespace name
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(408): error C2065: 'Reverse': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(408): error C2131: expression did not evaluate to a constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(408): note: a non-constant (sub-)expression was encountered
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(433): error C2065: 'mutation': undeclared identifier
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(432): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 1 has type 'size_t'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(432): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(432): note: placeholders and their parameters expect 3 variadic arguments, but 2 were provided
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(432): note: the missing variadic argument 3 is required by format string '%zu'
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(382): error C2051: case expression not constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(389): error C2051: case expression not constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(399): error C2051: case expression not constant
+D:\rawrxd\src\core\byte_level_hotpatcher.cpp(408): error C2051: case expression not constant
+[5/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\iterative_tensor_traversal.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/iterative_tensor_traversal.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\iterative_tensor_traversal.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\iterative_tensor_traversal.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\iterative_tensor_traversal.cpp(14): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\iterative_tensor_traversal.cpp(14): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[6/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\universal_model_hotpatcher.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/universal_model_hotpatcher.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\universal_model_hotpatcher.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\universal_model_hotpatcher.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[7/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/missing_handler_stubs.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\missing_handler_stubs.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[8/399] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\agentic_decision_tree.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/cli/agentic_decision_tree.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\cli\agentic_decision_tree.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\cli\agentic_decision_tree.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\cli\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[9/399] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_failure_detector.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agent/agentic_failure_detector.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agent\agentic_failure_detector.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agent\agentic_failure_detector.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agent\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[10/399] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_harness.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/test_harness/replay_harness.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\test_harness\replay_harness.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\test_harness\replay_harness.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\test_harness\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[11/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\model_bruteforce_engine.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/model_bruteforce_engine.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\model_bruteforce_engine.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\model_bruteforce_engine.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[12/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/ssot_handlers.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\ssot_handlers.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[13/399] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\ToolRegistry.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agentic/ToolRegistry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agentic\ToolRegistry.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agentic\ToolRegistry.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\agentic\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[14/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/agentic_task_graph.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\agentic_task_graph.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\agentic_task_graph.cpp(631): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(631): error C2146: syntax error: missing ';' before identifier 'bp'
+D:\rawrxd\src\core\agentic_task_graph.cpp(631): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(632): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(636): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(639): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(641): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1828): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1828): error C2146: syntax error: missing ';' before identifier 'bp'
+D:\rawrxd\src\core\agentic_task_graph.cpp(1828): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1829): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1830): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1833): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1835): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1843): error C2065: 'bp': undeclared identifier
+D:\rawrxd\src\core\agentic_task_graph.cpp(1844): error C2065: 'bp': undeclared identifier
+[15/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\feature_handlers.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/feature_handlers.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\feature_handlers.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\feature_handlers.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+[16/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_hotpatch_manager.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/unified_hotpatch_manager.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\unified_hotpatch_manager.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\unified_hotpatch_manager.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(136): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(136): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(144): error C2065: 'patch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(508): error C2662: 'allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type std::vector<_Ty,_Alloc>::size(void) noexcept const': cannot convert 'this' pointer from 'const std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(508): note: Reason: cannot convert from 'const std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(508): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1913): note: see declaration of 'std::vector<_Ty,_Alloc>::size'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(508): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(518): error C2662: 'allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type std::vector<_Ty,_Alloc>::size(void) noexcept const': cannot convert 'this' pointer from 'const std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(518): note: Reason: cannot convert from 'const std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(518): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1913): note: see declaration of 'std::vector<_Ty,_Alloc>::size'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(518): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): error C2678: binary '[': no operator found which takes a left-hand operand of type 'const std::vector' (or there is no acceptable conversion)
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1937): note: could be 'const _Ty &std::vector<_Ty,_Alloc>::operator [](const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type) noexcept const'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: 'const _Ty &std::vector<_Ty,_Alloc>::operator [](const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type) noexcept const': cannot convert 'this' pointer from 'const std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: Reason: cannot convert from 'const std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1927): note: or       '_Ty &std::vector<_Ty,_Alloc>::operator [](const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type) noexcept'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: '_Ty &std::vector<_Ty,_Alloc>::operator [](const allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type) noexcept': cannot convert 'this' pointer from 'const std::vector' to 'std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: Reason: cannot convert from 'const std::vector' to 'std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: Conversion requires a second user-defined-conversion operator or constructor
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): note: while trying to match the argument list '(const std::vector, size_t)'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(519): error C2530: 'bp': references must be initialized
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(521): error C3536: 'bp': cannot be used before it is initialized
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(520): warning C4473: 'fprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(520): note: placeholders and their parameters expect 3 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(520): note: the missing variadic argument 1 is required by format string '%zu'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(522): error C2662: 'allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type std::vector<_Ty,_Alloc>::size(void) noexcept const': cannot convert 'this' pointer from 'const std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(522): note: Reason: cannot convert from 'const std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(522): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1913): note: see declaration of 'std::vector<_Ty,_Alloc>::size'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(522): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(628): error C2662: 'void std::vector<_Ty,_Alloc>::clear(void) noexcept': cannot convert 'this' pointer from 'std::vector' to 'std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(628): note: Reason: cannot convert from 'std::vector' to 'std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(628): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1807): note: see declaration of 'std::vector<_Ty,_Alloc>::clear'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(628): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(642): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(642): error C2146: syntax error: missing ';' before identifier 'entry'
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(642): error C2065: 'entry': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(643): error C2065: 'entry': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(648): error C2065: 'entry': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(655): error C2065: 'entry': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(663): error C2065: 'entry': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.cpp(666): error C2065: 'entry': undeclared identifier
+[17/399] Building CXX object CMakeFiles\RawrEngine.dir\src\core\auto_feature_registry.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/core/auto_feature_registry.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\auto_feature_registry.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\auto_feature_registry.cpp
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\core\byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\core\unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2773): error C2079: 'bp' uses undefined struct 'BytePatch'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2782): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(2782): note: placeholders and their parameters expect 4 variadic arguments, but 2 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(2782): note: the missing variadic argument 3 is required by format string '%s'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2806): error C3861: 'direct_search': identifier not found
+D:\rawrxd\src\core\auto_feature_registry.cpp(2809): warning C4473: 'snprintf' : not enough arguments passed for format string
+D:\rawrxd\src\core\auto_feature_registry.cpp(2809): note: placeholders and their parameters expect 2 variadic arguments, but 0 were provided
+D:\rawrxd\src\core\auto_feature_registry.cpp(2809): note: the missing variadic argument 1 is required by format string '%llx'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2868): error C2662: 'allocator_traits<allocator_traits<_Alloc>::rebind_alloc<_Ty>>::size_type std::vector<_Ty,_Alloc>::size(void) noexcept const': cannot convert 'this' pointer from 'std::vector' to 'const std::vector<_Ty,_Alloc> &'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2868): note: Reason: cannot convert from 'std::vector' to 'const std::vector<_Ty,_Alloc>'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2868): note: Conversion requires a second user-defined-conversion operator or constructor
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(1913): note: see declaration of 'std::vector<_Ty,_Alloc>::size'
+D:\rawrxd\src\core\auto_feature_registry.cpp(2868): note: while trying to match the argument list '()'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3655): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 2 has type 'std::string'
+D:\rawrxd\src\core\auto_feature_registry.cpp(3655): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 3 has type 'std::string'
+[18/399] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\AgenticNavigator.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/agentic/AgenticNavigator.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\agentic\AgenticNavigator.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\agentic\AgenticNavigator.cpp
+D:\rawrxd\src\modules\../core/byte_level_hotpatcher.hpp(184): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\modules\../core/byte_level_hotpatcher.hpp(184): error C2143: syntax error: missing ',' before '&'
+D:\rawrxd\src\modules\../core/byte_level_hotpatcher.hpp(206): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\modules\../core/byte_level_hotpatcher.hpp(206): error C2146: syntax error: missing ';' before identifier 'direct_search'
+D:\rawrxd\src\modules\../core/byte_level_hotpatcher.hpp(211): error C2061: syntax error: identifier 'ByteMutation'
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(120): error C2065: 'BytePatch': undeclared identifier
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(120): error C2923: 'std::vector': 'BytePatch' is not a valid template type argument for parameter '_Ty'
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(120): note: see declaration of 'BytePatch'
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(120): error C2976: 'std::vector': too few template arguments
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(120): error C2955: 'std::vector': use of class template requires template argument list
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\vector(442): note: see declaration of 'std::vector'
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(140): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\modules\../core/unified_hotpatch_manager.hpp(140): error C2143: syntax error: missing ',' before '&'
+ninja: build stopped: subcommand failed.

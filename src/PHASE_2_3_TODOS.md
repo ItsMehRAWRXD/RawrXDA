@@ -1,10 +1,21 @@
-# TODOS - Qt Removal Phase 2 & 3 (Ready to Execute)
+# TODOS - Qt Removal Phase 2 & 3
 
-## 🎯 Current Status
-- ✅ Phase 1 COMPLETE: Foundation work done (this session)
-- ⏳ Phase 2 READY: Batch Qt removal from 1,186 files
-- ⏳ Phase 3 READY: Build system updates
-- ⏳ Phase 4 READY: Verification & testing
+## 🎯 Current Status (2026-02)
+
+**Qt removal is COMPLETE for the active codebase.**
+
+- ✅ **Verification**: Run `.\Verify-Build.ps1 -BuildDir "D:\rawrxd\build"` — must pass 7/7 (no Qt #includes in src or Ship, no Qt DLLs, no Q_OBJECT).
+- ✅ **Replacement layer**: Use `Ship/StdReplacements.hpp` (WideString, Variant, StdFile, StdDir, JsonDoc, etc.); no Qt headers.
+- ✅ **Policy**: `.cursorrules` and `Verify-Build.ps1` enforce zero Qt; see `UNFINISHED_FEATURES.md` for remaining open items.
+
+The batches below are **historical**. For any legacy or out-of-tree files that still reference Qt, use the same pattern: add `StdReplacements.hpp` where needed, remove `#include <Q*>` and Q_OBJECT, and re-run Verify-Build.
+
+---
+
+## Historical batch plan (reference only)
+- ✅ Phase 1 COMPLETE: Foundation work done
+- ✅ Phase 2/3: Qt removed from src + Ship (verified by Verify-Build.ps1)
+- ⏳ Phase 4: Ongoing — build fixes, stubs, parity (see UNFINISHED_FEATURES.md)
 
 ---
 

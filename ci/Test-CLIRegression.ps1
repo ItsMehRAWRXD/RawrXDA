@@ -8,7 +8,7 @@
     schema_version integrity, and report structure for all JSON artifacts.
     Compatible with GitHub Actions, local dev, and headless CI runners.
 .NOTES
-    Contract: CLI_CONTRACT_v1.0.md (v1.1 addendum)
+    Contract: CLI_CONTRACT_v1.1.md
     Date:     2026-02-10
     Modes:    18 (17 active + 1 Intel PT stub)
 #>
@@ -443,7 +443,7 @@ Write-Host ""
 $ciReport = @{
     timestamp   = (Get-Date -Format "o")
     binary      = $BinaryPath
-    contract    = "CLI_CONTRACT_v1.0 (v1.1 addendum)"
+    contract    = "CLI_CONTRACT_v1.1.md"
     total       = $script:TotalTests
     passed      = $script:PassedTests
     failed      = $script:FailedTests

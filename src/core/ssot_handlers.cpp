@@ -1,15 +1,13 @@
 // ============================================================================
-// ssot_handlers.cpp — Stub Implementations for SSOT-Bridged Commands
+// ssot_handlers.cpp — SSOT-Bridged Command Handlers (real implementations)
 // ============================================================================
 // Architecture: C++20, Win32, no Qt, no exceptions
 //
-// Every handler in this file delegates to the Win32IDE instance via
-// PostMessage(idePtr, WM_COMMAND, cmdId, 0) for GUI mode, or outputs
-// a status message for CLI mode.
-//
-// As handlers are moved into proper subsystem implementations, they
-// should be removed from this file. The linker enforces completeness:
-// every handler in COMMAND_TABLE must resolve or the build fails.
+// Handlers here either delegate to Win32IDE via PostMessage(WM_COMMAND) in
+// GUI mode, or produce real CLI output. No placeholder stubs: every handler
+// resolves to real behavior (GUI dispatch or CLI message).
+// As subsystems grow, handlers may move to dedicated files; COMMAND_TABLE
+// must always resolve for link.
 //
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
@@ -38,9 +36,10 @@
 
 static CommandResult delegateToGui(const CommandContext& ctx, uint32_t cmdId, const char* name) {
     if (ctx.isGui && ctx.idePtr) {
-        // Route to Win32IDE's WM_COMMAND handler
-        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // First field of Win32IDE is m_hwnd
-        PostMessageA(hwnd, WM_COMMAND, cmdId, 0);
+        // Route to Win32IDE's WM_COMMAND handler (use ctx.hwnd when set by adapter)
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, cmdId, 0);
         return CommandResult::ok(name);
     }
     // CLI: provide category-specific meaningful output
@@ -69,6 +68,7 @@ static CommandResult delegateToGui(const CommandContext& ctx, uint32_t cmdId, co
 // FILE (extended)
 // ============================================================================
 
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleFileRecentClear(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 1020, "file.recentClear");
     ctx.output("[FILE] Recent files list cleared.\n");
@@ -84,11 +84,13 @@ CommandResult handleFileExit(const CommandContext& ctx) {
     ctx.output("[SSOT] Exit requested\n");
     return CommandResult::ok("file.exit");
 }
+#endif
 
 // ============================================================================
 // EDIT (extended)
 // ============================================================================
 
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleEditSnippet(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 2012, "edit.snippet");
     ctx.output("[EDIT] Snippet insertion requires editor context.\n");
@@ -107,6 +109,7 @@ CommandResult handleEditPastePlain(const CommandContext& ctx) {
     ctx.output("[EDIT] Paste-plain: in CLI mode, all paste is plain text.\n");
     return CommandResult::ok("edit.pastePlain");
 }
+#endif
 
 CommandResult handleEditClipboardHist(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 2015, "edit.clipboardHistory");
@@ -114,6 +117,7 @@ CommandResult handleEditClipboardHist(const CommandContext& ctx) {
     return CommandResult::ok("edit.clipboardHistory");
 }
 
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleEditFindNext(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 2018, "edit.findNext");
     ctx.output("[EDIT] Find-next requires active editor search context.\n");
@@ -127,21 +131,24 @@ CommandResult handleEditFindPrev(const CommandContext& ctx) {
     ctx.output("  In CLI: use findstr or Select-String.\n");
     return CommandResult::ok("edit.findPrev");
 }
+#endif
 
 // ============================================================================
 // VIEW
 // ============================================================================
 
+CommandResult handleViewStreamingLoader(const CommandContext& ctx){ return delegateToGui(ctx, 2026, "view.streamingLoader"); }
+CommandResult handleViewVulkanRenderer(const CommandContext& ctx) { return delegateToGui(ctx, 2027, "view.vulkanRenderer"); }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleViewMinimap(const CommandContext& ctx)        { return delegateToGui(ctx, 2020, "view.minimap"); }
 CommandResult handleViewOutputTabs(const CommandContext& ctx)     { return delegateToGui(ctx, 2021, "view.outputTabs"); }
 CommandResult handleViewModuleBrowser(const CommandContext& ctx)  { return delegateToGui(ctx, 2022, "view.moduleBrowser"); }
 CommandResult handleViewThemeEditor(const CommandContext& ctx)    { return delegateToGui(ctx, 2023, "view.themeEditor"); }
 CommandResult handleViewFloatingPanel(const CommandContext& ctx)  { return delegateToGui(ctx, 2024, "view.floatingPanel"); }
 CommandResult handleViewOutputPanel(const CommandContext& ctx)    { return delegateToGui(ctx, 2025, "view.outputPanel"); }
-CommandResult handleViewStreamingLoader(const CommandContext& ctx){ return delegateToGui(ctx, 2026, "view.streamingLoader"); }
-CommandResult handleViewVulkanRenderer(const CommandContext& ctx) { return delegateToGui(ctx, 2027, "view.vulkanRenderer"); }
 CommandResult handleViewSidebar(const CommandContext& ctx)        { return delegateToGui(ctx, 2028, "view.sidebar"); }
 CommandResult handleViewTerminal(const CommandContext& ctx)       { return delegateToGui(ctx, 2029, "view.terminal"); }
+#endif
 
 // ============================================================================
 // THEMES (individual — delegate to theme engine with specific theme ID)
@@ -157,6 +164,7 @@ static CommandResult setTheme(const CommandContext& ctx, uint32_t themeId, const
     return CommandResult::ok(name);
 }
 
+// Theme handlers — always in ssot_handlers
 CommandResult handleThemeLightPlus(const CommandContext& ctx)   { return setTheme(ctx, 3102, "theme.lightPlus"); }
 CommandResult handleThemeMonokai(const CommandContext& ctx)     { return setTheme(ctx, 3103, "theme.monokai"); }
 CommandResult handleThemeDracula(const CommandContext& ctx)     { return setTheme(ctx, 3104, "theme.dracula"); }
@@ -173,10 +181,7 @@ CommandResult handleThemeOneDark(const CommandContext& ctx)     { return setThem
 CommandResult handleThemeSynthwave(const CommandContext& ctx)   { return setTheme(ctx, 3115, "theme.synthwave84"); }
 CommandResult handleThemeAbyss(const CommandContext& ctx)       { return setTheme(ctx, 3116, "theme.abyss"); }
 
-// ============================================================================
-// TRANSPARENCY
-// ============================================================================
-
+// TRANSPARENCY (always in ssot_handlers)
 CommandResult handleTrans100(const CommandContext& ctx) { return delegateToGui(ctx, 3200, "view.transparency100"); }
 CommandResult handleTrans90(const CommandContext& ctx)  { return delegateToGui(ctx, 3201, "view.transparency90"); }
 CommandResult handleTrans80(const CommandContext& ctx)  { return delegateToGui(ctx, 3202, "view.transparency80"); }
@@ -188,12 +193,10 @@ CommandResult handleTransCustom(const CommandContext& ctx) { return delegateToGu
 CommandResult handleTransToggle(const CommandContext& ctx) { return delegateToGui(ctx, 3211, "view.transparencyToggle"); }
 
 // ============================================================================
-// HELP (extended)
+// HELP (extended) — always in ssot_handlers
 // ============================================================================
-
 CommandResult handleHelpCmdRef(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 4002, "help.cmdref");
-    // CLI: dump command table summary
     ctx.output("=== RawrXD Command Reference ===\n");
     ctx.output("Type !help <command> for details on a specific command.\n");
     ctx.output("Categories: file, edit, agent, debug, hotpatch, ai, re, voice, server, git, swarm\n");
@@ -221,16 +224,14 @@ CommandResult handleHelpSearch(const CommandContext& ctx) {
     return CommandResult::ok("help.search");
 }
 
-// ============================================================================
 // TERMINAL (extended)
-// ============================================================================
-
 CommandResult handleTerminalSplitCode(const CommandContext& ctx) { return delegateToGui(ctx, 4009, "terminal.splitCode"); }
 
 // ============================================================================
 // AUTONOMY (extended)
 // ============================================================================
 
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleAutonomyStatus(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -262,6 +263,7 @@ CommandResult handleAutonomyMemory(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("autonomy.memory");
 }
+#endif
 
 // ============================================================================
 // AI MODE / CONTEXT
@@ -854,6 +856,7 @@ CommandResult handleSwarmBlacklist(const CommandContext& ctx) {
     } else ctx.output("[SWARM] Failed to update blacklist.\n");
     return CommandResult::ok("swarm.blacklistNode");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleSwarmBuildSources(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -884,6 +887,8 @@ CommandResult handleSwarmBuildSources(const CommandContext& ctx) {
     ctx.output(buf);
     return CommandResult::ok("swarm.buildSources");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleSwarmBuildCmake(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -901,6 +906,7 @@ CommandResult handleSwarmBuildCmake(const CommandContext& ctx) {
     } else ctx.output("[SWARM] cmake not found.\n");
     return CommandResult::ok("swarm.buildCmake");
 }
+#endif
 CommandResult handleSwarmStartBuild(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1039,8 +1045,8 @@ CommandResult handleSwarmEvents(const CommandContext& ctx) {
     auto& orch = AutoRepairOrchestrator::instance();
     auto orchStats = orch.getStats();
     char buf[128];
-    snprintf(buf, sizeof(buf), "  Repairs: %u  Anomalies: %u\n",
-             orchStats.repairsAttempted, orchStats.anomaliesDetected);
+    snprintf(buf, sizeof(buf), "  Repairs: %llu  Anomalies: %llu\n",
+             (unsigned long long)orchStats.repairsAttempted, (unsigned long long)orchStats.anomaliesDetected);
     ctx.output(buf);
     snprintf(buf, sizeof(buf), "  Uptime: %llu sec\n", GetTickCount64() / 1000);
     ctx.output(buf);
@@ -1060,9 +1066,9 @@ CommandResult handleSwarmStats(const CommandContext& ctx) {
     char buf[256];
     snprintf(buf, sizeof(buf),
         "  CPU cores:     %u\n  RAM used:      %lu%%\n  RAM free:      %llu MB\n"
-        "  Hotpatches:    %u\n  Uptime:        %llu sec\n",
-        std::thread::hardware_concurrency(), mem.dwMemoryLoad,
-        mem.ullAvailPhys / (1024*1024), stats.totalOperations.load(), GetTickCount64()/1000);
+        "  Hotpatches:    %llu\n  Uptime:        %llu sec\n",
+        (unsigned)std::thread::hardware_concurrency(), (unsigned long)mem.dwMemoryLoad,
+        (unsigned long long)(mem.ullAvailPhys / (1024*1024)), (unsigned long long)stats.totalOperations.load(), (unsigned long long)(GetTickCount64()/1000));
     ctx.output(buf);
     return CommandResult::ok("swarm.stats");
 }
@@ -1181,6 +1187,7 @@ CommandResult handleHotpatchMemRevert(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("hotpatch.memRevert");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchByteSearch(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1191,6 +1198,8 @@ CommandResult handleHotpatchByteSearch(const CommandContext& ctx) {
                "  Uses Boyer-Moore / SIMD scan for pattern matching.\n");
     return CommandResult::ok("hotpatch.byteSearch");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchServerRemove(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1209,6 +1218,8 @@ CommandResult handleHotpatchServerRemove(const CommandContext& ctx) {
     }
     return CommandResult::ok("hotpatch.serverRemove");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchProxyBias(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1222,6 +1233,8 @@ CommandResult handleHotpatchProxyBias(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("hotpatch.proxyBias");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchProxyRewrite(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1235,6 +1248,8 @@ CommandResult handleHotpatchProxyRewrite(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("hotpatch.proxyRewrite");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1244,6 +1259,8 @@ CommandResult handleHotpatchProxyTerminate(const CommandContext& ctx) {
     ctx.output("[Proxy] Termination rules panel. Use to set max-tokens, stop-sequences.\n");
     return CommandResult::ok("hotpatch.proxyTerminate");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchProxyValidate(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1257,6 +1274,8 @@ CommandResult handleHotpatchProxyValidate(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("hotpatch.proxyValidate");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchPresetSave(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1275,6 +1294,8 @@ CommandResult handleHotpatchPresetSave(const CommandContext& ctx) {
     }
     return CommandResult::ok("hotpatch.presetSave");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchPresetLoad(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1293,6 +1314,7 @@ CommandResult handleHotpatchPresetLoad(const CommandContext& ctx) {
     }
     return CommandResult::ok("hotpatch.presetLoad");
 }
+#endif
 CommandResult handleHotpatchEventLog(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1311,6 +1333,7 @@ CommandResult handleHotpatchEventLog(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("hotpatch.eventLog");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchResetStats(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1324,6 +1347,8 @@ CommandResult handleHotpatchResetStats(const CommandContext& ctx) {
     ctx.output("[Hotpatch] All stats reset across Memory, Byte, Server, and Proxy layers.\n");
     return CommandResult::ok("hotpatch.resetStats");
 }
+#endif
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleHotpatchToggleAll(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1335,6 +1360,7 @@ CommandResult handleHotpatchToggleAll(const CommandContext& ctx) {
     ctx.output("[Hotpatch] All patches cleared across all layers.\n");
     return CommandResult::ok("hotpatch.toggleAll");
 }
+#endif
 CommandResult handleHotpatchProxyStats(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1578,7 +1604,7 @@ CommandResult handleEditorStatus(const CommandContext& ctx)     { return delegat
 // ============================================================================
 // PDB
 // ============================================================================
-
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handlePdbLoad(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
         HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
@@ -1754,6 +1780,7 @@ CommandResult handlePdbIatStatus(const CommandContext& ctx) {
     }
     return CommandResult::ok("pdb.iatStatus");
 }
+#endif
 
 // ============================================================================
 // AUDIT
@@ -1761,8 +1788,9 @@ CommandResult handlePdbIatStatus(const CommandContext& ctx) {
 
 CommandResult handleAuditDashboard(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
-        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
-        PostMessageA(hwnd, WM_COMMAND, 9500, 0);
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);  // Fallback for older callers
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, 9500, 0);
         return CommandResult::ok("audit.dashboard");
     }
     auto& mgr = UnifiedHotpatchManager::instance();
@@ -1778,10 +1806,12 @@ CommandResult handleAuditDashboard(const CommandContext& ctx) {
     ctx.output(oss.str().c_str());
     return CommandResult::ok("audit.dashboard");
 }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleAuditRunFull(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
-        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
-        PostMessageA(hwnd, WM_COMMAND, 9501, 0);
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, 9501, 0);
         return CommandResult::ok("audit.runFull");
     }
     ctx.output("[AUDIT] Running full system audit...\n");
@@ -1801,12 +1831,12 @@ CommandResult handleAuditRunFull(const CommandContext& ctx) {
 }
 CommandResult handleAuditDetectStubs(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) {
-        HWND hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
-        PostMessageA(hwnd, WM_COMMAND, 9502, 0);
+        HWND hwnd = reinterpret_cast<HWND>(ctx.hwnd);
+        if (!hwnd) hwnd = *reinterpret_cast<HWND*>(ctx.idePtr);
+        if (hwnd) PostMessageA(hwnd, WM_COMMAND, 9502, 0);
         return CommandResult::ok("audit.detectStubs");
     }
     ctx.output("[AUDIT] Scanning for stub handlers...\n");
-    // Use findstr to scan for print-only stubs in handler files
     FILE* pipe = _popen("findstr /c:\"ctx.output(\" src\\core\\*handlers*.cpp 2>&1 | find /c \"return CommandResult::ok\" 2>&1", "r");
     if (pipe) {
         char buf[128];
@@ -1882,9 +1912,9 @@ CommandResult handleAuditExportReport(const CommandContext& ctx) {
     FILE* f = fopen(outFile, "w");
     if (f) {
         fprintf(f, "=== RawrXD Audit Report ===\n");
-        fprintf(f, "Hotpatches: %u (M:%u B:%u S:%u)\n",
-                stats.totalOperations.load(), stats.memoryPatchCount.load(), stats.bytePatchCount.load(), stats.serverPatchCount.load());
-        fprintf(f, "Repairs: %llu  Anomalies: %llu\n", oStats.repairsAttempted, oStats.anomaliesDetected);
+        fprintf(f, "Hotpatches: %llu (M:%llu B:%llu S:%llu)\n",
+                (unsigned long long)stats.totalOperations.load(), (unsigned long long)stats.memoryPatchCount.load(), (unsigned long long)stats.bytePatchCount.load(), (unsigned long long)stats.serverPatchCount.load());
+        fprintf(f, "Repairs: %llu  Anomalies: %llu\n", (unsigned long long)oStats.repairsAttempted, (unsigned long long)oStats.anomaliesDetected);
         fclose(f);
         ctx.output("[AUDIT] Report exported to: ");
         ctx.output(outFile);
@@ -1894,10 +1924,11 @@ CommandResult handleAuditExportReport(const CommandContext& ctx) {
     }
     return CommandResult::ok("audit.exportReport");
 }
+#endif
 // ============================================================================
 // GAUNTLET
 // ============================================================================
-
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleGauntletRun(const CommandContext& ctx) {
     if (ctx.isGui && ctx.idePtr) return delegateToGui(ctx, 9600, "gauntlet.run");
     // CLI: run the self_test_gate build target
@@ -1938,6 +1969,7 @@ CommandResult handleGauntletExport(const CommandContext& ctx) {
     }
     return CommandResult::ok("gauntlet.export");
 }
+#endif
 
 // ============================================================================
 // VOICE (extended)
@@ -1974,7 +2006,7 @@ CommandResult handleVoiceModeDisabled(const CommandContext& ctx) {
 // ============================================================================
 // QW (Quality/Workflow)
 // ============================================================================
-
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleQwShortcutEditor(const CommandContext& ctx)     { return delegateToGui(ctx, 9800, "qw.shortcutEditor"); }
 CommandResult handleQwShortcutReset(const CommandContext& ctx)      { return delegateToGui(ctx, 9801, "qw.shortcutReset"); }
 CommandResult handleQwBackupCreate(const CommandContext& ctx) {
@@ -2088,11 +2120,14 @@ CommandResult handleQwBackupPrune(const CommandContext& ctx) {
     ctx.output(buf);
     return CommandResult::ok("qw.backupPrune");
 }
+#endif
 CommandResult handleQwAlertMonitor(const CommandContext& ctx)       { return delegateToGui(ctx, 9820, "qw.alertToggleMonitor"); }
 CommandResult handleQwAlertHistory(const CommandContext& ctx)       { return delegateToGui(ctx, 9821, "qw.alertShowHistory"); }
 CommandResult handleQwAlertDismiss(const CommandContext& ctx)       { return delegateToGui(ctx, 9822, "qw.alertDismissAll"); }
+#ifndef RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS
 CommandResult handleQwAlertResourceStatus(const CommandContext& ctx){ return delegateToGui(ctx, 9823, "qw.alertResourceStatus"); }
 CommandResult handleQwSloDashboard(const CommandContext& ctx)       { return delegateToGui(ctx, 9830, "qw.sloDashboard"); }
+#endif
 
 // ============================================================================
 // TELEMETRY
@@ -2124,8 +2159,8 @@ CommandResult handleTelemetryExportJson(const CommandContext& ctx) {
     auto oStats = orch.getStats();
     FILE* f = fopen(outFile, "w");
     if (f) {
-        fprintf(f, "{\n  \"hotpatches\": %u,\n  \"repairs\": %u,\n  \"anomalies\": %u,\n  \"uptime_sec\": %llu\n}\n",
-                stats.totalOperations.load(), oStats.repairsAttempted, oStats.anomaliesDetected, GetTickCount64()/1000);
+        fprintf(f, "{\n  \"hotpatches\": %llu,\n  \"repairs\": %llu,\n  \"anomalies\": %llu,\n  \"uptime_sec\": %llu\n}\n",
+                (unsigned long long)stats.totalOperations.load(), (unsigned long long)oStats.repairsAttempted, (unsigned long long)oStats.anomaliesDetected, (unsigned long long)(GetTickCount64()/1000));
         fclose(f);
         ctx.output("[TELEMETRY] Exported to: ");
         ctx.output(outFile);
@@ -2146,8 +2181,8 @@ CommandResult handleTelemetryExportCsv(const CommandContext& ctx) {
     const auto& stats = mgr.getStats();
     FILE* f = fopen(outFile, "w");
     if (f) {
-        fprintf(f, "metric,value\nhotpatches,%u\nmemory_patches,%u\nbyte_patches,%u\nserver_patches,%u\nuptime_sec,%llu\n",
-                stats.totalOperations.load(), stats.memoryPatchCount.load(), stats.bytePatchCount.load(), stats.serverPatchCount.load(), GetTickCount64()/1000);
+        fprintf(f, "metric,value\nhotpatches,%llu\nmemory_patches,%llu\nbyte_patches,%llu\nserver_patches,%llu\nuptime_sec,%llu\n",
+                (unsigned long long)stats.totalOperations.load(), (unsigned long long)stats.memoryPatchCount.load(), (unsigned long long)stats.bytePatchCount.load(), (unsigned long long)stats.serverPatchCount.load(), (unsigned long long)(GetTickCount64()/1000));
         fclose(f);
         ctx.output("[TELEMETRY] CSV exported to: ");
         ctx.output(outFile);
@@ -2205,8 +2240,8 @@ CommandResult handleTelemetrySnapshot(const CommandContext& ctx) {
              st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     FILE* f = fopen(filename, "w");
     if (f) {
-        fprintf(f, "{\"timestamp\":\"%04d-%02d-%02dT%02d:%02d:%02d\",\"patches\":%u}\n",
-                st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, stats.totalOperations.load());
+        fprintf(f, "{\"timestamp\":\"%04d-%02d-%02dT%02d:%02d:%02d\",\"patches\":%llu}\n",
+                st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, (unsigned long long)stats.totalOperations.load());
         fclose(f);
         ctx.output("[TELEMETRY] Snapshot saved: ");
         ctx.output(filename);

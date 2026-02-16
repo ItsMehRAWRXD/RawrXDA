@@ -144,7 +144,7 @@ public:
     }
 
     /**
-     * @brief Create dashboard widget (convenience)
+     * @brief Create dashboard widget (convenience). Win32: parent is HWND.
      */
     void* createDashboard(void* parent = nullptr) {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -153,7 +153,7 @@ public:
     }
 
     /**
-     * @brief Create compact widget (convenience)
+     * @brief Create compact widget (convenience). Win32: parent is HWND.
      */
     void* createCompactWidget(void* parent = nullptr) {
         std::lock_guard<std::mutex> lock(m_mutex);

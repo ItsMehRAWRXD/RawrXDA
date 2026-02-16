@@ -47,6 +47,10 @@ if errorlevel 1 (
 )
 echo OK: RawrXD_Agent.exe
 
+REM Copy as RawrXD_CLI.exe (same binary, full parity)
+copy /Y "%OUTDIR%\RawrXD_Agent.exe" "%OUTDIR%\RawrXD_CLI.exe" >nul 2>&1
+if exist "%OUTDIR%\RawrXD_CLI.exe" echo OK: RawrXD_CLI.exe (copy)
+
 REM Build GUI Agent
 echo [2/5] Building GUI Agent...
 cl %CFLAGS% /Fe"%OUTDIR%\RawrXD_Agent_GUI.exe" Integration.cpp /link %LIBS% /SUBSYSTEM:WINDOWS /ENTRY:wWinMainCRTStartup

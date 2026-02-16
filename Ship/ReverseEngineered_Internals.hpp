@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <condition_variable>
 #include <sstream>
+#include <deque>
 
 #pragma comment(lib, "psapi.lib")
 
@@ -1250,6 +1251,72 @@ public:
 };
 
 } // namespace Internals
+
+// QtCompat — Win32/STL replacements for Qt types (no Qt code; naming only)
+// RawrXD_Agent_Complete.hpp used QtCompat::ThreadPool; this is the C++20 impl.
+namespace QtCompat {
+
+class ThreadPool {
+public:
+    explicit ThreadPool(size_t maxThreads = 0) {
+        if (maxThreads == 0) maxThreads = std::thread::hardware_concurrency();
+        if (maxThreads < 1) maxThreads = 1;
+        workers_.reserve(maxThreads);
+        for (size_t i = 0; i < maxThreads; ++i) {
+            workers_.emplace_back(&ThreadPool::workerLoop, this);
+        }
+    }
+    ~ThreadPool() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            stop_ = true;
+        }
+        cv_.notify_all();
+        for (auto& w : workers_) { if (w.joinable()) w.join(); }
+    }
+    void Run(std::function<void()> f) {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            queue_.push_back(std::move(f));
+        }
+        cv_.notify_one();
+    }
+    void WaitForDone() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        doneCv_.wait(lock, [this]() { return queue_.empty() && active_ == 0; });
+    }
+private:
+    void workerLoop() {
+        for (;;) {
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                cv_.wait(lock, [this]() { return stop_ || !queue_.empty(); });
+                if (stop_ && queue_.empty()) break;
+                if (queue_.empty()) continue;
+                task = std::move(queue_.front());
+                queue_.pop_front();
+                ++active_;
+            }
+            if (task) task();
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                --active_;
+            }
+            doneCv_.notify_all();
+        }
+    }
+    std::vector<std::thread> workers_;
+    std::deque<std::function<void()>> queue_;
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    std::condition_variable doneCv_;
+    std::atomic<bool> stop_{false};
+    size_t active_{0};
+};
+
+} // namespace QtCompat
+
 } // namespace RawrXD
 
 #endif // RAWRXD_REVERSE_ENGINEERED_INTERNALS_HPP

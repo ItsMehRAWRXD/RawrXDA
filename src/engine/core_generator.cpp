@@ -1,6 +1,10 @@
 #include "core_generator.h"
+#include "../../include/enterprise_license.h"
 #include <iostream>
 #include <fstream>
+
+// SCAFFOLD_284: Core generator Unity scaffolding
+
 
 CoreGenerator* CoreGenerator::instance = nullptr;
 
@@ -98,6 +102,12 @@ size_t CoreGenerator::GetTemplateCount() const {
 
 bool CoreGenerator::GenerateWithAllFeatures(const std::string& name, LanguageType language,
                                             const std::filesystem::path& output_dir) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::BatchProcessing,
+            "CoreGenerator::GenerateWithAllFeatures")) {
+        std::cerr << "[Core Generator] Batch Processing requires a Professional license.\n";
+        return false;
+    }
     if (!generator) return false;
     // Generate base project, then layer tests + CI + Docker
     bool ok = generator->GenerateWithTests(name, language, output_dir);
@@ -795,7 +805,7 @@ bool UniversalGenerator::GenerateWithDocker(const std::string& name, LanguageTyp
     } else if (language == LanguageType::JAVASCRIPT || language == LanguageType::TYPESCRIPT || language == LanguageType::REACT) {
         dockerfile = "FROM node:20-slim\nWORKDIR /app\nCOPY package*.json .\nRUN npm install\nCOPY . .\nRUN npm run build\nCMD [\"npm\", \"start\"]\n";
     } else {
-        dockerfile = "FROM ubuntu:latest\nWORKDIR /app\nCOPY . .\n# TODO: add language-specific build steps\n";
+        dockerfile = "FROM ubuntu:latest\nWORKDIR /app\nCOPY . .\nRUN if [ -f CMakeLists.txt ]; then cmake -B build && cmake --build build; elif [ -f Makefile ]; then make; else echo 'Add build steps for your project'; fi\nCMD [\"./build/main\"]\n";
     }
 
     WriteFile(root / "Dockerfile", dockerfile);

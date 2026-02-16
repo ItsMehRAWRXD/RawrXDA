@@ -4,7 +4,6 @@
 // EnterprisePolicyEngine — C++20, no Qt. Enterprise extension policies.
 // ============================================================================
 
-#include <functional>
 #include <list>
 #include <string>
 #include <vector>
@@ -35,12 +34,12 @@ public:
     bool isJwtValid(const std::string& token);
     std::string generateJwtToken(const std::string& userId, const std::vector<std::string>& permissions);
 
-    using PolicyViolationFn = std::function<void(const std::string& extensionId, const std::string& reason)>;
-    using AuditLogEntryFn = std::function<void(const std::string& entry)>;
-    using ComplianceChangedFn = std::function<void(bool compliant)>;
-    void setOnPolicyViolation(PolicyViolationFn fn) { m_onPolicyViolation = std::move(fn); }
-    void setOnAuditLogEntry(AuditLogEntryFn fn) { m_onAuditLogEntry = std::move(fn); }
-    void setOnComplianceStatusChanged(ComplianceChangedFn fn) { m_onComplianceStatusChanged = std::move(fn); }
+    using PolicyViolationFn = void(*)(const std::string& extensionId, const std::string& reason);
+    using AuditLogEntryFn = void(*)(const std::string& entry);
+    using ComplianceChangedFn = void(*)(bool compliant);
+    void setOnPolicyViolation(PolicyViolationFn fn) { m_onPolicyViolation = fn; }
+    void setOnAuditLogEntry(AuditLogEntryFn fn) { m_onAuditLogEntry = fn; }
+    void setOnComplianceStatusChanged(ComplianceChangedFn fn) { m_onComplianceStatusChanged = fn; }
 
 private:
     struct PolicySettings {
@@ -68,7 +67,7 @@ private:
     std::list<AuditEntry> m_auditLog;
     bool m_compliant = true;
 
-    PolicyViolationFn m_onPolicyViolation;
-    AuditLogEntryFn m_onAuditLogEntry;
-    ComplianceChangedFn m_onComplianceStatusChanged;
+    PolicyViolationFn m_onPolicyViolation = nullptr;
+    AuditLogEntryFn m_onAuditLogEntry = nullptr;
+    ComplianceChangedFn m_onComplianceStatusChanged = nullptr;
 };

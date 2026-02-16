@@ -1,380 +1,166 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
+#include <string>
 #include <vector>
 #include <map>
+#include <functional>
 #include <cstdint>
 
 /**
  * @class CheckpointManager
- * @brief Save, manage, and restore training checkpoints
+ * @brief Save, manage, and restore training checkpoints (Win32/Qt-free)
  *
  * Features:
  * - Save model state, optimizer state, training state
  * - Checkpoint versioning and history
  * - Automatic checkpointing (interval-based)
  * - Best model tracking (based on validation metric)
- * - Model state compression and decompression
- * - Efficient incremental snapshots
- * - Checkpoint validation and integrity checking
- * - Rollback to previous checkpoints
- * - Distributed checkpoint (multi-GPU/node)
- * - Cloud storage support (optional)
+ * - Checkpoint validation and rollback
  */
-class CheckpointManager : public QObject
+class CheckpointManager
 {
-    Q_OBJECT
-
 public:
     enum class CompressionLevel {
         None,
-        Low,            // Quick compression
+        Low,
         Medium,
-        High,           // Slow but small
-        Maximum         // Very slow
+        High,
+        Maximum
     };
 
     struct CheckpointMetadata {
-        QString checkpointId;
-        int epoch;
-        int step;
-        qint64 timestamp;
-        float validationLoss;
-        float trainLoss;
-        float accuracy;
-        float wallclockTime;        // Training time so far (seconds)
-        int modelSize;              // In bytes
-        QString modelArchitecture;
-        QString hyperparameters;    // JSON
-        QString datasetVersion;
-        bool isBestModel;
-        QString notes;
+        std::string checkpointId;
+        int epoch = 0;
+        int step = 0;
+        int64_t timestamp = 0;
+        float validationLoss = 0.f;
+        float trainLoss = 0.f;
+        float accuracy = 0.f;
+        float wallclockTime = 0.f;
+        int modelSize = 0;
+        std::string modelArchitecture;
+        std::string hyperparameters;
+        std::string datasetVersion;
+        bool isBestModel = false;
+        std::string notes;
     };
 
     struct CheckpointState {
-        QByteArray modelWeights;
-        QByteArray optimizerState;
-        QByteArray schedulerState;
-        QByteArray trainingState;   // Epoch, step, loss history
-        QJsonObject config;
+        std::vector<uint8_t> modelWeights;
+        std::vector<uint8_t> optimizerState;
+        std::vector<uint8_t> schedulerState;
+        std::vector<uint8_t> trainingState;
+        std::string config;
     };
 
     struct CheckpointIndex {
-        QString checkpointId;
-        QString filePath;
+        std::string checkpointId;
+        std::string filePath;
         CheckpointMetadata metadata;
-        int checkpointNumber;       // Sequential number
+        int checkpointNumber = 0;
     };
 
-    // Constructor
-    explicit CheckpointManager(QObject* parent = nullptr);
-    ~CheckpointManager() override;
+    using SavedCallback = void (*)(void* ctx, const char* checkpointId, int epoch, int step);
+    using LoadedCallback = void (*)(void* ctx, const char* checkpointId);
+    using DeletedCallback = void (*)(void* ctx, const char* checkpointId);
 
-    // Singleton access
-    static CheckpointManager& instance()
-    {
+    explicit CheckpointManager(void* parent = nullptr);
+    ~CheckpointManager();
+
+    static CheckpointManager& instance() {
         static CheckpointManager inst;
         return inst;
     }
 
-    /**
-     * @brief Initialize checkpoint manager
-     * @param checkpointDir Directory to store checkpoints
-     * @param maxCheckpoints Maximum number to keep (0 = unlimited)
-     * @return true if successful
-     */
-    bool initialize(const QString& checkpointDir, int maxCheckpoints = 10);
-
-    /**
-     * @brief Check if initialized
-     * @return true if ready
-     */
+    bool initialize(const std::string& checkpointDir, int maxCheckpoints = 10);
     bool isInitialized() const;
 
-    // ===== Checkpoint Creation =====
-    /**
-     * @brief Save checkpoint during training
-     * @param metadata Checkpoint metadata (epoch, step, metrics)
-     * @param state Model and optimizer state
-     * @param compress Compression level
-     * @return Checkpoint ID or empty if failed
-     */
-    QString saveCheckpoint(const CheckpointMetadata& metadata,
-                          const CheckpointState& state,
-                          CompressionLevel compress = CompressionLevel::Medium);
+    std::string saveCheckpoint(const CheckpointMetadata& metadata,
+                               const CheckpointState& state,
+                               CompressionLevel compress = CompressionLevel::Medium);
+    std::string quickSaveCheckpoint(const CheckpointMetadata& metadata,
+                                    const CheckpointState& state);
+    std::string saveModelWeights(const CheckpointMetadata& metadata,
+                                 const std::vector<uint8_t>& modelWeights,
+                                 CompressionLevel compress = CompressionLevel::Medium);
 
-    /**
-     * @brief Quick save (lightweight checkpoint)
-     * @param metadata Checkpoint metadata
-     * @param state State to save
-     * @return Checkpoint ID or empty if failed
-     */
-    QString quickSaveCheckpoint(const CheckpointMetadata& metadata,
-                               const CheckpointState& state);
+    bool loadCheckpoint(const std::string& checkpointId, CheckpointState& state);
+    std::string loadLatestCheckpoint(CheckpointState& state);
+    std::string loadBestCheckpoint(CheckpointState& state);
+    std::string loadCheckpointFromEpoch(int epoch, CheckpointState& state);
+    CheckpointMetadata getCheckpointMetadata(const std::string& checkpointId) const;
 
-    /**
-     * @brief Save only model weights (smaller checkpoint)
-     * @param metadata Checkpoint metadata
-     * @param modelWeights Model weights data
-     * @param compress Compression level
-     * @return Checkpoint ID or empty if failed
-     */
-    QString saveModelWeights(const CheckpointMetadata& metadata,
-                            const QByteArray& modelWeights,
-                            CompressionLevel compress = CompressionLevel::Medium);
-
-    // ===== Checkpoint Retrieval =====
-    /**
-     * @brief Load checkpoint
-     * @param checkpointId Checkpoint to load
-     * @param state Output: loaded state
-     * @return true if successful
-     */
-    bool loadCheckpoint(const QString& checkpointId, CheckpointState& state);
-
-    /**
-     * @brief Load latest checkpoint
-     * @param state Output: loaded state
-     * @return Checkpoint ID or empty if no checkpoints
-     */
-    QString loadLatestCheckpoint(CheckpointState& state);
-
-    /**
-     * @brief Load best checkpoint (by validation metric)
-     * @param state Output: loaded state
-     * @return Checkpoint ID or empty if not found
-     */
-    QString loadBestCheckpoint(CheckpointState& state);
-
-    /**
-     * @brief Load checkpoint from epoch
-     * @param epoch Target epoch
-     * @param state Output: loaded state
-     * @return Checkpoint ID or empty if not found
-     */
-    QString loadCheckpointFromEpoch(int epoch, CheckpointState& state);
-
-    /**
-     * @brief Get checkpoint metadata
-     * @param checkpointId Checkpoint to query
-     * @return Metadata or empty if not found
-     */
-    CheckpointMetadata getCheckpointMetadata(const QString& checkpointId) const;
-
-    // ===== Checkpoint Management =====
-    /**
-     * @brief List all saved checkpoints
-     * @return Vector of checkpoint indices
-     */
     std::vector<CheckpointIndex> listCheckpoints() const;
-
-    /**
-     * @brief Get checkpoint history (last N checkpoints)
-     * @param limit Number to return
-     * @return History of recent checkpoints
-     */
     std::vector<CheckpointIndex> getCheckpointHistory(int limit = 10) const;
-
-    /**
-     * @brief Delete checkpoint
-     * @param checkpointId Checkpoint to delete
-     * @return true if successful
-     */
-    bool deleteCheckpoint(const QString& checkpointId);
-
-    /**
-     * @brief Delete old checkpoints (keep only recent)
-     * @param keepCount Number of recent to keep
-     * @return Number of deleted checkpoints
-     */
+    bool deleteCheckpoint(const std::string& checkpointId);
     int pruneOldCheckpoints(int keepCount);
-
-    /**
-     * @brief Get best checkpoint info
-     * @return Metadata of best checkpoint or empty
-     */
     CheckpointMetadata getBestCheckpointInfo() const;
+    bool updateCheckpointMetadata(const std::string& checkpointId,
+                                  const CheckpointMetadata& metadata);
+    bool setCheckpointNote(const std::string& checkpointId, const std::string& note);
 
-    /**
-     * @brief Update checkpoint metadata (e.g., mark as best)
-     * @param checkpointId Checkpoint to update
-     * @param metadata Updated metadata
-     * @return true if successful
-     */
-    bool updateCheckpointMetadata(const QString& checkpointId,
-                                 const CheckpointMetadata& metadata);
-
-    /**
-     * @brief Set note for checkpoint
-     * @param checkpointId Checkpoint to annotate
-     * @param note Note text
-     * @return true if successful
-     */
-    bool setCheckpointNote(const QString& checkpointId, const QString& note);
-
-    // ===== Automatic Checkpointing =====
-    /**
-     * @brief Enable automatic checkpointing
-     * @param intervalSteps Save checkpoint every N steps
-     * @param saveEveryNEpochs Also save every N epochs
-     * @return true if successful
-     */
     bool enableAutoCheckpointing(int intervalSteps, int saveEveryNEpochs = 1);
-
-    /**
-     * @brief Disable automatic checkpointing
-     */
     void disableAutoCheckpointing();
-
-    /**
-     * @brief Check if should save checkpoint (for auto mode)
-     * @param step Current training step
-     * @param epoch Current epoch
-     * @return true if should save
-     */
     bool shouldCheckpoint(int step, int epoch) const;
 
-    // ===== Validation & Integrity =====
-    /**
-     * @brief Validate checkpoint integrity
-     * @param checkpointId Checkpoint to validate
-     * @return true if valid and uncorrupted
-     */
-    bool validateCheckpoint(const QString& checkpointId) const;
+    bool validateCheckpoint(const std::string& checkpointId) const;
+    std::map<std::string, bool> validateAllCheckpoints() const;
+    bool repairCheckpoint(const std::string& checkpointId);
 
-    /**
-     * @brief Validate all checkpoints
-     * @return Map of checkpointId -> isValid
-     */
-    std::map<QString, bool> validateAllCheckpoints() const;
-
-    /**
-     * @brief Repair/fix checkpoint if possible
-     * @param checkpointId Checkpoint to repair
-     * @return true if repair successful
-     */
-    bool repairCheckpoint(const QString& checkpointId);
-
-    // ===== Statistics & Analysis =====
-    /**
-     * @brief Get checkpoint storage usage (bytes)
-     * @return Total size of all checkpoints
-     */
     uint64_t getTotalCheckpointSize() const;
+    uint64_t getCheckpointSize(const std::string& checkpointId) const;
+    std::string generateCheckpointReport() const;
+    std::string compareCheckpoints(const std::string& checkpointId1,
+                                   const std::string& checkpointId2) const;
 
-    /**
-     * @brief Get checkpoint file size
-     * @param checkpointId Checkpoint to query
-     * @return Size in bytes or 0 if not found
-     */
-    uint64_t getCheckpointSize(const QString& checkpointId) const;
-
-    /**
-     * @brief Generate checkpoint report
-     * @return JSON with checkpoint statistics
-     */
-    QJsonObject generateCheckpointReport() const;
-
-    /**
-     * @brief Compare two checkpoints
-     * @param checkpointId1 First checkpoint
-     * @param checkpointId2 Second checkpoint
-     * @return JSON with comparison (validation loss, accuracy, etc.)
-     */
-    QJsonObject compareCheckpoints(const QString& checkpointId1,
-                                  const QString& checkpointId2) const;
-
-    // ===== Distributed Checkpointing =====
-    /**
-     * @brief Set rank for distributed training
-     * @param rank Process rank (0 for master)
-     * @param worldSize Total number of processes
-     */
     void setDistributedInfo(int rank, int worldSize);
-
-    /**
-     * @brief Synchronize checkpoints across distributed processes
-     * @return true if successful
-     */
     bool synchronizeDistributedCheckpoints();
 
-    // ===== Configuration Export/Import =====
-    /**
-     * @brief Export checkpoint configuration
-     * @return JSON configuration
-     */
-    QJsonObject exportConfiguration() const;
+    std::string exportConfiguration() const;
+    bool importConfiguration(const std::string& config);
+    bool saveConfigurationToFile(const std::string& filePath) const;
+    bool loadConfigurationFromFile(const std::string& filePath);
 
-    /**
-     * @brief Import checkpoint configuration
-     * @param config Configuration to import
-     * @return true if successful
-     */
-    bool importConfiguration(const QJsonObject& config);
+    using ShowCallback = std::function<void(void*, const std::vector<CheckpointIndex>&)>;
+    void setShowCallback(ShowCallback cb, void* ctx);
+    void show();
 
-    /**
-     * @brief Save configuration to file
-     * @param filePath Output file path
-     * @return true if successful
-     */
-    bool saveConfigurationToFile(const QString& filePath) const;
-
-    /**
-     * @brief Load configuration from file
-     * @param filePath Input file path
-     * @return true if successful
-     */
-    bool loadConfigurationFromFile(const QString& filePath);
-
-signals:
-    /// Emitted when checkpoint is saved
-    void checkpointSaved(const QString& checkpointId, int epoch, int step);
-
-    /// Emitted when checkpoint is loaded
-    void checkpointLoaded(const QString& checkpointId);
-
-    /// Emitted when new best checkpoint found
-    void bestCheckpointUpdated(const QString& checkpointId, float validationLoss);
-
-    /// Emitted when checkpoint deletion occurs
-    void checkpointDeleted(const QString& checkpointId);
-
-    /// Emitted on checkpoint error
-    void checkpointError(const QString& errorMessage);
-
-    /// Emitted periodically with checkpoint statistics
-    void checkpointStatsUpdated(uint64_t totalSize, int checkpointCount);
+    void setSavedCallback(void* ctx, SavedCallback cb) { m_savedCtx = ctx; m_savedCb = cb; }
+    void setLoadedCallback(void* ctx, LoadedCallback cb) { m_loadedCtx = ctx; m_loadedCb = cb; }
+    void setDeletedCallback(void* ctx, DeletedCallback cb) { m_deletedCtx = ctx; m_deletedCb = cb; }
 
 private:
-    // Internal state
-    QString m_checkpointDir;
-    int m_maxCheckpoints;
-    int m_checkpointCounter;
-    
-    // Auto checkpointing
-    bool m_autoCheckpointEnabled;
-    int m_autoCheckpointInterval;
-    int m_autoCheckpointEpochInterval;
-    int m_lastAutoCheckpointStep;
-    int m_lastAutoCheckpointEpoch;
-    
-    // Distributed info
-    int m_rank;
-    int m_worldSize;
-    
-    // Checkpoint tracking
-    std::vector<CheckpointIndex> m_checkpointIndex;
-    QString m_bestCheckpointId;
+    std::string m_checkpointDir;
+    int m_maxCheckpoints = 10;
+    int m_checkpointCounter = 0;
 
-    // Helper methods
-    QString generateCheckpointId();
-    QByteArray compressState(const QByteArray& data, CompressionLevel level);
-    QByteArray decompressState(const QByteArray& data);
-    bool writeCheckpointToDisk(const QString& checkpointId,
-                              const CheckpointState& state,
-                              CompressionLevel compress);
-    bool readCheckpointFromDisk(const QString& checkpointId,
-                               CheckpointState& state);
+    bool m_autoCheckpointEnabled = false;
+    int m_autoCheckpointInterval = 0;
+    int m_autoCheckpointEpochInterval = 1;
+    int m_lastAutoCheckpointStep = -1;
+    int m_lastAutoCheckpointEpoch = -1;
+
+    int m_rank = 0;
+    int m_worldSize = 1;
+
+    std::vector<CheckpointIndex> m_checkpointIndex;
+    std::string m_bestCheckpointId;
+
+    void* m_savedCtx = nullptr;
+    SavedCallback m_savedCb = nullptr;
+    void* m_loadedCtx = nullptr;
+    LoadedCallback m_loadedCb = nullptr;
+    void* m_deletedCtx = nullptr;
+    DeletedCallback m_deletedCb = nullptr;
+
+    ShowCallback m_showCb;
+    void* m_showCtx = nullptr;
+
+    std::string generateCheckpointId();
+    std::vector<uint8_t> compressState(const std::vector<uint8_t>& data, CompressionLevel level);
+    std::vector<uint8_t> decompressState(const std::vector<uint8_t>& data);
+    bool writeCheckpointToDisk(const std::string& checkpointId,
+                               const CheckpointState& state,
+                               CompressionLevel compress);
+    bool readCheckpointFromDisk(const std::string& checkpointId, CheckpointState& state);
 };

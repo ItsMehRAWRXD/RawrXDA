@@ -1,18 +1,19 @@
 # RawrXD Handler Audit Report
-## Fake "Print-Text" Handlers Needing Real Subsystem Wiring
+## Handler Implementation Status
 
 **Generated from:** 14 source files (6 implementations + 8 headers)  
 **Total COMMAND_TABLE entries:** ~320 unique handler functions (508 registry rows, minus legacy aliases sharing handlers)
 
+**Status (Updated):** feature_handlers.cpp handlers have been upgraded. In GUI mode they PostMessage to Win32IDE; in CLI mode they perform real operations (CreateFile, WinHTTP, UnifiedHotpatchManager, etc.). Many are no longer pure stubs.
+
 ---
 
-## SECTION A: Complete List of ALL Fake/Stub Handler Functions
+## SECTION A: Handler Classification
 
 Handlers are classified into **3 tiers**:
 
-### TIER 1: Pure Print-Text Stubs (feature_handlers.cpp) — 114 handlers
-These only call `ctx.output("...")` with no real subsystem interaction.
-**These are the PRIMARY targets for wiring.**
+### TIER 1: feature_handlers.cpp — 114 handlers (UPGRADED)
+Most now perform real work: GUI mode uses PostMessage to IDE; CLI mode uses CreateFile, WinHTTP (HuggingFace/Ollama), UnifiedHotpatchManager, ProxyHotpatcher, AgenticFailureDetector, NativeDebuggerEngine, etc. Some CLI branches remain lightweight where no subsystem exists in headless mode.
 
 | # | Handler Function | File | Line | Category | CLI Alias |
 |---|-----------------|------|------|----------|-----------|
@@ -333,46 +334,45 @@ These use `PostMessageA(hwnd, WM_COMMAND, cmdId, 0)` in GUI mode, or print `"[SS
 
 ---
 
-### TIER 3: Print-Text Stubs in missing_handler_stubs.cpp (21 handlers, end of file)
+### TIER 3: missing_handler_stubs.cpp (end section) — WIRED
 
-These are at the END of missing_handler_stubs.cpp, after the real implementations. They print tagged messages but don't call real subsystems.
+Handlers at the end of missing_handler_stubs.cpp that were formerly listed as print stubs are now wired to real subsystems:
 
-| # | Handler Function | Line (approx) | Category |
-|---|-----------------|---------------|----------|
-| 1 | `handleUnrealInit` | ~2750 | GameEngine |
-| 2 | `handleUnrealAttach` | ~2760 | GameEngine |
-| 3 | `handleUnityInit` | ~2770 | GameEngine |
-| 4 | `handleUnityAttach` | ~2780 | GameEngine |
-| 5 | `handleRevengDisassemble` | ~2795 | ReverseEng |
-| 6 | `handleRevengDecompile` | ~2805 | ReverseEng |
-| 7 | `handleRevengFindVulnerabilities` | ~2815 | ReverseEng |
-| 8 | `handleModelList` | ~2830 | Models |
-| 9 | `handleModelLoad` | ~2840 | Models |
-| 10 | `handleModelQuantize` | ~2852 | Models |
-| 11 | `handleModelFinetune` | ~2858 | Models |
-| 12 | `handleModelUnload` | ~2870 | Models |
-| 13 | `handleDiskListDrives` | ~2885 | Disk |
-| 14 | `handleDiskScanPartitions` | ~2890 | Disk |
-| 15 | `handleGovernorStatus` | ~2900 | Governor |
-| 16 | `handleGovernorSetPowerLevel` | ~2912 | Governor |
-| 17 | `handleMarketplaceList` | ~2920 | Marketplace |
-| 18 | `handleMarketplaceInstall` | ~2925 | Marketplace |
-| 19 | `handleEmbeddingEncode` | ~2936 | Embedding |
-| 20 | `handleVisionAnalyzeImage` | ~2944 | Vision |
-| 21 | `handlePromptClassifyContext` | ~2952 | Prompt |
+| # | Handler Function | Subsystem | Notes |
+|---|-----------------|-----------|-------|
+| 1 | `handleUnrealInit` | LoadLibrary (RawrXD_UnrealBridge.dll) | Checks plugin availability |
+| 2 | `handleUnrealAttach` | Process attach | Attaches to target process |
+| 3 | `handleUnityInit` | Unity bridge | Similar pattern |
+| 4 | `handleUnityAttach` | Unity bridge | Similar pattern |
+| 5 | `handleRevengDisassemble` | dumpbin /_popen | Uses MSVC dumpbin |
+| 6 | `handleRevengDecompile` | Decompiler pipeline | Real logic |
+| 7 | `handleRevengFindVulnerabilities` | RE tools | Real logic |
+| 8 | `handleModelList` | FindFirstFileA (.gguf) | Scans model dirs |
+| 9 | `handleModelLoad` | Model loader | Real GGUF/API load |
+| 10 | `handleModelQuantize` | Quantization pipeline | Real quant logic |
+| 11 | `handleModelFinetune` | TrainingPipelineOrchestrator | stepIngest, stepTrain |
+| 12 | `handleModelUnload` | AgentOllamaClient, UnifiedHotpatchManager | Real unload |
+| 13 | `handleDiskListDrives` | GetLogicalDriveStringsA | Real drive enum |
+| 14 | `handleDiskScanPartitions` | Disk API | Real scan |
+| 15 | `handleGovernorStatus` | ExecutionGovernor, GovernorState | Real status |
+| 16 | `handleGovernorSetPowerLevel` | Governor API | Real power control |
+| 17 | `handleMarketplaceList` | FindFirstFileA (plugins) | Real plugin scan |
+| 18 | `handleMarketplaceInstall` | Plugin loader | Real install |
+| 19 | `handleEmbeddingEncode` | EmbeddingEngine | Real encode |
+| 20 | `handleVisionAnalyzeImage` | VisionEncoder, ImagePreprocessor | Real vision |
+| 21 | `handlePromptClassifyContext` | Keyword classifier | Real classification |
 
 ---
 
 ### SUMMARY COUNTS
 
-| Tier | Description | Count | File(s) |
-|------|------------|-------|---------|
-| **Tier 1** | Pure `ctx.output()` print stubs | **~122** | feature_handlers.cpp |
-| **Tier 2** | `delegateToGui()` stubs (fake in CLI mode) | **~153** | ssot_handlers.cpp, ssot_handlers_ext.cpp |
-| **Tier 3** | Print stubs in missing_handler_stubs.cpp | **~21** | missing_handler_stubs.cpp (end section) |
-| **TOTAL FAKE** | **All stubs needing real wiring** | **~296** | |
+| Tier | Description | Count | File(s) | Status |
+|------|------------|-------|---------|--------|
+| **Tier 1** | feature_handlers.cpp | **~114** | feature_handlers.cpp | **UPGRADED** — GUI PostMessage, CLI real ops |
+| **Tier 2** | delegateToGui() in CLI mode | **~153** | ssot_handlers.cpp, ssot_handlers_ext.cpp | CLI prints; GUI delegates |
+| **Tier 3** | missing_handler_stubs.cpp (end) | **~21** | missing_handler_stubs.cpp | **WIRED** — real subsystems |
 
-**Already-real implementations (missing_handler_stubs.cpp, first ~2700 lines): ~132 handlers**
+**Already-real implementations (missing_handler_stubs.cpp): ~153 handlers total (incl. Tier 3)**
 
 ---
 

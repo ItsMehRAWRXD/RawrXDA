@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /opt/rawrxd
+
+COPY Ship/ /opt/rawrxd/Ship/
+COPY backend/ /opt/rawrxd/backend/
+COPY docker/run-backend.sh /usr/local/bin/run-backend.sh
+
+RUN pip install --no-cache-dir flask
+RUN chmod +x /usr/local/bin/run-backend.sh
+
+EXPOSE 23959
+
+CMD ["/usr/local/bin/run-backend.sh"]

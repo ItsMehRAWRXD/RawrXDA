@@ -7,6 +7,18 @@
 #include <windows.h>
 #include "RawrXD_Win32_Foundation.h" // Assuming this exists based on previous context
 
+// SCAFFOLD_131: RawrXD_ModelRouter
+
+
+// SCAFFOLD_129: RawrXD_AICompletion
+
+
+// SCAFFOLD_128: RawrXD_InferenceEngine_Win32
+
+
+// SCAFFOLD_089: RawrXD_AgenticEngine and AgenticController
+
+
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 

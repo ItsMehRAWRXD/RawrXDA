@@ -8,7 +8,7 @@
 #pragma once
 
 // ============================================================================
-// AgenticTextEdit — Qt-free stub. Use Win32 Rich Edit / custom control in impl.
+// AgenticTextEdit — Qt-free; use Win32 Rich Edit / custom control in impl.
 // ============================================================================
 
 #include <functional>

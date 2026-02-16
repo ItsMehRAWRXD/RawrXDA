@@ -86,9 +86,9 @@ static const char * status_to_str(uint32_t status) {
 
 static inline int hex_format_tensor_dims(char * str, const struct ggml_tensor * t) {
     if (t->ne[2] == 1 && t->ne[3] == 1) {
-        return sprintf(str, "%d:%d", (int) t->ne[0], (int) t->ne[1]);
+        return snprintf(str, 64, "%d:%d", (int) t->ne[0], (int) t->ne[1]);
     } else {
-        return sprintf(str, "%d:%d:%d:%d", (int) t->ne[0], (int) t->ne[1], (int) t->ne[2], (int) t->ne[3]);
+        return snprintf(str, 64, "%d:%d:%d:%d", (int) t->ne[0], (int) t->ne[1], (int) t->ne[2], (int) t->ne[3]);
     }
 }
 
@@ -100,27 +100,27 @@ static inline void hex_format_op_dims(char * str, const struct ggml_tensor * t) 
         p += hex_format_tensor_dims(p, t->src[0]);
 
         for (int i = 1; i < GGML_MAX_SRC && t->src[i]; i++) {
-            p += sprintf(p, " x ");
+            p += snprintf(p, str + 512 - p, " x ");
             p += hex_format_tensor_dims(p, t->src[i]);
         }
 
-        p += sprintf(p, " -> ");
+        p += snprintf(p, str + 512 - p, " -> ");
     }
 
     // format self dims separately for better visual alignment
     char self[64];
     hex_format_tensor_dims(self, t);
 
-    p += sprintf(p, "%s", self);
+    p += snprintf(p, str + 512 - p, "%s", self);
 }
 
 static inline int hex_format_tensor_strides(char * str, const struct ggml_tensor * t) {
     const char * c = ggml_is_contiguous(t) ? "" : "!";
 
     if (t->ne[2] == 1 && t->ne[3] == 1) {
-        return sprintf(str, "%zu:%zu%s", (size_t) t->nb[0], (size_t) t->nb[1], c);
+        return snprintf(str, 64, "%zu:%zu%s", (size_t) t->nb[0], (size_t) t->nb[1], c);
     } else {
-        return sprintf(str, "%zu:%zu:%zu:%zu%s", (size_t) t->nb[0], (size_t) t->nb[1], (size_t) t->nb[2],
+        return snprintf(str, 64, "%zu:%zu:%zu:%zu%s", (size_t) t->nb[0], (size_t) t->nb[1], (size_t) t->nb[2],
                        (size_t) t->nb[3], c);
     }
 }
@@ -133,18 +133,18 @@ static inline void hex_format_op_strides(char * str, const struct ggml_tensor * 
         p += hex_format_tensor_strides(p, t->src[0]);
 
         for (int i = 1; i < GGML_MAX_SRC && t->src[i]; i++) {
-            p += sprintf(p, " x ");
+            p += snprintf(p, str + 512 - p, " x ");
             p += hex_format_tensor_strides(p, t->src[i]);
         }
 
-        p += sprintf(p, " -> ");
+        p += snprintf(p, str + 512 - p, " -> ");
     }
 
     // format self dims separately for better visual alignment
     char self[64];
     hex_format_tensor_strides(self, t);
 
-    p += sprintf(p, "%s", self);
+    p += snprintf(p, str + 512 - p, "%s", self);
 }
 
 static inline void hex_format_op_types(char * str, const struct ggml_tensor * t) {
@@ -152,17 +152,17 @@ static inline void hex_format_op_types(char * str, const struct ggml_tensor * t)
 
     // append src0 and src1 (if any)
     if (t->src[0]) {
-        p += sprintf(p, "%s", ggml_type_name(t->src[0]->type));
+        p += snprintf(p, str + 512 - p, "%s", ggml_type_name(t->src[0]->type));
 
         for (int i = 1; i < GGML_MAX_SRC && t->src[i]; i++) {
-            p += sprintf(p, " x ");
-            p += sprintf(p, "%s", ggml_type_name(t->src[i]->type));
+            p += snprintf(p, str + 512 - p, " x ");
+            p += snprintf(p, str + 512 - p, "%s", ggml_type_name(t->src[i]->type));
         }
 
-        p += sprintf(p, " -> ");
+        p += snprintf(p, str + 512 - p, " -> ");
     }
 
-    p += sprintf(p, "%s", ggml_type_name(t->type));
+    p += snprintf(p, str + 512 - p, "%s", ggml_type_name(t->type));
 }
 
 static inline const char * hex_tensor_buff_name(const struct ggml_tensor * t) {
@@ -177,17 +177,17 @@ static inline void hex_format_op_buffs(char * str, const struct ggml_tensor * t)
 
     // append src0 and src1 (if any)
     if (t->src[0]) {
-        p += sprintf(p, "%s", hex_tensor_buff_name(t->src[0]));
+        p += snprintf(p, str + 512 - p, "%s", hex_tensor_buff_name(t->src[0]));
 
         for (int i = 1; i < GGML_MAX_SRC && t->src[i]; i++) {
-            p += sprintf(p, " x ");
-            p += sprintf(p, "%s", hex_tensor_buff_name(t->src[i]));
+            p += snprintf(p, str + 512 - p, " x ");
+            p += snprintf(p, str + 512 - p, "%s", hex_tensor_buff_name(t->src[i]));
         }
 
-        p += sprintf(p, " -> ");
+        p += snprintf(p, str + 512 - p, " -> ");
     }
 
-    p += sprintf(p, "%s", hex_tensor_buff_name(t));
+    p += snprintf(p, str + 512 - p, "%s", hex_tensor_buff_name(t));
 }
 
 static inline void hex_format_op_names(char * str, const struct ggml_tensor * t) {
@@ -195,17 +195,17 @@ static inline void hex_format_op_names(char * str, const struct ggml_tensor * t)
 
     // append src0 and src1 (if any)
     if (t->src[0]) {
-        p += sprintf(p, "%s", t->src[0]->name);
+        p += snprintf(p, str + 512 - p, "%s", t->src[0]->name);
 
         for (int i = 1; i < GGML_MAX_SRC && t->src[i]; i++) {
-            p += sprintf(p, " x ");
-            p += sprintf(p, "%s", t->src[i]->name);
+            p += snprintf(p, str + 512 - p, " x ");
+            p += snprintf(p, str + 512 - p, "%s", t->src[i]->name);
         }
 
-        p += sprintf(p, " -> ");
+        p += snprintf(p, str + 512 - p, " -> ");
     }
 
-    p += sprintf(p, "%s", t->name);
+    p += snprintf(p, str + 512 - p, "%s", t->name);
 }
 
 // ** backend sessions

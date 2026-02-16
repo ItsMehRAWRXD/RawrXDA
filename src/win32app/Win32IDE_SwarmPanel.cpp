@@ -23,6 +23,9 @@
 #include <sstream>
 #include <iomanip>
 
+// SCAFFOLD_331: SwarmPanel message and wiring
+
+
 // ── Local copies of utility functions (same pattern as Phase 10) ──────────
 // Duplicated because LocalServerUtil is static per-TU. DO NOT SIMPLIFY.
 namespace LocalServerUtil {
@@ -171,7 +174,11 @@ void Win32IDE::initPhase11() {
     SwarmCoordinator::instance().setLogCallback(swarmLogToOutput, this);
 
     m_phase11Initialized = true;
-    logMessage("Phase11", "Swarm subsystem initialized (not yet started — use Swarm Start)");
+    logMessage("Phase11", "Swarm subsystem ready. Use Swarm Start to begin.");
+}
+
+bool Win32IDE::isSwarmRunning() const {
+    return SwarmCoordinator::instance().isRunning() || SwarmWorker::instance().isRunning();
 }
 
 void Win32IDE::shutdownPhase11() {
@@ -222,8 +229,11 @@ void Win32IDE::cmdSwarmStatus() {
                                 << stats.parallelSpeedup << "x\n"
         << "  Packets TX/RX:  " << stats.totalPacketsSent << "/"
                                 << stats.totalPacketsRecv << "\n"
-        << "  Cache Hits:     " << stats.objectCacheHits << "\n"
-        << "════════════════════════════════════════════";
+        << "  Cache Hits:     " << stats.objectCacheHits << "\n";
+    if (!coord.isRunning() && !worker.isRunning()) {
+        oss << "  ── Next step: use Swarm Start (Leader / Worker / Hybrid) to begin.\n";
+    }
+    oss << "════════════════════════════════════════════";
     appendToOutput(oss.str());
 }
 

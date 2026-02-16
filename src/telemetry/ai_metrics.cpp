@@ -1,4 +1,5 @@
 #include "telemetry/ai_metrics.h"
+#include "license_enforcement.h"
 #include <chrono>
 #include <cstdint>
 #include <map>
@@ -27,6 +28,11 @@ void AIMetricsCollector::recordOllamaRequest(const std::string& model,
                                             bool success, 
                                             uint64_t prompt_tokens,
                                             uint64_t completion_tokens) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::InferenceStatistics, __FUNCTION__)) {
+        return;
+    }
+    
     std::lock_guard<std::mutex> lock(m_mutex);
     
     m_total_requests++;
@@ -125,11 +131,21 @@ void AIMetricsCollector::recordCustomMetric(const std::string& metric_name,
 }
 
 LatencyStats AIMetricsCollector::getOllamaLatencyStats() const {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::InferenceStatistics, __FUNCTION__)) {
+        return LatencyStats();
+    }
+    
     std::lock_guard<std::mutex> lock(m_mutex);
     return calculateLatencyStats(m_latency_samples);
 }
 
 TokenStats AIMetricsCollector::getTokenStats() const {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::InferenceStatistics, __FUNCTION__)) {
+        return TokenStats();
+    }
+    
     std::lock_guard<std::mutex> lock(m_mutex);
     return getTokenStatsInternal();
 }
@@ -155,6 +171,11 @@ TokenStats AIMetricsCollector::getTokenStatsInternal() const {
 }
 
 std::vector<ToolStats> AIMetricsCollector::getToolStats() const {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::InferenceStatistics, __FUNCTION__)) {
+        return std::vector<ToolStats>();
+    }
+    
     std::lock_guard<std::mutex> lock(m_mutex);
     return getToolStatsInternal();
 }
@@ -175,6 +196,11 @@ std::vector<ToolStats> AIMetricsCollector::getToolStatsInternal() const {
 }
 
 std::vector<ModelMetrics> AIMetricsCollector::getModelMetrics() const {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::InferenceStatistics, __FUNCTION__)) {
+        return std::vector<ModelMetrics>();
+    }
+    
     std::lock_guard<std::mutex> lock(m_mutex);
     
     std::vector<ModelMetrics> result;

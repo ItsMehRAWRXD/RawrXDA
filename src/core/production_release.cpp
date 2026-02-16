@@ -10,6 +10,7 @@
 #include "enterprise_license.h"
 
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
@@ -608,7 +609,14 @@ void ProductionReleaseEngine::registerGate(const LicenseGate& gate) {
     m_gates.push_back(gate);
 }
 
+namespace {
+    std::once_flag s_licenseRefreshed;
+}
 bool ProductionReleaseEngine::isFeatureAllowed(const std::string& featureName) const {
+    std::call_once(s_licenseRefreshed, []() {
+        RawrXD::EnterpriseLicense::initialize();  // ensure license init (Phase 1–3)
+        ProductionReleaseEngine::instance().refreshLicense();
+    });
     std::lock_guard<std::mutex> lock(m_mutex);
     auto& stats = const_cast<ProductionStats&>(m_stats);
     stats.licenseChecks.fetch_add(1, std::memory_order_relaxed);
@@ -628,6 +636,10 @@ bool ProductionReleaseEngine::isFeatureAllowed(const std::string& featureName) c
 }
 
 bool ProductionReleaseEngine::enforceGate(const std::string& featureName) const {
+    std::call_once(s_licenseRefreshed, []() {
+        RawrXD::EnterpriseLicense::initialize();
+        ProductionReleaseEngine::instance().refreshLicense();
+    });
     std::lock_guard<std::mutex> lock(m_mutex);
     // NOTE: fetch_add on atomics requires mutable stats — use const_cast since
     //       stats mutation is observational, not logical state change.

@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+// SCAFFOLD_254: monaco_gen and agentic template
+
+
 namespace {
 struct Args {
     std::string name = "rawrxd-ide";

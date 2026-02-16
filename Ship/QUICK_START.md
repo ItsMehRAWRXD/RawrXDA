@@ -1,7 +1,8 @@
 # 🎯 QUICK START - EXACT COMMANDS & FILES
 
 ## 📍 YOU ARE HERE
-**Status:** Qt removal complete ✅ | Ready to build ⏳ | Code is 100% Qt-free
+**Status:** Qt removal complete ✅ | Ready to build ⏳ | Code is 100% Qt-free  
+**Open items / stubs / audits:** See repo-root **UNFINISHED_FEATURES.md** for remaining optional steps and completed audit log.
 
 ---
 
@@ -74,7 +75,7 @@ D:\RawrXD\src\
 ```
 D:\RawrXD\Ship\
 ├── 5 automation scripts (Phase 1-5) ✅
-├── QtReplacements.hpp (stub library)
+├── StdReplacements.hpp (STL/Win32 type replacement library)
 ├── CMakeLists.txt (updated)
 └── Verify-QtRemoval.ps1 (verification)
 ```

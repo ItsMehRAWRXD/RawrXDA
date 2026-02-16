@@ -18,6 +18,9 @@
 #include <fstream>
 #include <cstring>
 
+// SCAFFOLD_183: Test harness and replay
+
+
 namespace fs = std::filesystem;
 
 // ============================================================================

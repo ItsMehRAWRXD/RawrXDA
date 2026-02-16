@@ -1,171 +1,96 @@
 // ============================================================================
 // File: test_agent_hot_patcher.cpp
-// 
-// Purpose: Comprehensive test suite for AgentHotPatcher
-//
+// Purpose: Comprehensive test suite for AgentHotPatcher (C++20, Qt-free)
 // License: Production Grade - Enterprise Ready
 // ============================================================================
 
-#include "agent_hot_patcher.hpp"
-#include <QCoreApplication>
-#include <QDebug>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QTimer>
-#include <QTest>
-#include <QSignalSpy>
+#include "agent/agent_hot_patcher.hpp"
+#include <cassert>
+#include <chrono>
+#include <iostream>
+#include <string>
 
-class TestAgentHotPatcher : public QObject
-{
-    Q_OBJECT
+static JsonValue emptyContext() { return JsonValue(JsonValue::Object{}); }
 
-private slots:
-    void initTestCase();
-    void cleanupTestCase();
-    void testInitialization();
-    void testHallucinationDetection();
-    void testHallucinationCorrection();
-    void testNavigationErrorFix();
-    void testBehaviorPatches();
-    void testStatistics();
-    void testThreadSafety();
-    void testPerformance();
+#define T_ASSERT(c) do { if (!(c)) { std::cerr << "FAIL: " << #c << std::endl; return 1; } } while(0)
 
-private:
-    AgentHotPatcher* m_patcher;
-};
+int main(int, char**) {
+    std::cout << "AgentHotPatcher test suite (C++20)" << std::endl;
 
-void TestAgentHotPatcher::initTestCase()
-{
-    m_patcher = new AgentHotPatcher();
-    QVERIFY(m_patcher != nullptr);
-}
+    AgentHotPatcher patcher;
+    T_ASSERT(patcher.initialize("dummy_gguf_loader.exe", 0));
+    T_ASSERT(patcher.isHotPatchingEnabled());
 
-void TestAgentHotPatcher::cleanupTestCase()
-{
-    delete m_patcher;
-}
+    // testHallucinationDetection
+    std::string contentInvalidPath = "The file is located at /mystical/path/to/file.txt";
+    HallucinationDetection detection = patcher.detectHallucination(contentInvalidPath, emptyContext());
+    T_ASSERT(!detection.detectionId.empty());
+    T_ASSERT(detection.hallucinationType == "fabricated_path");
+    T_ASSERT(detection.confidence > 0.6);
 
-void TestAgentHotPatcher::testInitialization()
-{
-    // Test initialization with valid GGUF loader path
-    bool result = m_patcher->initialize("dummy_gguf_loader.exe", 0);
-    QVERIFY(result);
-    QVERIFY(m_patcher->isHotPatchingEnabled());
-}
+    std::string contentContradiction = "This always succeeds but always fails";
+    detection = patcher.detectHallucination(contentContradiction, emptyContext());
+    T_ASSERT(!detection.detectionId.empty());
+    T_ASSERT(detection.hallucinationType == "logic_contradiction");
 
-void TestAgentHotPatcher::testHallucinationDetection()
-{
-    // Test path hallucination detection
-    QString contentWithInvalidPath = "The file is located at /mystical/path/to/file.txt";
-    HallucinationDetection detection = m_patcher->detectHallucination(contentWithInvalidPath, QJsonObject());
-    QVERIFY(!detection.detectionId.isEmpty());
-    QCOMPARE(detection.hallucinationType, QString("fabricated_path"));
-    QVERIFY(detection.confidence > 0.6);
-    
-    // Test logic contradiction detection
-    QString contentWithContradiction = "This always succeeds but always fails";
-    detection = m_patcher->detectHallucination(contentWithContradiction, QJsonObject());
-    QVERIFY(!detection.detectionId.isEmpty());
-    QCOMPARE(detection.hallucinationType, QString("logic_contradiction"));
-    
-    // Test incomplete reasoning detection
-    QString incompleteReasoning = "The answer is yes";
-    detection = m_patcher->detectHallucination(incompleteReasoning, QJsonObject());
-    QVERIFY(!detection.detectionId.isEmpty());
-    QCOMPARE(detection.hallucinationType, QString("incomplete_reasoning"));
-}
+    std::string incompleteReasoning = "The answer is yes";
+    detection = patcher.detectHallucination(incompleteReasoning, emptyContext());
+    T_ASSERT(!detection.detectionId.empty());
+    T_ASSERT(detection.hallucinationType == "incomplete_reasoning");
 
-void TestAgentHotPatcher::testHallucinationCorrection()
-{
-    // Test path hallucination correction
+    // testHallucinationCorrection
     HallucinationDetection pathDetection;
     pathDetection.hallucinationType = "fabricated_path";
     pathDetection.detectedContent = "/mystical/path";
-    
-    QString corrected = m_patcher->correctHallucination(pathDetection);
-    QVERIFY(!corrected.isEmpty());
-    QVERIFY(corrected.contains("./src/kernels/q8k_kernel.cpp"));
-    
-    // Test logic contradiction correction
+    std::string corrected = patcher.correctHallucination(pathDetection);
+    T_ASSERT(!corrected.empty());
+    T_ASSERT(corrected.find("./src/kernels/q8k_kernel.cpp") != std::string::npos);
+
     HallucinationDetection logicDetection;
     logicDetection.hallucinationType = "logic_contradiction";
-    
-    corrected = m_patcher->correctHallucination(logicDetection);
-    QVERIFY(!corrected.isEmpty());
-    QVERIFY(corrected.contains("robust error handling"));
-}
+    corrected = patcher.correctHallucination(logicDetection);
+    T_ASSERT(!corrected.empty());
+    T_ASSERT(corrected.find("robust error handling") != std::string::npos);
 
-void TestAgentHotPatcher::testNavigationErrorFix()
-{
-    // Test path normalization
-    QString invalidPath = "/absolute/path/../with/double//slashes";
-    NavigationFix fix = m_patcher->fixNavigationError(invalidPath, QJsonObject());
-    QVERIFY(!fix.fixId.isEmpty());
-    QVERIFY(!fix.reasoning.isEmpty());
-    QVERIFY(fix.effectiveness > 0.0);
-}
+    // testNavigationErrorFix
+    std::string invalidPath = "/absolute/path/../with/double//slashes";
+    NavigationFix fix = patcher.fixNavigationError(invalidPath, emptyContext());
+    T_ASSERT(!fix.fixId.empty());
+    T_ASSERT(!fix.reasoning.empty());
+    T_ASSERT(fix.effectiveness > 0.0);
 
-void TestAgentHotPatcher::testBehaviorPatches()
-{
-    // Test behavior patch application
-    QJsonObject output;
+    // testBehaviorPatches
+    JsonValue output(JsonValue::Object{});
     output["reasoning"] = "Simple reasoning";
-    
-    QJsonObject patched = m_patcher->applyBehaviorPatches(output, QJsonObject());
-    QVERIFY(!patched.isEmpty());
-    
-    // Verify the output structure is maintained
-    QVERIFY(patched.contains("reasoning"));
-}
+    JsonValue patched = patcher.applyBehaviorPatches(output, emptyContext());
+    T_ASSERT(!patched.isEmpty());
+    T_ASSERT(patched.contains("reasoning"));
 
-void TestAgentHotPatcher::testStatistics()
-{
-    QJsonObject stats = m_patcher->getCorrectionStatistics();
-    QVERIFY(!stats.isEmpty());
-    
-    // Verify all required statistics fields are present
-    QVERIFY(stats.contains("totalHallucinationsDetected"));
-    QVERIFY(stats.contains("hallucinationsCorrected"));
-    QVERIFY(stats.contains("navigationFixesApplied"));
-    QVERIFY(stats.contains("averageNavigationFixEffectiveness"));
-    QVERIFY(stats.contains("totalBehaviorPatches"));
-}
+    // testStatistics
+    JsonValue stats = patcher.getCorrectionStatistics();
+    T_ASSERT(!stats.isEmpty());
+    T_ASSERT(stats.contains("totalHallucinationsDetected"));
+    T_ASSERT(stats.contains("hallucinationsCorrected"));
+    T_ASSERT(stats.contains("navigationFixesApplied"));
+    T_ASSERT(stats.contains("averageNavigationFixEffectiveness"));
+    T_ASSERT(stats.contains("totalBehaviorPatches"));
 
-void TestAgentHotPatcher::testThreadSafety()
-{
-    // Test concurrent access (simulated)
-    QSignalSpy spy(m_patcher, &AgentHotPatcher::hallucinationDetected);
-    
-    // Simulate multiple concurrent operations
-    QString testContent = "Path: /mystical/path";
-    for (int i = 0; i < 10; ++i) {
-        m_patcher->detectHallucination(testContent, QJsonObject());
-    }
-    
-    // Verify no crashes occurred
-    QVERIFY(true);
-}
+    // testThreadSafety: multiple calls, no crash
+    std::string testContent = "Path: /mystical/path";
+    for (int i = 0; i < 10; ++i)
+        patcher.detectHallucination(testContent, emptyContext());
 
-void TestAgentHotPatcher::testPerformance()
-{
-    // Performance test with large content
-    QString largeContent;
-    for (int i = 0; i < 1000; ++i) {
-        largeContent += "This is test content with path: /valid/path/file" + QString::number(i) + "\n";
-    }
-    
-    QElapsedTimer timer;
-    timer.start();
-    
-    HallucinationDetection detection = m_patcher->detectHallucination(largeContent, QJsonObject());
-    
-    qint64 elapsed = timer.elapsed();
-    qDebug() << "Hallucination detection took" << elapsed << "ms";
-    
-    // Should complete in reasonable time (less than 100ms)
-    QVERIFY(elapsed < 100);
-}
+    // testPerformance
+    std::string largeContent;
+    for (int i = 0; i < 1000; ++i)
+        largeContent += "This is test content with path: /valid/path/file" + std::to_string(i) + "\n";
+    auto t0 = std::chrono::steady_clock::now();
+    detection = patcher.detectHallucination(largeContent, emptyContext());
+    auto t1 = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    std::cout << "Hallucination detection took " << elapsed << " ms" << std::endl;
+    T_ASSERT(elapsed < 100);
 
-QTEST_MAIN(TestAgentHotPatcher)
-#include "test_agent_hot_patcher.moc"
+    std::cout << "All AgentHotPatcher tests passed." << std::endl;
+    return 0;
+}

@@ -1,0 +1,1105 @@
+[0/1] Re-running CMake...
+-- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
+-- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+-- [Build Paths] MSVC CRT: C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717
+-- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
+-- MASM64 enabled: ASM kernels will be compiled
+-- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
+-- [RE] Deobfuscator MASM64 targets registered
+-- [RE] Model reverse pipeline MASM64 target registered
+-- [RE] Omega v3 MASM32 target registered
+-- [RE] Reverser compiler NASM targets registered
+-- [RE] Reverse Engineering Suite configured:
+--   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
+--   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
+--   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
+--   Deobfuscator:      3 ASM files + 1 INC + build/test
+--   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
+--   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
+--   Model Reverse:     model-llm-harvester.asm
+--   Security Toolkit:  RawrXD_IDE_unified.asm
+--   RE Modules:        gpu_dma_complete_reverse_engineered.asm
+-- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
+-- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
+-- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
+-- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
+-- MultiWindow Kernel DLL target enabled
+-- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
+-- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
+-- Ship RawrXD_FileManager_Win32.dll will be built (converted QT file ops)
+-- ═══════════════════════════════════════════════════════
+--  RawrXD_Gold.exe — Standalone Monolithic Deployment
+--  Build with: cmake --build . --target RawrXD-Gold
+-- ═══════════════════════════════════════════════════════
+-- [CI] self_test_gate target available (cmake --build . --target self_test_gate)
+-- [CI] RAWR_ASAN=OFF
+-- Configuring done (0.5s)
+-- Generating done (0.2s)
+-- Build files have been written to: D:/rawrxd/build
+[1/2] Cleaning all built files...
+Cleaning... 949 files.
+
+[1/425] Building ASM_MASM object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\asm\RawrXD_MultiWindow_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_MultiWindow_Kernel.asm
+
+[2/425] [MASM] Assembling RawrXD_License_Shield.asm (CRC32 Integrity, Anti-Debug, Tamper Detection)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_License_Shield.asm
+
+[3/425] [MASM] Assembling RawrXD_MonacoCore.asm (Gap Buffer, Tokenizer)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_MonacoCore.asm
+
+[4/425] [MASM] Assembling RawrCodex.asm (Agentic Decision Tree, Pattern Engine)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrCodex.asm
+
+[5/425] [MASM] Assembling RawrXD_Camellia256_Auth.asm (Encrypt-then-MAC, HMAC-SHA256, RCM2 Format)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Camellia256_Auth.asm
+
+[6/425] [MASM] Assembling RawrXD_GGUF_Vulkan_Loader.asm (GGUF v3, FNV-1a, Tensor Staging, GGML Types)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_GGUF_Vulkan_Loader.asm
+
+[7/425] [MASM] Assembling RawrXD_KQuant_Kernel.asm (Q4_K AVX2+AVX-512 Dequant, CPUID Dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_KQuant_Kernel.asm
+
+[8/425] [MASM] Assembling RawrXD_GSIHash.asm (PDB hash, GSI bucket probe)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_GSIHash.asm
+
+[9/425] [MASM] Assembling RawrXD_LSP_SymbolIndex.asm (Hash Lookup, Batch FNV-1a, Prefix Scan)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_LSP_SymbolIndex.asm
+
+[10/425] [MASM] Assembling RawrXD_Debug_Engine.asm (Breakpoints, Watchpoints, Symbolic DynTrace)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Debug_Engine.asm
+
+[11/425] [MASM] Assembling RawrXD_HardwareSynthesizer.asm (Dataflow, GEMM Spec, Verilog Gen)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_HardwareSynthesizer.asm
+
+[12/425] [MASM] Assembling RawrXD_AgenticOrchestrator.asm (23-Handler VTable, SPSC Queue, Metrics)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_AgenticOrchestrator.asm
+
+[13/425] [MASM] Assembling RawrXD_LSP_AI_Bridge.asm (Symbol Ranking, Weight Fusion, Kind Boost)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_LSP_AI_Bridge.asm
+
+[14/425] [MASM] Assembling RawrXD_Camellia256.asm (Camellia-256 CTR Encrypt, 24-Round Feistel, HWID Key)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Camellia256.asm
+
+[15/425] [MASM] Assembling RawrXD_EnterpriseLicense.asm (License Validation, HWID, Feature Gates)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_EnterpriseLicense.asm
+
+[16/425] [MASM] Assembling RawrXD_StubDetector.asm (Stub Pattern Scanner)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_StubDetector.asm
+
+[17/425] [MASM] Assembling RawrXD_Swarm_Network.asm (P2P Discovery, Task Distribution)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Swarm_Network.asm
+
+[18/425] [MASM] Assembling RawrXD_NeuralBridge.asm (EEG FFT, Intent Classify, Phosphene HUD)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_NeuralBridge.asm
+
+[19/425] [MASM] Assembling RawrXD_PDBKernel.asm (MSF magic, PubSym scan, GUID hex)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_PDBKernel.asm
+
+[20/425] [MASM] Assembling RawrXD_OmegaOrchestrator.asm (Task DAG, Agents, Pipeline, Self-Improve)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_OmegaOrchestrator.asm
+
+[21/425] [MASM] Assembling RawrXD_RefProvider.asm (Reference hash, pattern match)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RefProvider.asm
+
+[22/425] [MASM] Assembling RawrXD_QuadBuffer_Streamer.asm (4-Buffer Ring, Zero-Copy Streaming)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_QuadBuffer_Streamer.asm
+
+[23/425] [MASM] Assembling RawrXD_PerfCounters.asm (RDTSC Cycle Histograms, 64 Slots)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_PerfCounters.asm
+
+[24/425] [MASM] Assembling RawrXD_Streaming_QuadBuffer.asm (SPSC Ring, GDI BitBlt, 60 FPS Render)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Streaming_QuadBuffer.asm
+
+[25/425] [MASM] Assembling RawrXD_SocketResponder.asm (IOCP HTTP: /health /status /models sub-0.5ms)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SocketResponder.asm
+
+[26/425] [MASM] Assembling RawrXD_SelfHost_Engine.asm (Self-Compile, uASM, Atomic Swap)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SelfHost_Engine.asm
+
+[27/425] [MASM] Assembling RawrXD_RouterBridge.asm (Fast-Path Router Dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_RouterBridge.asm
+
+[28/425] [MASM] Assembling RawrXD_SelfPatch_Engine.asm (Hotpatch Table, Code Caves, CPUID Optimize, Quant Switch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_SelfPatch_Engine.asm
+
+[29/425] [MASM] Assembling RawrXD_TridentBeacon.asm (COM Trident Host, Beacon IDispatch, Ollama Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon.asm
+
+[30/425] [MASM] Assembling swarm_tensor_stream.asm (CRC32C, RLE, chunks)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/swarm_tensor_stream.asm
+
+[31/425] [MASM64] Assembling RawrXD_MetaReverse.asm (authenticity detection)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm
+
+[32/425] [MASM] Assembling RawrXD_VulkanBridge.asm (GPU Dispatch Shim: Init, MatMul, FlashAttn, Hotswap)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_VulkanBridge.asm
+
+[33/425] [MASM] Assembling deflate_brutal_masm.asm
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/gpu_masm/deflate_brutal_masm.asm
+
+[34/425] [MASM] Assembling RawrXD_TridentBeacon_GPU.asm (IE11 Feature Control, WebGL FBO, OpenGL Bridge)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_TridentBeacon_GPU.asm
+
+[35/425] [MASM] Assembling gpu_requantize_rocm.asm (HIP dispatch)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/gpu_requantize_rocm.asm
+
+[36/425] [MASM] Assembling requantize_q4km_to_q2k_avx512.asm (AVX-512 DQ/BW)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/requantize_q4km_to_q2k_avx512.asm
+
+[37/425] [MASM] Assembling rawrxd_cot_phase39.asm (Snapshot, Telemetry, CopyEngine, Seal, Quotas)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_phase39.asm
+
+[38/425] [MASM] Assembling rawrxd_cot_dll_entry.asm (DllMain, SRW Lock, Thread Tracking)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_dll_entry.asm
+
+[39/425] [MASM] Assembling rawrxd_cot_engine.asm (CoT Engine: 12 roles, 6 presets, 1GB arena, SEH)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/rawrxd_cot_engine.asm
+
+[40/425] [MASM] Assembling RawrXD_Watchdog.asm (.text HMAC-SHA256 Integrity, PE Parser, Tamper Detect)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Watchdog.asm
+
+[41/425] [MASM64] Assembling RawrXD_OmegaDeobfuscator.asm (AVX-512 deobfuscation)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+
+[42/425] [MASM] Assembling RawrXD_Speciator.asm (Genome, Crossover, Mutation, Speciation)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_Speciator.asm
+
+[43/425] [MASM] Assembling RawrXD_MeshBrain.asm (CRDT, ZKP, DHT, FedAvg, Gossip)
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:/rawrxd/src/asm/RawrXD_MeshBrain.asm
+
+[44/425] Building CXX object CMakeFiles\RawrXD_MultiWindow_Kernel.dir\src\core\multiwindow_scheduler.cpp.obj
+[45/425] Building CXX object src\reverse_engineering\CMakeFiles\RawrXD-RE-Library.dir\pe_tools\re_tools.cpp.obj
+[46/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\FileOpsInProcess.cpp.obj
+[47/425] Linking CXX shared library bin\RawrXD_MultiWindow_Kernel.dll
+[48/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Autonomy.cpp.obj
+[49/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\HeadlessIDE.cpp.obj
+[50/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Logger.cpp.obj
+[51/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\main_win32.cpp.obj
+[52/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShellPanel.cpp.obj
+[53/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgenticBridge.cpp.obj
+[54/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativePipeline.cpp.obj
+[55/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeUI.cpp.obj
+[56/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PowerShell.cpp.obj
+[57/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Debugger.cpp.obj
+[58/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FileOps.cpp.obj
+[59/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Sidebar.cpp.obj
+[60/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Commands.cpp.obj
+[61/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Core.cpp.obj
+[62/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentCommands.cpp.obj
+[63/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SyntaxHighlight.cpp.obj
+[64/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE.cpp.obj
+[65/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Themes.cpp.obj
+[66/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Annotations.cpp.obj
+[67/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FeatureManifest.cpp.obj
+[68/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Session.cpp.obj
+[69/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GhostText.cpp.obj
+[70/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_RenamePreview.cpp.obj
+[71/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_OutlinePanel.cpp.obj
+[72/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier2Cosmetics.cpp.obj
+[73/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureDetector.cpp.obj
+[74/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PlanExecutor.cpp.obj
+[75/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StreamingUX.cpp.obj
+[76/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier1Cosmetics.cpp.obj
+[77/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FailureIntelligence.cpp.obj
+[78/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DecompilerView.cpp.obj
+[79/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ReverseEngineering.cpp.obj
+[80/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Breadcrumbs.cpp.obj
+[81/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32TerminalManager.cpp.obj
+[82/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Settings.cpp.obj
+[83/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\stubs.cpp.obj
+[84/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TransparentRenderer.cpp.obj
+[85/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_BackendSwitcher.cpp.obj
+[86/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LLMRouter.cpp.obj
+[87/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPClient.cpp.obj
+[88/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\plugin_system\win32_plugin_loader.cpp.obj
+[89/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AsmSemantic.cpp.obj
+[90/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DiskRecovery.cpp.obj
+[91/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MultiResponse.cpp.obj
+[92/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LocalServer.cpp.obj
+[93/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\config\IDEConfig.cpp.obj
+[94/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSP_AI_Bridge.cpp.obj
+[95/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SubAgent.cpp.obj
+[96/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentPanel.cpp.obj
+[97/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ExecutionGovernor.cpp.obj
+[98/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DiffEngine.cpp.obj
+[99/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\subagent_core.cpp.obj
+[100/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OllamaProvider.cpp.obj
+[101/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AgentHistory.cpp.obj
+[102/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\tool_registry.cpp.obj
+[103/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\subsystem_mode_stubs.cpp.obj
+[104/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\rawrxd_subsystem_api.cpp.obj
+[105/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\local_parity_bridge.cpp.obj
+[106/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[107/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[108/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentToolHandlers.cpp.obj
+[109/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentOrchestrator.cpp.obj
+[110/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\FIMPromptBuilder.cpp.obj
+[111/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\BoundedAgentLoop.cpp.obj
+[112/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\reverse_engineered_stubs.cpp.obj
+[113/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\layer_offload_manager.cpp.obj
+[114/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\OrchestratorBridge.cpp.obj
+[115/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_engine.cpp.obj
+[116/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\ToolRegistry.cpp.obj
+[117/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_repair_orchestrator.cpp.obj
+[118/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\RawrXD_AgentLoop.cpp.obj
+[119/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\runtime_core.cpp.obj
+[120/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_executor.cpp.obj
+[121/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Plugins.cpp.obj
+[122/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\RawrXD_ToolRegistry.cpp.obj
+[123/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_memory_indexer.cpp.obj
+[124/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_observability.cpp.obj
+[125/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\ErrorReporter.cpp.obj
+[126/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\DiskRecoveryAgent.cpp.obj
+[127/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\hot_patcher.cpp.obj
+[128/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DiskRecoveryAgent.cpp.obj
+[129/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\memory_core.cpp.obj
+[130/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_transaction.cpp.obj
+[131/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_explainability.cpp.obj
+[132/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\compression_interface.cpp.obj
+[133/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_vocab_resolver.cpp.obj
+[134/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\engine_manager.cpp.obj
+[135/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\telemetry_collector.cpp.obj
+[136/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\inference_kernels.cpp.obj
+[137/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgenticNavigator.cpp.obj
+[138/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\gguf_core.cpp.obj
+[139/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_history.cpp.obj
+[140/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\transformer.cpp.obj
+[141/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent_policy.cpp.obj
+[142/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\codec\compression.cpp.obj
+[143/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\utils\Diagnostics.cpp.obj
+[144/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\DiskRecoveryToolHandler.cpp.obj
+[145/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\streaming_gguf_loader.cpp.obj
+[146/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cpu_inference_engine.cpp.obj
+[147/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gguf_loader.cpp.obj
+[148/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\codec\brutal_gzip.cpp.obj
+[149/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\sampler.cpp.obj
+[150/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\rawr_engine.cpp.obj
+[151/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\pyre_compute.cpp.obj
+[152/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\camellia256_bridge.cpp.obj
+[153/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\watchdog_service.cpp.obj
+[154/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_license.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\enterprise_license.cpp(306): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\core\enterprise_license.cpp(306): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=const wchar_t *,
+            _Sent=const wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=const wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[155/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\bpe_tokenizer.cpp.obj
+[156/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\flash_attention.cpp.obj
+[157/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\gpu_backend_bridge.cpp.obj
+[158/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\model_source_resolver.cpp.obj
+[159/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\sovereign_engines.cpp.obj
+[160/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\engine\core_generator.cpp.obj
+[161/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\multi_response_engine.cpp.obj
+[162/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agent_safety_contract.cpp.obj
+[163/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_inference_pipeline.cpp.obj
+[164/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_replay.cpp.obj
+[165/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\execution_scheduler.cpp.obj
+[166/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\streaming_engine_registry.cpp.obj
+[167/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\execution_governor.cpp.obj
+[168/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_memory_hotpatch.cpp.obj
+[169/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_speed_layer.cpp.obj
+[170/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\local_ai_core.cpp.obj
+[171/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\byte_level_hotpatcher.cpp.obj
+[172/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\confidence_gate.cpp.obj
+[173/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shadow_page_detour.cpp.obj
+[174/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pt_driver_contract.cpp.obj
+[175/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\proxy_hotpatcher.cpp.obj
+[176/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_worker.cpp.obj
+[177/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\server\gguf_server_hotpatch.cpp.obj
+[178/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_coordinator.cpp.obj
+[179/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sentinel_watchdog.cpp.obj
+[180/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[181/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\eval_framework.cpp.obj
+[182/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_hotpatch_manager.cpp.obj
+[183/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_repair.cpp.obj
+[184/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[185/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\llm_http_client.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[186/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_failure_detector.cpp.obj
+[187/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\agentic_puppeteer.cpp.obj
+[188/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_bruteforce_engine.cpp.obj
+[189/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SwarmPanel.cpp.obj
+[190/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\planner.cpp.obj
+[191/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\model_invoker.cpp.obj
+[192/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\autonomous_subagent.cpp.obj
+[193/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NativeDebugPanel.cpp.obj
+[194/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_decision_bridge.cpp.obj
+[195/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_DualAgentPanel.cpp.obj
+[196/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agent\local_reasoning_engine.cpp.obj
+[197/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\production_release.cpp.obj
+[198/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\native_debugger_engine.cpp.obj
+[199/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vsix_loader_win32.cpp.obj
+[200/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_hotpatcher.cpp.obj
+[201/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_reference_provider.cpp.obj
+[202/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\webrtc_signaling.cpp.obj
+[203/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_gsi_hash.cpp.obj
+[204/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sandbox_integration.cpp.obj
+[205/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quantum_safe_transport.cpp.obj
+[206/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\adaptive_pipeline_parallel.cpp.obj
+[207/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\universal_model_merger.cpp.obj
+[208/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchPanel.cpp.obj
+[209/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\gpu_kernel_autotuner.cpp.obj
+[210/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\amd_gpu_accelerator.cpp.obj
+[211/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\monaco_core_stubs.cpp.obj
+[212/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\arm64_gpu_accelerator.cpp.obj
+[213/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cerebras_wse_accelerator.cpp.obj
+[214/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\MonacoCoreEngine.cpp.obj
+[215/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\codex_ultimate.cpp.obj
+[216/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_native.cpp.obj
+[217/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\RichEditEditorEngine.cpp.obj
+[218/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\accelerator_router.cpp.obj
+[219/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\EditorEngineFactory.cpp.obj
+[220/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\gguf_diagnostic_provider.cpp.obj
+[221/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\lsp_hotpatch_bridge.cpp.obj
+[222/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intel_gpu_accelerator.cpp.obj
+[223/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\WebView2EditorEngine.cpp.obj
+[224/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_discovery.cpp.obj
+[225/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\hotpatch_symbol_provider.cpp.obj
+[226/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\menu_auditor.cpp.obj
+[227/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\pdb_lsp_bridge.cpp.obj
+[228/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_registry.cpp.obj
+[229/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VSCodeExtAPI.cpp.obj
+[230/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\final_gauntlet.cpp.obj
+[231/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_registration.cpp.obj
+[232/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\RawrXD_LSPServer.cpp.obj
+[233/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\shortcut_manager.cpp.obj
+[234/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_chat.cpp.obj
+[235/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\vscode_extension_api.cpp.obj
+[236/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\voice_automation.cpp.obj
+[237/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MonacoThemes.cpp.obj
+[238/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_WebView2.cpp.obj
+[239/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EditorEngine.cpp.obj
+[240/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\alert_system.cpp.obj
+[241/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\backup_manager.cpp.obj
+[242/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\intent_engine.cpp.obj
+[243/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PDBSymbols.cpp.obj
+[244/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_validation.cpp.obj
+[245/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_LSPServer.cpp.obj
+[246/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceAutomation.cpp.obj
+[247/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_VoiceChat.cpp.obj
+[248/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\unified_command_dispatch.cpp.obj
+[249/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\feature_handlers.cpp.obj
+[250/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\AgentOllamaClient.cpp.obj
+[251/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\model_training_pipeline.cpp.obj
+[252/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers_ext.cpp.obj
+[253/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\missing_handler_stubs.cpp.obj
+[254/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\chain_of_thought_engine.cpp.obj
+[255/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\cli\swarm_orchestrator.cpp.obj
+[256/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Gauntlet.cpp.obj
+[257/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\rawrxd_state_mmf.cpp.obj
+[258/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ssot_handlers.cpp.obj
+[259/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AuditDashboard.cpp.obj
+[260/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\live_binary_patcher.cpp.obj
+[261/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_vscode_bindings.cpp.obj
+[262/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\vulkan_compute.cpp.obj
+[263/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_node_shims.cpp.obj
+[264/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\mcp_integration.cpp.obj
+[265/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Telemetry.cpp.obj
+[266/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cot_fallback_system.cpp.obj
+[267/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\extension_polyfill_engine.cpp.obj
+[268/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\js_extension_host.cpp.obj
+[269/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_schema_versioning.cpp.obj
+[270/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_QuickWins.cpp.obj
+[271/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlightRecorder.cpp.obj
+[272/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\workspace_reasoning_profiles.cpp.obj
+[273/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\deterministic_swarm.cpp.obj
+[274/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\input_guard_slicer.cpp.obj
+[275/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\reasoning_profile.cpp.obj
+[276/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_agent_coordinator.cpp.obj
+[277/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_token_gate.cpp.obj
+[278/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\quickjs_extension_host.cpp.obj
+[279/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCP.cpp.obj
+[280/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\production_config_manager.cpp.obj
+[281/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_kv_isolation.cpp.obj
+[282/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_embedding_cache.cpp.obj
+[283/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_quantized_encoder.cpp.obj
+[284/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_gpu_staging.cpp.obj
+[285/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\autonomous_workflow_engine.cpp.obj
+[286/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\safe_refactor_engine.cpp.obj
+[287/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vision_encoder.cpp.obj
+[288/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\embedding_engine.cpp.obj
+[289/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic_loop_state.cpp.obj
+[290/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\auth\rbac_engine.cpp.obj
+[291/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\copilot_gap_closer.cpp.obj
+[292/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\marketplace\extension_marketplace.cpp.obj
+[293/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\agentic_task_graph.cpp.obj
+[294/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\vector_index.cpp.obj
+[295/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\unity_engine_integration.cpp.obj
+[296/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\transaction_journal.cpp.obj
+[297/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\game_engine_manager.cpp.obj
+[298/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\instructions_provider.cpp.obj
+[299/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+[300/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\hotpatch_control_plane.cpp.obj
+[301/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\crucible_engine.cpp.obj
+[302/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\modules\unreal_engine_integration.cpp.obj
+[303/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\lsp\diagnostic_consumer.cpp.obj
+[304/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Instructions.cpp.obj
+[305/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\code_linter.cpp.obj
+[306/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+[307/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_PipelinePanel.cpp.obj
+[308/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\semantic_code_intelligence.cpp.obj
+[309/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GameEnginePanel.cpp.obj
+[310/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\static_analysis_engine.cpp.obj
+[311/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CruciblePanel.cpp.obj
+[312/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CopilotGapPanel.cpp.obj
+[313/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\mesh_brain_asm_stubs.cpp.obj
+[314/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\omega_orchestrator.cpp.obj
+[315/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\mesh_brain.cpp.obj
+[316/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\neural_bridge.cpp.obj
+[317/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\speciator_engine.cpp.obj
+[318/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_HotpatchCtrlPanel.cpp.obj
+[319/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_StaticAnalysisPanel.cpp.obj
+[320/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\self_host_engine.cpp.obj
+[321/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\transcendence_coordinator.cpp.obj
+[322/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\hardware_synthesizer.cpp.obj
+[323/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier5Cosmetics.cpp.obj
+[324/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryPanel.cpp.obj
+[325/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Polish.cpp.obj
+[326/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CrashReporter.cpp.obj
+[327/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_Tier3Cosmetics.cpp.obj
+[328/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EmojiSupport.cpp.obj
+[329/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\VulkanRenderer.cpp.obj
+[330/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_SemanticPanel.cpp.obj
+[331/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ShortcutEditor.cpp.obj
+[332/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\ConsentPrompt.cpp.obj
+[333/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MCPHooks.cpp.obj
+[334/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\OSExplorerInterceptor.cpp.obj
+[335/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\gpu_backend_selector.cpp.obj
+[336/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\tool_action_status.cpp.obj
+[337/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\diff_dock.cpp.obj
+[338/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryDashboard.cpp.obj
+[339/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MarketplacePanel.cpp.obj
+[340/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TestExplorerTree.cpp.obj
+[341/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\TodoManager.cpp.obj
+[342/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\interpretability_panel.cpp.obj
+[343/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\crash_containment.cpp.obj
+[344/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\chat_panel.cpp.obj
+[345/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\streaming_token_progress.cpp.obj
+[346/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\cursor_github_parity_bridge.cpp.obj
+[347/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\patch_rollback_ledger.cpp.obj
+[348/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\gui\editor_agent_integration.cpp.obj
+[349/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\masm_stress_harness.cpp.obj
+[350/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ColorPicker.cpp.obj
+[351/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NetworkPanel.cpp.obj
+[352/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IDEDiagnosticAutoHealer.cpp.obj
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xutility(4924): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.cpp(499): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\win32app\IDEDiagnosticAutoHealer.cpp(499): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'DiagnosticUtils::ReadDigestFile'
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(862): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\xstring(1018): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[353/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quant_hysteresis.cpp.obj
+[354/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_stress_tests.cpp.obj
+[355/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\update_signature.cpp.obj
+[356/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\quickjs_sandbox.cpp.obj
+[357/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\auto_update_system.cpp.obj
+[358/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\convergence_stress_harness.cpp.obj
+[359/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_reconciliation.cpp.obj
+[360/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\IocpFileWatcher.cpp.obj
+[361/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\plugin_signature.cpp.obj
+[362/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\perf_telemetry.cpp.obj
+[363/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\AutonomousAgent.cpp.obj
+[364/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\knowledge_graph_core.cpp.obj
+[365/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_verification_loop.cpp.obj
+[366/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ui\chat_message_renderer.cpp.obj
+[367/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\setup\SetupWizard.cpp.obj
+[368/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\autonomous_debugger.cpp.obj
+[369/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\swarm_conflict_resolver.cpp.obj
+[370/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_communicator.cpp.obj
+[371/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\agentic_composer_ux.cpp.obj
+[372/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\context\context_mention_parser.cpp.obj
+[373/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TranscendencePanel.cpp.obj
+[374/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\agentic\autonomous_background_daemon.cpp.obj
+[375/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\telemetry\UnifiedTelemetryCore.cpp.obj
+[376/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\telemetry\telemetry_export.cpp.obj
+[377/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\RawrXD_FileManager_Win32.cpp.obj
+[378/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\Ship\RawrXD_MainWindow_Win32.cpp.obj
+[379/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ide\resource_generator.cpp.obj
+[380/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\Ship\RawrXD_TextEditor_Win32.cpp.obj
+[381/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[382/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[383/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\Ship\RawrXD_SettingsManager_Win32.cpp.obj
+[384/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[385/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[386/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[387/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[388/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[389/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[390/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[391/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[392/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[393/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ide\language_plugin.cpp.obj
+[394/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[395/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\Ship\RawrXD_TerminalManager_Win32.cpp.obj
+[396/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[397/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[398/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\Ship\RawrXD_ErrorHandler.cpp.obj
+[399/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[400/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[401/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[402/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[403/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\Ship\RawrXD_ResourceManager_Win32.cpp.obj
+[404/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[405/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\DirectML_Bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\DirectML_Bridge.asm
+
+[406/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[407/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\native_speed_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\native_speed_kernels.asm
+
+[408/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Hotpatch_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Hotpatch_Kernel.asm
+
+[409/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Snapshot.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Snapshot.asm
+
+[410/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Pyre_Compute.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Pyre_Compute.asm
+
+[411/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\vision_projection_kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\vision_projection_kernel.asm
+
+[412/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\ide\refactoring_plugin.cpp.obj
+[413/425] Building RC object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\RawrXD-Win32IDE.rc.res
+[414/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\multimodal_engine\vision_encoder.cpp.obj
+[415/425] Linking CXX static library src\reverse_engineering\RawrXD-RE-Library.lib
+[416/425] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[417/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\context\semantic_index.cpp.obj
+[418/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GUILayoutHotpatch.cpp.obj
+[419/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ProvableAgent.cpp.obj
+[420/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlagshipFeatures.cpp.obj
+[421/425] Building C object CMakeFiles\RawrXD-Win32IDE.dir\src\core\sqlite3.c.obj
+[422/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CursorParity.cpp.obj
+[423/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AIReverseEngineering.cpp.obj
+[424/425] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AirgappedEnterprise.cpp.obj
+[425/425] Linking CXX executable bin\RawrXD-Win32IDE.exe

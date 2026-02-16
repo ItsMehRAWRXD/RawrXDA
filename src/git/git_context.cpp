@@ -20,6 +20,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+
+// SCAFFOLD_297: Git context for agent prompts
+
 #endif
 
 namespace RawrXD {

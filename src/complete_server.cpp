@@ -1,4 +1,11 @@
 #include "complete_server.h"
+
+// Enterprise License & Support (must come before telemetry to define canonical LicenseTier)
+#include "core/enterprise_license.h"
+#include "enterprise_feature_manager.hpp"
+#include "enterprise/support_tier.h"
+#include "enterprise/multi_gpu.h"
+
 #include "agentic_engine.h"
 #include "subagent_core.h"
 #include "agent_history.h"
@@ -7,6 +14,7 @@
 #include "ai_backend.h"
 #include "gpu/speculative_decoder_v2.h"
 #include "core/flash_attention.h"
+#include "core/gpu_kernel_autotuner.h"
 #include "activation_compressor.h"
 #include "core/distributed_pipeline_orchestrator.hpp"
 #include "core/hotpatch_control_plane.hpp"
@@ -17,16 +25,39 @@
 // Phase 26: ReverseEngineered MASM Kernel Bridge
 #include "../include/reverse_engineered_bridge.h"
 
+// Phase 51: Security — Dork Scanner + Universal Dorker
+#include "security/RawrXD_GoogleDork_Scanner.h"
+#include "security/RawrXD_Universal_Dorker.h"
+
+// Phase 20-25: WebRTC, Swarm, Release, Tuner, Sandbox, GPU
+#include "core/webrtc_signaling.h"
+#include "core/swarm_decision_bridge.h"
+#include "core/universal_model_hotpatcher.h"
+#include "core/production_release.h"
+#include "core/sandbox_integration.h"
+#include "core/amd_gpu_accelerator.h"
+
+// Agentic Autonomous config
+#include "agentic_autonomous_config.h"
+#include "model_name_utils.h"
+
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <filesystem>
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <winsock2.h>
+#include <shlobj.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 #else
@@ -129,6 +160,147 @@ std::string EscapeJson(const std::string& value) {
         }
     }
     return out;
+}
+
+// ----- Ollama HTTP helpers (GET /api/tags, POST /api/generate) for models list + chat routing -----
+void ParseOllamaHost(const char* envUrl, std::string& host, int& port) {
+    host = "localhost";
+    port = 11434;
+    if (!envUrl || !envUrl[0]) return;
+    std::string u = envUrl;
+    size_t start = 0;
+    if (u.find("http://") == 0) start = 7;
+    else if (u.find("https://") == 0) { start = 8; if (port == 11434) port = 443; }
+    size_t colon = u.find(':', start);
+    size_t slash = u.find('/', start);
+    if (colon != std::string::npos && (slash == std::string::npos || colon < slash)) {
+        host = u.substr(start, colon - start);
+        size_t end = slash != std::string::npos ? slash : u.size();
+        port = std::stoi(u.substr(colon + 1, end - (colon + 1)));
+    } else if (slash != std::string::npos) {
+        host = u.substr(start, slash - start);
+    } else {
+        host = u.substr(start);
+    }
+    if (host.empty()) host = "localhost";
+    if (port <= 0 || port > 65535) port = 11434;
+}
+
+bool TcpHttpGet(const std::string& host, int port, const std::string& path, std::string& outBody) {
+    outBody.clear();
+    struct addrinfo hints = {}, *res = nullptr;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    char portStr[16];
+    snprintf(portStr, sizeof(portStr), "%d", port);
+    if (getaddrinfo(host.c_str(), portStr, &hints, &res) != 0 || !res) return false;
+    SocketType fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd == kInvalidSocket) { freeaddrinfo(res); return false; }
+    bool ok = (connect(fd, res->ai_addr, (int)res->ai_addrlen) == 0);
+    freeaddrinfo(res);
+    if (!ok) { CloseSocket(fd); return false; }
+    std::string req = "GET " + path + " HTTP/1.1\r\nHost: " + host + "\r\nConnection: close\r\n\r\n";
+    send(fd, req.c_str(), (int)req.size(), 0);
+    char buf[4096];
+    std::string raw;
+    int n;
+    while ((n = recv(fd, buf, sizeof(buf), 0)) > 0) raw.append(buf, buf + n);
+    CloseSocket(fd);
+    size_t bodyStart = raw.find("\r\n\r\n");
+    if (bodyStart != std::string::npos) outBody = raw.substr(bodyStart + 4);
+    return !outBody.empty();
+}
+
+bool TcpHttpPost(const std::string& host, int port, const std::string& path,
+                 const std::string& contentType, const std::string& body, std::string& outBody) {
+    outBody.clear();
+    struct addrinfo hints = {}, *res = nullptr;
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    char portStr[16];
+    snprintf(portStr, sizeof(portStr), "%d", port);
+    if (getaddrinfo(host.c_str(), portStr, &hints, &res) != 0 || !res) return false;
+    SocketType fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd == kInvalidSocket) { freeaddrinfo(res); return false; }
+    bool ok = (connect(fd, res->ai_addr, (int)res->ai_addrlen) == 0);
+    freeaddrinfo(res);
+    if (!ok) { CloseSocket(fd); return false; }
+    std::ostringstream h;
+    h << "POST " << path << " HTTP/1.1\r\nHost: " << host << "\r\n"
+      << "Content-Type: " << contentType << "\r\nContent-Length: " << body.size() << "\r\nConnection: close\r\n\r\n" << body;
+    std::string req = h.str();
+    send(fd, req.c_str(), (int)req.size(), 0);
+    char buf[4096];
+    std::string raw;
+    int n;
+    while ((n = recv(fd, buf, sizeof(buf), 0)) > 0) raw.append(buf, buf + n);
+    CloseSocket(fd);
+    size_t bodyStart = raw.find("\r\n\r\n");
+    if (bodyStart != std::string::npos) outBody = raw.substr(bodyStart + 4);
+    return true;
+}
+
+void ParseOllamaTagsModels(const std::string& body, std::vector<std::string>& names) {
+    names.clear();
+    size_t pos = body.find("\"models\"");
+    if (pos == std::string::npos) return;
+    pos = body.find('[', pos);
+    if (pos == std::string::npos) return;
+    for (;;) {
+        size_t nameKey = body.find("\"name\"", pos);
+        if (nameKey == std::string::npos || nameKey > body.find(']', pos)) break;
+        size_t colon = body.find(':', nameKey);
+        if (colon == std::string::npos) break;
+        size_t start = body.find('"', colon);
+        if (start == std::string::npos) break;
+        start++;
+        size_t end = start;
+        while (end < body.size() && body[end] != '"') { if (body[end] == '\\') end++; end++; }
+        if (end <= body.size()) names.push_back(body.substr(start, end - start));
+        pos = end + 1;
+    }
+}
+
+bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
+                        const std::string& prompt, std::string& outResponse) {
+    std::string escPrompt, escModel;
+    for (char c : prompt) {
+        if (c == '"') escPrompt += "\\\""; else if (c == '\\') escPrompt += "\\\\";
+        else if (c == '\n') escPrompt += "\\n"; else if (c == '\r') escPrompt += "\\r";
+        else if (static_cast<unsigned char>(c) >= 32 || c == '\t') escPrompt += c;
+    }
+    for (char c : model) {
+        if (c == '"') escModel += "\\\""; else if (c == '\\') escModel += "\\\\";
+        else if (static_cast<unsigned char>(c) >= 32 || c == '\t') escModel += c;
+    }
+    std::string body = "{\"model\":\"" + escModel + "\",\"prompt\":\"" + escPrompt + "\",\"stream\":false}";
+    std::string out;
+    if (!TcpHttpPost(host, port, "/api/generate", "application/json", body, out)) return false;
+    size_t respStart = out.find("\"response\":");
+    if (respStart == std::string::npos) {
+        size_t errStart = out.find("\"error\":");
+        if (errStart != std::string::npos) {
+            size_t q = out.find('"', errStart + 8);
+            if (q != std::string::npos) outResponse = out.substr(errStart + 9, q - (errStart + 9));
+        }
+        return false;
+    }
+    size_t start = out.find('"', respStart + 10) + 1;
+    outResponse.clear();
+    for (size_t i = start; i < out.size(); i++) {
+        if (out[i] == '"' && (i == 0 || out[i - 1] != '\\')) break;
+        if (out[i] == '\\' && i + 1 < out.size()) {
+            if (out[i + 1] == 'n') outResponse += '\n';
+            else if (out[i + 1] == 'r') outResponse += '\r';
+            else if (out[i + 1] == 't') outResponse += '\t';
+            else if (out[i + 1] == '"') outResponse += '"';
+            else outResponse += out[i + 1];
+            i++;
+            continue;
+        }
+        outResponse += out[i];
+    }
+    return true;
 }
 
 bool ParseRequest(const std::string& data, std::string& method, std::string& path, std::string& body) {
@@ -331,6 +503,8 @@ void CompletionServer::HandleClient(int client_fd) {
                         ",\"subagents\":" + (subagent_mgr_ ? "true" : "false") +
                         ",\"capabilities\":{\"completion\":true,\"streaming\":true"
                         ",\"chat\":true,\"subagent\":true,\"chain\":true,\"swarm\":true}}";
+    } else if (method == "GET" && (path == "/v1/models" || path == "/api/models")) {
+        response_body = HandleModelsListRequest();
     } else if (method == "POST" && path == "/complete") {
         response_body = HandleCompleteRequest(parsed_body);
     } else if (method == "POST" && path == "/complete/stream") {
@@ -343,6 +517,8 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = HandleChatRequest(parsed_body);
     } else if (method == "POST" && path == "/api/agent/wish") {
         response_body = HandleAgentWishRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/tool") {
+        response_body = HandleToolRequest(parsed_body);
     } else if (method == "POST" && path == "/api/subagent") {
         response_body = HandleSubAgentRequest(parsed_body);
     } else if (method == "POST" && path == "/api/chain") {
@@ -412,6 +588,18 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = HandleFlashAttnConfigRequest();
     } else if (method == "POST" && path == "/api/flash-attention/benchmark") {
         response_body = HandleFlashAttnBenchmarkRequest(parsed_body);
+    }
+    // === Feature API parity aliases ===
+    else if (method == "GET" && (path == "/api/flashattn" || path == "/api/flashattn/status")) {
+        response_body = HandleFlashAttnStatusRequest();
+    } else if (method == "POST" && path == "/api/flashattn/benchmark") {
+        response_body = HandleFlashAttnBenchmarkRequest(parsed_body);
+    } else if (method == "GET" && path == "/api/avx512/status") {
+        response_body = HandleAVX512StatusRequest();
+    } else if (method == "GET" && (path == "/api/tuner" || path == "/api/tuner/status")) {
+        response_body = HandleTunerStatusRequest();
+    } else if (method == "GET" && path == "/api/engine/800b") {
+        response_body = HandleEngine800BStatusRequest();
     }
     // === Phase 12: Extreme Compression API Routes ===
     else if (method == "GET" && path == "/api/compression/status") {
@@ -483,6 +671,40 @@ void CompletionServer::HandleClient(int client_fd) {
     } else if (method == "POST" && path == "/api/telemetry/export") {
         response_body = HandleTelemetryExportRequest(parsed_body);
     }
+    // === Phase 20: WebRTC P2P Signaling ===
+    else if (method == "GET" && path == "/api/webrtc/status") {
+        response_body = HandleWebrtcStatusRequest();
+    }
+    // === Phase 21: Swarm Bridge + Universal Model Hotpatcher ===
+    else if (method == "GET" && path == "/api/swarm/bridge") {
+        response_body = HandleSwarmBridgeStatusRequest();
+    } else if (method == "GET" && path == "/api/hotpatch/model") {
+        response_body = HandleHotpatchModelStatusRequest();
+    }
+    // === Phase 22: Production Release ===
+    else if (method == "GET" && path == "/api/release/status") {
+        response_body = HandleReleaseStatusRequest();
+    }
+    // === Phase 23: GPU Kernel Auto-Tuner (run) ===
+    else if (method == "POST" && path == "/api/tuner/run") {
+        response_body = HandleTunerRunRequest(parsed_body);
+    }
+    // === Phase 24: Windows Sandbox ===
+    else if (method == "GET" && path == "/api/sandbox/list") {
+        response_body = HandleSandboxListRequest();
+    } else if (method == "POST" && path == "/api/sandbox/create") {
+        response_body = HandleSandboxCreateRequest(parsed_body);
+    }
+    // === Phase 25: AMD GPU Acceleration ===
+    else if (method == "GET" && path == "/api/gpu/status") {
+        response_body = HandleGpuStatusRequest();
+    } else if (method == "POST" && path == "/api/gpu/toggle") {
+        response_body = HandleGpuToggleRequest();
+    } else if (method == "GET" && path == "/api/gpu/features") {
+        response_body = HandleGpuFeaturesRequest();
+    } else if (method == "GET" && path == "/api/gpu/memory") {
+        response_body = HandleGpuMemoryRequest();
+    }
     // === Phase 26: ReverseEngineered Kernel API Routes ===
     else if (method == "GET" && path == "/api/scheduler/status") {
         response_body = HandleSchedulerStatusRequest();
@@ -502,6 +724,38 @@ void CompletionServer::HandleClient(int client_fd) {
         response_body = HandleTimerRequest();
     } else if (method == "POST" && path == "/api/crc32") {
         response_body = HandleCrc32Request(parsed_body);
+    }
+    // ═══════════════════ Enterprise License API ═══════════════════
+    else if (method == "GET" && path == "/api/license/status") {
+        response_body = HandleLicenseStatusRequest();
+    } else if (method == "GET" && path == "/api/license/features") {
+        response_body = HandleLicenseFeaturesRequest();
+    } else if (method == "GET" && path == "/api/license/audit") {
+        response_body = HandleLicenseAuditRequest();
+    } else if (method == "GET" && path == "/api/license/hwid") {
+        response_body = HandleLicenseHwidRequest();
+    } else if (method == "GET" && path == "/api/license/support") {
+        response_body = HandleLicenseSupportStatusRequest();
+    } else if (method == "GET" && path == "/api/license/multigpu") {
+        response_body = HandleLicenseMultiGPUStatusRequest();
+    }
+    // Agentic Autonomous: operation mode (Agent/Plan/Debug/Ask) + model selection + cap 99 + cycle 1x-99x
+    else if (method == "GET" && (path == "/api/agentic/config" || path == "/api/agentic")) {
+        response_body = HandleAgenticConfigGetRequest();
+    } else if (method == "POST" && path == "/api/agentic/config") {
+        response_body = HandleAgenticConfigPostRequest(parsed_body);
+    } else if (method == "GET" && (path == "/api/agentic/audit-estimate" || path.rfind("/api/agentic/audit-estimate?", 0) == 0)) {
+        response_body = HandleAgenticAuditEstimateRequest(path);
+    }
+    // === Phase 51: Security (Dork Scanner + Universal Dorker) ===
+    else if (method == "GET" && path == "/api/security/dork/status") {
+        response_body = HandleSecurityDorkStatusRequest();
+    } else if (method == "POST" && path == "/api/security/dork/scan") {
+        response_body = HandleSecurityDorkScanRequest(parsed_body);
+    } else if (method == "POST" && path == "/api/security/dork/universal") {
+        response_body = HandleSecurityDorkUniversalRequest(parsed_body);
+    } else if (method == "GET" && path == "/api/security/dashboard") {
+        response_body = HandleSecurityDashboardRequest();
     } else {
         status = 400;
         response_body = R"({"error":"unknown_endpoint"})";
@@ -679,10 +933,6 @@ void CompletionServer::HandleCompleteStreamRequest(int client_fd, const std::str
 // ============================================================================
 
 std::string CompletionServer::HandleChatRequest(const std::string& body) {
-    if (!agentic_engine_) {
-        return R"({"error":"agentic_engine_not_available"})";
-    }
-
     std::string message;
     ExtractJsonString(body, "message", message);
     if (message.empty()) ExtractJsonString(body, "prompt", message);
@@ -690,12 +940,35 @@ std::string CompletionServer::HandleChatRequest(const std::string& body) {
         return R"({"error":"missing_message"})";
     }
 
+    std::string model;
+    ExtractJsonString(body, "model", model);
+    Trim(model);
+
+    // Optional model: route to Ollama when provided (agentic + local flow)
+    if (!model.empty()) {
+        std::string ollamaHostStr;
+        int ollamaPort = 11434;
+        ParseOllamaHost(std::getenv("OLLAMA_HOST"), ollamaHostStr, ollamaPort);
+        std::string response;
+        if (OllamaGenerateSync(ollamaHostStr, ollamaPort, model, message, response)) {
+            return "{\"response\":\"" + EscapeJson(response) + "\",\"model\":\"" + EscapeJson(model) + "\"}";
+        }
+        return "{\"error\":\"ollama_unavailable\",\"model\":\"" + EscapeJson(model) + "\",\"hint\":\"Start Ollama or check OLLAMA_HOST\"}";
+    }
+
+    if (!agentic_engine_) {
+        return R"({"error":"agentic_engine_not_available"})";
+    }
+
     std::string response = agentic_engine_->chat(message);
 
-    // Auto-dispatch tool calls if subagent manager is available
+    // Wire AgenticOperationMode: Ask = no tools, Plan = plan-only (no tool execution)
+    auto operationMode = RawrXD::AgenticAutonomousConfig::instance().getOperationMode();
+    bool allowTools = (operationMode != RawrXD::AgenticOperationMode::Ask && operationMode != RawrXD::AgenticOperationMode::Plan);
+
     std::string toolResult;
     bool hadToolCall = false;
-    if (subagent_mgr_) {
+    if (allowTools && subagent_mgr_) {
         hadToolCall = subagent_mgr_->dispatchToolCall("api", response, toolResult);
     }
 
@@ -716,8 +989,225 @@ std::string CompletionServer::HandleAgentWishRequest(const std::string& body) {
         return R"({"error":"missing_wish","hint":"Send JSON: {\"wish\":\"your natural language request\"}"})";
     }
     std::string message = "Execute the following user wish. Respond with a clear plan or result: " + wish;
-    std::string chat_body = "{\"message\":\"" + EscapeJson(message) + "\"}";
+    std::string model;
+    ExtractJsonString(body, "model", model);
+    Trim(model);
+    std::string chat_body = "{\"message\":\"" + EscapeJson(message) + "\"";
+    if (!model.empty()) chat_body += ",\"model\":\"" + EscapeJson(model) + "\"";
+    chat_body += "}";
     return HandleChatRequest(chat_body);
+}
+
+std::string CompletionServer::HandleToolRequest(const std::string& body) {
+    // POST /api/tool — aligned with Ship ToolExecutionEngine & Win32IDE LocalServer (same tool names + args schema)
+    std::string tool, path, content, command, source, destination, pattern;
+    ExtractJsonString(body, "tool", tool);
+    std::string argsBody;
+    {
+        auto argsKey = body.find("\"args\"");
+        if (argsKey != std::string::npos) {
+            auto colonPos = body.find(':', argsKey + 6);
+            if (colonPos != std::string::npos) {
+                colonPos++;
+                while (colonPos < body.size() && std::isspace(static_cast<unsigned char>(body[colonPos]))) colonPos++;
+                if (colonPos < body.size() && body[colonPos] == '{') {
+                    int depth = 0;
+                    bool inStr = false;
+                    size_t end = colonPos;
+                    for (size_t i = colonPos; i < body.size(); i++) {
+                        if (inStr) {
+                            if (body[i] == '\\') { i++; continue; }
+                            if (body[i] == '"') inStr = false;
+                            continue;
+                        }
+                        if (body[i] == '"') { inStr = true; continue; }
+                        if (body[i] == '{') depth++;
+                        if (body[i] == '}') { depth--; if (depth == 0) { end = i + 1; break; } }
+                    }
+                    argsBody = body.substr(colonPos, end - colonPos);
+                }
+            }
+        }
+    }
+    if (!argsBody.empty()) {
+        ExtractJsonString(argsBody, "path", path);
+        ExtractJsonString(argsBody, "content", content);
+        ExtractJsonString(argsBody, "command", command);
+        ExtractJsonString(argsBody, "source", source);
+        ExtractJsonString(argsBody, "destination", destination);
+        ExtractJsonString(argsBody, "pattern", pattern);
+    }
+    if (path.empty()) {
+        ExtractJsonString(body, "path", path);
+        ExtractJsonString(body, "content", content);
+        ExtractJsonString(body, "command", command);
+    }
+    if (path.empty() && !command.empty()) path = command;
+    Trim(tool);
+    Trim(path);
+    Trim(source);
+    Trim(destination);
+    Trim(pattern);
+    if (tool.empty()) {
+        return R"({"success":false,"error":"missing_tool","hint":"Send JSON: {\"tool\":\"read_file\"|\"write_file\"|...,\"args\":{\"path\":\"...\"}} or flat {\"tool\":\"...\",\"path\":\"...\"}"})";
+    }
+    auto escape = [](const std::string& s) -> std::string {
+        std::string out;
+        for (char c : s) {
+            if (c == '"') out += "\\\"";
+            else if (c == '\\') out += "\\\\";
+            else if (c == '\n') out += "\\n";
+            else if (c == '\r') out += "\\r";
+            else out += c;
+        }
+        return out;
+    };
+    auto jsonOk = [&escape, &tool](const std::string& result) -> std::string {
+        return "{\"success\":true,\"tool\":\"" + escape(tool) + "\",\"result\":\"" + escape(result) + "\"}";
+    };
+    auto jsonErr = [&escape, &tool](const std::string& err) -> std::string {
+        return "{\"success\":false,\"tool\":\"" + escape(tool) + "\",\"error\":\"" + escape(err) + "\"}";
+    };
+    try {
+        if (tool == "list_directory" || tool == "list_dir") {
+            if (path.empty()) path = ".";
+            std::filesystem::path p(path);
+            if (!std::filesystem::exists(p)) return jsonErr("path does not exist: " + path);
+            if (!std::filesystem::is_directory(p)) return jsonErr("not a directory: " + path);
+            std::ostringstream list;
+            for (const auto& e : std::filesystem::directory_iterator(p)) {
+                std::string name = e.path().filename().string();
+                if (e.is_directory()) list << "[DIR]  " << name << "\n";
+                else list << "[FILE] " << name << "\n";
+            }
+            return jsonOk(list.str());
+        }
+        if (tool == "read_file") {
+            if (path.empty()) return jsonErr("missing path");
+            std::ifstream f(path, std::ios::binary);
+            if (!f) return jsonErr("failed to open: " + path);
+            std::ostringstream buf;
+            buf << f.rdbuf();
+            return jsonOk(buf.str());
+        }
+        if (tool == "write_file" || tool == "create_file") {
+            if (path.empty()) return jsonErr("missing path");
+            std::ofstream f(path, std::ios::binary);
+            if (!f) return jsonErr("failed to write: " + path);
+            f << content;
+            return jsonOk("written " + std::to_string(content.size()) + " bytes");
+        }
+        if (tool == "run_command" || tool == "execute_command") {
+            std::string cmd = path.empty() ? command : path;
+            if (cmd.empty()) return jsonErr("missing command");
+#ifdef _WIN32
+            FILE* pipe = _popen(cmd.c_str(), "r");
+#else
+            FILE* pipe = popen(cmd.c_str(), "r");
+#endif
+            if (!pipe) return jsonErr("failed to run command");
+            std::ostringstream out;
+            char buf[256];
+            while (fgets(buf, sizeof(buf), pipe)) out << buf;
+#ifdef _WIN32
+            _pclose(pipe);
+#else
+            pclose(pipe);
+#endif
+            return jsonOk(out.str());
+        }
+        if (tool == "delete_file") {
+            if (path.empty()) return jsonErr("missing path");
+            std::error_code ec;
+            if (!std::filesystem::remove(path, ec)) return jsonErr("delete failed: " + path + (ec ? std::string(": ") + ec.message() : ""));
+            return jsonOk("deleted");
+        }
+        if (tool == "rename_file" || tool == "move_file") {
+            std::string src = source.empty() ? path : source;
+            std::string dst = destination;
+            if (src.empty() || dst.empty()) return jsonErr("missing source or destination");
+            std::error_code ec;
+            std::filesystem::rename(src, dst, ec);
+            if (ec) {
+                std::filesystem::copy(src, dst, std::filesystem::copy_options::overwrite_existing, ec);
+                if (ec) return jsonErr("rename/move failed: " + ec.message());
+                std::filesystem::remove(src, ec);
+            }
+            return jsonOk("moved");
+        }
+        if (tool == "copy_file") {
+            std::string src = source.empty() ? path : source;
+            std::string dst = destination;
+            if (src.empty() || dst.empty()) return jsonErr("missing source or destination");
+            std::error_code ec;
+            std::filesystem::copy(src, dst, std::filesystem::copy_options::overwrite_existing, ec);
+            if (ec) return jsonErr("copy failed: " + ec.message());
+            return jsonOk("copied");
+        }
+        if (tool == "mkdir" || tool == "create_directory") {
+            std::string dir = path.empty() ? source : path;
+            if (dir.empty()) return jsonErr("missing path");
+            std::error_code ec;
+            std::filesystem::create_directories(dir, ec);
+            if (ec) return jsonErr("mkdir failed: " + ec.message());
+            return jsonOk("created");
+        }
+        if (tool == "search_files") {
+            std::string root = path.empty() ? "." : path;
+            std::string pat = pattern;
+            if (pat.empty()) pat = "*";
+            std::ostringstream list;
+            std::error_code ec;
+            auto matchGlob = [](const std::string& name, const std::string& p) -> bool {
+                if (p == "*" || p == "*.*") return true;
+                size_t star = p.find('*');
+                if (star == std::string::npos) return name == p;
+                if (star == 0 && p.size() > 1)
+                    return name.size() >= p.size() - 1 && name.compare(name.size() - (p.size() - 1), p.size() - 1, p, 1) == 0;
+                if (star == p.size() - 1 && p.size() > 1)
+                    return name.size() >= p.size() - 1 && name.compare(0, p.size() - 1, p, 0, p.size() - 1) == 0;
+                return false;
+            };
+            for (const auto& e : std::filesystem::recursive_directory_iterator(root, std::filesystem::directory_options::skip_permission_denied, ec)) {
+                if (ec) break;
+                std::string name = e.path().filename().string();
+                if (matchGlob(name, pat)) list << e.path().string() << "\n";
+            }
+            return jsonOk(list.str().empty() ? "(no matches)" : list.str());
+        }
+        if (tool == "stat_file" || tool == "get_file_info") {
+            if (path.empty()) return jsonErr("missing path");
+            std::error_code ec;
+            auto st = std::filesystem::status(path, ec);
+            if (ec || !std::filesystem::exists(st)) return jsonErr("path not found: " + path);
+            std::ostringstream info;
+            info << "path=" << path << " exists=1";
+            if (std::filesystem::is_regular_file(st)) info << " type=file size=" << std::filesystem::file_size(path, ec);
+            else if (std::filesystem::is_directory(st)) info << " type=directory";
+            return jsonOk(info.str());
+        }
+        if (tool == "git_status") {
+            std::string cmd = "git status";
+#ifdef _WIN32
+            FILE* pipe = _popen(cmd.c_str(), "r");
+#else
+            FILE* pipe = popen(cmd.c_str(), "r");
+#endif
+            if (!pipe) return jsonErr("git not available or failed");
+            std::ostringstream out;
+            char buf[256];
+            while (fgets(buf, sizeof(buf), pipe)) out << buf;
+#ifdef _WIN32
+            _pclose(pipe);
+#else
+            pclose(pipe);
+#endif
+            return jsonOk(out.str());
+        }
+        return jsonErr("unknown tool: " + tool + " (supported: read_file, write_file, list_directory, delete_file, rename_file, move_file, copy_file, mkdir, search_files, stat_file, run_command, execute_command, git_status)");
+    } catch (const std::exception& e) {
+        return jsonErr(std::string("exception: ") + e.what());
+    }
 }
 
 std::string CompletionServer::HandleSubAgentRequest(const std::string& body) {
@@ -2621,4 +3111,644 @@ std::string CompletionServer::HandleCrc32Request(const std::string& body) {
 #endif
 }
 
+// =============================================================================
+// Enterprise License API Handlers
+// =============================================================================
+
+std::string CompletionServer::HandleLicenseStatusRequest() {
+    auto& lic = RawrXD::EnterpriseLicense::Instance();
+    auto& mgr = EnterpriseFeatureManager::Instance();
+
+    const char* edition = lic.GetEditionName();
+    uint64_t maxModel = lic.GetMaxModelSizeGB();
+    uint64_t maxCtx = lic.GetMaxContextLength();
+    const char* tierName = mgr.GetTierName(mgr.GetCurrentTier());
+
+    char buf[512];
+    snprintf(buf, sizeof(buf),
+        "{\"edition\":\"%s\",\"tier\":\"%s\","
+        "\"max_model_gb\":%llu,\"max_context\":%llu,"
+        "\"feature_mask\":\"0x%02llX\",\"is_800b_unlocked\":%s}",
+        edition ? edition : "Unknown",
+        tierName ? tierName : "Unknown",
+        (unsigned long long)maxModel,
+        (unsigned long long)maxCtx,
+        (unsigned long long)lic.GetFeatureMask(),
+        lic.Is800BUnlocked() ? "true" : "false");
+    return std::string(buf);
+}
+
+// ============================================================================
+// Feature API parity handlers
+// ============================================================================
+
+std::string CompletionServer::HandleEngine800BStatusRequest() {
+    auto& lic = RawrXD::EnterpriseLicense::Instance();
+    bool licensed = RawrXD::EnterpriseLicense::isFeatureEnabled(0x01);
+    bool unlocked = lic.Is800BUnlocked();
+    uint64_t maxModel = lic.GetMaxModelSizeGB();
+    const char* edition = lic.GetEditionName();
+
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+             "{\"feature\":\"800b\",\"licensed\":%s,\"unlocked\":%s,"
+             "\"max_model_gb\":%llu,\"edition\":\"%s\"}",
+             licensed ? "true" : "false",
+             unlocked ? "true" : "false",
+             (unsigned long long)maxModel,
+             edition ? edition : "Unknown");
+    return std::string(buf);
+}
+
+std::string CompletionServer::HandleAVX512StatusRequest() {
+    RawrXD::FlashAttentionEngine engine;
+    bool ready = engine.Initialize();
+    bool licensed = RawrXD::EnterpriseLicense::isFeatureEnabled(0x02);
+
+    return "{\"feature\":\"avx512\",\"ready\":" + std::string(ready ? "true" : "false") +
+           ",\"hasAVX512\":" + std::string(engine.HasAVX512() ? "true" : "false") +
+           ",\"licensed\":" + std::string(licensed ? "true" : "false") +
+           ",\"status\":\"" + engine.GetStatusString() + "\"}";
+}
+
+std::string CompletionServer::HandleTunerStatusRequest() {
+    auto& tuner = GPUKernelAutoTuner::instance();
+    bool licensed = RawrXD::EnterpriseLicense::isFeatureEnabled(0x08);
+
+    AutotuneResult initResult = AutotuneResult::ok("Already initialized");
+    if (licensed && !tuner.isInitialized()) {
+        initResult = tuner.initialize();
+    }
+
+    std::string tunerJson = tuner.isInitialized() ? tuner.toJson() : "{}";
+
+    std::ostringstream ss;
+    ss << "{\"feature\":\"gpu_quant\",\"licensed\":"
+       << (licensed ? "true" : "false")
+       << ",\"initialized\":" << (tuner.isInitialized() ? "true" : "false")
+       << ",\"initSuccess\":" << (initResult.success ? "true" : "false")
+       << ",\"detail\":\"" << (initResult.detail ? initResult.detail : "") << "\""
+       << ",\"tuner\":" << tunerJson
+       << "}";
+    return ss.str();
+}
+
+// ============================================================================
+// Phase 20: WebRTC P2P Signaling
+// ============================================================================
+std::string CompletionServer::HandleWebrtcStatusRequest() {
+    return WebRTCSignaling::instance().toJson();
+}
+
+// ============================================================================
+// Phase 21: Swarm Decision Bridge + Universal Model Hotpatcher
+// ============================================================================
+std::string CompletionServer::HandleSwarmBridgeStatusRequest() {
+    return SwarmDecisionBridge::instance().toJson();
+}
+
+std::string CompletionServer::HandleHotpatchModelStatusRequest() {
+    return UniversalModelHotpatcher::instance().toJson();
+}
+
+// ============================================================================
+// Phase 22: Production Release
+// ============================================================================
+std::string CompletionServer::HandleReleaseStatusRequest() {
+    return ProductionReleaseEngine::instance().toJson();
+}
+
+// ============================================================================
+// Phase 23: GPU Kernel Auto-Tuner run
+// ============================================================================
+std::string CompletionServer::HandleTunerRunRequest(const std::string& body) {
+    auto& tuner = GPUKernelAutoTuner::instance();
+    if (!tuner.isInitialized()) {
+        AutotuneResult r = tuner.initialize();
+        if (!r.success)
+            return "{\"success\":false,\"error\":\"" + EscapeJson(r.detail ? r.detail : "tuner not initialized") + "\"}";
+    }
+    TuneStrategy strategy = TuneStrategy::Heuristic;
+    std::string tmp;
+    if (ExtractJsonString(body, "strategy", tmp)) {
+        if (tmp == "exhaustive" || tmp == "Exhaustive") strategy = TuneStrategy::Exhaustive;
+        else if (tmp == "adaptive" || tmp == "AdaptiveScan") strategy = TuneStrategy::AdaptiveScan;
+        else if (tmp == "cache" || tmp == "CacheLookup") strategy = TuneStrategy::CacheLookup;
+    }
+    AutotuneResult r = tuner.tuneAllKernels(strategy);
+    return "{\"success\":" + std::string(r.success ? "true" : "false")
+         + ",\"detail\":\"" + EscapeJson(r.detail ? r.detail : "") + "\""
+         + ",\"tuner\":" + (tuner.isInitialized() ? tuner.toJson() : "{}") + "}";
+}
+
+// ============================================================================
+// Phase 24: Windows Sandbox
+// ============================================================================
+std::string CompletionServer::HandleSandboxListRequest() {
+    auto ids = SandboxManager::instance().listSandboxes();
+    std::ostringstream ss;
+    ss << "{\"sandboxes\":[";
+    for (size_t i = 0; i < ids.size(); ++i) {
+        if (i) ss << ",";
+        ss << "\"" << EscapeJson(ids[i]) << "\"";
+    }
+    ss << "],\"count\":" << ids.size() << "}";
+    return ss.str();
+}
+
+std::string CompletionServer::HandleSandboxCreateRequest(const std::string& body) {
+    SandboxConfig config;
+    std::string tmp;
+    if (ExtractJsonNumber(body, "memoryLimitBytes", tmp)) config.memoryLimitBytes = std::stoull(tmp);
+    if (ExtractJsonNumber(body, "timeoutMs", tmp)) config.timeoutMs = static_cast<uint32_t>(std::stoul(tmp));
+    if (ExtractJsonString(body, "sandboxName", tmp)) config.sandboxName = tmp;
+    std::string outId;
+    SandboxResult r = SandboxManager::instance().createSandbox(config, outId);
+    if (!r.success)
+        return "{\"success\":false,\"error\":\"" + EscapeJson(r.detail ? r.detail : "create failed") + "\"}";
+    return "{\"success\":true,\"sandbox_id\":\"" + EscapeJson(outId) + "\"}";
+}
+
+// ============================================================================
+// Phase 25: AMD GPU Acceleration
+// ============================================================================
+std::string CompletionServer::HandleGpuStatusRequest() {
+    return AMDGPUAccelerator::instance().toJson();
+}
+
+std::string CompletionServer::HandleGpuToggleRequest() {
+    AccelResult r = AMDGPUAccelerator::instance().toggleGPU();
+    bool on = AMDGPUAccelerator::instance().isGPUEnabled();
+    return "{\"success\":" + std::string(r.success ? "true" : "false")
+         + ",\"enabled\":" + (on ? "true" : "false")
+         + ",\"detail\":\"" + EscapeJson(r.detail ? r.detail : "") + "\"}";
+}
+
+std::string CompletionServer::HandleGpuFeaturesRequest() {
+    return AMDGPUAccelerator::instance().featuresToJson();
+}
+
+std::string CompletionServer::HandleGpuMemoryRequest() {
+    return AMDGPUAccelerator::instance().memoryToJson();
+}
+
+// ============================================================================
+// Phase 51: Security (Dork Scanner + Universal Dorker)
+// ============================================================================
+std::string CompletionServer::HandleSecurityDorkStatusRequest() {
+    using namespace RawrXD::Security;
+    DorkScannerConfig def = {};
+    def.threadCount = 4;
+    def.delayMs = 1500;
+    def.maxIterations = 100;
+    int builtin = 0;
+    {
+        GoogleDorkScanner scanner(def);
+        if (scanner.initialize())
+            builtin = scanner.getBuiltinDorkCount();
+    }
+    int universalCount = UniversalPhpDorker::GetBuiltinCount();
+    return "{\"phase\":51,\"name\":\"Security (Dork Scanner + Universal Dorker)\","
+           "\"dorkScanner\":{\"builtinDorkCount\":" + std::to_string(builtin) +
+           ",\"defaultThreadCount\":" + std::to_string(def.threadCount) +
+           ",\"defaultDelayMs\":" + std::to_string(def.delayMs) +
+           ",\"maxIterations\":" + std::to_string(def.maxIterations) + "},"
+           "\"universalDorker\":{\"builtinDorkCount\":" + std::to_string(universalCount) + "}}";
+}
+
+std::string CompletionServer::HandleSecurityDorkScanRequest(const std::string& body) {
+    using namespace RawrXD::Security;
+    std::string dork, file;
+    ExtractJsonString(body, "dork", dork);
+    ExtractJsonString(body, "file", file);
+    if (dork.empty() && file.empty())
+        return "{\"error\":\"missing_dork_or_file\",\"hint\":\"Provide \\\"dork\\\" or \\\"file\\\" in JSON body\"}";
+    DorkScannerConfig config = {};
+    config.threadCount = 4;
+    config.delayMs = 1500;
+    config.maxIterations = 100;
+    config.enableBoolean = 1;
+    GoogleDorkScanner scanner(config);
+    if (!scanner.initialize())
+        return "{\"error\":\"scanner_init_failed\"}";
+    std::vector<DorkTarget> results;
+    if (!file.empty())
+        results = scanner.scanFile(file);
+    else
+        results = scanner.scanSingle(dork);
+    std::ostringstream ss;
+    ss << "{\"count\":" << results.size() << ",\"results\":[";
+    for (size_t i = 0; i < results.size(); ++i) {
+        const auto& t = results[i];
+        if (i) ss << ",";
+        ss << "{\"url\":\"" << EscapeJson(t.url) << "\",\"dork\":\"" << EscapeJson(t.dork)
+           << "\",\"vulnType\":" << t.vulnType << ",\"dbType\":\"" << EscapeJson(t.dbType)
+           << "\",\"detail\":\"" << EscapeJson(t.detail) << "\",\"statusCode\":" << t.statusCode << "}";
+    }
+    ss << "]}";
+    return ss.str();
+}
+
+std::string CompletionServer::HandleSecurityDorkUniversalRequest(const std::string& body) {
+    using namespace RawrXD::Security;
+    std::string obfuscateStr;
+    bool obfuscate = false;
+    if (ExtractJsonString(body, "obfuscate", obfuscateStr))
+        obfuscate = (obfuscateStr == "true" || obfuscateStr == "1");
+    auto dorks = UniversalPhpDorker::GenerateUniversalDorks(obfuscate);
+    auto markers = UrlHotpatchEngine::getDefaultMarkers();
+    std::ostringstream ss;
+    ss << "{\"phase\":51,\"universalDorker\":{\"dorkCount\":" << dorks.size()
+       << ",\"markers\":[";
+    for (size_t i = 0; i < markers.size(); ++i) {
+        if (i) ss << ",";
+        ss << "\"" << EscapeJson(markers[i]) << "\"";
+    }
+    ss << "],\"dorks\":[";
+    for (size_t i = 0; i < dorks.size() && i < 50u; ++i) {
+        if (i) ss << ",";
+        ss << "\"" << EscapeJson(dorks[i]) << "\"";
+    }
+    if (dorks.size() > 50) ss << ",{\"_truncated\":true,\"total\":" << dorks.size() << "}";
+    ss << "]}}";
+    return ss.str();
+}
+
+std::string CompletionServer::HandleSecurityDashboardRequest() {
+    using namespace RawrXD::Security;
+    int dorkBuiltin = 0, universalBuiltin = 0;
+    {
+        DorkScannerConfig def = {};
+        GoogleDorkScanner scanner(def);
+        if (scanner.initialize())
+            dorkBuiltin = scanner.getBuiltinDorkCount();
+    }
+    universalBuiltin = UniversalPhpDorker::GetBuiltinCount();
+    return "{\"phase\":51,\"security\":{\"dorkScanner\":{\"builtinDorkCount\":" + std::to_string(dorkBuiltin) +
+           "},\"universalDorker\":{\"builtinDorkCount\":" + std::to_string(universalBuiltin) +
+           "},\"endpoints\":[\"/api/security/dork/status\",\"/api/security/dork/scan\",\"/api/security/dork/universal\"]}}";
+}
+
+std::string CompletionServer::HandleLicenseFeaturesRequest() {
+    auto statuses = EnterpriseFeatureManager::Instance().GetFeatureStatuses();
+
+    std::ostringstream ss;
+    ss << "{\"features\":[";
+    for (size_t i = 0; i < statuses.size(); ++i) {
+        if (i > 0) ss << ",";
+        ss << "{\"name\":\"" << statuses[i].name
+           << "\",\"mask\":\"0x" << std::hex << statuses[i].mask << std::dec
+           << "\",\"active\":" << (statuses[i].active ? "true" : "false")
+           << "}";
+    }
+    ss << "]}";
+    return ss.str();
+}
+
+std::string CompletionServer::HandleLicenseAuditRequest() {
+    auto entries = EnterpriseFeatureManager::Instance().RunFullAudit();
+    std::ostringstream ss;
+    ss << "{\"audit\":[";
+    for (size_t i = 0; i < entries.size(); ++i) {
+        if (i > 0) ss << ",";
+        ss << "{\"name\":\"" << entries[i].name
+           << "\",\"mask\":\"0x" << std::hex << entries[i].mask << std::dec
+           << "\",\"hasHeader\":" << (entries[i].hasHeader ? "true" : "false")
+           << ",\"hasCppImpl\":" << (entries[i].hasCppImpl ? "true" : "false")
+           << ",\"hasLicenseGate\":" << (entries[i].hasLicenseGate ? "true" : "false")
+           << ",\"hasREPLCommand\":" << (entries[i].hasREPLCommand ? "true" : "false")
+           << ",\"hasAPIEndpoint\":" << (entries[i].hasAPIEndpoint ? "true" : "false")
+           << ",\"completion\":" << entries[i].completionPct
+           << "}";
+    }
+    ss << "]}";
+    return ss.str();
+}
+
+std::string CompletionServer::HandleLicenseHwidRequest() {
+    auto hwid = EnterpriseFeatureManager::Instance().GetHWIDString();
+    return "{\"hwid\":\"" + std::string(hwid) + "\"}";
+}
+
+std::string CompletionServer::HandleLicenseSupportStatusRequest() {
+    auto& mgr = RawrXD::Enterprise::SupportTierManager::Instance();
+    std::string report = mgr.GenerateStatusReport();
+    // Escape for JSON
+    std::string escaped;
+    for (char c : report) {
+        if (c == '"') escaped += "\\\"";
+        else if (c == '\\') escaped += "\\\\";
+        else if (c == '\n') escaped += "\\n";
+        else if (c == '\r') continue;
+        else escaped += c;
+    }
+    return "{\"support_status\":\"" + escaped + "\"}";
+}
+
+std::string CompletionServer::HandleLicenseMultiGPUStatusRequest() {
+    auto& mgr = RawrXD::Enterprise::MultiGPUManager::Instance();
+    uint32_t count = mgr.GetDeviceCount();
+    uint64_t totalVram = mgr.GetTotalVRAM();
+    uint64_t freeVram = mgr.GetFreeVRAM();
+    bool allHealthy = mgr.AllDevicesHealthy();
+    const char* strategy = mgr.GetStrategyName(mgr.GetStrategy());
+
+    char buf[512];
+    snprintf(buf, sizeof(buf),
+        "{\"device_count\":%u,\"total_vram_mb\":%llu,"
+        "\"free_vram_mb\":%llu,\"all_healthy\":%s,"
+        "\"strategy\":\"%s\",\"licensed\":%s}",
+        count,
+        (unsigned long long)(totalVram / (1024*1024)),
+        (unsigned long long)(freeVram / (1024*1024)),
+        allHealthy ? "true" : "false",
+        strategy,
+        RawrXD::EnterpriseLicense::isFeatureEnabled(0x80) ? "true" : "false");
+    return std::string(buf);
+}
+
+// ============================================================================
+// Models list — for Cursor Settings > Models (Ollama + local)
+// GET /v1/models and GET /api/models return OpenAI-style list: local GGUF +
+// live Ollama /api/tags (when reachable) + well-known fallback IDs.
+// ============================================================================
+std::string CompletionServer::HandleModelsListRequest() {
+    std::vector<std::string> ids;
+    // 1) Loaded local model (from --model path)
+    if (!model_path_.empty()) {
+        size_t sep = model_path_.find_last_of("/\\");
+        std::string name = (sep != std::string::npos) ? model_path_.substr(sep + 1) : model_path_;
+        if (!name.empty()) {
+            size_t dot = name.find('.');
+            if (dot != std::string::npos) name = name.substr(0, dot);
+            if (!name.empty()) ids.push_back(name);
+        }
+    }
+    if (ids.empty()) ids.push_back("rawrxd");
+    // 2) Live Ollama models from GET /api/tags
+    const char* ollamaHostEnv = std::getenv("OLLAMA_HOST");
+    std::string ollamaHostStr;
+    int ollamaPort = 11434;
+    ParseOllamaHost(ollamaHostEnv, ollamaHostStr, ollamaPort);
+    std::string tagsBody;
+    if (TcpHttpGet(ollamaHostStr, ollamaPort, "/api/tags", tagsBody)) {
+        std::vector<std::string> ollamaNames;
+        ParseOllamaTagsModels(tagsBody, ollamaNames);
+        for (const auto& n : ollamaNames) {
+            if (!n.empty() && std::find(ids.begin(), ids.end(), n) == ids.end())
+                ids.push_back(n);
+        }
+    }
+    // 3) Well-known fallback IDs + BigDaddyG variants so Cursor never shows "invalid model name"
+    const std::string known[] = { "llama3", "llama2", "neural-chat", "BigDaddyG-Q4_K_M", "BigDaddyG-F32-FROM-Q4", "mistral", "codellama", "phi", "gemma" };
+    for (const auto& k : known) {
+        if (std::find(ids.begin(), ids.end(), k) == ids.end())
+            ids.push_back(k);
+    }
+    for (const auto& v : RawrXD::ModelNameUtils::getBigDaddyGVariants()) {
+        if (RawrXD::ModelNameUtils::isValid(v) && std::find(ids.begin(), ids.end(), v) == ids.end())
+            ids.push_back(v);
+    }
+    // 4) Scan Ollama model directories so loaded models (e.g. BigDaddyG-F32-FROM-Q4) are always valid
+    std::vector<std::string> scanPaths;
+    if (const char* ollamaModels = std::getenv("OLLAMA_MODELS"))
+        if (ollamaModels[0]) scanPaths.push_back(ollamaModels);
+#ifdef _WIN32
+    char localAppData[MAX_PATH] = {};
+    if (SHGetFolderPathA(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, localAppData) == S_OK)
+        scanPaths.push_back(std::string(localAppData) + "\\Ollama\\models");
+    scanPaths.push_back("D:\\OllamaModels");
+    scanPaths.push_back("C:\\OllamaModels");
+#endif
+    RawrXD::ModelNameUtils::addDerivedNamesFromDirs(scanPaths, ids);
+    // OpenAI-style response (Cursor Settings > Models expects this)
+    std::ostringstream out;
+    out << "{\"object\":\"list\",\"data\":[";
+    for (size_t i = 0; i < ids.size(); ++i) {
+        if (i) out << ",";
+        std::string id = ids[i];
+        std::string escaped = EscapeJson(id);
+        out << "{\"id\":\"" << escaped << "\",\"object\":\"model\",\"created\":1700000000}";
+    }
+    out << "]}";
+    return out.str();
+}
+
+std::string CompletionServer::HandleAgenticConfigGetRequest() {
+    auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+    std::string base = cfg.toJson();
+    // Trim trailing } and append terminal hint + audit estimate fields
+    if (base.size() >= 1 && base.back() == '}') {
+        base.pop_back();
+        base += ",\"recommendedTerminalHint\":\"" + cfg.getRecommendedTerminalRequirementHint() + "\"}";
+    }
+    return base;
+}
+
+std::string CompletionServer::HandleAgenticConfigPostRequest(const std::string& body) {
+    auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+    std::string tmp;
+    if (ExtractJsonString(body, "operationMode", tmp)) cfg.setOperationModeFromString(tmp);
+    if (ExtractJsonString(body, "modelSelectionMode", tmp)) cfg.setModelSelectionModeFromString(tmp);
+    if (ExtractJsonString(body, "qualitySpeedBalance", tmp)) cfg.setQualitySpeedBalanceFromString(tmp);
+    if (ExtractJsonNumber(body, "perModelInstances", tmp)) cfg.setPerModelInstanceCount(std::stoi(tmp));
+    if (ExtractJsonNumber(body, "maxModelsInParallel", tmp)) cfg.setMaxModelsInParallel(std::stoi(tmp));
+    if (ExtractJsonNumber(body, "cycleAgentCounter", tmp)) cfg.setCycleAgentCounter(std::clamp(std::stoi(tmp), 1, 99));
+    if (body.find("\"clearModelInstanceOverrides\":true") != std::string::npos) cfg.clearModelInstanceOverrides();
+    size_t overridesPos = body.find("\"modelInstanceOverrides\"");
+    if (overridesPos != std::string::npos) {
+        size_t objStart = body.find('{', overridesPos);
+        if (objStart != std::string::npos) {
+            size_t i = objStart + 1;
+            while (i < body.size()) {
+                while (i < body.size() && body[i] != '"' && body[i] != '}') i++;
+                if (i >= body.size() || body[i] == '}') break;
+                size_t keyStart = i + 1;
+                i = keyStart;
+                while (i < body.size() && body[i] != '"') { if (body[i] == '\\') i++; i++; }
+                std::string key = body.substr(keyStart, i - keyStart);
+                i++;
+                while (i < body.size() && (body[i] == ':' || std::isspace(static_cast<unsigned char>(body[i])))) i++;
+                if (i < body.size() && std::isdigit(static_cast<unsigned char>(body[i]))) {
+                    size_t numStart = i;
+                    while (i < body.size() && std::isdigit(static_cast<unsigned char>(body[i]))) i++;
+                    int val = std::stoi(body.substr(numStart, i - numStart));
+                    if (!key.empty()) cfg.setInstanceCountForModel(key, val);
+                }
+                while (i < body.size() && body[i] != ',' && body[i] != '}') i++;
+                if (i < body.size() && body[i] == ',') i++;
+            }
+        }
+    }
+    return cfg.toJson();
+}
+
+std::string CompletionServer::HandleAgenticAuditEstimateRequest(const std::string& path) {
+    std::string codebase = "full";
+    int topN = 20;
+    size_t q = path.find('?');
+    if (q != std::string::npos && q + 1 < path.size()) {
+        std::string query = path.substr(q + 1);
+        for (size_t i = 0; i < query.size(); ) {
+            size_t amp = query.find('&', i);
+            std::string pair = (amp == std::string::npos) ? query.substr(i) : query.substr(i, amp - i);
+            i = (amp == std::string::npos) ? query.size() : amp + 1;
+            size_t eq = pair.find('=');
+            if (eq != std::string::npos) {
+                std::string key = pair.substr(0, eq);
+                std::string val = pair.substr(eq + 1);
+                if (key == "codebase") codebase = val;
+                else if (key == "topN" && !val.empty()) {
+                    try { topN = std::max(1, std::min(99, std::stoi(val))); } catch (...) {}
+                }
+            }
+        }
+    }
+    auto& cfg = RawrXD::AgenticAutonomousConfig::instance();
+    int estRedos = 0;
+    int taskCategoryCount = 0;
+    cfg.estimateProductionAuditIterations(codebase, topN, &estRedos, &taskCategoryCount);
+    std::ostringstream oss;
+    oss << "{\"codebase\":\"" << codebase << "\",\"topNDifficult\":" << topN
+        << ",\"estimatedIterationRedos\":" << estRedos
+        << ",\"taskCategoryCount\":" << taskCategoryCount
+        << ",\"recommendedTerminalHint\":\"" << cfg.getRecommendedTerminalRequirementHint() << "\"}";
+    return oss.str();
+}
+
 } // namespace RawrXD
+
+// -----------------------------------------------------------------------------
+// Global OllamaGenerateSync — declared in complete_server.h, used by main.cpp (CLI)
+// Must be at global scope to match the declaration. Uses socket APIs from top of file.
+// -----------------------------------------------------------------------------
+namespace {
+#ifdef _WIN32
+    using OSocket = SOCKET;
+    constexpr OSocket kBadSocket = INVALID_SOCKET;
+    int CloseOSocket(OSocket s) { return closesocket(s); }
+#else
+    using OSocket = int;
+    constexpr OSocket kBadSocket = -1;
+    int CloseOSocket(OSocket s) { return close(s); }
+#endif
+
+    bool TcpPost(const std::string& host, int port, const std::string& path,
+                 const std::string& contentType, const std::string& body, std::string& out) {
+        out.clear();
+        struct addrinfo hints = {}, *res = nullptr;
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        char portStr[16];
+        snprintf(portStr, sizeof(portStr), "%d", port);
+        if (getaddrinfo(host.c_str(), portStr, &hints, &res) != 0 || !res) return false;
+        OSocket fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (fd == kBadSocket) { freeaddrinfo(res); return false; }
+        bool ok = (connect(fd, res->ai_addr, (int)res->ai_addrlen) == 0);
+        freeaddrinfo(res);
+        if (!ok) { CloseOSocket(fd); return false; }
+        std::ostringstream h;
+        h << "POST " << path << " HTTP/1.1\r\nHost: " << host << "\r\n"
+          << "Content-Type: " << contentType << "\r\nContent-Length: " << body.size()
+          << "\r\nConnection: close\r\n\r\n" << body;
+        std::string req = h.str();
+        send(fd, req.c_str(), (int)req.size(), 0);
+        char buf[4096];
+        int n;
+        while ((n = recv(fd, buf, sizeof(buf), 0)) > 0) out.append(buf, buf + n);
+        CloseOSocket(fd);
+        size_t bodyStart = out.find("\r\n\r\n");
+        if (bodyStart != std::string::npos) out = out.substr(bodyStart + 4);
+        return true;
+    }
+
+    bool TcpGet(const std::string& host, int port, const std::string& path, std::string& out) {
+        out.clear();
+        struct addrinfo hints = {}, *res = nullptr;
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        char portStr[16];
+        snprintf(portStr, sizeof(portStr), "%d", port);
+        if (getaddrinfo(host.c_str(), portStr, &hints, &res) != 0 || !res) return false;
+        OSocket fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (fd == kBadSocket) { freeaddrinfo(res); return false; }
+        bool ok = (connect(fd, res->ai_addr, (int)res->ai_addrlen) == 0);
+        freeaddrinfo(res);
+        if (!ok) { CloseOSocket(fd); return false; }
+        std::string req = "GET " + path + " HTTP/1.1\r\nHost: " + host + "\r\nConnection: close\r\n\r\n";
+        send(fd, req.c_str(), (int)req.size(), 0);
+        char buf[4096];
+        int n;
+        while ((n = recv(fd, buf, sizeof(buf), 0)) > 0) out.append(buf, buf + n);
+        CloseOSocket(fd);
+        size_t bodyStart = out.find("\r\n\r\n");
+        if (bodyStart != std::string::npos) out = out.substr(bodyStart + 4);
+        return !out.empty();
+    }
+}
+
+bool OllamaListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames) {
+    outNames.clear();
+    std::string body;
+    if (!TcpGet(host, port, "/api/tags", body)) return false;
+    size_t pos = body.find("\"models\"");
+    if (pos == std::string::npos) return true;
+    pos = body.find('[', pos);
+    if (pos == std::string::npos) return true;
+    for (;;) {
+        size_t nameKey = body.find("\"name\"", pos);
+        if (nameKey == std::string::npos || nameKey > body.find(']', pos)) break;
+        size_t colon = body.find(':', nameKey);
+        if (colon == std::string::npos) break;
+        size_t start = body.find('"', colon);
+        if (start == std::string::npos) break;
+        start++;
+        size_t end = start;
+        while (end < body.size() && body[end] != '"') { if (body[end] == '\\') end++; end++; }
+        if (end <= body.size()) outNames.push_back(body.substr(start, end - start));
+        pos = end + 1;
+    }
+    return true;
+}
+
+bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
+                        const std::string& prompt, std::string& outResponse) {
+    std::string escPrompt, escModel;
+    for (char c : prompt) {
+        if (c == '"') escPrompt += "\\\""; else if (c == '\\') escPrompt += "\\\\";
+        else if (c == '\n') escPrompt += "\\n"; else if (c == '\r') escPrompt += "\\r";
+        else if (static_cast<unsigned char>(c) >= 32 || c == '\t') escPrompt += c;
+    }
+    for (char c : model) {
+        if (c == '"') escModel += "\\\""; else if (c == '\\') escModel += "\\\\";
+        else if (static_cast<unsigned char>(c) >= 32 || c == '\t') escModel += c;
+    }
+    std::string body = "{\"model\":\"" + escModel + "\",\"prompt\":\"" + escPrompt + "\",\"stream\":false}";
+    std::string out;
+    if (!TcpPost(host, port, "/api/generate", "application/json", body, out)) return false;
+    size_t respStart = out.find("\"response\":");
+    if (respStart == std::string::npos) {
+        size_t errStart = out.find("\"error\":");
+        if (errStart != std::string::npos) {
+            size_t q = out.find('"', errStart + 8);
+            if (q != std::string::npos) outResponse = out.substr(errStart + 9, q - (errStart + 9));
+        }
+        return false;
+    }
+    size_t start = out.find('"', respStart + 10) + 1;
+    outResponse.clear();
+    for (size_t i = start; i < out.size(); i++) {
+        if (out[i] == '"' && (i == 0 || out[i - 1] != '\\')) break;
+        if (out[i] == '\\' && i + 1 < out.size()) {
+            if (out[i + 1] == 'n') outResponse += '\n';
+            else if (out[i + 1] == 'r') outResponse += '\r';
+            else if (out[i + 1] == 't') outResponse += '\t';
+            else if (out[i + 1] == '"') outResponse += '"';
+            else outResponse += out[i + 1];
+            i++;
+            continue;
+        }
+        outResponse += out[i];
+    }
+    return true;
+}

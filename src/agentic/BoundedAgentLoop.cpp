@@ -24,6 +24,12 @@
 #include <windows.h>
 #include <winhttp.h>
 
+// SCAFFOLD_295: BoundedAgentLoop integration
+
+
+// SCAFFOLD_060: BoundedAgentLoop and cycle limit
+
+
 #pragma comment(lib, "winhttp.lib")
 
 using RawrXD::Agent::BoundedAgentLoop;

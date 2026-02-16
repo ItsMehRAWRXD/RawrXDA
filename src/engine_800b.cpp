@@ -1,4 +1,5 @@
 #include "engine_iface.h"
+#include "license_enforcement.h"
 #include <windows.h>
 #include <vector>
 #include <string>
@@ -25,6 +26,7 @@ class Engine800B : public Engine {
 
 public:
     bool load_model(const std::string& path) override {
+        ENFORCE_FEATURE_BOOL(DualEngine800B);
         // path = directory
         std::vector<std::string> shard_paths = {
             path + "\\shard0.gguf",
@@ -82,6 +84,10 @@ public:
     const char* name() override { return "sovereign800b"; }
 
     std::string infer(const AgentRequest& req) override {
+        if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::DualEngine800B, __FUNCTION__))
+            return "[LICENSE] 800B Dual-Engine requires Enterprise license.";
+
         std::string output;
         std::vector<float> activations;
 

@@ -88,8 +88,12 @@ int main(int argc, char* argv[]) {
         std::cout << "Failed: " << failed << "\n";
         std::cout << "===========================================\n";
 
-        // Write detailed results to file
-        std::ofstream resultFile("C:\\RawrXD_IDE_TestResults.txt");
+        // Write detailed results to file (temp dir or cwd)
+        char tempPath[MAX_PATH] = {};
+        std::string resultPath = "RawrXD_IDE_TestResults.txt";
+        if (GetTempPathA(MAX_PATH, tempPath))
+            resultPath = std::string(tempPath) + "RawrXD_IDE_TestResults.txt";
+        std::ofstream resultFile(resultPath);
         if (resultFile.is_open()) {
             resultFile << "RawrXD IDE Test Results\n";
             resultFile << "=======================\n\n";
@@ -111,11 +115,11 @@ int main(int argc, char* argv[]) {
             resultFile << "Failed: " << failed << "\n";
             resultFile.close();
             
-            std::cout << "\nDetailed results written to: C:\\RawrXD_IDE_TestResults.txt\n";
+            std::cout << "\nDetailed results written to: " << resultPath << "\n";
             LOG_INFO("Test results written to file");
         }
 
-        std::cout << "Log file: C:\\RawrXD_IDE_TestRun.log\n";
+        std::cout << "Log file: see IDELogger output (e.g. %APPDATA%\\RawrXD\\ide.log or cwd)\n";
         
         LOG_INFO("Test runner completed");
         

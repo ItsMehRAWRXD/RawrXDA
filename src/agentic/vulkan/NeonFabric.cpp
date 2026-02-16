@@ -19,6 +19,9 @@ FabricControlBlock* NeonFabric::s_controlBlock = nullptr;
 std::vector<void*> NeonFabric::s_mappedShards;
 std::vector<VulkanContext> NeonFabric::s_vulkanContexts;
 bool NeonFabric::s_initialized = false;
+#ifdef _WIN32
+HANDLE NeonFabric::s_hMapFile = nullptr;
+#endif
 
 bool NeonFabric::initialize(const FabricConfig& config) {
     if (s_initialized) {
@@ -43,6 +46,7 @@ bool NeonFabric::initialize(const FabricConfig& config) {
         CloseHandle(hMapFile);
         return false;
     }
+    s_hMapFile = hMapFile;  // Store handle for cleanup in shutdown()
 #else
     int fd = shm_open("/rawrxd_neonfabric_cb", O_CREAT | O_RDWR, 0666);
     if (fd < 0) return false;
@@ -110,6 +114,10 @@ void NeonFabric::shutdown() {
     if (s_controlBlock) {
 #ifdef _WIN32
         UnmapViewOfFile(s_controlBlock);
+        if (s_hMapFile) {
+            CloseHandle(s_hMapFile);
+            s_hMapFile = nullptr;
+        }
 #else
         munmap(s_controlBlock, sizeof(FabricControlBlock));
         shm_unlink("/rawrxd_neonfabric_cb");

@@ -10,8 +10,10 @@
 #include <memory>
 #include "engine/react_ide_generator.h"
 
-// Forward declarations to avoid including heavy headers in header
+// Forward declarations
 struct IWebBrowser2;
+// NOTE: This file (ide_window.h) is NOT compiled into any target.
+// The real IDE class is Win32IDE in src/win32app/Win32IDE.h
 
 struct TabInfo {
     std::wstring filePath;

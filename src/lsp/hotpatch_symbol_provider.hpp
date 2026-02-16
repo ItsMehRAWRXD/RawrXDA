@@ -29,12 +29,11 @@
 #include <mutex>
 #include <atomic>
 
-// Forward declarations
-struct MemoryPatchEntry;
-struct BytePatch;
-struct ServerHotpatch;
-struct PatchResult;
-class  UnifiedHotpatchManager;
+// Include full types to avoid redefinition conflicts
+#include "../core/model_memory_hotpatch.hpp"
+#include "../core/byte_level_hotpatcher.hpp"
+#include "../server/gguf_server_hotpatch.hpp"
+#include "../core/unified_hotpatch_manager.hpp"
 
 // ---------------------------------------------------------------------------
 // External ASM entry points (RawrXD_LSP_SymbolIndex.asm)

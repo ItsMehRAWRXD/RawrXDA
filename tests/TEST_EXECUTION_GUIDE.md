@@ -6,6 +6,67 @@
 
 ---
 
+## Full CLI + Win32 IDE Manifestation Tests (no simulation)
+
+**Script:** `tests/Full-Manifestation-Tests.ps1`  
+**Contract:** `CLI_CONTRACT_v1.1.md`
+
+These tests **verify everything for real** — no stubs, no simulation. Every CLI mode runs the actual binary; the Win32 IDE is started, its main window is verified, then closed.
+
+### What is run
+
+1. **CLI contract modes (real execution)**  
+   Meta-flags `--help` and `--version`; then all 18 modes: `-compile`, `-c`, `/c`, `-encrypt`, `-entropy`, `-avscan`, `-bbcov`, `-covfuse`, `-dyntrace`, `-agenttrace`, `-gapfuzz`, `-intelpt`, `-diffcov`, `-sideload`, `-trace`, `-stubgen`, `-inject`, `-agent`, `-persist`, `-uac`.  
+   Exit codes and artifacts are asserted: `trace_map.json`, `encrypted.bin` (for `-encrypt`), `bbcov_report.json`, `covfusion_report.json`, `rawrxd_ide.log`.
+
+2. **Artifact integrity**  
+   `trace_map.json`, `bbcov_report.json`, and `covfusion_report.json` are checked for required keys and structure. **schema_version: 1** is asserted for both JSON reports. **RVA-only** check ensures no absolute VAs (ASLR safety) in reports.
+
+3. **RawrEngine --help**  
+   If `RawrEngine.exe` is present in the build, `--help` is run and output is checked.
+
+4. **Win32 IDE manifestation**  
+   `RawrXD-Win32IDE.exe` (or `RawrXD_IDE_unified.exe`) is started, the main window handle is waited for (up to 30s by default), then the process is closed. Any failure (no window, crash) fails the run.
+
+### Prerequisites
+
+- CMake build completed (e.g. `cmake -B build -G "Visual Studio 17 2022" -A x64` then `cmake --build build --config Release`).
+- Binaries under `build/` (or path given by `-BuildDir`): at least one of `RawrXD_IDE_unified.exe`, `RawrXD-Win32IDE.exe` for CLI/IDE; `RawrEngine.exe` optional for `--help` check.
+
+### Run locally
+
+```powershell
+# From repo root; build dir auto-detected as ./build or $env:RAWRXD_BUILD_DIR
+pwsh -ExecutionPolicy Bypass -File tests/Full-Manifestation-Tests.ps1
+
+# Custom build dir and work dir
+pwsh -ExecutionPolicy Bypass -File tests/Full-Manifestation-Tests.ps1 -BuildDir "D:\rawrxd\build" -WorkDir "D:\rawrxd"
+
+# CI-style: skip registry and elevation-only modes
+pwsh -ExecutionPolicy Bypass -File tests/Full-Manifestation-Tests.ps1 -SkipPersist -SkipElevated
+
+# CLI only (no IDE launch)
+pwsh -ExecutionPolicy Bypass -File tests/Full-Manifestation-Tests.ps1 -CLIOnly
+
+# IDE manifestation only
+pwsh -ExecutionPolicy Bypass -File tests/Full-Manifestation-Tests.ps1 -IDEOnly
+```
+
+### CI
+
+Workflow **Full Manifestation (CLI + IDE)** (`.github/workflows/full-manifestation.yml`) runs after a full CMake build with `-SkipPersist` and `-SkipElevated`. Trigger: push to `main` (when relevant paths change), or `workflow_dispatch`.
+
+### Exit code
+
+- `0`: All tests passed.  
+- `1`: At least one check failed; no test is simulated or skipped except optional `-persist`/`-uac` when `-SkipPersist`/`-SkipElevated` are set.
+
+### Related scripts
+
+- **`verification_script.ps1`** (repo root): Configures + builds with CMake, verifies RawrEngine/RawrXD-Win32IDE binaries exist, runs RawrEngine `--help` smoke. Use for quick “build + smoke” without running the full CLI/IDE manifestation suite.
+
+---
+
 ## Overview
 
 This testing suite validates all Phase 2 components with **145+ tests**:

@@ -314,7 +314,7 @@ extern "C" {
     // Global context access
     extern PHASE1_CONTEXT* g_Phase1Context;
     extern uint32_t g_Phase1Initialized;
-}
+}  // extern "C"
 
 /*================================================================================
  UTILITY MACROS FOR PHASE 1 OPERATIONS
@@ -341,5 +341,3 @@ extern "C" {
 #define PHASE1_THREADS() PHASE1().GetLogicalCoreCount()
 
 }  // namespace Phase1
-
-#endif // PHASE1_FOUNDATION_H

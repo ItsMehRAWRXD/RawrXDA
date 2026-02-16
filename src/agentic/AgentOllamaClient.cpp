@@ -633,6 +633,9 @@ done:
 #include <unistd.h>
 #include <arpa/inet.h>
 
+// SCAFFOLD_065: AgentOllamaClient and HTTP
+
+
 static int posix_connect(const std::string& host, int port) {
     struct addrinfo hints{}, *result = nullptr;
     hints.ai_family = AF_INET;

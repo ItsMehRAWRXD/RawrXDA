@@ -1260,8 +1260,8 @@ void Win32IDE::foldRegion(FoldRegion& region) {
     // Hide lines from startLine+1 to endLine using EM_SETPARAFORMAT
     // with line spacing = 0 (effectively hiding them)
     //
-    // Alternative approach: Replace the folded content with a placeholder
-    // and store the original text for later restoration.
+    // Alternative approach: Replace the folded content with a folding placeholder
+    // (e.g. "... N lines ...") and store the original text for later restoration.
 
     region.collapsed = true;
 

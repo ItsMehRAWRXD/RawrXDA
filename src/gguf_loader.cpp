@@ -13,6 +13,9 @@
 #include <vector>
 #include <cstdint>
 
+// SCAFFOLD_101: GGUF loader and tensor read
+
+
 // Forward declarations for codec functions
 namespace codec {
     extern std::vector<uint8_t> deflate(const std::vector<uint8_t>& in, bool* ok);

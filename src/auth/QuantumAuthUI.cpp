@@ -21,6 +21,12 @@
 #include <intrin.h>
 #include <bcrypt.h>
 #include <wincrypt.h>
+
+// SCAFFOLD_344: QuantumAuthUI void* parent doc
+
+
+// SCAFFOLD_214: QuantumAuthUI and auth flow
+
 #pragma comment(lib, "Bcrypt.lib")
 #pragma comment(lib, "crypt32.lib")
 #endif
@@ -152,7 +158,7 @@ KeyGenerationResult QuantumAuthManager::generateKey(const std::string& name, Key
     
     if (status != 0) { // Non-zero status indicates error
         result.success = false;
-        result.error = "Failed to generate random bytes: " + std::to_string(status);
+        result.errorMessage = "Failed to generate random bytes: " + std::to_string(status);
         return result;
     }
     

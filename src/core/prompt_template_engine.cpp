@@ -15,6 +15,9 @@
 #include <regex>
 #include <cctype>
 
+// SCAFFOLD_098: prompt_template_engine AGENTIC type
+
+
 namespace RawrXD {
 namespace Prompt {
 

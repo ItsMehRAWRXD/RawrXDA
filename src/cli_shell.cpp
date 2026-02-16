@@ -28,6 +28,9 @@
 #include "cli/cli_feature_bridge.h"
 #include "core/feature_handlers.h"
 
+// SCAFFOLD_094: cli_shell agentic engine wiring
+
+
 namespace fs = std::filesystem;
 
 // ============================================================================

@@ -75,69 +75,197 @@ bool VSIXLoader::ExtractVSIX(const std::string& vsix_path, const std::filesystem
 }
 
 bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::path& plugin_dir) {
-    // Load manifest
-    std::filesystem::path manifest_path = plugin_dir / "manifest.json";
-    if (!std::filesystem::exists(manifest_path)) {
-        return false;
-    }
+    // ========================================================================
+    // Phase 37: VS Code package.json support (primary) + manifest.json fallback
+    // ========================================================================
+    // Real VS Code VSIX files extract to:
+    //   <dir>/extension/package.json   (standard VSIX layout)
+    //   <dir>/package.json             (flat layout)
+    //   <dir>/manifest.json            (legacy RawrXD format — fallback)
+    // ========================================================================
     
-    std::ifstream manifest_file(manifest_path);
     nlohmann::json manifest;
-    try {
-        manifest_file >> manifest;
-    } catch (...) {
-        return false;
+    bool isVSCodePackageJson = false;
+    bool manifestLoaded = false;
+    
+    // Priority 1: extension/package.json (standard VSIX extraction layout)
+    std::filesystem::path vscode_ext_pkg = plugin_dir / "extension" / "package.json";
+    // Priority 2: package.json (flat layout or %APPDATA% install)
+    std::filesystem::path vscode_pkg = plugin_dir / "package.json";
+    // Priority 3: manifest.json (legacy RawrXD native format)
+    std::filesystem::path legacy_manifest = plugin_dir / "manifest.json";
+    
+    if (std::filesystem::exists(vscode_ext_pkg)) {
+        std::ifstream f(vscode_ext_pkg);
+        try { f >> manifest; manifestLoaded = true; isVSCodePackageJson = true; }
+        catch (...) { manifestLoaded = false; }
     }
     
-    if (!ValidateManifest(manifest)) {
+    if (!manifestLoaded && std::filesystem::exists(vscode_pkg)) {
+        std::ifstream f(vscode_pkg);
+        try { f >> manifest; manifestLoaded = true; isVSCodePackageJson = true; }
+        catch (...) { manifestLoaded = false; }
+    }
+    
+    if (!manifestLoaded && std::filesystem::exists(legacy_manifest)) {
+        std::ifstream f(legacy_manifest);
+        try { f >> manifest; manifestLoaded = true; isVSCodePackageJson = false; }
+        catch (...) { manifestLoaded = false; }
+    }
+    
+    if (!manifestLoaded) {
+        std::cout << "[VSIX Loader] No manifest found in: " << plugin_dir << std::endl;
         return false;
     }
     
     auto plugin = std::make_unique<VSIXPlugin>();
-    plugin->id = manifest["id"];
-    plugin->name = manifest["name"];
-    plugin->version = manifest["version"];
-    plugin->description = manifest["description"];
-    plugin->author = manifest["author"];
     plugin->install_path = plugin_dir;
     plugin->enabled = true;
     plugin->manifest = manifest;
     
-    // Load commands
-    if (manifest.contains("commands")) {
-        for (const auto& cmd : manifest["commands"]) {
-            plugin->commands.push_back(cmd);
+    if (isVSCodePackageJson) {
+        // ================================================================
+        // VS Code package.json field mapping
+        // ================================================================
+        // Required: name (used as id if no publisher), version
+        // Optional: displayName, publisher, description, categories,
+        //           contributes.commands, extensionDependencies, main, icon
+        // ================================================================
+        
+        std::string name = manifest.value("name", "");
+        std::string publisher = manifest.value("publisher", "unknown");
+        std::string version = manifest.value("version", "0.0.0");
+        std::string displayName = manifest.value("displayName", name);
+        std::string description = manifest.value("description", "");
+        
+        // VS Code extension ID format: publisher.name
+        plugin->id = publisher + "." + name;
+        plugin->name = displayName.empty() ? name : displayName;
+        plugin->version = version;
+        plugin->description = description;
+        plugin->author = publisher;
+        
+        // Map contributes.commands → plugin->commands
+        if (manifest.contains("contributes") && manifest["contributes"].contains("commands")) {
+            for (const auto& cmd : manifest["contributes"]["commands"]) {
+                if (cmd.contains("command")) {
+                    plugin->commands.push_back(cmd["command"].get<std::string>());
+                }
+            }
         }
+        
+        // Map extensionDependencies → plugin->dependencies
+        if (manifest.contains("extensionDependencies")) {
+            for (const auto& dep : manifest["extensionDependencies"]) {
+                plugin->dependencies.push_back(dep.get<std::string>());
+            }
+        }
+        
+        // Also check extensionPack (bundled extensions)
+        if (manifest.contains("extensionPack")) {
+            for (const auto& dep : manifest["extensionPack"]) {
+                plugin->dependencies.push_back(dep.get<std::string>());
+            }
+        }
+        
+        // Register contributed commands with the global command registry
+        if (manifest.contains("contributes") && manifest["contributes"].contains("commands")) {
+            for (const auto& cmd : manifest["contributes"]["commands"]) {
+                if (cmd.contains("command")) {
+                    std::string cmdId = cmd["command"].get<std::string>();
+                    std::string cmdTitle = cmd.value("title", cmdId);
+                    RegisterCommand(cmdId, [cmdId, cmdTitle]() {
+                        std::cout << "[VSIX] Execute VS Code command: " << cmdId
+                                  << " (" << cmdTitle << ")" << std::endl;
+                    });
+                }
+            }
+        }
+        
+        // Store VS Code activation events for QuickJS host integration
+        if (manifest.contains("activationEvents")) {
+            // Stored in manifest JSON, accessible via plugin->manifest["activationEvents"]
+            std::cout << "[VSIX Loader] Loaded VS Code extension: " << plugin->id
+                      << " v" << plugin->version
+                      << " (" << manifest["activationEvents"].size() << " activation events)"
+                      << std::endl;
+        } else {
+            std::cout << "[VSIX Loader] Loaded VS Code extension: " << plugin->id
+                      << " v" << plugin->version << std::endl;
+        }
+        
+        // Store main entry point path for JS extension host
+        if (manifest.contains("main")) {
+            std::string mainEntry = manifest["main"].get<std::string>();
+            // Resolve relative to extension directory
+            std::filesystem::path mainPath;
+            if (std::filesystem::exists(vscode_ext_pkg)) {
+                mainPath = plugin_dir / "extension" / mainEntry;
+            } else {
+                mainPath = plugin_dir / mainEntry;
+            }
+            // Store in manifest for QuickJS host to pick up
+            plugin->manifest["_resolved_main"] = mainPath.string();
+        }
+        
+    } else {
+        // ================================================================
+        // Legacy RawrXD manifest.json format (backwards compatible)
+        // ================================================================
+        if (!ValidateManifest(manifest)) {
+            return false;
+        }
+        
+        plugin->id = manifest["id"];
+        plugin->name = manifest["name"];
+        plugin->version = manifest["version"];
+        plugin->description = manifest["description"];
+        plugin->author = manifest["author"];
+        
+        // Load commands
+        if (manifest.contains("commands")) {
+            for (const auto& cmd : manifest["commands"]) {
+                plugin->commands.push_back(cmd);
+            }
+        }
+        
+        // Load dependencies
+        if (manifest.contains("dependencies")) {
+            for (const auto& dep : manifest["dependencies"]) {
+                plugin->dependencies.push_back(dep);
+            }
+        }
+        
+        // Load command handlers if present
+        if (manifest.contains("command_handlers")) {
+            for (const auto& [cmd, handler] : manifest["command_handlers"].items()) {
+                RegisterCommand(cmd, [handler]() {
+                    std::cout << "Executing: " << handler << std::endl;
+                });
+            }
+        }
+        
+        std::cout << "[VSIX Loader] Loaded native plugin: " << plugin->id
+                  << " v" << plugin->version << std::endl;
     }
     
-    // Load dependencies
-    if (manifest.contains("dependencies")) {
-        for (const auto& dep : manifest["dependencies"]) {
-            plugin->dependencies.push_back(dep);
-        }
-    }
-    
-    // Load command handlers if present
-    if (manifest.contains("command_handlers")) {
-        for (const auto& [cmd, handler] : manifest["command_handlers"].items()) {
-            RegisterCommand(cmd, [handler]() {
-                // Execute handler (simplified)
-                std::cout << "Executing: " << handler << std::endl;
-            });
-        }
-    }
-    
-    plugins_[plugin->id] = std::move(plugin);
+    std::string pluginId = plugin->id;
+    plugins_[pluginId] = std::move(plugin);
     
     // Call onLoad if exists
-    if (plugins_[plugin->id]->onLoad) {
-        plugins_[plugin->id]->onLoad();
+    if (plugins_[pluginId]->onLoad) {
+        plugins_[pluginId]->onLoad();
     }
     
     return true;
 }
 
 bool VSIXLoader::ValidateManifest(const nlohmann::json& manifest) {
+    // Legacy RawrXD manifest.json requires: id, name, version, description
+    // VS Code package.json requires: name, version (minimum)
+    if (manifest.contains("name") && manifest.contains("version")) {
+        return true;  // Valid for either format
+    }
     return manifest.contains("id") && manifest.contains("name") &&
            manifest.contains("version") && manifest.contains("description");
 }

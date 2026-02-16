@@ -56,6 +56,7 @@ Commands:
   chat                  Enter interactive chat mode
   bench <model.gguf>    Run performance benchmark
   info <model.gguf>     Show model information
+  extensions            List installed extensions
 
 Options:
   -m, --model <path>    Specify model path
@@ -63,12 +64,16 @@ Options:
   -T, --temp <float>    Temperature (default: 0.8)
   -p, --top_p <float>   Top-P sampling (default: 0.95)
   -c, --context <n>     Context size (default: 4096)
+  --api-key <key>       Set user API key for extensions
+  --enable-amazonq      Enable Amazon Q extension
+  --enable-copilot      Enable GitHub Copilot extension
   -h, --help            Show this help
 
 Examples:
   rawrxd_cli load D:\Models\llama-7b.gguf
   rawrxd_cli -m llama-7b.gguf generate "Hello, world!"
-  rawrxd_cli chat
+  rawrxd_cli --api-key key_xxx chat
+  rawrxd_cli --enable-amazonq --enable-copilot
 
 )" << std::endl;
 }
@@ -125,6 +130,9 @@ struct ModelState {
 };
 
 static ModelState g_model;
+static std::string g_apiKey = "key_1bbe2f4d33423a095fc03d9f873eb4a161a680df099e82410be7bb19e65c319f";
+static bool g_enableAmazonQ = false;
+static bool g_enableCopilot = false;
 
 bool LoadModel(const std::string& path) {
     std::cout << "[+] Loading model: " << path << std::endl;
@@ -575,6 +583,23 @@ int main(int argc, char* argv[]) {
 CLI v1.0 - Autonomous Agentic Inference
 )" << std::endl;
 
+    // Parse API key and extension flags first
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "--api-key" && i + 1 < argc) {
+            g_apiKey = argv[++i];
+            std::cout << "[+] API key set" << std::endl;
+        }
+        else if (arg == "--enable-amazonq") {
+            g_enableAmazonQ = true;
+            std::cout << "[+] Amazon Q will be enabled" << std::endl;
+        }
+        else if (arg == "--enable-copilot") {
+            g_enableCopilot = true;
+            std::cout << "[+] GitHub Copilot will be enabled" << std::endl;
+        }
+    }
+
     // Load DLLs
     if (!LoadDLLs()) {
         std::cout << "[*] Running in standalone mode (no DLLs loaded)" << std::endl;
@@ -591,6 +616,14 @@ CLI v1.0 - Autonomous Agentic Inference
     
     if (cmd == "-h" || cmd == "--help" || cmd == "help") {
         PrintHelp();
+        return 0;
+    }
+    
+    if (cmd == "extensions") {
+        std::cout << "\n=== Extension Status ===" << std::endl;
+        std::cout << "API Key: " << (g_apiKey.empty() ? "Not set" : "****" + g_apiKey.substr(g_apiKey.length() - 8)) << std::endl;
+        std::cout << "Amazon Q: " << (g_enableAmazonQ ? "Enabled" : "Disabled") << std::endl;
+        std::cout << "GitHub Copilot: " << (g_enableCopilot ? "Enabled" : "Disabled") << std::endl;
         return 0;
     }
     

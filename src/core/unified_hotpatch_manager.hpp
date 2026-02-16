@@ -9,6 +9,7 @@
 
 #include "model_memory_hotpatch.hpp"
 #include "byte_level_hotpatcher.hpp"
+#include "../server/gguf_server_hotpatch.hpp"
 #include "pt_driver_contract.hpp"
 #include "live_binary_patcher.hpp"
 #include "shadow_page_detour.hpp"
@@ -35,10 +36,8 @@ namespace RawrXD { namespace Auth { class RBACEngine; } }
 #include <atomic>
 #include <vector>
 
-// Forward declaration — server layer
-struct ServerHotpatch;
-struct Request;
-struct Response;
+// Forward declarations removed — now included via gguf_server_hotpatch.hpp
+// (ServerHotpatch, Request, Response are fully defined there)
 
 // ---------------------------------------------------------------------------
 // UnifiedResult — Extends PatchResult with layer info
@@ -117,7 +116,7 @@ struct HotpatchPreset {
     char                        name[128];
     int                         version = 0;
     std::vector<MemoryPatchEntry>  memoryPatches;
-    std::vector<BytePatch>         bytePatches;
+    std::vector<BytePatchEnhanced> bytePatches;
     // Server patches are function pointers, not serializable — stored by name
     std::vector<std::string>       serverPatchNames;
     // Memory patches stored by name for preset load/save
@@ -137,7 +136,7 @@ public:
     UnifiedResult revert_memory_patch(MemoryPatchEntry* entry);
 
     // ---- Byte Layer (Layer 2) ----
-    UnifiedResult apply_byte_patch(const char* filename, const BytePatch& patch);
+    UnifiedResult apply_byte_patch(const char* filename, const BytePatchEnhanced& patch);
     UnifiedResult apply_byte_search_patch(const char* filename,
                                           const std::vector<uint8_t>& pattern,
                                           const std::vector<uint8_t>& replacement);
@@ -282,6 +281,14 @@ public:
     // Poll the most recent event (returns false if no new events).
     bool poll_event(HotpatchEvent* outEvent);
 
+    // ---- Force TPS (tokens per second) hotpatching ----
+    /** Set target TPS for token delivery. 0 or negative = disabled (run normally). When set, throttle_token_delivery() will sleep to achieve this rate. */
+    void set_target_tps(double tps);
+    /** Get current target TPS. 0 = disabled. */
+    double get_target_tps() const { return m_targetTPS.load(std::memory_order_relaxed); }
+    /** Call after each token is delivered. If target TPS is set, sleeps so that effective rate does not exceed target. Leave target unset (0) to run normally. */
+    void throttle_token_delivery(uint64_t tokenIndex1Based);
+
     // ---- Statistics ----
     struct Stats {
         std::atomic<uint64_t> memoryPatchCount{0};
@@ -348,4 +355,9 @@ private:
     // Layer 6: Shadow-Page Detour + Sentinel Watchdog
     std::atomic<bool>                       m_shadowInit{false};
     std::atomic<bool>                       m_sentinelInit{false};
+
+    // Force TPS: 0 = disabled; >0 = target tokens per second (throttle token delivery)
+    std::atomic<double>                     m_targetTPS{0.0};
+    std::mutex                              m_tpsMutex;
+    double                                  m_tpsStreamStartMs{0.0};  // Set when token 1 is delivered
 };

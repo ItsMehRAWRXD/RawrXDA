@@ -42,7 +42,18 @@ struct DiffDecoration {
     std::string type;           // "add", "remove", "modify"
 };
 
-#ifdef RAWR_USE_QT
+#ifndef RAWR_USE_QT
+/**
+ * \brief Stub for Win32 build (no Qt). Ghost text uses inline state in Win32IDE.
+ */
+class GhostTextRenderer {
+public:
+    GhostTextRenderer() = default;
+    GhostTextRenderer(void* /*editor*/, void* /*parent*/) {}
+    void initialize() {}
+    void setEditorHwnd(void* /*hwnd*/) {}
+};
+#else
 #include <QWidget>
 #include <QTextEdit>
 #include <QPlainTextEdit>
@@ -165,5 +176,7 @@ private:
     QColor m_addColor{0, 255, 0, 100};        // Green for additions
     QColor m_removeColor{255, 0, 0, 100};     // Red for deletions
 };
+
+#endif // RAWR_USE_QT (Qt GhostTextRenderer class)
 
 } // namespace RawrXD

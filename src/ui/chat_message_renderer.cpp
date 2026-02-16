@@ -8,7 +8,9 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "ui/chat_message_renderer.h"
 
 #include <sstream>

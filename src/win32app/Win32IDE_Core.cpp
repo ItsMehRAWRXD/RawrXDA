@@ -2,13 +2,17 @@
 // Win32IDE_Core.cpp - Core Window Management Functions
 // createWindow, showWindow, runMessageLoop, ~Win32IDE, onSize,
 // syncEditorToGpuSurface, initializeEditorSurface, trySendToOllama,
-// createReverseEngineeringMenu, handleReverseEngineering* stubs
+// createReverseEngineeringMenu, handleReverseEngineering* — implemented in Win32IDE_ReverseEngineering.cpp (output to IDE Output tab)
 // ============================================================================
 
 #include "Win32IDE.h"
 #include "Win32IDE_IELabels.h"
+#include "../../include/model_registry.h"
+#include "../../include/interpretability_panel.h"
+#include "../../include/benchmark_menu_widget.hpp"
 #include "IDELogger.h"
 #include "IDEConfig.h"
+#include "../../include/agentic_autonomous_config.h"
 #include "lsp/RawrXD_LSPServer.h"
 #include "ModelConnection.h"
 #include "multi_response_engine.h"
@@ -17,11 +21,17 @@
 #include "../modules/ExtensionLoader.hpp"
 #include "../native_agent.hpp"
 #include "win32_feature_adapter.h"  // Unified Feature Dispatch adapter
+#include "../core/enterprise_license.h"
+#include "enterprise_feature_manager.hpp"
+#include "../../include/enterprise_license.h"
+#include "../../include/feature_flags_runtime.h"
+#include "../../include/license_enforcement.h"
 #include <commctrl.h>
 #include <richedit.h>
 #ifndef WM_DPICHANGED
 #define WM_DPICHANGED 0x02E0
 #endif
+#include <shlobj.h>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
@@ -231,6 +241,17 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
         }
         return 0;
 
+    case WM_KEYDOWN:
+        // Command Palette from main window (e.g. when frame has focus)
+        if ((GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000) && (wParam == 'P')) {
+            if (m_commandPaletteVisible)
+                hideCommandPalette();
+            else
+                showCommandPalette();
+            return 0;
+        }
+        break;
+
     case WM_ERASEBKGND: {
         // Paint the background dark instead of default white
         HDC hdc = (HDC)wParam;
@@ -261,10 +282,43 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     case WM_NOTIFY: {
         NMHDR* pNMHDR = reinterpret_cast<NMHDR*>(lParam);
         if (pNMHDR) {
-            // Tier 3 (Feature 38/39): Status bar click → language/encoding selector
+            // Tier 3 (Feature 38/39): Status bar click → language/encoding selector (use part index for reliable dispatch)
             if (pNMHDR->hwndFrom == m_hwndStatusBar && pNMHDR->code == NM_CLICK) {
                 NMMOUSE* pNMMouse = reinterpret_cast<NMMOUSE*>(lParam);
-                handleStatusBarClick(pNMMouse->pt.x, pNMMouse->pt.y);
+                handleStatusBarClick(static_cast<int>(pNMMouse->dwItemSpec));
+            }
+            // Output panel tab switch (Output / Errors / Debug / Find Results)
+            if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs) {
+                int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
+                static const char* outputTabKeys[] = { "Output", "Errors", "Debug", "Find Results" };
+                if (idx >= 0 && idx < 4) {
+                    m_activeOutputTab = outputTabKeys[idx];
+                    m_selectedOutputTab = idx;
+                    for (auto& kv : m_outputWindows) {
+                        ShowWindow(kv.second, (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                    }
+                }
+            }
+            // Output panel tab switch (Output / Errors / Debug / Find Results / Problems)
+            if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndOutputTabs) {
+                int idx = (int)TabCtrl_GetCurSel(m_hwndOutputTabs);
+                static const char* outputTabKeys[] = { "Output", "Errors", "Debug", "Find Results", "Problems" };
+                if (idx >= 0 && idx < 5) {
+                    m_activeOutputTab = outputTabKeys[idx];
+                    m_selectedOutputTab = idx;
+                    for (auto& kv : m_outputWindows) {
+                        ShowWindow(kv.second, (kv.first == m_activeOutputTab && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                    }
+                    if (m_hwndProblemsListView) {
+                        ShowWindow(m_hwndProblemsListView, (idx == 4 && m_outputPanelVisible) ? SW_SHOW : SW_HIDE);
+                    }
+                }
+            }
+            // Problems ListView double-click → goToProblem
+            if (pNMHDR->hwndFrom == m_hwndProblemsListView &&
+                (pNMHDR->code == NM_DBLCLK || pNMHDR->code == LVN_ITEMACTIVATE)) {
+                int idx = (int)ListView_GetNextItem(m_hwndProblemsListView, -1, LVNI_SELECTED);
+                if (idx >= 0) goToProblem(idx);
             }
             // Handle tab bar selection change
             if (pNMHDR->code == TCN_SELCHANGE && pNMHDR->hwndFrom == m_hwndTabBar) {
@@ -504,6 +558,16 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             }
             return 0;
         }
+        // RE: set binary from build output (Game Engine or other build that posted path)
+        if (uMsg == WM_APP + 202) {
+            std::string* path = reinterpret_cast<std::string*>(lParam);
+            if (path && !path->empty()) {
+                setCurrentBinaryForReverseEngineering(*path);
+                appendToOutput("[RE] Binary set from build output: " + *path + "\n", "Output", OutputSeverity::Info);
+                delete path;
+            }
+            return 0;
+        }
         // Handle custom agent output message
         if (uMsg == WM_AGENT_OUTPUT_SAFE) {
             const char* text = reinterpret_cast<const char*>(lParam);
@@ -601,6 +665,20 @@ bool Win32IDE::createWindow() {
         m_useStreamingLoader = config.getBool("performance.streamingGGUFLoad", true);
         m_useVulkanRenderer = config.getBool("performance.vulkanRenderer", false);
 
+        // Sync agentic autonomous config (1–99x limits, QualitySpeedBalance, operation/model mode)
+        {
+            auto& aac = RawrXD::AgenticAutonomousConfig::instance();
+            aac.setPerModelInstanceCount(config.getInt("agent.perModelInstances", 1));
+            aac.setCycleAgentCounter(config.getInt("agent.cycleAgentCounter", 1));
+            aac.setQualitySpeedBalanceFromString(config.getString("agent.qualitySpeedBalance", "Auto"));
+            aac.setOperationModeFromString(config.getString("agent.operationMode", "Agent"));
+            aac.setModelSelectionModeFromString(config.getString("agent.modelSelectionMode", "Auto"));
+            int maxParallel = config.getInt("agent.maxModelsInParallel", 99);
+            aac.setMaxModelsInParallel(maxParallel > 0 ? maxParallel : 99);
+            std::string agenticJson = config.getString("agentic.configJson", "");
+            if (!agenticJson.empty()) aac.fromJson(agenticJson);
+        }
+
         LOG_INFO("Configuration loaded — " + std::to_string(config.getAllKeys().size()) + " keys");
         METRICS.increment("config.loads_total");
     }
@@ -629,20 +707,35 @@ bool Win32IDE::createWindow() {
         }
     }
 
-    // Create the main window
+    // Create the main window at explicit position so it is never off-screen (e.g. disconnected monitor)
+    // WS_VISIBLE so window is visible from creation; SW_SHOWNORMAL when showing.
+    int winW = 1600, winH = 1000;
+    int winX = 50, winY = 50;
     m_hwndMain = CreateWindowExA(
         WS_EX_APPWINDOW,
         kWindowClassName,
         "RawrXD IDE - Native Win32 AI Development Environment",
-        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        1600, 1000,
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_VISIBLE,
+        winX, winY, winW, winH,
         nullptr, nullptr, m_hInstance, this);
 
     if (!m_hwndMain) {
         LOG_ERROR("Failed to create main window");
         return false;
     }
+
+    // Show immediately, normal (not minimized), and on top
+    ShowWindow(m_hwndMain, SW_SHOWNORMAL);
+    UpdateWindow(m_hwndMain);
+    SetWindowPos(m_hwndMain, HWND_TOP, winX, winY, winW, winH, SWP_SHOWWINDOW);
+    SetForegroundWindow(m_hwndMain);
+    BringWindowToTop(m_hwndMain);
+
+    // Register GUI output callback so unified-command handler output goes to IDE output panel
+    setIdeAppendOutput([](void* ide, const char* text) {
+        if (ide && text)
+            static_cast<Win32IDE*>(ide)->appendToOutput(std::string(text), "Output", OutputSeverity::Info);
+    });
 
     LOG_INFO("Main window created successfully");
     return true;
@@ -653,8 +746,15 @@ bool Win32IDE::createWindow() {
 // ============================================================================
 void Win32IDE::showWindow() {
     if (m_hwndMain) {
-        ShowWindow(m_hwndMain, SW_SHOW);
+        ShowWindow(m_hwndMain, SW_RESTORE);   // restore if minimized
+        ShowWindow(m_hwndMain, SW_SHOWNORMAL);
         UpdateWindow(m_hwndMain);
+        BringWindowToTop(m_hwndMain);
+        SetForegroundWindow(m_hwndMain);
+        SetActiveWindow(m_hwndMain);
+        // Flash taskbar button so user sees the window if it was behind others
+        FLASHWINFO fwi = { sizeof(FLASHWINFO), m_hwndMain, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0 };
+        FlashWindowEx(&fwi);
     }
 }
 
@@ -675,6 +775,7 @@ int Win32IDE::runMessageLoop() {
         if (msg.message == WM_KEYDOWN) {
             bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
             bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+            bool alt = (GetKeyState(VK_MENU) & 0x8000) != 0;
 
             if (ctrl && shift && msg.wParam == 'P') {
                 if (m_commandPaletteVisible) {
@@ -684,22 +785,32 @@ int Win32IDE::runMessageLoop() {
                 }
                 continue;
             }
-            if (ctrl && msg.wParam == 'N') { routeCommandUnified(IDM_FILE_NEW, this); continue; }
-            if (ctrl && msg.wParam == 'O') { routeCommandUnified(IDM_FILE_OPEN, this); continue; }
+            if (ctrl && msg.wParam == 'N') { routeCommandUnified(IDM_FILE_NEW, this, m_hwndMain); continue; }
+            if (ctrl && msg.wParam == 'O') { routeCommandUnified(IDM_FILE_OPEN, this, m_hwndMain); continue; }
             if (ctrl && msg.wParam == 'S') {
-                if (shift) routeCommandUnified(IDM_FILE_SAVEAS, this);
-                else routeCommandUnified(IDM_FILE_SAVE, this);
+                if (shift) routeCommandUnified(IDM_FILE_SAVEAS, this, m_hwndMain);
+                else routeCommandUnified(IDM_FILE_SAVE, this, m_hwndMain);
                 continue;
             }
-            if (ctrl && msg.wParam == 'F') { routeCommandUnified(IDM_EDIT_FIND, this); continue; }
-            if (ctrl && msg.wParam == 'H') { routeCommandUnified(IDM_EDIT_REPLACE, this); continue; }
+            // Ctrl+Shift+L → License Creator, Ctrl+Shift+F → Feature Registry (before plain Ctrl+F)
+            if (ctrl && shift && msg.wParam == 'L') { routeCommand(3015); continue; }
+            if (ctrl && shift && msg.wParam == 'F') { routeCommand(3016); continue; }
+            if (ctrl && msg.wParam == 'F') { routeCommandUnified(IDM_EDIT_FIND, this, m_hwndMain); continue; }
+            if (ctrl && msg.wParam == 'H') { routeCommandUnified(IDM_EDIT_REPLACE, this, m_hwndMain); continue; }
             if (ctrl && msg.wParam == 'B') { toggleSidebar(); continue; }
+            if (ctrl && alt && msg.wParam == 'B') { toggleSecondarySidebar(); continue; }
+            // Ctrl+Shift+E → File Explorer (show sidebar with Explorer view)
+            if (ctrl && shift && msg.wParam == 'E') { routeCommand(IDM_VIEW_FILE_EXPLORER); continue; }
+            // Ctrl+Shift+X → Extensions view
+            if (ctrl && shift && msg.wParam == 'X') { routeCommand(2031); continue; }
+            // Ctrl+Shift+C → AI Chat panel toggle
+            if (ctrl && shift && msg.wParam == 'C') { toggleSecondarySidebar(); continue; }
             // Ctrl+Shift+A → Audit Dashboard
-            if (ctrl && shift && msg.wParam == 'A') { routeCommandUnified(IDM_AUDIT_SHOW_DASHBOARD, this); continue; }
+            if (ctrl && shift && msg.wParam == 'A') { routeCommandUnified(IDM_AUDIT_SHOW_DASHBOARD, this, m_hwndMain); continue; }
             // Ctrl+Shift+I → Bounded Agent Loop (tool-calling autonomous agent)
-            if (ctrl && shift && msg.wParam == 'I') { routeCommandUnified(IDM_AGENT_BOUNDED_LOOP, this); continue; }
-            // Ctrl+, → Settings dialog
-            if (ctrl && msg.wParam == VK_OEM_COMMA) { showSettingsDialog(); continue; }
+            if (ctrl && shift && msg.wParam == 'I') { routeCommandUnified(IDM_AGENT_BOUNDED_LOOP, this, m_hwndMain); continue; }
+            // Ctrl+, → Settings (full GUI)
+            if (ctrl && msg.wParam == VK_OEM_COMMA) { this->showSettingsGUIDialog(); continue; }
             // Ctrl+= / Ctrl+- → UI Zoom In/Out, Ctrl+0 → Reset zoom
             if (ctrl && (msg.wParam == VK_OEM_PLUS || msg.wParam == 0xBB)) {
                 // Zoom in: increase scale by 10%
@@ -852,6 +963,11 @@ void Win32IDE::onSize(int width, int height) {
         int editorW = editorWidth - gutterWidth - minimapW;
         MoveWindow(m_hwndEditor, editorX, breadcrumbBottom, editorW, editorContentHeight, TRUE);
 
+        // Annotation overlay (same rect as editor, draws inline annotations on top)
+        if (m_hwndAnnotationOverlay && IsWindow(m_hwndAnnotationOverlay)) {
+            SetWindowPos(m_hwndAnnotationOverlay, HWND_TOP, editorX, breadcrumbBottom, editorW, editorContentHeight, SWP_NOACTIVATE);
+        }
+
         // Minimap
         if (m_hwndMinimap && m_minimapVisible) {
             MoveWindow(m_hwndMinimap, editorRight - minimapW, breadcrumbBottom, minimapW, editorContentHeight, TRUE);
@@ -865,6 +981,21 @@ void Win32IDE::onSize(int width, int height) {
         if (m_hwndOutputTabs) {
             MoveWindow(m_hwndOutputTabs, editorLeft, panelTop, editorWidth, panelHeight, TRUE);
         }
+        int termTop = contentTop + editorAreaHeight;
+        int tabBarH = 24;
+        int termHeight = panelHeight;
+        // Output tab windows (Output, Errors, Debug, Find Results)
+        for (auto& kv : m_outputWindows) {
+            if (kv.second) {
+                MoveWindow(kv.second, editorLeft, termTop + tabBarH,
+                           editorWidth, termHeight - tabBarH, TRUE);
+            }
+        }
+        // Problems ListView (5th tab) — same region
+        if (m_hwndProblemsListView) {
+            MoveWindow(m_hwndProblemsListView, editorLeft, termTop + tabBarH,
+                       editorWidth, termHeight - tabBarH, TRUE);
+        }
         panelTop += panelHeight;
     }
 
@@ -872,17 +1003,9 @@ void Win32IDE::onSize(int width, int height) {
     if (!m_terminalPanes.empty() && panelHeight > 0) {
         int termTop = contentTop + editorAreaHeight;
         int termHeight = panelHeight;
-        // If output tabs are visible, terminal panes share the same region
-        // Place them below the tab control bar (24px)
         int tabBarH = 24;
         if (m_hwndOutputTabs) {
-            // Output tab windows (General, Errors, Debug, Find Results)
-            for (auto& kv : m_outputWindows) {
-                if (kv.second) {
-                    MoveWindow(kv.second, editorLeft, termTop + tabBarH,
-                               editorWidth, termHeight - tabBarH, TRUE);
-                }
-            }
+            // Windows already positioned above; no-op for positioning
         }
     }
 
@@ -944,6 +1067,22 @@ void Win32IDE::initializeEditorSurface() {
 }
 
 // ============================================================================
+// getResolvedOllamaModel - Returns Ollama model tag (override, loaded path, or default)
+// ============================================================================
+std::string Win32IDE::getResolvedOllamaModel() const {
+    if (!m_ollamaModelOverride.empty()) return m_ollamaModelOverride;
+    if (!m_loadedModelPath.empty()) {
+        std::string filename = m_loadedModelPath;
+        size_t pos = filename.find_last_of("/\\");
+        if (pos != std::string::npos) filename = filename.substr(pos + 1);
+        size_t extPos = filename.rfind(".gguf");
+        if (extPos != std::string::npos) filename = filename.substr(0, extPos);
+        return filename;
+    }
+    return "llama3.2:latest";
+}
+
+// ============================================================================
 // trySendToOllama - Attempt to send a prompt to Ollama and get a response
 // ============================================================================
 bool Win32IDE::trySendToOllama(const std::string& prompt, std::string& outResponse) {
@@ -954,21 +1093,7 @@ bool Win32IDE::trySendToOllama(const std::string& prompt, std::string& outRespon
             return false;
         }
 
-        std::string modelTag = m_ollamaModelOverride;
-        if (modelTag.empty()) {
-            // Use the currently loaded model's filename as tag
-            if (!m_loadedModelPath.empty()) {
-                std::string filename = m_loadedModelPath;
-                auto pos = filename.find_last_of("/\\");
-                if (pos != std::string::npos) filename = filename.substr(pos + 1);
-                // Strip .gguf extension
-                auto extPos = filename.rfind(".gguf");
-                if (extPos != std::string::npos) filename = filename.substr(0, extPos);
-                modelTag = filename;
-            } else {
-                modelTag = "llama3.2:latest";
-            }
-        }
+        std::string modelTag = getResolvedOllamaModel();
 
         // Synchronous send for simplicity — uses sendPrompt internally
         bool gotResponse = false;
@@ -1048,20 +1173,25 @@ void Win32IDE::onCreate(HWND hwnd) {
     OutputDebugStringA("[onCreate] createBreadcrumbBar...\n");
     createBreadcrumbBar(hwnd);  // ESP:IDC_BREADCRUMB_BAR — symbol path bar
     OutputDebugStringA("[onCreate] createLineNumberGutter...\n");
+    createLineNumberGutter(hwnd);
     OutputDebugStringA("[onCreate] createEditor...\n");
     createEditor(hwnd);
+    createAnnotationOverlay(hwnd);
     OutputDebugStringA("[onCreate] createTerminal...\n");
     createTerminal(hwnd);
-    OutputDebugStringA("[onCreate] createStatusBar...\n");
-    createStatusBar(hwnd);
+    OutputDebugStringA("[onCreate] createEnhancedStatusBar...\n");
+    createEnhancedStatusBar(hwnd);
 
     OutputDebugStringA("[onCreate] createOutputTabs...\n");
     createOutputTabs();
     OutputDebugStringA("[onCreate] createPowerShellPanel...\n");
     createPowerShellPanel();
+    OutputDebugStringA("[onCreate] createChatPanel...\n");
+    createChatPanel();
 
     if (m_hwndMain) {
         SetPropA(m_hwndMain, "RawrXD.IDE.Label", (HANDLE)RAWRXD_IDE_LABEL_MAIN_WINDOW);
+        if (m_interpretabilityPanel) m_interpretabilityPanel->setParent(m_hwndMain);
     }
 
     LOG_INFO("onCreate complete — all panels created");
@@ -1095,13 +1225,9 @@ void Win32IDE::onCreate(HWND hwnd) {
     m_backgroundBrush = CreateSolidBrush(RGB(30, 30, 30));
     applyTheme();
 
-    // Update status bar with initial state
+    // Update status bar with initial state (12-part enhanced bar: Line/Col, Encoding, Language, etc.)
     if (m_hwndStatusBar) {
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Ln 1, Col 1");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)"UTF-8");
-
-        // Initialize context window display (Part 3)
+        updateEnhancedStatusBar();
         m_contextUsage.maxTokens = m_settings.aiContextWindow;
         updateContextWindowDisplay();
     }
@@ -1137,11 +1263,45 @@ void bgInitBody(void* self) {
 }
 
 void Win32IDE::deferredHeavyInitBody() {
-        // Initialize logger
+        // Initialize logger under %APPDATA%\RawrXD\ide.log (fallback: RawrXD_IDE.log in cwd)
         try {
-            IDELogger::getInstance().initialize("C:\\RawrXD_IDE.log");
+            std::string logPath = "RawrXD_IDE.log";
+            char appData[MAX_PATH] = {};
+            if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+                std::string dir = std::string(appData) + "\\RawrXD";
+                CreateDirectoryA(dir.c_str(), nullptr);
+                logPath = dir + "\\ide.log";
+            }
+            IDELogger::getInstance().initialize(logPath);
         } catch (...) {
             OutputDebugStringA("ERROR: Logger init failed\n");
+        }
+        if (isShuttingDown()) return;
+
+        // ================================================================
+        // Enterprise License System — initialize FIRST (gates engine registration)
+        // ================================================================
+        try {
+            auto& license = RawrXD::EnterpriseLicense::Instance();
+            license.Initialize();
+
+            auto& featureMgr = EnterpriseFeatureManager::Instance();
+            featureMgr.Initialize();
+
+            // V2 license system (61-feature manifest) + runtime enforcement
+            auto& licV2 = RawrXD::License::EnterpriseLicenseV2::Instance();
+            licV2.initialize();
+            RawrXD::Flags::FeatureFlagsRuntime::Instance().refreshFromLicense();
+            RawrXD::Enforce::LicenseEnforcer::Instance().initialize();
+
+            OutputDebugStringA("[deferredHeavyInit] Enterprise license initialized\n");
+
+            // Update status bar with license tier badge
+            std::string tierBadge = std::string("[") + license.GetEditionName() + "]";
+            PostMessage(m_hwndMain, WM_USER + 200, 0,
+                reinterpret_cast<LPARAM>(_strdup(tierBadge.c_str())));
+        } catch (...) {
+            OutputDebugStringA("ERROR: Enterprise license init failed\n");
         }
         if (isShuttingDown()) return;
 
@@ -1211,6 +1371,19 @@ void Win32IDE::deferredHeavyInitBody() {
             OutputDebugStringA("ERROR: initializeAgenticBridge failed\n");
         }
 
+        // Initialize AI/Extensions panels so menu -> show() creates real UI
+        if (isShuttingDown()) return;
+        try {
+            if (m_modelRegistry) m_modelRegistry->initialize();
+            if (m_interpretabilityPanel) m_interpretabilityPanel->initialize();
+            if (m_benchmarkMenu && m_hwndMain) {
+                m_benchmarkMenu->setMainWindow(m_hwndMain);
+                m_benchmarkMenu->initialize();
+            }
+        } catch (...) {
+            OutputDebugStringA("ERROR: AI panels init failed\n");
+        }
+
         // Initialize Ghost Text renderer (Copilot-style inline completions)
         try {
             initGhostText();
@@ -1223,6 +1396,13 @@ void Win32IDE::deferredHeavyInitBody() {
             initFailureDetector();
         } catch (...) {
             OutputDebugStringA("ERROR: initFailureDetector failed\n");
+        }
+
+        // Initialize Agent Diff Panel (Win32IDE_AgentPanel.cpp)
+        try {
+            initAgentPanel();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initAgentPanel failed\n");
         }
 
         // Load persistent settings from %APPDATA%\RawrXD\settings.json
@@ -1284,6 +1464,23 @@ void Win32IDE::deferredHeavyInitBody() {
             initPhase10();
         } catch (...) {
             OutputDebugStringA("ERROR: initPhase10 failed\n");
+        }
+
+        // Initialize MultiResponse, LSP Server, Hotpatch UI (lazy-ready)
+        try {
+            initMultiResponse();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initMultiResponse failed\n");
+        }
+        try {
+            initLSPServer();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initLSPServer failed\n");
+        }
+        try {
+            initHotpatchUI();
+        } catch (...) {
+            OutputDebugStringA("ERROR: initHotpatchUI failed\n");
         }
 
         // Initialize Phase 11: Distributed Swarm Compilation
@@ -1666,18 +1863,122 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
         cancelModelOperation();
         return;
     }
-    
+    // Copilot secondary sidebar control IDs (created in createSecondarySidebar)
+    if (id == 1204) { HandleCopilotSend(); return; }
+    if (id == 1205) { HandleCopilotClear(); return; }
+    if (id == 1206) { setAgenticMode(RawrXD::AgenticMode::Plan);  return; }
+    if (id == 1207) { setAgenticMode(RawrXD::AgenticMode::Agent); return; }
+    if (id == 1208) { setAgenticMode(RawrXD::AgenticMode::Ask);   return; }
+
+    // Agent diff panel buttons (created in initAgentPanel)
+    if (id == 14003) { agentAcceptAll(); refreshAgentDiffDisplay(); return; }
+    if (id == 14004) { agentRejectAll(); refreshAgentDiffDisplay(); return; }
+    if (id == 14005) { onBoundedAgentLoop(); return; }
+
+    // Audit commands (9500-9506) — handle directly; SSOT handlers PostMessage to us, avoid loop
+    if (id >= 9500 && id < 9600) { handleAuditCommand(id); return; }
+
+    // ── GUI-ONLY FILE / MODEL / VIEW TOGGLES — Win32 menu IDs that must run IDE actions (dialogs, loading, toggles). All other commands go through unified dispatch (Agent, Autonomy, Backend, LSP, Hotpatch, etc.).
+    switch (id) {
+        case 2001: newFile(); if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"New file created"); return;
+        case 2002: openFile(); return;
+        case 2003: if (saveFile() && m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File saved"); return;
+        case 2004: if (saveFileAs() && m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File saved as new name"); return;
+        case 2005: if (!m_fileModified || promptSaveChanges()) PostQuitMessage(0); return;
+        case 1030: openModel(); return;
+        case 1031: openModelFromHuggingFace(); return;
+        case 1032: openModelFromOllama(); return;
+        case 1033: openModelFromURL(); return;
+        case 1034: openModelUnified(); return;
+        case 1035: quickLoadGGUFModel(); return;
+        case 2007: // Edit > Undo (Win32 menu ID)
+            if (m_hwndEditor) SendMessage(m_hwndEditor, EM_UNDO, 0, 0);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Undo");
+            return;
+        case 2008: // Edit > Redo
+            if (m_hwndEditor) SendMessage(m_hwndEditor, EM_REDO, 0, 0);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Redo");
+            return;
+        case 2009: // Edit > Cut
+            if (m_hwndEditor) { SendMessage(m_hwndEditor, WM_CUT, 0, 0); m_fileModified = true; }
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Cut");
+            return;
+        case 2010: // Edit > Copy
+            if (m_hwndEditor) SendMessage(m_hwndEditor, WM_COPY, 0, 0);
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Copied");
+            return;
+        case 2011: // Edit > Paste
+            if (m_hwndEditor) { SendMessage(m_hwndEditor, WM_PASTE, 0, 0); m_fileModified = true; }
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Pasted");
+            return;
+        case 2026: // View > Use Streaming Loader — toggle so model loading uses low-memory path
+            m_useStreamingLoader = !m_useStreamingLoader;
+            if (m_hMenu) CheckMenuItem(m_hMenu, 2026, MF_BYCOMMAND | (m_useStreamingLoader ? MF_CHECKED : MF_UNCHECKED));
+            appendToOutput(std::string("Streaming loader ") + (m_useStreamingLoader ? "ON" : "OFF") + "\n", "Output", OutputSeverity::Info);
+            return;
+        case 2027: // View > Vulkan Renderer
+            m_useVulkanRenderer = !m_useVulkanRenderer;
+            if (m_hMenu) CheckMenuItem(m_hMenu, 2027, MF_BYCOMMAND | (m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED));
+            appendToOutput(std::string("Vulkan renderer ") + (m_useVulkanRenderer ? "ON" : "OFF") + "\n", "Output", OutputSeverity::Info);
+            return;
+        case 502:   // Tools > Settings (IDM_TOOLS_SETTINGS)
+        case 1024:  // Title bar gear (IDC_BTN_SETTINGS)
+        case 1106:  // Activity bar Settings (IDC_ACTBAR_SETTINGS)
+            showSettingsGUIDialog();
+            return;
+        case 1022:  // Title bar GH button — toggle AI Chat panel (secondary sidebar)
+            toggleSecondarySidebar();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? "AI Chat shown" : "AI Chat hidden"));
+            return;
+        case 3007:  // View > AI Chat — toggle secondary sidebar (Ctrl+Alt+B)
+        case 3009:  // View > Agent Chat (autonomous)
+            toggleSecondarySidebar();
+            if (m_hwndStatusBar) SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)(m_secondarySidebarVisible ? "Chat panel shown" : "Chat panel hidden"));
+            return;
+        case IDM_VIEW_AGENT_PANEL:
+            toggleAgentPanel();
+            return;
+        case IDM_SECURITY_SCAN_SECRETS:
+            RunSecretsScan();
+            return;
+        case IDM_SECURITY_SCAN_SAST:
+            RunSastScan();
+            return;
+        case IDM_SECURITY_SCAN_DEPENDENCIES:
+            RunDependencyAudit();
+            return;
+        case IDM_BUILD_SOLUTION:
+            runBuildInBackground(m_gitRepoPath, "");
+            return;
+        case IDM_BUILD_PROJECT:
+            runBuildInBackground(m_gitRepoPath, "--target RawrXD-Win32IDE");
+            return;
+        case IDM_BUILD_CLEAN:
+            runBuildInBackground(m_gitRepoPath, "--target clean");
+            return;
+        default: break;
+    }
+
+    // ── LEGACY FALLBACK — View/Tier1/Git/Monaco commands that delegateToGui would loop on
+    // routeCommand invokes handleViewCommand, handleTier1Command, etc. directly instead of
+    // going through SSOT handlers that PostMessage same ID → infinite re-entry.
+    if (routeCommand(id)) {
+        return;
+    }
+
     // ── UNIFIED DISPATCH — The ONE AND ONLY command path ────────────────
     // All commands live in COMMAND_TABLE (command_registry.hpp).
-    // No legacy fallback. No dual routing. Drift is structurally impossible.
     // If routeCommandUnified returns false, the command does NOT EXIST.
-    if (routeCommandUnified(id, this)) {
+    if (routeCommandUnified(id, this, hwnd)) {
         return; // Dispatched via g_commandRegistry[] — identical path to CLI
     }
 
-    // Command not found in SSOT registry.
-    // This is NOT an error path for "legacy commands" — those are gone.
-    // This only fires for truly unknown IDs (e.g. system-generated WM_COMMAND).
+    // Command not found — direct user so they know the command wasn't handled
+    if (m_hwndStatusBar && IsWindow(m_hwndStatusBar)) {
+        char buf[96];
+        snprintf(buf, sizeof(buf), "Unknown command (id %d) — not in registry", id);
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)buf);
+    }
 #ifdef _DEBUG
     {
         char dbgBuf[128];

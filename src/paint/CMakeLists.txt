@@ -6,7 +6,7 @@ target_include_directories(image_generator INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/image_generator
 )
 
-# Paint Application (Qt-based)
+# Paint Application (Win32 GDI+/D2D)
 set(PAINT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/paint_app.cpp
 )

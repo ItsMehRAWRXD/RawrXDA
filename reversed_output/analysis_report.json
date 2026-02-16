@@ -1,0 +1,32 @@
+{
+  "Analysis": {
+    "Path": "C:\\Windows\\System32\\cmd.exe",
+    "Hash": "64AFC6DB3AAD1289533662E2D79E27DD55C7DCDB8CD918B08E145AD82AD5ACB4",
+    "Timestamp": "1601-01-01T00:01:19.7523203Z",
+    "Sections": 8,
+    "Machine": "x64 (AMD64)",
+    "IsExecutable": true,
+    "EntryPoint": "0x00027C70",
+    "ImageBase": "0x140000000",
+    "Size": 339968,
+    "Format": "PE32+",
+    "IsDLL": false
+  },
+  "Target": "C:\\Windows\\System32\\cmd.exe",
+  "AntiDebug": {
+    "Techniques": [],
+    "Score": 0
+  },
+  "Compiler": {
+    "Confidence": 0,
+    "Name": "Unknown",
+    "Evidence": [],
+    "Version": "Unknown"
+  },
+  "Patterns": {
+    "PrologueCount": 1256,
+    "EpilogueCount": 2329,
+    "StringCount": 100
+  },
+  "Timestamp": "2026-02-16 01:02:25"
+}

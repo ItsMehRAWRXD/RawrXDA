@@ -1,12 +1,42 @@
-{
-  "TestPlugin": {
-    "Enabled": true,
-    "Path": "d:\\lazy init ide\\craft_room\\TestPlugin.psm1",
-    "InstalledPath": "D:\\lazy init ide\\scripts\\modules\\TestPlugin.psm1",
-    "Created": "2026-01-26 06:22:41",
-    "Type": "Custom",
-    "LastEnabled": "2026-01-26 06:22:41",
-    "Parameters": {},
-    "Installed": true
-  }
+﻿{
+    "TestPlugin":  {
+                       "Enabled":  true,
+                       "Path":  "d:\\lazy init ide\\craft_room\\TestPlugin.psm1",
+                       "InstalledPath":  "D:\\lazy init ide\\scripts\\modules\\TestPlugin.psm1",
+                       "Created":  "2026-01-26 06:22:41",
+                       "Type":  "Custom",
+                       "LastEnabled":  "2026-01-26 06:22:41",
+                       "Parameters":  {
+
+                                      },
+                       "Installed":  true
+                   },
+    "amazonwebservices.amazon-q-vscode":  {
+                                              "Enabled":  true,
+                                              "Path":  "C:\\Users\\HiH8e\\AppData\\Roaming\\RawrXD\\extensions\\amazonwebservices.amazon-q-vscode",
+                                              "InstalledPath":  "C:\\Users\\HiH8e\\AppData\\Roaming\\RawrXD\\extensions\\amazonwebservices.amazon-q-vscode",
+                                              "Created":  "2026-02-14 21:40:19",
+                                              "Type":  "VSCodeExtension",
+                                              "LastEnabled":  "2026-02-14 21:40:19",
+                                              "Publisher":  "amazonwebservices",
+                                              "ExtensionName":  "amazon-q-vscode",
+                                              "DisplayName":  "Amazon Q",
+                                              "Version":  "1.109.0",
+                                              "Installed":  true,
+                                              "Source":  "marketplace"
+                                          },
+    "GitHub.copilot":  {
+                           "Enabled":  true,
+                           "Path":  "C:\\Users\\HiH8e\\AppData\\Roaming\\RawrXD\\extensions\\GitHub.copilot",
+                           "InstalledPath":  "C:\\Users\\HiH8e\\AppData\\Roaming\\RawrXD\\extensions\\GitHub.copilot",
+                           "Created":  "2026-02-14 21:40:46",
+                           "Type":  "VSCodeExtension",
+                           "LastEnabled":  "2026-02-14 21:40:46",
+                           "Publisher":  "GitHub",
+                           "ExtensionName":  "copilot",
+                           "DisplayName":  "GitHub Copilot",
+                           "Version":  "1.388.0",
+                           "Installed":  true,
+                           "Source":  "marketplace"
+                       }
 }

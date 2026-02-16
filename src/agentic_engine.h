@@ -63,8 +63,13 @@ public:
     // Agent tool capabilities
     std::string grepFiles(const std::string& pattern, const std::string& path = ".");
     std::string readFile(const std::string& filepath, int startLine = -1, int endLine = -1);
+    std::string writeFile(const std::string& filepath, const std::string& content);
+    std::string listDir(const std::string& path);
     std::string searchFiles(const std::string& query, const std::string& path = ".");
     std::string referenceSymbol(const std::string& symbol);
+    
+    // Command Execution
+    std::string executeCommand(const std::string& command, bool isPowerShell = false);
     
     // RE Suite Integration
     std::string runDumpbin(const std::string& filePath, const std::string& mode);
@@ -75,8 +80,16 @@ public:
     void setInferenceEngine(RawrXD::InferenceEngine* engine) { m_inferenceEngine = engine; }
     RawrXD::InferenceEngine* inferenceEngine() const { return m_inferenceEngine; }
 
+    /// Headless/CLI: inject a chat provider (e.g. Ollama via routeInferenceRequest).
+    /// When set, chat() uses this instead of NativeAgent. Enables full agentic parity
+    /// in headless mode without requiring CPUInferenceEngine.
+    void setChatProvider(std::function<std::string(const std::string&)> fn) { m_chatProvider = std::move(fn); }
+    void clearChatProvider() { m_chatProvider = nullptr; }
 
-    bool isModelLoaded() const { return m_inferenceEngine && m_inferenceEngine->IsModelLoaded(); }
+    bool isModelLoaded() const {
+        if (m_chatProvider) return true;
+        return m_inferenceEngine && m_inferenceEngine->IsModelLoaded();
+    }
     std::string currentModelPath() const { return m_currentModelPath; }
     
     // Configuration
@@ -106,7 +119,6 @@ public:
 private:
     std::string m_currentModelPath;
     RawrXD::InferenceEngine* m_inferenceEngine = nullptr;
-
-
+    std::function<std::string(const std::string&)> m_chatProvider;
     GenerationConfig m_config;
 };

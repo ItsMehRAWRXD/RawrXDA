@@ -899,7 +899,9 @@ const os = {
     
     endianness() { return 'LE'; },
     
-    networkInterfaces() { return {}; },
+    networkInterfaces() {
+        return { Loopback: [{ address: '127.0.0.1', netmask: '255.0.0.0', family: 'IPv4', mac: '00:00:00:00:00:00', internal: true }] };
+    },
     
     userInfo() {
         return {
@@ -1702,13 +1704,50 @@ const electron = {
 
     // Dialog module
     dialog: {
-        showOpenDialog(options) { return Promise.resolve({ canceled: true, filePaths: [] }); },
-        showSaveDialog(options) { return Promise.resolve({ canceled: true, filePath: undefined }); },
-        showMessageBox(options) { return Promise.resolve({ response: 0, checkboxChecked: false }); },
-        showErrorBox(title, content) { console.error('[Electron Dialog]', title, content); },
-        showOpenDialogSync() { return []; },
-        showSaveDialogSync() { return undefined; },
-        showMessageBoxSync() { return 0; },
+        showOpenDialog(options) { 
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showOpenDialog) {
+                return globalThis.__rawrxd_native.dialog_showOpenDialog(options);
+            }
+            return Promise.resolve({ canceled: true, filePaths: [] }); 
+        },
+        showSaveDialog(options) { 
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showSaveDialog) {
+                return globalThis.__rawrxd_native.dialog_showSaveDialog(options);
+            }
+            return Promise.resolve({ canceled: true, filePath: undefined }); 
+        },
+        showMessageBox(options) { 
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showMessageBox) {
+                return globalThis.__rawrxd_native.dialog_showMessageBox(options);
+            }
+            return Promise.resolve({ response: 0, checkboxChecked: false }); 
+        },
+        showErrorBox(title, content) { 
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showErrorBox) {
+                 globalThis.__rawrxd_native.dialog_showErrorBox(title, content);
+            } else {
+                 console.error('[Electron Dialog]', title, content); 
+            }
+        },
+        showOpenDialogSync(options) { 
+            // Blocking call via synchronous native method
+             if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showOpenDialogSync) {
+                return globalThis.__rawrxd_native.dialog_showOpenDialogSync(options);
+            }
+            return []; 
+        },
+        showSaveDialogSync(options) { 
+             if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showSaveDialogSync) {
+                return globalThis.__rawrxd_native.dialog_showSaveDialogSync(options);
+            }
+            return undefined; 
+        },
+        showMessageBoxSync(options) { 
+             if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.dialog_showMessageBoxSync) {
+                return globalThis.__rawrxd_native.dialog_showMessageBoxSync(options);
+            }
+            return 0; 
+        },
     },
 
     // Shell module
@@ -1726,8 +1765,17 @@ const electron = {
 
     // Clipboard
     clipboard: {
-        readText() { return ''; },
-        writeText(text) {},
+        readText() { 
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.clipboard_readText) {
+                return globalThis.__rawrxd_native.clipboard_readText();
+            }
+            return ''; 
+        },
+        writeText(text) { 
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.clipboard_writeText) {
+                globalThis.__rawrxd_native.clipboard_writeText(text);
+            }
+        },
         readHTML() { return ''; },
         writeHTML(html) {},
     },
@@ -1736,8 +1784,16 @@ const electron = {
     Menu: class Menu {
         constructor() { this.items = []; }
         append(item) { this.items.push(item); }
-        popup() {}
-        static buildFromTemplate(template) { return new Menu(); }
+        popup() {
+            if (globalThis.__rawrxd_native && globalThis.__rawrxd_native.menu_popup) {
+                globalThis.__rawrxd_native.menu_popup(this.items);
+            }
+        }
+        static buildFromTemplate(template) { 
+            const m = new Menu();
+            // Deep clone logic would be needed here for full fidelity
+            return m; 
+        }
         static setApplicationMenu(menu) {}
         static getApplicationMenu() { return null; }
     },

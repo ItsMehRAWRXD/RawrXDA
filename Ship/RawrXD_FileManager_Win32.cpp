@@ -10,6 +10,13 @@
 #include <string>
 #include <map>
 #include <algorithm>
+#include <cstring>
+
+#ifndef RAWRXD_WIN32_STATIC_BUILD
+#define RAWRXD_SHIP_EXPORT __declspec(dllexport)
+#else
+#define RAWRXD_SHIP_EXPORT
+#endif
 
 struct FileInfo {
     wchar_t fileName[MAX_PATH];
@@ -183,43 +190,139 @@ public:
 
 static RawrXDFileManager* g_fileManager = nullptr;
 
+static RawrXDFileManager* GetFileManagerSingleton() {
+    if (!g_fileManager)
+        g_fileManager = new RawrXDFileManager();
+    return g_fileManager;
+}
+
+// UTF-8 to wchar_t (for legacy C API used by file_operations_win32.h)
+static int Utf8ToWide(const char* utf8, wchar_t* wide, int wideSize) {
+    if (!utf8 || !wide || wideSize <= 0) return 0;
+    int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, wideSize);
+    return len > 0 ? len - 1 : 0;
+}
+
+static int WideToUtf8(const wchar_t* wide, char* utf8, int utf8Size) {
+    if (!wide || !utf8 || utf8Size <= 0) return 0;
+    int len = WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, utf8Size, nullptr, nullptr);
+    return len > 0 ? len - 1 : 0;
+}
+
+// Legacy C API for file_operations_win32.h (char* = UTF-8). Used when linked statically.
 extern "C" {
-    __declspec(dllexport) void* __stdcall CreateFileManager() {
+
+enum { kListFilesBufferSize = 32768 };
+
+RAWRXD_SHIP_EXPORT bool __stdcall RawrXD_ListFiles(const char* path, const char* pattern, char** buffer, uint32_t* count) {
+    if (!path || !buffer || !count) return false;
+    wchar_t wpath[MAX_PATH];
+    if (Utf8ToWide(path, wpath, MAX_PATH) < 0) return false;
+    RawrXDFileManager* m = GetFileManagerSingleton();
+    if (!m->ListFiles(wpath)) return false;
+    size_t n = m->GetFileCount();
+    if (n > 256) n = 256;
+    *count = (uint32_t)n;
+    char* out = *buffer;
+    if (!out) { *count = (uint32_t)n; return true; }
+    size_t used = 0;
+    uint32_t writtenCount = 0;
+    for (size_t i = 0; i < n && used + 260 < kListFilesBufferSize; i++) {
+        wchar_t wname[MAX_PATH];
+        uint64_t sz;
+        bool isDir;
+        if (!m->GetFileInfo(i, wname, MAX_PATH, &sz, &isDir)) break;
+        int written = WideToUtf8(wname, out + used, (int)(kListFilesBufferSize - used));
+        if (written <= 0) break;
+        used += (size_t)written + 1;
+        writtenCount++;
+    }
+    *count = writtenCount;
+    return true;
+}
+
+RAWRXD_SHIP_EXPORT bool __stdcall RawrXD_ReadFile(const char* path, char* buffer, uint32_t bufSize, uint32_t* bytesRead) {
+    if (!path || !buffer || !bytesRead) return false;
+    wchar_t wpath[MAX_PATH];
+    if (Utf8ToWide(path, wpath, MAX_PATH) < 0) return false;
+    RawrXDFileManager* m = GetFileManagerSingleton();
+    size_t read = 0;
+    bool ok = m->ReadFileContent(wpath, buffer, bufSize, read);
+    *bytesRead = (uint32_t)read;
+    return ok;
+}
+
+RAWRXD_SHIP_EXPORT bool __stdcall RawrXD_WriteFileContent(const char* path, const char* content, uint32_t contentLen) {
+    if (!path || !content) return false;
+    wchar_t wpath[MAX_PATH];
+    if (Utf8ToWide(path, wpath, MAX_PATH) < 0) return false;
+    RawrXDFileManager* m = GetFileManagerSingleton();
+    return m->WriteFileContent(wpath, content, contentLen);
+}
+
+RAWRXD_SHIP_EXPORT bool __stdcall RawrXD_FileExists(const char* path) {
+    if (!path) return false;
+    wchar_t wpath[MAX_PATH];
+    if (Utf8ToWide(path, wpath, MAX_PATH) < 0) return false;
+    RawrXDFileManager* m = GetFileManagerSingleton();
+    return m->FileExists(wpath);
+}
+
+RAWRXD_SHIP_EXPORT bool __stdcall RawrXD_DeleteFile(const char* path) {
+    if (!path) return false;
+    wchar_t wpath[MAX_PATH];
+    if (Utf8ToWide(path, wpath, MAX_PATH) < 0) return false;
+    RawrXDFileManager* m = GetFileManagerSingleton();
+    return m->DeleteFile(wpath);
+}
+
+RAWRXD_SHIP_EXPORT bool __stdcall RawrXD_CreateDirectory(const char* path) {
+    if (!path) return false;
+    wchar_t wpath[MAX_PATH];
+    if (Utf8ToWide(path, wpath, MAX_PATH) < 0) return false;
+    RawrXDFileManager* m = GetFileManagerSingleton();
+    return m->CreateDirectory(wpath);
+}
+
+} // legacy API
+
+extern "C" {
+    RAWRXD_SHIP_EXPORT void* __stdcall CreateFileManager() {
         if (!g_fileManager) {
             g_fileManager = new RawrXDFileManager();
         }
         return g_fileManager;
     }
     
-    __declspec(dllexport) void __stdcall DestroyFileManager(void* mgr) {
+    RAWRXD_SHIP_EXPORT void __stdcall DestroyFileManager(void* mgr) {
         if (mgr && mgr == g_fileManager) {
             delete g_fileManager;
             g_fileManager = nullptr;
         }
     }
     
-    __declspec(dllexport) bool __stdcall FileManager_ChangeDirectory(void* mgr, const wchar_t* path) {
+    RAWRXD_SHIP_EXPORT bool __stdcall FileManager_ChangeDirectory(void* mgr, const wchar_t* path) {
         RawrXDFileManager* m = static_cast<RawrXDFileManager*>(mgr);
         return m ? m->ChangeDirectory(path) : false;
     }
     
-    __declspec(dllexport) bool __stdcall FileManager_ListFiles(void* mgr, const wchar_t* path) {
+    RAWRXD_SHIP_EXPORT bool __stdcall FileManager_ListFiles(void* mgr, const wchar_t* path) {
         RawrXDFileManager* m = static_cast<RawrXDFileManager*>(mgr);
         return m ? m->ListFiles(path) : false;
     }
     
-    __declspec(dllexport) size_t __stdcall FileManager_GetFileCount(void* mgr) {
+    RAWRXD_SHIP_EXPORT size_t __stdcall FileManager_GetFileCount(void* mgr) {
         RawrXDFileManager* m = static_cast<RawrXDFileManager*>(mgr);
         return m ? m->GetFileCount() : 0;
     }
     
-    __declspec(dllexport) bool __stdcall FileManager_GetFileInfo(void* mgr, size_t index,
+    RAWRXD_SHIP_EXPORT bool __stdcall FileManager_GetFileInfo(void* mgr, size_t index,
         wchar_t* nameBuffer, size_t nameSize, uint64_t* fileSize, bool* isDir) {
         RawrXDFileManager* m = static_cast<RawrXDFileManager*>(mgr);
         return m ? m->GetFileInfo(index, nameBuffer, nameSize, fileSize, isDir) : false;
     }
     
-    __declspec(dllexport) bool __stdcall FileManager_ReadFile(void* mgr, const wchar_t* filePath,
+    RAWRXD_SHIP_EXPORT bool __stdcall FileManager_ReadFile(void* mgr, const wchar_t* filePath,
         char* buffer, size_t bufSize, size_t* bytesRead) {
         RawrXDFileManager* m = static_cast<RawrXDFileManager*>(mgr);
         size_t read = 0;
@@ -228,18 +331,21 @@ extern "C" {
         return result;
     }
     
-    __declspec(dllexport) bool __stdcall FileManager_WriteFile(void* mgr, const wchar_t* filePath,
+    RAWRXD_SHIP_EXPORT bool __stdcall FileManager_WriteFile(void* mgr, const wchar_t* filePath,
         const char* buffer, size_t bufSize) {
         RawrXDFileManager* m = static_cast<RawrXDFileManager*>(mgr);
         return m ? m->WriteFileContent(filePath, buffer, bufSize) : false;
     }
 }
 
+#ifndef RAWRXD_WIN32_STATIC_BUILD
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugStringW(L"RawrXD_FileManager_Win32 loaded\n");
     } else if (fdwReason == DLL_PROCESS_DETACH && g_fileManager) {
         delete g_fileManager;
+        g_fileManager = nullptr;
     }
     return TRUE;
 }
+#endif

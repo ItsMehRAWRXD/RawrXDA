@@ -29,6 +29,7 @@
 // ============================================================================
 
 #include "swarm_orchestrator.h"
+#include "../core/enterprise_license.h"
 
 #include <iostream>
 #include <sstream>
@@ -85,6 +86,11 @@ std::string SwarmOrchestrator::generateNodeId() {
 // ============================================================================
 
 SwarmResult SwarmOrchestrator::initialize(NodeRole role, const std::string& bindAddr) {
+    // Enterprise gate: DistributedSwarm (0x04) requires Enterprise license
+    if (!RawrXD::EnterpriseLicense::isFeatureEnabled(0x04)) {
+        return SwarmResult::error("Distributed Swarm requires Enterprise license (feature 0x04)");
+    }
+
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_running.load()) {

@@ -6352,45 +6352,34 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         
         $availableModels = @($modelsResponse.models | ForEach-Object { $_.name })
         
-        if ($Model -notin $availableModels) {
-            Write-DevConsole "Model '$Model' not found. Available models: $($availableModels -join ', ')" "ERROR"
-            Write-SecurityLog "Requested model not available" "WARNING" "Requested: $Model, Available: $($availableModels.Count)"
-            
-            # AI-specific error logging for model validation
-            $modelMetrics = @{
-                RequestedModel  = $Model
-                AvailableModels = $availableModels
-                AvailableCount  = $availableModels.Count
-                Endpoint        = $tagsEndpoint
-            }
-            
-            Write-ErrorLog -ErrorMessage "Requested AI model '$Model' not available on server" `
-                -ErrorCategory "AI" `
-                -Severity "MEDIUM" `
-                -SourceFunction "Send-OllamaRequest" `
-                -IsAIRelated $true `
-                -AgentContext "Model_Validation_Failed" `
-                -AIModel $Model `
-                -AIMetrics $modelMetrics
-            
-            if ($availableModels.Count -gt 0) {
-                $fallbackModel = $availableModels[0]
-                Write-DevConsole "Using fallback model: $fallbackModel" "WARNING"
+        # Enhanced validation: allow SHA names and fuzzy matching for non-standard names
+        $isShaName = ($Model -match "^[a-f0-9]{12}$") -or ($Model -match "^sha256:[a-f0-9]{64}$")
+        
+        if ($Model -notin $availableModels -and -not $isShaName) {
+            # Try to find if the model exists with a :latest tag or partial match
+            $fuzzyMatch = @($availableModels | Where-Object { $_ -eq "$Model:latest" -or $_.Split(':')[0] -eq $Model -or $_.Contains($Model) }) | Select-Object -First 1
+            if ($fuzzyMatch) {
+                Write-DevConsole "Model '$Model' not found exactly, but found valid match: '$fuzzyMatch'. Using it." "WARNING"
+                $Model = $fuzzyMatch
+            } else {
+                Write-DevConsole "Model '$Model' not found in Ollama list. (Proceeding anyway if it might be a blob...)" "WARNING"
+                Write-SecurityLog "Requested model not found in official list" "INFO" "Requested: $Model"
                 
-                # Log successful fallback
-                Write-ErrorLog -ErrorMessage "Automatically using fallback model '$fallbackModel'" `
-                    -ErrorCategory "AI" `
-                    -Severity "LOW" `
-                    -SourceFunction "Send-OllamaRequest" `
-                    -IsAIRelated $true `
-                    -AgentContext "Model_Fallback_Applied" `
-                    -AIModel $fallbackModel `
-                    -AIMetrics $modelMetrics
-                              
-                $Model = $fallbackModel
-            }
-            else {
-                return "Error: No models available. Please install a model using 'ollama pull <model>'"
+                # Check metrics and logs
+                $modelMetrics = @{
+                    RequestedModel  = $Model
+                    AvailableModels = $availableModels
+                    AvailableCount  = $availableModels.Count
+                    Endpoint        = $tagsEndpoint
+                }
+                
+                # If we have no models at all, we still need a fallback or error
+                if ($availableModels.Count -eq 0 -and -not $isShaName) {
+                    return "Error: No models available in Ollama. Please install a model using 'ollama pull <model>'"
+                }
+                
+                # If it's not a SHA and not found, we'll log it but try to proceed
+                # This fixes the "bigdaddyg" error by allowing it to flow to the backend which may resolve it via ResolveOllamaBlob
             }
         }
     }

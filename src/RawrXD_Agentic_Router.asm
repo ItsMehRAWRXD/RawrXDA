@@ -1,3 +1,5 @@
+; SCAFFOLD_090: RawrXD_Agent and tool dispatch
+
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; RawrXD_Agentic_Router.asm
 ; Semantic routing, tool selection, SIMD keyword matching

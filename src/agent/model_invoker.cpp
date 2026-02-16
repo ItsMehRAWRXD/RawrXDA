@@ -21,6 +21,9 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
+
+// SCAFFOLD_289: Model invoker
+
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 

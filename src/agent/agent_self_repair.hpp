@@ -21,7 +21,9 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #pragma once
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <tlhelp32.h>
 #include "../core/model_memory_hotpatch.hpp"

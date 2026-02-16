@@ -13,6 +13,7 @@
 #include "intel_gpu_accelerator.h"
 #include "arm64_gpu_accelerator.h"
 #include "cerebras_wse_accelerator.h"
+#include "../../include/enterprise_license.h"
 
 #include <iostream>
 #include <sstream>
@@ -83,6 +84,11 @@ AcceleratorRouter::~AcceleratorRouter() { shutdown(); }
 // ============================================================================
 
 RouterResult AcceleratorRouter::initialize() {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::MultiGPULoadBalance,
+            "AcceleratorRouter::initialize")) {
+        return RouterResult::error("Multi-GPU Load Balance requires an Enterprise license", -1);
+    }
     if (m_initialized.load(std::memory_order_acquire)) {
         return RouterResult::ok("Router already initialized", getActiveBackend());
     }

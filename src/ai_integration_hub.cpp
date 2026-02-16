@@ -6,6 +6,9 @@
 #include <fstream>
 #include <filesystem>
 
+// SCAFFOLD_278: Integration.cpp and wWinMain tail
+
+
 AIIntegrationHub::AIIntegrationHub() {
     m_logger = std::make_shared<Logger>("AIIntegrationHub");
     m_metrics = std::make_shared<Metrics>();

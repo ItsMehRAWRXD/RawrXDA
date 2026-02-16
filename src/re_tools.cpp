@@ -79,29 +79,35 @@ std::string run_compiler(const char* src){
     ofs << src;
     ofs.close();
 
-    // Check if ml64.exe (MASM) is in path, otherwise fallback to simulation message
-    // In a real automated setup we would pipe stdout/stderr.
-    // Here we use a temp output file.
-    
+    // Try MASM (ml64) first; same return shape for parity with custom/non-MASM builds.
     std::string cmd = "ml64.exe /c /nologo " + tempCtx + " > rawr_compile_log.txt 2>&1";
     int ret = system(cmd.c_str());
-    
+
     std::ifstream logf("rawr_compile_log.txt");
     std::string result((std::istreambuf_iterator<char>(logf)), std::istreambuf_iterator<char>());
     logf.close();
-    
-    // Clean up
+
+    // NASM fallback: if MASM failed, try NASM so non-MASM builds function the same way
+    if (ret != 0) {
+        std::string objOut = "rawr_temp.obj";
+        cmd = "nasm.exe -f win64 -o " + objOut + " " + tempCtx + " > rawr_compile_log.txt 2>&1";
+        ret = system(cmd.c_str());
+        logf.open("rawr_compile_log.txt");
+        if (logf) {
+            result.assign((std::istreambuf_iterator<char>(logf)), std::istreambuf_iterator<char>());
+            logf.close();
+        }
+        remove(objOut.c_str());
+    }
+
     remove(tempCtx.c_str());
-    remove("rawr_compile_log.txt"); // optional, maybe keep for debugging?
+    remove("rawr_compile_log.txt");
 
     if (ret != 0) {
-        if (result.empty()) return "Compiler execution failed (ml64.exe not found?).";
+        if (result.empty()) return "Compiler execution failed (ml64.exe and nasm.exe not found or both failed).";
         return "Compilation Errors:\n" + result;
     }
 
-    // Attempt link if compile success? User just asked for "run_compiler"
-    // Usually implies building the obj.
-    
     if (result.empty()) return "Compilation successful (No output).";
     return "Output:\n" + result;
 }

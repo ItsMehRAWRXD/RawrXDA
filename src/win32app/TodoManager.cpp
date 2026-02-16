@@ -2,6 +2,7 @@
 // Bridges PowerShell todo system with Win32IDE
 
 #include "TodoManager.h"
+#include <shlobj.h>
 #include <fstream>
 #include <sstream>
 #include <regex>
@@ -11,6 +12,26 @@
 
 namespace RawrXD {
 namespace Todos {
+
+// Resolve %APPDATA%\RawrXD (create dir); return empty on failure.
+static std::string getRawrXDAppDataDir() {
+    char buf[MAX_PATH] = {};
+    if (SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, buf) != S_OK)
+        return {};
+    std::string dir = std::string(buf) + "\\RawrXD";
+    CreateDirectoryA(dir.c_str(), nullptr);
+    return dir;
+}
+
+// Default script path for PowerShell todo integration (optional).
+static std::string getTodoScriptPath() {
+    const char* env = getenv("RAWRXD_TODO_SCRIPT");
+    if (env && env[0]) return env;
+    std::string dir = getRawrXDAppDataDir();
+    if (dir.empty()) return {};
+    CreateDirectoryA((dir + "\\scripts").c_str(), nullptr);
+    return dir + "\\scripts\\todo_manager.ps1";
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TodoManager Implementation
@@ -22,7 +43,10 @@ TodoManager::TodoManager(const std::string& storagePath)
     , pipeHandle_(INVALID_HANDLE_VALUE)
     , watchThread_(NULL)
     , stopWatch_(false) {
-    
+    if (storagePath_.empty()) {
+        std::string dir = getRawrXDAppDataDir();
+        storagePath_ = dir.empty() ? "todos.json" : (dir + "\\todos.json");
+    }
     stats_.totalCreated = 0;
     stats_.totalCompleted = 0;
     stats_.totalDeleted = 0;
@@ -365,8 +389,11 @@ json TodoManager::TodoToJson(const TodoItem& todo) const {
 }
 
 bool TodoManager::ExecutePowerShellCommand(const std::string& operation, const std::vector<std::string>& args) {
+    std::string scriptPath = getTodoScriptPath();
+    if (scriptPath.empty() || GetFileAttributesA(scriptPath.c_str()) == INVALID_FILE_ATTRIBUTES)
+        return false;
     std::ostringstream cmd;
-    cmd << "powershell.exe -ExecutionPolicy Bypass -File \"D:\\lazy init ide\\scripts\\todo_manager.ps1\" ";
+    cmd << "powershell.exe -ExecutionPolicy Bypass -File \"" << scriptPath << "\" ";
     cmd << "-Operation " << operation;
     
     for (const auto& arg : args) {
@@ -425,9 +452,15 @@ DWORD WINAPI TodoManager::PipeServerThreadProc(LPVOID param) {
 
 DWORD WINAPI TodoManager::FileWatchThreadProc(LPVOID param) {
     auto* manager = static_cast<TodoManager*>(param);
-    
+    std::string watchDir = manager->storagePath_;
+    size_t sep = watchDir.find_last_of("/\\");
+    if (sep != std::string::npos)
+        watchDir.resize(sep);
+    else
+        watchDir = ".";
+
     HANDLE hDir = CreateFileA(
-        "D:\\lazy init ide\\data",
+        watchDir.c_str(),
         FILE_LIST_DIRECTORY,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,

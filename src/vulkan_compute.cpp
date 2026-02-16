@@ -7,6 +7,9 @@
 #include <cmath>
 #include <cstring>
 
+// SCAFFOLD_105: Vulkan compute backend init
+
+
 VulkanCompute::VulkanCompute()
     : instance_(nullptr), physical_device_(nullptr), device_(nullptr),
       command_pool_(nullptr), compute_queue_(nullptr) {

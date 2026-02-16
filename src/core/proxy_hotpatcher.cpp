@@ -2,6 +2,8 @@
 // Byte-level output rewriting, token bias injection, stream termination.
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "proxy_hotpatcher.hpp"
+#include "license_enforcement.h"
+#include <cctype>
 #include <cstring>
 #include <algorithm>
 
@@ -16,10 +18,18 @@ ProxyHotpatcher& ProxyHotpatcher::instance() {
 ProxyHotpatcher::ProxyHotpatcher() = default;
 ProxyHotpatcher::~ProxyHotpatcher() = default;
 
+static bool allow_proxy_hotpatch(const char* caller) {
+    return RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+        RawrXD::License::FeatureID::ProxyHotpatching, caller);
+}
+
 // ---------------------------------------------------------------------------
 // Token Bias Injection
 // ---------------------------------------------------------------------------
 PatchResult ProxyHotpatcher::add_token_bias(const TokenBias& bias) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     // Check for duplicate tokenId — update if exists
     for (auto& b : m_biases) {
@@ -34,6 +44,9 @@ PatchResult ProxyHotpatcher::add_token_bias(const TokenBias& bias) {
 }
 
 PatchResult ProxyHotpatcher::remove_token_bias(uint32_t tokenId) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     for (auto it = m_biases.begin(); it != m_biases.end(); ++it) {
         if (it->tokenId == tokenId) {
@@ -45,12 +58,18 @@ PatchResult ProxyHotpatcher::remove_token_bias(uint32_t tokenId) {
 }
 
 PatchResult ProxyHotpatcher::clear_token_biases() {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     m_biases.clear();
     return PatchResult::ok("All token biases cleared");
 }
 
 size_t ProxyHotpatcher::apply_token_biases(float* logits, size_t vocabSize) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return 0;
+    }
     if (!logits || vocabSize == 0) return 0;
 
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -75,12 +94,18 @@ size_t ProxyHotpatcher::apply_token_biases(float* logits, size_t vocabSize) {
 // Stream Termination
 // ---------------------------------------------------------------------------
 PatchResult ProxyHotpatcher::add_termination_rule(const StreamTerminationRule& rule) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     m_terminationRules.push_back(rule);
     return PatchResult::ok("Termination rule added");
 }
 
 PatchResult ProxyHotpatcher::remove_termination_rule(const char* name) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     if (!name) return PatchResult::error("Null name", 1);
     std::lock_guard<std::mutex> lock(m_mutex);
     for (auto it = m_terminationRules.begin(); it != m_terminationRules.end(); ++it) {
@@ -93,6 +118,9 @@ PatchResult ProxyHotpatcher::remove_termination_rule(const char* name) {
 }
 
 bool ProxyHotpatcher::check_termination(const char* output, size_t outputLen, size_t tokenCount) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return false;
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     for (const auto& rule : m_terminationRules) {
         if (!rule.enabled) continue;
@@ -131,12 +159,18 @@ bool ProxyHotpatcher::check_termination(const char* output, size_t outputLen, si
 // Output Rewriting
 // ---------------------------------------------------------------------------
 PatchResult ProxyHotpatcher::add_rewrite_rule(const OutputRewriteRule& rule) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     m_rewriteRules.push_back(rule);
     return PatchResult::ok("Rewrite rule added");
 }
 
 PatchResult ProxyHotpatcher::remove_rewrite_rule(const char* name) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     if (!name) return PatchResult::error("Null name", 1);
     std::lock_guard<std::mutex> lock(m_mutex);
     for (auto it = m_rewriteRules.begin(); it != m_rewriteRules.end(); ++it) {
@@ -149,6 +183,9 @@ PatchResult ProxyHotpatcher::remove_rewrite_rule(const char* name) {
 }
 
 size_t ProxyHotpatcher::apply_rewrites(char* output, size_t outputLen, size_t bufferCapacity) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return outputLen;
+    }
     if (!output || outputLen == 0) return outputLen;
 
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -187,6 +224,9 @@ size_t ProxyHotpatcher::apply_rewrites(char* output, size_t outputLen, size_t bu
 // Custom Validators
 // ---------------------------------------------------------------------------
 PatchResult ProxyHotpatcher::add_validator(const ProxyValidator& validator) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     if (!validator.name || !validator.validate) {
         return PatchResult::error("Null validator name or function pointer", 1);
     }
@@ -196,6 +236,9 @@ PatchResult ProxyHotpatcher::add_validator(const ProxyValidator& validator) {
 }
 
 PatchResult ProxyHotpatcher::remove_validator(const char* name) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Proxy hotpatching requires Enterprise license", -1);
+    }
     if (!name) return PatchResult::error("Null name", 1);
     std::lock_guard<std::mutex> lock(m_mutex);
     for (auto it = m_validators.begin(); it != m_validators.end(); ++it) {
@@ -208,6 +251,9 @@ PatchResult ProxyHotpatcher::remove_validator(const char* name) {
 }
 
 bool ProxyHotpatcher::run_validators(const char* output, size_t outputLen) {
+    if (!allow_proxy_hotpatch(__FUNCTION__)) {
+        return true;
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     bool allPassed = true;
     for (const auto& v : m_validators) {
@@ -255,3 +301,160 @@ PatchResult ProxyHotpatcher::clear_validators() {
     m_validators.clear();
     return PatchResult::ok("All validators cleared");
 }
+
+// ---------------------------------------------------------------------------
+// Boyer-Moore Pattern Search (ported from Qt version)
+// ---------------------------------------------------------------------------
+static int64_t boyer_moore_search(const char* text, size_t textLen,
+                                  const char* pattern, size_t patLen,
+                                  size_t startPos = 0) {
+    if (patLen == 0 || textLen == 0 || patLen > textLen) return -1;
+
+    // Bad character table (256 entries for all byte values)
+    int64_t badChar[256];
+    for (int i = 0; i < 256; ++i) badChar[i] = -1;
+    for (size_t i = 0; i < patLen - 1; ++i) {
+        badChar[static_cast<uint8_t>(pattern[i])] = static_cast<int64_t>(i);
+    }
+
+    int64_t s = static_cast<int64_t>(startPos);
+    int64_t n = static_cast<int64_t>(textLen);
+    int64_t m = static_cast<int64_t>(patLen);
+
+    while (s <= n - m) {
+        int64_t j = m - 1;
+        while (j >= 0 && pattern[j] == text[s + j]) --j;
+
+        if (j < 0) return s;  // Found
+
+        int64_t shift = badChar[static_cast<uint8_t>(text[s + j])];
+        s += (j - shift > 1) ? (j - shift) : 1;
+    }
+    return -1;
+}
+
+// ---------------------------------------------------------------------------
+// Agent Output Validation (ported from Qt version — pure C++20)
+// ---------------------------------------------------------------------------
+struct AgentValidationResult {
+    bool        isValid{true};
+    std::string errorMessage;
+    std::string correctedOutput;
+};
+
+static char toLowerChar(unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+}
+static bool str_icontains(const std::string& haystack, const char* needle) {
+    std::string hLower = haystack;
+    std::transform(hLower.begin(), hLower.end(), hLower.begin(), toLowerChar);
+    std::string nLower(needle);
+    std::transform(nLower.begin(), nLower.end(), nLower.begin(), toLowerChar);
+    return hLower.find(nLower) != std::string::npos;
+}
+
+AgentValidationResult validate_plan_format(const std::string& output) {
+    AgentValidationResult result;
+    bool hasPlan     = str_icontains(output, "plan");
+    bool hasSubagent = str_icontains(output, "runSubagent");
+
+    if (!hasPlan && !hasSubagent) {
+        result.isValid = false;
+        result.errorMessage = "Plan mode format violation";
+        result.correctedOutput =
+            "I'm in Plan mode, and I need to run a subagent first to gather information.\n\n"
+            + output +
+            "\n\nHere is the proposed plan:\n1. [Step 1]\n2. [Step 2]\n3. [Step 3]";
+    }
+    return result;
+}
+
+AgentValidationResult validate_agent_format(const std::string& output) {
+    AgentValidationResult result;
+    bool hasTodoList = str_icontains(output, "manage_todo_list");
+    bool hasSubagent = str_icontains(output, "runSubagent");
+    bool hasTodo     = str_icontains(output, "todo");
+
+    if (!hasTodoList && !hasSubagent && !hasTodo) {
+        result.isValid = false;
+        result.errorMessage = "Agent mode format violation";
+        result.correctedOutput =
+            "I need to use manage_todo_list and runSubagent for this task.\n\n" + output;
+    }
+    return result;
+}
+
+AgentValidationResult validate_ask_format(const std::string& output) {
+    AgentValidationResult result;
+    bool hasVerify  = str_icontains(output, "verify");
+    bool hasCheck   = str_icontains(output, "check");
+    bool hasConfirm = str_icontains(output, "confirm");
+
+    if (!hasVerify && !hasCheck && !hasConfirm) {
+        result.isValid = false;
+        result.errorMessage = "Ask mode should include verification steps";
+    }
+    return result;
+}
+
+// ---------------------------------------------------------------------------
+// Enabled / Disabled state
+// ---------------------------------------------------------------------------
+void ProxyHotpatcher::setEnabled(bool enable) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_enabled = enable;
+}
+
+bool ProxyHotpatcher::isEnabled() const {
+    return m_enabled;
+}
+
+// ---------------------------------------------------------------------------
+// Batch byte-patch find-and-replace (Boyer-Moore powered)
+// ---------------------------------------------------------------------------
+size_t ProxyHotpatcher::apply_rewrites_advanced(
+    char* output, size_t outputLen, size_t bufferCapacity,
+    bool useBoyer) {
+    if (!output || outputLen == 0) return outputLen;
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    size_t currentLen = outputLen;
+
+    for (auto& rule : m_rewriteRules) {
+        if (!rule.enabled || !rule.pattern || !rule.replacement) continue;
+
+        size_t patLen = std::strlen(rule.pattern);
+        size_t repLen = std::strlen(rule.replacement);
+        if (patLen == 0) continue;
+
+        int64_t pos = -1;
+        if (useBoyer && patLen > 4) {
+            pos = boyer_moore_search(output, currentLen, rule.pattern, patLen);
+        } else {
+            // Simple linear search
+            for (size_t i = 0; i + patLen <= currentLen; ++i) {
+                if (std::memcmp(output + i, rule.pattern, patLen) == 0) {
+                    pos = static_cast<int64_t>(i);
+                    break;
+                }
+            }
+        }
+
+        if (pos >= 0) {
+            size_t newLen = currentLen - patLen + repLen;
+            if (newLen > bufferCapacity) continue;
+
+            std::memmove(output + pos + repLen,
+                         output + pos + patLen,
+                         currentLen - static_cast<size_t>(pos) - patLen);
+            std::memcpy(output + pos, rule.replacement, repLen);
+            currentLen = newLen;
+            rule.hitCount++;
+            m_stats.rewritesApplied.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
+    output[currentLen] = '\0';
+    return currentLen;
+}
+

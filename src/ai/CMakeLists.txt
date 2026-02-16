@@ -1,4 +1,4 @@
-# Minimal CMake configuration for testing streaming GGUF loader
+# Minimal CMake configuration for testing streaming GGUF loader (C++20, Qt-free)
 
 cmake_minimum_required(VERSION 3.16)
 project(StreamingGGUFLoaderTest)
@@ -6,15 +6,16 @@ project(StreamingGGUFLoaderTest)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add source files
-add_executable(test_streaming_gguf_loader
-    memory_mapped_file.cpp
-    streaming_gguf_loader.cpp
-    test_streaming_gguf_loader.cpp
-)
+set(AI_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-# Include current directory for headers
-target_include_directories(test_streaming_gguf_loader PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+# Use parent src/ StreamingGGUFLoader (C++20, Qt-free)
+add_executable(test_streaming_gguf_loader
+    ${AI_DIR}/test_streaming_gguf_loader.cpp
+    ${SRC_DIR}/streaming_gguf_loader.cpp
+    ${SRC_DIR}/utils/Diagnostics.cpp
+)
+target_include_directories(test_streaming_gguf_loader PRIVATE ${AI_DIR} ${SRC_DIR})
 
 # Link Windows libraries for memory mapping
 if(WIN32)

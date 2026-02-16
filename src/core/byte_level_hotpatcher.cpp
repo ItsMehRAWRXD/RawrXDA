@@ -1,5 +1,8 @@
 #include "byte_level_hotpatcher.hpp"
+#include "license_enforcement.h"
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstring>
 #include <algorithm>
@@ -29,7 +32,11 @@ extern "C" const void* find_pattern_asm(const void* haystack, size_t haystack_le
 }
 #endif
 
-PatchResult patch_bytes(const char* filename, const BytePatch& patch) {
+PatchResult patch_bytes(const char* filename, const BytePatchEnhanced& patch) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Byte-level hotpatching requires Professional license", -1);
+    }
     HANDLE hFile = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
         return PatchResult::error("Could not open file", GetLastError());
@@ -69,6 +76,10 @@ PatchResult patch_bytes(const char* filename, const BytePatch& patch) {
 }
 
 PatchResult search_and_patch_bytes(const char* filename, const std::vector<uint8_t>& pattern, const std::vector<uint8_t>& replacement) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Byte-level hotpatching requires Professional license", -1);
+    }
     if (pattern.empty() || replacement.empty() || pattern.size() != replacement.size()) {
         return PatchResult::error("Invalid pattern or replacement (must be non-empty and same size)", 3);
     }
@@ -110,6 +121,10 @@ PatchResult search_and_patch_bytes(const char* filename, const std::vector<uint8
 }
 
 PatchResult patch_bytes_mem(const char* filename, const uint8_t* pattern, size_t pattern_len, const uint8_t* replacement, size_t replacement_len) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Byte-level hotpatching requires Professional license", -1);
+    }
     HANDLE hFile = CreateFileA(filename, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
         return PatchResult::error("Could not open file", GetLastError());
@@ -148,6 +163,10 @@ PatchResult patch_bytes_mem(const char* filename, const uint8_t* pattern, size_t
 // ============================================================================
 PatchResult direct_read(const char* filename, size_t offset, size_t len,
                         void* outBuffer, size_t* outBytesRead) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Byte-level hotpatching requires Professional license", -1);
+    }
     if (!filename || !outBuffer || len == 0) {
         return PatchResult::error("Invalid parameters for direct_read", 1);
     }
@@ -203,6 +222,10 @@ PatchResult direct_read(const char* filename, size_t offset, size_t len,
 // ============================================================================
 PatchResult direct_write(const char* filename, size_t offset,
                          const void* data, size_t len) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Byte-level hotpatching requires Professional license", -1);
+    }
     if (!filename || !data || len == 0) {
         return PatchResult::error("Invalid parameters for direct_write", 1);
     }
@@ -256,6 +279,10 @@ PatchResult direct_write(const char* filename, size_t offset,
 // ============================================================================
 ByteSearchResult direct_search(const char* filename,
                                const uint8_t* pattern, size_t pattern_len) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return ByteSearchResult::miss();
+    }
     if (!filename || !pattern || pattern_len == 0) {
         return ByteSearchResult::miss();
     }
@@ -310,6 +337,10 @@ ByteSearchResult direct_search(const char* filename,
 PatchResult apply_byte_mutation(const char* filename, size_t offset,
                                 size_t len, ByteMutation mutation,
                                 uint8_t param) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::ByteLevelHotpatching, __FUNCTION__)) {
+        return PatchResult::error("[LICENSE] Byte-level hotpatching requires Professional license", -1);
+    }
     if (!filename || len == 0) {
         return PatchResult::error("Invalid parameters for byte mutation", 1);
     }

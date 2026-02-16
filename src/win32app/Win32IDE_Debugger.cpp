@@ -201,7 +201,7 @@ void Win32IDE::createDebuggerUI()
         WS_EX_CLIENTEDGE,
         WC_TREEVIEWA,
         "",
-        WS_CHILD | LVS_SINGLESEL,
+        WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT,
         10, 85, 380, 100,
         m_hwndDebuggerContainer,
         (HMENU)IDC_DEBUGGER_VARIABLE_TREE,
@@ -336,7 +336,10 @@ void Win32IDE::attachDebugger()
         }
         if (!exePath.empty()) {
             attachR = engine.launchProcess(exePath);
-            if (!attachR.success) {
+            if (attachR.success) {
+                setCurrentBinaryForReverseEngineering(exePath);
+                appendToOutput("[RE] Binary set for analysis (Reverse Engineering menu).\n", "Output", OutputSeverity::Info);
+            } else {
                 std::string warn = "⚠️ Launch failed: ";
                 warn += attachR.detail;
                 warn += " — attach by PID instead";
@@ -591,6 +594,19 @@ void Win32IDE::restartDebugger()
         }
     } else {
         SetWindowTextA(m_hwndDebuggerStatus, "🔄 Debugger Restarted — ready");
+    }
+}
+
+void Win32IDE::handleDebuggerToolbarCommand(int commandId)
+{
+    switch (commandId) {
+        case IDC_DEBUGGER_BTN_CONTINUE:  resumeExecution(); break;
+        case IDC_DEBUGGER_BTN_STEP_OVER:  stepOverExecution(); break;
+        case IDC_DEBUGGER_BTN_STEP_INTO:  stepIntoExecution(); break;
+        case IDC_DEBUGGER_BTN_STEP_OUT:   stepOutExecution(); break;
+        case IDC_DEBUGGER_BTN_STOP:       stopDebugger(); break;
+        case IDC_DEBUGGER_BTN_RESTART:   restartDebugger(); break;
+        default: break;
     }
 }
 
@@ -927,53 +943,63 @@ void Win32IDE::evaluateWatch(WatchItem& item)
 
 void Win32IDE::updateVariables()
 {
-    // Fetch real local variables from the engine's current stack frame
     auto& engine = NativeDebuggerEngine::Instance();
     m_localVariables.clear();
 
-    // If the engine has a live session, get frame locals
     if (m_debuggerAttached && m_debuggerPaused) {
+        int frameIndex = m_selectedStackFrameIndex;
+        if (frameIndex < 0) frameIndex = 0;
+        if (!m_callStack.empty() && (size_t)frameIndex >= m_callStack.size())
+            frameIndex = static_cast<int>(m_callStack.size()) - 1;
+
         std::map<std::string, std::string> frameLocals;
-        DebugResult r = engine.getFrameLocals(0, frameLocals);  // Frame 0 = current
+        DebugResult r = engine.getFrameLocals(frameIndex, frameLocals);
         if (r.success) {
             for (const auto& local : frameLocals) {
                 Variable var;
                 var.name  = local.first;
                 var.value = local.second;
-                var.type  = "auto";  // DbgEng gives formatted values; type is in the string
+                var.type  = "auto";
+                var.expanded = false;
+                m_localVariables.push_back(var);
+            }
+        }
+        if (m_localVariables.empty() && !m_callStack.empty() && frameIndex >= 0 && (size_t)frameIndex < m_callStack.size()) {
+            const auto& frame = m_callStack[static_cast<size_t>(frameIndex)];
+            for (const auto& local : frame.locals) {
+                Variable var;
+                var.name  = local.first;
+                var.value = local.second;
+                var.type  = "auto";
                 var.expanded = false;
                 m_localVariables.push_back(var);
             }
         }
     }
 
-    // Fallback: if engine couldn't provide locals, check our cached call stack
-    if (m_localVariables.empty() && !m_callStack.empty()) {
-        const auto& frame = m_callStack.back();
-        for (const auto& local : frame.locals) {
-            Variable var;
-            var.name  = local.first;
-            var.value = local.second;
-            var.type  = "auto";
-            var.expanded = false;
-            m_localVariables.push_back(var);
-        }
-    }
-
     if (m_hwndDebuggerVariables) {
-        // Update tree view with variables
         TreeView_DeleteAllItems(m_hwndDebuggerVariables);
 
-        for (const auto& var : m_localVariables) {
+        if (m_localVariables.empty()) {
             TVINSERTSTRUCTA tvis;
             tvis.hParent = TVI_ROOT;
             tvis.hInsertAfter = TVI_LAST;
             tvis.item.mask = TVIF_TEXT;
-            
-            std::string item_text = var.name + " = " + var.value + " (" + var.type + ")";
-            tvis.item.pszText = const_cast<char*>(item_text.c_str());
-            
+            const char* placeholder = (m_debuggerAttached && m_debuggerPaused)
+                ? "(No locals for this frame)"
+                : "Attach and break to inspect variables";
+            tvis.item.pszText = const_cast<char*>(placeholder);
             TreeView_InsertItem(m_hwndDebuggerVariables, &tvis);
+        } else {
+            for (const auto& var : m_localVariables) {
+                TVINSERTSTRUCTA tvis;
+                tvis.hParent = TVI_ROOT;
+                tvis.hInsertAfter = TVI_LAST;
+                tvis.item.mask = TVIF_TEXT;
+                std::string item_text = var.name + " = " + var.value + " (" + var.type + ")";
+                tvis.item.pszText = const_cast<char*>(item_text.c_str());
+                TreeView_InsertItem(m_hwndDebuggerVariables, &tvis);
+            }
         }
     }
 }
@@ -1006,8 +1032,9 @@ void Win32IDE::updateCallStack()
                 m_callStack.push_back(sf);
             }
 
-            // Update debugger current position from top frame
+            // Update debugger current position from top frame and selected frame index
             if (!m_callStack.empty()) {
+                m_selectedStackFrameIndex = 0;
                 const auto& top = m_callStack.front();
                 if (!top.file.empty()) {
                     m_debuggerCurrentFile = top.file;
@@ -1023,22 +1050,35 @@ void Win32IDE::updateCallStack()
     LVITEMA lvi;
     lvi.mask = LVIF_TEXT;
 
-    for (size_t i = 0; i < m_callStack.size(); ++i) {
-        const auto& frame = m_callStack[i];
-
-        lvi.iItem = static_cast<int>(i);
+    if (m_callStack.empty()) {
+        lvi.iItem = 0;
         lvi.iSubItem = 0;
-        lvi.pszText = const_cast<char*>(frame.function.c_str());
+        lvi.pszText = const_cast<char*>("Attach and break to inspect call stack");
         ListView_InsertItem(m_hwndDebuggerStackTrace, &lvi);
-
         lvi.iSubItem = 1;
-        lvi.pszText = const_cast<char*>(frame.file.c_str());
+        lvi.pszText = const_cast<char*>("");
         ListView_SetItem(m_hwndDebuggerStackTrace, &lvi);
-
         lvi.iSubItem = 2;
-        std::string line_str = std::to_string(frame.line);
-        lvi.pszText = const_cast<char*>(line_str.c_str());
+        lvi.pszText = const_cast<char*>("");
         ListView_SetItem(m_hwndDebuggerStackTrace, &lvi);
+    } else {
+        for (size_t i = 0; i < m_callStack.size(); ++i) {
+            const auto& frame = m_callStack[i];
+
+            lvi.iItem = static_cast<int>(i);
+            lvi.iSubItem = 0;
+            lvi.pszText = const_cast<char*>(frame.function.c_str());
+            ListView_InsertItem(m_hwndDebuggerStackTrace, &lvi);
+
+            lvi.iSubItem = 1;
+            lvi.pszText = const_cast<char*>(frame.file.c_str());
+            ListView_SetItem(m_hwndDebuggerStackTrace, &lvi);
+
+            lvi.iSubItem = 2;
+            std::string line_str = std::to_string(frame.line);
+            lvi.pszText = const_cast<char*>(line_str.c_str());
+            ListView_SetItem(m_hwndDebuggerStackTrace, &lvi);
+        }
     }
 }
 

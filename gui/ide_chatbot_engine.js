@@ -3939,22 +3939,28 @@ async function sendMessage() {
   document.getElementById('sendBtn').disabled = true;
   showStopHideSend();
 
-  if (State.backend.online) {
-    await sendToBackend(text);
-  } else {
-    // Offline mode — still record to conversation memory
-    Conversation.addMessage('user', text);
-    showTyping();
-    await sleep(400);
-    hideTyping();
-    var offlineReply = getOfflineResponse(text);
-    Conversation.addMessage('assistant', offlineReply);
-    addMessage('assistant', offlineReply, { skipMemory: true });
+  try {
+    if (State.backend.online) {
+      await sendToBackend(text);
+    } else {
+      // Offline mode — still record to conversation memory
+      Conversation.addMessage('user', text);
+      showTyping();
+      await sleep(400);
+      hideTyping();
+      var offlineReply = getOfflineResponse(text);
+      Conversation.addMessage('assistant', offlineReply);
+      addMessage('assistant', offlineReply, { skipMemory: true });
+    }
+  } catch (err) {
+    logDebug('sendMessage error: ' + (err && err.message ? err.message : String(err)), 'error');
+    addMessage('system', '\u26A0\uFE0F **Error:** ' + (err && err.message ? err.message : 'Failed to send. Please try again.'), { skipMemory: true });
+  } finally {
+    State.chat.sending = false;
+    var sendBtn = document.getElementById('sendBtn');
+    if (sendBtn) { sendBtn.disabled = false; }
+    showSendHideStop();
   }
-
-  State.chat.sending = false;
-  document.getElementById('sendBtn').disabled = false;
-  showSendHideStop();
 }
 
 // ======================================================================
@@ -4182,6 +4188,14 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'F11' && _isFileProtocol) {
     e.preventDefault();
     toggleStandaloneFullscreen();
+  }
+});
+
+// Keyboard shortcut: Ctrl+Shift+P — Command Palette / Settings (opens Backend Switcher)
+document.addEventListener('keydown', function (e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+    e.preventDefault();
+    if (typeof showBackendSwitcher === 'function') showBackendSwitcher();
   }
 });
 

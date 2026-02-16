@@ -300,17 +300,18 @@ struct ModelInput {
 
 struct InferenceResult {
     std::vector<int> tokens;
-    float* logits = nullptr;
+    std::vector<float> logits;  // RAII-managed, no double-free
     float perplexity = 0.0f;
     float confidence = 0.0f;
     int error = 0;
     
-    ~InferenceResult() {
-        if (logits) {
-            delete[] logits;
-            logits = nullptr;
-        }
-    }
+    // Rule of 5 satisfied by std::vector - move/copy are safe
+    InferenceResult() = default;
+    ~InferenceResult() = default;
+    InferenceResult(InferenceResult&&) = default;
+    InferenceResult& operator=(InferenceResult&&) = default;
+    InferenceResult(const InferenceResult&) = default;
+    InferenceResult& operator=(const InferenceResult&) = default;
 };
 
 // ============================================================
@@ -558,9 +559,9 @@ InferenceResult AIModelCaller_RunInference_Real(const ModelInput& input) {
     ggml_graph_compute_with_ctx(graph_ctx, gf, n_threads);
     
     // Extract real logits - NOT FAKE 0.42f!
-    result.logits = new float[g_ctx.n_vocab];
+    result.logits.resize(g_ctx.n_vocab);
     if (logits_tensor && logits_tensor->data) {
-        memcpy(result.logits, logits_tensor->data, g_ctx.n_vocab * sizeof(float));
+        memcpy(result.logits.data(), logits_tensor->data, g_ctx.n_vocab * sizeof(float));
     } else {
         // Generate test logits based on actual computation
         for (int i = 0; i < g_ctx.n_vocab; i++) {
@@ -573,12 +574,12 @@ InferenceResult AIModelCaller_RunInference_Real(const ModelInput& input) {
     // Calculate perplexity (real)
     float loss = 0.0f;
     float max_logit = result.logits[0];
-    for (int i = 1; i < g_ctx.n_vocab; i++) {
+    for (size_t i = 1; i < result.logits.size(); i++) {
         if (result.logits[i] > max_logit) max_logit = result.logits[i];
     }
     
     float sum_exp = 0.0f;
-    for (int i = 0; i < g_ctx.n_vocab; i++) {
+    for (size_t i = 0; i < result.logits.size(); i++) {
         sum_exp += expf(result.logits[i] - max_logit);
     }
     float log_sum_exp = max_logit + logf(sum_exp);
@@ -588,17 +589,17 @@ InferenceResult AIModelCaller_RunInference_Real(const ModelInput& input) {
     // Sample next token (real top-k/top-p)
     int next_token;
     if (input.top_p > 0.0f && input.top_p < 1.0f) {
-        next_token = sample_top_p(result.logits, g_ctx.n_vocab, input.top_p, 
+        next_token = sample_top_p(result.logits.data(), g_ctx.n_vocab, input.top_p, 
                                   input.temperature > 0 ? input.temperature : 0.8f);
     } else {
         int k = input.top_k > 0 ? input.top_k : 40;
-        next_token = sample_top_k(result.logits, g_ctx.n_vocab, k,
+        next_token = sample_top_k(result.logits.data(), g_ctx.n_vocab, k,
                                   input.temperature > 0 ? input.temperature : 0.8f);
     }
     result.tokens.push_back(next_token);
     
     // Calculate confidence (max probability after softmax)
-    std::vector<float> probs(result.logits, result.logits + g_ctx.n_vocab);
+    std::vector<float> probs(result.logits.begin(), result.logits.end());
     softmax_with_temp(probs.data(), g_ctx.n_vocab, 1.0f);
     result.confidence = probs[next_token];
     

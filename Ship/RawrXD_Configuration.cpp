@@ -471,6 +471,13 @@ const std::map<std::wstring, std::wstring> ConfigurationManager::ConfigDefaults:
     {L"top_p", L"0.95"},
     {L"top_k", L"50"},
     
+    // Authentication & API keys
+    {L"user_api_key", L"key_1bbe2f4d33423a095fc03d9f873eb4a161a680df099e82410be7bb19e65c319f"},
+    {L"api_endpoint", L"http://localhost:23959"},
+    {L"enable_extensions", L"true"},
+    {L"amazon_q_enabled", L"false"},
+    {L"github_copilot_enabled", L"false"},
+    
     // Performance settings
     {L"num_threads", L"8"},
     {L"max_memory_mb", L"4096"},

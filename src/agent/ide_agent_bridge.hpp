@@ -10,6 +10,8 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <thread>
+#include <atomic>
 #include <nlohmann/json.hpp>
 
 struct ExecutionPlan {
@@ -23,7 +25,10 @@ struct ExecutionPlan {
 class IDEAgentBridge {
 public:
     IDEAgentBridge();
-    virtual ~IDEAgentBridge() = default;
+    virtual ~IDEAgentBridge() {
+        m_isShuttingDown.store(true, std::memory_order_release);
+        if (m_retryThread.joinable()) m_retryThread.join();
+    }
 
     void initialize(const std::string& endpoint, const std::string& backend = "ollama", const std::string& apiKey = "");
     void setProjectRoot(const std::string& root);
@@ -84,5 +89,7 @@ protected:
     int m_retriesLeft = 0;
     int m_currentRetryBackoffMs = 1000;
     InvocationParams m_lastParams;
+    std::thread m_retryThread;
+    std::atomic<bool> m_isShuttingDown{false};
     void retryPlanGeneration();
 };

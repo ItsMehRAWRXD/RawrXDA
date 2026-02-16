@@ -19,6 +19,9 @@
 #include <windows.h>
 #include <winhttp.h>
 
+// SCAFFOLD_064: OllamaProvider and model list
+
+
 #pragma comment(lib, "winhttp.lib")
 
 using RawrXD::Prediction::OllamaProvider;

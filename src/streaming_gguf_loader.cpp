@@ -6,6 +6,9 @@
 #include <stdexcept>
 #include <iostream>
 
+// SCAFFOLD_102: Streaming GGUF loader
+
+
 namespace RawrXD {
 
 StreamingGGUFLoader::StreamingGGUFLoader()

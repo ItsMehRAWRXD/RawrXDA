@@ -1,7 +1,9 @@
 #include "cpu_inference_engine.h"
 #include "gguf_loader.h"
 #include "../plugins/MemoryPlugin.hpp"
+#include "modules/native_memory.hpp"
 #include "inference_kernels.h"
+#include "license_enforcement.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -12,6 +14,7 @@
 #include <future> 
 #include <cstring>
 #include <algorithm>
+#include <mutex>
 // #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <immintrin.h>
@@ -870,44 +873,59 @@ static size_t RowSizeBytes(TensorType type, size_t dim) {
 
 // --- CPUInferenceEngine Implementation ---
 
+// Singleton guard: only print Titan DLL status once across all CPUInferenceEngine instances
+static std::once_flag s_titanInitFlag;
+static bool s_titanDllLoaded = false;
+static HMODULE s_titanDllHandle = nullptr;
+
 CPUInferenceEngine::CPUInferenceEngine() 
     : m_numLayers(0), m_numHeads(0), m_embeddingDim(0), m_vocabSize(0), 
       m_threadCount(std::thread::hardware_concurrency()), m_modelLoaded(false), m_totalMemoryAllocated(0) {
     m_loader = std::make_unique<GGUFLoader>();
     
-    // Explicit Logic: Load Assembly Engine
+    // Explicit Logic: Load Assembly Engine (print DLL status only once)
 #ifdef RAWRXD_STATIC_ASM
-    std::cout << "[Titan] Linking Static Assembly Engine..." << std::endl;
+    std::call_once(s_titanInitFlag, []() {
+        std::cout << "[Titan] Linking Static Assembly Engine..." << std::endl;
+    });
     fnTitan_Initialize = &Titan_Initialize;
     fnTitan_LoadModel = &Titan_LoadModel;
     fnTitan_RunInferenceStep = &Titan_RunInferenceStep;
     
     fnTitan_Initialize(&m_pTitanContext);
-    std::cout << "[Titan] Static Assembly Engine Initialized." << std::endl;
+    std::call_once(s_titanInitFlag, []() {
+        std::cout << "[Titan] Static Assembly Engine Initialized." << std::endl;
+    });
     m_hTitanDLL = nullptr;
 #else
-    HMODULE hDll = LoadLibraryA("RawrXD_Interconnect.dll");
+    std::call_once(s_titanInitFlag, []() {
+        s_titanDllHandle = LoadLibraryA("RawrXD_Interconnect.dll");
+        s_titanDllLoaded = (s_titanDllHandle != nullptr);
+        if (s_titanDllLoaded) {
+            std::cout << "[Titan] Assembly Engine DLL loaded." << std::endl;
+        } else {
+            std::cout << "[Titan] RawrXD_Interconnect.dll not found. Using Pure C++ Fallback." << std::endl;
+        }
+    });
     
-    if (hDll) {
-        m_hTitanDLL = (void*)hDll;
-        fnTitan_Initialize = (FTitan_Initialize)GetProcAddress(hDll, "Titan_Initialize");
-        fnTitan_LoadModel = (FTitan_LoadModel)GetProcAddress(hDll, "Titan_LoadModel");
-        fnTitan_RunInferenceStep = (FTitan_RunInferenceStep)GetProcAddress(hDll, "Titan_RunInferenceStep");
+    if (s_titanDllLoaded && s_titanDllHandle) {
+        m_hTitanDLL = (void*)s_titanDllHandle;
+        fnTitan_Initialize = (FTitan_Initialize)GetProcAddress(s_titanDllHandle, "Titan_Initialize");
+        fnTitan_LoadModel = (FTitan_LoadModel)GetProcAddress(s_titanDllHandle, "Titan_LoadModel");
+        fnTitan_RunInferenceStep = (FTitan_RunInferenceStep)GetProcAddress(s_titanDllHandle, "Titan_RunInferenceStep");
         
         if (fnTitan_Initialize) {
             fnTitan_Initialize(&m_pTitanContext);
-            std::cout << "[Titan] Assembly Engine Initialized." << std::endl;
         }
     } else {
-        // Fallback to internal CPU ops only
-        std::cout << "[Titan] RawrXD_Interconnect.dll not found. Using Pure C++ Fallback." << std::endl;
         m_hTitanDLL = nullptr;
     }
 #endif
 
-    // Register default memory plugins
+    // Register memory plugins: smallest → largest (selection is best-fit)
     RegisterMemoryPlugin(std::make_shared<RawrXD::StandardMemoryPlugin>());
     RegisterMemoryPlugin(std::make_shared<RawrXD::LargeContextPlugin>());
+    RegisterMemoryPlugin(std::make_shared<RawrXD::Modules::NativeMemoryModule>());
 }
 
 CPUInferenceEngine::~CPUInferenceEngine() {
@@ -960,17 +978,18 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path) {
 
 bool CPUInferenceEngine::LoadWeights(const std::unordered_map<std::string, Tensor>&) { return true; }
 
-size_t CPUInferenceEngine::GetMemoryUsage() const { return m_totalMemoryAllocated; }
-
-void CPUInferenceEngine::ClearCache() {
-    m_memoryPool.clear();
-    m_kv_cache.clear();
-    m_totalMemoryAllocated = 0;
-}
-
 #include "modules/native_memory.hpp"
 
+// SCAFFOLD_110: KV cache and attention
+
+
 void CPUInferenceEngine::InitKVCache() {
+    bool allowKv = RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+        RawrXD::License::FeatureID::KVCacheManagement, __FUNCTION__);
+    if (!allowKv) {
+        if (m_contextLimit > 2048) m_contextLimit = 2048;
+        if (m_contextSize > 2048) m_contextSize = 2048;
+    }
     // Sync context size with limit if set
     if (m_contextLimit > 0) m_contextSize = m_contextLimit;
     if (m_contextSize == 0) m_contextSize = 2048;
@@ -994,7 +1013,7 @@ void CPUInferenceEngine::InitKVCache() {
     std::cout << "[CPUInferenceEngine] Allocating KV Cache for " << m_contextSize << " tokens..." << std::endl;
     
     // For very large contexts, use memory plugin optimization
-    if (m_contextSize > 32768) {
+    if (allowKv && m_contextSize > 32768) {
         std::cout << "[CPUInferenceEngine] Using memory plugin optimization for large context" << std::endl;
         
         // Find appropriate memory plugin
@@ -1169,7 +1188,12 @@ void CPUInferenceEngine::MultiHeadAttention(const float* query, const float* key
     }
 }
 
-void CPUInferenceEngine::TransformerLayer(const float* input, float* output, int layer_idx, int seq_len) {
+void CPUInferenceEngine::TransformerLayer(const float* input, float* output, int layer_idx, int seq_len, uint32_t deviceId) {
+    // [Phase 23: Multi-GPU Logic]
+    // If deviceId > 0, we could dispatch to an external GPU worker/bridge.
+    // However, in the CPU engine, we treat it as an affinity hint for future
+    // NUMA/distributed workloads.
+    
     std::string prefix = "blk." + std::to_string(layer_idx) + ".";
     
     std::vector<float> norm1(m_embeddingDim);
@@ -1582,20 +1606,74 @@ void CPUInferenceEngine::RegisterMemoryPlugin(std::shared_ptr<IMemoryPlugin> plu
 }
 
 void CPUInferenceEngine::SetContextLimit(size_t limit) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::KVCacheManagement, __FUNCTION__)) {
+        if (limit > 4096) {
+            limit = 4096;  // Community tier: max 4K context
+        }
+    }
     m_contextLimit = limit;
     std::cout << "[CPUInferenceEngine] Context limit set to " << limit << " tokens." << std::endl;
     
-    // Find best plugin
+    // Find best-fit plugin: pick the smallest plugin whose max >= limit
+    // This avoids always matching Standard (4k) for small limits when
+    // a more capable plugin should be preferred for larger contexts.
+    std::shared_ptr<IMemoryPlugin> bestPlugin = nullptr;
+    size_t bestMax = SIZE_MAX;
+    
     for (auto& plugin : m_memoryPlugins) {
-        if (plugin->GetMaxContext() >= limit) {
-            if (plugin->Configure(limit)) {
-                plugin->Optimize();
-                std::cout << "[CPUInferenceEngine] Active Memory Manager: " << plugin->GetName() << std::endl;
-                return;
+        size_t pmax = plugin->GetMaxContext();
+        if (pmax >= limit && pmax < bestMax) {
+            bestPlugin = plugin;
+            bestMax = pmax;
+        }
+    }
+    
+    // For limits that exceed Small (4k), skip Standard and prefer larger plugins
+    if (bestPlugin && limit <= 4096) {
+        // Standard is fine for small contexts
+    } else if (limit > 4096) {
+        // Re-select: prefer the plugin with the largest capacity for big contexts
+        bestPlugin = nullptr;
+        bestMax = 0;
+        for (auto& plugin : m_memoryPlugins) {
+            size_t pmax = plugin->GetMaxContext();
+            if (pmax >= limit && pmax > bestMax) {
+                bestPlugin = plugin;
+                bestMax = pmax;
             }
         }
     }
+    
+    if (bestPlugin) {
+        if (bestPlugin->Configure(limit)) {
+            bestPlugin->Optimize();
+            std::cout << "[CPUInferenceEngine] Active Memory Manager: " << bestPlugin->GetName() << std::endl;
+            return;
+        }
+    }
     std::cout << "[CPUInferenceEngine] Warning: No plugin supports this context size. Using default fallback." << std::endl;
+}
+
+void CPUInferenceEngine::ClearCache() {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::KVCacheManagement, __FUNCTION__)) {
+        return;
+    }
+    
+    m_kv_cache.clear();
+    m_totalMemoryAllocated = 0;
+    std::cout << "[CPUInferenceEngine] KV Cache cleared." << std::endl;
+}
+
+size_t CPUInferenceEngine::GetMemoryUsage() const {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::KVCacheManagement, __FUNCTION__)) {
+        return 0;
+    }
+    
+    return m_totalMemoryAllocated +
+           (m_kv_cache.size() * m_contextLimit * m_embeddingDim * sizeof(float) * 2);  // keys + values
 }
 
 void CPUInferenceEngine::SetMaxMode(bool enabled) { 

@@ -1,0 +1,2 @@
+# RawrXD GPU Kernel AutoTuner Cache
+# Format: key|wgX|wgY|wgZ|tM|tN|tK|wave|occ|shmem|throughput

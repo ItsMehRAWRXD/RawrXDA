@@ -53,20 +53,41 @@ The **AIIntegrationHub** acts as the central nervous system, routing messages be
 ### Building (Native Win32)
 ```powershell
 cd RawrXD
-mkdir build_native
-cd build_native
-cmake .. -DENABLE_QT=OFF -DUSE_AVX512=ON -DRAWRXD_BUILD_CLI=ON
+mkdir build -Force
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
 ```
+
+### Verification & finalizing
+After a successful build, run the verification suite (Qt-free policy, binary checks, Win32 linkage):
+```powershell
+.\Verify-Build.ps1 -BuildDir ".\build"
+```
+All seven checks must pass. Optionally generate the source manifest (≈1450 files in `src` + `Ship`):
+```powershell
+.\scripts\Digest-SourceManifest.ps1 -OutDir ".\build" -Format both
+# or: cmake --build build --target source_manifest
+```
+Open items and ship checklist: **UNFINISHED_FEATURES.md**. Which IDE exe to run: **IDE_LAUNCH.md**. Mac/Linux: **docs/MAC_LINUX_WRAPPER.md** (Wine bootable space).
 
 ## 🏗️ Build Targets
 
 | Target | Description |
 |--------|-------------|
+| `RawrXD_CLI` | **Pure CLI** — full chat + agentic parity with Win32 IDE (`/chat`, `/agent`, `/smoke`, `/tools`) |
 | `RawrEngine` | CLI inference engine + agentic core |
 | `RawrXD-Win32IDE` | Full Win32 GUI IDE with all subsystems |
 | `RawrXD-InferenceEngine` | **Standalone inference** — loads GGUF, emits tokens, no IDE |
 | `rawrxd-monaco-gen` | Monaco/React IDE generator |
+
+### Pure CLI (101% Win32 Parity)
+```powershell
+cmake --build build_ide --target RawrXD_CLI --config Release
+# Output: build_ide/bin/RawrXD_CLI.exe — default port 23959
+# Commands: /chat, /agent, /smoke, /tools, /subagent, /chain, /swarm, /autonomy
+# See Ship/CLI_PARITY.md and AGENTIC_IDE_INTEGRATION.md
+```
 
 ### Standalone Inference Engine (Phase 6)
 ```powershell
@@ -90,6 +111,8 @@ The original numbered phase system (Phases 0–46) has been superseded by a tier
 | Phase 11 (Swarm Coordinator) | Merged | `RawrXD_Swarm_Network.asm` + `Win32IDE_SwarmPanel.cpp` |
 | Phase 12 (Native Debugger) | Merged | `RawrXD_Debug_Engine.asm` + `Win32IDE_NativeDebugPanel.cpp` |
 | Phase 13 | Never defined | — |
+
+**Mac/Linux:** Use `./scripts/rawrxd-space.sh` — see **docs/MAC_LINUX_WRAPPER.md** (Wine bootable space).
 | Phase 14 (Hotpatch UI) | Merged | `Win32IDE_HotpatchPanel.cpp` + T3-C |
 | Phases 15–16 (CFG/SSA) | Merged | `RawrCodex.asm` prerequisites |
 | Phase 17 (Type Recovery) | Merged | `RawrCodex.asm` + `enterprise_license.cpp` |
@@ -106,4 +129,5 @@ The original numbered phase system (Phases 0–46) has been superseded by a tier
 - **Config**: Settings are now stored in `settings.json` via pure JSON parsing.
 
 ---
-*RawrXD v3.0 - The Future of Native AI Development*
+
+**Verification:** `Verify-Build.ps1` · **Open work:** `UNFINISHED_FEATURES.md` · **Gap vs top 50:** `docs/TOP_50_GAP_ANALYSIS.md` · *RawrXD v3.0 — Native AI Development*

@@ -7,6 +7,7 @@
 // Rule: No exceptions. Structured PatchResult returns only.
 // Rule: All threading via std::mutex + std::lock_guard. No recursive locks.
 #include "distributed_pipeline_orchestrator.hpp"
+#include "../../include/enterprise_license.h"
 #include <cassert>
 #include <cmath>
 #include <sstream>
@@ -31,6 +32,11 @@ DistributedPipelineOrchestrator::~DistributedPipelineOrchestrator() {
 // Lifecycle
 // ============================================================================
 PatchResult DistributedPipelineOrchestrator::initialize(uint32_t workerThreads) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::PipelineParallel,
+            "DistributedPipelineOrchestrator::initialize")) {
+        return PatchResult::error("Pipeline Parallel requires an Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_running.load()) {

@@ -55,13 +55,21 @@
     "maxIterations": 10,
     "autoApprove": false,
     "sandboxed": true,
-    "memoryLimit": 1024
+    "memoryLimit": 1024,
+    "cycleCount": 10,
+    "perModelInstances": 1,
+    "cycleAgentCounter": 1,
+    "qualitySpeedBalance": "Auto"
   },
   "terminal": {
     "shell": "powershell.exe",
     "fontSize": 13,
     "cursorStyle": "block",
-    "scrollback": 10000
+    "scrollback": 10000,
+    "timeoutMs": 30000,
+    "timeoutMode": "fixed",
+    "timeoutMinMs": 10000,
+    "timeoutMaxMs": 120000
   },
   "debugger": {
     "engine": "gdb",

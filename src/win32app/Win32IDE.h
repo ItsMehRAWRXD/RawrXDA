@@ -45,6 +45,7 @@
 #include "../../include/mcp_integration.h"
 #include "../core/instructions_provider.hpp"
 #include "../core/native_inference_pipeline.hpp"
+#include "../core/problems_aggregator.hpp"
 #include "../ui/tool_action_status.h"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
@@ -53,6 +54,12 @@
 // Forward declarations
 class MultiResponseEngine;
 class SubAgentManager;
+class ModelRegistry;
+class InterpretabilityPanel;
+class BenchmarkMenu;
+class CheckpointManager;
+class CICDSettings;
+class MultiFileSearchWidget;
 namespace RawrXD { namespace LSPServer { class RawrXDLSPServer; } }
 
 // Tier 3: File Watcher + DirectWrite (need full types for unique_ptr destructor)
@@ -65,6 +72,8 @@ struct IDWriteTextLayout;
 
 #include "../agentic/OllamaProvider.h"
 #include "../../include/agentic/agentic_composer_ux.h"
+#include "../agent/agentic_failure_detector.hpp"
+#include "agentic_mode_switcher.hpp"
 
 // Agent and AI IDs
 #define IDM_AGENT_BOUNDED_LOOP 4120
@@ -136,6 +145,31 @@ struct IDWriteTextLayout;
 #define IDC_PLAN_BTN_RETRY_NO  7031
 #define IDC_PLAN_RETRY_LABEL   7032
 
+// Unified Problems Panel (P0: LSP, SAST, SCA, Secrets, Build)
+#define IDC_PROBLEMS_PANEL      7050
+#define IDC_PROBLEMS_LISTVIEW   7051
+#define IDC_PROBLEMS_FILTER     7052
+#define IDC_PROBLEMS_CLEAR      7053
+#define IDC_PROBLEMS_SHOW_ERRORS 7054
+#define IDC_PROBLEMS_SHOW_WARNINGS 7055
+#define IDM_VIEW_PROBLEMS       7056
+#define IDM_VIEW_AGENT_PANEL    7057
+#define IDM_VIEW_FILE_EXPLORER  2030
+#define IDM_VIEW_EXTENSIONS     2031
+
+// Security scan menu IDs (Top-50 P0)
+#define IDM_SECURITY_SCAN_SECRETS       9550
+#define IDM_SECURITY_SCAN_SAST          9551
+#define IDM_SECURITY_SCAN_DEPENDENCIES  9552
+#define IDM_SECURITY_DASHBOARD          9553
+#define IDM_SECURITY_EXPORT_SBOM        9554
+
+// Build menu IDs (Win32 IDE)
+// Note: kept out of existing routed ranges; routeCommand explicitly routes 10400–10499 to handleBuildCommand().
+#define IDM_BUILD_SOLUTION              10400
+#define IDM_BUILD_CLEAN                 10401
+#define IDM_BUILD_REBUILD               10402
+
 // Context Window IDs
 #define IDM_AI_CONTEXT_4K 4210
 #define IDM_AI_CONTEXT_32K 4211
@@ -150,6 +184,22 @@ struct IDWriteTextLayout;
 #define IDM_AI_AGENT_MULTI_STATUS 4220
 #define IDM_AI_TITAN_TOGGLE       4221
 #define IDM_AI_800B_STATUS        4222
+
+// AI Extensions (5300+ range)
+#define IDM_AI_MODEL_REGISTRY     5300
+#define IDM_AI_CHECKPOINT_MGR     5301
+#define IDM_AI_INTERPRET_PANEL    5302
+#define IDM_AI_CICD_SETTINGS      5303
+#define IDM_AI_MULTI_FILE_SEARCH  5304
+#define IDM_AI_BENCHMARK_MENU     5305
+
+// View Monaco / Thermal
+#define IDM_VIEW_MONACO_SETTINGS  5310
+#define IDM_VIEW_THERMAL_DASHBOARD 5311
+
+// Agent testing
+#define IDM_AGENT_SMOKE_TEST      5320
+#define IDM_AGENT_SET_CYCLE_AGENT_COUNTER 5321
 
 // Reverse Engineering IDs
 #define IDM_REVENG_ANALYZE 4300
@@ -174,6 +224,10 @@ struct IDWriteTextLayout;
 #define IDM_REVENG_DECOMP_RENAME   4317
 #define IDM_REVENG_DECOMP_SYNC     4318
 #define IDM_REVENG_DECOMP_CLOSE    4319
+#define IDM_REVENG_SET_BINARY_FROM_ACTIVE 4320
+#define IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET  4321
+#define IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT  4322
+#define IDM_REVENG_DISASM_AT_RIP                 4323
 
 // Define LOG_FUNCTION macro if not already defined
 #ifndef LOG_FUNCTION
@@ -383,24 +437,7 @@ struct WatchItem {
 // ============================================================================
 #define WM_GHOST_TEXT_READY (WM_APP + 400)
 
-// ============================================================================
-// Agent Failure Detection Enums & Structures
-// ============================================================================
-enum class AgentFailureType {
-    None = 0,
-    Refusal,
-    Hallucination,
-    FormatViolation,
-    InfiniteLoop,
-    QualityDegradation,
-    EmptyResponse,
-    Timeout,
-    ToolError,
-    InvalidOutput,
-    LowConfidence,
-    SafetyViolation,
-    UserAbort
-};
+// AgentFailureType from agentic_failure_detector.hpp (included above)
 
 // ── Phase 4B: Failure Classification with confidence + evidence ──
 struct FailureClassification {
@@ -628,6 +665,10 @@ struct IDESettings {
     bool localParityEnabled     = false;
     std::string localParityModelPath;
     std::string updateManifestUrl;   // Public URL for update check (no auth)
+
+    // Agent terminal isolation (Top-001: prevent agent commands/CTRL+C from interrupting user work)
+    // When true, agent-originated commands use a dedicated terminal; user terminal stays untouched.
+    bool agentTerminalIsolated  = true;
 };
 
 // ============================================================================
@@ -1210,13 +1251,23 @@ private:
     void handleFileCommand(int commandId);
     void handleEditCommand(int commandId);
     void handleViewCommand(int commandId);
+    void handleBuildCommand(int commandId);
     void handleTerminalCommand(int commandId);
     void handleToolsCommand(int commandId);
     void handleModulesCommand(int commandId);
     void handleHelpCommand(int commandId);
     void handleGitCommand(int commandId);
     void handleAgentCommand(int commandId);
-    
+
+    // Security scans (Top-50 P0)
+    bool handleSecurityCommand(int commandId);
+    void RunSecretsScan();
+    void RunSastScan();
+    void RunDependencyAudit();
+    void initSecurityDashboard();
+    void ShowSecurityDashboard();
+    void ExportSBOM();
+
     // Reverse Engineering Menu Handlers
     void handleReverseEngineeringAnalyze();
     void handleReverseEngineeringDisassemble();
@@ -1235,7 +1286,15 @@ private:
     void handleReverseEngineeringDataFlow();
     void handleReverseEngineeringLicenseInfo();
     void handleReverseEngineeringDecompilerView();
-    
+    void handleReverseEngineeringSetBinaryFromActive();
+    void handleReverseEngineeringSetBinaryFromDebugTarget();
+    void handleReverseEngineeringSetBinaryFromBuildOutput();
+    void handleReverseEngineeringDisassembleAtRIP();
+
+    /** Set the current binary for Reverse Engineering menu (Disassemble, DumpBin, CFG, etc.).
+     *  Called automatically when debug is launched; can be called after build to target the built exe. */
+    void setCurrentBinaryForReverseEngineering(const std::string& path);
+
     HMENU createReverseEngineeringMenu(); // Helper to add the menu
 
     // ========================================================================
@@ -1482,6 +1541,7 @@ private:
     COLORREF getAnnotationColor(AnnotationSeverity severity) const;
     int getAnnotationGutterIconWidth() const;
     static LRESULT CALLBACK AnnotationOverlayProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void createAnnotationOverlay(HWND hwndParent);
 
     // Annotation lifecycle — tab switch / file close
     void clearAnnotationsForCurrentFile();  // Clear annotations when closing a tab
@@ -1616,6 +1676,8 @@ private:
     void resizeSidebar(int width, int height);
     static LRESULT CALLBACK ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     static LRESULT CALLBACK SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK SidebarContentProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    static WNDPROC s_sidebarContentOldProc;
     
     // Explorer View
     void createExplorerView(HWND hwndParent);
@@ -1675,6 +1737,13 @@ private:
     void updateExtension(const std::string& extensionId);
     void showExtensionDetails(const std::string& extensionId);
     void loadInstalledExtensions();
+    void runWorkspaceSearchFromDialog(const std::string& query);
+    void installFromVSIXFile();
+    void showMultiFileSearchDialog();
+    void showCICDSettingsDialog();
+    void showModelRegistryDialog();
+    friend LRESULT CALLBACK CICDSettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    friend LRESULT CALLBACK ModelRegistryDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 private:
     // ========================================================================
@@ -2021,6 +2090,7 @@ private:
     // Primary Sidebar state
     HWND m_hwndActivityBar;
     HWND m_hwndSidebar;
+    HWND m_hwndSidebarTitle = nullptr;
     HWND m_hwndSidebarContent;
     bool m_sidebarVisible;
     int m_sidebarWidth;
@@ -2188,7 +2258,7 @@ private:
     HWND m_hwndPanelKillTerminalBtn;
     HWND m_hwndPanelMaximizeBtn;
     HWND m_hwndPanelCloseBtn;
-    HWND m_hwndProblemsListView;
+    HWND m_hwndProblemsListView = nullptr;  // unified with Problems panel (no duplicate)
     PanelTab m_activePanelTab;
     bool m_panelVisible;
     bool m_panelMaximized;
@@ -2278,6 +2348,12 @@ private:
     // Ollama config
     std::string m_ollamaBaseUrl;      // e.g., http://localhost:11434
     std::string m_ollamaModelOverride; // if set, use this tag instead of deriving from filename
+
+    // Optional panels (nullptr when feature not used)
+    ModelRegistry*         m_modelRegistry         = nullptr;
+    InterpretabilityPanel* m_interpretabilityPanel = nullptr;
+    BenchmarkMenu*         m_benchmarkMenu         = nullptr;
+    ModelRegistry* getModelRegistry() { return m_modelRegistry; }
 
     // FIM Prediction Provider (OllamaProvider for ghost text)
     std::unique_ptr<RawrXD::Prediction::OllamaProvider> m_predictionProvider;
@@ -2448,6 +2524,8 @@ private:
     std::string trimGhostText(const std::string& raw);
 
     // Ghost Text state
+    class GhostTextRenderer;
+    GhostTextRenderer* m_ghostTextRendererOverlay = nullptr;
     bool m_ghostTextEnabled     = false;
     bool m_ghostTextVisible     = false;
     bool m_ghostTextAccepted    = false;
@@ -2466,9 +2544,32 @@ private:
     void agentRejectHunk(int fileIndex, int hunkIndex);
     void agentAcceptAll();
     void agentRejectAll();
+    void refreshAgentDiffDisplay();
     std::string getAgentSessionSummary() const;
     void renderAgentDiffPanel(HDC hdc, RECT panelRect);
     void onBoundedAgentLoop();  // Ctrl+Shift+I → Bounded Agent (FIM tools)
+    void toggleAgentPanel();   // View > Agent Panel — show/hide agent chat panel
+
+    // Resolved Ollama model (used by GhostText, AI caller)
+    std::string getResolvedOllamaModel() const;
+
+    // Agentic mode (Plan/Agent/Ask) — agentic_mode_switcher.hpp
+    void setAgenticMode(RawrXD::AgenticMode mode);
+    void onAgenticModeChanged(RawrXD::AgenticMode mode);
+    void onAgenticModeAsk();
+    void onAgenticModePlan();
+    void onAgenticModeAgent();
+    RawrXD::AgenticMode m_agenticMode = RawrXD::AgenticMode::Ask;
+    HWND m_hwndAgenticModeAsk  = nullptr;
+    HWND m_hwndAgenticModePlan = nullptr;
+    HWND m_hwndAgenticModeAgent = nullptr;
+
+    // ========================================================================
+    // Security Scans (Win32IDE_SecurityScans.cpp) — Top-50 P0
+    // ========================================================================
+    void RunSecretsScan();
+    void RunSastScan();
+    void RunDependencyAudit();
 
     // ========================================================================
     // Disk Recovery Panel (Win32IDE_DiskRecovery.cpp)
@@ -3231,6 +3332,7 @@ private:
     void handleToolDispatchEndpoint(SOCKET client, const std::string& body);
     void handleCliEndpoint(SOCKET client, const std::string& body);
     void handleHotpatchEndpoint(SOCKET client, const std::string& path, const std::string& body);
+    void handleHotpatchTargetTpsEndpoint(SOCKET client, const std::string& method, const std::string& body);
 
     // Phase 6B: Agentic + Failure visibility endpoints (read-only)
     void handleAgentHistoryEndpoint(SOCKET client, const std::string& path);
@@ -4066,6 +4168,7 @@ private:
 #define IDM_HOTPATCH_RESET_STATS        9015
 #define IDM_HOTPATCH_TOGGLE_ALL         9016
 #define IDM_HOTPATCH_SHOW_PROXY_STATS   9017
+#define IDM_HOTPATCH_SET_TARGET_TPS     9018
 
 // ========================================================================
 // WEBVIEW2 + MONACO EDITOR COMMANDS — Phase 26 (9100 range)
@@ -4142,6 +4245,11 @@ private:
 #define IDM_GAUNTLET_EXPORT             9601
 
 // ============================================================================
+// BUILD COMMANDS — Unified Build Pipeline (9602+)
+// ============================================================================
+#define IDM_BUILD_SOLUTION              9602
+
+// ============================================================================
 // PHASE 33: VOICE CHAT — Native Win32 Audio Engine (9700 range)
 // ============================================================================
 #define IDM_VOICE_RECORD                9700
@@ -4191,6 +4299,7 @@ private:
     void cmdHotpatchResetStats();
     void cmdHotpatchToggleAll();
     void cmdHotpatchShowProxyStats();
+    void cmdHotpatchSetTargetTps();
 
     // Hotpatch state
     bool m_hotpatchEnabled = false;
@@ -4778,6 +4887,21 @@ private:
     void cmdSemShowStats();
     bool getEditorCursorFileLineCol(std::string& outFile, uint32_t& outLine1Based, uint32_t& outCol) const;
     void navigateToFileLine(const std::string& filePath, uint32_t line1Based);
+
+    // Unified Problems Panel (P0)
+    void initProblemsPanel();
+    void refreshProblemsView();
+    void onProblemsItemActivate(int index);
+    void handleProblemsCommand(int commandId);
+    void runBuildInBackground(const std::string& workingDir, const std::string& buildCommand);
+    bool m_problemsPanelInitialized = false;
+    bool m_problemsShowErrors = true;
+    bool m_problemsShowWarnings = true;
+    bool m_problemsShowInfo = false;
+    HWND m_hwndProblemsPanel = nullptr;
+    HWND m_hwndProblemsFilter = nullptr;
+    std::vector<RawrXD::ProblemEntry> m_problemsViewCache;
+
     bool m_semanticPanelInitialized = false;
 
     static constexpr int IDM_SEM_GO_TO_DEF         = 11300;
@@ -4817,6 +4941,7 @@ private:
     void cmdTelSetLevel();
     void cmdTelShowStats();
     bool m_telemetryPanelInitialized = false;
+    bool m_securityDashboardInitialized = false;
 
     static constexpr int IDM_TEL_TRACE_STATUS      = 11400;
     static constexpr int IDM_TEL_START_SPAN        = 11401;
@@ -5436,7 +5561,7 @@ private:
     int  m_currentEncoding = 65001; // CP_UTF8
 
     // Tier 3: Status bar click routing
-    void handleStatusBarClick(int x, int y);
+    void handleStatusBarClick(int partIndex);
 
     // ════════════════════════════════════════════════════════════════════
     // TIER 3: COSMETICS — Features 20–30
@@ -5639,6 +5764,7 @@ private:
     void paintBreadcrumbs(HDC hdc, RECT& rc);
     static LRESULT CALLBACK BreadcrumbProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     std::vector<BreadcrumbItem> m_breadcrumbPath;
+    std::vector<RECT> m_breadcrumbRects;
     int  m_breadcrumbHeight = 22;
     HFONT m_breadcrumbFont = nullptr;
     HWND  m_hwndBreadcrumbs = nullptr;
@@ -5661,6 +5787,7 @@ private:
     // 5. Settings GUI
     void initSettingsGUI();
     void showSettingsGUIDialog();
+    friend LRESULT CALLBACK SettingsSummaryWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
     // 6. Welcome / Onboarding Page
     void initWelcomePage();
@@ -5996,3 +6123,6 @@ public:
     bool m_emojiSupportInitialized       = false;
 private:
 };
+
+// Global IDE instance for C-callable bridges (agent streaming, etc.). Set in initProblemsPanel().
+extern Win32IDE* g_pMainIDE;

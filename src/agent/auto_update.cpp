@@ -108,6 +108,21 @@ std::vector<uint8_t> httpGet(const std::wstring& host, const std::wstring& path,
         return body;
     }
 
+    // Check HTTP status code
+    DWORD statusCode = 0;
+    DWORD statusCodeSize = sizeof(statusCode);
+    if (!WinHttpQueryHeaders(hReq, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                            WINHTTP_HEADER_NAME_BY_INDEX, &statusCode, &statusCodeSize, WINHTTP_NO_HEADER_INDEX)) {
+        WinHttpCloseHandle(hReq); WinHttpCloseHandle(hConn); WinHttpCloseHandle(hSession);
+        return body;
+    }
+
+    if (statusCode != 200) {
+        fprintf(stderr, "[ERROR] [AutoUpdate] HTTP %lu (expected 200)\n", statusCode);
+        WinHttpCloseHandle(hReq); WinHttpCloseHandle(hConn); WinHttpCloseHandle(hSession);
+        return body;
+    }
+
     DWORD avail = 0;
     while (WinHttpQueryDataAvailable(hReq, &avail) && avail > 0) {
         size_t pos = body.size();

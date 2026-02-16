@@ -1,5 +1,8 @@
-// agentic_failure_detector.cpp - Implementation of failure detection
+// agentic_failure_detector.cpp - Implementation of failure detection with MASM acceleration
 #include "agentic_failure_detector.hpp"
+#include "license_enforcement.h"
+#include "../asm/ai_agent_masm_bridge.hpp"
+#include "../core/unified_hotpatch_manager.hpp"
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -7,6 +10,35 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <atomic>
+#include <memory>
+#include <cstring>
+#include <windows.h>
+
+// SCAFFOLD_067: agentic_failure_detector and retry
+
+
+// MASM Bridge integration
+static std::unique_ptr<AgentMasmBridge> g_masmBridge;
+static std::atomic<bool> g_masmInitialized{false};
+static std::atomic<uint64_t> g_detectionCycles{0};
+static std::atomic<uint64_t> g_hotpatchHits{0};
+
+// Hotpatch callback for failure correction 
+extern "C" {
+    static void failure_detection_callback(uint32_t failure_type, const char* details) {
+        if (details) {
+            fprintf(stderr, "[MASM-FAILURE] Type:%u Details:%s\n", failure_type, details);
+        }
+        g_hotpatchHits.fetch_add(1, std::memory_order_relaxed);
+    }
+    
+    static void correction_callback(const char* correction_data, size_t data_size) {
+        if (correction_data && data_size > 0) {
+            fprintf(stderr, "[MASM-CORRECTION] Applied %zu bytes of correction\n", data_size);
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Helper functions replacing Qt string methods
@@ -63,10 +95,32 @@ static int str_count_substr(const std::string& s, const std::string& sub) {
     return count;
 }
 
-AgenticFailureDetector::AgenticFailureDetector()
-    {
+AgenticFailureDetector::AgenticFailureDetector() {
     initializePatterns();
-    fprintf(stderr, "[INFO] [AgenticFailureDetector] Initialized with pattern library\n");
+    initializeMasmAcceleration();
+    fprintf(stderr, "[INFO] [AgenticFailureDetector] Initialized with MASM-accelerated pattern library\n");
+}
+
+void AgenticFailureDetector::initializeMasmAcceleration() {
+    if (!g_masmInitialized.load(std::memory_order_acquire)) {
+        g_masmBridge = std::make_unique<AgentMasmBridge>();
+        
+        // Initialize MASM bridge with failure and correction callbacks
+        auto result = g_masmBridge->initialize(
+            reinterpret_cast<uint64_t>(this),  // agent_id (use this pointer as ID)
+            1048576,  // 1MB reasoning buffer
+            failure_detection_callback,
+            correction_callback
+        );
+        
+        if (result.success) {
+            g_masmInitialized.store(true, std::memory_order_release);
+            fprintf(stderr, "[INFO] [AgenticFailureDetector] MASM acceleration initialized: %s\n", result.detail);
+        } else {
+            fprintf(stderr, "[ERROR] [AgenticFailureDetector] MASM initialization failed: %s (code: %d)\n", 
+                   result.detail, result.errorCode);
+        }
+    }
 }
 
 void AgenticFailureDetector::initializePatterns()
@@ -106,6 +160,13 @@ void AgenticFailureDetector::initializePatterns()
 
 FailureInfo AgenticFailureDetector::detectFailure(const std::string& modelOutput, const std::string& context)
 {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::AgenticFailureDetect, __FUNCTION__)) {
+        return FailureInfo{AgentFailureType::None,
+                           "[LICENSE] Agentic failure detection requires Enterprise license",
+                           0.0, "", std::chrono::system_clock::now(), m_sequenceNumber};
+    }
+    
     std::lock_guard<std::mutex> lock(m_mutex);
     
     if (!m_enabled) {
@@ -118,29 +179,54 @@ FailureInfo AgenticFailureDetector::detectFailure(const std::string& modelOutput
     
     m_stats.totalOutputsAnalyzed++;
     
-    // Check each failure type in priority order
-    if (isRefusal(modelOutput)) {
-        FailureInfo info{AgentFailureType::Refusal, "Model refusal detected", 
-                        calculateConfidence(AgentFailureType::Refusal, modelOutput),
-                        "Contains refusal keywords", std::chrono::system_clock::now(), m_sequenceNumber++};
-        m_stats.failureTypeCounts[static_cast<int>(AgentFailureType::Refusal)]++;
-        return info;
+    // MASM-Accelerated Detection Path
+    if (g_masmInitialized.load(std::memory_order_acquire) && g_masmBridge) {
+        constexpr size_t MAX_FAILURE_EVENTS = 8;
+        AgentFailureEvent masmEvents[MAX_FAILURE_EVENTS];
+        size_t eventCount = 0;
+        
+        auto masmResult = g_masmBridge->detectFailures(
+            modelOutput.c_str(), modelOutput.size(),
+            masmEvents, MAX_FAILURE_EVENTS, &eventCount
+        );
+        
+        if (masmResult.success && eventCount > 0) {
+            // Update performance counter
+            g_detectionCycles.fetch_add(masmResult.cycleCount, std::memory_order_relaxed);
+            
+            // Convert first MASM failure event to FailureInfo
+            const auto& masmEvent = masmEvents[0];
+            AgentFailureType failureType = static_cast<AgentFailureType>(masmEvent.failure_type - 1);  // Convert from 1-based to 0-based
+            
+            FailureInfo info{
+                failureType,
+                std::string(masmEvent.description ? masmEvent.description : "MASM failure detected"),
+                masmEvent.confidence,
+                "SIMD pattern match",
+                std::chrono::system_clock::now(),
+                m_sequenceNumber++
+            };
+            
+            m_stats.failureTypeCounts[static_cast<int>(failureType)]++;
+            
+            // Trigger callback if available
+            if (onFailureDetected) {
+                onFailureDetected(failureType, masmEvent.description, callbackContext);
+            }
+            
+            return info;
+        }
+        
+        // MASM detection found no failures, fall through to fallback
+        fprintf(stderr, "[DEBUG] MASM detection completed with no failures found\n");
     }
     
-    if (isSafetyViolation(modelOutput)) {
-        FailureInfo info{AgentFailureType::SafetyViolation, "Safety filter triggered",
-                        calculateConfidence(AgentFailureType::SafetyViolation, modelOutput),
-                        "Contains safety markers", std::chrono::system_clock::now(), m_sequenceNumber++};
-        m_stats.failureTypeCounts[static_cast<int>(AgentFailureType::SafetyViolation)]++;
-        return info;
-    }
-    
-    if (isTokenLimitExceeded(modelOutput)) {
-        FailureInfo info{AgentFailureType::TokenLimitExceeded, "Token limit exceeded",
-                        0.9, "Response truncated or incomplete", std::chrono::system_clock::now(), m_sequenceNumber++};
-        m_stats.failureTypeCounts[static_cast<int>(AgentFailureType::TokenLimitExceeded)]++;
-        return info;
-    }
+    // Fallback to traditional pattern matching (for compatibility)
+    return detectFailureFallback(modelOutput, context);
+}
+
+FailureInfo AgenticFailureDetector::detectFailureFallback(const std::string& modelOutput, const std::string& context)
+{
     
     if (isTimeout(modelOutput)) {
         FailureInfo info{AgentFailureType::Timeout, "Inference timeout",
@@ -186,6 +272,10 @@ FailureInfo AgenticFailureDetector::detectFailure(const std::string& modelOutput
 
 std::vector<FailureInfo> AgenticFailureDetector::detectMultipleFailures(const std::string& modelOutput)
 {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::AgenticFailureDetect, __FUNCTION__)) {
+        return {};
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     std::vector<FailureInfo> failures;
     

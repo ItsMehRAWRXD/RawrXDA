@@ -889,7 +889,8 @@ function buildDllIfNeeded() {
     const dllPath = path.join(__dirname, 'bin', 'Phase3_Agent_Kernel.dll');
     if (!fs.existsSync(dllPath)) {
         console.log('⚠️  DLL not found at', dllPath);
-        console.log('   Build it offline: cmake --build . --config Release --target RawrXD-Shell');
+        console.log('   Build it: from repo root run build_phase3.bat (use "Developer Command Prompt for VS")');
+        console.log('   Or: open Visual Studio, open D:\\rawrxd, then run build_phase3.bat from a VS x64 shell.');
         console.log('   Server will run in Ollama/model-server fallback mode.');
         return false;
     }

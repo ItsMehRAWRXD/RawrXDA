@@ -21,6 +21,15 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
+
+// SCAFFOLD_296: MCP tool list and invoke
+
+
+// SCAFFOLD_191: MCP client (if present)
+
+
+// SCAFFOLD_086: MCP integration and tools
+
 #endif
 
 namespace RawrXD {

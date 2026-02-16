@@ -28,6 +28,7 @@ struct ThermalSnapshot {
 
 /**
  * @brief Plugin interface for thermal dashboard injection
+ * Win32: parent in widget creation is HWND for CreateWindowExW.
  */
 class IThermalDashboardPlugin {
 public:
@@ -39,7 +40,7 @@ public:
     virtual std::string pluginName() const = 0;
     virtual std::string pluginVersion() const = 0;
     
-    // Widget creation
+    // Widget creation (parent: Win32 HWND)
     virtual void* createDashboardWidget(void* parent = nullptr) = 0;
     virtual void* createCompactWidget(void* parent = nullptr) = 0;  // Toolbar widget
     

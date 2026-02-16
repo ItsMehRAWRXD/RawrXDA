@@ -265,6 +265,10 @@ public:
     VSCodeAPIResult loadJSExtension(const char* extensionId, const char* extensionPath,
                                      const VSCodeExtensionManifest* manifest);
 
+    // Load a pre-extracted extension from a directory containing package.json.
+    // Parses the manifest, validates it, and loads the JS runtime.
+    VSCodeAPIResult loadPreInstalledExtension(const char* extensionDir);
+
     // ---- Extension Lifecycle ----
     VSCodeAPIResult activateExtension(const char* extensionId);
     VSCodeAPIResult deactivateExtension(const char* extensionId);

@@ -12,6 +12,8 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "../core/context_deterioration_hotpatch.hpp"
+#include "../../include/feature_flags_runtime.h"
 #include <cstdio>
 #include <sstream>
 
@@ -57,7 +59,8 @@ bool Win32IDE::initNativePipeline() {
     cfg.targetHWND          = m_hwndMain;
     cfg.postMessages        = true;
     cfg.backgroundInference = true;
-    cfg.enableTelemetry     = true;
+    cfg.enableTelemetry     = RawrXD::Flags::FeatureFlagsRuntime::Instance().isEnabled(
+        RawrXD::License::FeatureID::InferenceStatistics);
 
     // Use inference config defaults from IDE settings
     cfg.defaultSampler.temperature    = m_inferenceConfig.temperature;
@@ -112,7 +115,7 @@ void Win32IDE::shutdownNativePipeline() {
 // loadNativeModel — Load a GGUF model into the native pipeline
 // ============================================================================
 bool Win32IDE::loadNativeModel(const std::string& ggufPath) {
-    // Auto-initialize pipeline if not yet done
+    // Auto-initialize pipeline if not already initialized
     if (!m_nativePipelineReady) {
         if (!initNativePipeline()) {
             RAWRXD_LOG_ERROR("[NativePipeline] Cannot load model: pipeline init failed");
@@ -177,6 +180,29 @@ std::string Win32IDE::generateNativeResponse(const std::string& prompt) {
     // Build the full chat prompt with system instructions and history
     std::string fullPrompt = buildChatPrompt(prompt);
 
+    // Context deterioration hotpatch: keep quality at 100% by truncating
+    // context before models hit their deterioration sweet-spot limit
+    uint32_t ctxMax = (m_currentModelMetadata.context_length > 0)
+        ? static_cast<uint32_t>(m_currentModelMetadata.context_length)
+        : static_cast<uint32_t>(m_inferenceConfig.contextWindow);
+    if (ctxMax == 0) ctxMax = 4096;
+    const char* modelName = nullptr;
+    if (!m_loadedModelPath.empty()) {
+        size_t pos = m_loadedModelPath.find_last_of("\\/");
+        modelName = m_loadedModelPath.c_str() + (pos == std::string::npos ? 0 : pos + 1);
+    }
+    auto& ctxHotpatch = ContextDeteriorationHotpatch::instance();
+    if (ctxHotpatch.isEnabled()) {
+        auto result = ctxHotpatch.prepareContextForInference(
+            fullPrompt, ctxMax, modelName);
+        fullPrompt = std::move(result.modifiedPrompt);
+        if (result.mitigation != DeteriorationMitigation::None) {
+            RAWRXD_LOG_INFO("[ContextHotpatch] " << result.description
+                << " quality=" << result.qualityScore << "% saved "
+                << result.droppedTokens << " tokens");
+        }
+    }
+
     // Apply current inference config
     RawrXD::LocalAI::SamplerConfig sampler;
     sampler.temperature   = m_inferenceConfig.temperature;
@@ -212,6 +238,11 @@ std::string Win32IDE::generateNativeResponse(const std::string& prompt) {
 void Win32IDE::onNativeAIToken(WPARAM wParam, LPARAM lParam) {
     auto* entry = reinterpret_cast<RawrXD::TokenStreamEntry*>(lParam);
     if (!entry) return;
+    if (!RawrXD::Flags::FeatureFlagsRuntime::Instance().isEnabled(
+            RawrXD::License::FeatureID::TokenStreaming)) {
+        VirtualFree(entry, 0, MEM_RELEASE);
+        return;
+    }
 
     // Append the token text to the active chat response
     std::string tokenText(entry->text, entry->textLen);
@@ -230,7 +261,9 @@ void Win32IDE::onNativeAIToken(WPARAM wParam, LPARAM lParam) {
 
     // Update status bar with throughput
     float tps = m_nativePipeline ? m_nativePipeline->CurrentTokensPerSec() : 0.0f;
-    if (m_hwndStatusBar && entry->seqPosition % 10 == 0) {
+    if (m_hwndStatusBar && entry->seqPosition % 10 == 0 &&
+        RawrXD::Flags::FeatureFlagsRuntime::Instance().isEnabled(
+            RawrXD::License::FeatureID::InferenceStatistics)) {
         char tpsBuf[64];
         snprintf(tpsBuf, sizeof(tpsBuf), "Native AI: %.1f tok/s", tps);
         SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)tpsBuf);
@@ -254,9 +287,15 @@ void Win32IDE::onNativeAIComplete(WPARAM wParam, LPARAM lParam) {
     // Append completion marker to chat
     if (m_hwndCopilotChatOutput) {
         char summary[128];
-        snprintf(summary, sizeof(summary),
-                 "\r\n\r\n[Native AI — %.1f tok/s]\r\n",
-                 tokensPerSec);
+        if (RawrXD::Flags::FeatureFlagsRuntime::Instance().isEnabled(
+                RawrXD::License::FeatureID::InferenceStatistics)) {
+            snprintf(summary, sizeof(summary),
+                     "\r\n\r\n[Native AI — %.1f tok/s]\r\n",
+                     tokensPerSec);
+        } else {
+            snprintf(summary, sizeof(summary),
+                     "\r\n\r\n[Native AI — Complete]\r\n");
+        }
 
         int len = GetWindowTextLengthA(m_hwndCopilotChatOutput);
         SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, len, len);
@@ -276,8 +315,13 @@ void Win32IDE::onNativeAIComplete(WPARAM wParam, LPARAM lParam) {
         // Update status bar
         if (m_hwndStatusBar) {
             char statusBuf[128];
-            snprintf(statusBuf, sizeof(statusBuf),
-                     "Native AI: Ready (%.1f tok/s)", tokensPerSec);
+            if (RawrXD::Flags::FeatureFlagsRuntime::Instance().isEnabled(
+                    RawrXD::License::FeatureID::InferenceStatistics)) {
+                snprintf(statusBuf, sizeof(statusBuf),
+                         "Native AI: Ready (%.1f tok/s)", tokensPerSec);
+            } else {
+                snprintf(statusBuf, sizeof(statusBuf), "Native AI: Ready");
+            }
             SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)statusBuf);
         }
     }

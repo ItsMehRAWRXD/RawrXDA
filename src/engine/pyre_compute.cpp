@@ -9,7 +9,9 @@
 // Error model: PatchResult (no exceptions)
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include "pyre_compute.h"
 #include "../core/model_memory_hotpatch.hpp"  // PatchResult
@@ -20,6 +22,9 @@
 #include <cstdlib>
 #include <algorithm>
 #include <intrin.h>  // __rdtsc, _mm256_*
+
+// SCAFFOLD_138: Pyre compute and wiring
+
 
 // ---------------------------------------------------------------------------
 //                        PyreTensor Static Methods
@@ -480,7 +485,7 @@ PatchResult PyreGraph::loadModel(const char* filepath) {
 PatchResult PyreGraph::loadFromGGUF(const char* /*ggufPath*/) {
     // Future: convert GGUF tensors into Pyre tensor layout on-the-fly
     // For now, use the dedicated .pyre format or StreamingGGUFLoader
-    return PatchResult::error("GGUF-to-Pyre bridge not yet wired — use .pyre format or StreamingGGUFLoader", -1);
+    return PatchResult::error("GGUF-to-Pyre bridge not implemented — use .pyre format or StreamingGGUFLoader", -1);
 }
 
 bool PyreGraph::isModelLoaded() const { return m_modelLoaded; }

@@ -53,12 +53,16 @@ struct SSOTStartupValidator {
     SSOTStartupValidator() {
         auto audit = RawrXD::Dispatch::auditRegistry();
         if (!audit.isClean) {
-            fprintf(stderr, 
+            fprintf(stderr,
                 "[SSOT AUDIT] WARNING: Registry integrity issue detected!\n"
                 "  Total: %zu  GUI: %zu  CLI: %zu\n"
                 "  Null handlers: %zu  Duplicate IDs: %zu  Duplicate aliases: %zu\n",
                 audit.totalCommands, audit.guiCommands, audit.cliCommands,
                 audit.nullHandlers, audit.duplicateIds, audit.duplicateAliases);
+            if (audit.duplicateAliases > 0 && audit.firstDuplicateAlias) {
+                fprintf(stderr, "  First duplicate alias: \"%s\" (fix in command_registry.hpp)\n",
+                    audit.firstDuplicateAlias);
+            }
         }
     }
 } g_ssotValidator;

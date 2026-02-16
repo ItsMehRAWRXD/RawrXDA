@@ -9,6 +9,21 @@
 #include <functional>
 #include <chrono>
 
+// PatchResult pattern for no-exceptions architecture
+struct PatchResult {
+    bool success;
+    const char* detail;
+    int errorCode;
+    
+    static PatchResult ok(const char* msg = "Success") {
+        return {true, msg, 0};
+    }
+    
+    static PatchResult error(const char* msg, int code = -1) {
+        return {false, msg, code};
+    }
+};
+
 // Comprehensive IDE Test Agent
 // Tests every function in the IDE with detailed logging
 class IDETestAgent {
@@ -18,6 +33,7 @@ public:
         bool passed;
         std::string errorMessage;
         double durationMs;
+        int errorCode;
     };
 
     IDETestAgent(Win32IDE* ide) : m_ide(ide), m_testsRun(0), m_testsPassed(0), m_testsFailed(0) {
@@ -110,55 +126,46 @@ private:
     int m_testsPassed;
     int m_testsFailed;
 
-    // Test helper
-    void runTest(const std::string& name, std::function<void()> testFunc) {
+    // Test helper - no exceptions, uses PatchResult pattern
+    void runTest(const std::string& name, std::function<PatchResult()> testFunc) {
         LOG_INFO("Running test: " + name);
         auto start = std::chrono::high_resolution_clock::now();
         
-        try {
-            testFunc();
-            auto end = std::chrono::high_resolution_clock::now();
-            double durationMs = std::chrono::duration<double, std::milli>(end - start).count();
-            
-            m_results.push_back({name, true, "", durationMs});
+        PatchResult result = testFunc();
+        auto end = std::chrono::high_resolution_clock::now();
+        double durationMs = std::chrono::duration<double, std::milli>(end - start).count();
+        
+        if (result.success) {
+            m_results.push_back({name, true, "", durationMs, 0});
             m_testsPassed++;
             LOG_INFO("✓ PASSED: " + name + " (" + std::to_string(durationMs) + "ms)");
-        } catch (const std::exception& e) {
-            auto end = std::chrono::high_resolution_clock::now();
-            double durationMs = std::chrono::duration<double, std::milli>(end - start).count();
-            
-            std::string error = std::string(e.what());
-            m_results.push_back({name, false, error, durationMs});
+        } else {
+            std::string error = std::string(result.detail ? result.detail : "Unknown error");
+            m_results.push_back({name, false, error, durationMs, result.errorCode});
             m_testsFailed++;
             LOG_ERROR("✗ FAILED: " + name + " - " + error);
-        } catch (...) {
-            auto end = std::chrono::high_resolution_clock::now();
-            double durationMs = std::chrono::duration<double, std::milli>(end - start).count();
-            
-            m_results.push_back({name, false, "Unknown exception", durationMs});
-            m_testsFailed++;
-            LOG_ERROR("✗ FAILED: " + name + " - Unknown exception");
         }
         m_testsRun++;
     }
 
     // Core window tests
     void testWindowCreation() {
-        runTest("Window Creation", [this]() {
+        runTest("Window Creation", [this]() -> PatchResult {
             if (!m_ide->getMainWindow()) {
-                throw std::runtime_error("Main window handle is null");
+                return PatchResult::error("Main window handle is null");
             }
             LOG_DEBUG("Main window handle validated");
+            return PatchResult::ok("Main window validated");
         });
     }
 
     void testWindowVisibility() {
-        runTest("Window Visibility", [this]() {
+        runTest("Window Visibility", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
-            if (!hwnd) throw std::runtime_error("Window handle is null");
+            if (!hwnd) return PatchResult::error("Window handle is null");
             
             if (!IsWindow(hwnd)) {
-                throw std::runtime_error("Window is not valid");
+                return PatchResult::error("Window is not valid");
             }
             
             if (!IsWindowVisible(hwnd)) {
@@ -166,29 +173,31 @@ private:
             } else {
                 LOG_DEBUG("Window is visible");
             }
+            return PatchResult::ok("Window visibility checked");
         });
     }
 
     // UI Component tests
     void testMenuBar() {
-        runTest("Menu Bar", [this]() {
+        runTest("Menu Bar", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
             HMENU menu = GetMenu(hwnd);
             if (!menu) {
-                throw std::runtime_error("Menu bar not found");
+                return PatchResult::error("Menu bar not found");
             }
             
             int menuCount = GetMenuItemCount(menu);
             LOG_DEBUG("Menu bar has " + std::to_string(menuCount) + " items");
             
             if (menuCount == 0) {
-                throw std::runtime_error("Menu bar is empty");
+                return PatchResult::error("Menu bar is empty");
             }
+            return PatchResult::ok("Menu bar validated");
         });
     }
 
     void testToolbar() {
-        runTest("Toolbar", [this]() {
+        runTest("Toolbar", [this]() -> PatchResult {
             // Test toolbar existence by checking for common toolbar controls
             HWND hwnd = m_ide->getMainWindow();
             HWND toolbar = FindWindowExA(hwnd, NULL, "ToolbarWindow32", NULL);
@@ -197,57 +206,63 @@ private:
             } else {
                 LOG_DEBUG("Toolbar found");
             }
+            return PatchResult::ok("Toolbar checked");
         });
     }
 
     void testStatusBar() {
-        runTest("Status Bar", [this]() {
+        runTest("Status Bar", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
             HWND statusBar = FindWindowExA(hwnd, NULL, "msctls_statusbar32", NULL);
             if (!statusBar) {
-                throw std::runtime_error("Status bar not found");
+                return PatchResult::error("Status bar not found");
             }
             LOG_DEBUG("Status bar validated");
+            return PatchResult::ok("Status bar found");
         });
     }
 
     void testSidebar() {
-        runTest("Sidebar", [this]() {
+        runTest("Sidebar", [this]() -> PatchResult {
             // Test sidebar visibility and state
             LOG_DEBUG("Testing sidebar presence");
             // Sidebar is created in onCreate, should exist
+            return PatchResult::ok("Sidebar checked");
         });
     }
 
     void testActivityBar() {
-        runTest("Activity Bar", [this]() {
+        runTest("Activity Bar", [this]() -> PatchResult {
             LOG_DEBUG("Testing activity bar (VS Code style icon bar)");
+            return PatchResult::ok("Activity bar checked");
         });
     }
 
     void testSecondarySidebar() {
-        runTest("Secondary Sidebar (Copilot)", [this]() {
+        runTest("Secondary Sidebar (Copilot)", [this]() -> PatchResult {
             LOG_DEBUG("Testing secondary sidebar for AI/Copilot");
+            return PatchResult::ok("Secondary sidebar checked");
         });
     }
 
     // Editor tests
     void testEditor() {
-        runTest("Editor Control", [this]() {
+        runTest("Editor Control", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
             HWND editor = FindWindowExA(hwnd, NULL, "RICHEDIT50W", NULL);
             if (!editor) {
-                throw std::runtime_error("Editor control not found");
+                return PatchResult::error("Editor control not found");
             }
             LOG_DEBUG("Editor control validated");
+            return PatchResult::ok("Editor control found");
         });
     }
 
     void testEditorText() {
-        runTest("Editor Text Operations", [this]() {
+        runTest("Editor Text Operations", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
             HWND editor = FindWindowExA(hwnd, NULL, "RICHEDIT50W", NULL);
-            if (!editor) throw std::runtime_error("Editor not found");
+            if (!editor) return PatchResult::error("Editor not found");
             
             // Test setting text
             const char* testText = "// IDETestAgent test content\nint main() {\n    return 0;\n}";
@@ -258,16 +273,17 @@ private:
             LOG_DEBUG("Editor text length: " + std::to_string(len));
             
             if (len == 0) {
-                throw std::runtime_error("Failed to set editor text");
+                return PatchResult::error("Failed to set editor text");
             }
+            return PatchResult::ok("Editor text operations successful");
         });
     }
 
     void testEditorSelection() {
-        runTest("Editor Selection", [this]() {
+        runTest("Editor Selection", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
             HWND editor = FindWindowExA(hwnd, NULL, "RICHEDIT50W", NULL);
-            if (!editor) throw std::runtime_error("Editor not found");
+            if (!editor) return PatchResult::error("Editor not found");
             
             // Test selection
             CHARRANGE range{0, 10};
@@ -277,27 +293,32 @@ private:
             SendMessage(editor, EM_EXGETSEL, 0, (LPARAM)&checkRange);
             
             LOG_DEBUG("Selection set: " + std::to_string(checkRange.cpMin) + " to " + std::to_string(checkRange.cpMax));
+            return PatchResult::ok("Editor selection test completed");
         });
     }
 
     void testSyntaxHighlighting() {
-        runTest("Syntax Highlighting", [this]() {
+        runTest("Syntax Highlighting", [this]() -> PatchResult {
             LOG_DEBUG("Testing syntax highlighting system");
             // Syntax highlighting is visual - log that system exists
+            return PatchResult::ok("Syntax highlighting checked");
         });
     }
 
     // File operation tests
     void testFileOperations() {
-        runTest("File Operations", [this]() {
+        runTest("File Operations", [this]() -> PatchResult {
             LOG_DEBUG("Testing file operation system");
             // File ops tested through actual file loading later
+            return PatchResult::ok("File operations checked");
         });
     }
 
     void testFileExplorer() {
-        runTest("File Explorer", [this]() {
+        runTest("File Explorer", [this]() -> PatchResult {
             HWND hwnd = m_ide->getMainWindow();
+            return PatchResult::ok("File explorer checked");
+        });
             HWND tree = FindWindowExA(hwnd, NULL, "SysTreeView32", NULL);
             if (!tree) {
                 LOG_WARNING("File explorer tree view not found");

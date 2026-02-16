@@ -1,0 +1,1116 @@
+﻿{
+  "timestamp": "2026-02-15T17:19:07.9765981-05:00",
+  "mode": "APPLY",
+  "repoRoot": "D:\\rawrxd",
+  "includeDocs": false,
+  "filesChanged": 0,
+  "markersRemoved": 0,
+  "markersRemaining": 686,
+  "changed": [],
+  "remaining": [
+    {
+      "file": "D:\\rawrxd\\CMakeLists.txt",
+      "after": 10
+    },
+    {
+      "file": "D:\\rawrxd\\include\\d3d10effect.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\feature_registry.h",
+      "after": 10
+    },
+    {
+      "file": "D:\\rawrxd\\include\\gguf.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\ghost_text_renderer.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\ide\\resource_generator.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\image_generator\\stb_image_write.h",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\include\\mainwindow_stub.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\multi_file_search.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\scaffold_markers_367.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\include\\sqlite3.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\Build-MASMBridge-NoAdmin.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\Build-MASMBridge.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\command_translator.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\Convert-CppToMASM.ps1",
+      "after": 10
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\ConvertToMASM_FullProduction.ps1",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\ConvertToMASM_GovernorAuditBeaconDual.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\Generate-PatternSources.ps1",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\model_maker_zero_dep.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\model_self_digest.ps1",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\RawrXD-IDE-Bridge.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\StressTest-BigDaddyG.ps1",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\scripts\\todo_manager.ps1",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agent\\advanced_autonomous_task_manager.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agent\\autonomous_orchestrator.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agent\\planner.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agent\\process_utils.hpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agent\\quantum_agent_orchestrator.cpp",
+      "after": 8
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agent\\self_patch.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic_engine.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\autonomous_recovery_orchestrator.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\CMakeLists.txt",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\monaco\\NEON_MONACO_HACK.ASM",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\monaco\\test_monaco_verification.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\Phase3_Agent_Kernel_Complete.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_Absolutely_Complete.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_Complete_Explicit.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\rawrxd_complete_master_implementation.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_Complete_ReverseEngineered.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_Critical_Blockers_P0.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_High_Priority_P1.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_Production_ReverseEngineered.asm",
+      "after": 8
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\tests\\CMakeLists.txt",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\Titan_Streaming_Orchestrator_Complete.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\Titan_Streaming_Orchestrator.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\vulkan\\NEON_VULKAN_FABRIC_STUB.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\vulkan\\NEON_VULKAN_FABRIC.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\vulkan\\VulkanManager.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\agentic\\week4\\WEEK4_DELIVERABLE.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ai_model_caller_real.cpp",
+      "after": 6
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ai\\digestion_engine.cpp",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ai\\digestion_scanner.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\ai_agent_masm_core.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\ai_completion_provider_masm.asm",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\gpu_requantize_rocm.asm",
+      "after": 8
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\memory_patch.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\native_speed_kernels.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrCodex.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_AgenticOrchestrator.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_AgenticShellBridge.asm",
+      "after": 6
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\rawrxd_link.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_NanoDiskBridge.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_NeuralBridge.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_Speciator.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_StubDetector.asm",
+      "after": 6
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD_UnifiedOverclockGovernor.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD-AnalyzerDistiller.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\asm\\RawrXD-StreamingOrchestrator.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\cache\\response_cache.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\cli\\rawrxd_cli_compiler.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\CMakeLists.txt",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\CodexUltimate_simple.asm",
+      "after": 9
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\analyzer_distiller.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\auto_discovery.cpp",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\auto_feature_registry.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\auto_feature_registry.hpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\context_deterioration_hotpatch.hpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\enterprise_licensev2_impl.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\extension_polyfill_engine.cpp",
+      "after": 5
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\feature_registry.cpp",
+      "after": 6
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\final_gauntlet.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\ide_linker_bridge.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\js_extension_host.cpp",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\js_extension_host.hpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\license_offline_validator.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\model_training_pipeline.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\monaco_core_stubs.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\pdb_gsi_hash.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\pdb_lsp_bridge.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\pdb_native.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\pdb_reference_provider.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\plugin_signature.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\rawrxd_subsystem_api.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\sqlite3.c",
+      "after": 7
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\ssot_handlers_ext.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\ssot_handlers.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\streaming_orchestrator.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\universal_model_merger.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\core\\vision_encoder.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\debug_logger.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\digestion\\digestion_reverse_engineering.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\digestion\\RawrXD_DigestionEngine.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\direct_io\\adaptive_burst_router.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\direct_io\\gguf_burstzone_patcher.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\direct_io\\ghost_handshake.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\direct_io\\nvme_oracle_service.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\direct_io\\nvme_thermal_sidecar_entry.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\direct_io\\nvme_thermal_sidecar.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\directstorage_real.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\dual_engine_inference.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\dumpbin_final_backup.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\dumpbin_final.asm",
+      "after": 7
+    },
+    {
+      "file": "D:\\rawrxd\\src\\enterprise_license.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\extension_host\\RawrXD_DAP.asm",
+      "after": 7
+    },
+    {
+      "file": "D:\\rawrxd\\src\\extension_host\\RawrXD_ExtensionHost.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\extension_host\\RawrXD_MarketplaceInstaller.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml_masm\\attention.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml_masm\\tensor_ops.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-alloc.c",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-backend.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-blas\\ggml-blas.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cann\\aclnn_ops.cpp",
+      "after": 5
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cann\\common.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cann\\ggml-cann.cpp",
+      "after": 16
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-common.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\amx\\common.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\amx\\mmq.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\arch\\arm\\quants.c",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\arch\\wasm\\quants.c",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\arch\\x86\\quants.c",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\binary-ops.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\CMakeLists.txt",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\common.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\ggml-cpu-impl.h",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\ggml-cpu.c",
+      "after": 12
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\ops.cpp",
+      "after": 29
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\quants.c",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\repack.cpp",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\simd-mappings.h",
+      "after": 5
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\unary-ops.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\vec.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-cpu\\vec.h",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-hexagon\\ggml-hexagon.cpp",
+      "after": 9
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-hexagon\\htp\\htp-dma.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-hip\\CMakeLists.txt",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-impl.h",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-metal\\ggml-metal-impl.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-metal\\ggml-metal-ops.cpp",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-musa\\CMakeLists.txt",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-opencl\\ggml-opencl.cpp",
+      "after": 6
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-rpc\\ggml-rpc.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\CMakeLists.txt",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\common.hpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\convert.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\getrows.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\ggml-sycl.cpp",
+      "after": 9
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\softmax.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\sycl_hw.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-sycl\\sycl_hw.hpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-vulkan\\ggml-vulkan.cpp",
+      "after": 7
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-webgpu\\ggml-webgpu.cpp",
+      "after": 7
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-zdnn\\ggml-zdnn.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-zdnn\\mmf.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml-zdnn\\utils.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml.c",
+      "after": 9
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ggml\\ggml_nanoquant.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu_masm\\cuda_api.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu_masm\\deflate_brutal_masm.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu_masm\\gpu_backend.asm",
+      "after": 12
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu_masm\\gpu_memory.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu_masm\\vk_instance.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu_masm\\vulkan\\vk_instance.asm",
+      "after": 5
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu\\cuda_inference_engine.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu\\directstorage_real.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu\\speculative_decoder_v2.h",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\gpu\\vulkan_compute_real.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\ide\\refactoring_plugin.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\linker_stubs_old.h",
+      "after": 8
+    },
+    {
+      "file": "D:\\rawrxd\\src\\llm\\lora_adapter.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\loader\\Phase2_Foundation.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\lsp_client_incremental.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\lsp\\lsp_client_unified.cpp",
+      "after": 10
+    },
+    {
+      "file": "D:\\rawrxd\\src\\lsp\\RawrXD_LSPServer.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\main_kernels.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\main-simple.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\elf_writer.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_Agentic_Router.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_HTTP_Router.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_JSON_Parser.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_Model_StateMachine.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_RingBuffer_Consumer.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_Streaming_Formatter.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\interconnect\\RawrXD_Swarm_Orchestrator.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\masm_cli_compiler.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\pe_writer.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\RawrXD_HttpChatServer.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\RawrXD_NativeHttpServer.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\masm\\RawrXD_Streaming_Orchestrator.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\modules\\crucible_engine.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\modules\\quickjs_extension_host.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\modules\\quickjs_vscode_bindings.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\modules\\ReverseEngineering.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\modules\\unreal_engine_integration.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\modules\\vsix_loader_win32.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\multimodal_engine\\vision_encoder.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\net\\net.asm",
+      "after": 14
+    },
+    {
+      "file": "D:\\rawrxd\\src\\net\\test_net_ops.cpp",
+      "after": 4
+    },
+    {
+      "file": "D:\\rawrxd\\src\\omega_crx.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\omega_final_working.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\omega_professional.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\orchestration\\kubernetes_adapter.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\orchestrator\\RawrXD_Titan_Extensions.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\os_interceptor_cli.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\rawrxd_html_backend.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_HTTP_Router.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_JSON_Parser.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\rawrxd_lsp_bridge.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_LSP_Core.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_PipeServer.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_SIMDClassifier.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_Standalone_Inference.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_Swarm_Orchestrator.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_Titan_MINIMAL.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\RawrXD_Titan_UNIFIED.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\deobfuscator\\RawrXD_Deobfuscator.inc",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\deobfuscator\\RawrXD_OmegaDeobfuscator.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\model_reverse\\model-llm-harvester.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\src_variants\\CodexUltimate_simple.asm",
+      "after": 9
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\src_variants\\omega_crx.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\src_variants\\omega_final_working.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\src_variants\\omega_professional.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\v3\\omega_pro_root.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\v3\\omega_pro_v3.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\v3\\OmegaProProfessional_fixed.asm",
+      "after": 5
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\v4\\OmegaPolyglot_v4_fixed.asm",
+      "after": 8
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\v4\\OmegaPolyglot_v4.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\omega_suite\\v5\\Omega-Install-Reverser-Protected.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\re_modules\\gpu_dma_complete_reverse_engineered.asm",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\reverser_compiler\\reverser_compiler_from_scratch_patched.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\reverser_compiler\\reverser_compiler_patched.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\reverser_compiler\\tests\\test_reverser_platform.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\reverse_engineering\\security_toolkit\\RawrXD_IDE_unified.asm",
+      "after": 21
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\airgap_deployer.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\audit_log_immutable.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\classified_network.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\fips_compliance.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\hsm_integration.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\policy_engine.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\security\\sovereign_keymgmt.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\smoke_test_standalone.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\stubs.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\stubs\\complete_implementations.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\stubs\\production_link_stubs.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\subagent_core.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\testfile.ps1",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\thermal\\masm\\pocket_lab.asm",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\thermal\\RAWRXD_ThermalDashboard_Enhanced.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\Titan_InferenceCore.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\Titan_Streaming_Orchestrator_NoHTTP.asm",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\tool_registry_init.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\tools\\license_validator_telemetry_stub.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\vulkan_masm.asm",
+      "after": 13
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\benchmark_menu_stub.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\benchmark_runner_stub.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\digestion_engine_stub.cpp",
+      "after": 2
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\TodoManager.h",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE_AuditDashboard.cpp",
+      "after": 5
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE_CursorParity.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE_SubAgent.cpp",
+      "after": 3
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE_Tier3Cosmetics.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE_Tier5Cosmetics.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\win32app\\Win32IDE.cpp",
+      "after": 1
+    },
+    {
+      "file": "D:\\rawrxd\\src\\x64\\rawrxd_audit.asm",
+      "after": 1
+    }
+  ]
+}

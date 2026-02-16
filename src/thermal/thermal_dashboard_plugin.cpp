@@ -11,20 +11,19 @@
 
 #include <cstring>
 
+// SCAFFOLD_345: Thermal dashboard void* parent doc
+
+
 namespace rawrxd::thermal {
 
-class ThermalDashboardPlugin : public void, public IThermalDashboardPlugin {
-
-    (IID IThermalDashboardPlugin_iid FILE "thermal_dashboard.json")
-
-
+class ThermalDashboardPlugin : public IThermalDashboardPlugin {
 public:
     ThermalDashboardPlugin(void* parent = nullptr)
-        : void(parent)
-        , m_isMonitoring(false)
+        : m_isMonitoring(false)
         , m_currentBurstMode(2)  // Default: hybrid
         , m_pollTimer(nullptr)
     {
+        (void)parent;
         std::memset(&m_currentSnapshot, 0, sizeof(ThermalSnapshot));
     }
     
@@ -37,9 +36,8 @@ public:
     // ═══════════════════════════════════════════════════════════════════════════
     
     bool initialize() override {
-        
-        m_pollTimer = new void*(this);
-        m_pollTimer->setInterval(1000);  // 1 second poll
+        // Timer not needed for backend; poll via pollThermals() when needed
+        m_pollTimer = nullptr;
 // Qt connect removed
         // Initialize thermal snapshot
         memset(&m_currentSnapshot, 0, sizeof(ThermalSnapshot));
@@ -53,11 +51,7 @@ public:
     
     void shutdown() override {
         stopMonitoring();
-        if (m_pollTimer) {
-            m_pollTimer->stop();
-            delete m_pollTimer;
-            m_pollTimer = nullptr;
-        }
+        m_pollTimer = nullptr;
     }
     
     std::string pluginName() const override {
@@ -95,7 +89,7 @@ public:
         if (m_isMonitoring) return;
         
         m_isMonitoring = true;
-        m_pollTimer->start();
+        // Timer not used for backend; poll via pollThermals() when needed
         
         // Initial poll
         pollThermals();
@@ -105,9 +99,6 @@ public:
         if (!m_isMonitoring) return;
         
         m_isMonitoring = false;
-        if (m_pollTimer) {
-            m_pollTimer->stop();
-        }
     }
     
     bool isMonitoring() const override {
@@ -305,7 +296,7 @@ private:
 private:
     bool m_isMonitoring;
     int m_currentBurstMode;
-    void** m_pollTimer;
+    void* m_pollTimer;  // Win32: stub (was QTimer), nullptr
     ThermalSnapshot m_currentSnapshot;
     mutable std::mutex m_snapshotMutex;
 };

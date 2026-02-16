@@ -18,6 +18,9 @@
 #include <cstdio>
 #include <string>
 
+// SCAFFOLD_029: Voice chat and transcript UI
+
+
 // ============================================================================
 // Static VoiceChat engine instance (one per IDE)
 // ============================================================================

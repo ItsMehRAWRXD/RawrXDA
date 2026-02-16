@@ -1,4 +1,5 @@
 #include "sampler.h"
+#include "../../include/enterprise_license.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -38,6 +39,26 @@ int Sampler::sampleFromProbs(float* probs, int n) {
         if (cumsum >= r) return i;
     }
     return n - 1;  // Rounding safety
+}
+
+bool Sampler::setCustomStopSequences(const std::vector<std::string>& sequences) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::CustomStopSequences,
+            "Sampler::setCustomStopSequences")) {
+        return false;
+    }
+    custom_stop_sequences_ = sequences;
+    return true;
+}
+
+bool Sampler::setGrammarConstraints(const std::string& grammar) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::GrammarConstrainedGen,
+            "Sampler::setGrammarConstraints")) {
+        return false;
+    }
+    grammar_constraints_ = grammar;
+    return true;
 }
 
 int Sampler::sample(float* logits, int n_vocab) {

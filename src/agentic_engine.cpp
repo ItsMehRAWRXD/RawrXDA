@@ -30,6 +30,9 @@ struct FeedbackEntry {
 // MASM Telemetry bridge — lock-free atomic counters
 #include "rawrxd_telemetry_exports.h"
 
+// SCAFFOLD_092: AgenticEngine chat/analyze/generate
+
+
 // Static feedback tracking
 static std::mutex g_feedbackMutex;
 static std::vector<FeedbackEntry> g_feedbackLog;
@@ -429,6 +432,32 @@ bool AgenticEngine::isCommandSafe(const std::string& command) {
     return true;
 }
 
+std::string AgenticEngine::writeFile(const std::string& filepath, const std::string& content) {
+    if (!isCommandSafe(filepath)) return "[Error] Invalid file path.";
+    
+    std::ofstream file(filepath, std::ios::out | std::ios::trunc);
+    if (!file.is_open()) return "[Error] Could not open file for writing: " + filepath;
+    
+    file << content;
+    file.close();
+    
+    return "Successfully wrote " + std::to_string(content.size()) + " bytes to " + filepath;
+}
+
+std::string AgenticEngine::listDir(const std::string& path) {
+    std::ostringstream oss;
+    oss << "Contents of " << path << ":\n";
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+            oss << (entry.is_directory() ? "[DIR] " : "[FILE] ")
+                << entry.path().filename().string() << "\n";
+        }
+    } catch (const std::exception& e) {
+        return "[Error] " + std::string(e.what());
+    }
+    return oss.str();
+}
+
 std::string AgenticEngine::grepFiles(const std::string& pattern, const std::string& path) {
     std::ostringstream results;
     int matchCount = 0;
@@ -771,24 +800,59 @@ std::string AgenticEngine::runCompiler(const std::string& sourceFile, const std:
     }
 }
 
+std::string AgenticEngine::executeCommand(const std::string& command, bool isPowerShell) {
+    if (!isCommandSafe(command)) {
+        return "[Security Error] Command rejected as potentially dangerous.";
+    }
+
+    std::string fullCmd = command;
+    if (isPowerShell) {
+        fullCmd = "powershell -NoProfile -NonInteractive -Command \"" + command + "\"";
+    }
+
+#ifdef _WIN32
+    FILE* pipe = _popen(fullCmd.c_str(), "r");
+#else
+    FILE* pipe = popen(fullCmd.c_str(), "r");
+#endif
+
+    if (!pipe) return "[Error] Failed to open pipe for command execution.";
+
+    char buffer[4096];
+    std::string result;
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
+
+#ifdef _WIN32
+    _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
+
+    return result.empty() ? "[Command executed with no output]" : result;
+}
+
 std::string AgenticEngine::chat(const std::string& message) {
+    // Headless/CLI: use injected chat provider (Ollama, etc.) when set
+    if (m_chatProvider) {
+        return m_chatProvider(message);
+    }
     if (!m_inferenceEngine) return "[Error: No Inference Engine]";
-    
-    RawrXD::NativeAgent agent(static_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine));
-    
+
+    auto* cpuEngine = dynamic_cast<RawrXD::CPUInferenceEngine*>(m_inferenceEngine);
+    if (!cpuEngine) return "[Error: Inference engine must be CPUInferenceEngine]";
+
+    RawrXD::NativeAgent agent(cpuEngine);
+
     // Configure Agent from Engine config
     agent.SetMaxMode(m_config.maxMode);
     agent.SetDeepThink(m_config.deepThinking);
     agent.SetDeepResearch(m_config.deepResearch);
     agent.SetNoRefusal(m_config.noRefusal);
 
-    std::string response;
-    agent.SetOutputCallback([&](const std::string& token) {
-        response += token;
-    });
-    
-    agent.Ask(message);
-    return response;
+    // Use Execute instead of Ask to avoid boilerplate headers/footers in the string
+    return agent.Execute(message);
 }
 
 // ============================================================================

@@ -9,8 +9,12 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 // ============================================================================
 
+#ifdef WIN32_LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <commctrl.h>
+#include <commdlg.h>
 #include <string>
 #include <vector>
 #include <map>

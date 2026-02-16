@@ -16,6 +16,43 @@
 #include <richedit.h>
 #include <algorithm>
 
+#ifndef IDC_ANNOTATION_OVERLAY
+#define IDC_ANNOTATION_OVERLAY 19998
+#endif
+
+// ============================================================================
+// CREATE ANNOTATION OVERLAY — transparent overlay window for inline annotations
+// ============================================================================
+void Win32IDE::createAnnotationOverlay(HWND hwndParent) {
+    if (!hwndParent || m_hwndAnnotationOverlay) return;
+
+    static bool classRegistered = false;
+    if (!classRegistered) {
+        WNDCLASSEXA wc = {};
+        wc.cbSize = sizeof(WNDCLASSEXA);
+        wc.style = CS_HREDRAW | CS_VREDRAW;
+        wc.lpfnWndProc = AnnotationOverlayProc;
+        wc.hInstance = m_hInstance;
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)GetStockObject(HOLLOW_BRUSH);
+        wc.lpszClassName = "RawrXDAnnotationOverlay";
+        if (RegisterClassExA(&wc)) classRegistered = true;
+    }
+
+    m_hwndAnnotationOverlay = CreateWindowExA(
+        WS_EX_LAYERED,
+        "RawrXDAnnotationOverlay", "",
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+        0, 0, 1, 1,
+        hwndParent, (HMENU)(UINT_PTR)IDC_ANNOTATION_OVERLAY, m_hInstance, nullptr);
+
+    if (m_hwndAnnotationOverlay) {
+        SetPropA(m_hwndAnnotationOverlay, "IDE_PTR", (HANDLE)this);
+        SetLayeredWindowAttributes(m_hwndAnnotationOverlay, 0, 255, LWA_ALPHA);
+        LOG_INFO("Annotation overlay created");
+    }
+}
+
 // ============================================================================
 // ANNOTATION SEVERITY → COLOR
 // ============================================================================

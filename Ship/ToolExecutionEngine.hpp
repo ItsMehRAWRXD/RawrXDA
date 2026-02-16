@@ -3,10 +3,11 @@
 #pragma once
 
 #include "agent_kernel_main.hpp"
-#include "QtReplacements.hpp"
 #include <functional>
 #include <chrono>
 #include <any>
+#include <mutex>
+#include <algorithm>
 
 namespace RawrXD {
 
@@ -24,7 +25,7 @@ enum class ToolStatus {
 struct ToolResult {
     ToolStatus status = ToolStatus::Success;
     JsonValue output;
-    QString errorMessage;
+    String errorMessage;
     int64_t executionTimeMs = 0;
 
     bool isSuccess() const { return status == ToolStatus::Success; }
@@ -34,7 +35,7 @@ struct ToolResult {
         obj[L"status"] = static_cast<int64_t>(status);
         obj[L"success"] = status == ToolStatus::Success;
         obj[L"output"] = output;
-        obj[L"error"] = errorMessage.toStdWString();
+        obj[L"error"] = errorMessage;
         obj[L"executionTimeMs"] = executionTimeMs;
         return obj;
     }
@@ -46,7 +47,7 @@ struct ToolResult {
         return r;
     }
 
-    static ToolResult Error(const QString& message) {
+    static ToolResult Error(const String& message) {
         ToolResult r;
         r.status = ToolStatus::Error;
         r.errorMessage = message;
@@ -56,17 +57,17 @@ struct ToolResult {
 
 // Tool parameter definition
 struct ToolParameter {
-    QString name;
-    QString type;  // "string", "number", "boolean", "array", "object"
-    QString description;
+    String name;
+    String type;  // "string", "number", "boolean", "array", "object"
+    String description;
     bool required = false;
     JsonValue defaultValue;
 
     JsonObject toJson() const {
         JsonObject obj;
-        obj[L"name"] = name.toStdWString();
-        obj[L"type"] = type.toStdWString();
-        obj[L"description"] = description.toStdWString();
+        obj[L"name"] = name;
+        obj[L"type"] = type;
+        obj[L"description"] = description;
         obj[L"required"] = required;
         return obj;
     }
@@ -74,9 +75,9 @@ struct ToolParameter {
 
 // Tool definition
 struct ToolDefinition {
-    QString name;
-    QString description;
-    QString category;
+    String name;
+    String description;
+    String category;
     Vector<ToolParameter> parameters;
     bool requiresConfirmation = false;
     bool isDangerous = false;
@@ -84,9 +85,9 @@ struct ToolDefinition {
 
     JsonObject toJson() const {
         JsonObject obj;
-        obj[L"name"] = name.toStdWString();
-        obj[L"description"] = description.toStdWString();
-        obj[L"category"] = category.toStdWString();
+        obj[L"name"] = name;
+        obj[L"description"] = description;
+        obj[L"category"] = category;
         obj[L"requiresConfirmation"] = requiresConfirmation;
         obj[L"isDangerous"] = isDangerous;
         obj[L"timeoutMs"] = static_cast<int64_t>(timeoutMs);
@@ -97,9 +98,9 @@ struct ToolDefinition {
         JsonArray required;
 
         for (const auto& p : parameters) {
-            properties[p.name.toStdWString()] = p.toJson();
+            properties[p.name] = p.toJson();
             if (p.required) {
-                required.push_back(p.name.toStdWString());
+                required.push_back(p.name);
             }
         }
         params[L"properties"] = properties;
@@ -122,12 +123,12 @@ struct ToolEntry {
 
 // Tool execution context
 struct ToolContext {
-    QString workingDirectory;
-    QMap<QString, QString> environment;
+    String workingDirectory;
+    std::map<String, String> environment;
     bool dryRun = false;
     int maxOutputLength = 100000;
-    std::function<void(const QString&)> onOutput;
-    std::function<bool(const QString&, const QString&)> onConfirmation;
+    std::function<void(const String&)> onOutput;
+    std::function<bool(const String&, const String&)> onConfirmation;
 };
 
 // Tool execution engine
@@ -137,7 +138,7 @@ public:
 
     // Register a tool
     void registerTool(const ToolDefinition& def, ToolExecutor executor) {
-        QMutexLocker lock(&m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         ToolEntry entry;
         entry.definition = def;
         entry.executor = std::move(executor);
@@ -146,18 +147,19 @@ public:
     }
 
     // Unregister a tool
-    void unregisterTool(const QString& name) {
-        QMutexLocker lock(&m_mutex);
-        m_tools.erase(m_tools.find(name));
+    void unregisterTool(const String& name) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_tools.find(name);
+        if (it != m_tools.end()) m_tools.erase(it);
     }
 
     // Check if tool exists
-    bool hasTool(const QString& name) const {
-        return m_tools.contains(name);
+    bool hasTool(const String& name) const {
+        return m_tools.find(name) != m_tools.end();
     }
 
     // Get tool definition
-    Optional<ToolDefinition> getToolDefinition(const QString& name) const {
+    Optional<ToolDefinition> getToolDefinition(const String& name) const {
         auto it = m_tools.find(name);
         if (it != m_tools.end()) {
             return it->second.definition;
@@ -184,8 +186,8 @@ public:
                 JsonObject tool;
                 tool[L"type"] = String(L"function");
                 JsonObject func;
-                func[L"name"] = entry.definition.name.toStdWString();
-                func[L"description"] = entry.definition.description.toStdWString();
+                func[L"name"] = entry.definition.name;
+                func[L"description"] = entry.definition.description;
 
                 JsonObject params;
                 params[L"type"] = String(L"object");
@@ -194,11 +196,11 @@ public:
 
                 for (const auto& p : entry.definition.parameters) {
                     JsonObject prop;
-                    prop[L"type"] = p.type.toStdWString();
-                    prop[L"description"] = p.description.toStdWString();
-                    properties[p.name.toStdWString()] = prop;
+                    prop[L"type"] = p.type;
+                    prop[L"description"] = p.description;
+                    properties[p.name] = prop;
                     if (p.required) {
-                        required.push_back(p.name.toStdWString());
+                        required.push_back(p.name);
                     }
                 }
 
@@ -212,15 +214,22 @@ public:
         return schema;
     }
 
+    /** Return tools as JSON schema string (UTF-8) for external agents / API. */
+    std::string GetToolsJsonSchema() const {
+        JsonArray arr = getToolsSchema();
+        JsonValue v(arr);
+        return JsonParser::Serialize(v);
+    }
+
     // Execute a tool
-    ToolResult execute(const QString& name, const JsonObject& params) {
+    ToolResult execute(const String& name, const JsonObject& params) {
         auto start = std::chrono::steady_clock::now();
 
         auto it = m_tools.find(name);
         if (it == m_tools.end()) {
             ToolResult r;
             r.status = ToolStatus::NotFound;
-            r.errorMessage = QString("Tool not found: ") + name;
+            r.errorMessage = L"Tool not found: " + name;
             return r;
         }
 
@@ -228,16 +237,16 @@ public:
         if (!entry.enabled) {
             ToolResult r;
             r.status = ToolStatus::Error;
-            r.errorMessage = QString("Tool is disabled: ") + name;
+            r.errorMessage = L"Tool is disabled: " + name;
             return r;
         }
 
         // Validate required parameters
         for (const auto& p : entry.definition.parameters) {
-            if (p.required && params.find(p.name.toStdWString()) == params.end()) {
+            if (p.required && params.find(p.name) == params.end()) {
                 ToolResult r;
                 r.status = ToolStatus::InvalidParams;
-                r.errorMessage = QString("Missing required parameter: ") + p.name;
+                r.errorMessage = L"Missing required parameter: " + p.name;
                 return r;
             }
         }
@@ -247,7 +256,7 @@ public:
             if (!m_context.onConfirmation(name, entry.definition.description)) {
                 ToolResult r;
                 r.status = ToolStatus::PermissionDenied;
-                r.errorMessage = QString("User denied execution");
+                r.errorMessage = L"User denied execution";
                 return r;
             }
         }
@@ -259,7 +268,7 @@ public:
                 result.status = ToolStatus::Success;
                 JsonObject dryRunOutput;
                 dryRunOutput[L"dryRun"] = true;
-                dryRunOutput[L"tool"] = name.toStdWString();
+                dryRunOutput[L"tool"] = name;
                 dryRunOutput[L"params"] = params;
                 result.output = dryRunOutput;
             } else {
@@ -267,7 +276,7 @@ public:
             }
         } catch (const std::exception& e) {
             result.status = ToolStatus::Error;
-            result.errorMessage = QString::fromStdString(e.what());
+            result.errorMessage = StringUtils::FromUtf8(e.what());
         }
 
         auto end = std::chrono::steady_clock::now();
@@ -277,7 +286,7 @@ public:
     }
 
     // Execute with timeout
-    ToolResult executeWithTimeout(const QString& name, const JsonObject& params, int timeoutMs) {
+    ToolResult executeWithTimeout(const String& name, const JsonObject& params, int timeoutMs) {
         std::atomic<bool> completed{false};
         ToolResult result;
 
@@ -297,7 +306,7 @@ public:
             } else {
                 worker.detach();
                 result.status = ToolStatus::Timeout;
-                result.errorMessage = QString("Tool execution timed out after %1ms").arg(timeoutMs);
+                result.errorMessage = L"Tool execution timed out after " + std::to_wstring(timeoutMs) + L"ms";
             }
         }
 
@@ -314,7 +323,7 @@ public:
     }
 
     // Enable/disable tool
-    void setToolEnabled(const QString& name, bool enabled) {
+    void setToolEnabled(const String& name, bool enabled) {
         auto it = m_tools.find(name);
         if (it != m_tools.end()) {
             it->second.enabled = enabled;
@@ -322,10 +331,10 @@ public:
     }
 
     // Get tool categories
-    QStringList getCategories() const {
-        QStringList categories;
+    Vector<String> getCategories() const {
+        Vector<String> categories;
         for (const auto& [name, entry] : m_tools) {
-            if (!categories.contains(entry.definition.category)) {
+            if (std::find(categories.begin(), categories.end(), entry.definition.category) == categories.end()) {
                 categories.push_back(entry.definition.category);
             }
         }
@@ -333,7 +342,7 @@ public:
     }
 
     // Get tools by category
-    Vector<ToolDefinition> getToolsByCategory(const QString& category) const {
+    Vector<ToolDefinition> getToolsByCategory(const String& category) const {
         Vector<ToolDefinition> result;
         for (const auto& [name, entry] : m_tools) {
             if (entry.enabled && entry.definition.category == category) {
@@ -344,29 +353,29 @@ public:
     }
 
 private:
-    QMap<QString, ToolEntry> m_tools;
+    Map<String, ToolEntry> m_tools;
     ToolContext m_context;
-    mutable QMutex m_mutex;
+    mutable std::mutex m_mutex;
 };
 
 // Tool builder helper
 class ToolBuilder {
 public:
-    ToolBuilder(const QString& name) {
+    ToolBuilder(const String& name) {
         m_def.name = name;
     }
 
-    ToolBuilder& description(const QString& desc) {
+    ToolBuilder& description(const String& desc) {
         m_def.description = desc;
         return *this;
     }
 
-    ToolBuilder& category(const QString& cat) {
+    ToolBuilder& category(const String& cat) {
         m_def.category = cat;
         return *this;
     }
 
-    ToolBuilder& param(const QString& name, const QString& type, const QString& desc, bool required = false) {
+    ToolBuilder& param(const String& name, const String& type, const String& desc, bool required = false) {
         ToolParameter p;
         p.name = name;
         p.type = type;
@@ -400,11 +409,11 @@ private:
 };
 
 // Helper to get string from JsonValue
-inline QString jsonToString(const JsonValue& val) {
+inline String jsonToString(const JsonValue& val) {
     if (std::holds_alternative<String>(val)) {
-        return QString(std::get<String>(val));
+        return std::get<String>(val);
     }
-    return QString();
+    return String();
 }
 
 // Helper to get int from JsonValue
@@ -440,7 +449,7 @@ inline JsonObject jsonToObject(const JsonValue& val) {
 }
 
 // Parameter extraction helpers
-inline QString getParam(const JsonObject& params, const String& key, const QString& defaultVal = QString()) {
+inline String getParam(const JsonObject& params, const String& key, const String& defaultVal = String()) {
     auto it = params.find(key);
     if (it != params.end()) {
         return jsonToString(it->second);
