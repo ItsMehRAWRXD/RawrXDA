@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 
+#include "logging/logger.h"
+static Logger s_logger("test_streaming_gguf_loader");
+
 namespace {
 struct TensorDef {
     std::string name;
@@ -134,63 +137,63 @@ int main() {
         const auto temp_dir = std::filesystem::temp_directory_path();
         const auto temp_path = temp_dir / "streaming_loader_120b.gguf";
         
-        std::cerr << "Creating test GGUF at: " << temp_path << std::endl;
+        s_logger.error( "Creating test GGUF at: " << temp_path << std::endl;
         auto defs = buildTestModel(temp_path);
         
         if (!std::filesystem::exists(temp_path)) {
-            std::cerr << "Test GGUF file was not created" << std::endl;
+            s_logger.error( "Test GGUF file was not created" << std::endl;
             return 1;
         }
-        std::cerr << "Test GGUF file size: " << std::filesystem::file_size(temp_path) << " bytes" << std::endl;
+        s_logger.error( "Test GGUF file size: " << std::filesystem::file_size(temp_path) << " bytes" << std::endl;
 
         StreamingGGUFLoader loader;
         if (!loader.Open(temp_path.string())) {
-            std::cerr << "failed to open streaming gguf loader" << std::endl;
+            s_logger.error( "failed to open streaming gguf loader" << std::endl;
             std::filesystem::remove(temp_path);
             return 1;
         }
-        std::cerr << "✓ Loader opened successfully" << std::endl;
+        s_logger.error( "✓ Loader opened successfully" << std::endl;
 
         const uint64_t budget_bytes = 1024ull * 1024ull;
         auto zones = loader.GetAllZones();
         if (zones.empty()) {
-            std::cerr << "no zones were assigned" << std::endl;
+            s_logger.error( "no zones were assigned" << std::endl;
             std::filesystem::remove(temp_path);
             return 2;
         }
-        std::cerr << "✓ Zones assigned: " << zones.size() << std::endl;
+        s_logger.error( "✓ Zones assigned: " << zones.size() << std::endl;
 
         for (const auto& zone_name : zones) {
             auto info = loader.GetZoneInfo(zone_name);
             if (zone_name.rfind("layers_", 0) == 0 && zone_name.find("oversize") == std::string::npos) {
                 if (info.total_bytes > budget_bytes) {
-                    std::cerr << "layer zone exceeds budget" << std::endl;
+                    s_logger.error( "layer zone exceeds budget" << std::endl;
                     std::filesystem::remove(temp_path);
                     return 3;
                 }
             }
         }
-        std::cerr << "✓ Zone budgets validated" << std::endl;
+        s_logger.error( "✓ Zone budgets validated" << std::endl;
 
         std::vector<uint8_t> data;
         if (!loader.GetTensorData("output.weight", data)) {
-            std::cerr << "failed to stream oversize tensor" << std::endl;
+            s_logger.error( "failed to stream oversize tensor" << std::endl;
             std::filesystem::remove(temp_path);
             return 4;
         }
         if (data.size() != defs.back().size_bytes) {
-            std::cerr << "unexpected tensor size: " << data.size() << " vs " << defs.back().size_bytes << std::endl;
+            s_logger.error( "unexpected tensor size: " << data.size() << " vs " << defs.back().size_bytes << std::endl;
             std::filesystem::remove(temp_path);
             return 5;
         }
-        std::cerr << "✓ Tensor streaming works" << std::endl;
+        s_logger.error( "✓ Tensor streaming works" << std::endl;
 
         loader.Close();
         std::filesystem::remove(temp_path);
-        std::cout << "PASS: 120B streaming loader test" << std::endl;
+        s_logger.info("PASS: 120B streaming loader test");
         return 0;
     } catch (const std::exception& ex) {
-        std::cerr << "Exception: " << ex.what() << std::endl;
+        s_logger.error( "Exception: " << ex.what() << std::endl;
         return 10;
     }
 }
