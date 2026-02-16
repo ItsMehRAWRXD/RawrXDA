@@ -1,6 +1,8 @@
 #include "kv_cache_optimizer.h"
-#include <cstdio>
+#include "logging/logger.h"
 #include <algorithm>
+
+static Logger s_kvLogger("KVCache");
 
 KVCacheOptimizer::KVCacheOptimizer()
     : m_cacheSizeLimit(32000)    // Default limit: 32k tokens
@@ -43,7 +45,7 @@ void KVCacheOptimizer::evictIfNeeded()
         if (tokensToEvict > 0) {
             // Remove tokens from the beginning (oldest tokens)
             m_cachedTokens.erase(m_cachedTokens.begin(), m_cachedTokens.begin() + tokensToEvict);
-            fprintf(stderr, "[KVCache] Evicted %d tokens from KV cache\n", tokensToEvict);
+            s_kvLogger.info("Evicted {} tokens from KV cache", tokensToEvict);
 
             if (onCacheEvicted) {
                 onCacheEvicted(tokensToEvict);
