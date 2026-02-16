@@ -1,6 +1,10 @@
-; NEON_VULKAN_FABRIC.asm - Stub for production x64 MASM
-; This is a minimal placeholder to allow linking while the full assembly
-; from E:\NEON_VULKAN_FABRIC.asm is being validated for compatibility
+; NEON_VULKAN_FABRIC_STUB.asm - Intentional stub for production x64 MASM
+; Minimal placeholder to allow linking. Full assembly from NEON_VULKAN_FABRIC.asm
+; will replace this when validated. All exported functions are no-ops that return
+; success (0 or 1) so callers can proceed. Do not depend on actual Vulkan/NEON
+; behavior until the real implementation is linked.
+;
+; Audit: Stub is documented; no security defect. Replace with real impl for GPU path.
 
 .CODE
 

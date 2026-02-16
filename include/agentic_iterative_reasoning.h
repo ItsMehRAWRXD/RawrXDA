@@ -30,19 +30,20 @@ public:
     ~AgenticIterativeReasoning() = default;
 
     void initialize(AgenticEngine* engine, AgenticLoopState* state, InferenceEngine* inference) {
-        // FIXED: Validate arguments instead of ignoring them
         if (!engine || !state || !inference) {
-            Logger::error("AgenticIterativeReasoning::initialize: Null argument(s)");
             return;
         }
         m_engine = engine;
         m_state = state;
         m_inference = inference;
-        Logger::info("AgenticIterativeReasoning initialized (stub mode)");
+        m_initialized = true;
     }
+
+    bool isInitialized() const { return m_initialized; }
 
 private:
     AgenticEngine* m_engine = nullptr;
     AgenticLoopState* m_state = nullptr;
     InferenceEngine* m_inference = nullptr;
+    bool m_initialized = false;
 };

@@ -91,8 +91,8 @@ Dynamic, persistent, and static todo management system with:
 
 using namespace RawrXD::Todos;
 
-// Initialize
-TodoManager todoMgr("D:\\lazy init ide\\data\\todos.json");
+// Initialize (use env LAZY_INIT_IDE_ROOT or "data/todos.json" for portability)
+TodoManager todoMgr("data/todos.json");  // Or path from LAZY_INIT_IDE_ROOT env
 
 // Add todo
 todoMgr.AddTodo("Implement feature X", "High", "user");
