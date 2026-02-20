@@ -31,13 +31,14 @@ void* ggml_sycl_host_malloc(size_t size) try {
 
   if (err != 0) {
     // clear the error
-    GGML_
+    GGML_LOG_ERROR("WARNING: failed to allocate %.2f MB of pinned memory: %s\n", size / 1024.0 / 1024.0,    "syclGetErrorString is not supported");
     return nullptr;
   }
 
   return ptr;
 } catch (sycl::exception const& exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -45,7 +46,8 @@ void ggml_sycl_host_free(void* ptr) try {
   // allow to use dpct::get_in_order_queue() for host malloc
   SYCL_CHECK(CHECK_TRY_ERROR(sycl::free(ptr, dpct::get_in_order_queue())));
 } catch (sycl::exception const& exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 

@@ -8,7 +8,7 @@
 #include <vector>
 #include <functional>
 #include <thread>
-
+#include <queue>
 #include <mutex>
 #include <condition_variable>
 #include <iostream>
@@ -266,7 +266,7 @@ public:
                     }
                 } else if (modelsNode.is_object()) {
                     for (auto it = modelsNode.begin(); it != modelsNode.end(); ++it) {
-                        const auto& value = it->second;
+                        const auto& value = *it;
                         if (value.is_object()) {
                             if (value.contains("name") && value["name"].is_string()) {
                                 models.push_back(value["name"].get<std::string>());
@@ -466,7 +466,7 @@ private:
                         }
                     } catch (const std::exception& e) {
                         // Handle potential parsing errors if a line is incomplete or invalid
-                        
+                        std::cerr << "JSON parse error: " << e.what() << std::endl;
                     }
 
                     // Remove the processed line from the buffer

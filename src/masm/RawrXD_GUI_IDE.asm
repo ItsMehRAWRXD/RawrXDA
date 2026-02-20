@@ -1085,6 +1085,85 @@ Editor_Parse_Lines ENDP
 ; AI & BUILD
 ;================================================================================
 AI_Complete PROC FRAME
+    ; AI code completion: scan backward for partial identifier,
+    ; hash it, look up in completion table, insert suggestion
+    push rbx
+    push rsi
+    push rdi
+    .PUSHREG rbx
+    .PUSHREG rsi
+    .PUSHREG rdi
+    sub rsp, 64
+    .ALLOCSTACK 64
+    .ENDPROLOG
+    
+    ; Get cursor position in editor buffer
+    mov rsi, QWORD PTR [g_ide.buffer_ptr]
+    mov ecx, DWORD PTR [g_ide.cursor_offset]
+    
+    test rsi, rsi
+    jz @@aic_done
+    
+    ; Scan backward to find start of current token
+    mov edx, ecx                     ; cursor pos
+    dec edx
+@@aic_scan_back:
+    cmp edx, 0
+    jl @@aic_have_prefix
+    movzx eax, BYTE PTR [rsi+rdx]
+    ; Identifier chars: a-z, A-Z, 0-9, _
+    cmp al, '_'
+    je @@aic_continue_back
+    cmp al, 'a'
+    jb @@aic_check_upper
+    cmp al, 'z'
+    jbe @@aic_continue_back
+@@aic_check_upper:
+    cmp al, 'A'
+    jb @@aic_check_digit
+    cmp al, 'Z'
+    jbe @@aic_continue_back
+@@aic_check_digit:
+    cmp al, '0'
+    jb @@aic_have_prefix
+    cmp al, '9'
+    jbe @@aic_continue_back
+    jmp @@aic_have_prefix
+@@aic_continue_back:
+    dec edx
+    jmp @@aic_scan_back
+    
+@@aic_have_prefix:
+    inc edx                          ; start of prefix
+    mov ebx, ecx
+    sub ebx, edx                     ; prefix length
+    cmp ebx, 0
+    jle @@aic_done
+    
+    ; Hash the prefix (FNV-1a) for completion lookup
+    mov eax, 2166136261
+    mov edi, edx                     ; prefix start
+@@aic_hash:
+    cmp edi, ecx
+    jae @@aic_lookup
+    movzx r8d, BYTE PTR [rsi+rdi]
+    xor eax, r8d
+    imul eax, eax, 16777619
+    inc edi
+    jmp @@aic_hash
+    
+@@aic_lookup:
+    ; Store hash for completion engine to pick up
+    mov DWORD PTR [g_ide.completion_hash], eax
+    mov DWORD PTR [g_ide.completion_prefix_start], edx
+    mov DWORD PTR [g_ide.completion_prefix_len], ebx
+    mov DWORD PTR [g_ide.show_completion], 1
+    
+@@aic_done:
+    add rsp, 64
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 AI_Complete ENDP
 

@@ -1794,6 +1794,10 @@ Tensor_QuantizedMatMul ENDP
 ; EXPORT TABLE - ALL PUBLIC SYMBOLS
 ; =============================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 PUBLIC INFINITY_InitializeStream
 PUBLIC INFINITY_CheckQuadBuffer
 PUBLIC INFINITY_RotateBuffers

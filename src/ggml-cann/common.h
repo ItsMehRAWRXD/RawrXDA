@@ -369,7 +369,8 @@ struct ggml_backend_cann_context {
 
 #ifdef USE_ACL_GRAPH
         acl_graph_mode = parse_bool(get_env("GGML_CANN_ACL_GRAPH").value_or("on"));
-        GGML_
+        GGML_LOG_INFO("%s: device %d execution mode is %s (%s)\n", __func__, device, acl_graph_mode ? "GRAPH" : "EAGER",
+                      acl_graph_mode ? "acl graph enabled" : "acl graph disabled");
 #endif
     }
 

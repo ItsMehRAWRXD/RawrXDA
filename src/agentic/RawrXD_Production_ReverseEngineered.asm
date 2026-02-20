@@ -16,8 +16,19 @@
 
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; --- Minimal includes to avoid conflicts ---
 SRWLOCK TYPEDEF QWORD
+
+; EXTERN declarations
+EXTERN HeapAlloc: PROC
+EXTERN HeapFree: PROC
+EXTERN AcquireSRWLockExclusive: PROC
+EXTERN ReleaseSRWLockExclusive: PROC
+EXTERN GetProcessHeap: PROC
 
 ; --- Windows API Constants ---
 INVALID_HANDLE_VALUE         EQU -1
@@ -844,12 +855,64 @@ AI_RunInference ENDP
 AI_Softmax PROC
     PUSH RBP
     MOV  RBP, RSP
-    SUB  RSP, 32
+    SUB  RSP, 64
     
-    ; For production: compute max, exp, sum, normalize
-    ; Placeholder here
+    ; RCX = logits_ptr, RDX = vocab_size, R8 = temperature (as FP64 bits)
+    MOV  QWORD PTR [RBP-8], RCX      ; logits
+    MOV  QWORD PTR [RBP-16], RDX     ; vocab_size
+    MOVQ XMM5, R8                     ; temperature
     
-    ADD  RSP, 32
+    ; Step 1: Find max logit for numerical stability
+    MOV  RSI, RCX
+    MOV  ECX, EDX
+    VMOVSS XMM0, DWORD PTR [RSI]      ; max = logits[0]
+    MOV  EAX, 1
+@@sm_find_max:
+    CMP  EAX, ECX
+    JAE  @@sm_have_max
+    VMOVSS XMM1, DWORD PTR [RSI+RAX*4]
+    VMAXSS XMM0, XMM0, XMM1
+    INC  EAX
+    JMP  @@sm_find_max
+@@sm_have_max:
+    ; XMM0 = max_logit
+    
+    ; Step 2: Compute exp(logit[i] - max) / temperature for each, accumulate sum
+    VXORPS XMM4, XMM4, XMM4          ; sum = 0
+    VCVTSS2SD XMM5, XMM5, XMM5       ; ensure temperature is usable
+    VCVTSD2SS XMM5, XMM5, XMM5
+    XOR  EAX, EAX
+@@sm_exp_loop:
+    CMP  EAX, ECX
+    JAE  @@sm_normalize
+    VMOVSS XMM1, DWORD PTR [RSI+RAX*4]
+    VSUBSS XMM1, XMM1, XMM0          ; logit - max
+    ; Approximate exp via Schraudolph: 2^(x * 1/ln2)
+    ; exp(x) ~ reinterpret(int(x * 12102203.16 + 1065353216))
+    VMULSS XMM2, XMM1, DWORD PTR [f_exp_coeff]  ; x * 12102203.16
+    VADDSS XMM2, XMM2, DWORD PTR [f_exp_bias]   ; + 1065353216
+    VCVTSS2SI EDX, XMM2
+    VMOVD  XMM3, EDX                  ; reinterpret as float
+    VMOVSS DWORD PTR [RSI+RAX*4], XMM3  ; store exp(logit-max)
+    VADDSS XMM4, XMM4, XMM3          ; sum += exp(...)
+    INC  EAX
+    JMP  @@sm_exp_loop
+    
+@@sm_normalize:
+    ; Step 3: Divide each by sum
+    VRCPSS XMM4, XMM4, XMM4          ; 1/sum (approximate)
+    XOR  EAX, EAX
+@@sm_div_loop:
+    CMP  EAX, ECX
+    JAE  @@sm_done
+    VMOVSS XMM1, DWORD PTR [RSI+RAX*4]
+    VMULSS XMM1, XMM1, XMM4
+    VMOVSS DWORD PTR [RSI+RAX*4], XMM1
+    INC  EAX
+    JMP  @@sm_div_loop
+    
+@@sm_done:
+    ADD  RSP, 64
     POP  RBP
     RET
 AI_Softmax ENDP
@@ -859,12 +922,95 @@ AI_Softmax ENDP
 AI_TopKSampling PROC
     PUSH RBP
     MOV  RBP, RSP
-    SUB  RSP, 32
+    SUB  RSP, 64
     
-    ; For production: sort logits, keep top-k, sample from
-    ; Placeholder here
+    ; RCX = logits_ptr (probabilities after softmax)
+    ; RDX = vocab_size
+    ; R8D = k (top-K value)
+    MOV  QWORD PTR [RBP-8], RCX      ; logits
+    MOV  DWORD PTR [RBP-12], EDX     ; vocab_size
+    MOV  DWORD PTR [RBP-16], R8D     ; k
     
-    ADD  RSP, 32
+    ; Partial selection sort: find top-K indices
+    ; Use simple O(n*k) selection for correctness
+    MOV  ESI, R8D                    ; k iterations
+    CMP  ESI, EDX
+    CMOVA ESI, EDX                   ; k = min(k, vocab_size)
+    
+    XOR  EDI, EDI                    ; outer loop counter
+@@tk_outer:
+    CMP  EDI, ESI
+    JAE  @@tk_sample
+    
+    ; Find max in logits[edi..vocab_size-1]
+    MOV  RCX, QWORD PTR [RBP-8]
+    MOV  EAX, EDI                    ; best_idx = edi
+    VMOVSS XMM0, DWORD PTR [RCX+RDI*4] ; best_val = logits[edi]
+    MOV  EDX, EDI
+    INC  EDX
+@@tk_inner:
+    CMP  EDX, DWORD PTR [RBP-12]
+    JAE  @@tk_swap
+    VMOVSS XMM1, DWORD PTR [RCX+RDX*4]
+    VCOMISS XMM1, XMM0
+    JBE  @@tk_inner_next
+    MOV  EAX, EDX
+    VMOVAPS XMM0, XMM1
+@@tk_inner_next:
+    INC  EDX
+    JMP  @@tk_inner
+    
+@@tk_swap:
+    ; Swap logits[edi] and logits[best_idx]
+    MOV  RCX, QWORD PTR [RBP-8]
+    VMOVSS XMM1, DWORD PTR [RCX+RDI*4]
+    VMOVSS XMM2, DWORD PTR [RCX+RAX*4]
+    VMOVSS DWORD PTR [RCX+RDI*4], XMM2
+    VMOVSS DWORD PTR [RCX+RAX*4], XMM1
+    
+    INC  EDI
+    JMP  @@tk_outer
+    
+@@tk_sample:
+    ; Now logits[0..k-1] contain top-K probabilities
+    ; Re-normalize top-K, then sample
+    MOV  RCX, QWORD PTR [RBP-8]
+    VXORPS XMM0, XMM0, XMM0          ; sum = 0
+    XOR  EAX, EAX
+@@tk_resum:
+    CMP  EAX, ESI
+    JAE  @@tk_rng
+    VADDSS XMM0, XMM0, DWORD PTR [RCX+RAX*4]
+    INC  EAX
+    JMP  @@tk_resum
+    
+@@tk_rng:
+    ; Generate random float in [0, sum) using rdtsc
+    RDTSC
+    AND  EAX, 0FFFFh
+    VCVTSI2SS XMM1, XMM1, EAX        ; random int
+    MOV  EAX, 65535
+    VCVTSI2SS XMM2, XMM2, EAX        ; max
+    VDIVSS XMM1, XMM1, XMM2          ; random in [0,1)
+    VMULSS XMM1, XMM1, XMM0          ; random in [0, sum)
+    
+    ; Walk top-K accumulating until threshold crossed
+    MOV  RCX, QWORD PTR [RBP-8]
+    VXORPS XMM0, XMM0, XMM0          ; accum = 0
+    XOR  EAX, EAX
+@@tk_walk:
+    CMP  EAX, ESI
+    JAE  @@tk_last
+    VADDSS XMM0, XMM0, DWORD PTR [RCX+RAX*4]
+    VCOMISS XMM0, XMM1
+    JAE  @@tk_selected
+    INC  EAX
+    JMP  @@tk_walk
+@@tk_last:
+    DEC  EAX                         ; fallback to last
+@@tk_selected:
+    ; EAX = selected token index (within sorted top-K)
+    ADD  RSP, 64
     POP  RBP
     RET
 AI_TopKSampling ENDP
@@ -1367,32 +1513,48 @@ INFINITY_Shutdown ENDP
 
 ; Placeholder: HeapAlloc
 HeapAlloc PROC
-    ; In production: call kernel32!HeapAlloc or use malloc
-    ; For now, return dummy pointer
-    MOV  RAX, 1000000h
-    ADD  RAX, RCX
-    RET
+    ; Call real HeapAlloc
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    call GetProcessHeap
+    mov rcx, rax
+    ; rdx = dwFlags (already in rdx)
+    ; r8 = dwBytes (already in r8)
+    call HeapAlloc
+    add rsp, 32
+    pop rbp
+    ret
 HeapAlloc ENDP
 
 ; Placeholder: HeapFree
 HeapFree PROC
-    ; In production: call kernel32!HeapFree or use free
-    MOV  EAX, ERROR_SUCCESS
-    RET
+    ; Call real HeapFree
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    call GetProcessHeap
+    mov rcx, rax
+    ; rdx = dwFlags (0)
+    ; r8 = lpMem
+    call HeapFree
+    add rsp, 32
+    pop rbp
+    ret
 HeapFree ENDP
 
 ; Placeholder: AcquireSRWLock
 AcquireSRWLock PROC
-    ; In production: call kernel32!AcquireSRWLockExclusive
-    MOV  EAX, ERROR_SUCCESS
-    RET
+    ; Call real AcquireSRWLockExclusive
+    jmp AcquireSRWLockExclusive
+    ret
 AcquireSRWLock ENDP
 
 ; Placeholder: ReleaseSRWLock
 ReleaseSRWLock PROC
-    ; In production: call kernel32!ReleaseSRWLockExclusive
-    MOV  EAX, ERROR_SUCCESS
-    RET
+    ; Call real ReleaseSRWLockExclusive
+    jmp ReleaseSRWLockExclusive
+    ret
 ReleaseSRWLock ENDP
 
 ; =============================================================================

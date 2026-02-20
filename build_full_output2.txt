@@ -1,0 +1,98 @@
+[1/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\tool_registry.cpp.obj
+[2/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\gguf_vocab_resolver.cpp.obj
+[3/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\compression_interface.cpp.obj
+[4/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\inference_kernels.cpp.obj
+[5/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\utils\ErrorReporter.cpp.obj
+[6/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\gguf_core.cpp.obj
+[7/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\utils\Diagnostics.cpp.obj
+[8/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\gguf_loader.cpp.obj
+[9/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic_controller.cpp.obj
+[10/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\transformer.cpp.obj
+[11/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\vulkan_compute.cpp.obj
+[12/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\sampler.cpp.obj
+[13/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic_loop_state.cpp.obj
+[14/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic_agent_coordinator.cpp.obj
+[15/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\codec\compression.cpp.obj
+[16/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\production_config_manager.cpp.obj
+[17/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\rawr_engine.cpp.obj
+[18/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\codec\brutal_gzip.cpp.obj
+[19/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\streaming_gguf_loader.cpp.obj
+[20/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\mcp_integration.cpp.obj
+[21/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\bpe_tokenizer.cpp.obj
+[22/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\engine\core_generator.cpp.obj
+[23/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_Tier3Cosmetics.cpp.obj
+FAILED: CMakeFiles/RawrXD-Gold.dir/src/win32app/Win32IDE_Tier3Cosmetics.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_GOLD_BUILD=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\ide -ID:\rawrxd\src\context -ID:\rawrxd\src\multimodal_engine -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_Tier3Cosmetics.cpp.obj /FdCMakeFiles\RawrXD-Gold.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Tier3Cosmetics.cpp
+D:\rawrxd\src\win32app\Win32IDE_Tier3Cosmetics.cpp(936): error C2039: 'startLine': is not a member of 'Win32IDE::LSPRange'
+D:\rawrxd\src\win32app\Win32IDE.h(3029): note: see declaration of 'Win32IDE::LSPRange'
+D:\rawrxd\src\win32app\Win32IDE_Tier3Cosmetics.cpp(1064): error C2039: 'startLine': is not a member of 'Win32IDE::LSPRange'
+D:\rawrxd\src\win32app\Win32IDE.h(3029): note: see declaration of 'Win32IDE::LSPRange'
+[24/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_Tier5Cosmetics.cpp.obj
+FAILED: CMakeFiles/RawrXD-Gold.dir/src/win32app/Win32IDE_Tier5Cosmetics.cpp.obj 
+C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_GOLD_BUILD=1 -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_VULKAN=1 -DRAWR_QUICKJS_STUB=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\core -ID:\rawrxd\src\server -ID:\rawrxd\src\agent -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\utils -ID:\rawrxd\src\config -ID:\rawrxd\src\asm -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\plugin_system -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\src\ide -ID:\rawrxd\src\context -ID:\rawrxd\src\multimodal_engine -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /EHsc /O2 /W0 /arch:AVX2 /showIncludes /FoCMakeFiles\RawrXD-Gold.dir\src\win32app\Win32IDE_Tier5Cosmetics.cpp.obj /FdCMakeFiles\RawrXD-Gold.dir\ /FS -c D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(20): error C2039: 'initTier5Cosmetics': is not a member of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE.h(690): note: see declaration of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(21): error C3861: 'initLineEndingSelector': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(22): error C3861: 'initNetworkPanel': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(23): error C3861: 'initTestExplorer': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(24): error C3861: 'initDebugWatchFormat': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(25): error C3861: 'initCallStackSymbols': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(26): error C3861: 'initMarketplace': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(27): error C3861: 'initTelemetryDashboard': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(28): error C3861: 'initShortcutEditorPanel': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(29): error C3861: 'initColorPicker': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(30): error C3861: 'initEmojiSupport': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(31): error C3861: 'initCrashReporter': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(34): error C3861: 'appendToOutput': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(41): error C2039: 'handleTier5Command': is not a member of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE.h(690): note: see declaration of 'Win32IDE'
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(43): error C2065: 'IDM_LINEENDING_DETECT': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(43): error C2065: 'IDM_LINEENDING_TO_LF': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(44): error C3861: 'handleLineEndingCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(47): error C2065: 'IDM_NETWORK_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(47): error C2065: 'IDM_NETWORK_STATUS': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(48): error C3861: 'handleNetworkCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(51): error C2065: 'IDM_TESTEXPLORER_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(51): error C2065: 'IDM_TESTEXPLORER_FILTER': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(52): error C3861: 'handleTestExplorerCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(55): error C2065: 'IDM_DBGWATCH_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(55): error C2065: 'IDM_DBGWATCH_CLEAR': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(56): error C3861: 'handleDebugWatchCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(59): error C2065: 'IDM_CALLSTACK_CAPTURE': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(59): error C2065: 'IDM_CALLSTACK_RESOLVE': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(60): error C3861: 'handleCallStackCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(63): error C2065: 'IDM_MARKETPLACE_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(63): error C2065: 'IDM_MARKETPLACE_STATUS': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(64): error C3861: 'handleMarketplaceCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(67): error C2065: 'IDM_TELDASH_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(67): error C2065: 'IDM_TELDASH_STATS': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(68): error C3861: 'handleTelemetryDashboardCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(71): error C2065: 'IDM_SHORTCUT_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(71): error C2065: 'IDM_SHORTCUT_LIST': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(72): error C3861: 'handleShortcutEditorCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(75): error C2065: 'IDM_COLORPICK_SCAN': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(75): error C2065: 'IDM_COLORPICK_LIST': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(76): error C3861: 'handleColorPickerCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(79): error C2065: 'IDM_EMOJI_PICKER': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(79): error C2065: 'IDM_EMOJI_TEST': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(80): error C3861: 'handleEmojiCommand': identifier not found
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(83): error C2065: 'IDM_CRASH_SHOW': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(83): error C2065: 'IDM_CRASH_STATS': undeclared identifier
+D:\rawrxd\src\win32app\Win32IDE_Tier5Cosmetics.cpp(84): error C3861: 'handleCrashReporterCommand': identifier not found
+[25/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\DiffEngine.cpp.obj
+[26/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\model_source_resolver.cpp.obj
+[27/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\cli\swarm_orchestrator.cpp.obj
+[28/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\cli\cli_autonomy_loop.cpp.obj
+[29/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\OllamaProvider.cpp.obj
+[30/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\cli\cli_headless_systems.cpp.obj
+[31/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\BoundedAgentLoop.cpp.obj
+[32/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[33/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\agentic_transaction.cpp.obj
+[34/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\AgentOllamaClient.cpp.obj
+[35/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\model_cascade.cpp.obj
+[36/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\context_assembler.cpp.obj
+[37/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\multi_file_transaction.cpp.obj
+[38/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[39/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\cli\agentic_decision_tree.cpp.obj
+[40/247] Building CXX object CMakeFiles\RawrXD-Gold.dir\src\agentic\AgentToolHandlers.cpp.obj
+ninja: build stopped: subcommand failed.

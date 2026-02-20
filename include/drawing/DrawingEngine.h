@@ -1,5 +1,5 @@
 #pragma once
-/*  DrawingEngine.h  -  Custom Drawing Engine from Scratch
+/*  DrawingEngine.h  -  Custom Drawing Engine from Scratch (C++20, no Qt)
     
     A complete, high-performance drawing engine for rendering:
     - Geometric primitives (lines, rectangles, circles, polygons)
@@ -14,15 +14,12 @@
     Built on top of a low-level rasterizer with optional GPU acceleration.
 */
 
-#include <QString>
-#include <QPoint>
-#include <QColor>
-#include <QList>
-#include <QMap>
-#include <QMatrix4x4>
 #include <memory>
 #include <cstdint>
 #include <vector>
+#include <string>
+#include <cmath>
+#include <functional>
 
 namespace RawrXD {
 namespace Drawing {
@@ -57,8 +54,8 @@ struct Color {
     uint8_t r, g, b, a;
     Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255)
         : r(r), g(g), b(b), a(a) {}
-    Color(const QColor& qc) : r(qc.red()), g(qc.green()), b(qc.blue()), a(qc.alpha()) {}
-    
+    explicit Color(uint32_t rgba) : r((rgba >> 24) & 0xFF), g((rgba >> 16) & 0xFF), b((rgba >> 8) & 0xFF), a(rgba & 0xFF) {}
+
     uint32_t toRGBA() const { return (uint32_t(r) << 24) | (uint32_t(g) << 16) | (uint32_t(b) << 8) | a; }
     Color lerp(const Color& other, float t) const {
         return Color(
@@ -107,6 +104,38 @@ struct FontMetrics {
     float descent;
     float lineHeight;
     float averageCharWidth;
+};
+
+// 4x4 transform matrix (replaces QMatrix4x4)
+struct Matrix4 {
+    float m[4][4];
+    Matrix4() { for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) m[i][j] = (i == j) ? 1.0f : 0.0f; }
+    static Matrix4 identity() { return Matrix4(); }
+    void translate(float x, float y) { m[0][3] += x; m[1][3] += y; }
+    void rotate(float angle) {
+        float c = std::cos(angle), s = std::sin(angle);
+        float m00 = m[0][0], m01 = m[0][1], m10 = m[1][0], m11 = m[1][1];
+        m[0][0] = m00 * c - m01 * s; m[0][1] = m00 * s + m01 * c;
+        m[1][0] = m10 * c - m11 * s; m[1][1] = m10 * s + m11 * c;
+    }
+    void scale(float x, float y) { m[0][0] *= x; m[1][1] *= y; }
+    Matrix4 operator*(const Matrix4& other) const {
+        Matrix4 out;
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++) {
+                out.m[i][j] = 0;
+                for (int k = 0; k < 4; k++) out.m[i][j] += m[i][k] * other.m[k][j];
+            }
+        return out;
+    }
+    Point transformPoint(const Point& p) const {
+        float w = m[3][0] * p.x + m[3][1] * p.y + m[3][2] + m[3][3];
+        if (w == 0) w = 1.0f;
+        return Point(
+            (m[0][0] * p.x + m[0][1] * p.y + m[0][2] + m[0][3]) / w,
+            (m[1][0] * p.x + m[1][1] * p.y + m[1][2] + m[1][3]) / w
+        );
+    }
 };
 
 // ============================================================================
@@ -203,7 +232,7 @@ public:
     void translate(float x, float y);
     void rotate(float angle);
     void scale(float x, float y);
-    void transform(const QMatrix4x4& matrix);
+    void transform(const Matrix4& matrix);
     
     // Clipping
     void beginClip(const Path& path);
@@ -221,7 +250,7 @@ public:
     void drawCircle(const Point& center, float radius, const FillStyle& fillStyle = FillStyle(), const StrokeStyle& strokeStyle = StrokeStyle());
     void drawEllipse(const Point& center, float radiusX, float radiusY, const FillStyle& fillStyle = FillStyle(), const StrokeStyle& strokeStyle = StrokeStyle());
     void drawPolygon(const std::vector<Point>& vertices, const FillStyle& fillStyle = FillStyle(), const StrokeStyle& strokeStyle = StrokeStyle());
-    void drawText(const QString& text, const Point& position, const QString& fontFamily, float fontSize, 
+    void drawText(const std::string& text, const Point& position, const std::string& fontFamily, float fontSize,
                   const Color& color, TextAlignment align = TextAlignment::Left, VerticalAlignment vAlign = VerticalAlignment::Top);
     void drawRoundedRect(const Rect& r, float cornerRadius, const FillStyle& fillStyle = FillStyle(), const StrokeStyle& strokeStyle = StrokeStyle());
     void drawTriangle(const Point& p1, const Point& p2, const Point& p3, const FillStyle& fillStyle = FillStyle(), const StrokeStyle& strokeStyle = StrokeStyle());
@@ -236,8 +265,8 @@ public:
     Surface capture(const Rect& region);
     
     // Font metrics
-    FontMetrics measureFont(const QString& fontFamily, float fontSize);
-    Rect measureText(const QString& text, const QString& fontFamily, float fontSize);
+    FontMetrics measureFont(const std::string& fontFamily, float fontSize);
+    Rect measureText(const std::string& text, const std::string& fontFamily, float fontSize);
     
     // Buffer access
     const uint32_t* getBuffer() const { return m_surface->getBuffer(); }
@@ -245,9 +274,9 @@ public:
     
 private:
     std::unique_ptr<Surface> m_surface;
-    std::vector<QMatrix4x4> m_transformStack;
+    std::vector<Matrix4> m_transformStack;
     std::vector<Rect> m_clipStack;
-    QMatrix4x4 m_currentTransform;
+    Matrix4 m_currentTransform;
     
     // Rasterization helpers
     void rasterizeLine(const Point& p1, const Point& p2, const StrokeStyle& style);
@@ -293,15 +322,15 @@ protected:
 
 class Button : public Component {
 public:
-    Button(const Rect& bounds, const QString& label);
+    Button(const Rect& bounds, const std::string& label);
     void render(DrawingContext& ctx) override;
     void onMouseDown(const Point& pos) override;
-    void setLabel(const QString& label) { m_label = label; }
+    void setLabel(const std::string& label) { m_label = label; }
     
     std::function<void()> onClick;
     
 private:
-    QString m_label;
+    std::string m_label;
     bool m_pressed;
     bool m_hovered;
 };
@@ -321,22 +350,22 @@ class TextBox : public Component {
 public:
     TextBox(const Rect& bounds);
     void render(DrawingContext& ctx) override;
-    void setText(const QString& text) { m_text = text; }
-    QString getText() const { return m_text; }
+    void setText(const std::string& text) { m_text = text; }
+    std::string getText() const { return m_text; }
     
 private:
-    QString m_text;
+    std::string m_text;
     int m_cursorPosition;
 };
 
 class Label : public Component {
 public:
-    Label(const Rect& bounds, const QString& text);
+    Label(const Rect& bounds, const std::string& text);
     void render(DrawingContext& ctx) override;
-    void setText(const QString& text) { m_text = text; }
+    void setText(const std::string& text) { m_text = text; }
     
 private:
-    QString m_text;
+    std::string m_text;
 };
 
 class Canvas : public Component {

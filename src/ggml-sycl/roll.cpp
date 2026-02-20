@@ -116,7 +116,7 @@ void ggml_sycl_roll(ggml_backend_sycl_context & ctx, ggml_tensor *dst) {
             shift0, shift1, shift2, shift3
         );
     } catch (const std::exception &e) {
-        std::
+        std::fprintf(stderr, "[SYCL-ROLL] ERROR: %s\n", e.what());
         throw;
     }
 }

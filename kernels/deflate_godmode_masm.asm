@@ -2,6 +2,10 @@
 ; ml64 /c /Fo deflate_godmode_masm.obj deflate_godmode_masm.asm
 OPTION casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; Win64 ABI: rcx=src, rdx=len, r8=out_len*, r9=hash_buf
 PUBLIC deflate_godmode
 EXTERN malloc:PROC

@@ -12,7 +12,7 @@ extern "C" {
 // ========================================
 
 // Initialize GPU backend with preferred backend type
-// backend: 0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm
+// backend: 0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm, 4=LevelZero(Intel), 5=Adreno(ARM64), 6=Cerebras(WSE)
 // Returns: 0 on success, -1 on failure
 int64_t InitializeGPUBackend(int64_t backend);
 
@@ -20,7 +20,7 @@ int64_t InitializeGPUBackend(int64_t backend);
 void ShutdownGPUBackend();
 
 // Get current backend type
-// Returns: 0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm
+// Returns: 0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm, 4=LevelZero, 5=Adreno, 6=Cerebras
 int64_t GetCurrentBackend();
 
 // Check if backend is initialized
@@ -180,6 +180,44 @@ int64_t CUDA_SetDevice(int32_t deviceId);
 // deviceId: Device index
 // Returns: Pointer to device properties structure
 void* CUDA_GetDeviceProperties(int32_t deviceId);
+
+// ========================================
+// Phase 30: Accelerator Router Fast-Path (RawrXD_RouterBridge.asm)
+// ========================================
+// MASM fast-path entry points for the unified accelerator router.
+// These bypass C++ dispatch overhead for hot-loop inference.
+// Backend types: 0=None, 1=AMD_XDNA, 2=Intel_Xe, 3=ARM64_Adreno,
+//                4=ARM64_NPU, 5=Cerebras_WSE, 6=CPU_Fallback, 255=Auto
+
+// Initialize the fast-path router bridge (one-time setup)
+// Returns: Router handle pointer, or NULL on failure
+void* Router_FastInit();
+
+// Shutdown the router bridge and clear cached state
+void Router_FastShutdown();
+
+// Hot-path inference dispatch — minimal overhead entry point
+// task: Pointer to RouterInferenceTask struct
+// result: Pointer to RouterResult struct (output)
+// Returns: 0 on success, negative error code on failure
+int64_t Router_FastSubmit(const void* task, void* result);
+
+// Get cached active backend (no mutex, O(1))
+// Returns: Backend type ID (see constants above)
+int32_t Router_FastGetBackend();
+
+// Force a specific backend via fast path
+// backendType: Backend type ID to force
+void Router_FastForceBackend(int32_t backendType);
+
+// Check backend availability (O(1) lookup)
+// backendType: Backend type ID to check
+// Returns: 1 if available, 0 if not
+int32_t Router_FastIsAvailable(int32_t backendType);
+
+// Get total fast-path dispatch count
+// Returns: 64-bit dispatch count
+int64_t Router_FastGetDispatchCount();
 
 #ifdef __cplusplus
 }

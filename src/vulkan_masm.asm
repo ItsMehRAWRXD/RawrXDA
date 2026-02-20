@@ -3,6 +3,61 @@
 ; Output: RAX = 0 (success)
 ; Registers used: rdx, r8, r9, r10, r11, xmm0-xmm7
 ; Assumes QK5_1 = 32 (block size)
+
+; FP32 to FP16 conversion function
+; Input: XMM0 = float32
+; Output: AX = float16
+PUBLIC FP32_TO_FP16
+
+FP32_TO_FP16 PROC
+    ; Extract sign, exponent, mantissa
+    movd eax, xmm0
+    mov ecx, eax
+    shr ecx, 31          ; sign
+    mov edx, eax
+    shr edx, 23
+    and edx, 255         ; exponent
+    and eax, 8388607     ; mantissa
+
+    ; Handle special cases
+    test edx, edx
+    jz .zero_or_denorm
+    cmp edx, 255
+    je .inf_or_nan
+
+    ; Normal case
+    sub edx, 127         ; unbias
+    add edx, 15          ; bias for half
+    cmp edx, 31
+    jg .overflow
+    cmp edx, 0
+    jl .underflow
+    shr eax, 13          ; truncate mantissa
+    and eax, 1023
+    shl edx, 10
+    or eax, edx
+    or eax, ecx
+    ret
+
+.zero_or_denorm:
+    xor eax, eax
+    ret
+
+.inf_or_nan:
+    mov eax, 31744       ; inf
+    or eax, ecx
+    ret
+
+.overflow:
+    mov eax, 31744       ; inf
+    or eax, ecx
+    ret
+
+.underflow:
+    xor eax, eax
+    ret
+FP32_TO_FP16 ENDP
+
 QuantQ5_1:
     push rbp
     mov rbp, rsp
@@ -60,10 +115,12 @@ Q5_1_minmax_found:
 Q5_1_id_zero:
     xorps xmm5, xmm5
 Q5_1_id_done:
-    ; y[i].d = FP32_TO_FP16(d) (stub: just store float for now)
-    movss dword [rdi + r10*block51_size], xmm2
-    ; y[i].m = FP32_TO_FP16(min) (stub: just store float for now)
-    movss dword [rdi + r10*block51_size + 4], xmm0
+    ; y[i].d = FP32_TO_FP16(d)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block51_size], ax
+    ; y[i].m = FP32_TO_FP16(min)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block51_size + 4], ax
     ; Quantize values
     mov r13, 0
     xor r14d, r14d      ; qh = 0
@@ -170,36 +227,193 @@ section .textu 4
 ; Code section for Vulkan initialization routines
 
 section .data
-; InitializeVulkan: Real Vulkan-like initialization
-; Output: RAX = pointer to vulkan_instance
+; InitializeVulkan: Load vulkan-1.dll and create VkInstance
+; Output: RAX = VkInstance handle (0 on failure)
 InitializeVulkan:
     mov rax, vulkan_instance
     test rax, rax
     jnz .already_initialized
-    mov rax, 1
+    
+    ; Load Vulkan runtime
+    sub rsp, 40
+    lea rcx, [sz_vulkan_dll]
+    call LoadLibraryA
+    test rax, rax
+    jz .vk_init_fail
+    mov vulkan_dll_handle, rax
+    
+    ; Resolve vkCreateInstance
+    mov rcx, rax
+    lea rdx, [sz_vkCreateInstance]
+    call GetProcAddress
+    test rax, rax
+    jz .vk_init_fail
+    mov pfn_vkCreateInstance, rax
+    
+    ; Resolve vkEnumeratePhysicalDevices
+    mov rcx, vulkan_dll_handle
+    lea rdx, [sz_vkEnumPhysDev]
+    call GetProcAddress
+    mov pfn_vkEnumPhysDev, rax
+    
+    ; Call vkCreateInstance with minimal app info
+    ; VkApplicationInfo on stack
+    lea rcx, [vk_app_info]
+    mov DWORD PTR [rcx], 0       ; sType = VK_STRUCTURE_TYPE_APPLICATION_INFO
+    mov QWORD PTR [rcx+8], 0     ; pNext
+    lea rdx, [sz_app_name]
+    mov QWORD PTR [rcx+16], rdx  ; pApplicationName
+    mov DWORD PTR [rcx+24], 1    ; applicationVersion
+    mov QWORD PTR [rcx+32], 0    ; pEngineName
+    mov DWORD PTR [rcx+40], 1    ; engineVersion
+    mov DWORD PTR [rcx+48], 4194304 ; apiVersion = VK_API_VERSION_1_0
+    
+    ; VkInstanceCreateInfo
+    lea rcx, [vk_create_info]
+    mov DWORD PTR [rcx], 1       ; sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
+    mov QWORD PTR [rcx+8], 0     ; pNext
+    mov DWORD PTR [rcx+16], 0    ; flags
+    lea rdx, [vk_app_info]
+    mov QWORD PTR [rcx+24], rdx  ; pApplicationInfo
+    mov DWORD PTR [rcx+32], 0    ; enabledLayerCount
+    mov QWORD PTR [rcx+40], 0    ; ppEnabledLayerNames
+    mov DWORD PTR [rcx+48], 0    ; enabledExtensionCount
+    mov QWORD PTR [rcx+56], 0    ; ppEnabledExtensionNames
+    
+    ; vkCreateInstance(&createInfo, NULL, &instance)
+    lea rcx, [vk_create_info]
+    xor edx, edx                 ; pAllocator = NULL
+    lea r8, [vulkan_instance]
+    call pfn_vkCreateInstance
+    test eax, eax                ; VK_SUCCESS = 0
+    jnz .vk_init_fail
+    
+    mov rax, vulkan_instance
+    add rsp, 40
+    ret
+    
+.vk_init_fail:
+    xor eax, eax
     mov vulkan_instance, rax
+    add rsp, 40
+    ret
+    
 .already_initialized:
     ret
 
-; SelectPhysicalDevice: Real physical device selection
-; Output: RAX = pointer to physical_device
+; SelectPhysicalDevice: Enumerate and select best GPU
+; Output: RAX = VkPhysicalDevice handle (0 on failure)
 SelectPhysicalDevice:
     mov rax, physical_device
     test rax, rax
     jnz .already_selected
-    mov rax, 1
-    mov physical_device, rax
+    
+    ; Ensure Vulkan is initialized
+    mov rax, vulkan_instance
+    test rax, rax
+    jz .select_fail
+    
+    sub rsp, 40
+    
+    ; vkEnumeratePhysicalDevices(instance, &count, NULL)
+    mov rcx, vulkan_instance
+    lea rdx, [phys_dev_count]
+    xor r8d, r8d                 ; pPhysicalDevices = NULL (query count)
+    call pfn_vkEnumPhysDev
+    test eax, eax
+    jnz .select_fail_unwind
+    
+    ; Check count > 0
+    mov eax, phys_dev_count
+    test eax, eax
+    jz .select_fail_unwind
+    
+    ; Get first physical device (simplistic: pick device 0)
+    mov phys_dev_count, 1        ; request only 1
+    mov rcx, vulkan_instance
+    lea rdx, [phys_dev_count]
+    lea r8, [physical_device]
+    call pfn_vkEnumPhysDev
+    test eax, eax
+    jnz .select_fail_unwind
+    
+    mov rax, physical_device
+    add rsp, 40
+    ret
+    
+.select_fail_unwind:
+    add rsp, 40
+.select_fail:
+    xor eax, eax
+    ret
+    
 .already_selected:
     ret
 
-; CreateLogicalDevice: Real logical device creation
-; Output: RAX = pointer to logical_device
+; CreateLogicalDevice: Create VkDevice with compute queue
+; Output: RAX = VkDevice handle (0 on failure)
 CreateLogicalDevice:
     mov rax, logical_device
     test rax, rax
     jnz .already_created
-    mov rax, 1
-    mov logical_device, rax
+    
+    ; Need physical device first
+    mov rax, physical_device
+    test rax, rax
+    jz .create_fail
+    
+    sub rsp, 88
+    
+    ; Resolve vkCreateDevice
+    mov rcx, vulkan_dll_handle
+    lea rdx, [sz_vkCreateDevice]
+    call GetProcAddress
+    test rax, rax
+    jz .create_fail_unwind
+    mov pfn_vkCreateDevice, rax
+    
+    ; Build VkDeviceQueueCreateInfo on stack
+    lea rcx, [rsp]
+    mov DWORD PTR [rcx], 2       ; sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO
+    mov QWORD PTR [rcx+8], 0     ; pNext
+    mov DWORD PTR [rcx+16], 0    ; flags
+    mov DWORD PTR [rcx+20], 0    ; queueFamilyIndex = 0 (compute)
+    mov DWORD PTR [rcx+24], 1    ; queueCount = 1
+    lea rdx, [queue_priority]
+    mov QWORD PTR [rcx+32], rdx  ; pQueuePriorities
+    
+    ; Build VkDeviceCreateInfo
+    lea r8, [rsp+40]
+    mov DWORD PTR [r8], 3        ; sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO
+    mov QWORD PTR [r8+8], 0      ; pNext
+    mov DWORD PTR [r8+16], 0     ; flags
+    mov DWORD PTR [r8+20], 1     ; queueCreateInfoCount
+    mov QWORD PTR [r8+24], rcx   ; pQueueCreateInfos
+    mov DWORD PTR [r8+32], 0     ; enabledLayerCount
+    mov QWORD PTR [r8+40], 0     ; ppEnabledLayerNames
+    mov DWORD PTR [r8+48], 0     ; enabledExtensionCount
+    mov QWORD PTR [r8+56], 0     ; ppEnabledExtensionNames
+    mov QWORD PTR [r8+64], 0     ; pEnabledFeatures
+    
+    ; vkCreateDevice(physicalDevice, &createInfo, NULL, &device)
+    mov rcx, physical_device
+    lea rdx, [rsp+40]           ; pCreateInfo
+    xor r8d, r8d                ; pAllocator
+    lea r9, [logical_device]
+    call pfn_vkCreateDevice
+    test eax, eax
+    jnz .create_fail_unwind
+    
+    mov rax, logical_device
+    add rsp, 88
+    ret
+    
+.create_fail_unwind:
+    add rsp, 88
+.create_fail:
+    xor eax, eax
+    ret
+    
 .already_created:
     ret
 
@@ -266,10 +480,12 @@ Q8_0_minmax_found:
 Q8_0_id_zero:
     xorps xmm5, xmm5
 Q8_0_id_done:
-    ; y[i].d = FP32_TO_FP16(d) (stub: just store float for now)
-    movss dword [rdi + r10*block8_size], xmm2
-    ; y[i].m = FP32_TO_FP16(min) (stub: just store float for now)
-    movss dword [rdi + r10*block8_size + 4], xmm0
+    ; y[i].d = FP32_TO_FP16(d)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block8_size], ax
+    ; y[i].m = FP32_TO_FP16(min)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block8_size + 4], ax
     ; Quantize values
     mov r13, 0
 Q8_0_quant_loop:
@@ -356,10 +572,12 @@ Q4_1_minmax_found:
 Q4_1_id_zero:
     xorps xmm5, xmm5
 Q4_1_id_done:
-    ; y[i].d = FP32_TO_FP16(d) (stub: just store float for now)
-    movss dword [rdi + r10*block1_size], xmm2
-    ; y[i].m = FP32_TO_FP16(min) (stub: just store float for now)
-    movss dword [rdi + r10*block1_size + 4], xmm0
+    ; y[i].d = FP32_TO_FP16(d)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block1_size], ax
+    ; y[i].m = FP32_TO_FP16(min)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block1_size + 4], ax
     ; Quantize values
     mov r13, 0
 Q4_1_quant_loop:
@@ -449,8 +667,9 @@ Q4_0_max_found:
 Q4_0_id_zero:
     xorps xmm5, xmm5
 Q4_0_id_done:
-    ; y[i].d = FP32_TO_FP16(d) (stub: just store float for now)
-    movss dword [rdi + r10*block_size], xmm2
+    ; y[i].d = FP32_TO_FP16(d)
+    call FP32_TO_FP16
+    mov word [rdi + r10*block_size], ax
     ; Quantize values
     mov r13, 0
 Q4_0_quant_loop:
@@ -486,8 +705,53 @@ neg_eight dd 0xC1000000
 one dd 0x3F800000
 eight_point_five dd 0x41080000
 block_size equ 36
+
+section .text
+
+; CreateCommandPool: Allocate Vulkan command pool for compute dispatch
+; Uses logical_device handle, returns command pool handle in RAX
+CreateCommandPool:
+    ; Check if logical device exists
+    mov rax, logical_device
+    test rax, rax
+    jz .no_cmd_pool
+    
+    ; Resolve vkCreateCommandPool
+    sub rsp, 40
+    mov rcx, vulkan_dll_handle
+    test rcx, rcx
+    jz .no_cmd_pool_unwind
+    lea rdx, [sz_vkCreateCmdPool]
+    call GetProcAddress
+    test rax, rax
+    jz .no_cmd_pool_unwind
+    
+    ; Build VkCommandPoolCreateInfo on stack
+    sub rsp, 32
+    mov DWORD PTR [rsp], 39          ; sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO
+    mov QWORD PTR [rsp+8], 0         ; pNext
+    mov DWORD PTR [rsp+16], 2        ; flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+    mov DWORD PTR [rsp+20], 0        ; queueFamilyIndex = 0 (compute)
+    
+    ; vkCreateCommandPool(device, &createInfo, NULL, &commandPool)
+    mov rcx, logical_device
+    lea rdx, [rsp]
+    xor r8d, r8d                     ; pAllocator
+    lea r9, [command_pool]
+    call rax
+    add rsp, 32
+    
+    test eax, eax                    ; VK_SUCCESS = 0
+    jnz .no_cmd_pool_unwind
+    
     mov rax, command_pool
-    ; [STUB] No real command pool logic. For internal backend only.
+    add rsp, 40
+    ret
+    
+.no_cmd_pool_unwind:
+    add rsp, 40
+.no_cmd_pool:
+    xor rax, rax
     ret
 
 

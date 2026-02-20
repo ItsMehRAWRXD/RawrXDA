@@ -327,14 +327,79 @@ public:
     // ========================================================================
     
     AgenticResult EnsureCoordinator() {
-        // TODO: Initialize actual coordinator when available
-        // For now, simulate successful coordinator setup
-        
         LogInfo(L"Initializing agentic coordinator...");
-        
-        // Simulate coordinator initialization
-        Sleep(10); // Small delay to simulate work
-        
+
+        // Load coordinator configuration from disk
+        std::wstring configFile = m_configPath + L"\\agentic_config.json";
+        HANDLE hFile = CreateFileW(configFile.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                   nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hFile != INVALID_HANDLE_VALUE) {
+            DWORD fileSize = GetFileSize(hFile, nullptr);
+            if (fileSize > 0 && fileSize < 1024 * 1024) {
+                std::vector<char> buf(fileSize + 1, 0);
+                DWORD bytesRead = 0;
+                ReadFile(hFile, buf.data(), fileSize, &bytesRead, nullptr);
+                std::string configJson(buf.data(), bytesRead);
+                // Parse max_concurrent_tasks from JSON
+                size_t pos = configJson.find("\"max_concurrent_tasks\"");
+                if (pos != std::string::npos) {
+                    pos = configJson.find(':', pos);
+                    if (pos != std::string::npos) {
+                        m_maxConcurrentTasks = std::max(1, std::atoi(configJson.c_str() + pos + 1));
+                    }
+                }
+                // Parse model_path
+                pos = configJson.find("\"model_path\"");
+                if (pos != std::string::npos) {
+                    size_t valStart = configJson.find('"', pos + 13) + 1;
+                    size_t valEnd = configJson.find('"', valStart);
+                    if (valStart > 0 && valEnd > valStart) {
+                        std::string mp = configJson.substr(valStart, valEnd - valStart);
+                        m_modelPath = std::wstring(mp.begin(), mp.end());
+                    }
+                }
+            }
+            CloseHandle(hFile);
+            LogInfo(L"Coordinator config loaded from disk");
+        } else {
+            LogInfo(L"No coordinator config file, using defaults");
+        }
+
+        // Initialize the task queue and worker thread
+        m_coordinatorReady = true;
+        m_coordinatorShutdown = false;
+
+        if (!m_workerThread) {
+            m_workerThread = CreateThread(nullptr, 0,
+                [](LPVOID param) -> DWORD {
+                    auto* self = static_cast<decltype(this)>(param);
+                    while (!self->m_coordinatorShutdown) {
+                        // Process pending tasks from the queue
+                        {
+                            std::lock_guard<std::mutex> lock(self->m_taskMutex);
+                            while (!self->m_taskQueue.empty() && 
+                                   self->m_activeTasks < self->m_maxConcurrentTasks) {
+                                auto task = std::move(self->m_taskQueue.front());
+                                self->m_taskQueue.pop();
+                                self->m_activeTasks++;
+                                // Execute the task
+                                if (task.callback) {
+                                    task.callback();
+                                }
+                                self->m_activeTasks--;
+                            }
+                        }
+                        Sleep(50); // Poll interval
+                    }
+                    return 0;
+                }, this, 0, nullptr);
+        }
+
+        // Verify coordinator is responsive
+        if (!m_coordinatorReady) {
+            return AgenticResult::Error(L"Coordinator failed to initialize");
+        }
+
         LogInfo(L"Agentic coordinator initialized successfully");
         return AgenticResult::Ok(L"Coordinator ready");
     }

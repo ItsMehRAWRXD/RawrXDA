@@ -1,11 +1,15 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QJsonArray>
+#include <string>
 #include <memory>
 #include <unordered_map>
+#include <vector>
+#include <variant>
+#include <chrono>
+#include <functional>
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 /**
  * @class AgenticConfiguration
@@ -20,10 +24,8 @@
  * - Hierarchical configuration with defaults
  * - Secure handling of sensitive values (API keys, tokens)
  */
-class AgenticConfiguration : public QObject
+class AgenticConfiguration
 {
-    Q_OBJECT
-
 public:
     enum class Environment {
         Development,
@@ -40,27 +42,29 @@ public:
         Object
     };
 
+    typedef std::variant<std::string, int, float, bool, json> ConfigVar;
+
     struct ConfigValue {
         ConfigType type;
-        QVariant value;
+        ConfigVar value;
         bool isSecret;
-        QString description;
-        QVariant defaultValue;
+        std::string description;
+        ConfigVar defaultValue;
         bool isRequired;
-        QStringList validationRules;
+        std::vector<std::string> validationRules;
     };
 
     struct FeatureToggle {
-        QString featureName;
+        std::string featureName;
         bool enabled;
-        QString description;
-        QString rolloutPercentage; // "0-100" for gradual rollout
-        QDateTime enabledDate;
-        QString owner;
+        std::string description;
+        std::string rolloutPercentage; // "0-100" for gradual rollout
+        std::chrono::system_clock::time_point enabledDate;
+        std::string owner;
     };
 
 public:
-    explicit AgenticConfiguration(QObject* parent = nullptr);
+    explicit AgenticConfiguration();
     ~AgenticConfiguration();
 
     // ===== INITIALIZATION =====
@@ -69,9 +73,9 @@ public:
     void initializeFromEnvironment(Environment env);
     
     // Load from file
-    bool loadFromJson(const QString& filePath);
-    bool loadFromEnv(const QString& filePath); // dotenv format
-    bool loadFromYaml(const QString& filePath);
+    bool loadFromJson(const std::string& filePath);
+    bool loadFromYaml(const std::string& filePath);
+    bool loadFromEnv(const std::string& filePath); // dotenv format
     
     // Load defaults
     void loadDefaults();
@@ -79,84 +83,84 @@ public:
     // ===== CONFIGURATION ACCESS =====
     
     // Get configuration values
-    QVariant get(const QString& key, const QVariant& defaultValue = QVariant());
-    QString getString(const QString& key, const QString& defaultValue = "");
-    int getInt(const QString& key, int defaultValue = 0);
-    float getFloat(const QString& key, float defaultValue = 0.0f);
-    bool getBool(const QString& key, bool defaultValue = false);
-    QJsonObject getObject(const QString& key, const QJsonObject& defaultValue = QJsonObject());
-    QJsonArray getArray(const QString& key, const QJsonArray& defaultValue = QJsonArray());
+    ConfigVar get(const std::string& key, const ConfigVar& defaultValue = ConfigVar());
+    std::string getString(const std::string& key, const std::string& defaultValue = "");
+    int getInt(const std::string& key, int defaultValue = 0);
+    float getFloat(const std::string& key, float defaultValue = 0.0f);
+    bool getBool(const std::string& key, bool defaultValue = false);
+    json getObject(const std::string& key, const json& defaultValue = json());
+    json getArray(const std::string& key, const json& defaultValue = json());
     
     // Set configuration values at runtime
-    void set(const QString& key, const QVariant& value);
-    void setSecret(const QString& key, const QString& value);
+    void set(const std::string& key, const ConfigVar& value);
+    void setSecret(const std::string& key, const std::string& value);
 
     // ===== ENVIRONMENT-SPECIFIC CONFIG =====
     
     Environment getCurrentEnvironment() const { return m_currentEnvironment; }
     void setEnvironment(Environment env);
-    QString getEnvironmentName() const;
+    std::string getEnvironmentName() const;
     
     // Get environment-specific config
-    QVariant getEnvironmentSpecific(
-        const QString& key,
+    ConfigVar getEnvironmentSpecific(
+        const std::string& key,
         Environment env = Environment::Development
     );
 
     // ===== FEATURE TOGGLES =====
     
-    bool isFeatureEnabled(const QString& featureName);
-    void enableFeature(const QString& featureName);
-    void disableFeature(const QString& featureName);
+    bool isFeatureEnabled(const std::string& featureName);
+    void enableFeature(const std::string& featureName);
+    void disableFeature(const std::string& featureName);
     void setFeatureToggle(const FeatureToggle& toggle);
-    FeatureToggle getFeatureToggle(const QString& featureName);
-    QJsonArray getAllFeatureToggles();
+    FeatureToggle getFeatureToggle(const std::string& featureName);
+    json getAllFeatureToggles();
     
     // Gradual rollout
     bool isFeatureEnabledForUser(
-        const QString& featureName,
-        const QString& userId
+        const std::string& featureName,
+        const std::string& userId
     );
 
     // ===== VALIDATION =====
     
-    bool validateConfig(const QString& key);
+    bool validateConfig(const std::string& key);
     bool validateAllConfig();
-    QString getValidationError(const QString& key);
-    QJsonObject getValidationReport();
+    std::string getValidationError(const std::string& key);
+    json getValidationReport();
 
     // ===== HOT RELOADING =====
     
     void enableHotReloading(bool enabled);
-    void watchConfigFile(const QString& filePath);
+    void watchConfigFile(const std::string& filePath);
     void reloadConfiguration();
 
     // ===== PROFILE MANAGEMENT =====
     
     // Save current configuration as profile
-    bool saveProfile(const QString& profileName);
+    bool saveProfile(const std::string& profileName);
     
     // Load saved profile
-    bool loadProfile(const QString& profileName);
+    bool loadProfile(const std::string& profileName);
     
     // List available profiles
-    QStringList getAvailableProfiles();
+    std::vector<std::string> getAvailableProfiles();
     
     // Delete profile
-    bool deleteProfile(const QString& profileName);
+    bool deleteProfile(const std::string& profileName);
 
     // ===== EXPORT/IMPORT =====
     
-    QString exportConfiguration(bool includeSecrets = false) const;
-    bool importConfiguration(const QString& jsonData);
+    std::string exportConfiguration(bool includeSecrets = false) const;
+    bool importConfiguration(const std::string& jsonData);
     
     // Export for documentation
-    QString generateConfigurationDocumentation() const;
+    std::string generateConfigurationDocumentation() const;
 
     // ===== SENSITIVE DATA HANDLING =====
     
     // Mask secrets in output
-    QString maskSecrets(const QString& text) const;
+    std::string maskSecrets(const std::string& text) const;
     
     // Validate secrets are not logged
     bool validateNoSecretsInLogs() const;
@@ -164,56 +168,64 @@ public:
     // ===== DEFAULTS =====
     
     // Get all keys with current values
-    QJsonObject getAllConfiguration(bool includeSecrets = false) const;
+    json getAllConfiguration(bool includeSecrets = false) const;
     
     // Get schema
-    QJsonObject getConfigurationSchema() const;
+    json getConfigurationSchema() const;
     
     // Get help text for key
-    QString getConfigurationHelp(const QString& key);
+    std::string getConfigurationHelp(const std::string& key);
 
     // ===== METRICS AND MONITORING =====
     
-    int getConfigurationAccessCount(const QString& key) const;
-    QJsonObject getConfigurationUsageStats();
+    int getConfigurationAccessCount(const std::string& key) const;
+    json getConfigurationUsageStats();
+    
+    // Callbacks for events
+    std::function<void()> onConfigurationLoaded;
+    std::function<void()> onConfigurationReloaded;
+    std::function<void(const std::string&)> onConfigurationChanged;
+    std::function<void(const std::string&, bool)> onFeatureToggled;
+    std::function<void(const std::string&, const std::string&)> onValidationError;
+    std::function<void(const std::string&)> onSecretAccessed;
 
-signals:
-    void configurationLoaded();
-    void configurationReloaded();
-    void configurationChanged(const QString& key);
-    void featureToggled(const QString& featureName, bool enabled);
-    void validationError(const QString& key, const QString& error);
-    void secretAccessed(const QString& secretName);
+    // Emitter helpers
+    void emitConfigurationLoaded() { if(onConfigurationLoaded) onConfigurationLoaded(); }
+    void emitConfigurationReloaded() { if(onConfigurationReloaded) onConfigurationReloaded(); }
+    void emitConfigurationChanged(const std::string& key) { if(onConfigurationChanged) onConfigurationChanged(key); }
+    void emitFeatureToggled(const std::string& feature, bool enabled) { if(onFeatureToggled) onFeatureToggled(feature, enabled); }
+    void emitValidationError(const std::string& key, const std::string& err) { if(onValidationError) onValidationError(key, err); }
+    void emitSecretAccessed(const std::string& secret) { if(onSecretAccessed) onSecretAccessed(secret); }
 
 private:
     // Internal helpers
-    void setConfigDefault(const QString& key, const ConfigValue& config);
-    QVariant parseValue(const QString& valueStr, ConfigType type);
-    bool validateValue(const QString& key, const QVariant& value);
+    void setConfigDefault(const std::string& key, const ConfigValue& config);
+    ConfigVar parseValue(const std::string& valueStr, ConfigType type);
+    bool validateValue(const std::string& key, const ConfigVar& value);
     void applyEnvironmentOverrides();
 
     // YAML parsing helper (if YAML support needed)
-    QJsonObject parseYamlFile(const QString& filePath);
+    json parseYamlFile(const std::string& filePath);
 
     // Configuration store
     std::unordered_map<std::string, ConfigValue> m_config;
     std::unordered_map<std::string, FeatureToggle> m_featureToggles;
     
     // Profile storage
-    std::unordered_map<std::string, QJsonObject> m_profiles;
+    std::unordered_map<std::string, json> m_profiles;
     
     // Current state
     Environment m_currentEnvironment = Environment::Development;
     bool m_hotReloadingEnabled = false;
     
     // Watched files
-    std::vector<QString> m_watchedFiles;
+    std::vector<std::string> m_watchedFiles;
     
     // Access tracking
     std::unordered_map<std::string, int> m_accessCounts;
     
     // Secrets list (for masking)
-    std::vector<QString> m_secretKeys;
+    std::vector<std::string> m_secretKeys;
 
     // File watchers (for hot reload)
     class ConfigFileWatcher;

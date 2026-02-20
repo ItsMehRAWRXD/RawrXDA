@@ -16,6 +16,9 @@
 #include <cmath>
 #include <filesystem>
 
+#include "logging/logger.h"
+static Logger s_logger("benchmark_zerocopy_microbench");
+
 #ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
@@ -123,10 +126,10 @@ void buildMicroGGUF(const std::string& path, size_t tensor_count, size_t tensor_
 }
 
 int main() {
-    std::cout << "╔═══════════════════════════════════════════════════════════╗\n";
-    std::cout << "║   RAWRXD ZERO-COPY MICRO-BENCHMARK                       ║\n";
-    std::cout << "║   Target: 50μs for 128KB tensor (zero-copy)              ║\n";
-    std::cout << "╚═══════════════════════════════════════════════════════════╝\n\n";
+    s_logger.info("╔═══════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║   RAWRXD ZERO-COPY MICRO-BENCHMARK                       ║\n");
+    s_logger.info("║   Target: 50μs for 128KB tensor (zero-copy)              ║\n");
+    s_logger.info("╚═══════════════════════════════════════════════════════════╝\n\n");
     
     // Test parameters
     const size_t TENSOR_COUNT = 100;
@@ -141,23 +144,23 @@ int main() {
         std::filesystem::remove(model_path);
     }
     
-    std::cout << "Generating test model: " << TENSOR_COUNT << " tensors × " << TENSOR_SIZE_KB << " KB\n";
+    s_logger.info("Generating test model: ");
     buildMicroGGUF(model_path, TENSOR_COUNT, TENSOR_SIZE_KB);
-    std::cout << "✓ Model created: " << (TENSOR_COUNT * TENSOR_SIZE_KB / 1024.0) << " MB total\n\n";
+    s_logger.info("✓ Model created: ");
     
     // ========================================================================
     // BENCHMARK 1: GetTensorData (memcpy path)
     // ========================================================================
-    std::cout << "=== BENCHMARK 1: GetTensorData (memcpy) ===\n";
+    s_logger.info("=== BENCHMARK 1: GetTensorData (memcpy) ===\n");
     {
         EnhancedStreamingGGUFLoader loader;
         if (!loader.Open(model_path)) {
-            std::cerr << "Failed to open model\n";
+            s_logger.error( "Failed to open model\n";
             return 1;
         }
         
         // Warmup
-        std::cout << "Warmup (" << WARMUP_ITERATIONS << " iterations)...\n";
+        s_logger.info("Warmup (");
         std::vector<uint8_t> data;
         for (int i = 0; i < WARMUP_ITERATIONS; ++i) {
             loader.GetTensorData("tensor_0000", data);
@@ -165,7 +168,7 @@ int main() {
         
         // Benchmark
         BenchmarkStats stats;
-        std::cout << "Benchmarking (" << BENCHMARK_ITERATIONS << " iterations)...\n";
+        s_logger.info("Benchmarking (");
         
         for (int i = 0; i < BENCHMARK_ITERATIONS; ++i) {
             PrecisionTimer timer;
@@ -178,20 +181,20 @@ int main() {
         
         stats.compute();
         
-        std::cout << std::fixed << std::setprecision(2);
-        std::cout << "\nResults (memcpy path):\n";
-        std::cout << "  Mean:   " << stats.mean << " μs\n";
-        std::cout << "  Median: " << stats.p50 << " μs\n";
-        std::cout << "  P95:    " << stats.p95 << " μs\n";
-        std::cout << "  P99:    " << stats.p99 << " μs\n";
-        std::cout << "  Min:    " << stats.min << " μs\n";
-        std::cout << "  Max:    " << stats.max << " μs\n";
+        s_logger.info( std::fixed << std::setprecision(2);
+        s_logger.info("\nResults (memcpy path):\n");
+        s_logger.info("  Mean:   ");
+        s_logger.info("  Median: ");
+        s_logger.info("  P95:    ");
+        s_logger.info("  P99:    ");
+        s_logger.info("  Min:    ");
+        s_logger.info("  Max:    ");
         
         double throughput_gbps = (TENSOR_SIZE_KB * 1024.0) / (stats.mean * 1000.0);
-        std::cout << "  Throughput: " << throughput_gbps << " GB/s\n";
+        s_logger.info("  Throughput: ");
         
         bool pass = stats.mean < 200.0;  // memcpy expected ~100-150μs for 128KB
-        std::cout << "  Status: " << (pass ? "✓ EXPECTED" : "✗ SLOW") << "\n\n";
+        s_logger.info("  Status: ");
         
         loader.Close();
     }
@@ -199,11 +202,11 @@ int main() {
     // ========================================================================
     // BENCHMARK 2: GetTensorView (zero-copy path)
     // ========================================================================
-    std::cout << "=== BENCHMARK 2: GetTensorView (zero-copy) ===\n";
+    s_logger.info("=== BENCHMARK 2: GetTensorView (zero-copy) ===\n");
     {
         EnhancedStreamingGGUFLoader loader;
         if (!loader.Open(model_path)) {
-            std::cerr << "Failed to open model\n";
+            s_logger.error( "Failed to open model\n";
             return 1;
         }
         
@@ -211,7 +214,7 @@ int main() {
         loader.LoadZone("misc");
         
         // Warmup
-        std::cout << "Warmup (" << WARMUP_ITERATIONS << " iterations)...\n";
+        s_logger.info("Warmup (");
         for (int i = 0; i < WARMUP_ITERATIONS; ++i) {
             auto view = loader.GetTensorView("tensor_0000");
             (void)view.data();  // Touch to prevent optimization
@@ -219,7 +222,7 @@ int main() {
         
         // Benchmark
         BenchmarkStats stats;
-        std::cout << "Benchmarking (" << BENCHMARK_ITERATIONS << " iterations)...\n";
+        s_logger.info("Benchmarking (");
         
         for (int i = 0; i < BENCHMARK_ITERATIONS; ++i) {
             PrecisionTimer timer;
@@ -234,21 +237,21 @@ int main() {
         
         stats.compute();
         
-        std::cout << std::fixed << std::setprecision(2);
-        std::cout << "\nResults (zero-copy path):\n";
-        std::cout << "  Mean:   " << stats.mean << " μs\n";
-        std::cout << "  Median: " << stats.p50 << " μs\n";
-        std::cout << "  P95:    " << stats.p95 << " μs\n";
-        std::cout << "  P99:    " << stats.p99 << " μs\n";
-        std::cout << "  Min:    " << stats.min << " μs\n";
-        std::cout << "  Max:    " << stats.max << " μs\n";
+        s_logger.info( std::fixed << std::setprecision(2);
+        s_logger.info("\nResults (zero-copy path):\n");
+        s_logger.info("  Mean:   ");
+        s_logger.info("  Median: ");
+        s_logger.info("  P95:    ");
+        s_logger.info("  P99:    ");
+        s_logger.info("  Min:    ");
+        s_logger.info("  Max:    ");
         
         // TARGET: 50μs ± 20μs
         bool pass = stats.mean >= 30.0 && stats.mean <= 70.0;
-        std::cout << "\n  *** TARGET: 50μs ± 20μs ***\n";
-        std::cout << "  Status: " << (pass ? "✓ PASS" : "✗ FAIL") << "\n";
+        s_logger.info("\n  *** TARGET: 50μs ± 20μs ***\n");
+        s_logger.info("  Status: ");
         if (!pass) {
-            std::cout << "  Deviation: " << (stats.mean - 50.0) << " μs from target\n";
+            s_logger.info("  Deviation: ");
         }
         
         loader.Close();
@@ -257,11 +260,11 @@ int main() {
     // ========================================================================
     // BENCHMARK 3: IsTensorResident check (ultra-fast path)
     // ========================================================================
-    std::cout << "\n=== BENCHMARK 3: IsTensorResident (cache check only) ===\n";
+    s_logger.info("\n=== BENCHMARK 3: IsTensorResident (cache check only) ===\n");
     {
         EnhancedStreamingGGUFLoader loader;
         if (!loader.Open(model_path)) {
-            std::cerr << "Failed to open model\n";
+            s_logger.error( "Failed to open model\n";
             return 1;
         }
         
@@ -281,15 +284,15 @@ int main() {
         
         stats.compute();
         
-        std::cout << std::fixed << std::setprecision(3);
-        std::cout << "Results (cache check only):\n";
-        std::cout << "  Mean:   " << stats.mean << " μs\n";
-        std::cout << "  Median: " << stats.p50 << " μs\n";
-        std::cout << "  P99:    " << stats.p99 << " μs\n";
+        s_logger.info( std::fixed << std::setprecision(3);
+        s_logger.info("Results (cache check only):\n");
+        s_logger.info("  Mean:   ");
+        s_logger.info("  Median: ");
+        s_logger.info("  P99:    ");
         
         // Should be sub-microsecond
         bool pass = stats.mean < 1.0;
-        std::cout << "  Status: " << (pass ? "✓ SUB-MICROSECOND" : "✗ TOO SLOW") << "\n";
+        s_logger.info("  Status: ");
         
         loader.Close();
     }
@@ -297,16 +300,16 @@ int main() {
     // ========================================================================
     // SUMMARY
     // ========================================================================
-    std::cout << "\n╔═══════════════════════════════════════════════════════════╗\n";
-    std::cout << "║   MICRO-BENCHMARK COMPLETE                               ║\n";
-    std::cout << "╚═══════════════════════════════════════════════════════════╝\n";
-    std::cout << "\nConclusion:\n";
-    std::cout << "  • GetTensorData (memcpy): ~100-150μs for 128KB (physics limit)\n";
-    std::cout << "  • GetTensorView (zero-copy): TARGET 50μs (pointer arithmetic only)\n";
-    std::cout << "  • IsTensorResident: <1μs (instant cache check)\n";
-    std::cout << "\nRecommendation:\n";
-    std::cout << "  Use GetTensorView() for hot paths in inference loops.\n";
-    std::cout << "  Use IsTensorResident() + PrefetchTensorAsync() for async pipelines.\n";
+    s_logger.info("\n╔═══════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║   MICRO-BENCHMARK COMPLETE                               ║\n");
+    s_logger.info("╚═══════════════════════════════════════════════════════════╝\n");
+    s_logger.info("\nConclusion:\n");
+    s_logger.info("  • GetTensorData (memcpy): ~100-150μs for 128KB (physics limit)\n");
+    s_logger.info("  • GetTensorView (zero-copy): TARGET 50μs (pointer arithmetic only)\n");
+    s_logger.info("  • IsTensorResident: <1μs (instant cache check)\n");
+    s_logger.info("\nRecommendation:\n");
+    s_logger.info("  Use GetTensorView() for hot paths in inference loops.\n");
+    s_logger.info("  Use IsTensorResident() + PrefetchTensorAsync() for async pipelines.\n");
     
     // Cleanup
     std::filesystem::remove(model_path);

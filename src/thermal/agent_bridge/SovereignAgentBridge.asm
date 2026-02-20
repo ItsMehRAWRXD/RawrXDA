@@ -4,6 +4,13 @@
 ; ============================================================================
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
+; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+PUBLIC AgentBridgeEntry
+
 ; include windows.inc ; Removed dependency
 ; includelib kernel32.lib ; Handled by linker
 
@@ -152,6 +159,7 @@ _error_restart:
     mov ecx, 1000
     call Sleep
     jmp _listen_loop
+    ret
 AgentBridgeEntry ENDP
 
 

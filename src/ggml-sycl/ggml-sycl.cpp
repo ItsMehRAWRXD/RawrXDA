@@ -67,7 +67,7 @@ static ggml_sycl_device_info ggml_sycl_init() {
 
     info.device_count = dpct::dev_mgr::instance().device_count();
     if (info.device_count == 0) {
-        GGML_
+        GGML_LOG_ERROR("%s: failed to initialize: %s\n", GGML_SYCL_NAME, __func__);
         return info;
     }
 
@@ -76,9 +76,9 @@ static ggml_sycl_device_info ggml_sycl_init() {
     int64_t total_vram = 0;
 /* This is a bit misleading;  reserved for later */
 // #if defined(SYCL_USE_XMX)
-//     GGML_
+//     GGML_LOG_INFO("%s: SYCL_USE_XMX: yes\n", __func__);
 // #else
-//     GGML_
+//     GGML_LOG_INFO("%s: SYCL_USE_XMX: no\n", __func__);
 // #endif
     for (int i = 0; i < info.device_count; ++i) {
         info.devices[i].vmm = 0;
@@ -128,13 +128,18 @@ static void print_device_detail(int id, sycl::device &device, std::string device
     name = std::regex_replace(name, std::regex("\\(TM\\)"), "");
 
     auto global_mem_size = prop.get_global_mem_size()/1000000;
-    GGML_
+    GGML_LOG_INFO("|%2d|%19s|%39s|%7s|%7d|%8d|%5d|%6luM|%21s|\n", id, device_type.c_str(),
+            name.c_str(), version.c_str(), prop.get_max_compute_units(),
+            prop.get_max_work_group_size(), prop.get_max_sub_group_size(),
+            global_mem_size, device.get_info<sycl::info::device::driver_version>().c_str());
 }
 
 static void print_device_opt_feature(int device_count) {
-    GGML_
-    GGML_
-    GGML_
+    GGML_LOG_INFO("SYCL Optimization Feature:\n");
+    GGML_LOG_INFO(
+        "|ID|        Device Type|Reorder|\n");
+    GGML_LOG_INFO(
+        "|--|-------------------|-------|\n");
     std::map<std::string, size_t> DeviceNums;
     for (int id = 0; id < device_count; ++id) {
       sycl::device device = dpct::dev_mgr::instance().get_device(id);
@@ -145,7 +150,8 @@ static void print_device_opt_feature(int device_count) {
                   << "]";
       std::string device_type_s = device_type.str();
       device_type_s = std::regex_replace(device_type_s, std::regex("ext_oneapi_"), "");
-      GGML_
+      GGML_LOG_INFO("|%2d|%19s|%7s|\n", id, device_type_s.c_str(),
+        ggml_sycl_info().devices[id].opt_feature.reorder ? "Y": "N");
     }
 
 }
@@ -153,12 +159,20 @@ void ggml_backend_sycl_print_sycl_devices() {
     GGML_SYCL_DEBUG("[SYCL] call ggml_backend_sycl_print_sycl_devices\n");
     int device_count = dpct::dev_mgr::instance().device_count();
     std::map<std::string, size_t> DeviceNums;
-    GGML_
+    GGML_LOG_INFO("Found %d SYCL devices:\n", device_count);
 
-    GGML_
-    GGML_
-    GGML_
-    GGML_
+    GGML_LOG_INFO(
+        "|  |                   |                                       |      "
+        " |Max    |        |Max  |Global |                     |\n");
+    GGML_LOG_INFO(
+        "|  |                   |                                       |      "
+        " |compute|Max work|sub  |mem    |                     |\n");
+    GGML_LOG_INFO(
+        "|ID|        Device Type|                                   "
+        "Name|Version|units  |group   |group|size   |       Driver version|\n");
+    GGML_LOG_INFO(
+        "|--|-------------------|---------------------------------------|------"
+        "-|-------|--------|-----|-------|---------------------|\n");
 
     for (int id = 0; id < device_count; ++id) {
       sycl::device device = dpct::dev_mgr::instance().get_device(id);
@@ -197,37 +211,37 @@ static void ggml_check_sycl() try {
         g_ggml_sycl_disable_dnn = get_sycl_env("GGML_SYCL_DISABLE_DNN", 0);
         g_ggml_sycl_prioritize_dmmv = get_sycl_env("GGML_SYCL_PRIORITIZE_DMMV", 0);
         GGML_SYCL_DEBUG("[SYCL] call ggml_check_sycl\n");
-        GGML_
-        GGML_
-        GGML_
+        GGML_LOG_INFO("Running with Environment Variables:\n");
+        GGML_LOG_INFO("  GGML_SYCL_DEBUG: %d\n", g_ggml_sycl_debug);
+        GGML_LOG_INFO("  GGML_SYCL_DISABLE_OPT: %d\n", g_ggml_sycl_disable_optimize);
 #ifdef GGML_SYCL_GRAPH
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_DISABLE_GRAPH: %d\n", g_ggml_sycl_disable_graph);
 #else
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_DISABLE_GRAPH: graph disabled by compile flag\n");
 #endif
 #if GGML_SYCL_DNNL
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_DISABLE_DNN: %d\n", g_ggml_sycl_disable_dnn);
 #else
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_DISABLE_DNN: DNN disabled by compile flag\n");
 #endif
-        GGML_
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_PRIORITIZE_DMMV: %d\n", g_ggml_sycl_prioritize_dmmv);
+        GGML_LOG_INFO("Build with Macros:\n");
 #if defined(GGML_SYCL_FORCE_MMQ)
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_FORCE_MMQ: yes\n");
 #else
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_FORCE_MMQ: no\n");
 #endif
 #if defined(GGML_SYCL_F16)
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_F16: yes\n");
 #else
-        GGML_
+        GGML_LOG_INFO("  GGML_SYCL_F16: no\n");
 #endif
 
 /* NOT REMOVE, keep it for next optimize for XMX.
 #if defined(SYCL_USE_XMX)
-
+        fprintf(stderr, "%s: SYCL_USE_XMX: yes\n", __func__);
 #else
-
+        fprintf(stderr, "%s: SYCL_USE_XMX: no\n", __func__);
 #endif
 */
         // Currently, we only use async malloc / free when graphs are enabled as it is required for the calls to be
@@ -258,7 +272,8 @@ static void ggml_check_sycl() try {
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -276,7 +291,7 @@ inline void check_allow_gpu_index(const int device_index) {
         __func__,
         device_index,
         ggml_sycl_info().device_count - 1);
-    GGML_
+    GGML_LOG_ERROR("%s\n", error_buf);
     assert(false);
   }
 }
@@ -292,7 +307,8 @@ GGML_API void ggml_backend_sycl_get_gpu_list(int *id_list, int max_len) try {
     return;
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -341,7 +357,8 @@ ggml_backend_sycl_buffer_free_buffer(ggml_backend_buffer_t buffer) try {
     delete ctx;
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -382,7 +399,8 @@ ggml_backend_sycl_buffer_init_tensor(ggml_backend_buffer_t buffer,
     return GGML_STATUS_SUCCESS;
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -409,7 +427,8 @@ static void ggml_backend_sycl_buffer_set_tensor(ggml_backend_buffer_t buffer,
 #endif
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -430,7 +449,8 @@ static void ggml_backend_sycl_buffer_get_tensor(ggml_backend_buffer_t buffer,
             .wait()));
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -502,7 +522,7 @@ ggml_backend_sycl_buffer_cpy_tensor(ggml_backend_buffer_t buffer,
     return false;
     GGML_UNUSED(buffer);
 } catch (const sycl::exception & exc) {
-    
+    std::cerr << exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 
@@ -521,7 +541,8 @@ static void ggml_backend_sycl_buffer_clear(ggml_backend_buffer_t buffer,
                                     .wait()));
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -599,14 +620,15 @@ ggml_backend_sycl_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft,
     SYCL_CHECK(CHECK_TRY_ERROR(dev_ptr = (void *)sycl::malloc_device(
                                     size, *stream)));
     if (!dev_ptr) {
-      GGML_
+      GGML_LOG_ERROR("%s: can't allocate %lu Bytes of memory on device\n", __func__, size);
       return nullptr;
     }
     ggml_backend_sycl_buffer_context * ctx = new  ggml_backend_sycl_buffer_context(buft_ctx->device, dev_ptr, buft_ctx->stream);
     return ggml_backend_buffer_init(buft, ggml_backend_sycl_buffer_interface, ctx, size);
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -653,7 +675,8 @@ ggml_backend_buffer_type_t ggml_backend_sycl_buffer_type(int device) {
     auto dev_count = ggml_backend_sycl_get_device_count();
 
     if (device>=dev_count or device<0) {
-        GGML_
+        GGML_LOG_ERROR("ggml_backend_sycl_buffer_type error: device_index:%d is out of range [0, %d], miss to call ggml_backend_sycl_set_single_device()\n",
+            device, dev_count-1);
         GGML_ASSERT(device<dev_count);
     }
     static struct ggml_backend_buffer_type ggml_backend_sycl_buffer_types[GGML_SYCL_MAX_DEVICES];
@@ -680,7 +703,8 @@ static ggml_backend_buffer_type_t ggml_backend_sycl_buffer_type(ggml_backend_syc
 
     int device = ctx->device;
     if (device>=ggml_sycl_info().device_count or device<0) {
-        GGML_
+        GGML_LOG_ERROR("ggml_backend_sycl_buffer_type error: device_index:%d is out of range [0, %d], miss to call ggml_backend_sycl_set_single_device()\n",
+            device, ggml_sycl_info().device_count-1);
         GGML_ASSERT(device<ggml_sycl_info().device_count);
     }
     static struct ggml_backend_buffer_type ggml_backend_sycl_buffer_types[GGML_SYCL_MAX_DEVICES];
@@ -780,7 +804,8 @@ struct ggml_backend_sycl_split_buffer_context {
         }
     }
     catch (sycl::exception const &exc) {
-      
+      std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+                << ", line:" << __LINE__ << std::endl;
       std::exit(1);
     }
 
@@ -880,7 +905,8 @@ ggml_backend_sycl_split_buffer_init_tensor(ggml_backend_buffer_t buffer,
     return GGML_STATUS_SUCCESS;
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -935,7 +961,8 @@ ggml_backend_sycl_split_buffer_set_tensor(ggml_backend_buffer_t buffer,
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -990,7 +1017,8 @@ ggml_backend_sycl_split_buffer_get_tensor(ggml_backend_buffer_t buffer,
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -1238,7 +1266,7 @@ struct ggml_sycl_pool_leg : public ggml_sycl_pool {
             CHECK_TRY_ERROR(ptr = (void *)sycl::malloc_device(
                                 look_ahead_size, *qptr)));
         if (!ptr) {
-            GGML_
+            GGML_LOG_ERROR("%s: can't allocate %lu Bytes of memory on device/GPU\n", __func__, look_ahead_size);
             return nullptr;
         }
 
@@ -1246,7 +1274,8 @@ struct ggml_sycl_pool_leg : public ggml_sycl_pool {
         pool_size += look_ahead_size;
 
 #ifdef DEBUG_SYCL_MALLOC
-        GGML_
+        GGML_LOG_DEBUG("%s[%d]: %d buffers, max_size = %u MB, pool_size = %u MB, requested %u MB\n", __func__, id, nnz,
+                (uint32_t)(max_size/1024/1024), (uint32_t)(g_sycl_pool_size[id]/1024/1024), (uint32_t)(size/1024/1024));
 #endif
 
         // GGML_SYCL_DEBUG("ggml_sycl_pool_malloc_leg look_ahead_size=%lu, return %p\n", look_ahead_size, ptr);
@@ -1262,7 +1291,7 @@ struct ggml_sycl_pool_leg : public ggml_sycl_pool {
                 return;
             }
         }
-        GGML_
+        GGML_LOG_WARN("WARNING: sycl buffer pool full, increase MAX_sycl_BUFFERS\n");
         SYCL_CHECK(CHECK_TRY_ERROR(sycl::free(ptr, *qptr)));
         pool_size -= size;
     }
@@ -1314,7 +1343,7 @@ struct ggml_sycl_pool_host : public ggml_sycl_pool {
 
             SYCL_CHECK(CHECK_TRY_ERROR(ptr = (void *) sycl::malloc_host(size, *qptr)));
             if (!ptr) {
-                GGML_
+                GGML_LOG_ERROR("%s: can't allocate %lu Bytes of memory on host\n", __func__, size);
                 return nullptr;
             }
             pool_size += size;
@@ -1366,6 +1395,7 @@ typedef void (*ggml_sycl_op_mul_mat_t)(
     float *dst_dd_i, const int64_t row_low, const int64_t row_high,
     const int64_t src1_ncols, const int64_t src1_padded_row_size,
     const queue_ptr &stream);
+
 
 
 static void mul_mat_p021_f16_f32(
@@ -1706,6 +1736,7 @@ static void ggml_mul_mat_vec_nc_f16_f32_sycl(
 }
 
 
+
 static void scale_f32_sycl(const float *x, float *dst, const float scale, const float bias,
                            const int k, queue_ptr stream) {
     const int num_blocks = (k + SYCL_SCALE_BLOCK_SIZE - 1) / SYCL_SCALE_BLOCK_SIZE;
@@ -1934,7 +1965,8 @@ static dpct::err0 ggml_sycl_cpy_tensor_2d(void *dst,
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -2069,7 +2101,8 @@ inline void ggml_sycl_op_mul_mat_sycl(
     GGML_UNUSED(src1_padded_row_size);
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -2409,7 +2442,8 @@ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_ten
                 try {
                     quantize_row_q8_1_sycl<quantize_f>(dev[i].src1_ddf, dev[i].src1_ddq, ne10, nrows1, src1_padded_col_size, stream);
                 } catch (sycl::exception const &exc) {
-                    
+                    std::cerr << "Quantize_row_q8_1_sycl error" << exc.what() << "Exception caught at file:" << __FILE__
+                              << ", line:" << __LINE__ << std::endl;
                     std::exit(1);
                 }
             }
@@ -2506,7 +2540,8 @@ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_ten
                             quantize_row_q8_1_sycl<quantize_q8_1>(src1_ddf_i, src1_ddq_i, ne10, src1_ncols,
                                                                   src1_padded_col_size, stream);
                         } catch (const sycl::exception & exc) {
-                            
+                            std::cerr << "Quantize_row_q8_1_sycl error" << exc.what()
+                                      << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
                             std::exit(1);
                         }
                     }
@@ -2578,7 +2613,8 @@ static void ggml_sycl_op_mul_mat(ggml_backend_sycl_context & ctx, const ggml_ten
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -2643,7 +2679,8 @@ static void ggml_sycl_mul_mat_vec_p021(ggml_backend_sycl_context & ctx, const gg
     ggml_mul_mat_p021_f16_f32_sycl(src0_ddq, src1_ddf, dst_ddf, ne00, ne01, ne02, ne12, main_stream);
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -2683,7 +2720,8 @@ static void ggml_sycl_mul_mat_vec_nc(ggml_backend_sycl_context & ctx, const ggml
     ggml_mul_mat_vec_nc_f16_f32_sycl(src0_ddq, src1_ddf, dst_ddf, ne00, ne01, row_stride_x, ne02, ne12, channel_stride_x,channel_stride_y, main_stream);
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -2955,7 +2993,7 @@ static void ggml_sycl_mul_mat_batched_sycl(ggml_backend_sycl_context & ctx, cons
         }
     }
 } catch (const sycl::exception & exc) {
-    
+    std::cerr << exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 
@@ -3559,7 +3597,8 @@ static void ggml_sycl_mul_mat_id(ggml_backend_sycl_context & ctx,
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -3625,11 +3664,13 @@ static void ggml_sycl_set_main_device(const int main_device) try {
         dpct::device_info prop;
         SYCL_CHECK(CHECK_TRY_ERROR(dpct::get_device_info(
             prop, dpct::dev_mgr::instance().get_device(main_device))));
-        GGML_
+        GGML_LOG_INFO("Using device %d (%s) as main device\n",
+                main_device, prop.get_name());
     }
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -3905,8 +3946,8 @@ static bool ggml_sycl_compute_forward(ggml_backend_sycl_context & ctx, struct gg
 
     return true;
 } catch (sycl::exception & e) {
-
-
+    std::cerr << e.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
+    std::cerr << "Error OP "<<ggml_op_name(dst->op)<< std::endl;
     std::exit(1);
 }
 
@@ -3919,7 +3960,8 @@ GGML_API void ggml_backend_sycl_get_device_description(int device, char *descrip
     snprintf(description, description_size, "%s", prop.get_name());
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -3942,7 +3984,8 @@ void ggml_backend_sycl_get_device_memory(int device, size_t *free,
         dpct::dev_mgr::instance().get_device(device).get_memory_info(*free, *total)));
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -3980,7 +4023,8 @@ static void ggml_backend_sycl_set_tensor_async(ggml_backend_t backend,
         (stream)->memcpy((char *)tensor->data + offset, data, size)));
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -4000,7 +4044,8 @@ static void ggml_backend_sycl_get_tensor_async(ggml_backend_t backend,
         data, (const char *)tensor->data + offset, size)));
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -4029,7 +4074,8 @@ static bool ggml_backend_sycl_cpy_tensor_async(ggml_backend_t backend,
     return false;
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -4042,7 +4088,8 @@ static void ggml_backend_sycl_synchronize(ggml_backend_t backend) try {
     GGML_UNUSED(backend);
 }
 catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -4064,7 +4111,7 @@ static void ggml_backend_sycl_graph_compute_impl(ggml_backend_sycl_context * syc
 #endif
         bool ok = ggml_sycl_compute_forward(*sycl_ctx, node);
         if (!ok) {
-            GGML_
+            GGML_LOG_ERROR("%s: error: op not supported %s (%s)\n", __func__, node->name, ggml_op_name(node->op));
         }
         GGML_ASSERT(ok);
     }
@@ -4074,7 +4121,7 @@ static void ggml_backend_sycl_graph_compute_impl(ggml_backend_sycl_context * syc
 static bool check_graph_compatibility(ggml_cgraph * cgraph) {
     if (ggml_sycl_info().device_count > 1) {
         // A sycl_ex::command_graph object can only be created for a single device
-        GGML_
+        GGML_LOG_INFO("%s: disabling SYCL graphs due to multiple devices\n", __func__);
         return false;
     }
 
@@ -4092,14 +4139,19 @@ static bool check_graph_compatibility(ggml_cgraph * cgraph) {
                 // ggml_sycl_mul_mat_id() does a blocking host wait on the sycl queue after
                 // submitting a memcpy operation, but wait() can't be called on a queue that
                 // is recording to a graph.
-                GGML_
+                GGML_LOG_INFO("%s: disabling SYCL graphs due to unsupported node type %s\n", __func__,
+                              ggml_op_name(node_op));
                 return false;
             case GGML_OP_MUL_MAT:
                 // We cannot use graphs with ggml_sycl_mul_mat() when SYCL async memory allocation extensions are not available,
                 // as SYCL malloc / free and host wait calls are not supported when recording to a graph which are all present
                 // in reordering.
                 if (!g_ggml_sycl_use_async_mem_op) {
-                    GGML_
+                    GGML_LOG_INFO(
+                        "%s: disabling SYCL graphs due to unsupported node type when using a compiler without the "
+                        "oneAPI async memory allocation extension "
+                        "%s\n",
+                        __func__, ggml_op_name(node_op));
                     return false;
                 }
         }
@@ -4168,7 +4220,8 @@ try
 }
 catch (sycl::exception const &exc)
 {
-    
+    std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+              << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 
@@ -4181,7 +4234,8 @@ static void ggml_backend_sycl_event_wait(ggml_backend_t backend, ggml_backend_ev
     } else
         GGML_ABORT("fatal error");
 } catch (sycl::exception const& exc) {
-    
+    std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+              << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 
@@ -4633,7 +4687,8 @@ static void ggml_backend_sycl_device_event_free(ggml_backend_dev_t dev, ggml_bac
 
   delete event;
 } catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -4645,7 +4700,8 @@ static void ggml_backend_sycl_device_event_synchronize(ggml_backend_dev_t dev, g
   sycl::event *sycl_event = static_cast<sycl::event *>(event->context);
   SYCL_CHECK(CHECK_TRY_ERROR(sycl_event->wait()));
 } catch (sycl::exception const &exc) {
-  
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
+            << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
 
@@ -4765,7 +4821,7 @@ ggml_backend_t ggml_backend_sycl_init(int device) {
 
     ggml_backend_sycl_context * ctx = new ggml_backend_sycl_context(device);
     if (ctx == nullptr) {
-        GGML_
+        GGML_LOG_ERROR("%s: error: failed to allocate context\n", __func__);
         return nullptr;
     };
 

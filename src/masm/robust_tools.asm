@@ -77,6 +77,10 @@ IO_CONTEXT ENDS
 ;=============================================================================
 ; .DATA SECTION
 ;=============================================================================
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 align 8
 g_RobustCtx       ROBUST_CTX <>
@@ -549,7 +553,45 @@ Robust_SkipString ENDP
 ; Robust_Crc64Init - Initialize CRC context
 ;-----------------------------------------------------------------------------
 Robust_Crc64Init PROC
-    ; Already done in Initialize, but can refresh here
+    ; Initialize CRC-64 lookup table (ECMA-182 polynomial)
+    ; Table: 256 entries * 8 bytes = 2048 bytes
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 32
+    
+    lea rdi, [g_crc64_table]
+    mov r8, 0C96C5795D7870F42h       ; CRC-64/ECMA polynomial
+    
+    xor ecx, ecx                     ; byte index 0-255
+@@c64i_outer:
+    cmp ecx, 256
+    jae @@c64i_done
+    
+    mov rax, rcx                     ; CRC = index
+    mov edx, 8                       ; 8 bits
+@@c64i_inner:
+    test rax, 1
+    jz @@c64i_no_xor
+    shr rax, 1
+    xor rax, r8
+    jmp @@c64i_next
+@@c64i_no_xor:
+    shr rax, 1
+@@c64i_next:
+    dec edx
+    jnz @@c64i_inner
+    
+    mov QWORD PTR [rdi + rcx*8], rax ; store table entry
+    inc ecx
+    jmp @@c64i_outer
+    
+@@c64i_done:
+    mov DWORD PTR [g_crc64_initialized], 1
+    add rsp, 32
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Robust_Crc64Init ENDP
 

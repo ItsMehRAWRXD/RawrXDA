@@ -388,7 +388,7 @@ class tinyBLAS {
         if constexpr (RN > 1) {
             return mnpack<RM, RN-1, BM>(m, n, SIZE_N, BN);
         } else {
-            GGML_
+            GGML_LOG_ERROR("mnpack<%d, %d> bloc size not supported\n", RM, (int)SIZE_N);
             GGML_ASSERT(false); // we have miss something.
         }
     }

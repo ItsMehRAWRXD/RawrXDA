@@ -1,6 +1,20 @@
 #pragma once
 #include <functional>
 #include <memory>
+#include <string>
+#include <vector>
+#include <map>
+#include <mutex>
+#include <atomic>
+#include <queue>
+#include <chrono>
+#include <regex>
+#include <thread>
+
+// Forward declarations — SQLite3 C API (no Qt)
+struct sqlite3;
+struct sqlite3_stmt;
+
 // Forward declarations for AI system integration
 class CompletionEngine;
 class CodebaseContextAnalyzer;
@@ -84,7 +98,8 @@ class RawrXDDigestionEngine  {public:
         std::map<std::string, int> stubsByLanguage;
     };
     Stats getStatistics() const;
-\npublic:\n    void pipelineStarted(int totalFiles);
+
+\npublic:\n    void pipelineStarted(int totalFiles);
     void fileScanStarted(const std::string &path);
     void fileScanCompleted(const std::string &path, int stubsFound, int stubsFixed);
     void stubDetected(const StubInstance &stub);
@@ -95,7 +110,8 @@ class RawrXDDigestionEngine  {public:
     void checkpointSaved(int filesProcessed);
     void aiFixRequested(const std::string &context, std::string *outFix);
     void aiFixGenerated(const std::string &fix, float confidence);
-\nprivate:\n    void processNextChunk();
+
+\nprivate:\n    void processNextChunk();
     void onFileScanned(const std::string &path, const std::vector<StubInstance> &stubs);
     void onStubFixApplied(int stubId, bool success);
 
@@ -112,19 +128,19 @@ private:
     void loadCheckpoint();
     void updateTaskStatus(int taskId, const std::string &status);
     
-    // Database
-    QSqlDatabase m_db;
+    // Database — SQLite3 C API (no Qt)
+    sqlite3* m_db = nullptr;
     mutable std::mutex m_dbMutex;
     
     // State
     struct SystemState {
-        QAtomicInt running{0};
-        QAtomicInt paused{0};
-        QAtomicInt stopRequested{0};
-        QAtomicInt filesProcessed{0};
-        QAtomicInt totalFiles{0};
-        QAtomicInt stubsFound{0};
-        QAtomicInt stubsFixed{0};
+        std::atomic<int> running{0};
+        std::atomic<int> paused{0};
+        std::atomic<int> stopRequested{0};
+        std::atomic<int> filesProcessed{0};
+        std::atomic<int> totalFiles{0};
+        std::atomic<int> stubsFound{0};
+        std::atomic<int> stubsFixed{0};
         std::string currentRootDir;
         std::chrono::steady_clock::time_point timer;
     } m_state;
@@ -137,8 +153,8 @@ private:
     AdvancedCodingAgent *m_codingAgent = nullptr;
     
     // Threading
-    std::threadPool m_threadPool;
-    QQueue<std::string> m_pendingFiles;
+    unsigned int m_threadPoolSize = 0;  // std::thread::hardware_concurrency()
+    std::queue<std::string> m_pendingFiles;
     std::mutex m_queueMutex;
     int m_chunkSize = 50;
     int m_checkpointInterval = 100; // Save every 100 files
@@ -146,7 +162,7 @@ private:
     // Language profiles
     struct LangProfile {
         std::string name;
-        std::stringList extensions;
+        std::vector<std::string> extensions;
         std::vector<std::vector<uint8_t>> stubSignatures; // For AVX-512
         std::regex stubRegex;
     };

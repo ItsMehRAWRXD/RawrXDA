@@ -27,7 +27,12 @@ struct UIElement {
     std::string className;
     std::string name;
     std::string text;
+    std::string type;
     RECT bounds;
+    int x;
+    int y;
+    int width;
+    int height;
     bool visible;
     bool enabled;
     int controlId;

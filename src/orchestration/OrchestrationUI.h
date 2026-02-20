@@ -7,7 +7,8 @@ namespace RawrXD {
 
 class OrchestrationUI {public:
     explicit OrchestrationUI(TaskOrchestrator* orchestrator, void* parent = nullptr);
-\nprivate:\n    void onOrchestrateClicked();
+
+\nprivate:\n    void onOrchestrateClicked();
     void onTaskSplitCompleted(const std::vector<TaskDefinition>& tasks);
     void onModelSelectionCompleted(const std::map<std::string, std::string>& modelAssignments);
     void onTabCreated(const std::string& tabName, const std::string& model);
@@ -35,7 +36,7 @@ private:
     void* m_orchestrateButton = nullptr;
     void* m_statusLabel = nullptr;
     void* m_overallProgress = nullptr;
-    QListWidget* m_taskList = nullptr;
+    void* m_taskList = nullptr;  // HWND list control (was QListWidget*)
     void* m_resultsDisplay = nullptr;
     void* m_memoryProfileCombo = nullptr;
     void* m_memoryStrategyCombo = nullptr;

@@ -2,6 +2,10 @@
 ; Connects once, reads JSON, dumps it to agent_dump.log
 
 option casemap:none
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 extern CreateFileA : PROC
 extern WriteFile : PROC
 extern ReadFile : PROC
@@ -96,6 +100,7 @@ _wait:
     mov ecx, 1000
     call Sleep
     jmp _try
+    ret
 main ENDP
 END
 

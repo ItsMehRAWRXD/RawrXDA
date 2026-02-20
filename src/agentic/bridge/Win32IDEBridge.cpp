@@ -1,5 +1,6 @@
 #include "Win32IDEBridge.hpp"
 #include "../manifestor/SelfManifestor.hpp"
+#include "../OrchestratorBridge.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
 
@@ -44,6 +45,20 @@ bool Win32IDEBridge::initialize(HINSTANCE hInst, int nCmdShow) {
     
     initialized_ = true;
 
+    // Initialize the Agent Orchestrator Bridge
+    // This wires ToolRegistry, OllamaClient, FIMPromptBuilder into BoundedAgentLoop
+    {
+        // Use build directory parent as working dir, or fallback to CWD
+        std::string workingDir = ".";
+        if (!config_.buildDirectory.empty()) {
+            // buildDirectory is relative; use its parent
+            workingDir = config_.buildDirectory + "/..";
+        }
+        auto& orch = RawrXD::Agent::OrchestratorBridge::Instance();
+        if (!orch.Initialize(workingDir)) {
+            // Non-fatal: agent features unavailable but IDE still works
+        }
+    }
 
     return true;
 }
@@ -91,7 +106,12 @@ LRESULT Win32IDEBridge::preprocessMessage(HWND hwnd, UINT msg, WPARAM wParam, LP
         case WM_TIMER:
             // Periodic telemetry updates
             if (telemetry_ && wParam == 1001) {
-                
+                telemetry_->recordEvent("timer_tick", {{"interval_ms", 1000}});
+                // Export buffered metrics to disk periodically
+                auto now = std::chrono::system_clock::now();
+                auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now.time_since_epoch()).count();
+                telemetry_->recordEvent("metrics_flush", {{"timestamp_ms", nowMs}});
             }
             break;
     }
@@ -103,9 +123,19 @@ void Win32IDEBridge::onIdle() {
     if (!initialized_) {
         return;
     }
-    
-    // Export metrics periodically
-    
+
+    // Export metrics periodically via telemetry subsystem
+    if (telemetry_) {
+        TelemetrySnapshot snap;
+        if (telemetry::Poll(snap)) {
+            telemetry_->recordEvent("idle_poll", {
+                {"cpu_usage", snap.cpuUsagePercent},
+                {"gpu_usage", snap.gpuUsagePercent},
+                {"cpu_temp", snap.cpuTempC},
+                {"capabilities", getCapabilityCount()},
+                {"hotpatches", getHotpatchCount()}
+            });
+        }
     }
 }
 
@@ -162,15 +192,27 @@ bool Win32IDEBridge::disableHotpatch(const char* name) {
 }
 
 void Win32IDEBridge::logFunctionCall(const std::string& functionName) {
-    
+    if (telemetry_) {
+        telemetry_->recordEvent("function_call", {{"function", functionName}});
+    }
 }
 
 void Win32IDEBridge::logError(const std::string& functionName, const std::string& error) {
-    
+    if (telemetry_) {
+        telemetry_->recordEvent("error", {
+            {"function", functionName},
+            {"error", error}
+        });
+    }
 }
 
 void Win32IDEBridge::metric(const std::string& name, double value) {
-    
+    if (telemetry_) {
+        telemetry_->recordEvent("metric", {
+            {"name", name},
+            {"value", value}
+        });
+    }
 }
 
 void Win32IDEBridge::setFeatureFlag(const std::string& feature, bool enabled) {
@@ -203,11 +245,15 @@ bool Win32IDEBridge::initializeCapabilities() {
     
     // Register discovered capabilities
     for (auto& cap : capabilities) {
-        // Create factory from discovered capability
-        Wiring::CapabilityFactory factory = [cap]() {
-            // This would create the actual capability instance
-            // For now, return a placeholder
-            return std::unique_ptr<Wiring::ICapability>(nullptr);
+        // Create factory from discovered build artifact's factory function pointer
+        Wiring::CapabilityFactory factory = [cap]() -> std::unique_ptr<Wiring::ICapability> {
+            if (cap.factory) {
+                // Cast the discovered factory pointer and invoke it
+                using FactoryFn = Wiring::ICapability* (*)();
+                auto fn = reinterpret_cast<FactoryFn>(cap.factory);
+                return std::unique_ptr<Wiring::ICapability>(fn());
+            }
+            return nullptr;
         };
         
         router_->registerCapability(cap.name, cap.version, factory, cap.dependencies);
@@ -246,36 +292,64 @@ bool Win32IDEBridge::initializeHotpatching() {
 }
 
 bool Win32IDEBridge::initializeObservability() {
-    telemetry_ = &Observability::Telemetry::instance();
-    
-    Observability::ObservabilityConfig obsConfig;
-    obsConfig.enableLogging = true;
-    obsConfig.enableMetrics = true;
-    obsConfig.enableTracing = true;
-    obsConfig.serviceName = "RawrXD-Win32IDE";
-    
-    return 
+    // Initialize the global telemetry subsystem (two-phase: hardware polling deferred)
+    if (!telemetry::Initialize()) {
+        return false;
+    }
+    // Allocate instance-local Telemetry for structured event logging
+    telemetryOwned_ = std::make_unique<Telemetry>();
+    telemetry_ = telemetryOwned_.get();
+    // Start a periodic timer (1 sec) for metric flushing via WM_TIMER
+    if (mainHwnd_) {
+        SetTimer(mainHwnd_, 1001, 1000, nullptr);
+    }
+    return true;
 }
 
 LRESULT Win32IDEBridge::handleAgenticMessage(WPARAM wParam, LPARAM lParam) {
-    // Handle agentic-specific messages
     switch (wParam) {
-        case 1: // Capability request
-            // Process capability request
-            break;
-        case 2: // Hotpatch request
-            // Process hotpatch request
-            break;
-        case 3: // Telemetry update
-            // Process telemetry update
-            break;
+        case 1: { // Capability request — lParam is const char* name
+            const char* capName = reinterpret_cast<const char*>(lParam);
+            if (capName && router_) {
+                void* iface = requestCapability(capName, 1);
+                logFunctionCall(std::string("capability_request:") + capName);
+                return iface ? 1 : 0;
+            }
+            return 0;
+        }
+        case 2: { // Hotpatch request — lParam is const char* hook name
+            const char* hookName = reinterpret_cast<const char*>(lParam);
+            if (hookName && hotpatch_) {
+                bool ok = enableHotpatch(hookName);
+                logFunctionCall(std::string("hotpatch_request:") + hookName);
+                return ok ? 1 : 0;
+            }
+            return 0;
+        }
+        case 3: { // Telemetry update — force a metric flush
+            if (telemetry_) {
+                TelemetrySnapshot snap;
+                if (telemetry::Poll(snap)) {
+                    telemetry_->recordEvent("telemetry_update", {
+                        {"cpu_usage", snap.cpuUsagePercent},
+                        {"gpu_usage", snap.gpuUsagePercent}
+                    });
+                }
+            }
+            return 1;
+        }
     }
-    
     return 0;
 }
 
 LRESULT Win32IDEBridge::handleHotkeyMessage(WPARAM wParam, LPARAM lParam) {
-    // Handle hotkey messages
+    if (hotpatch_) {
+        UINT vk = static_cast<UINT>(wParam);
+        if (hotpatch_->isHotkey(vk)) {
+            logFunctionCall(std::string("hotkey:") + std::to_string(vk));
+            return hotpatch_->execute(vk);
+        }
+    }
     return 0;
 }
 

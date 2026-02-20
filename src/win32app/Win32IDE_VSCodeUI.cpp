@@ -2,10 +2,30 @@
 // Activity Bar, Secondary Sidebar, Panel (Terminal/Output/Problems/Debug Console), Enhanced Status Bar
 
 #include "Win32IDE.h"
+#include "../ui/tool_action_status.h"
 #include <commctrl.h>
 #include <richedit.h>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
+#include <fstream>
+#include <map>
+
+// Win32-native debug logging (replaces Qt qInfo/qDebug/qWarning)
+#ifndef RAWRXD_LOG_INFO
+#define RAWRXD_LOG_INFO(msg) do { \
+    std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+    std::cout << _oss.str(); \
+} while(0)
+#endif
+#ifndef RAWRXD_LOG_WARNING
+#define RAWRXD_LOG_WARNING(msg) do { \
+    std::ostringstream _oss; _oss << "[WARN] " << msg << "\n"; \
+    OutputDebugStringA(_oss.str().c_str()); \
+    std::cerr << _oss.str(); \
+} while(0)
+#endif
 
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM
@@ -282,12 +302,27 @@ void Win32IDE::toggleSecondarySidebar()
 
 void Win32IDE::updateSecondarySidebarContent()
 {
-    // Update chat display with history
+    // Update chat display with history + tool action status + working bubbles
     std::string chatText;
-    for (const auto& msg : m_chatHistory) {
+    for (size_t i = 0; i < m_chatHistory.size(); ++i) {
+        const auto& msg = m_chatHistory[i];
         if (msg.first == "user") {
             chatText += "You: " + msg.second + "\r\n\r\n";
         } else {
+            // Render tool action status block before assistant message
+            auto it = m_chatToolActions.find(i);
+            if (it != m_chatToolActions.end() && !it->second.empty()) {
+                chatText += RawrXD::UI::ToolActionStatusFormatter::formatPlainTextBlock(
+                    it->second, static_cast<int>(it->second.size()));
+                chatText += "\r\n";
+            }
+
+            // Render working bubbles (plain text) if accumulator has any
+            if (m_currentToolActions.workingBubbles().size() > 0) {
+                chatText += m_currentToolActions.renderBubblesPlainText();
+                chatText += "\r\n";
+            }
+
             chatText += "Copilot: " + msg.second + "\r\n\r\n";
         }
     }
@@ -302,8 +337,10 @@ void Win32IDE::updateSecondarySidebarContent()
 void Win32IDE::sendCopilotMessage(const std::string& message)
 {
     if (message.empty()) return;
-
-
+    
+    RAWRXD_LOG_INFO("=== SEND MESSAGE CLICKED ===");
+    RAWRXD_LOG_INFO("[sendCopilotMessage] Message: " << message);
+    
     // Add user message to history
     m_chatHistory.push_back({"user", message});
     
@@ -311,10 +348,13 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     std::string response;
     
     if (isModelLoaded()) {
+        RAWRXD_LOG_INFO("[sendCopilotMessage] Model is loaded, calling generateResponse...");
         // Use the loaded GGUF model for inference
         response = generateResponse(message);
+        RAWRXD_LOG_INFO("[sendCopilotMessage] Inference response: " << response);
     } else {
         // No model loaded - prompt user to load one
+        RAWRXD_LOG_WARNING("[sendCopilotMessage] No model loaded!");
         response = "⚠️ No AI model loaded.\r\n\r\n"
                    "To use AI assistance, please load a GGUF model:\r\n"
                    "1. Open the File Explorer (Activity Bar → Explorer icon)\r\n"
@@ -329,6 +369,19 @@ void Win32IDE::sendCopilotMessage(const std::string& message)
     }
     
     m_chatHistory.push_back({"assistant", response});
+
+    // Store accumulated tool actions for this response
+    if (m_currentToolActions.totalActions() > 0) {
+        size_t msgIdx = m_chatHistory.size() - 1;
+        m_chatToolActions[msgIdx] = m_currentToolActions.actions();
+        // Add "Finished" summary action
+        m_chatToolActions[msgIdx].push_back(
+            RawrXD::UI::ToolActionStatus::FinishedAction(m_currentToolActions.totalActions()));
+        m_currentToolActions.clear();
+    }
+
+    RAWRXD_LOG_INFO("[sendCopilotMessage] Added response to history, updating UI...");
+    RAWRXD_LOG_INFO("=== SEND MESSAGE END ===");
     
     // Update display
     updateSecondarySidebarContent();
@@ -867,4 +920,3 @@ void Win32IDE::detectLanguageFromFile(const std::string& filePath)
         m_statusBarInfo.languageMode = "Plain Text";
     }
 }
-

@@ -1114,4 +1114,12 @@ PUBLIC StreamToPowerShell
 PUBLIC StreamSuccessMessage
 PUBLIC StreamErrorMessage
 
+; Export initialization and lifecycle
+PUBLIC InitOSInterceptor
+PUBLIC UnloadInterceptor
+PUBLIC ExportCapturedData
+PUBLIC InstallHook
+PUBLIC FormatLogEntry
+PUBLIC DllMain
+
 END

@@ -1,11 +1,26 @@
 // ============================================================================
 // RawrXD IDE - DEBUGGER IMPLEMENTATION
 // ============================================================================
-// Full debugger with breakpoints, variables, call stack, and watch expressions
+// Full debugger with breakpoints, variables, call stack, watch expressions,
+// and live integration with the NativeDebuggerEngine (DbgEng COM).
+//
+// Phase 13: Integration & Honesty — all execution-control, breakpoint,
+// watch, variable, stack, and memory methods now route through the real
+// DbgEng-backed NativeDebuggerEngine singleton instead of toggling booleans.
+//
+// UI creation code (createDebuggerUI) is unchanged — Win32 controls are real.
+// ============================================================================
 
 #include "Win32IDE.h"
+#include "IDEConfig.h"
+#include "../core/native_debugger_engine.h"
+#include "../core/native_debugger_types.h"
+#include <richedit.h>
 #include <sstream>
 #include <algorithm>
+#include <iomanip>
+
+using namespace RawrXD::Debugger;
 
 // Debugger Control IDs
 #define IDC_DEBUGGER_CONTAINER 2100
@@ -281,28 +296,140 @@ void Win32IDE::createDebuggerUI()
 
 void Win32IDE::attachDebugger()
 {
+    METRICS.increment("debugger.attach_total");
     if (m_debuggerAttached) return;
+
+    auto& engine = NativeDebuggerEngine::Instance();
+
+    // Ensure engine is initialized (Phase 12 initPhase12 should have done this,
+    // but guard against late startup)
+    if (!engine.isInitialized()) {
+        DebugConfig config;
+        config.breakOnEntry         = true;
+        config.autoLoadSymbols      = true;
+        config.enableSourceStepping = true;
+        config.maxEventHistory      = 10000;
+        config.symbolPath = "srv*C:\\Symbols*https://msdl.microsoft.com/download/symbols";
+        DebugResult initR = engine.initialize(config);
+        if (!initR.success) {
+            std::string err = "❌ Debugger engine init failed: ";
+            err += initR.detail;
+            SetWindowTextA(m_hwndDebuggerStatus, err.c_str());
+            appendToOutput(err, "Output", OutputSeverity::Error);
+            return;
+        }
+    }
+
+    // If we have a current file open, try to launch it as target.
+    // For C++ projects the user would have built an .exe; use the build output path.
+    // If no target is available, we still mark attached so user can later attach by PID.
+    DebugResult attachR = DebugResult::ok("Debugger ready — use Launch or Attach to PID");
+
+    // Attempt to launch if we have a compiled binary path
+    if (!m_currentFile.empty()) {
+        // Derive the expected .exe from the project build dir
+        std::string exePath;
+        // Check if current file IS an exe
+        if (m_currentFile.size() > 4 &&
+            m_currentFile.substr(m_currentFile.size() - 4) == ".exe") {
+            exePath = m_currentFile;
+        }
+        if (!exePath.empty()) {
+            attachR = engine.launchProcess(exePath);
+            if (!attachR.success) {
+                std::string warn = "⚠️ Launch failed: ";
+                warn += attachR.detail;
+                warn += " — attach by PID instead";
+                appendToOutput(warn, "Output", OutputSeverity::Warning);
+                // Fall through — still mark debugger as attached in ready state
+            }
+        }
+    }
 
     m_debuggerAttached = true;
     m_debuggerPaused = false;
-    
-    std::string status = "✅ Debugger Attached | Ready to debug";
+
+    // Register callbacks so engine events flow back to UI
+    engine.setBreakpointHitCallback([](const NativeBreakpoint* bp,
+                                       const RegisterSnapshot* regs,
+                                       void* userData) {
+        auto* ide = static_cast<Win32IDE*>(userData);
+        if (ide && bp) {
+            ide->onDebuggerBreakpoint(bp->sourceFile, bp->sourceLine);
+        }
+    }, this);
+
+    engine.setOutputCallback([](const char* text, uint32_t /*category*/, void* userData) {
+        auto* ide = static_cast<Win32IDE*>(userData);
+        if (ide && text) {
+            ide->onDebuggerOutput(text);
+        }
+    }, this);
+
+    engine.setStateCallback([](DebugSessionState newState, void* userData) {
+        auto* ide = static_cast<Win32IDE*>(userData);
+        if (!ide) return;
+        switch (newState) {
+            case DebugSessionState::Running:
+            case DebugSessionState::Stepping:
+                ide->onDebuggerContinued();
+                break;
+            case DebugSessionState::Broken:
+                // Engine broke — pause UI
+                ide->m_debuggerPaused = true;
+                SetWindowTextA(ide->m_hwndDebuggerStatus, "⏸ Break — target paused");
+                ide->updateVariables();
+                ide->updateCallStack();
+                ide->updateMemoryView();
+                break;
+            case DebugSessionState::Terminated:
+            case DebugSessionState::Idle:
+                ide->onDebuggerTerminated();
+                break;
+            case DebugSessionState::Error:
+                SetWindowTextA(ide->m_hwndDebuggerStatus, "❌ Engine error");
+                ide->appendToOutput("❌ Debug engine entered error state", "Output", OutputSeverity::Error);
+                break;
+            default:
+                break;
+        }
+    }, this);
+
+    std::string status = "✅ Debugger Attached | Engine: ";
+    status += attachR.detail;
     SetWindowTextA(m_hwndDebuggerStatus, status.c_str());
-    appendToOutput("🔍 Debugger attached successfully", "Output", OutputSeverity::Info);
+    appendToOutput("🔍 Debugger attached — NativeDebuggerEngine active", "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::detachDebugger()
 {
     if (!m_debuggerAttached) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+
+    // Detach from target process via DbgEng
+    DebugResult r = engine.detach();
+    if (!r.success) {
+        std::string warn = "⚠️ Engine detach note: ";
+        warn += r.detail;
+        appendToOutput(warn, "Output", OutputSeverity::Warning);
+    }
+
+    // Clear callbacks to prevent dangling pointers
+    engine.setBreakpointHitCallback(nullptr, nullptr);
+    engine.setOutputCallback(nullptr, nullptr);
+    engine.setStateCallback(nullptr, nullptr);
+
     m_debuggerAttached = false;
     m_debuggerPaused = false;
     m_callStack.clear();
     m_localVariables.clear();
+    m_debuggerCurrentFile.clear();
+    m_debuggerCurrentLine = -1;
     
     std::string status = "⏹ Debugger Detached";
     SetWindowTextA(m_hwndDebuggerStatus, status.c_str());
-    appendToOutput("🔍 Debugger detached", "Output", OutputSeverity::Info);
+    appendToOutput("🔍 Debugger detached — engine released", "Output", OutputSeverity::Info);
     
     updateDebuggerUI();
 }
@@ -311,12 +438,24 @@ void Win32IDE::pauseExecution()
 {
     if (!m_debuggerAttached || m_debuggerPaused) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.breakExecution();
+    if (!r.success) {
+        std::string err = "❌ Break failed: ";
+        err += r.detail;
+        SetWindowTextA(m_hwndDebuggerStatus, err.c_str());
+        appendToOutput(err, "Output", OutputSeverity::Error);
+        return;
+    }
+
     m_debuggerPaused = true;
-    SetWindowTextA(m_hwndDebuggerStatus, "⏸ Debugger Paused - Execution halted");
-    appendToOutput("⏸ Execution paused by debugger", "Output", OutputSeverity::Info);
+    SetWindowTextA(m_hwndDebuggerStatus, "⏸ Debugger Paused — Execution halted via DbgEng");
+    appendToOutput("⏸ Execution paused (DebugBreakProcess)", "Output", OutputSeverity::Info);
     
+    // Refresh all inspection panels with real data from the engine
     updateVariables();
     updateCallStack();
+    updateMemoryView();
     updateDebuggerUI();
 }
 
@@ -324,10 +463,21 @@ void Win32IDE::resumeExecution()
 {
     if (!m_debuggerAttached || !m_debuggerPaused) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.go();
+    if (!r.success) {
+        std::string err = "❌ Continue failed: ";
+        err += r.detail;
+        SetWindowTextA(m_hwndDebuggerStatus, err.c_str());
+        appendToOutput(err, "Output", OutputSeverity::Error);
+        return;
+    }
+
     m_debuggerPaused = false;
-    SetWindowTextA(m_hwndDebuggerStatus, "▶ Debugger Running");
-    appendToOutput("▶ Execution resumed", "Output", OutputSeverity::Info);
+    SetWindowTextA(m_hwndDebuggerStatus, "▶ Debugger Running — target resumed");
+    appendToOutput("▶ Execution resumed (IDebugControl::SetExecutionStatus)", "Output", OutputSeverity::Info);
     
+    clearDebuggerHighlight();
     updateDebuggerUI();
 }
 
@@ -335,10 +485,22 @@ void Win32IDE::stepOverExecution()
 {
     if (!m_debuggerAttached) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.stepOver();
+    if (!r.success) {
+        std::string err = "❌ Step Over failed: ";
+        err += r.detail;
+        appendToOutput(err, "Output", OutputSeverity::Error);
+        return;
+    }
+
     m_debuggerPaused = true;
-    appendToOutput("⟿ Step Over executed", "Output", OutputSeverity::Debug);
+    appendToOutput("⟿ Step Over executed (DEBUG_STATUS_STEP_OVER)", "Output", OutputSeverity::Debug);
+
+    // Refresh inspection panels with post-step state
     updateVariables();
     updateCallStack();
+    updateMemoryView();
     updateDebuggerUI();
 }
 
@@ -346,10 +508,21 @@ void Win32IDE::stepIntoExecution()
 {
     if (!m_debuggerAttached) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.stepInto();
+    if (!r.success) {
+        std::string err = "❌ Step Into failed: ";
+        err += r.detail;
+        appendToOutput(err, "Output", OutputSeverity::Error);
+        return;
+    }
+
     m_debuggerPaused = true;
-    appendToOutput("↓ Step Into executed", "Output", OutputSeverity::Debug);
+    appendToOutput("↓ Step Into executed (DEBUG_STATUS_STEP_INTO)", "Output", OutputSeverity::Debug);
+
     updateVariables();
     updateCallStack();
+    updateMemoryView();
     updateDebuggerUI();
 }
 
@@ -357,10 +530,21 @@ void Win32IDE::stepOutExecution()
 {
     if (!m_debuggerAttached) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.stepOut();
+    if (!r.success) {
+        std::string err = "❌ Step Out failed: ";
+        err += r.detail;
+        appendToOutput(err, "Output", OutputSeverity::Error);
+        return;
+    }
+
     m_debuggerPaused = true;
-    appendToOutput("↑ Step Out executed", "Output", OutputSeverity::Debug);
+    appendToOutput("↑ Step Out executed (DEBUG_STATUS_STEP_BRANCH)", "Output", OutputSeverity::Debug);
+
     updateVariables();
     updateCallStack();
+    updateMemoryView();
     updateDebuggerUI();
 }
 
@@ -368,15 +552,46 @@ void Win32IDE::stopDebugger()
 {
     if (!m_debuggerAttached) return;
 
+    auto& engine = NativeDebuggerEngine::Instance();
+
+    // Terminate the target process via DbgEng before detaching
+    DebugResult r = engine.terminateTarget();
+    if (!r.success) {
+        std::string warn = "⚠️ Terminate target note: ";
+        warn += r.detail;
+        appendToOutput(warn, "Output", OutputSeverity::Warning);
+    }
+
     detachDebugger();
-    SetWindowTextA(m_hwndDebuggerStatus, "⏹ Debugger Stopped");
+    SetWindowTextA(m_hwndDebuggerStatus, "⏹ Debugger Stopped — target terminated");
 }
 
 void Win32IDE::restartDebugger()
 {
+    // Remember the target path before stopping
+    auto& engine = NativeDebuggerEngine::Instance();
+    std::string previousTarget = engine.getTargetName();
+    uint32_t previousPID = engine.getTargetPID();
+
     stopDebugger();
     attachDebugger();
-    SetWindowTextA(m_hwndDebuggerStatus, "🔄 Debugger Restarted");
+
+    // If we had a target, relaunch it
+    if (!previousTarget.empty()) {
+        DebugResult r = engine.launchProcess(previousTarget);
+        if (r.success) {
+            std::string msg = "🔄 Debugger Restarted — relaunched: " + previousTarget;
+            SetWindowTextA(m_hwndDebuggerStatus, msg.c_str());
+            appendToOutput(msg, "Output", OutputSeverity::Info);
+        } else {
+            std::string msg = "🔄 Debugger Restarted — relaunch failed: ";
+            msg += r.detail;
+            SetWindowTextA(m_hwndDebuggerStatus, msg.c_str());
+            appendToOutput(msg, "Output", OutputSeverity::Warning);
+        }
+    } else {
+        SetWindowTextA(m_hwndDebuggerStatus, "🔄 Debugger Restarted — ready");
+    }
 }
 
 // ============================================================================
@@ -385,7 +600,7 @@ void Win32IDE::restartDebugger()
 
 void Win32IDE::addBreakpoint(const std::string& file, int line)
 {
-    // Check if breakpoint already exists
+    // Check if breakpoint already exists in our UI list
     for (auto& bp : m_breakpoints) {
         if (bp.file == file && bp.line == line) {
             bp.enabled = true;
@@ -394,7 +609,18 @@ void Win32IDE::addBreakpoint(const std::string& file, int line)
         }
     }
 
-    // Add new breakpoint
+    // Add to NativeDebuggerEngine (source-line breakpoint via DbgEng)
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.addBreakpointBySourceLine(file, line);
+    if (!r.success) {
+        std::string warn = "⚠️ Engine breakpoint at " + file + ":" +
+                           std::to_string(line) + " — " + r.detail;
+        appendToOutput(warn, "Output", OutputSeverity::Warning);
+        // Still add to UI list so user can see it; engine may resolve later
+        // when symbols are loaded
+    }
+
+    // Add to our UI-side tracking vector
     Breakpoint bp;
     bp.file = file;
     bp.line = line;
@@ -406,7 +632,67 @@ void Win32IDE::addBreakpoint(const std::string& file, int line)
     updateBreakpointList();
 
     std::string msg = "🔴 Breakpoint added at " + file + ":" + std::to_string(line);
+    if (r.success) msg += " (engine confirmed)";
     appendToOutput(msg, "Output", OutputSeverity::Debug);
+}
+
+void Win32IDE::setBreakpoint(const std::string& file, int line)
+{
+    METRICS.increment("debugger.breakpoint_sets");
+
+    // Check if breakpoint already exists at this location
+    for (auto& bp : m_breakpoints) {
+        if (bp.file == file && bp.line == line) {
+            // Re-enable if it was disabled
+            if (!bp.enabled) {
+                bp.enabled = true;
+
+                // Re-enable in engine: find matching engine breakpoint and enable it
+                auto& engine = NativeDebuggerEngine::Instance();
+                const auto& engineBPs = engine.getBreakpoints();
+                for (const auto& ebp : engineBPs) {
+                    if (ebp.sourceLine == line) {
+                        engine.enableBreakpoint(ebp.id, true);
+                        break;
+                    }
+                }
+
+                updateBreakpointList();
+                std::string msg = "🔴 Breakpoint re-enabled at " + file + ":" + std::to_string(line);
+                appendToOutput(msg, "Output", OutputSeverity::Debug);
+            }
+            return;
+        }
+    }
+
+    // Create in engine first
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.addBreakpointBySourceLine(file, line);
+    if (!r.success) {
+        std::string warn = "⚠️ Engine BP at " + file + ":" +
+                           std::to_string(line) + " — " + r.detail;
+        appendToOutput(warn, "Output", OutputSeverity::Warning);
+    }
+
+    // Create and add to our UI-side tracking
+    Breakpoint bp;
+    bp.file = file;
+    bp.line = line;
+    bp.enabled = true;
+    bp.condition = "";
+    bp.hitCount = 0;
+
+    m_breakpoints.push_back(bp);
+    updateBreakpointList();
+
+    // Highlight the breakpoint line in the editor if it's the current file
+    if (file == m_currentFile || file == m_debuggerCurrentFile) {
+        highlightDebuggerLine(file, line);
+    }
+
+    std::string msg = "🔴 Breakpoint set at " + file + ":" + std::to_string(line);
+    if (r.success) msg += " (engine confirmed)";
+    appendToOutput(msg, "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::removeBreakpoint(const std::string& file, int line)
@@ -415,6 +701,21 @@ void Win32IDE::removeBreakpoint(const std::string& file, int line)
         [&](const Breakpoint& bp) { return bp.file == file && bp.line == line; });
 
     if (it != m_breakpoints.end()) {
+        // Remove from engine: find matching engine breakpoint by source line
+        auto& engine = NativeDebuggerEngine::Instance();
+        const auto& engineBPs = engine.getBreakpoints();
+        for (const auto& ebp : engineBPs) {
+            if (ebp.sourceLine == line) {
+                DebugResult r = engine.removeBreakpoint(ebp.id);
+                if (!r.success) {
+                    std::string warn = "⚠️ Engine BP remove: ";
+                    warn += r.detail;
+                    appendToOutput(warn, "Output", OutputSeverity::Warning);
+                }
+                break;
+            }
+        }
+
         m_breakpoints.erase(it);
         updateBreakpointList();
         
@@ -425,11 +726,23 @@ void Win32IDE::removeBreakpoint(const std::string& file, int line)
 
 void Win32IDE::toggleBreakpoint(const std::string& file, int line)
 {
+    METRICS.increment("debugger.breakpoint_toggles");
     auto it = std::find_if(m_breakpoints.begin(), m_breakpoints.end(),
         [&](const Breakpoint& bp) { return bp.file == file && bp.line == line; });
 
     if (it != m_breakpoints.end()) {
         it->enabled = !it->enabled;
+
+        // Toggle enable state in engine
+        auto& engine = NativeDebuggerEngine::Instance();
+        const auto& engineBPs = engine.getBreakpoints();
+        for (const auto& ebp : engineBPs) {
+            if (ebp.sourceLine == line) {
+                engine.enableBreakpoint(ebp.id, it->enabled);
+                break;
+            }
+        }
+
         updateBreakpointList();
     } else {
         addBreakpoint(file, line);
@@ -438,9 +751,18 @@ void Win32IDE::toggleBreakpoint(const std::string& file, int line)
 
 void Win32IDE::clearAllBreakpoints()
 {
+    // Remove all breakpoints from engine
+    auto& engine = NativeDebuggerEngine::Instance();
+    DebugResult r = engine.removeAllBreakpoints();
+    if (!r.success) {
+        std::string warn = "⚠️ Engine remove-all BPs: ";
+        warn += r.detail;
+        appendToOutput(warn, "Output", OutputSeverity::Warning);
+    }
+
     m_breakpoints.clear();
     updateBreakpointList();
-    appendToOutput("🗑 All breakpoints cleared", "Output", OutputSeverity::Info);
+    appendToOutput("🗑 All breakpoints cleared (UI + engine)", "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::updateBreakpointList()
@@ -478,16 +800,34 @@ void Win32IDE::updateBreakpointList()
 
 void Win32IDE::addWatchExpression(const std::string& expression)
 {
+    // Register with the engine's watch system
+    auto& engine = NativeDebuggerEngine::Instance();
+    uint32_t watchId = engine.addWatch(expression);
+
     WatchItem item;
     item.expression = expression;
     item.value = "...";
-    item.type = "unknown";
+    item.type = "pending";
     item.enabled = true;
+
+    // If engine is live and paused, evaluate immediately
+    if (m_debuggerAttached && m_debuggerPaused) {
+        engine.updateWatches();
+        const auto& watches = engine.getWatches();
+        for (const auto& w : watches) {
+            if (w.id == watchId && w.lastResult.success) {
+                item.value = w.lastResult.value;
+                item.type  = w.lastResult.type;
+                break;
+            }
+        }
+    }
 
     m_watchList.push_back(item);
     updateWatchList();
 
     std::string msg = "👁 Watch added: " + expression;
+    if (watchId > 0) msg += " (engine ID: " + std::to_string(watchId) + ")";
     appendToOutput(msg, "Output", OutputSeverity::Debug);
 }
 
@@ -497,6 +837,16 @@ void Win32IDE::removeWatchExpression(const std::string& expression)
         [&](const WatchItem& item) { return item.expression == expression; });
 
     if (it != m_watchList.end()) {
+        // Find and remove from engine watch list
+        auto& engine = NativeDebuggerEngine::Instance();
+        const auto& watches = engine.getWatches();
+        for (const auto& w : watches) {
+            if (w.expression == expression) {
+                engine.removeWatch(w.id);
+                break;
+            }
+        }
+
         m_watchList.erase(it);
         updateWatchList();
         
@@ -508,6 +858,29 @@ void Win32IDE::removeWatchExpression(const std::string& expression)
 void Win32IDE::updateWatchList()
 {
     if (!m_hwndDebuggerWatch) return;
+
+    // Refresh watch values from engine if we're paused
+    if (m_debuggerAttached && m_debuggerPaused) {
+        auto& engine = NativeDebuggerEngine::Instance();
+        engine.updateWatches();
+        const auto& watches = engine.getWatches();
+
+        // Sync engine results → our UI watch items
+        for (auto& item : m_watchList) {
+            for (const auto& w : watches) {
+                if (w.expression == item.expression) {
+                    if (w.lastResult.success) {
+                        item.value = w.lastResult.value;
+                        item.type  = w.lastResult.type;
+                    } else {
+                        item.value = "<unavailable>";
+                        item.type  = "error";
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     ListView_DeleteAllItems(m_hwndDebuggerWatch);
 
@@ -534,28 +907,18 @@ void Win32IDE::updateWatchList()
 
 void Win32IDE::evaluateWatch(WatchItem& item)
 {
-    // Try to evaluate as PowerShell variable
-    if (!item.expression.empty()) {
-        std::string val = getPowerShellVariable(item.expression);
-        if (!val.empty()) {
-            item.value = val;
-            item.type = "PowerShell Var";
-            return;
-        }
-
-        // Try to evaluate as immediate command
-        std::string cmdVal = executePowerShellCommand(item.expression, false);
-        if (!cmdVal.empty()) {
-             // Basic newline trim
-             while(!cmdVal.empty() && (cmdVal.back() == '\r' || cmdVal.back() == '\n')) cmdVal.pop_back();
-             item.value = cmdVal;
-             item.type = "PowerShell Expr";
-             return;
-        }
+    auto& engine = NativeDebuggerEngine::Instance();
+    EvalResult evalRes;
+    DebugResult r = engine.evaluate(item.expression, evalRes);
+    if (r.success) {
+        item.value = evalRes.value;
+        item.type  = evalRes.type;
+    } else {
+        item.value = "<error: ";
+        item.value += r.detail;
+        item.value += ">";
+        item.type  = "error";
     }
-
-    item.value = "undefined";
-    item.type = "unknown";
 }
 
 // ============================================================================
@@ -564,19 +927,37 @@ void Win32IDE::evaluateWatch(WatchItem& item)
 
 void Win32IDE::updateVariables()
 {
-    // Populate local variables from current stack frame
-    if (m_callStack.empty()) return;
-
-    const auto& frame = m_callStack.back();
+    // Fetch real local variables from the engine's current stack frame
+    auto& engine = NativeDebuggerEngine::Instance();
     m_localVariables.clear();
 
-    for (const auto& local : frame.locals) {
-        Variable var;
-        var.name = local.first;
-        var.value = local.second;
-        var.type = "auto";
-        var.expanded = false;
-        m_localVariables.push_back(var);
+    // If the engine has a live session, get frame locals
+    if (m_debuggerAttached && m_debuggerPaused) {
+        std::map<std::string, std::string> frameLocals;
+        DebugResult r = engine.getFrameLocals(0, frameLocals);  // Frame 0 = current
+        if (r.success) {
+            for (const auto& local : frameLocals) {
+                Variable var;
+                var.name  = local.first;
+                var.value = local.second;
+                var.type  = "auto";  // DbgEng gives formatted values; type is in the string
+                var.expanded = false;
+                m_localVariables.push_back(var);
+            }
+        }
+    }
+
+    // Fallback: if engine couldn't provide locals, check our cached call stack
+    if (m_localVariables.empty() && !m_callStack.empty()) {
+        const auto& frame = m_callStack.back();
+        for (const auto& local : frame.locals) {
+            Variable var;
+            var.name  = local.first;
+            var.value = local.second;
+            var.type  = "auto";
+            var.expanded = false;
+            m_localVariables.push_back(var);
+        }
     }
 
     if (m_hwndDebuggerVariables) {
@@ -600,6 +981,42 @@ void Win32IDE::updateVariables()
 void Win32IDE::updateCallStack()
 {
     if (!m_hwndDebuggerStackTrace) return;
+
+    // Fetch real stack frames from engine when paused
+    if (m_debuggerAttached && m_debuggerPaused) {
+        auto& engine = NativeDebuggerEngine::Instance();
+        std::vector<NativeStackFrame> nativeFrames;
+        DebugResult r = engine.walkStack(nativeFrames, 256);
+
+        if (r.success && !nativeFrames.empty()) {
+            // Convert NativeStackFrame → our UI StackFrame type
+            m_callStack.clear();
+            for (const auto& nf : nativeFrames) {
+                StackFrame sf;
+                sf.function = nf.function;
+                if (sf.function.empty()) {
+                    // Show address if no symbol
+                    std::ostringstream addrStr;
+                    addrStr << "0x" << std::hex << nf.instructionPtr;
+                    sf.function = addrStr.str();
+                }
+                sf.file = nf.sourceFile;
+                sf.line = nf.sourceLine;
+                sf.locals = nf.locals;
+                m_callStack.push_back(sf);
+            }
+
+            // Update debugger current position from top frame
+            if (!m_callStack.empty()) {
+                const auto& top = m_callStack.front();
+                if (!top.file.empty()) {
+                    m_debuggerCurrentFile = top.file;
+                    m_debuggerCurrentLine = top.line;
+                    highlightDebuggerLine(top.file, top.line);
+                }
+            }
+        }
+    }
 
     ListView_DeleteAllItems(m_hwndDebuggerStackTrace);
 
@@ -632,10 +1049,57 @@ void Win32IDE::updateMemoryView()
     std::ostringstream oss;
     oss << "Memory Inspector\n";
     oss << "================\n\n";
-    oss << "Max Memory: " << (m_debuggerMaxMemory / 1024 / 1024) << " MB\n";
-    oss << "Watch Size: " << m_watchList.size() << " expressions\n";
-    oss << "Breakpoints: " << m_breakpoints.size() << "\n";
-    oss << "Stack Depth: " << m_callStack.size() << " frames\n";
+
+    auto& engine = NativeDebuggerEngine::Instance();
+
+    if (m_debuggerAttached && m_debuggerPaused) {
+        // Show registers summary at the top
+        RegisterSnapshot regs;
+        DebugResult regR = engine.captureRegisters(regs);
+        if (regR.success) {
+            oss << "RIP: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rip << "\n";
+            oss << "RSP: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rsp << "\n";
+            oss << "RBP: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rbp << "\n";
+            oss << "RAX: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rax;
+            oss << "  RBX: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rbx << "\n";
+            oss << "RCX: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rcx;
+            oss << "  RDX: 0x" << std::hex << std::setw(16) << std::setfill('0') << regs.rdx << "\n";
+            oss << "FLAGS: " << engine.formatFlags(regs.rflags) << "\n";
+            oss << "\n";
+
+            // Read 256 bytes at RSP (stack memory)
+            uint8_t stackBuf[256] = {};
+            uint64_t bytesRead = 0;
+            DebugResult memR = engine.readMemory(regs.rsp, stackBuf, sizeof(stackBuf), &bytesRead);
+            if (memR.success && bytesRead > 0) {
+                oss << "Stack Memory (RSP):\n";
+                oss << engine.formatHexDump(regs.rsp, stackBuf, bytesRead, 16) << "\n";
+            }
+        } else {
+            oss << "Register capture failed: " << regR.detail << "\n\n";
+        }
+
+        // Show memory region stats
+        std::vector<MemoryRegion> regions;
+        DebugResult qR = engine.queryMemoryRegions(regions);
+        if (qR.success) {
+            uint64_t totalCommit = 0;
+            uint64_t totalReserve = 0;
+            for (const auto& mr : regions) {
+                if (mr.state == 0x1000) totalCommit += mr.size;   // MEM_COMMIT
+                if (mr.state == 0x2000) totalReserve += mr.size;  // MEM_RESERVE
+            }
+            oss << std::dec;
+            oss << "Memory Regions: " << regions.size() << "\n";
+            oss << "Committed: " << (totalCommit / 1024 / 1024) << " MB\n";
+            oss << "Reserved:  " << (totalReserve / 1024 / 1024) << " MB\n";
+        }
+    } else {
+        oss << "Debugger not paused — attach and break to inspect memory.\n\n";
+        oss << "Breakpoints: " << m_breakpoints.size() << "\n";
+        oss << "Watch Expressions: " << m_watchList.size() << "\n";
+        oss << "Stack Depth: " << m_callStack.size() << " frames\n";
+    }
 
     SetWindowTextA(m_hwndDebuggerMemory, oss.str().c_str());
 }
@@ -655,14 +1119,29 @@ void Win32IDE::updateDebuggerUI()
 
 void Win32IDE::onDebuggerBreakpoint(const std::string& file, int line)
 {
-    pauseExecution();
+    m_debuggerPaused = true;
     m_debuggerCurrentFile = file;
     m_debuggerCurrentLine = line;
 
+    // Update hit count on matching UI breakpoint
+    for (auto& bp : m_breakpoints) {
+        if (bp.file == file && bp.line == line) {
+            bp.hitCount++;
+            break;
+        }
+    }
+
     std::string msg = "🔴 Breakpoint hit at " + file + ":" + std::to_string(line);
     appendToOutput(msg, "Output", OutputSeverity::Warning);
+    SetWindowTextA(m_hwndDebuggerStatus, ("⏸ Break: " + file + ":" + std::to_string(line)).c_str());
     
     highlightDebuggerLine(file, line);
+
+    // Refresh all inspection panels with live data
+    updateVariables();
+    updateCallStack();
+    updateMemoryView();
+    updateBreakpointList();  // Show updated hit counts
 }
 
 void Win32IDE::onDebuggerException(const std::string& message)
@@ -679,13 +1158,25 @@ void Win32IDE::onDebuggerOutput(const std::string& text)
 
 void Win32IDE::onDebuggerContinued()
 {
-    resumeExecution();
+    m_debuggerPaused = false;
+    SetWindowTextA(m_hwndDebuggerStatus, "▶ Debugger Running");
     clearDebuggerHighlight();
+    updateDebuggerUI();
 }
 
 void Win32IDE::onDebuggerTerminated()
 {
-    stopDebugger();
+    m_debuggerAttached = false;
+    m_debuggerPaused = false;
+    m_callStack.clear();
+    m_localVariables.clear();
+    m_debuggerCurrentFile.clear();
+    m_debuggerCurrentLine = -1;
+
+    SetWindowTextA(m_hwndDebuggerStatus, "⏹ Target terminated");
+    appendToOutput("⏹ Debug target terminated", "Output", OutputSeverity::Info);
+    clearDebuggerHighlight();
+    updateDebuggerUI();
 }
 
 // ============================================================================
@@ -694,13 +1185,60 @@ void Win32IDE::onDebuggerTerminated()
 
 void Win32IDE::highlightDebuggerLine(const std::string& file, int line)
 {
-    // In a real implementation, would highlight the line in the editor
     m_debuggerCurrentFile = file;
     m_debuggerCurrentLine = line;
+
+    // Open the file in the editor if it's not the current file
+    if (!file.empty() && file != m_currentFile) {
+        openFile(file);
+    }
+
+    // Scroll to the line and highlight it in the editor
+    if (m_hwndEditor && line > 0) {
+        // Calculate character index for the target line
+        int charIndex = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, line - 1, 0);
+        if (charIndex >= 0) {
+            int lineLen = (int)SendMessage(m_hwndEditor, EM_LINELENGTH, charIndex, 0);
+            // Select the entire line to highlight it
+            CHARRANGE cr = { charIndex, charIndex + lineLen };
+            SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
+            SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
+            // Apply yellow background highlight via CHARFORMAT2
+            CHARFORMAT2A cf = {};
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_BACKCOLOR;
+            cf.crBackColor = RGB(255, 255, 180); // Light yellow for breakpoint line
+            SendMessageA(m_hwndEditor, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+        }
+    }
+
+    // Update the debugger status bar
+    if (m_hwndDebuggerStatus) {
+        std::string status = "\xe2\x96\xb6 " + file + ":" + std::to_string(line);
+        SetWindowTextA(m_hwndDebuggerStatus, status.c_str());
+    }
 }
 
 void Win32IDE::clearDebuggerHighlight()
 {
+    // Clear the highlight in the editor by resetting background color
+    if (m_hwndEditor && m_debuggerCurrentLine > 0) {
+        int charIndex = (int)SendMessage(m_hwndEditor, EM_LINEINDEX, m_debuggerCurrentLine - 1, 0);
+        if (charIndex >= 0) {
+            int lineLen = (int)SendMessage(m_hwndEditor, EM_LINELENGTH, charIndex, 0);
+            CHARRANGE cr = { charIndex, charIndex + lineLen };
+            SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&cr);
+            // Reset to default background
+            CHARFORMAT2A cf = {};
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_BACKCOLOR;
+            cf.dwEffects = CFE_AUTOBACKCOLOR;
+            SendMessageA(m_hwndEditor, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+            // Deselect
+            CHARRANGE desel = { 0, 0 };
+            SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&desel);
+        }
+    }
     m_debuggerCurrentFile = "";
     m_debuggerCurrentLine = -1;
 }
@@ -755,43 +1293,90 @@ void Win32IDE::debuggerStepCommand(const std::string& command)
 
 void Win32IDE::debuggerSetVariable(const std::string& name, const std::string& value)
 {
-    auto it = std::find_if(m_localVariables.begin(), m_localVariables.end(),
-        [&](const Variable& var) { return var.name == name; });
+    // Try to set via engine expression evaluation (e.g., "varName = newValue")
+    auto& engine = NativeDebuggerEngine::Instance();
+    std::string assignExpr = name + " = " + value;
+    EvalResult evalRes;
+    DebugResult r = engine.evaluate(assignExpr, evalRes);
 
-    if (it != m_localVariables.end()) {
-        it->value = value;
+    if (r.success) {
+        // Update our local cache too
+        auto it = std::find_if(m_localVariables.begin(), m_localVariables.end(),
+            [&](const Variable& var) { return var.name == name; });
+        if (it != m_localVariables.end()) {
+            it->value = value;
+        }
         updateVariables();
         
-        std::string msg = "✏️ Set " + name + " = " + value;
+        std::string msg = "✏️ Set " + name + " = " + value + " (engine confirmed)";
         appendToOutput(msg, "Output", OutputSeverity::Info);
+    } else {
+        // Fallback: update UI-only cache
+        auto it = std::find_if(m_localVariables.begin(), m_localVariables.end(),
+            [&](const Variable& var) { return var.name == name; });
+        if (it != m_localVariables.end()) {
+            it->value = value;
+            updateVariables();
+        }
+
+        std::string msg = "✏️ Set " + name + " = " + value + " (UI only — engine: ";
+        msg += r.detail;
+        msg += ")";
+        appendToOutput(msg, "Output", OutputSeverity::Warning);
     }
 }
 
 void Win32IDE::debuggerInspectMemory(uint64_t address, size_t bytes)
 {
+    auto& engine = NativeDebuggerEngine::Instance();
+
+    // Cap at 4KB to prevent UI overload
+    if (bytes > 4096) bytes = 4096;
+
+    std::vector<uint8_t> buffer(bytes, 0);
+    uint64_t bytesRead = 0;
+    DebugResult r = engine.readMemory(address, buffer.data(), bytes, &bytesRead);
+
     std::ostringstream oss;
-    oss << "Memory at 0x" << std::hex << address << " (" << std::dec << bytes << " bytes):\n";
+    oss << "Memory at 0x" << std::hex << address << " (" << std::dec << bytes << " bytes requested):\n";
+
+    if (r.success && bytesRead > 0) {
+        oss << engine.formatHexDump(address, buffer.data(), bytesRead, 16);
+    } else {
+        oss << "Read failed: " << r.detail << "\n";
+    }
+
     appendToOutput(oss.str(), "Output", OutputSeverity::Debug);
+
+    // Also update the memory view edit control with this dump
+    if (m_hwndDebuggerMemory && r.success && bytesRead > 0) {
+        std::string dump = engine.formatHexDump(address, buffer.data(), bytesRead, 16);
+        SetWindowTextA(m_hwndDebuggerMemory, dump.c_str());
+    }
 }
 
 void Win32IDE::debuggerEvaluateExpression(const std::string& expression)
 {
-    // Real evaluation via PowerShell backend
-    // Since debugger state is often inspected via Get-Variable or similar
-    std::string result = executePowerShellCommand(expression, false); // Block for result
+    auto& engine = NativeDebuggerEngine::Instance();
+    EvalResult evalRes;
+    DebugResult r = engine.evaluate(expression, evalRes);
 
-    // Trim output
-    if (!result.empty()) {
-        size_t last = result.find_last_not_of(" \n\r\t");
-        if (last != std::string::npos) result = result.substr(0, last + 1);
+    std::string msg;
+    if (r.success) {
+        msg = "📐 " + expression + " = " + evalRes.value;
+        if (!evalRes.type.empty()) {
+            msg += " (" + evalRes.type + ")";
+        }
+        if (evalRes.isPointer) {
+            std::ostringstream addrStr;
+            addrStr << " [0x" << std::hex << evalRes.rawValue << "]";
+            msg += addrStr.str();
+        }
+    } else {
+        msg = "📐 " + expression + " = <error: ";
+        msg += r.detail;
+        msg += ">";
     }
-    
-    // If output is too long, truncate
-    if (result.length() > 512) {
-        result = result.substr(0, 512) + "... (truncated)";
-    }
-    
-    std::string msg = "📐 Evaluate: " + expression + " = " + result;
     appendToOutput(msg, "Output", OutputSeverity::Debug);
 }
 

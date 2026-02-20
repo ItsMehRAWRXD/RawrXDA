@@ -26,6 +26,10 @@
 OPTION WIN64:3
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 INCLUDE \masm64\include64\win64.inc
 INCLUDE \masm64\include64\kernel32.inc
 INCLUDE \masm64\include64\user32.inc
@@ -496,6 +500,8 @@ ANALYSIS_CONTEXT STRUCT
     StringCount             DWORD   ?
     FunctionCount           DWORD   ?
 ANALYSIS_CONTEXT ENDS
+PATTERN_PROLOGUE        EQU     1       ; Function prologue (MSVC/GCC/Clang)
+PATTERN_CALL            EQU     2       ; Call site / standard library
 PATTERN_STRING          EQU     6       ; String operation
 PATTERN_CRYPTO          EQU     7       ; Cryptographic operation
 PATTERN_OBFUSCATION     EQU     8       ; Obfuscation pattern
@@ -643,11 +649,14 @@ szXRefTable             BYTE    1048576 DUP(?)   ; 1MB cross references
 szStringTable           BYTE    524288 DUP(?)    ; String references
 
 ; Statistics
+dwPatternCount          DWORD   0
 dwFunctionsFound        DWORD   0
 dwTypesReconstructed    DWORD   0
 dwXRefsFound            DWORD   0
 dwStringsRecovered      DWORD   0
 dwAIHits                DWORD   0
+pFileBuffer             QWORD   0       ; Mapped PE base (set by MapFile)
+dwCodeSectionSize       DWORD   0       ; .text size (set by ParsePEHeaders)
 
 ;============================================================================
 ; AI ENGINE CODE
@@ -656,6 +665,12 @@ dwAIHits                DWORD   0
 ;----------------------------------------------------------------------------
 ; AI PATTERN MATCHING ENGINE
 ;----------------------------------------------------------------------------
+
+; Handler when MSVC prologue is matched (record AI hit)
+HandlerMSVCPrologue PROC FRAME
+    inc dwAIHits
+    ret
+HandlerMSVCPrologue ENDP
 
 ; Initialize AI pattern database
 InitAIPatterns PROC FRAME
@@ -673,7 +688,7 @@ InitAIPatterns PROC FRAME
     lea rdx, (AI_PATTERN PTR [rcx]).PatternBytes
     mov r8, 8
     call memcpy
-    lea rax, szHandlerMSVCPrologue
+    lea rax, HandlerMSVCPrologue
     mov (AI_PATTERN PTR [rcx]).HandlerFunc, rax
     inc dwPatternCount
     
@@ -683,6 +698,10 @@ InitAIPatterns PROC FRAME
     mov (AI_PATTERN PTR [rcx]).PatternLength, 9
     mov (AI_PATTERN PTR [rcx]).PatternType, PATTERN_CALL
     mov (AI_PATTERN PTR [rcx]).Confidence, 88
+    lea rax, PatternMemcpy
+    lea rdx, (AI_PATTERN PTR [rcx]).PatternBytes
+    mov r8, 9
+    call memcpy
     lea rax, (AI_PATTERN PTR [rcx]).Description
     lea rdx, szDescMemcpy
     call lstrcpyA
@@ -741,6 +760,32 @@ AIMatchPattern PROC FRAME pData:QWORD, pPattern:QWORD
     xor eax, eax
     ret
 AIMatchPattern ENDP
+
+; Find first pattern of given type in AIPatterns. RCX=pPatternArray, EDX=PatternType. Returns pattern ptr in RAX or 0.
+FindPatternByType PROC FRAME pPatternArray:QWORD, PatternType:DWORD
+    LOCAL n:DWORD
+    mov eax, dwPatternCount
+    mov n, 0
+@@loop:
+    mov eax, n
+    cmp eax, dwPatternCount
+    jge @@notfound
+    mov rcx, pPatternArray
+    mov eax, SIZEOF AI_PATTERN
+    imul eax, n
+    add rcx, rax
+    mov eax, (AI_PATTERN PTR [rcx]).PatternType
+    cmp eax, PatternType
+    jne @@next
+    mov rax, rcx
+    ret
+@@next:
+    inc n
+    jmp @@loop
+@@notfound:
+    xor eax, eax
+    ret
+FindPatternByType ENDP
 
 ;----------------------------------------------------------------------------
 ; ADVANCED DECOMPILATION ENGINE
@@ -1100,27 +1145,57 @@ RunAIAnalysis PROC FRAME
 RunAIAnalysis ENDP
 
 DiscoverFunctionsAI PROC FRAME
-    ; Use AI patterns to identify function boundaries
+    ; Use AI patterns to identify function boundaries. Scan mapped code at pFileBuffer.
     LOCAL pCode:QWORD
     LOCAL dwCodeSize:DWORD
     LOCAL i:DWORD
+    LOCAL pPattern:QWORD
+    LOCAL dwLen:DWORD
+    
+    mov rax, pFileBuffer
+    mov pCode, rax
+    mov eax, dwCodeSectionSize
+    test eax, eax
+    jnz @@size_ok
+    mov eax, 65536
+@@size_ok:
+    mov dwCodeSize, eax
     
     mov i, 0
-    
 @@scan:
-    cmp i, dwCodeSize
+    mov eax, i
+    add eax, 8
+    cmp eax, dwCodeSize
     jge @@done
     
-    ; Check for prologue patterns
+    ; Find prologue pattern and try match at pCode+i
     lea rcx, AIPatterns
     mov edx, PATTERN_PROLOGUE
     call FindPatternByType
+    mov pPattern, rax
+    test rax, rax
+    jz @@continue
     
+    mov rax, pPattern
+    mov ecx, (AI_PATTERN PTR [rax]).PatternLength
+    mov dwLen, ecx
+    mov rax, pCode
+    add rax, i
+    mov rcx, rax
+    mov rdx, pPattern
+    call AIMatchPattern
     test eax, eax
     jz @@continue
     
-    ; Found potential function start
     inc dwFunctionsFound
+    mov rax, pPattern
+    mov rax, (AI_PATTERN PTR [rax]).HandlerFunc
+    test rax, rax
+    jz @@continue
+    ; Call handler (e.g. HandlerMSVCPrologue)
+    sub rsp, 28h
+    call rax
+    add rsp, 28h
     
 @@continue:
     inc i

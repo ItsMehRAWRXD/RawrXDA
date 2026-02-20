@@ -48,10 +48,6 @@ struct ConflictAnalysis {
     uint32_t agentB = 0;
     std::string resourceInConflict;
     std::vector<FileDiff> fileDiffs;
-    // content buffers for memory-based resolution
-    std::string contentA;
-    std::string contentB;
-    std::string baseContent; 
     float severityScore = 0.0f;  // 0.0 (minor) to 1.0 (critical)
     bool isMergeable = false;    // Can automatic merge succeed?
     std::string recommendedResolution;
@@ -79,9 +75,6 @@ public:
     bool preventConflictByLocking(uint32_t agentId, const std::string& resourcePath,
                                  uint32_t lockTimeoutSeconds);
     bool releaseResourceLock(uint32_t agentId, const std::string& resourcePath);
-    
-    // Register conflict details allow analysis (NEW)
-    void registerConflict(uint64_t conflictId, const ConflictAnalysis& details);
 
     // Statistics
     struct ConflictStats {

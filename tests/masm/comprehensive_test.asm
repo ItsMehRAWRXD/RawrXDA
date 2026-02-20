@@ -3,6 +3,10 @@
 ; Tests all major features of the MASM compiler
 ; ============================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .data
     ; String data
     welcome     db 'MASM Compiler Comprehensive Test', 13, 10, 0

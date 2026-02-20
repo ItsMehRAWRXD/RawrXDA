@@ -1,84 +1,103 @@
-<<<<<<< HEAD
 # Build artifacts
 build/
-*.obj
+build_fresh/
+build_manual/
+build2/
+build_clean/
+build_fresh/
+build_ghost/
+build_mingw/
+build_msvc/
+build_nasm/
+build_new/
+build_output/
+build_pure_cpp/
+build_test/
+build_universal/
+build_verify/
+build_win32_gui_test/
+build_gui_3/
+build-arm64/
+bin/
+lib/
+obj/
 *.o
-*.lib
-*.exe
+*.a
+*.so
 *.dll
+*.exe
+*.dylib
+*.obj
 *.pdb
+*.lst
+*.lib
+*.exp
 *.ilk
-*.log
+NUL.obj
 
 # CMake
-CMakeCache.txt
 CMakeFiles/
+CMakeCache.txt
 cmake_install.cmake
-*.vcxproj
-*.vcxproj.filters
-*.sln
-
-# Qt
-*_autogen/
-moc_*.cpp
-moc_*.cpp.d
-*.qm
-
-# Visual Studio
-.vs/
-*.user
-*.suo
-*.sdf
-*.opensdf
+Makefile
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
-=======
-build/
-build-*/
-out/
-tmp/
-models/
-models-mnt
+*.log
 
-compile_commands.json
-CMakeSettings.json
-.vs/
-.vscode/
-.idea/
-.clangd
+# Dependencies
+node_modules/
+package-lock.json
 
-.venv/
-ggml_env/
-.exrc
-.cache
-.DS_Store
-.stablelm
-.gpt-2
+# Generated IDE
+out/rawrxd-ide/node_modules/
+out/rawrxd-ide/dist/
+out/rawrxd-ide/.vite/
 
-src/arm_neon.h
-tests/arm_neon.h
-
-zig-out/
-zig-cache/
-
-*.o
-*.d
-*.dot
-
-*.sw?
-
-__pycache__/
-
-# Model files
-ggml-model-f16.bin
-*.bat
->>>>>>> upstream/master
-build_prod/
-
+# Models (large, user-provided)
+models/*.gguf
+models/*.bin
 *.gguf
+*.bin
+*.sqlite
+*.zip
+
+# Temp
+tmp/
+temp/
+*.tmp
+soak_logs/
+soak_evidence*.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# Local only
+*.local
+secrets.txt
+
+# Nested repos (not submodules)
+itsmehrawrxd-master/
+
+# Non-IDE directories (extracted/cached/external)
+OrganizedPiProject/
+Cursor_Source_Extracted/
+Extracted_Chat_Agent_Features/
+Cursor_Reverse_Engineered_Fork/
+Fixed_Reverse_Engineered/
+Consolidated_Modules_*/
+*.exe.WebView2/
+build_universal/
+itsmehrawrxd-master.zip

@@ -30,10 +30,10 @@ param(
     [string]$Operation = "digest",
     
     [Parameter(Mandatory=$false)]
-    [string]$RootPath = "D:\lazy init ide",
+    [string]$RootPath = (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Split-Path $PSScriptRoot -Parent) }),
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputPath = "D:\lazy init ide\data\knowledge_base.json",
+    [string]$OutputPath = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Split-Path $PSScriptRoot -Parent) }) "data" "knowledge_base.json"),
     
     [Parameter(Mandatory=$false)]
     [string]$Query = ""

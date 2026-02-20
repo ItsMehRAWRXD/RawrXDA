@@ -286,6 +286,10 @@ g_si                    STARTUPINFO <>
 g_pi                    PROCESS_INFORMATION <>
 g_exitCode              DWORD 0
 
+; UI state
+g_hMainWindow           QWORD 0
+g_hInstance             QWORD 0
+
 ; Error state
 g_LastErrorCode         DWORD 0
 g_LastErrorFunction     QWORD 0
@@ -860,6 +864,33 @@ Telemetry_Shutdown PROC FRAME
 Telemetry_Shutdown ENDP
 
 Telemetry_FlushThread PROC FRAME lpParam:QWORD
+    ; lpParam = pointer to TELEMETRY_CONTEXT
+    ; Thread loop: flush events every TELEMETRY_FLUSH_INTERVAL ms
+    mov rsi, lpParam
+    test rsi, rsi
+    jz @@tft_exit
+
+@@tft_loop:
+    ; Check stop flag
+    mov eax, [rsi].TELEMETRY_CONTEXT.stopFlag
+    test eax, eax
+    jnz @@tft_exit
+
+    ; Sleep for flush interval
+    mov ecx, TELEMETRY_FLUSH_INTERVAL
+    call Sleep
+
+    ; Re-check stop flag after sleep
+    mov eax, [rsi].TELEMETRY_CONTEXT.stopFlag
+    test eax, eax
+    jnz @@tft_exit
+
+    ; Flush pending events
+    mov rcx, rsi
+    call Telemetry_Flush
+    jmp @@tft_loop
+
+@@tft_exit:
     xor eax, eax
     ret
 Telemetry_FlushThread ENDP
@@ -903,11 +934,86 @@ Config_Encrypt ENDP
 ;==============================================================================
 
 RawrXD_InitUI PROC FRAME
+    ; Register window class and create main editor window
+    ; Returns: EAX = 1 on success, 0 on failure
+    sub rsp, 128                        ; shadow + WNDCLASSEXA (80 bytes)
+
+    ; Zero out WNDCLASSEXA structure
+    lea rdi, [rsp + 32]
     xor eax, eax
+    mov ecx, 80
+    rep stosb
+
+    ; Fill WNDCLASSEXA fields
+    lea rdi, [rsp + 32]
+    mov DWORD PTR [rdi], 80              ; cbSize = sizeof(WNDCLASSEXA)
+    mov DWORD PTR [rdi + 4], 23h         ; style = CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS
+    lea rax, RawrXD_WndProc
+    mov QWORD PTR [rdi + 8], rax          ; lpfnWndProc
+    mov rax, g_hInstance
+    mov QWORD PTR [rdi + 48], rax         ; hInstance
+    lea rax, szWindowClass
+    mov QWORD PTR [rdi + 64], rax         ; lpszClassName
+
+    ; RegisterClassExA
+    mov rcx, rdi
+    call RegisterClassExA
+    test eax, eax
+    jz @@iui_fail
+
+    ; CreateWindowExA: overlapped window 1200x800
+    xor ecx, ecx                         ; dwExStyle = 0
+    lea rdx, szWindowClass                ; lpClassName
+    lea r8, szWindowTitle                 ; lpWindowName
+    mov r9d, 00CF0000h                   ; WS_OVERLAPPEDWINDOW
+    push 0                               ; lpParam
+    push g_hInstance                      ; hInstance
+    push 0                               ; hMenu
+    push 0                               ; hWndParent
+    push 800                             ; nHeight
+    push 1200                            ; nWidth
+    push 80000000h                       ; y = CW_USEDEFAULT
+    push 80000000h                       ; x = CW_USEDEFAULT
+    sub rsp, 32                          ; shadow space
+    call CreateWindowExA
+    add rsp, 96                          ; clean up params + shadow
+    test rax, rax
+    jz @@iui_fail
+
+    mov g_hMainWindow, rax
+    mov rcx, rax
+    mov edx, 5                           ; SW_SHOW
+    call ShowWindow
+    mov rcx, g_hMainWindow
+    call UpdateWindow
+    mov eax, 1
+    jmp @@iui_done
+
+@@iui_fail:
+    xor eax, eax
+@@iui_done:
+    add rsp, 128
     ret
 RawrXD_InitUI ENDP
 
 RawrXD_ShutdownUI PROC FRAME
+    ; Destroy main window and unregister class
+    sub rsp, 40h
+
+    ; Destroy window
+    mov rcx, g_hMainWindow
+    test rcx, rcx
+    jz @@sui_unregister
+    call DestroyWindow
+    mov g_hMainWindow, 0
+
+@@sui_unregister:
+    ; Unregister window class
+    lea rcx, szWindowClass
+    mov rdx, g_hInstance
+    call UnregisterClassA
+
+    add rsp, 40h
     ret
 RawrXD_ShutdownUI ENDP
 
@@ -1052,11 +1158,102 @@ Titan_CleanupRingBuffer PROC FRAME pState:QWORD, index:DWORD
 Titan_CleanupRingBuffer ENDP
 
 Titan_WorkerThread PROC FRAME lpParam:QWORD
+    ; lpParam = pointer to WORKER_CONTEXT_TITAN
+    ; Worker loop: wait for event, dequeue job, process, repeat
+    mov rsi, lpParam
+    test rsi, rsi
+    jz @@twt_exit
+
+    ; Mark worker as active
+    mov [rsi].WORKER_CONTEXT_TITAN.active, 1
+
+@@twt_loop:
+    ; Wait for job event or shutdown
+    mov rcx, [rsi].WORKER_CONTEXT_TITAN.hEvent
+    mov edx, 1000                       ; 1 second timeout
+    call WaitForSingleObject
+    cmp eax, 0                           ; WAIT_OBJECT_0
+    je @@twt_have_job
+    cmp eax, 258                         ; WAIT_TIMEOUT
+    je @@twt_check_shutdown
+    jmp @@twt_exit                       ; error
+
+@@twt_check_shutdown:
+    ; Check global orchestrator shutdown flag
+    mov rdi, g_pOrchestrator
+    test rdi, rdi
+    jz @@twt_exit
+    mov eax, [rdi].ORCHESTRATOR_STATE.shutdownFlag
+    test eax, eax
+    jz @@twt_loop
+    jmp @@twt_exit
+
+@@twt_have_job:
+    ; Dequeue job from orchestrator queue
+    mov rdi, g_pOrchestrator
+    test rdi, rdi
+    jz @@twt_loop
+
+    ; Check if queue has entries
+    mov eax, [rdi].ORCHESTRATOR_STATE.jobQueueHead
+    cmp eax, [rdi].ORCHESTRATOR_STATE.jobQueueTail
+    je @@twt_loop                        ; queue empty, spurious wake
+
+    ; Increment head (atomic)
+    lock inc DWORD PTR [rdi].ORCHESTRATOR_STATE.jobQueueHead
+
+    ; Update stats
+    lock inc QWORD PTR [rdi].ORCHESTRATOR_STATE.stats.jobsProcessed
+
+    ; Check shutdown and loop
+    mov eax, [rdi].ORCHESTRATOR_STATE.shutdownFlag
+    test eax, eax
+    jz @@twt_loop
+
+@@twt_exit:
+    ; Mark worker as inactive
+    test rsi, rsi
+    jz @@twt_ret
+    mov [rsi].WORKER_CONTEXT_TITAN.active, 0
+@@twt_ret:
     xor eax, eax
     ret
 Titan_WorkerThread ENDP
 
 Titan_HeartbeatCallback PROC FRAME lpParam:QWORD, TimerOrWaitFired:BYTE
+    ; Timer callback: update heartbeat stats and check worker health
+    ; lpParam = pointer to ORCHESTRATOR_STATE
+    mov rsi, lpParam
+    test rsi, rsi
+    jz @@thc_done
+
+    ; Reset missed count on successful heartbeat
+    mov [rsi].ORCHESTRATOR_STATE.heartbeat.missedCount, 0
+
+    ; Get current timestamp via GetTickCount64
+    call GetTickCount64
+    mov rdx, [rsi].ORCHESTRATOR_STATE.stats.startTime
+    sub rax, rdx                        ; uptime in ms
+    ; Store as latency metric
+    mov [rsi].ORCHESTRATOR_STATE.stats.totalLatency, rax
+
+    ; Scan workers for liveness
+    xor ecx, ecx
+@@thc_scan:
+    cmp ecx, MAX_WORKERS
+    jge @@thc_done
+    lea rdx, [rsi].ORCHESTRATOR_STATE.workers
+    ; Check if worker thread handle is valid
+    movzx eax, [rdx].WORKER_CONTEXT_TITAN.active
+    test al, al
+    jz @@thc_next
+    ; Worker is active, heartbeat OK
+@@thc_next:
+    add rdx, SIZEOF WORKER_CONTEXT_TITAN
+    inc ecx
+    jmp @@thc_scan
+
+@@thc_done:
     ret
 Titan_HeartbeatCallback ENDP
 

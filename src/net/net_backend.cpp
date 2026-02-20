@@ -53,7 +53,7 @@ public:
 
     ~WebSocketClient() {
         if (socket_handle) {
-            TcpClose(socket_handle);
+            WebSocketClose(socket_handle);
             socket_handle = nullptr;
         }
     }

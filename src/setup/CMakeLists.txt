@@ -17,14 +17,17 @@ add_library(rawrxd_setup STATIC
     ${SETUP_WIZARD_HEADERS}
 )
 
+# Qt-free: pure C++20
 set_target_properties(rawrxd_setup PROPERTIES
-    AUTOMOC ON
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )
 
 target_link_libraries(rawrxd_setup PUBLIC
 )
+if(WIN32)
+    target_link_libraries(rawrxd_setup PRIVATE bcrypt)
+endif()
 
 target_include_directories(rawrxd_setup PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

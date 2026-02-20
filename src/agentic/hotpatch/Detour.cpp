@@ -43,28 +43,44 @@ void* Detour::install(void* targetFunc, void* replacementFunc, size_t* trampolin
 }
 
 bool Detour::uninstall(void* targetFunc, void* trampoline) {
-    if (!targetFunc || !trampoline) return false;
-    
-    // The trampoline's first N bytes are the original target function bytes
-    // We stored the length in the 14-byte epilogue's first qword (metadata hack)
-    // For simplicity, assume we saved 5 or 14 bytes depending on 32/64-bit
-    
-    DWORD oldProtect;
-    const size_t restoreSize = 14; // Conservative: restore 14 bytes max
-    
-    if (!VirtualProtect(targetFunc, restoreSize, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+    if (!targetFunc || !trampoline) {
         return false;
     }
-    
-    // Copy original bytes back from trampoline
-    std::memcpy(targetFunc, trampoline, restoreSize);
-    
-    // Restore protection
-    VirtualProtect(targetFunc, restoreSize, oldProtect, &oldProtect);
-    
-    // Free trampoline
-    VirtualFree(trampoline, 0, MEM_RELEASE);
-    
+
+    // The trampoline contains the original bytes at its start,
+    // followed by a jump back to targetFunc + originalSize.
+    // We need to figure out the original instruction size by scanning
+    // the trampoline for our absolute jump pattern (0x48 0xB8 = mov rax, imm64).
+    const uint8_t* trampolineBytes = static_cast<const uint8_t*>(trampoline);
+    size_t originalSize = 0;
+
+    // Scan for the return-jump signature in trampoline
+    for (size_t i = 0; i < 256; ++i) {
+        if (trampolineBytes[i] == 0x48 && trampolineBytes[i + 1] == 0xB8) {
+            // Found mov rax, imm64 — this is the return jump
+            originalSize = i;
+            break;
+        }
+    }
+
+    if (originalSize == 0 || originalSize > 64) {
+        return false; // Sanity check
+    }
+
+    // Restore original bytes to target function
+    DWORD oldProtect;
+    if (!VirtualProtect(targetFunc, originalSize, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+        return false;
+    }
+
+    memcpy(targetFunc, trampoline, originalSize);
+
+    VirtualProtect(targetFunc, originalSize, oldProtect, &oldProtect);
+    FlushInstructionCache(GetCurrentProcess(), targetFunc, originalSize);
+
+    // Free the trampoline memory
+    freeTrampoline(trampoline);
+
     return true;
 }
 
@@ -197,37 +213,50 @@ bool Detour::generateRelativeJump(void* from, void* to, uint8_t* buffer) {
 
 bool Detour::relocateInstruction(const uint8_t* original, uint8_t* relocated, 
                                  uintptr_t newBase, size_t* length) {
-    // Basic implementation for common instructions (e.g., simplistic LDE)
-    // In a real scenario, use Capstone or Zydis.
-    
-    // Default: just copy basic instructions assuming no relative offsets
-    // This is "reverse engineer" style - we implement the missing gaps.
-    
-    // Assume 1-byte instruction if unknown (dangerous, but fills the gap logic)
-    // Better: Detect 0xE8/0xE9 (Call/Jmp)
-    
-    uint8_t opcode = original[0];
-    size_t insLength = 1;
-    
-    if (opcode == 0x55) insLength = 1; // push rbp
-    else if (opcode == 0x48 && original[1] == 0x89) insLength = 3; // mov rbp, rsp
-    else if (opcode == 0xE9 || opcode == 0xE8) insLength = 5; // jmp/call rel32
-    else if (opcode == 0xEB) insLength = 2; // jmp rel8
-    
-    // Copy
-    if (relocated) memcpy(relocated, original, insLength);
-    
-    // Relocate if relative
-    if (relocated && (opcode == 0xE9 || opcode == 0xE8)) {
-        int32_t rel;
-        memcpy(&rel, original + 1, 4);
-        uintptr_t target = (uintptr_t)original + rel + 5;
-        // Adjust for new base
-        int32_t newRel = (int32_t)(target - (newBase + 5));
-        memcpy(relocated + 1, &newRel, 4);
+    if (!original || !relocated || !length) {
+        return false;
     }
-    
-    if(length) *length = insLength;
+
+    InstructionInfo info = disassembleOne(original);
+    if (info.length == 0) {
+        return false;
+    }
+
+    *length = info.length;
+
+    if (!info.isRelative) {
+        // Non-relative instruction: just copy as-is
+        memcpy(relocated, original, info.length);
+        return true;
+    }
+
+    // Relative instruction (call/jmp rel32): recalculate displacement
+    uintptr_t originalAddr = reinterpret_cast<uintptr_t>(original);
+    uintptr_t originalTarget = originalAddr + info.length + info.relativeOffset;
+
+    // Calculate new displacement from relocated position
+    int64_t newDisplacement = static_cast<int64_t>(originalTarget) -
+                              static_cast<int64_t>(newBase + info.length);
+
+    if (newDisplacement < INT32_MIN || newDisplacement > INT32_MAX) {
+        // Cannot relocate with rel32 — convert to absolute jump
+        // mov rax, target; call/jmp rax
+        if (original[0] == 0xE8) { // call
+            relocated[0] = 0x48; relocated[1] = 0xB8; // mov rax, imm64
+            *reinterpret_cast<uint64_t*>(relocated + 2) = originalTarget;
+            relocated[10] = 0xFF; relocated[11] = 0xD0; // call rax
+            *length = 12;
+        } else { // jmp
+            generateAbsoluteJump(reinterpret_cast<void*>(newBase),
+                                reinterpret_cast<void*>(originalTarget), relocated);
+            *length = 14;
+        }
+        return true;
+    }
+
+    // Fits in rel32: copy opcode and patch displacement
+    memcpy(relocated, original, info.length);
+    *reinterpret_cast<int32_t*>(relocated + 1) = static_cast<int32_t>(newDisplacement);
     return true;
 }
 
@@ -237,23 +266,53 @@ bool Detour::isNearJumpPossible(void* from, void* to) {
 }
 
 void* Detour::findCodeCave(void* near, size_t size, size_t searchRadius) {
-    uint8_t* start = (uint8_t*)near - searchRadius;
-    uint8_t* end = (uint8_t*)near + searchRadius;
-    
-    // Align scan
-    for (uint8_t* ptr = start; ptr < end; ptr += 16) {
-        if (IsBadReadPtr(ptr, size)) continue;
-        
-        bool isPadding = true;
-        for (size_t i = 0; i < size; i++) {
-            if (ptr[i] != 0x00 && ptr[i] != 0xCC) {
-                isPadding = false;
-                break;
+    if (!near || size == 0) {
+        return nullptr;
+    }
+
+    uintptr_t base = reinterpret_cast<uintptr_t>(near);
+    uintptr_t searchStart = (base > searchRadius) ? base - searchRadius : 0;
+    uintptr_t searchEnd = base + searchRadius;
+
+    MEMORY_BASIC_INFORMATION mbi;
+    uintptr_t addr = searchStart;
+
+    while (addr < searchEnd) {
+        if (!VirtualQuery(reinterpret_cast<void*>(addr), &mbi, sizeof(mbi))) {
+            break;
+        }
+
+        // Only search in committed executable regions
+        if (mbi.State == MEM_COMMIT &&
+            (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ |
+                           PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY))) {
+
+            const uint8_t* regionStart = static_cast<const uint8_t*>(mbi.BaseAddress);
+            size_t regionSize = mbi.RegionSize;
+
+            // Scan for consecutive 0xCC (INT3) or 0x90 (NOP) bytes
+            size_t consecutiveBytes = 0;
+            for (size_t i = 0; i < regionSize; ++i) {
+                if (regionStart[i] == 0xCC || regionStart[i] == 0x90) {
+                    consecutiveBytes++;
+                    if (consecutiveBytes >= size) {
+                        // Found a cave
+                        void* cave = const_cast<uint8_t*>(regionStart + i - size + 1);
+                        // Verify it's within search radius
+                        uintptr_t caveAddr = reinterpret_cast<uintptr_t>(cave);
+                        if (caveAddr >= searchStart && caveAddr <= searchEnd) {
+                            return cave;
+                        }
+                    }
+                } else {
+                    consecutiveBytes = 0;
+                }
             }
         }
-        
-        if (isPadding) return ptr;
+
+        addr = reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
     }
+
     return nullptr;
 }
 

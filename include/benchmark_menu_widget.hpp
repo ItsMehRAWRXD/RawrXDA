@@ -1,22 +1,38 @@
 /**
  * \file benchmark_menu_widget.hpp
- * \brief Benchmark menu and test selector widget for the IDE (Stubbed for Native Migration)
+ * \brief Benchmark menu and test selector widget for the IDE
  * \author RawrXD Team
- * \date 2026-02-01
+ * \date 2025-12-13
+ *
+ * Provides:
+ * - Menu dropdown for benchmark operations
+ * - Test selection checkboxes for individual benchmark selection
+ * - Real-time logging output with structured formatting
+ * - Progress tracking and result display
  */
 
 #pragma once
 
+#include <QString>
+#include <QWidget>
+#include <QMainWindow>
+#include <QMenu>
+#include <QAction>
+#include <QCheckBox>
+#include <QTextEdit>
+#include <QPushButton>
+#include <QProgressBar>
+#include <QThread>
+#include <QComboBox>
+#include <memory>
 #include <vector>
 #include <string>
-#include <memory>
-#include <functional>
 
 class BenchmarkRunner;
 
 // Local TestResult struct for benchmark results display
 struct TestResult {
-    std::string testName;
+    QString testName;
     bool passed;
     double avgLatencyMs;
     double p95LatencyMs;
@@ -25,54 +41,12 @@ struct TestResult {
 
 /**
  * @brief Widget for selecting which benchmarks to run
- * Stubbed out for non-Qt build
  */
-class BenchmarkSelector {
+class BenchmarkSelector : public QWidget {
+    Q_OBJECT
+
 public:
-    explicit BenchmarkSelector(void* parent = nullptr);
-    virtual ~BenchmarkSelector() = default;
-
-    std::vector<std::string> getSelectedTests() const;
-    std::string getSelectedModel() const;
-    bool isGpuEnabled() const;
-    bool isVerbose() const;
-
-private:
-    std::vector<void*> testCheckboxes_;
-    void* modelCombo_;
-    void* gpuCheckbox_;
-    void* verboseCheckbox_;
-};
-
-/**
- * @brief Main benchmark control widget
- */
-class BenchmarkMenuWidget {
-public:
-    explicit BenchmarkMenuWidget(void* parent = nullptr);
-    ~BenchmarkMenuWidget();
-
-    void show();
-    void addTestResult(const std::string& name, bool passed, double latency);
-    void updateProgress(int current, int total);
-    void logMessage(const std::string& msg, int level);
-
-private:
-    void setupConnections();
-    void startBenchmarks();
-    void stopBenchmarks();
-
-    std::unique_ptr<BenchmarkRunner> runner_;
-    std::unique_ptr<BenchmarkSelector> selector_;
-    
-    // UI elements stubbed
-    void* runButton_;
-    void* stopButton_;
-    void* progressBar_;
-    void* logView_;
-    void* resultsTable_;
-    void* statusLabel_;
-};
+    explicit BenchmarkSelector(QWidget* parent = nullptr);
 
     // Get selected tests
     std::vector<std::string> getSelectedTests() const;

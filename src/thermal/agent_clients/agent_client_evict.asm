@@ -2,6 +2,10 @@
 ; Sends SET_EVICT <drive_id> command to SovereignThermalAgent pipe
 
 option casemap:none
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 extern CreateFileA : PROC
 extern WriteFile : PROC
 extern CloseHandle : PROC
@@ -67,6 +71,7 @@ _fail_wait:
     mov ecx, 500
     call Sleep
     jmp _retry
+    ret
 main ENDP
 END
 

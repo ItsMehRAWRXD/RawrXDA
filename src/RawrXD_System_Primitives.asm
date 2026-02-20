@@ -16,6 +16,10 @@ MEMORY_ALLOCATION_ALIGNMENT EQU 64  ; For SIMD operations
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 align 16
 g_SystemPageSize        QWORD       0
@@ -320,6 +324,7 @@ Thread_AffinitySet PROC FRAME
     mov rdx, r8
     ; RCX already has thread handle
     jmp SetThreadAffinityMask
+    ret
 Thread_AffinitySet ENDP
 
 ; ═══════════════════════════════════════════════════════════════════════════════

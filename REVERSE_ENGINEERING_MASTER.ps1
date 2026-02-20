@@ -37,14 +37,15 @@ param(
     [switch]$Verbose,
     
     [string]$CursorPath = "",
-    [string]$OutputIntegration = "d:\lazy init ide\src",
-    [string]$ReportPath = "d:\lazy init ide\reverse_engineering_reports"
+    [string]$OutputIntegration = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Split-Path $PSScriptRoot -Parent) }) "src"),
+    [string]$ReportPath = (Join-Path (if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Split-Path $PSScriptRoot -Parent) }) "reverse_engineering_reports")
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ProjectRoot = "d:\lazy init ide"
+$ProjectRoot = if ($env:LAZY_INIT_IDE_ROOT) { $env:LAZY_INIT_IDE_ROOT } else { (Split-Path $PSScriptRoot -Parent) }
+if (-not $ProjectRoot) { $ProjectRoot = "d:\lazy init ide" }
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION

@@ -17,8 +17,8 @@ add_library(rawrxd_auth STATIC
     ${AUTH_HEADERS}
 )
 
+# Qt-free: pure C++20
 set_target_properties(rawrxd_auth PROPERTIES
-    AUTOMOC ON
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )

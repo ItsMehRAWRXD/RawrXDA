@@ -1,39 +1,33 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
+// C++20 / Win32. Todo dock; no Qt. Use HWND in impl.
 
-class QTreeWidget;
-class QTreeWidgetItem;
-class TodoManager;
+#include <string>
+#include <functional>
+
 struct TodoItem;
+class TodoManager;
 
-class TodoDock : public QWidget {
-    Q_OBJECT
+class TodoDock
+{
 public:
-    explicit TodoDock(TodoManager* todoManager, QWidget* parent = nullptr);
+    using OpenFileRequestedFn = std::function<void(const std::string& filePath, const std::string& todoId)>;
+
+    explicit TodoDock(TodoManager* todoManager);
+    void setOnOpenFileRequested(OpenFileRequestedFn f) { m_onOpenFileRequested = std::move(f); }
     void initialize();
-    
-public slots:
     void refreshTodos();
-    
-signals:
-    void openFileRequested(const QString& filePath, const QString& todoId);
-    
-private slots:
-    void onTodoAdded(const TodoItem& todo);
-    void onTodoCompleted(const QString& id);
-    void onTodoRemoved(const QString& id);
-    void onItemDoubleClicked(QTreeWidgetItem* item, int column);
-    void onAddTodo();
-    void onCompleteTodo();
-    void onRemoveTodo();
-    void onScanCode();
-    
+
+    void* getWidgetHandle() const { return m_handle; }
+
 private:
     void setupUI();
     void loadTodos();
-    
-    QTreeWidget* treeWidget_;
-    TodoManager* todoManager_;
+    void onTodoAdded(const TodoItem& todo);
+    void onTodoCompleted(const std::string& id);
+    void onTodoRemoved(const std::string& id);
+
+    void* m_handle = nullptr;
+    TodoManager* todoManager_ = nullptr;
+    OpenFileRequestedFn m_onOpenFileRequested;
 };

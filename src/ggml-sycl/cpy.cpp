@@ -100,6 +100,7 @@ static void cpy_blck_q8_0_f32(const char * cxi, char * cdsti) {
 }
 
 
+
 template <dequantize_kernel_t dequant, int qk> static void cpy_blck_q_f32(const char * cxi, char * cdsti) {
     float * cdstf = (float *) (cdsti);
 
@@ -589,11 +590,12 @@ void ggml_sycl_cpy(ggml_backend_sycl_context & ctx, const ggml_tensor * src0, co
     } else if (src0->type == GGML_TYPE_Q4_1 && src1->type == GGML_TYPE_Q4_1) {
         ggml_cpy_q4_1_q4_1(src0_ddc, src1_ddc, ne, ne00, ne01, ne02, nb00, nb01, nb02, nb03, ne10, ne11, ne12, nb10, nb11, nb12, nb13, main_stream);
     } else {
-        GGML_
+        GGML_LOG_ERROR("%s: unsupported type combination (%s to %s)\n", __func__, ggml_type_name(src0->type),
+                       ggml_type_name(src1->type));
         GGML_ABORT("fatal error");
     }
 } catch (const sycl::exception & exc) {
-    
+    std::cerr << exc.what() << "Exception caught at file:" << __FILE__ << ", line:" << __LINE__ << std::endl;
     std::exit(1);
 }
 

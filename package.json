@@ -10,12 +10,20 @@
   },
   "dependencies": {
     "ffi-napi": "^4.0.3",
+    "jsdom": "^28.0.0",
     "ref-napi": "^3.0.3"
   },
   "devDependencies": {
+    "acorn": "^8.15.0",
     "nodemon": "^3.0.1"
   },
-  "keywords": ["ai", "chatbot", "masm", "120b", "model"],
+  "keywords": [
+    "ai",
+    "chatbot",
+    "masm",
+    "120b",
+    "model"
+  ],
   "author": "RawrXD",
   "license": "MIT"
 }

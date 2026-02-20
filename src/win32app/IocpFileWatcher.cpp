@@ -1,4 +1,5 @@
 #include "IocpFileWatcher.h"
+#include "IDELogger.h"
 
 #include <filesystem>
 

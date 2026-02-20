@@ -1,68 +1,57 @@
 #pragma once
+/**
+ * @file deflate_brutal_qt.hpp
+ * @brief MASM brutal gzip compress/decompress — STL-only (Qt-free).
+ *
+ * Legacy name kept for include compatibility. Uses std::vector<uint8_t> only.
+ * For QByteArray-based code, use deflate_brutal_std.hpp (compress_std/compress_buf).
+ */
 #include <cstdint>
 #include <cstdlib>
-#include <QtCore/QByteArray>
+#include <vector>
+#include <cstring>
 #include "brutal_gzip.h"
 
 namespace brutal {
 
 /**
- * @brief Compress QByteArray using brutal MASM stored-block gzip
+ * @brief Compress buffer using brutal MASM stored-block gzip
  * @param in Raw input data
  * @return Compressed gzip stream (RFC 1952 compliant)
- * 
- * Ultra-fast, deterministic-size gzip compression using only stored blocks.
- * No Huffman, no LZ77 – pure memcpy speed with gzip framing.
- * Perfect for GGUF tensor caching, streaming inference, or speed-critical paths.
  */
-inline QByteArray compress(const QByteArray& in)
+inline std::vector<uint8_t> compress(const std::vector<uint8_t>& in)
 {
-    if (in.isEmpty()) return {};
-    
-    std::uint64_t packedSz = 0;
-    void* p = deflate_brutal_masm(
-        reinterpret_cast<const void*>(in.constData()),
-        in.size(),
-        reinterpret_cast<size_t*>(&packedSz)
-    );
-    
-    if (!p) return {};  // malloc failure
-    
-    QByteArray out(reinterpret_cast<const char*>(p), static_cast<int>(packedSz));
+    if (in.empty()) return {};
+
+    size_t packedSz = 0;
+    void* p = deflate_brutal_masm(in.data(), in.size(), &packedSz);
+    if (!p) return {};
+
+    std::vector<uint8_t> out(static_cast<size_t>(packedSz));
+    std::memcpy(out.data(), p, packedSz);
     std::free(p);
     return out;
 }
 
 /**
  * @brief Compress raw buffer using brutal MASM stored-block gzip
- * @param data Raw input pointer
- * @param size Input size in bytes
- * @return Compressed gzip stream (RFC 1952 compliant)
  */
-inline QByteArray compress(const void* data, std::size_t size)
+inline std::vector<uint8_t> compress(const void* data, std::size_t size)
 {
     if (!data || size == 0) return {};
-    
-    std::uint64_t packedSz = 0;
-    void* p = deflate_brutal_masm(
-        data,
-        size,
-        reinterpret_cast<size_t*>(&packedSz)
-    );
-    
+
+    size_t packedSz = 0;
+    void* p = deflate_brutal_masm(data, size, &packedSz);
     if (!p) return {};
-    
-    QByteArray out(reinterpret_cast<const char*>(p), static_cast<int>(packedSz));
+
+    std::vector<uint8_t> out(static_cast<size_t>(packedSz));
+    std::memcpy(out.data(), p, packedSz);
     std::free(p);
     return out;
 }
 
 /**
- * @brief Calculate worst-case compressed size for planning/allocation
- * @param rawSize Input size
- * @return Maximum possible compressed size (gzip header + stored blocks + footer)
- * 
- * Formula: header(10) + ceil(rawSize/65535)*5 + rawSize + footer(8)
+ * @brief Worst-case compressed size (gzip header + stored blocks + footer)
  */
 inline std::size_t maxCompressedSize(std::size_t rawSize)
 {
@@ -71,92 +60,44 @@ inline std::size_t maxCompressedSize(std::size_t rawSize)
 }
 
 /**
- * @brief Decompress gzip stream using MASM inflate kernel
- * @param compressed Compressed gzip data
- * @return Decompressed raw data, empty if decompression fails
- * 
- * Fast decompression using MASM-optimized inflate algorithm.
- * Handles RFC 1952 gzip format with DEFLATE stored blocks.
+ * @brief Decompress gzip stream (stored-block format).
+ * When HAS_BRUTAL_INFLATE_MASM is defined, uses MASM inflate; otherwise
+ * requires zlib/miniz or similar — no Qt dependency.
  */
-inline QByteArray decompress(const QByteArray& compressed)
+inline std::vector<uint8_t> decompress(const std::vector<uint8_t>& compressed)
 {
-    if (compressed.isEmpty()) return {};
-    
-    // Try to use MASM inflate if available; fallback to Qt's gzip decompression
-    // For stored-block gzip, we can use standard zlib
-    // The brutal format is RFC 1952 compliant, so standard tools work
-    
-    size_t max_uncompressed = compressed.size() * 4;  // Initial guess
-    void* out_buf = malloc(max_uncompressed);
+    if (compressed.empty()) return {};
+
+    size_t max_uncompressed = compressed.size() * 4;
+    void* out_buf = std::malloc(max_uncompressed);
     if (!out_buf) return {};
-    
+
     size_t out_len = 0;
-    
+
 #ifdef HAS_BRUTAL_INFLATE_MASM
-    // Use MASM inflate if available
-    extern "C" int inflate_brutal_masm(const void* src, size_t src_len, 
+    extern "C" int inflate_brutal_masm(const void* src, size_t src_len,
                                        void* dst, size_t dst_len, size_t* out_len);
     int result = inflate_brutal_masm(
-        reinterpret_cast<const void*>(compressed.constData()),
+        compressed.data(),
         compressed.size(),
         out_buf,
         max_uncompressed,
         &out_len
     );
-    
     if (result != 0) {
-        free(out_buf);
+        std::free(out_buf);
         return {};
     }
+    std::vector<uint8_t> result_vec(out_len);
+    std::memcpy(result_vec.data(), out_buf, out_len);
+    std::free(out_buf);
+    return result_vec;
 #else
-    // Fallback: use Qt's built-in zlib (qUncompress for gzip with custom header handling)
-    // Since brutal format is RFC 1952 gzip, we need to strip the gzip header/footer manually
-    
-    // Skip gzip header (10 bytes minimum)
-    const unsigned char* data = reinterpret_cast<const unsigned char*>(compressed.constData());
-    size_t data_len = compressed.size();
-    
-    if (data_len < 18) {  // Minimum: 10-byte header + data + 8-byte footer
-        free(out_buf);
-        return {};
-    }
-    
-    // Verify gzip magic number
-    if (data[0] != 0x1f || data[1] != 0x8b) {
-        free(out_buf);
-        return {};
-    }
-    
-    // Skip to deflate data (skip variable-length gzip header)
-    size_t header_size = 10;
-    if (data[3] & 0x04) {  // FEXTRA flag
-        header_size += 2 + (data[header_size] | (data[header_size + 1] << 8));
-    }
-    if (data[3] & 0x08) {  // FNAME flag
-        while (header_size < data_len && data[header_size] != 0) header_size++;
-        header_size++;
-    }
-    if (data[3] & 0x10) {  // FCOMMENT flag
-        while (header_size < data_len && data[header_size] != 0) header_size++;
-        header_size++;
-    }
-    if (data[3] & 0x02) {  // FHCRC flag
-        header_size += 2;
-    }
-    
-    // Extract raw deflate data (without 8-byte gzip footer)
-    QByteArray deflateData(reinterpret_cast<const char*>(data + header_size), 
-                           data_len - header_size - 8);
-    
-    // Use Qt's qUncompress (handles raw DEFLATE)
-    QByteArray decompressed = qUncompress(deflateData);
-    free(out_buf);
-    return decompressed;
+    (void)out_len;
+    // No Qt qUncompress: caller must use brutal_gzip inflate or zlib/miniz.
+    std::free(out_buf);
+    return {};
 #endif
-    
-    QByteArray result(reinterpret_cast<const char*>(out_buf), static_cast<int>(out_len));
-    free(out_buf);
-    return result;
 }
 
 } // namespace brutal

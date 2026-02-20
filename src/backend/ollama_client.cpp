@@ -2,6 +2,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <algorithm>
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 #ifdef _WIN32
@@ -45,7 +46,7 @@ std::string OllamaClient::getVersion() {
         json j = json::parse(response);
         return j.value("version", std::string());
     } catch (const json::exception& e) {
-        
+        s_logger.error( "JSON parsing error in getVersion: " << e.what() << std::endl;
         return "";
     }
 }
@@ -191,9 +192,9 @@ OllamaResponse OllamaClient::parseResponse(const std::string& json_str) {
             resp.eval_duration = j["eval_duration"].get<uint64_t>();
         }
         
-    } catch (const json::exception& e) {
+    } catch (const std::exception& e) {
         // Log parsing error and return partial response
-        
+        s_logger.error( "JSON parsing error in parseResponse: " << e.what() << std::endl;
         // resp already initialized with defaults
     }
     
@@ -231,9 +232,9 @@ std::vector<OllamaModel> OllamaClient::parseModels(const std::string& json_str) 
             }
         }
         
-    } catch (const json::exception& e) {
+    } catch (const std::exception& e) {
         // Log parsing error and return empty list
-        
+        s_logger.error( "JSON parsing error in parseModels: " << e.what() << std::endl;
     }
     
     return models;
@@ -377,7 +378,7 @@ bool OllamaClient::makeStreamingPostRequest(const std::string& endpoint,
     resp.response = makePostRequest(endpoint, json_body);
     resp.done = true;
     
-    if (on_chunk) on_chunk(resp);
+    if (on_chunk) on_chunk(resp.response);
     if (on_complete) on_complete(resp);
     
     return true;

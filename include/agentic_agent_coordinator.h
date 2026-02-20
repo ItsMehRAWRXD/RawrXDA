@@ -1,191 +1,113 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QJsonArray>
+#include <string>
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <chrono>
+#include <iostream>
+#include "../src/nlohmann/json.hpp"
+
+using json = nlohmann::json;
+
+#include "../include/agentic_iterative_reasoning.h"
 
 class AgenticLoopState;
-class AgenticIterativeReasoning;
 class AgenticEngine;
-class InferenceEngine;
+namespace CPUInference { class CPUInferenceEngine; }
 
 /**
  * @class AgenticAgentCoordinator
  * @brief Multi-agent coordination for complex problem solving
- * 
- * Manages multiple reasoning agents working together:
- * - Task decomposition across agents
- * - Agent specialization (analyzer, planner, executor, verifier)
- * - State synchronization between agents
- * - Resource allocation
- * - Conflict resolution
- * - Consensus building
- * 
- * Enables parallel reasoning and task execution while maintaining
- * coherent state and preventing conflicts.
  */
-class AgenticAgentCoordinator : public QObject
+class AgenticAgentCoordinator
 {
-    Q_OBJECT
-
 public:
     enum class AgentRole {
-        Analyzer,      // Problem analysis and context gathering
-        Planner,       // Strategy generation and planning
-        Executor,      // Action execution
-        Verifier,      // Result verification
-        Optimizer,     // Performance optimization
-        Learner        // Experience management
+        Analyzer,
+        Planner,
+        Executor,
+        Verifier,
+        Optimizer,
+        Learner
     };
 
     struct AgentInstance {
-        QString agentId;
+        std::string agentId;
         AgentRole role;
         std::unique_ptr<AgenticIterativeReasoning> reasoner;
         std::unique_ptr<AgenticLoopState> state;
-        QString currentTask;
+        std::string currentTask;
         bool isAvailable;
         float utilization;
         int tasksCompleted;
-        QString lastResult;
-        QDateTime lastActive;
+        std::string lastResult;
+        std::chrono::system_clock::time_point lastActive;
     };
 
     struct TaskAssignment {
-        QString taskId;
-        QString assignedAgentId;
+        std::string taskId;
+        std::string assignedAgentId;
         AgentRole requiredRole;
-        QString description;
-        QJsonObject parameters;
-        QDateTime assignedTime;
-        QDateTime completionTime;
-        QString status;
-        QJsonObject result;
+        std::string description;
+        json parameters;
+        std::chrono::system_clock::time_point assignedTime;
+        std::chrono::system_clock::time_point completionTime;
+        std::string status;
+        json result;
         float estimatedComplexity;
     };
 
     struct AgentConflict {
-        QString conflictId;
-        QString agent1Id;
-        QString agent2Id;
-        QString conflictReason;
-        QJsonObject state1;
-        QJsonObject state2;
-        QString resolution;
-        QDateTime timestamp;
+        std::string conflictId;
+        std::string agent1Id;
+        std::string agent2Id;
+        std::string conflictReason;
+        json state1;
+        json state2;
+        std::string resolution;
+        std::chrono::system_clock::time_point timestamp;
     };
 
 public:
-    explicit AgenticAgentCoordinator(QObject* parent = nullptr);
+    explicit AgenticAgentCoordinator();
     ~AgenticAgentCoordinator();
 
-    void initialize(AgenticEngine* engine, InferenceEngine* inference);
+    void initialize(AgenticEngine* engine, CPUInference::CPUInferenceEngine* inference);
 
-    // ===== AGENT MANAGEMENT =====
-    QString createAgent(AgentRole role);
-    void removeAgent(const QString& agentId);
-    AgentInstance* getAgent(const QString& agentId);
+    std::string createAgent(AgentRole role);
+    void removeAgent(const std::string& agentId);
+    AgentInstance* getAgent(const std::string& agentId);
     std::vector<AgentInstance*> getAvailableAgents(AgentRole role);
-    QStringList getAllAgentIds() const;
-    QJsonObject getAgentStatus(const QString& agentId);
-    QJsonArray getAllAgentStatuses();
+    std::vector<std::string> getAllAgentIds() const;
+    json getAgentStatus(const std::string& agentId);
+    json getAllAgentStatuses();
 
-    // ===== TASK ASSIGNMENT AND EXECUTION =====
-    QString assignTask(
-        const QString& taskDescription,
-        const QJsonObject& parameters,
-        AgentRole requiredRole
-    );
-    bool executeAssignedTask(const QString& taskId);
-    QString getTaskStatus(const QString& taskId);
-    QJsonObject getTaskResult(const QString& taskId);
-    QJsonArray getAllTaskStatuses();
+    std::string assignTask(
+        const std::string& taskDescription,
+        const json& parameters,
+        AgentRole preferredRole = AgentRole::Analyzer);
 
-    // ===== COORDINATION MECHANISMS =====
-    
-    // Decompose complex task across multiple agents
-    QJsonArray decomposeLargeTask(const QString& goal);
-    
-    // Synchronize state across agents
-    void synchronizeAgentStates();
-    bool detectStateConflict(const QString& agentId1, const QString& agentId2);
-    QString resolveStateConflict(const QString& agentId1, const QString& agentId2);
-    
-    // Consensus building
-    bool buildConsensus(const QStringList& agentIds, const QString& question);
-    QString getAgentOpinion(const QString& agentId, const QString& question);
-    QString resolveDisagreement(const QStringList& agentIds);
-    
-    // Resource allocation
-    void allocateResources(const QString& agentId, float cpuShare, float memoryShare);
-    void rebalanceResources();
+    void updateTaskStatus(const std::string& taskId, const std::string& status, const json& result = json());
+    json getTaskResult(const std::string& taskId);
 
-    // ===== MONITORING AND METRICS =====
-    QJsonObject getCoordinationMetrics() const;
-    float getTotalUtilization() const;
-    int getTotalTasksCompleted() const;
-    float getAverageTaskDuration() const;
-    int getConflictCount() const { return m_conflicts.size(); }
-    QJsonArray getConflictHistory();
-    
-    // ===== LOAD BALANCING =====
-    QString selectBestAgentForTask(const QString& taskDescription);
-    void rebalanceWorkload();
+    void resolveConflicts();
+    void synchronizeState();
+    json performJointInference(const std::vector<std::string>& agentIds, const std::string& prompt);
 
-    // ===== STATE MANAGEMENT =====
-    QJsonObject getGlobalState();
-    bool restoreGlobalState(const QJsonObject& state);
-    void saveCheckpoint();
-    bool restoreFromCheckpoint();
-
-signals:
-    void agentCreated(const QString& agentId, const QString& role);
-    void agentRemoved(const QString& agentId);
-    void taskAssigned(const QString& taskId, const QString& agentId);
-    void taskCompleted(const QString& taskId);
-    void taskFailed(const QString& taskId, const QString& error);
-    void stateConflictDetected(const QString& agentId1, const QString& agentId2);
-    void stateConflictResolved(const QString& resolution);
-    void agentStatusChanged(const QString& agentId, const QString& newStatus);
-    void coordinationMetricsUpdated();
+protected:
+    void logCoordination(const std::string& message);
 
 private:
-    // Internal helpers
-    void syncStateWithAgent(const QString& agentId);
-    QString reconcileConflictingStates(
-        const QJsonObject& state1,
-        const QJsonObject& state2
-    );
-    QString selectResolutionStrategy(const QString& conflictReason);
-    void recordConflict(
-        const QString& agent1,
-        const QString& agent2,
-        const QString& reason,
-        const QString& resolution
-    );
-    void updateAgentMetrics(const QString& agentId);
+    std::string selectBestAgentForTask(const std::string& taskDescription);
 
-    // Agent pool
+    AgenticEngine* m_engine = nullptr;
+    CPUInference::CPUInferenceEngine* m_inference = nullptr;
+    
     std::unordered_map<std::string, std::unique_ptr<AgentInstance>> m_agents;
     std::unordered_map<std::string, std::unique_ptr<TaskAssignment>> m_assignments;
     std::vector<AgentConflict> m_conflicts;
     
-    // Configuration
-    AgenticEngine* m_engine = nullptr;
-    InferenceEngine* m_inferenceEngine = nullptr;
-    
-    // Metrics
-    QDateTime m_coordinationStartTime;
+    std::chrono::system_clock::time_point m_coordinationStartTime;
     int m_totalTasksAssigned = 0;
-    int m_totalTasksCompleted = 0;
-    int m_totalConflicts = 0;
-    std::vector<std::pair<QString, int>> m_taskDurations;
-    
-    // Checkpointing
-    QJsonObject m_lastCheckpoint;
-    QDateTime m_lastCheckpointTime;
 };

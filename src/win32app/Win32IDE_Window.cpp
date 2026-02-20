@@ -52,6 +52,9 @@ void Win32IDE::showWindow() {
 int Win32IDE::runMessageLoop() {
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (m_hAccel && TranslateAccelerator(m_hwndMain, m_hAccel, &msg)) {
+            continue;
+        }
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
@@ -148,12 +151,19 @@ void Win32IDE::onCreate(HWND hwnd) {
     if (m_hwndEditor) {
         SetFocus(m_hwndEditor);
     }
+
+    // 4. Create keyboard accelerator table for Build shortcuts
+    createAcceleratorTable();
 }
 
 void Win32IDE::onDestroy() {
     // Cleanup Resources
     if (m_agenticBridge) {
-        m_agenticBridge->Stop();
+        m_agenticBridge->StopAgentLoop();
+    }
+    if (m_hAccel) {
+        DestroyAcceleratorTable(m_hAccel);
+        m_hAccel = nullptr;
     }
     shutdownInference();
     shutdownLogging();

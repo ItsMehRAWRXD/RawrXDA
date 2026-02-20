@@ -1,0 +1,19 @@
+"C:\Program Files\CMake\bin\cmake.exe" -SD:\rawrxd -BD:\rawrxd\build --check-build-system CMakeFiles\Makefile.cmake 0
+C:/ProgramData/mingw64/mingw64/bin/mingw32-make.exe  -f CMakeFiles\Makefile2 RawrXD-Win32IDE
+mingw32-make[1]: Entering directory 'D:/rawrxd/build'
+"C:\Program Files\CMake\bin\cmake.exe" -SD:\rawrxd -BD:\rawrxd\build --check-build-system CMakeFiles\Makefile.cmake 0
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_progress_start D:\rawrxd\build\CMakeFiles 71
+C:/ProgramData/mingw64/mingw64/bin/mingw32-make.exe  -f CMakeFiles\Makefile2 CMakeFiles/RawrXD-Win32IDE.dir/all
+mingw32-make[2]: Entering directory 'D:/rawrxd/build'
+C:/ProgramData/mingw64/mingw64/bin/mingw32-make.exe  -f CMakeFiles\RawrXD-Win32IDE.dir\build.make CMakeFiles/RawrXD-Win32IDE.dir/depend
+mingw32-make[3]: Entering directory 'D:/rawrxd/build'
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_depends "MinGW Makefiles" D:\rawrxd D:\rawrxd D:\rawrxd\build D:\rawrxd\build D:\rawrxd\build\CMakeFiles\RawrXD-Win32IDE.dir\DependInfo.cmake "--color=" RawrXD-Win32IDE
+mingw32-make[3]: Leaving directory 'D:/rawrxd/build'
+C:/ProgramData/mingw64/mingw64/bin/mingw32-make.exe  -f CMakeFiles\RawrXD-Win32IDE.dir\build.make CMakeFiles/RawrXD-Win32IDE.dir/build
+mingw32-make[3]: Entering directory 'D:/rawrxd/build'
+mingw32-make[3]: Nothing to be done for 'CMakeFiles/RawrXD-Win32IDE.dir/build'.
+mingw32-make[3]: Leaving directory 'D:/rawrxd/build'
+[100%] Built target RawrXD-Win32IDE
+mingw32-make[2]: Leaving directory 'D:/rawrxd/build'
+"C:\Program Files\CMake\bin\cmake.exe" -E cmake_progress_start D:\rawrxd\build\CMakeFiles 0
+mingw32-make[1]: Leaving directory 'D:/rawrxd/build'

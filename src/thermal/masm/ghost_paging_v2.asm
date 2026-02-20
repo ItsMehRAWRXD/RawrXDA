@@ -14,6 +14,10 @@
 ;=====================================================
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; ---- NT Syscall Imports (ntdll.lib) -------------------------------
 EXTERN NtDeviceIoControlFile:PROC
 EXTERN NtCreateSection:PROC
@@ -184,6 +188,9 @@ DllMain ENDP
 ; RCX = NVMe handle (0 = auto), RDX = model size bytes
 ; Returns: 0 = success, -1 = failure
 ; ============================================================================
+PUBLIC DllMain
+PUBLIC ConsolePrint
+PUBLIC ConnectThermalMMF
 PUBLIC GhostPagingInit
 GhostPagingInit PROC FRAME
     push rbx

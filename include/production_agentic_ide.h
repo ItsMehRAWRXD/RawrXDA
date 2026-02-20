@@ -1,16 +1,16 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QString>
-#include <QObject>
+// ============================================================================
+// ProductionAgenticIDE — C++20, Win32. No Qt. (QMainWindow, QWidget removed)
+// ============================================================================
 
-class ProductionAgenticIDE : public QMainWindow {
-    Q_OBJECT
+#include <string>
+
+class ProductionAgenticIDE {
 public:
-    explicit ProductionAgenticIDE(QWidget* parent = nullptr);
-    ~ProductionAgenticIDE() override;
+    explicit ProductionAgenticIDE(void* parent = nullptr);
+    ~ProductionAgenticIDE();
 
-public slots:
     void onNewPaint();
     void onNewCode();
     void onNewChat();
@@ -29,6 +29,6 @@ public slots:
     void onToggleChatPanel();
     void onToggleFeaturesPanel();
     void onResetLayout();
-    void onFeatureToggled(const QString& featureId, bool enabled);
-    void onFeatureClicked(const QString& featureId);
+    void onFeatureToggled(const std::string& featureId, bool enabled);
+    void onFeatureClicked(const std::string& featureId);
 };

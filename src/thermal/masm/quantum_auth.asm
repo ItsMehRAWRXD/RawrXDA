@@ -14,6 +14,10 @@
 ;        link quantum_auth.obj /DLL /OUT:quantum_auth.dll /DEF:quantum_auth.def
 ; ═══════════════════════════════════════════════════════════════════════════════
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .CODE
 
 ; ═══════════════════════════════════════════════════════════════════════════════

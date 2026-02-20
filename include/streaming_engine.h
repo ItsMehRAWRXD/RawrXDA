@@ -205,6 +205,14 @@ private:
     bool setupConnection(const std::string& url);
     bool readChunkedResponse();
     std::string parseChunkSize(const std::string& line);
+
+    // WinHTTP streaming state
+    std::string m_currentUrl;
+    std::vector<std::pair<std::string, std::string>> m_currentHeaders;
+    std::string m_currentBody;
+    void* m_hSession = nullptr;    // HINTERNET session
+    void* m_hConnect = nullptr;    // HINTERNET connection
+    void* m_hRequest = nullptr;    // HINTERNET request
 };
 
 /**

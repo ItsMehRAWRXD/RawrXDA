@@ -4,6 +4,10 @@
 ; NO PLACEHOLDERS - Fully functional implementation
 ; ============================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .data
     ; Window class and title
     szClassName     db "MASMEditorClass", 0

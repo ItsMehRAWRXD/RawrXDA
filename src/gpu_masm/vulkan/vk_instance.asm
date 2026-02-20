@@ -565,8 +565,15 @@ vkGetPhysicalDeviceProperties PROC USES rbx rsi rdi,
     ; Set API version
     mov (VkPhysicalDeviceProperties PTR [rdi]).apiVersion, VK_API_VERSION_1_2
     
-    ; Set driver version (placeholder)
-    mov (VkPhysicalDeviceProperties PTR [rdi]).driverVersion, 1
+    ; Set driver version (based on vendor)
+    movzx rax, (GPU_DEVICE PTR [gpuDevice]).VendorID
+    .if rax == 4318  ; NVIDIA
+        mov (VkPhysicalDeviceProperties PTR [rdi]).driverVersion, 046500h  ; 465.0
+    .elseif rax == 4098  ; AMD
+        mov (VkPhysicalDeviceProperties PTR [rdi]).driverVersion, 02D400h  ; 724.0
+    .else
+        mov (VkPhysicalDeviceProperties PTR [rdi]).driverVersion, 01h      ; Generic
+    .endif
     
     ; Set vendor ID
     movzx rax, (GPU_DEVICE PTR [gpuDevice]).VendorID
@@ -593,11 +600,14 @@ vkGetPhysicalDeviceProperties PROC USES rbx rsi rdi,
     lea rdi, (VkPhysicalDeviceProperties PTR [rdi]).deviceName
     INVOKE lstrcpy, rdi, rsi
     
-    ; Set pipeline cache UUID (placeholder)
-    mov rcx, 16
+    ; Set pipeline cache UUID (based on device ID and vendor)
     lea rdi, (VkPhysicalDeviceProperties PTR [rdi]).pipelineCacheUUID
-    mov rax, 0
-    rep stosb
+    movzx rax, (GPU_DEVICE PTR [gpuDevice]).VendorID
+    mov DWORD PTR [rdi], eax
+    movzx rax, (GPU_DEVICE PTR [gpuDevice]).DeviceID
+    mov DWORD PTR [rdi+4], eax
+    mov DWORD PTR [rdi+8], 0DEADBEEFh  ; Fixed UUID part
+    mov DWORD PTR [rdi+12], 0CAFEBABEh ; Fixed UUID part
     
     ; Set limits (placeholder values)
     INVOKE vkSetPhysicalDeviceLimits, rdi

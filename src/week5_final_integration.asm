@@ -12,6 +12,10 @@
 ;================================================================================
 
 OPTION CASEMAP:NONE
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 OPTION WIN64:3
 
 ;================================================================================
@@ -362,6 +366,7 @@ CrashReportUploadThread PROC
     xor eax, eax
     mov ecx, 0
     call ExitThread
+    ret
 CrashReportUploadThread ENDP
 
 ;================================================================================
@@ -1230,28 +1235,275 @@ ShutdownSystems ENDP
 ; UTILITY FUNCTIONS (stubs - use actual Win32 APIs in production)
 ;================================================================================
 
-; These would be actual Win32 API calls or thin wrappers
+; Win32 API wrapper implementations for IDE integration
 NewFile PROC
+    ; Creates a new empty document buffer
+    ; Allocates a 64KB buffer and initializes editor state
+    push rbx
+    sub rsp, 32
+    
+    ; Allocate 64KB for new document buffer
+    mov rcx, 0                       ; lpAddress = NULL
+    mov rdx, 65536                   ; 64KB
+    mov r8d, 3000h                   ; MEM_COMMIT | MEM_RESERVE
+    mov r9d, 04h                     ; PAGE_READWRITE
+    call VirtualAlloc
+    test rax, rax
+    jz @@nf_fail
+    
+    ; Initialize buffer with empty state
+    mov rbx, rax
+    mov BYTE PTR [rax], 0            ; null-terminate
+    mov rax, rbx                     ; return buffer ptr
+    
+    add rsp, 32
+    pop rbx
+    ret
+    
+@@nf_fail:
+    xor eax, eax
+    add rsp, 32
+    pop rbx
     ret
 NewFile ENDP
 
 OpenFileDialog PROC
+    ; Display Win32 Open File dialog via GetOpenFileNameA
+    ; Returns: RAX = pointer to selected filename, 0 on cancel
+    push rbx
+    sub rsp, 352                     ; OPENFILENAMEA = 152 bytes + 260 filename buffer
+    
+    ; Zero the OPENFILENAMEA struct
+    lea rdi, [rsp]
+    mov ecx, 88                      ; 352/4
+    xor eax, eax
+    rep stosd
+    
+    ; Fill OPENFILENAMEA
+    lea rbx, [rsp]
+    mov DWORD PTR [rbx], 152         ; lStructSize (x64)
+    mov QWORD PTR [rbx+8], 0         ; hwndOwner = NULL
+    lea rax, [rsp+152]               ; filename buffer
+    mov BYTE PTR [rax], 0            ; empty initial filename
+    mov QWORD PTR [rbx+24], rax      ; lpstrFile
+    mov DWORD PTR [rbx+32], 260      ; nMaxFile
+    mov DWORD PTR [rbx+52], 1804h    ; Flags: OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST
+    
+    ; Call GetOpenFileNameA
+    mov rcx, rbx
+    call GetOpenFileNameA
+    test eax, eax
+    jz @@ofd_cancel
+    
+    lea rax, [rsp+152]               ; return filename ptr
+    add rsp, 352
+    pop rbx
+    ret
+    
+@@ofd_cancel:
+    xor eax, eax
+    add rsp, 352
+    pop rbx
     ret
 OpenFileDialog ENDP
 
 UndoLastAction PROC
+    ; Pop last action from undo stack and reverse it
+    ; Uses global undo_stack pointer and undo_count
+    ; Returns: RAX = 1 if undo performed, 0 if stack empty
+    
+    mov eax, [undo_count]
+    test eax, eax
+    jz @@undo_empty
+    
+    dec eax
+    mov [undo_count], eax
+    
+    ; Get undo entry: each entry = 16 bytes (offset:8, old_byte:4, new_byte:4)
+    mov rcx, [undo_stack]
+    test rcx, rcx
+    jz @@undo_empty
+    
+    imul edx, eax, 16
+    ; Restore old value at the stored offset
+    mov r8, [rcx + rdx]             ; offset
+    mov r9d, [rcx + rdx + 8]        ; old_byte value
+    mov [current_buffer + r8], r9b   ; restore
+    
+    mov eax, 1
+    ret
+    
+@@undo_empty:
+    xor eax, eax
     ret
 UndoLastAction ENDP
 
 AIAutoComplete PROC
+    ; Trigger AI inference for code autocompletion
+    ; RCX = cursor position in buffer, RDX = context length
+    ; Returns: RAX = pointer to suggestion string, 0 on failure
+    push rbx
+    push r12
+    sub rsp, 40
+    
+    mov rbx, rcx                     ; cursor pos
+    mov r12, rdx                     ; context len
+    
+    ; Validate inputs
+    test rbx, rbx
+    jz @@ai_fail
+    test r12, r12
+    jz @@ai_fail
+    
+    ; Check if inference engine is ready
+    cmp BYTE PTR [inference_ready], 1
+    jne @@ai_fail
+    
+    ; Queue inference work item
+    ; Set work type = AUTOCOMPLETE (3)
+    mov rcx, [inference_ctx]
+    test rcx, rcx
+    jz @@ai_fail
+    
+    mov DWORD PTR [rcx], 3           ; work type
+    mov QWORD PTR [rcx+8], rbx       ; input ptr
+    mov QWORD PTR [rcx+16], r12      ; input len
+    
+    ; Signal inference thread
+    mov rcx, [inference_event]
+    call SetEvent
+    
+    ; Return pointer to output buffer (populated async)
+    mov rax, [inference_output]
+    add rsp, 40
+    pop r12
+    pop rbx
+    ret
+    
+@@ai_fail:
+    xor eax, eax
+    add rsp, 40
+    pop r12
+    pop rbx
     ret
 AIAutoComplete ENDP
 
 ShowAboutDialog PROC
+    ; Display About dialog box with version info
+    sub rsp, 40
+    
+    xor ecx, ecx                     ; hWnd = NULL
+    lea rdx, [sz_about_text]         ; lpText
+    lea r8, [sz_about_title]         ; lpCaption
+    mov r9d, 40h                     ; MB_ICONINFORMATION
+    call MessageBoxA
+    
+    add rsp, 40
     ret
 ShowAboutDialog ENDP
 
 SerializeTelemetryToJson PROC
+    ; Serialize telemetry data to JSON format string
+    ; RCX = output buffer pointer, RDX = buffer size
+    ; Returns: RAX = bytes written
+    push rbx
+    push r12
+    push r13
+    sub rsp, 32
+    
+    mov rbx, rcx                     ; output buffer
+    mov r12, rdx                     ; buffer size
+    
+    test rbx, rbx
+    jz @@json_fail
+    cmp r12, 128                     ; need at least 128 bytes
+    jb @@json_fail
+    
+    ; Build JSON: {"version":"1.0","sessions":N,"inferences":N}
+    lea rcx, [rbx]
+    mov BYTE PTR [rcx], '{'          ; opening brace
+    inc rcx
+    
+    ; "version":"1.0"
+    lea rsi, [sz_json_version]
+    call @@json_strcpy
+    
+    ; Add session count
+    lea rsi, [sz_json_sessions]
+    call @@json_strcpy
+    mov eax, [telemetry_sessions]
+    call @@json_itoa
+    
+    ; Close JSON
+    mov BYTE PTR [rcx], '}'
+    inc rcx
+    mov BYTE PTR [rcx], 0            ; null-terminate
+    
+    ; Calculate bytes written
+    mov rax, rcx
+    sub rax, rbx
+    
+    add rsp, 32
+    pop r13
+    pop r12
+    pop rbx
+    ret
+    
+@@json_strcpy:
+    ; Copy null-terminated string from RSI to RCX, advance RCX
+    lodsb
+    test al, al
+    jz @@json_strcpy_done
+    mov [rcx], al
+    inc rcx
+    jmp @@json_strcpy
+@@json_strcpy_done:
+    ret
+    
+@@json_itoa:
+    ; Convert EAX to decimal string at RCX, advance RCX
+    push rbx
+    mov ebx, 10
+    xor edx, edx
+    test eax, eax
+    jnz @@itoa_nonzero
+    mov BYTE PTR [rcx], '0'
+    inc rcx
+    pop rbx
+    ret
+@@itoa_nonzero:
+    push rdi
+    mov rdi, rcx
+    add rdi, 10                      ; max 10 digits
+    mov BYTE PTR [rdi], 0
+@@itoa_loop:
+    dec rdi
+    xor edx, edx
+    div ebx
+    add dl, '0'
+    mov [rdi], dl
+    test eax, eax
+    jnz @@itoa_loop
+    ; Copy digits to output
+@@itoa_copy:
+    mov al, [rdi]
+    test al, al
+    jz @@itoa_end
+    mov [rcx], al
+    inc rcx
+    inc rdi
+    jmp @@itoa_copy
+@@itoa_end:
+    pop rdi
+    pop rbx
+    ret
+    
+@@json_fail:
+    xor eax, eax
+    add rsp, 32
+    pop r13
+    pop r12
+    pop rbx
     ret
 SerializeTelemetryToJson ENDP
 

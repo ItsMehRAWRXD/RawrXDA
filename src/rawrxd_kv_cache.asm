@@ -1,6 +1,10 @@
 .code
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; =========================================================================================
 ; RawrXD KV Cache Manager (AVX-512)
 ; Handles Paged Attention KV Blocks
@@ -47,15 +51,36 @@ done:
 KVCache_Update_AVX512 endp
 
 ; -----------------------------------------------------------------------------------------
-; KVCache_Retrieve_AVX512
+; KVCache_Retrieve_AVX512(float* cache, float* dst, int pos, int head_dim)
+; RCX = cache base
+; RDX = dst vector (output)
+; R8 = position index
+; R9 = head dimension (must be multiple of 16 for AVX-512)
 ; -----------------------------------------------------------------------------------------
 KVCache_Retrieve_AVX512 proc frame
     push rbp
     mov rbp, rsp
     .endprolog
-    
-    ; Stub: Just returns
-    
+
+    ; Calculate offset: pos * head_dim * sizeof(float)
+    imul r8, r9
+    shl r8, 2                   ; * 4 bytes per float
+    add rcx, r8                 ; src ptr = cache + offset
+
+    ; Copy loop (using ZMM registers — 64 bytes = 16 floats per iteration)
+retrieve_loop:
+    cmp r9, 0
+    jle retrieve_done
+
+    vmovups zmm0, zmmword ptr [rcx]
+    vmovups zmmword ptr [rdx], zmm0
+
+    add rcx, 64
+    add rdx, 64
+    sub r9, 16
+    jmp retrieve_loop
+
+retrieve_done:
     mov rsp, rbp
     pop rbp
     ret

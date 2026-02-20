@@ -1,32 +1,33 @@
 #ifndef EXTENSION_PANEL_H
 #define EXTENSION_PANEL_H
 
-#include <QWidget>
-#include <QListWidget>
-#include <QPushButton>
-#include <QLabel>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
+// ============================================================================
+// ExtensionPanel — C++20, Win32. No Qt. (QWidget, QListWidget, signals removed)
+// ============================================================================
+
+#include <functional>
+#include <string>
 #include "extension_manager.h"
 
 namespace IDE {
 
-class ExtensionPanel : public QWidget {
-    Q_OBJECT
-
+class ExtensionPanel {
 public:
-    explicit ExtensionPanel(QWidget* parent = nullptr);
-    ~ExtensionPanel() override;
+    using ExtensionEnabledFn = std::function<void(const std::string&)>;
+    using ExtensionDisabledFn = std::function<void(const std::string&)>;
+    using ExtensionInstalledFn = std::function<void(const std::string&)>;
+
+    explicit ExtensionPanel(void* parent = nullptr);
+    ~ExtensionPanel();
 
     void refreshExtensionList();
 
-signals:
-    void extensionEnabled(const QString& name);
-    void extensionDisabled(const QString& name);
-    void extensionInstalled(const QString& name);
+    void setOnExtensionEnabled(ExtensionEnabledFn fn) { m_onExtensionEnabled = std::move(fn); }
+    void setOnExtensionDisabled(ExtensionDisabledFn fn) { m_onExtensionDisabled = std::move(fn); }
+    void setOnExtensionInstalled(ExtensionInstalledFn fn) { m_onExtensionInstalled = std::move(fn); }
 
-private slots:
-    void onExtensionSelected(QListWidgetItem* item);
+private:
+    void onExtensionSelected(void* item);
     void onCreateClicked();
     void onInstallClicked();
     void onEnableClicked();
@@ -34,26 +35,26 @@ private slots:
     void onUninstallClicked();
     void onRemoveClicked();
     void onRefreshClicked();
-
-private:
     void setupUI();
     void updateExtensionDetails();
-    QString getCurrentExtensionName() const;
-    void showMessage(const QString& message, bool isError = false);
+    std::string getCurrentExtensionName() const;
+    void showMessage(const std::string& message, bool isError = false);
 
-    // UI Components
-    QListWidget* extensionList_;
-    QLabel* statusLabel_;
-    QLabel* detailsLabel_;
-    QPushButton* createBtn_;
-    QPushButton* installBtn_;
-    QPushButton* enableBtn_;
-    QPushButton* disableBtn_;
-    QPushButton* uninstallBtn_;
-    QPushButton* removeBtn_;
-    QPushButton* refreshBtn_;
+    void* extensionList_ = nullptr;
+    void* statusLabel_ = nullptr;
+    void* detailsLabel_ = nullptr;
+    void* createBtn_ = nullptr;
+    void* installBtn_ = nullptr;
+    void* enableBtn_ = nullptr;
+    void* disableBtn_ = nullptr;
+    void* uninstallBtn_ = nullptr;
+    void* removeBtn_ = nullptr;
+    void* refreshBtn_ = nullptr;
 
     ExtensionManager& extManager_;
+    ExtensionEnabledFn m_onExtensionEnabled;
+    ExtensionDisabledFn m_onExtensionDisabled;
+    ExtensionInstalledFn m_onExtensionInstalled;
 };
 
 } // namespace IDE

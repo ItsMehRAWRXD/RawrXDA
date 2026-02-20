@@ -2,6 +2,10 @@
 ; RawrXD_NativeHost.asm
 ; ============================================================================
 OPTION CASEMAP:NONE
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 OPTION DOTNAME
 
 includelib kernel32.lib
@@ -174,6 +178,7 @@ main PROC
     call Titan_Shutdown
     mov ecx, 0
     call ExitProcess
+    ret
 
 main ENDP
 

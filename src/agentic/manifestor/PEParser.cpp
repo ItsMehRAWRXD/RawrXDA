@@ -95,68 +95,53 @@ std::vector<PEExport> PEParser::getExports() const {
 
 std::vector<PEImport> PEParser::getImports() const {
     std::vector<PEImport> imports;
-    
-    if (!isValidPE()) return imports;
 
-    DWORD importRva = m_ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-    if (importRva == 0) return imports;
+    if (!isValidPE()) {
+        return imports;
+    }
 
-    // Convert RVA to VA within our mapping
-    // Note: Using simple offset logic assuming section mapping corresponds to file offset for simple implementation
-    // Ideally we should traverse section headers to find which section contains the RVA.
-    // For mapped view (LoadLibrary style), RVA + Base is fine.
-    // For CreateFileMapping (Raw file), RVA != FileOffset. 
-    // Wait, MapViewOfFile maps the file as it is on disk (raw) unless SEC_IMAGE is used.
-    // The previous code used CreateFileMapping without SEC_IMAGE, so it is a RAW mapping.
-    // We must convert RVA to FileOffset.
-
-    auto rvaToFileOffset = [&](DWORD rva) -> DWORD {
-        auto* sectionHeader = IMAGE_FIRST_SECTION(m_ntHeaders);
-        for (WORD i = 0; i < m_ntHeaders->FileHeader.NumberOfSections; ++i, ++sectionHeader) {
-            if (rva >= sectionHeader->VirtualAddress && 
-                rva < sectionHeader->VirtualAddress + sectionHeader->Misc.VirtualSize) {
-                return rva - sectionHeader->VirtualAddress + sectionHeader->PointerToRawData;
-            }
-        }
-        return 0; 
-    };
-
-    DWORD importOffset = rvaToFileOffset(importRva);
-    if (!importOffset) return imports;
+    // Get import directory from data directory
+    auto& importDir = m_ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+    if (importDir.VirtualAddress == 0 || importDir.Size == 0) {
+        return imports;
+    }
 
     auto* importDesc = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(
-        static_cast<uint8_t*>(m_moduleBase) + importOffset);
+        static_cast<uint8_t*>(m_moduleBase) + importDir.VirtualAddress);
 
+    // Iterate through import descriptors (null-terminated array)
     while (importDesc->Name != 0) {
-        DWORD nameOffset = rvaToFileOffset(importDesc->Name);
-        if(!nameOffset) break;
-        
-        std::string dllName = reinterpret_cast<const char*>(static_cast<uint8_t*>(m_moduleBase) + nameOffset);
+        PEImport imp;
+        imp.dllName = reinterpret_cast<const char*>(
+            static_cast<uint8_t*>(m_moduleBase) + importDesc->Name);
+        imp.firstThunk = importDesc->FirstThunk;
+        imp.originalFirstThunk = importDesc->OriginalFirstThunk;
+        imp.timeDateStamp = importDesc->TimeDateStamp;
 
-        DWORD thunkOffset = importDesc->OriginalFirstThunk ? rvaToFileOffset(importDesc->OriginalFirstThunk) : rvaToFileOffset(importDesc->FirstThunk);
-        if(!thunkOffset) { importDesc++; continue; }
+        // Parse imported function names from the ILT/INT
+        DWORD thunkRVA = importDesc->OriginalFirstThunk ?
+                         importDesc->OriginalFirstThunk : importDesc->FirstThunk;
 
-        auto* thunk = reinterpret_cast<IMAGE_THUNK_DATA*>(static_cast<uint8_t*>(m_moduleBase) + thunkOffset);
-        
+        auto* thunk = reinterpret_cast<IMAGE_THUNK_DATA*>(
+            static_cast<uint8_t*>(m_moduleBase) + thunkRVA);
+
         while (thunk->u1.AddressOfData != 0) {
-            PEImport imp;
-            imp.dllName = dllName;
-            
-            if (thunk->u1.Ordinal & IMAGE_ORDINAL_FLAG) {
-                imp.isOrdinal = true;
-                imp.ordinal = static_cast<WORD>(IMAGE_ORDINAL(thunk->u1.Ordinal));
+            if (!(thunk->u1.Ordinal & IMAGE_ORDINAL_FLAG)) {
+                // Import by name
+                auto* importByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(
+                    static_cast<uint8_t*>(m_moduleBase) + thunk->u1.AddressOfData);
+                imp.functionNames.push_back(importByName->Name);
+                imp.hints.push_back(importByName->Hint);
             } else {
-                imp.isOrdinal = false;
-                DWORD nameDataOffset = rvaToFileOffset(static_cast<DWORD>(thunk->u1.AddressOfData));
-                if(nameDataOffset) {
-                    auto* importByName = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(
-                        static_cast<uint8_t*>(m_moduleBase) + nameDataOffset);
-                    imp.functionName = importByName->Name;
-                }
+                // Import by ordinal
+                uint16_t ordinal = static_cast<uint16_t>(thunk->u1.Ordinal & 0xFFFF);
+                imp.functionNames.push_back("Ordinal#" + std::to_string(ordinal));
+                imp.hints.push_back(ordinal);
             }
-            imports.push_back(imp);
             thunk++;
         }
+
+        imports.push_back(imp);
         importDesc++;
     }
 

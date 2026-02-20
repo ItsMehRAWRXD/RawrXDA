@@ -1,17 +1,16 @@
 #pragma once
 
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QDateTime>
+#include <string>
 #include <vector>
 #include <deque>
 #include <memory>
 #include <unordered_map>
+#include <chrono>
+#include <nlohmann/json.hpp>
 
 /**
  * @class AgenticLoopState
- * @brief Complete state management for iterative reasoning loops with full context
+ * @brief Complete state management for iterative reasoning loops with full context (Qt-free)
  * 
  * Manages:
  * - Reasoning iterations and history
@@ -25,6 +24,8 @@
 class AgenticLoopState
 {
 public:
+    using TimePoint = std::chrono::system_clock::time_point;
+
     // Iteration result status
     enum class IterationStatus {
         NotStarted,
@@ -47,44 +48,44 @@ public:
 
     // Agent decision record
     struct Decision {
-        QDateTime timestamp;
+        TimePoint timestamp;
         ReasoningPhase phase;
-        QString description;
-        QJsonObject reasoning;
-        QJsonObject outcome;
+        std::string description;
+        nlohmann::json reasoning;
+        nlohmann::json outcome;
         float confidence;
         bool success;
         int retryCount = 0;
-        QString recoveryAction;
+        std::string recoveryAction;
     };
 
     // Iteration record
     struct Iteration {
         int iterationNumber;
-        QDateTime startTime;
-        QDateTime endTime;
+        TimePoint startTime;
+        TimePoint endTime;
         ReasoningPhase currentPhase;
         IterationStatus status;
         std::vector<Decision> decisions;
-        QString goalStatement;
-        QJsonObject contextSnapshot;
-        QString resultSummary;
+        std::string goalStatement;
+        nlohmann::json contextSnapshot;
+        std::string resultSummary;
         float successScore;
         int errorCount = 0;
-        QStringList appliedStrategies;
+        std::vector<std::string> appliedStrategies;
     };
 
     // Error recovery record
     struct ErrorRecord {
-        QDateTime timestamp;
-        QString errorType;
-        QString errorMessage;
-        QString stackTrace;
+        TimePoint timestamp;
+        std::string errorType;
+        std::string errorMessage;
+        std::string stackTrace;
         ReasoningPhase phase;
-        QString recoveryStrategy;
+        std::string recoveryStrategy;
         bool recoverySucceeded;
         int recoveryAttempt;
-        QJsonObject context;
+        nlohmann::json context;
     };
 
 public:
@@ -92,8 +93,8 @@ public:
     ~AgenticLoopState();
 
     // ===== ITERATION MANAGEMENT =====
-    void startIteration(const QString& goal);
-    void endIteration(IterationStatus status, const QString& result);
+    void startIteration(const std::string& goal);
+    void endIteration(IterationStatus status, const std::string& result);
     Iteration* getCurrentIteration();
     const std::vector<Iteration>& getIterationHistory() const { return m_iterations; }
 
@@ -101,17 +102,17 @@ public:
     void setCurrentPhase(ReasoningPhase phase);
     ReasoningPhase getCurrentPhase() const { return m_currentPhase; }
     float getPhaseProgress() const;
-    QStringList getAllPhaseTransitions() const;
+    std::vector<std::string> getAllPhaseTransitions() const;
 
     // ===== DECISION TRACKING =====
     void recordDecision(
-        const QString& description,
-        const QJsonObject& reasoning,
+        const std::string& description,
+        const nlohmann::json& reasoning,
         float confidence
     );
     void recordDecisionOutcome(
         int decisionIndex,
-        const QJsonObject& outcome,
+        const nlohmann::json& outcome,
         bool success
     );
     std::vector<Decision> getDecisionHistory(int limit = -1) const;
@@ -121,74 +122,79 @@ public:
 
     // ===== ERROR TRACKING AND RECOVERY =====
     void recordError(
-        const QString& errorType,
-        const QString& message,
-        const QString& stackTrace = ""
+        const std::string& errorType,
+        const std::string& message,
+        const std::string& stackTrace = ""
     );
     void recordErrorRecovery(
         int errorIndex,
-        const QString& strategy,
+        const std::string& strategy,
         bool succeeded
     );
     const std::deque<ErrorRecord>& getErrorHistory(size_t limit = 50) const;
-    int getTotalErrorCount() const { return m_errorHistory.size(); }
+    int getTotalErrorCount() const { return static_cast<int>(m_errorHistory.size()); }
     float getErrorRate() const;
-    QString generateErrorAnalysis() const;
+    std::string generateErrorAnalysis() const;
 
     // ===== STATE SNAPSHOTS (CHECKPOINTING) =====
-    QJsonObject takeSnapshot();
-    bool restoreFromSnapshot(const QJsonObject& snapshot);
-    QJsonObject getLastSnapshot() const { return m_lastSnapshot; }
+    nlohmann::json takeSnapshot();
+    bool restoreFromSnapshot(const nlohmann::json& snapshot);
+    nlohmann::json getLastSnapshot() const { return m_lastSnapshot; }
 
     // ===== MEMORY AND CONTEXT WINDOW =====
-    void addToMemory(const QString& key, const QVariant& value);
-    QVariant getFromMemory(const QString& key);
-    void removeFromMemory(const QString& key);
-    QJsonObject getAllMemory() const;
-    void clearMemoryExcept(const QStringList& keysToKeep);
+    void addToMemory(const std::string& key, const nlohmann::json& value);
+    nlohmann::json getFromMemory(const std::string& key);
+    void removeFromMemory(const std::string& key);
+    nlohmann::json getAllMemory() const;
+    void clearMemoryExcept(const std::vector<std::string>& keysToKeep);
     
     // Context window management - keep last N iterations in context
     void setContextWindowSize(int size);
-    QJsonArray getContextWindow() const;
-    QString formatContextForModel() const;
+    nlohmann::json getContextWindow() const;
+    std::string formatContextForModel() const;
 
     // ===== GOAL AND PROGRESS TRACKING =====
-    void setGoal(const QString& goal) { m_currentGoal = goal; }
-    QString getGoal() const { return m_currentGoal; }
+    void setGoal(const std::string& goal) { m_currentGoal = goal; }
+    std::string getGoal() const { return m_currentGoal; }
     void updateProgress(int current, int total);
     float getProgressPercentage() const;
-    QJsonObject getProgressInfo() const;
+    nlohmann::json getProgressInfo() const;
 
     // ===== CONSTRAINT MANAGEMENT =====
-    void addConstraint(const QString& key, const QString& constraint);
-    void removeConstraint(const QString& key);
-    QJsonObject getAllConstraints() const { return m_constraints; }
-    bool validateAgainstConstraints(const QJsonObject& action) const;
+    void addConstraint(const std::string& key, const std::string& constraint);
+    void removeConstraint(const std::string& key);
+    nlohmann::json getAllConstraints() const { return m_constraints; }
+    bool validateAgainstConstraints(const nlohmann::json& action) const;
 
     // ===== STRATEGY TRACKING =====
-    void recordAppliedStrategy(const QString& strategy);
-    QStringList getAppliedStrategies() const { return m_appliedStrategies; }
-    QStringList getSuggestedStrategies() const { return m_suggestedStrategies; }
-    void setSuggestedStrategies(const QStringList& strategies);
+    void recordAppliedStrategy(const std::string& strategy);
+    std::vector<std::string> getAppliedStrategies() const { return m_appliedStrategies; }
+    std::vector<std::string> getSuggestedStrategies() const { return m_suggestedStrategies; }
+    void setSuggestedStrategies(const std::vector<std::string>& strategies);
 
     // ===== OVERALL STATE METRICS =====
-    QJsonObject getMetrics() const;
-    int getTotalIterations() const { return m_iterations.size(); }
+    nlohmann::json getMetrics() const;
+    int getTotalIterations() const { return static_cast<int>(m_iterations.size()); }
     int getCompletedIterations() const;
     int getFailedIterations() const;
     float getOverallSuccessRate() const;
-    QString getStateAsSummary() const;
+    std::string getStateAsSummary() const;
 
     // ===== SERIALIZATION =====
-    QString serializeState() const;
-    bool deserializeState(const QString& jsonStr);
+    std::string serializeState() const;
+    bool deserializeState(const std::string& jsonStr);
 
     // ===== DEBUGGING =====
-    QString generateDebugReport() const;
+    std::string generateDebugReport() const;
     void setDebugMode(bool enabled) { m_debugMode = enabled; }
     bool isDebugMode() const { return m_debugMode; }
 
 private:
+    // Helper: ISO timestamp from time_point
+    static std::string timePointToISO(const TimePoint& tp);
+    // Helper: HH:MM:SS from time_point
+    static std::string timePointToHMS(const TimePoint& tp);
+
     // State data
     std::vector<Iteration> m_iterations;
     std::deque<ErrorRecord> m_errorHistory;
@@ -196,33 +202,33 @@ private:
     
     ReasoningPhase m_currentPhase;
     IterationStatus m_currentStatus;
-    QString m_currentGoal;
+    std::string m_currentGoal;
     
-    QDateTime m_stateStartTime;
-    QDateTime m_lastUpdateTime;
+    TimePoint m_stateStartTime;
+    TimePoint m_lastUpdateTime;
     
     int m_progressCurrent = 0;
     int m_progressTotal = 0;
     int m_contextWindowSize = 5;
     
     // Memory store
-    std::unordered_map<std::string, QVariant> m_memory;
-    QJsonObject m_constraints;
+    std::unordered_map<std::string, nlohmann::json> m_memory;
+    nlohmann::json m_constraints;
     
     // Strategy tracking
-    QStringList m_appliedStrategies;
-    QStringList m_suggestedStrategies;
+    std::vector<std::string> m_appliedStrategies;
+    std::vector<std::string> m_suggestedStrategies;
     
     // Snapshots for recovery
-    QJsonObject m_lastSnapshot;
-    std::vector<QJsonObject> m_snapshotHistory;
+    nlohmann::json m_lastSnapshot;
+    std::vector<nlohmann::json> m_snapshotHistory;
     
     // Debug
     bool m_debugMode = false;
 
     // Helper methods
-    QString phaseToString(ReasoningPhase phase) const;
-    ReasoningPhase stringToPhase(const QString& str) const;
-    QString statusToString(IterationStatus status) const;
-    IterationStatus stringToStatus(const QString& str) const;
+    std::string phaseToString(ReasoningPhase phase) const;
+    ReasoningPhase stringToPhase(const std::string& str) const;
+    std::string statusToString(IterationStatus status) const;
+    IterationStatus stringToStatus(const std::string& str) const;
 };

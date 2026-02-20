@@ -12,9 +12,19 @@
 #include <cstring>
 #include "../inference/InferenceEngine.hpp"
 
+#include "logging/logger.h"
+static Logger s_logger("simple_gpu_test");
+
 void printUsage(const char* prog_name) {
-
-
+    s_logger.info("Simple GPU Test - GGUF Model Inference Tool\n\n");
+    s_logger.info("Usage: ");
+    s_logger.info("Options:\n");
+    s_logger.info("  --model <path>   Path to GGUF model file (required)\n");
+    s_logger.info("  --tokens <num>   Number of tokens to generate (required)\n");
+    s_logger.info("  --prompt <text>  Prompt text (default: 'Test')\n");
+    s_logger.info("  --help           Show this help message\n\n");
+    s_logger.info("Output Format (JSON):\n");
+    s_logger.info("  {\");
 }
 
 struct TestConfig {
@@ -57,7 +67,7 @@ int main(int argc, char* argv[]) {
     
     if (!config.valid) {
         printUsage(argv[0]);
-        
+        s_logger.error( "\nError: Missing required arguments\n";
         return 1;
     }
     
@@ -71,7 +81,7 @@ int main(int argc, char* argv[]) {
         auto load_end = std::chrono::high_resolution_clock::now();
         
         if (!loaded) {
-            
+            s_logger.info("{\");
             return 1;
         }
         
@@ -86,15 +96,16 @@ int main(int argc, char* argv[]) {
         double tokens_per_sec = (config.num_tokens * 1000.0) / total_time_ms;
         
         // Output JSON result
-
-
+        s_logger.info( std::fixed << std::setprecision(2);
+        s_logger.info("{");
+        
         // Unload
         engine.unloadModel();
         
         return 0;
         
     } catch (const std::exception& e) {
-        
+        s_logger.info("{\");
         return 1;
     }
 }

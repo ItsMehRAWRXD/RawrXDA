@@ -29,6 +29,7 @@ namespace RawrXD {
     class GGUFParser;
     class VulkanCompute;
     namespace Net { class NetworkManager; }
+    namespace IDE { class ToolchainIntegration; }
 }
 
 namespace RawrXD {
@@ -55,6 +56,7 @@ public:
     // Component access
     std::shared_ptr<AgenticIDE> getIDE() const { return m_ide; }
     std::shared_ptr<TokenGenerator> getTokenizer() const { return m_tokenizer; }
+    RawrXD::IDE::ToolchainIntegration* getToolchain() const { return m_toolchain.get(); }
     
 private:
     IDEConfig m_config;
@@ -72,6 +74,7 @@ private:
     std::shared_ptr<CPUInferenceEngine> m_inferenceEngine;
     std::shared_ptr<VulkanCompute> m_vulkanCompute;
     std::shared_ptr<GGUFParser> m_ggufParser;
+    std::unique_ptr<RawrXD::IDE::ToolchainIntegration> m_toolchain;
     
     // Threads
     std::thread m_mainThread;
@@ -92,6 +95,7 @@ private:
     RawrXD::Expected<void, IDEError> setupChainOfThought();
     RawrXD::Expected<void, IDEError> setupEditor();
     RawrXD::Expected<void, IDEError> setupInference();
+    RawrXD::Expected<void, IDEError> setupToolchain();
     RawrXD::Expected<void, IDEError> startBackgroundThreads();
     
     void mainLoop();

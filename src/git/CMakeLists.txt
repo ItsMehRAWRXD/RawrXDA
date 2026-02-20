@@ -6,8 +6,10 @@ add_library(RawrXDGit STATIC
     ai_merge_resolver.cpp
 )
 
+# Qt-free: uses nlohmann::json + STL + WinHTTP
 target_link_libraries(RawrXDGit
     PUBLIC
+        $<$<PLATFORM_ID:Windows>:winhttp>
     PRIVATE
         RawrXDOrchestration
 )

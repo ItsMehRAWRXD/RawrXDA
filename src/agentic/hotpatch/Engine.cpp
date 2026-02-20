@@ -329,7 +329,12 @@ bool Engine::applyHook(HookConfig& config) {
             if (!prot.isValid()) {
                 return false;
             }
-            // Apply patch (placeholder)
+            // Save original bytes before patching
+            config.originalCode.resize(config.patchSize);
+            memcpy(config.originalCode.data(), config.target, config.patchSize);
+            // Apply the patch data over the target memory
+            memcpy(config.target, config.patchData.data(),
+                   std::min(config.patchSize, static_cast<size_t>(config.patchData.size())));
             break;
         }
         default:

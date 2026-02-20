@@ -1,11 +1,14 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QJsonObject>
+// Data structs use std::string (Qt-free). Widget base requires Qt when building Qt UI.
 #include <vector>
 #include <map>
 #include <memory>
+#include <string>
+
+#include <QWidget>
+#include <QString>
+#include <QJsonObject>
 
 class QTabWidget;
 class QLabel;
@@ -65,13 +68,13 @@ public:
         int headIndex;
         int sequenceLength;
         std::vector<std::vector<float>> weights;  // (seq_len, seq_len)
-        QString queryTokens;
-        QString keyTokens;
+        std::string queryTokens;
+        std::string keyTokens;
     };
 
     struct FeatureImportance {
         int featureId;
-        QString featureName;
+        std::string featureName;
         float importance;           // 0.0 to 1.0
         float stdDev;
         int rank;
@@ -79,7 +82,7 @@ public:
 
     struct GradientFlowData {
         int layerIndex;
-        QString layerName;
+        std::string layerName;
         float minGradient;
         float maxGradient;
         float meanGradient;
@@ -89,7 +92,7 @@ public:
 
     struct ActivationStats {
         int layerIndex;
-        QString layerName;
+        std::string layerName;
         float mean;
         float stdDev;
         float min;
@@ -100,7 +103,7 @@ public:
 
     struct LayerAttribution {
         int layerIndex;
-        QString layerName;
+        std::string layerName;
         float attributionScore;     // 0.0 to 1.0
         float relativeImportance;   // Normalized importance
     };

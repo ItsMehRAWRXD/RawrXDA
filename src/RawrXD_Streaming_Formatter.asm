@@ -6,6 +6,10 @@
 OPTION DOTNAME
 include RawrXD_Defs.inc
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERN send : PROC
 
 ; ═══════════════════════════════════════════════════════════════════════════════

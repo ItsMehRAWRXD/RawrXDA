@@ -3,12 +3,19 @@
 // Explorer, Search, Source Control, Run & Debug, Extensions
 
 #include "Win32IDE.h"
+#include "Win32IDE_IELabels.h"
 #include <commctrl.h>
+#include <commdlg.h>
+#include <shellapi.h>
 #include <shlwapi.h>
 #include <regex>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+#include "IDELogger.h"
+#include "vsix_loader.h"
+#include <nlohmann/json.hpp>
 
 // Define GET_X_LPARAM and GET_Y_LPARAM if not available
 #ifndef GET_X_LPARAM
@@ -23,6 +30,19 @@
 
 namespace fs = std::filesystem;
 
+namespace {
+// UTF-8 to UTF-16 for Unicode Win32 APIs (C++20, no Qt)
+static std::wstring utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), len) == 0)
+        return {};
+    return out;
+}
+} // namespace
+
 // Activity Bar constants
 constexpr int ACTIVITY_BAR_WIDTH = 48;
 constexpr int SIDEBAR_DEFAULT_WIDTH = 250;
@@ -35,6 +55,7 @@ constexpr int IDC_ACTIVITY_SEARCH = 6002;
 constexpr int IDC_ACTIVITY_SCM = 6003;
 constexpr int IDC_ACTIVITY_DEBUG = 6004;
 constexpr int IDC_ACTIVITY_EXTENSIONS = 6005;
+constexpr int IDC_ACTIVITY_RECOVERY = 6006;
 
 constexpr int IDC_EXPLORER_TREE = 6010;
 constexpr int IDC_EXPLORER_NEW_FILE = 6011;
@@ -71,10 +92,15 @@ constexpr int IDC_EXT_DETAILS = 6052;
 constexpr int IDC_EXT_INSTALL = 6053;
 constexpr int IDC_EXT_UNINSTALL = 6054;
 
+// File Explorer IDs from Win32IDE.cpp (used in FileExplorerProc / SidebarProc)
+constexpr int IDC_FILE_EXPLORER = 1025;
+constexpr int IDC_FILE_TREE = 1026;
+
 // ============================================================================
 // Activity Bar Implementation
 // ============================================================================
 
+// ESP:m_hwndActivityBar — Activity Bar (Files, Search, SCM, Debug, Extensions, Recovery)
 void Win32IDE::createActivityBar(HWND hwndParent)
 {
     m_hwndActivityBar = CreateWindowExA(
@@ -94,7 +120,8 @@ void Win32IDE::createActivityBar(HWND hwndParent)
         {IDC_ACTIVITY_SEARCH, "Search"},
         {IDC_ACTIVITY_SCM, "Source"},
         {IDC_ACTIVITY_DEBUG, "Debug"},
-        {IDC_ACTIVITY_EXTENSIONS, "Exts"}
+        {IDC_ACTIVITY_EXTENSIONS, "Exts"},
+        {IDC_ACTIVITY_RECOVERY, "Recov"}
     };
 
     for (const auto& btn : buttons) {
@@ -107,7 +134,7 @@ void Win32IDE::createActivityBar(HWND hwndParent)
         y += 48;
     }
 
-    appendToOutput("Activity Bar created with 5 views\n", "Output", OutputSeverity::Info);
+    appendToOutput("Activity Bar created with 6 views\n", "Output", OutputSeverity::Info);
 }
 
 LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -124,6 +151,7 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
             case IDC_ACTIVITY_SCM: pThis->setSidebarView(SidebarView::SourceControl); break;
             case IDC_ACTIVITY_DEBUG: pThis->setSidebarView(SidebarView::RunDebug); break;
             case IDC_ACTIVITY_EXTENSIONS: pThis->setSidebarView(SidebarView::Extensions); break;
+            case IDC_ACTIVITY_RECOVERY: pThis->setSidebarView(SidebarView::DiskRecovery); break;
             }
         }
         return 0;
@@ -148,13 +176,13 @@ LRESULT CALLBACK Win32IDE::ActivityBarProc(HWND hwnd, UINT uMsg, WPARAM wParam, 
 }
 
 // ============================================================================
-// Primary Sidebar Container
+// Primary Sidebar Container — ESP:m_hwndSidebar, m_hwndSidebarContent
 // ============================================================================
 
 void Win32IDE::createPrimarySidebar(HWND hwndParent)
 {
     m_hwndSidebar = CreateWindowExA(
-        0, "STATIC", "Sidebar",
+        0, "STATIC", RAWRXD_IDE_LABEL_SIDEBAR,
         WS_CHILD | WS_VISIBLE | WS_BORDER,
         ACTIVITY_BAR_WIDTH, 0, SIDEBAR_DEFAULT_WIDTH, 600,
         hwndParent, nullptr, m_hInstance, nullptr
@@ -180,6 +208,7 @@ void Win32IDE::createPrimarySidebar(HWND hwndParent)
     createSourceControlView(m_hwndSidebarContent);
     createRunDebugView(m_hwndSidebarContent);
     createExtensionsView(m_hwndSidebarContent);
+    createDiskRecoveryView(m_hwndSidebarContent);
 
     // Default to Explorer view
     setSidebarView(SidebarView::Explorer);
@@ -214,6 +243,19 @@ LRESULT CALLBACK Win32IDE::SidebarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
             pThis->resizeSidebar(width, height);
         }
         return 0;
+    }
+
+    case WM_NOTIFY: {
+        if (pThis) {
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->code == TVN_DELETEITEM && pnmh->idFrom == IDC_FILE_EXPLORER) {
+                NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                if (pnmtv->itemOld.lParam)
+                    delete[] reinterpret_cast<char*>(pnmtv->itemOld.lParam);
+                return 0;
+            }
+        }
+        break;
     }
     }
 
@@ -251,6 +293,19 @@ void Win32IDE::setSidebarView(SidebarView view)
     ShowWindow(m_hwndDebugToolbar, SW_HIDE);
     ShowWindow(m_hwndExtensionsList, SW_HIDE);
     ShowWindow(m_hwndExtensionSearch, SW_HIDE);
+    // Recovery view controls
+    if (m_hwndRecoveryTitle)     ShowWindow(m_hwndRecoveryTitle, SW_HIDE);
+    if (m_hwndRecoveryDriveList) ShowWindow(m_hwndRecoveryDriveList, SW_HIDE);
+    if (m_hwndRecoveryOutPath)   ShowWindow(m_hwndRecoveryOutPath, SW_HIDE);
+    if (m_hwndRecoveryStatus)    ShowWindow(m_hwndRecoveryStatus, SW_HIDE);
+    if (m_hwndRecoveryProgress)  ShowWindow(m_hwndRecoveryProgress, SW_HIDE);
+    if (m_hwndRecoveryLog)       ShowWindow(m_hwndRecoveryLog, SW_HIDE);
+    // Also hide all child buttons created in createDiskRecoveryView
+    EnumChildWindows(m_hwndSidebarContent, [](HWND hwnd, LPARAM) -> BOOL {
+        int id = GetDlgCtrlID(hwnd);
+        if (id >= 10301 && id <= 10312) ShowWindow(hwnd, SW_HIDE);
+        return TRUE;
+    }, 0);
 
     m_currentSidebarView = view;
 
@@ -292,6 +347,22 @@ void Win32IDE::setSidebarView(SidebarView view)
         appendToOutput("Extensions view activated\n", "Output", OutputSeverity::Info);
         break;
 
+    case SidebarView::DiskRecovery:
+        if (m_hwndRecoveryTitle)     ShowWindow(m_hwndRecoveryTitle, SW_SHOW);
+        if (m_hwndRecoveryDriveList) ShowWindow(m_hwndRecoveryDriveList, SW_SHOW);
+        if (m_hwndRecoveryOutPath)   ShowWindow(m_hwndRecoveryOutPath, SW_SHOW);
+        if (m_hwndRecoveryStatus)    ShowWindow(m_hwndRecoveryStatus, SW_SHOW);
+        if (m_hwndRecoveryProgress)  ShowWindow(m_hwndRecoveryProgress, SW_SHOW);
+        if (m_hwndRecoveryLog)       ShowWindow(m_hwndRecoveryLog, SW_SHOW);
+        // Show all recovery buttons/controls
+        EnumChildWindows(m_hwndSidebarContent, [](HWND hwnd, LPARAM) -> BOOL {
+            int id = GetDlgCtrlID(hwnd);
+            if (id >= 10301 && id <= 10312) ShowWindow(hwnd, SW_SHOW);
+            return TRUE;
+        }, 0);
+        appendToOutput("Disk Recovery view activated\n", "Output", OutputSeverity::Info);
+        break;
+
     default:
         break;
     }
@@ -318,6 +389,9 @@ void Win32IDE::updateSidebarContent()
     case SidebarView::Extensions:
         loadInstalledExtensions();
         break;
+    case SidebarView::DiskRecovery:
+        // Recovery panel is self-updating via timer
+        break;
     default:
         break;
     }
@@ -326,6 +400,11 @@ void Win32IDE::updateSidebarContent()
 void Win32IDE::resizeSidebar(int width, int height)
 {
     if (!m_hwndSidebarContent) return;
+
+    // LOGGING AS REQUESTED
+    char buf[256];
+    sprintf_s(buf, "Resizing Sidebar to %dx%d (ExplorerTree: %p)", width, height, m_hwndExplorerTree);
+    LOG_INFO(std::string(buf));
 
     MoveWindow(m_hwndSidebarContent, 0, 0, width, height, TRUE);
 
@@ -392,10 +471,10 @@ void Win32IDE::createExplorerView(HWND hwndParent)
         );
     }
 
-    // TreeView for file/folder structure
+    // ESP:m_hwndExplorerTree — File Explorer TreeView (IDC_EXPLORER_TREE 6010)
     appendToOutput("Creating Explorer TreeView control\n", "Output", OutputSeverity::Debug);
     m_hwndExplorerTree = CreateWindowExA(
-        WS_EX_CLIENTEDGE, WC_TREEVIEWA, "",
+        WS_EX_CLIENTEDGE, WC_TREEVIEWA, RAWRXD_IDE_LABEL_FILE_EXPLORER,
         WS_CHILD | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
         0, 30, SIDEBAR_DEFAULT_WIDTH, 570,
         hwndParent, (HMENU)IDC_EXPLORER_TREE, m_hInstance, nullptr
@@ -408,8 +487,23 @@ void Win32IDE::createExplorerView(HWND hwndParent)
     SetWindowLongPtrA(m_hwndExplorerTree, GWLP_USERDATA, (LONG_PTR)this);
     SetWindowLongPtrA(m_hwndExplorerTree, GWLP_WNDPROC, (LONG_PTR)ExplorerTreeProc);
 
-    // Set current workspace as root
-    m_explorerRootPath = "C:\\Users\\HiH8e\\OneDrive\\Desktop\\Powershield";
+    // LOGGING AS REQUESTED
+    char buf[256];
+    sprintf_s(buf, "ExplorerTree HWND created: %p (SidebarContent: %p)", m_hwndExplorerTree, m_hwndSidebarContent);
+    LOG_INFO(std::string(buf));
+    appendToOutput(std::string(buf) + "\n", "Output", OutputSeverity::Debug);
+
+    // Set current workspace as root (portable — relative to exe directory)
+    {
+        char exeDir[MAX_PATH] = {};
+        GetModuleFileNameA(nullptr, exeDir, MAX_PATH);
+        char* lastSlash = strrchr(exeDir, '\\');
+        if (lastSlash) *(lastSlash + 1) = '\0';
+        m_explorerRootPath = std::string(exeDir);
+        // Trim trailing backslash
+        if (!m_explorerRootPath.empty() && m_explorerRootPath.back() == '\\')
+            m_explorerRootPath.pop_back();
+    }
 
     appendToOutput("Explorer view created with file tree at: " + m_explorerRootPath + "\n", "Output", OutputSeverity::Info);
 }
@@ -491,8 +585,84 @@ void Win32IDE::refreshFileTree()
 
 void Win32IDE::expandFolder(const std::string& path)
 {
-    // Placeholder - full implementation would recursively load subdirectories
-    appendToOutput("Expanding folder: " + path + "\n", "Output", OutputSeverity::Info);
+    LOG_FUNCTION();
+    if (!m_hwndExplorerTree || path.empty()) return;
+
+    // Find the tree item that corresponds to this path
+    HTREEITEM hTarget = nullptr;
+    for (const auto& [item, itemPath] : m_treeItemPaths) {
+        if (itemPath == path) { hTarget = item; break; }
+    }
+    if (!hTarget) {
+        LOG_WARNING("expandFolder: no tree item found for path: " + path);
+        return;
+    }
+
+    // Check if children are already loaded (first child is not a placeholder)
+    HTREEITEM hChild = TreeView_GetChild(m_hwndExplorerTree, hTarget);
+    bool alreadyLoaded = false;
+    if (hChild) {
+        char buf[MAX_PATH] = {};
+        TVITEMA tv = {};
+        tv.hItem = hChild;
+        tv.mask = TVIF_TEXT;
+        tv.pszText = buf;
+        tv.cchTextMax = MAX_PATH;
+        if (TreeView_GetItem(m_hwndExplorerTree, &tv) && strcmp(buf, "Loading...") != 0) {
+            alreadyLoaded = true;
+        }
+    }
+
+    if (!alreadyLoaded) {
+        // Remove any placeholder children
+        while (hChild) {
+            HTREEITEM hNext = TreeView_GetNextSibling(m_hwndExplorerTree, hChild);
+            TreeView_DeleteItem(m_hwndExplorerTree, hChild);
+            hChild = hNext;
+        }
+
+        // Populate with real directory contents
+        try {
+            for (const auto& entry : fs::directory_iterator(path)) {
+                try {
+                    std::string name = entry.path().filename().string();
+                    // Skip hidden/system entries starting with '.'
+                    if (!name.empty() && name[0] == '.') continue;
+
+                    TVINSERTSTRUCTA tvis = {};
+                    tvis.hParent = hTarget;
+                    tvis.hInsertAfter = TVI_LAST;
+                    tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
+
+                    char* nameBuffer = new char[name.size() + 1];
+                    strcpy_s(nameBuffer, name.size() + 1, name.c_str());
+                    tvis.item.pszText = nameBuffer;
+                    tvis.item.lParam = entry.is_directory() ? 1 : 0;
+
+                    HTREEITEM hNew = TreeView_InsertItem(m_hwndExplorerTree, &tvis);
+                    if (hNew) {
+                        m_treeItemPaths[hNew] = entry.path().string();
+                        // Add dummy child for subdirectories so expand arrow shows
+                        if (entry.is_directory()) {
+                            TVINSERTSTRUCTA dummy = {};
+                            dummy.hParent = hNew;
+                            dummy.hInsertAfter = TVI_FIRST;
+                            dummy.item.mask = TVIF_TEXT;
+                            static char loadingText[] = "Loading...";
+                            dummy.item.pszText = loadingText;
+                            TreeView_InsertItem(m_hwndExplorerTree, &dummy);
+                        }
+                    }
+                    delete[] nameBuffer;
+                } catch (...) { continue; }
+            }
+        } catch (const std::exception& e) {
+            LOG_ERROR("expandFolder failed: " + std::string(e.what()));
+        }
+    }
+
+    TreeView_Expand(m_hwndExplorerTree, hTarget, TVE_EXPAND);
+    LOG_INFO("Expanded folder: " + path);
 }
 
 void Win32IDE::collapseAllFolders()
@@ -507,28 +677,61 @@ void Win32IDE::collapseAllFolders()
 
 void Win32IDE::newFileInExplorer()
 {
-    // Simple implementation - create new untitled file
-    newFile();
-    appendToOutput("New file created from Explorer\n", "Output", OutputSeverity::Info);
+    LOG_FUNCTION();
+    try {
+        newFile();
+        LOG_INFO("New file created from Explorer");
+        appendToOutput("New file created from Explorer\n", "Explorer", OutputSeverity::Info);
+    } catch (const std::exception& e) {
+        LOG_CRITICAL(std::string("Exception during new file creation: ") + e.what());
+        MessageBoxA(m_hwndMain, 
+                   "An unexpected error occurred while creating the file.",
+                   "System Error", MB_ICONERROR | MB_OK);
+    }
 }
 
 void Win32IDE::newFolderInExplorer()
 {
-    char folderName[256] = "";
-    
-    // Simple input dialog (in production, use proper dialog)
-    if (MessageBoxA(m_hwndMain, "Create new folder in workspace?", "New Folder", 
-                    MB_OKCANCEL | MB_ICONQUESTION) == IDOK) {
-        std::string newPath = m_explorerRootPath + "\\NewFolder";
-        try {
-            fs::create_directory(newPath);
+    LOG_FUNCTION();
+    try {
+        std::string baseName = "NewFolder";
+        std::string fullPath = m_explorerRootPath + "\\" + baseName;
+        int counter = 1;
+        while (fs::exists(fullPath)) {
+            fullPath = m_explorerRootPath + "\\" + baseName + std::to_string(counter++);
+        }
+        if (fs::create_directory(fullPath)) {
+            LOG_INFO("New folder created: " + fullPath);
             refreshFileTree();
-            appendToOutput("Folder created: " + newPath + "\n", "Output", OutputSeverity::Info);
+            appendToOutput("New folder created: " + fullPath + "\n", "Explorer", OutputSeverity::Info);
+        } else {
+            LOG_ERROR("Failed to create folder: " + fullPath);
+            MessageBoxA(m_hwndMain, "Failed to create folder. Check permissions.", "Creation Failed", MB_ICONERROR);
         }
-        catch (const std::exception& e) {
-            appendToOutput("Error creating folder: " + std::string(e.what()) + "\n", 
-                           "Output", OutputSeverity::Error);
+    } catch (const std::exception& e) {
+        LOG_CRITICAL(std::string("Exception during folder creation: ") + e.what());
+        MessageBoxA(m_hwndMain, "An error occurred while creating the folder.", "System Error", MB_ICONERROR);
+    }
+}
+
+void Win32IDE::deleteItemInExplorer(const std::string& path)
+{
+    if (path.empty()) return;
+    std::string prompt = "Delete '" + path + "'? This action cannot be undone.";
+    if (MessageBoxA(m_hwndMain, prompt.c_str(), "Confirm Delete", MB_YESNO | MB_ICONWARNING) != IDYES)
+        return;
+    try {
+        if (std::filesystem::is_directory(path)) {
+            std::filesystem::remove_all(path);
+        } else {
+            std::filesystem::remove(path);
         }
+        if (m_hwndExplorerTree) refreshFileTree();
+        if (m_hwndFileExplorer) refreshFileExplorer();
+        appendToOutput("Deleted: " + path + "\n", "Output", OutputSeverity::Info);
+    }
+    catch (const std::exception& e) {
+        appendToOutput(std::string("Error deleting: ") + e.what() + "\n", "Output", OutputSeverity::Error);
     }
 }
 
@@ -536,47 +739,15 @@ void Win32IDE::deleteItemInExplorer()
 {
     HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
     if (!hSelected) return;
-
-    TVITEMA item = {};
-    char text[MAX_PATH] = {};
-    item.hItem = hSelected;
-    item.mask = TVIF_PARAM | TVIF_TEXT;
-    item.pszText = text;
-    item.cchTextMax = MAX_PATH;
-    if (!TreeView_GetItem(m_hwndExplorerTree, &item)) return;
-
     std::string fullPath = getTreeItemPath(hSelected);
-    if (fullPath.empty()) return;
-
-    std::string prompt = "Delete '" + fullPath + "'? This action cannot be undone.";
-    if (MessageBoxA(m_hwndMain, prompt.c_str(), "Confirm Delete", MB_YESNO | MB_ICONWARNING) == IDYES) {
-        try {
-            if (std::filesystem::is_directory(fullPath)) {
-                std::filesystem::remove_all(fullPath);
-            } else {
-                std::filesystem::remove(fullPath);
-            }
-            refreshFileTree();
-            appendToOutput("Deleted: " + fullPath + "\n", "Output", OutputSeverity::Info);
-        }
-        catch (const std::exception& e) {
-            appendToOutput(std::string("Error deleting: ") + e.what() + "\n", "Output", OutputSeverity::Error);
-        }
-    }
+    if (!fullPath.empty()) deleteItemInExplorer(fullPath);
 }
 
-void Win32IDE::renameItemInExplorer()
+void Win32IDE::renameItemInExplorer(const std::string& oldPath)
 {
-    HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
-    if (!hSelected) return;
-
-    std::string oldPath = getTreeItemPath(hSelected);
     if (oldPath.empty()) return;
-
-    // Use GetSaveFileName to prompt for new name
     char buffer[MAX_PATH] = {};
     strcpy_s(buffer, oldPath.c_str());
-
     OPENFILENAMEA ofn = {};
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
@@ -588,13 +759,22 @@ void Win32IDE::renameItemInExplorer()
         std::string newPath = buffer;
         try {
             std::filesystem::rename(oldPath, newPath);
-            refreshFileTree();
+            if (m_hwndExplorerTree) refreshFileTree();
+            if (m_hwndFileExplorer) refreshFileExplorer();
             appendToOutput("Renamed: " + oldPath + " -> " + newPath + "\n", "Output", OutputSeverity::Info);
         }
         catch (const std::exception& e) {
             appendToOutput(std::string("Error renaming: ") + e.what() + "\n", "Output", OutputSeverity::Error);
         }
     }
+}
+
+void Win32IDE::renameItemInExplorer()
+{
+    HTREEITEM hSelected = TreeView_GetSelection(m_hwndExplorerTree);
+    if (!hSelected) return;
+    std::string oldPath = getTreeItemPath(hSelected);
+    if (!oldPath.empty()) renameItemInExplorer(oldPath);
 }
 
 void Win32IDE::revealInExplorer(const std::string& filePath)
@@ -624,15 +804,19 @@ void Win32IDE::revealInExplorer(const std::string& filePath)
 
 void Win32IDE::handleExplorerContextMenu(POINT pt)
 {
+    static constexpr int IDC_CTX_DELETE = 50020, IDC_CTX_RENAME = 50021;
     HMENU hMenu = CreatePopupMenu();
     AppendMenuA(hMenu, MF_STRING, IDC_EXPLORER_NEW_FILE, "New File");
     AppendMenuA(hMenu, MF_STRING, IDC_EXPLORER_NEW_FOLDER, "New Folder");
     AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hMenu, MF_STRING, 999, "Delete");
-    AppendMenuA(hMenu, MF_STRING, 1000, "Rename");
-    
-    TrackPopupMenu(hMenu, TPM_RIGHTBUTTON, pt.x, pt.y, 0, m_hwndMain, nullptr);
+    AppendMenuA(hMenu, MF_STRING, IDC_CTX_DELETE, "Delete");
+    AppendMenuA(hMenu, MF_STRING, IDC_CTX_RENAME, "Rename");
+    int cmd = (int)TrackPopupMenu(hMenu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.x, pt.y, 0, m_hwndMain, nullptr);
     DestroyMenu(hMenu);
+    if (cmd == IDC_CTX_DELETE) deleteItemInExplorer();
+    else if (cmd == IDC_CTX_RENAME) renameItemInExplorer();
+    else if (cmd == IDC_EXPLORER_NEW_FILE) newFileInExplorer();
+    else if (cmd == IDC_EXPLORER_NEW_FOLDER) newFolderInExplorer();
 }
 
 LRESULT CALLBACK Win32IDE::ExplorerTreeProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -801,8 +985,75 @@ void Win32IDE::updateSearchResults(const std::vector<std::string>& results)
 
 void Win32IDE::applySearchFilters(const std::string& includePattern, const std::string& excludePattern)
 {
-    // Placeholder - would filter search results based on patterns
-    appendToOutput("Apply filters - Include: " + includePattern + ", Exclude: " + excludePattern + "\n",
+    LOG_FUNCTION();
+    if (m_searchResults.empty()) return;
+
+    // Convert simple glob patterns (*.cpp, *.h) to check against results
+    auto matchesGlob = [](const std::string& filename, const std::string& pattern) -> bool {
+        if (pattern.empty() || pattern == "*") return true;
+        // Support simple *.ext patterns
+        if (pattern.size() >= 2 && pattern[0] == '*' && pattern[1] == '.') {
+            std::string ext = pattern.substr(1); // ".cpp"
+            if (filename.size() >= ext.size()) {
+                std::string fileExt = filename.substr(filename.size() - ext.size());
+                // Case-insensitive compare
+                std::string lowerFileExt = fileExt, lowerExt = ext;
+                std::transform(lowerFileExt.begin(), lowerFileExt.end(), lowerFileExt.begin(), ::tolower);
+                std::transform(lowerExt.begin(), lowerExt.end(), lowerExt.begin(), ::tolower);
+                return lowerFileExt == lowerExt;
+            }
+            return false;
+        }
+        // Substring match fallback
+        return filename.find(pattern) != std::string::npos;
+    };
+
+    // Parse comma-separated patterns
+    auto parsePatterns = [](const std::string& input) -> std::vector<std::string> {
+        std::vector<std::string> patterns;
+        std::istringstream ss(input);
+        std::string token;
+        while (std::getline(ss, token, ',')) {
+            // Trim whitespace
+            size_t start = token.find_first_not_of(" \t");
+            size_t end = token.find_last_not_of(" \t");
+            if (start != std::string::npos)
+                patterns.push_back(token.substr(start, end - start + 1));
+        }
+        return patterns;
+    };
+
+    auto includes = parsePatterns(includePattern);
+    auto excludes = parsePatterns(excludePattern);
+
+    std::vector<std::string> filtered;
+    for (const auto& result : m_searchResults) {
+        // Extract filename from result format "filename (line): content"
+        std::string filename = result.substr(0, result.find(' '));
+
+        // Check include (if include patterns specified, file must match at least one)
+        bool includeMatch = includes.empty();
+        for (const auto& pat : includes) {
+            if (matchesGlob(filename, pat)) { includeMatch = true; break; }
+        }
+        if (!includeMatch) continue;
+
+        // Check exclude (if any exclude pattern matches, skip)
+        bool excludeMatch = false;
+        for (const auto& pat : excludes) {
+            if (matchesGlob(filename, pat)) { excludeMatch = true; break; }
+        }
+        if (excludeMatch) continue;
+
+        filtered.push_back(result);
+    }
+
+    // Update UI with filtered results
+    m_searchResults = filtered;
+    updateSearchResults(filtered);
+
+    appendToOutput("Search filtered: " + std::to_string(filtered.size()) + " results (include: " +
+                   includePattern + ", exclude: " + excludePattern + ")\n",
                    "Output", OutputSeverity::Info);
 }
 
@@ -819,7 +1070,7 @@ void Win32IDE::replaceInFiles(const std::string& searchText, const std::string& 
 {
     if (searchText.empty()) return;
 
-    if (MessageBoxA(m_hwndMain, "Replace occurrences across workspace?", "Confirm Replace", MB_YESNO | MB_ICONQUESTION) != IDYES) return;
+    if (MessageBoxW(m_hwndMain, L"Replace occurrences across workspace?", L"Confirm Replace", MB_YESNO | MB_ICONQUESTION) != IDYES) return;
 
     size_t totalReplacements = 0;
     try {
@@ -1093,8 +1344,68 @@ void Win32IDE::createRunDebugView(HWND hwndParent)
 
 void Win32IDE::createLaunchConfiguration()
 {
-    appendToOutput("Creating launch configuration...\n", "Output", OutputSeverity::Info);
-    // Placeholder - would create launch.json equivalent
+    LOG_FUNCTION();
+
+    // Create .rawrxd directory if it doesn't exist
+    std::string configDir = m_explorerRootPath + "\\.rawrxd";
+    try { fs::create_directories(configDir); } catch (...) {}
+
+    std::string launchPath = configDir + "\\launch.json";
+
+    // Detect project type from current file or workspace
+    std::string progName = "${workspaceFolder}\\build\\main.exe";
+    std::string debuggerType = "gdb";
+    std::string stopAtEntry = "true";
+
+    if (!m_currentFile.empty()) {
+        std::string ext = fs::path(m_currentFile).extension().string();
+        if (ext == ".ps1") {
+            debuggerType = "powershell";
+            progName = m_currentFile;
+        } else if (ext == ".py") {
+            debuggerType = "python";
+            progName = m_currentFile;
+        }
+    }
+
+    // Write launch.json
+    std::ofstream out(launchPath, std::ios::trunc);
+    if (!out.is_open()) {
+        LOG_ERROR("Failed to create launch configuration at: " + launchPath);
+        MessageBoxA(m_hwndMain, "Failed to create launch.json", "Error", MB_ICONERROR);
+        return;
+    }
+
+    out << "{\n";
+    out << "  \"version\": \"0.2.0\",\n";
+    out << "  \"configurations\": [\n";
+    out << "    {\n";
+    out << "      \"name\": \"RawrXD Debug (GDB)\",\n";
+    out << "      \"type\": \"" << debuggerType << "\",\n";
+    out << "      \"request\": \"launch\",\n";
+    out << "      \"program\": \"" << progName << "\",\n";
+    out << "      \"args\": [],\n";
+    out << "      \"stopAtEntry\": " << stopAtEntry << ",\n";
+    out << "      \"cwd\": \"" << m_explorerRootPath << "\",\n";
+    out << "      \"environment\": [],\n";
+    out << "      \"externalConsole\": false,\n";
+    out << "      \"preLaunchTask\": \"build\"\n";
+    out << "    },\n";
+    out << "    {\n";
+    out << "      \"name\": \"RawrXD Attach\",\n";
+    out << "      \"type\": \"gdb\",\n";
+    out << "      \"request\": \"attach\",\n";
+    out << "      \"processId\": \"${command:pickProcess}\"\n";
+    out << "    }\n";
+    out << "  ]\n";
+    out << "}\n";
+    out.close();
+
+    appendToOutput("Launch configuration created: " + launchPath + "\n", "Output", OutputSeverity::Info);
+    LOG_INFO("Created launch.json at: " + launchPath);
+
+    // Open the file in the editor so user can modify
+    openFile(launchPath);
 }
 
 void Win32IDE::startDebugging()
@@ -1141,29 +1452,63 @@ void Win32IDE::showDebugConsole()
 void Win32IDE::updateDebugVariables()
 {
     if (!m_debuggingActive || !m_hwndDebugVariables) return;
+    LOG_FUNCTION();
 
-    // Placeholder - would query actual debugger variables
     ListView_DeleteAllItems(m_hwndDebugVariables);
 
-    const struct { const char* name; const char* value; } vars[] = {
-        {"$PSVersionTable", "7.4.6"},
-        {"$PWD", "C:\\Users\\HiH8e"},
-        {"$ErrorCount", "0"}
-    };
+    // Collect real environment and debugger state
+    struct VarEntry { std::string name; std::string value; };
+    std::vector<VarEntry> vars;
+
+    // System variables
+    vars.push_back(VarEntry{"$DebuggerActive", m_debuggerAttached ? "true" : "false"});
+    vars.push_back(VarEntry{"$DebuggerPaused", m_debuggerPaused ? "true" : "false"});
+    vars.push_back(VarEntry{"$CurrentFile", m_currentFile.empty() ? "(none)" : m_currentFile});
+    vars.push_back(VarEntry{"$CurrentLine", std::to_string(m_debuggerCurrentLine)});
+    vars.push_back(VarEntry{"$BreakpointCount", std::to_string(m_breakpoints.size())});
+
+    // Watch expressions
+    for (const auto& w : m_watchList) {
+        if (w.enabled) {
+            vars.push_back(VarEntry{"[watch] " + w.expression, w.value.empty() ? "<not evaluated>" : w.value});
+        }
+    }
+
+    // Call stack info
+    if (!m_callStack.empty()) {
+        vars.push_back(VarEntry{"$CallStackDepth", std::to_string(m_callStack.size())});
+        vars.push_back(VarEntry{"$TopFrame", m_callStack[0].function + " @ " + m_callStack[0].file + ":" + std::to_string(m_callStack[0].line)});
+    }
+
+    // Model/inference state
+    vars.push_back(VarEntry{"$ModelLoaded", m_loadedModelPath.empty() ? "false" : "true"});
+    vars.push_back(VarEntry{"$ModelPath", m_loadedModelPath.empty() ? "(none)" : m_loadedModelPath});
+    vars.push_back(VarEntry{"$InferenceRunning", m_inferenceRunning ? "true" : "false"});
+    vars.push_back(VarEntry{"$WorkingDirectory", m_explorerRootPath});
+
+    // Process environment
+    char envBuf[256] = {};
+    if (GetEnvironmentVariableA("USERNAME", envBuf, sizeof(envBuf))) {
+        vars.push_back(VarEntry{"$USERNAME", envBuf});
+    }
+    if (GetEnvironmentVariableA("COMPUTERNAME", envBuf, sizeof(envBuf))) {
+        vars.push_back(VarEntry{"$COMPUTERNAME", envBuf});
+    }
 
     LVITEMA item = {};
     item.mask = LVIF_TEXT;
-
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < (int)vars.size(); i++) {
         item.iItem = i;
         item.iSubItem = 0;
-        item.pszText = (LPSTR)vars[i].name;
+        item.pszText = (LPSTR)vars[i].name.c_str();
         ListView_InsertItem(m_hwndDebugVariables, &item);
 
         item.iSubItem = 1;
-        item.pszText = (LPSTR)vars[i].value;
+        item.pszText = (LPSTR)vars[i].value.c_str();
         ListView_SetItem(m_hwndDebugVariables, &item);
     }
+
+    LOG_DEBUG("Updated " + std::to_string(vars.size()) + " debug variables");
 }
 
 // ============================================================================
@@ -1204,20 +1549,164 @@ void Win32IDE::createExtensionsView(HWND hwndParent)
 
 void Win32IDE::searchExtensions(const std::string& query)
 {
-    appendToOutput("Searching extensions: " + query + "\n", "Output", OutputSeverity::Info);
-    // Placeholder - would query extension marketplace
+    LOG_FUNCTION();
+    if (!m_hwndExtensionsList) return;
+
+    // Filter loaded extensions by query
+    ListView_DeleteAllItems(m_hwndExtensionsList);
+
+    std::string lowerQuery = query;
+    std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), ::tolower);
+
+    LVITEMA item = {};
+    item.mask = LVIF_TEXT;
+    int idx = 0;
+
+    for (const auto& ext : m_extensions) {
+        std::string lowerName = ext.name;
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+        std::string lowerId = ext.id;
+        std::transform(lowerId.begin(), lowerId.end(), lowerId.begin(), ::tolower);
+        std::string lowerDesc = ext.description;
+        std::transform(lowerDesc.begin(), lowerDesc.end(), lowerDesc.begin(), ::tolower);
+
+        if (lowerQuery.empty() || lowerName.find(lowerQuery) != std::string::npos ||
+            lowerId.find(lowerQuery) != std::string::npos ||
+            lowerDesc.find(lowerQuery) != std::string::npos) {
+
+            item.iItem = idx;
+            item.iSubItem = 0;
+            item.pszText = (LPSTR)ext.name.c_str();
+            ListView_InsertItem(m_hwndExtensionsList, &item);
+
+            item.iSubItem = 1;
+            item.pszText = (LPSTR)ext.version.c_str();
+            ListView_SetItem(m_hwndExtensionsList, &item);
+            idx++;
+        }
+    }
+
+    // Also scan plugins directory for unloaded extensions
+    std::string pluginsDir = m_explorerRootPath + "\\plugins";
+    if (fs::exists(pluginsDir) && fs::is_directory(pluginsDir)) {
+        for (const auto& entry : fs::directory_iterator(pluginsDir)) {
+            if (!entry.is_directory()) continue;
+            std::string dirName = entry.path().filename().string();
+            std::string lowerDir = dirName;
+            std::transform(lowerDir.begin(), lowerDir.end(), lowerDir.begin(), ::tolower);
+
+            // Skip if already in loaded list
+            bool alreadyLoaded = false;
+            for (const auto& ext : m_extensions) {
+                if (ext.id == dirName) { alreadyLoaded = true; break; }
+            }
+            if (alreadyLoaded) continue;
+
+            if (lowerQuery.empty() || lowerDir.find(lowerQuery) != std::string::npos) {
+                item.iItem = idx;
+                item.iSubItem = 0;
+                item.pszText = (LPSTR)dirName.c_str();
+                ListView_InsertItem(m_hwndExtensionsList, &item);
+
+                std::string notInstalled = "(available)";
+                item.iSubItem = 1;
+                item.pszText = (LPSTR)notInstalled.c_str();
+                ListView_SetItem(m_hwndExtensionsList, &item);
+                idx++;
+            }
+        }
+    }
+
+    appendToOutput("Extension search '" + query + "': " + std::to_string(idx) + " results\n",
+                   "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::installExtension(const std::string& extensionId)
 {
-    appendToOutput("Installing extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    // Check if extension directory exists in plugins/
+    std::string pluginsDir = m_explorerRootPath + "\\plugins";
+    std::string extDir = pluginsDir + "\\" + extensionId;
+
+    if (!fs::exists(extDir)) {
+        // Try loading as a .vsix file
+        std::string vsixPath = pluginsDir + "\\" + extensionId + ".vsix";
+        if (fs::exists(vsixPath)) {
+            extDir = vsixPath;
+        } else {
+            appendToOutput("Extension not found: " + extensionId + "\nPlace extension in: " + pluginsDir + "\n",
+                           "Output", OutputSeverity::Warning);
+            return;
+        }
+    }
+
+    // Use VSIXLoader to load
+    auto& loader = VSIXLoader::GetInstance();
+    if (loader.LoadPlugin(extDir)) {
+        // Add to our internal list
+        Extension info;
+        info.id = extensionId;
+        info.name = extensionId;
+        info.version = "1.0.0";
+        info.description = "Loaded from plugins directory";
+        info.author = "Local";
+        info.installed = true;
+        info.enabled = true;
+
+        // Try to read package.json for real metadata
+        std::string manifestPath = extDir + "\\package.json";
+        if (fs::exists(manifestPath)) {
+            try {
+                std::ifstream mf(manifestPath);
+                std::string content((std::istreambuf_iterator<char>(mf)), std::istreambuf_iterator<char>());
+                nlohmann::json manifest = nlohmann::json::parse(content);
+                if (manifest.contains("name")) info.name = manifest["name"].get<std::string>();
+                if (manifest.contains("version")) info.version = manifest["version"].get<std::string>();
+                if (manifest.contains("description")) info.description = manifest["description"].get<std::string>();
+                if (manifest.contains("publisher")) info.author = manifest["publisher"].get<std::string>();
+            } catch (...) {}
+        }
+
+        m_extensions.push_back(info);
+        loadInstalledExtensions(); // Refresh UI
+
+        appendToOutput("Installed extension: " + info.name + " v" + info.version + "\n",
+                       "Output", OutputSeverity::Info);
+        LOG_INFO("Installed extension: " + extensionId);
+    } else {
+        appendToOutput("Failed to install extension: " + extensionId + "\n",
+                       "Output", OutputSeverity::Error);
+        LOG_ERROR("Failed to install extension: " + extensionId);
+    }
 }
 
 void Win32IDE::uninstallExtension(const std::string& extensionId)
 {
-    appendToOutput("Uninstalling extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    // Unload from VSIXLoader
+    auto& loader = VSIXLoader::GetInstance();
+    loader.UnloadPlugin(extensionId);
+
+    // Remove from internal list
+    m_extensions.erase(
+        std::remove_if(m_extensions.begin(), m_extensions.end(),
+                       [&](const Extension& ext) { return ext.id == extensionId; }),
+        m_extensions.end());
+
+    // Optionally remove from disk
+    std::string extDir = m_explorerRootPath + "\\plugins\\" + extensionId;
+    if (fs::exists(extDir)) {
+        const std::wstring msg = utf8ToWide("Delete extension files from disk?\n" + extDir);
+        if (MessageBoxW(m_hwndMain, msg.c_str(), L"Uninstall Extension", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            try { fs::remove_all(extDir); } catch (...) {}
+        }
+    }
+
+    loadInstalledExtensions(); // Refresh UI
+    appendToOutput("Uninstalled extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
+    LOG_INFO("Uninstalled extension: " + extensionId);
 }
 
 void Win32IDE::enableExtension(const std::string& extensionId)
@@ -1244,32 +1733,145 @@ void Win32IDE::disableExtension(const std::string& extensionId)
 
 void Win32IDE::updateExtension(const std::string& extensionId)
 {
-    appendToOutput("Updating extension: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    auto& loader = VSIXLoader::GetInstance();
+    if (loader.ReloadPlugin(extensionId)) {
+        appendToOutput("Extension updated: " + extensionId + "\n", "Output", OutputSeverity::Info);
+        loadInstalledExtensions();
+    } else {
+        appendToOutput("Failed to update extension: " + extensionId + "\n", "Output", OutputSeverity::Error);
+    }
 }
 
 void Win32IDE::showExtensionDetails(const std::string& extensionId)
 {
-    appendToOutput("Showing details for: " + extensionId + "\n", "Output", OutputSeverity::Info);
-    // Placeholder
+    LOG_FUNCTION();
+
+    std::string details;
+    // Check internal list first
+    for (const auto& ext : m_extensions) {
+        if (ext.id == extensionId) {
+            details += "Name: " + ext.name + "\n";
+            details += "ID: " + ext.id + "\n";
+            details += "Version: " + ext.version + "\n";
+            details += "Author: " + ext.author + "\n";
+            details += "Description: " + ext.description + "\n";
+            details += "Status: " + std::string(ext.enabled ? "Enabled" : "Disabled") + "\n";
+            details += "Installed: " + std::string(ext.installed ? "Yes" : "No") + "\n";
+            break;
+        }
+    }
+
+    // Check VSIXLoader for additional info (commands, dependencies)
+    auto& loader = VSIXLoader::GetInstance();
+    VSIXPlugin* plugin = loader.GetPlugin(extensionId);
+    if (plugin) {
+        details += "\n--- Plugin Details ---\n";
+        details += "Install Path: " + plugin->install_path.string() + "\n";
+        if (!plugin->commands.empty()) {
+            details += "Commands:\n";
+            for (const auto& cmd : plugin->commands) {
+                details += "  - " + cmd + "\n";
+            }
+        }
+        if (!plugin->dependencies.empty()) {
+            details += "Dependencies:\n";
+            for (const auto& dep : plugin->dependencies) {
+                details += "  - " + dep + "\n";
+            }
+        }
+    }
+
+    if (details.empty()) {
+        details = "No details available for: " + extensionId;
+    }
+
+    MessageBoxA(m_hwndMain, details.c_str(), ("Extension: " + extensionId).c_str(), MB_OK | MB_ICONINFORMATION);
+    appendToOutput("Extension details shown for: " + extensionId + "\n", "Output", OutputSeverity::Info);
 }
 
 void Win32IDE::loadInstalledExtensions()
 {
+    LOG_FUNCTION();
     if (!m_hwndExtensionsList) return;
 
     ListView_DeleteAllItems(m_hwndExtensionsList);
+    m_extensions.clear();
 
-    // Placeholder - load from extensions directory
-    m_extensions = {
-        {"powershell.vscode", "PowerShell", "2024.2.2", "PowerShell language support", "Microsoft", true, true},
-        {"ms-vscode.cpptools", "C/C++", "1.20.5", "C++ IntelliSense", "Microsoft", true, true},
-        {"github.copilot", "GitHub Copilot", "1.150.0", "AI pair programmer", "GitHub", true, true}
+    // Load from VSIXLoader (already-loaded plugins)
+    auto& loader = VSIXLoader::GetInstance();
+    auto loadedPlugins = loader.GetLoadedPlugins();
+    for (auto* plugin : loadedPlugins) {
+        Extension info;
+        info.id = plugin->id;
+        info.name = plugin->name;
+        info.version = plugin->version;
+        info.description = plugin->description;
+        info.author = plugin->author;
+        info.installed = true;
+        info.enabled = plugin->enabled;
+        m_extensions.push_back(info);
+    }
+
+    // Scan plugins directory for directory-based plugins not yet loaded
+    std::string pluginsDir = m_explorerRootPath + "\\plugins";
+    if (fs::exists(pluginsDir) && fs::is_directory(pluginsDir)) {
+        for (const auto& entry : fs::directory_iterator(pluginsDir)) {
+            if (!entry.is_directory()) continue;
+            std::string dirName = entry.path().filename().string();
+
+            // Skip if already in the list
+            bool found = false;
+            for (const auto& ext : m_extensions) {
+                if (ext.id == dirName) { found = true; break; }
+            }
+            if (found) continue;
+
+            Extension info;
+            info.id = dirName;
+            info.name = dirName;
+            info.version = "0.0.0";
+            info.description = "";
+            info.author = "";
+            info.installed = true;
+            info.enabled = false;
+
+            // Try reading package.json
+            std::string manifestPath = entry.path().string() + "\\package.json";
+            if (fs::exists(manifestPath)) {
+                try {
+                    std::ifstream mf(manifestPath);
+                    std::string manifestStr((std::istreambuf_iterator<char>(mf)), std::istreambuf_iterator<char>());
+                    nlohmann::json manifest = nlohmann::json::parse(manifestStr);
+                    if (manifest.contains("displayName")) info.name = manifest["displayName"].get<std::string>();
+                    else if (manifest.contains("name")) info.name = manifest["name"].get<std::string>();
+                    if (manifest.contains("version")) info.version = manifest["version"].get<std::string>();
+                    if (manifest.contains("description")) info.description = manifest["description"].get<std::string>();
+                    if (manifest.contains("publisher")) info.author = manifest["publisher"].get<std::string>();
+                } catch (...) {}
+            }
+
+            m_extensions.push_back(info);
+        }
+    }
+
+    // Always include built-in extensions
+    auto addBuiltIn = [&](const std::string& id, const std::string& name, const std::string& ver,
+                          const std::string& desc, const std::string& author) {
+        bool found = false;
+        for (const auto& ext : m_extensions) { if (ext.id == id) { found = true; break; } }
+        if (!found) {
+            m_extensions.push_back({id, name, ver, desc, author, true, true});
+        }
     };
+    addBuiltIn("rawrxd.inference", "RawrXD Inference", "7.1.0", "Native CPU inference engine", "RawrXD");
+    addBuiltIn("rawrxd.agentic", "RawrXD Agentic", "7.1.0", "Agentic AI bridge", "RawrXD");
+    addBuiltIn("rawrxd.reverse-eng", "RawrXD Reverse Engineering", "7.1.0", "Disassembler, DumpBin, Compiler", "RawrXD");
 
+    // Populate ListView
     LVITEMA item = {};
     item.mask = LVIF_TEXT;
-
     for (size_t i = 0; i < m_extensions.size(); i++) {
         item.iItem = (int)i;
         item.iSubItem = 0;
@@ -1551,5 +2153,548 @@ void Win32IDE::goToTimelineEntry(int index)
         }
     } else {
         appendToOutput("Selected local entry: " + entry.message + "\n", "Output", OutputSeverity::Info);
+    }
+}
+
+// ============================================================================
+// Git Panel Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::GitPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background matching VS Code SCM panel
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // Draw header text
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(204, 204, 204));
+        HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+        RECT rcHeader = rc;
+        rcHeader.left += 8;
+        rcHeader.top += 4;
+        rcHeader.bottom = rcHeader.top + 24;
+        DrawTextA(hdc, "SOURCE CONTROL", -1, &rcHeader, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+
+        SelectObject(hdc, hOldFont);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            // Resize the git status text
+            if (pThis->m_hwndGitStatusText) {
+                MoveWindow(pThis->m_hwndGitStatusText, 8, 30,
+                           rc.right - 16, 60, TRUE);
+            }
+
+            // Resize the git file list
+            if (pThis->m_hwndGitFileList) {
+                MoveWindow(pThis->m_hwndGitFileList, 8, 96,
+                           rc.right - 16, rc.bottom - 104, TRUE);
+            }
+        }
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            int id = LOWORD(wParam);
+            switch (id) {
+            case IDC_SCM_STAGE:
+                pThis->stageSelectedFiles();
+                return 0;
+            case IDC_SCM_UNSTAGE:
+                pThis->refreshSourceControlView();
+                return 0;
+            case IDC_SCM_COMMIT:
+                pThis->commitChangesFromSidebar();
+                return 0;
+            case IDC_SCM_SYNC:
+                pThis->syncRepository();
+                return 0;
+            }
+        }
+        break;
+    }
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLOREDIT: {
+        // Dark theme colors for child controls
+        HDC hdcChild = (HDC)wParam;
+        SetTextColor(hdcChild, RGB(204, 204, 204));
+        SetBkColor(hdcChild, RGB(30, 30, 30));
+        static HBRUSH hDarkBrush = CreateSolidBrush(RGB(30, 30, 30));
+        return (LRESULT)hDarkBrush;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// Module Panel Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::ModulePanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background for module browser panel
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // Draw header
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(204, 204, 204));
+        HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+
+        RECT rcHeader = rc;
+        rcHeader.left += 8;
+        rcHeader.top += 4;
+        rcHeader.bottom = rcHeader.top + 24;
+        DrawTextA(hdc, "MODULE BROWSER", -1, &rcHeader, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+
+        SelectObject(hdc, hOldFont);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            // Resize module list
+            if (pThis->m_hwndModuleList) {
+                MoveWindow(pThis->m_hwndModuleList, 8, 62,
+                           rc.right - 16, rc.bottom - 70, TRUE);
+            }
+
+            // Reposition buttons horizontally in toolbar area
+            int btnY = 30;
+            int btnW = 65;
+            int btnH = 25;
+            int btnX = 8;
+            if (pThis->m_hwndModuleLoadButton) {
+                MoveWindow(pThis->m_hwndModuleLoadButton, btnX, btnY, btnW, btnH, TRUE);
+                btnX += btnW + 5;
+            }
+            if (pThis->m_hwndModuleUnloadButton) {
+                MoveWindow(pThis->m_hwndModuleUnloadButton, btnX, btnY, btnW, btnH, TRUE);
+                btnX += btnW + 5;
+            }
+            if (pThis->m_hwndModuleRefreshButton) {
+                MoveWindow(pThis->m_hwndModuleRefreshButton, btnX, btnY, btnW, btnH, TRUE);
+            }
+        }
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            HWND hCtrl = (HWND)lParam;
+
+            if (hCtrl == pThis->m_hwndModuleLoadButton) {
+                // Get selected module from the list
+                if (pThis->m_hwndModuleList) {
+                    int sel = (int)SendMessageA(pThis->m_hwndModuleList, LB_GETCURSEL, 0, 0);
+                    if (sel != LB_ERR && sel < (int)pThis->m_modules.size()) {
+                        pThis->loadModule(pThis->m_modules[sel].name);
+                        pThis->m_moduleListDirty = true;
+                    } else {
+                        pThis->appendToOutput("No module selected for loading\n",
+                                              "Output", OutputSeverity::Warning);
+                    }
+                }
+                return 0;
+            }
+
+            if (hCtrl == pThis->m_hwndModuleUnloadButton) {
+                if (pThis->m_hwndModuleList) {
+                    int sel = (int)SendMessageA(pThis->m_hwndModuleList, LB_GETCURSEL, 0, 0);
+                    if (sel != LB_ERR && sel < (int)pThis->m_modules.size()) {
+                        pThis->unloadModule(pThis->m_modules[sel].name);
+                        pThis->m_moduleListDirty = true;
+                    } else {
+                        pThis->appendToOutput("No module selected for unloading\n",
+                                              "Output", OutputSeverity::Warning);
+                    }
+                }
+                return 0;
+            }
+
+            if (hCtrl == pThis->m_hwndModuleRefreshButton) {
+                // Refresh the module list from PowerShell
+                pThis->m_moduleListDirty = true;
+                if (pThis->m_hwndModuleList) {
+                    SendMessageA(pThis->m_hwndModuleList, LB_RESETCONTENT, 0, 0);
+                    for (const auto& mod : pThis->m_modules) {
+                        std::string display = mod.name;
+                        if (mod.loaded) display += " [loaded]";
+                        if (!mod.version.empty()) display += " v" + mod.version;
+                        SendMessageA(pThis->m_hwndModuleList, LB_ADDSTRING, 0,
+                                     (LPARAM)display.c_str());
+                    }
+                }
+                pThis->appendToOutput("Module list refreshed\n", "Output", OutputSeverity::Info);
+                return 0;
+            }
+        }
+        break;
+    }
+
+    case WM_CTLCOLORLISTBOX:
+    case WM_CTLCOLORSTATIC: {
+        HDC hdcChild = (HDC)wParam;
+        SetTextColor(hdcChild, RGB(204, 204, 204));
+        SetBkColor(hdcChild, RGB(30, 30, 30));
+        static HBRUSH hDarkBrush = CreateSolidBrush(RGB(30, 30, 30));
+        return (LRESULT)hDarkBrush;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// Commit Dialog Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::CommitDialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_CREATE: {
+        // Dark background
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        SetClassLongPtrA(hwnd, GCLP_HBRBACKGROUND, (LONG_PTR)hBrush);
+
+        HINSTANCE hInst = ((CREATESTRUCTA*)lParam)->hInstance;
+
+        // Commit message label
+        CreateWindowExA(0, "STATIC", "Commit Message:",
+                        WS_CHILD | WS_VISIBLE,
+                        10, 10, 280, 20, hwnd, nullptr, hInst, nullptr);
+
+        // Commit message edit (multi-line)
+        CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+                        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL,
+                        10, 35, 360, 120, hwnd, (HMENU)8001, hInst, nullptr);
+
+        // OK / Cancel buttons
+        CreateWindowExA(0, "BUTTON", "Commit",
+                        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+                        200, 170, 80, 30, hwnd, (HMENU)IDOK, hInst, nullptr);
+
+        CreateWindowExA(0, "BUTTON", "Cancel",
+                        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        290, 170, 80, 30, hwnd, (HMENU)IDCANCEL, hInst, nullptr);
+
+        return 0;
+    }
+
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        int id = LOWORD(wParam);
+
+        if (id == IDOK && pThis) {
+            // Retrieve commit message from the edit control
+            HWND hEdit = GetDlgItem(hwnd, 8001);
+            if (hEdit) {
+                int len = GetWindowTextLengthA(hEdit);
+                if (len > 0) {
+                    std::string message(len + 1, '\0');
+                    GetWindowTextA(hEdit, &message[0], len + 1);
+                    message.resize(len);
+
+                    // Execute git commit
+                    std::string cmd = "git commit -m \"" + message + "\"";
+                    std::string output;
+                    if (pThis->executeGitCommand(cmd, output)) {
+                        pThis->appendToOutput("✅ Committed: " + message + "\n",
+                                              "Output", OutputSeverity::Info);
+                        pThis->refreshSourceControlView();
+                    } else {
+                        pThis->appendToOutput("❌ Commit failed: " + output + "\n",
+                                              "Output", OutputSeverity::Error);
+                    }
+                } else {
+                    pThis->appendToOutput("⚠️ Cannot commit with empty message\n",
+                                          "Output", OutputSeverity::Warning);
+                    return 0; // Don't close dialog
+                }
+            }
+            DestroyWindow(hwnd);
+            if (pThis) pThis->m_hwndCommitDialog = nullptr;
+            return 0;
+        }
+
+        if (id == IDCANCEL) {
+            DestroyWindow(hwnd);
+            if (pThis) pThis->m_hwndCommitDialog = nullptr;
+            return 0;
+        }
+        break;
+    }
+
+    case WM_CLOSE:
+        DestroyWindow(hwnd);
+        if (pThis) pThis->m_hwndCommitDialog = nullptr;
+        return 0;
+
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLOREDIT: {
+        HDC hdcChild = (HDC)wParam;
+        SetTextColor(hdcChild, RGB(204, 204, 204));
+        SetBkColor(hdcChild, RGB(30, 30, 30));
+        static HBRUSH hDarkBrush = CreateSolidBrush(RGB(30, 30, 30));
+        return (LRESULT)hDarkBrush;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// File Explorer Window Procedure
+// ============================================================================
+
+LRESULT CALLBACK Win32IDE::FileExplorerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background for file explorer container
+        HBRUSH hBrush = CreateSolidBrush(RGB(37, 37, 38));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+
+            // Resize the file tree to fill the explorer container
+            if (pThis->m_hwndFileTree) {
+                MoveWindow(pThis->m_hwndFileTree, 0, 0,
+                           rc.right, rc.bottom, TRUE);
+            }
+        }
+        return 0;
+    }
+
+    case WM_NOTIFY: {
+        if (pThis) {
+            NMHDR* pnmh = (NMHDR*)lParam;
+            if (pnmh->idFrom == IDC_FILE_TREE || pnmh->idFrom == IDC_EXPLORER_TREE || pnmh->idFrom == IDC_FILE_EXPLORER) {
+                switch (pnmh->code) {
+                case TVN_DELETEITEM: {
+                    NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                    if (pnmtv->itemOld.lParam) {
+                        if (pnmh->idFrom == IDC_FILE_EXPLORER) {
+                            delete[] reinterpret_cast<char*>(pnmtv->itemOld.lParam);
+                        }
+                        /* IDC_FILE_TREE uses std::string* (freed in FileExplorerContainerProc); IDC_EXPLORER_TREE uses lParam as flag/index, no heap */
+                    }
+                    return 0;
+                }
+
+                case TVN_SELCHANGEDA: {
+                    NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                    if (pnmtv->itemNew.hItem) {
+                        pThis->onFileTreeSelect(pnmtv->itemNew.hItem);
+                    }
+                    return 0;
+                }
+
+                case NM_DBLCLK: {
+                    HTREEITEM hItem = TreeView_GetSelection(pnmh->hwndFrom);
+                    if (hItem) {
+                        pThis->onFileTreeDoubleClick(hItem);
+                    }
+                    return 0;
+                }
+
+                case TVN_ITEMEXPANDINGA: {
+                    NMTREEVIEWA* pnmtv = (NMTREEVIEWA*)lParam;
+                    if ((pnmtv->action & TVE_EXPAND) && pnmtv->itemNew.hItem) {
+                        std::string path = pThis->getTreeItemPath(pnmtv->itemNew.hItem);
+                        if (!path.empty()) {
+                            pThis->onFileTreeExpand(pnmtv->itemNew.hItem, path);
+                        }
+                    }
+                    return 0;
+                }
+                }
+            }
+        }
+        break;
+    }
+
+    case WM_CONTEXTMENU: {
+        if (pThis) {
+            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            pThis->handleExplorerContextMenu(pt);
+            return 0;
+        }
+        break;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// File Tree Selection and Navigation
+// ============================================================================
+
+void Win32IDE::onFileTreeSelect(HTREEITEM item)
+{
+    if (!item) return;
+
+    std::string path = getTreeItemPath(item);
+    if (path.empty()) {
+        // Try extracting from the tree item text directly
+        if (m_hwndFileTree) {
+            char buf[MAX_PATH] = {};
+            TVITEMA tvi = {};
+            tvi.mask = TVIF_TEXT;
+            tvi.hItem = item;
+            tvi.pszText = buf;
+            tvi.cchTextMax = MAX_PATH;
+            if (TreeView_GetItem(m_hwndFileTree, &tvi)) {
+                path = buf;
+            }
+        }
+    }
+
+    if (path.empty()) return;
+
+    // Update status bar with the selected file/folder path
+    if (m_hwndStatusBar) {
+        std::string statusText = "Selected: " + path;
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)statusText.c_str());
+    }
+
+    // Check if it's a file (has extension) or directory
+    DWORD attrs = GetFileAttributesA(path.c_str());
+    if (attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        // It's a file — show preview info in the output
+        WIN32_FILE_ATTRIBUTE_DATA fileData = {};
+        if (GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &fileData)) {
+            ULARGE_INTEGER fileSize;
+            fileSize.LowPart = fileData.nFileSizeLow;
+            fileSize.HighPart = fileData.nFileSizeHigh;
+
+            std::ostringstream oss;
+            oss << "📄 " << path << " (" << fileSize.QuadPart << " bytes)";
+            appendToOutput(oss.str() + "\n", "Output", OutputSeverity::Debug);
+        }
+    }
+}
+
+void Win32IDE::onFileTreeDoubleClick(HTREEITEM item)
+{
+    if (!item) return;
+
+    std::string path = getTreeItemPath(item);
+    if (path.empty()) {
+        // Fallback: extract from tree item text
+        if (m_hwndFileTree) {
+            char buf[MAX_PATH] = {};
+            TVITEMA tvi = {};
+            tvi.mask = TVIF_TEXT;
+            tvi.hItem = item;
+            tvi.pszText = buf;
+            tvi.cchTextMax = MAX_PATH;
+            if (TreeView_GetItem(m_hwndFileTree, &tvi)) {
+                path = buf;
+            }
+        }
+    }
+
+    if (path.empty()) return;
+
+    DWORD attrs = GetFileAttributesA(path.c_str());
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        appendToOutput("⚠️ Cannot access: " + path + "\n", "Output", OutputSeverity::Warning);
+        return;
+    }
+
+    if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
+        // It's a directory — expand the tree node
+        if (m_hwndFileTree) {
+            TreeView_Expand(m_hwndFileTree, item, TVE_TOGGLE);
+        }
+    } else {
+        // It's a file — open it in the editor
+        appendToOutput("Opening: " + path + "\n", "Output", OutputSeverity::Info);
+        openFile(path);
+
+        // Check if it's a GGUF model file and offer to load it
+        std::string ext;
+        size_t dotPos = path.rfind('.');
+        if (dotPos != std::string::npos) {
+            ext = path.substr(dotPos + 1);
+            for (char& c : ext) c = (char)tolower((unsigned char)c);
+        }
+
+        if (ext == "gguf") {
+            const std::wstring msg = utf8ToWide("Load model file?\n\n" + path);
+            int result = MessageBoxW(m_hwndMain, msg.c_str(), L"RawrXD - Load Model", MB_YESNO | MB_ICONQUESTION);
+            if (result == IDYES) {
+                loadModelFromPath(path);
+            }
+        }
     }
 }

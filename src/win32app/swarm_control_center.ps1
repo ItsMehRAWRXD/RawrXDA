@@ -29,7 +29,14 @@ $ErrorActionPreference = "Stop"
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$script:SwarmRoot = "D:\lazy init ide"
+# Swarm root: use repo containing this script so swarm_modes.ps1 and scripts\ are always found.
+# (Script lives in ...\src\win32app\ → repo root is two levels up.)
+$script:SwarmRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+# Optional override: if env RAWRXD_SWARM_ROOT is set and contains scripts\swarm_modes.ps1, use it
+$envRoot = $env:RAWRXD_SWARM_ROOT
+if ($envRoot -and (Test-Path (Join-Path $envRoot "scripts\swarm_modes.ps1"))) {
+    $script:SwarmRoot = $envRoot
+}
 $script:ConfigDir = Join-Path $SwarmRoot "logs/swarm_config"
 $script:BeaconDir = Join-Path $SwarmRoot "logs/swarm_beacon"
 $script:MemoryDir = Join-Path $SwarmRoot "logs/swarm_memory"
@@ -521,8 +528,10 @@ function Invoke-SwarmLaunch {
         [int]$AgentCount = 4
     )
     
-    $modesScript = Join-Path $SwarmRoot "scripts\swarm_modes.ps1"
-    
+    $modesScript = Join-Path $script:SwarmRoot "scripts\swarm_modes.ps1"
+    if (-not (Test-Path $modesScript)) {
+        Write-Error "Swarm modes script not found: $modesScript (SwarmRoot: $script:SwarmRoot)"
+    }
     Write-Host ""
     Write-Host "🚀 Launching $Mode swarm with $AgentCount agents..." -ForegroundColor Green
     
@@ -590,3 +599,4 @@ while ($true) {
         default { }
     }
 }
+

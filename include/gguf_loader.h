@@ -6,11 +6,18 @@
 #include <cstdint>
 #include <fstream>
 #include <unordered_map>
+#ifndef RAWRXD_NO_VULKAN
 #include "vulkan_compute.h"
+#endif
 #include "brutal_gzip.h"
-// #include "deflate_brutal_qt.hpp"
+#include "deflate_brutal_std.hpp"
+
+namespace CPUInference {
 
 class VulkanCompute;
+struct VulkanTensor; // Forward declaration
+
+
 
 // Compression type enumeration for GGUF tensors
 enum class CompressionType : uint32_t {
@@ -55,6 +62,7 @@ struct GGUFMetadata {
     std::map<std::string, std::string> kv_pairs;
     uint32_t architecture_type;
     uint32_t layer_count;
+    uint32_t head_count;      // Added for engine
     uint32_t context_length;
     uint32_t embedding_dim;
     uint32_t vocab_size;
@@ -192,3 +200,5 @@ private:
     void CleanupMemoryMap();
     const void* GetMappedSlice(uint64_t offset, uint64_t size) const;
 };
+
+} // namespace CPUInference

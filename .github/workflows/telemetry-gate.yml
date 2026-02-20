@@ -1,0 +1,116 @@
+name: Telemetry Divergence CI Gate
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'src/asm/RawrXD_Telemetry_Kernel.asm'
+      - 'src/asm/RawrXD_Prometheus_Exporter.asm'
+      - 'src/asm/RawrXD_Common.inc'
+      - 'src/telemetry/**'
+      - 'ci/telemetry_divergence_gate.ps1'
+      - 'include/rawrxd_telemetry_exports.h'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'src/asm/RawrXD_Telemetry_Kernel.asm'
+      - 'src/asm/RawrXD_Prometheus_Exporter.asm'
+      - 'src/asm/RawrXD_Common.inc'
+      - 'src/telemetry/**'
+      - 'ci/telemetry_divergence_gate.ps1'
+      - 'include/rawrxd_telemetry_exports.h'
+
+jobs:
+  telemetry-gate:
+    name: "T3-A: MASM Telemetry Build & Divergence Gate"
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Enable MSVC x64 Environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: amd64
+
+    - name: Assemble Telemetry Kernel (ml64)
+      shell: cmd
+      run: |
+        mkdir build\telemetry_obj 2>NUL
+        ml64 /c /nologo /Fo build\telemetry_obj\RawrXD_Telemetry_Kernel.obj /I src\asm src\asm\RawrXD_Telemetry_Kernel.asm
+        if errorlevel 1 exit /b 1
+        echo [OK] Telemetry Kernel assembled
+
+    - name: Assemble Prometheus Exporter (ml64)
+      shell: cmd
+      run: |
+        ml64 /c /nologo /Fo build\telemetry_obj\RawrXD_Prometheus_Exporter.obj /I src\asm src\asm\RawrXD_Prometheus_Exporter.asm
+        if errorlevel 1 exit /b 1
+        echo [OK] Prometheus Exporter assembled
+
+    - name: Verify Kernel Symbols (dumpbin)
+      shell: cmd
+      run: |
+        echo --- Telemetry Kernel Symbols ---
+        dumpbin /symbols build\telemetry_obj\RawrXD_Telemetry_Kernel.obj | findstr /i "UTC_ g_Counter_ g_MetricTable g_EventBuffer g_HeadIdx g_TailIdx"
+        if errorlevel 1 (
+          echo [WARN] Some symbols not found — check assembly
+        )
+
+    - name: Verify Exporter Symbols (dumpbin)
+      shell: cmd
+      run: |
+        echo --- Prometheus Exporter Symbols ---
+        dumpbin /symbols build\telemetry_obj\RawrXD_Prometheus_Exporter.obj | findstr /i "ExportPrometheus Internal_U64 Internal_Append"
+        if errorlevel 1 (
+          echo [WARN] Some symbols not found — check assembly
+        )
+
+    - name: Run Telemetry Divergence Gate
+      shell: pwsh
+      run: |
+        Write-Host "Running Telemetry Divergence CI Gate (Milestone T3-A)..."
+        .\ci\telemetry_divergence_gate.ps1 -Verbose -SkipBuild
+      env:
+        CI: true
+
+    - name: Upload Gate Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: telemetry-gate-report
+        path: telemetry_gate_report.json
+        retention-days: 30
+
+    - name: Upload Baseline Snapshot
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: telemetry-baseline
+        path: telemetry_baseline.json
+        retention-days: 90
+
+    - name: Badge Summary
+      if: always()
+      shell: pwsh
+      run: |
+        if (Test-Path "telemetry_gate_report.json") {
+          $report = Get-Content "telemetry_gate_report.json" | ConvertFrom-Json
+          $badge = $report.badge
+          $passed = $report.summary.passed
+          $total = $report.summary.total
+          
+          Write-Host ""
+          Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+          Write-Host "  Badge:   $badge"
+          Write-Host "  Checks:  $passed / $total passed"
+          Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+          
+          # Write to GitHub Actions Job Summary
+          "## Telemetry Divergence Gate`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "| Metric | Value |`n|--------|-------|" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "| Badge | ``$badge`` |" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "| Passed | $passed / $total |" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "| Result | $($report.result) |" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+        }

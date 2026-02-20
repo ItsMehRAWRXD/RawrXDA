@@ -1,23 +1,23 @@
 /**
  * @file RAWRXD_ThermalDashboard_Enhanced.hpp
- * @brief Enhanced Qt6 Thermal Dashboard with Predictive Visualization
- * 
-// REMOVED_QT:  * Adds QtCharts predicted temperature path visualization and
- * integration with PredictiveThrottling engine.
- * 
+ * @brief Enhanced Win32 Thermal Dashboard with Predictive Visualization (Qt-free)
+ *
+ * Integrates with PredictiveThrottling engine; pure C++20/Win32.
+ *
  * @copyright RawrXD IDE 2026
  */
 
 #pragma once
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 #include "thermal_dashboard_plugin.hpp"
 #include "PredictiveThrottling.h"
 #include "DynamicLoadBalancer.h"
 #include "SovereignControlBlock.h"
-
-
-// REMOVED_QT: // QtCharts
-
 
 #include <memory>
 #include <vector>
@@ -41,11 +41,11 @@ struct TemperatureDataPoint {
 /**
  * @brief Enhanced Thermal Dashboard with Predictive Visualization
  */
-class ThermalDashboardEnhanced : public void {
+class ThermalDashboardEnhanced {
 
 public:
     explicit ThermalDashboardEnhanced(void* parent = nullptr);
-    ~ThermalDashboardEnhanced() override;
+    ~ThermalDashboardEnhanced();
 
 public:
     /**
@@ -161,38 +161,38 @@ private:
     // ═══════════════════════════════════════════════════════════════════════════
     
     // Temperature history chart
-// REMOVED_QT:     QChartView* m_tempChartView;
-    QChart* m_tempChart;
-    QLineSeries* m_nvmeTempSeries[5];
-    QLineSeries* m_gpuTempSeries;
-    QLineSeries* m_cpuTempSeries;
-    QLineSeries* m_predictedTempSeries;     // Dotted prediction line
-    QAreaSeries* m_predictionRangeSeries;   // Confidence band
-    QScatterSeries* m_thresholdMarkers;
-    QValueAxis* m_tempXAxis;
-    QValueAxis* m_tempYAxis;
+    void* m_tempChartView;           // Chart view handle
+    void* m_tempChart;               // Chart object handle
+    void* m_nvmeTempSeries[5];       // Line series (was QLineSeries*)
+    void* m_gpuTempSeries;           // Line series (was QLineSeries*)
+    void* m_cpuTempSeries;           // Line series (was QLineSeries*)
+    void* m_predictedTempSeries;     // Dotted prediction line (was QLineSeries*)
+    void* m_predictionRangeSeries;   // Confidence band (was QAreaSeries*)
+    void* m_thresholdMarkers;        // Scatter series (was QScatterSeries*)
+    void* m_tempXAxis;               // Value axis (was QValueAxis*)
+    void* m_tempYAxis;               // Value axis (was QValueAxis*)
     
     // Load balancer chart
-// REMOVED_QT:     QChartView* m_loadChartView;
-    QChart* m_loadChart;
-    QLineSeries* m_loadSeries[5];
-    QLineSeries* m_selectedDriveSeries;
+    void* m_loadChartView;           // Chart view handle
+    void* m_loadChart;               // Chart object handle
+    void* m_loadSeries[5];           // Line series (was QLineSeries*)
+    void* m_selectedDriveSeries;     // Line series (was QLineSeries*)
     
     // Prediction chart
-// REMOVED_QT:     QChartView* m_predChartView;
-    QChart* m_predChart;
-    QLineSeries* m_ewmaSeries;
-    QLineSeries* m_slopeSeries;
-    QLineSeries* m_confidenceSeries;
+    void* m_predChartView;           // Chart view handle
+    void* m_predChart;               // Chart object handle
+    void* m_ewmaSeries;              // Line series (was QLineSeries*)
+    void* m_slopeSeries;             // Line series (was QLineSeries*)
+    void* m_confidenceSeries;        // Line series (was QLineSeries*)
     
     // ═══════════════════════════════════════════════════════════════════════════
     // UI Components - Config Tab
     // ═══════════════════════════════════════════════════════════════════════════
     
-    QDoubleSpinBox* m_alphaSpinBox;
+    void* m_alphaSpinBox;            // Double spin (was QDoubleSpinBox*)
     void* m_historySizeSpinBox;
-    QDoubleSpinBox* m_thermalThresholdSpinBox;
-    QDoubleSpinBox* m_emergencyThresholdSpinBox;
+    void* m_thermalThresholdSpinBox;  // Double spin (was QDoubleSpinBox*)
+    void* m_emergencyThresholdSpinBox; // Double spin (was QDoubleSpinBox*)
     void* m_predictionHorizonSpinBox;
     void* m_predictiveEnabledCheck;
     
@@ -207,7 +207,7 @@ private:
     void* m_driveOverrideCheck;
     void* m_driveOverrideCombo;
     
-    QTableWidget* m_driveSelectionTable;
+    void* m_driveSelectionTable;  // HWND list-view control (was QTableWidget*)
     
     void* m_emergencyStopButton;
     void* m_clearEmergencyButton;
@@ -237,11 +237,11 @@ private:
 /**
  * @brief Compact toolbar widget for thermal status (enhanced)
  */
-class ThermalCompactWidgetEnhanced : public void {
+class ThermalCompactWidgetEnhanced {
 
 public:
     explicit ThermalCompactWidgetEnhanced(void* parent = nullptr);
-    ~ThermalCompactWidgetEnhanced() override = default;
+    ~ThermalCompactWidgetEnhanced() = default;
 
 public:
     void onThermalUpdate(const ThermalSnapshot& snapshot);

@@ -12,6 +12,10 @@
 ;   - Titan_Dispatch_Nitro_Shader_Real (~200 lines)
 
 OPTION CASEMAP:NONE
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 

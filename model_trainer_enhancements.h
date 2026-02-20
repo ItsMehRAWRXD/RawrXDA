@@ -1,345 +1,156 @@
 // ============================================================================
 // File: model_trainer_enhancements.h
-// 
-// Purpose: Enhanced ModelTrainer with dynamic learning rate scheduling,
-//          JSON configuration, checkpointing, and advanced features
-//
-// License: Production Grade - Enterprise Ready
+// Purpose: Enhanced ModelTrainer — C++20, no Qt. JSON via nlohmann::json.
+//          Dynamic LR scheduling, checkpointing, callbacks replace signals.
 // ============================================================================
 
 #pragma once
 
 #include "model_trainer.h"
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QFile>
-#include <math>
+#include <nlohmann/json.hpp>
+#include <cmath>
 #include <vector>
 #include <string>
 #include <memory>
+#include <fstream>
+#include <functional>
 
 /**
  * @class EnhancedModelTrainer
- * @brief Enhanced ModelTrainer with advanced features
- * 
- * Additional Features:
- * - Dynamic learning rate scheduling
- * - JSON configuration support
- * - Model checkpointing
- * - Advanced error handling and logging
- * - GPU acceleration support (future)
- * - Enhanced user feedback
+ * @brief Enhanced ModelTrainer with advanced features (C++20, no Qt)
+ *
+ * Callbacks replace Qt signals. JSON via nlohmann::json.
  */
 class EnhancedModelTrainer : public ModelTrainer
 {
-    Q_OBJECT
-
 public:
     // ===== Enhanced Configuration =====
-    
-    /**
-     * @struct EnhancedTrainingConfig
-     * @brief Extended training configuration with scheduling options
-     */
+
     struct EnhancedTrainingConfig : public TrainingConfig {
-        // Learning rate scheduling
-        QString lrSchedule = "cosine";        ///< "cosine", "linear", "step"
-        float warmupRatio = 0.1f;             ///< Warmup as ratio of total steps
-        float minLearningRate = 1e-6f;        ///< Minimum learning rate
-        int stepDecayEpochs = 10;             ///< Epochs between step decays
-        float stepDecayRate = 0.5f;           ///< Step decay multiplier
-        
-        // Checkpointing
-        bool enableCheckpoints = true;        ///< Save model checkpoints
-        int checkpointFrequency = 1;          ///< Epochs between checkpoints
-        int keepBestCheckpoints = 3;          ///< Number of best checkpoints to keep
-        
-        // Advanced options
-        bool mixedPrecision = false;          ///< Use mixed precision training
-        int gradientAccumulation = 1;         ///< Gradient accumulation steps
-        bool earlyStopping = true;            ///< Enable early stopping
-        int earlyStoppingPatience = 5;        ///< Epochs without improvement
-        
-        // JSON configuration support
-        QJsonObject toJson() const;
-        static EnhancedTrainingConfig fromJson(const QJsonObject& json);
-    };
-    
-    /**
-     * @enum LearningRateSchedule
-     * @brief Supported learning rate schedules
-     */
-    enum class LearningRateSchedule {
-        Cosine,     ///< Cosine decay
-        Linear,     ///< Linear decay
-        Step,       ///< Step decay
-        Exponential ///< Exponential decay
+        std::string lrSchedule = "cosine";
+        float warmupRatio = 0.1f;
+        float minLearningRate = 1e-6f;
+        int stepDecayEpochs = 10;
+        float stepDecayRate = 0.5f;
+        bool enableCheckpoints = true;
+        int checkpointFrequency = 1;
+        int keepBestCheckpoints = 3;
+        bool mixedPrecision = false;
+        int gradientAccumulation = 1;
+        bool earlyStopping = true;
+        int earlyStoppingPatience = 5;
+
+        nlohmann::json toJson() const;
+        static EnhancedTrainingConfig fromJson(const nlohmann::json& json);
     };
 
+    enum class LearningRateSchedule { Cosine, Linear, Step, Exponential };
+
     // ===== Lifecycle =====
-    
-    explicit EnhancedModelTrainer(QObject* parent = nullptr);
+
+    explicit EnhancedModelTrainer();
     ~EnhancedModelTrainer() override;
-    
-    /**
-     * @brief Load configuration from JSON file
-     * @param configPath Path to JSON configuration file
-     * @return true if configuration loaded successfully
-     */
-    bool loadConfiguration(const QString& configPath);
-    
-    /**
-     * @brief Save configuration to JSON file
-     * @param configPath Path to save configuration
-     * @return true if configuration saved successfully
-     */
-    bool saveConfiguration(const QString& configPath) const;
-    
-    /**
-     * @brief Start training with enhanced configuration
-     * @param config Enhanced training configuration
-     * @return true if training started successfully
-     */
+
+    bool loadConfiguration(const std::string& configPath);
+    bool saveConfiguration(const std::string& configPath) const;
     bool startTraining(const EnhancedTrainingConfig& config);
 
     // ===== Checkpoint Management =====
-    
-    /**
-     * @brief Save training checkpoint
-     * @param epoch Current epoch
-     * @param loss Current loss
-     * @param perplexity Current perplexity
-     * @return true if checkpoint saved successfully
-     */
+
     bool saveCheckpoint(int epoch, float loss, float perplexity);
-    
-    /**
-     * @brief Load training checkpoint
-     * @param checkpointPath Path to checkpoint file
-     * @return true if checkpoint loaded successfully
-     */
-    bool loadCheckpoint(const QString& checkpointPath);
-    
-    /**
-     * @brief Get list of available checkpoints
-     * @return List of checkpoint file paths
-     */
-    QStringList getAvailableCheckpoints() const;
-    
-    /**
-     * @brief Clean up old checkpoints
-     * @param keepCount Number of checkpoints to keep
-     */
+    bool loadCheckpoint(const std::string& checkpointPath);
+    std::vector<std::string> getAvailableCheckpoints() const;
     void cleanupCheckpoints(int keepCount = 3);
 
-    // ===== Enhanced Signals =====
-    
-signals:
-    /**
-     * @brief Emitted when learning rate changes
-     * @param epoch Current epoch
-     * @param step Current step
-     * @param learningRate New learning rate
-     */
-    void learningRateChanged(int epoch, int step, float learningRate);
-    
-    /**
-     * @brief Emitted when checkpoint is saved
-     * @param checkpointPath Path to saved checkpoint
-     * @param epoch Checkpoint epoch
-     * @param loss Checkpoint loss
-     */
-    void checkpointSaved(const QString& checkpointPath, int epoch, float loss);
-    
-    /**
-     * @brief Emitted for detailed training metrics
-     * @param metrics JSON object with detailed metrics
-     */
-    void trainingMetrics(const QJsonObject& metrics);
-    
-    /**
-     * @brief Emitted when early stopping is triggered
-     * @param bestEpoch Best epoch achieved
-     * @param bestLoss Best loss achieved
-     */
-    void earlyStoppingTriggered(int bestEpoch, float bestLoss);
+    // ===== Callbacks (replace Qt signals) =====
 
-private slots:
-    /**
-     * @brief Enhanced training loop
-     */
-    void runEnhancedTraining();
+    std::function<void(int epoch, int step, float learningRate)> onLearningRateChanged;
+    std::function<void(const std::string& checkpointPath, int epoch, float loss)> onCheckpointSaved;
+    std::function<void(const nlohmann::json& metrics)> onTrainingMetrics;
+    std::function<void(int bestEpoch, float bestLoss)> onEarlyStoppingTriggered;
 
 private:
-    // ===== Learning Rate Scheduling =====
-    
-    /**
-     * @brief Calculate learning rate based on schedule
-     * @param step Current training step
-     * @param totalSteps Total training steps
-     * @return Current learning rate
-     */
-    float calculateLearningRate(int step, int totalSteps);
-    
-    /**
-     * @brief Cosine decay learning rate schedule
-     */
-    float cosineDecay(int step, int totalSteps);
-    
-    /**
-     * @brief Linear decay learning rate schedule
-     */
-    float linearDecay(int step, int totalSteps);
-    
-    /**
-     * @brief Step decay learning rate schedule
-     */
-    float stepDecay(int step, int totalSteps);
-    
-    /**
-     * @brief Exponential decay learning rate schedule
-     */
-    float exponentialDecay(int step, int totalSteps);
-    
-    // ===== Checkpoint Management =====
-    
-    /**
-     * @brief Get checkpoint file path
-     * @param epoch Epoch number
-     * @param loss Training loss
-     * @return Checkpoint file path
-     */
-    QString getCheckpointPath(int epoch, float loss) const;
-    
-    /**
-     * @brief Parse checkpoint filename
-     * @param filename Checkpoint filename
-     * @return Epoch and loss extracted from filename
-     */
-    std::pair<int, float> parseCheckpointFilename(const QString& filename) const;
-    
-    // ===== Enhanced Training =====
-    
-    /**
-     * @brief Execute enhanced training epoch
-     * @param epoch Current epoch
-     * @return true if epoch completed successfully
-     */
-    bool executeEnhancedEpoch(int epoch);
-    
-    /**
-     * @brief Check for early stopping conditions
-     * @param epoch Current epoch
-     * @param loss Current loss
-     * @return true if early stopping should be triggered
-     */
-    bool checkEarlyStopping(int epoch, float loss);
-    
-    /**
-     * @brief Update training metrics
-     */
-    void updateMetrics();
-    
-    /**
-     * @brief Log enhanced training information
-     * @param message Log message
-     * @param level Log level (INFO, WARNING, ERROR)
-     */
-    void logEnhanced(const QString& message, const QString& level = "INFO");
+    void runEnhancedTraining();
 
-    // ===== Enhanced State =====
-    
+    float calculateLearningRate(int step, int totalSteps);
+    float cosineDecay(int step, int totalSteps);
+    float linearDecay(int step, int totalSteps);
+    float stepDecay(int step, int totalSteps);
+    float exponentialDecay(int step, int totalSteps);
+
+    std::string getCheckpointPath(int epoch, float loss) const;
+    std::pair<int, float> parseCheckpointFilename(const std::string& filename) const;
+
+    bool executeEnhancedEpoch(int epoch);
+    bool checkEarlyStopping(int epoch, float loss);
+    void updateMetrics();
+    void logEnhanced(const std::string& message, const std::string& level = "INFO");
+
     EnhancedTrainingConfig m_enhancedConfig;
     LearningRateSchedule m_lrSchedule;
-    
-    // Checkpoint management
-    QString m_checkpointDir;
+    std::string m_checkpointDir;
     std::vector<std::pair<int, float>> m_checkpointHistory;
-    
-    // Early stopping
     int m_bestEpoch = 0;
     float m_bestLoss = std::numeric_limits<float>::max();
     int m_epochsWithoutImprovement = 0;
-    
-    // Metrics tracking
-    QJsonObject m_trainingMetrics;
+    nlohmann::json m_trainingMetrics;
     std::vector<float> m_lossHistory;
     std::vector<float> m_perplexityHistory;
     std::vector<float> m_learningRateHistory;
-    
-    // Enhanced logging
-    QFile* m_logFile = nullptr;
+    std::ofstream m_logFile;
 };
 
-// ===== JSON Serialization Helpers =====
+// ===== JSON Serialization (inline for header-only use) =====
 
-/**
- * @brief Serialize EnhancedTrainingConfig to JSON
- */
-QJsonObject EnhancedModelTrainer::EnhancedTrainingConfig::toJson() const
+inline nlohmann::json EnhancedModelTrainer::EnhancedTrainingConfig::toJson() const
 {
-    QJsonObject json;
-    
-    // Base configuration
-    json["datasetPath"] = datasetPath;
-    json["outputPath"] = outputPath;
-    json["epochs"] = epochs;
-    json["learningRate"] = learningRate;
-    json["batchSize"] = batchSize;
-    json["sequenceLength"] = sequenceLength;
-    json["gradientClip"] = gradientClip;
-    json["validationSplit"] = validationSplit;
-    
-    // Enhanced configuration
-    json["lrSchedule"] = lrSchedule;
-    json["warmupRatio"] = warmupRatio;
-    json["minLearningRate"] = minLearningRate;
-    json["stepDecayEpochs"] = stepDecayEpochs;
-    json["stepDecayRate"] = stepDecayRate;
-    json["enableCheckpoints"] = enableCheckpoints;
-    json["checkpointFrequency"] = checkpointFrequency;
-    json["keepBestCheckpoints"] = keepBestCheckpoints;
-    json["mixedPrecision"] = mixedPrecision;
-    json["gradientAccumulation"] = gradientAccumulation;
-    json["earlyStopping"] = earlyStopping;
-    json["earlyStoppingPatience"] = earlyStoppingPatience;
-    
-    return json;
+    nlohmann::json j;
+    j["datasetPath"] = datasetPath;
+    j["outputPath"] = outputPath;
+    j["epochs"] = epochs;
+    j["learningRate"] = learningRate;
+    j["batchSize"] = batchSize;
+    j["sequenceLength"] = sequenceLength;
+    j["gradientClip"] = gradientClip;
+    j["validationSplit"] = validationSplit;
+    j["lrSchedule"] = lrSchedule;
+    j["warmupRatio"] = warmupRatio;
+    j["minLearningRate"] = minLearningRate;
+    j["stepDecayEpochs"] = stepDecayEpochs;
+    j["stepDecayRate"] = stepDecayRate;
+    j["enableCheckpoints"] = enableCheckpoints;
+    j["checkpointFrequency"] = checkpointFrequency;
+    j["keepBestCheckpoints"] = keepBestCheckpoints;
+    j["mixedPrecision"] = mixedPrecision;
+    j["gradientAccumulation"] = gradientAccumulation;
+    j["earlyStopping"] = earlyStopping;
+    j["earlyStoppingPatience"] = earlyStoppingPatience;
+    return j;
 }
 
-/**
- * @brief Deserialize EnhancedTrainingConfig from JSON
- */
-EnhancedModelTrainer::EnhancedTrainingConfig 
-EnhancedModelTrainer::EnhancedTrainingConfig::fromJson(const QJsonObject& json)
+inline EnhancedModelTrainer::EnhancedTrainingConfig
+EnhancedModelTrainer::EnhancedTrainingConfig::fromJson(const nlohmann::json& j)
 {
-    EnhancedTrainingConfig config;
-    
-    // Base configuration
-    config.datasetPath = json["datasetPath"].toString();
-    config.outputPath = json["outputPath"].toString();
-    config.epochs = json["epochs"].toInt();
-    config.learningRate = json["learningRate"].toDouble();
-    config.batchSize = json["batchSize"].toInt();
-    config.sequenceLength = json["sequenceLength"].toInt();
-    config.gradientClip = json["gradientClip"].toDouble();
-    config.validationSplit = json["validationSplit"].toDouble();
-    
-    // Enhanced configuration
-    config.lrSchedule = json["lrSchedule"].toString();
-    config.warmupRatio = json["warmupRatio"].toDouble();
-    config.minLearningRate = json["minLearningRate"].toDouble();
-    config.stepDecayEpochs = json["stepDecayEpochs"].toInt();
-    config.stepDecayRate = json["stepDecayRate"].toDouble();
-    config.enableCheckpoints = json["enableCheckpoints"].toBool();
-    config.checkpointFrequency = json["checkpointFrequency"].toInt();
-    config.keepBestCheckpoints = json["keepBestCheckpoints"].toInt();
-    config.mixedPrecision = json["mixedPrecision"].toBool();
-    config.gradientAccumulation = json["gradientAccumulation"].toInt();
-    config.earlyStopping = json["earlyStopping"].toBool();
-    config.earlyStoppingPatience = json["earlyStoppingPatience"].toInt();
-    
-    return config;
+    EnhancedTrainingConfig c;
+    c.datasetPath = j.value("datasetPath", "");
+    c.outputPath = j.value("outputPath", "");
+    c.epochs = j.value("epochs", 10);
+    c.learningRate = j.value("learningRate", 0.001);
+    c.batchSize = j.value("batchSize", 32);
+    c.sequenceLength = j.value("sequenceLength", 512);
+    c.gradientClip = j.value("gradientClip", 1.0);
+    c.validationSplit = j.value("validationSplit", 0.1);
+    c.lrSchedule = j.value("lrSchedule", "cosine");
+    c.warmupRatio = j.value("warmupRatio", 0.1);
+    c.minLearningRate = j.value("minLearningRate", 1e-6);
+    c.stepDecayEpochs = j.value("stepDecayEpochs", 10);
+    c.stepDecayRate = j.value("stepDecayRate", 0.5);
+    c.enableCheckpoints = j.value("enableCheckpoints", true);
+    c.checkpointFrequency = j.value("checkpointFrequency", 1);
+    c.keepBestCheckpoints = j.value("keepBestCheckpoints", 3);
+    c.mixedPrecision = j.value("mixedPrecision", false);
+    c.gradientAccumulation = j.value("gradientAccumulation", 1);
+    c.earlyStopping = j.value("earlyStopping", true);
+    c.earlyStoppingPatience = j.value("earlyStoppingPatience", 5);
+    return c;
 }
-
-#endif // ENHANCED_MODEL_TRAINER_H

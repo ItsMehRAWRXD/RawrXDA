@@ -1,4 +1,8 @@
 #include "agentic_failure_detector.hpp"
+#include <chrono>
+#include <mutex>
+#include <string>
+#include <vector>
 #include <algorithm>
 #include <iostream>
 
@@ -141,6 +145,58 @@ bool AgenticFailureDetector::isResourceExhausted(const std::string& output) {
 }
 
 double AgenticFailureDetector::calculateConfidence(AgentFailureType type, const std::string& output) {
-    // Simplified placeholder
-    return 0.9;
+    if (output.empty()) return 0.0;
+
+    // Base confidence varies by failure type severity
+    double base = 0.0;
+    const std::vector<std::string>* patterns = nullptr;
+
+    switch (type) {
+        case AgentFailureType::Refusal:
+            base = 0.70;
+            patterns = &m_refusalPatterns;
+            break;
+        case AgentFailureType::SafetyViolation:
+            base = 0.80;
+            patterns = &m_safetyPatterns;
+            break;
+        case AgentFailureType::Timeout:
+            base = 0.85;
+            patterns = &m_timeoutIndicators;
+            break;
+        case AgentFailureType::ResourceExhaustion:
+            base = 0.75;
+            patterns = &m_resourceExhaustionIndicators;
+            break;
+        case AgentFailureType::TokenLimitExceeded:
+            base = 0.60;
+            patterns = nullptr; // heuristic-based, no pattern list
+            break;
+        default:
+            return 0.5;
+    }
+
+    if (!patterns || patterns->empty()) return base;
+
+    // Count how many distinct patterns match — more matches = higher confidence
+    int matchCount = 0;
+    for (const auto& pattern : *patterns) {
+        if (output.find(pattern) != std::string::npos) {
+            matchCount++;
+        }
+    }
+
+    // Scale: 1 match = base, each additional adds diminishing confidence
+    // Cap at 0.99
+    double bonus = 0.0;
+    if (matchCount > 1) {
+        bonus = std::min(0.20, (matchCount - 1) * 0.05);
+    }
+
+    // Length penalty: very short outputs with matches are more suspicious
+    if (output.size() < 50 && matchCount > 0) {
+        bonus += 0.05;
+    }
+
+    return std::min(0.99, base + bonus);
 }

@@ -57,6 +57,10 @@ FLAG_SESSION_VALID      EQU 20h
 ; Magic value for validation
 SCB_MAGIC_VALUE         EQU 052415752h  ; 'RAWR'
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
     ALIGN 8
     XorState    dq 0                   ; Entropy state for fast jitter

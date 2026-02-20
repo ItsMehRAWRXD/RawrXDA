@@ -1,6 +1,6 @@
 /**
  * @file RAWRXD_ThermalDashboard.cpp
- * @brief Qt6 Thermal Dashboard UI Implementation
+ * @brief Win32 Thermal Dashboard UI Implementation (Qt-free)
  */
 
 #include "RAWRXD_ThermalDashboard.hpp"

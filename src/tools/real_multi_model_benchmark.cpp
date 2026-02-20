@@ -3,10 +3,12 @@
 #include <vector>
 #include <string>
 #include <filesystem>
-#include "../cpu_inference_engine.h"
+#include "../inference/InferenceEngine.hpp"
+
+#include "logging/logger.h"
+static Logger s_logger("real_multi_model_benchmark");
 
 namespace fs = std::filesystem;
-using InferenceEngine = RawrXD::CPUInferenceEngine;
 
 struct ModelBenchmarkResult {
     std::string model_path;
@@ -21,8 +23,11 @@ struct ModelBenchmarkResult {
 };
 
 void printHeader() {
-
-
+    s_logger.info("\n");
+    s_logger.info("╔═══════════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║   REAL MULTI-MODEL GPU BENCHMARK - ACTUAL INFERENCE TEST     ║\n");
+    s_logger.info("║         Testing All GGUF Models with Real Loading            ║\n");
+    s_logger.info("╚═══════════════════════════════════════════════════════════════╝\n\n");
 }
 
 std::vector<std::string> discoverGGUFModels(const std::string& models_dir) {
@@ -35,7 +40,7 @@ std::vector<std::string> discoverGGUFModels(const std::string& models_dir) {
             }
         }
     } catch (const std::exception& e) {
-        
+        s_logger.error( "Error scanning directory: " << e.what() << "\n";
     }
     
     // Sort by file size (descending)
@@ -53,13 +58,17 @@ ModelBenchmarkResult benchmarkModel(const std::string& model_path, int num_token
     result.file_size_gb = fs::file_size(model_path) / (1024ULL * 1024 * 1024);
     result.tokens_generated = num_tokens;
     result.success = false;
-
-
+    
+    s_logger.info("\n╔═══════════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║ Model: ");
+    s_logger.info("║ Size:  ");
+    s_logger.info("╚═══════════════════════════════════════════════════════════════╝\n");
+    
     try {
         // Initialize InferenceEngine
         InferenceEngine engine;
-
-
+        
+        s_logger.info("Loading model...");
         auto load_start = std::chrono::high_resolution_clock::now();
         
         bool loaded = engine.loadModel(model_path);
@@ -69,16 +78,17 @@ ModelBenchmarkResult benchmarkModel(const std::string& model_path, int num_token
         
         if (!loaded) {
             result.error = "Failed to load model";
-
-
+            s_logger.info(" FAILED\n");
+            s_logger.info("Error: ");
             return result;
         }
-
-
+        
+        s_logger.info(" OK (");
+        
         // Prepare prompt
         std::string prompt = "Write a short story about artificial intelligence:";
-
-
+        s_logger.info("Generating ");
+        
         // Run inference and measure time
         auto gen_start = std::chrono::high_resolution_clock::now();
         
@@ -93,24 +103,43 @@ ModelBenchmarkResult benchmarkModel(const std::string& model_path, int num_token
         result.success = true;
         
         // Print results
-
-
+        s_logger.info("\n✓ RESULTS:\n");
+        s_logger.info("  Total Time:      ");
+        s_logger.info("  Tokens/Sec:      ");
+        s_logger.info("  Avg Latency:     ");
+        s_logger.info("  Output Length:   ");
+        
         // Unload model
         engine.unloadModel();
         
     } catch (const std::exception& e) {
         result.error = std::string("Exception: ") + e.what();
-        
+        s_logger.info("\n✗ ERROR: ");
     }
     
     return result;
 }
 
 void printSummary(const std::vector<ModelBenchmarkResult>& results) {
-
-
+    s_logger.info("\n╔═══════════════════════════════════════════════════════════════╗\n");
+    s_logger.info("║                  BENCHMARK SUMMARY                            ║\n");
+    s_logger.info("╚═══════════════════════════════════════════════════════════════╝\n\n");
+    
+    s_logger.info( std::left << std::setw(40) << "Model"
+              << std::setw(10) << "Size (GB)"
+              << std::setw(12) << "TPS"
+              << std::setw(15) << "Latency (ms)"
+              << std::setw(10) << "Status" << "\n";
+    s_logger.info( std::string(90, '─') << "\n";
+    
     for (const auto& result : results) {
-        
+        s_logger.info( std::left << std::setw(40) << result.model_name.substr(0, 38)
+                  << std::setw(10) << result.file_size_gb
+                  << std::setw(12) << std::fixed << std::setprecision(2) 
+                  << (result.success ? result.tokens_per_sec : 0.0)
+                  << std::setw(15) << std::fixed << std::setprecision(2) 
+                  << (result.success ? result.avg_latency_ms : 0.0)
+                  << std::setw(10) << (result.success ? "✓" : "✗") << "\n";
     }
     
     // Calculate statistics
@@ -126,18 +155,22 @@ void printSummary(const std::vector<ModelBenchmarkResult>& results) {
         
         double max_tps = *std::max_element(tps_values.begin(), tps_values.end());
         double min_tps = *std::min_element(tps_values.begin(), tps_values.end());
-
-
+        
+        s_logger.info("\n");
+        s_logger.info("Successful Models: ");
+        s_logger.info("Average TPS:       ");
+        s_logger.info("Max TPS:           ");
+        s_logger.info("Min TPS:           ");
     }
-
-
+    
+    s_logger.info("\n");
 }
 
 void exportCSV(const std::vector<ModelBenchmarkResult>& results, const std::string& filename) {
     std::ofstream csv(filename);
     
     if (!csv.is_open()) {
-        
+        s_logger.error( "Failed to open CSV file: " << filename << "\n";
         return;
     }
     
@@ -157,7 +190,7 @@ void exportCSV(const std::vector<ModelBenchmarkResult>& results, const std::stri
     }
     
     csv.close();
-    
+    s_logger.info("✓ Results exported to: ");
 }
 
 int main(int argc, char* argv[]) {
@@ -174,23 +207,27 @@ int main(int argc, char* argv[]) {
     if (argc > 2) {
         tokens_per_model = std::atoi(argv[2]);
     }
-
-
-    // Discover models
     
+    s_logger.info("Models Directory: ");
+    s_logger.info("Tokens Per Test:  ");
+    s_logger.info("\n");
+    
+    // Discover models
+    s_logger.info("Discovering GGUF models...\n");
     std::vector<std::string> model_paths = discoverGGUFModels(models_dir);
     
     if (model_paths.empty()) {
-        
+        s_logger.error( "No GGUF models found in " << models_dir << "\n";
         return 1;
     }
-
-
+    
+    s_logger.info("Found ");
+    
     // Benchmark each model
     std::vector<ModelBenchmarkResult> results;
     
     for (size_t i = 0; i < model_paths.size(); i++) {
-        
+        s_logger.info("\n[");
         ModelBenchmarkResult result = benchmarkModel(model_paths[i], tokens_per_model);
         results.push_back(result);
         
@@ -204,7 +241,8 @@ int main(int argc, char* argv[]) {
     // Export to CSV
     std::string csv_path = "D:\\temp\\RawrXD-q8-wire\\test_results\\REAL_GPU_BENCHMARK_RESULTS.csv";
     exportCSV(results, csv_path);
-
-
+    
+    s_logger.info("\n✓ ALL BENCHMARKS COMPLETE\n\n");
+    
     return 0;
 }

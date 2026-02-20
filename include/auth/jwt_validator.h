@@ -1,43 +1,31 @@
 #ifndef JWT_VALIDATOR_H
 #define JWT_VALIDATOR_H
 
-#include <QObject>
-#include <QMap>
-#include <QVariant>
-#include <QString>
-#include <QJsonWebToken>
+// C++20, no Qt. JWT validator (HS256 + RS256). Claims as string map.
 
-// JWT validator middleware (HS256 + RS256) – plug into LLMHttpClient.
-class JWTValidator : public QObject
+#include <string>
+#include <map>
+
+class JWTValidator
 {
-    Q_OBJECT
-
 public:
-    explicit JWTValidator(QObject *parent = nullptr);
-    ~JWTValidator();
+    JWTValidator() = default;
+    ~JWTValidator() = default;
 
-    // Set the secret key for HS256 validation
-    void setHS256Secret(const QString &secret);
+    void setHS256Secret(const std::string& secret);
+    void setRS256PublicKey(const std::string& publicKey);
+    bool validateToken(const std::string& token);
 
-    // Set the public key for RS256 validation
-    void setRS256PublicKey(const QString &publicKey);
-
-    // Validate a JWT token
-    bool validateToken(const QString &token);
-
-    // Extract claims from a validated token
-    QMap<QString, QVariant> getClaims() const;
+    /** Claims after validateToken; values as string (or JSON string for nested). */
+    std::map<std::string, std::string> getClaims() const { return m_claims; }
 
 private:
-    QString m_hs256Secret;
-    QString m_rs256PublicKey;
-    QMap<QString, QVariant> m_claims;
-    
-    // Validate HS256 token
-    bool validateHS256(const QString &token);
-    
-    // Validate RS256 token
-    bool validateRS256(const QString &token);
+    bool validateHS256(const std::string& token);
+    bool validateRS256(const std::string& token);
+
+    std::string m_hs256Secret;
+    std::string m_rs256PublicKey;
+    std::map<std::string, std::string> m_claims;
 };
 
 #endif // JWT_VALIDATOR_H

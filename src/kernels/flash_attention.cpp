@@ -35,7 +35,7 @@ extern \"C\" {
         for (int b = 0; b < batch_size; b++) {
             for (int h = 0; h < num_heads; h++) {
                 int offset = (b * num_heads + h) * seq_len * head_size;
-                float*  = q + offset;
+                float* q_head = q + offset;
                 float* k_head = k + offset;
                 float* v_head = v + offset;
                 float* out_head = output + offset;
@@ -58,7 +58,7 @@ extern \"C\" {
                                 // Q * K^T
                                 float score = 0.0f;
                                 for (int d = 0; d < head_size; d++) {
-                                    score += [qi * head_size + d] * k_head[ki * head_size + d];
+                                    score += q_head[qi * head_size + d] * k_head[ki * head_size + d];
                                 }
                                 scores[(qi - i) * (block_j_end - j) + (ki - j)] = score * scale;
                             }
@@ -87,7 +87,7 @@ extern \"C\" {
         for (int b = 0; b < batch_size; b++) {
             for (int h = 0; h < num_heads; h++) {
                 int offset = (b * num_heads + h) * seq_len * head_size;
-                float*  = q + offset;
+                float* q_head = q + offset;
                 float* k_head = k + offset;
                 float* v_head = v + offset;
                 float* out_head = output + offset;
@@ -100,7 +100,7 @@ extern \"C\" {
                     for (int j = 0; j < seq_len; j++) {
                         float score = 0.0f;
                         for (int d = 0; d < head_size; d++) {
-                            score += [i * head_size + d] * k_head[j * head_size + d];
+                            score += q_head[i * head_size + d] * k_head[j * head_size + d];
                         }
                         attn[i * seq_len + j] = score * scale;
                     }

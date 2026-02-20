@@ -4,7 +4,6 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
-#include <nlohmann/json.hpp>
 
 namespace RawrXD::Agentic::Coordination {
 
@@ -56,16 +55,6 @@ AgentState AgentCoordinator::getAgentState(uint32_t agentId) const {
         return it->second.state;
     }
     return AgentState::UNINITIALIZED;
-}
-
-uint32_t AgentCoordinator::getAgentPriority(uint32_t agentId) const {
-    std::lock_guard<std::mutex> lock(coordinatorMutex_);
-
-    auto it = agents_.find(agentId);
-    if (it != agents_.end()) {
-        return it->second.capabilities.priority;
-    }
-    return 0;  // Default low priority for unknown agents
 }
 
 void AgentCoordinator::setAgentState(uint32_t agentId, AgentState newState) {
@@ -442,103 +431,117 @@ void AgentCoordinator::prune_completed_tasks(std::chrono::hours olderThan) {
 }
 
 bool AgentCoordinator::export_state(const std::string& filepath) {
-    // REAL IMPLEMENTATION: JSON Serialization
-    // In a full implementation, we would include <nlohmann/json.hpp>
-    // For now, we use a robust string builder format which is lighter.
-    std::stringstream ss;
-    ss << "{\n";
-    ss << "  \"agent_count\": " << agents_.size() << ",\n";
-    ss << "  \"agents\": [\n";
-    
-    bool first = true;
-    for (const auto& pair : agents_) {
-        if (!first) ss << ",\n";
-        const auto& record = pair.second;
-        ss << "    {\n";
-        ss << "      \"id\": " << record.agentId << ",\n";
-        ss << "      \"name\": \"" << record.agentName << "\",\n";
-        ss << "      \"state\": " << static_cast<int>(record.state) << ",\n";
-        ss << "      \"priority\": " << record.capabilities.priority << "\n";
-        ss << "    }";
-        first = false;
-    }
-    ss << "\n  ]\n";
-    ss << "}";
-    
-    // Atomic write pattern: write to temp, rename
-    std::string tmpPath = filepath + ".tmp";
-    {
-        std::ofstream tmpFile(tmpPath);
-        if (!tmpFile.is_open()) return false;
-        tmpFile << ss.str();
-        tmpFile.close();
-        if (!tmpFile.good()) return false;
-    }
-    
-    // Atomic rename
-    std::filesystem::path temp(tmpPath);
-    std::filesystem::path final(filepath);
-    std::error_code ec;
-    std::filesystem::rename(temp, final, ec);
-    if (ec) {
-        std::filesystem::remove(temp); // Cleanup on failure
+    std::lock_guard<std::mutex> lock(coordinatorMutex_);
+
+    std::ofstream ofs(filepath, std::ios::binary | std::ios::trunc);
+    if (!ofs.is_open()) {
         return false;
     }
-    
-    return true;
+
+    // JSON serialization of coordinator state
+    std::ostringstream json;
+    json << "{\n";
+
+    // Serialize agents
+    json << "  \"agents\": [\n";
+    bool firstAgent = true;
+    for (const auto& [id, rec] : agents_) {
+        if (!firstAgent) json << ",\n";
+        firstAgent = false;
+        json << "    {\"id\":" << id
+             << ",\"name\":\"" << rec.agentName << "\""
+             << ",\"state\":" << static_cast<int>(rec.state)
+             << ",\"tasksExecuted\":" << rec.tasksExecuted
+             << ",\"priority\":" << rec.capabilities.priority
+             << ",\"contextWindow\":" << rec.capabilities.contextWindowSize
+             << "}";
+    }
+    json << "\n  ],\n";
+
+    // Serialize tasks
+    json << "  \"tasks\": [\n";
+    bool firstTask = true;
+    for (const auto& [id, task] : tasks_) {
+        if (!firstTask) json << ",\n";
+        firstTask = false;
+        json << "    {\"id\":" << id
+             << ",\"agentId\":" << task.agentId
+             << ",\"name\":\"" << task.taskName << "\""
+             << ",\"progress\":" << task.progressPercentage
+             << ",\"checkpoints\":" << task.checkpointCount
+             << ",\"isLongRunning\":" << (task.isLongRunning ? "true" : "false")
+             << "}";
+    }
+    json << "\n  ],\n";
+
+    // Serialize conflicts
+    json << "  \"conflicts\": [\n";
+    bool firstConflict = true;
+    for (const auto& [id, conflict] : conflicts_) {
+        if (!firstConflict) json << ",\n";
+        firstConflict = false;
+        json << "    {\"id\":" << id
+             << ",\"resource\":\"" << conflict.resourceInContention << "\""
+             << ",\"resolved\":" << (conflict.resolved ? "true" : "false")
+             << ",\"attempts\":" << conflict.resolutionAttempts
+             << "}";
+    }
+    json << "\n  ],\n";
+
+    // Serialize counters
+    json << "  \"nextAgentId\":" << nextAgentId_ << ",\n"
+         << "  \"nextTaskId\":" << nextTaskId_ << ",\n"
+         << "  \"nextConflictId\":" << nextConflictId_ << ",\n"
+         << "  \"nextLeaseId\":" << nextLeaseId_ << ",\n"
+         << "  \"nextCheckpointId\":" << nextCheckpointId_ << "\n";
+    json << "}\n";
+
+    ofs << json.str();
+    return ofs.good();
 }
 
 bool AgentCoordinator::import_state(const std::string& filepath) {
     std::lock_guard<std::mutex> lock(coordinatorMutex_);
-    try {
-        std::ifstream file(filepath);
-        if (!file.is_open()) return false;
 
-        nlohmann::json j;
-        file >> j;
-        
-        // Validate structure
-        if (!j.is_object()) return false;
-        if (j.contains("activeAgents") && !j["activeAgents"].is_array()) return false;
-        if (j.contains("tasks") && !j["tasks"].is_array()) return false;
-
-        // Deserialize activeAgents
-        if (j.contains("activeAgents")) {
-            for (const auto& agentJson : j["activeAgents"]) {
-                if (!agentJson.contains("id") || !agentJson.contains("role")) continue;
-                
-                std::string id = agentJson["id"];
-                AgentInfo info;
-                info.id = id;
-                info.role = agentJson.value("role", "unknown");
-                info.status = agentJson.value("status", "unknown");
-                info.lastHeartbeat = std::chrono::system_clock::now();
-                
-                agents_[id] = info;
-            }
-        }
-
-        // Deserialize tasks
-        if (j.contains("tasks")) {
-            for (const auto& taskJson : j["tasks"]) {
-                if (!taskJson.contains("id")) continue;
-                
-                std::string id = taskJson["id"];
-                Task task;
-                task.id = id;
-                task.description = taskJson.value("description", "");
-                task.status = taskJson.value("status", "pending");
-                task.assignedAgent = taskJson.value("assignedAgent", "");
-                task.priority = taskJson.value("priority", 0);
-                
-                tasks_[id] = task;
-            }
-        }
-        
-        return true;
-    } catch (const std::exception&) {
+    std::ifstream ifs(filepath, std::ios::binary);
+    if (!ifs.is_open()) {
         return false;
     }
+
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                        std::istreambuf_iterator<char>());
+    if (content.empty()) {
+        return false;
+    }
+
+    // Simple JSON parser: extract counter values to restore state
+    auto extractUint = [&](const std::string& key) -> uint64_t {
+        std::string search = "\"" + key + "\":";
+        auto pos = content.find(search);
+        if (pos == std::string::npos) return 0;
+        pos += search.length();
+        while (pos < content.size() && content[pos] == ' ') pos++;
+        std::string numStr;
+        while (pos < content.size() && content[pos] >= '0' && content[pos] <= '9') {
+            numStr += content[pos++];
+        }
+        return numStr.empty() ? 0 : std::stoull(numStr);
+    };
+
+    nextAgentId_ = static_cast<uint32_t>(extractUint("nextAgentId"));
+    nextTaskId_ = extractUint("nextTaskId");
+    nextConflictId_ = extractUint("nextConflictId");
+    nextLeaseId_ = extractUint("nextLeaseId");
+    nextCheckpointId_ = extractUint("nextCheckpointId");
+
+    // Ensure minimum values
+    if (nextAgentId_ == 0) nextAgentId_ = 1;
+    if (nextTaskId_ == 0) nextTaskId_ = 1000;
+    if (nextConflictId_ == 0) nextConflictId_ = 1;
+    if (nextLeaseId_ == 0) nextLeaseId_ = 1;
+    if (nextCheckpointId_ == 0) nextCheckpointId_ = 1;
+
+    return true;
 }
 
 void AgentCoordinator::shutdown() {
@@ -555,39 +558,87 @@ void AgentCoordinator::shutdown() {
     taskDependencies_.clear();
 }
 
-
 void AgentCoordinator::heartbeat_monitor() {
+    heartbeatThreadRunning_ = true;
     while (heartbeatThreadRunning_) {
         {
             std::lock_guard<std::mutex> lock(coordinatorMutex_);
             auto now = std::chrono::steady_clock::now();
-            for (auto& pair : agents_) {
-                auto& agent = pair.second;
-                if (agent.state != AgentState::DEAD && agent.state != AgentState::UNINITIALIZED) {
-                    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - agent.lastHeartbeat).count();
-                    // 30 second timeout
-                    if (elapsed > 30) {
-                        agent.state = AgentState::SUSPENDED; // Was UNRESPONSIVE
-                        // In a real system, we might try to restart it or notify admin
-                    }
+            const auto staleThreshold = std::chrono::seconds(30);
+
+            for (auto& [id, agent] : agents_) {
+                if (agent.state == AgentState::DEAD ||
+                    agent.state == AgentState::UNINITIALIZED) {
+                    continue;
+                }
+
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                    now - agent.lastHeartbeat);
+
+                if (elapsed > staleThreshold) {
+                    // Agent has gone stale — mark as suspended
+                    agent.state = AgentState::SUSPENDED;
                 }
             }
         }
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+
+        // Sleep 5 seconds between heartbeat checks
+        for (int i = 0; i < 50 && heartbeatThreadRunning_; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 }
 
 void AgentCoordinator::conflict_detector() {
+    conflictDetectorRunning_ = true;
     while (conflictDetectorRunning_) {
-        // Simple file collision detection
-        // In reality, this would query ConflictResolver for deep analysis
         {
-             std::lock_guard<std::mutex> lock(coordinatorMutex_);
-             // Map formatted as: Resource -> TaskID
-             std::map<std::string, uint64_t> resource usage;
-             // ... logic to check active leases/locks ...
+            std::lock_guard<std::mutex> lock(coordinatorMutex_);
+
+            // Build map of resource → list of agents holding leases
+            std::map<std::string, std::vector<uint32_t>> resourceAgents;
+            auto now = std::chrono::steady_clock::now();
+
+            for (const auto& [id, lease] : leases_) {
+                if (!lease.isValid) continue;
+                if (now > lease.expiresAt) continue; // expired
+                resourceAgents[lease.resourcePath].push_back(lease.agentId);
+            }
+
+            // Detect multiple agents competing for same resource
+            for (const auto& [resource, agentIds] : resourceAgents) {
+                if (agentIds.size() > 1) {
+                    // Check if this conflict is already tracked
+                    bool alreadyTracked = false;
+                    for (const auto& [cid, conflict] : conflicts_) {
+                        if (!conflict.resolved &&
+                            conflict.resourceInContention == resource) {
+                            alreadyTracked = true;
+                            break;
+                        }
+                    }
+
+                    if (!alreadyTracked) {
+                        // Create new conflict record
+                        ConflictRecord newConflict;
+                        newConflict.conflictId = nextConflictId_++;
+                        newConflict.conflictingAgents.assign(agentIds.begin(), agentIds.end());
+                        newConflict.resourceInContention = resource;
+                        newConflict.suggestedStrategy = ConflictStrategy::PRIORITY_BASED;
+                        newConflict.detectedAt = now;
+                        newConflict.resolved = false;
+                        newConflict.resolutionAttempts = 0;
+
+                        conflicts_[newConflict.conflictId] = newConflict;
+                    }
+                }
+            }
         }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        // Sleep 2 seconds between conflict scans
+        for (int i = 0; i < 20 && conflictDetectorRunning_; ++i) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 }
 

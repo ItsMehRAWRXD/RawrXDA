@@ -561,27 +561,27 @@ int EnhancedDynamicLoadBalancer::getCriticalDriveCount() const
     return count;
 }
 
-QVariantMap EnhancedDynamicLoadBalancer::getStatistics() const
+std::map<std::string, std::string> EnhancedDynamicLoadBalancer::getStatistics() const
 {
-    QVariantMap stats;
+    std::map<std::string, std::string> stats;
     
-    stats["driveCount"] = getDriveCount();
-    stats["healthyDriveCount"] = getHealthyDriveCount();
-    stats["criticalDriveCount"] = getCriticalDriveCount();
-    stats["averageHealth"] = getAverageHealth();
-    stats["averageTemperature"] = getAverageTemperature();
-    stats["averageLoad"] = getAverageLoad();
+    stats["driveCount"] = std::to_string(getDriveCount());
+    stats["healthyDriveCount"] = std::to_string(getHealthyDriveCount());
+    stats["criticalDriveCount"] = std::to_string(getCriticalDriveCount());
+    stats["averageHealth"] = std::to_string(getAverageHealth());
+    stats["averageTemperature"] = std::to_string(getAverageTemperature());
+    stats["averageLoad"] = std::to_string(getAverageLoad());
     stats["lastSelectedDrive"] = getLastSelectedDrive();
-    stats["isMonitoring"] = isMonitoring();
+    stats["isMonitoring"] = isMonitoring() ? "true" : "false";
     
     return stats;
 }
 
-QVariantMap EnhancedDynamicLoadBalancer::getDriveStatistics(const std::string& drivePath) const
+std::map<std::string, std::string> EnhancedDynamicLoadBalancer::getDriveStatistics(const std::string& drivePath) const
 {
-    std::lock_guard<std::mutex> lock(&m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     
-    QVariantMap stats;
+    std::map<std::string, std::string> stats;
     auto it = m_drives.find(drivePath);
     
     if (it != m_drives.end()) {
@@ -590,30 +590,30 @@ QVariantMap EnhancedDynamicLoadBalancer::getDriveStatistics(const std::string& d
         stats["drivePath"] = profile.drivePath;
         stats["driveModel"] = profile.driveModel;
         stats["serialNumber"] = profile.serialNumber;
-        stats["temperature"] = profile.currentTemperature;
-        stats["load"] = profile.currentLoad;
-        stats["healthScore"] = profile.healthScore * 100;
-        stats["thermalScore"] = profile.thermalScore * 100;
-        stats["loadScore"] = profile.loadScore * 100;
-        stats["compositeScore"] = profile.compositeScore * 100;
-        stats["isOnline"] = profile.isOnline;
-        stats["isThrottled"] = profile.isThrottled;
+        stats["temperature"] = std::to_string(profile.currentTemperature);
+        stats["load"] = std::to_string(profile.currentLoad);
+        stats["healthScore"] = std::to_string(profile.healthScore * 100);
+        stats["thermalScore"] = std::to_string(profile.thermalScore * 100);
+        stats["loadScore"] = std::to_string(profile.loadScore * 100);
+        stats["compositeScore"] = std::to_string(profile.compositeScore * 100);
+        stats["isOnline"] = profile.isOnline ? "true" : "false";
+        stats["isThrottled"] = profile.isThrottled ? "true" : "false";
         stats["statusMessage"] = profile.statusMessage;
         
         // SMART data
-        stats["smartHealth"] = profile.smart.overallHealth;
-        stats["smartHealthy"] = profile.smart.isHealthy;
-        stats["smartCritical"] = profile.smart.isCritical;
-        stats["reallocatedSectors"] = profile.smart.reallocatedSectorCount;
-        stats["pendingSectors"] = profile.smart.currentPendingSectorCount;
-        stats["availableSpare"] = profile.smart.availableSpare;
-        stats["mediaErrors"] = profile.smart.mediaErrors;
+        stats["smartHealth"] = std::to_string(profile.smart.overallHealth);
+        stats["smartHealthy"] = profile.smart.isHealthy ? "true" : "false";
+        stats["smartCritical"] = profile.smart.isCritical ? "true" : "false";
+        stats["reallocatedSectors"] = std::to_string(profile.smart.reallocatedSectorCount);
+        stats["pendingSectors"] = std::to_string(profile.smart.currentPendingSectorCount);
+        stats["availableSpare"] = std::to_string(profile.smart.availableSpare);
+        stats["mediaErrors"] = std::to_string(profile.smart.mediaErrors);
         
         // TBW data
-        stats["totalTBW"] = profile.tbw.totalTBW;
-        stats["ratedTBW"] = profile.tbw.ratedTBW;
-        stats["wearLevel"] = profile.tbw.wearLevel;
-        stats["estimatedDaysRemaining"] = profile.tbw.estimatedDaysRemaining;
+        stats["totalTBW"] = std::to_string(profile.tbw.totalTBW);
+        stats["ratedTBW"] = std::to_string(profile.tbw.ratedTBW);
+        stats["wearLevel"] = std::to_string(profile.tbw.wearLevel);
+        stats["estimatedDaysRemaining"] = std::to_string(profile.tbw.estimatedDaysRemaining);
     }
     
     return stats;

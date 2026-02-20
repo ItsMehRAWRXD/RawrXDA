@@ -4,6 +4,10 @@
 ; Uses AVX-512 FMA instructions for maximum throughput
 ;================================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .code
 
 ; External symbols (placeholders for linking)
@@ -27,32 +31,61 @@ MatMul_AVX PROC FRAME
     .allocstack 32
     .endprolog
     
-    ; Align stack for AVX
-    and rsp, -32
-    
     ; Setup loop counters
-    xor r10, r10        ; i counter
+    mov r10, r9         ; M (rows of A/C)
+    mov r11, [rbp+40]   ; N (cols of B/C)
+    mov r12, [rbp+48]   ; K (cols of A/rows of B)
+    
+    xor r13, r13        ; i = 0
 tile_i:
-    xor r11, r11        ; j counter
+    cmp r13, r10
+    jae done_i
+    
+    xor r14, r14        ; j = 0
 tile_j:
-    vzeroall            ; Clear YMM registers for accumulation
-    xor r12, r12        ; k counter
+    cmp r14, r11
+    jae next_i
+    
+    vxorps ymm0, ymm0, ymm0  ; sum = 0
+    xor r15, r15        ; k = 0
     
 inner_k:
-    ; Real-time inference math: C[i,j] += A[i,k] * B[k,j]
-    ; Note: simplified addressing for demonstration
-    ; vbroadcastss ymm0, dword ptr [rdx + r12*4] ; Load A element
-    ; vmovaps ymm1, [r8 + r12*32]               ; Load B row
-    ; vfmadd231ps ymm2, ymm0, ymm1              ; Fused Multiply-Add
+    cmp r15, r12
+    jae store_result
     
-    inc r12
-    ; cmp r12, [rbp+48]   ; Check K (Commented out to avoid read access violation in stub)
-    ; jl inner_k
+    ; Load A[i][k]
+    mov rax, r13
+    mul r12
+    add rax, r15
+    vbroadcastss ymm1, dword ptr [rdx + rax*4]
     
-    ; vmovaps [rcx], ymm2 ; Store Result
-    add rcx, 32
+    ; Load B[k][j]
+    mov rax, r15
+    mul r11
+    add rax, r14
+    vmovups ymm2, [r8 + rax*4]
     
-    ; ... (loop logic for i and j)
+    ; FMA: sum += A[i][k] * B[k][j]
+    vfmadd231ps ymm0, ymm1, ymm2
+    
+    inc r15
+    jmp inner_k
+    
+store_result:
+    ; Store C[i][j]
+    mov rax, r13
+    mul r11
+    add rax, r14
+    vmovups [rcx + rax*4], ymm0
+    
+    add r14, 8          ; 8 floats per ymm
+    jmp tile_j
+    
+next_i:
+    inc r13
+    jmp tile_i
+    
+done_i:
     
     mov rsp, rbp
     pop rbp
@@ -73,26 +106,32 @@ Inference_MatMul_AVX512 PROC FRAME
     .setframe rbp, 0
     .endprolog
 
-    ; zmm0-zmm7: Accumulators (512-bit each)
-    ; zmm8-zmm15: Weights
-    
-    ; Check AVX512 support (assumed present for this code path)
+    ; rcx = Weights (A), rdx = Input (B), r8 = HiddenDim (K)
+    ; Assume M=1 for inference (single token), N=HiddenDim
     
     vzeroall
-    xor r10, r10 ; Index
-loop_start:
-    ; vmovups zmm8, [rcx + r10]    ; Load 16 floats from Weights
-    ; vmovups zmm9, [rdx + r10]    ; Load 16 floats from Input
-    ; vfmadd231ps zmm0, zmm8, zmm9 ; Parallel Fused Multiply-Add
+    xor r10, r10        ; k = 0
+    vxorps zmm0, zmm0, zmm0  ; accumulator
     
-    add r10, 64                  ; Move to next 16 floats (16 * 4 bytes)
-    cmp r10, r8                  ; Check hidden dimension size
-    jl loop_start
+loop_k:
+    cmp r10, r8
+    jae done_k
     
-    ; Reduce zmm0 to a single scalar result...
-    ; vextractf32x8 ymm1, zmm0, 1
-    ; vaddps ymm0, ymm0, ymm1
-    ; (Final reduction to rax/xmm0)
+    ; Load 16 floats from Weights
+    vmovups zmm1, [rcx + r10*4]
+    
+    ; Broadcast single float from Input
+    vbroadcastss zmm2, dword ptr [rdx + r10*4]
+    
+    ; FMA: acc += weights * input
+    vfmadd231ps zmm0, zmm1, zmm2
+    
+    add r10, 16
+    jmp loop_k
+    
+done_k:
+    ; Store result back to rcx (in-place?)
+    vmovups [rcx], zmm0
     
     mov rsp, rbp
     pop rbp

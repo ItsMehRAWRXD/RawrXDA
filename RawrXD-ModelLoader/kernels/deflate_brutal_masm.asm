@@ -1,6 +1,10 @@
 ; deflate_brutal_masm.asm
 ; ml64 /c /Fo deflate_brutal_masm.obj deflate_brutal_masm.asm
 OPTION casemap:none
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 PUBLIC deflate_brutal_masm
 EXTERN malloc:PROC
 EXTERN memcpy:PROC

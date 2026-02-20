@@ -1,5 +1,7 @@
 #pragma once
 
+// codec.h — C++20, Qt-free. QByteArray → std::vector<uint8_t>
+
 #include <vector>
 #include <cstdint>
 

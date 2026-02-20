@@ -5,6 +5,10 @@
 
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; No includelib statements - we are linking against NOTHING
 ; No EXTERNDEF for WinAPI - we resolve them at runtime via PEB walking
 
@@ -78,6 +82,13 @@ p_PostMessageA              QWORD ?
 ; CODE: PEB WALKING & API RESOLUTION (The "Linker Bypass")
 ; ============================================================================
 .code
+
+; ----------------------------------------------------------------------------
+; PUBLIC declarations for cross-module symbol resolution
+; ----------------------------------------------------------------------------
+PUBLIC GetKernel32Base
+PUBLIC GetProcAddressByName
+PUBLIC BootstrapAPIs
 
 ; ----------------------------------------------------------------------------
 ; GetKernel32Base - Walk PEB InMemoryOrderModuleList to find kernel32.dll
@@ -421,6 +432,7 @@ PEBMain PROC
 @@die:
     int 3                           ; Break into debugger on fail
     jmp @@die
+    ret
 PEBMain ENDP
 
 END

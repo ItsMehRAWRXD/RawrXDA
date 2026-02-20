@@ -1,230 +1,63 @@
 // digestion_engine_stub.cpp
-// REAL IMPLEMENTATION for RawrXD_DigestionEngine_Avx512
-// Replaced stub with high-performance C++/Win32 implementation.
+// Production implementation for RawrXD_DigestionEngine_Avx512
+// Full source code analysis with function extraction, dependency mapping, and metrics
 
 #include <windows.h>
 #include <cwchar>
-#include <vector>
-#include <string>
-#include <algorithm>
+#include <fstream>
 #include <sstream>
-#include <unordered_set>
+#include <vector>
+#include <cctype>
+#include <map>
+#include <set>
+#include <regex>
+#include <algorithm>
 
-// --------------------------------------------------------------------------------------
-// High-performance file mapping wrapper
-// --------------------------------------------------------------------------------------
-class MemoryMappedFile {
-    HANDLE m_hFile;
-    HANDLE m_hMap;
-    const char* m_pData;
-    LARGE_INTEGER m_size;
-
-public:
-    MemoryMappedFile(LPCWSTR path) : m_hFile(INVALID_HANDLE_VALUE), m_hMap(NULL), m_pData(nullptr) {
-        m_size.QuadPart = 0;
-        m_hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (m_hFile == INVALID_HANDLE_VALUE) return;
-
-        GetFileSizeEx(m_hFile, &m_size);
-        if (m_size.QuadPart == 0) {
-            CloseHandle(m_hFile);
-            m_hFile = INVALID_HANDLE_VALUE;
-            return;
-        }
-
-        m_hMap = CreateFileMappingW(m_hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-        if (m_hMap) {
-            m_pData = (const char*)MapViewOfFile(m_hMap, FILE_MAP_READ, 0, 0, 0);
-        }
-    }
-
-    ~MemoryMappedFile() {
-        if (m_pData) UnmapViewOfFile(m_pData);
-        if (m_hMap) CloseHandle(m_hMap);
-        if (m_hFile != INVALID_HANDLE_VALUE) CloseHandle(m_hFile);
-    }
-
-    bool IsValid() const { return m_pData != nullptr; }
-    const char* Data() const { return m_pData; }
-    size_t Size() const { return (size_t)m_size.QuadPart; }
-};
-
-// --------------------------------------------------------------------------------------
-// Analysis Structures
-// --------------------------------------------------------------------------------------
-struct FileMetrics {
-    size_t lineCount = 0;
-    size_t emptyLines = 0;
-    size_t commentLines = 0;
-    size_t currentComplexity = 1;
-    size_t maxComplexity = 1;
-    size_t branchCount = 0;
-    size_t todoCount = 0;
-    std::unordered_set<std::string> imports;
-};
-
-// --------------------------------------------------------------------------------------
-// Fast Scanner Implementation
-// --------------------------------------------------------------------------------------
-static void AnalyzeContent(const char* start, size_t length, FileMetrics& metrics) {
-    const char* p = start;
-    const char* end = start + length;
-    
-    bool inBlockComment = false;
-    bool inLineComment = false;
-    bool inString = false;
-    bool lineHasCode = false;
-    char stringChar = 0;
-    
-    // Keywords for complexity
-    const char* keywords[] = { "if", "else", "case", "default", "for", "while", "catch", "&&", "||", "?" };
-    
-    std::string currentWord;
-    currentWord.reserve(32);
-
-    while (p < end) {
-        char c = *p;
-
-        // Line counting
-        if (c == '\n') {
-            metrics.lineCount++;
-            if (!lineHasCode && !inBlockComment) metrics.emptyLines++;
-            if (inLineComment) metrics.commentLines++;
-            
-            inLineComment = false;
-            inString = false; // Reset string state on newline (sanity check)
-            lineHasCode = false;
-            p++;
-            continue;
-        }
-
-        // Comment handling
-        if (!inString && !inBlockComment && !inLineComment) {
-            if (c == '/' && (p + 1 < end)) {
-                if (*(p+1) == '/') {
-                    inLineComment = true;
-                    // Check for TODO/FIXME inside the comment
-                    // Simple scan ahead for optimization
-                    const char* scan = p + 2;
-                    while (scan < end && *scan != '\n') {
-                        if ((*scan == 'T' || *scan == 't') &&
-                            (end - scan > 4) &&
-                            (_strnicmp(scan, "TODO", 4) == 0)) {
-                            metrics.todoCount++;
-                        }
-                        if ((*scan == 'F' || *scan == 'f') &&
-                            (end - scan > 5) &&
-                            (_strnicmp(scan, "FIXME", 5) == 0)) {
-                            metrics.todoCount++;
-                        }
-                        scan++;
-                    }
-                    p += 2;
-                    continue;
-                } else if (*(p+1) == '*') {
-                    inBlockComment = true;
-                    p += 2;
-                    continue;
-                }
-            }
-        } else if (inBlockComment) {
-            if (c == '*' && (p + 1 < end) && *(p+1) == '/') {
-                inBlockComment = false;
-                p += 2;
-            } else {
-                if (c != ' ' && c != '\t' && c != '\r') metrics.commentLines++; // Rough estimation for block comment content
-                p++;
-            }
-            continue;
-        }
-
-        // String handling
-        if (!inLineComment && !inBlockComment) {
-            if (c == '"' || c == '\'') {
-                if (!inString) {
-                    inString = true;
-                    stringChar = c;
-                } else if (c == stringChar && *(p-1) != '\\') {
-                    inString = false;
-                }
-            }
-        }
-
-        // Code Analysis
-        if (!inLineComment && !inBlockComment && !inString) {
-            if (!isspace((unsigned char)c)) lineHasCode = true;
-
-            // Complexity Scoring
-            if (isalpha((unsigned char)c) || c == '_' || c == '&' || c == '|') {
-                currentWord += c;
-            } else {
-                if (!currentWord.empty()) {
-                    // Check keywords
-                    for (const char* kw : keywords) {
-                        if (currentWord == kw) {
-                            metrics.currentComplexity++;
-                            metrics.branchCount++;
-                            break;
-                        }
-                    }
-                    // Include detection (very rough)
-                    if (currentWord == "include" || currentWord == "import" || currentWord == "using") {
-                         // could parse next token as dependency
-                    }
-                    currentWord.clear();
-                }
-                
-                // Check operators specifically
-                if (c == '?' || (c == '&' && (p+1<end && *(p+1) == '&')) || (c == '|' && (p+1<end && *(p+1) == '|'))) {
-                     metrics.currentComplexity++;
-                     metrics.branchCount++;
-                }
-            }
-            
-            // Function boundaries (heuristics for max complexity)
-            if (c == '}') {
-                if (metrics.currentComplexity > metrics.maxComplexity) {
-                    metrics.maxComplexity = metrics.currentComplexity;
-                }
-                metrics.currentComplexity = 1; // Reset for next block
-            }
-        }
-
-        p++;
-    }
+// Helper to convert wide to UTF-8
+static std::string wideToUtf8(const wchar_t* src) {
+    if (!src) return "";
+    int len = WideCharToMultiByte(CP_UTF8, 0, src, -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return "";
+    std::string result(len - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, src, -1, &result[0], len, nullptr, nullptr);
+    return result;
 }
 
-// --------------------------------------------------------------------------------------
-// JSON Helper
-// --------------------------------------------------------------------------------------
-static std::string JsonEscape(const std::string& s) {
-    std::ostringstream o;
+// Helper to escape JSON strings
+static std::string jsonEscape(const std::string& s) {
+    std::string out;
     for (char c : s) {
-        if (c == '"') o << "\\\"";
-        else if (c == '\\') o << "\\\\";
-        else if (c == '\b') o << "\\b";
-        else if (c == '\f') o << "\\f";
-        else if (c == '\n') o << "\\n";
-        else if (c == '\r') o << "\\r";
-        else if (c == '\t') o << "\\t";
-        else if ((unsigned char)c <= 0x1f) {} 
-        else o << c;
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out += c;
+        }
     }
-    return o.str();
+    return out;
 }
 
-static std::string WideToUtf8(LPCWSTR wstr) {
-    if (!wstr) return "";
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
-    std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &strTo[0], size_needed, NULL, NULL);
-    if (!strTo.empty() && strTo.back() == 0) strTo.pop_back();
-    return strTo;
+// Detect language from file extension
+static std::string detectLanguage(const std::string& filepath) {
+    size_t dot = filepath.find_last_of('.');
+    if (dot == std::string::npos) return "unknown";
+    std::string ext = filepath.substr(dot);
+    // Convert to lowercase
+    for (auto& c : ext) c = std::tolower(c);
+    if (ext == ".cpp" || ext == ".cc" || ext == ".cxx") return "cpp";
+    if (ext == ".h" || ext == ".hpp" || ext == ".hxx") return "header";
+    if (ext == ".c") return "c";
+    if (ext == ".py") return "python";
+    if (ext == ".js" || ext == ".ts") return "javascript";
+    if (ext == ".asm" || ext == ".s") return "assembly";
+    if (ext == ".json") return "json";
+    if (ext == ".cmake") return "cmake";
+    return "unknown";
 }
 
-// --------------------------------------------------------------------------------------
-// Main Entry Point
-// --------------------------------------------------------------------------------------
+// Stub implementation - write a minimal digestion report
 extern "C" DWORD __stdcall RawrXD_DigestionEngine_Avx512(
     LPCWSTR wszSource,
     LPCWSTR wszOutput,
@@ -234,57 +67,283 @@ extern "C" DWORD __stdcall RawrXD_DigestionEngine_Avx512(
     void (__stdcall *pfnProgress)(DWORD percent, DWORD taskId)
 )
 {
-    // Real implementation ignores dwChunkSize/dwThreads for now as we map the whole file.
-    // In a future AVX-512 version, we would dispatch chunks here.
+    (void)dwChunkSize;
+    (void)dwThreads;
+    (void)dwFlags;
     
-    if (!wszSource || !wszOutput) return ERROR_INVALID_PARAMETER;
-
-    MemoryMappedFile srcFile(wszSource);
-    if (!srcFile.IsValid()) {
-        char msg[256];
-        sprintf_s(msg, "[RawrXD] Failed to open source: %ws\n", wszSource);
-        OutputDebugStringA(msg);
-        return ERROR_FILE_NOT_FOUND;
+    OutputDebugStringA("[RawrXD] Digestion engine entered\n");
+    
+    if (!wszSource || !wszOutput) {
+        OutputDebugStringA("[RawrXD] Invalid parameters (source or output null)\n");
+        return ERROR_INVALID_PARAMETER;
     }
 
-    if (pfnProgress) pfnProgress(10, 1); // Started
+    std::string srcPath = wideToUtf8(wszSource);
+    std::string outPath = wideToUtf8(wszOutput);
+    
+    if (srcPath.empty() || outPath.empty()) {
+        OutputDebugStringA("[RawrXD] Failed to convert wide strings\n");
+        return ERROR_INVALID_PARAMETER;
+    }
 
-    FileMetrics metrics;
-    AnalyzeContent(srcFile.Data(), srcFile.Size(), metrics);
+    char debugMsg[512];
+    sprintf_s(debugMsg, sizeof(debugMsg), "[RawrXD] Digestion: src=%s, out=%s\n", srcPath.c_str(), outPath.c_str());
+    OutputDebugStringA(debugMsg);
+    
+    // Progress: start
+    if (pfnProgress) pfnProgress(0, 1);
 
-    if (pfnProgress) pfnProgress(50, 1); // Analyzed
+    // Read the entire source file
+    std::ifstream inFile(srcPath, std::ios::binary);
+    if (!inFile.is_open()) {
+        sprintf_s(debugMsg, sizeof(debugMsg), "[RawrXD] Failed to open source file: %s\n", srcPath.c_str());
+        OutputDebugStringA(debugMsg);
+        return ERROR_FILE_NOT_FOUND;
+    }
+    
+    std::string content((std::istreambuf_iterator<char>(inFile)),
+                         std::istreambuf_iterator<char>());
+    inFile.close();
 
-    // Generate real report
+    if (pfnProgress) pfnProgress(10, 1);
+
+    std::string language = detectLanguage(srcPath);
+
+    // === Phase 1: Line & Comment Analysis ===
+    int lineCount = 0;
+    int blankLines = 0;
+    int commentLines = 0;
+    int codeLines = 0;
+    int stubCount = 0;
+    int todoCount = 0;
+    int maxLineLength = 0;
+    bool inBlockComment = false;
+
+    std::istringstream lineStream(content);
+    std::string line;
+    while (std::getline(lineStream, line)) {
+        lineCount++;
+        if (static_cast<int>(line.length()) > maxLineLength)
+            maxLineLength = static_cast<int>(line.length());
+
+        std::string trimmed;
+        size_t firstNonSpace = line.find_first_not_of(" \t\r");
+        if (firstNonSpace == std::string::npos) {
+            blankLines++;
+            continue;
+        }
+        trimmed = line.substr(firstNonSpace);
+
+        // Track block comments
+        if (inBlockComment) {
+            commentLines++;
+            if (trimmed.find("*/") != std::string::npos) inBlockComment = false;
+            continue;
+        }
+        if (trimmed.substr(0, 2) == "/*") {
+            commentLines++;
+            if (trimmed.find("*/") == std::string::npos) inBlockComment = true;
+            continue;
+        }
+        if (trimmed.substr(0, 2) == "//" || trimmed[0] == '#') {
+            commentLines++;
+        } else {
+            codeLines++;
+        }
+
+        // Detect stubs/TODOs
+        std::string lower = trimmed;
+        for (auto& c : lower) c = std::tolower(c);
+        if (lower.find("stub") != std::string::npos) stubCount++;
+        if (lower.find("todo") != std::string::npos || lower.find("fixme") != std::string::npos) todoCount++;
+    }
+
+    if (pfnProgress) pfnProgress(30, 1);
+
+    // === Phase 2: Function/Class Extraction ===
+    struct FunctionInfo {
+        std::string name;
+        std::string returnType;
+        int startLine;
+        int endLine;
+        int complexity; // cyclomatic
+    };
+
+    std::vector<FunctionInfo> functions;
+    std::vector<std::string> classNames;
+
+    // Function detection regex (C/C++ style)
+    std::regex funcPattern(R"((\w[\w:*&<>\s]*?)\s+(\w+)\s*\(([^)]*)\)\s*(?:const)?\s*\{)");
+    std::regex classPattern(R"(\b(class|struct)\s+(\w+))");
+    
+    // Find functions
+    auto funcBegin = std::sregex_iterator(content.begin(), content.end(), funcPattern);
+    auto funcEnd = std::sregex_iterator();
+    for (auto it = funcBegin; it != funcEnd; ++it) {
+        FunctionInfo fi;
+        fi.returnType = (*it)[1].str();
+        fi.name = (*it)[2].str();
+        // Calculate start line
+        std::string prefix = content.substr(0, it->position());
+        fi.startLine = static_cast<int>(std::count(prefix.begin(), prefix.end(), '\n')) + 1;
+        
+        // Find matching closing brace
+        size_t bracePos = it->position() + it->length() - 1;
+        int depth = 1;
+        size_t pos = bracePos + 1;
+        while (pos < content.size() && depth > 0) {
+            if (content[pos] == '{') depth++;
+            else if (content[pos] == '}') depth--;
+            pos++;
+        }
+        std::string funcBody = content.substr(bracePos, pos - bracePos);
+        std::string endPrefix = content.substr(0, pos);
+        fi.endLine = static_cast<int>(std::count(endPrefix.begin(), endPrefix.end(), '\n')) + 1;
+        
+        // Calculate cyclomatic complexity for this function
+        fi.complexity = 1;
+        for (const auto& kw : {"if", "while", "for", "case", "catch"}) {
+            size_t p = 0;
+            std::string keyword(kw);
+            while ((p = funcBody.find(keyword, p)) != std::string::npos) {
+                bool leftOk = (p == 0 || !std::isalnum(funcBody[p-1]));
+                bool rightOk = (p + keyword.size() >= funcBody.size() || !std::isalnum(funcBody[p + keyword.size()]));
+                if (leftOk && rightOk) fi.complexity++;
+                p += keyword.size();
+            }
+        }
+        // Count && and ||
+        for (size_t i = 0; i + 1 < funcBody.size(); ++i) {
+            if ((funcBody[i] == '&' && funcBody[i+1] == '&') || (funcBody[i] == '|' && funcBody[i+1] == '|'))
+                fi.complexity++;
+        }
+        
+        functions.push_back(fi);
+    }
+
+    // Find classes/structs
+    auto classBegin = std::sregex_iterator(content.begin(), content.end(), classPattern);
+    for (auto it = classBegin; it != funcEnd; ++it) {
+        classNames.push_back((*it)[2].str());
+    }
+
+    if (pfnProgress) pfnProgress(60, 1);
+
+    // === Phase 3: Dependency Analysis ===
+    std::set<std::string> includes;
+    std::regex includePattern(R"(#include\s+[<"]([^>"]+)[>"])");
+    auto incBegin = std::sregex_iterator(content.begin(), content.end(), includePattern);
+    for (auto it = incBegin; it != funcEnd; ++it) {
+        includes.insert((*it)[1].str());
+    }
+
+    // === Phase 4: Duplication Detection ===
+    std::vector<std::string> codeLineVec;
+    std::istringstream dupStream(content);
+    while (std::getline(dupStream, line)) {
+        size_t first = line.find_first_not_of(" \t\r");
+        if (first != std::string::npos && line.size() > 10) {
+            codeLineVec.push_back(line.substr(first));
+        }
+    }
+    int duplicateLines = 0;
+    std::map<std::string, int> lineFreq;
+    for (const auto& cl : codeLineVec) lineFreq[cl]++;
+    for (const auto& [k, v] : lineFreq) {
+        if (v > 1) duplicateLines += (v - 1);
+    }
+    float duplicationRatio = codeLineVec.empty() ? 0.0f : 
+        static_cast<float>(duplicateLines) / static_cast<float>(codeLineVec.size());
+
+    if (pfnProgress) pfnProgress(80, 1);
+
+    // === Phase 5: Build JSON Report ===
     std::ostringstream json;
     json << "{\n";
-    json << "  \"file_path\": \"" << JsonEscape(WideToUtf8(wszSource)) << "\",\n";
-    json << "  \"file_size_bytes\": " << srcFile.Size() << ",\n";
+    json << "  \"file_path\": \"" << jsonEscape(srcPath) << "\",\n";
+    json << "  \"language_detected\": \"" << language << "\",\n";
+    json << "  \"line_count\": " << lineCount << ",\n";
+    json << "  \"code_lines\": " << codeLines << ",\n";
+    json << "  \"comment_lines\": " << commentLines << ",\n";
+    json << "  \"blank_lines\": " << blankLines << ",\n";
+    json << "  \"max_line_length\": " << maxLineLength << ",\n";
+    json << "  \"stub_count\": " << stubCount << ",\n";
+    json << "  \"todo_count\": " << todoCount << ",\n";
+    json << "  \"duplication_ratio\": " << duplicationRatio << ",\n";
+
+    // Functions
+    json << "  \"functions\": [\n";
+    for (size_t i = 0; i < functions.size(); ++i) {
+        const auto& f = functions[i];
+        json << "    {\"name\": \"" << jsonEscape(f.name) 
+             << "\", \"return_type\": \"" << jsonEscape(f.returnType)
+             << "\", \"start_line\": " << f.startLine
+             << ", \"end_line\": " << f.endLine
+             << ", \"cyclomatic_complexity\": " << f.complexity << "}";
+        if (i + 1 < functions.size()) json << ",";
+        json << "\n";
+    }
+    json << "  ],\n";
+
+    // Classes
+    json << "  \"classes\": [";
+    for (size_t i = 0; i < classNames.size(); ++i) {
+        json << "\"" << jsonEscape(classNames[i]) << "\"";
+        if (i + 1 < classNames.size()) json << ", ";
+    }
+    json << "],\n";
+
+    // Dependencies
+    json << "  \"dependencies\": [";
+    {
+        bool first = true;
+        for (const auto& inc : includes) {
+            if (!first) json << ", ";
+            first = false;
+            json << "\"" << jsonEscape(inc) << "\"";
+        }
+    }
+    json << "],\n";
+
+    // Summary metrics
+    int totalComplexity = 0;
+    int maxComplexity = 0;
+    for (const auto& f : functions) {
+        totalComplexity += f.complexity;
+        if (f.complexity > maxComplexity) maxComplexity = f.complexity;
+    }
+    float avgComplexity = functions.empty() ? 0.0f : 
+        static_cast<float>(totalComplexity) / static_cast<float>(functions.size());
+
     json << "  \"metrics\": {\n";
-    json << "    \"loc\": " << metrics.lineCount << ",\n";
-    json << "    \"sloc\": " << (metrics.lineCount - metrics.emptyLines - metrics.commentLines) << ",\n";
-    json << "    \"comments\": " << metrics.commentLines << ",\n";
-    json << "    \"cyclomatic_complexity_max\": " << metrics.maxComplexity << ",\n";
-    json << "    \"branches\": " << metrics.branchCount << ",\n";
-    json << "    \"todos\": " << metrics.todoCount << "\n";
+    json << "    \"total_functions\": " << functions.size() << ",\n";
+    json << "    \"total_classes\": " << classNames.size() << ",\n";
+    json << "    \"total_includes\": " << includes.size() << ",\n";
+    json << "    \"avg_cyclomatic_complexity\": " << avgComplexity << ",\n";
+    json << "    \"max_cyclomatic_complexity\": " << maxComplexity << ",\n";
+    json << "    \"comment_ratio\": " << (lineCount > 0 ? static_cast<float>(commentLines) / lineCount : 0.0f) << ",\n";
+    json << "    \"code_to_comment_ratio\": " << (commentLines > 0 ? static_cast<float>(codeLines) / commentLines : 0.0f) << "\n";
     json << "  },\n";
-    json << "  \"engine\": \"RawrXD_Native_v1.0\",\n";
+
+    json << "  \"analysis_summary\": \"Full digestion analysis complete\",\n";
     json << "  \"timestamp\": \"" << __DATE__ << " " << __TIME__ << "\",\n";
     json << "  \"status\": \"completed\"\n";
     json << "}\n";
 
-    // Write to output file
-    HANDLE hOut = CreateFileW(wszOutput, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hOut == INVALID_HANDLE_VALUE) {
-        return ERROR_ACCESS_DENIED;
+    if (pfnProgress) pfnProgress(90, 1);
+
+    // Write report to output file
+    std::ofstream outFile(outPath, std::ios::binary);
+    if (!outFile.is_open()) {
+        sprintf_s(debugMsg, sizeof(debugMsg), "[RawrXD] Failed to open output file: %s\n", outPath.c_str());
+        OutputDebugStringA(debugMsg);
+        return ERROR_FILE_NOT_FOUND;
     }
-
-    std::string report = json.str();
-    DWORD written = 0;
-    WriteFile(hOut, report.c_str(), (DWORD)report.length(), &written, NULL);
-    CloseHandle(hOut);
-
-    if (pfnProgress) pfnProgress(100, 1); // Done
     
-    return 0; // S_OK
-}
+    outFile << json.str();
+    outFile.close();
 
+    if (pfnProgress) pfnProgress(100, 1);
+    OutputDebugStringA("[RawrXD] Digestion report written successfully\n");
+    return 0;  // S_DIGEST_OK
+}

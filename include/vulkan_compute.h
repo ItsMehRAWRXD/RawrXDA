@@ -6,7 +6,38 @@
 #include <cstdint>
 #include <functional>
 #include <queue>
+
+#ifdef RAWR_ENABLE_VULKAN
 #include <vulkan/vulkan.h>
+#else
+// Dummy types to allow compilation without Vulkan SDK
+typedef void* VkDevice;
+typedef void* VkInstance;
+typedef void* VkPhysicalDevice;
+typedef void* VkQueue;
+typedef void* VkCommandPool;
+typedef void* VkDescriptorPool;
+typedef void* VkDescriptorSet;
+typedef void* VkDescriptorSetLayout;
+typedef void* VkShaderModule;
+typedef void* VkPipelineLayout;
+typedef void* VkPipeline;
+typedef void* VkBuffer;
+typedef void* VkDeviceMemory;
+typedef void* VkCommandBuffer;
+typedef void* VkFence;
+typedef void* VkDescriptorSetLayoutBinding;
+typedef uint32_t VkMemoryPropertyFlags;
+
+typedef struct { 
+    uint32_t vendorID; 
+    uint32_t deviceID; 
+    char deviceName[256];
+} VkPhysicalDeviceProperties;
+typedef struct { uint32_t memoryTypeCount; } VkPhysicalDeviceMemoryProperties;
+#endif
+
+namespace CPUInference {
 
 // GPU compute optional - CPU inference always works
 // Vulkan is enabled if system supports it, otherwise CPU fallback
@@ -172,3 +203,5 @@ private:
     // Helper for creating staging buffers (reduces code duplication)
     bool CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory& memory);
 };
+
+} // namespace CPUInference

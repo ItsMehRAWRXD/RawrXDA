@@ -1,20 +1,15 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <QObject>
-#include <QMap>
-#include <QVariant>
-#include <QString>
-#include <QFile>
-#include <QTextStream>
-#include <QDateTime>
-#include <QMutex>
+#include <string>
+#include <map>
+#include <mutex>
+#include <fstream>
+#include <iostream>
 
 // Structured JSON logs → stdout + rotating file
-class Logger : public QObject
+class Logger
 {
-    Q_OBJECT
-
 public:
     enum LogLevel {
         Debug = 0,
@@ -23,38 +18,38 @@ public:
         Error = 3
     };
 
-    explicit Logger(QObject *parent = nullptr);
+    using LogData = std::map<std::string, std::string>;
+
+    Logger();
     ~Logger();
 
     // Log a message with structured data
-    void log(LogLevel level, const QString &message, const QMap<QString, QVariant> &data = QMap<QString, QVariant>());
+    void log(LogLevel level, const std::string &message, const LogData &data = {});
 
     // Convenience functions
-    void logDebug(const QString &message, const QMap<QString, QVariant> &data = QMap<QString, QVariant>()) {
+    void logDebug(const std::string &message, const LogData &data = {}) {
         log(Debug, message, data);
     }
-    void logInfo(const QString &message, const QMap<QString, QVariant> &data = QMap<QString, QVariant>()) {
+    void logInfo(const std::string &message, const LogData &data = {}) {
         log(Info, message, data);
     }
-    void logWarning(const QString &message, const QMap<QString, QVariant> &data = QMap<QString, QVariant>()) {
+    void logWarning(const std::string &message, const LogData &data = {}) {
         log(Warning, message, data);
     }
-    void logError(const QString &message, const QMap<QString, QVariant> &data = QMap<QString, QVariant>()) {
+    void logError(const std::string &message, const LogData &data = {}) {
         log(Error, message, data);
     }
+    
+    static Logger& instance();
 
 private:
-    QFile *m_logFile;
-    QTextStream *m_logStream;
-    QMutex m_mutex;
-    int m_maxFileSize;
-    int m_currentFileSize;
+    std::mutex m_mutex;
+    std::ofstream m_logFile;
+    int m_maxFileSize = 10 * 1024 * 1024; // 10 MB
+    int m_currentFileSize = 0;
 
-    // Rotate log file if necessary
     void rotateLogFile();
-
-    // Format log entry as JSON
-    QString formatLogEntry(LogLevel level, const QString &message, const QMap<QString, QVariant> &data);
+    std::string formatLogEntry(LogLevel level, const std::string &message, const LogData &data);
 };
 
 #endif // LOGGER_H

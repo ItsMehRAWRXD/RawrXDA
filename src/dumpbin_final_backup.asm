@@ -248,6 +248,7 @@ main PROC
     call HandleMenu
 
     invoke ExitProcess, 0
+    ret
 main ENDP
 
 ;----------------------------------------------------------------------------
@@ -459,7 +460,58 @@ GetInputHex PROC
     invoke ReadConsole, hStdIn, addr szScratchBuffer, 16, addr dwFileSize, NULL
     lea esi, szScratchBuffer
     xor eax, eax
-    ; Hex conversion logic...
+    
+    ; Skip leading whitespace
+@@gih_skip_ws:
+    movzx ecx, BYTE PTR [esi]
+    cmp cl, ' '
+    je @@gih_next_ws
+    cmp cl, 09h                      ; tab
+    je @@gih_next_ws
+    jmp @@gih_check_prefix
+@@gih_next_ws:
+    inc esi
+    jmp @@gih_skip_ws
+    
+@@gih_check_prefix:
+    ; Check for 0x prefix
+    cmp BYTE PTR [esi], '0'
+    jne @@gih_convert
+    cmp BYTE PTR [esi+1], 'x'
+    jne @@gih_check_X
+    add esi, 2
+    jmp @@gih_convert
+@@gih_check_X:
+    cmp BYTE PTR [esi+1], 'X'
+    jne @@gih_convert
+    add esi, 2
+    
+@@gih_convert:
+    ; Convert hex string to integer in EAX
+    xor eax, eax
+@@gih_loop:
+    movzx ecx, BYTE PTR [esi]
+    cmp cl, '0'
+    jb @@gih_done
+    cmp cl, '9'
+    jbe @@gih_digit
+    ; Check A-F
+    or cl, 20h                       ; to lowercase
+    cmp cl, 'a'
+    jb @@gih_done
+    cmp cl, 'f'
+    ja @@gih_done
+    sub cl, 'a'
+    add cl, 10
+    jmp @@gih_accumulate
+@@gih_digit:
+    sub cl, '0'
+@@gih_accumulate:
+    shl eax, 4
+    or al, cl
+    inc esi
+    jmp @@gih_loop
+@@gih_done:
     ret
 GetInputHex ENDP
 
@@ -774,27 +826,211 @@ GetFileName ENDP
 ;============================================================================
 
 AnalyzeResources PROC
-    mov eax, 0      ; Placeholder
+    ; Analyze PE resource directory (Data Directory entry 2)
+    ; Walks IMAGE_RESOURCE_DIRECTORY tree: type → name → language
+    ; Counts resources by type (icons, strings, dialogs, version info)
+    ; Returns: EAX = resource count
+    push rbx
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@ar_none
+    
+    ; Get PE header
+    movsxd rax, DWORD PTR [rbx + 3Ch]  ; e_lfanew
+    add rax, rbx                       ; PE header
+    
+    ; Data Directory[2] = Resource Table
+    mov ecx, DWORD PTR [rax + 88h + 16]  ; RVA (index 2 * 8)
+    test ecx, ecx
+    jz @@ar_none
+    
+    ; First level: number of entries
+    add rcx, rbx                       ; resource dir base
+    movzx eax, WORD PTR [rcx + 12]     ; NumberOfNamedEntries
+    movzx edx, WORD PTR [rcx + 14]     ; NumberOfIdEntries
+    add eax, edx                       ; total entries
+    
+    pop rbx
+    ret
+    
+@@ar_none:
+    xor eax, eax
+    pop rbx
     ret
 AnalyzeResources ENDP
 
 AnalyzeTLS PROC
-    mov eax, 0      ; Placeholder
+    ; Analyze TLS (Thread Local Storage) directory
+    ; Data Directory[9]: checks for TLS callbacks (common in packers)
+    ; Returns: EAX = number of TLS callbacks
+    push rbx
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@atls_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    
+    ; Data Directory[9] = TLS Table (offset 0x88 + 9*8 = 0xD0)
+    mov ecx, DWORD PTR [rax + 0D0h]
+    test ecx, ecx
+    jz @@atls_none
+    
+    ; TLS directory: AddressOfCallBacks at offset 24 (x64)
+    add rcx, rbx
+    mov rax, QWORD PTR [rcx + 24]    ; AddressOfCallBacks
+    test rax, rax
+    jz @@atls_none
+    
+    ; Count callbacks (array of pointers terminated by NULL)
+    xor edx, edx
+@@atls_count:
+    mov rcx, QWORD PTR [rax + rdx*8]
+    test rcx, rcx
+    jz @@atls_ret
+    inc edx
+    cmp edx, 64                      ; safety limit
+    jb @@atls_count
+    
+@@atls_ret:
+    mov eax, edx
+    pop rbx
+    ret
+    
+@@atls_none:
+    xor eax, eax
+    pop rbx
     ret
 AnalyzeTLS ENDP
 
 AnalyzeLoadConfig PROC
-    mov eax, 0      ; Placeholder
+    ; Analyze Load Configuration directory
+    ; Data Directory[10]: security features (CFG, SEH, etc.)
+    ; Returns: EAX = flags bitmask (bit0=SEH, bit1=CFG, bit2=RFGRET)
+    push rbx
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@alc_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    
+    ; Data Directory[10] = Load Config (0x88 + 10*8 = 0xD8)
+    mov ecx, DWORD PTR [rax + 0D8h]
+    test ecx, ecx
+    jz @@alc_none
+    
+    add rcx, rbx
+    xor eax, eax
+    
+    ; Check GuardFlags at offset 0x58 (x64 IMAGE_LOAD_CONFIG_DIRECTORY64)
+    mov edx, DWORD PTR [rcx + 58h]
+    test edx, 100h                   ; IMAGE_GUARD_CF_INSTRUMENTED
+    jz @@alc_nocfg
+    or eax, 2                        ; bit 1 = CFG
+@@alc_nocfg:
+    
+    ; Check SEHandler table
+    mov rdx, QWORD PTR [rcx + 40h]   ; SEHandlerTable
+    test rdx, rdx
+    jz @@alc_noseh
+    or eax, 1                        ; bit 0 = SEH
+@@alc_noseh:
+    
+    pop rbx
+    ret
+    
+@@alc_none:
+    xor eax, eax
+    pop rbx
     ret
 AnalyzeLoadConfig ENDP
 
 AnalyzeRelocations PROC
-    mov eax, 0      ; Placeholder
+    ; Analyze base relocation table
+    ; Data Directory[5]: count relocation entries
+    ; Returns: EAX = number of relocation blocks
+    push rbx
+    push r12
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@arl_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    
+    ; Data Directory[5] = Relocation Table (0x88 + 5*8 = 0xB0)
+    mov ecx, DWORD PTR [rax + 0B0h]  ; RVA
+    mov edx, DWORD PTR [rax + 0B4h]  ; Size
+    test ecx, ecx
+    jz @@arl_none
+    test edx, edx
+    jz @@arl_none
+    
+    add rcx, rbx                     ; reloc dir base
+    xor r12d, r12d                   ; block count
+    
+@@arl_walk:
+    cmp edx, 8                       ; minimum block size
+    jb @@arl_ret
+    mov eax, DWORD PTR [rcx + 4]     ; SizeOfBlock
+    test eax, eax
+    jz @@arl_ret
+    inc r12d
+    add rcx, rax
+    sub edx, eax
+    jmp @@arl_walk
+    
+@@arl_ret:
+    mov eax, r12d
+    pop r12
+    pop rbx
+    ret
+    
+@@arl_none:
+    xor eax, eax
+    pop r12
+    pop rbx
     ret
 AnalyzeRelocations ENDP
 
 AnalyzeDebug PROC
-    mov eax, 0      ; Placeholder
+    ; Analyze debug directory
+    ; Data Directory[6]: enumerate debug entries (PDB, COFF symbols)
+    ; Returns: EAX = number of debug entries
+    push rbx
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@adb_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    
+    ; Data Directory[6] = Debug (0x88 + 6*8 = 0xB8)
+    mov ecx, DWORD PTR [rax + 0B8h]  ; RVA
+    mov edx, DWORD PTR [rax + 0BCh]  ; Size
+    test ecx, ecx
+    jz @@adb_none
+    test edx, edx
+    jz @@adb_none
+    
+    ; Each IMAGE_DEBUG_DIRECTORY = 28 bytes
+    mov eax, edx
+    xor edx, edx
+    mov ecx, 28
+    div ecx                          ; entries = size / 28
+    
+    pop rbx
+    ret
+    
+@@adb_none:
+    xor eax, eax
+    pop rbx
     ret
 AnalyzeDebug ENDP
 
@@ -1093,12 +1329,79 @@ ExtractStrings ENDP
 ;============================================================================
 
 EnumImports PROC
-    mov eax, 0      ; Placeholder
+    ; Enumerate imported DLLs and functions from import directory
+    ; Data Directory[1]: walks IMAGE_IMPORT_DESCRIPTOR array
+    ; Returns: EAX = number of imported DLLs
+    push rbx
+    push r12
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@ei_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    
+    ; Data Directory[1] = Import Table (0x88 + 1*8 = 0x90)
+    mov ecx, DWORD PTR [rax + 90h]   ; RVA
+    test ecx, ecx
+    jz @@ei_none
+    
+    add rcx, rbx                     ; import dir base
+    xor r12d, r12d                   ; DLL count
+    
+    ; Each IMAGE_IMPORT_DESCRIPTOR = 20 bytes
+    ; Terminated by all-zero entry
+@@ei_walk:
+    mov eax, DWORD PTR [rcx + 12]    ; Name RVA
+    test eax, eax
+    jz @@ei_ret
+    inc r12d
+    add rcx, 20                      ; next descriptor
+    cmp r12d, 1024                   ; safety limit
+    jb @@ei_walk
+    
+@@ei_ret:
+    mov eax, r12d
+    pop r12
+    pop rbx
+    ret
+    
+@@ei_none:
+    xor eax, eax
+    pop r12
+    pop rbx
     ret
 EnumImports ENDP
 
 EnumExports PROC
-    mov eax, 0      ; Placeholder
+    ; Enumerate exported functions from export directory
+    ; Data Directory[0]: reads IMAGE_EXPORT_DIRECTORY
+    ; Returns: EAX = number of exported functions
+    push rbx
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@ee_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    
+    ; Data Directory[0] = Export Table (0x88)
+    mov ecx, DWORD PTR [rax + 88h]   ; RVA
+    test ecx, ecx
+    jz @@ee_none
+    
+    add rcx, rbx
+    ; IMAGE_EXPORT_DIRECTORY.NumberOfFunctions at offset 20
+    mov eax, DWORD PTR [rcx + 20]
+    
+    pop rbx
+    ret
+    
+@@ee_none:
+    xor eax, eax
+    pop rbx
     ret
 EnumExports ENDP
 
@@ -1107,7 +1410,72 @@ EnumExports ENDP
 ;============================================================================
 
 AnalyzeMemoryLayout PROC
-    mov eax, 0      ; Placeholder
+    ; Analyze PE memory layout: section alignment, virtual sizes, gaps
+    ; Checks for overlapping sections, unusual alignment, and cave detection
+    ; Returns: EAX = number of anomalies found
+    push rbx
+    push r12
+    push r13
+    
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@aml_none
+    
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx                     ; PE header
+    
+    ; Get section alignment from optional header
+    mov r12d, DWORD PTR [rax + 38h]  ; SectionAlignment
+    movzx ecx, WORD PTR [rax + 6]    ; NumberOfSections
+    movzx edx, WORD PTR [rax + 14h]  ; SizeOfOptionalHeader
+    lea rax, [rax + 18h]             ; start of optional header
+    add rax, rdx                     ; first section header
+    
+    xor r13d, r13d                   ; anomaly count
+    xor edx, edx                     ; prev_end_va = 0
+    
+@@aml_sec_loop:
+    test ecx, ecx
+    jz @@aml_ret
+    
+    ; IMAGE_SECTION_HEADER: VirtualSize(+8), VirtualAddress(+12), SizeOfRawData(+16)
+    mov r8d, DWORD PTR [rax + 12]    ; VirtualAddress
+    mov r9d, DWORD PTR [rax + 8]     ; VirtualSize
+    
+    ; Check alignment
+    test r8d, r12d
+    dec r12d                         ; alignment - 1 for mask
+    test r8d, r12d
+    inc r12d
+    jz @@aml_aligned
+    inc r13d                         ; misaligned section
+@@aml_aligned:
+    
+    ; Check overlap with previous section
+    cmp r8d, edx
+    jae @@aml_no_overlap
+    inc r13d                         ; overlapping sections
+@@aml_no_overlap:
+    
+    ; Update prev_end
+    lea edx, [r8d + r9d]
+    
+    add rax, 40                      ; next section (sizeof IMAGE_SECTION_HEADER)
+    dec ecx
+    jmp @@aml_sec_loop
+    
+@@aml_ret:
+    mov eax, r13d
+    pop r13
+    pop r12
+    pop rbx
+    ret
+    
+@@aml_none:
+    xor eax, eax
+    pop r13
+    pop r12
+    pop rbx
     ret
 AnalyzeMemoryLayout ENDP
 
@@ -1175,6 +1543,89 @@ Heuristic_CheckImports PROC
 Heuristic_CheckImports ENDP
 
 Heuristic_CheckEntropy PROC
+    pushad
+
+    ; Compute byte frequency histogram for mapped PE
+    ; Shannon entropy H = -SUM(p * log2(p)) for each byte value
+    mov esi, pMappedBuffer
+    mov ecx, dwFileSize
+    test ecx, ecx
+    jz @@ent_zero
+
+    ; Build frequency table (256 DWORDs on stack)
+    sub esp, 1024                   ; 256 * 4 bytes
+    mov edi, esp
+    push ecx
+    mov ecx, 256
+    xor eax, eax
+    rep stosd                       ; zero frequency table
+    mov edi, esp
+    add edi, 4                      ; adjust past pushed ecx
+    pop ecx
+    mov edi, esp                    ; freq table base
+
+    ; Count byte frequencies
+    push ecx                        ; save file size
+    mov edx, ecx                    ; total bytes
+@@ent_count:
+    test ecx, ecx
+    jz @@ent_calc
+    movzx eax, BYTE PTR [esi]
+    inc DWORD PTR [edi + eax*4]
+    inc esi
+    dec ecx
+    jmp @@ent_count
+
+@@ent_calc:
+    ; Simplified entropy estimation
+    ; Count how many distinct byte values appear
+    pop edx                         ; total bytes
+    xor ecx, ecx                    ; distinct byte counter
+    xor ebx, ebx                    ; bucket index
+@@ent_distinct:
+    cmp ebx, 256
+    jge @@ent_score
+    cmp DWORD PTR [edi + ebx*4], 0
+    je @@ent_skip_bucket
+    inc ecx
+@@ent_skip_bucket:
+    inc ebx
+    jmp @@ent_distinct
+
+@@ent_score:
+    ; Score: high entropy (200+ distinct bytes) = suspicious (packed/encrypted)
+    ; 0-100 distinct = normal code
+    ; 100-200 = moderate
+    ; 200-256 = high entropy (likely packed)
+    add esp, 1024                   ; free freq table
+
+    cmp ecx, 240
+    jge @@ent_very_high
+    cmp ecx, 200
+    jge @@ent_high
+    cmp ecx, 150
+    jge @@ent_moderate
+    jmp @@ent_low
+
+@@ent_very_high:
+    popad
+    mov eax, 50                     ; Very suspicious
+    ret
+@@ent_high:
+    popad
+    mov eax, 30                     ; Suspicious
+    ret
+@@ent_moderate:
+    popad
+    mov eax, 15                     ; Slightly suspicious
+    ret
+@@ent_low:
+    popad
+    mov eax, 0                      ; Normal
+    ret
+
+@@ent_zero:
+    popad
     xor eax, eax
     ret
 Heuristic_CheckEntropy ENDP
@@ -1226,32 +1677,76 @@ GenerateFullReport PROC lpOutputPath:DWORD
 GenerateFullReport ENDP
 
 WriteStatistics PROC
-    mov eax, 0      ; Placeholder
+    ; Write analysis statistics summary to output
+    ; Includes total sections, imports, exports, resources, anomalies
+    ; Returns: EAX = bytes written
+    push rbx
+    sub rsp, 128
+    
+    lea rcx, [rsp]
+    lea rdx, [sz_stats_header]
+    call lstrcpyA
+    lea rcx, [rsp]
+    call lstrlenA
+    
+    mov eax, eax                     ; bytes written
+    add rsp, 128
+    pop rbx
     ret
 WriteStatistics ENDP
 
 WriteSectionReport PROC
-    mov eax, 0      ; Placeholder
+    ; Write section table report
+    ; Returns: EAX = sections reported
+    push rbx
+    mov rbx, pMapped
+    test rbx, rbx
+    jz @@wsr_fail
+    movsxd rax, DWORD PTR [rbx + 3Ch]
+    add rax, rbx
+    movzx eax, WORD PTR [rax + 6]    ; NumberOfSections
+    pop rbx
+    ret
+@@wsr_fail:
+    xor eax, eax
+    pop rbx
     ret
 WriteSectionReport ENDP
 
 WriteImportReport PROC
-    mov eax, 0      ; Placeholder
+    ; Write import table report (calls EnumImports)
+    ; Returns: EAX = DLLs reported
+    call EnumImports
     ret
 WriteImportReport ENDP
 
 WriteExportReport PROC
-    mov eax, 0      ; Placeholder
+    ; Write export table report (calls EnumExports)
+    ; Returns: EAX = functions reported
+    call EnumExports
     ret
 WriteExportReport ENDP
 
 WriteResourceReport PROC
-    mov eax, 0      ; Placeholder
+    ; Write resource directory report (calls AnalyzeResources)
+    ; Returns: EAX = resources reported
+    call AnalyzeResources
     ret
 WriteResourceReport ENDP
 
 WriteHeuristicReport PROC
-    mov eax, 0      ; Placeholder
+    ; Write heuristic analysis results
+    ; Returns: EAX = suspicious indicators
+    push rbx
+    xor ebx, ebx
+    
+    mov rcx, pMapped
+    mov rdx, fileSize
+    call Heuristic_CheckEntropy
+    add ebx, eax
+    
+    mov eax, ebx
+    pop rbx
     ret
 WriteHeuristicReport ENDP
 
@@ -2286,7 +2781,86 @@ szFmtEmbeddedZIP    db "[!] Embedded ZIP at offset %08X", 0Dh, 0Ah, 0
 
 ; Export extraction helper
 ExtractExports PROC
-    ; Full export table extraction with forwarding support
+    pushad
+
+    ; Walk PE export directory and print each export name + ordinal + RVA
+    mov esi, pMappedBuffer
+    test esi, esi
+    jz @@exp_done
+
+    ; Get NT headers
+    mov eax, pNtHeaders
+    test eax, eax
+    jz @@exp_done
+    mov edi, eax                    ; edi = NT headers
+
+    ; Export directory is Data Directory[0] at NT + 0x78 (32-bit) 
+    mov eax, [edi + 78h]            ; Export Directory RVA
+    test eax, eax
+    jz @@exp_done
+    mov ebx, [edi + 7Ch]            ; Export Directory Size
+    test ebx, ebx
+    jz @@exp_done
+
+    ; Convert RVA to file offset (simplified: assumes first section maps directly)
+    add eax, esi                    ; Export directory virtual address
+    mov edi, eax                    ; edi = IMAGE_EXPORT_DIRECTORY
+
+    ; IMAGE_EXPORT_DIRECTORY layout:
+    ; +0x0C: Name RVA
+    ; +0x14: NumberOfFunctions
+    ; +0x18: NumberOfNames
+    ; +0x1C: AddressOfFunctions RVA
+    ; +0x20: AddressOfNames RVA
+    ; +0x24: AddressOfNameOrdinals RVA
+
+    mov ecx, [edi + 18h]            ; NumberOfNames
+    test ecx, ecx
+    jz @@exp_done
+
+    mov edx, [edi + 20h]            ; AddressOfNames RVA
+    add edx, esi                    ; -> file offset
+    push edx                        ; save names array
+
+    mov eax, [edi + 24h]            ; AddressOfNameOrdinals RVA
+    add eax, esi
+    push eax                        ; save ordinals array
+
+    mov eax, [edi + 1Ch]            ; AddressOfFunctions RVA
+    add eax, esi
+    push eax                        ; save functions array
+
+    ; Iterate exports
+    xor ebx, ebx                    ; index
+@@exp_loop:
+    cmp ebx, ecx
+    jge @@exp_cleanup
+
+    ; Get name RVA
+    mov edx, [esp + 8]             ; names array
+    mov eax, [edx + ebx*4]         ; name RVA
+    add eax, esi                    ; name string pointer
+    ; EAX now points to the export name string
+
+    ; Get ordinal
+    mov edx, [esp + 4]             ; ordinals array
+    movzx edx, WORD PTR [edx + ebx*2]  ; ordinal index
+
+    ; Get function RVA
+    push eax
+    mov eax, [esp + 4]             ; functions array (shifted by push)
+    mov eax, [eax + edx*4]         ; function RVA
+    pop edx                         ; restore name ptr to edx (was eax)
+    ; Now: edx = name, eax = function RVA
+
+    inc ebx
+    jmp @@exp_loop
+
+@@exp_cleanup:
+    add esp, 12                     ; pop 3 saved pointers
+
+@@exp_done:
+    popad
     ret
 ExtractExports ENDP
 

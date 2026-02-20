@@ -7,16 +7,24 @@
 
 // C++ Implementations of Kernels (Ensuring Real Logic Execution)
 void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M, uint64_t K, uint64_t N) {
-    // A: (M, K), B: (N, K) [Transposed Standard Weight], C: (M, N)
+    // A: (M, K), B: (K, N) [Standard matrix multiplication], C: (M, N)
+    // Note: B is transposed in the original code, but we'll assume standard layout
     // Parallelize over M (batch) and N (outputs)
     #pragma omp parallel for collapse(2)
     for (uint64_t i = 0; i < M; i++) {
         for (uint64_t j = 0; j < N; j++) {
-            float sum = 0.0f;
-            // Vectorize this inner loop
-            #pragma omp simd reduction(+:sum)
-            for (uint64_t k = 0; k < K; k++) {
-                sum += A[i * K + k] * B[j * K + k]; 
+            __m512 sum_vec = _mm512_setzero_ps();
+            uint64_t k = 0;
+            // Vectorize the inner loop with AVX-512 (16 floats per iteration)
+            for (; k + 15 < K; k += 16) {
+                __m512 a_vec = _mm512_loadu_ps(A + i * K + k);
+                __m512 b_vec = _mm512_loadu_ps(B + j * K + k);
+                sum_vec = _mm512_fmadd_ps(a_vec, b_vec, sum_vec);
+            }
+            // Handle remaining elements
+            float sum = _mm512_reduce_add_ps(sum_vec);
+            for (; k < K; k++) {
+                sum += A[i * K + k] * B[j * K + k];
             }
             C[i * N + j] = sum;
         }
@@ -24,23 +32,76 @@ void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M,
 }
 
 void RMSNorm_AVX512(float* out, const float* in, const float* weight, int size, float eps) {
-    float ss = 0.0f;
-    for (int i = 0; i < size; i++) ss += in[i] * in[i];
+    // Compute sum of squares
+    __m512 sum_vec = _mm512_setzero_ps();
+    int i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 in_vec = _mm512_loadu_ps(in + i);
+        sum_vec = _mm512_fmadd_ps(in_vec, in_vec, sum_vec);
+    }
+    float ss = _mm512_reduce_add_ps(sum_vec);
+    for (; i < size; i++) {
+        ss += in[i] * in[i];
+    }
     ss /= size;
     ss += eps;
     float inv_rms = 1.0f / sqrtf(ss);
-    for (int i = 0; i < size; i++) out[i] = in[i] * weight[i] * inv_rms;
+
+    // Apply normalization
+    __m512 inv_rms_vec = _mm512_set1_ps(inv_rms);
+    i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 in_vec = _mm512_loadu_ps(in + i);
+        __m512 weight_vec = _mm512_loadu_ps(weight + i);
+        __m512 out_vec = _mm512_mul_ps(_mm512_mul_ps(in_vec, weight_vec), inv_rms_vec);
+        _mm512_storeu_ps(out + i, out_vec);
+    }
+    for (; i < size; i++) {
+        out[i] = in[i] * weight[i] * inv_rms;
+    }
 }
 
 void Softmax_AVX512(float* x, int size) {
-    float max_val = x[0];
-    for(int i=1; i<size; i++) if(x[i] > max_val) max_val = x[i];
-    float sum = 0.0f;
-    for(int i=0; i<size; i++) {
+    // Find max value
+    __m512 max_vec = _mm512_loadu_ps(x);
+    int i = 16;
+    for (; i + 15 < size; i += 16) {
+        __m512 curr_vec = _mm512_loadu_ps(x + i);
+        max_vec = _mm512_max_ps(max_vec, curr_vec);
+    }
+    float max_val = _mm512_reduce_max_ps(max_vec);
+    for (; i < size; i++) {
+        if (x[i] > max_val) max_val = x[i];
+    }
+
+    // Compute exp(x - max) and sum
+    __m512 max_val_vec = _mm512_set1_ps(max_val);
+    __m512 sum_vec = _mm512_setzero_ps();
+    i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 curr_vec = _mm512_loadu_ps(x + i);
+        curr_vec = _mm512_sub_ps(curr_vec, max_val_vec);
+        curr_vec = _mm512_exp_ps(curr_vec);
+        _mm512_storeu_ps(x + i, curr_vec);
+        sum_vec = _mm512_add_ps(sum_vec, curr_vec);
+    }
+    float sum = _mm512_reduce_add_ps(sum_vec);
+    for (; i < size; i++) {
         x[i] = expf(x[i] - max_val);
         sum += x[i];
     }
-    for(int i=0; i<size; i++) x[i] /= sum;
+
+    // Normalize
+    __m512 sum_inv_vec = _mm512_set1_ps(1.0f / sum);
+    i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 curr_vec = _mm512_loadu_ps(x + i);
+        curr_vec = _mm512_mul_ps(curr_vec, sum_inv_vec);
+        _mm512_storeu_ps(x + i, curr_vec);
+    }
+    for (; i < size; i++) {
+        x[i] /= sum;
+    }
 }
 
 void RoPE_AVX512(float* q, float* k, int pos, int head_dim, int num_heads) {
@@ -71,9 +132,65 @@ void RoPE_AVX512(float* q, float* k, int pos, int head_dim, int num_heads) {
 }
 
 void Silu_AVX512(float* x, int size) {
-    for(int i=0; i<size; i++) {
+    int i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 val_vec = _mm512_loadu_ps(x + i);
+        __m512 neg_val_vec = _mm512_sub_ps(_mm512_setzero_ps(), val_vec);
+        __m512 exp_vec = _mm512_exp_ps(neg_val_vec);
+        __m512 one_vec = _mm512_set1_ps(1.0f);
+        __m512 denom_vec = _mm512_add_ps(one_vec, exp_vec);
+        __m512 result_vec = _mm512_div_ps(val_vec, denom_vec);
+        _mm512_storeu_ps(x + i, result_vec);
+    }
+    for (; i < size; i++) {
         float val = x[i];
         x[i] = val / (1.0f + expf(-val));
+    }
+}
+
+// AVX-512 optimized dot product
+float DotProduct_AVX512(const float* a, const float* b, int size) {
+    __m512 sum_vec = _mm512_setzero_ps();
+    int i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 a_vec = _mm512_loadu_ps(a + i);
+        __m512 b_vec = _mm512_loadu_ps(b + i);
+        sum_vec = _mm512_fmadd_ps(a_vec, b_vec, sum_vec);
+    }
+    float sum = _mm512_reduce_add_ps(sum_vec);
+    for (; i < size; i++) {
+        sum += a[i] * b[i];
+    }
+    return sum;
+}
+
+// AVX-512 optimized vector addition with scalar multiplier
+void VectorAddScaled_AVX512(float* out, const float* in, float scale, int size) {
+    __m512 scale_vec = _mm512_set1_ps(scale);
+    int i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 out_vec = _mm512_loadu_ps(out + i);
+        __m512 in_vec = _mm512_loadu_ps(in + i);
+        __m512 scaled_vec = _mm512_mul_ps(in_vec, scale_vec);
+        out_vec = _mm512_add_ps(out_vec, scaled_vec);
+        _mm512_storeu_ps(out + i, out_vec);
+    }
+    for (; i < size; i++) {
+        out[i] += scale * in[i];
+    }
+}
+
+// AVX-512 optimized vector addition
+void VectorAdd_AVX512(float* out, const float* a, const float* b, int size) {
+    int i = 0;
+    for (; i + 15 < size; i += 16) {
+        __m512 a_vec = _mm512_loadu_ps(a + i);
+        __m512 b_vec = _mm512_loadu_ps(b + i);
+        __m512 sum_vec = _mm512_add_ps(a_vec, b_vec);
+        _mm512_storeu_ps(out + i, sum_vec);
+    }
+    for (; i < size; i++) {
+        out[i] = a[i] + b[i];
     }
 }
 
@@ -172,8 +289,7 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                     float* k_past = kv_cache_k.data() + k_offset;
                     
                     // Dot product
-                    float score = 0.0f;
-                    for (int i=0; i<head_dim; i++) score += q_head[i] * k_past[i];
+                    float score = DotProduct_AVX512(q_head, k_past, head_dim);
                     score /= sqrtf((float)head_dim);
                     scores[p] = score;
                 }
@@ -189,8 +305,7 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
                     int v_offset = (l * config.n_ctx + p) * config.dim + h * head_dim;
                     float* v_past = kv_cache_v.data() + v_offset;
                     float w = scores[p];
-                    
-                    for (int i=0; i<head_dim; i++) out_head[i] += w * v_past[i];
+                    VectorAddScaled_AVX512(out_head, v_past, w, head_dim);
                 }
             }
             
@@ -199,7 +314,7 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             MatrixMultiply_AVX512(att_out.data(), wo, attn_final.data(), 1, config.dim, config.dim);
             
             // Residual Add
-            for(int i=0; i<config.dim; i++) x[i] = residual[i] + attn_final[i];
+            VectorAdd_AVX512(x.data(), residual.data(), attn_final.data(), config.dim);
             
             // --- ATTENTION END ---
             
@@ -235,14 +350,24 @@ std::vector<float> RawrXDTransformer::Forward(const std::vector<uint32_t>& token
             
             // SiLU(h1) * h3
             Silu_AVX512(h1.data(), config.hidden_dim);
-            for(int i=0; i<config.hidden_dim; i++) h1[i] *= h3[i];
+            // Element-wise multiplication
+            int i = 0;
+            for (; i + 15 < config.hidden_dim; i += 16) {
+                __m512 h1_vec = _mm512_loadu_ps(h1.data() + i);
+                __m512 h3_vec = _mm512_loadu_ps(h3.data() + i);
+                __m512 result_vec = _mm512_mul_ps(h1_vec, h3_vec);
+                _mm512_storeu_ps(h1.data() + i, result_vec);
+            }
+            for (; i < config.hidden_dim; i++) {
+                h1[i] *= h3[i];
+            }
             
             // Down proj
             std::vector<float> final_ffn(config.dim);
             MatrixMultiply_AVX512(h1.data(), w2, final_ffn.data(), 1, config.hidden_dim, config.dim);
             
             // Residual Add
-            for(int i=0; i<config.dim; i++) x[i] = residual[i] + final_ffn[i];
+            VectorAdd_AVX512(x.data(), residual.data(), final_ffn.data(), config.dim);
             
             // --- FFN END ---
         }

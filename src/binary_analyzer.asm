@@ -945,6 +945,7 @@ main PROC
     
     ; Exit
     invoke ExitProcess, dwExitCode
+    ret
 main ENDP
 
 END main
@@ -968,6 +969,7 @@ main PROC
     
     ; Exit
     invoke ExitProcess, dwExitCode
+    ret
 main ENDP
 
 END main

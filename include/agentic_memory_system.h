@@ -1,208 +1,196 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QDateTime>
+/**
+ * AgenticMemorySystem — C++20, no Qt. Persistent memory for agents with
+ * learning, recall, and pattern recognition.
+ *
+ * Memory types: Episodic, Semantic, Procedural, Working.
+ * Features: retention/forgetting, pattern recognition, similarity retrieval,
+ * temporal decay, experience scoring, strategy effectiveness.
+ */
+
+#include <string>
 #include <memory>
 #include <vector>
 #include <unordered_map>
 #include <deque>
+#include <chrono>
+#include <functional>
 
-/**
- * @class AgenticMemorySystem
- * @brief Persistent memory for agents with learning, recall, and pattern recognition
- * 
- * Memory types:
- * 1. EPISODIC: Memories of specific interactions and outcomes
- * 2. SEMANTIC: General knowledge and patterns learned
- * 3. PROCEDURAL: Remembered processes and strategies that worked
- * 4. WORKING: Current task context and short-term goals
- * 
- * Features:
- * - Automatic retention and forgetting policies
- * - Pattern recognition and generalization
- * - Similarity-based retrieval
- * - Temporal decay of memories
- * - Experience scoring
- * - Strategy effectiveness tracking
- */
-class AgenticMemorySystem : public QObject
+class AgenticMemorySystem
 {
-    Q_OBJECT
-
 public:
     enum class MemoryType {
-        Episodic,   // Specific events and interactions
-        Semantic,   // General knowledge and patterns
-        Procedural, // Processes and strategies
-        Working     // Current context
+        Episodic,
+        Semantic,
+        Procedural,
+        Working
     };
 
     struct MemoryEntry {
-        QString id;
-        MemoryType type;
-        QString content;
-        QJsonObject metadata;
-        QDateTime timestamp;
-        float relevanceScore;
-        int accessCount;
-        QString tags;
-        bool isPinned;
+        std::string id;
+        MemoryType type = MemoryType::Episodic;
+        std::string content;
+        std::string metadata;   // JSON
+        std::chrono::system_clock::time_point timestamp{};
+        float relevanceScore = 0.f;
+        int accessCount = 0;
+        std::string tags;
+        bool isPinned = false;
     };
 
     struct Experience {
-        QString experienceId;
-        QString taskDescription;
-        QJsonObject goalState;
-        QJsonObject resultState;
-        bool successful;
-        float successRate;
-        QStringList strategiesUsed;
-        int iterationsNeeded;
-        float similarityToCurrentTask;
-        int usageCount;
-        QDateTime timestamp;
+        std::string experienceId;
+        std::string taskDescription;
+        std::string goalState;    // JSON
+        std::string resultState;  // JSON
+        bool successful = false;
+        float successRate = 0.f;
+        std::vector<std::string> strategiesUsed;
+        int iterationsNeeded = 0;
+        float similarityToCurrentTask = 0.f;
+        int usageCount = 0;
+        std::chrono::system_clock::time_point timestamp{};
     };
 
     struct Pattern {
-        QString patternId;
-        QString description;
-        QJsonArray examples;
-        float confidence;
-        QString category;
-        int occurrences;
-        QDateTime firstObserved;
-        QDateTime lastObserved;
+        std::string patternId;
+        std::string description;
+        std::string examples;     // JSON array
+        float confidence = 0.f;
+        std::string category;
+        int occurrences = 0;
+        std::chrono::system_clock::time_point firstObserved{};
+        std::chrono::system_clock::time_point lastObserved{};
     };
 
-public:
-    explicit AgenticMemorySystem(QObject* parent = nullptr);
+    AgenticMemorySystem();
     ~AgenticMemorySystem();
 
+    // Callbacks (replace Qt signals)
+    using MemoryStoredFn = std::function<void(const std::string& memoryId)>;
+    using MemoryRetrievedFn = std::function<void(const std::string& memoryId)>;
+    using ExperienceRecordedFn = std::function<void(const std::string& experienceId)>;
+    using PatternDetectedFn = std::function<void(const std::string& patternId)>;
+    using MemoriesConsolidatedFn = std::function<void()>;
+    using MemoryPrunedFn = std::function<void(int prunedCount)>;
+
+    void setOnMemoryStored(MemoryStoredFn f) { m_onMemoryStored = std::move(f); }
+    void setOnMemoryRetrieved(MemoryRetrievedFn f) { m_onMemoryRetrieved = std::move(f); }
+    void setOnExperienceRecorded(ExperienceRecordedFn f) { m_onExperienceRecorded = std::move(f); }
+    void setOnPatternDetected(PatternDetectedFn f) { m_onPatternDetected = std::move(f); }
+    void setOnMemoriesConsolidated(MemoriesConsolidatedFn f) { m_onMemoriesConsolidated = std::move(f); }
+    void setOnMemoryPruned(MemoryPrunedFn f) { m_onMemoryPruned = std::move(f); }
+
     // ===== MEMORY STORAGE =====
-    QString storeMemory(
+    std::string storeMemory(
         MemoryType type,
-        const QString& content,
-        const QJsonObject& metadata = QJsonObject()
+        const std::string& content,
+        const std::string& metadataJson = "{}"
     );
-    void updateMemory(const QString& memoryId, const QString& content);
-    void deleteMemory(const QString& memoryId);
-    void pinMemory(const QString& memoryId, bool pinned);
-    
+    void updateMemory(const std::string& memoryId, const std::string& content);
+    void deleteMemory(const std::string& memoryId);
+    void pinMemory(const std::string& memoryId, bool pinned);
+
     // ===== MEMORY RETRIEVAL =====
-    MemoryEntry* getMemory(const QString& memoryId);
+    MemoryEntry* getMemory(const std::string& memoryId);
     std::vector<MemoryEntry*> getMemoriesByType(MemoryType type);
-    std::vector<MemoryEntry*> getMemoriesByTag(const QString& tag);
-    std::vector<MemoryEntry*> searchMemories(const QString& query, int limit = 10);
-    std::vector<MemoryEntry*> getRelevantMemories(const QString& context, int limit = 5);
-    
+    std::vector<MemoryEntry*> getMemoriesByTag(const std::string& tag);
+    std::vector<MemoryEntry*> searchMemories(const std::string& query, int limit = 10);
+    std::vector<MemoryEntry*> getRelevantMemories(const std::string& context, int limit = 5);
+
     // ===== EXPERIENCE MANAGEMENT =====
-    QString recordExperience(
-        const QString& taskDescription,
-        const QJsonObject& goalState,
-        const QJsonObject& resultState,
+    std::string recordExperience(
+        const std::string& taskDescription,
+        const std::string& goalStateJson,
+        const std::string& resultStateJson,
         bool successful,
-        const QStringList& strategiesUsed
+        const std::vector<std::string>& strategiesUsed
     );
     std::vector<Experience> findSimilarExperiences(
-        const QString& currentTask,
+        const std::string& currentTask,
         float minSimilarity = 0.6f
     );
-    Experience* getExperience(const QString& experienceId);
-    void recordExperienceUsage(const QString& experienceId);
+    Experience* getExperience(const std::string& experienceId);
+    void recordExperienceUsage(const std::string& experienceId);
     std::vector<Experience> getMostSuccessfulExperiences(int limit = 10);
 
     // ===== PATTERN RECOGNITION =====
-    QString recordPattern(
-        const QString& description,
-        const QString& category,
-        const QJsonArray& examples
+    std::string recordPattern(
+        const std::string& description,
+        const std::string& category,
+        const std::string& examplesJson
     );
-    std::vector<Pattern> detectPatterns(const QString& context);
-    std::vector<Pattern> getPatternsForCategory(const QString& category);
-    Pattern* getPattern(const QString& patternId);
-    float getPatternConfidence(const QString& patternId);
-    
+    std::vector<Pattern> detectPatterns(const std::string& context);
+    std::vector<Pattern> getPatternsForCategory(const std::string& category);
+    Pattern* getPattern(const std::string& patternId);
+    float getPatternConfidence(const std::string& patternId);
+
     // ===== LEARNING AND ADAPTATION =====
     void recordSuccess(
-        const QString& taskDescription,
-        const QString& strategy,
+        const std::string& taskDescription,
+        const std::string& strategy,
         float effectiveness
     );
     void recordFailure(
-        const QString& taskDescription,
-        const QString& strategy,
-        const QString& failureReason
+        const std::string& taskDescription,
+        const std::string& strategy,
+        const std::string& failureReason
     );
-    
-    // Get strategy effectiveness
-    float getStrategyEffectiveness(const QString& strategy) const;
-    QStringList getRankedStrategies(const QString& taskType);
-    
+
+    float getStrategyEffectiveness(const std::string& strategy) const;
+    std::vector<std::string> getRankedStrategies(const std::string& taskType);
+
     // ===== MEMORY CONSOLIDATION =====
     void consolidateMemories();
     void pruneOldMemories(int ageInDays = 30);
-    void forgetMemory(const QString& memoryId);
+    void forgetMemory(const std::string& memoryId);
     float getMemoryDecayFactor(const MemoryEntry& entry) const;
-    
+
     // ===== STATISTICAL ANALYSIS =====
-    QJsonObject getMemoryStatistics() const;
-    int getTotalMemories() const { return m_memories.size(); }
-    int getExperienceCount() const { return m_experiences.size(); }
-    int getPatternCount() const { return m_patterns.size(); }
+    std::string getMemoryStatistics() const;  // JSON
+    int getTotalMemories() const { return static_cast<int>(m_memories.size()); }
+    int getExperienceCount() const { return static_cast<int>(m_experiences.size()); }
+    int getPatternCount() const { return static_cast<int>(m_patterns.size()); }
     float getAverageSuccessRate() const;
-    QString getMostCommonSuccessStrategy() const;
-    
+    std::string getMostCommonSuccessStrategy() const;
+
     // ===== EXPORT/IMPORT =====
-    QString exportMemories() const;
-    bool importMemories(const QString& jsonData);
-    QString exportExperiences() const;
-    bool importExperiences(const QString& jsonData);
-    
+    std::string exportMemories() const;
+    bool importMemories(const std::string& jsonData);
+    std::string exportExperiences() const;
+    bool importExperiences(const std::string& jsonData);
+
     // ===== CONFIGURATION =====
     void setRetentionPolicy(int maxMemories);
     void setDecayRate(float rate);
     void setAccessWeightFactor(float factor);
 
-signals:
-    void memoryStored(const QString& memoryId);
-    void memoryRetrieved(const QString& memoryId);
-    void experienceRecorded(const QString& experienceId);
-    void patternDetected(const QString& patternId);
-    void memoriesConsolidated();
-    void memoryPruned(int prunedCount);
-
 private:
-    // Calculate similarity between strings
-    float calculateSimilarity(const QString& str1, const QString& str2);
-    
-    // Decay calculation
+    float calculateSimilarity(const std::string& str1, const std::string& str2);
     void updateMemoryDecay();
-    float calculateRelevanceScore(
-        const MemoryEntry& entry,
-        const QString& context
-    );
-    
-    // Pattern extraction
+    float calculateRelevanceScore(const MemoryEntry& entry, const std::string& context);
     void extractPatterns();
-    QString hashContent(const QString& content);
+    std::string hashContent(const std::string& content);
 
-    // Memory stores
     std::unordered_map<std::string, std::unique_ptr<MemoryEntry>> m_memories;
     std::unordered_map<std::string, std::unique_ptr<Experience>> m_experiences;
     std::unordered_map<std::string, std::unique_ptr<Pattern>> m_patterns;
-    std::deque<QString> m_accessHistory;
-    
-    // Configuration
+    std::deque<std::string> m_accessHistory;
+
     int m_maxMemories = 1000;
     float m_decayRate = 0.99f;
     float m_accessWeightFactor = 1.5f;
     int m_contextWindowSize = 10;
-    
-    // Metrics
-    QDateTime m_systemStartTime;
+
+    std::chrono::system_clock::time_point m_systemStartTime;
     int m_totalStored = 0;
     int m_totalRetrieved = 0;
+
+    MemoryStoredFn m_onMemoryStored;
+    MemoryRetrievedFn m_onMemoryRetrieved;
+    ExperienceRecordedFn m_onExperienceRecorded;
+    PatternDetectedFn m_onPatternDetected;
+    MemoriesConsolidatedFn m_onMemoriesConsolidated;
+    MemoryPrunedFn m_onMemoryPruned;
 };

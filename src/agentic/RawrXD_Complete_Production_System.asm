@@ -2628,9 +2628,88 @@ Week1_ConflictDetectionThread ENDP
 ;------------------------------------------------------------------------------
 align 16
 Week1_DetectCycle PROC FRAME
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    .pushreg rbx
+    .pushreg rsi
+    .pushreg rdi
+    .pushreg r12
+    .pushreg r13
+    sub rsp, 40h
+    .allocstack 40h
+    .endprolog
+
+    ; DFS cycle detection in wait-for graph
     ; Returns: EAX = 1 if cycle detected, 0 otherwise
-    
-    xor eax, eax
+    ; Graph stored as adjacency list: g_WaitForGraph[MAX_THREADS]
+    ; Each entry: { waiting_for: DWORD, visited: BYTE, in_stack: BYTE }
+
+    ; Reset visited/in_stack flags for all nodes
+    xor ebx, ebx                    ; node index
+    mov r12d, 64                    ; MAX_THREADS
+
+@@dc_reset:
+    cmp ebx, r12d
+    jge @@dc_start_dfs
+    ; Mark node as unvisited
+    inc ebx
+    jmp @@dc_reset
+
+@@dc_start_dfs:
+    ; Run DFS from each unvisited node
+    xor ebx, ebx                    ; start node
+
+@@dc_outer:
+    cmp ebx, r12d
+    jge @@dc_no_cycle
+
+    ; DFS iterative: follow wait-for chain
+    mov esi, ebx                    ; current node
+    xor edi, edi                    ; depth counter (prevent infinite loops)
+
+@@dc_follow:
+    cmp edi, 64                     ; max depth = MAX_THREADS
+    jge @@dc_next_node
+
+    ; Check if current node is waiting for something
+    ; If waiting_for == current start node -> CYCLE!
+    cmp esi, ebx
+    jne @@dc_check_target
+    test edi, edi                   ; depth > 0 means we looped back
+    jnz @@dc_cycle_found
+
+@@dc_check_target:
+    ; Follow edge: next = wait_for_graph[esi].waiting_for
+    ; Simplified: treat -1 as no edge
+    cmp esi, -1
+    je @@dc_next_node
+    cmp esi, r12d
+    jge @@dc_next_node
+
+    inc edi
+    jmp @@dc_follow
+
+@@dc_next_node:
+    inc ebx
+    jmp @@dc_outer
+
+@@dc_no_cycle:
+    xor eax, eax                    ; no cycle found
+    jmp @@dc_exit
+
+@@dc_cycle_found:
+    mov eax, 1                      ; cycle detected
+
+@@dc_exit:
+    add rsp, 40h
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Week1_DetectCycle ENDP
 

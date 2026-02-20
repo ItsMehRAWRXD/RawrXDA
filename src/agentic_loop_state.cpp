@@ -1,19 +1,56 @@
-// AgenticLoopState Implementation
+// AgenticLoopState Implementation (Qt-free)
 #include "agentic_loop_state.h"
-
-
 #include <algorithm>
+#include <cstdio>
+#include <ctime>
+#include <sstream>
+#include <iomanip>
+
+// ===== STATIC HELPERS =====
+
+// Const overloads (actual implementation)
+std::string AgenticLoopState::timePointToISO(const TimePoint& tp) const
+{
+    auto tt = std::chrono::system_clock::to_time_t(tp);
+    struct tm tmBuf;
+#ifdef _WIN32
+    localtime_s(&tmBuf, &tt);
+#else
+    localtime_r(&tt, &tmBuf);
+#endif
+    char buf[32];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tmBuf);
+    return std::string(buf);
+}
+
+std::string AgenticLoopState::timePointToHMS(const TimePoint& tp) const
+{
+    auto tt = std::chrono::system_clock::to_time_t(tp);
+    struct tm tmBuf;
+#ifdef _WIN32
+    localtime_s(&tmBuf, &tt);
+#else
+    localtime_r(&tt, &tmBuf);
+#endif
+    char buf[16];
+    std::strftime(buf, sizeof(buf), "%H:%M:%S", &tmBuf);
+    return std::string(buf);
+}
 
 AgenticLoopState::AgenticLoopState()
     : m_currentPhase(ReasoningPhase::Analysis)
     , m_currentStatus(IterationStatus::NotStarted)
-    , m_stateStartTime(std::chrono::system_clock::time_point::currentDateTime())
-    , m_lastUpdateTime(std::chrono::system_clock::time_point::currentDateTime())
+    , m_stateStartTime(std::chrono::system_clock::now())
+    , m_lastUpdateTime(std::chrono::system_clock::now())
+    , m_constraints(nlohmann::json::object())
+    , m_lastSnapshot(nlohmann::json::object())
 {
+    fprintf(stderr, "[AgenticLoopState] Initialized - Ready for iterative reasoning\n");
 }
 
 AgenticLoopState::~AgenticLoopState()
 {
+    fprintf(stderr, "[AgenticLoopState] Destroyed - Cleaned up %zu iterations\n", m_iterations.size());
 }
 
 // ===== ITERATION MANAGEMENT =====
@@ -21,8 +58,8 @@ AgenticLoopState::~AgenticLoopState()
 void AgenticLoopState::startIteration(const std::string& goal)
 {
     Iteration iteration;
-    iteration.iterationNumber = m_iterations.size() + 1;
-    iteration.startTime = std::chrono::system_clock::time_point::currentDateTime();
+    iteration.iterationNumber = static_cast<int>(m_iterations.size()) + 1;
+    iteration.startTime = std::chrono::system_clock::now();
     iteration.currentPhase = ReasoningPhase::Analysis;
     iteration.status = IterationStatus::InProgress;
     iteration.goalStatement = goal;
@@ -34,6 +71,8 @@ void AgenticLoopState::startIteration(const std::string& goal)
     m_currentStatus = IterationStatus::InProgress;
 
     if (m_debugMode) {
+        fprintf(stderr, "[AgenticLoopState] Started iteration %d - %s\n",
+                iteration.iterationNumber, goal.c_str());
     }
 }
 
@@ -42,21 +81,22 @@ void AgenticLoopState::endIteration(IterationStatus status, const std::string& r
     if (m_iterations.empty()) return;
 
     Iteration& iteration = m_iterations.back();
-    iteration.endTime = std::chrono::system_clock::time_point::currentDateTime();
+    iteration.endTime = std::chrono::system_clock::now();
     iteration.status = status;
     iteration.resultSummary = result;
 
     // Update context window
     m_contextWindow.push_back(iteration);
-    if (m_contextWindow.size() > m_contextWindowSize) {
+    if (static_cast<int>(m_contextWindow.size()) > m_contextWindowSize) {
         m_contextWindow.pop_front();
     }
 
     m_currentStatus = status;
-    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::now();
 
     if (m_debugMode) {
-                 << "- Status:" << statusToString(status);
+        fprintf(stderr, "[AgenticLoopState] Ended iteration %d - Status: %s\n",
+                iteration.iterationNumber, statusToString(status).c_str());
     }
 }
 
@@ -71,30 +111,30 @@ AgenticLoopState::Iteration* AgenticLoopState::getCurrentIteration()
 void AgenticLoopState::setCurrentPhase(ReasoningPhase phase)
 {
     m_currentPhase = phase;
-    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::now();
 
     if (m_debugMode) {
+        fprintf(stderr, "[AgenticLoopState] Phase transitioned to %s\n",
+                phaseToString(phase).c_str());
     }
 }
 
 float AgenticLoopState::getPhaseProgress() const
 {
-    // Calculate progress based on iterations completed
     if (m_iterations.empty()) return 0.0f;
 
     int completed = getCompletedIterations();
     float baseProgress = (completed * 100.0f) / m_iterations.size();
 
-    // Add partial progress for current iteration
     auto curr = m_iterations.back();
     float phaseWeight = 0.0f;
     switch (curr.currentPhase) {
-        case ReasoningPhase::Analysis: phaseWeight = 0.1f; break;
-        case ReasoningPhase::Planning: phaseWeight = 0.3f; break;
-        case ReasoningPhase::Execution: phaseWeight = 0.6f; break;
-        case ReasoningPhase::Verification: phaseWeight = 0.8f; break;
-        case ReasoningPhase::Reflection: phaseWeight = 0.9f; break;
-        case ReasoningPhase::Adjustment: phaseWeight = 0.95f; break;
+        case ReasoningPhase::Analysis:     phaseWeight = 0.1f;  break;
+        case ReasoningPhase::Planning:     phaseWeight = 0.3f;  break;
+        case ReasoningPhase::Execution:    phaseWeight = 0.6f;  break;
+        case ReasoningPhase::Verification: phaseWeight = 0.8f;  break;
+        case ReasoningPhase::Reflection:   phaseWeight = 0.9f;  break;
+        case ReasoningPhase::Adjustment:   phaseWeight = 0.95f; break;
     }
 
     float iterationProgress = phaseWeight / m_iterations.size() * 100.0f;
@@ -105,7 +145,7 @@ std::vector<std::string> AgenticLoopState::getAllPhaseTransitions() const
 {
     std::vector<std::string> transitions;
     for (const auto& iteration : m_iterations) {
-        transitions.append(phaseToString(iteration.currentPhase));
+        transitions.push_back(phaseToString(iteration.currentPhase));
     }
     return transitions;
 }
@@ -114,13 +154,13 @@ std::vector<std::string> AgenticLoopState::getAllPhaseTransitions() const
 
 void AgenticLoopState::recordDecision(
     const std::string& description,
-    const void*& reasoning,
+    const nlohmann::json& reasoning,
     float confidence)
 {
     if (m_iterations.empty()) return;
 
     Decision decision;
-    decision.timestamp = std::chrono::system_clock::time_point::currentDateTime();
+    decision.timestamp = std::chrono::system_clock::now();
     decision.phase = m_currentPhase;
     decision.description = description;
     decision.reasoning = reasoning;
@@ -131,16 +171,18 @@ void AgenticLoopState::recordDecision(
     m_iterations.back().decisions.push_back(decision);
 
     if (m_debugMode) {
-                 << "- Confidence:" << confidence;
+        fprintf(stderr, "[AgenticLoopState] Recorded decision: %s - Confidence: %.2f\n",
+                description.c_str(), confidence);
     }
 }
 
 void AgenticLoopState::recordDecisionOutcome(
     int decisionIndex,
-    const void*& outcome,
+    const nlohmann::json& outcome,
     bool success)
 {
-    if (m_iterations.empty() || decisionIndex >= m_iterations.back().decisions.size()) {
+    if (m_iterations.empty() ||
+        decisionIndex >= static_cast<int>(m_iterations.back().decisions.size())) {
         return;
     }
 
@@ -149,6 +191,8 @@ void AgenticLoopState::recordDecisionOutcome(
     decision.success = success;
 
     if (m_debugMode) {
+        fprintf(stderr, "[AgenticLoopState] Decision outcome recorded - Success: %s\n",
+                success ? "true" : "false");
     }
 }
 
@@ -162,8 +206,9 @@ std::vector<AgenticLoopState::Decision> AgenticLoopState::getDecisionHistory(int
         }
     }
 
-    if (limit > 0 && allDecisions.size() > limit) {
-        allDecisions.erase(allDecisions.begin(), allDecisions.end() - limit);
+    if (limit > 0 && static_cast<int>(allDecisions.size()) > limit) {
+        allDecisions.erase(allDecisions.begin(),
+                           allDecisions.end() - limit);
     }
 
     return allDecisions;
@@ -211,7 +256,7 @@ void AgenticLoopState::recordError(
     const std::string& stackTrace)
 {
     ErrorRecord error;
-    error.timestamp = std::chrono::system_clock::time_point::currentDateTime();
+    error.timestamp = std::chrono::system_clock::now();
     error.errorType = errorType;
     error.errorMessage = message;
     error.stackTrace = stackTrace;
@@ -231,6 +276,8 @@ void AgenticLoopState::recordError(
     }
 
     if (m_debugMode) {
+        fprintf(stderr, "[AgenticLoopState] Error recorded: %s - %s\n",
+                errorType.c_str(), message.c_str());
     }
 }
 
@@ -239,25 +286,21 @@ void AgenticLoopState::recordErrorRecovery(
     const std::string& strategy,
     bool succeeded)
 {
-    if (errorIndex >= m_errorHistory.size()) return;
+    if (errorIndex >= static_cast<int>(m_errorHistory.size())) return;
 
     auto& error = m_errorHistory[errorIndex];
     error.recoveryStrategy = strategy;
     error.recoverySucceeded = succeeded;
 
     if (m_debugMode) {
-                 << "- Success:" << succeeded;
+        fprintf(stderr, "[AgenticLoopState] Error recovery recorded - Strategy: %s - Success: %s\n",
+                strategy.c_str(), succeeded ? "true" : "false");
     }
 }
 
 const std::deque<AgenticLoopState::ErrorRecord>& AgenticLoopState::getErrorHistory(size_t limit) const
 {
     return m_errorHistory;
-}
-
-int AgenticLoopState::getTotalErrorCount() const
-{
-    return m_errorHistory.size();
 }
 
 float AgenticLoopState::getErrorRate() const
@@ -274,31 +317,31 @@ float AgenticLoopState::getErrorRate() const
 
 std::string AgenticLoopState::generateErrorAnalysis() const
 {
-    void* analysis;
+    nlohmann::json analysis;
     analysis["total_errors"] = getTotalErrorCount();
     analysis["error_rate"] = getErrorRate();
 
     // Group errors by type
     std::unordered_map<std::string, int> errorTypeCounts;
     for (const auto& error : m_errorHistory) {
-        errorTypeCounts[error.errorType.toStdString()]++;
+        errorTypeCounts[error.errorType]++;
     }
 
-    void* errorTypes;
+    nlohmann::json errorTypes = nlohmann::json::object();
     for (const auto& pair : errorTypeCounts) {
-        errorTypes[std::string::fromStdString(pair.first)] = pair.second;
+        errorTypes[pair.first] = pair.second;
     }
     analysis["error_types"] = errorTypes;
 
-    return std::string::fromUtf8(void*(analysis).toJson());
+    return analysis.dump(2);
 }
 
 // ===== STATE SNAPSHOTS =====
 
-void* AgenticLoopState::takeSnapshot()
+nlohmann::json AgenticLoopState::takeSnapshot()
 {
-    void* snapshot;
-    snapshot["timestamp"] = std::chrono::system_clock::time_point::currentDateTime().toString(//ISODate);
+    nlohmann::json snapshot;
+    snapshot["timestamp"] = timePointToISO(std::chrono::system_clock::now());
     snapshot["phase"] = phaseToString(m_currentPhase);
     snapshot["status"] = statusToString(m_currentStatus);
     snapshot["iterations_completed"] = getCompletedIterations();
@@ -314,15 +357,19 @@ void* AgenticLoopState::takeSnapshot()
     return snapshot;
 }
 
-bool AgenticLoopState::restoreFromSnapshot(const void*& snapshot)
+bool AgenticLoopState::restoreFromSnapshot(const nlohmann::json& snapshot)
 {
     // Restore limited state from snapshot
-    // Note: Full state restoration would require serializing entire iteration history
-    m_currentPhase = stringToPhase(snapshot["phase"].toString());
-    m_currentStatus = stringToStatus(snapshot["status"].toString());
+    if (snapshot.contains("phase") && snapshot["phase"].is_string()) {
+        m_currentPhase = stringToPhase(snapshot["phase"].get<std::string>());
+    }
+    if (snapshot.contains("status") && snapshot["status"].is_string()) {
+        m_currentStatus = stringToStatus(snapshot["status"].get<std::string>());
+    }
     m_lastSnapshot = snapshot;
 
     if (m_debugMode) {
+        fprintf(stderr, "[AgenticLoopState] Restored from snapshot\n");
     }
 
     return true;
@@ -330,40 +377,40 @@ bool AgenticLoopState::restoreFromSnapshot(const void*& snapshot)
 
 // ===== MEMORY MANAGEMENT =====
 
-void AgenticLoopState::addToMemory(const std::string& key, const std::any& value)
+void AgenticLoopState::addToMemory(const std::string& key, const nlohmann::json& value)
 {
-    m_memory[key.toStdString()] = value;
-    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
+    m_memory[key] = value;
+    m_lastUpdateTime = std::chrono::system_clock::now();
 }
 
-std::any AgenticLoopState::getFromMemory(const std::string& key)
+nlohmann::json AgenticLoopState::getFromMemory(const std::string& key)
 {
-    auto it = m_memory.find(key.toStdString());
+    auto it = m_memory.find(key);
     if (it != m_memory.end()) {
         return it->second;
     }
-    return std::any();
+    return nlohmann::json();
 }
 
 void AgenticLoopState::removeFromMemory(const std::string& key)
 {
-    m_memory.erase(key.toStdString());
+    m_memory.erase(key);
 }
 
-void* AgenticLoopState::getAllMemory() const
+nlohmann::json AgenticLoopState::getAllMemory() const
 {
-    void* obj;
+    nlohmann::json obj = nlohmann::json::object();
     for (const auto& pair : m_memory) {
-        obj[std::string::fromStdString(pair.first)] = void*::fromVariant(pair.second);
+        obj[pair.first] = pair.second;
     }
     return obj;
 }
 
 void AgenticLoopState::clearMemoryExcept(const std::vector<std::string>& keysToKeep)
 {
-    std::unordered_map<std::string, std::any> newMemory;
+    std::unordered_map<std::string, nlohmann::json> newMemory;
     for (const auto& key : keysToKeep) {
-        auto it = m_memory.find(key.toStdString());
+        auto it = m_memory.find(key);
         if (it != m_memory.end()) {
             newMemory[it->first] = it->second;
         }
@@ -376,15 +423,15 @@ void AgenticLoopState::setContextWindowSize(int size)
     m_contextWindowSize = size;
 }
 
-void* AgenticLoopState::getContextWindow() const
+nlohmann::json AgenticLoopState::getContextWindow() const
 {
-    void* array;
+    nlohmann::json array = nlohmann::json::array();
     for (const auto& iteration : m_contextWindow) {
-        void* obj;
+        nlohmann::json obj;
         obj["iteration"] = iteration.iterationNumber;
         obj["goal"] = iteration.goalStatement;
         obj["status"] = statusToString(iteration.status);
-        array.append(obj);
+        array.push_back(obj);
     }
     return array;
 }
@@ -393,17 +440,17 @@ std::string AgenticLoopState::formatContextForModel() const
 {
     std::string context;
     context += "=== REASONING CONTEXT ===\n";
-    context += std::string("Current Goal: %1\n");
-    context += std::string("Current Phase: %1\n"));
-    context += std::string("Total Iterations: %1\n"));
-    context += std::string("Progress: %1%\n")));
+    context += "Current Goal: " + m_currentGoal + "\n";
+    context += "Current Phase: " + phaseToString(m_currentPhase) + "\n";
+    context += "Total Iterations: " + std::to_string(getTotalIterations()) + "\n";
+    context += "Progress: " + std::to_string(static_cast<int>(getProgressPercentage())) + "%\n";
 
     context += "\n=== RECENT DECISIONS ===\n";
     auto decisions = getDecisionHistory(5);
     for (const auto& decision : decisions) {
-        context += std::string("- %1 (Confidence: %2)\n")
-                  
-                  ;
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%.2f", decision.confidence);
+        context += "- " + decision.description + " (Confidence: " + buf + ")\n";
     }
 
     return context;
@@ -415,7 +462,7 @@ void AgenticLoopState::updateProgress(int current, int total)
 {
     m_progressCurrent = current;
     m_progressTotal = total;
-    m_lastUpdateTime = std::chrono::system_clock::time_point::currentDateTime();
+    m_lastUpdateTime = std::chrono::system_clock::now();
 }
 
 float AgenticLoopState::getProgressPercentage() const
@@ -426,9 +473,9 @@ float AgenticLoopState::getProgressPercentage() const
     return (m_progressCurrent * 100.0f) / m_progressTotal;
 }
 
-void* AgenticLoopState::getProgressInfo() const
+nlohmann::json AgenticLoopState::getProgressInfo() const
 {
-    void* info;
+    nlohmann::json info;
     info["current"] = m_progressCurrent;
     info["total"] = m_progressTotal;
     info["percentage"] = getProgressPercentage();
@@ -449,11 +496,11 @@ void AgenticLoopState::removeConstraint(const std::string& key)
     m_constraints.erase(key);
 }
 
-bool AgenticLoopState::validateAgainstConstraints(const void*& action) const
+bool AgenticLoopState::validateAgainstConstraints(const nlohmann::json& action) const
 {
-    // Simple constraint validation - can be extended
-    for (auto it = m_constraints.constBegin(); it != m_constraints.constEnd(); ++it) {
-        const std::string& constraintValue = it.value().toString();
+    // Simple constraint validation — can be extended
+    for (auto it = m_constraints.begin(); it != m_constraints.end(); ++it) {
+        const std::string& constraintValue = it.value().get<std::string>();
         if (!action.contains(it.key()) && !constraintValue.empty()) {
             return false;
         }
@@ -465,9 +512,9 @@ bool AgenticLoopState::validateAgainstConstraints(const void*& action) const
 
 void AgenticLoopState::recordAppliedStrategy(const std::string& strategy)
 {
-    m_appliedStrategies.append(strategy);
+    m_appliedStrategies.push_back(strategy);
     if (!m_iterations.empty()) {
-        m_iterations.back().appliedStrategies.append(strategy);
+        m_iterations.back().appliedStrategies.push_back(strategy);
     }
 }
 
@@ -478,9 +525,9 @@ void AgenticLoopState::setSuggestedStrategies(const std::vector<std::string>& st
 
 // ===== METRICS =====
 
-void* AgenticLoopState::getMetrics() const
+nlohmann::json AgenticLoopState::getMetrics() const
 {
-    void* metrics;
+    nlohmann::json metrics;
     metrics["total_iterations"] = getTotalIterations();
     metrics["completed_iterations"] = getCompletedIterations();
     metrics["failed_iterations"] = getFailedIterations();
@@ -526,14 +573,13 @@ float AgenticLoopState::getOverallSuccessRate() const
 std::string AgenticLoopState::getStateAsSummary() const
 {
     std::string summary;
-    summary += std::string("=== AGENTIC LOOP STATE ===\n");
-    summary += std::string("Current Phase: %1\n"));
-    summary += std::string("Status: %1\n"));
-    summary += std::string("Iterations: %1/%2 completed\n")
-              )
-              );
-    summary += std::string("Success Rate: %1%\n")));
-    summary += std::string("Errors: %1\n"));
+    summary += "=== AGENTIC LOOP STATE ===\n";
+    summary += "Current Phase: " + phaseToString(m_currentPhase) + "\n";
+    summary += "Status: " + statusToString(m_currentStatus) + "\n";
+    summary += "Iterations: " + std::to_string(getCompletedIterations()) + "/"
+             + std::to_string(getTotalIterations()) + " completed\n";
+    summary += "Success Rate: " + std::to_string(static_cast<int>(getOverallSuccessRate())) + "%\n";
+    summary += "Errors: " + std::to_string(getTotalErrorCount()) + "\n";
 
     return summary;
 }
@@ -542,7 +588,7 @@ std::string AgenticLoopState::getStateAsSummary() const
 
 std::string AgenticLoopState::serializeState() const
 {
-    void* state;
+    nlohmann::json state;
     state["phase"] = phaseToString(m_currentPhase);
     state["status"] = statusToString(m_currentStatus);
     state["goal"] = m_currentGoal;
@@ -550,20 +596,26 @@ std::string AgenticLoopState::serializeState() const
     state["memory"] = getAllMemory();
     state["constraints"] = m_constraints;
 
-    return std::string::fromUtf8(void*(state).toJson());
+    return state.dump(2);
 }
 
 bool AgenticLoopState::deserializeState(const std::string& jsonStr)
 {
-    void* doc = void*::fromJson(jsonStr.toUtf8());
-    if (!doc.isObject()) return false;
+    try {
+        nlohmann::json state = nlohmann::json::parse(jsonStr);
+        if (!state.is_object()) return false;
 
-    void* state = doc.object();
-    m_currentPhase = stringToPhase(state["phase"].toString());
-    m_currentStatus = stringToStatus(state["status"].toString());
-    m_currentGoal = state["goal"].toString();
+        if (state.contains("phase") && state["phase"].is_string())
+            m_currentPhase = stringToPhase(state["phase"].get<std::string>());
+        if (state.contains("status") && state["status"].is_string())
+            m_currentStatus = stringToStatus(state["status"].get<std::string>());
+        if (state.contains("goal") && state["goal"].is_string())
+            m_currentGoal = state["goal"].get<std::string>();
 
-    return true;
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 // ===== DEBUGGING =====
@@ -575,27 +627,24 @@ std::string AgenticLoopState::generateDebugReport() const
 
     report += "ITERATIONS:\n";
     for (const auto& iteration : m_iterations) {
-        report += std::string("  %1. %2 - %3\n")
-
-
-                  );
-        report += std::string("     Decisions: %1, Errors: %2\n")
-                  )
-                  ;
+        report += "  " + std::to_string(iteration.iterationNumber) + ". "
+                + iteration.goalStatement + " - "
+                + statusToString(iteration.status) + "\n";
+        report += "     Decisions: " + std::to_string(iteration.decisions.size())
+                + ", Errors: " + std::to_string(iteration.errorCount) + "\n";
     }
 
     report += "\nERRORS:\n";
     for (const auto& error : m_errorHistory) {
-        report += std::string("  [%1] %2 - %3\n")
-                  )
-                  
-                  ;
+        report += "  [" + timePointToHMS(error.timestamp) + "] "
+                + error.errorType + " - "
+                + error.errorMessage + "\n";
     }
 
     report += "\nMETRICS:\n";
-    void* metrics = getMetrics();
-    for (auto it = metrics.constBegin(); it != metrics.constEnd(); ++it) {
-        report += std::string("  %1: %2\n")).toVariant().toString());
+    nlohmann::json metrics = getMetrics();
+    for (auto it = metrics.begin(); it != metrics.end(); ++it) {
+        report += "  " + it.key() + ": " + it.value().dump() + "\n";
     }
 
     return report;
@@ -606,49 +655,47 @@ std::string AgenticLoopState::generateDebugReport() const
 std::string AgenticLoopState::phaseToString(ReasoningPhase phase) const
 {
     switch (phase) {
-        case ReasoningPhase::Analysis: return "Analysis";
-        case ReasoningPhase::Planning: return "Planning";
-        case ReasoningPhase::Execution: return "Execution";
+        case ReasoningPhase::Analysis:     return "Analysis";
+        case ReasoningPhase::Planning:     return "Planning";
+        case ReasoningPhase::Execution:    return "Execution";
         case ReasoningPhase::Verification: return "Verification";
-        case ReasoningPhase::Reflection: return "Reflection";
-        case ReasoningPhase::Adjustment: return "Adjustment";
-        default: return "Unknown";
+        case ReasoningPhase::Reflection:   return "Reflection";
+        case ReasoningPhase::Adjustment:   return "Adjustment";
+        default:                           return "Unknown";
     }
 }
 
-AgenticLoopState::ReasoningPhase AgenticLoopState::stringToPhase(const std::string& str) const
+ReasoningPhase AgenticLoopState::stringToPhase(const std::string& str) const
 {
-    if (str == "Analysis") return ReasoningPhase::Analysis;
-    if (str == "Planning") return ReasoningPhase::Planning;
-    if (str == "Execution") return ReasoningPhase::Execution;
+    if (str == "Analysis")     return ReasoningPhase::Analysis;
+    if (str == "Planning")     return ReasoningPhase::Planning;
+    if (str == "Execution")    return ReasoningPhase::Execution;
     if (str == "Verification") return ReasoningPhase::Verification;
-    if (str == "Reflection") return ReasoningPhase::Reflection;
-    if (str == "Adjustment") return ReasoningPhase::Adjustment;
+    if (str == "Reflection")   return ReasoningPhase::Reflection;
+    if (str == "Adjustment")   return ReasoningPhase::Adjustment;
     return ReasoningPhase::Analysis;
 }
 
 std::string AgenticLoopState::statusToString(IterationStatus status) const
 {
     switch (status) {
-        case IterationStatus::NotStarted: return "NotStarted";
-        case IterationStatus::InProgress: return "InProgress";
-        case IterationStatus::Completed: return "Completed";
-        case IterationStatus::Failed: return "Failed";
-        case IterationStatus::Recovering: return "Recovering";
+        case IterationStatus::NotStarted:         return "NotStarted";
+        case IterationStatus::InProgress:         return "InProgress";
+        case IterationStatus::Completed:          return "Completed";
+        case IterationStatus::Failed:             return "Failed";
+        case IterationStatus::Recovering:         return "Recovering";
         case IterationStatus::MaxAttemptsReached: return "MaxAttemptsReached";
-        default: return "Unknown";
+        default:                                  return "Unknown";
     }
 }
 
-AgenticLoopState::IterationStatus AgenticLoopState::stringToStatus(const std::string& str) const
+IterationStatus AgenticLoopState::stringToStatus(const std::string& str) const
 {
-    if (str == "NotStarted") return IterationStatus::NotStarted;
-    if (str == "InProgress") return IterationStatus::InProgress;
-    if (str == "Completed") return IterationStatus::Completed;
-    if (str == "Failed") return IterationStatus::Failed;
-    if (str == "Recovering") return IterationStatus::Recovering;
+    if (str == "NotStarted")         return IterationStatus::NotStarted;
+    if (str == "InProgress")         return IterationStatus::InProgress;
+    if (str == "Completed")          return IterationStatus::Completed;
+    if (str == "Failed")             return IterationStatus::Failed;
+    if (str == "Recovering")         return IterationStatus::Recovering;
     if (str == "MaxAttemptsReached") return IterationStatus::MaxAttemptsReached;
     return IterationStatus::NotStarted;
 }
-
-

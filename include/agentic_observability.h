@@ -1,5 +1,65 @@
 #pragma once
 
+#ifdef RAWRXD_NO_QT
+#include <memory>
+#include <vector>
+#include <unordered_map>
+#include <chrono>
+#include <string>
+
+/** Stub observability for non-Qt (GMake/MinGW) builds */
+class AgenticObservability {
+public:
+    enum class LogLevel { DEBUG = 0, INFO = 1, WARN = 2, ERROR = 3, CRITICAL = 4 };
+    struct LogEntry {
+        std::chrono::system_clock::time_point timestamp;
+        LogLevel level;
+        std::string component;
+        std::string message;
+        std::string traceId;
+        std::string spanId;
+    };
+    struct MetricPoint { std::string metricName; float value; std::string unit; std::chrono::system_clock::time_point timestamp; };
+    struct TraceSpan { std::string spanId, parentSpanId, traceId, operation; bool hasError; std::string errorMessage; int statusCode; };
+
+    explicit AgenticObservability(void* parent = nullptr);
+    ~AgenticObservability();
+
+    void log(LogLevel level, const std::string& component, const std::string& message, const void* context = nullptr);
+    void logDebug(const std::string& component, const std::string& message, const void* context = nullptr);
+    void logInfo(const std::string& component, const std::string& message, const void* context = nullptr);
+    void logWarn(const std::string& component, const std::string& message, const void* context = nullptr);
+    void logError(const std::string& component, const std::string& message, const void* context = nullptr);
+    void logCritical(const std::string& component, const std::string& message, const void* context = nullptr);
+
+    std::vector<LogEntry> getLogs(int limit = 100, LogLevel minLevel = LogLevel::DEBUG, const std::string& component = "");
+    void recordMetric(const std::string& metricName, float value, const void* labels = nullptr, const std::string& unit = "");
+    void incrementCounter(const std::string& metricName, int delta = 1, const void* labels = nullptr);
+    float getCounterValue(const std::string& metricName) const;
+    void setGauge(const std::string& metricName, float value, const void* labels = nullptr);
+    float getGaugeValue(const std::string& metricName) const;
+    void recordHistogram(const std::string& metricName, float value, const void* labels = nullptr);
+    std::string startTrace(const std::string& operation);
+    std::string startSpan(const std::string& spanName, const std::string& parentSpanId = "");
+    void endSpan(const std::string& spanId, bool hasError = false, const std::string& errorMessage = "", int statusCode = 0);
+    void setLogLevel(LogLevel level) { m_minLogLevel = level; }
+    void setMaxLogEntries(int max) { m_maxLogEntries = max; }
+    void setSamplingRate(float rate) { m_samplingRate = rate; }
+
+private:
+    std::string generateTraceId();
+    std::string generateSpanId();
+    std::vector<LogEntry> m_logs;
+    LogLevel m_minLogLevel = LogLevel::DEBUG;
+    int m_maxLogEntries = 10000;
+    float m_samplingRate = 1.0f;
+    std::chrono::system_clock::time_point m_systemStartTime;
+    int m_totalLogsWritten = 0;
+    int m_totalMetricsRecorded = 0;
+};
+
+#else
+
 #include <QString>
 #include <QObject>
 #include <QJsonObject>
@@ -13,13 +73,6 @@
 /**
  * @class AgenticObservability
  * @brief Comprehensive observability for agentic systems
- * 
- * Three pillars of observability:
- * 1. STRUCTURED LOGGING: Detailed context at key points
- * 2. METRICS: Quantifiable measurements for performance tracking
- * 3. DISTRIBUTED TRACING: Request flow visualization across components
- * 
- * Enables production monitoring, debugging, and performance optimization.
  */
 class AgenticObservability : public QObject
 {
@@ -226,3 +279,5 @@ private:
     int m_totalMetricsRecorded = 0;
     std::unordered_map<std::string, int> m_errorCounts; // error_type -> count
 };
+
+#endif /* !RAWRXD_NO_QT */

@@ -1,650 +1,230 @@
-<<<<<<< HEAD
-# CMakeLists.txt for Unit Tests
-# Google Test and Qt Test Framework configuration for RawrXD IDE components
+# ============================================================
+# RawrXD Test Suite - CTest Registration
+# ============================================================
+# This file registers tests defined in the parent CMakeLists.txt with CTest
+# and adds additional tests not already defined there.
+#
+# Tests ALREADY defined in parent CMakeLists.txt (do NOT redefine):
+# - test_gguf_loader
+# - test_gguf_loader_simple  
+# - test_agent_coordinator
+# - test_agent_coordinator_integration
+# - quant_correctness_tests
+# - quant_engine_test
+# - quant_scalar_smoke
+# - test_kv_cache
+# - test_chat_streaming
+# - test_terminal
+# - test_ide_main
+# - test_header
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 # Enable testing
 enable_testing()
 
-# Find required packages
-    Core 
-    Gui 
-    Sql 
-    Network 
-    Multimedia 
-    Concurrent
-    REQUIRED
-)
+message(STATUS "========================================")
+message(STATUS "Registering Tests with CTest")
+message(STATUS "========================================")
 
-# Google Test
-include(FetchContent)
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-)
+# Register existing tests from parent CMakeLists.txt with CTest
+# These targets already exist, we just register them for ctest discovery
+if(TARGET test_gguf_loader)
+    add_test(NAME test_gguf_loader COMMAND test_gguf_loader)
+    message(STATUS "  ✓ Registered test_gguf_loader")
+endif()
 
-# Prevent installation of gtest
-set(INSTALL_GTEST OFF CACHE BOOL "Disable gtest installation" FORCE)
+if(TARGET test_gguf_loader_simple)
+    add_test(NAME test_gguf_loader_simple COMMAND test_gguf_loader_simple)
+    message(STATUS "  ✓ Registered test_gguf_loader_simple")
+endif()
 
-FetchContent_MakeAvailable(googletest)
+if(TARGET test_agent_coordinator)
+    add_test(NAME test_agent_coordinator COMMAND test_agent_coordinator)
+    message(STATUS "  ✓ Registered test_agent_coordinator")
+endif()
 
-# ============= Voice Processor Tests =============
-add_executable(voice_processor_test
-    voice_processor_test.cpp
-)
+if(TARGET test_agent_coordinator_integration)
+    add_test(NAME test_agent_coordinator_integration COMMAND test_agent_coordinator_integration)
+    message(STATUS "  ✓ Registered test_agent_coordinator_integration")
+endif()
 
-target_link_libraries(voice_processor_test
-    PRIVATE
-        gtest
-        gtest_main
-)
+if(TARGET quant_correctness_tests)
+    add_test(NAME quant_correctness_tests COMMAND quant_correctness_tests)
+    message(STATUS "  ✓ Registered quant_correctness_tests")
+endif()
 
-target_include_directories(voice_processor_test
-    PRIVATE
+if(TARGET quant_engine_test)
+    add_test(NAME quant_engine_test COMMAND quant_engine_test)
+    message(STATUS "  ✓ Registered quant_engine_test")
+endif()
+
+if(TARGET quant_scalar_smoke)
+    add_test(NAME quant_scalar_smoke COMMAND quant_scalar_smoke)
+    message(STATUS "  ✓ Registered quant_scalar_smoke")
+endif()
+
+if(TARGET test_kv_cache)
+    add_test(NAME test_kv_cache COMMAND test_kv_cache)
+    message(STATUS "  ✓ Registered test_kv_cache")
+endif()
+
+# ============================================================
+# NEW TESTS - Qt-free, C++20 native test framework
+# ============================================================
+
+# AI Completions Test
+if(NOT TARGET test_ai_completions AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_completions.cpp")
+    add_executable(test_ai_completions test_ai_completions.cpp)
+    target_include_directories(test_ai_completions PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_ai_completions PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_ai_completions COMMAND test_ai_completions)
+    message(STATUS "  ✓ Added test_ai_completions")
+endif()
+
+# LLM Connectivity Test
+if(NOT TARGET test_llm_connectivity AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_llm_connectivity.cpp")
+    add_executable(test_llm_connectivity test_llm_connectivity.cpp)
+    target_include_directories(test_llm_connectivity PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_llm_connectivity PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    if(WIN32)
+        target_link_libraries(test_llm_connectivity PRIVATE ws2_32 winhttp)
+    endif()
+    add_test(NAME test_llm_connectivity COMMAND test_llm_connectivity)
+    message(STATUS "  ✓ Added test_llm_connectivity")
+endif()
+
+# Tool Registry Test
+if(NOT TARGET test_tool_registry AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_tool_registry.cpp")
+    add_executable(test_tool_registry test_tool_registry.cpp)
+    target_include_directories(test_tool_registry PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_tool_registry PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_tool_registry COMMAND test_tool_registry)
+    message(STATUS "  ✓ Added test_tool_registry")
+endif()
+
+# Voice Processor Test
+if(NOT TARGET test_voice_processor AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_voice_processor.cpp")
+    add_executable(test_voice_processor test_voice_processor.cpp)
+    target_include_directories(test_voice_processor PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_voice_processor PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_voice_processor COMMAND test_voice_processor)
+    message(STATUS "  ✓ Added test_voice_processor")
+endif()
+
+# Zero Retention Manager Test
+if(NOT TARGET test_zero_retention_manager AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_zero_retention_manager.cpp")
+    add_executable(test_zero_retention_manager test_zero_retention_manager.cpp)
+    target_include_directories(test_zero_retention_manager PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_zero_retention_manager PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_zero_retention_manager COMMAND test_zero_retention_manager)
+    message(STATUS "  ✓ Added test_zero_retention_manager")
+endif()
+
+# Semantic Diff Analyzer Test
+if(NOT TARGET test_semantic_diff_analyzer AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_semantic_diff_analyzer.cpp")
+    add_executable(test_semantic_diff_analyzer test_semantic_diff_analyzer.cpp)
+    target_include_directories(test_semantic_diff_analyzer PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_semantic_diff_analyzer PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_semantic_diff_analyzer COMMAND test_semantic_diff_analyzer)
+    message(STATUS "  ✓ Added test_semantic_diff_analyzer")
+endif()
+
+# AI Merge Resolver Test
+if(NOT TARGET test_ai_merge_resolver AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_ai_merge_resolver.cpp")
+    add_executable(test_ai_merge_resolver test_ai_merge_resolver.cpp)
+    target_include_directories(test_ai_merge_resolver PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_ai_merge_resolver PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    if(WIN32)
+        target_link_libraries(test_ai_merge_resolver PRIVATE ws2_32 winhttp)
+    endif()
+    add_test(NAME test_ai_merge_resolver COMMAND test_ai_merge_resolver)
+    message(STATUS "  ✓ Added test_ai_merge_resolver")
+endif()
+
+# Sandboxed Terminal Test
+if(NOT TARGET test_sandboxed_terminal AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_sandboxed_terminal.cpp")
+    add_executable(test_sandboxed_terminal test_sandboxed_terminal.cpp)
+    target_include_directories(test_sandboxed_terminal PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_sandboxed_terminal PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_sandboxed_terminal COMMAND test_sandboxed_terminal)
+    message(STATUS "  ✓ Added test_sandboxed_terminal")
+endif()
+
+# Agentic File Operations Test
+if(NOT TARGET test_agentic_file_operations AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_agentic_file_operations.cpp")
+    add_executable(test_agentic_file_operations test_agentic_file_operations.cpp)
+    target_include_directories(test_agentic_file_operations PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_agentic_file_operations PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_agentic_file_operations COMMAND test_agentic_file_operations)
+    message(STATUS "  ✓ Added test_agentic_file_operations")
+endif()
+
+# Model Registry Test
+if(NOT TARGET model_registry_test AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/model_registry_test.cpp")
+    add_executable(model_registry_test model_registry_test.cpp)
+    target_include_directories(model_registry_test PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(model_registry_test PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME model_registry_test COMMAND model_registry_test)
+    message(STATUS "  ✓ Added model_registry_test")
+endif()
+
+# GGUF Integration Test
+if(NOT TARGET test_gguf_integration AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_gguf_integration.cpp")
+    add_executable(test_gguf_integration test_gguf_integration.cpp)
+    target_include_directories(test_gguf_integration PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+    set_target_properties(test_gguf_integration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests" CXX_STANDARD 20)
+    add_test(NAME test_gguf_integration COMMAND test_gguf_integration)
+    message(STATUS "  ✓ Added test_gguf_integration")
+endif()
+
+# ============================================================
+# Test Summary
+# ============================================================
+
+# Production Regression Test Suite (Qt-free, no external deps)
+if(NOT TARGET test_production_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_production_regression.cpp")
+    add_executable(test_production_regression test_production_regression.cpp)
+    target_include_directories(test_production_regression PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/src
-)
+        ${CMAKE_SOURCE_DIR}/3rdparty
+    )
+    # Link against the core library (no Qt)
+    if(TARGET RawrEngine)
+        target_link_libraries(test_production_regression PRIVATE RawrEngine)
+    endif()
+    set_target_properties(test_production_regression PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    add_test(NAME test_production_regression COMMAND test_production_regression)
+    message(STATUS "  ✓ Added test_production_regression (Qt-free regression suite)")
+endif()
 
-add_test(
-    NAME VoiceProcessorTests
-    COMMAND voice_processor_test
-)
-
-# ============= AI Merge Resolver Tests =============
-add_executable(ai_merge_resolver_test
-    ai_merge_resolver_test.cpp
-)
-
-target_link_libraries(ai_merge_resolver_test
-    PRIVATE
-        gtest
-        gtest_main
-)
-
-target_include_directories(ai_merge_resolver_test
-    PRIVATE
+# Instructions Provider Test (getAllContent aggregation, priority sort, hot-reload watcher)
+if(NOT TARGET test_instructions_provider AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_instructions_provider.cpp")
+    add_executable(test_instructions_provider
+        test_instructions_provider.cpp
+        ${CMAKE_SOURCE_DIR}/src/core/instructions_provider.cpp
+    )
+    target_include_directories(test_instructions_provider PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/src
-)
-
-add_test(
-    NAME AIMergeResolverTests
-    COMMAND ai_merge_resolver_test
-)
-
-# ============= Semantic Diff Analyzer Tests =============
-add_executable(semantic_diff_analyzer_test
-    semantic_diff_analyzer_test.cpp
-)
-
-target_link_libraries(semantic_diff_analyzer_test
-    PRIVATE
-        gtest
-        gtest_main
-)
-
-target_include_directories(semantic_diff_analyzer_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-)
-
-add_test(
-    NAME SemanticDiffAnalyzerTests
-    COMMAND semantic_diff_analyzer_test
-)
-
-# ============= Zero Retention Manager Tests =============
-add_executable(zero_retention_manager_test
-    zero_retention_manager_test.cpp
-)
-
-target_link_libraries(zero_retention_manager_test
-    PRIVATE
-        gtest
-        gtest_main
-)
-
-target_include_directories(zero_retention_manager_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-)
-
-add_test(
-    NAME ZeroRetentionManagerTests
-    COMMAND zero_retention_manager_test
-)
-
-# ============= Sandboxed Terminal Tests =============
-add_executable(sandboxed_terminal_test
-    sandboxed_terminal_test.cpp
-)
-
-target_link_libraries(sandboxed_terminal_test
-    PRIVATE
-        gtest
-        gtest_main
-)
-
-target_include_directories(sandboxed_terminal_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-)
-
-add_test(
-    NAME SandboxedTerminalTests
-    COMMAND sandboxed_terminal_test
-)
-
-# ============= Model Registry Tests =============
-add_executable(model_registry_test
-    model_registry_test.cpp
-)
-
-target_link_libraries(model_registry_test
-    PRIVATE
-)
-
-target_include_directories(model_registry_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-)
-
-add_test(
-    NAME ModelRegistryTests
-    COMMAND model_registry_test
-)
-
-# ============= Test Configuration Options =============
-
-# Enable verbose test output
-set(CMAKE_CTEST_COMMAND ctest --verbose)
-
-# Set compiler flags for testing
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /W4")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17")
-endif()
-
-# ============= Test Coverage (Optional) =============
-
-# Uncomment to enable code coverage reporting
-# include(CodeCoverage)
-# append_coverage_compiler_flags()
-
-# ============= Custom Test Targets =============
-
-# Run all tests
-add_custom_target(run_all_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS 
-        voice_processor_test
-        ai_merge_resolver_test
-        semantic_diff_analyzer_test
-        zero_retention_manager_test
-        sandboxed_terminal_test
-        model_registry_test
-    COMMENT "Running all unit tests"
-)
-
-# Run only Google Test tests
-add_custom_target(run_gtest_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-            -R "(VoiceProcessor|AIMergeResolver|SemanticDiffAnalyzer|ZeroRetentionManager|SandboxedTerminal)"
-    DEPENDS 
-        voice_processor_test
-        ai_merge_resolver_test
-        semantic_diff_analyzer_test
-        zero_retention_manager_test
-        sandboxed_terminal_test
-    COMMENT "Running Google Test suite"
-)
-
-# Run only Qt Test tests
-add_custom_target(run_qt_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-            -R "ModelRegistry"
-    DEPENDS model_registry_test
-    COMMENT "Running Qt Test suite"
-)
-
-# Run specific test suite with verbose output
-add_custom_target(run_voice_processor_tests
-    COMMAND voice_processor_test
-    DEPENDS voice_processor_test
-    COMMENT "Running VoiceProcessor tests"
-)
-
-add_custom_target(run_ai_merge_resolver_tests
-    COMMAND ai_merge_resolver_test
-    DEPENDS ai_merge_resolver_test
-    COMMENT "Running AIMergeResolver tests"
-)
-
-add_custom_target(run_semantic_diff_analyzer_tests
-    COMMAND semantic_diff_analyzer_test
-    DEPENDS semantic_diff_analyzer_test
-    COMMENT "Running SemanticDiffAnalyzer tests"
-)
-
-add_custom_target(run_zero_retention_manager_tests
-    COMMAND zero_retention_manager_test
-    DEPENDS zero_retention_manager_test
-    COMMENT "Running ZeroRetentionManager tests"
-)
-
-add_custom_target(run_sandboxed_terminal_tests
-    COMMAND sandboxed_terminal_test
-    DEPENDS sandboxed_terminal_test
-    COMMENT "Running SandboxedTerminal tests"
-)
-
-add_custom_target(run_model_registry_tests
-    COMMAND model_registry_test
-    DEPENDS model_registry_test
-    COMMENT "Running ModelRegistry tests"
-)
-
-# ============= Test Summary =============
-
-message(STATUS "")
-message(STATUS "========== Test Configuration ==========")
-message(STATUS "Google Test Framework: Enabled")
-message(STATUS "Qt Test Framework: Enabled")
-message(STATUS "")
-message(STATUS "Test Targets Created:")
-message(STATUS "  - voice_processor_test (33 tests)")
-message(STATUS "  - ai_merge_resolver_test (40+ tests)")
-message(STATUS "  - semantic_diff_analyzer_test (45+ tests)")
-message(STATUS "  - zero_retention_manager_test (50+ tests)")
-message(STATUS "  - sandboxed_terminal_test (55+ tests)")
-message(STATUS "  - model_registry_test (67 tests)")
-message(STATUS "")
-message(STATUS "Custom Targets:")
-message(STATUS "  - run_all_tests (run all test suites)")
-message(STATUS "  - run_gtest_tests (run Google Test suite)")
-message(STATUS "  - run_qt_tests (run Qt Test suite)")
-message(STATUS "  - run_[component]_tests (run individual component tests)")
-message(STATUS "")
-message(STATUS "Build and run tests with:")
-message(STATUS "  cmake --build . --target run_all_tests")
-message(STATUS "")
-message(STATUS "Total Test Coverage: ~290 individual test cases")
-message(STATUS "=========================================")
-message(STATUS "")
-
-# ============= CTest Configuration =============
-
-# Set timeout for long-running tests (in seconds)
-set_tests_properties(
-    VoiceProcessorTests
-    AIMergeResolverTests
-    SemanticDiffAnalyzerTests
-    ZeroRetentionManagerTests
-    SandboxedTerminalTests
-    ModelRegistryTests
-    PROPERTIES TIMEOUT 300
-)
-
-# Configure parallel test execution
-set(CTEST_PARALLEL_LEVEL 4 CACHE STRING "Number of parallel test processes")
-
-# Enable detailed output on test failure
-set(CTEST_OUTPUT_ON_FAILURE ON CACHE BOOL "Output on test failure")
-=======
-find_library(MATH_LIBRARY m)
-
-# check systems
-if (NOT UNAME_S)
-    execute_process(COMMAND uname -s OUTPUT_VARIABLE UNAME_S)
-endif()
-if (NOT UNAME_P)
-    execute_process(COMMAND uname -p OUTPUT_VARIABLE UNAME_P)
-endif()
-if (NOT UNAME_M)
-    execute_process(COMMAND uname -m OUTPUT_VARIABLE UNAME_M)
-endif()
-#message(STATUS "UNAME_S: ${UNAME_S}  UNAME_P: ${UNAME_P}  UNAME_M: ${UNAME_M}")
-
-# Mac OS + Arm can report x86_64
-# ref: https://github.com/ggerganov/whisper.cpp/issues/66#issuecomment-1282546789
-if (UNAME_S MATCHES "Darwin")
-    if (NOT UNAME_P MATCHES "arm")
-        execute_process(COMMAND sysctl -n hw.optional.arm64 OUTPUT_VARIABLE SYSCTL_M)
-        if (SYSCTL_M MATCHES "1")
-            #set(UNAME_P "arm")
-            #set(UNAME_M "arm64")
-            message(WARNING "Your arch is announced as x86_64, but it seems to actually be ARM64. Not fixing that can lea
-d to bad performance. For more info see: https://github.com/ggerganov/whisper.cpp/issues/66\#issuecomment-#1282546789")
-        endif()
+    )
+    set_target_properties(test_instructions_provider PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    if(WIN32)
+        target_link_libraries(test_instructions_provider PRIVATE shell32 ole32)
     endif()
+    add_test(NAME test_instructions_provider COMMAND test_instructions_provider)
+    message(STATUS "  ✓ Added test_instructions_provider")
 endif()
 
-if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(aarch64|arm.*|ARM64)$")
-    message(STATUS "ARM detected")
-    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=apple-m1")
-elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "ppc64le" OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES "ppc64")
-    message(STATUS "PPC64 detected")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mpower9-vector")
-elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "loongarch64")
-    message(STATUS "loongarch64 detected")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mlsx -mlasx")
-else()
-    message(STATUS "x86 detected")
-    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx -mavx2 -mfma -mf16c")
-    if (UNAME_S MATCHES "Darwin")
-        execute_process(COMMAND sysctl machdep.cpu.features OUTPUT_VARIABLE AVX1_M)
-        if (AVX1_M MATCHES "AVX1.0")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx")
-        endif()
-        execute_process(COMMAND sysctl machdep.cpu.leaf7_features OUTPUT_VARIABLE AVX2_M)
-        if (AVX2_M MATCHES "AVX2")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx2")
-        endif()
-        if (AVX1_M MATCHES "FMA")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfma")
-        endif()
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mf16c")
-    elseif (UNAME_S MATCHES "Linux")
-        message(STATUS "Linux detected")
-        # must have to build on ubuntu22 with gcc11:
-        find_package(Threads)
-        set(GGML_EXTRA_LIBS  ${GGML_EXTRA_LIBS} Threads::Threads)
-
-        execute_process(COMMAND grep "avx " /proc/cpuinfo OUTPUT_VARIABLE AVX1_M)
-        if (AVX1_M MATCHES "avx")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx")
-        endif()
-        execute_process(COMMAND grep "avx2 " /proc/cpuinfo OUTPUT_VARIABLE AVX2_M)
-        if (AVX2_M MATCHES "avx2")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx2")
-        endif()
-        execute_process(COMMAND grep "fma " /proc/cpuinfo OUTPUT_VARIABLE FMA_M)
-        if (FMA_M MATCHES "fma")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfma")
-        endif()
-        execute_process(COMMAND grep "f16c " /proc/cpuinfo OUTPUT_VARIABLE F16C_M)
-        if (F16C_M MATCHES "f16c")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mf16c")
-        endif()
-        execute_process(COMMAND grep "sse3 " /proc/cpuinfo OUTPUT_VARIABLE SSE3_M)
-        if (SSE3_M MATCHES "sse3")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3")
-        endif()
-    elseif (UNAME_S MATCHES "Haiku")
-        message(STATUS "Haiku detected")
-	execute_process(COMMAND sysinfo -cpu COMMAND grep "AVX " OUTPUT_VARIABLE AVX1_M)
-        if (AVX1_M MATCHES "avx")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx")
-        endif()
-	execute_process(COMMAND sysinfo -cpu COMMAND grep "AVX2 " OUTPUT_VARIABLE AVX2_M)
-        if (AVX2_M MATCHES "avx2")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx2")
-        endif()
-	execute_process(COMMAND sysinfo -cpu COMMAND grep "FMA " OUTPUT_VARIABLE FMA_M)
-        if (FMA_M MATCHES "fma")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfma")
-        endif()
-	execute_process(COMMAND sysinfo -cpu COMMAND grep "F16C " OUTPUT_VARIABLE F16C_M)
-        if (F16C_M MATCHES "f16c")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mf16c")
-        endif()
-    elseif (MSVC)
-        if (GGML_AVX512)
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:AVX512")
-            # MSVC has no compile-time flags enabling specific
-            # AVX512 extensions, neither it defines the
-            # macros corresponding to the extensions.
-            # Do it manually.
-            if (GGML_AVX512_VBMI)
-                add_compile_definitions(__AVX512VBMI__)
-            endif()
-            if (GGML_AVX512_VNNI)
-                add_compile_definitions(__AVX512VNNI__)
-            endif()
-        elseif (GGML_AVX2)
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:AVX2")
-        elseif (GGML_AVX)
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:AVX")
-        endif()
-    else()
-        set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -mfma -mf16c -mavx -mavx2")
-    endif()
-endif()
-
-# on APPLE - include Accelerate framework
-if (APPLE AND NOT GGML_NO_ACCELERATE)
-    find_library(ACCELERATE_FRAMEWORK Accelerate)
-    if (ACCELERATE_FRAMEWORK)
-        message(STATUS "Accelerate framework found")
-
-        set(GGML_EXTRA_LIBS  ${GGML_EXTRA_LIBS}  ${ACCELERATE_FRAMEWORK})
-        set(GGML_EXTRA_FLAGS ${GGML_EXTRA_FLAGS} -DGGML_USE_ACCELERATE)
-    else()
-        message(WARNING "Accelerate framework not found")
-    endif()
-endif()
-
-if (GGML_OPENBLAS)
-    set(OPENBLAS_INCLUDE_SEARCH_PATHS
-        /usr/include
-        /usr/include/openblas
-        /usr/include/openblas-base
-        /usr/local/include
-        /usr/local/include/openblas
-        /usr/local/include/openblas-base
-        /opt/OpenBLAS/include
-        $ENV{OpenBLAS_HOME}
-        $ENV{OpenBLAS_HOME}/include
-        )
-    find_path(OPENBLAS_INC NAMES cblas.h PATHS ${OPENBLAS_INCLUDE_SEARCH_PATHS})
-    find_library(OPENBLAS_LIB NAMES openblas libopenblas)
-    if (OPENBLAS_LIB)
-        message(STATUS "OpenBLAS found")
-
-        set(GGML_EXTRA_LIBS  ${GGML_EXTRA_LIBS}  ${OPENBLAS_LIB})
-        set(GGML_EXTRA_INCS  ${GGML_EXTRA_INCS}  ${OPENBLAS_INC})
-        set(GGML_EXTRA_FLAGS ${GGML_EXTRA_FLAGS} -DGGML_USE_OPENBLAS)
-    else()
-        message(WARNING "OpenBLAS not found")
-    endif()
-endif()
-
-# undefine NDEBUG so asserts don't get disabled in tests
-add_definitions(-UNDEBUG)
-
-#
-# test-backend-ops
-
-set(TEST_TARGET test-backend-ops)
-add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-target_link_libraries(${TEST_TARGET} PRIVATE ggml Threads::Threads)
-add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-
-if (NOT GGML_BACKEND_DL)
-    #
-    # test-opt
-    set(TEST_TARGET test-opt)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-quantize-fns
-
-    set(TEST_TARGET test-quantize-fns)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-quantize-perf
-
-    set(TEST_TARGET test-quantize-perf)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-pool
-
-    set(TEST_TARGET test-pool)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.c)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    if (MSVC)
-        target_link_options(${TEST_TARGET} PRIVATE "/STACK:8388608") # 8MB
-    endif()
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-arange
-
-    set(TEST_TARGET test-arange)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml Threads::Threads)
-    if (MSVC)
-        target_link_options(${TEST_TARGET} PRIVATE "/STACK:8388608") # 8MB
-    endif()
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-timestep_embedding
-
-    set(TEST_TARGET test-timestep_embedding)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    if (MSVC)
-        target_link_options(${TEST_TARGET} PRIVATE "/STACK:8388608") # 8MB
-    endif()
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-pad-reflect-1d
-
-    set(TEST_TARGET test-pad-reflect-1d)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-
-    #
-    # test-roll
-
-    set(TEST_TARGET test-roll)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-
-    #
-    # test-conv-transpose
-
-    set(TEST_TARGET test-conv-transpose)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.c)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-
-    # test-conv-transpose-1d
-
-    set(TEST_TARGET test-conv-transpose-1d)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-
-    #
-    # test-dup
-
-    set(TEST_TARGET test-dup)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.c)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-
-    #
-    # test-rel-pos
-
-    set(TEST_TARGET test-rel-pos)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.c)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-
-    #
-    # test-customop
-
-    set(TEST_TARGET test-customop)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.c)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    if (MSVC)
-        target_link_options(${TEST_TARGET} PRIVATE "/STACK:8388608") # 8MB
-    endif()
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-conv1d
-
-    set(TEST_TARGET test-conv1d)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-conv1d-dw-c1
-
-    set(TEST_TARGET test-conv1d-dw-c1)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-conv1d-dw-c2
-
-    set(TEST_TARGET test-conv1d-dw-c2)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-conv2d
-
-    set(TEST_TARGET test-conv2d)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-conv2d-dw
-
-    set(TEST_TARGET test-conv2d-dw)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-cont
-
-    set(TEST_TARGET test-cont)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.c)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-
-    #
-    # test-interpolate
-
-    set(TEST_TARGET test-interpolate)
-    add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
-    target_link_libraries(${TEST_TARGET} PRIVATE ggml)
-    add_test(NAME ${TEST_TARGET} COMMAND $<TARGET_FILE:${TEST_TARGET}>)
-    set_property(TEST ${TEST_TARGET} PROPERTY ENVIRONMENT "LLVM_PROFILE_FILE=${TEST_TARGET}.profraw")
-endif()
->>>>>>> upstream/master
+message(STATUS "========================================")
+message(STATUS "Test Suite Registration Complete")
+message(STATUS "Run tests: ctest --output-on-failure -C Release")
+message(STATUS "Run specific: ctest -R <name> -V -C Release")
+message(STATUS "========================================")

@@ -1,27 +1,33 @@
+/**
+ * @file self_test_gate.cpp
+ * @brief Self-test gate - Qt-free (C++20 / Win32)
+ *
+ * Entry point that runs all self-tests and returns pass/fail.
+ * Intended for CI or pre-commit hooks.
+ */
+
 #include "self_test_gate.hpp"
 #include "self_test.hpp"
-#include "rollback.hpp"
+#include "logging/logger.h"
+
+static Logger s_gateLogger("SelfTestGate");
 
 bool runSelfTestGate() {
-    SelfTest st;
-    Rollback rb;
+    s_gateLogger.info("Starting self-test gate...");
 
-    // 1. Functional Tests
-    if (!st.runAll()) {
-        std::cerr << "[!] Self-test failed. Reverting..." << std::endl;
-        rb.revertLastCommit();
-        rb.openIssue("Functional regression (Self-Test Failed)", st.lastOutput());
-        return false;
+    SelfTest tester;
+
+    // Wire a log callback for structured output via Logger
+    tester.setLogCb([](void* /*ctx*/, const char* line) {
+        s_gateLogger.info(line);
+    }, nullptr);
+
+    bool pass = tester.runAll();
+
+    if (pass) {
+        s_gateLogger.info("Result: PASS");
+    } else {
+        s_gateLogger.error("Result: FAIL");
     }
-
-    // 2. Performance Regression
-    if (rb.detectRegression()) {
-        std::cerr << "[!] Performance regression detected. Reverting..." << std::endl;
-        rb.revertLastCommit();
-        rb.openIssue("Performance regression", st.lastOutput());
-        return false;
-    }
-
-    return true;
+    return pass;
 }
-

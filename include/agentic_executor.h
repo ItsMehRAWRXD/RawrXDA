@@ -1,110 +1,120 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QProcess>
-#include <QDir>
-#include <memory>
+// C++20, no Qt. Agentic execution: callbacks replace signals; JSON as std::string.
+
+#include <string>
 #include <vector>
+#include <map>
+#include <cstdint>
 
 class AgenticEngine;
 class InferenceEngine;
-class ModelTrainer;
-
+class SettingsManager;
+class MemorySpaceManager;
 /**
- * @class AgenticExecutor
- * @brief Real agentic execution - not simulated, actually performs tasks
- * 
- * This is the core agent loop that:
- * - Decomposes user requests into actionable steps
- * - Executes file operations (create folders, files)
- * - Runs compilers and reports results
- * - Uses function calling to interact with the IDE
- * - Maintains memory across tasks
- * - Self-corrects on failures
- * - Can fine-tune models with on-device training
+ * AgenticExecutor — real agentic execution (file ops, compilers, tool use, training).
+ * Raw function-pointer callbacks replace Qt signals. No std::function.
  */
-class AgenticExecutor : public QObject {
-    Q_OBJECT
-
+class AgenticExecutor {
 public:
-    explicit AgenticExecutor(QObject* parent = nullptr);
+    // Raw function-pointer callback types — void* ctx for user data
+    using StepStartedFn       = void(*)(const char* step, void* ctx);
+    using StepCompletedFn     = void(*)(const char* step, bool success, void* ctx);
+    using TaskProgressFn      = void(*)(int current, int total, void* ctx);
+    using ExecutionCompleteFn = void(*)(const char* resultJson, void* ctx);
+    using ErrorOccurredFn     = void(*)(const char* error, void* ctx);
+    using LogMessageFn        = void(*)(const char* message, void* ctx);
+    using TrainingProgressFn  = void(*)(int epoch, int totalEpochs, float loss, float perplexity, void* ctx);
+    using TrainingCompletedFn = void(*)(const char* modelPath, float finalPerplexity, void* ctx);
+
+    AgenticExecutor();
     ~AgenticExecutor();
 
     void initialize(AgenticEngine* engine, InferenceEngine* inference);
 
-    // Main agentic execution entry point
-    QJsonObject executeUserRequest(const QString& request);
+    void setOnStepStarted(StepStartedFn f)      { m_onStepStarted = f; }
+    void setOnStepCompleted(StepCompletedFn f) { m_onStepCompleted = f; }
+    void setOnTaskProgress(TaskProgressFn f)    { m_onTaskProgress = f; }
+    void setOnExecutionComplete(ExecutionCompleteFn f) { m_onExecutionComplete = f; }
+    void setOnErrorOccurred(ErrorOccurredFn f)  { m_onErrorOccurred = f; }
+    void setOnLogMessage(LogMessageFn f)       { m_onLogMessage = f; }
+    void setOnTrainingProgress(TrainingProgressFn f) { m_onTrainingProgress = f; }
+    void setOnTrainingCompleted(TrainingCompletedFn f) { m_onTrainingCompleted = f; }
+    void setCallbackContext(void* ctx)          { m_callbackContext = ctx; }
 
-    // Core agentic capabilities
-    QJsonArray decomposeTask(const QString& goal);
-    bool executeStep(const QJsonObject& step);
-    bool verifyStepCompletion(const QJsonObject& step, const QString& result);
+    /** Execute user request; returns result as JSON string. */
+    std::string executeUserRequest(const std::string& request);
 
-    // File system operations (real, not simulated)
-    bool createDirectory(const QString& path);
-    bool createFile(const QString& path, const QString& content);
-    bool writeFile(const QString& path, const QString& content);
-    QString readFile(const QString& path);
-    bool deleteFile(const QString& path);
-    bool deleteDirectory(const QString& path);
-    QStringList listDirectory(const QString& path);
+    std::string decomposeTask(const std::string& goal);  // JSON array string
+    bool executeStep(const std::string& stepJson);
+    bool verifyStepCompletion(const std::string& stepJson, const std::string& result);
 
-    // Compiler integration (real compilation)
-    QJsonObject compileProject(const QString& projectPath, const QString& compiler = "g++");
-    QJsonObject runExecutable(const QString& executablePath, const QStringList& args = QStringList());
+    void setCurrentWorkingDirectory(const std::string& path) { m_currentWorkingDirectory = path; }
+    std::string getCurrentWorkingDirectory() const { return m_currentWorkingDirectory; }
 
-    // Function calling system (tool use)
-    QJsonArray getAvailableTools();
-    QJsonObject callTool(const QString& toolName, const QJsonObject& params);
+    bool createDirectory(const std::string& path);
+    bool createFile(const std::string& path, const std::string& content);
+    bool writeFile(const std::string& path, const std::string& content);
+    std::string readFile(const std::string& path);
+    bool deleteFile(const std::string& path);
+    bool deleteDirectory(const std::string& path);
+    std::vector<std::string> listDirectory(const std::string& path);
 
-    // Model training capabilities
-    QJsonObject trainModel(const QString& datasetPath, const QString& modelPath, const QJsonObject& config);
+    std::string compileProject(const std::string& projectPath, const std::string& compiler = "g++");  // JSON
+    std::string runExecutable(const std::string& executablePath, const std::vector<std::string>& args = {});  // JSON
+
+    std::string getAvailableTools();  // JSON array
+    std::string callTool(const std::string& toolName, const std::string& paramsJson);
+
+    std::string trainModel(const std::string& datasetPath, const std::string& modelPath, const std::string& configJson);
     bool isTrainingModel() const;
 
-    // Memory and context
-    void addToMemory(const QString& key, const QVariant& value);
-    QVariant getFromMemory(const QString& key);
+    void addToMemory(const std::string& key, const std::string& valueJson);
+    std::string getFromMemory(const std::string& key);
     void clearMemory();
-    QString getFullContext();
+    std::string getFullContext();
+    void removeMemoryItem(const std::string& key);
 
-    // Self-correction
-    bool detectFailure(const QString& output);
-    QString generateCorrectionPlan(const QString& failureReason);
-    QJsonObject retryWithCorrection(const QJsonObject& failedStep);
-
-signals:
-    void stepStarted(const QString& description);
-    void stepCompleted(const QString& description, bool success);
-    void taskProgress(int current, int total);
-    void executionComplete(const QJsonObject& result);
-    void errorOccurred(const QString& error);
-    void logMessage(const QString& message);
-    void trainingProgress(int epoch, int totalEpochs, float loss, float perplexity);
-    void trainingCompleted(const QString& modelPath, float finalPerplexity);
+    bool detectFailure(const std::string& output);
+    std::string generateCorrectionPlan(const std::string& failureReason);
+    std::string retryWithCorrection(const std::string& failedStepJson);
 
 private:
-    // Agent reasoning using model
-    QString planNextAction(const QString& currentState, const QString& goal);
-    QJsonObject generateCode(const QString& specification);
-    QString analyzeError(const QString& errorOutput);
-    QString improveCode(const QString& code, const QString& issue);
+    std::string planNextAction(const std::string& currentState, const std::string& goal);
+    std::string generateCode(const std::string& specification);
+    std::string analyzeError(const std::string& errorOutput);
+    std::string improveCode(const std::string& code, const std::string& issue);
 
-    // Internal helpers
-    QJsonObject buildToolCallPrompt(const QString& goal, const QJsonArray& tools);
-    QString extractCodeFromResponse(const QString& response);
-    bool validateGeneratedCode(const QString& code);
+    void loadMemorySettings();
+    void loadMemoryFromDisk();
+    void persistMemoryToDisk();
+    void enforceMemoryLimit();
+
+    std::string buildToolCallPrompt(const std::string& goal, const std::string& toolsJson);
+    std::string extractCodeFromResponse(const std::string& response);
+    bool validateGeneratedCode(const std::string& code);
 
     AgenticEngine* m_agenticEngine = nullptr;
     InferenceEngine* m_inferenceEngine = nullptr;
-    std::unique_ptr<ModelTrainer> m_modelTrainer;
-    
-    QMap<QString, QVariant> m_memory;
-    QJsonArray m_executionHistory;
-    QString m_currentWorkingDirectory;
-    
+    void* m_modelTrainer = nullptr;  // Opaque; ModelTrainer is Qt-based, not used in Qt-free Win32 build
+    SettingsManager* m_settingsManager = nullptr;
+
+    std::map<std::string, std::string> m_memory;
+    std::string m_executionHistoryJson;  // JSON array
+    std::string m_currentWorkingDirectory;
+
+    bool m_memoryEnabled = false;
+    int64_t m_memoryLimitBytes = 134217728;
     int m_maxRetries = 3;
     int m_currentRetryCount = 0;
+
+    StepStartedFn      m_onStepStarted      = nullptr;
+    StepCompletedFn    m_onStepCompleted    = nullptr;
+    TaskProgressFn     m_onTaskProgress     = nullptr;
+    ExecutionCompleteFn m_onExecutionComplete = nullptr;
+    ErrorOccurredFn    m_onErrorOccurred    = nullptr;
+    LogMessageFn       m_onLogMessage       = nullptr;
+    TrainingProgressFn m_onTrainingProgress = nullptr;
+    TrainingCompletedFn m_onTrainingCompleted = nullptr;
+    void*              m_callbackContext    = nullptr;
 };

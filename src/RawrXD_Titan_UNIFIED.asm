@@ -5,6 +5,10 @@
 
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; Library Includes
 includelib kernel32.lib
 includelib ntdll.lib
@@ -823,20 +827,167 @@ PUBLIC RMSNorm_AVX512
 RMSNorm_AVX512 PROC FRAME
     ; Wrapper for RMSNorm_F32_AVX512
     jmp RMSNorm_F32_AVX512
+    ret
 RMSNorm_AVX512 ENDP
 
 PUBLIC Titan_Softmax_AVX512
 Titan_Softmax_AVX512 PROC FRAME
+    ; Numerically stable softmax using AVX-512 and Schraudolph fast-exp
+    ; RCX = logits buffer (float32*), RDX = count (N)
+    ; Computes in-place: x_i = exp(x_i - max) / sum(exp(x_j - max))
+    
     push rbp
     .pushreg rbp
     mov rbp, rsp
     .setframe rbp, 0
+    push rbx
+    push r12
+    push r13
+    .pushreg rbx
+    .pushreg r12
+    .pushreg r13
     .endprolog
     
-    ; Stub implementation: Fast exp loop
-    ; rcx = input, rdx = N
-    ; For now, ret to prevent crash
+    mov rbx, rcx                           ; logits ptr
+    mov r12d, edx                          ; count
     
+    test r12d, r12d
+    jle @@sm_ret
+    
+    ; ── Pass 1: Find max across all logits ──
+    vmovss xmm0, [rbx]                    ; max = logits[0]
+    mov ecx, 1
+@@sm_max_loop:
+    cmp ecx, r12d
+    jge @@sm_pass2
+    vmovss xmm1, [rbx + rcx*4]
+    vmaxss xmm0, xmm0, xmm1
+    inc ecx
+    jmp @@sm_max_loop
+
+@@sm_pass2:
+    ; ── Pass 2: exp(x_i - max) with Schraudolph + accumulate sum ──
+    ; Broadcast max for AVX-512 subtraction
+    vbroadcastss zmm15, xmm0              ; zmm15 = max (broadcast)
+    vxorps xmm5, xmm5, xmm5              ; sum = 0
+    
+    ; Process 16 floats at a time with AVX-512 where possible
+    mov r13d, r12d
+    shr r13d, 4                            ; num full ZMM blocks
+    xor ecx, ecx                           ; block index
+    
+    ; Schraudolph constants
+    mov eax, 4B3A8000h                     ; ~12102203.0 as float
+    vmovd xmm6, eax
+    vbroadcastss zmm6, xmm6               ; scale
+    mov eax, 3F800000h                     ; 1.0f (used as bias base)
+    vmovd xmm7, eax
+    ; Actual bias is integer 1065353216 = 0x3F800000
+    
+@@sm_avx_loop:
+    cmp ecx, r13d
+    jge @@sm_scalar_pass
+    
+    ; Load 16 logits
+    vmovups zmm0, [rbx + rcx*64]
+    vsubps zmm0, zmm0, zmm15              ; x - max
+    
+    ; Schraudolph fast-exp: per-element
+    ; result = reinterpret_float(int(x * 12102203 + 1065353216))
+    vmulps zmm0, zmm0, zmm6              ; x * scale
+    ; Add integer bias and convert
+    ; Use vcvtps2dq to truncate to int, then add bias, then reinterpret
+    vcvtps2dq zmm1, zmm0                  ; truncate to int32
+    mov eax, 3F800000h
+    vpbroadcastd zmm2, eax                 ; bias = 0x3F800000
+    vpaddd zmm1, zmm1, zmm2               ; add bias
+    ; Clamp negatives to 0
+    vpxord zmm3, zmm3, zmm3
+    vpmaxsd zmm1, zmm1, zmm3              ; max(val, 0)
+    ; zmm1 now contains bit patterns for exp(x-max) approximations
+    
+    vmovups [rbx + rcx*64], zmm1           ; store exp values
+    
+    ; Horizontal sum of this block
+    vextractf64x4 ymm8, zmm1, 1
+    ; Need to treat zmm1 as float for addition
+    vaddps ymm8, ymm8, ymm1               ; sum high + low halves
+    vextractf128 xmm9, ymm8, 1
+    vaddps xmm8, xmm8, xmm9
+    vhaddps xmm8, xmm8, xmm8
+    vhaddps xmm8, xmm8, xmm8
+    vaddss xmm5, xmm5, xmm8              ; accumulate to sum
+    
+    inc ecx
+    jmp @@sm_avx_loop
+
+@@sm_scalar_pass:
+    ; Handle remaining elements (count % 16)
+    mov ecx, r13d
+    shl ecx, 4                             ; ecx = first unprocessed index
+@@sm_scalar_loop:
+    cmp ecx, r12d
+    jge @@sm_pass3
+    
+    vmovss xmm1, [rbx + rcx*4]
+    vsubss xmm1, xmm1, xmm15             ; x - max (use scalar of broadcast)
+    
+    ; Schraudolph scalar
+    vmulss xmm1, xmm1, xmm6
+    vcvttss2si eax, xmm1
+    add eax, 3F800000h
+    test eax, eax
+    jns @@sm_sc_ok
+    xor eax, eax
+@@sm_sc_ok:
+    vmovd xmm1, eax
+    vmovss [rbx + rcx*4], xmm1
+    vaddss xmm5, xmm5, xmm1
+    inc ecx
+    jmp @@sm_scalar_loop
+
+@@sm_pass3:
+    ; ── Pass 3: Normalize by dividing each by sum ──
+    ; Guard against div by zero
+    mov eax, 3727C5ACh                     ; ~1e-5f
+    vmovd xmm6, eax
+    vaddss xmm5, xmm5, xmm6
+    
+    ; Broadcast 1/sum for multiplication
+    vmovss xmm6, xmm5
+    vmovss xmm7, xmm5
+    mov eax, 3F800000h
+    vmovd xmm8, eax
+    vdivss xmm8, xmm8, xmm7              ; inv_sum = 1/sum
+    vbroadcastss zmm8, xmm8
+    
+    ; Vectorized normalization
+    xor ecx, ecx
+@@sm_norm_avx:
+    cmp ecx, r13d
+    jge @@sm_norm_scalar
+    vmovups zmm0, [rbx + rcx*64]
+    vmulps zmm0, zmm0, zmm8
+    vmovups [rbx + rcx*64], zmm0
+    inc ecx
+    jmp @@sm_norm_avx
+
+@@sm_norm_scalar:
+    mov ecx, r13d
+    shl ecx, 4
+@@sm_norm_sc_loop:
+    cmp ecx, r12d
+    jge @@sm_ret
+    vmovss xmm0, [rbx + rcx*4]
+    vmulss xmm0, xmm0, xmm8
+    vmovss [rbx + rcx*4], xmm0
+    inc ecx
+    jmp @@sm_norm_sc_loop
+
+@@sm_ret:
+    pop r13
+    pop r12
+    pop rbx
     mov rsp, rbp
     pop rbp
     ret
@@ -844,7 +995,7 @@ Titan_Softmax_AVX512 ENDP
 
 ; MatMul_F16_AVX512 - Complete matrix multiplication
 ; RCX = A matrix (F16), RDX = B matrix (F16), R8 = C matrix (F32 out)
-; R9 = M (rows of A), [rsp+80] = N (cols of B), [rsp+88] = K (inner dim)
+; R9 = M (rows of A), [rsp+40] = N (cols of B), [rsp+48] = K (inner dim)
 PUBLIC MatMul_F16_AVX512
 MatMul_F16_AVX512 PROC FRAME
     push rbx
@@ -865,14 +1016,76 @@ MatMul_F16_AVX512 PROC FRAME
     mov r13, rdx                ; B (F16)
     mov r14, r8                 ; C (F32)
     mov r15, r9                 ; M
-    mov rbx, [rsp+80+56]        ; N (5th argument) - stack offset adjustments? 
-                                ; shadow(32) + ret(8) + pushes(40) = 80?
-                                ; Original had clean stack. FRAME adds complexity.
-                                ; We'll assume Shadow space.
+    mov rbx, [rsp+40+56]        ; N - adjust for stack
+    mov rsi, [rsp+48+56]        ; K
 
-    ; STUB to prevent crash until full AVX512 restoration
-    ; Real AVX-512 code is large.
+    ; Simple implementation: C[i][j] = sum_k A[i][k] * B[k][j]
+    ; Convert F16 to F32 for accumulation
     
+    xor rdi, rdi                ; i = 0
+outer_loop:
+    cmp rdi, r15
+    jae done
+    
+    xor rcx, rcx                ; j = 0
+inner_loop:
+    cmp rcx, rbx
+    jae next_i
+    
+    ; Compute C[i][j]
+    vxorps xmm0, xmm0, xmm0     ; sum = 0.0
+    
+    xor rdx, rdx                ; k = 0
+k_loop:
+    cmp rdx, rsi
+    jae store_result
+    
+    ; Load A[i][k] (F16)
+    mov rax, rdi
+    mul rsi
+    add rax, rdx
+    movzx eax, word ptr [r12 + rax*2]  ; F16 is 2 bytes
+    
+    ; Convert F16 to F32 (simplified)
+    ; F16: sign(1) exp(5) mant(10)
+    ; For simplicity, assume normalized and convert
+    vcvtph2ps xmm1, xmm0, xmm0  ; Convert F16 in xmm0 to F32 in xmm1
+    ; Wait, vcvtph2ps takes F16 input
+    
+    ; Actually, load F16 and convert
+    vmovd xmm1, eax
+    vcvtph2ps xmm1, xmm1, xmm1
+    
+    ; Load B[k][j] (F16)
+    mov rax, rdx
+    mul rbx
+    add rax, rcx
+    movzx eax, word ptr [r13 + rax*2]
+    vmovd xmm2, eax
+    vcvtph2ps xmm2, xmm2, xmm2
+    
+    ; Multiply and add
+    vmulps xmm1, xmm1, xmm2
+    vaddps xmm0, xmm0, xmm1
+    
+    inc rdx
+    jmp k_loop
+    
+store_result:
+    ; Store to C[i][j] (F32)
+    mov rax, rdi
+    mul rbx
+    add rax, rcx
+    vmovss dword ptr [r14 + rax*4], xmm0
+    
+    inc rcx
+    jmp inner_loop
+    
+next_i:
+    inc rdi
+    jmp outer_loop
+    
+done:
     add rsp, 16
     pop r15
     pop r14
@@ -884,7 +1097,110 @@ MatMul_F16_AVX512 ENDP
 
 PUBLIC RoPE_Rotate_AVX512
 RoPE_Rotate_AVX512 PROC FRAME
-    ; Stub
+    ; Rotary Position Embedding using x87 FPU for sin/cos
+    ; RCX = Q or K vector (float32*, HeadDim floats)
+    ; RDX = position (integer)
+    ; R8  = head_dim (must be even, typically 128)
+    ; Applies: for each pair (i, i+1):
+    ;   theta = pos * 10000^(-2i/dim)
+    ;   x[i]   = x[i]*cos(theta) - x[i+1]*sin(theta)
+    ;   x[i+1] = x[i]*sin(theta) + x[i+1]*cos(theta)
+    
+    push rbx
+    push r12
+    push r13
+    push r14
+    .pushreg rbx
+    .pushreg r12
+    .pushreg r13
+    .pushreg r14
+    sub rsp, 32
+    .allocstack 32
+    .endprolog
+    
+    mov r12, rcx                           ; vector pointer
+    mov r13d, edx                          ; position
+    mov r14d, r8d                          ; head_dim
+    
+    xor ebx, ebx                           ; pair index (step by 2)
+
+@@rope_pair:
+    cmp ebx, r14d
+    jge @@rope_done
+    
+    ; Compute freq_exp = -2*i / dim
+    mov eax, ebx
+    add eax, eax                           ; 2*i
+    neg eax                                ; -2*i
+    
+    sub rsp, 16
+    cvtsi2ss xmm0, eax                    ; (float)(-2*i)
+    cvtsi2ss xmm1, r14d                   ; (float)(dim)
+    divss xmm0, xmm1                      ; freq_exp = -2i/dim
+    movss [rsp], xmm0
+    
+    ; theta_base = 10000.0 ^ freq_exp via x87: exp(freq_exp * ln(10000))
+    ; fyl2x: ST(1) * log2(ST(0))
+    fld dword ptr [rsp]                    ; ST(0) = freq_exp
+    
+    ; Load 10000.0
+    mov dword ptr [rsp+4], 461C4000h       ; 10000.0f
+    fld dword ptr [rsp+4]                  ; ST(0) = 10000, ST(1) = freq_exp
+    fyl2x                                  ; ST(0) = freq_exp * log2(10000)
+    
+    ; 2^result = 10000^freq_exp
+    fld st(0)                              ; dup
+    frndint                                ; int part
+    fsub st(1), st(0)                      ; frac = orig - int
+    fxch                                   ; ST(0) = frac, ST(1) = int
+    f2xm1                                  ; 2^frac - 1
+    fld1
+    faddp st(1), st(0)                     ; 2^frac
+    fscale                                 ; * 2^int
+    fstp st(1)                             ; clean int from stack
+    
+    ; ST(0) = theta_base
+    ; theta = position * theta_base
+    cvtsi2ss xmm0, r13d
+    movss [rsp+4], xmm0
+    fmul dword ptr [rsp+4]                 ; ST(0) = pos * theta_base
+    
+    ; sin and cos
+    fsincos                                ; ST(0) = cos, ST(1) = sin
+    fstp dword ptr [rsp]                   ; cos
+    fstp dword ptr [rsp+4]                 ; sin
+    
+    ; Load x[i], x[i+1]
+    vmovss xmm0, [r12 + rbx*4]            ; x[i]
+    vmovss xmm1, [r12 + rbx*4 + 4]        ; x[i+1]
+    vmovss xmm2, [rsp]                    ; cos
+    vmovss xmm3, [rsp+4]                  ; sin
+    
+    ; new_x[i]   = x[i]*cos - x[i+1]*sin
+    vmovaps xmm4, xmm0
+    vmulss xmm4, xmm4, xmm2              ; x[i]*cos
+    vmovaps xmm5, xmm1
+    vmulss xmm5, xmm5, xmm3              ; x[i+1]*sin
+    vsubss xmm4, xmm4, xmm5              ; result_i
+    
+    ; new_x[i+1] = x[i]*sin + x[i+1]*cos
+    vmulss xmm0, xmm0, xmm3              ; x[i]*sin
+    vmulss xmm1, xmm1, xmm2              ; x[i+1]*cos
+    vaddss xmm0, xmm0, xmm1              ; result_i+1
+    
+    vmovss [r12 + rbx*4], xmm4
+    vmovss [r12 + rbx*4 + 4], xmm0
+    
+    add rsp, 16
+    add ebx, 2
+    jmp @@rope_pair
+
+@@rope_done:
+    add rsp, 32
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
     ret
 RoPE_Rotate_AVX512 ENDP
 

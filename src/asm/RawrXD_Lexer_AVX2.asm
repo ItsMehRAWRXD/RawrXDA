@@ -4,6 +4,10 @@
 ; Outputs: r8 = ColorAttributeBuffer (1 byte per char)
 ;================================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .code
 
 PUBLIC Lexer_Scan_Parallel

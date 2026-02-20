@@ -90,7 +90,7 @@ inline bool write_png(const Canvas& canvas, const std::string& path) {
     return stbi_write_png(path.c_str(), canvas.width, canvas.height, 3, rgb_data.data(), 0) != 0;
 }
 #else
-inline bool write_png(const Canvas& canvas, const std::string& path) {
+bool write_png(const Canvas& canvas, const std::string& path) {
     // Fallback to BMP if stb_image_write not available
     return write_bmp(canvas, path);
 }

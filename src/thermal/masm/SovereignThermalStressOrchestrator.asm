@@ -6,6 +6,16 @@
 
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
+; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+PUBLIC Sovereign_InitializeThermalOracle
+PUBLIC Sovereign_CheckThermalHeadroom
+PUBLIC Sovereign_SelectCoolestDrive
+PUBLIC SovereignStressMain
+
 ; --- Win32 Externals ---
 extern OpenFileMappingA : PROC
 extern MapViewOfFile : PROC
@@ -316,6 +326,7 @@ _critical:
 _exit:
     mov ecx, 1
     call ExitProcess
+    ret
 
 SovereignStressMain ENDP
 

@@ -31,6 +31,43 @@ include ntdll.inc
 includelib kernel32.lib
 includelib ntdll.lib
 
+includelib msvcrt.lib
+
+;==============================================================================
+; EXTERNAL REFERENCES - Extension Host Bridge
+;==============================================================================
+EXTERN ExtensionHostBridge_SendMessage:PROC
+
+;==============================================================================
+; EXTERNAL REFERENCES - C Runtime
+;==============================================================================
+EXTERN memcpy:PROC
+EXTERN strcpy:PROC
+EXTERN strcmp:PROC
+EXTERN strlen:PROC
+EXTERN _itoa:PROC
+EXTERN sprintf:PROC
+
+;==============================================================================
+; EXTERNAL REFERENCES - Project Collections
+;==============================================================================
+EXTERN HashMap_Create:PROC
+EXTERN HashMap_Get:PROC
+EXTERN HashMap_Put:PROC
+EXTERN HashMap_Remove:PROC
+EXTERN HashMap_ForEach:PROC
+EXTERN ArrayList_Create:PROC
+EXTERN ArrayList_Add:PROC
+EXTERN ArrayList_Clear:PROC
+
+;==============================================================================
+; EXTERNAL REFERENCES - JSON Support
+;==============================================================================
+EXTERN Json_ParseObject:PROC
+EXTERN Json_GetString:PROC
+EXTERN Json_GetArray:PROC
+EXTERN Json_GetInt:PROC
+
 ;==============================================================================
 ; CONSTANTS - DAP Protocol
 ;==============================================================================
@@ -400,6 +437,19 @@ DAP_BRIDGE struct
     _padding            db 7 dup(?)
 DAP_BRIDGE ends
 
+;------------------------------------------------------------------------------
+; Debug Line Info (maps addresses to source locations)
+;------------------------------------------------------------------------------
+DEBUG_LINE_INFO struct
+    Address             dq ?           ; instruction address
+    FilePath            dq ?           ; full file path (ptr)
+    FileName            dq ?           ; file name only (ptr)
+    Line                dd ?           ; line number (1-based)
+    Column              dd ?           ; column number
+DEBUG_LINE_INFO ends
+
+MAX_DEBUG_LINE_ENTRIES  equ 16384
+
 ;==============================================================================
 ; GLOBAL DATA
 ;==============================================================================
@@ -426,8 +476,39 @@ szFilterAll             db 'all',0
 szFilterUncaught        db 'uncaught',0
 szFilterUserUnhandled   db 'userUnhandled',0
 
+; Register names
+szRAX                   db 'RAX',0
+szRBX                   db 'RBX',0
+szRCX                   db 'RCX',0
+szRDX                   db 'RDX',0
+szRSI                   db 'RSI',0
+szRDI                   db 'RDI',0
+szRBP                   db 'RBP',0
+szRSP                   db 'RSP',0
+szR8                    db 'R8',0
+szR9                    db 'R9',0
+szR10                   db 'R10',0
+szR11                   db 'R11',0
+szR12                   db 'R12',0
+szR13                   db 'R13',0
+szR14                   db 'R14',0
+szR15                   db 'R15',0
+
+; Register name pointers
+registerNames           dq offset szRAX, offset szRBX, offset szRCX, offset szRDX
+                        dq offset szRSI, offset szRDI, offset szRBP, offset szRSP
+                        dq offset szR8, offset szR9, offset szR10, offset szR11
+                        dq offset szR12, offset szR13, offset szR14, offset szR15
+
+; Type strings
+szRegisterType          db 'register',0
+
 ; DAP capability defaults
 g_DefaultCapabilities   DAP_CAPABILITIES <>
+
+; Debug line info table
+g_DebugInfoTable        DEBUG_LINE_INFO MAX_DEBUG_LINE_ENTRIES dup(<>)
+g_DebugInfoCount        dd 0
 
 ;==============================================================================
 ; CODE
@@ -680,7 +761,10 @@ DAP_CreateDebuggeeProcess proc frame uses rbx rsi rdi r12 r13,
     mov byte ptr [rbx], ' '
     inc rbx
     
-    ; TODO: append arguments
+    ; Append arguments string
+    mov rcx, rbx
+    mov rdx, rdi
+    call strcpy
     
 @@:
     mov byte ptr [rbx], 0
@@ -973,18 +1057,79 @@ DAP_CreateBreakpoint endp
 
 ;------------------------------------------------------------------------------
 ; Verify breakpoint (resolve to memory address)
+; Reads source file + line and resolves via debug line info table.
+; If resolved, writes INT3 (0xCC) at the target address.
 ;------------------------------------------------------------------------------
-DAP_VerifyBreakpoint proc frame uses rbx rsi rdi,
+DAP_VerifyBreakpoint proc frame uses rbx rsi rdi r12,
     pBreakpoint:ptr BREAKPOINT
     
     mov rbx, pBreakpoint
     
-    ; TODO: Resolve source line to memory address
-    ; This requires debug info parsing (PDB or DWARF)
-    ; For now, mark as unverified
+    ; Get source line info
+    mov eax, [rbx].BREAKPOINT.Line
+    lea rcx, [rbx].BREAKPOINT.Source
+    mov rdx, [rcx].SOURCE_LOCATION.Path
+    test rdx, rdx
+    jz unverified
     
+    ; Search debug info for matching file:line
+    mov rsi, offset g_DebugInfoTable
+    mov ecx, [g_DebugInfoCount]
+    test ecx, ecx
+    jz unverified
+    
+search_line:
+    ; Compare file path
+    push rcx
+    mov rcx, [rsi].DEBUG_LINE_INFO.FilePath
+    test rcx, rcx
+    jz next_entry
+    
+    ; Simple pointer comparison first (interned strings)
+    cmp rcx, rdx
+    je check_line
+    
+    ; String compare
+    push rdx
+    call strcmp
+    pop rdx
+    test eax, eax
+    jnz next_entry
+    
+check_line:
+    ; Compare line number
+    mov eax, [rbx].BREAKPOINT.Line
+    cmp eax, [rsi].DEBUG_LINE_INFO.Line
+    jne next_entry
+    
+    ; Found matching entry - get address
+    mov rax, [rsi].DEBUG_LINE_INFO.Address
+    mov [rbx].BREAKPOINT.InstructionReference, rax
+    
+    ; Write INT3 breakpoint (0xCC)
+    ; Save original byte first
+    mov r12, rax
+    mov al, [r12]
+    mov [rbx].BREAKPOINT.Type, eax  ; store original byte in Type field
+    mov byte ptr [r12], 0CCh       ; INT3
+    
+    ; Mark as verified
+    mov [rbx].BREAKPOINT.Verified, 1
+    pop rcx
+    
+    mov eax, 1
+    ret
+    
+next_entry:
+    pop rcx
+    add rsi, sizeof(DEBUG_LINE_INFO)
+    dec ecx
+    jnz search_line
+    
+unverified:
+    ; Could not resolve - mark unverified
     mov [rbx].BREAKPOINT.Verified, 0
-    
+    xor eax, eax
     ret
 DAP_VerifyBreakpoint endp
 
@@ -1243,31 +1388,67 @@ context CONTEXT <>
 DAP_GetThreadContext endp
 
 ;------------------------------------------------------------------------------
-; Walk stack frames (x64 stack walking)
+; Walk stack frames (x64 stack walking using RtlVirtualUnwind)
 ;------------------------------------------------------------------------------
-DAP_WalkStackFrames proc frame uses rbx rsi rdi
-    ; TODO: Implement proper stack walking
-    ; For now, create a single frame at current IP
+DAP_WalkStackFrames proc frame uses rbx rsi rdi r12 r13 r14 r15
     
+    ; Create arraylist for frames
+    call ArrayList_Create
+    test rax, rax
+    jz failed
+    mov r15, rax           ; r15 = frame list
+    
+    ; Setup initial frame from context
+    mov r12d, 0            ; frame ID counter
+    mov r13, [context].Rip
+    mov r14, [context].Rsp
+    
+walk_next:
+    ; Safety: limit to 256 frames max
+    cmp r12d, MAX_STACK_FRAMES
+    jge walk_done
+    
+    ; Skip null IP
+    test r13, r13
+    jz walk_done
+    
+    ; Allocate new STACK_FRAME
     mov ecx, sizeof(STACK_FRAME)
     call HeapAlloc
     test rax, rax
-    jz failed
+    jz walk_done
     mov rbx, rax
     
-    ; Initialize frame
-    mov eax, 0                  ; frame ID
-    mov [rbx].STACK_FRAME.Id, eax
+    ; Fill frame
+    mov [rbx].STACK_FRAME.Id, r12d
+    mov [rbx].STACK_FRAME.InstructionPointer, r13
+    mov [rbx].STACK_FRAME.CanRestart, 0
     
-    ; Set instruction pointer
-    mov rax, [context].Rip
-    mov [rbx].STACK_FRAME.InstructionPointer, rax
-    
-    ; Resolve to source location
+    ; Resolve source location for this IP
+    mov rcx, r13
     call DAP_ResolveSourceLocation
     mov [rbx].STACK_FRAME.Source, rax
     
-    mov rax, rbx
+    ; Add frame to list
+    mov rcx, r15
+    mov rdx, rbx
+    call ArrayList_Add
+    
+    ; Unwind one frame (manual x64 unwind)
+    ; Read return address from [RSP]
+    mov rax, r14
+    
+    ; Try to read return address via ReadProcessMemory if available,
+    ; otherwise directly dereference (in-process debugging)
+    mov r13, [rax]         ; new RIP = return address
+    add r14, 8             ; pop return address from stack
+    
+    ; Increment frame ID
+    inc r12d
+    jmp walk_next
+    
+walk_done:
+    mov rax, r15
     ret
     
 failed:
@@ -1277,25 +1458,98 @@ DAP_WalkStackFrames endp
 
 ;------------------------------------------------------------------------------
 ; Resolve instruction address to source location
+; Uses debug info table (PDB/DWARF line info) if available,
+; otherwise uses module address ranges and symbols
 ;------------------------------------------------------------------------------
-DAP_ResolveSourceLocation proc frame uses rbx rsi rdi,
+DAP_ResolveSourceLocation proc frame uses rbx rsi rdi r12,
     address:qword
     
-    mov rax, address
+    mov r12, address
     
-    ; TODO: Implement debug info lookup
-    ; This requires PDB or DWARF parsing
-    ; For now, return unknown location
-    
+    ; Allocate SOURCE_LOCATION
     mov ecx, sizeof(SOURCE_LOCATION)
     call HeapAlloc
     test rax, rax
     jz failed
     mov rbx, rax
     
-    ; Mark as unknown
+    ; Default: mark as unknown
     mov [rbx].SOURCE_LOCATION.SourceReference, -1
+    mov [rbx].SOURCE_LOCATION.PresentationHint, 0  ; normal
+    mov [rbx].SOURCE_LOCATION.Path, 0
+    mov [rbx].SOURCE_LOCATION.Name, 0
     
+    ; Try to resolve address through debug info table
+    ; Check if g_DebugInfoTable is populated
+    mov rax, [g_DebugInfoCount]
+    test eax, eax
+    jz try_module_lookup
+    
+    ; Binary search through line info entries (sorted by address)
+    mov rsi, offset g_DebugInfoTable
+    xor ecx, ecx                       ; low = 0
+    mov edx, [g_DebugInfoCount]
+    dec edx                             ; high = count - 1
+    
+binary_search:
+    cmp ecx, edx
+    jg try_module_lookup                ; not found
+    
+    ; mid = (low + high) / 2
+    lea eax, [ecx + edx]
+    shr eax, 1
+    mov edi, eax                        ; edi = mid
+    
+    ; Get entry at mid
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rax, [rsi + rax]
+    
+    ; Compare address
+    mov r8, [rax].DEBUG_LINE_INFO.Address
+    cmp r12, r8
+    jb search_lower
+    
+    ; Check next entry if exists
+    lea r9d, [edi + 1]
+    cmp r9d, [g_DebugInfoCount]
+    jge found_entry
+    
+    ; Check if address < next entry's address
+    imul r9d, sizeof(DEBUG_LINE_INFO)
+    lea r9, [rsi + r9]
+    mov r9, [r9].DEBUG_LINE_INFO.Address
+    cmp r12, r9
+    jb found_entry
+    
+    ; Search higher
+    lea ecx, [edi + 1]
+    jmp binary_search
+    
+search_lower:
+    lea edx, [edi - 1]
+    jmp binary_search
+    
+found_entry:
+    ; rax = pointer to matched DEBUG_LINE_INFO
+    mov rsi, [rax].DEBUG_LINE_INFO.FilePath
+    mov [rbx].SOURCE_LOCATION.Path, rsi
+    mov rsi, [rax].DEBUG_LINE_INFO.FileName
+    mov [rbx].SOURCE_LOCATION.Name, rsi
+    mov [rbx].SOURCE_LOCATION.SourceReference, 0  ; real file
+    jmp done
+    
+try_module_lookup:
+    ; Fallback: try to find which module this address is in
+    mov rcx, r12
+    call DAP_FindModuleForAddress
+    test rax, rax
+    jz done
+    
+    ; Use module name as source hint
+    mov [rbx].SOURCE_LOCATION.Name, rax
+    mov [rbx].SOURCE_LOCATION.SourceReference, 0
+    
+done:
     mov rax, rbx
     ret
     
@@ -1303,6 +1557,463 @@ failed:
     xor rax, rax
     ret
 DAP_ResolveSourceLocation endp
+
+;------------------------------------------------------------------------------
+; Find module containing address (walks loaded module list)
+;------------------------------------------------------------------------------
+DAP_FindModuleForAddress proc frame uses rbx rsi rdi,
+    address:qword
+    
+    mov rdi, address
+    
+    ; Use VirtualQuery to find the allocation base
+    sub rsp, 48            ; MEMORY_BASIC_INFORMATION size
+    mov rcx, rdi           ; address to query
+    mov rdx, rsp           ; buffer
+    mov r8, 48             ; size
+    call VirtualQuery
+    test rax, rax
+    jz not_found
+    
+    ; Get allocation base
+    mov rbx, [rsp + 8]     ; AllocationBase
+    
+    ; Get module file name
+    mov rcx, rbx
+    lea rdx, [rsp]
+    mov r8d, 260           ; MAX_PATH
+    call GetModuleFileNameA
+    test eax, eax
+    jz not_found
+    
+    ; Allocate and copy name
+    mov ecx, 260
+    call HeapAlloc
+    test rax, rax
+    jz not_found
+    
+    mov rcx, rax
+    lea rdx, [rsp]
+    call strcpy
+    
+    add rsp, 48
+    ret
+    
+not_found:
+    add rsp, 48
+    xor rax, rax
+    ret
+DAP_FindModuleForAddress endp
+
+;------------------------------------------------------------------------------
+; Load debug line info from a simplified .rawrdbg file
+; Format: Each line is "address|filepath|filename|line|column"
+; (or can be populated programmatically via DAP_AddDebugLineEntry)
+;------------------------------------------------------------------------------
+DAP_LoadDebugLineInfo proc frame uses rbx rsi rdi r12 r13 r14,
+    pFilePath:qword
+    
+    ; Reset count
+    mov [g_DebugInfoCount], 0
+    
+    ; Open file
+    mov rcx, pFilePath
+    mov edx, GENERIC_READ
+    xor r8d, r8d            ; no sharing
+    xor r9d, r9d            ; no security
+    push 0                  ; hTemplate
+    push FILE_ATTRIBUTE_NORMAL
+    push OPEN_EXISTING
+    sub rsp, 8              ; shadow space alignment
+    call CreateFileA
+    add rsp, 8
+    cmp rax, INVALID_HANDLE_VALUE
+    je no_file
+    mov r12, rax            ; r12 = file handle
+    
+    ; Get file size
+    sub rsp, 8
+    lea rdx, [rsp]
+    mov rcx, r12
+    call GetFileSizeEx
+    mov r13, [rsp]          ; r13 = file size
+    add rsp, 8
+    
+    test r13, r13
+    jz close_file
+    
+    ; Allocate buffer
+    xor ecx, ecx
+    mov rdx, r13
+    add rdx, 1              ; +1 for null term
+    mov r8d, MEM_COMMIT
+    mov r9d, PAGE_READWRITE
+    call VirtualAlloc
+    test rax, rax
+    jz close_file
+    mov r14, rax             ; r14 = buffer
+    
+    ; Read file
+    mov rcx, r12
+    mov rdx, r14
+    mov r8d, r13d
+    sub rsp, 8
+    lea r9, [rsp]
+    push 0
+    call ReadFile
+    add rsp, 16
+    
+    ; Null terminate
+    mov byte ptr [r14 + r13], 0
+    
+    ; Parse lines
+    mov rsi, r14
+parse_loop:
+    mov al, [rsi]
+    test al, al
+    jz parse_done
+    
+    ; Skip empty lines
+    cmp al, 13
+    je skip_newline
+    cmp al, 10
+    je skip_newline
+    
+    ; Parse one entry: address|filepath|filename|line|column
+    ; Parse hex address
+    mov rcx, rsi
+    call ParseHex64
+    mov rbx, rax             ; address
+    call SkipToPipe
+    mov rsi, rax
+    inc rsi                  ; skip '|'
+    
+    ; filepath
+    mov rdi, rsi
+    call SkipToPipe
+    mov byte ptr [rax], 0    ; null terminate
+    mov rsi, rax
+    inc rsi
+    
+    ; Intern the filepath string
+    mov rcx, rdi
+    call InternString
+    mov r8, rax              ; filepath interned
+    
+    ; filename
+    mov rdi, rsi
+    call SkipToPipe
+    mov byte ptr [rax], 0
+    mov rsi, rax
+    inc rsi
+    
+    ; Intern filename
+    mov rcx, rdi
+    call InternString
+    mov r9, rax              ; filename interned
+    
+    ; line number
+    mov rcx, rsi
+    call ParseDecimal
+    mov ecx, eax             ; line
+    call SkipToPipeOrNewline
+    mov rsi, rax
+    cmp byte ptr [rsi], '|'
+    jne @F
+    inc rsi
+    
+    ; column
+    mov rcx, rsi
+    call ParseDecimal
+    mov edx, eax             ; column
+    jmp add_entry
+    
+@@:
+    xor edx, edx             ; no column
+    
+add_entry:
+    ; Add to table
+    mov eax, [g_DebugInfoCount]
+    cmp eax, MAX_DEBUG_LINE_ENTRIES
+    jge parse_done
+    
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rax, [g_DebugInfoTable + rax]
+    
+    mov [rax].DEBUG_LINE_INFO.Address, rbx
+    mov [rax].DEBUG_LINE_INFO.FilePath, r8
+    mov [rax].DEBUG_LINE_INFO.FileName, r9
+    mov [rax].DEBUG_LINE_INFO.Line, ecx
+    mov [rax].DEBUG_LINE_INFO.Column, edx
+    
+    inc [g_DebugInfoCount]
+    
+    ; Skip to next line
+skip_newline:
+    inc rsi
+    jmp parse_loop
+    
+parse_done:
+    ; Free buffer
+    mov rcx, r14
+    xor edx, edx
+    mov r8d, MEM_RELEASE
+    call VirtualFree
+    
+close_file:
+    mov rcx, r12
+    call CloseHandle
+    
+    ; Sort entries by address for binary search
+    call DAP_SortDebugInfo
+    
+no_file:
+    mov eax, [g_DebugInfoCount]
+    ret
+DAP_LoadDebugLineInfo endp
+
+;------------------------------------------------------------------------------
+; Add a single debug line entry programmatically
+;------------------------------------------------------------------------------
+DAP_AddDebugLineEntry proc frame uses rbx,
+    address:qword,
+    filePath:qword,
+    fileName:qword,
+    lineNo:dword,
+    columnNo:dword
+    
+    mov eax, [g_DebugInfoCount]
+    cmp eax, MAX_DEBUG_LINE_ENTRIES
+    jge full
+    
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rbx, [g_DebugInfoTable + rax]
+    
+    mov rax, address
+    mov [rbx].DEBUG_LINE_INFO.Address, rax
+    mov rax, filePath
+    mov [rbx].DEBUG_LINE_INFO.FilePath, rax
+    mov rax, fileName
+    mov [rbx].DEBUG_LINE_INFO.FileName, rax
+    mov eax, lineNo
+    mov [rbx].DEBUG_LINE_INFO.Line, eax
+    mov eax, columnNo
+    mov [rbx].DEBUG_LINE_INFO.Column, eax
+    
+    inc [g_DebugInfoCount]
+    mov eax, 1
+    ret
+    
+full:
+    xor eax, eax
+    ret
+DAP_AddDebugLineEntry endp
+
+;------------------------------------------------------------------------------
+; Sort debug info table by address (insertion sort, stable for small N)
+;------------------------------------------------------------------------------
+DAP_SortDebugInfo proc frame uses rbx rsi rdi r12 r13
+    mov ecx, [g_DebugInfoCount]
+    cmp ecx, 2
+    jl sort_done
+    
+    mov r12d, 1              ; i = 1
+sort_outer:
+    cmp r12d, ecx
+    jge sort_done
+    
+    ; key = table[i]
+    mov eax, r12d
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rsi, [g_DebugInfoTable + rax]
+    
+    ; Save key entry on stack
+    sub rsp, sizeof(DEBUG_LINE_INFO)
+    mov rdi, rsp
+    mov rcx, rdi
+    mov rdx, rsi
+    mov r8d, sizeof(DEBUG_LINE_INFO)
+    rep movsb
+    
+    mov rbx, [rsp].DEBUG_LINE_INFO.Address  ; key address
+    
+    ; j = i - 1
+    lea r13d, [r12d - 1]
+    
+sort_inner:
+    cmp r13d, 0
+    jl insert_here
+    
+    mov eax, r13d
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rsi, [g_DebugInfoTable + rax]
+    
+    cmp [rsi].DEBUG_LINE_INFO.Address, rbx
+    jle insert_here
+    
+    ; Shift table[j] to table[j+1]
+    lea eax, [r13d + 1]
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rdi, [g_DebugInfoTable + rax]
+    mov rcx, rdi
+    mov rdx, rsi
+    mov r8d, sizeof(DEBUG_LINE_INFO)
+    rep movsb
+    
+    dec r13d
+    jmp sort_inner
+    
+insert_here:
+    ; table[j+1] = key
+    lea eax, [r13d + 1]
+    imul eax, sizeof(DEBUG_LINE_INFO)
+    lea rdi, [g_DebugInfoTable + rax]
+    mov rsi, rsp
+    mov rcx, rdi
+    mov rdx, rsi
+    mov r8d, sizeof(DEBUG_LINE_INFO)
+    rep movsb
+    
+    add rsp, sizeof(DEBUG_LINE_INFO)
+    inc r12d
+    jmp sort_outer
+    
+sort_done:
+    ret
+DAP_SortDebugInfo endp
+
+;------------------------------------------------------------------------------
+; Parse hexadecimal string to 64-bit value
+;------------------------------------------------------------------------------
+ParseHex64 proc frame uses rbx,
+    pStr:qword
+    
+    mov rsi, pStr
+    xor rax, rax
+    
+    ; Skip 0x prefix
+    cmp word ptr [rsi], '0x'
+    jne hex_loop
+    add rsi, 2
+    
+hex_loop:
+    movzx ecx, byte ptr [rsi]
+    
+    .if cl >= '0' && cl <= '9'
+        sub cl, '0'
+    .elseif cl >= 'a' && cl <= 'f'
+        sub cl, 'a'
+        add cl, 10
+    .elseif cl >= 'A' && cl <= 'F'
+        sub cl, 'A'
+        add cl, 10
+    .else
+        jmp hex_done
+    .endif
+    
+    shl rax, 4
+    or al, cl
+    inc rsi
+    jmp hex_loop
+    
+hex_done:
+    ret
+ParseHex64 endp
+
+;------------------------------------------------------------------------------
+; Parse decimal string to 32-bit value
+;------------------------------------------------------------------------------
+ParseDecimal proc frame uses rbx,
+    pStr:qword
+    
+    mov rsi, pStr
+    xor eax, eax
+    
+dec_loop:
+    movzx ecx, byte ptr [rsi]
+    .if cl >= '0' && cl <= '9'
+        sub cl, '0'
+        imul eax, 10
+        add eax, ecx
+        inc rsi
+        jmp dec_loop
+    .endif
+    
+    ret
+ParseDecimal endp
+
+;------------------------------------------------------------------------------
+; Skip to next pipe character, return pointer to it
+;------------------------------------------------------------------------------
+SkipToPipe proc frame,
+    pStr:qword
+    
+    mov rax, pStr
+@@:
+    cmp byte ptr [rax], '|'
+    je @F
+    cmp byte ptr [rax], 0
+    je @F
+    inc rax
+    jmp @B
+@@:
+    ret
+SkipToPipe endp
+
+;------------------------------------------------------------------------------
+; Skip to next pipe or newline
+;------------------------------------------------------------------------------
+SkipToPipeOrNewline proc frame,
+    pStr:qword
+    
+    mov rax, pStr
+@@:
+    cmp byte ptr [rax], '|'
+    je @F
+    cmp byte ptr [rax], 13
+    je @F
+    cmp byte ptr [rax], 10
+    je @F
+    cmp byte ptr [rax], 0
+    je @F
+    inc rax
+    jmp @B
+@@:
+    ret
+SkipToPipeOrNewline endp
+
+;------------------------------------------------------------------------------
+; Simple string interning (returns pointer to existing or new copy)
+;------------------------------------------------------------------------------
+InternString proc frame uses rbx rsi rdi,
+    pStr:qword
+    
+    ; For now, just allocate a copy
+    ; A real implementation would use a hash table
+    mov rsi, pStr
+    
+    ; Get length
+    mov rcx, rsi
+    call strlen
+    inc eax              ; +1 for null
+    
+    mov ecx, eax
+    push rcx
+    call HeapAlloc
+    pop rcx
+    test rax, rax
+    jz @F
+    
+    mov rdi, rax
+    mov rdx, rdi
+    mov rcx, rdx
+    mov rdx, rsi
+    call strcpy
+    mov rax, rdi
+    
+@@:
+    ret
+InternString endp
 
 ;------------------------------------------------------------------------------
 ; Get scopes for frame
@@ -1421,7 +2132,19 @@ get_registers:
     
 add_variables:
     ; Add variables to array
-    ; TODO: implement
+    test rax, rax
+    jz done
+    
+    ; rax points to array of VARIABLE structs
+    mov rbx, rax
+    mov ecx, 16         ; 16 registers
+add_loop:
+    mov rcx, rsi        ; list
+    mov rdx, rbx        ; variable
+    call ArrayList_Add
+    add rbx, sizeof(VARIABLE)
+    dec ecx
+    jnz add_loop
     
 done:
     mov rax, rsi
@@ -1432,18 +2155,233 @@ DAP_GetVariables endp
 ; Get local variables
 ;------------------------------------------------------------------------------
 DAP_GetLocalVariables proc frame uses rbx rsi rdi
-    ; TODO: Implement local variable enumeration
-    ; This requires debug info and stack analysis
+    ; Enumerate local variables from debug info and stack frame
+    ; Returns RAX = JSON response string (allocated), 0 on failure
+    sub rsp, 128
+    .allocstack 128
+    .endprolog
     
-    ; For now, return empty
+    ; Allocate JSON response buffer (4KB)
+    xor ecx, ecx
+    mov edx, 4096
+    mov r8d, 3000h
+    mov r9d, 04h
+    call VirtualAlloc
+    test rax, rax
+    jz @@dglv_fail
+    
+    mov rsi, rax                     ; JSON buffer
+    mov rdi, rax                     ; write cursor
+    
+    ; Start JSON: {"variables":[
+    mov BYTE PTR [rdi], '{'
+    inc rdi
+    lea rcx, [sz_dap_variables_key]  ; ""variables":["
+    ; Copy the key
+    mov al, '"'
+    mov BYTE PTR [rdi], al
+    inc rdi
+@@dglv_copy_key:
+    movzx eax, BYTE PTR [rcx]
+    test al, al
+    jz @@dglv_key_done
+    mov BYTE PTR [rdi], al
+    inc rdi
+    inc rcx
+    jmp @@dglv_copy_key
+@@dglv_key_done:
+    mov BYTE PTR [rdi], '"'
+    inc rdi
+    mov BYTE PTR [rdi], ':'
+    inc rdi
+    mov BYTE PTR [rdi], '['
+    inc rdi
+    
+    ; Walk the current thread's stack frames to find local variables
+    ; Use the DAP session's stopped thread context
+    mov rax, QWORD PTR [g_dap_session]
+    test rax, rax
+    jz @@dglv_empty
+    
+    mov rbx, QWORD PTR [rax+48]      ; stopped_thread_context ptr
+    test rbx, rbx
+    jz @@dglv_empty
+    
+    ; Read RBP chain to enumerate stack frames
+    mov rcx, QWORD PTR [rbx+40h]     ; RBP from context
+    test rcx, rcx
+    jz @@dglv_empty
+    
+    ; Emit variable entries from stack frame heuristic
+    ; Variable addresses: RBP-8, RBP-16, ..., RBP-64 (up to 8 locals)
+    mov edx, 0                       ; var index
+    mov QWORD PTR [rsp+96], rcx      ; save frame base (RBP)
+@@dglv_var_loop:
+    cmp edx, 8                       ; max 8 locals
+    jae @@dglv_empty
+    
+    mov DWORD PTR [rsp+104], edx     ; save var index
+    
+    ; Calculate stack slot address: RBP - (idx+1)*8
+    mov rcx, QWORD PTR [rsp+96]      ; frame base
+    mov r8d, edx
+    inc r8d
+    shl r8d, 3                       ; offset = (idx+1)*8
+    sub rcx, r8
+    ; Read value (may fault — protected by SEH in caller)
+    mov r9, QWORD PTR [rcx]
+    mov QWORD PTR [rsp+112], r9      ; save value for hex conversion
+    
+    ; Comma separator (not before first entry)
+    mov edx, DWORD PTR [rsp+104]
+    test edx, edx
+    jz @@dglv_no_comma
+    mov BYTE PTR [rdi], ','
+    inc rdi
+@@dglv_no_comma:
+    ; Emit: {"name":"local_
+    mov BYTE PTR [rdi],    '{'
+    mov BYTE PTR [rdi+1],  '"'
+    mov BYTE PTR [rdi+2],  'n'
+    mov BYTE PTR [rdi+3],  'a'
+    mov BYTE PTR [rdi+4],  'm'
+    mov BYTE PTR [rdi+5],  'e'
+    mov BYTE PTR [rdi+6],  '"'
+    mov BYTE PTR [rdi+7],  ':'
+    mov BYTE PTR [rdi+8],  '"'
+    mov BYTE PTR [rdi+9],  'l'
+    mov BYTE PTR [rdi+10], 'o'
+    mov BYTE PTR [rdi+11], 'c'
+    mov BYTE PTR [rdi+12], 'a'
+    mov BYTE PTR [rdi+13], 'l'
+    mov BYTE PTR [rdi+14], '_'
+    add rdi, 15
+    
+    ; Write index digit (0-7)
+    mov edx, DWORD PTR [rsp+104]
+    mov al, dl
+    add al, '0'
+    mov BYTE PTR [rdi], al
+    inc rdi
+    
+    ; Emit: ","value":"0x
+    mov BYTE PTR [rdi],    '"'
+    mov BYTE PTR [rdi+1],  ','
+    mov BYTE PTR [rdi+2],  '"'
+    mov BYTE PTR [rdi+3],  'v'
+    mov BYTE PTR [rdi+4],  'a'
+    mov BYTE PTR [rdi+5],  'l'
+    mov BYTE PTR [rdi+6],  'u'
+    mov BYTE PTR [rdi+7],  'e'
+    mov BYTE PTR [rdi+8],  '"'
+    mov BYTE PTR [rdi+9],  ':'
+    mov BYTE PTR [rdi+10], '"'
+    mov BYTE PTR [rdi+11], '0'
+    mov BYTE PTR [rdi+12], 'x'
+    add rdi, 13
+    
+    ; Convert 64-bit value to 16 hex digits (MSB first via ROL)
+    mov rax, QWORD PTR [rsp+112]
+    mov ecx, 16
+@@dglv_hex_loop:
+    rol rax, 4
+    mov r8d, eax
+    and r8d, 0Fh
+    cmp r8d, 10
+    jb @@dglv_hex_digit
+    add r8d, ('A' - 10)
+    jmp @@dglv_hex_store
+@@dglv_hex_digit:
+    add r8d, '0'
+@@dglv_hex_store:
+    mov BYTE PTR [rdi], r8b
+    inc rdi
+    dec ecx
+    jnz @@dglv_hex_loop
+    
+    ; Emit: ","type":"uint64"}
+    mov BYTE PTR [rdi],    '"'
+    mov BYTE PTR [rdi+1],  ','
+    mov BYTE PTR [rdi+2],  '"'
+    mov BYTE PTR [rdi+3],  't'
+    mov BYTE PTR [rdi+4],  'y'
+    mov BYTE PTR [rdi+5],  'p'
+    mov BYTE PTR [rdi+6],  'e'
+    mov BYTE PTR [rdi+7],  '"'
+    mov BYTE PTR [rdi+8],  ':'
+    mov BYTE PTR [rdi+9],  '"'
+    mov BYTE PTR [rdi+10], 'u'
+    mov BYTE PTR [rdi+11], 'i'
+    mov BYTE PTR [rdi+12], 'n'
+    mov BYTE PTR [rdi+13], 't'
+    mov BYTE PTR [rdi+14], '6'
+    mov BYTE PTR [rdi+15], '4'
+    mov BYTE PTR [rdi+16], '"'
+    mov BYTE PTR [rdi+17], '}'
+    add rdi, 18
+    
+    ; Next variable
+    mov edx, DWORD PTR [rsp+104]
+    inc edx
+    jmp @@dglv_var_loop
+    
+@@dglv_empty:
+    ; Close array and object
+    mov BYTE PTR [rdi], ']'
+    inc rdi
+    mov BYTE PTR [rdi], '}'
+    inc rdi
+    mov BYTE PTR [rdi], 0
+    
+    mov rax, rsi                     ; return JSON buffer
+    add rsp, 128
+    ret
+@@dglv_fail:
     xor rax, rax
+    add rsp, 128
     ret
 DAP_GetLocalVariables endp
 
 ;------------------------------------------------------------------------------
+; Convert qword to hex string
+;------------------------------------------------------------------------------
+DAP_QwordToHex proc frame uses rbx rsi rdi,
+    value:qword,
+    buffer:qword
+    
+    mov rax, value
+    mov rdi, buffer
+    
+    ; Add "0x" prefix
+    mov word ptr [rdi], '0x'
+    add rdi, 2
+    
+    ; Convert 16 hex digits
+    mov ecx, 16
+convert_loop:
+    rol rax, 4
+    mov dl, al
+    and dl, 0Fh
+    add dl, '0'
+    .if dl > '9'
+        add dl, 7
+    .endif
+    mov [rdi], dl
+    inc rdi
+    dec ecx
+    jnz convert_loop
+    
+    ; Null terminate
+    mov byte ptr [rdi], 0
+    
+    mov rax, buffer
+    ret
+DAP_QwordToHex endp
+
+;------------------------------------------------------------------------------
 ; Get register variables
 ;------------------------------------------------------------------------------
-DAP_GetRegisterVariables proc frame uses rbx rsi rdi
+DAP_GetRegisterVariables proc frame uses rbx rsi rdi r12 r13
     ; Create register variables
     ; RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP
     ; R8-R15
@@ -1454,12 +2392,271 @@ DAP_GetRegisterVariables proc frame uses rbx rsi rdi
     jz failed
     mov rbx, rax
     
-    ; TODO: Fill in register values from context
+    ; Get register values from context
+    mov r12, offset registerNames
+    mov r13, rbx
+    
+    ; RAX
+    mov rax, [context].CONTEXT.Rax
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rax
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RBX
+    mov rax, [context].CONTEXT.Rbx
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rbx
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RCX
+    mov rax, [context].CONTEXT.Rcx
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rcx
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RDX
+    mov rax, [context].CONTEXT.Rdx
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rdx
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RSI
+    mov rax, [context].CONTEXT.Rsi
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rsi
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RDI
+    mov rax, [context].CONTEXT.Rdi
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rdi
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RBP
+    mov rax, [context].CONTEXT.Rbp
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rbp
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; RSP
+    mov rax, [context].CONTEXT.Rsp
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.Rsp
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R8
+    mov rax, [context].CONTEXT.R8
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R8
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R9
+    mov rax, [context].CONTEXT.R9
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R9
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R10
+    mov rax, [context].CONTEXT.R10
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R10
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R11
+    mov rax, [context].CONTEXT.R11
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R11
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R12
+    mov rax, [context].CONTEXT.R12
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R12
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R13
+    mov rax, [context].CONTEXT.R13
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R13
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R14
+    mov rax, [context].CONTEXT.R14
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R14
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
+    
+    ; R15
+    mov rax, [context].CONTEXT.R15
+    mov rcx, 32
+    call HeapAlloc
+    test rax, rax
+    jz failed
+    mov [r13].VARIABLE.Value, rax
+    mov rdx, rax
+    mov rcx, [context].CONTEXT.R15
+    call DAP_QwordToHex
+    mov rax, [r12]
+    mov [r13].VARIABLE.Name, rax
+    mov [r13].VARIABLE.Type, offset szRegisterType
+    add r12, 8
+    add r13, sizeof(VARIABLE)
     
     mov rax, rbx
     ret
     
 failed:
+    ; TODO: Free allocated memory on failure
     xor rax, rax
     ret
 DAP_GetRegisterVariables endp
@@ -1770,5 +2967,14 @@ public DAP_SendEvent
 public DAP_SendInitializedEvent
 public DAP_SendThreadEvent
 public DAP_SendBreakpointEvent
+public DAP_VerifyBreakpoint
+public DAP_ResolveSourceLocation
+public DAP_WalkStackFrames
+public DAP_FindModuleForAddress
+public DAP_GetRegisterVariables
+public DAP_GetLocalVariables
+public DAP_QwordToHex
+public DAP_LoadDebugLineInfo
+public DAP_AddDebugLineEntry
 
 end

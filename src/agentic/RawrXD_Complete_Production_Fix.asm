@@ -3418,6 +3418,10 @@ Telemetry_FlushThread ENDP
 ;------------------------------------------------------------------------------
 ; Data Sections
 ;------------------------------------------------------------------------------
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .data
 align 8
 

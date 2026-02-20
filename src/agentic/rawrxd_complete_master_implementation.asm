@@ -436,6 +436,8 @@ ThreadPool_Destroy ENDP
 ;-----------------------------------------------------------------------------
 ; Logging System - Ring Buffer + Async Flush
 ;-----------------------------------------------------------------------------
+LOG_BUFFER_SIZE      EQU 1000000h  ; 1MB ring buffer
+
 Log_Init PROC FRAME pFilePath:DQ
     LOCAL szPath:DQ
     
@@ -535,10 +537,38 @@ Log_Write PROC FRAME level:DWORD, pFormat:DQ, args:VARARG
     invoke Str_Length, addr entry
     mov len, eax
     
+    ; Get current write position atomically
     invoke InterlockedExchangeAdd, addr g_logWritePos, len
+    mov rbx, rax  ; Old write pos
     
-    ; TODO: Actually write to buffer with proper synchronization
-    ; (Simplified for brevity)
+    ; Copy to ring buffer with wraparound
+    mov rsi, addr entry
+    mov rdi, g_pLogBuffer
+    add rdi, rbx
+    mov rcx, len
+    
+    ; Handle wraparound
+    mov rdx, LOG_BUFFER_SIZE
+    sub rdx, rbx
+    cmp rcx, rdx
+    jbe @@no_wrap
+    
+    ; Wrap around copy
+    mov rcx, rdx
+    rep movsb
+    
+    ; Reset to start
+    mov rdi, g_pLogBuffer
+    mov rcx, len
+    sub rcx, rdx
+    rep movsb
+    jmp @@copy_done
+    
+@@no_wrap:
+    rep movsb
+    
+@@copy_done:
+    ; Signal flush thread if needed (simplified - no event)
     
 @@done:
     pop rdi
@@ -548,6 +578,8 @@ Log_Write PROC FRAME level:DWORD, pFormat:DQ, args:VARARG
 Log_Write ENDP
 
 Log_FlushThread PROC FRAME lpParam:DQ
+    LOCAL bytesWritten:DWORD
+    
 @@flush_loop:
     invoke Sleep, 1000  ; Flush every second
     
@@ -555,8 +587,39 @@ Log_FlushThread PROC FRAME lpParam:DQ
         jmp @@exit
     .endif
     
-    ; TODO: Flush ring buffer to file
-    ; (Implementation omitted for brevity)
+    ; Flush ring buffer to file
+    mov eax, g_logWritePos
+    mov ecx, g_logReadPos
+    
+    .if eax == ecx
+        jmp @@flush_loop  ; Nothing to flush
+    .endif
+    
+    ; Calculate bytes to flush
+    .if eax > ecx
+        mov edx, eax
+        sub edx, ecx
+    .else
+        ; Wrapped around
+        mov edx, LOG_BUFFER_SIZE
+        sub edx, ecx
+        add edx, eax
+    .endif
+    
+    ; Write from read pos
+    mov rsi, g_pLogBuffer
+    add rsi, rcx
+    
+    invoke WriteFile, g_hLogFile, rsi, rdx, addr bytesWritten, NULL
+    
+    ; Update read pos
+    add ecx, bytesWritten
+    cmp ecx, LOG_BUFFER_SIZE
+    jb @@no_wrap_read
+    sub ecx, LOG_BUFFER_SIZE
+    
+@@no_wrap_read:
+    mov g_logReadPos, ecx
     
     jmp @@flush_loop
     
@@ -653,8 +716,14 @@ Safetensors_ParseHeader PROC FRAME pJson:DQ, jsonLen:DQ, pModel:DQ
     LOCAL pJsonData:DQ
     LOCAL length:DQ
     LOCAL pCtx:DQ
+    LOCAL pCurrent:DQ
+    LOCAL braceCount:DQ
+    LOCAL tensorCount:DQ
+    LOCAL pTensors:DQ
     
     push rbx
+    push rsi
+    push rdi
     
     .endprolog
     
@@ -662,13 +731,255 @@ Safetensors_ParseHeader PROC FRAME pJson:DQ, jsonLen:DQ, pModel:DQ
     mov length, rdx
     mov pCtx, r8
     
-    ; TODO: Full JSON parsing implementation
-    ; This would parse the tensor metadata and populate pModel->tensors[]
+    ; Skip the opening brace
+    mov rsi, pJsonData
+    .if byte ptr [rsi] == '{'
+        inc rsi
+    .endif
     
+    ; Count tensors by counting top-level keys
+    mov tensorCount, 0
+    mov pCurrent, rsi
+    mov braceCount, 0
+    
+@@count_tensors:
+    mov al, byte ptr [pCurrent]
+    .if al == 0
+        jmp @@count_done
+    .endif
+    .if al == '{'
+        inc braceCount
+    .elseif al == '}'
+        dec braceCount
+        .if braceCount == 0
+            inc tensorCount
+            .if byte ptr [pCurrent + 1] == ','
+                add pCurrent, 2
+                jmp @@count_tensors
+            .elseif byte ptr [pCurrent + 1] == '}'
+                jmp @@count_done
+            .endif
+        .endif
+    .endif
+    inc pCurrent
+    jmp @@count_tensors
+    
+@@count_done:
+    ; Allocate tensor array
+    mov rcx, tensorCount
+    imul rcx, sizeof TENSOR_INFO
+    invoke HeapAlloc, GetProcessHeap(), HEAP_ZERO_MEMORY, rcx
+    .if rax == 0
+        xor eax, eax
+        jmp @@error
+    .endif
+    mov pTensors, rax
+    
+    ; Store in model context
+    mov rbx, pCtx
+    mov (MODEL_CONTEXT ptr [rbx]).pTensors, rax
+    mov eax, tensorCount
+    mov (MODEL_CONTEXT ptr [rbx]).numTensors, eax
+    
+    ; Parse each tensor
+    mov rsi, pJsonData
+    .if byte ptr [rsi] == '{'
+        inc rsi
+    .endif
+    
+    mov rdi, pTensors  ; Current tensor
+    mov tensorCount, 0
+    
+@@parse_tensor:
+    ; Skip whitespace
+    .while byte ptr [rsi] == ' ' || byte ptr [rsi] == 9 || byte ptr [rsi] == 10 || byte ptr [rsi] == 13
+        inc rsi
+    .endw
+    
+    ; Check for end
+    .if byte ptr [rsi] == '}'
+        jmp @@parse_done
+    .endif
+    
+    ; Parse tensor name (quoted string)
+    .if byte ptr [rsi] == '"'
+        inc rsi
+        lea rcx, (TENSOR_INFO ptr [rdi]).name
+        .while byte ptr [rsi] != '"' && byte ptr [rsi] != 0
+            mov al, byte ptr [rsi]
+            mov byte ptr [rcx], al
+            inc rsi
+            inc rcx
+        .endw
+        .if byte ptr [rsi] == '"'
+            inc rsi
+        .endif
+    .endif
+    
+    ; Skip to colon and opening brace
+    .while byte ptr [rsi] != '{' && byte ptr [rsi] != 0
+        inc rsi
+    .endw
+    .if byte ptr [rsi] == '{'
+        inc rsi
+    .endif
+    
+    ; Parse tensor properties
+@@parse_props:
+    ; Skip whitespace
+    .while byte ptr [rsi] == ' ' || byte ptr [rsi] == 9 || byte ptr [rsi] == 10 || byte ptr [rsi] == 13
+        inc rsi
+    .endw
+    
+    .if byte ptr [rsi] == '}'
+        ; End of tensor object
+        add rdi, sizeof TENSOR_INFO
+        inc tensorCount
+        ; Skip comma if present
+        .if byte ptr [rsi + 1] == ','
+            add rsi, 2
+        .else
+            inc rsi
+        .endif
+        jmp @@parse_tensor
+    .endif
+    
+    ; Parse property name
+    .if byte ptr [rsi] == '"'
+        inc rsi
+        ; Check property type
+        .if byte ptr [rsi] == 'd' && byte ptr [rsi+1] == 't' && byte ptr [rsi+2] == 'y' && byte ptr [rsi+3] == 'p' && byte ptr [rsi+4] == 'e'
+            ; dtype
+            add rsi, 7  ; skip "dtype":
+            .while byte ptr [rsi] != '"' && byte ptr [rsi] != 0
+                inc rsi
+            .endw
+            .if byte ptr [rsi] == '"'
+                inc rsi
+                ; Parse dtype string
+                .if byte ptr [rsi] == 'F' && byte ptr [rsi+1] == '3' && byte ptr [rsi+2] == '2'
+                    mov (TENSOR_INFO ptr [rdi]).dtype, 0  ; F32
+                .elseif byte ptr [rsi] == 'F' && byte ptr [rsi+1] == '1' && byte ptr [rsi+2] == '6'
+                    mov (TENSOR_INFO ptr [rdi]).dtype, 1  ; F16
+                .elseif byte ptr [rsi] == 'I' && byte ptr [rsi+1] == '3' && byte ptr [rsi+2] == '2'
+                    mov (TENSOR_INFO ptr [rdi]).dtype, 2  ; I32
+                .endif
+                .while byte ptr [rsi] != '"' && byte ptr [rsi] != 0
+                    inc rsi
+                .endw
+                .if byte ptr [rsi] == '"'
+                    inc rsi
+                .endif
+            .endif
+        .elseif byte ptr [rsi] == 's' && byte ptr [rsi+1] == 'h' && byte ptr [rsi+2] == 'a' && byte ptr [rsi+3] == 'p' && byte ptr [rsi+4] == 'e'
+            ; shape
+            add rsi, 7  ; skip "shape":
+            ; Skip array parsing for now - would need more complex parser
+            .while byte ptr [rsi] != ']' && byte ptr [rsi] != 0
+                inc rsi
+            .endw
+            .if byte ptr [rsi] == ']'
+                inc rsi
+            .endif
+        .elseif byte ptr [rsi] == 'd' && byte ptr [rsi+1] == 'a' && byte ptr [rsi+2] == 't' && byte ptr [rsi+3] == 'a' && byte ptr [rsi+4] == '_' && byte ptr [rsi+5] == 'o' && byte ptr [rsi+6] == 'f' && byte ptr [rsi+7] == 'f' && byte ptr [rsi+8] == 's' && byte ptr [rsi+9] == 'e' && byte ptr [rsi+10] == 't' && byte ptr [rsi+11] == 's'
+            ; data_offsets
+            add rsi, 14  ; skip "data_offsets":
+            ; Parse [offset, size]
+            .while byte ptr [rsi] != '[' && byte ptr [rsi] != 0
+                inc rsi
+            .endw
+            .if byte ptr [rsi] == '['
+                inc rsi
+                ; Parse first number (offset)
+                invoke ParseNumber, rsi, addr tempNum
+                mov (TENSOR_INFO ptr [rdi]).dataOffset, rax
+                ; Skip to comma
+                .while byte ptr [rsi] != ',' && byte ptr [rsi] != 0
+                    inc rsi
+                .endw
+                .if byte ptr [rsi] == ','
+                    inc rsi
+                    ; Parse second number (next offset = size)
+                    invoke ParseNumber, rsi, addr tempNum
+                    mov rcx, (TENSOR_INFO ptr [rdi]).dataOffset
+                    sub rax, rcx
+                    mov (TENSOR_INFO ptr [rdi]).dataSize, rax
+                .endif
+                ; Skip to ]
+                .while byte ptr [rsi] != ']' && byte ptr [rsi] != 0
+                    inc rsi
+                .endw
+                .if byte ptr [rsi] == ']'
+                    inc rsi
+                .endif
+            .endif
+        .endif
+        
+        ; Skip to next property or end
+        .while byte ptr [rsi] != ',' && byte ptr [rsi] != '}' && byte ptr [rsi] != 0
+            inc rsi
+        .endw
+        .if byte ptr [rsi] == ','
+            inc rsi
+        .endif
+    .endif
+    
+    jmp @@parse_props
+    
+@@parse_done:
     mov eax, 1
+    jmp @@exit
+    
+@@error:
+    xor eax, eax
+    
+@@exit:
+    pop rdi
+    pop rsi
     pop rbx
     ret
 Safetensors_ParseHeader ENDP
+
+;-----------------------------------------------------------------------------
+; Utility: Parse Number from JSON
+;-----------------------------------------------------------------------------
+ParseNumber PROC FRAME pStr:DQ, pResult:DQ
+    LOCAL result:DQ
+    
+    push rbx
+    
+    .endprolog
+    
+    mov result, 0
+    mov rbx, rcx  ; pStr
+    
+    ; Skip whitespace
+    .while byte ptr [rbx] == ' ' || byte ptr [rbx] == 9 || byte ptr [rbx] == 10 || byte ptr [rbx] == 13
+        inc rbx
+    .endw
+    
+    ; Parse digits
+    .while byte ptr [rbx] >= '0' && byte ptr [rbx] <= '9'
+        mov rax, result
+        imul rax, 10
+        movzx rcx, byte ptr [rbx]
+        sub rcx, '0'
+        add rax, rcx
+        mov result, rax
+        inc rbx
+    .endw
+    
+    ; Store result
+    mov rcx, rdx  ; pResult
+    mov rax, result
+    mov [rcx], rax
+    
+    ; Return pointer to next character
+    mov rax, rbx
+    
+    pop rbx
+    ret
+ParseNumber ENDP
 
 ;-----------------------------------------------------------------------------
 ; PyTorch Pickle Loader - Limited Implementation
@@ -2084,9 +2395,155 @@ RS_Encode ENDP
 
 RS_Decode PROC FRAME pCodec:DQ, ppShards:DQ, pPresent:DQ, pData:DQ, dataLen:DQ
     ; Reconstruct missing shards using matrix inversion in GF(2^8)
-    ; (Complex implementation - omitted for brevity)
+    ; pCodec = Reed-Solomon codec handle
+    ; ppShards = array of shard pointers (QWORD each)
+    ; pPresent = byte array (1=present, 0=missing) per shard
+    ; pData = original data buffer for validation
+    ; dataLen = length per shard
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    .PUSHREG rbx
+    .PUSHREG rsi
+    .PUSHREG rdi
+    .PUSHREG r12
+    .PUSHREG r13
+    .PUSHREG r14
+    .PUSHREG r15
+    sub rsp, 128
+    .ALLOCSTACK 128
+    .ENDPROLOG
     
+    mov r12, pCodec                  ; codec
+    mov r13, ppShards                ; shards
+    mov r14, pPresent                ; present flags
+    mov r15, pData                   ; data buffer
+    mov rbx, dataLen                 ; shard length
+    
+    ; Count present and missing shards
+    mov ecx, DWORD PTR [r12]         ; total_shards (data + parity)
+    mov esi, DWORD PTR [r12+4]       ; data_shards
+    xor edi, edi                     ; missing count
+    xor edx, edx
+@@rsd_count:
+    cmp edx, ecx
+    jae @@rsd_check
+    movzx eax, BYTE PTR [r14+rdx]
+    test al, al
+    jnz @@rsd_next_count
+    inc edi                          ; missing++
+@@rsd_next_count:
+    inc edx
+    jmp @@rsd_count
+    
+@@rsd_check:
+    ; Need at least data_shards present to reconstruct
+    mov eax, ecx
+    sub eax, edi                     ; present_count
+    cmp eax, esi                     ; need >= data_shards
+    jb @@rsd_fail
+    
+    test edi, edi
+    jz @@rsd_ok                      ; nothing missing
+    
+    ; For each missing shard, reconstruct via XOR of all present shards
+    ; (Simplified: works for single parity. For full RS, need Vandermonde inversion)
+    xor edx, edx
+@@rsd_reconstruct:
+    cmp edx, ecx
+    jae @@rsd_ok
+    movzx eax, BYTE PTR [r14+rdx]
+    test al, al
+    jnz @@rsd_skip_present
+    
+    ; Allocate buffer for missing shard if needed
+    mov rax, QWORD PTR [r13+rdx*8]
+    test rax, rax
+    jnz @@rsd_have_buf
+    
+    push rcx
+    push rdx
+    xor ecx, ecx
+    mov edx, ebx                     ; shard length
+    mov r8d, 3000h
+    mov r9d, 04h
+    call VirtualAlloc
+    pop rdx
+    pop rcx
+    mov QWORD PTR [r13+rdx*8], rax
+    
+@@rsd_have_buf:
+    ; Zero the reconstruction buffer
+    push rcx
+    push rdx
+    mov rdi, rax
+    mov ecx, ebx
+    xor eax, eax
+    rep stosb
+    pop rdx
+    pop rcx
+    
+    ; XOR all present shards into this buffer
+    push rdx
+    mov r8, QWORD PTR [r13+rdx*8]    ; dest
+    xor r9d, r9d                     ; shard index
+@@rsd_xor_loop:
+    cmp r9d, ecx
+    jae @@rsd_xor_done
+    cmp r9d, edx
+    je @@rsd_xor_skip
+    movzx eax, BYTE PTR [r14+r9]
+    test al, al
+    jz @@rsd_xor_skip
+    
+    mov r10, QWORD PTR [r13+r9*8]    ; source shard
+    push rcx
+    xor eax, eax
+@@rsd_xor_byte:
+    cmp eax, ebx
+    jae @@rsd_xor_byte_done
+    movzx r11d, BYTE PTR [r10+rax]
+    xor BYTE PTR [r8+rax], r11b
+    inc eax
+    jmp @@rsd_xor_byte
+@@rsd_xor_byte_done:
+    pop rcx
+    
+@@rsd_xor_skip:
+    inc r9d
+    jmp @@rsd_xor_loop
+@@rsd_xor_done:
+    pop rdx
+    
+@@rsd_skip_present:
+    inc edx
+    jmp @@rsd_reconstruct
+    
+@@rsd_ok:
     mov eax, 1
+    add rsp, 128
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+@@rsd_fail:
+    xor eax, eax
+    add rsp, 128
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 RS_Decode ENDP
 
@@ -2748,6 +3205,10 @@ Workspace_ScanFiles ENDP
 ; PART 7: DATA SECTION ADDITIONS
 ;=============================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 ; Logging
 szLogPrefix         DB "[%04d-%02d-%02d %02d:%02d:%02d.%03d] ", 0
@@ -2797,6 +3258,9 @@ g_wsaData           WSADATA <>
 g_raftState         DD 0
 g_healthyNodes      DD 0
 g_totalTokens       DQ 0
+
+; Temporary variables for parsing
+tempNum             DQ 0
 
 g_pklData           DQ 0
 g_pklSize           DQ 0
@@ -2850,6 +3314,16 @@ WORK_ITEM STRUCT
     pFunc           DQ ?
     pContext        DQ ?
 WORK_ITEM ENDS
+
+; Tensor information
+TENSOR_INFO STRUCT
+    name            DB 256 dup(?)
+    dtype           DD ?
+    shape           DQ ?  ; pointer to array of dimensions
+    numDims         DD ?
+    dataOffset      DQ ?
+    dataSize        DQ ?
+TENSOR_INFO ENDS
 
 ; Model context
 MODEL_CONTEXT STRUCT
@@ -3066,5 +3540,16 @@ PUBLIC PipeIPC_Connect
 PUBLIC PipeIPC_Send
 PUBLIC Workspace_Create
 PUBLIC Workspace_ScanFiles
+
+; --- Additional PROCs that were missing PUBLIC ---
+PUBLIC ThreadPool_WorkerProc
+PUBLIC Log_FlushThread
+PUBLIC Safetensors_ParseHeader
+PUBLIC ParseNumber
+PUBLIC Gossip_ThreadProc
+PUBLIC Prometheus_AcceptThread
+PUBLIC Prometheus_HandleClient
+PUBLIC PipeIPC_ServerThread
+PUBLIC Workspace_WatchThread
 
 END
