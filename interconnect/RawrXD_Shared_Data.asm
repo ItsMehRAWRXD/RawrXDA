@@ -3,6 +3,10 @@
 ; Shared definitions for linking standalone interconnect modules
 ; ═══════════════════════════════════════════════════════════════════════════════
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 ALIGN 16
 

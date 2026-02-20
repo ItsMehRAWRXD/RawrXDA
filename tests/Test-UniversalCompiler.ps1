@@ -27,7 +27,8 @@ param(
     [switch]$VerboseOutput,
     [switch]$Benchmark,
     [string]$CompilerPath,
-    [string]$OutputDir
+    [string]$OutputDir,
+    [string]$RootDir = "D:\RawrXD"
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,7 +38,7 @@ $ProgressPreference = "SilentlyContinue"
 # GLOBAL STATE
 # ============================================================================
 $Script:Config = @{
-    RootDir      = "E:\RawrXD"
+    RootDir      = $RootDir
     TestDir      = ""
     CompilerPath = ""
     StartTime    = Get-Date

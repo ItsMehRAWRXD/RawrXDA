@@ -1,4 +1,8 @@
 ; Test: Minimal MMF creation only
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERN CreateFileMappingA:PROC
 EXTERN CloseHandle:PROC
 EXTERN ExitProcess:PROC
@@ -38,5 +42,6 @@ TestEntry PROC
 _fail:
     mov ecx, 1
     call ExitProcess
+    ret
 TestEntry ENDP
 END

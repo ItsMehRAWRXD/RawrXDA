@@ -15,6 +15,10 @@ MAX_KEYWORD_LEN         EQU 16
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 align 16
 ; Keywords that trigger "Tool" usage instead of "Inference"
@@ -46,7 +50,46 @@ g_Keywords              QWORD OFFSET xzString_Find
 ; ═══════════════════════════════════════════════════════════════════════════════
 AgentRouter_Initialize PROC FRAME
     .endprolog
-    mov rax, 1
+    
+    ; Initialize agent router: zero route table, set default capabilities
+    push rbx
+    push rsi
+    sub rsp, 32
+    
+    ; Allocate route dispatch table: 16 agent slots * 64 bytes = 1KB
+    xor ecx, ecx
+    mov edx, 1024
+    mov r8d, 3000h                   ; MEM_COMMIT | MEM_RESERVE
+    mov r9d, 04h                     ; PAGE_READWRITE
+    call VirtualAlloc
+    test rax, rax
+    jz @@ari_fail
+    
+    mov QWORD PTR [g_agent_route_table], rax
+    mov DWORD PTR [g_agent_count], 0
+    mov DWORD PTR [g_max_agents], 16
+    mov DWORD PTR [g_router_initialized], 1
+    
+    ; Register default agent handlers from string table
+    ; Each entry: agent_id(DWORD), capability_mask(DWORD), handler_ptr(QWORD), name_ptr(QWORD)
+    ; Default: inference agent at slot 0
+    mov DWORD PTR [rax], 0           ; agent_id = 0
+    mov DWORD PTR [rax+4], 7         ; mask: inference|tool|chain
+    lea rcx, [AgentRouter_ExecuteTask]
+    mov QWORD PTR [rax+8], rcx       ; handler
+    mov QWORD PTR [rax+16], 0        ; name
+    mov DWORD PTR [g_agent_count], 1
+    
+    mov rax, 1                       ; success
+    add rsp, 32
+    pop rsi
+    pop rbx
+    ret
+@@ari_fail:
+    xor eax, eax
+    add rsp, 32
+    pop rsi
+    pop rbx
     ret
 AgentRouter_Initialize ENDP
 

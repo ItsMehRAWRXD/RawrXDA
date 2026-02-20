@@ -1975,6 +1975,7 @@ Titan_InitializeGPU ENDP
 
 Titan_IsDeviceAddress PROC EXPORT FRAME
     jmp IsDeviceAddress
+    ret
 Titan_IsDeviceAddress ENDP
 
 Titan_GetGPUStats PROC EXPORT FRAME

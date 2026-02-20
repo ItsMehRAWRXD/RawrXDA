@@ -3,82 +3,82 @@
 #include <cassert>
 #include <filesystem>
 
+#include "logging/logger.h"
+static Logger s_logger("test_gguf_loader");
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Usage: test_gguf_loader <model.gguf>" << std::endl;
+        s_logger.error( "Usage: test_gguf_loader <model.gguf>" << std::endl;
         return 1;
     }
     
     std::string model_path = argv[1];
     if (!std::filesystem::exists(model_path)) {
-        std::cerr << "Model file not found: " << model_path << std::endl;
+        s_logger.error( "Model file not found: " << model_path << std::endl;
         return 1;
     }
     
     try {
-        std::cout << "=== GGUF Loader Improvements Test ===" << std::endl;
+        s_logger.info("=== GGUF Loader Improvements Test ===");
         
         GGUFLoader loader;
         
         // Test 1: Open and parse header
-        std::cout << "Test 1: Opening GGUF file..." << std::endl;
+        s_logger.info("Test 1: Opening GGUF file...");
         if (!loader.Open(model_path)) {
-            std::cerr << "Failed to open GGUF file" << std::endl;
+            s_logger.error( "Failed to open GGUF file" << std::endl;
             return 1;
         }
-        std::cout << "✓ File opened successfully" << std::endl;
+        s_logger.info("✓ File opened successfully");
         
         GGUFHeader header = loader.GetHeader();
-        std::cout << "  Magic: 0x" << std::hex << header.magic << std::dec << std::endl;
-        std::cout << "  Version: " << header.version << std::endl;
-        std::cout << "  Tensors: " << header.tensor_count << std::endl;
-        std::cout << "  Metadata KV pairs: " << header.metadata_kv_count << std::endl;
+        s_logger.info("  Magic: 0x");
+        s_logger.info("  Version: ");
+        s_logger.info("  Tensors: ");
+        s_logger.info("  Metadata KV pairs: ");
         
         // Test 2: Parse metadata
-        std::cout << "\nTest 2: Parsing metadata..." << std::endl;
+        s_logger.info("\nTest 2: Parsing metadata...");
         if (!loader.ParseMetadata()) {
-            std::cerr << "Failed to parse metadata" << std::endl;
+            s_logger.error( "Failed to parse metadata" << std::endl;
             return 1;
         }
-        std::cout << "✓ Metadata parsed successfully" << std::endl;
+        s_logger.info("✓ Metadata parsed successfully");
         
         GGUFMetadata metadata = loader.GetMetadata();
-        std::cout << "  Architecture: " << metadata.architecture_type << std::endl;
-        std::cout << "  Layers: " << metadata.layer_count << std::endl;
-        std::cout << "  Context length: " << metadata.context_length << std::endl;
-        std::cout << "  Embedding dimension: " << metadata.embedding_dim << std::endl;
-        std::cout << "  Vocabulary size: " << metadata.vocab_size << std::endl;
+        s_logger.info("  Architecture: ");
+        s_logger.info("  Layers: ");
+        s_logger.info("  Context length: ");
+        s_logger.info("  Embedding dimension: ");
+        s_logger.info("  Vocabulary size: ");
         
         // Vocab size validation
         if (metadata.vocab_size < 1000 || metadata.vocab_size > 1000000) {
-            std::cout << "  ⚠ WARNING: Vocab size " << metadata.vocab_size 
-                      << " is outside typical range (1K-1M)" << std::endl;
-            std::cout << "  ⚠ This might indicate incorrect metadata or special model" << std::endl;
+            s_logger.info("  ⚠ WARNING: Vocab size ");
+            s_logger.info("  ⚠ This might indicate incorrect metadata or special model");
         } else {
-            std::cout << "  ✓ Vocab size is within reasonable bounds" << std::endl;
+            s_logger.info("  ✓ Vocab size is within reasonable bounds");
         }
         
         // Test 3: Check tensor info
-        std::cout << "\nTest 3: Checking tensor information..." << std::endl;
+        s_logger.info("\nTest 3: Checking tensor information...");
         std::vector<TensorInfo> tensors = loader.GetTensorInfo();
-        std::cout << "  Total tensors: " << tensors.size() << std::endl;
+        s_logger.info("  Total tensors: ");
         
         if (!tensors.empty()) {
             // Show first few tensors
             size_t show_count = std::min(size_t(5), tensors.size());
             for (size_t i = 0; i < show_count; ++i) {
                 const TensorInfo& tensor = tensors[i];
-                std::cout << "  Tensor " << i << ": " << tensor.name 
-                          << " (" << loader.GetTypeString(tensor.type) << ")"
-                          << " size: " << tensor.size_bytes << " bytes" << std::endl;
+                s_logger.info("  Tensor ");
             }
         }
         
         // Test 4: Verify tensor index lookup (O(1) performance)
-        std::cout << "\nTest 4: Testing tensor index lookup..." << std::endl;
+        s_logger.info("\nTest 4: Testing tensor index lookup...");
         if (!tensors.empty()) {
             const std::string& first_tensor_name = tensors[0].name;
-            std::cout << "  Looking up tensor: " << first_tensor_name << std::endl;
+            s_logger.info("  Looking up tensor: ");
             
             // This should be O(1) thanks to our tensor_index_ improvement
             // Skip actual data loading to avoid memory issues with large models
@@ -89,59 +89,59 @@ int main(int argc, char* argv[]) {
                 for (const auto& tensor : tensor_info) {
                     if (tensor.name == first_tensor_name) {
                         found = true;
-                        std::cout << "  ✓ Successfully found tensor in index" << std::endl;
-                        std::cout << "    Type: " << loader.GetTypeString(tensor.type) << std::endl;
-                        std::cout << "    Size: " << tensor.size_bytes << " bytes" << std::endl;
+                        s_logger.info("  ✓ Successfully found tensor in index");
+                        s_logger.info("    Type: ");
+                        s_logger.info("    Size: ");
                         break;
                     }
                 }
                 if (!found) {
-                    std::cerr << "  ✗ Tensor not found in index" << std::endl;
+                    s_logger.error( "  ✗ Tensor not found in index" << std::endl;
                     return 1;
                 }
             } catch (const std::exception& e) {
-                std::cerr << "  ✗ Exception during tensor lookup: " << e.what() << std::endl;
+                s_logger.error( "  ✗ Exception during tensor lookup: " << e.what() << std::endl;
                 return 1;
             }
         }
         
         // Test 5: Test tensor size calculations
-        std::cout << "\nTest 5: Testing tensor size calculations..." << std::endl;
+        s_logger.info("\nTest 5: Testing tensor size calculations...");
         for (const auto& tensor : tensors) {
             size_t calculated_size = loader.GetTensorByteSize(tensor);
             if (calculated_size != tensor.size_bytes) {
-                std::cerr << "  ✗ Size mismatch for tensor " << tensor.name 
+                s_logger.error( "  ✗ Size mismatch for tensor " << tensor.name 
                           << ": calculated " << calculated_size 
                           << ", stored " << tensor.size_bytes << std::endl;
                 return 1;
             }
         }
-        std::cout << "  ✓ All tensor size calculations match" << std::endl;
+        s_logger.info("  ✓ All tensor size calculations match");
         
         // Test 6: Test alignment helper
-        std::cout << "\nTest 6: Testing alignment helper..." << std::endl;
+        s_logger.info("\nTest 6: Testing alignment helper...");
         uint64_t test_offsets[] = {0, 1, 31, 32, 33, 63, 64, 100, 1024};
         for (uint64_t offset : test_offsets) {
             uint64_t aligned = loader.AlignTo32Bytes(offset);
             if (aligned % 32 != 0) {
-                std::cerr << "  ✗ Alignment failed for offset " << offset 
+                s_logger.error( "  ✗ Alignment failed for offset " << offset 
                           << ": got " << aligned << std::endl;
                 return 1;
             }
             if (aligned < offset) {
-                std::cerr << "  ✗ Alignment produced smaller value for offset " << offset 
+                s_logger.error( "  ✗ Alignment produced smaller value for offset " << offset 
                           << ": got " << aligned << std::endl;
                 return 1;
             }
         }
-        std::cout << "  ✓ All alignment calculations correct" << std::endl;
+        s_logger.info("  ✓ All alignment calculations correct");
         
         loader.Close();
-        std::cout << "\n=== ALL TESTS PASSED ===" << std::endl;
-        std::cout << "GGUF loader improvements are working correctly!" << std::endl;
+        s_logger.info("\n=== ALL TESTS PASSED ===");
+        s_logger.info("GGUF loader improvements are working correctly!");
         
     } catch (const std::exception& e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        s_logger.error( "Exception: " << e.what() << std::endl;
         return 1;
     }
     

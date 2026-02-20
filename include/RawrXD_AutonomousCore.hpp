@@ -123,8 +123,63 @@ Respond in JSON:
     }
 
     std::vector<ExecutionStep> ParsePlanFromJSON(const std::string& json) {
-        // Implementation stub for JSON parsing
-        return {};
+        std::vector<ExecutionStep> steps;
+        
+        // Find the "steps" array in the JSON response
+        size_t stepsPos = json.find("\"steps\"");
+        if (stepsPos == std::string::npos) return steps;
+        
+        // Extract individual step objects by finding { } pairs
+        size_t pos = json.find('[', stepsPos);
+        if (pos == std::string::npos) return steps;
+        
+        int stepIndex = 0;
+        while (pos < json.size() && stepIndex < 50) { // Safety cap at 50 steps
+            size_t objStart = json.find('{', pos);
+            if (objStart == std::string::npos) break;
+            
+            // Find matching closing brace (handles nesting)
+            int depth = 1;
+            size_t objEnd = objStart + 1;
+            while (objEnd < json.size() && depth > 0) {
+                if (json[objEnd] == '{') depth++;
+                else if (json[objEnd] == '}') depth--;
+                objEnd++;
+            }
+            if (depth != 0) break;
+            
+            std::string obj = json.substr(objStart, objEnd - objStart);
+            
+            // Extract fields from the step object
+            auto extractField = [&obj](const std::string& key) -> std::string {
+                size_t kp = obj.find("\"" + key + "\"");
+                if (kp == std::string::npos) return "";
+                size_t vs = obj.find('"', kp + key.size() + 3);
+                if (vs == std::string::npos) return "";
+                size_t ve = obj.find('"', vs + 1);
+                if (ve == std::string::npos) return "";
+                return obj.substr(vs + 1, ve - vs - 1);
+            };
+            
+            ExecutionStep step;
+            step.id = extractField("id");
+            if (step.id.empty()) step.id = std::to_string(stepIndex + 1);
+            step.tool_name = extractField("tool");
+            step.tool_input = extractField("input");
+            step.expected_output = extractField("expected");
+            step.description = step.tool_name + ": " + step.tool_input;
+            step.state = TaskState::PENDING;
+            step.requires_confirmation = false;
+            
+            if (!step.tool_name.empty()) {
+                steps.push_back(step);
+            }
+            
+            pos = objEnd;
+            stepIndex++;
+        }
+        
+        return steps;
     }
     
     std::string ExecuteWithSelfHealing(AutonomousTask& task) {

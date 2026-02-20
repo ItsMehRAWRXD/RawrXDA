@@ -1,5 +1,6 @@
 // src/io/io_factory.cpp
 #include "backend_interface.hpp"
+#include <memory>
 
 #ifdef _WIN32
     #include "direct_io_ring_win.hpp"
@@ -10,10 +11,10 @@
 //     #include "direct_io_ring_linux.hpp"
 // #endif
 
-IDirectIOBackend* CreateIOBackend(IOBackendType type) {
+std::unique_ptr<IDirectIOBackend> CreateIOBackend(IOBackendType type) {
 #ifdef _WIN32
     if (type == IOBackendType::IORING_WINDOWS) {
-        return new DirectIORingWindows();
+        return std::make_unique<DirectIORingWindows>();
     }
 #endif
 

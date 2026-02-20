@@ -6,7 +6,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 # Root paths (aligned with swarm_control_center.ps1)
-$script:SwarmRoot = "D:\lazy init ide"
+. "$PSScriptRoot\\RawrXD_Root.ps1"
+
+$script:SwarmRoot = Get-RawrXDRoot
 $script:ConfigDir = Join-Path $SwarmRoot "logs/swarm_config"
 $script:BeaconDir = Join-Path $SwarmRoot "logs/swarm_beacon"
 $script:MemoryDir = Join-Path $SwarmRoot "logs/swarm_memory"

@@ -60,7 +60,8 @@ static enum ggml_status ggml_zdnn_graph_compute(ggml_backend_t backend, ggml_cgr
 
         bool ok = ggml_zdnn_compute_forward(ctx, node);
         if (!ok) {
-            GGML_
+            GGML_LOG_ERROR("%s: unsupported op %s (%s)\n",
+                           __func__, node->name, ggml_op_name(node->op));
         }
 
         GGML_ASSERT(ok);
@@ -163,8 +164,8 @@ static void ggml_backend_zdnn_device_rel(ggml_backend_zdnn_device_context * ctx)
 }
 
 static ggml_backend_zdnn_context * ggml_zdnn_init(ggml_backend_dev_t dev) {
-    GGML_
-    GGML_
+    GGML_LOG_INFO("%s: allocating\n", __func__);
+    GGML_LOG_INFO("%s: found 1 device\n", __func__);
 
     #ifdef STATIC_LIB
     zdnn_init();
@@ -174,12 +175,12 @@ static ggml_backend_zdnn_context * ggml_zdnn_init(ggml_backend_dev_t dev) {
     ggml_backend_zdnn_device_context * ctx_dev = (ggml_backend_zdnn_device_context *)dev->context;
 
     int device = 1;
-    GGML_
+    GGML_LOG_INFO("%s: picking default device: %s\n", __func__, ctx_dev->name);
 
     ctx->device = device;
-    GGML_
-    GGML_
-    GGML_
+    GGML_LOG_INFO("%s: NNPA name: %s\n", __func__, ctx_dev->name);
+    GGML_LOG_INFO("%s: NNPA_PARMBLKFORMAT_0 = %s\n", __func__, ctx_dev->has_parmblkformat_0 ? "true" : "false");
+    GGML_LOG_INFO("%s: NNPA_PARMBLKFORMAT_1 = %s\n", __func__, ctx_dev->has_parmblkformat_1 ? "true" : "false");
 
     ctx->gf = nullptr;
 
@@ -187,7 +188,7 @@ static ggml_backend_zdnn_context * ggml_zdnn_init(ggml_backend_dev_t dev) {
 }
 
 static void ggml_zdnn_free(ggml_backend_zdnn_context * ctx) {
-    GGML_
+    GGML_LOG_INFO("%s: deallocating\n", __func__);
     delete ctx;
 }
 
@@ -262,7 +263,8 @@ static enum ggml_status ggml_backend_zdnn_buffer_init_tensor(ggml_backend_buffer
     ctx->buffers.push_back(std::move(zdnn_buffer));
     ctx->n_buffers++;
 
-    // GGML_
+    // GGML_LOG_INFO("%s: initialised tensor '%s' in buffer %d, size = %8.2f MiB\n",
+    //               __func__, tensor->name, buffer_idx, tsize);
 
     return GGML_STATUS_SUCCESS;
 
@@ -350,7 +352,8 @@ static ggml_backend_buffer_t ggml_backend_zdnn_buffer_type_alloc_buffer(ggml_bac
     }
 
     if (size_aligned > 0 && (ctx->all_data == NULL)) {
-        GGML_
+        GGML_LOG_ERROR("%s: error: failed to allocate buffer, size = %8.2f\n",
+                       __func__, size_aligned / 1024.0 / 1024.0);
         delete ctx;
         return NULL;
     }
@@ -482,7 +485,7 @@ static void ggml_backend_zdnn_device_get_props(ggml_backend_dev_t dev, ggml_back
 static ggml_backend_t ggml_backend_zdnn_device_init(ggml_backend_dev_t dev, const char * params) {
     ggml_backend_zdnn_context * ctx = ggml_zdnn_init(dev);
     if (ctx == NULL) {
-        GGML_
+        GGML_LOG_ERROR("%s: error: failed to allocate context\n", __func__);
         return NULL;
     }
 

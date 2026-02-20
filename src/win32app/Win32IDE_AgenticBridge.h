@@ -11,7 +11,9 @@
 #include <vector>
 #include <functional>
 #include <memory>
-#include "../agentic_engine.h"
+#include "../native_agent.hpp"
+#include "../cpu_inference_engine.h"
+#include "Win32IDE_SubAgent.h"
 
 // Forward declaration
 class Win32IDE;
@@ -32,7 +34,7 @@ struct AgentResponse {
 };
 
 // Agentic Framework Bridge for Win32IDE
-// Integrates Native C++ Agentic Engine with Win32IDE
+// Integrates PowerShell-based agentic framework with C++ IDE
 class AgenticBridge {
 public:
     AgenticBridge(Win32IDE* ide);
@@ -56,15 +58,73 @@ public:
     
     // Configuration
     void SetModel(const std::string& modelName);
-    void SetOllamaServer(const std::string& serverUrl); // Kept for API interface compatibility but unused internally now
+    void SetOllamaServer(const std::string& serverUrl);
+    void SetMaxMode(bool enabled);
+    bool GetMaxMode() const { return m_maxMode; }
+    void SetDeepThinking(bool enabled);
+    bool GetDeepThinking() const { return m_deepThinking; }
+    void SetDeepResearch(bool enabled);
+    bool GetDeepResearch() const { return m_deepResearch; }
+    void SetNoRefusal(bool enabled);
+    bool GetNoRefusal() const { return m_noRefusal; }
+    void SetAutoCorrect(bool enabled);
+    bool GetAutoCorrect() const { return m_autoCorrect; }
+    void SetContextSize(const std::string& sizeName);
+    bool LoadModel(const std::string& path);
     std::string GetCurrentModel() const { return m_modelName; }
+
+    // Language-aware context propagation
+    void SetLanguageContext(const std::string& language, const std::string& filePath);
+    std::string GetLanguageContext() const { return m_languageContext; }
+    std::string GetFileContext() const { return m_fileContext; }
     
     // Output callback
     using OutputCallback = std::function<void(const std::string&, const std::string&)>;
     void SetOutputCallback(OutputCallback callback);
 
+    // RE Tools Access
+    std::string RunDumpbin(const std::string& path, const std::string& mode);
+    std::string RunCodex(const std::string& path);
+    std::string RunCompiler(const std::string& path);
+
+    // ---- SubAgent / Chaining / HexMag Swarm ----
+
+    /// Access the SubAgentManager (lazy-initialized)
+    SubAgentManager* GetSubAgentManager();
+
+    /// Spawn a sub-agent from user/model request
+    std::string RunSubAgent(const std::string& description, const std::string& prompt);
+
+    /// Execute a sequential chain of prompts
+    std::string ExecuteChain(const std::vector<std::string>& steps, const std::string& initialInput = "");
+
+    /// Execute a HexMag swarm (parallel fan-out with merge)
+    std::string ExecuteSwarm(const std::vector<std::string>& prompts,
+                              const std::string& mergeStrategy = "concatenate",
+                              int maxParallel = 4);
+
+    /// Cancel all running sub-agents
+    void CancelAllSubAgents();
+
+    /// Get sub-agent status summary
+    std::string GetSubAgentStatus() const;
+
+    /// Dispatch tool calls detected in model output
+    bool DispatchModelToolCalls(const std::string& modelOutput, std::string& toolResult);
+
 private:
-   
+   // Native Integration
+    std::unique_ptr<RawrXD::CPUInferenceEngine> m_nativeEngine;
+    std::unique_ptr<RawrXD::NativeAgent> m_nativeAgent;
+
+    // SubAgent Manager (lazy-initialized)
+    std::unique_ptr<SubAgentManager> m_subAgentManager;
+
+    // PowerShell process management
+    bool SpawnPowerShellProcess(const std::string& scriptPath, const std::string& arguments);
+    bool ReadProcessOutput(std::string& output, DWORD timeoutMs = 5000);
+    void KillPowerShellProcess();
+    
     // Response parsing
     AgentResponse ParseAgentResponse(const std::string& rawOutput);
     bool IsToolCall(const std::string& line);
@@ -83,8 +143,21 @@ private:
     std::string m_modelName;
     std::string m_ollamaServer;
     
-    // Native Engine
-    std::shared_ptr<AgenticEngine> m_nativeEngine;
+    HANDLE m_hProcess;
+    HANDLE m_hStdoutRead;
+    HANDLE m_hStdoutWrite;
+    HANDLE m_hStdinRead;
+    HANDLE m_hStdinWrite;
     
+    // Config Cache
+    bool m_maxMode = false;
+    bool m_deepThinking = false;
+    bool m_deepResearch = false;
+    bool m_noRefusal = false;
+    bool m_autoCorrect = false;
+    std::string m_languageContext;  // Current language (e.g. "C/C++")
+    std::string m_fileContext;      // Current file path
+
+    // Output callback for streaming results to UI
     OutputCallback m_outputCallback;
 };

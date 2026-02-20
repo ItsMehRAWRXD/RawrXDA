@@ -2,6 +2,10 @@
 ; Raw buffer manipulation for MCP message interception
 ; Provides trampoline stubs that preserve all registers before calling C++ handlers
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .code
 
 ; External C++ handlers

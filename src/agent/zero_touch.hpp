@@ -1,11 +1,11 @@
 #pragma once
-
+// zero_touch.hpp – Qt-free ZeroTouch (C++20 / Win32)
 #include <string>
 
 class ZeroTouch {
-
 public:
-    explicit ZeroTouch();
+    ZeroTouch();
+    ~ZeroTouch() = default;
 
     void installAll();
     void installFileWatcher();
@@ -14,5 +14,4 @@ public:
 
 private:
     std::string m_lastVoiceWish;
-    bool m_running;
 };

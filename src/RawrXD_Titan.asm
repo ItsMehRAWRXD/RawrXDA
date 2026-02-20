@@ -3,6 +3,15 @@
 ; Optimized for Critical Math Operations
 ;================================================================================
 
+; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+PUBLIC Titan_RMSNorm_AVX512
+PUBLIC Titan_Softmax_AVX512
+PUBLIC Titan_Exp_Polynomial_AVX512
+
 .data
 align 32
 shuf_mask_8to4 DWORD 0, 1, 2, 3, 0, 1, 2, 3  ; Shuffle 8 -> 4 elements

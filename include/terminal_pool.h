@@ -1,39 +1,38 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
+// C++20 / Win32. Terminal pool; no Qt widgets. Use HWND/void* in impl.
+
+#include <string>
 #include <vector>
 #include <cstdint>
-
-class QTabWidget;
-class QTextEdit;
-class QLineEdit;
-class QProcess;
+#include <functional>
 
 struct TerminalInfo {
-    QTextEdit* output_widget;
-    QLineEdit* input_widget;
-    QProcess* process;
+    void* output_handle = nullptr;  // HWND or custom control
+    void* input_handle = nullptr;
+    void* process_handle = nullptr; // HANDLE or process impl
 };
 
-class TerminalPool : public QWidget {
-    Q_OBJECT
+class TerminalPool
+{
 public:
-    explicit TerminalPool(uint32_t pool_size, QWidget* parent = nullptr);
+    using CommandExecutedFn = std::function<void(const std::string& command)>;
+
+    explicit TerminalPool(uint32_t pool_size);
+    void setOnCommandExecuted(CommandExecutedFn f) { m_onCommandExecuted = std::move(f); }
     void initialize();
-    
-public slots:
+
     void createNewTerminal();
     void executeCommand(int terminal_index);
     void readProcessOutput(int terminal_index);
     void readProcessError(int terminal_index);
     void closeTerminal(int tab_index);
-    
-signals:
-    void commandExecuted(const QString& command);
-    
+
+    void* getContainerHandle() const { return m_container; }  // For Win32: parent HWND
+
 private:
-    uint32_t pool_size_;
-    QTabWidget* tab_widget_;
+    uint32_t pool_size_ = 0;
+    void* m_container = nullptr;
     std::vector<TerminalInfo> terminals_;
+    CommandExecutedFn m_onCommandExecuted;
 };

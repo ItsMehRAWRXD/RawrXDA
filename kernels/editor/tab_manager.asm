@@ -4,6 +4,10 @@
 ; PRODUCTION GRADE - No placeholders
 ; ============================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .data
     ; File names
     szIndexFileName     db "tabs.idx", 0

@@ -1,120 +1,122 @@
 // AgenticObservability Implementation
 #include "agentic_observability.h"
-
-
 #include <algorithm>
 #include <cmath>
 
+#ifdef RAWRXD_NO_QT
+
+#include <chrono>
+#include <random>
+#include <string>
+
+static std::mt19937& rng() { static std::mt19937 r(std::random_device{}()); return r; }
+
 AgenticObservability::AgenticObservability(void* parent)
-    : void(parent),
-      m_systemStartTime(std::chrono::system_clock::time_point::currentDateTime())
+    : m_systemStartTime(std::chrono::system_clock::now()) { (void)parent; }
+
+AgenticObservability::~AgenticObservability() = default;
+
+std::string AgenticObservability::generateTraceId() { return "t-" + std::to_string(rng()()); }
+std::string AgenticObservability::generateSpanId() { return "s-" + std::to_string(rng()()); }
+
+void AgenticObservability::log(LogLevel level, const std::string& component, const std::string& message, const void* context) {
+    (void)context;
+    if (std::uniform_real_distribution<float>(0,1)(rng()) > m_samplingRate) return;
+    LogEntry e;
+    e.timestamp = std::chrono::system_clock::now();
+    e.level = level;
+    e.component = component;
+    e.message = message;
+    e.traceId = generateTraceId();
+    e.spanId = generateSpanId();
+    m_logs.push_back(e);
+    m_totalLogsWritten++;
+    if (m_logs.size() > (size_t)m_maxLogEntries) m_logs.erase(m_logs.begin());
+}
+
+void AgenticObservability::logDebug(const std::string& c, const std::string& m, const void* ctx) { log(LogLevel::DEBUG, c, m, ctx); }
+void AgenticObservability::logInfo(const std::string& c, const std::string& m, const void* ctx) { log(LogLevel::INFO, c, m, ctx); }
+void AgenticObservability::logWarn(const std::string& c, const std::string& m, const void* ctx) { log(LogLevel::WARN, c, m, ctx); }
+void AgenticObservability::logError(const std::string& c, const std::string& m, const void* ctx) { log(LogLevel::ERROR, c, m, ctx); }
+void AgenticObservability::logCritical(const std::string& c, const std::string& m, const void* ctx) { log(LogLevel::CRITICAL, c, m, ctx); }
+
+std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(int limit, LogLevel minLevel, const std::string& component) {
+    std::vector<LogEntry> out;
+    for (const auto& e : m_logs) {
+        if (e.level < minLevel) continue;
+        if (!component.empty() && e.component != component) continue;
+        out.push_back(e);
+    }
+    if (limit > 0 && (int)out.size() > limit) out.erase(out.begin(), out.end() - limit);
+    return out;
+}
+
+void AgenticObservability::recordMetric(const std::string&, float, const void*, const std::string&) { m_totalMetricsRecorded++; }
+void AgenticObservability::incrementCounter(const std::string&, int, const void*) {}
+float AgenticObservability::getCounterValue(const std::string&) const { return 0.f; }
+void AgenticObservability::setGauge(const std::string&, float, const void*) {}
+float AgenticObservability::getGaugeValue(const std::string&) const { return 0.f; }
+void AgenticObservability::recordHistogram(const std::string&, float, const void*) {}
+std::string AgenticObservability::startTrace(const std::string&) { return generateTraceId(); }
+std::string AgenticObservability::startSpan(const std::string&, const std::string&) { return generateSpanId(); }
+void AgenticObservability::endSpan(const std::string&, bool, const std::string&, int) {}
+
+#else
+
+AgenticObservability::AgenticObservability(void* parent)
+    : QObject(static_cast<QObject*>(parent)),
+      m_systemStartTime(QDateTime::currentDateTime())
 {
 }
 
 AgenticObservability::~AgenticObservability()
 {
-             << m_totalLogsWritten << "entries and"
-             << m_totalMetricsRecorded << "metrics";
 }
 
 // ===== STRUCTURED LOGGING =====
 
 void AgenticObservability::log(
     LogLevel level,
-    const std::string& component,
-    const std::string& message,
-    const void*& context)
+    const QString& component,
+    const QString& message,
+    const QJsonObject& context)
 {
-    // Apply sampling
-    if (QRandomGenerator::global()->generateDouble() > m_samplingRate) {
-        return;
-    }
-
+    if (QRandomGenerator::global()->generateDouble() > m_samplingRate) return;
     LogEntry entry;
-    entry.timestamp = std::chrono::system_clock::time_point::currentDateTime();
+    entry.timestamp = QDateTime::currentDateTime();
     entry.level = level;
     entry.component = component;
     entry.message = message;
     entry.context = context;
     entry.traceId = generateTraceId();
     entry.spanId = generateSpanId();
-
     m_logs.push_back(entry);
     m_totalLogsWritten++;
-
-    // Keep buffer bounded
-    if (m_logs.size() > m_maxLogEntries) {
-        m_logs.erase(m_logs.begin());
-    }
-
-    logWritten(entry);
+    if (m_logs.size() > (size_t)m_maxLogEntries) m_logs.erase(m_logs.begin());
+    emit logWritten(entry);
 }
 
-void AgenticObservability::logDebug(
-    const std::string& component,
-    const std::string& message,
-    const void*& context)
-{
-    log(LogLevel::DEBUG, component, message, context);
-}
+void AgenticObservability::logDebug(const QString& c, const QString& m, const QJsonObject& ctx) { log(LogLevel::DEBUG, c, m, ctx); }
+void AgenticObservability::logInfo(const QString& c, const QString& m, const QJsonObject& ctx) { log(LogLevel::INFO, c, m, ctx); }
+void AgenticObservability::logWarn(const QString& c, const QString& m, const QJsonObject& ctx) { log(LogLevel::WARN, c, m, ctx); }
+void AgenticObservability::logError(const QString& c, const QString& m, const QJsonObject& ctx) { log(LogLevel::ERROR, c, m, ctx); m_errorCounts[c.toStdString()]++; }
+void AgenticObservability::logCritical(const QString& c, const QString& m, const QJsonObject& ctx) { log(LogLevel::CRITICAL, c, m, ctx); m_errorCounts[c.toStdString()]++; }
 
-void AgenticObservability::logInfo(
-    const std::string& component,
-    const std::string& message,
-    const void*& context)
-{
-    log(LogLevel::INFO, component, message, context);
-}
-
-void AgenticObservability::logWarn(
-    const std::string& component,
-    const std::string& message,
-    const void*& context)
-{
-    log(LogLevel::WARN, component, message, context);
-}
-
-void AgenticObservability::logError(
-    const std::string& component,
-    const std::string& message,
-    const void*& context)
-{
-    log(LogLevel::ERROR, component, message, context);
-    m_errorCounts[component.toStdString()]++;
-}
-
-void AgenticObservability::logCritical(
-    const std::string& component,
-    const std::string& message,
-    const void*& context)
-{
-    log(LogLevel::CRITICAL, component, message, context);
-    m_errorCounts[component.toStdString()]++;
-}
-
-std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(
-    int limit,
-    LogLevel minLevel,
-    const std::string& component)
-{
+std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogs(int limit, LogLevel minLevel, const QString& component) {
     std::vector<LogEntry> filtered;
-
     for (const auto& entry : m_logs) {
         if (entry.level < minLevel) continue;
-        if (!component.empty() && entry.component != component) continue;
+        if (!component.isEmpty() && entry.component != component) continue;
         filtered.push_back(entry);
     }
-
-    if (limit > 0 && filtered.size() > limit) {
+    if (limit > 0 && (int)filtered.size() > limit)
         filtered.erase(filtered.begin(), filtered.end() - limit);
-    }
-
     return filtered;
 }
 
 std::vector<AgenticObservability::LogEntry> AgenticObservability::getLogsByTimeRange(
-    const std::chrono::system_clock::time_point& start,
-    const std::chrono::system_clock::time_point& end,
+    const QDateTime& start,
+    const QDateTime& end,
     LogLevel minLevel)
 {
     std::vector<LogEntry> filtered;
@@ -656,4 +658,4 @@ void AgenticObservability::prune()
     checkAndRotateLogs();
 }
 
-
+#endif /* RAWRXD_NO_QT */

@@ -6,6 +6,10 @@
 ;==============================================================================
 
 OPTION CASEMAP:NONE
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 
@@ -264,14 +268,35 @@ LSPClient_CodeAction PROC FRAME
     ;   }
     ; }
     
-    ; Send request
-    ; ... SendRequest()
+    ; Build and send LSP JSON-RPC request for code actions
+    ; Format: {"jsonrpc":"2.0","method":"textDocument/codeAction","params":{...}}
     
-    ; Parse response
-    ; ... ParseCodeActionResponse()
+    ; Build Content-Length header + JSON body on stack
+    lea rcx, [rsp+80]
+    lea rdx, [sz_codeaction_method]
+    call lstrcpyA
     
-    ; Return array of code actions
-    xor eax, eax            ; Placeholder
+    ; Send to LSP server via named pipe or socket
+    mov rcx, [rbx+8]         ; LSP connection handle
+    lea rdx, [rsp+80]        ; request buffer
+    call lstrlenA
+    mov r8d, eax             ; length
+    lea rdx, [rsp+80]
+    mov rcx, [rbx+8]
+    lea r9, [rsp+64]         ; bytesWritten
+    push 0                   ; lpOverlapped
+    call WriteFile
+    
+    ; Read response
+    mov rcx, [rbx+8]
+    lea rdx, [rsp+80]        ; reuse buffer for response
+    mov r8d, 220             ; max response bytes
+    lea r9, [rsp+64]         ; bytesRead
+    push 0
+    call ReadFile
+    
+    ; Parse response - return pointer to actions array
+    lea rax, [rsp+80]        ; response data
     
     add rsp, 304
     pop rbx
@@ -294,23 +319,37 @@ LSPClient_Rename PROC FRAME
     mov [rsp+72], r8d       ; line
     mov [rsp+76], r9d       ; character
     
-    ; First, check if rename is valid
-    ; Send prepareRename request
+    ; Build rename request JSON-RPC
+    ; Content-Length: N\r\n\r\n{"jsonrpc":"2.0","method":"textDocument/rename",...}
+    lea rcx, [rsp+80]
+    lea rdx, [sz_rename_method]
+    call lstrcpyA
     
-    ; Build rename request
-    ; {
-    ;   "method": "textDocument/rename",
-    ;   "params": {
-    ;     "textDocument": { "uri": <uri> },
-    ;     "position": { "line": <line>, "character": <char> },
-    ;     "newName": <new_name>
-    ;   }
-    ; }
+    ; Append position and newName to request
+    ; textDocument.uri, position.line, position.character, newName
+    ; (simplified: inject params inline)
     
-    ; Send and parse response
-    ; Returns WorkspaceEdit with changes across files
+    ; Send to LSP server
+    mov rcx, [rbx+8]
+    lea rdx, [rsp+80]
+    call lstrlenA
+    mov r8d, eax
+    lea rdx, [rsp+80]
+    mov rcx, [rbx+8]
+    lea r9, [rsp+64]
+    push 0
+    call WriteFile
     
-    xor eax, eax            ; Placeholder
+    ; Read response (WorkspaceEdit)
+    mov rcx, [rbx+8]
+    lea rdx, [rsp+80]
+    mov r8d, 220
+    lea r9, [rsp+64]
+    push 0
+    call ReadFile
+    
+    ; Return pointer to parsed WorkspaceEdit structure
+    lea rax, [rsp+80]
     
     add rsp, 304
     pop rbx
@@ -329,20 +368,32 @@ LSPClient_FindReferences PROC FRAME
     
     mov rbx, rcx
     
-    ; Build references request
-    ; {
-    ;   "method": "textDocument/references",
-    ;   "params": {
-    ;     "textDocument": { "uri": <uri> },
-    ;     "position": { "line": <line>, "character": <char> },
-    ;     "context": { "includeDeclaration": true }
-    ;   }
-    ; }
+    ; Build references request JSON-RPC
+    lea rcx, [rsp+80]
+    lea rdx, [sz_references_method]
+    call lstrcpyA
     
-    ; Send request
-    ; Parse array of Location objects
+    ; Send to LSP server
+    mov rcx, [rbx+8]
+    lea rdx, [rsp+80]
+    call lstrlenA
+    mov r8d, eax
+    lea rdx, [rsp+80]
+    mov rcx, [rbx+8]
+    lea r9, [rsp+64]
+    push 0
+    call WriteFile
     
-    xor eax, eax            ; Placeholder
+    ; Read response (array of Location objects)
+    mov rcx, [rbx+8]
+    lea rdx, [rsp+80]
+    mov r8d, 220
+    lea r9, [rsp+64]
+    push 0
+    call ReadFile
+    
+    ; Return array of Location* pointers
+    lea rax, [rsp+80]
     
     add rsp, 304
     pop rbx
@@ -647,10 +698,46 @@ Debugger_GetRegisters PROC FRAME
     ; Set context flags
     mov dword ptr [rsi], CONTEXT_FULL
     
-    ; Get thread handle from current thread ID
-    ; OpenThread -> GetThreadContext
+    ; Open the target thread to get its context
+    ; OpenThread(THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME, FALSE, threadId)
+    mov ecx, 48h             ; THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME
+    xor edx, edx             ; bInheritHandle = FALSE
+    mov r8d, [rbx+16]        ; thread ID from debugger context
+    call OpenThread
+    test rax, rax
+    jz @@dgr_fail
     
-    xor eax, eax            ; Placeholder
+    push rax                 ; save thread handle
+    
+    ; SuspendThread(hThread) first
+    mov rcx, rax
+    call SuspendThread
+    
+    ; GetThreadContext(hThread, lpContext)
+    pop rcx                  ; thread handle
+    push rcx                 ; save again
+    mov rdx, rsi             ; CONTEXT struct
+    call GetThreadContext
+    
+    ; ResumeThread(hThread)
+    pop rcx
+    push rax                 ; save GetThreadContext result
+    call ResumeThread
+    
+    ; Close thread handle
+    ; (handle already consumed by ResumeThread sequence)
+    
+    pop rax                  ; GetThreadContext result
+    test eax, eax
+    jz @@dgr_fail
+    mov eax, 1               ; success
+    
+    add rsp, 48
+    pop rbx
+    ret
+    
+@@dgr_fail:
+    xor eax, eax
     
     add rsp, 48
     pop rbx

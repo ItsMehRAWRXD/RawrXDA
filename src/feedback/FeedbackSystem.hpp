@@ -13,18 +13,16 @@
 #include <memory>
 #include <vector>
 #include <functional>
-#include <string>
 #include <optional>
-#include <unordered_map>
-#include <any>
+
+// Forward declarations
+
 
 namespace rawrxd::feedback {
 
-// Type aliases for replaced Qt types
-using anyMap = std::unordered_map<std::string, std::string>; // Simplified for now
-using stringList = std::vector<std::string>;
-
-// ...existing code...
+// ═══════════════════════════════════════════════════════════════════════════════
+// Data Structures
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * @brief Feedback category enumeration
@@ -94,9 +92,9 @@ struct FeedbackEntry {
     std::anyMap thermalSnapshot;
     
     // Timestamps
-    int64_t created = 0;
-    int64_t modified = 0;
-    int64_t submitted = 0;
+    // DateTime created;
+    // DateTime modified;
+    // DateTime submitted;
     
     // Response
     std::string responseText;
@@ -178,10 +176,36 @@ struct TelemetryConsent {
     // DateTime consentDate;
     std::string consentVersion;
     
-    int64_t getConsentDate() const { return 0; }
+    bool hasAnyConsent() const {
+        return basicTelemetry || performanceTelemetry || thermalTelemetry ||
+               crashReporting || featureUsage || hardwareInfo;
+    }
     
-    // Serialization removed for now or should use json
-    // ...
+    void* toJson() const {
+        void* obj;
+        obj["basicTelemetry"] = basicTelemetry;
+        obj["performanceTelemetry"] = performanceTelemetry;
+        obj["thermalTelemetry"] = thermalTelemetry;
+        obj["crashReporting"] = crashReporting;
+        obj["featureUsage"] = featureUsage;
+        obj["hardwareInfo"] = hardwareInfo;
+        obj["consentDate"] = consentDate.toString(ISODate);
+        obj["consentVersion"] = consentVersion;
+        return obj;
+    }
+    
+    static TelemetryConsent fromJson(const void*& obj) {
+        TelemetryConsent consent;
+        consent.basicTelemetry = obj["basicTelemetry"].toBool();
+        consent.performanceTelemetry = obj["performanceTelemetry"].toBool();
+        consent.thermalTelemetry = obj["thermalTelemetry"].toBool();
+        consent.crashReporting = obj["crashReporting"].toBool();
+        consent.featureUsage = obj["featureUsage"].toBool();
+        consent.hardwareInfo = obj["hardwareInfo"].toBool();
+        consent.consentDate = // DateTime::fromString(obj["consentDate"].toString(), ISODate);
+        consent.consentVersion = obj["consentVersion"].toString();
+        return consent;
+    }
 };
 
 /**
@@ -223,116 +247,260 @@ using TelemetryConsentCallback = std::function<void(const TelemetryConsent& cons
 using ContributionCallback = std::function<void(const ContributionEntry& entry, bool success)>;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Feedback Dialog (Abstract/Headless Representation)
+// Feedback Dialog
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class FeedbackDialog {
-public:
+/**
+ * @class FeedbackDialog
+ * @brief Main feedback collection dialog
+ */
+class FeedbackDialog
+{public:
     explicit FeedbackDialog(void* parent = nullptr);
-    virtual ~FeedbackDialog();
+    ~FeedbackDialog() override;
 
+    // Pre-fill data
     void setThermalData(double currentTemp, double avgTemp, int throttleCount);
-    void setThermalSnapshot(const anyMap& snapshot);
-    void setSystemInfo(const anyMap& sysInfo);
+    void setThermalSnapshot(const std::anyMap& snapshot);
+    void setSystemInfo(const std::anyMap& sysInfo);
     
+    // Get result
     FeedbackEntry getFeedback() const;
+    
+    // Callbacks
     void setSubmitCallback(FeedbackSubmittedCallback callback);
 
-    void show(); // Logic to show native dialog or log
+\npublic:\n    void onCategoryChanged(int index);
+    void onPriorityChanged(int index);
+    void onAttachFile();
+    void onAttachScreenshot();
+    void onPreviewSubmission();
+    void onSubmit();
+    void onSaveDraft();
+
+\npublic:\n    void feedbackSubmitted(const FeedbackEntry& entry);
+    void draftSaved(const FeedbackEntry& entry);
 
 private:
+    void setupUI();
+    void setupValidation();
+    void collectSystemInfo();
+    void updatePreview();
+    bool validateInput();
+    
+    // UI Elements
+    void* m_tabWidget;
+    
+    // Feedback tab
+    voidEdit* m_titleEdit;
+    void* m_descriptionEdit;
+    void* m_categoryCombo;
+    void* m_priorityCombo;
+    
+    // Contact tab
+    voidEdit* m_emailEdit;
+    voidEdit* m_nameEdit;
+    void* m_consentContact;
+    
+    // System info tab
+    void* m_includeSystemInfo;
+    void* m_includeThermalData;
+    void* m_systemInfoPreview;
+    
+    // Attachments tab
+    void* m_attachmentsList;  // HWND list control (was QListWidget*)
+    void* m_attachFileBtn;
+    void* m_attachScreenshotBtn;
+    void* m_removeAttachmentBtn;
+    
+    // Preview tab
+    void* m_previewText;
+    
+    // Buttons
+    voidButtonBox* m_buttonBox;
+    void* m_submitBtn;
+    void* m_saveDraftBtn;
+    
+    // Progress
+    void* m_progressBar;
+    void* m_statusLabel;
+    
+    // Data
     FeedbackEntry m_entry;
-    anyMap m_systemInfo;
-    anyMap m_thermalSnapshot;
+    std::anyMap m_systemInfo;
+    std::anyMap m_thermalSnapshot;
     FeedbackSubmittedCallback m_submitCallback;
-    void* m_nativeHandle = nullptr;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Telemetry Consent Dialog
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class TelemetryConsentDialog {
-public:
+/**
+ * @class TelemetryConsentDialog
+ * @brief GDPR-compliant telemetry consent dialog
+ */
+class TelemetryConsentDialog
+{public:
     explicit TelemetryConsentDialog(void* parent = nullptr);
-    virtual ~TelemetryConsentDialog();
+    ~TelemetryConsentDialog() override;
 
     void setCurrentConsent(const TelemetryConsent& consent);
     TelemetryConsent getConsent() const;
+    
     void setConsentCallback(TelemetryConsentCallback callback);
-    void show(); 
+
+\npublic:\n    void onSelectAll();
+    void onSelectNone();
+    void onShowDetails(const std::string& category);
+    void onSaveConsent();
+
+\npublic:\n    void consentUpdated(const TelemetryConsent& consent);
 
 private:
+    void setupUI();
+    void updateSummary();
+    
+    // Checkboxes
+    void* m_basicCheck;
+    void* m_performanceCheck;
+    void* m_thermalCheck;
+    void* m_crashCheck;
+    void* m_featureCheck;
+    void* m_hardwareCheck;
+    
+    // Info
+    void* m_summaryLabel;
+    void* m_detailsText;
+    void* m_selectAllBtn;
+    void* m_selectNoneBtn;
+    
+    // Legal
+    void* m_agreedToPrivacy;
+    void* m_privacyLink;
+    
+    // Data
     TelemetryConsent m_consent;
     TelemetryConsentCallback m_consentCallback;
-    void* m_nativeHandle = nullptr;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Contribution Dialog
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class ContributionDialog {
-public:
+/**
+ * @class ContributionDialog
+ * @brief Community contribution submission dialog
+ */
+class ContributionDialog
+{public:
     explicit ContributionDialog(void* parent = nullptr);
-    virtual ~ContributionDialog();
+    ~ContributionDialog() override;
 
     void setContributionCallback(ContributionCallback callback);
     ContributionEntry getContribution() const;
-    void show();
+
+\npublic:\n    void onTypeChanged(int index);
+    void onSelectFile();
+    void onPreview();
+    void onSubmit();
+
+\npublic:\n    void contributionSubmitted(const ContributionEntry& entry);
 
 private:
+    void setupUI();
+    bool validateInput();
+    std::string calculateChecksum(const std::vector<uint8_t>& data);
+    
+    // Form
+    voidEdit* m_titleEdit;
+    void* m_descriptionEdit;
+    void* m_typeCombo;
+    
+    // Contributor
+    voidEdit* m_nameEdit;
+    voidEdit* m_emailEdit;
+    
+    // File
+    voidEdit* m_filePathEdit;
+    void* m_selectFileBtn;
+    void* m_fileSizeLabel;
+    void* m_checksumLabel;
+    
+    // License
+    void* m_licenseCombo;
+    void* m_agreedToTerms;
+    void* m_licensePreview;
+    
+    // Preview
+    void* m_previewText;
+    
+    // Data
     ContributionEntry m_entry;
     ContributionCallback m_contributionCallback;
-    void* m_nativeHandle = nullptr;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Feedback Manager
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class FeedbackManager {
-public:
+/**
+ * @class FeedbackManager
+ * @brief Central manager for feedback, telemetry, and contributions
+ */
+class FeedbackManager 
+{public:
     static FeedbackManager& instance();
     
+    // Dialogs
     void showFeedbackDialog(void* parent = nullptr);
     void showTelemetryConsentDialog(void* parent = nullptr);
     void showContributionDialog(void* parent = nullptr);
     
+    // Quick feedback
     void submitQuickFeedback(const std::string& message, FeedbackCategory category);
     void reportBug(const std::string& title, const std::string& description);
     void requestFeature(const std::string& title, const std::string& description);
-    void reportThermalIssue(const std::string& description, const anyMap& thermalData);
+    void reportThermalIssue(const std::string& description, const std::anyMap& thermalData);
     
+    // Telemetry
     void setTelemetryConsent(const TelemetryConsent& consent);
     TelemetryConsent getTelemetryConsent() const;
     bool hasTelemetryConsent() const;
     
-    void sendTelemetry(const std::string& eventName, const anyMap& data);
-    void sendPerformanceMetrics(const anyMap& metrics);
-    void sendThermalData(const anyMap& thermalData);
-    void sendCrashReport(const std::string& crashDump, const anyMap& context);
+    void sendTelemetry(const std::string& eventName, const std::anyMap& data);
+    void sendPerformanceMetrics(const std::anyMap& metrics);
+    void sendThermalData(const std::anyMap& thermalData);
+    void sendCrashReport(const std::string& crashDump, const std::anyMap& context);
     
+    // Draft management
     void saveDraft(const FeedbackEntry& entry);
     std::vector<FeedbackEntry> loadDrafts();
     void deleteDraft(const std::string& id);
     
+    // History
     std::vector<FeedbackEntry> getSubmissionHistory();
     FeedbackEntry getSubmission(const std::string& id);
     
+    // Configuration
     void setApiEndpoint(const std::string& endpoint);
     void setApiKey(const std::string& key);
+    
+\npublic:\n    void feedbackSubmitted(const std::string& id, bool success);
+    void telemetryConsentChanged(const TelemetryConsent& consent);
+    void contributionSubmitted(const std::string& id, bool success);
+
+\nprivate:\n    void onNetworkReply(void** reply);
 
 private:
     FeedbackManager();
-    ~FeedbackManager();
-    FeedbackManager(const FeedbackManager&) = delete;
-    FeedbackManager& operator=(const FeedbackManager&) = delete;
+    ~FeedbackManager() override;
     
     void loadSettings();
     void saveSettings();
-    anyMap collectSystemInfo();
+    std::anyMap collectSystemInfo();
     
+    std::unique_ptr<void*> m_networkManager;
     TelemetryConsent m_consent;
     std::string m_apiEndpoint;
     std::string m_apiKey;

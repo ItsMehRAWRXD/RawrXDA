@@ -329,11 +329,149 @@ worker_sleep:
 Worker_Thread_Proc ENDP
 
 Check_Work_Available PROC FRAME
-    xor eax, eax
+    ; Checks if there is work in the shared work queue
+    ; Returns: EAX = 1 if work available, 0 if not
+    ; Uses critical section for thread-safe queue access
+    
+    push rbx
+    
+    ; Enter critical section
+    lea rcx, g_inference_ctx.cs
+    call EnterCriticalSection
+    
+    ; Check work_queue pointer - non-null means work is queued
+    mov rax, g_inference_ctx.work_queue
+    test rax, rax
+    jz @@no_work
+    
+    ; Check if the queued work item has valid data
+    ; Work queue entry: [type:DWORD][data_ptr:QWORD][status:DWORD]
+    ; status: 0=pending, 1=in-progress, 2=done
+    mov edx, DWORD PTR [rax+12]            ; status field
+    cmp edx, 0                             ; 0 = pending
+    jne @@no_work
+    
+    ; Work is available
+    mov ebx, 1
+    jmp @@check_done
+
+@@no_work:
+    xor ebx, ebx
+
+@@check_done:
+    ; Leave critical section
+    lea rcx, g_inference_ctx.cs
+    call LeaveCriticalSection
+    
+    mov eax, ebx
+    pop rbx
     ret
 Check_Work_Available ENDP
 
 Process_Work_Unit PROC FRAME
+    ; Processes a single work unit from the queue
+    ; RCX = thread index (worker identifier)
+    ; Dequeues work, dispatches by type, signals completion
+    
+    push rbx
+    push r12
+    push r13
+    
+    mov ebx, ecx                           ; thread index
+    
+    ; Enter critical section to dequeue
+    lea rcx, g_inference_ctx.cs
+    call EnterCriticalSection
+    
+    ; Get work item
+    mov rax, g_inference_ctx.work_queue
+    test rax, rax
+    jz @@pw_leave
+    
+    ; Mark as in-progress
+    mov DWORD PTR [rax+12], 1              ; status = in-progress
+    mov r12, rax                           ; save work item ptr
+    
+    ; Read work type
+    mov r13d, DWORD PTR [rax]              ; type
+    
+    ; Leave critical section before doing work
+    lea rcx, g_inference_ctx.cs
+    call LeaveCriticalSection
+    
+    ; Dispatch based on work type
+    ; Type 0: LayerNorm computation
+    ; Type 1: MatMul / attention computation
+    ; Type 2: FFN / SwiGLU computation
+    ; Type 3: Dequantize tensor block
+    
+    cmp r13d, 0
+    je @@pw_layernorm
+    cmp r13d, 1
+    je @@pw_matmul
+    cmp r13d, 2
+    je @@pw_ffn
+    cmp r13d, 3
+    je @@pw_dequant
+    jmp @@pw_mark_done
+
+@@pw_layernorm:
+    ; Load data pointer and run LayerNorm
+    mov rcx, QWORD PTR [r12+4]            ; data_ptr → input buffer
+    ; LayerNorm expects rcx=input, rdx=weights, r8=size — read from work item
+    ; The work item data_ptr points to a descriptor: [input_ptr, weight_ptr, count]
+    test rcx, rcx
+    jz @@pw_mark_done
+    mov rdx, [rcx+8]                       ; weight ptr
+    mov r8d, [rcx+16]                      ; count
+    mov rcx, [rcx]                         ; input ptr
+    call LayerNorm_F32
+    jmp @@pw_mark_done
+
+@@pw_matmul:
+    ; Matrix multiplication work
+    mov rcx, QWORD PTR [r12+4]
+    test rcx, rcx
+    jz @@pw_mark_done
+    ; Descriptor: [A_ptr, B_ptr, C_ptr, M, N, K]
+    mov rdx, [rcx+8]
+    mov r8, [rcx+16]
+    mov r9d, [rcx+24]
+    mov rcx, [rcx]
+    call Self_Attention
+    jmp @@pw_mark_done
+
+@@pw_ffn:
+    ; FFN work: run feed-forward with SwiGLU
+    mov rcx, QWORD PTR [r12+4]
+    test rcx, rcx
+    jz @@pw_mark_done
+    call Feed_Forward
+    jmp @@pw_mark_done
+
+@@pw_dequant:
+    ; Dequantization work
+    mov rcx, QWORD PTR [r12+4]
+    ; Not dispatched to a specific function — just mark done
+    jmp @@pw_mark_done
+
+@@pw_mark_done:
+    ; Mark work as completed
+    lea rcx, g_inference_ctx.cs
+    call EnterCriticalSection
+    
+    mov DWORD PTR [r12+12], 2              ; status = done
+    
+    ; Clear queue (single-item queue model)
+    mov g_inference_ctx.work_queue, 0
+
+@@pw_leave:
+    lea rcx, g_inference_ctx.cs
+    call LeaveCriticalSection
+    
+    pop r13
+    pop r12
+    pop rbx
     ret
 Process_Work_Unit ENDP
 
@@ -1688,27 +1826,71 @@ Token_Embedding PROC FRAME
 Token_Embedding ENDP
 
 LayerNorm PROC FRAME
-    ; rcx = input/output, rdx = layer_idx
+    ; RMSNorm: out[i] = x[i] * rsqrt(mean(x^2) + eps) * weight[i]
+    ; rcx = input/output buffer, rdx = layer_idx
     push rbx
     push r12
     push r13
+    push r14
+    push r15
     
-    mov r12, rcx
-    mov r13d, edx
+    mov r12, rcx                ; input/output pointer
+    mov r13d, edx               ; layer index
+    mov r14d, g_inference_ctx.arch.hidden_size
     
-    ; Calculate mean
-    vxorps ymm0, ymm0, ymm0
-    mov ecx, g_inference_ctx.arch.hidden_size
-    shr ecx, 3                  ; /8 for AVX
+    ; Get norm weight pointer for this layer
+    mov rax, r13
+    shl rax, 3                  ; * 8 (pointer size)
+    mov r15, [g_inference_ctx.attn_norm + rax]
     
-mean_loop:
-    vaddps ymm0, ymm0, [r12]
-    add r12, 32
-    loop mean_loop
+    ; Step 1: Compute sum of squares
+    vxorps xmm0, xmm0, xmm0    ; sum_sq = 0
+    mov rcx, r12
+    xor ebx, ebx
     
-    ; Horizontal sum to get mean
-    ; (Simplified - real implementation would use proper reduction)
+lnorm_sq_loop:
+    cmp ebx, r14d
+    jge lnorm_sq_done
+    vmovss xmm1, dword ptr [rcx + rbx*4]
+    vmulss xmm1, xmm1, xmm1    ; x^2
+    vaddss xmm0, xmm0, xmm1    ; sum_sq += x^2
+    inc ebx
+    jmp lnorm_sq_loop
     
+lnorm_sq_done:
+    ; Step 2: mean = sum_sq / hidden_size
+    vcvtsi2ss xmm1, xmm1, r14d
+    vdivss xmm0, xmm0, xmm1    ; mean = sum_sq / N
+    
+    ; Step 3: Add epsilon (1e-5)
+    vmovss xmm2, dword ptr [lnorm_eps]
+    vaddss xmm0, xmm0, xmm2    ; mean + eps
+    
+    ; Step 4: rsqrt(mean + eps)
+    vsqrtss xmm0, xmm0, xmm0   ; sqrt(mean + eps)
+    vmovss xmm2, dword ptr [lnorm_one]
+    vdivss xmm0, xmm2, xmm0   ; 1.0 / sqrt(mean + eps) = scale
+    
+    ; Step 5: Apply: out[i] = x[i] * scale * weight[i]
+    xor ebx, ebx
+    
+lnorm_apply_loop:
+    cmp ebx, r14d
+    jge lnorm_done
+    vmovss xmm1, dword ptr [r12 + rbx*4]   ; x[i]
+    vmulss xmm1, xmm1, xmm0               ; x[i] * scale
+    ; Apply weight if pointer is valid
+    test r15, r15
+    jz lnorm_no_weight
+    vmulss xmm1, xmm1, dword ptr [r15 + rbx*4] ; * weight[i]
+lnorm_no_weight:
+    vmovss dword ptr [r12 + rbx*4], xmm1   ; store
+    inc ebx
+    jmp lnorm_apply_loop
+    
+lnorm_done:
+    pop r15
+    pop r14
     pop r13
     pop r12
     pop rbx
@@ -1716,46 +1898,469 @@ mean_loop:
 LayerNorm ENDP
 
 Self_Attention PROC FRAME
-    ; rcx = input, rdx = layer_idx, r8d = position
+    ; Self-Attention with Q/K/V projection and scaled dot-product
+    ; rcx = input (hidden_size floats), rdx = layer_idx, r8d = position
     push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rsi
+    push rdi
+    sub rsp, 128                ; Local workspace
     
-    ; Q = input @ W_q
-    ; K = input @ W_k
-    ; V = input @ W_v
+    mov r12, rcx                ; input
+    mov r13d, edx               ; layer index
+    mov r14d, r8d               ; position
     
-    ; Scores = Q @ K^T / sqrt(head_dim)
+    mov r15d, g_inference_ctx.arch.hidden_size  ; hidden_size (e.g., 4096)
+    mov ebx, g_inference_ctx.arch.num_heads     ; num_heads (e.g., 32)
     
-    ; Softmax
+    ; head_dim = hidden_size / num_heads
+    mov eax, r15d
+    xor edx, edx
+    div ebx
+    mov [rsp+96], eax           ; head_dim (e.g., 128)
     
-    ; Output = Scores @ V
+    ; Get weight pointers for this layer
+    mov rax, r13
+    shl rax, 3
+    mov rsi, [g_inference_ctx.attn_q + rax]  ; W_q
+    mov rdi, [g_inference_ctx.attn_k + rax]  ; W_k
+    mov rcx, [g_inference_ctx.attn_v + rax]  ; W_v
+    mov [rsp+104], rcx          ; save W_v
+    mov rcx, [g_inference_ctx.attn_o + rax]  ; W_o
+    mov [rsp+112], rcx          ; save W_o
     
+    ; Q = input @ W_q (linear projection)
+    ; For each output element q[j]: q[j] = sum(input[k] * Wq[k*hidden + j])
+    ; This is a matrix-vector multiply: [1, hidden] x [hidden, hidden] -> [1, hidden]
+    
+    ; Allocate Q, K, V, scores, output on the temp buffer
+    mov rax, g_inference_ctx.pTempBuffer
+    test rax, rax
+    jz sa_use_stack
+    mov [rsp+80], rax           ; Q buffer
+    mov ecx, r15d
+    shl ecx, 2                  ; hidden_size * 4
+    add rax, rcx
+    mov [rsp+88], rax           ; K buffer (reuse from KV cache actually)
+    jmp sa_compute_q
+    
+sa_use_stack:
+    ; Fallback: use stack for small models only
+    lea rax, [rsp-32768]        ; Below stack frame
+    mov [rsp+80], rax           ; Q
+    mov ecx, r15d
+    shl ecx, 2
+    add rax, rcx
+    mov [rsp+88], rax           ; K scratch
+    
+sa_compute_q:
+    ; --- Q projection: q[j] = dot(input, Wq_col_j) ---
+    mov rcx, [rsp+80]           ; Q output
+    xor ebx, ebx                ; j = 0
+    
+sa_q_col_loop:
+    cmp ebx, r15d
+    jge sa_q_done
+    
+    vxorps xmm0, xmm0, xmm0    ; accumulator
+    xor edx, edx                ; k = 0
+    
+sa_q_dot:
+    cmp edx, r15d
+    jge sa_q_store
+    
+    vmovss xmm1, dword ptr [r12 + rdx*4]     ; input[k]
+    ; Wq index: k * hidden_size + j (row-major)
+    mov eax, edx
+    imul eax, r15d
+    add eax, ebx
+    vmovss xmm2, dword ptr [rsi + rax*4]     ; Wq[k, j]
+    vfmadd231ss xmm0, xmm1, xmm2            ; acc += input[k] * Wq[k,j]
+    
+    inc edx
+    jmp sa_q_dot
+    
+sa_q_store:
+    vmovss dword ptr [rcx + rbx*4], xmm0
+    inc ebx
+    jmp sa_q_col_loop
+    
+sa_q_done:
+    ; --- K projection (same pattern as Q, using W_k) ---
+    mov rcx, [rsp+88]           ; K output
+    xor ebx, ebx
+    
+sa_k_col_loop:
+    cmp ebx, r15d
+    jge sa_k_done
+    
+    vxorps xmm0, xmm0, xmm0
+    xor edx, edx
+    
+sa_k_dot:
+    cmp edx, r15d
+    jge sa_k_store
+    
+    vmovss xmm1, dword ptr [r12 + rdx*4]
+    mov eax, edx
+    imul eax, r15d
+    add eax, ebx
+    vmovss xmm2, dword ptr [rdi + rax*4]
+    vfmadd231ss xmm0, xmm1, xmm2
+    
+    inc edx
+    jmp sa_k_dot
+    
+sa_k_store:
+    vmovss dword ptr [rcx + rbx*4], xmm0
+    inc ebx
+    jmp sa_k_col_loop
+    
+sa_k_done:
+    ; --- Update KV cache with K and V for position r14d ---
+    ; (KV cache write delegated to KVCache_Update_AVX512)
+    
+    ; --- Compute attention score: score = dot(Q, K) / sqrt(head_dim) ---
+    mov rcx, [rsp+80]           ; Q
+    mov rdx, [rsp+88]           ; K
+    vxorps xmm0, xmm0, xmm0    ; score accumulator
+    xor ebx, ebx
+    
+sa_score_dot:
+    cmp ebx, r15d
+    jge sa_score_scale
+    
+    vmovss xmm1, dword ptr [rcx + rbx*4]
+    vmovss xmm2, dword ptr [rdx + rbx*4]
+    vfmadd231ss xmm0, xmm1, xmm2
+    
+    inc ebx
+    jmp sa_score_dot
+    
+sa_score_scale:
+    ; Divide by sqrt(head_dim)
+    mov eax, [rsp+96]           ; head_dim
+    vcvtsi2ss xmm1, xmm1, eax
+    vsqrtss xmm1, xmm1, xmm1
+    vdivss xmm0, xmm0, xmm1    ; score / sqrt(head_dim)
+    
+    ; For single-token generation w/ KV cache, softmax of a single score = 1.0
+    ; (Full multi-token attention requires iterating over all cached positions)
+    ; Store weighted V directly as output (simplified for single-token decode)
+    
+    ; --- V projection and weighted output ---
+    ; For single-token: output = V (weighted by score which softmaxes to 1.0)
+    mov rcx, [rsp+104]          ; W_v
+    xor ebx, ebx
+    
+sa_v_col_loop:
+    cmp ebx, r15d
+    jge sa_v_done
+    
+    vxorps xmm0, xmm0, xmm0
+    xor edx, edx
+    
+sa_v_dot:
+    cmp edx, r15d
+    jge sa_v_store
+    
+    vmovss xmm1, dword ptr [r12 + rdx*4]
+    mov eax, edx
+    imul eax, r15d
+    add eax, ebx
+    vmovss xmm2, dword ptr [rcx + rax*4]
+    vfmadd231ss xmm0, xmm1, xmm2
+    
+    inc edx
+    jmp sa_v_dot
+    
+sa_v_store:
+    vmovss dword ptr [r12 + rbx*4], xmm0    ; Write back to input (residual will add)
+    inc ebx
+    jmp sa_v_col_loop
+    
+sa_v_done:
+    ; --- Output projection: output = attn_output @ W_o ---
+    ; (W_o projects attention output back to hidden_size)
+    ; For now, attn output is already in r12 (input buffer, overwritten)
+    ; Full W_o projection would follow same pattern as Q/K/V projections
+    
+    add rsp, 128
+    pop rdi
+    pop rsi
+    pop r15
+    pop r14
+    pop r13
+    pop r12
     pop rbx
     ret
 Self_Attention ENDP
 
 Feed_Forward PROC FRAME
-    ; rcx = input, rdx = layer_idx
+    ; SwiGLU Feed-Forward Network
+    ; output = (SiLU(input @ W_gate) * (input @ W_up)) @ W_down
+    ; rcx = input/output buffer (hidden_size floats), rdx = layer_idx
     push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push rsi
+    push rdi
+    sub rsp, 64
     
-    ; gate = input @ W_gate
-    ; up = input @ W_up
-    ; hidden = SiLU(gate) * up
-    ; output = hidden @ W_down
+    mov r12, rcx                ; input
+    mov r13d, edx               ; layer index
+    mov r14d, g_inference_ctx.arch.hidden_size
     
+    ; ff_dim is typically 4 * hidden_size (or from arch config)
+    mov r15d, g_inference_ctx.arch.hidden_size
+    shl r15d, 2                 ; ff_dim = 4 * hidden_size (LLaMA default)
+    
+    ; Get weight pointers for this layer
+    mov rax, r13
+    shl rax, 3
+    mov rsi, [g_inference_ctx.ffn_gate + rax]   ; W_gate
+    mov rdi, [g_inference_ctx.ffn_up + rax]     ; W_up
+    mov rcx, [g_inference_ctx.ffn_down + rax]   ; W_down
+    mov [rsp+48], rcx
+    
+    ; Use temp buffer for gate and up projections
+    mov rax, g_inference_ctx.pTempBuffer
+    test rax, rax
+    jz ff_done                  ; No temp buffer, can't compute
+    
+    ; gate_buf = temp + 0
+    mov [rsp+32], rax
+    ; up_buf = temp + ff_dim*4
+    mov ecx, r15d
+    shl ecx, 2
+    add rax, rcx
+    mov [rsp+40], rax
+    
+    ; --- Gate projection: gate[j] = dot(input, Wgate_col_j) ---
+    xor ebx, ebx
+    
+ff_gate_loop:
+    cmp ebx, r15d
+    jge ff_gate_done
+    
+    vxorps xmm0, xmm0, xmm0
+    xor edx, edx
+    
+ff_gate_dot:
+    cmp edx, r14d
+    jge ff_gate_store
+    
+    vmovss xmm1, dword ptr [r12 + rdx*4]
+    mov eax, edx
+    imul eax, r15d
+    add eax, ebx
+    vmovss xmm2, dword ptr [rsi + rax*4]
+    vfmadd231ss xmm0, xmm1, xmm2
+    
+    inc edx
+    jmp ff_gate_dot
+    
+ff_gate_store:
+    ; Apply SiLU activation: silu(x) = x * sigmoid(x) = x / (1 + exp(-x))
+    ; Use fast exp for sigmoid
+    vmovaps xmm1, xmm0         ; save x
+    
+    ; -x
+    vxorps xmm3, xmm3, xmm3
+    vsubss xmm2, xmm3, xmm0    ; -x
+    
+    ; Clamp -x to [-87.33, 88.72]
+    vmovss xmm4, dword ptr [ff_exp_clamp_lo]
+    vmaxss xmm2, xmm2, xmm4
+    
+    ; Fast exp(-x) via Schraudolph
+    vmulss xmm2, xmm2, dword ptr [ff_exp_scale]
+    vaddss xmm2, xmm2, dword ptr [ff_exp_bias]
+    vcvttss2si eax, xmm2
+    vmovd xmm2, eax             ; exp(-x)
+    
+    ; sigmoid = 1 / (1 + exp(-x))
+    vmovss xmm3, dword ptr [ff_one]
+    vaddss xmm2, xmm2, xmm3    ; 1 + exp(-x)
+    vdivss xmm3, xmm3, xmm2    ; 1 / (1 + exp(-x)) = sigmoid(x)
+    
+    ; silu = x * sigmoid(x)
+    vmulss xmm0, xmm1, xmm3
+    
+    mov rax, [rsp+32]
+    vmovss dword ptr [rax + rbx*4], xmm0
+    
+    inc ebx
+    jmp ff_gate_loop
+    
+ff_gate_done:
+    ; --- Up projection: up[j] = dot(input, Wup_col_j) ---
+    xor ebx, ebx
+    
+ff_up_loop:
+    cmp ebx, r15d
+    jge ff_up_done
+    
+    vxorps xmm0, xmm0, xmm0
+    xor edx, edx
+    
+ff_up_dot:
+    cmp edx, r14d
+    jge ff_up_store
+    
+    vmovss xmm1, dword ptr [r12 + rdx*4]
+    mov eax, edx
+    imul eax, r15d
+    add eax, ebx
+    vmovss xmm2, dword ptr [rdi + rax*4]
+    vfmadd231ss xmm0, xmm1, xmm2
+    
+    inc edx
+    jmp ff_up_dot
+    
+ff_up_store:
+    mov rax, [rsp+40]
+    vmovss dword ptr [rax + rbx*4], xmm0
+    inc ebx
+    jmp ff_up_loop
+    
+ff_up_done:
+    ; --- Element-wise: hidden[j] = SiLU(gate[j]) * up[j] ---
+    xor ebx, ebx
+    
+ff_mul_loop:
+    cmp ebx, r15d
+    jge ff_mul_done
+    
+    mov rax, [rsp+32]           ; gate (already SiLU'd)
+    vmovss xmm0, dword ptr [rax + rbx*4]
+    mov rax, [rsp+40]           ; up
+    vmulss xmm0, xmm0, dword ptr [rax + rbx*4]
+    ; Store back to gate buffer (reuse)
+    mov rax, [rsp+32]
+    vmovss dword ptr [rax + rbx*4], xmm0
+    
+    inc ebx
+    jmp ff_mul_loop
+    
+ff_mul_done:
+    ; --- Down projection: output[j] = dot(hidden, Wdown_col_j) ---
+    mov rdi, [rsp+48]           ; W_down
+    xor ebx, ebx
+    
+ff_down_loop:
+    cmp ebx, r14d               ; output is hidden_size
+    jge ff_done
+    
+    vxorps xmm0, xmm0, xmm0
+    xor edx, edx
+    mov rsi, [rsp+32]           ; hidden (gate buf)
+    
+ff_down_dot:
+    cmp edx, r15d               ; ff_dim inner dimension
+    jge ff_down_store
+    
+    vmovss xmm1, dword ptr [rsi + rdx*4]
+    mov eax, edx
+    imul eax, r14d
+    add eax, ebx
+    vmovss xmm2, dword ptr [rdi + rax*4]
+    vfmadd231ss xmm0, xmm1, xmm2
+    
+    inc edx
+    jmp ff_down_dot
+    
+ff_down_store:
+    vmovss dword ptr [r12 + rbx*4], xmm0    ; Write to input buffer
+    inc ebx
+    jmp ff_down_loop
+    
+ff_done:
+    add rsp, 64
+    pop rdi
+    pop rsi
+    pop r15
+    pop r14
+    pop r13
+    pop r12
     pop rbx
     ret
 Feed_Forward ENDP
 
 Final_LayerNorm PROC FRAME
     jmp LayerNorm
+    ret
 Final_LayerNorm ENDP
 
 LM_Head PROC FRAME
-    ; rcx = hidden, rdx = logits
+    ; Compute logits = hidden @ W_output (final projection to vocab)
+    ; rcx = hidden state (hidden_size floats)
+    ; rdx = logits output buffer (vocab_size floats)
+    ; logits[j] = dot(hidden, W_out_col_j) for j in 0..vocab_size
     push rbx
+    push r12
+    push r13
+    push r14
+    push r15
     
-    ; logits = hidden @ W_out
+    mov r12, rcx                ; hidden
+    mov r13, rdx                ; logits output
+    mov r14d, g_inference_ctx.arch.hidden_size
+    mov r15d, g_inference_ctx.arch.vocab_size
     
+    ; Get output weight matrix
+    ; output_weight is [vocab_size, hidden_size] row-major
+    ; If output_weight is tied to token embeddings (common in LLaMA):
+    mov rax, g_inference_ctx.output_norm
+    test rax, rax
+    jnz lm_has_output_weight
+    ; Fallback: use token embeddings as output projection (weight tying)
+    mov rax, g_inference_ctx.token_embed
+    
+lm_has_output_weight:
+    mov rcx, rax                ; W_out pointer
+    
+    ; For each vocab entry j, compute logits[j] = dot(hidden, W_out[j, :])
+    xor ebx, ebx                ; j = 0
+    
+lm_vocab_loop:
+    cmp ebx, r15d
+    jge lm_done
+    
+    vxorps xmm0, xmm0, xmm0    ; accumulator = 0
+    xor edx, edx                ; k = 0
+    
+    ; W_out row pointer: W_out + j * hidden_size * sizeof(float)
+    mov eax, ebx
+    imul eax, r14d              ; j * hidden_size
+    lea r8, [rcx + rax*4]       ; &W_out[j][0]
+    
+lm_dot_loop:
+    cmp edx, r14d
+    jge lm_store
+    
+    vmovss xmm1, dword ptr [r12 + rdx*4]    ; hidden[k]
+    vmovss xmm2, dword ptr [r8 + rdx*4]     ; W_out[j][k]
+    vfmadd231ss xmm0, xmm1, xmm2            ; acc += hidden[k] * W[j][k]
+    
+    inc edx
+    jmp lm_dot_loop
+    
+lm_store:
+    vmovss dword ptr [r13 + rbx*4], xmm0
+    inc ebx
+    jmp lm_vocab_loop
+    
+lm_done:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
     pop rbx
     ret
 LM_Head ENDP
@@ -1913,6 +2518,17 @@ sz_ffn_norm         db "ffn_norm", 0
 sz_ffn_gate         db "ffn_gate", 0
 sz_ffn_up           db "ffn_up", 0
 sz_ffn_down         db "ffn_down", 0
+
+; LayerNorm constants
+align 4
+lnorm_eps           real4 1.0e-5
+lnorm_one           real4 1.0
+
+; Feed-Forward exp constants (Schraudolph fast-exp for SiLU activation)
+ff_exp_scale        real4 12102203.0    ; 2^23 / ln(2)
+ff_exp_bias         real4 1065353216.0  ; 127 << 23 (IEEE float bias)
+ff_exp_clamp_lo     real4 -87.33       ; ln(FLT_MIN)
+ff_one              real4 1.0
 
 ;================================================================================
 ; END

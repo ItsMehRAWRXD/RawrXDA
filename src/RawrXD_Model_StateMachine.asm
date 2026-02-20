@@ -30,6 +30,10 @@ ModelState ENDS
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 g_ModelStates           BYTE (MAX_MODELS * SIZEOF ModelState) DUP (?)
 g_StateLock             DWORD       0

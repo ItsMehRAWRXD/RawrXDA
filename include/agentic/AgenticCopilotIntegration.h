@@ -1,7 +1,6 @@
 #pragma once
 
 #include "agentic/AgenticNavigator.h"
-#include "agentic/agentic_command_executor.h"
 #include "win32app/Win32IDE.h"
 #include <string>
 #include <memory>
@@ -39,7 +38,6 @@ public:
     
 private:
     std::unique_ptr<AgenticNavigator> m_navigator;
-    std::shared_ptr<AgenticCommandExecutor> m_executor;
     std::string m_currentContext;
     Win32IDE* m_ideInstance;
     

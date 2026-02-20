@@ -60,105 +60,117 @@ void FeatureFlags::onFlagChanged(const std::string& name, FlagCallback callback)
     m_callbacks[name].push_back(callback);
 }
 
-#include <nlohmann/json.hpp>
-
-// ...existing code...
-
-
 bool FeatureFlags::loadFromFile(const std::string& filePath) {
-    std::ifstream file(filePath);
-    if (!file.is_open()) return false;
-    
-    try {
-        nlohmann::json j;
-        file >> j;
-        
-        std::lock_guard<std::mutex> lock(m_mutex);
-        
-        // Parse simple key-value pairs
-        if (j.contains("bools")) {
-             for (auto& element : j["bools"].items()) {
-                 m_boolFlags[element.key()].store(element.value().get<bool>());
-             }
-        }
-        if (j.contains("strings")) {
-             for (auto& element : j["strings"].items()) {
-                 m_stringFlags[element.key()] = element.value().get<std::string>();
-             }
-        }
-        return true;
-    } catch (...) {
+    std::ifstream ifs(filePath);
+    if (!ifs.is_open()) {
         return false;
     }
+
+    std::string content((std::istreambuf_iterator<char>(ifs)),
+                        std::istreambuf_iterator<char>());
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    // Parse simple JSON format: {"key": value, ...}
+    // Supports bool (true/false), int, float, and string values
+    size_t pos = 0;
+    while ((pos = content.find('"', pos)) != std::string::npos) {
+        size_t keyStart = pos + 1;
+        size_t keyEnd = content.find('"', keyStart);
+        if (keyEnd == std::string::npos) break;
+
+        std::string key = content.substr(keyStart, keyEnd - keyStart);
+        pos = content.find(':', keyEnd);
+        if (pos == std::string::npos) break;
+        pos++;
+
+        // Skip whitespace
+        while (pos < content.size() && (content[pos] == ' ' || content[pos] == '\t')) pos++;
+
+        if (pos >= content.size()) break;
+
+        if (content[pos] == '"') {
+            // String value
+            size_t valStart = pos + 1;
+            size_t valEnd = content.find('"', valStart);
+            if (valEnd == std::string::npos) break;
+            m_stringFlags[key] = content.substr(valStart, valEnd - valStart);
+            pos = valEnd + 1;
+        } else if (content.substr(pos, 4) == "true") {
+            m_boolFlags[key].store(true);
+            pos += 4;
+        } else if (content.substr(pos, 5) == "false") {
+            m_boolFlags[key].store(false);
+            pos += 5;
+        } else {
+            // Numeric value — extract until delimiter
+            size_t numStart = pos;
+            while (pos < content.size() && content[pos] != ',' &&
+                   content[pos] != '}' && content[pos] != '\n') {
+                pos++;
+            }
+            std::string numStr = content.substr(numStart, pos - numStart);
+            // Trim whitespace
+            while (!numStr.empty() && (numStr.back() == ' ' || numStr.back() == '\r')) {
+                numStr.pop_back();
+            }
+            if (numStr.find('.') != std::string::npos) {
+                m_floatFlags[key].store(std::stof(numStr));
+            } else {
+                m_intFlags[key].store(std::stoi(numStr));
+            }
+        }
+    }
+
+    return true;
 }
 
 bool FeatureFlags::saveToFile(const std::string& filePath) const {
-    try {
-        nlohmann::json j;
-        j["bools"] = nlohmann::json::object();
-        j["strings"] = nlohmann::json::object();
-
-        {
-             std::lock_guard<std::mutex> lock(m_mutex);
-             for (const auto& pair : m_boolFlags) {
-                 j["bools"][pair.first] = pair.second.load();
-             }
-             for (const auto& pair : m_stringFlags) {
-                 j["strings"][pair.first] = pair.second;
-             }
-        }
-        
-        std::ofstream file(filePath);
-        if (!file.is_open()) return false;
-        
-        file << j.dump(4);
-        return true;
-    } catch (...) {
+    std::ofstream ofs(filePath, std::ios::trunc);
+    if (!ofs.is_open()) {
         return false;
     }
+
+    ofs << toJson();
+    return ofs.good();
 }
 
 std::string FeatureFlags::toJson() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     std::ostringstream json;
     json << "{\n";
-    json << "  \"boolFlags\": {\n";
+
     bool first = true;
-    for (const auto& [key, val] : m_boolFlags) {
+
+    // Serialize bool flags
+    for (const auto& [name, value] : m_boolFlags) {
         if (!first) json << ",\n";
-        json << "    \"" << key << "\": " << (val ? "true" : "false");
         first = false;
+        json << "  \"" << name << "\": " << (value.load() ? "true" : "false");
     }
-    json << "\n  },\n";
-    
-    json << "  \"intFlags\": {\n";
-    first = true;
-    for (const auto& [key, val] : m_intFlags) {
+
+    // Serialize int flags
+    for (const auto& [name, value] : m_intFlags) {
         if (!first) json << ",\n";
-        json << "    \"" << key << "\": " << val;
         first = false;
+        json << "  \"" << name << "\": " << value.load();
     }
-    json << "\n  },\n";
-    
-    json << "  \"floatFlags\": {\n";
-    first = true;
-    for (const auto& [key, val] : m_floatFlags) {
+
+    // Serialize float flags
+    for (const auto& [name, value] : m_floatFlags) {
         if (!first) json << ",\n";
-        json << "    \"" << key << "\": " << val;
         first = false;
+        json << "  \"" << name << "\": " << value.load();
     }
-    json << "\n  },\n";
-    
-    json << "  \"stringFlags\": {\n";
-    first = true;
-    for (const auto& [key, val] : m_stringFlags) {
+
+    // Serialize string flags
+    for (const auto& [name, value] : m_stringFlags) {
         if (!first) json << ",\n";
-        json << "    \"" << key << "\": \"" << val << "\"";
         first = false;
+        json << "  \"" << name << "\": \"" << value << "\"";
     }
-    json << "\n  }\n";
-    
-    json << "}\n";
+
+    json << "\n}\n";
     return json.str();
 }
 

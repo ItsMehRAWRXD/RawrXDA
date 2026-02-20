@@ -1,6 +1,10 @@
 ; RawrXD_CLI_Main.asm - Console Entry Point for Titan Unified
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; External symbols from Titan Unified
 EXTERNDEF Titan_LoadModel : PROC
 EXTERNDEF Titan_RunInferenceStep : PROC
@@ -102,6 +106,7 @@ RunCLLoop:
 @@exit:
     mov ecx, 0
     call ExitProcess
+    ret
 
 mainCRTStartup ENDP
 

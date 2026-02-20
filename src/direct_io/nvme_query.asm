@@ -1,6 +1,10 @@
 ; nvme_query.asm - DLL with temperature query export
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; External APIs
 EXTERN CreateFileA:PROC
 EXTERN DeviceIoControl:PROC

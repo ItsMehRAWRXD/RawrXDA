@@ -1,0 +1,21 @@
+# Consolidated into docker-compose.yml — use:
+#   docker-compose up -d
+# For localhost-only binding:
+#   RAWRXD_BIND=127.0.0.1 docker-compose up -d
+
+version: "3.8"
+
+services:
+  rawrxd-backend:
+    extends:
+      file: docker-compose.yml
+      service: rawrxd-backend
+    ports:
+      - "127.0.0.1:23959:23959"
+
+  rawrxd-web:
+    extends:
+      file: docker-compose.yml
+      service: rawrxd-web
+    ports:
+      - "127.0.0.1:8088:80"

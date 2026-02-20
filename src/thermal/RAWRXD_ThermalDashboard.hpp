@@ -1,6 +1,6 @@
 /**
  * @file RAWRXD_ThermalDashboard.hpp
- * @brief Qt6 Thermal Dashboard UI Widgets
+ * @brief Win32 Thermal Dashboard UI (Qt-free)
  */
 
 #pragma once

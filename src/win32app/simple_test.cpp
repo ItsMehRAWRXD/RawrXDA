@@ -1,21 +1,16 @@
 // Simple IDE instantiation test
 #include <windows.h>
-#include <iostream>
-#include <fstream>
+#include "logging/logger.h"
 
 int main() {
-    std::ofstream log("simple_test_log.txt");
-    log << "Test started\n";
-    log.flush();
+    Logger logger("SimpleTest", "logs/");
+    logger.info("Test started");
+    logger.info("Simple IDE Test");
+    logger.info("===============");
+    logger.info("About to load library");
 
-
-    log << "About to load library\n";
-    log.flush();
-    
     // Just test if we can reach main
-    
-    log << "Success\n";
-    log.close();
-    
+    logger.info("Success: Program executed");
+
     return 0;
 }

@@ -1,22 +1,28 @@
 /**
- * PathResolver - Cross-platform path resolution utility
- * 
- * Centralizes all path operations to use QStandardPaths and environment variables
- * instead of hardcoded Windows user paths. Ensures app works for any user on any machine.
- * 
+ * PathResolver - Cross-platform path resolution utility (C++20, Win32, no Qt)
+ *
+ * Centralizes path operations using Windows Known Folders and environment
+ * variables. Replaces QStandardPaths / QDir / QFileInfo.
+ *
  * Usage:
- *   QString desktopPath = PathResolver::getDesktopPath();
- *   QString appDataPath = PathResolver::getAppDataPath();
- *   QString configPath = PathResolver::getConfigPath();
+ *   std::string desktopPath = PathResolver::getDesktopPath();
+ *   std::string appDataPath = PathResolver::getAppDataPath();
+ *   std::string configPath = PathResolver::getConfigPath();
  */
 
 #pragma once
 
-#include <QString>
-#include <QStandardPaths>
-#include <QDir>
-#include <QFileInfo>
-#include <QCoreApplication>
+#include <string>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#include <knownfolders.h>
+#pragma comment(lib, "shell32.lib")
+#endif
 
 class PathResolver
 {
@@ -24,72 +30,91 @@ public:
     /**
      * Get user's desktop directory
      * Windows: C:\Users\<username>\Desktop
-     * Linux: ~/Desktop
-     * macOS: ~/Desktop
      */
-    static QString getDesktopPath()
+    static std::string getDesktopPath()
     {
-        return QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+#ifdef _WIN32
+        wchar_t* path = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Desktop, 0, nullptr, &path))) {
+            std::wstring w(path);
+            CoTaskMemFree(path);
+            return wideToUtf8(w);
+        }
+#endif
+        return getHomePath() + "/Desktop";
     }
 
     /**
      * Get application data directory
      * Windows: C:\Users\<username>\AppData\Local\RawrXD
-     * Linux: ~/.local/share/RawrXD
-     * macOS: ~/Library/Application Support/RawrXD
      */
-    static QString getAppDataPath()
+    static std::string getAppDataPath()
     {
-        return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+#ifdef _WIN32
+        wchar_t* path = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &path))) {
+            std::wstring w(path);
+            CoTaskMemFree(path);
+            return wideToUtf8(w) + "\\RawrXD";
+        }
+#endif
+        return getHomePath() + "/.local/share/RawrXD";
     }
 
     /**
      * Get application config directory
      * Windows: C:\Users\<username>\AppData\Roaming\RawrXD
-     * Linux: ~/.config/RawrXD
-     * macOS: ~/Library/Preferences/RawrXD
      */
-    static QString getConfigPath()
+    static std::string getConfigPath()
     {
-        return QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/RawrXD";
+#ifdef _WIN32
+        wchar_t* path = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path))) {
+            std::wstring w(path);
+            CoTaskMemFree(path);
+            return wideToUtf8(w) + "\\RawrXD";
+        }
+#endif
+        return getHomePath() + "/.config/RawrXD";
     }
 
     /**
      * Get application documents directory
      * Windows: C:\Users\<username>\Documents
-     * Linux: ~/Documents
-     * macOS: ~/Documents
      */
-    static QString getDocumentsPath()
+    static std::string getDocumentsPath()
     {
-        return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+#ifdef _WIN32
+        wchar_t* path = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &path))) {
+            std::wstring w(path);
+            CoTaskMemFree(path);
+            return wideToUtf8(w);
+        }
+#endif
+        return getHomePath() + "/Documents";
     }
 
     /**
      * Get application temporary directory
-     * Uses system temp folder
      */
-    static QString getTempPath()
+    static std::string getTempPath()
     {
-        return QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+        return std::filesystem::temp_directory_path().string();
     }
 
     /**
      * Get project/workspace root path
      * Priority:
      * 1. Environment variable: RAWRXD_WORKSPACE_ROOT
-     * 2. Config file setting
-     * 3. Documents folder
+     * 2. Documents folder
      */
-    static QString getWorkspaceRootPath()
+    static std::string getWorkspaceRootPath()
     {
-        // Check environment variable first
         const char* envPath = std::getenv("RAWRXD_WORKSPACE_ROOT");
-        if (envPath && strlen(envPath) > 0) {
-            return QString::fromUtf8(envPath);
+        if (envPath && envPath[0] != '\0') {
+            return envPath;
         }
-        
-        // Fall back to Documents
         return getDocumentsPath();
     }
 
@@ -97,9 +122,9 @@ public:
      * Get models directory for caching downloaded/imported models
      * Location: <AppData>/models
      */
-    static QString getModelsPath()
+    static std::string getModelsPath()
     {
-        QString path = getAppDataPath() + "/models";
+        std::string path = getAppDataPath() + "\\models";
         ensurePathExists(path);
         return path;
     }
@@ -108,9 +133,9 @@ public:
      * Get scripts directory for PowerShell/Bash scripts
      * Location: <AppData>/scripts
      */
-    static QString getScriptsPath()
+    static std::string getScriptsPath()
     {
-        QString path = getAppDataPath() + "/scripts";
+        std::string path = getAppDataPath() + "\\scripts";
         ensurePathExists(path);
         return path;
     }
@@ -119,9 +144,9 @@ public:
      * Get tools directory for utility executables
      * Location: <AppData>/tools
      */
-    static QString getToolsPath()
+    static std::string getToolsPath()
     {
-        QString path = getAppDataPath() + "/tools";
+        std::string path = getAppDataPath() + "\\tools";
         ensurePathExists(path);
         return path;
     }
@@ -130,9 +155,9 @@ public:
      * Get plugins/extensions directory
      * Location: <AppData>/plugins
      */
-    static QString getPluginsPath()
+    static std::string getPluginsPath()
     {
-        QString path = getAppDataPath() + "/plugins";
+        std::string path = getAppDataPath() + "\\plugins";
         ensurePathExists(path);
         return path;
     }
@@ -141,20 +166,18 @@ public:
      * Get Powershield tools directory
      * Location: <Tools>/powershield
      */
-    static QString getPowershieldPath()
+    static std::string getPowershieldPath()
     {
-        QString path = getToolsPath() + "/powershield";
-        ensurePathExists(path);
-        return path;
+        return getToolsPath() + "\\powershield";
     }
 
     /**
      * Get logs directory
      * Location: <AppData>/logs
      */
-    static QString getLogsPath()
+    static std::string getLogsPath()
     {
-        QString path = getAppDataPath() + "/logs";
+        std::string path = getAppDataPath() + "\\logs";
         ensurePathExists(path);
         return path;
     }
@@ -163,72 +186,92 @@ public:
      * Get cache directory
      * Location: <AppData>/cache
      */
-    static QString getCachePath()
+    static std::string getCachePath()
     {
-        QString path = getAppDataPath() + "/cache";
+        std::string path = getAppDataPath() + "\\cache";
         ensurePathExists(path);
         return path;
     }
 
     /**
      * Resolve a relative path based on workspace root
-     * Example: resolveWorkspacePath("src/main.cpp") -> "/home/user/projects/myapp/src/main.cpp"
      */
-    static QString resolveWorkspacePath(const QString& relativePath)
+    static std::string resolveWorkspacePath(const std::string& relativePath)
     {
-        QString workspaceRoot = getWorkspaceRootPath();
-        return QDir(workspaceRoot).absoluteFilePath(relativePath);
+        std::filesystem::path base(getWorkspaceRootPath());
+        return (base / relativePath).lexically_normal().string();
     }
 
     /**
      * Ensure a directory exists, creating it if necessary
-     * Returns true if path exists or was successfully created
      */
-    static bool ensurePathExists(const QString& path)
+    static bool ensurePathExists(const std::string& path)
     {
-        QDir dir(path);
-        if (!dir.exists()) {
-            return dir.mkpath(".");
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec)) {
+            return std::filesystem::is_directory(path, ec);
         }
-        return true;
+        return std::filesystem::create_directories(path, ec);
     }
 
     /**
      * Verify a path is accessible and not dangerous (e.g., no path traversal)
      */
-    static bool isPathSafe(const QString& path, const QString& basePath = "")
+    static bool isPathSafe(const std::string& path, const std::string& basePath = "")
     {
-        QFileInfo fileInfo(path);
-        QString absolutePath = fileInfo.absoluteFilePath();
-        
-        // If base path provided, verify it's under base path
-        if (!basePath.isEmpty()) {
-            QDir baseDir(basePath);
-            QString baseAbsPath = baseDir.absolutePath();
-            if (!absolutePath.startsWith(baseAbsPath)) {
-                return false;  // Path traversal attempt
-            }
+        std::error_code ec;
+        auto absPath = std::filesystem::absolute(path, ec);
+        if (ec) return false;
+        if (!basePath.empty()) {
+            auto baseAbs = std::filesystem::absolute(basePath, ec);
+            if (ec) return false;
+            auto [a, b] = std::mismatch(baseAbs.begin(), baseAbs.end(), absPath.begin(), absPath.end());
+            return a == baseAbs.end();
         }
-        
         return true;
     }
 
     /**
-     * Convert platform-specific path to forward slashes
+     * Normalize path to native separators
      */
-    static QString normalizePath(const QString& path)
+    static std::string normalizePath(const std::string& path)
     {
-        return QDir::toNativeSeparators(path);
+        return std::filesystem::path(path).lexically_normal().string();
     }
 
     /**
      * Get home directory path
      */
-    static QString getHomePath()
+    static std::string getHomePath()
     {
-        return QDir::homePath();
+#ifdef _WIN32
+        wchar_t* path = nullptr;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Profile, 0, nullptr, &path))) {
+            std::wstring w(path);
+            CoTaskMemFree(path);
+            return wideToUtf8(w);
+        }
+#endif
+        const char* home = std::getenv("USERPROFILE");
+        if (!home) home = std::getenv("HOME");
+        return home ? home : ".";
     }
 
 private:
-    PathResolver() = delete;  // Utility class, no instantiation
+    PathResolver() = delete;
+
+    static std::string wideToUtf8(const std::wstring& w)
+    {
+        if (w.empty()) return {};
+#ifdef _WIN32
+        int size = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), static_cast<int>(w.size()), nullptr, 0, nullptr, nullptr);
+        if (size <= 0) return {};
+        std::string s(size, 0);
+        WideCharToMultiByte(CP_UTF8, 0, w.c_str(), static_cast<int>(w.size()), s.data(), size, nullptr, nullptr);
+        return s;
+#else
+        (void)w;
+        return {};
+#endif
+    }
 };

@@ -1,44 +1,51 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-#include <QList>
-#include <QTimer>
+// C++20, no Qt. Planning agent; callbacks replace signals.
+
+#include <string>
+#include <vector>
+#include <functional>
 
 struct Task {
-    QString id;
-    QString description;
-    QString status; // "pending", "in-progress", "completed", "failed"
-    int priority;
-    QString assignedAgent;
+    std::string id;
+    std::string description;
+    std::string status;
+    int priority = 0;
+    std::string assignedAgent;
 };
 
-class PlanningAgent : public QObject {
-    Q_OBJECT
+class PlanningAgent
+{
 public:
-    explicit PlanningAgent(QObject* parent = nullptr);
+    using PlanCreatedFn     = std::function<void(const std::string& plan)>;
+    using TaskStatusChangedFn = std::function<void(const std::string& taskId, const std::string& status)>;
+    using PlanCompletedFn   = std::function<void()>;
+    using PlanFailedFn      = std::function<void(const std::string& error)>;
+
+    PlanningAgent() = default;
     virtual ~PlanningAgent() = default;
-    
+
+    void setOnPlanCreated(PlanCreatedFn f)         { m_onPlanCreated = std::move(f); }
+    void setOnTaskStatusChanged(TaskStatusChangedFn f) { m_onTaskStatusChanged = std::move(f); }
+    void setOnPlanCompleted(PlanCompletedFn f)     { m_onPlanCompleted = std::move(f); }
+    void setOnPlanFailed(PlanFailedFn f)           { m_onPlanFailed = std::move(f); }
+
     void initialize();
-    void createPlan(const QString& goal);
+    void createPlan(const std::string& goal);
     void executePlan();
     void addTask(const Task& task);
-    QList<Task> getTasks() const;
-    
-signals:
-    void planCreated(const QString& plan);
-    void taskStatusChanged(const QString& taskId, const QString& status);
-    void planCompleted();
-    void planFailed(const QString& error);
-    
-private slots:
-    void processNextTask();
-    
+    std::vector<Task> getTasks() const;
+
 private:
-    QList<Task> tasks_;
-    QTimer* taskProcessor_;
-    int currentTaskIndex_;
-    
-    QString generatePlan(const QString& goal);
-    void updateTaskStatus(const QString& taskId, const QString& status);
+    void processNextTask();
+    std::string generatePlan(const std::string& goal);
+    void updateTaskStatus(const std::string& taskId, const std::string& status);
+
+    std::vector<Task> tasks_;
+    int currentTaskIndex_ = 0;
+
+    PlanCreatedFn       m_onPlanCreated;
+    TaskStatusChangedFn m_onTaskStatusChanged;
+    PlanCompletedFn     m_onPlanCompleted;
+    PlanFailedFn        m_onPlanFailed;
 };

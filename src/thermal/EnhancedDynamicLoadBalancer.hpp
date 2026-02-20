@@ -17,6 +17,9 @@
 #include <atomic>
 #include <functional>
 #include <chrono>
+#include <map>
+#include <string>
+#include <mutex>
 
 namespace rawrxd::thermal {
 
@@ -393,8 +396,8 @@ public:
     int getHealthyDriveCount() const;
     int getCriticalDriveCount() const;
     
-    QVariantMap getStatistics() const;
-    QVariantMap getDriveStatistics(const std::string& drivePath) const;
+    std::map<std::string, std::string> getStatistics() const;
+    std::map<std::string, std::string> getDriveStatistics(const std::string& drivePath) const;
 
     void driveSelected(const std::string& drivePath);
     void drivesChanged();

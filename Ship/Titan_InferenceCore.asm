@@ -1,4 +1,8 @@
 OPTION CASEMAP:NONE
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 includelib kernel32.lib
 includelib ntdll.lib
 

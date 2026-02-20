@@ -145,8 +145,12 @@ class LocalAgenticCopilot {
       }
 
       vscode.window.showInformationMessage('✅ Code generated!');
-    } catch (error) {
-      vscode.window.showErrorMessage(`Error: ${error}`);
+    } catch (error: unknown) {
+      const msg = error && typeof error === 'object' && 'message' in error ? String((error as Error).message) : String(error);
+      const code = error && typeof error === 'object' && 'code' in error ? (error as NodeJS.ErrnoException).code : '';
+      const isNetwork = msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT';
+      const friendly = isNetwork ? `Ollama unreachable at ${this.config.ollamaEndpoint}. Start Ollama and pull model "${this.config.agenticMode ? this.config.agenticModel : this.config.standardModel}".` : `Error: ${msg}`;
+      vscode.window.showErrorMessage(friendly);
     }
   }
 
@@ -196,8 +200,14 @@ class LocalAgenticCopilot {
                 </body>
                 </html>
             `;
-    } catch (error) {
-      vscode.window.showErrorMessage(`Error: ${error}`);
+    } catch (error: unknown) {
+      const msg = error && typeof error === 'object' && 'message' in error ? String((error as Error).message) : String(error);
+      const code = error && typeof error === 'object' && 'code' in error ? (error as NodeJS.ErrnoException).code : '';
+      const isNetwork = msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT';
+      const friendly = isNetwork
+        ? `RawrXD Explanation: Cannot reach Ollama at ${this.config.ollamaEndpoint}. Start Ollama (e.g. \`ollama serve\`) and ensure the model "${model}" is pulled.`
+        : `RawrXD Explanation failed: ${msg}`;
+      vscode.window.showErrorMessage(friendly);
     }
   }
 
@@ -233,8 +243,12 @@ class LocalAgenticCopilot {
       });
 
       vscode.window.showInformationMessage('✅ Code fixed!');
-    } catch (error) {
-      vscode.window.showErrorMessage(`Error: ${error}`);
+    } catch (error: unknown) {
+      const msg = error && typeof error === 'object' && 'message' in error ? String((error as Error).message) : String(error);
+      const code = error && typeof error === 'object' && 'code' in error ? (error as NodeJS.ErrnoException).code : '';
+      const isNetwork = msg.includes('fetch failed') || msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('ETIMEDOUT') || code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT';
+      const friendly = isNetwork ? `Ollama unreachable at ${this.config.ollamaEndpoint}. Start Ollama to fix code.` : `Error: ${msg}`;
+      vscode.window.showErrorMessage(friendly);
     }
   }
 

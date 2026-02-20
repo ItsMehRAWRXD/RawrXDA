@@ -15,6 +15,10 @@ MAX_CONNECTIONS         EQU 100
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 g_WsaData               WSADATA <>
 

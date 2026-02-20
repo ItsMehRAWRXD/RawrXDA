@@ -81,10 +81,10 @@ static void init_kleidiai_context(void) {
         ctx.kernels_q8 = ggml_kleidiai_select_kernels_q8_0(ctx.features);
 #ifndef NDEBUG
         if (ctx.kernels_q4) {
-            GGML_
+            GGML_LOG_DEBUG("kleidiai: using q4 kernel with CPU feature %s\n", cpu_feature_to_string(ctx.kernels_q4->required_cpu));
         }
         if (ctx.kernels_q8) {
-            GGML_
+            GGML_LOG_DEBUG("kleidiai: using q8 kernel with CPU feature %s\n", cpu_feature_to_string(ctx.kernels_q8->required_cpu));
         }
 #endif
     }

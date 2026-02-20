@@ -129,6 +129,14 @@ private:
 
     std::unique_ptr<Tools::GitClient> m_git_client;
     std::unique_ptr<OllamaClient> m_ollama_client;
+
+    // Tool execution statistics
+    struct ToolStats {
+        uint64_t total_tool_calls = 0;
+        uint64_t successful_calls = 0;
+        uint64_t failed_calls = 0;
+        std::map<std::string, uint64_t> tool_usage_count;
+    } m_stats;
 };
 
 } // namespace Backend

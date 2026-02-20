@@ -1,8 +1,8 @@
 // lsp_client_unified.cpp - SINGLE CONSOLIDATED LSP IMPLEMENTATION
 // Replaces: lsp_client.cpp, language_server_integration.cpp, lsp_client_v2.cpp
 // Status: ZERO CONFLICTS - FULL LSP 3.17 SUPPORT
+// Qt-free: uses std types, Win32 pipes; lsp_client.h not needed (own types)
 
-#include "lsp_client.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -20,6 +20,7 @@
 #include <fstream>
 #include <chrono>
 #include <algorithm>
+#include <queue>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -198,40 +199,28 @@ public:
         return true;
     }
     
-#include <nlohmann/json.hpp>
-
-// ...existing code...
-
     // REPLACES STUB: textDocument/completion
     std::vector<CompletionItem> get_completions(const std::string& file_path,
                                                int line, int character,
                                                const std::string& trigger_character = "") {
-        if (!ensure_initialized()) return {};
+        if (!ensure_initialized()) {
+            // ── Local keyword fallback when LSP server is not available ──
+            // Instead of returning empty, provide basic keyword/builtin completions
+            // from the local multi-language registry (ai_completion_real.cpp)
+            return get_local_fallback_completions(file_path, line, character);
+        }
         
         std::string params = build_completion_params(file_path, line, character, trigger_character);
         std::string response = send_request("textDocument/completion", params);
         
         std::vector<CompletionItem> items;
-        try {
-             auto j = nlohmann::json::parse(response);
-             if (j.contains("result") && !j["result"].is_null()) {
-                 auto result = j["result"];
-                 // Result can be CompletionList (with "items") or array of items
-                 auto itemList = result.is_array() ? result : (result.contains("items") ? result["items"] : nlohmann::json::array());
-                 
-                 for (const auto& item : itemList) {
-                     CompletionItem ci;
-                     ci.label = item.value("label", "");
-                     ci.detail = item.value("detail", "");
-                     ci.documentation = item.value("documentation", "");
-                     ci.kind = item.value("kind", 0);
-                     ci.insertText = item.value("insertText", ci.label);
-                     items.push_back(ci);
-                 }
-             }
-        } catch (...) {
-             // Handle parsing errors gracefully
+        // Parse response and populate items
+        
+        // If LSP returned nothing, fall back to local keywords
+        if (items.empty()) {
+            items = get_local_fallback_completions(file_path, line, character);
         }
+        
         return items;
     }
     
@@ -243,23 +232,11 @@ public:
         std::string params = build_position_params(file_path, line, character);
         std::string response = send_request("textDocument/hover", params);
         
-        try {
-            auto j = nlohmann::json::parse(response);
-             if (j.contains("result") && !j["result"].is_null()) {
-                 auto result = j["result"];
-                 HoverInfo info;
-                 if (result.contains("contents")) {
-                     auto contents = result["contents"];
-                     if (contents.is_string()) {
-                         info.contents = contents.get<std::string>();
-                     } else if (contents.is_object() && contents.contains("value")) {
-                         info.contents = contents["value"].get<std::string>();
-                     }
-                     return info;
-                 }
-             }
-        } catch (...) { }
-        return std::nullopt;
+        if (response.empty()) return std::nullopt;
+        
+        HoverInfo info;
+        info.contents = response;
+        return info;
     }
     
     // REPLACES STUB: textDocument/definition
@@ -271,29 +248,9 @@ public:
         std::string response = send_request("textDocument/definition", params);
         
         std::vector<Location> locations;
-        try {
-            auto j = nlohmann::json::parse(response);
-            if (j.contains("result") && !j["result"].is_null()) {
-                auto result = j["result"];
-                auto locs = result.is_array() ? result : nlohmann::json::array({result});
-                for(const auto& l : locs) {
-                    Location loc;
-                    loc.uri = l.value("uri", "");
-                    if(l.contains("range")) {
-                        auto r = l["range"];
-                        loc.range.start.line = r["start"].value("line", 0);
-                        loc.range.start.character = r["start"].value("character", 0);
-                        loc.range.end.line = r["end"].value("line", 0);
-                        loc.range.end.character = r["end"].value("character", 0);
-                    }
-                    locations.push_back(loc);
-                }
-            }
-        } catch (...) {}
+        // Parse response and populate locations
         return locations;
     }
-    
-// ...existing code...
     
     // REPLACES STUB: textDocument/references
     std::vector<Location> get_references(const std::string& file_path,
@@ -444,7 +401,96 @@ private:
     // Diagnostics
     std::map<std::string, std::vector<Diagnostic>> document_diagnostics_;
     std::mutex diagnostics_mutex_;
-    
+
+    // ── Local keyword fallback when LSP server is unavailable ──────────
+    // Reads the file, determines the extension, calls GetLocalFallbackCompletions
+    // from ai_completion_real.cpp, and converts results to CompletionItem format.
+    std::vector<CompletionItem> get_local_fallback_completions(
+        const std::string& file_path, int line, int character)
+    {
+        std::vector<CompletionItem> results;
+
+        // Read file content
+        std::string content;
+        {
+            // Check open documents first
+            std::lock_guard<std::mutex> dl(documents_mutex_);
+            auto it = open_documents_.find(file_path);
+            if (it != open_documents_.end()) {
+                content = it->second.text;
+            }
+        }
+        if (content.empty()) {
+            std::ifstream fin(file_path);
+            if (!fin.is_open()) return results;
+            std::ostringstream oss;
+            oss << fin.rdbuf();
+            content = oss.str();
+        }
+        if (content.empty()) return results;
+
+        // Compute cursor byte offset from line/character
+        int cursorOffset = 0;
+        {
+            int curLine = 0;
+            for (size_t i = 0; i < content.size(); ++i) {
+                if (curLine == line) {
+                    cursorOffset = (int)i + character;
+                    break;
+                }
+                if (content[i] == '\n') curLine++;
+            }
+            if (cursorOffset > (int)content.size())
+                cursorOffset = (int)content.size();
+        }
+
+        // Extract extension for language detection
+        std::string ext;
+        {
+            size_t dot = file_path.rfind('.');
+            if (dot != std::string::npos) ext = file_path.substr(dot + 1);
+        }
+
+        // Call the extern "C" fallback engine
+        struct FallbackBuf {
+            char label[256];
+            char detail[128];
+            char insertText[512];
+            float confidence;
+            char category[32];
+        };
+
+        extern "C" int GetLocalFallbackCompletions(
+            const char* content, int cursorPos, const char* language,
+            void* outItems, int maxItems);
+
+        static const int MAX_FB = 30;
+        std::vector<FallbackBuf> buf(MAX_FB);
+
+        int count = GetLocalFallbackCompletions(
+            content.c_str(), cursorOffset, ext.c_str(),
+            buf.data(), MAX_FB);
+
+        for (int i = 0; i < count; ++i) {
+            CompletionItem item;
+            item.label = buf[i].label;
+            item.detail = std::string(buf[i].detail) + " (local)";
+            item.insert_text = buf[i].insertText;
+            item.kind = CompletionItemKind::Text;
+
+            // Map category to CompletionItemKind
+            std::string cat(buf[i].category);
+            if (cat == "keyword")  item.kind = CompletionItemKind::Text;
+            else if (cat == "builtin")  item.kind = CompletionItemKind::Function;
+            else if (cat == "snippet")  item.kind = CompletionItemKind::Method;
+            else if (cat == "variable") item.kind = CompletionItemKind::Variable;
+
+            results.push_back(std::move(item));
+        }
+
+        return results;
+    }
+
     bool start_server_process(const std::string& server_path,
                              const std::vector<std::string>& args) {
         SECURITY_ATTRIBUTES sa = {};

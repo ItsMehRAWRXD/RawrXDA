@@ -1,0 +1,1 @@
+{"covfusion_report":{"schema_version":1,"fusion_version":"2.0","summary":{"total_blocks":2777,"hit_blocks":0,"missed_blocks":2775,"partial_blocks":2,"coverage_pct":0,"fuzz_targets":0,"trace_targets":0,"inject_targets":2775,"ignore_count":2},"recommendations":[

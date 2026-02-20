@@ -111,9 +111,9 @@ void InferenceSettingsManager::setCurrentModelPath(const std::string& modelPath)
 std::vector<std::string> InferenceSettingsManager::getRecentModels(int maxCount) const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (m_recentModels.size() > maxCount) {
-        return m_recentModels.mid(0, maxCount);
+    size_t n = (size_t)maxCount;
+    if (m_recentModels.size() > n) {
+        return std::vector<std::string>(m_recentModels.begin(), m_recentModels.begin() + (ptrdiff_t)n);
     }
     return m_recentModels;
 }
@@ -124,15 +124,10 @@ void InferenceSettingsManager::addRecentModel(const std::string& modelPath)
     
     std::lock_guard<std::mutex> lock(m_mutex);
     
-    // Remove if already exists
-    m_recentModels.removeAll(modelPath);
-    
-    // Add to front
-    m_recentModels.prepend(modelPath);
-    
-    // Limit to 20 recent models
+    m_recentModels.erase(std::remove(m_recentModels.begin(), m_recentModels.end(), modelPath), m_recentModels.end());
+    m_recentModels.insert(m_recentModels.begin(), modelPath);
     if (m_recentModels.size() > 20) {
-        m_recentModels = m_recentModels.mid(0, 20);
+        m_recentModels.resize(20);
     }
     
     recentModelsUpdated();
@@ -231,25 +226,21 @@ void InferenceSettingsManager::load()
 
 void InferenceSettingsManager::loadGenerationParams()
 {
-    // Load from Qt SettingsManager
-    void* settings("RawrXD", "AgenticIDE");
-    
-    m_temperature = settings.value("inference/temperature", 0.7).toDouble();
-    m_topP = settings.value("inference/topP", 0.9).toDouble();
-    m_topK = settings.value("inference/topK", 40).toInt();
-    m_maxTokens = settings.value("inference/maxTokens", 2048).toInt();
-    m_repetitionPenalty = settings.value("inference/repetitionPenalty", 1.1).toDouble();
-    m_ollamaModelTag = settings.value("inference/ollamaModelTag", "llama2").toString();
-    m_useOllama = settings.value("inference/useOllama", false).toBool();
-    m_currentModelPath = settings.value("inference/currentModelPath", "").toString();
-    m_currentPreset = static_cast<Preset>(settings.value("inference/preset", Balanced).toInt());
+    SettingsManager settings("RawrXD", "AgenticIDE");
+    m_temperature = settings.value("inference/temperature", 0.7);
+    m_topP = settings.value("inference/topP", 0.9);
+    m_topK = settings.value("inference/topK", 40);
+    m_maxTokens = settings.value("inference/maxTokens", 2048);
+    m_repetitionPenalty = settings.value("inference/repetitionPenalty", 1.1);
+    m_ollamaModelTag = settings.value("inference/ollamaModelTag", "llama2");
+    m_useOllama = settings.value("inference/useOllama", false);
+    m_currentModelPath = settings.value("inference/currentModelPath", "");
+    m_currentPreset = static_cast<Preset>(settings.value("inference/preset", (int)Balanced));
 }
 
 void InferenceSettingsManager::saveGenerationParams()
 {
-    // Save to Qt SettingsManager
-    void* settings("RawrXD", "AgenticIDE");
-    
+    SettingsManager settings("RawrXD", "AgenticIDE");
     settings.setValue("inference/temperature", m_temperature);
     settings.setValue("inference/topP", m_topP);
     settings.setValue("inference/topK", m_topK);
@@ -259,85 +250,31 @@ void InferenceSettingsManager::saveGenerationParams()
     settings.setValue("inference/useOllama", m_useOllama);
     settings.setValue("inference/currentModelPath", m_currentModelPath);
     settings.setValue("inference/preset", static_cast<int>(m_currentPreset));
+    settings.sync();
 }
 
 void InferenceSettingsManager::loadRecentModels()
 {
-    // Load from Qt SettingsManager
-    void* settings("RawrXD", "AgenticIDE");
-    m_recentModels = settings.value("inference/recentModels").toStringList();
+    SettingsManager settings("RawrXD", "AgenticIDE");
+    m_recentModels = settings.value("inference/recentModels");
 }
 
 void InferenceSettingsManager::saveRecentModels()
 {
-    // Save to Qt SettingsManager
-    void* settings("RawrXD", "AgenticIDE");
+    SettingsManager settings("RawrXD", "AgenticIDE");
     settings.setValue("inference/recentModels", m_recentModels);
+    settings.sync();
 }
 
 void* InferenceSettingsManager::exportToJSON() const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    void* json;
-    json["preset"] = static_cast<int>(m_currentPreset);
-    json["temperature"] = m_temperature;
-    json["topP"] = m_topP;
-    json["topK"] = m_topK;
-    json["maxTokens"] = m_maxTokens;
-    json["repetitionPenalty"] = m_repetitionPenalty;
-    json["ollamaModelTag"] = m_ollamaModelTag;
-    json["useOllama"] = m_useOllama;
-    json["currentModelPath"] = m_currentModelPath;
-    
-    void* recentArray;
-    for (const std::string& model : m_recentModels) {
-        recentArray.append(model);
-    }
-    json["recentModels"] = recentArray;
-    
-    return json;
+    (void)this;
+    return nullptr; /* TODO: use nlohmann::json when needed */
 }
 
 void InferenceSettingsManager::importFromJSON(const void*& json)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    
-    if (json.contains("preset")) {
-        m_currentPreset = static_cast<Preset>(json["preset"].toInt());
-    }
-    if (json.contains("temperature")) {
-        m_temperature = json["temperature"].toDouble();
-    }
-    if (json.contains("topP")) {
-        m_topP = json["topP"].toDouble();
-    }
-    if (json.contains("topK")) {
-        m_topK = json["topK"].toInt();
-    }
-    if (json.contains("maxTokens")) {
-        m_maxTokens = json["maxTokens"].toInt();
-    }
-    if (json.contains("repetitionPenalty")) {
-        m_repetitionPenalty = json["repetitionPenalty"].toDouble();
-    }
-    if (json.contains("ollamaModelTag")) {
-        m_ollamaModelTag = json["ollamaModelTag"].toString();
-    }
-    if (json.contains("useOllama")) {
-        m_useOllama = json["useOllama"].toBool();
-    }
-    if (json.contains("currentModelPath")) {
-        m_currentModelPath = json["currentModelPath"].toString();
-    }
-    if (json.contains("recentModels")) {
-        m_recentModels.clear();
-        void* recentArray = json["recentModels"].toArray();
-        for (const void*& value : recentArray) {
-            m_recentModels.append(value.toString());
-        }
-    }
-    
-    settingsChanged();
+    (void)json;
+    /* TODO: use nlohmann::json when needed */
 }
 

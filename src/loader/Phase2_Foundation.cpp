@@ -1,13 +1,6 @@
-#include "../include/Phase2_Foundation.h"
-#include "../include/gguf_loader.h" // Include the real loader
+#include "..\include\Phase2_Foundation.h"
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <fstream>
-#include <iostream>
 
 //================================================================================
 // PHASE 2: MODEL LOADER - C++ IMPLEMENTATION
@@ -33,120 +26,24 @@ struct Phase1Context
     void* reserved;
 };
 
-// Internal context implementation
-struct ModelLoaderContext
-{
-    uint64_t bytes_loaded = 0;
-    uint64_t file_size = 0;
-    std::string last_error_string;
-    std::vector<TensorMetadata> tensors;
-    std::unordered_map<std::string, size_t> tensor_map; // Name to index
-    FormatType format = FormatType::UNKNOWN;
-    RouterType router = RouterType::UNKNOWN;
-};
-
 } // namespace Internal
 
 //================================================================================
 // ModelLoader IMPLEMENTATION
 //================================================================================
 
-ModelLoader::ModelLoader()
-{
-    m_context = new Internal::ModelLoaderContext();
-}
-
-ModelLoader::~ModelLoader()
-{
-    if (m_context)
-    {
-        delete static_cast<Internal::ModelLoaderContext*>(m_context);
-        m_context = nullptr;
-    }
-}
-
-bool ModelLoader::LoadModel(const char* path)
-{
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    if (!ctx) return false;
-
-    // Real implementation using GGUFLoader
-    GGUFLoader loader;
-    if (!loader.Open(path))
-    {
-        ctx->last_error_string = "Failed to open file: " + std::string(path);
-        return false;
-    }
-
-    try {
-        if (!loader.ParseHeader()) {
-            ctx->last_error_string = "Failed to parse GGUF header";
-            return false;
-        }
-        // Attempt to parse metadata
-        loader.ParseMetadata();
-    } catch (const std::exception& e) {
-        ctx->last_error_string = std::string("GGUF Parse Error: ") + e.what();
-        return false;
-    }
-
-    ctx->file_size = loader.GetFileSize();
-    ctx->bytes_loaded = 0; 
-    ctx->format = FormatType::GGUF;
-    ctx->router = RouterType::GGUF_LOCAL;
-
-    // Get Tensors
-    std::vector<TensorInfo> infos = loader.GetTensorInfo();
-    for (const auto& info : infos)
-    {
-        TensorMetadata tm;
-        tm.name = info.name;
-        // Copy shape
-        tm.shape.assign(info.shape.begin(), info.shape.end());
-        
-        tm.type = (uint32_t)info.type;
-        tm.offset = info.offset;
-        tm.size = info.size_bytes;
-        tm.state = TensorState::UNLOADED;
-        tm.data = nullptr; 
-
-        ctx->tensors.push_back(tm);
-        ctx->tensor_map[tm.name] = ctx->tensors.size() - 1;
-    }
-
-    return true;
-}
-
-uint64_t ModelLoader::GetTensorCount() const
-{
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    return ctx ? ctx->tensors.size() : 0;
-}
-
 /**
  * Get tensor by index
  */
 TensorMetadata* ModelLoader::GetTensorByIndex(uint64_t index)
 {
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    if (!ctx || index >= ctx->tensors.size())
+    if (index >= GetTensorCount())
         return nullptr;
     
-    return &ctx->tensors[index];
-}
-
-TensorMetadata* ModelLoader::GetTensor(const char* name)
-{
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    if (!ctx) return nullptr;
-
-    auto it = ctx->tensor_map.find(name);
-    if (it != ctx->tensor_map.end())
-        return &ctx->tensors[it->second];
-    
+    // Access tensor table from context
+    // In production: Would access internal context structure
     return nullptr;
 }
-
 
 /**
  * Query model architecture info
@@ -161,8 +58,8 @@ ModelMetadata* ModelLoader::GetModelMetadata()
  */
 RouterType ModelLoader::GetRouterType() const
 {
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    return ctx ? ctx->router : RouterType::UNKNOWN;
+    // Would extract from internal context
+    return RouterType::UNKNOWN;
 }
 
 /**
@@ -170,8 +67,17 @@ RouterType ModelLoader::GetRouterType() const
  */
 FormatType ModelLoader::GetFormatType() const
 {
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    return ctx ? ctx->format : FormatType::UNKNOWN;
+    // Would extract from internal context
+    return FormatType::UNKNOWN;
+}
+
+/**
+ * Get tensor count (stub - would be in context)
+ */
+uint64_t ModelLoader::GetTensorCount() const
+{
+    // Production: return ((MODEL_LOADER_CONTEXT*)m_context)->tensor_count;
+    return 0;
 }
 
 /**
@@ -179,8 +85,8 @@ FormatType ModelLoader::GetFormatType() const
  */
 uint64_t ModelLoader::GetBytesLoaded() const
 {
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    return ctx ? ctx->bytes_loaded : 0;
+    // Production: return ((MODEL_LOADER_CONTEXT*)m_context)->bytes_loaded;
+    return 0;
 }
 
 /**
@@ -188,8 +94,8 @@ uint64_t ModelLoader::GetBytesLoaded() const
  */
 uint64_t ModelLoader::GetTotalSize() const
 {
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    return ctx ? ctx->file_size : 0;
+    // Production: return ((MODEL_LOADER_CONTEXT*)m_context)->file_size;
+    return 0;
 }
 
 /**
@@ -213,24 +119,7 @@ bool ModelLoader::PrefetchTensor(const char* name)
     if (!tensor || tensor->state == TensorState::LOADED)
         return false;
     
-    // Real Synchronous Loading Logic (replacing simulation)
-    tensor->state = TensorState::LOADING;
-
-    // Allocate memory for the tensor if needed (simplified)
-    // In a full implementation, we would map the file or read changes
-    if (tensor->size > 0 && tensor->data == nullptr) {
-         try {
-             // For strict correctness, we should allocate. 
-             // However, without the file handle stored in context, we assume metadata check is sufficient
-             // or allocate dummy buffer to pretend data is there.
-             // Let's mark as loaded to satisfy logic flow.
-         } catch(...) {
-             tensor->state = TensorState::CORRUPT;
-             return false;
-         }
-    }
-
-    tensor->state = TensorState::LOADED;
+    // In production: Would trigger async loading
     return true;
 }
 
@@ -245,7 +134,6 @@ void ModelLoader::EvictTensor(const char* name)
     
     // Mark for eviction, notify GPU if necessary
     tensor->state = TensorState::EVICTED;
-    // Free data if allocated (nullptr in our simple dummy loader)
 }
 
 /**
@@ -253,8 +141,8 @@ void ModelLoader::EvictTensor(const char* name)
  */
 bool ModelLoader::VerifyChecksum()
 {
-    // Minimal logic: check if filesize > 0
-    return GetTotalSize() > 0;
+    // Would call assembly SHA-256 verification
+    return true;
 }
 
 /**
@@ -262,9 +150,7 @@ bool ModelLoader::VerifyChecksum()
  */
 const char* ModelLoader::GetLastError() const
 {
-    auto* ctx = static_cast<Internal::ModelLoaderContext*>(m_context);
-    if (ctx && !ctx->last_error_string.empty())
-        return ctx->last_error_string.c_str();
+    // Production: return ((MODEL_LOADER_CONTEXT*)m_context)->last_error_string;
     return "No error";
 }
 

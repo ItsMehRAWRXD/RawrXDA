@@ -1,27 +1,20 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QLabel>
-#include <QSlider>
-#include <QSpinBox>
-#include <QComboBox>
-#include <QPushButton>
-#include <QColorDialog>
-#include <QUndoStack>
-#include <QUndoCommand>
-#include <memory>
+// ============================================================================
+// PaintCanvas / PaintApp — C++20, Win32. No Qt. (QWidget, QUndoStack removed)
+// ============================================================================
+
 #include <deque>
+#include <memory>
+#include <string>
 
 #include "image_generator/image_generator.h"
 
-class PaintCanvas : public QWidget {
-    Q_OBJECT
-
+class PaintCanvas {
 public:
-    explicit PaintCanvas(int width, int height, QWidget* parent = nullptr);
-    ~PaintCanvas() override = default;
+    explicit PaintCanvas(int width, int height, void* parent = nullptr);
+    ~PaintCanvas() = default;
 
-    // Tool types
     enum Tool {
         PENCIL,
         BRUSH,
@@ -35,7 +28,6 @@ public:
         TEXT
     };
 
-    // Canvas operations
     void clear_canvas(const ig::Color& color = ig::Color::white());
     void set_tool(Tool tool) { m_current_tool = tool; }
     void set_foreground_color(const ig::Color& color) { m_foreground_color = color; }
@@ -48,38 +40,26 @@ public:
     float get_brush_size() const { return m_brush_size; }
     float get_opacity() const { return m_opacity; }
 
-    // File operations
     bool save_as_bmp(const std::string& path);
     bool save_as_png(const std::string& path);
     bool load_from_file(const std::string& path);
 
-    // Undo/Redo
     void undo();
     void redo();
 
-    // Zoom and pan
-    void set_zoom(float zoom) { m_zoom = std::max(0.1f, zoom); update(); }
+    void set_zoom(float zoom) { m_zoom = std::max(0.1f, zoom); }
     void pan(int dx, int dy);
     float get_zoom() const { return m_zoom; }
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
-    QSize sizeHint() const override { return QSize(800, 600); }
+    /** Win32: call from WM_PAINT to render canvas into HDC */
+    void paint(void* hdc);
+    /** Win32: call from WM_LBUTTONDOWN, WM_MOUSEMOVE, WM_LBUTTONUP, WM_MOUSEWHEEL */
+    void mousePress(int x, int y);
+    void mouseMove(int x, int y);
+    void mouseRelease(int x, int y);
+    void wheel(int delta);
 
 private:
-    struct DrawCommand : public QUndoCommand {
-        ig::Canvas before_state;
-        ig::Canvas after_state;
-
-        DrawCommand(const ig::Canvas& before, const ig::Canvas& after, QUndoCommand* parent = nullptr);
-        void undo() override;
-        void redo() override;
-    };
-
     void save_state_for_undo();
     void draw_brush_stroke(float x, float y, float prev_x, float prev_y);
     void draw_line_preview(float x, float y);
@@ -87,8 +67,9 @@ private:
     void finalize_shape(float x, float y);
 
     ig::Canvas m_canvas;
-    ig::Canvas m_temp_preview;  // For previewing shapes
-    std::unique_ptr<QUndoStack> m_undo_stack;
+    ig::Canvas m_temp_preview;
+    std::deque<ig::Canvas> m_undo_stack;
+    std::deque<ig::Canvas> m_redo_stack;
     std::deque<ig::Canvas> m_history;
 
     Tool m_current_tool = PENCIL;
@@ -100,20 +81,16 @@ private:
     int m_pan_x = 0;
     int m_pan_y = 0;
 
-    // For shape drawing
     float m_shape_start_x = 0, m_shape_start_y = 0;
     bool m_is_drawing = false;
     float m_last_x = 0, m_last_y = 0;
 };
 
-class PaintApp : public QMainWindow {
-    Q_OBJECT
-
+class PaintApp {
 public:
-    explicit PaintApp(QWidget* parent = nullptr);
-    ~PaintApp() override = default;
+    explicit PaintApp(void* parent = nullptr);
+    ~PaintApp() = default;
 
-private slots:
     void on_new_file();
     void on_open_file();
     void on_save_as_bmp();
@@ -132,15 +109,15 @@ private slots:
 
 private:
     void create_menu_bar();
-    QLayout* create_tool_panel();
+    void* create_tool_panel();
     void update_color_buttons();
 
     PaintCanvas* m_canvas = nullptr;
-    QPushButton* m_foreground_button = nullptr;
-    QPushButton* m_background_button = nullptr;
-    QComboBox* m_tool_combo = nullptr;
-    QSlider* m_brush_size_slider = nullptr;
-    QSlider* m_opacity_slider = nullptr;
-    QSpinBox* m_brush_size_spin = nullptr;
-    QLabel* m_zoom_label = nullptr;
+    void* m_foreground_button = nullptr;
+    void* m_background_button = nullptr;
+    void* m_tool_combo = nullptr;
+    void* m_brush_size_slider = nullptr;
+    void* m_opacity_slider = nullptr;
+    void* m_brush_size_spin = nullptr;
+    void* m_zoom_label = nullptr;
 };

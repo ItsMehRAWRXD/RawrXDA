@@ -159,9 +159,6 @@ public:
     bool import_state(const std::string& filepath);
     void shutdown();
 
-    // Expose priority for ConflictResolver
-    uint32_t getAgentPriority(uint32_t agentId) const;
-
 private:
     AgentCoordinator();
     ~AgentCoordinator();

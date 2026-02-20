@@ -79,15 +79,34 @@ extern "C" void __cdecl Robust_Free(void* ptr) {
 extern "C" int __cdecl Robust_OpenStream(const wchar_t* filename, void* io_context) {
     EnsureInit();
     if (pOpenStream) return pOpenStream(filename, io_context);
-    // Fallback: not implemented
-    return 0;
+    // Fallback: open file with Win32 CreateFileW, store handle in io_context
+    if (!filename || !io_context) return 0;
+    HANDLE hFile = CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, nullptr,
+                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return 0;
+    // Store the HANDLE in the first 8 bytes of io_context
+    *reinterpret_cast<HANDLE*>(io_context) = hFile;
+    return 1;
 }
 
 extern "C" uint64_t __cdecl Robust_ReadSafe(void* io_context, void* dest, uint64_t bytesToRead) {
     EnsureInit();
     if (pReadSafe) return pReadSafe(io_context, dest, bytesToRead);
-    // Fallback: not implemented
-    return 0;
+    // Fallback: read from Win32 HANDLE stored in io_context
+    if (!io_context || !dest || bytesToRead == 0) return 0;
+    HANDLE hFile = *reinterpret_cast<HANDLE*>(io_context);
+    if (!hFile || hFile == INVALID_HANDLE_VALUE) return 0;
+    uint64_t totalRead = 0;
+    while (totalRead < bytesToRead) {
+        DWORD chunkSize = (DWORD)min(bytesToRead - totalRead, (uint64_t)0x7FFFFFFF);
+        DWORD bytesRead = 0;
+        if (!ReadFile(hFile, static_cast<uint8_t*>(dest) + totalRead, chunkSize, &bytesRead, nullptr)) {
+            break; // I/O error — return what we've read so far
+        }
+        if (bytesRead == 0) break; // EOF
+        totalRead += bytesRead;
+    }
+    return totalRead;
 }
 
 extern "C" uint64_t __cdecl Robust_SkipString(void* io_context) {

@@ -64,6 +64,10 @@ SECTOR_ALIGN                EQU 4096
 ; ════════════════════════════════════════════════════════════════════════════════
 ; External Windows API
 ; ════════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERN CreateFileA:PROC
 EXTERN CloseHandle:PROC
 EXTERN DeviceIoControl:PROC

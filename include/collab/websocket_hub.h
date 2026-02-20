@@ -1,39 +1,35 @@
 #ifndef WEBSOCKET_HUB_H
 #define WEBSOCKET_HUB_H
 
-#include <QObject>
-#include <QWebSocketServer>
-#include <QWebSocket>
-#include <QList>
-#include <QJsonObject>
+Please ensure everything is correct and present without lacking any source regardless if its supposed to not be in the repo or not IE keygen for unlock 800b kernel along with others IE titan agents that arent wired and toggable
+// C++20 / Win32. WebSocket server; no Qt. Use platform WS API in impl.
 
-// WebSocket server embedded inside RawrXD-Agent.exe (port 5173)
-class WebSocketHub : public QObject
+#include <string>
+#include <functional>
+#include <vector>
+
+struct WebSocketClient;  // Opaque per-client handle
+
+class WebSocketHub
 {
-    Q_OBJECT
-
 public:
-    explicit WebSocketHub(QObject *parent = nullptr);
+    using MessageReceivedFn = std::function<void(const std::string& messageJson, void* client)>;
+
+    WebSocketHub() = default;
     ~WebSocketHub();
 
-    // Start the server
-    bool startServer(quint16 port = 5173);
-
-    // Send message to all clients
-    void broadcastMessage(const QJsonObject &message);
-
-signals:
-    // Emitted when a message is received from a client
-    void messageReceived(const QJsonObject &message, QWebSocket *client);
-
-private slots:
-    void onNewConnection();
-    void onTextMessageReceived(const QString &message);
-    void onSocketDisconnected();
+    void setOnMessageReceived(MessageReceivedFn f) { m_onMessageReceived = std::move(f); }
+    bool startServer(uint16_t port = 5173);
+    void broadcastMessage(const std::string& messageJson);
 
 private:
-    QWebSocketServer *m_server;
-    QList<QWebSocket *> m_clients;
+    void onNewConnection();
+    void onTextMessageReceived(const std::string& message, void* client);
+    void onSocketDisconnected(void* client);
+
+    void* m_server = nullptr;
+    std::vector<void*> m_clients;
+    MessageReceivedFn m_onMessageReceived;
 };
 
 #endif // WEBSOCKET_HUB_H

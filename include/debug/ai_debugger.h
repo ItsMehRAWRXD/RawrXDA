@@ -1,70 +1,51 @@
 #ifndef AI_DEBUGGER_H
 #define AI_DEBUGGER_H
 
-#include <QObject>
-#include <QProcess>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QMap>
-#include <QTemporaryFile>
-#include <QDir>
-#include <QFile>
-#include <QTextStream>
-#include <QDebug>
+// C++20, no Qt. Breakpoint → collect debug info → prompt → model → fix. Callbacks replace signals.
 
-// Breakpoint hit → collect locals, stack, registers → prompt → model → diff → Keep/Undo dialog → apply patch → continue.
-class AIDebugger : public QObject
+#include <string>
+#include <vector>
+#include <map>
+#include <memory>
+#include <functional>
+
+struct AIDebuggerImpl;
+
+class AIDebugger
 {
-    Q_OBJECT
-
 public:
-    explicit AIDebugger(QObject *parent = nullptr);
+    using BreakpointHitFn   = std::function<void(const std::string& filePath, int lineNumber, const std::string& debugInfoJson)>;
+    using FixSuggestedFn   = std::function<void(const std::string& diff)>;
+    using DebuggingFinishedFn = std::function<void()>;
+
+    AIDebugger() = default;
     ~AIDebugger();
 
-    // Start debugging session
-    bool startDebugging(const QString &executablePath, const QStringList &arguments = QStringList());
+    void setOnBreakpointHit(BreakpointHitFn f)   { m_onBreakpointHit = std::move(f); }
+    void setOnFixSuggested(FixSuggestedFn f)     { m_onFixSuggested = std::move(f); }
+    void setOnDebuggingFinished(DebuggingFinishedFn f) { m_onDebuggingFinished = std::move(f); }
 
-    // Set a breakpoint
-    void setBreakpoint(const QString &filePath, int lineNumber);
-
-    // Continue execution
+    bool startDebugging(const std::string& executablePath, const std::vector<std::string>& arguments = {});
+    void setBreakpoint(const std::string& filePath, int lineNumber);
     void continueExecution();
-
-    // Stop debugging session
     void stopDebugging();
 
-signals:
-    // Emitted when a breakpoint is hit
-    void breakpointHit(const QString &filePath, int lineNumber, const QJsonObject &debugInfo);
-
-    // Emitted when a suggested fix is ready
-    void fixSuggested(const QString &diff);
-
-    // Emitted when debugging session ends
-    void debuggingFinished();
-
-private slots:
-    void onGdbReadyRead();
-    void onGdbFinished(int exitCode, QProcess::ExitStatus exitStatus);
-
 private:
-    QProcess *m_gdbProcess;
-    QString m_executablePath;
-    bool m_isRunning;
-    QMap<QString, int> m_breakpoints; // filePath -> lineNumber
+    void onGdbReadyRead();
+    void onGdbFinished(int exitCode, int exitStatus);
+    void parseGdbOutput(const std::string& output);
+    void sendGdbCommand(const std::string& command);
+    std::string collectDebugInfo();
+    void requestFixFromModel(const std::string& debugInfoJson);
 
-    // Parse GDB output
-    void parseGdbOutput(const QString &output);
+    std::unique_ptr<AIDebuggerImpl> m_impl;
+    std::string m_executablePath;
+    bool m_isRunning = false;
+    std::map<std::string, int> m_breakpoints;
 
-    // Send command to GDB
-    void sendGdbCommand(const QString &command);
-
-    // Collect debug information
-    QJsonObject collectDebugInfo();
-
-    // Request fix from model
-    void requestFixFromModel(const QJsonObject &debugInfo);
+    BreakpointHitFn   m_onBreakpointHit;
+    FixSuggestedFn    m_onFixSuggested;
+    DebuggingFinishedFn m_onDebuggingFinished;
 };
 
 #endif // AI_DEBUGGER_H

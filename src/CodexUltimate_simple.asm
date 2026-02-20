@@ -10,6 +10,22 @@ INCLUDE C:\masm32\include\windows.inc
 ; Define 64-bit structures manually
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
+; EXTERN declarations for API calls
+EXTERN CreateFileA: PROC
+EXTERN GetFileSizeEx: PROC
+EXTERN CreateFileMappingA: PROC
+EXTERN MapViewOfFile: PROC
+EXTERN UnmapViewOfFile: PROC
+EXTERN GetStdHandle: PROC
+EXTERN WriteConsoleA: PROC
+EXTERN ReadConsoleA: PROC
+EXTERN ExitProcess: PROC
+EXTERN atol: PROC
+
 ;============================================================================
 ; PROFESSIONAL CONSTANTS
 ;============================================================================
@@ -337,7 +353,7 @@ Print PROC lpString:QWORD
     lea r9, qwWritten              ; Bytes written
     
     ; Call WriteConsoleA (simplified)
-    mov rax, 0FFFFFFFFFFFFFFFFh    ; kernel32.dll base (placeholder)
+    call WriteConsoleA
     ret
 Print ENDP
 
@@ -423,8 +439,8 @@ MapFile PROC lpFileName:QWORD
     mov [rsp+20h], rcx
     mov rcx, lpFileName
     
-    ; Call CreateFileA (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    ; Call CreateFileA
+    call CreateFileA
     cmp rax, INVALID_HANDLE_VALUE
     je @@error
     mov hFile, rax
@@ -433,8 +449,8 @@ MapFile PROC lpFileName:QWORD
     lea rdx, qwSize
     mov rcx, hFile
     
-    ; Call GetFileSizeEx (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    ; Call GetFileSizeEx
+    call GetFileSizeEx
     test eax, eax
     jz @@error_close
     
@@ -451,8 +467,8 @@ MapFile PROC lpFileName:QWORD
     xor r9d, r9d
     mov rcx, hFile
     
-    ; Call CreateFileMappingA (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    ; Call CreateFileMappingA
+    call CreateFileMappingA
     test rax, rax
     jz @@error_close
     mov hMapping, rax
@@ -464,8 +480,8 @@ MapFile PROC lpFileName:QWORD
     mov r9, qwFileSize
     mov rcx, hMapping
     
-    ; Call MapViewOfFile (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    ; Call MapViewOfFile
+    call MapViewOfFile
     test rax, rax
     jz @@error_map
     mov pFileBuffer, rax
@@ -494,8 +510,8 @@ MapFile ENDP
 ; Unmap file (simplified)
 UnmapFile PROC
     mov rcx, pFileBuffer
-    ; Call UnmapViewOfFile (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    ; Call UnmapViewOfFile
+    call UnmapViewOfFile
     ret
 UnmapFile ENDP
 
@@ -961,13 +977,11 @@ main PROC
     
     ; Get standard handles
     mov ecx, STD_INPUT_HANDLE
-    ; Call GetStdHandle (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    call GetStdHandle
     mov hStdIn, rax
     
     mov ecx, STD_OUTPUT_HANDLE
-    ; Call GetStdHandle (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    call GetStdHandle
     mov hStdOut, rax
     
     ; Print banner
@@ -983,8 +997,8 @@ main PROC
     
     call ReadInput
     mov rcx, OFFSET szInputPath
-    ; Call atol (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
+    ; Call atol
+    call atol
     mov dwChoice, eax
     
     cmp dwChoice, 1
@@ -1006,10 +1020,7 @@ main PROC
     
 @@exit:
     xor ecx, ecx
-    ; Call ExitProcess (placeholder)
-    mov rax, 0FFFFFFFFFFFFFFFFh
-    
-    ret
+    call ExitProcess
 main ENDP
 
 END main

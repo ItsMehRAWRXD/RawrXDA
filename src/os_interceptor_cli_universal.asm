@@ -636,6 +636,7 @@ main PROC
     mov eax, dwExitCode
     push eax
     call ExitProcess
+    ret
 main ENDP
 
 END main

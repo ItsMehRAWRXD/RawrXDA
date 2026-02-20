@@ -4,11 +4,6 @@ project(RawrXD_Registry_Core)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Qt6 components
-
-# Qt6 requires C++17 minimum, but we use C++20
-set(CMAKE_CXX_STANDARD 20)
-
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -34,10 +29,6 @@ set(HEADERS
 
 # Create executable
 add_executable(registry_core ${SOURCES} ${HEADERS})
-
-# Link Qt6 libraries
-target_link_libraries(registry_core
-)
 
 # Platform-specific settings
 if(WIN32)

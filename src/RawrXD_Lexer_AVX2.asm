@@ -294,7 +294,47 @@ hash_done:
 Hash_Keyword ENDP
 
 Init_SIMD_Vectors PROC FRAME
-    ; Vectors are already initialized in .data
+    push rbx
+    .pushreg rbx
+    .endprolog
+
+    ; Build identifier char vector: a-z, A-Z, 0-9, _
+    ; Fill vec_identifier_chars with broadcast of valid char flags
+    lea rcx, [char_class_table]
+    
+    ; Mark lowercase letters
+    xor ebx, ebx
+    mov al, 1                       ; identifier class
+@@init_lower:
+    cmp ebx, 26
+    jge @@init_upper
+    mov BYTE PTR [rcx + rbx + 'a'], al
+    inc ebx
+    jmp @@init_lower
+@@init_upper:
+    xor ebx, ebx
+@@init_upper_loop:
+    cmp ebx, 26
+    jge @@init_digits
+    mov BYTE PTR [rcx + rbx + 'A'], al
+    inc ebx
+    jmp @@init_upper_loop
+@@init_digits:
+    xor ebx, ebx
+@@init_digit_loop:
+    cmp ebx, 10
+    jge @@init_special
+    mov BYTE PTR [rcx + rbx + '0'], al
+    inc ebx
+    jmp @@init_digit_loop
+@@init_special:
+    mov BYTE PTR [rcx + '_'], al    ; underscore is identifier
+
+    ; Reset performance counters
+    mov QWORD PTR [perf_chars_scanned], 0
+    mov QWORD PTR [perf_time_micros], 0
+
+    pop rbx
     ret
 Init_SIMD_Vectors ENDP
 
@@ -666,7 +706,56 @@ Lexer_Scan_Parallel ENDP
 ; FINALIZATION AND METRICS
 ;================================================================================
 Lexer_Finalize PROC FRAME
-    ; Post-processing: keyword identification, etc.
+    push rbx
+    push r12
+    push r13
+    .pushreg rbx
+    .pushreg r12
+    .pushreg r13
+    sub rsp, 20h
+    .allocstack 20h
+    .endprolog
+
+    ; Post-processing pass: scan all TOKEN_DEFAULT tokens
+    ; and reclassify identifiers that match keywords
+    ; RCX = token array, EDX = token count
+    mov r12, rcx                    ; token array
+    mov r13d, edx                   ; count
+    xor ebx, ebx                    ; index
+
+@@finalize_loop:
+    cmp ebx, r13d
+    jge @@finalize_done
+
+    ; Each TOKEN_RANGE is: { start:DWORD, length:DWORD, type:DWORD }
+    lea rcx, [r12 + rbx*8]          ; token entry (simplified)
+    movzx eax, BYTE PTR [rcx + 8]   ; token type
+    cmp eax, 0                      ; TOKEN_DEFAULT
+    jne @@finalize_next
+
+    ; It's a default token - check if it's a keyword
+    ; Hash the text and look up in keyword_table
+    mov rcx, [rcx]                  ; start offset into source
+    call Hash_Keyword
+    ; EAX = hash
+    and eax, 511                    ; mask to 512-bucket table
+    lea rcx, [keyword_table]
+    cmp BYTE PTR [rcx + rax], 0
+    je @@finalize_next
+
+    ; Match found - reclassify as TOKEN_KEYWORD
+    lea rcx, [r12 + rbx*8]
+    mov BYTE PTR [rcx + 8], 1       ; TOKEN_KEYWORD
+
+@@finalize_next:
+    inc ebx
+    jmp @@finalize_loop
+
+@@finalize_done:
+    add rsp, 20h
+    pop r13
+    pop r12
+    pop rbx
     ret
 Lexer_Finalize ENDP
 

@@ -1,0 +1,6182 @@
+{
+  "generated": "2026-02-12T22:56:28.359386Z",
+  "summary": {
+    "connected": 181,
+    "missing_handler": 70,
+    "missing_source": 305,
+    "total_defines": 619,
+    "total_sources": 358,
+    "total_sinks": 661
+  },
+  "connected": [
+    {
+      "id": 2001,
+      "name": "IDC_NP_ADD_BTN",
+      "sources": 2,
+      "sinks": 4
+    },
+    {
+      "id": 2002,
+      "name": "IDC_NP_REMOVE_BTN",
+      "sources": 3,
+      "sinks": 4
+    },
+    {
+      "id": 2003,
+      "name": "IDC_NP_TOGGLE_BTN",
+      "sources": 3,
+      "sinks": 4
+    },
+    {
+      "id": 2004,
+      "name": "IDM_EDIT_COPY",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 0,
+      "name": "#0",
+      "sources": 64,
+      "sinks": 7
+    },
+    {
+      "id": 1030,
+      "name": "IDM_FILE_LOAD_MODEL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 2005,
+      "name": "IDM_EDIT_PASTE",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 2016,
+      "name": "IDM_EDIT_FIND",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 2017,
+      "name": "IDM_EDIT_REPLACE",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 12020,
+      "name": "IDM_T1_BREADCRUMBS_TOGGLE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3001,
+      "name": "IDC_TE_RUN_BTN",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 3002,
+      "name": "IDC_TE_REFRESH_BTN",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 3003,
+      "name": "IDC_TE_COLLAPSE_BTN",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 4007,
+      "name": "IDM_TERMINAL_SPLIT_H",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4008,
+      "name": "IDM_TERMINAL_SPLIT_V",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3006,
+      "name": "IDM_TERMINAL_CLEAR_ALL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9706,
+      "name": "IDM_VOICE_TOGGLE_PANEL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9700,
+      "name": "IDM_VOICE_RECORD",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9701,
+      "name": "IDM_VOICE_PTT",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9702,
+      "name": "IDM_VOICE_SPEAK",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9703,
+      "name": "IDM_VOICE_JOIN_ROOM",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9704,
+      "name": "IDM_VOICE_SHOW_DEVICES",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9705,
+      "name": "IDM_VOICE_METRICS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 10200,
+      "name": "IDM_VOICE_AUTO_TOGGLE",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 10206,
+      "name": "IDM_VOICE_AUTO_STOP",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 10202,
+      "name": "IDM_VOICE_AUTO_NEXT_VOICE",
+      "sources": 2,
+      "sinks": 2
+    },
+    {
+      "id": 10203,
+      "name": "IDM_VOICE_AUTO_PREV_VOICE",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 10204,
+      "name": "IDM_VOICE_AUTO_RATE_UP",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 10205,
+      "name": "IDM_VOICE_AUTO_RATE_DOWN",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 9810,
+      "name": "IDM_QW_BACKUP_CREATE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9811,
+      "name": "IDM_QW_BACKUP_RESTORE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9812,
+      "name": "IDM_QW_BACKUP_AUTO_TOGGLE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9813,
+      "name": "IDM_QW_BACKUP_LIST",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9814,
+      "name": "IDM_QW_BACKUP_PRUNE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9820,
+      "name": "IDM_QW_ALERT_TOGGLE_MONITOR",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9823,
+      "name": "IDM_QW_ALERT_RESOURCE_STATUS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9821,
+      "name": "IDM_QW_ALERT_SHOW_HISTORY",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9822,
+      "name": "IDM_QW_ALERT_DISMISS_ALL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9800,
+      "name": "IDM_QW_SHORTCUT_EDITOR",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9830,
+      "name": "IDM_QW_SLO_DASHBOARD",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4002,
+      "name": "IDM_HELP_CMDREF",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4003,
+      "name": "IDM_HELP_PSDOCS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4004,
+      "name": "IDM_HELP_SEARCH",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4001,
+      "name": "IDM_HELP_ABOUT",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9500,
+      "name": "IDM_AUDIT_SHOW_DASHBOARD",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9501,
+      "name": "IDM_AUDIT_RUN_FULL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9502,
+      "name": "IDM_AUDIT_DETECT_STUBS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9503,
+      "name": "IDM_AUDIT_CHECK_MENUS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9504,
+      "name": "IDM_AUDIT_RUN_TESTS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9505,
+      "name": "IDM_AUDIT_EXPORT_REPORT",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9506,
+      "name": "IDM_AUDIT_QUICK_STATS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4100,
+      "name": "IDM_AGENT_START_LOOP",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4120,
+      "name": "IDM_AGENT_BOUNDED_LOOP",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 4201,
+      "name": "IDM_AI_MODE_DEEP_THINK",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4202,
+      "name": "IDM_AI_MODE_DEEP_RESEARCH",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4203,
+      "name": "IDM_AI_MODE_NO_REFUSAL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4210,
+      "name": "IDM_AI_CONTEXT_4K",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4211,
+      "name": "IDM_AI_CONTEXT_32K",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 4212,
+      "name": "IDM_AI_CONTEXT_64K",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 4213,
+      "name": "IDM_AI_CONTEXT_128K",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 4214,
+      "name": "IDM_AI_CONTEXT_256K",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 4215,
+      "name": "IDM_AI_CONTEXT_512K",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 4216,
+      "name": "IDM_AI_CONTEXT_1M",
+      "sources": 1,
+      "sinks": 3
+    },
+    {
+      "id": 4101,
+      "name": "IDM_AGENT_EXECUTE_CMD",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4102,
+      "name": "IDM_AGENT_CONFIGURE_MODEL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4103,
+      "name": "IDM_AGENT_VIEW_TOOLS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4104,
+      "name": "IDM_AGENT_VIEW_STATUS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4105,
+      "name": "IDM_AGENT_STOP",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9001,
+      "name": "IDM_HOTPATCH_SHOW_STATUS",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9016,
+      "name": "IDM_HOTPATCH_TOGGLE_ALL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9014,
+      "name": "IDM_HOTPATCH_SHOW_EVENT_LOG",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9015,
+      "name": "IDM_HOTPATCH_RESET_STATS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9002,
+      "name": "IDM_HOTPATCH_MEMORY_APPLY",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9003,
+      "name": "IDM_HOTPATCH_MEMORY_REVERT",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9004,
+      "name": "IDM_HOTPATCH_BYTE_APPLY",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9005,
+      "name": "IDM_HOTPATCH_BYTE_SEARCH",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9006,
+      "name": "IDM_HOTPATCH_SERVER_ADD",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 9007,
+      "name": "IDM_HOTPATCH_SERVER_REMOVE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9008,
+      "name": "IDM_HOTPATCH_PROXY_BIAS",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 9009,
+      "name": "IDM_HOTPATCH_PROXY_REWRITE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9010,
+      "name": "IDM_HOTPATCH_PROXY_TERMINATE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9011,
+      "name": "IDM_HOTPATCH_PROXY_VALIDATE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9017,
+      "name": "IDM_HOTPATCH_SHOW_PROXY_STATS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9012,
+      "name": "IDM_HOTPATCH_PRESET_SAVE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9013,
+      "name": "IDM_HOTPATCH_PRESET_LOAD",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4150,
+      "name": "IDM_AUTONOMY_TOGGLE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4151,
+      "name": "IDM_AUTONOMY_START",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4152,
+      "name": "IDM_AUTONOMY_STOP",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4153,
+      "name": "IDM_AUTONOMY_SET_GOAL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4154,
+      "name": "IDM_AUTONOMY_STATUS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4155,
+      "name": "IDM_AUTONOMY_MEMORY",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 1005,
+      "name": "IDM_FILE_SAVEALL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 5010,
+      "name": "IDC_PS_BTN_EXECUTE",
+      "sources": 3,
+      "sinks": 2
+    },
+    {
+      "id": 5020,
+      "name": "IDC_CASE_SENSITIVE",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 5021,
+      "name": "IDC_WHOLE_WORD",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 5022,
+      "name": "IDC_USE_REGEX",
+      "sources": 2,
+      "sinks": 1
+    },
+    {
+      "id": 5030,
+      "name": "IDC_BTN_FIND_NEXT",
+      "sources": 2,
+      "sinks": 3
+    },
+    {
+      "id": 5033,
+      "name": "IDC_BTN_CLOSE",
+      "sources": 2,
+      "sinks": 3
+    },
+    {
+      "id": 5011,
+      "name": "IDC_PS_BTN_CLEAR",
+      "sources": 2,
+      "sinks": 2
+    },
+    {
+      "id": 5031,
+      "name": "IDC_BTN_REPLACE",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 5032,
+      "name": "IDC_BTN_REPLACE_ALL",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 6010,
+      "name": "IDC_SNIPPET_LIST_DLG",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 6011,
+      "name": "IDC_SNIPPET_NAME",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 6012,
+      "name": "IDC_SNIPPET_DESC",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 6013,
+      "name": "IDC_SNIPPET_CODE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 1025,
+      "name": "IDC_FILE_EXPLORER",
+      "sources": 2,
+      "sinks": 3
+    },
+    {
+      "id": 1026,
+      "name": "IDC_FILE_TREE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 5001,
+      "name": "IDC_AI_MAX_MODE",
+      "sources": 3,
+      "sinks": 2
+    },
+    {
+      "id": 5002,
+      "name": "IDC_AI_DEEP_THINK",
+      "sources": 3,
+      "sinks": 2
+    },
+    {
+      "id": 5003,
+      "name": "IDC_AI_DEEP_RESEARCH",
+      "sources": 2,
+      "sinks": 2
+    },
+    {
+      "id": 5004,
+      "name": "IDC_AI_NO_REFUSAL",
+      "sources": 3,
+      "sinks": 2
+    },
+    {
+      "id": 201,
+      "name": "#201",
+      "sources": 2,
+      "sinks": 2
+    },
+    {
+      "id": 7601,
+      "name": "IDC_CRASH_RESTART",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7602,
+      "name": "IDC_CRASH_SAFEMODE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7603,
+      "name": "IDC_CRASH_SEND",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7605,
+      "name": "IDC_CRASH_COPY",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7604,
+      "name": "IDC_CRASH_CLOSE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 8001,
+      "name": "IDM_DECOMP_RENAME_VAR",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 8002,
+      "name": "IDM_DECOMP_GOTO_DEF",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 8003,
+      "name": "IDM_DECOMP_FIND_REFS",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 8004,
+      "name": "IDM_DECOMP_COPY_LINE",
+      "sources": 2,
+      "sinks": 3
+    },
+    {
+      "id": 8005,
+      "name": "IDM_DECOMP_COPY_ALL",
+      "sources": 2,
+      "sinks": 3
+    },
+    {
+      "id": 8006,
+      "name": "IDM_DECOMP_GOTO_ADDR",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 5012,
+      "name": "IDC_PS_BTN_STOP",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 5013,
+      "name": "IDC_PS_BTN_HISTORY",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 5014,
+      "name": "IDC_PS_BTN_RESTART",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 5015,
+      "name": "IDC_PS_BTN_LOAD_RAWRXD",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 4300,
+      "name": "IDM_REVENG_ANALYZE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4301,
+      "name": "IDM_REVENG_DISASM",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4302,
+      "name": "IDM_REVENG_DUMPBIN",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4316,
+      "name": "IDM_REVENG_DECOMPILER_VIEW",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4303,
+      "name": "IDM_REVENG_COMPILE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4308,
+      "name": "IDM_REVENG_CFG",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4309,
+      "name": "IDM_REVENG_FUNCTIONS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4310,
+      "name": "IDM_REVENG_DEMANGLE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4311,
+      "name": "IDM_REVENG_SSA",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4312,
+      "name": "IDM_REVENG_RECURSIVE_DISASM",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4313,
+      "name": "IDM_REVENG_TYPE_RECOVERY",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4314,
+      "name": "IDM_REVENG_DATA_FLOW",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4304,
+      "name": "IDM_REVENG_COMPARE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4305,
+      "name": "IDM_REVENG_DETECT_VULNS",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4306,
+      "name": "IDM_REVENG_EXPORT_IDA",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4307,
+      "name": "IDM_REVENG_EXPORT_GHIDRA",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 4315,
+      "name": "IDM_REVENG_LICENSE_INFO",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7005,
+      "name": "IDC_SE_SEARCH",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7001,
+      "name": "IDC_PLAN_LIST",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7002,
+      "name": "IDC_PLAN_DETAIL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7003,
+      "name": "IDC_PLAN_GOAL_LABEL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 7004,
+      "name": "IDC_PLAN_SUMMARY_LABEL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 6001,
+      "name": "IDC_TD_FILTER",
+      "sources": 2,
+      "sinks": 2
+    },
+    {
+      "id": 6002,
+      "name": "IDC_TD_CLEAR",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 6003,
+      "name": "IDC_TD_EXPORT",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 3101,
+      "name": "IDM_THEME_DARK_PLUS",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3102,
+      "name": "IDM_THEME_LIGHT_PLUS",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3103,
+      "name": "IDM_THEME_MONOKAI",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3104,
+      "name": "IDM_THEME_DRACULA",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3105,
+      "name": "IDM_THEME_NORD",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3114,
+      "name": "IDM_THEME_ONE_DARK_PRO",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3106,
+      "name": "IDM_THEME_SOLARIZED_DARK",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3107,
+      "name": "IDM_THEME_SOLARIZED_LIGHT",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3109,
+      "name": "IDM_THEME_GRUVBOX_DARK",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3110,
+      "name": "IDM_THEME_CATPPUCCIN_MOCHA",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3111,
+      "name": "IDM_THEME_TOKYO_NIGHT",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3108,
+      "name": "IDM_THEME_CYBERPUNK_NEON",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3115,
+      "name": "IDM_THEME_SYNTHWAVE84",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3112,
+      "name": "IDM_THEME_RAWRXD_CRIMSON",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3116,
+      "name": "IDM_THEME_ABYSS",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3113,
+      "name": "IDM_THEME_HIGH_CONTRAST",
+      "sources": 1,
+      "sinks": 4
+    },
+    {
+      "id": 3200,
+      "name": "IDM_TRANSPARENCY_100",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3201,
+      "name": "IDM_TRANSPARENCY_90",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3202,
+      "name": "IDM_TRANSPARENCY_80",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3203,
+      "name": "IDM_TRANSPARENCY_70",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3204,
+      "name": "IDM_TRANSPARENCY_60",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3205,
+      "name": "IDM_TRANSPARENCY_50",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3206,
+      "name": "IDM_TRANSPARENCY_40",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3210,
+      "name": "IDM_TRANSPARENCY_CUSTOM",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 3211,
+      "name": "IDM_TRANSPARENCY_TOGGLE",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 12061,
+      "name": "IDM_T1_ICON_THEME_SETI",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 12062,
+      "name": "IDM_T1_ICON_THEME_MATERIAL",
+      "sources": 1,
+      "sinks": 1
+    },
+    {
+      "id": 9200,
+      "name": "IDM_LSP_SERVER_START",
+      "sources": 1,
+      "sinks": 2
+    },
+    {
+      "id": 9303,
+      "name": "IDM_EDITOR_ENGINE_CYCLE",
+      "sources": 1,
+      "sinks": 1
+    }
+  ],
+  "missing_handler": [
+    {
+      "id": 2018,
+      "name": "IDM_EDIT_FIND_NEXT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2019,
+      "name": "IDM_EDIT_FIND_PREV",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2012,
+      "name": "IDM_EDIT_SNIPPET",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2013,
+      "name": "IDM_EDIT_COPY_FORMAT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2014,
+      "name": "IDM_EDIT_PASTE_PLAIN",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2015,
+      "name": "IDM_EDIT_CLIPBOARD_HISTORY",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2020,
+      "name": "IDM_VIEW_MINIMAP",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2021,
+      "name": "IDM_VIEW_OUTPUT_TABS",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2025,
+      "name": "IDM_VIEW_OUTPUT_PANEL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2022,
+      "name": "IDM_VIEW_MODULE_BROWSER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2024,
+      "name": "IDM_VIEW_FLOATING_PANEL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2023,
+      "name": "IDM_VIEW_THEME_EDITOR",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2026,
+      "name": "IDM_VIEW_USE_STREAMING_LOADER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2027,
+      "name": "IDM_VIEW_USE_VULKAN_RENDERER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3010,
+      "name": "IDM_TOOLS_PROFILE_START",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3011,
+      "name": "IDM_TOOLS_PROFILE_STOP",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3012,
+      "name": "IDM_TOOLS_PROFILE_RESULTS",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3013,
+      "name": "IDM_TOOLS_ANALYZE_SCRIPT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3050,
+      "name": "IDM_MODULES_REFRESH",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3051,
+      "name": "IDM_MODULES_IMPORT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3052,
+      "name": "IDM_MODULES_EXPORT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3020,
+      "name": "IDM_GIT_STATUS",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3021,
+      "name": "IDM_GIT_COMMIT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3022,
+      "name": "IDM_GIT_PUSH",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3023,
+      "name": "IDM_GIT_PULL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 3024,
+      "name": "IDM_GIT_PANEL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1018,
+      "name": "IDC_TITLE_TEXT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1001,
+      "name": "IDC_EDITOR",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1003,
+      "name": "IDC_COMMAND_INPUT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2000,
+      "name": "IDC_STATUS_BAR",
+      "sources": 2,
+      "sinks": 0
+    },
+    {
+      "id": 1017,
+      "name": "IDC_SEVERITY_FILTER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 6020,
+      "name": "IDC_BTN_INSERT_SNIPPET",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 6021,
+      "name": "IDC_BTN_NEW_SNIPPET",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 6022,
+      "name": "IDC_BTN_DELETE_SNIPPET",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 6023,
+      "name": "IDC_BTN_SAVE_SNIPPETS",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1200,
+      "name": "IDC_SECONDARY_SIDEBAR",
+      "sources": 2,
+      "sinks": 0
+    },
+    {
+      "id": 1204,
+      "name": "IDC_COPILOT_SEND_BTN",
+      "sources": 3,
+      "sinks": 0
+    },
+    {
+      "id": 1205,
+      "name": "IDC_COPILOT_CLEAR_BTN",
+      "sources": 3,
+      "sinks": 0
+    },
+    {
+      "id": 1206,
+      "name": "IDC_AI_CONTEXT_SLIDER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1203,
+      "name": "IDC_COPILOT_CHAT_OUTPUT",
+      "sources": 2,
+      "sinks": 0
+    },
+    {
+      "id": 1202,
+      "name": "IDC_COPILOT_CHAT_INPUT",
+      "sources": 2,
+      "sinks": 0
+    },
+    {
+      "id": 7607,
+      "name": "IDC_CRASH_TRACE_EDIT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2100,
+      "name": "IDC_DEBUGGER_CONTAINER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2101,
+      "name": "IDC_DEBUGGER_TOOLBAR",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2103,
+      "name": "IDC_DEBUGGER_BTN_CONTINUE",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2104,
+      "name": "IDC_DEBUGGER_BTN_STEP_OVER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2105,
+      "name": "IDC_DEBUGGER_BTN_STEP_INTO",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2106,
+      "name": "IDC_DEBUGGER_BTN_STEP_OUT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2107,
+      "name": "IDC_DEBUGGER_BTN_STOP",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2109,
+      "name": "IDC_DEBUGGER_STATUS_TEXT",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2102,
+      "name": "IDC_DEBUGGER_TABS",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2110,
+      "name": "IDC_DEBUGGER_BREAKPOINT_LIST",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2111,
+      "name": "IDC_DEBUGGER_WATCH_LIST",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2112,
+      "name": "IDC_DEBUGGER_VARIABLE_TREE",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2113,
+      "name": "IDC_DEBUGGER_STACK_LIST",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 2114,
+      "name": "IDC_DEBUGGER_MEMORY",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 5000,
+      "name": "IDC_PS_PANEL_CONTAINER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 998,
+      "name": "#998",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 9000,
+      "name": "#9000",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1100,
+      "name": "IDC_ACTIVITY_BAR",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1201,
+      "name": "IDC_SECONDARY_SIDEBAR_HEADER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1300,
+      "name": "IDC_PANEL_CONTAINER",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1301,
+      "name": "IDC_PANEL_TABS",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1306,
+      "name": "IDC_PANEL_TOOLBAR",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1307,
+      "name": "IDC_PANEL_BTN_NEW_TERMINAL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1308,
+      "name": "IDC_PANEL_BTN_SPLIT_TERMINAL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1309,
+      "name": "IDC_PANEL_BTN_KILL_TERMINAL",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1310,
+      "name": "IDC_PANEL_BTN_MAXIMIZE",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1311,
+      "name": "IDC_PANEL_BTN_CLOSE",
+      "sources": 1,
+      "sinks": 0
+    },
+    {
+      "id": 1312,
+      "name": "IDC_PANEL_PROBLEMS_LIST",
+      "sources": 1,
+      "sinks": 0
+    }
+  ],
+  "missing_source": [
+    {
+      "id": 50001,
+      "name": "#50001",
+      "sinks": 1
+    },
+    {
+      "id": 50002,
+      "name": "#50002",
+      "sinks": 1
+    },
+    {
+      "id": 50015,
+      "name": "#50015",
+      "sinks": 1
+    },
+    {
+      "id": 50020,
+      "name": "#50020",
+      "sinks": 1
+    },
+    {
+      "id": 50021,
+      "name": "#50021",
+      "sinks": 1
+    },
+    {
+      "id": 50003,
+      "name": "#50003",
+      "sinks": 1
+    },
+    {
+      "id": 50011,
+      "name": "#50011",
+      "sinks": 1
+    },
+    {
+      "id": 50012,
+      "name": "#50012",
+      "sinks": 1
+    },
+    {
+      "id": 50013,
+      "name": "#50013",
+      "sinks": 1
+    },
+    {
+      "id": 50014,
+      "name": "#50014",
+      "sinks": 1
+    },
+    {
+      "id": 4106,
+      "name": "IDM_AGENT_MEMORY",
+      "sinks": 1
+    },
+    {
+      "id": 4107,
+      "name": "IDM_AGENT_MEMORY_VIEW",
+      "sinks": 1
+    },
+    {
+      "id": 4108,
+      "name": "IDM_AGENT_MEMORY_CLEAR",
+      "sinks": 1
+    },
+    {
+      "id": 4109,
+      "name": "IDM_AGENT_MEMORY_EXPORT",
+      "sinks": 1
+    },
+    {
+      "id": 4110,
+      "name": "IDM_SUBAGENT_CHAIN",
+      "sinks": 1
+    },
+    {
+      "id": 4111,
+      "name": "IDM_SUBAGENT_SWARM",
+      "sinks": 1
+    },
+    {
+      "id": 4112,
+      "name": "IDM_SUBAGENT_TODO_LIST",
+      "sinks": 1
+    },
+    {
+      "id": 4113,
+      "name": "IDM_SUBAGENT_TODO_CLEAR",
+      "sinks": 1
+    },
+    {
+      "id": 4114,
+      "name": "IDM_SUBAGENT_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 4317,
+      "name": "IDM_REVENG_DECOMP_RENAME",
+      "sinks": 1
+    },
+    {
+      "id": 4318,
+      "name": "IDM_REVENG_DECOMP_SYNC",
+      "sinks": 1
+    },
+    {
+      "id": 4319,
+      "name": "IDM_REVENG_DECOMP_CLOSE",
+      "sinks": 1
+    },
+    {
+      "id": 9100,
+      "name": "IDM_VIEW_TOGGLE_MONACO",
+      "sinks": 2
+    },
+    {
+      "id": 1031,
+      "name": "IDM_FILE_MODEL_FROM_HF",
+      "sinks": 1
+    },
+    {
+      "id": 1032,
+      "name": "IDM_FILE_MODEL_FROM_OLLAMA",
+      "sinks": 1
+    },
+    {
+      "id": 1033,
+      "name": "IDM_FILE_MODEL_FROM_URL",
+      "sinks": 1
+    },
+    {
+      "id": 1034,
+      "name": "IDM_FILE_MODEL_UNIFIED",
+      "sinks": 1
+    },
+    {
+      "id": 1035,
+      "name": "IDM_FILE_MODEL_QUICK_LOAD",
+      "sinks": 1
+    },
+    {
+      "id": 1006,
+      "name": "IDM_FILE_CLOSE",
+      "sinks": 1
+    },
+    {
+      "id": 2006,
+      "name": "IDM_EDIT_SELECT_ALL",
+      "sinks": 1
+    },
+    {
+      "id": 3004,
+      "name": "#3004",
+      "sinks": 1
+    },
+    {
+      "id": 3005,
+      "name": "#3005",
+      "sinks": 1
+    },
+    {
+      "id": 3007,
+      "name": "#3007",
+      "sinks": 1
+    },
+    {
+      "id": 3008,
+      "name": "#3008",
+      "sinks": 1
+    },
+    {
+      "id": 4005,
+      "name": "#4005",
+      "sinks": 1
+    },
+    {
+      "id": 4006,
+      "name": "IDM_TERMINAL_KILL",
+      "sinks": 1
+    },
+    {
+      "id": 4009,
+      "name": "IDM_TERMINAL_SPLIT_CODE",
+      "sinks": 1
+    },
+    {
+      "id": 5005,
+      "name": "#5005",
+      "sinks": 1
+    },
+    {
+      "id": 5016,
+      "name": "IDC_PS_BTN_TOGGLE",
+      "sinks": 1
+    },
+    {
+      "id": 5017,
+      "name": "#5017",
+      "sinks": 1
+    },
+    {
+      "id": 5018,
+      "name": "#5018",
+      "sinks": 1
+    },
+    {
+      "id": 5019,
+      "name": "#5019",
+      "sinks": 1
+    },
+    {
+      "id": 5023,
+      "name": "#5023",
+      "sinks": 1
+    },
+    {
+      "id": 5024,
+      "name": "#5024",
+      "sinks": 1
+    },
+    {
+      "id": 5025,
+      "name": "#5025",
+      "sinks": 1
+    },
+    {
+      "id": 5026,
+      "name": "#5026",
+      "sinks": 1
+    },
+    {
+      "id": 5027,
+      "name": "#5027",
+      "sinks": 1
+    },
+    {
+      "id": 5028,
+      "name": "#5028",
+      "sinks": 1
+    },
+    {
+      "id": 5029,
+      "name": "#5029",
+      "sinks": 1
+    },
+    {
+      "id": 5034,
+      "name": "#5034",
+      "sinks": 1
+    },
+    {
+      "id": 5035,
+      "name": "#5035",
+      "sinks": 1
+    },
+    {
+      "id": 5036,
+      "name": "#5036",
+      "sinks": 1
+    },
+    {
+      "id": 5037,
+      "name": "IDM_BACKEND_SWITCH_LOCAL",
+      "sinks": 1
+    },
+    {
+      "id": 5038,
+      "name": "IDM_BACKEND_SWITCH_OLLAMA",
+      "sinks": 1
+    },
+    {
+      "id": 5039,
+      "name": "IDM_BACKEND_SWITCH_OPENAI",
+      "sinks": 1
+    },
+    {
+      "id": 5040,
+      "name": "IDM_BACKEND_SWITCH_CLAUDE",
+      "sinks": 1
+    },
+    {
+      "id": 5041,
+      "name": "IDM_BACKEND_SWITCH_GEMINI",
+      "sinks": 1
+    },
+    {
+      "id": 5042,
+      "name": "IDM_BACKEND_SHOW_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5043,
+      "name": "IDM_BACKEND_SHOW_SWITCHER",
+      "sinks": 1
+    },
+    {
+      "id": 5044,
+      "name": "IDM_BACKEND_CONFIGURE",
+      "sinks": 1
+    },
+    {
+      "id": 5045,
+      "name": "IDM_BACKEND_HEALTH_CHECK",
+      "sinks": 1
+    },
+    {
+      "id": 5046,
+      "name": "IDM_BACKEND_SET_API_KEY",
+      "sinks": 1
+    },
+    {
+      "id": 5047,
+      "name": "IDM_BACKEND_SAVE_CONFIGS",
+      "sinks": 1
+    },
+    {
+      "id": 5048,
+      "name": "IDM_ROUTER_ENABLE",
+      "sinks": 1
+    },
+    {
+      "id": 5049,
+      "name": "IDM_ROUTER_DISABLE",
+      "sinks": 1
+    },
+    {
+      "id": 5050,
+      "name": "IDM_ROUTER_SHOW_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5051,
+      "name": "IDM_ROUTER_SHOW_DECISION",
+      "sinks": 1
+    },
+    {
+      "id": 5052,
+      "name": "IDM_ROUTER_SET_POLICY",
+      "sinks": 1
+    },
+    {
+      "id": 5053,
+      "name": "IDM_ROUTER_SHOW_CAPABILITIES",
+      "sinks": 1
+    },
+    {
+      "id": 5054,
+      "name": "IDM_ROUTER_SHOW_FALLBACKS",
+      "sinks": 1
+    },
+    {
+      "id": 5055,
+      "name": "IDM_ROUTER_SAVE_CONFIG",
+      "sinks": 1
+    },
+    {
+      "id": 5056,
+      "name": "IDM_ROUTER_ROUTE_PROMPT",
+      "sinks": 1
+    },
+    {
+      "id": 5057,
+      "name": "IDM_ROUTER_RESET_STATS",
+      "sinks": 1
+    },
+    {
+      "id": 5071,
+      "name": "IDM_ROUTER_WHY_BACKEND",
+      "sinks": 1
+    },
+    {
+      "id": 5072,
+      "name": "IDM_ROUTER_PIN_TASK",
+      "sinks": 1
+    },
+    {
+      "id": 5073,
+      "name": "IDM_ROUTER_UNPIN_TASK",
+      "sinks": 1
+    },
+    {
+      "id": 5074,
+      "name": "IDM_ROUTER_SHOW_PINS",
+      "sinks": 1
+    },
+    {
+      "id": 5075,
+      "name": "IDM_ROUTER_SHOW_HEATMAP",
+      "sinks": 1
+    },
+    {
+      "id": 5076,
+      "name": "IDM_ROUTER_ENSEMBLE_ENABLE",
+      "sinks": 1
+    },
+    {
+      "id": 5077,
+      "name": "IDM_ROUTER_ENSEMBLE_DISABLE",
+      "sinks": 1
+    },
+    {
+      "id": 5078,
+      "name": "IDM_ROUTER_ENSEMBLE_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5079,
+      "name": "IDM_ROUTER_SIMULATE",
+      "sinks": 1
+    },
+    {
+      "id": 5081,
+      "name": "IDM_ROUTER_SHOW_COST_STATS",
+      "sinks": 1
+    },
+    {
+      "id": 5058,
+      "name": "IDM_LSP_START_ALL",
+      "sinks": 1
+    },
+    {
+      "id": 5059,
+      "name": "IDM_LSP_STOP_ALL",
+      "sinks": 1
+    },
+    {
+      "id": 5060,
+      "name": "IDM_LSP_SHOW_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5061,
+      "name": "IDM_LSP_GOTO_DEFINITION",
+      "sinks": 1
+    },
+    {
+      "id": 5062,
+      "name": "IDM_LSP_FIND_REFERENCES",
+      "sinks": 1
+    },
+    {
+      "id": 5063,
+      "name": "IDM_LSP_RENAME_SYMBOL",
+      "sinks": 1
+    },
+    {
+      "id": 5064,
+      "name": "IDM_LSP_HOVER_INFO",
+      "sinks": 1
+    },
+    {
+      "id": 5065,
+      "name": "IDM_LSP_SHOW_DIAGNOSTICS",
+      "sinks": 1
+    },
+    {
+      "id": 5066,
+      "name": "IDM_LSP_RESTART_SERVER",
+      "sinks": 1
+    },
+    {
+      "id": 5067,
+      "name": "IDM_LSP_CLEAR_DIAGNOSTICS",
+      "sinks": 1
+    },
+    {
+      "id": 5068,
+      "name": "IDM_LSP_SHOW_SYMBOL_INFO",
+      "sinks": 1
+    },
+    {
+      "id": 5069,
+      "name": "IDM_LSP_CONFIGURE",
+      "sinks": 1
+    },
+    {
+      "id": 5070,
+      "name": "IDM_LSP_SAVE_CONFIG",
+      "sinks": 1
+    },
+    {
+      "id": 5082,
+      "name": "IDM_ASM_PARSE_SYMBOLS",
+      "sinks": 1
+    },
+    {
+      "id": 5083,
+      "name": "IDM_ASM_GOTO_LABEL",
+      "sinks": 1
+    },
+    {
+      "id": 5084,
+      "name": "IDM_ASM_FIND_LABEL_REFS",
+      "sinks": 1
+    },
+    {
+      "id": 5085,
+      "name": "IDM_ASM_SHOW_SYMBOL_TABLE",
+      "sinks": 1
+    },
+    {
+      "id": 5086,
+      "name": "IDM_ASM_INSTRUCTION_INFO",
+      "sinks": 1
+    },
+    {
+      "id": 5087,
+      "name": "IDM_ASM_REGISTER_INFO",
+      "sinks": 1
+    },
+    {
+      "id": 5088,
+      "name": "IDM_ASM_ANALYZE_BLOCK",
+      "sinks": 1
+    },
+    {
+      "id": 5089,
+      "name": "IDM_ASM_SHOW_CALL_GRAPH",
+      "sinks": 1
+    },
+    {
+      "id": 5090,
+      "name": "IDM_ASM_SHOW_DATA_FLOW",
+      "sinks": 1
+    },
+    {
+      "id": 5091,
+      "name": "IDM_ASM_DETECT_CONVENTION",
+      "sinks": 1
+    },
+    {
+      "id": 5092,
+      "name": "IDM_ASM_SHOW_SECTIONS",
+      "sinks": 1
+    },
+    {
+      "id": 5093,
+      "name": "IDM_ASM_CLEAR_SYMBOLS",
+      "sinks": 1
+    },
+    {
+      "id": 5094,
+      "name": "IDM_HYBRID_COMPLETE",
+      "sinks": 1
+    },
+    {
+      "id": 5095,
+      "name": "IDM_HYBRID_DIAGNOSTICS",
+      "sinks": 1
+    },
+    {
+      "id": 5096,
+      "name": "IDM_HYBRID_SMART_RENAME",
+      "sinks": 1
+    },
+    {
+      "id": 5097,
+      "name": "IDM_HYBRID_ANALYZE_FILE",
+      "sinks": 1
+    },
+    {
+      "id": 5098,
+      "name": "IDM_HYBRID_AUTO_PROFILE",
+      "sinks": 1
+    },
+    {
+      "id": 5099,
+      "name": "IDM_HYBRID_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5100,
+      "name": "IDM_HYBRID_SYMBOL_USAGE",
+      "sinks": 1
+    },
+    {
+      "id": 5101,
+      "name": "IDM_HYBRID_EXPLAIN_SYMBOL",
+      "sinks": 1
+    },
+    {
+      "id": 5102,
+      "name": "IDM_HYBRID_ANNOTATE_DIAG",
+      "sinks": 1
+    },
+    {
+      "id": 5103,
+      "name": "IDM_HYBRID_STREAM_ANALYZE",
+      "sinks": 1
+    },
+    {
+      "id": 5104,
+      "name": "IDM_HYBRID_SEMANTIC_PREFETCH",
+      "sinks": 1
+    },
+    {
+      "id": 5105,
+      "name": "IDM_HYBRID_CORRECTION_LOOP",
+      "sinks": 1
+    },
+    {
+      "id": 5106,
+      "name": "IDM_MULTI_RESP_GENERATE",
+      "sinks": 1
+    },
+    {
+      "id": 5108,
+      "name": "IDM_MULTI_RESP_SELECT_PREFERRED",
+      "sinks": 1
+    },
+    {
+      "id": 5109,
+      "name": "IDM_MULTI_RESP_COMPARE",
+      "sinks": 1
+    },
+    {
+      "id": 5110,
+      "name": "IDM_MULTI_RESP_SHOW_STATS",
+      "sinks": 1
+    },
+    {
+      "id": 5111,
+      "name": "IDM_MULTI_RESP_SHOW_TEMPLATES",
+      "sinks": 1
+    },
+    {
+      "id": 5112,
+      "name": "IDM_MULTI_RESP_TOGGLE_TEMPLATE",
+      "sinks": 1
+    },
+    {
+      "id": 5113,
+      "name": "IDM_MULTI_RESP_SHOW_PREFS",
+      "sinks": 1
+    },
+    {
+      "id": 5114,
+      "name": "IDM_MULTI_RESP_SHOW_LATEST",
+      "sinks": 1
+    },
+    {
+      "id": 5115,
+      "name": "IDM_MULTI_RESP_SHOW_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5116,
+      "name": "IDM_MULTI_RESP_CLEAR_HISTORY",
+      "sinks": 1
+    },
+    {
+      "id": 5117,
+      "name": "IDM_MULTI_RESP_APPLY_PREFERRED",
+      "sinks": 1
+    },
+    {
+      "id": 5118,
+      "name": "IDM_GOV_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5119,
+      "name": "IDM_GOV_SUBMIT_COMMAND",
+      "sinks": 1
+    },
+    {
+      "id": 5120,
+      "name": "IDM_GOV_KILL_ALL",
+      "sinks": 1
+    },
+    {
+      "id": 5121,
+      "name": "IDM_GOV_TASK_LIST",
+      "sinks": 1
+    },
+    {
+      "id": 5122,
+      "name": "IDM_SAFETY_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5123,
+      "name": "IDM_SAFETY_RESET_BUDGET",
+      "sinks": 1
+    },
+    {
+      "id": 5125,
+      "name": "IDM_SAFETY_SHOW_VIOLATIONS",
+      "sinks": 1
+    },
+    {
+      "id": 5126,
+      "name": "IDM_REPLAY_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5128,
+      "name": "IDM_REPLAY_EXPORT_SESSION",
+      "sinks": 1
+    },
+    {
+      "id": 5129,
+      "name": "IDM_REPLAY_CHECKPOINT",
+      "sinks": 1
+    },
+    {
+      "id": 5130,
+      "name": "IDM_CONFIDENCE_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5131,
+      "name": "IDM_CONFIDENCE_SET_POLICY",
+      "sinks": 1
+    },
+    {
+      "id": 5132,
+      "name": "IDM_SWARM_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5133,
+      "name": "IDM_SWARM_START_LEADER",
+      "sinks": 1
+    },
+    {
+      "id": 5134,
+      "name": "IDM_SWARM_START_WORKER",
+      "sinks": 1
+    },
+    {
+      "id": 5135,
+      "name": "IDM_SWARM_START_HYBRID",
+      "sinks": 1
+    },
+    {
+      "id": 5136,
+      "name": "IDM_SWARM_STOP",
+      "sinks": 1
+    },
+    {
+      "id": 5137,
+      "name": "IDM_SWARM_LIST_NODES",
+      "sinks": 1
+    },
+    {
+      "id": 5138,
+      "name": "IDM_SWARM_ADD_NODE",
+      "sinks": 1
+    },
+    {
+      "id": 5139,
+      "name": "IDM_SWARM_REMOVE_NODE",
+      "sinks": 1
+    },
+    {
+      "id": 5140,
+      "name": "IDM_SWARM_BLACKLIST_NODE",
+      "sinks": 1
+    },
+    {
+      "id": 5141,
+      "name": "IDM_SWARM_BUILD_SOURCES",
+      "sinks": 1
+    },
+    {
+      "id": 5142,
+      "name": "IDM_SWARM_BUILD_CMAKE",
+      "sinks": 1
+    },
+    {
+      "id": 5143,
+      "name": "IDM_SWARM_START_BUILD",
+      "sinks": 1
+    },
+    {
+      "id": 5144,
+      "name": "IDM_SWARM_CANCEL_BUILD",
+      "sinks": 1
+    },
+    {
+      "id": 5145,
+      "name": "IDM_SWARM_CACHE_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5146,
+      "name": "IDM_SWARM_CACHE_CLEAR",
+      "sinks": 1
+    },
+    {
+      "id": 5147,
+      "name": "IDM_SWARM_SHOW_CONFIG",
+      "sinks": 1
+    },
+    {
+      "id": 5148,
+      "name": "IDM_SWARM_TOGGLE_DISCOVERY",
+      "sinks": 1
+    },
+    {
+      "id": 5149,
+      "name": "IDM_SWARM_SHOW_TASK_GRAPH",
+      "sinks": 1
+    },
+    {
+      "id": 5150,
+      "name": "IDM_SWARM_SHOW_EVENTS",
+      "sinks": 1
+    },
+    {
+      "id": 5151,
+      "name": "IDM_SWARM_SHOW_STATS",
+      "sinks": 1
+    },
+    {
+      "id": 5152,
+      "name": "IDM_SWARM_RESET_STATS",
+      "sinks": 1
+    },
+    {
+      "id": 5153,
+      "name": "IDM_SWARM_WORKER_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5154,
+      "name": "IDM_SWARM_WORKER_CONNECT",
+      "sinks": 1
+    },
+    {
+      "id": 5155,
+      "name": "IDM_SWARM_WORKER_DISCONNECT",
+      "sinks": 1
+    },
+    {
+      "id": 5156,
+      "name": "IDM_SWARM_FITNESS_TEST",
+      "sinks": 1
+    },
+    {
+      "id": 5157,
+      "name": "IDM_DBG_LAUNCH",
+      "sinks": 1
+    },
+    {
+      "id": 5158,
+      "name": "IDM_DBG_ATTACH",
+      "sinks": 1
+    },
+    {
+      "id": 5159,
+      "name": "IDM_DBG_DETACH",
+      "sinks": 1
+    },
+    {
+      "id": 5160,
+      "name": "IDM_DBG_GO",
+      "sinks": 1
+    },
+    {
+      "id": 5161,
+      "name": "IDM_DBG_STEP_OVER",
+      "sinks": 1
+    },
+    {
+      "id": 5162,
+      "name": "IDM_DBG_STEP_INTO",
+      "sinks": 1
+    },
+    {
+      "id": 5163,
+      "name": "IDM_DBG_STEP_OUT",
+      "sinks": 1
+    },
+    {
+      "id": 5164,
+      "name": "IDM_DBG_BREAK",
+      "sinks": 1
+    },
+    {
+      "id": 5165,
+      "name": "IDM_DBG_KILL",
+      "sinks": 1
+    },
+    {
+      "id": 5166,
+      "name": "IDM_DBG_ADD_BP",
+      "sinks": 1
+    },
+    {
+      "id": 5167,
+      "name": "IDM_DBG_REMOVE_BP",
+      "sinks": 1
+    },
+    {
+      "id": 5168,
+      "name": "IDM_DBG_ENABLE_BP",
+      "sinks": 1
+    },
+    {
+      "id": 5169,
+      "name": "IDM_DBG_CLEAR_BPS",
+      "sinks": 1
+    },
+    {
+      "id": 5170,
+      "name": "IDM_DBG_LIST_BPS",
+      "sinks": 1
+    },
+    {
+      "id": 5171,
+      "name": "IDM_DBG_ADD_WATCH",
+      "sinks": 1
+    },
+    {
+      "id": 5172,
+      "name": "IDM_DBG_REMOVE_WATCH",
+      "sinks": 1
+    },
+    {
+      "id": 5173,
+      "name": "IDM_DBG_REGISTERS",
+      "sinks": 1
+    },
+    {
+      "id": 5174,
+      "name": "IDM_DBG_STACK",
+      "sinks": 1
+    },
+    {
+      "id": 5175,
+      "name": "IDM_DBG_MEMORY",
+      "sinks": 1
+    },
+    {
+      "id": 5176,
+      "name": "IDM_DBG_DISASM",
+      "sinks": 1
+    },
+    {
+      "id": 5177,
+      "name": "IDM_DBG_MODULES",
+      "sinks": 1
+    },
+    {
+      "id": 5178,
+      "name": "IDM_DBG_THREADS",
+      "sinks": 1
+    },
+    {
+      "id": 5179,
+      "name": "IDM_DBG_SWITCH_THREAD",
+      "sinks": 1
+    },
+    {
+      "id": 5180,
+      "name": "IDM_DBG_EVALUATE",
+      "sinks": 1
+    },
+    {
+      "id": 5181,
+      "name": "IDM_DBG_SET_REGISTER",
+      "sinks": 1
+    },
+    {
+      "id": 5182,
+      "name": "IDM_DBG_SEARCH_MEMORY",
+      "sinks": 1
+    },
+    {
+      "id": 5183,
+      "name": "IDM_DBG_SYMBOL_PATH",
+      "sinks": 1
+    },
+    {
+      "id": 5184,
+      "name": "IDM_DBG_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 5200,
+      "name": "IDM_PLUGIN_SHOW_PANEL",
+      "sinks": 2
+    },
+    {
+      "id": 5201,
+      "name": "IDM_PLUGIN_LOAD",
+      "sinks": 2
+    },
+    {
+      "id": 5202,
+      "name": "IDM_PLUGIN_UNLOAD",
+      "sinks": 2
+    },
+    {
+      "id": 5203,
+      "name": "IDM_PLUGIN_UNLOAD_ALL",
+      "sinks": 2
+    },
+    {
+      "id": 5204,
+      "name": "IDM_PLUGIN_REFRESH",
+      "sinks": 2
+    },
+    {
+      "id": 5205,
+      "name": "IDM_PLUGIN_SCAN_DIR",
+      "sinks": 2
+    },
+    {
+      "id": 5206,
+      "name": "IDM_PLUGIN_SHOW_STATUS",
+      "sinks": 2
+    },
+    {
+      "id": 5207,
+      "name": "IDM_PLUGIN_TOGGLE_HOTLOAD",
+      "sinks": 2
+    },
+    {
+      "id": 5208,
+      "name": "IDM_PLUGIN_CONFIGURE",
+      "sinks": 2
+    },
+    {
+      "id": 6004,
+      "name": "#6004",
+      "sinks": 2
+    },
+    {
+      "id": 7006,
+      "name": "#7006",
+      "sinks": 1
+    },
+    {
+      "id": 9101,
+      "name": "IDM_VIEW_MONACO_DEVTOOLS",
+      "sinks": 1
+    },
+    {
+      "id": 9102,
+      "name": "IDM_VIEW_MONACO_RELOAD",
+      "sinks": 1
+    },
+    {
+      "id": 9103,
+      "name": "IDM_VIEW_MONACO_ZOOM_IN",
+      "sinks": 1
+    },
+    {
+      "id": 9104,
+      "name": "IDM_VIEW_MONACO_ZOOM_OUT",
+      "sinks": 1
+    },
+    {
+      "id": 9105,
+      "name": "IDM_VIEW_MONACO_SYNC_THEME",
+      "sinks": 1
+    },
+    {
+      "id": 9903,
+      "name": "IDM_TELEMETRY_SHOW_DASHBOARD",
+      "sinks": 2
+    },
+    {
+      "id": 200,
+      "name": "#200",
+      "sinks": 7
+    },
+    {
+      "id": 400,
+      "name": "#400",
+      "sinks": 7
+    },
+    {
+      "id": 404,
+      "name": "#404",
+      "sinks": 7
+    },
+    {
+      "id": 409,
+      "name": "#409",
+      "sinks": 2
+    },
+    {
+      "id": 500,
+      "name": "#500",
+      "sinks": 2
+    },
+    {
+      "id": 507,
+      "name": "#507",
+      "sinks": 1
+    },
+    {
+      "id": 9300,
+      "name": "IDM_EDITOR_ENGINE_RICHEDIT",
+      "sinks": 1
+    },
+    {
+      "id": 9301,
+      "name": "IDM_EDITOR_ENGINE_WEBVIEW2",
+      "sinks": 1
+    },
+    {
+      "id": 9302,
+      "name": "IDM_EDITOR_ENGINE_MONACOCORE",
+      "sinks": 1
+    },
+    {
+      "id": 9304,
+      "name": "IDM_EDITOR_ENGINE_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 204,
+      "name": "#204",
+      "sinks": 5
+    },
+    {
+      "id": 403,
+      "name": "#403",
+      "sinks": 3
+    },
+    {
+      "id": 1,
+      "name": "#1",
+      "sinks": 7
+    },
+    {
+      "id": 2,
+      "name": "#2",
+      "sinks": 7
+    },
+    {
+      "id": 3,
+      "name": "#3",
+      "sinks": 6
+    },
+    {
+      "id": 9600,
+      "name": "IDM_GAUNTLET_RUN",
+      "sinks": 1
+    },
+    {
+      "id": 9601,
+      "name": "IDM_GAUNTLET_EXPORT",
+      "sinks": 1
+    },
+    {
+      "id": 102,
+      "name": "#102",
+      "sinks": 1
+    },
+    {
+      "id": 103,
+      "name": "#103",
+      "sinks": 1
+    },
+    {
+      "id": 413,
+      "name": "#413",
+      "sinks": 1
+    },
+    {
+      "id": 4,
+      "name": "#4",
+      "sinks": 3
+    },
+    {
+      "id": 9201,
+      "name": "IDM_LSP_SERVER_STOP",
+      "sinks": 1
+    },
+    {
+      "id": 9202,
+      "name": "IDM_LSP_SERVER_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 9203,
+      "name": "IDM_LSP_SERVER_REINDEX",
+      "sinks": 1
+    },
+    {
+      "id": 9204,
+      "name": "IDM_LSP_SERVER_STATS",
+      "sinks": 1
+    },
+    {
+      "id": 9205,
+      "name": "IDM_LSP_SERVER_PUBLISH_DIAG",
+      "sinks": 1
+    },
+    {
+      "id": 9206,
+      "name": "IDM_LSP_SERVER_CONFIG",
+      "sinks": 1
+    },
+    {
+      "id": 9207,
+      "name": "IDM_LSP_SERVER_EXPORT_SYMBOLS",
+      "sinks": 1
+    },
+    {
+      "id": 9208,
+      "name": "IDM_LSP_SERVER_LAUNCH_STDIO",
+      "sinks": 1
+    },
+    {
+      "id": 422,
+      "name": "#422",
+      "sinks": 1
+    },
+    {
+      "id": 502,
+      "name": "#502",
+      "sinks": 1
+    },
+    {
+      "id": 9400,
+      "name": "IDM_PDB_LOAD",
+      "sinks": 1
+    },
+    {
+      "id": 9401,
+      "name": "IDM_PDB_FETCH",
+      "sinks": 1
+    },
+    {
+      "id": 9402,
+      "name": "IDM_PDB_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 9403,
+      "name": "IDM_PDB_CACHE_CLEAR",
+      "sinks": 1
+    },
+    {
+      "id": 9404,
+      "name": "IDM_PDB_ENABLE",
+      "sinks": 1
+    },
+    {
+      "id": 9405,
+      "name": "IDM_PDB_RESOLVE",
+      "sinks": 1
+    },
+    {
+      "id": 9410,
+      "name": "IDM_PDB_IMPORTS",
+      "sinks": 1
+    },
+    {
+      "id": 9411,
+      "name": "IDM_PDB_EXPORTS",
+      "sinks": 1
+    },
+    {
+      "id": 9412,
+      "name": "IDM_PDB_IAT_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 7010,
+      "name": "IDC_PLAN_BTN_APPROVE",
+      "sinks": 1
+    },
+    {
+      "id": 7011,
+      "name": "IDC_PLAN_BTN_EDIT",
+      "sinks": 1
+    },
+    {
+      "id": 7012,
+      "name": "IDC_PLAN_BTN_REJECT",
+      "sinks": 1
+    },
+    {
+      "id": 7013,
+      "name": "IDC_PLAN_BTN_PAUSE",
+      "sinks": 1
+    },
+    {
+      "id": 7014,
+      "name": "IDC_PLAN_BTN_CANCEL",
+      "sinks": 1
+    },
+    {
+      "id": 9801,
+      "name": "IDM_QW_SHORTCUT_RESET",
+      "sinks": 1
+    },
+    {
+      "id": 5,
+      "name": "#5",
+      "sinks": 1
+    },
+    {
+      "id": 6,
+      "name": "#6",
+      "sinks": 1
+    },
+    {
+      "id": 9900,
+      "name": "IDM_TELEMETRY_TOGGLE",
+      "sinks": 1
+    },
+    {
+      "id": 9901,
+      "name": "IDM_TELEMETRY_EXPORT_JSON",
+      "sinks": 1
+    },
+    {
+      "id": 9902,
+      "name": "IDM_TELEMETRY_EXPORT_CSV",
+      "sinks": 1
+    },
+    {
+      "id": 9904,
+      "name": "IDM_TELEMETRY_CLEAR",
+      "sinks": 1
+    },
+    {
+      "id": 9905,
+      "name": "IDM_TELEMETRY_SNAPSHOT",
+      "sinks": 1
+    },
+    {
+      "id": 12000,
+      "name": "IDM_T1_SMOOTH_SCROLL_TOGGLE",
+      "sinks": 1
+    },
+    {
+      "id": 12010,
+      "name": "IDM_T1_MINIMAP_TOGGLE",
+      "sinks": 1
+    },
+    {
+      "id": 12011,
+      "name": "IDM_T1_MINIMAP_HIGHLIGHT",
+      "sinks": 1
+    },
+    {
+      "id": 12030,
+      "name": "IDM_T1_FUZZY_PALETTE",
+      "sinks": 1
+    },
+    {
+      "id": 12031,
+      "name": "IDM_T1_FUZZY_FILES",
+      "sinks": 1
+    },
+    {
+      "id": 12032,
+      "name": "IDM_T1_FUZZY_SYMBOLS",
+      "sinks": 1
+    },
+    {
+      "id": 12040,
+      "name": "IDM_T1_SETTINGS_GUI",
+      "sinks": 1
+    },
+    {
+      "id": 12042,
+      "name": "IDM_T1_SETTINGS_RESET",
+      "sinks": 1
+    },
+    {
+      "id": 12050,
+      "name": "IDM_T1_WELCOME_SHOW",
+      "sinks": 1
+    },
+    {
+      "id": 12051,
+      "name": "IDM_T1_WELCOME_CLONE",
+      "sinks": 1
+    },
+    {
+      "id": 12052,
+      "name": "IDM_T1_WELCOME_OPEN_FOLDER",
+      "sinks": 1
+    },
+    {
+      "id": 12053,
+      "name": "IDM_T1_WELCOME_NEW_FILE",
+      "sinks": 1
+    },
+    {
+      "id": 12060,
+      "name": "IDM_T1_ICON_THEME_SET",
+      "sinks": 1
+    },
+    {
+      "id": 12070,
+      "name": "IDM_T1_TAB_DRAG_ENABLE",
+      "sinks": 1
+    },
+    {
+      "id": 12080,
+      "name": "IDM_T1_SPLIT_VERTICAL",
+      "sinks": 1
+    },
+    {
+      "id": 12081,
+      "name": "IDM_T1_SPLIT_HORIZONTAL",
+      "sinks": 1
+    },
+    {
+      "id": 12082,
+      "name": "IDM_T1_SPLIT_GRID_2X2",
+      "sinks": 1
+    },
+    {
+      "id": 12083,
+      "name": "IDM_T1_SPLIT_CLOSE",
+      "sinks": 1
+    },
+    {
+      "id": 12084,
+      "name": "IDM_T1_SPLIT_FOCUS_NEXT",
+      "sinks": 1
+    },
+    {
+      "id": 12090,
+      "name": "IDM_T1_UPDATE_CHECK",
+      "sinks": 1
+    },
+    {
+      "id": 12091,
+      "name": "IDM_T1_UPDATE_INSTALL",
+      "sinks": 1
+    },
+    {
+      "id": 12092,
+      "name": "IDM_T1_UPDATE_DISMISS",
+      "sinks": 1
+    },
+    {
+      "id": 12093,
+      "name": "IDM_T1_UPDATE_RELEASE_NOTES",
+      "sinks": 1
+    },
+    {
+      "id": 6000,
+      "name": "#6000",
+      "sinks": 1
+    },
+    {
+      "id": 6005,
+      "name": "#6005",
+      "sinks": 1
+    },
+    {
+      "id": 6014,
+      "name": "#6014",
+      "sinks": 1
+    },
+    {
+      "id": 6015,
+      "name": "#6015",
+      "sinks": 1
+    },
+    {
+      "id": 10210,
+      "name": "IDC_VA_TOGGLE_BTN",
+      "sinks": 1
+    },
+    {
+      "id": 10220,
+      "name": "IDC_VA_STOP_BTN",
+      "sinks": 1
+    },
+    {
+      "id": 10211,
+      "name": "IDC_VA_PROVIDER_COMBO",
+      "sinks": 1
+    },
+    {
+      "id": 10212,
+      "name": "IDC_VA_VOICE_COMBO",
+      "sinks": 1
+    },
+    {
+      "id": 10020,
+      "name": "IDM_QUICKJS_HOST_STATUS",
+      "sinks": 1
+    },
+    {
+      "id": 10021,
+      "name": "IDM_QUICKJS_HOST_INSTALL_VSIX",
+      "sinks": 1
+    },
+    {
+      "id": 10022,
+      "name": "IDM_QUICKJS_HOST_LIST_EXTENSIONS",
+      "sinks": 1
+    },
+    {
+      "id": 10023,
+      "name": "IDM_QUICKJS_HOST_ACTIVATE",
+      "sinks": 1
+    },
+    {
+      "id": 10024,
+      "name": "IDM_QUICKJS_HOST_DEACTIVATE",
+      "sinks": 1
+    },
+    {
+      "id": 10025,
+      "name": "IDM_QUICKJS_HOST_RELOAD",
+      "sinks": 1
+    },
+    {
+      "id": 10026,
+      "name": "IDM_QUICKJS_HOST_SANDBOX_CONFIG",
+      "sinks": 1
+    },
+    {
+      "id": 10027,
+      "name": "IDM_QUICKJS_HOST_KILL_RUNTIME",
+      "sinks": 1
+    }
+  ],
+  "creation_order": [
+    {
+      "function": "createReverseEngineeringMenu",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 615
+    },
+    {
+      "function": "createTitleBarControls",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 647
+    },
+    {
+      "function": "createTitleBarControls",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 655
+    },
+    {
+      "function": "createPowerShellPanel",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 1009
+    },
+    {
+      "function": "createPrimarySidebar",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 1234
+    },
+    {
+      "function": "createOutputTabs",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 1888
+    },
+    {
+      "function": "createMinimap",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2119
+    },
+    {
+      "function": "createMinimap",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2273
+    },
+    {
+      "function": "createFloatingPanel",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2595
+    },
+    {
+      "function": "createFloatingPanel",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2668
+    },
+    {
+      "function": "createSnippet",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3435
+    },
+    {
+      "function": "createFileExplorer",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3856
+    },
+    {
+      "function": "createChatPanel",
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 5195
+    },
+    {
+      "function": "createWindow",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 572
+    },
+    {
+      "function": "createMenuBar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1037
+    },
+    {
+      "function": "createToolbar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1039
+    },
+    {
+      "function": "createActivityBar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1042
+    },
+    {
+      "function": "createPrimarySidebar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1044
+    },
+    {
+      "function": "createTabBar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1047
+    },
+    {
+      "function": "createBreadcrumbBar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1049
+    },
+    {
+      "function": "createEditor",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1052
+    },
+    {
+      "function": "createTerminal",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1054
+    },
+    {
+      "function": "createStatusBar",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1056
+    },
+    {
+      "function": "createOutputTabs",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1059
+    },
+    {
+      "function": "createPowerShellPanel",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1061
+    },
+    {
+      "function": "createVoiceChatPanel",
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 1314
+    }
+  ],
+  "id_defines": [
+    {
+      "name": "IDM_AUTONOMY_TOGGLE",
+      "value": 4150,
+      "file": "win32app\\Win32IDE.h",
+      "line": 97
+    },
+    {
+      "name": "IDM_FILE_NEW",
+      "value": 2001,
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 32
+    },
+    {
+      "name": "IDM_FILE_OPEN",
+      "value": 2002,
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 35
+    },
+    {
+      "name": "IDM_FILE_SAVE",
+      "value": 2003,
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 38
+    },
+    {
+      "name": "IDM_FILE_SAVEAS",
+      "value": 2004,
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 41
+    },
+    {
+      "name": "IDM_FILE_LOAD_MODEL",
+      "value": 1030,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 46
+    },
+    {
+      "name": "IDM_FILE_EXIT",
+      "value": 2005,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 64
+    },
+    {
+      "name": "IDM_VOICE_AUTO_TOGGLE",
+      "value": 10200,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 26
+    },
+    {
+      "name": "IDM_VOICE_AUTO_STOP",
+      "value": 10206,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 32
+    },
+    {
+      "name": "IDM_VOICE_AUTO_NEXT",
+      "value": 10202,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 172
+    },
+    {
+      "name": "IDM_VOICE_AUTO_PREV",
+      "value": 10203,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 173
+    },
+    {
+      "name": "IDM_VOICE_AUTO_RATE_UP",
+      "value": 10204,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 30
+    },
+    {
+      "name": "IDM_VOICE_AUTO_RATE_DOWN",
+      "value": 10205,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 31
+    },
+    {
+      "name": "IDM_EDIT_UNDO",
+      "value": 2001,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 68
+    },
+    {
+      "name": "IDM_EDIT_REDO",
+      "value": 2002,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 71
+    },
+    {
+      "name": "IDM_EDIT_CUT",
+      "value": 2003,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 74
+    },
+    {
+      "name": "IDM_EDIT_COPY",
+      "value": 2004,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 77
+    },
+    {
+      "name": "IDM_EDIT_PASTE",
+      "value": 2005,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 80
+    },
+    {
+      "name": "IDM_EDIT_SNIPPET",
+      "value": 2012,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 182
+    },
+    {
+      "name": "IDM_EDIT_COPY_FORMAT",
+      "value": 2013,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 183
+    },
+    {
+      "name": "IDM_EDIT_PASTE_PLAIN",
+      "value": 2014,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 184
+    },
+    {
+      "name": "IDM_EDIT_CLIPBOARD_HISTORY",
+      "value": 2015,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 185
+    },
+    {
+      "name": "IDM_EDIT_FIND",
+      "value": 2016,
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 44
+    },
+    {
+      "name": "IDM_EDIT_REPLACE",
+      "value": 2017,
+      "file": "win32app\\Win32IDE_Core.cpp",
+      "line": 47
+    },
+    {
+      "name": "IDM_EDIT_FIND_NEXT",
+      "value": 2018,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 188
+    },
+    {
+      "name": "IDM_EDIT_FIND_PREV",
+      "value": 2019,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 189
+    },
+    {
+      "name": "IDM_VIEW_MINIMAP",
+      "value": 2020,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 191
+    },
+    {
+      "name": "IDM_VIEW_OUTPUT_TABS",
+      "value": 2021,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 192
+    },
+    {
+      "name": "IDM_VIEW_MODULE_BROWSER",
+      "value": 2022,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 193
+    },
+    {
+      "name": "IDM_VIEW_THEME_EDITOR",
+      "value": 2023,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 194
+    },
+    {
+      "name": "IDM_VIEW_FLOATING_PANEL",
+      "value": 2024,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 195
+    },
+    {
+      "name": "IDM_VIEW_OUTPUT_PANEL",
+      "value": 2025,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 196
+    },
+    {
+      "name": "IDM_VIEW_USE_STREAMING_LOADER",
+      "value": 2026,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 197
+    },
+    {
+      "name": "IDM_VIEW_USE_VULKAN_RENDERER",
+      "value": 2027,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 198
+    },
+    {
+      "name": "IDM_VIEW_SIDEBAR",
+      "value": 2028,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 199
+    },
+    {
+      "name": "IDM_VIEW_TERMINAL",
+      "value": 2029,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 200
+    },
+    {
+      "name": "IDM_TERMINAL_POWERSHELL",
+      "value": 3001,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 202
+    },
+    {
+      "name": "IDM_TERMINAL_CMD",
+      "value": 3002,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 203
+    },
+    {
+      "name": "IDM_TERMINAL_STOP",
+      "value": 3003,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 204
+    },
+    {
+      "name": "IDM_TERMINAL_SPLIT_H",
+      "value": 4007,
+      "file": "win32app\\Win32IDE.h",
+      "line": 91
+    },
+    {
+      "name": "IDM_TERMINAL_SPLIT_V",
+      "value": 4008,
+      "file": "win32app\\Win32IDE.h",
+      "line": 92
+    },
+    {
+      "name": "IDM_TERMINAL_CLEAR_ALL",
+      "value": 3006,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 207
+    },
+    {
+      "name": "IDM_TOOLS_PROFILE_START",
+      "value": 3010,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 209
+    },
+    {
+      "name": "IDM_TOOLS_PROFILE_STOP",
+      "value": 3011,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 210
+    },
+    {
+      "name": "IDM_TOOLS_PROFILE_RESULTS",
+      "value": 3012,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 211
+    },
+    {
+      "name": "IDM_TOOLS_ANALYZE_SCRIPT",
+      "value": 3013,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 212
+    },
+    {
+      "name": "IDM_GIT_STATUS",
+      "value": 3020,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 214
+    },
+    {
+      "name": "IDM_GIT_COMMIT",
+      "value": 3021,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 215
+    },
+    {
+      "name": "IDM_GIT_PUSH",
+      "value": 3022,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 216
+    },
+    {
+      "name": "IDM_GIT_PULL",
+      "value": 3023,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 217
+    },
+    {
+      "name": "IDM_GIT_PANEL",
+      "value": 3024,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 218
+    },
+    {
+      "name": "IDM_MODULES_REFRESH",
+      "value": 3050,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 220
+    },
+    {
+      "name": "IDM_MODULES_IMPORT",
+      "value": 3051,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 221
+    },
+    {
+      "name": "IDM_MODULES_EXPORT",
+      "value": 3052,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 222
+    },
+    {
+      "name": "IDM_HELP_ABOUT",
+      "value": 4001,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 224
+    },
+    {
+      "name": "IDM_HELP_CMDREF",
+      "value": 4002,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 225
+    },
+    {
+      "name": "IDM_HELP_PSDOCS",
+      "value": 4003,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 226
+    },
+    {
+      "name": "IDM_HELP_SEARCH",
+      "value": 4004,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 227
+    },
+    {
+      "name": "IDM_AGENT_START_LOOP",
+      "value": 4100,
+      "file": "win32app\\Win32IDE.h",
+      "line": 71
+    },
+    {
+      "name": "IDM_AGENT_EXECUTE_CMD",
+      "value": 4101,
+      "file": "win32app\\Win32IDE.h",
+      "line": 72
+    },
+    {
+      "name": "IDM_AGENT_CONFIGURE_MODEL",
+      "value": 4102,
+      "file": "win32app\\Win32IDE.h",
+      "line": 73
+    },
+    {
+      "name": "IDM_AGENT_VIEW_TOOLS",
+      "value": 4103,
+      "file": "win32app\\Win32IDE.h",
+      "line": 74
+    },
+    {
+      "name": "IDM_AGENT_VIEW_STATUS",
+      "value": 4104,
+      "file": "win32app\\Win32IDE.h",
+      "line": 75
+    },
+    {
+      "name": "IDM_AGENT_STOP",
+      "value": 4105,
+      "file": "win32app\\Win32IDE.h",
+      "line": 76
+    },
+    {
+      "name": "IDC_EDITOR",
+      "value": 1001,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 60
+    },
+    {
+      "name": "IDC_TERMINAL",
+      "value": 1002,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 61
+    },
+    {
+      "name": "IDC_COMMAND_INPUT",
+      "value": 1003,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 62
+    },
+    {
+      "name": "IDC_STATUS_BAR",
+      "value": 2000,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 40
+    },
+    {
+      "name": "IDC_OUTPUT_TABS",
+      "value": 1005,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 64
+    },
+    {
+      "name": "IDC_MINIMAP",
+      "value": 1006,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 65
+    },
+    {
+      "name": "IDC_MODULE_BROWSER",
+      "value": 1007,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 66
+    },
+    {
+      "name": "IDC_HELP_PANEL",
+      "value": 1008,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 67
+    },
+    {
+      "name": "IDC_SNIPPET_LIST",
+      "value": 1009,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 68
+    },
+    {
+      "name": "IDC_CLIPBOARD_HISTORY",
+      "value": 1010,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 69
+    },
+    {
+      "name": "IDC_OUTPUT_TEXT",
+      "value": 1011,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 70
+    },
+    {
+      "name": "IDC_OUTPUT_EDIT_GENERAL",
+      "value": 1012,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 71
+    },
+    {
+      "name": "IDC_OUTPUT_EDIT_ERRORS",
+      "value": 1013,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 72
+    },
+    {
+      "name": "IDC_OUTPUT_EDIT_DEBUG",
+      "value": 1014,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 73
+    },
+    {
+      "name": "IDC_OUTPUT_EDIT_FIND",
+      "value": 1015,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 74
+    },
+    {
+      "name": "IDC_SPLITTER",
+      "value": 1016,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 75
+    },
+    {
+      "name": "IDC_SEVERITY_FILTER",
+      "value": 1017,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 76
+    },
+    {
+      "name": "IDC_TITLE_TEXT",
+      "value": 1018,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 77
+    },
+    {
+      "name": "IDC_BTN_MINIMIZE",
+      "value": 1019,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 78
+    },
+    {
+      "name": "IDC_BTN_MAXIMIZE",
+      "value": 1020,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 79
+    },
+    {
+      "name": "IDC_BTN_CLOSE",
+      "value": 5033,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2823
+    },
+    {
+      "name": "IDC_BTN_GITHUB",
+      "value": 1022,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 81
+    },
+    {
+      "name": "IDC_BTN_MICROSOFT",
+      "value": 1023,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 82
+    },
+    {
+      "name": "IDC_BTN_SETTINGS",
+      "value": 1024,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 83
+    },
+    {
+      "name": "IDC_FILE_EXPLORER",
+      "value": 1025,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 84
+    },
+    {
+      "name": "IDC_FILE_TREE",
+      "value": 1026,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 85
+    },
+    {
+      "name": "IDC_ACTIVITY_BAR",
+      "value": 1100,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 46
+    },
+    {
+      "name": "IDC_ACTBAR_EXPLORER",
+      "value": 1101,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 47
+    },
+    {
+      "name": "IDC_ACTBAR_SEARCH",
+      "value": 1102,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 48
+    },
+    {
+      "name": "IDC_ACTBAR_SCM",
+      "value": 1103,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 49
+    },
+    {
+      "name": "IDC_ACTBAR_DEBUG",
+      "value": 1104,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 50
+    },
+    {
+      "name": "IDC_ACTBAR_EXTENSIONS",
+      "value": 1105,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 51
+    },
+    {
+      "name": "IDC_ACTBAR_SETTINGS",
+      "value": 1106,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 52
+    },
+    {
+      "name": "IDC_ACTBAR_ACCOUNTS",
+      "value": 1107,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 53
+    },
+    {
+      "name": "IDC_SECONDARY_SIDEBAR",
+      "value": 1200,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 56
+    },
+    {
+      "name": "IDC_SECONDARY_SIDEBAR_HEADER",
+      "value": 1201,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 57
+    },
+    {
+      "name": "IDC_COPILOT_CHAT_INPUT",
+      "value": 1202,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 58
+    },
+    {
+      "name": "IDC_COPILOT_CHAT_OUTPUT",
+      "value": 1203,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 59
+    },
+    {
+      "name": "IDC_COPILOT_SEND_BTN",
+      "value": 1204,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 60
+    },
+    {
+      "name": "IDC_COPILOT_CLEAR_BTN",
+      "value": 1205,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 61
+    },
+    {
+      "name": "IDC_AI_CONTEXT_SLIDER",
+      "value": 1206,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 107
+    },
+    {
+      "name": "IDC_AI_CONTEXT_LABEL",
+      "value": 1207,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 108
+    },
+    {
+      "name": "IDC_PANEL_CONTAINER",
+      "value": 1300,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 64
+    },
+    {
+      "name": "IDC_PANEL_TABS",
+      "value": 1301,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 65
+    },
+    {
+      "name": "IDC_PANEL_TERMINAL",
+      "value": 1302,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 66
+    },
+    {
+      "name": "IDC_PANEL_OUTPUT",
+      "value": 1303,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 67
+    },
+    {
+      "name": "IDC_PANEL_PROBLEMS",
+      "value": 1304,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 68
+    },
+    {
+      "name": "IDC_PANEL_DEBUG_CONSOLE",
+      "value": 1305,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 69
+    },
+    {
+      "name": "IDC_PANEL_TOOLBAR",
+      "value": 1306,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 70
+    },
+    {
+      "name": "IDC_PANEL_BTN_NEW_TERMINAL",
+      "value": 1307,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 71
+    },
+    {
+      "name": "IDC_PANEL_BTN_SPLIT_TERMINAL",
+      "value": 1308,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 72
+    },
+    {
+      "name": "IDC_PANEL_BTN_KILL_TERMINAL",
+      "value": 1309,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 73
+    },
+    {
+      "name": "IDC_PANEL_BTN_MAXIMIZE",
+      "value": 1310,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 74
+    },
+    {
+      "name": "IDC_PANEL_BTN_CLOSE",
+      "value": 1311,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 75
+    },
+    {
+      "name": "IDC_PANEL_PROBLEMS_LIST",
+      "value": 1312,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 76
+    },
+    {
+      "name": "IDC_DEBUGGER_CONTAINER",
+      "value": 2100,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 26
+    },
+    {
+      "name": "IDC_DEBUGGER_TABS",
+      "value": 2102,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 28
+    },
+    {
+      "name": "IDC_DEBUGGER_BREAKPOINTS",
+      "value": 1315,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 128
+    },
+    {
+      "name": "IDC_DEBUGGER_WATCH",
+      "value": 1316,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 129
+    },
+    {
+      "name": "IDC_DEBUGGER_VARIABLES",
+      "value": 1317,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 130
+    },
+    {
+      "name": "IDC_DEBUGGER_STACK_TRACE",
+      "value": 1318,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 131
+    },
+    {
+      "name": "IDC_DEBUGGER_MEMORY",
+      "value": 2114,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 40
+    },
+    {
+      "name": "IDC_DEBUGGER_TOOLBAR",
+      "value": 2101,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 27
+    },
+    {
+      "name": "IDC_DEBUGGER_BTN_CONTINUE",
+      "value": 2103,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 29
+    },
+    {
+      "name": "IDC_DEBUGGER_BTN_STEP_OVER",
+      "value": 2104,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 30
+    },
+    {
+      "name": "IDC_DEBUGGER_BTN_STEP_INTO",
+      "value": 2105,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 31
+    },
+    {
+      "name": "IDC_DEBUGGER_BTN_STEP_OUT",
+      "value": 2106,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 32
+    },
+    {
+      "name": "IDC_DEBUGGER_BTN_RESTART",
+      "value": 2108,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 34
+    },
+    {
+      "name": "IDC_DEBUGGER_BTN_STOP",
+      "value": 2107,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 33
+    },
+    {
+      "name": "IDC_DEBUGGER_INPUT",
+      "value": 2115,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 41
+    },
+    {
+      "name": "IDC_DEBUGGER_BREAKPOINT_LIST",
+      "value": 2110,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 36
+    },
+    {
+      "name": "IDC_DEBUGGER_WATCH_LIST",
+      "value": 2111,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 37
+    },
+    {
+      "name": "IDC_DEBUGGER_VARIABLE_TREE",
+      "value": 2112,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 38
+    },
+    {
+      "name": "IDC_DEBUGGER_STACK_LIST",
+      "value": 2113,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 39
+    },
+    {
+      "name": "IDC_DEBUGGER_STATUS_TEXT",
+      "value": 2109,
+      "file": "win32app\\Win32IDE_Debugger.cpp",
+      "line": 35
+    },
+    {
+      "name": "IDC_STATUS_REMOTE",
+      "value": 1400,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 79
+    },
+    {
+      "name": "IDC_STATUS_BRANCH",
+      "value": 1401,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 80
+    },
+    {
+      "name": "IDC_STATUS_SYNC",
+      "value": 1402,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 81
+    },
+    {
+      "name": "IDC_STATUS_ERRORS",
+      "value": 1403,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 82
+    },
+    {
+      "name": "IDC_STATUS_WARNINGS",
+      "value": 1404,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 83
+    },
+    {
+      "name": "IDC_STATUS_LINE_COL",
+      "value": 1405,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 84
+    },
+    {
+      "name": "IDC_STATUS_SPACES",
+      "value": 1406,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 85
+    },
+    {
+      "name": "IDC_STATUS_ENCODING",
+      "value": 1407,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 86
+    },
+    {
+      "name": "IDC_STATUS_EOL",
+      "value": 1408,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 87
+    },
+    {
+      "name": "IDC_STATUS_LANGUAGE",
+      "value": 1409,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 88
+    },
+    {
+      "name": "IDC_STATUS_COPILOT",
+      "value": 1410,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 89
+    },
+    {
+      "name": "IDC_STATUS_NOTIFICATIONS",
+      "value": 1411,
+      "file": "win32app\\Win32IDE_VSCodeUI.cpp",
+      "line": 90
+    },
+    {
+      "name": "IDC_CMDPAL_CONTAINER",
+      "value": 1500,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 240
+    },
+    {
+      "name": "IDC_CMDPAL_INPUT",
+      "value": 1501,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 241
+    },
+    {
+      "name": "IDC_CMDPAL_LIST",
+      "value": 1502,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 242
+    },
+    {
+      "name": "IDC_FIND_TEXT",
+      "value": 5010,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2815
+    },
+    {
+      "name": "IDC_REPLACE_TEXT",
+      "value": 5011,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2816
+    },
+    {
+      "name": "IDC_CASE_SENSITIVE",
+      "value": 5020,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2817
+    },
+    {
+      "name": "IDC_WHOLE_WORD",
+      "value": 5021,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2818
+    },
+    {
+      "name": "IDC_USE_REGEX",
+      "value": 5022,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2819
+    },
+    {
+      "name": "IDC_BTN_FIND_NEXT",
+      "value": 5030,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2820
+    },
+    {
+      "name": "IDC_BTN_REPLACE",
+      "value": 5031,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2821
+    },
+    {
+      "name": "IDC_BTN_REPLACE_ALL",
+      "value": 5032,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 2822
+    },
+    {
+      "name": "IDC_SNIPPET_LIST_DLG",
+      "value": 6010,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3292
+    },
+    {
+      "name": "IDC_SNIPPET_NAME",
+      "value": 6011,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3293
+    },
+    {
+      "name": "IDC_SNIPPET_DESC",
+      "value": 6012,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3294
+    },
+    {
+      "name": "IDC_SNIPPET_CODE",
+      "value": 6013,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3295
+    },
+    {
+      "name": "IDC_BTN_INSERT_SNIPPET",
+      "value": 6020,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3296
+    },
+    {
+      "name": "IDC_BTN_NEW_SNIPPET",
+      "value": 6021,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3297
+    },
+    {
+      "name": "IDC_BTN_DELETE_SNIPPET",
+      "value": 6022,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3298
+    },
+    {
+      "name": "IDC_BTN_SAVE_SNIPPETS",
+      "value": 6023,
+      "file": "win32app\\Win32IDE.cpp",
+      "line": 3299
+    },
+    {
+      "name": "IDM_FILE_SAVEALL",
+      "value": 1005,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 34
+    },
+    {
+      "name": "IDM_FILE_CLOSE",
+      "value": 1006,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 37
+    },
+    {
+      "name": "IDM_FILE_MODEL_FROM_HF",
+      "value": 1031,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 49
+    },
+    {
+      "name": "IDM_FILE_MODEL_FROM_OLLAMA",
+      "value": 1032,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 52
+    },
+    {
+      "name": "IDM_FILE_MODEL_FROM_URL",
+      "value": 1033,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 55
+    },
+    {
+      "name": "IDM_FILE_MODEL_UNIFIED",
+      "value": 1034,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 58
+    },
+    {
+      "name": "IDM_FILE_MODEL_QUICK_LOAD",
+      "value": 1035,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 61
+    },
+    {
+      "name": "IDM_EDIT_SELECT_ALL",
+      "value": 2006,
+      "file": "win32app\\Win32IDE_Commands.cpp",
+      "line": 83
+    },
+    {
+      "name": "IDC_CRASH_RESTART",
+      "value": 7601,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 65
+    },
+    {
+      "name": "IDC_CRASH_SAFEMODE",
+      "value": 7602,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 66
+    },
+    {
+      "name": "IDC_CRASH_SEND",
+      "value": 7603,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 67
+    },
+    {
+      "name": "IDC_CRASH_CLOSE",
+      "value": 7604,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 68
+    },
+    {
+      "name": "IDC_CRASH_COPY",
+      "value": 7605,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 69
+    },
+    {
+      "name": "IDC_CRASH_DETAILS",
+      "value": 7606,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 70
+    },
+    {
+      "name": "IDC_CRASH_TRACE_EDIT",
+      "value": 7607,
+      "file": "win32app\\Win32IDE_CrashReporter.cpp",
+      "line": 71
+    },
+    {
+      "name": "IDM_DECOMP_RENAME_VAR",
+      "value": 8001,
+      "file": "win32app\\Win32IDE_DecompilerView.cpp",
+      "line": 54
+    },
+    {
+      "name": "IDM_DECOMP_GOTO_DEF",
+      "value": 8002,
+      "file": "win32app\\Win32IDE_DecompilerView.cpp",
+      "line": 55
+    },
+    {
+      "name": "IDM_DECOMP_FIND_REFS",
+      "value": 8003,
+      "file": "win32app\\Win32IDE_DecompilerView.cpp",
+      "line": 56
+    },
+    {
+      "name": "IDM_DECOMP_COPY_LINE",
+      "value": 8004,
+      "file": "win32app\\Win32IDE_DecompilerView.cpp",
+      "line": 57
+    },
+    {
+      "name": "IDM_DECOMP_COPY_ALL",
+      "value": 8005,
+      "file": "win32app\\Win32IDE_DecompilerView.cpp",
+      "line": 58
+    },
+    {
+      "name": "IDM_DECOMP_GOTO_ADDR",
+      "value": 8006,
+      "file": "win32app\\Win32IDE_DecompilerView.cpp",
+      "line": 59
+    },
+    {
+      "name": "IDC_MP_SEARCH",
+      "value": 5001,
+      "file": "win32app\\Win32IDE_MarketplacePanel.cpp",
+      "line": 246
+    },
+    {
+      "name": "IDC_MP_INSTALL",
+      "value": 5002,
+      "file": "win32app\\Win32IDE_MarketplacePanel.cpp",
+      "line": 247
+    },
+    {
+      "name": "IDC_MP_UNINSTALL",
+      "value": 5003,
+      "file": "win32app\\Win32IDE_MarketplacePanel.cpp",
+      "line": 248
+    },
+    {
+      "name": "IDC_MP_REFRESH",
+      "value": 5004,
+      "file": "win32app\\Win32IDE_MarketplacePanel.cpp",
+      "line": 249
+    },
+    {
+      "name": "IDC_NP_ADD_BTN",
+      "value": 2001,
+      "file": "win32app\\Win32IDE_NetworkPanel.cpp",
+      "line": 182
+    },
+    {
+      "name": "IDC_NP_REMOVE_BTN",
+      "value": 2002,
+      "file": "win32app\\Win32IDE_NetworkPanel.cpp",
+      "line": 183
+    },
+    {
+      "name": "IDC_NP_TOGGLE_BTN",
+      "value": 2003,
+      "file": "win32app\\Win32IDE_NetworkPanel.cpp",
+      "line": 184
+    },
+    {
+      "name": "IDC_PS_PANEL_CONTAINER",
+      "value": 5000,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 10
+    },
+    {
+      "name": "IDC_PS_OUTPUT",
+      "value": 5001,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 11
+    },
+    {
+      "name": "IDC_PS_INPUT",
+      "value": 5002,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 12
+    },
+    {
+      "name": "IDC_PS_TOOLBAR",
+      "value": 5003,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 13
+    },
+    {
+      "name": "IDC_PS_STATUSBAR",
+      "value": 5004,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 14
+    },
+    {
+      "name": "IDC_PS_BTN_EXECUTE",
+      "value": 5010,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 15
+    },
+    {
+      "name": "IDC_PS_BTN_CLEAR",
+      "value": 5011,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 16
+    },
+    {
+      "name": "IDC_PS_BTN_STOP",
+      "value": 5012,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 17
+    },
+    {
+      "name": "IDC_PS_BTN_HISTORY",
+      "value": 5013,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 18
+    },
+    {
+      "name": "IDC_PS_BTN_RESTART",
+      "value": 5014,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 19
+    },
+    {
+      "name": "IDC_PS_BTN_LOAD_RAWRXD",
+      "value": 5015,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 20
+    },
+    {
+      "name": "IDC_PS_BTN_TOGGLE",
+      "value": 5016,
+      "file": "win32app\\Win32IDE_PowerShellPanel.cpp",
+      "line": 21
+    },
+    {
+      "name": "IDC_PROVE_START",
+      "value": 9001,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 147
+    },
+    {
+      "name": "IDC_PROVE_VERIFY",
+      "value": 9002,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 148
+    },
+    {
+      "name": "IDC_PROVE_REPLAY",
+      "value": 9003,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 149
+    },
+    {
+      "name": "IDC_PROVE_EXPORT",
+      "value": 9004,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 150
+    },
+    {
+      "name": "IDC_PROVE_RESET",
+      "value": 9005,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 151
+    },
+    {
+      "name": "IDC_PROVE_CHAIN_VIEW",
+      "value": 9006,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 152
+    },
+    {
+      "name": "IDC_PROVE_TAB",
+      "value": 9007,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 153
+    },
+    {
+      "name": "IDC_PROVE_STATUS",
+      "value": 9008,
+      "file": "win32app\\Win32IDE_ProvableAgent.cpp",
+      "line": 154
+    },
+    {
+      "name": "IDC_SE_RECORD",
+      "value": 7001,
+      "file": "win32app\\Win32IDE_ShortcutEditor.cpp",
+      "line": 252
+    },
+    {
+      "name": "IDC_SE_RESET",
+      "value": 7002,
+      "file": "win32app\\Win32IDE_ShortcutEditor.cpp",
+      "line": 253
+    },
+    {
+      "name": "IDC_SE_SAVE",
+      "value": 7003,
+      "file": "win32app\\Win32IDE_ShortcutEditor.cpp",
+      "line": 254
+    },
+    {
+      "name": "IDC_SE_CAPTURE",
+      "value": 7004,
+      "file": "win32app\\Win32IDE_ShortcutEditor.cpp",
+      "line": 255
+    },
+    {
+      "name": "IDC_SE_SEARCH",
+      "value": 7005,
+      "file": "win32app\\Win32IDE_ShortcutEditor.cpp",
+      "line": 256
+    },
+    {
+      "name": "IDC_TD_FILTER",
+      "value": 6001,
+      "file": "win32app\\Win32IDE_TelemetryDashboard.cpp",
+      "line": 217
+    },
+    {
+      "name": "IDC_TD_CLEAR",
+      "value": 6002,
+      "file": "win32app\\Win32IDE_TelemetryDashboard.cpp",
+      "line": 218
+    },
+    {
+      "name": "IDC_TD_EXPORT",
+      "value": 6003,
+      "file": "win32app\\Win32IDE_TelemetryDashboard.cpp",
+      "line": 219
+    },
+    {
+      "name": "IDC_TE_RUN_BTN",
+      "value": 3001,
+      "file": "win32app\\Win32IDE_TestExplorerTree.cpp",
+      "line": 189
+    },
+    {
+      "name": "IDC_TE_REFRESH_BTN",
+      "value": 3002,
+      "file": "win32app\\Win32IDE_TestExplorerTree.cpp",
+      "line": 190
+    },
+    {
+      "name": "IDC_TE_COLLAPSE_BTN",
+      "value": 3003,
+      "file": "win32app\\Win32IDE_TestExplorerTree.cpp",
+      "line": 191
+    },
+    {
+      "name": "IDM_T1_SMOOTH_SCROLL_TOGGLE",
+      "value": 12000,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 59
+    },
+    {
+      "name": "IDM_T1_SMOOTH_SCROLL_SPEED",
+      "value": 12001,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 60
+    },
+    {
+      "name": "IDM_T1_MINIMAP_TOGGLE",
+      "value": 12010,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 63
+    },
+    {
+      "name": "IDM_T1_MINIMAP_HIGHLIGHT",
+      "value": 12011,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 64
+    },
+    {
+      "name": "IDM_T1_MINIMAP_SLIDER",
+      "value": 12012,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 65
+    },
+    {
+      "name": "IDM_T1_BREADCRUMBS_TOGGLE",
+      "value": 12020,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 68
+    },
+    {
+      "name": "IDM_T1_BREADCRUMBS_CLICK",
+      "value": 12021,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 69
+    },
+    {
+      "name": "IDM_T1_FUZZY_PALETTE",
+      "value": 12030,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 72
+    },
+    {
+      "name": "IDM_T1_FUZZY_FILES",
+      "value": 12031,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 73
+    },
+    {
+      "name": "IDM_T1_FUZZY_SYMBOLS",
+      "value": 12032,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 74
+    },
+    {
+      "name": "IDM_T1_SETTINGS_GUI",
+      "value": 12040,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 77
+    },
+    {
+      "name": "IDM_T1_SETTINGS_SEARCH",
+      "value": 12041,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 78
+    },
+    {
+      "name": "IDM_T1_SETTINGS_RESET",
+      "value": 12042,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 79
+    },
+    {
+      "name": "IDM_T1_WELCOME_SHOW",
+      "value": 12050,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 82
+    },
+    {
+      "name": "IDM_T1_WELCOME_CLONE",
+      "value": 12051,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 83
+    },
+    {
+      "name": "IDM_T1_WELCOME_OPEN_FOLDER",
+      "value": 12052,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 84
+    },
+    {
+      "name": "IDM_T1_WELCOME_NEW_FILE",
+      "value": 12053,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 85
+    },
+    {
+      "name": "IDM_T1_ICON_THEME_SET",
+      "value": 12060,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 88
+    },
+    {
+      "name": "IDM_T1_ICON_THEME_SETI",
+      "value": 12061,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 89
+    },
+    {
+      "name": "IDM_T1_ICON_THEME_MATERIAL",
+      "value": 12062,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 90
+    },
+    {
+      "name": "IDM_T1_TAB_DRAG_ENABLE",
+      "value": 12070,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 93
+    },
+    {
+      "name": "IDM_T1_TAB_TEAROFF",
+      "value": 12071,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 94
+    },
+    {
+      "name": "IDM_T1_TAB_MERGE",
+      "value": 12072,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 95
+    },
+    {
+      "name": "IDM_T1_SPLIT_VERTICAL",
+      "value": 12080,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 98
+    },
+    {
+      "name": "IDM_T1_SPLIT_HORIZONTAL",
+      "value": 12081,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 99
+    },
+    {
+      "name": "IDM_T1_SPLIT_GRID_2X2",
+      "value": 12082,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 100
+    },
+    {
+      "name": "IDM_T1_SPLIT_CLOSE",
+      "value": 12083,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 101
+    },
+    {
+      "name": "IDM_T1_SPLIT_FOCUS_NEXT",
+      "value": 12084,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 102
+    },
+    {
+      "name": "IDM_T1_UPDATE_CHECK",
+      "value": 12090,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 105
+    },
+    {
+      "name": "IDM_T1_UPDATE_INSTALL",
+      "value": 12091,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 106
+    },
+    {
+      "name": "IDM_T1_UPDATE_DISMISS",
+      "value": 12092,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 107
+    },
+    {
+      "name": "IDM_T1_UPDATE_RELEASE_NOTES",
+      "value": 12093,
+      "file": "win32app\\Win32IDE_Tier1Cosmetics.cpp",
+      "line": 108
+    },
+    {
+      "name": "IDM_VOICE_AUTO_SETTINGS",
+      "value": 10201,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 27
+    },
+    {
+      "name": "IDM_VOICE_AUTO_NEXT_VOICE",
+      "value": 10202,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 28
+    },
+    {
+      "name": "IDM_VOICE_AUTO_PREV_VOICE",
+      "value": 10203,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 29
+    },
+    {
+      "name": "IDC_VA_TOGGLE_BTN",
+      "value": 10210,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 35
+    },
+    {
+      "name": "IDC_VA_PROVIDER_COMBO",
+      "value": 10211,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 36
+    },
+    {
+      "name": "IDC_VA_VOICE_COMBO",
+      "value": 10212,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 37
+    },
+    {
+      "name": "IDC_VA_RATE_SLIDER",
+      "value": 10213,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 38
+    },
+    {
+      "name": "IDC_VA_VOLUME_SLIDER",
+      "value": 10214,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 39
+    },
+    {
+      "name": "IDC_VA_PITCH_SLIDER",
+      "value": 10215,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 40
+    },
+    {
+      "name": "IDC_VA_STATUS_LABEL",
+      "value": 10216,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 41
+    },
+    {
+      "name": "IDC_VA_RATE_LABEL",
+      "value": 10217,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 42
+    },
+    {
+      "name": "IDC_VA_VOLUME_LABEL",
+      "value": 10218,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 43
+    },
+    {
+      "name": "IDC_VA_PITCH_LABEL",
+      "value": 10219,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 44
+    },
+    {
+      "name": "IDC_VA_STOP_BTN",
+      "value": 10220,
+      "file": "win32app\\Win32IDE_VoiceAutomation.cpp",
+      "line": 45
+    },
+    {
+      "name": "IDM_AGENT_BOUNDED_LOOP",
+      "value": 4120,
+      "file": "win32app\\Win32IDE.h",
+      "line": 70
+    },
+    {
+      "name": "IDM_AGENT_MEMORY",
+      "value": 4106,
+      "file": "win32app\\Win32IDE.h",
+      "line": 77
+    },
+    {
+      "name": "IDM_AGENT_MEMORY_VIEW",
+      "value": 4107,
+      "file": "win32app\\Win32IDE.h",
+      "line": 78
+    },
+    {
+      "name": "IDM_AGENT_MEMORY_CLEAR",
+      "value": 4108,
+      "file": "win32app\\Win32IDE.h",
+      "line": 79
+    },
+    {
+      "name": "IDM_AGENT_MEMORY_EXPORT",
+      "value": 4109,
+      "file": "win32app\\Win32IDE.h",
+      "line": 80
+    },
+    {
+      "name": "IDM_SUBAGENT_CHAIN",
+      "value": 4110,
+      "file": "win32app\\Win32IDE.h",
+      "line": 83
+    },
+    {
+      "name": "IDM_SUBAGENT_SWARM",
+      "value": 4111,
+      "file": "win32app\\Win32IDE.h",
+      "line": 84
+    },
+    {
+      "name": "IDM_SUBAGENT_TODO_LIST",
+      "value": 4112,
+      "file": "win32app\\Win32IDE.h",
+      "line": 85
+    },
+    {
+      "name": "IDM_SUBAGENT_TODO_CLEAR",
+      "value": 4113,
+      "file": "win32app\\Win32IDE.h",
+      "line": 86
+    },
+    {
+      "name": "IDM_SUBAGENT_STATUS",
+      "value": 4114,
+      "file": "win32app\\Win32IDE.h",
+      "line": 87
+    },
+    {
+      "name": "IDM_TERMINAL_KILL",
+      "value": 4006,
+      "file": "win32app\\Win32IDE.h",
+      "line": 90
+    },
+    {
+      "name": "IDM_TERMINAL_SPLIT_CODE",
+      "value": 4009,
+      "file": "win32app\\Win32IDE.h",
+      "line": 93
+    },
+    {
+      "name": "IDM_TERMINAL_CLEAR",
+      "value": 4010,
+      "file": "win32app\\Win32IDE.h",
+      "line": 94
+    },
+    {
+      "name": "IDM_AUTONOMY_START",
+      "value": 4151,
+      "file": "win32app\\Win32IDE.h",
+      "line": 98
+    },
+    {
+      "name": "IDM_AUTONOMY_STOP",
+      "value": 4152,
+      "file": "win32app\\Win32IDE.h",
+      "line": 99
+    },
+    {
+      "name": "IDM_AUTONOMY_SET_GOAL",
+      "value": 4153,
+      "file": "win32app\\Win32IDE.h",
+      "line": 100
+    },
+    {
+      "name": "IDM_AUTONOMY_STATUS",
+      "value": 4154,
+      "file": "win32app\\Win32IDE.h",
+      "line": 101
+    },
+    {
+      "name": "IDM_AUTONOMY_MEMORY",
+      "value": 4155,
+      "file": "win32app\\Win32IDE.h",
+      "line": 102
+    },
+    {
+      "name": "IDM_AI_MODE_DEEP_THINK",
+      "value": 4201,
+      "file": "win32app\\Win32IDE.h",
+      "line": 106
+    },
+    {
+      "name": "IDM_AI_MODE_DEEP_RESEARCH",
+      "value": 4202,
+      "file": "win32app\\Win32IDE.h",
+      "line": 107
+    },
+    {
+      "name": "IDM_AI_MODE_NO_REFUSAL",
+      "value": 4203,
+      "file": "win32app\\Win32IDE.h",
+      "line": 108
+    },
+    {
+      "name": "IDM_AI_CONTEXT_4K",
+      "value": 4210,
+      "file": "win32app\\Win32IDE.h",
+      "line": 135
+    },
+    {
+      "name": "IDM_AI_CONTEXT_32K",
+      "value": 4211,
+      "file": "win32app\\Win32IDE.h",
+      "line": 136
+    },
+    {
+      "name": "IDM_AI_CONTEXT_64K",
+      "value": 4212,
+      "file": "win32app\\Win32IDE.h",
+      "line": 137
+    },
+    {
+      "name": "IDM_AI_CONTEXT_128K",
+      "value": 4213,
+      "file": "win32app\\Win32IDE.h",
+      "line": 138
+    },
+    {
+      "name": "IDM_AI_CONTEXT_256K",
+      "value": 4214,
+      "file": "win32app\\Win32IDE.h",
+      "line": 139
+    },
+    {
+      "name": "IDM_AI_CONTEXT_512K",
+      "value": 4215,
+      "file": "win32app\\Win32IDE.h",
+      "line": 140
+    },
+    {
+      "name": "IDM_AI_CONTEXT_1M",
+      "value": 4216,
+      "file": "win32app\\Win32IDE.h",
+      "line": 141
+    },
+    {
+      "name": "IDM_AI_AGENT_CYCLES_SET",
+      "value": 4217,
+      "file": "win32app\\Win32IDE.h",
+      "line": 142
+    },
+    {
+      "name": "IDM_AI_AGENT_MULTI_ENABLE",
+      "value": 4218,
+      "file": "win32app\\Win32IDE.h",
+      "line": 143
+    },
+    {
+      "name": "IDM_AI_AGENT_MULTI_DISABLE",
+      "value": 4219,
+      "file": "win32app\\Win32IDE.h",
+      "line": 144
+    },
+    {
+      "name": "IDM_AI_AGENT_MULTI_STATUS",
+      "value": 4220,
+      "file": "win32app\\Win32IDE.h",
+      "line": 145
+    },
+    {
+      "name": "IDM_REVENG_ANALYZE",
+      "value": 4300,
+      "file": "win32app\\Win32IDE.h",
+      "line": 148
+    },
+    {
+      "name": "IDM_REVENG_DISASM",
+      "value": 4301,
+      "file": "win32app\\Win32IDE.h",
+      "line": 149
+    },
+    {
+      "name": "IDM_REVENG_DUMPBIN",
+      "value": 4302,
+      "file": "win32app\\Win32IDE.h",
+      "line": 150
+    },
+    {
+      "name": "IDM_REVENG_COMPILE",
+      "value": 4303,
+      "file": "win32app\\Win32IDE.h",
+      "line": 151
+    },
+    {
+      "name": "IDM_REVENG_COMPARE",
+      "value": 4304,
+      "file": "win32app\\Win32IDE.h",
+      "line": 152
+    },
+    {
+      "name": "IDM_REVENG_DETECT_VULNS",
+      "value": 4305,
+      "file": "win32app\\Win32IDE.h",
+      "line": 153
+    },
+    {
+      "name": "IDM_REVENG_EXPORT_IDA",
+      "value": 4306,
+      "file": "win32app\\Win32IDE.h",
+      "line": 154
+    },
+    {
+      "name": "IDM_REVENG_EXPORT_GHIDRA",
+      "value": 4307,
+      "file": "win32app\\Win32IDE.h",
+      "line": 155
+    },
+    {
+      "name": "IDM_REVENG_CFG",
+      "value": 4308,
+      "file": "win32app\\Win32IDE.h",
+      "line": 156
+    },
+    {
+      "name": "IDM_REVENG_FUNCTIONS",
+      "value": 4309,
+      "file": "win32app\\Win32IDE.h",
+      "line": 157
+    },
+    {
+      "name": "IDM_REVENG_DEMANGLE",
+      "value": 4310,
+      "file": "win32app\\Win32IDE.h",
+      "line": 158
+    },
+    {
+      "name": "IDM_REVENG_SSA",
+      "value": 4311,
+      "file": "win32app\\Win32IDE.h",
+      "line": 159
+    },
+    {
+      "name": "IDM_REVENG_RECURSIVE_DISASM",
+      "value": 4312,
+      "file": "win32app\\Win32IDE.h",
+      "line": 160
+    },
+    {
+      "name": "IDM_REVENG_TYPE_RECOVERY",
+      "value": 4313,
+      "file": "win32app\\Win32IDE.h",
+      "line": 161
+    },
+    {
+      "name": "IDM_REVENG_DATA_FLOW",
+      "value": 4314,
+      "file": "win32app\\Win32IDE.h",
+      "line": 162
+    },
+    {
+      "name": "IDM_REVENG_LICENSE_INFO",
+      "value": 4315,
+      "file": "win32app\\Win32IDE.h",
+      "line": 163
+    },
+    {
+      "name": "IDM_REVENG_DECOMPILER_VIEW",
+      "value": 4316,
+      "file": "win32app\\Win32IDE.h",
+      "line": 166
+    },
+    {
+      "name": "IDM_REVENG_DECOMP_RENAME",
+      "value": 4317,
+      "file": "win32app\\Win32IDE.h",
+      "line": 167
+    },
+    {
+      "name": "IDM_REVENG_DECOMP_SYNC",
+      "value": 4318,
+      "file": "win32app\\Win32IDE.h",
+      "line": 168
+    },
+    {
+      "name": "IDM_REVENG_DECOMP_CLOSE",
+      "value": 4319,
+      "file": "win32app\\Win32IDE.h",
+      "line": 169
+    },
+    {
+      "name": "IDM_THEME_DARK_PLUS",
+      "value": 3101,
+      "file": "win32app\\Win32IDE.h",
+      "line": 183
+    },
+    {
+      "name": "IDM_THEME_LIGHT_PLUS",
+      "value": 3102,
+      "file": "win32app\\Win32IDE.h",
+      "line": 184
+    },
+    {
+      "name": "IDM_THEME_MONOKAI",
+      "value": 3103,
+      "file": "win32app\\Win32IDE.h",
+      "line": 185
+    },
+    {
+      "name": "IDM_THEME_DRACULA",
+      "value": 3104,
+      "file": "win32app\\Win32IDE.h",
+      "line": 186
+    },
+    {
+      "name": "IDM_THEME_NORD",
+      "value": 3105,
+      "file": "win32app\\Win32IDE.h",
+      "line": 187
+    },
+    {
+      "name": "IDM_THEME_SOLARIZED_DARK",
+      "value": 3106,
+      "file": "win32app\\Win32IDE.h",
+      "line": 188
+    },
+    {
+      "name": "IDM_THEME_SOLARIZED_LIGHT",
+      "value": 3107,
+      "file": "win32app\\Win32IDE.h",
+      "line": 189
+    },
+    {
+      "name": "IDM_THEME_CYBERPUNK_NEON",
+      "value": 3108,
+      "file": "win32app\\Win32IDE.h",
+      "line": 190
+    },
+    {
+      "name": "IDM_THEME_GRUVBOX_DARK",
+      "value": 3109,
+      "file": "win32app\\Win32IDE.h",
+      "line": 191
+    },
+    {
+      "name": "IDM_THEME_CATPPUCCIN_MOCHA",
+      "value": 3110,
+      "file": "win32app\\Win32IDE.h",
+      "line": 192
+    },
+    {
+      "name": "IDM_THEME_TOKYO_NIGHT",
+      "value": 3111,
+      "file": "win32app\\Win32IDE.h",
+      "line": 193
+    },
+    {
+      "name": "IDM_THEME_RAWRXD_CRIMSON",
+      "value": 3112,
+      "file": "win32app\\Win32IDE.h",
+      "line": 194
+    },
+    {
+      "name": "IDM_THEME_HIGH_CONTRAST",
+      "value": 3113,
+      "file": "win32app\\Win32IDE.h",
+      "line": 195
+    },
+    {
+      "name": "IDM_THEME_ONE_DARK_PRO",
+      "value": 3114,
+      "file": "win32app\\Win32IDE.h",
+      "line": 196
+    },
+    {
+      "name": "IDM_THEME_SYNTHWAVE84",
+      "value": 3115,
+      "file": "win32app\\Win32IDE.h",
+      "line": 197
+    },
+    {
+      "name": "IDM_THEME_ABYSS",
+      "value": 3116,
+      "file": "win32app\\Win32IDE.h",
+      "line": 198
+    },
+    {
+      "name": "IDM_TRANSPARENCY_100",
+      "value": 3200,
+      "file": "win32app\\Win32IDE.h",
+      "line": 215
+    },
+    {
+      "name": "IDM_TRANSPARENCY_90",
+      "value": 3201,
+      "file": "win32app\\Win32IDE.h",
+      "line": 216
+    },
+    {
+      "name": "IDM_TRANSPARENCY_80",
+      "value": 3202,
+      "file": "win32app\\Win32IDE.h",
+      "line": 217
+    },
+    {
+      "name": "IDM_TRANSPARENCY_70",
+      "value": 3203,
+      "file": "win32app\\Win32IDE.h",
+      "line": 218
+    },
+    {
+      "name": "IDM_TRANSPARENCY_60",
+      "value": 3204,
+      "file": "win32app\\Win32IDE.h",
+      "line": 219
+    },
+    {
+      "name": "IDM_TRANSPARENCY_50",
+      "value": 3205,
+      "file": "win32app\\Win32IDE.h",
+      "line": 220
+    },
+    {
+      "name": "IDM_TRANSPARENCY_40",
+      "value": 3206,
+      "file": "win32app\\Win32IDE.h",
+      "line": 221
+    },
+    {
+      "name": "IDM_TRANSPARENCY_CUSTOM",
+      "value": 3210,
+      "file": "win32app\\Win32IDE.h",
+      "line": 222
+    },
+    {
+      "name": "IDM_TRANSPARENCY_TOGGLE",
+      "value": 3211,
+      "file": "win32app\\Win32IDE.h",
+      "line": 223
+    },
+    {
+      "name": "IDM_BACKEND_SWITCH_LOCAL",
+      "value": 5037,
+      "file": "win32app\\Win32IDE.h",
+      "line": 226
+    },
+    {
+      "name": "IDM_BACKEND_SWITCH_OLLAMA",
+      "value": 5038,
+      "file": "win32app\\Win32IDE.h",
+      "line": 227
+    },
+    {
+      "name": "IDM_BACKEND_SWITCH_OPENAI",
+      "value": 5039,
+      "file": "win32app\\Win32IDE.h",
+      "line": 228
+    },
+    {
+      "name": "IDM_BACKEND_SWITCH_CLAUDE",
+      "value": 5040,
+      "file": "win32app\\Win32IDE.h",
+      "line": 229
+    },
+    {
+      "name": "IDM_BACKEND_SWITCH_GEMINI",
+      "value": 5041,
+      "file": "win32app\\Win32IDE.h",
+      "line": 230
+    },
+    {
+      "name": "IDM_BACKEND_SHOW_STATUS",
+      "value": 5042,
+      "file": "win32app\\Win32IDE.h",
+      "line": 231
+    },
+    {
+      "name": "IDM_BACKEND_SHOW_SWITCHER",
+      "value": 5043,
+      "file": "win32app\\Win32IDE.h",
+      "line": 232
+    },
+    {
+      "name": "IDM_BACKEND_CONFIGURE",
+      "value": 5044,
+      "file": "win32app\\Win32IDE.h",
+      "line": 233
+    },
+    {
+      "name": "IDM_BACKEND_HEALTH_CHECK",
+      "value": 5045,
+      "file": "win32app\\Win32IDE.h",
+      "line": 234
+    },
+    {
+      "name": "IDM_BACKEND_SET_API_KEY",
+      "value": 5046,
+      "file": "win32app\\Win32IDE.h",
+      "line": 235
+    },
+    {
+      "name": "IDM_BACKEND_SAVE_CONFIGS",
+      "value": 5047,
+      "file": "win32app\\Win32IDE.h",
+      "line": 236
+    },
+    {
+      "name": "IDM_ROUTER_ENABLE",
+      "value": 5048,
+      "file": "win32app\\Win32IDE.h",
+      "line": 239
+    },
+    {
+      "name": "IDM_ROUTER_DISABLE",
+      "value": 5049,
+      "file": "win32app\\Win32IDE.h",
+      "line": 240
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_STATUS",
+      "value": 5050,
+      "file": "win32app\\Win32IDE.h",
+      "line": 241
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_DECISION",
+      "value": 5051,
+      "file": "win32app\\Win32IDE.h",
+      "line": 242
+    },
+    {
+      "name": "IDM_ROUTER_SET_POLICY",
+      "value": 5052,
+      "file": "win32app\\Win32IDE.h",
+      "line": 243
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_CAPABILITIES",
+      "value": 5053,
+      "file": "win32app\\Win32IDE.h",
+      "line": 244
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_FALLBACKS",
+      "value": 5054,
+      "file": "win32app\\Win32IDE.h",
+      "line": 245
+    },
+    {
+      "name": "IDM_ROUTER_SAVE_CONFIG",
+      "value": 5055,
+      "file": "win32app\\Win32IDE.h",
+      "line": 246
+    },
+    {
+      "name": "IDM_ROUTER_ROUTE_PROMPT",
+      "value": 5056,
+      "file": "win32app\\Win32IDE.h",
+      "line": 247
+    },
+    {
+      "name": "IDM_ROUTER_RESET_STATS",
+      "value": 5057,
+      "file": "win32app\\Win32IDE.h",
+      "line": 248
+    },
+    {
+      "name": "IDM_LSP_START_ALL",
+      "value": 5058,
+      "file": "win32app\\Win32IDE.h",
+      "line": 251
+    },
+    {
+      "name": "IDM_LSP_STOP_ALL",
+      "value": 5059,
+      "file": "win32app\\Win32IDE.h",
+      "line": 252
+    },
+    {
+      "name": "IDM_LSP_SHOW_STATUS",
+      "value": 5060,
+      "file": "win32app\\Win32IDE.h",
+      "line": 253
+    },
+    {
+      "name": "IDM_LSP_GOTO_DEFINITION",
+      "value": 5061,
+      "file": "win32app\\Win32IDE.h",
+      "line": 254
+    },
+    {
+      "name": "IDM_LSP_FIND_REFERENCES",
+      "value": 5062,
+      "file": "win32app\\Win32IDE.h",
+      "line": 255
+    },
+    {
+      "name": "IDM_LSP_RENAME_SYMBOL",
+      "value": 5063,
+      "file": "win32app\\Win32IDE.h",
+      "line": 256
+    },
+    {
+      "name": "IDM_LSP_HOVER_INFO",
+      "value": 5064,
+      "file": "win32app\\Win32IDE.h",
+      "line": 257
+    },
+    {
+      "name": "IDM_LSP_SHOW_DIAGNOSTICS",
+      "value": 5065,
+      "file": "win32app\\Win32IDE.h",
+      "line": 258
+    },
+    {
+      "name": "IDM_LSP_RESTART_SERVER",
+      "value": 5066,
+      "file": "win32app\\Win32IDE.h",
+      "line": 259
+    },
+    {
+      "name": "IDM_LSP_CLEAR_DIAGNOSTICS",
+      "value": 5067,
+      "file": "win32app\\Win32IDE.h",
+      "line": 260
+    },
+    {
+      "name": "IDM_LSP_SHOW_SYMBOL_INFO",
+      "value": 5068,
+      "file": "win32app\\Win32IDE.h",
+      "line": 261
+    },
+    {
+      "name": "IDM_LSP_CONFIGURE",
+      "value": 5069,
+      "file": "win32app\\Win32IDE.h",
+      "line": 262
+    },
+    {
+      "name": "IDM_LSP_SAVE_CONFIG",
+      "value": 5070,
+      "file": "win32app\\Win32IDE.h",
+      "line": 263
+    },
+    {
+      "name": "IDM_ROUTER_WHY_BACKEND",
+      "value": 5071,
+      "file": "win32app\\Win32IDE.h",
+      "line": 266
+    },
+    {
+      "name": "IDM_ROUTER_PIN_TASK",
+      "value": 5072,
+      "file": "win32app\\Win32IDE.h",
+      "line": 267
+    },
+    {
+      "name": "IDM_ROUTER_UNPIN_TASK",
+      "value": 5073,
+      "file": "win32app\\Win32IDE.h",
+      "line": 268
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_PINS",
+      "value": 5074,
+      "file": "win32app\\Win32IDE.h",
+      "line": 269
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_HEATMAP",
+      "value": 5075,
+      "file": "win32app\\Win32IDE.h",
+      "line": 270
+    },
+    {
+      "name": "IDM_ROUTER_ENSEMBLE_ENABLE",
+      "value": 5076,
+      "file": "win32app\\Win32IDE.h",
+      "line": 271
+    },
+    {
+      "name": "IDM_ROUTER_ENSEMBLE_DISABLE",
+      "value": 5077,
+      "file": "win32app\\Win32IDE.h",
+      "line": 272
+    },
+    {
+      "name": "IDM_ROUTER_ENSEMBLE_STATUS",
+      "value": 5078,
+      "file": "win32app\\Win32IDE.h",
+      "line": 273
+    },
+    {
+      "name": "IDM_ROUTER_SIMULATE",
+      "value": 5079,
+      "file": "win32app\\Win32IDE.h",
+      "line": 274
+    },
+    {
+      "name": "IDM_ROUTER_SHOW_COST_STATS",
+      "value": 5081,
+      "file": "win32app\\Win32IDE.h",
+      "line": 276
+    },
+    {
+      "name": "IDM_PLUGIN_SHOW_PANEL",
+      "value": 5200,
+      "file": "win32app\\Win32IDE.h",
+      "line": 279
+    },
+    {
+      "name": "IDM_PLUGIN_LOAD",
+      "value": 5201,
+      "file": "win32app\\Win32IDE.h",
+      "line": 280
+    },
+    {
+      "name": "IDM_PLUGIN_UNLOAD",
+      "value": 5202,
+      "file": "win32app\\Win32IDE.h",
+      "line": 281
+    },
+    {
+      "name": "IDM_PLUGIN_UNLOAD_ALL",
+      "value": 5203,
+      "file": "win32app\\Win32IDE.h",
+      "line": 282
+    },
+    {
+      "name": "IDM_PLUGIN_REFRESH",
+      "value": 5204,
+      "file": "win32app\\Win32IDE.h",
+      "line": 283
+    },
+    {
+      "name": "IDM_PLUGIN_SCAN_DIR",
+      "value": 5205,
+      "file": "win32app\\Win32IDE.h",
+      "line": 284
+    },
+    {
+      "name": "IDM_PLUGIN_SHOW_STATUS",
+      "value": 5206,
+      "file": "win32app\\Win32IDE.h",
+      "line": 285
+    },
+    {
+      "name": "IDM_PLUGIN_TOGGLE_HOTLOAD",
+      "value": 5207,
+      "file": "win32app\\Win32IDE.h",
+      "line": 286
+    },
+    {
+      "name": "IDM_PLUGIN_CONFIGURE",
+      "value": 5208,
+      "file": "win32app\\Win32IDE.h",
+      "line": 287
+    },
+    {
+      "name": "IDM_ASM_PARSE_SYMBOLS",
+      "value": 5082,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3333
+    },
+    {
+      "name": "IDM_ASM_GOTO_LABEL",
+      "value": 5083,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3334
+    },
+    {
+      "name": "IDM_ASM_FIND_LABEL_REFS",
+      "value": 5084,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3335
+    },
+    {
+      "name": "IDM_ASM_SHOW_SYMBOL_TABLE",
+      "value": 5085,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3336
+    },
+    {
+      "name": "IDM_ASM_INSTRUCTION_INFO",
+      "value": 5086,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3337
+    },
+    {
+      "name": "IDM_ASM_REGISTER_INFO",
+      "value": 5087,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3338
+    },
+    {
+      "name": "IDM_ASM_ANALYZE_BLOCK",
+      "value": 5088,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3339
+    },
+    {
+      "name": "IDM_ASM_SHOW_CALL_GRAPH",
+      "value": 5089,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3340
+    },
+    {
+      "name": "IDM_ASM_SHOW_DATA_FLOW",
+      "value": 5090,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3341
+    },
+    {
+      "name": "IDM_ASM_DETECT_CONVENTION",
+      "value": 5091,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3342
+    },
+    {
+      "name": "IDM_ASM_SHOW_SECTIONS",
+      "value": 5092,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3343
+    },
+    {
+      "name": "IDM_ASM_CLEAR_SYMBOLS",
+      "value": 5093,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3344
+    },
+    {
+      "name": "IDM_HYBRID_COMPLETE",
+      "value": 5094,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3549
+    },
+    {
+      "name": "IDM_HYBRID_DIAGNOSTICS",
+      "value": 5095,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3550
+    },
+    {
+      "name": "IDM_HYBRID_SMART_RENAME",
+      "value": 5096,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3551
+    },
+    {
+      "name": "IDM_HYBRID_ANALYZE_FILE",
+      "value": 5097,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3552
+    },
+    {
+      "name": "IDM_HYBRID_AUTO_PROFILE",
+      "value": 5098,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3553
+    },
+    {
+      "name": "IDM_HYBRID_STATUS",
+      "value": 5099,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3554
+    },
+    {
+      "name": "IDM_HYBRID_SYMBOL_USAGE",
+      "value": 5100,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3555
+    },
+    {
+      "name": "IDM_HYBRID_EXPLAIN_SYMBOL",
+      "value": 5101,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3556
+    },
+    {
+      "name": "IDM_HYBRID_ANNOTATE_DIAG",
+      "value": 5102,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3557
+    },
+    {
+      "name": "IDM_HYBRID_STREAM_ANALYZE",
+      "value": 5103,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3558
+    },
+    {
+      "name": "IDM_HYBRID_SEMANTIC_PREFETCH",
+      "value": 5104,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3559
+    },
+    {
+      "name": "IDM_HYBRID_CORRECTION_LOOP",
+      "value": 5105,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3560
+    },
+    {
+      "name": "IDM_MULTI_RESP_GENERATE",
+      "value": 5106,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3705
+    },
+    {
+      "name": "IDM_MULTI_RESP_SELECT_PREFERRED",
+      "value": 5108,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3707
+    },
+    {
+      "name": "IDM_MULTI_RESP_COMPARE",
+      "value": 5109,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3708
+    },
+    {
+      "name": "IDM_MULTI_RESP_SHOW_STATS",
+      "value": 5110,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3709
+    },
+    {
+      "name": "IDM_MULTI_RESP_SHOW_TEMPLATES",
+      "value": 5111,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3710
+    },
+    {
+      "name": "IDM_MULTI_RESP_TOGGLE_TEMPLATE",
+      "value": 5112,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3711
+    },
+    {
+      "name": "IDM_MULTI_RESP_SHOW_PREFS",
+      "value": 5113,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3712
+    },
+    {
+      "name": "IDM_MULTI_RESP_SHOW_LATEST",
+      "value": 5114,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3713
+    },
+    {
+      "name": "IDM_MULTI_RESP_SHOW_STATUS",
+      "value": 5115,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3714
+    },
+    {
+      "name": "IDM_MULTI_RESP_CLEAR_HISTORY",
+      "value": 5116,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3715
+    },
+    {
+      "name": "IDM_MULTI_RESP_APPLY_PREFERRED",
+      "value": 5117,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3716
+    },
+    {
+      "name": "IDM_GOV_STATUS",
+      "value": 5118,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3754
+    },
+    {
+      "name": "IDM_GOV_SUBMIT_COMMAND",
+      "value": 5119,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3755
+    },
+    {
+      "name": "IDM_GOV_KILL_ALL",
+      "value": 5120,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3756
+    },
+    {
+      "name": "IDM_GOV_TASK_LIST",
+      "value": 5121,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3757
+    },
+    {
+      "name": "IDM_SAFETY_STATUS",
+      "value": 5122,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3758
+    },
+    {
+      "name": "IDM_SAFETY_RESET_BUDGET",
+      "value": 5123,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3759
+    },
+    {
+      "name": "IDM_SAFETY_SHOW_VIOLATIONS",
+      "value": 5125,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3761
+    },
+    {
+      "name": "IDM_REPLAY_STATUS",
+      "value": 5126,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3762
+    },
+    {
+      "name": "IDM_REPLAY_EXPORT_SESSION",
+      "value": 5128,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3764
+    },
+    {
+      "name": "IDM_REPLAY_CHECKPOINT",
+      "value": 5129,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3765
+    },
+    {
+      "name": "IDM_CONFIDENCE_STATUS",
+      "value": 5130,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3766
+    },
+    {
+      "name": "IDM_CONFIDENCE_SET_POLICY",
+      "value": 5131,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3767
+    },
+    {
+      "name": "IDM_SWARM_STATUS",
+      "value": 5132,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3771
+    },
+    {
+      "name": "IDM_SWARM_START_LEADER",
+      "value": 5133,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3772
+    },
+    {
+      "name": "IDM_SWARM_START_WORKER",
+      "value": 5134,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3773
+    },
+    {
+      "name": "IDM_SWARM_START_HYBRID",
+      "value": 5135,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3774
+    },
+    {
+      "name": "IDM_SWARM_STOP",
+      "value": 5136,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3775
+    },
+    {
+      "name": "IDM_SWARM_LIST_NODES",
+      "value": 5137,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3777
+    },
+    {
+      "name": "IDM_SWARM_ADD_NODE",
+      "value": 5138,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3778
+    },
+    {
+      "name": "IDM_SWARM_REMOVE_NODE",
+      "value": 5139,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3779
+    },
+    {
+      "name": "IDM_SWARM_BLACKLIST_NODE",
+      "value": 5140,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3780
+    },
+    {
+      "name": "IDM_SWARM_BUILD_SOURCES",
+      "value": 5141,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3782
+    },
+    {
+      "name": "IDM_SWARM_BUILD_CMAKE",
+      "value": 5142,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3783
+    },
+    {
+      "name": "IDM_SWARM_START_BUILD",
+      "value": 5143,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3784
+    },
+    {
+      "name": "IDM_SWARM_CANCEL_BUILD",
+      "value": 5144,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3785
+    },
+    {
+      "name": "IDM_SWARM_CACHE_STATUS",
+      "value": 5145,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3787
+    },
+    {
+      "name": "IDM_SWARM_CACHE_CLEAR",
+      "value": 5146,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3788
+    },
+    {
+      "name": "IDM_SWARM_SHOW_CONFIG",
+      "value": 5147,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3789
+    },
+    {
+      "name": "IDM_SWARM_TOGGLE_DISCOVERY",
+      "value": 5148,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3790
+    },
+    {
+      "name": "IDM_SWARM_SHOW_TASK_GRAPH",
+      "value": 5149,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3792
+    },
+    {
+      "name": "IDM_SWARM_SHOW_EVENTS",
+      "value": 5150,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3793
+    },
+    {
+      "name": "IDM_SWARM_SHOW_STATS",
+      "value": 5151,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3794
+    },
+    {
+      "name": "IDM_SWARM_RESET_STATS",
+      "value": 5152,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3795
+    },
+    {
+      "name": "IDM_SWARM_WORKER_STATUS",
+      "value": 5153,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3797
+    },
+    {
+      "name": "IDM_SWARM_WORKER_CONNECT",
+      "value": 5154,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3798
+    },
+    {
+      "name": "IDM_SWARM_WORKER_DISCONNECT",
+      "value": 5155,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3799
+    },
+    {
+      "name": "IDM_SWARM_FITNESS_TEST",
+      "value": 5156,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3800
+    },
+    {
+      "name": "IDM_DBG_LAUNCH",
+      "value": 5157,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3938
+    },
+    {
+      "name": "IDM_DBG_ATTACH",
+      "value": 5158,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3939
+    },
+    {
+      "name": "IDM_DBG_DETACH",
+      "value": 5159,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3940
+    },
+    {
+      "name": "IDM_DBG_GO",
+      "value": 5160,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3942
+    },
+    {
+      "name": "IDM_DBG_STEP_OVER",
+      "value": 5161,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3943
+    },
+    {
+      "name": "IDM_DBG_STEP_INTO",
+      "value": 5162,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3944
+    },
+    {
+      "name": "IDM_DBG_STEP_OUT",
+      "value": 5163,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3945
+    },
+    {
+      "name": "IDM_DBG_BREAK",
+      "value": 5164,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3946
+    },
+    {
+      "name": "IDM_DBG_KILL",
+      "value": 5165,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3947
+    },
+    {
+      "name": "IDM_DBG_ADD_BP",
+      "value": 5166,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3949
+    },
+    {
+      "name": "IDM_DBG_REMOVE_BP",
+      "value": 5167,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3950
+    },
+    {
+      "name": "IDM_DBG_ENABLE_BP",
+      "value": 5168,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3951
+    },
+    {
+      "name": "IDM_DBG_CLEAR_BPS",
+      "value": 5169,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3952
+    },
+    {
+      "name": "IDM_DBG_LIST_BPS",
+      "value": 5170,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3953
+    },
+    {
+      "name": "IDM_DBG_ADD_WATCH",
+      "value": 5171,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3955
+    },
+    {
+      "name": "IDM_DBG_REMOVE_WATCH",
+      "value": 5172,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3956
+    },
+    {
+      "name": "IDM_DBG_REGISTERS",
+      "value": 5173,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3958
+    },
+    {
+      "name": "IDM_DBG_STACK",
+      "value": 5174,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3959
+    },
+    {
+      "name": "IDM_DBG_MEMORY",
+      "value": 5175,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3960
+    },
+    {
+      "name": "IDM_DBG_DISASM",
+      "value": 5176,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3961
+    },
+    {
+      "name": "IDM_DBG_MODULES",
+      "value": 5177,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3962
+    },
+    {
+      "name": "IDM_DBG_THREADS",
+      "value": 5178,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3963
+    },
+    {
+      "name": "IDM_DBG_SWITCH_THREAD",
+      "value": 5179,
+      "file": "win32app\\Win32IDE.h",
+      "line": 3964
+    }
+  ]
+}

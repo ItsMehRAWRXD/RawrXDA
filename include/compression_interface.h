@@ -3,8 +3,8 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
-#include "brutal_gzip.h"
-#include "deflate_brutal_qt.hpp"
+// #include "brutal_gzip.h"
+#include "deflate_brutal_std.hpp"
 
 /**
  * @file compression_interface.h
@@ -12,7 +12,7 @@
  * 
  * This header provides wrapper classes that integrate with:
  * - brutal_gzip.lib (MASM-optimized GZIP decompression)
- * - deflate_brutal_qt.hpp (MASM-optimized deflate with Qt integration)
+ * - deflate_brutal_std.hpp (MASM-optimized deflate with std integration)
  * 
  * These libraries use hand-optimized MASM kernels for maximum performance
  * on GGUF model tensor decompression.
@@ -77,13 +77,12 @@ private:
 
 /**
  * @class DeflateWrapper
- * @brief Wrapper around deflate_brutal_qt.hpp (MASM-optimized deflate)
+ * @brief Wrapper around deflate_brutal_std.hpp (MASM-optimized deflate, Qt-free)
  * 
- * This class wraps the deflate decompression with Qt integration:
+ * This class wraps the deflate decompression with STL integration:
  * - MASM-optimized deflate kernels (deflate_brutal_masm.asm)
  * - Full zlib/deflate compatibility
- * - Qt-friendly error handling and logging
- * - Automatic memory management
+ * - std::vector-based API; no Qt
  * 
  * Performance characteristics:
  * - Decompression: ~450 MB/s on modern CPUs
@@ -166,5 +165,3 @@ struct CompressionStats {
      */
     std::string ToString() const;
 };
-
-#endif // COMPRESSION_INTERFACE_H

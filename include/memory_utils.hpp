@@ -16,9 +16,14 @@
 
 #include <memory>
 #include <cassert>
+#include <cstdio>
+#include <cstring>
 #include <type_traits>
 #include <mutex>
 #include <set>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace RawrXD {
 namespace Memory {
@@ -75,16 +80,27 @@ public:
     void track_allocation(void* ptr, const char* type, const char* location) {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_allocations.insert(ptr);
-        // Log in debug builds
-        qDebug() << QString("ALLOC: %1 at %2 (%3)")
-            .arg(type).arg(location).arg(reinterpret_cast<uint64_t>(ptr));
+#ifndef NDEBUG
+        char buf[256];
+        (void)snprintf(buf, sizeof(buf), "ALLOC: %s at %s (%zu)\n", type, location, (size_t)reinterpret_cast<uintptr_t>(ptr));
+        (void)fwrite(buf, 1, strlen(buf), stderr);
+#ifdef _WIN32
+        OutputDebugStringA(buf);
+#endif
+#endif
     }
 
     void track_deallocation(void* ptr, const char* location) {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_allocations.erase(ptr);
-        qDebug() << QString("FREE: at %1 (%2)")
-            .arg(location).arg(reinterpret_cast<uint64_t>(ptr));
+#ifndef NDEBUG
+        char buf[256];
+        (void)snprintf(buf, sizeof(buf), "FREE: at %s (%zu)\n", location, (size_t)reinterpret_cast<uintptr_t>(ptr));
+        (void)fwrite(buf, 1, strlen(buf), stderr);
+#ifdef _WIN32
+        OutputDebugStringA(buf);
+#endif
+#endif
     }
 
     size_t active_allocations() const {

@@ -86,6 +86,10 @@ ComputeKernel ENDS
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 align 16
 g_InferenceContext      InferenceContext <>
@@ -335,6 +339,7 @@ Inference_SubmitBatch PROC FRAME
     pop rsi
     pop rbx
     ret
+Inference_SubmitBatch ENDP
 
 ; ==============================================================================
 ; Inference_FreeSequence

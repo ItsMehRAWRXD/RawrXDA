@@ -3,6 +3,7 @@
 #include "swarm_orchestrator.h" // Ensure these are included too if they weren't
 #include "chain_of_thought.h"
 #include "token_generator.h"
+#include "toolchain_integration.hpp"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -28,7 +29,7 @@ RawrXD::Expected<void, IDEError> IDEOrchestrator::initialize() {
     
     // Setup logging
     if (m_config.enableLogging) {
-        auto logLevel = spdlog::level::from_str(m_config.logLevel);
+        auto logLevel = static_cast<spdlog::level::level_enum>(std::min(6, std::max(0, m_config.logLevel)));
         spdlog::set_level(logLevel);
         spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] %v");
         
@@ -43,7 +44,7 @@ RawrXD::Expected<void, IDEError> IDEOrchestrator::initialize() {
             );
             auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
             
-            std::vector<spdlog::sink_ptr> sinks = {console_sink};
+            std::vector<spdlog::sinks::sink_ptr> sinks = {console_sink};
             if (m_config.enableFileLogging) {
                 sinks.push_back(file_sink);
             }
@@ -126,6 +127,18 @@ RawrXD::Expected<void, IDEError> IDEOrchestrator::initialize() {
         return inferenceResult;
     }
     spdlog::info("Inference engine initialized");
+    
+    // Setup toolchain integration (MASM64 assembler + linker)
+    {
+        auto toolchainResult = setupToolchain();
+        if (!toolchainResult) {
+            spdlog::warn("Toolchain setup failed: {} (continuing without toolchain)",
+                        static_cast<int>(toolchainResult.error()));
+            // Non-fatal — IDE works without toolchain
+        } else {
+            spdlog::info("Toolchain integration initialized");
+        }
+    }
     
     // Start background threads
     auto threadResult = startBackgroundThreads();
@@ -394,6 +407,28 @@ RawrXD::Expected<void, IDEError> IDEOrchestrator::setupInference() {
         spdlog::warn("No model found at {}, inference will use fallback", modelPath);
     }
     
+    return {};
+}
+
+RawrXD::Expected<void, IDEError> IDEOrchestrator::setupToolchain() {
+    spdlog::debug("Setting up toolchain integration...");
+    
+    RawrXD::IDE::ToolchainConfig tcConfig;
+    tcConfig.enabled         = true;
+    tcConfig.autoDetectTasks = true;
+    tcConfig.autoAnalyze     = true;
+    tcConfig.debounceMs      = 300;
+    tcConfig.maxDiagnostics  = 500;
+    tcConfig.workspaceRoot   = m_config.toolsPath; /* Use workspace root when available */
+    
+    m_toolchain = std::make_unique<RawrXD::IDE::ToolchainIntegration>();
+    if (!m_toolchain->initialize(tcConfig)) {
+        spdlog::error("Toolchain integration initialization failed");
+        m_toolchain.reset();
+        return std::unexpected(IDEError::InitializationFailed);
+    }
+    
+    spdlog::info("Toolchain integration ready (MASM64 assembler + linker)");
     return {};
 }
 

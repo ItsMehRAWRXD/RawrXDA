@@ -213,6 +213,7 @@ main PROC FRAME
 main_fail:
     mov ecx, 1
     call ExitProcess
+    ret
 main ENDP
 
 ;================================================================================
@@ -700,6 +701,47 @@ Cmd_Quit PROC FRAME
 Cmd_Quit ENDP
 
 Cmd_Cancel PROC FRAME
+    ; Cancel the current running build/run/search operation
+    push rbx
+    .PUSHREG rbx
+    sub rsp, 32
+    .ALLOCSTACK 32
+    .ENDPROLOG
+    
+    ; Check if a build process is running
+    mov rax, QWORD PTR [g_build_process]
+    test rax, rax
+    jz @@cc_check_run
+    
+    ; Terminate build process
+    mov rcx, rax
+    mov edx, 1                       ; exit code
+    call TerminateProcess
+    mov rcx, QWORD PTR [g_build_process]
+    call CloseHandle
+    mov QWORD PTR [g_build_process], 0
+    lea rcx, szCancelled
+    call Set_Status
+    jmp @@cc_done
+    
+@@cc_check_run:
+    ; Check for running execution process
+    mov rax, QWORD PTR [g_run_process]
+    test rax, rax
+    jz @@cc_done
+    
+    mov rcx, rax
+    mov edx, 1
+    call TerminateProcess
+    mov rcx, QWORD PTR [g_run_process]
+    call CloseHandle
+    mov QWORD PTR [g_run_process], 0
+    lea rcx, szCancelled
+    call Set_Status
+    
+@@cc_done:
+    add rsp, 32
+    pop rbx
     ret
 Cmd_Cancel ENDP
 
@@ -707,13 +749,117 @@ Cmd_Build PROC FRAME
     lea rcx, szBuilding
     call Set_Status
     
-    ; Spawn build process
+    ; Spawn build process via CreateProcessA
+    push rbx
+    push r12
+    .PUSHREG rbx
+    .PUSHREG r12
+    sub rsp, 128
+    .ALLOCSTACK 128
+    .ENDPROLOG
+    
+    ; Zero out STARTUPINFO and PROCESS_INFORMATION
+    lea rdi, [rsp]
+    mov ecx, 128
+    xor eax, eax
+    rep stosb
+    
+    ; Set STARTUPINFO.cb
+    mov DWORD PTR [rsp], 104         ; sizeof(STARTUPINFOA) = 104
+    
+    ; CreateProcessA(NULL, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)
+    xor ecx, ecx                     ; lpApplicationName = NULL
+    lea rdx, [g_build_command]       ; lpCommandLine
+    xor r8d, r8d                     ; lpProcessAttributes
+    xor r9d, r9d                     ; lpThreadAttributes
+    mov DWORD PTR [rsp+80], 0        ; bInheritHandles
+    mov DWORD PTR [rsp+88], 0        ; dwCreationFlags
+    mov QWORD PTR [rsp+96], 0        ; lpEnvironment
+    mov QWORD PTR [rsp+104], 0       ; lpCurrentDirectory
+    lea rax, [rsp]                   ; STARTUPINFO
+    mov QWORD PTR [rsp+112], rax
+    lea rax, [rsp+104]               ; PROCESS_INFORMATION
+    mov QWORD PTR [rsp+120], rax
+    call CreateProcessA
+    test eax, eax
+    jz @@cb_fail
+    
+    ; Save process handle
+    mov rax, QWORD PTR [rsp+104]     ; hProcess
+    mov QWORD PTR [g_build_process], rax
+    
+    lea rcx, szBuildStarted
+    call Set_Status
+    jmp @@cb_done
+    
+@@cb_fail:
+    lea rcx, szBuildFailed
+    call Set_Status
+    
+@@cb_done:
+    add rsp, 128
+    pop r12
+    pop rbx
     ret
 Cmd_Build ENDP
 
 Cmd_Run PROC FRAME
     lea rcx, szRunning
     call Set_Status
+    
+    ; Execute the built output binary
+    push rbx
+    .PUSHREG rbx
+    sub rsp, 128
+    .ALLOCSTACK 128
+    .ENDPROLOG
+    
+    ; Zero out STARTUPINFO + PROCESS_INFORMATION
+    lea rdi, [rsp]
+    mov ecx, 128
+    xor eax, eax
+    rep stosb
+    
+    ; Set STARTUPINFO.cb
+    mov DWORD PTR [rsp], 104
+    
+    ; CreateProcessA for the output binary
+    xor ecx, ecx
+    lea rdx, [g_run_command]         ; run command
+    xor r8d, r8d
+    xor r9d, r9d
+    mov DWORD PTR [rsp+80], 0
+    mov DWORD PTR [rsp+88], 0
+    mov QWORD PTR [rsp+96], 0
+    mov QWORD PTR [rsp+104], 0
+    lea rax, [rsp]
+    mov QWORD PTR [rsp+112], rax
+    lea rax, [rsp+104]
+    mov QWORD PTR [rsp+120], rax
+    call CreateProcessA
+    test eax, eax
+    jz @@cr_fail
+    
+    ; Save process handle
+    mov rax, QWORD PTR [rsp+104]
+    mov QWORD PTR [g_run_process], rax
+    
+    ; Wait for process to complete
+    mov rcx, rax
+    mov edx, -1                      ; INFINITE
+    call WaitForSingleObject
+    
+    lea rcx, szRunComplete
+    call Set_Status
+    jmp @@cr_done
+    
+@@cr_fail:
+    lea rcx, szRunFailed
+    call Set_Status
+    
+@@cr_done:
+    add rsp, 128
+    pop rbx
     ret
 Cmd_Run ENDP
 
@@ -1195,6 +1341,7 @@ Strip_Newline ENDP
 
 Sprintf PROC FRAME
     jmp wsprintfA
+    ret
 Sprintf ENDP
 
 Itoa PROC FRAME

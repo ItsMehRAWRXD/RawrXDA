@@ -1,0 +1,28 @@
+; =============================================================================
+; RawrXD_TridentBeacon.def — Trident COM Host + Beacon + GPU Exports
+; =============================================================================
+LIBRARY RawrXD_TridentBeacon
+EXPORTS
+    ; === Trident Beacon Core (RawrXD_TridentBeacon.asm) ===
+    TridentBeacon_Create            @1
+    TridentBeacon_Destroy           @2
+    TridentBeacon_Navigate          @3
+    TridentBeacon_InjectJS          @4
+    TridentBeacon_LoadHTML          @5
+    TridentBeacon_IsOllamaRunning   @6
+    TridentBeacon_SetStreamCallback @7
+    TridentBeacon_GetHitCount       @8
+    TridentBeacon_InjectBeaconRuntime @9
+
+    ; === GPU Acceleration (RawrXD_TridentBeacon_GPU.asm) ===
+    Trident_EnableGPU               @20
+    Trident_DisableGPU              @21
+    Trident_GetEmulationMode        @22
+    Trident_CreateGPU               @23
+
+    ; === WebGL Bridge (RawrXD_TridentBeacon_GPU.asm) ===
+    WebGL_CreateContext              @30
+    WebGL_DestroyContext             @31
+    WebGL_ExecuteCommand            @32
+    WebGL_CompositeToTrident        @33
+    WebGL_GetContextCount           @34

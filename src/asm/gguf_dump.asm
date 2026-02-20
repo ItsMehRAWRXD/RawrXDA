@@ -7,6 +7,10 @@ OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 
 ; Windows API
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERNDEF __imp_CreateFileA:QWORD
 EXTERNDEF __imp_CreateFileMappingA:QWORD
 EXTERNDEF __imp_MapViewOfFile:QWORD
@@ -184,6 +188,7 @@ main PROC
 .exit:
     leave
     ret
+main ENDP
 
 ; ════════════════════════════════════════════════════════════════════════════════
 ; MapGGUFFile — Memory-map file for zero-copy parsing
@@ -447,17 +452,63 @@ OutputGhostMap PROC
     add rbx, rdi                    ; Skip name
     
     mov eax, [rbx]                  ; n_dims
+    mov r9d, eax                    ; save n_dims
     add rbx, 4
-    shl rax, 3                      ; *8 for uint64 dimensions
-    add rbx, rax                    ; Skip dimensions
     
-    add rbx, 4                      ; Skip type
+    ; Calculate element count from dimensions
+    xor r10, r10                    ; element_count = 1
+    test r9d, r9d
+    jz .no_dims
+    mov rsi, rbx                    ; dimensions start
+    mov ecx, r9d
+.dim_loop:
+    mov rax, [rsi]
+    mul r10                         ; element_count *= dim
+    mov r10, rax
+    add rsi, 8
+    dec ecx
+    jnz .dim_loop
+    
+.no_dims:
+    shl r9, 3                       ; n_dims * 8
+    add rbx, r9                     ; Skip dimensions
+    
+    mov r9d, [rbx]                  ; type
+    add rbx, 4
+    
+    ; Calculate element size from type
+    mov r11, 1                      ; default size
+    cmp r9d, GGUF_TYPE_UINT8
+    je .size_done
+    cmp r9d, GGUF_TYPE_INT8
+    je .size_done
+    mov r11, 2
+    cmp r9d, GGUF_TYPE_UINT16
+    je .size_done
+    cmp r9d, GGUF_TYPE_INT16
+    je .size_done
+    mov r11, 4
+    cmp r9d, GGUF_TYPE_UINT32
+    je .size_done
+    cmp r9d, GGUF_TYPE_INT32
+    je .size_done
+    cmp r9d, GGUF_TYPE_FLOAT32
+    je .size_done
+    mov r11, 8
+    cmp r9d, GGUF_TYPE_UINT64
+    je .size_done
+    cmp r9d, GGUF_TYPE_INT64
+    je .size_done
+    cmp r9d, GGUF_TYPE_FLOAT64
+    je .size_done
+    ; For string/array, use 1 as placeholder
+.size_done:
+    mov rax, r10
+    mul r11                         ; total_size = element_count * element_size
+    mov r15, rax                    ; tensor size
     
     mov r14, [rbx]                  ; offset
     add rbx, 8
-    
-    ; Calculate size from type and dimensions (simplified)
-    mov r15, 4096                   ; Placeholder: would compute actual size
     
     ; Determine priority based on tensor name patterns
     mov ecx, r12d
@@ -587,24 +638,148 @@ PrintNewline PROC
 PrintNewline ENDP
 
 PrintQword PROC
-    ; rdx = value to print
-    ; Simple hex output (full implementation would use itoa)
+    ; rdx = value to print as hex
+    ; Output 16 hex digits to stdout
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 48
+    
+    mov rbx, rdx                    ; rbx = value
+    lea rsi, [rsp + 32]             ; output buffer on stack
+    mov rdi, rsi
+    
+    ; Convert 64-bit value to 16 hex chars (big-endian)
+    mov ecx, 16                     ; 16 nibbles
+@@hex_loop:
+    rol rbx, 4                      ; rotate left 4 bits
+    mov al, bl
+    and al, 0Fh
+    cmp al, 10
+    jb @@digit
+    add al, 'A' - 10
+    jmp @@store
+@@digit:
+    add al, '0'
+@@store:
+    mov [rdi], al
+    inc rdi
+    dec ecx
+    jnz @@hex_loop
+    
+    ; Write to stdout
+    mov rcx, g_stdout
+    mov rdx, rsi
+    mov r8, 16
+    lea r9, [rsp + 16]
+    push 0
+    sub rsp, 32
+    call __imp_WriteFile
+    add rsp, 40
+    
+    add rsp, 48
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 PrintQword ENDP
 
 PrintDword PROC
-    ; edx = value
+    ; edx = value to print as hex
+    ; Output 8 hex digits to stdout
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 48
+    
+    mov ebx, edx
+    lea rsi, [rsp + 32]
+    mov rdi, rsi
+    
+    mov ecx, 8
+@@hex_loop:
+    rol ebx, 4
+    mov al, bl
+    and al, 0Fh
+    cmp al, 10
+    jb @@digit
+    add al, 'A' - 10
+    jmp @@store
+@@digit:
+    add al, '0'
+@@store:
+    mov [rdi], al
+    inc rdi
+    dec ecx
+    jnz @@hex_loop
+    
+    mov rcx, g_stdout
+    mov rdx, rsi
+    mov r8, 8
+    lea r9, [rsp + 16]
+    push 0
+    sub rsp, 32
+    call __imp_WriteFile
+    add rsp, 40
+    
+    add rsp, 48
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 PrintDword ENDP
 
 PrintFormatted PROC
-    ; Would call wsprintfA or custom formatter
+    ; rcx = format string, rdx/r8/r9 = args
+    ; Uses wsprintfA + WriteFile
+    push rbx
+    sub rsp, 560                    ; 512-byte format buffer + alignment
+    
+    ; Format into stack buffer
+    lea rbx, [rsp + 32]             ; output buffer
+    mov [rsp + 24], r9              ; save r9 for wsprintfA
+    mov r9, r8                      ; shift args: r9=arg3
+    mov r8, rdx                     ; r8=arg2
+    mov rdx, rcx                    ; rdx=format
+    mov rcx, rbx                    ; rcx=output buffer
+    call wsprintfA
+    mov ebx, eax                    ; ebx = length
+    
+    ; Write to stdout
+    mov rcx, g_stdout
+    lea rdx, [rsp + 32]
+    mov r8d, ebx
+    lea r9, [rsp + 16]
+    push 0
+    sub rsp, 32
+    call __imp_WriteFile
+    add rsp, 40
+    
+    add rsp, 560
+    pop rbx
     ret
 PrintFormatted ENDP
 
 StrCompare PROC
     ; rsi, rdi = strings to compare
-    ; returns rax=1 if equal
+    ; returns rax=1 if equal, 0 if not
+@@cmp_loop:
+    movzx eax, byte ptr [rsi]
+    movzx ecx, byte ptr [rdi]
+    cmp al, cl
+    jne @@not_equal
+    test al, al
+    jz @@equal
+    inc rsi
+    inc rdi
+    jmp @@cmp_loop
+    
+@@equal:
+    mov rax, 1
+    ret
+    
+@@not_equal:
+    xor rax, rax
     ret
 StrCompare ENDP
 

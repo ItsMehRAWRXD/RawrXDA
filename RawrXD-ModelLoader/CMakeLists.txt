@@ -513,6 +513,30 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_q8_0_end2end.cpp")
     )
 endif()
 
+# Q4_0 AVX2/AVX-512 end-to-end bench
+if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_q4_0_end2end.cpp")
+    add_executable(bench_q4_0_end2end
+        tests/bench_q4_0_end2end.cpp
+        kernels/q4_0_gemm_avx2.cc
+        kernels/q4_0_unpack_avx2.cc
+        kernels/matmul_kernel_avx2.cc
+        kernels/matmul_kernel_avx512.cc
+        kernels/q4_0_gemm_avx512.cc
+        kernels/q4_0_unpack_avx512.cc
+    )
+    target_include_directories(bench_q4_0_end2end PRIVATE ${CMAKE_SOURCE_DIR})
+    if(MSVC)
+        target_compile_options(bench_q4_0_end2end PRIVATE /arch:AVX2 /O2)
+        target_compile_definitions(bench_q4_0_end2end PRIVATE __AVX2__=1 __AVX512F__=1)
+    else()
+        target_compile_options(bench_q4_0_end2end PRIVATE -mavx2 -mfma -O2)
+        target_compile_definitions(bench_q4_0_end2end PRIVATE __AVX2__=1 __AVX512F__=1)
+    endif()
+    set_target_properties(bench_q4_0_end2end PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    )
+endif()
+
 # Flash-Attention AVX2 bench
 if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_flash_attn.cpp")
     add_executable(bench_flash_attn
@@ -610,17 +634,19 @@ endif()
 
 
 # Brutal Gzip Library auto-selects MASM on x64 and NEON on ARM64
-add_library(brutal_gzip STATIC)
-target_include_directories(brutal_gzip PUBLIC include)
-# Architecture-specific kernels get added below (MASM on x64, NEON on ARM64).
-
 if(MSVC AND CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64")
     enable_language(ASM_MASM)
-    target_sources(brutal_gzip PRIVATE kernels/deflate_brutal_masm.asm)
+    add_library(brutal_gzip STATIC kernels/deflate_brutal_masm.asm)
+    target_include_directories(brutal_gzip PUBLIC include)
     target_compile_definitions(brutal_gzip PUBLIC HAS_BRUTAL_GZIP_MASM=1)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|ARM64")
     enable_language(ASM)
-    target_sources(brutal_gzip PRIVATE kernels/deflate_neon.S)
+    add_library(brutal_gzip STATIC kernels/deflate_neon.S)
+    target_include_directories(brutal_gzip PUBLIC include)
     target_compile_definitions(brutal_gzip PUBLIC HAS_BRUTAL_GZIP_NEON=1)
+else()
+    # Stub library for unsupported architectures
+    add_library(brutal_gzip INTERFACE)
+    target_include_directories(brutal_gzip INTERFACE include)
 endif()
 

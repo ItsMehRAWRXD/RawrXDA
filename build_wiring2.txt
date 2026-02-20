@@ -1,0 +1,93 @@
+[1/5] Building ASM_MASM object CMakeFiles\RawrXD-Win32IDE.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[2/5] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[3/5] Linking CXX executable bin\rawrxd-monaco-gen.exe
+[4/5] Linking CXX executable RawrEngine.exe
+FAILED: RawrEngine.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1944 --intdir=CMakeFiles\RawrEngine.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrEngine.rsp  /out:RawrEngine.exe /implib:RawrEngine.lib /pdb:RawrEngine.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrEngine.rsp /out:RawrEngine.exe /implib:RawrEngine.lib /pdb:RawrEngine.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:console /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1120) with the following output:
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_Init already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_IsReady already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_LoadMatMulShader already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_DispatchMatMul already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_AllocBuffer already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_CopyToDevice already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_CopyToHost already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_DispatchFlashAttn already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_HotswapShader already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_GetStats already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_Cleanup already defined in RawrXD_VulkanBridge.asm.obj
+
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2019: unresolved external symbol SO_int_PrintBanner referenced in function _SO_standalone_main
+
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2019: unresolved external symbol SO_int_FatalError referenced in function _SO_standalone_main
+
+
+RawrEngine.exe : fatal error LNK1120: 2 unresolved externals
+
+
+[5/5] Linking CXX executable bin\RawrXD-Win32IDE.exe
+FAILED: bin/RawrXD-Win32IDE.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1944 --intdir=CMakeFiles\RawrXD-Win32IDE.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp  /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\PROGRA~2\MICROS~2\2022\BUILDT~1\VC\Tools\MSVC\1444~1.352\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1120) with the following output:
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_Init already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_IsReady already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_LoadMatMulShader already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_DispatchMatMul already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_AllocBuffer already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_CopyToDevice already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_CopyToHost already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_DispatchFlashAttn already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_HotswapShader already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_GetStats already defined in RawrXD_VulkanBridge.asm.obj
+
+RawrXD_VulkanBridge.obj : error LNK2005: VkBridge_Cleanup already defined in RawrXD_VulkanBridge.asm.obj
+
+DiskRecoveryToolHandler.cpp.obj : error LNK2019: unresolved external symbol "public: void __cdecl RawrXD::Agent::AgentToolRegistry::RegisterHandler(class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > const &,struct RawrXD::Agent::ToolExecResult (__cdecl*)(class nlohmann::json const &))" (?RegisterHandler@AgentToolRegistry@Agent@RawrXD@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@P6A?AUToolExecResult@23@AEBVjson@nlohmann@@@Z@Z) referenced in function "public: static void __cdecl RawrXD::Agent::DiskRecoveryToolHandler::RegisterTools(class RawrXD::Agent::AgentToolRegistry &)" (?RegisterTools@DiskRecoveryToolHandler@Agent@RawrXD@@SAXAEAVAgentToolRegistry@23@@Z)
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2019: unresolved external symbol SO_int_PrintBanner referenced in function _SO_standalone_main
+
+
+RawrXD-StreamingOrchestrator.asm.obj : error LNK2019: unresolved external symbol SO_int_FatalError referenced in function _SO_standalone_main
+
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 3 unresolved externals
+
+
+ninja: build stopped: subcommand failed.

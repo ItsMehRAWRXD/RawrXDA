@@ -3,6 +3,10 @@
 
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 EXTERN RawrXD_Marketplace_ResolveSymbol:PROC
 EXTERN RawrXD_UI_Push_Notify:PROC
 EXTERN RawrXD_JSON_Stringify:PROC

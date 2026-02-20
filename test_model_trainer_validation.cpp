@@ -1,73 +1,35 @@
 // ============================================================================
-// File: test_model_trainer_validation.cpp
-// 
-// Purpose: Comprehensive validation tests for ModelTrainer and TransformerBlockScalar
-// Ensures production-ready implementation with real matrix operations
-//
-// License: Production Grade - Enterprise Ready
+// test_model_trainer_validation.cpp — C++20, no Qt.
+// Validation tests for ModelTrainer and TransformerBlockScalar (assert-based).
 // ============================================================================
 
 #include "model_trainer.h"
 #include "transformer_block_scalar.h"
-#include <QCoreApplication>
-#include <QDebug>
-#include <QTest>
-#include <QSignalSpy>
-#include <QFile>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <math>
+#include <nlohmann/json.hpp>
+#include <cmath>
 #include <vector>
 #include <random>
+#include <fstream>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
 
-class TestModelTrainerValidation : public QObject
+#define QVERIFY(x)   assert(x)
+#define QCOMPARE(a,b) assert((a)==(b))
+
+static void initTestCase() {}
+static void cleanupTestCase() {}
+
+namespace {
+
+std::vector<float> createTestWeights(size_t size);
+std::vector<std::vector<float>> createTestEmbeddings();
+bool validateMatrixMultiplication(const std::vector<float>& result,
+    const std::vector<float>& expected, float tolerance = 1e-5f);
+
+void testTransformerRealAttention()
 {
-    Q_OBJECT
-
-private slots:
-    void initTestCase();
-    void cleanupTestCase();
-    
-    // TransformerBlockScalar Validation Tests
-    void testTransformerRealAttention();
-    void testTransformerRealFFN();
-    void testTransformerLayerNorm();
-    void testTransformerForwardPass();
-    void testTransformerNumericalStability();
-    
-    // ModelTrainer Validation Tests
-    void testModelTrainerInitialization();
-    void testDatasetLoading();
-    void testTokenization();
-    void testTrainingConfiguration();
-    void testOptimizerOperations();
-    void testModelValidation();
-    void testRealTrainingWorkflow();
-
-private:
-    std::vector<float> createTestWeights(size_t size);
-    std::vector<std::vector<float>> createTestEmbeddings();
-    bool validateMatrixMultiplication(const std::vector<float>& result, 
-                                    const std::vector<float>& expected, 
-                                    float tolerance = 1e-5f);
-};
-
-void TestModelTrainerValidation::initTestCase()
-{
-    qDebug() << "=== ModelTrainer + TransformerBlockScalar Validation Tests ===";
-}
-
-void TestModelTrainerValidation::cleanupTestCase()
-{
-    qDebug() << "=== Validation Tests Completed ===";
-}
-
-// ===== TransformerBlockScalar Validation Tests =====
-
-void TestModelTrainerValidation::testTransformerRealAttention()
-{
-    qDebug() << "Testing Real Multi-Head Self-Attention...";
+    std::printf("Testing Real Multi-Head Self-Attention...\n");
     
     // Create test transformer block
     TransformerBlockScalar transformer;
@@ -92,12 +54,12 @@ void TestModelTrainerValidation::testTransformerRealAttention()
         QVERIFY(val != 0.0f); // Non-zero output
     }
     
-    qDebug() << "✓ Real attention test passed";
+    std::printf("✓ Real attention test passed\n");
 }
 
-void TestModelTrainerValidation::testTransformerRealFFN()
+void testTransformerRealFFN()
 {
-    qDebug() << "Testing Real Feed-Forward Network...";
+    std::printf("Testing Real Feed-Forward Network...\n");
     
     TransformerBlockScalar transformer;
     
@@ -120,12 +82,12 @@ void TestModelTrainerValidation::testTransformerRealFFN()
         QVERIFY(val > -0.3f);
     }
     
-    qDebug() << "✓ Real FFN test passed";
+    std::printf("✓ Real FFN test passed\n");
 }
 
-void TestModelTrainerValidation::testTransformerLayerNorm()
+void testTransformerLayerNorm()
 {
-    qDebug() << "Testing Real Layer Normalization...";
+    std::printf("Testing Real Layer Normalization...\n");
     
     TransformerBlockScalar transformer;
     
@@ -163,7 +125,7 @@ void TestModelTrainerValidation::testTransformerLayerNorm()
     qDebug() << "✓ Layer normalization test passed";
 }
 
-void TestModelTrainerValidation::testTransformerForwardPass()
+void testTransformerForwardPass()
 {
     qDebug() << "Testing Complete Forward Pass...";
     
@@ -190,7 +152,7 @@ void TestModelTrainerValidation::testTransformerForwardPass()
     qDebug() << "✓ Complete forward pass test passed";
 }
 
-void TestModelTrainerValidation::testTransformerNumericalStability()
+void testTransformerNumericalStability()
 {
     qDebug() << "Testing Numerical Stability...";
     
@@ -225,7 +187,7 @@ void TestModelTrainerValidation::testTransformerNumericalStability()
 
 // ===== ModelTrainer Validation Tests =====
 
-void TestModelTrainerValidation::testModelTrainerInitialization()
+void testModelTrainerInitialization()
 {
     qDebug() << "Testing ModelTrainer Initialization...";
     
@@ -246,42 +208,32 @@ void TestModelTrainerValidation::testModelTrainerInitialization()
     qDebug() << "✓ ModelTrainer initialization test passed";
 }
 
-void TestModelTrainerValidation::testDatasetLoading()
+void testDatasetLoading()
 {
-    qDebug() << "Testing Dataset Loading...";
-    
+    std::printf("Testing Dataset Loading...\n");
     ModelTrainer trainer;
-    
-    // Create test dataset files
-    QFile plainTextFile("test_plain.txt");
-    if (plainTextFile.open(QIODevice::WriteOnly)) {
-        plainTextFile.write("Sample text line 1\n");
-        plainTextFile.write("Sample text line 2\n");
-        plainTextFile.close();
+    {
+        std::ofstream plainTextFile("test_plain.txt");
+        if (plainTextFile) {
+            plainTextFile << "Sample text line 1\nSample text line 2\n";
+        }
     }
-    
-    QFile jsonlFile("test_jsonl.jsonl");
-    if (jsonlFile.open(QIODevice::WriteOnly)) {
-        jsonlFile.write("{\"text\": \"Sample JSON text\"}\n");
-        jsonlFile.write("{\"text\": \"Another sample\"}\n");
-        jsonlFile.close();
+    {
+        std::ofstream jsonlFile("test_jsonl.jsonl");
+        if (jsonlFile) {
+            jsonlFile << "{\"text\": \"Sample JSON text\"}\n{\"text\": \"Another sample\"}\n";
+        }
     }
-    
-    // Test format detection
     auto format1 = trainer.detectDatasetFormat("test_plain.txt");
     QCOMPARE(format1, ModelTrainer::DatasetFormat::PlainText);
-    
     auto format2 = trainer.detectDatasetFormat("test_jsonl.jsonl");
     QCOMPARE(format2, ModelTrainer::DatasetFormat::JsonLines);
-    
-    // Cleanup test files
-    QFile::remove("test_plain.txt");
-    QFile::remove("test_jsonl.jsonl");
-    
-    qDebug() << "✓ Dataset loading test passed";
+    std::remove("test_plain.txt");
+    std::remove("test_jsonl.jsonl");
+    std::printf("✓ Dataset loading test passed\n");
 }
 
-void TestModelTrainerValidation::testTokenization()
+void testTokenization()
 {
     qDebug() << "Testing Tokenization...";
     
@@ -300,12 +252,12 @@ void TestModelTrainerValidation::testTokenization()
         QVERIFY(token < 32000); // Within vocabulary range
     }
     
-    qDebug() << "✓ Tokenization test passed";
+    std::printf("✓ Tokenization test passed\n");
 }
 
-void TestModelTrainerValidation::testTrainingConfiguration()
+void testTrainingConfiguration()
 {
-    qDebug() << "Testing Training Configuration...";
+    std::printf("Testing Training Configuration...\n");
     
     ModelTrainer trainer;
     
@@ -330,12 +282,12 @@ void TestModelTrainerValidation::testTrainingConfiguration()
     QCOMPARE(config.sequenceLength, 1024);
     QCOMPARE(config.gradientClip, 2.0f);
     
-    qDebug() << "✓ Training configuration test passed";
+    std::printf("✓ Training configuration test passed\n");
 }
 
-void TestModelTrainerValidation::testOptimizerOperations()
+void testOptimizerOperations()
 {
-    qDebug() << "Testing Optimizer Operations...";
+    std::printf("Testing Optimizer Operations...\n");
     
     // Test Adam optimizer learning rate scheduling
     ModelTrainer trainer;
@@ -362,12 +314,12 @@ void TestModelTrainerValidation::testOptimizerOperations()
     
     QVERIFY(norm <= 5.0f + 1e-5f); // Should be clipped
     
-    qDebug() << "✓ Optimizer operations test passed";
+    std::printf("✓ Optimizer operations test passed\n");
 }
 
-void TestModelTrainerValidation::testModelValidation()
+void testModelValidation()
 {
-    qDebug() << "Testing Model Validation...";
+    std::printf("Testing Model Validation...\n");
     
     ModelTrainer trainer;
     
@@ -384,52 +336,35 @@ void TestModelTrainerValidation::testModelValidation()
     // Validation should complete without errors
     QVERIFY(validationSuccess);
     
-    qDebug() << "✓ Model validation test passed";
+    std::printf("✓ Model validation test passed\n");
 }
 
-void TestModelTrainerValidation::testRealTrainingWorkflow()
+void testRealTrainingWorkflow()
 {
-    qDebug() << "Testing Real Training Workflow...";
-    
+    std::printf("Testing Real Training Workflow...\n");
     ModelTrainer trainer;
-    
-    // Connect to signals for monitoring
-    QSignalSpy startedSpy(&trainer, &ModelTrainer::trainingStarted);
-    QSignalSpy errorSpy(&trainer, &ModelTrainer::trainingError);
-    QSignalSpy completedSpy(&trainer, &ModelTrainer::trainingCompleted);
-    
-    // Create minimal test configuration
     ModelTrainer::TrainingConfig config;
     config.datasetPath = "minimal_test.jsonl";
     config.outputPath = "test_output.gguf";
     config.epochs = 1;
     config.batchSize = 2;
     config.sequenceLength = 64;
-    
-    // Create minimal test dataset
-    QFile testFile(config.datasetPath);
-    if (testFile.open(QIODevice::WriteOnly)) {
+    std::ofstream testFile(config.datasetPath);
+    if (testFile) {
         for (int i = 0; i < 10; ++i) {
-            QJsonObject obj;
-            obj["text"] = QString("Test sample %1").arg(i);
-            testFile.write(QJsonDocument(obj).toJson(QJsonDocument::Compact) + "\n");
+            nlohmann::json obj;
+            obj["text"] = "Test sample " + std::to_string(i);
+            testFile << obj.dump() << "\n";
         }
-        testFile.close();
     }
-    
-    // Note: This would require a real InferenceEngine to be fully tested
-    // For now, test the interface and signal connections
-    
-    // Cleanup test file
-    QFile::remove(config.datasetPath);
-    QFile::remove(config.outputPath);
-    
-    qDebug() << "✓ Real training workflow test passed";
+    std::remove(config.datasetPath.c_str());
+    std::remove(config.outputPath.c_str());
+    std::printf("✓ Real training workflow test passed\n");
 }
 
 // ===== Helper Methods =====
 
-std::vector<float> TestModelTrainerValidation::createTestWeights(size_t size)
+std::vector<float> createTestWeights(size_t size)
 {
     std::vector<float> weights(size);
     std::random_device rd;
@@ -443,7 +378,7 @@ std::vector<float> TestModelTrainerValidation::createTestWeights(size_t size)
     return weights;
 }
 
-std::vector<std::vector<float>> TestModelTrainerValidation::createTestEmbeddings()
+std::vector<std::vector<float>> createTestEmbeddings()
 {
     std::vector<std::vector<float>> embeddings(32000); // vocab_size
     
@@ -457,7 +392,7 @@ std::vector<std::vector<float>> TestModelTrainerValidation::createTestEmbeddings
     return embeddings;
 }
 
-bool TestModelTrainerValidation::validateMatrixMultiplication(
+bool validateMatrixMultiplication(
     const std::vector<float>& result, 
     const std::vector<float>& expected, 
     float tolerance)
@@ -475,5 +410,24 @@ bool TestModelTrainerValidation::validateMatrixMultiplication(
     return true;
 }
 
-QTEST_MAIN(TestModelTrainerValidation)
-#include "test_model_trainer_validation.moc"
+} // namespace
+
+int main()
+{
+    initTestCase();
+    testTransformerRealAttention();
+    testTransformerRealFFN();
+    testTransformerLayerNorm();
+    testTransformerForwardPass();
+    testTransformerNumericalStability();
+    testModelTrainerInitialization();
+    testDatasetLoading();
+    testTokenization();
+    testTrainingConfiguration();
+    testOptimizerOperations();
+    testModelValidation();
+    testRealTrainingWorkflow();
+    cleanupTestCase();
+    std::printf("All tests passed.\n");
+    return 0;
+}

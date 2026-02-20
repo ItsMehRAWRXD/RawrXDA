@@ -1,20 +1,27 @@
-Win32IDE::~Win32IDE() {
-    if (m_nativeEngine) {
-        delete static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
-        m_nativeEngine = nullptr;
-    }
-    // Resource cleanup
-    Win32TerminalManager::cleanup();
-}
 #include "Win32IDE.h"
+#include "../../include/rawrxd_version.h"
+#include "multi_response_engine.h"
+#include "lsp/RawrXD_LSPServer.h"
 #include "IDELogger.h"
+#include "IDEConfig.h"
 #include "Win32IDE_AgenticBridge.h"
-#include "../cpu_inference_engine.h" // Added for Native Fallback
-#include "streaming_gguf_loader.h"
+#include "../cpu_inference_engine.h" 
+#include "../modules/native_memory.hpp"
+#include "../modules/ExtensionLoader.hpp" // Added
+#include "VSIXInstaller.hpp"
+#include "../streaming_gguf_loader.h"
+#include "../model_source_resolver.h"
 #include "../utils/ErrorReporter.hpp"
+#include <nlohmann/json.hpp>
 #include <commdlg.h>
 #include <richedit.h>
+#ifndef CP_UNICODE
+#define CP_UNICODE 1200  // Unicode code page for Richedit EM_GETTEXTLENGTHEX/EM_SETTEXTEX
+#endif
 #include <commctrl.h>
+#ifndef TRACKBAR_CLASSW
+#define TRACKBAR_CLASSW L"msctls_trackbar32"
+#endif
 #include <shlobj.h>
 #include <shellapi.h>
 #include <iostream>
@@ -23,12 +30,158 @@ Win32IDE::~Win32IDE() {
 #include <algorithm>
 #include <sstream>
 #include <ctime>
+#include <cctype>
+#include <regex>
+#include <filesystem>
+#include <unordered_set>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
 
 #pragma comment(lib, "comdlg32.lib")
 #pragma comment(lib, "comctl32.lib")
+
+// Helper function to execute shell commands and capture output
+static std::string ExecCmd(const char* cmd) {
+    std::string result;
+    #ifdef _WIN32
+    FILE* pipe = _popen(cmd, "r");
+    #else
+    FILE* pipe = popen(cmd, "r");
+    #endif
+    
+    if (!pipe) return "Error: Could not execute command";
+    
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
+    
+    #ifdef _WIN32
+    _pclose(pipe);
+    #else
+    pclose(pipe);
+    #endif
+    
+    return result;
+}
+
+// UTF-8 to UTF-16 for Unicode Win32 APIs (Qt removal / pure MASM C++20)
+static std::wstring utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return {};
+    const int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), nullptr, 0);
+    if (len <= 0) return {};
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()), out.data(), len) == 0)
+        return {};
+    return out;
+}
+static std::wstring utf8ToWide(const char* utf8) {
+    if (!utf8 || !*utf8) return {};
+    return utf8ToWide(std::string(utf8));
+}
+static std::string wideToUtf8(const wchar_t* wide) {
+    if (!wide || !*wide) return {};
+    const int len = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return {};
+    std::string out(static_cast<size_t>(len), '\0');
+    if (WideCharToMultiByte(CP_UTF8, 0, wide, -1, out.data(), len, nullptr, nullptr) == 0)
+        return {};
+    out.resize(out.size() - 1); // drop NUL
+    return out;
+}
+
+static std::string toLowerAscii(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return value;
+}
+
+static std::string normalizePathForCompare(std::string path) {
+    std::replace(path.begin(), path.end(), '/', '\\');
+    return toLowerAscii(path);
+}
+
+static bool shouldSkipSourceRegistryDirectory(const std::filesystem::path& dirPath) {
+    static const std::unordered_set<std::string> kSkipDirs = {
+        ".git", ".hg", ".svn", ".idea", ".vscode", ".cursor",
+        "node_modules", "__pycache__", ".venv", "venv", "env",
+        "build", "dist", "out", "bin", "obj", ".vs"
+    };
+    const std::string name = toLowerAscii(dirPath.filename().string());
+    return kSkipDirs.find(name) != kSkipDirs.end();
+}
+
+static bool isSourceLikeFile(const std::filesystem::path& filePath) {
+    static const std::unordered_set<std::string> kExts = {
+        ".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".ipp", ".inl",
+        ".asm", ".s", ".inc",
+        ".cs", ".java", ".go", ".rs",
+        ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
+        ".py",
+        ".ps1", ".psm1", ".psd1",
+        ".sql"
+    };
+    static const std::unordered_set<std::string> kFileNames = {
+        "cmakelists.txt", "makefile", "dockerfile", "meson.build", "build.gradle"
+    };
+
+    const std::string ext = toLowerAscii(filePath.extension().string());
+    if (!ext.empty() && kExts.find(ext) != kExts.end()) {
+        return true;
+    }
+    const std::string name = toLowerAscii(filePath.filename().string());
+    return kFileNames.find(name) != kFileNames.end();
+}
+
+static std::filesystem::path detectSourceRegistryRootPath(
+    const std::string& currentDirectory,
+    const std::string& gitRepoPath
+) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+
+    if (!gitRepoPath.empty()) {
+        fs::path gitRoot(gitRepoPath);
+        if (fs::exists(gitRoot, ec)) {
+            return fs::absolute(gitRoot, ec);
+        }
+    }
+
+    fs::path start;
+    if (!currentDirectory.empty()) {
+        start = fs::path(currentDirectory);
+    } else {
+        start = fs::current_path(ec);
+    }
+    if (start.empty()) {
+        return {};
+    }
+    if (!fs::is_directory(start, ec)) {
+        start = start.parent_path();
+    }
+    if (start.empty()) {
+        return {};
+    }
+
+    fs::path probe = fs::absolute(start, ec);
+    if (probe.empty()) {
+        return start;
+    }
+
+    while (!probe.empty()) {
+        if (fs::exists(probe / ".git", ec)) {
+            return probe;
+        }
+        fs::path parent = probe.parent_path();
+        if (parent == probe) {
+            break;
+        }
+        probe = parent;
+    }
+    return fs::absolute(start, ec);
+}
 
 #define IDC_EDITOR 1001
 #define IDC_TERMINAL 1002
@@ -56,12 +209,9 @@ Win32IDE::~Win32IDE() {
 #define IDC_BTN_SETTINGS 1024
 #define IDC_FILE_EXPLORER 1025
 #define IDC_FILE_TREE 1026
-#define IDM_AUTONOMY_TOGGLE 4150
-#define IDM_AUTONOMY_START 4151
-#define IDM_AUTONOMY_STOP 4152
-#define IDM_AUTONOMY_SET_GOAL 4153
-#define IDM_AUTONOMY_STATUS 4154
-#define IDM_AUTONOMY_MEMORY 4155
+// Defined in Win32IDE.h
+// #define IDM_AUTONOMY_TOGGLE 4150
+// ... constants moved to header
 
 // Activity Bar (Far Left) - VS Code style icon bar
 #define IDC_ACTIVITY_BAR 1100
@@ -80,6 +230,8 @@ Win32IDE::~Win32IDE() {
 #define IDC_COPILOT_CHAT_OUTPUT 1203
 #define IDC_COPILOT_SEND_BTN 1204
 #define IDC_COPILOT_CLEAR_BTN 1205
+#define IDC_AI_CONTEXT_SLIDER 1206
+#define IDC_AI_CONTEXT_LABEL 1207
 
 // Panel (Bottom) - Terminal, Output, Problems, Debug Console
 #define IDC_PANEL_CONTAINER 1300
@@ -132,12 +284,21 @@ Win32IDE::~Win32IDE() {
 #define IDC_STATUS_COPILOT 1410
 #define IDC_STATUS_NOTIFICATIONS 1411
 
+/* Menu IDs: 2001+ to avoid overlap with IDC_* (1001+) in WM_COMMAND */
 #define IDM_FILE_NEW 2001
 #define IDM_FILE_OPEN 2002
 #define IDM_FILE_SAVE 2003
 #define IDM_FILE_SAVEAS 2004
-#define IDM_FILE_LOAD_MODEL 2006
+#define IDM_FILE_LOAD_MODEL 1030
 #define IDM_FILE_EXIT 2005
+
+/* Voice Automation (Tools > Voice Automation) — Phase 44 TTS; dispatched in Win32IDE_Commands 10200–10300 */
+#define IDM_VOICE_AUTO_TOGGLE    10200
+#define IDM_VOICE_AUTO_STOP      10206
+#define IDM_VOICE_AUTO_NEXT      10202
+#define IDM_VOICE_AUTO_PREV      10203
+#define IDM_VOICE_AUTO_RATE_UP   10204
+#define IDM_VOICE_AUTO_RATE_DOWN 10205
 
 #define IDM_EDIT_UNDO 2007
 #define IDM_EDIT_REDO 2008
@@ -197,7 +358,9 @@ Win32IDE::~Win32IDE() {
 #define IDM_AGENT_CONFIGURE_MODEL 4102
 #define IDM_AGENT_VIEW_TOOLS 4103
 #define IDM_AGENT_VIEW_STATUS 4104
-#define IDM_AGENT_STOP 4105
+// Constants moved to Win32IDE.h
+// #define IDM_AGENT_STOP 4105
+// ...
 
 // Command Palette control IDs
 #define IDC_CMDPAL_CONTAINER 1500
@@ -206,6 +369,8 @@ Win32IDE::~Win32IDE() {
 
 Win32IDE::Win32IDE(HINSTANCE hInstance)
         : m_hInstance(hInstance), m_hwndMain(nullptr), m_hwndEditor(nullptr),
+            m_hwndLineNumbers(nullptr), m_hwndTabBar(nullptr), m_oldLineNumberProc(nullptr),
+            m_lineNumberWidth(50), m_activeTabIndex(-1),
             m_hwndCommandInput(nullptr), m_hwndStatusBar(nullptr),
             m_hwndMinimap(nullptr), m_hwndModuleBrowser(nullptr), m_hwndModuleList(nullptr),
             m_hwndModuleLoadButton(nullptr), m_hwndModuleUnloadButton(nullptr), m_hwndModuleRefreshButton(nullptr),
@@ -216,7 +381,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     m_hwndBtnSettings(nullptr), m_lastTitleBarText(),
       m_fileModified(false), m_editorHeight(400), m_terminalHeight(200),
       m_minimapVisible(true), m_minimapWidth(150), m_profilingActive(false),
-      m_moduleListDirty(true), m_backgroundBrush(nullptr), m_editorFont(nullptr),
+      m_moduleListDirty(true), m_backgroundBrush(nullptr), m_editorFont(nullptr), m_hFontUI(nullptr),
     m_activeOutputTab("General"), m_minimapX(650), m_outputTabHeight(200),
     m_nextTerminalId(1), m_activeTerminalId(-1),
     m_ggufLoader(nullptr), m_loadedModelPath(""),
@@ -232,6 +397,9 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     // Primary Sidebar
     m_hwndActivityBar(nullptr), m_hwndSidebar(nullptr), m_hwndSidebarContent(nullptr),
     m_sidebarVisible(true), m_sidebarWidth(250), m_currentSidebarView(SidebarView::None),
+    // Secondary Sidebar
+    m_hwndSecondarySidebar(nullptr), m_hwndSecondarySidebarHeader(nullptr),
+    m_secondarySidebarVisible(false), m_secondarySidebarWidth(320),
     // Explorer View
     m_hwndExplorerTree(nullptr), m_hwndExplorerToolbar(nullptr), m_hImageListExplorer(nullptr),
     m_explorerRootPath(),
@@ -261,114 +429,29 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     m_useStreamingLoader(false), m_useVulkanRenderer(false),
     m_powerShellExecuting(false), m_powerShellProcessHandle(nullptr),
     m_dedicatedPowerShellTerminal(nullptr)
-    , m_hwndCommandPalette(nullptr), m_hwndCommandPaletteInput(nullptr), m_hwndCommandPaletteList(nullptr), m_commandPaletteVisible(false)
+    , m_hwndCommandPalette(nullptr), m_hwndCommandPaletteInput(nullptr), m_hwndCommandPaletteList(nullptr), m_commandPaletteVisible(false), m_oldCommandPaletteInputProc(nullptr)
     , m_hwndModelSelector(nullptr), m_hwndMaxTokensSlider(nullptr), m_hwndMaxTokensLabel(nullptr)
     , m_currentMaxTokens(512)
+    , m_syntaxColoringEnabled(true), m_syntaxDirty(false)
+    , m_syntaxLanguage(SyntaxLanguage::None), m_inBlockComment(false)
+    , m_activeThemeId(IDM_THEME_DARK_PLUS), m_themeIdBeforePreview(IDM_THEME_DARK_PLUS)
+    , m_transparencyEnabled(false), m_windowAlpha(255)
+    , m_sidebarBrush(nullptr), m_sidebarContentBrush(nullptr)
+    , m_panelBrush(nullptr), m_secondarySidebarBrush(nullptr), m_mainWindowBrush(nullptr)
+    , m_modelOperationActive(false), m_modelOperationCancelled(false)
+    , m_modelProgressPercent(0.0f)
+    , m_hwndModelProgressBar(nullptr), m_hwndModelProgressLabel(nullptr)
+    , m_hwndModelProgressContainer(nullptr), m_hwndModelCancelBtn(nullptr)
+    , m_sessionRestored(false), m_annotationsVisible(true), m_annotationFont(nullptr)
+    , m_hwndAnnotationOverlay(nullptr)
 {
-    // DIAGNOSTIC: Constructor entry
-    {
-        std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\CONSTRUCTOR_START.txt");
-        diag << "Win32IDE constructor entered" << std::endl;
-    }
+    // ============================================================
+    // MINIMAL CONSTRUCTOR — all heavy init deferred to onCreate()
+    // C++ try/catch does NOT catch SEH (access violations) on MinGW,
+    // so we keep the constructor as lightweight as possible.
+    // ============================================================
 
-    // Initialize Native Fallback Engine (Moved to end of constructor)
-    // m_nativeEngine init removed from here.
-
-    // Initialize logger ABSOLUTELY FIRST - with fallback error handling
-    try {
-        IDELogger::getInstance().initialize("C:\\RawrXD_IDE.log");
-
-
-    } catch (const std::exception& e) {
-        OutputDebugStringA("FATAL: Logger initialization failed: ");
-        OutputDebugStringA(e.what());
-        OutputDebugStringA("\n");
-        // Continue without logging
-    } catch (...) {
-        OutputDebugStringA("FATAL: Logger initialization failed with unknown exception\n");
-    }
-    
-    // DIAGNOSTIC: After logger section
-    {
-        std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\AFTER_LOGGER.txt");
-        diag << "Logger section skipped" << std::endl;
-    }
-    
-    // Prepare DirectX renderer with safety wrapper
-    try {
-
-        m_renderer = std::make_unique<TransparentRenderer>();
-
-    } catch (const std::exception& e) {
-        LOG_CRITICAL(std::string("TransparentRenderer creation failed: ") + e.what());
-        OutputDebugStringA("ERROR: TransparentRenderer failed: ");
-        OutputDebugStringA(e.what());
-        OutputDebugStringA("\n");
-        m_renderer = nullptr; // Use null renderer
-    } catch (...) {
-        LOG_CRITICAL("TransparentRenderer creation failed with unknown exception");
-        OutputDebugStringA("ERROR: TransparentRenderer failed with unknown exception\n");
-        m_renderer = nullptr;
-    }
-    
-    // DIAGNOSTIC: After renderer
-    {
-        std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\AFTER_RENDERER.txt");
-        diag << "Renderer created: " << (m_renderer ? "SUCCESS" : "NULL") << std::endl;
-    }
-    
-    // Initialize PowerShell state with safety
-    try {
-
-        initializePowerShellState();
-
-    } catch (const std::exception& e) {
-
-        OutputDebugStringA("ERROR: PowerShell init failed\n");
-    } catch (...) {
-
-        OutputDebugStringA("ERROR: PowerShell init failed\n");
-    }
-    
-    // DIAGNOSTIC: After PowerShell
-    {
-        std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\AFTER_POWERSHELL.txt");
-        diag << "PowerShell state initialized" << std::endl;
-    }
-    
-    // Initialize default theme
-    try {
-
-        resetToDefaultTheme();
-
-    } catch (...) {
-
-        OutputDebugStringA("ERROR: Theme reset failed\n");
-    }
-    
-    // DIAGNOSTIC: After theme
-    {
-        std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\AFTER_THEME.txt");
-        diag << "Theme reset complete" << std::endl;
-    }
-    
-    // Load code snippets
-    try {
-
-        loadCodeSnippets();
-
-    } catch (...) {
-
-        OutputDebugStringA("ERROR: Code snippets loading failed\n");
-    }
-    
-    // DIAGNOSTIC: After snippets
-    {
-        std::ofstream diag("C:\\Users\\HiH8e\\Desktop\\AFTER_SNIPPETS.txt");
-        diag << "Code snippets loaded" << std::endl;
-    }
-    
-    // Initialize profiling frequency
+    // Initialize profiling frequency (safe — kernel call)
     QueryPerformanceFrequency(&m_profilingFreq);
 
     // Initialize clipboard history
@@ -383,1490 +466,302 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
     m_gitRepoPath = currentDir;
     
     // Default Ollama configuration
-    m_ollamaBaseUrl = "http://localhost:11434"; // default
+    m_ollamaBaseUrl = "http://localhost:11434";
     m_ollamaModelOverride = "";
 
-    // Initialize Native Fallback Engine
-    m_nativeEngine = new RawrXD::CPUInferenceEngine();
     m_nativeEngineLoaded = false;
-    
-    // Initialize Enhanced Status Bar info
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Autonomy: OFF");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 2, (LPARAM)"Branch: None");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)"Model: None");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 4, (LPARAM)"GGUF: None");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 5, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 6, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 7, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 8, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 9, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 10, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 11, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 12, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 13, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 14, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 15, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 16, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 17, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 18, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 19, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 20, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 21, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 22, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 23, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 24, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 25, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 26, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 27, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 28, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 29, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 30, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 31, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 32, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 33, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 34, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 35, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 36, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 37, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 38, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 39, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 40, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 41, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 42, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 43, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 44, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 45, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 46, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 47, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 48, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 49, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 50, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 51, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 52, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 53, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 54, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 55, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 56, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 57, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 58, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 59, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 60, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 61, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 62, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 63, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 64, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 65, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 66, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 67, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 68, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 69, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 70, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 71, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 72, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 73, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 74, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 75, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 76, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 77, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 78, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 79, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 80, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 81, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 82, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 83, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 84, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 85, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 86, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 87, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 88, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 89, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 90, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 91, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 92, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 93, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 94, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 95, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 96, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 97, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 98, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 99, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 100, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 101, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 102, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 103, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 104, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 105, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 106, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 107, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 108, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 109, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 110, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 111, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 112, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 113, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 114, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 115, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 116, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 117, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 118, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 119, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 120, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 121, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 122, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 123, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 124, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 125, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 126, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 127, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 128, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 129, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 130, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 131, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 132, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 133, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 134, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 135, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 136, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 137, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 138, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 139, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 140, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 141, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 142, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 143, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 144, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 145, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 146, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 147, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 148, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 149, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 150, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 151, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 152, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 153, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 154, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 155, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 156, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 157, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 158, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 159, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 160, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 161, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 162, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 163, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 164, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 165, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 166, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 167, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 168, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 169, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 170, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 171, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 172, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 173, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 174, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 175, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 176, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 177, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 178, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 179, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 180, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 181, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 182, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 183, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 184, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 185, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 186, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 187, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 188, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 189, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 190, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 191, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 192, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 193, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 194, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 195, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 196, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 197, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 198, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 199, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 200, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 201, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 202, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 203, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 204, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 205, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 206, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 207, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 208, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 209, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 210, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 211, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 212, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 213, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 214, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 215, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 216, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 217, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 218, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 219, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 220, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 221, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 222, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 223, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 224, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 225, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 226, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 227, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 228, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 229, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 230, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 231, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 232, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 233, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 234, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 235, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 236, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 237, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 238, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 239, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 240, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 241, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 242, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 243, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 244, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 245, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 246, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 247, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 248, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 249, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 250, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 251, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 252, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 253, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 254, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 255, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 256, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 257, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 258, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 259, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 260, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 261, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 262, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 263, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 264, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 265, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 266, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 267, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 268, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 269, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 270, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 271, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 272, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 273, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 274, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 275, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 276, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 277, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 278, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 279, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 280, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 281, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 282, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 283, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 284, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 285, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 286, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 287, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 288, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 289, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 290, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 291, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 292, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 293, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 294, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 295, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 296, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 297, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 298, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 299, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 300, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 301, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 302, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 303, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 304, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 305, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 306, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 307, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 308, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 309, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 310, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 311, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 312, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 313, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 314, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 315, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 316, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 317, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 318, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 319, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 320, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 321, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 322, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 323, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 324, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 325, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 326, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 327, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 328, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 329, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 330, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 331, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 332, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 333, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 334, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 335, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 336, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 337, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 338, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 339, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 340, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 341, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 342, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 343, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 344, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 345, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 346, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 347, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 348, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 349, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 350, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 351, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 352, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 353, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 354, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 355, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 356, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 357, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 358, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 359, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 360, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 361, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 362, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 363, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 364, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 365, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 366, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 367, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 368, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 369, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 370, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 371, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 372, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 373, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 374, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 375, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 376, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 377, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 378, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 379, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 380, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 381, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 382, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 383, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 384, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 385, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 386, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 387, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 388, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 389, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 390, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 391, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 392, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 393, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 394, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 395, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 396, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 397, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 398, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 399, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 400, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 401, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 402, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 403, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 404, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 405, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 406, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 407, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 408, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 409, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 410, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 411, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 412, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 413, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 414, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 415, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 416, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 417, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 418, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 419, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 420, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 421, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 422, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 423, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 424, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 425, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 426, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 427, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 428, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 429, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 430, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 431, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 432, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 433, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 434, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 435, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 436, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 437, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 438, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 439, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 440, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 441, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 442, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 443, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 444, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 445, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 446, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 447, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 448, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 449, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 450, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 451, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 452, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 453, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 454, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 455, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 456, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 457, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 458, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 459, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 460, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 461, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 462, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 463, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 464, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 465, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 466, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 467, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 468, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 469, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 470, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 471, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 472, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 473, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 474, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 475, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 476, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 477, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 478, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 479, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 480, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 481, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 482, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 483, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 484, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 485, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 486, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 487, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 488, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 489, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 490, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 491, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 492, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 493, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 494, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 495, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 496, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 497, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 498, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 499, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 500, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 501, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 502, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 503, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 504, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 505, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 506, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 507, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 508, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 509, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 510, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 511, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 512, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 513, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 514, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 515, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 516, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 517, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 518, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 519, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 520, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 521, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 522, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 523, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 524, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 525, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 526, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 527, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 528, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 529, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 530, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 531, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 532, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 533, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 534, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 535, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 536, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 537, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 538, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 539, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 540, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 541, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 542, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 543, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 544, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 545, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 546, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 547, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 548, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 549, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 550, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 551, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 552, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 553, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 554, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 555, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 556, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 557, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 558, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 559, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 560, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 561, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 562, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 563, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 564, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 565, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 566, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 567, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 568, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 569, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 570, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 571, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 572, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 573, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 574, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 575, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 576, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 577, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 578, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 579, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 580, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 581, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 582, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 583, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 584, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 585, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 586, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 587, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 588, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 589, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 590, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 591, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 592, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 593, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 594, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 595, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 596, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 597, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 598, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 599, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 600, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 601, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 602, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 603, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 604, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 605, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 606, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 607, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 608, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 609, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 610, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 611, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 612, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 613, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 614, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 615, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 616, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 617, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 618, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 619, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 620, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 621, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 622, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 623, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 624, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 625, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 626, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 627, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 628, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 629, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 630, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 631, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 632, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 633, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 634, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 635, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 636, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 637, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 638, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 639, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 640, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 641, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 642, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 643, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 644, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 645, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 646, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 647, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 648, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 649, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 650, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 651, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 652, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 653, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 654, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 655, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 656, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 657, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 658, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 659, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 660, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 661, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 662, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 663, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 664, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 665, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 666, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 667, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 668, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 669, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 670, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 671, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 672, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 673, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 674, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 675, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 676, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 677, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 678, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 679, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 680, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 681, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 682, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 683, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 684, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 685, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 686, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 687, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 688, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 689, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 690, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 691, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 692, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 693, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 694, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 695, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 696, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 697, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 698, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 699, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 700, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 701, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 702, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 703, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 704, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 705, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 706, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 707, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 708, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 709, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 710, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 711, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 712, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 713, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 714, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 715, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 716, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 717, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 718, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 719, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 720, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 721, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 722, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 723, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 724, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 725, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 726, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 727, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 728, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 729, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 730, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 731, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 732, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 733, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 734, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 735, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 736, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 737, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 738, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 739, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 740, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 741, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 742, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 743, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 744, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 745, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 746, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 747, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 748, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 749, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 750, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 751, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 752, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 753, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 754, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 755, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 756, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 757, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 758, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 759, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 760, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 761, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 762, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 763, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 764, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 765, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 766, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 767, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 768, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 769, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 770, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 771, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 772, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 773, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 774, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 775, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 776, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 777, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 778, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 779, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 780, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 781, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 782, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 783, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 784, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 785, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 786, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 787, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 788, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 789, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 790, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 791, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 792, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 793, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 794, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 795, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 796, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 797, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 798, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 799, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 800, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 801, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 802, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 803, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 804, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 805, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 806, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 807, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 808, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 809, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 810, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 811, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 812, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 813, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 814, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 815, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 816, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 817, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 818, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 819, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 820, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 821, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 822, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 823, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 824, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 825, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 826, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 827, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 828, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 829, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 830, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 831, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 832, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 833, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 834, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 835, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 836, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 837, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 838, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 839, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 840, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 841, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 842, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 843, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 844, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 845, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 846, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 847, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 848, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 849, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 850, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 851, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 852, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 853, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 854, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 855, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 856, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 857, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 858, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 859, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 860, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 861, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 862, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 863, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 864, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 865, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 866, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 867, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 868, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 869, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 870, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 871, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 872, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 873, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 874, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 875, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 876, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 877, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 878, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 879, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 880, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 881, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 882, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 883, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 884, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 885, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 886, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 887, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 888, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 889, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 890, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 891, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 892, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 893, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 894, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 895, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 896, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 897, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 898, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 899, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 900, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 901, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 902, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 903, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 904, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 905, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 906, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 907, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 908, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 909, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 910, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 911, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 912, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 913, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 914, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 915, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 916, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 917, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 918, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 919, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 920, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 921, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 922, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 923, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 924, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 925, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 926, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 927, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 928, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 929, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 930, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 931, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 932, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 933, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 934, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 935, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 936, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 937, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 938, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 939, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 940, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 941, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 942, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 943, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 944, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 945, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 946, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 947, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 948, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 949, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 950, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 951, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 952, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 953, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 954, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 955, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 956, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 957, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 958, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 959, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 960, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 961, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 962, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 963, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 964, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 965, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 966, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 967, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 968, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 969, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 970, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 971, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 972, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 973, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 974, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 975, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 976, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 977, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 978, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 979, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 980, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 981, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 982, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 983, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 984, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 985, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 986, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 987, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 988, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 989, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 990, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 991, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 992, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 993, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 994, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 995, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 996, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 997, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 998, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 999, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1000, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1001, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1002, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1003, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1004, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1005, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1006, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1007, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1008, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1009, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1010, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1011, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1012, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1013, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1014, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1015, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1016, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1017, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1018, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1019, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1020, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1021, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1022, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1023, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1024, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1025, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1026, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1027, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1028, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1029, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1030, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1031, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1032, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1033, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1034, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1035, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1036, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1037, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1038, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1039, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1040, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1041, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1042, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1043, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1044, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1045, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1046, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1047, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1048, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1049, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1050, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1051, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1052, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1053, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1054, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1055, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1056, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1057, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1058, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1059, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1060, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1061, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1062, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1063, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1064, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1065, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1066, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1067, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1068, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1069, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1070, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1071, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1072, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1073, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1074, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1075, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1076, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1077, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1078, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1079, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1080, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1081, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1082, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1083, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1084, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1085, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1086, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1087, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1088, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1089, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1090, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1091, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1092, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1093, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1094, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1095, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1096, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1097, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1098, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1099, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1100, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1101, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1102, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1103, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1104, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1105, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1106, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1107, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1108, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1109, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1110, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1111, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1112, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1113, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1114, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1115, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1116, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1117, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1118, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1119, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1120, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1121, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1122, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1123, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1124, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1125, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1126, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1127, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1128, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1129, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1130, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1131, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1132, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1133, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1134, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1135, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1136, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1137, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1138, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1139, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1140, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1141, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1142, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1143, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1144, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1145, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1146, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1147, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1148, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1149, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1150, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1151, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1152, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1153, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1154, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1155, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1156, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1157, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1158, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1159, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1160, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1161, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1162, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1163, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1164, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1165, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1166, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1167, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1168, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1169, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1170, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1171, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1172, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1173, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1174, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1175, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1176, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1177, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1178, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1179, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1180, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1181, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1182, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1183, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1184, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1185, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1186, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1187, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1188, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1189, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1190, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1191, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1192, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1193, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1194, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1195, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1196, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1197, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1198, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1199, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1200, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1201, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1202, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1203, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1204, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1205, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1206, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1207, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1208, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1209, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1210, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1211, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1212, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1213, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1214, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1215, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1216, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1217, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1218, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1219, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1220, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1221, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1222, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1223, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1224, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1225, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1226, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1227, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1228, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1229, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1230, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1231, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1232, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1233, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1234, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1235, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1236, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1237, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1238, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1239, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1240, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1241, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1242, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1243, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1244, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1245, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1246, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1247, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1248, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1249, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1250, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1251, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1252, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1253, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1254, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1255, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1256, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1257, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1258, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1259, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1260, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1261, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1262, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1263, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1264, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1265, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1266, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1267, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1268, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1269, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1270, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1271, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1272, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1273, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1274, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1275, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1276, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1277, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1278, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1279, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1280, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1281, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1282, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1283, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1284, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1285, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1286, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1287, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1288, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1289, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1290, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1291, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1292, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1293, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1294, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1295, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1296, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1297, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1298, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1299, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1300, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1301, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1302, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1303, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1304, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1305, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1306, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1307, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1308, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1309, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1310, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1311, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1312, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1313, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1314, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1315, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1316, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1317, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1318, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1319, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1320, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1321, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1322, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1323, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1324, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1325, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1326, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1327, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1328, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1329, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1330, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1331, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1332, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1333, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1334, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1335, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1336, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1337, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1338, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1339, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1340, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1341, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1342, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1343, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1344, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1345, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1346, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1347, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1348, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1349, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1350, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1351, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1352, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1353, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1354, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1355, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1356, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1357, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1358, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1359, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1360, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1361, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1362, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1363, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1364, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1365, (LPARAM)"");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1366, (LPARAM)"");
-        return;
-    }
+}
 
-    // File menu
+// ESP:m_hMenu — Main menu bar; submenus File/Edit/View/Terminal/Tools/Modules/Help/Audit/Git/Agent (see Win32IDE_IELabels.h)
+void Win32IDE::createMenuBar(HWND hwnd)
+{
+    if (!m_hMenu)
+        m_hMenu = CreateMenu();
+    if (!m_hMenu) return;
+
+    // Status bar is initialized in onCreate after createStatusBar (see Win32IDE_Core.cpp).
+
+    // File menu (Unicode)
     HMENU hFileMenu = CreatePopupMenu();
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_NEW, "&New");
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_OPEN, "&Open");
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_SAVE, "&Save");
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, "Save &As");
-    AppendMenuA(hFileMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_LOAD_MODEL, "Load &Model (GGUF)...");
-    AppendMenuA(hFileMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hFileMenu, MF_STRING, IDM_FILE_EXIT, "E&xit");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, "&File");
-    
-    // Edit menu
-    HMENU hEditMenu = CreatePopupMenu();
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_FIND, "&Find...\tCtrl+F");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_REPLACE, "&Replace...\tCtrl+H");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_FIND_NEXT, "Find &Next\tF3");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_FIND_PREV, "Find &Previous\tShift+F3");
-    AppendMenuA(hEditMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_SNIPPET, "Insert &Snippet...");
-    AppendMenuA(hEditMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_COPY_FORMAT, "Copy with &Formatting");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_PASTE_PLAIN, "Paste &Plain Text");
-    AppendMenuA(hEditMenu, MF_STRING, IDM_EDIT_CLIPBOARD_HISTORY, "Clipboard &History...");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hEditMenu, "&Edit");
-    
-    // View menu
-    HMENU hViewMenu = CreatePopupMenu();
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_MINIMAP, "&Minimap");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_TABS, "&Output Tabs");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_PANEL, "Output &Panel");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_MODULE_BROWSER, "Module &Browser");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_FLOATING_PANEL, "&Floating Panel");
-    AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_THEME_EDITOR, "&Theme Editor...");
-    AppendMenuA(hViewMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, "Use Streaming Loader (Low Memory)");
-    AppendMenuA(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, "Enable Vulkan Renderer (experimental)");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hViewMenu, "&View");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_NEW, L"&New");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_OPEN, L"&Open");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVE, L"&Save");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVEAS, L"Save &As");
+    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_LOAD_MODEL, L"Load &Model (GGUF)...");
+    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
 
-    // Terminal menu
+    HMENU hSourcefileMenu = CreatePopupMenu();
+    AppendMenuW(hSourcefileMenu, MF_STRING, 1040, L"Open Source File...");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSourcefileMenu, L"#&Sourcefile");
+
+    // Edit menu (Unicode)
+    HMENU hEditMenu = CreatePopupMenu();
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND, L"&Find...\tCtrl+F");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_REPLACE, L"&Replace...\tCtrl+H");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND_NEXT, L"Find &Next\tF3");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND_PREV, L"Find &Previous\tShift+F3");
+    AppendMenuW(hEditMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_SNIPPET, L"Insert &Snippet...");
+    AppendMenuW(hEditMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_COPY_FORMAT, L"Copy with &Formatting");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_PASTE_PLAIN, L"Paste &Plain Text");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_CLIPBOARD_HISTORY, L"Clipboard &History...");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hEditMenu, L"&Edit");
+    
+    // View menu (Unicode)
+    HMENU hViewMenu = CreatePopupMenu();
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_MINIMAP, L"&Minimap");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_T1_BREADCRUMBS_TOGGLE, L"&Breadcrumbs");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_TABS, L"&Output Tabs");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT_PANEL, L"Output &Panel");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_MODULE_BROWSER, L"Module &Browser");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_FLOATING_PANEL, L"&Floating Panel");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    buildThemeMenu(hViewMenu);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_THEME_EDITOR, L"Theme &Picker...");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, L"Use Streaming Loader (Low Memory)");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, L"Enable Vulkan Renderer (experimental)");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_TELDASH_SHOW, L"Telemetry &Dashboard...");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_EMOJI_PICKER, L"&Emoji Picker");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hViewMenu, L"&View");
+
+    // Terminal menu (Unicode)
     HMENU hTerminalMenu = CreatePopupMenu();
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_POWERSHELL, "&PowerShell");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_CMD, "&Command Prompt");
-    AppendMenuA(hTerminalMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_STOP, "&Stop Terminal");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_H, "Split &Horizontal\tCtrl+Shift+H");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_V, "Split &Vertical\tCtrl+Shift+V");
-    AppendMenuA(hTerminalMenu, MF_STRING, IDM_TERMINAL_CLEAR_ALL, "&Clear All Terminals");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hTerminalMenu, "&Terminal");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_POWERSHELL, L"&PowerShell");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_CMD, L"&Command Prompt");
+    AppendMenuW(hTerminalMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_STOP, L"&Stop Terminal");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_H, L"Split &Horizontal\tCtrl+Shift+H");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_SPLIT_V, L"Split &Vertical\tCtrl+Shift+V");
+    AppendMenuW(hTerminalMenu, MF_STRING, IDM_TERMINAL_CLEAR_ALL, L"&Clear All Terminals");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hTerminalMenu, L"&Terminal");
     
-    // Tools menu
+    // Tools menu (Unicode)
     HMENU hToolsMenu = CreatePopupMenu();
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_START, "Start &Profiling");
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_STOP, "Stop P&rofiling");
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_RESULTS, "Profile &Results...");
-    AppendMenuA(hToolsMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE_SCRIPT, "&Analyze Script");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, "&Tools");
-    
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_START, L"Start &Profiling");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_STOP, L"Stop P&rofiling");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_PROFILE_RESULTS, L"Profile &Results...");
+    AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE_SCRIPT, L"&Analyze Script");
+    AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+
+    // Voice Chat submenu (Unicode — Qt removal / pure Win32)
+    HMENU hVoiceMenu = CreatePopupMenu();
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_TOGGLE_PANEL, L"Show/Hide &Voice Panel\tCtrl+Shift+U");
+    AppendMenuW(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_RECORD, L"&Record / Stop\tF9");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_PTT, L"&Push-to-Talk\tCtrl+Shift+V");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_SPEAK, L"Text-to-&Speech");
+    AppendMenuW(hVoiceMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_JOIN_ROOM, L"&Join/Leave Room");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_SHOW_DEVICES, L"Audio &Devices...");
+    AppendMenuW(hVoiceMenu, MF_STRING, IDM_VOICE_METRICS, L"&Metrics...");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceMenu, L"&Voice Chat");
+
+    // Voice Automation submenu (Phase 44: TTS for AI responses)
+    HMENU hVoiceAutoMenu = CreatePopupMenu();
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_TOGGLE, L"Toggle Voice Automation\tCtrl+Shift+A");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_STOP, L"Stop Speaking\tEscape");
+    AppendMenuW(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_NEXT, L"Next Voice\tCtrl+Shift+]");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_PREV, L"Previous Voice\tCtrl+Shift+[");
+    AppendMenuW(hVoiceAutoMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_UP, L"Increase Speech Rate\tCtrl+Shift+=");
+    AppendMenuW(hVoiceAutoMenu, MF_STRING, IDM_VOICE_AUTO_RATE_DOWN, L"Decrease Speech Rate\tCtrl+Shift+-");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hVoiceAutoMenu, L"Voice &Automation");
+
+    // Backup submenu
+    HMENU hBackupMenu = CreatePopupMenu();
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_CREATE, L"&Create Backup Now\tCtrl+Shift+B");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_RESTORE, L"&Restore from Backup...");
+    AppendMenuW(hBackupMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_AUTO_TOGGLE, L"Toggle &Auto-Backup");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_LIST, L"&List Backups...");
+    AppendMenuW(hBackupMenu, MF_STRING, IDM_QW_BACKUP_PRUNE, L"&Prune Old Backups");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hBackupMenu, L"&Backups");
+
+    // Alert & Monitoring submenu
+    HMENU hAlertMenu = CreatePopupMenu();
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_TOGGLE_MONITOR, L"Toggle Resource &Monitor");
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_RESOURCE_STATUS, L"&Resource Status...");
+    AppendMenuW(hAlertMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_SHOW_HISTORY, L"Alert &History...");
+    AppendMenuW(hAlertMenu, MF_STRING, IDM_QW_ALERT_DISMISS_ALL, L"&Dismiss All Alerts");
+    AppendMenuW(hToolsMenu, MF_POPUP, (UINT_PTR)hAlertMenu, L"A&lerts");
+
+    // Shortcuts & SLO (Tier 5)
+    AppendMenuW(hToolsMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SHORTCUT_EDITOR, L"\u2328 &Keyboard Shortcuts...\tCtrl+K Ctrl+S");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_SHORTCUT_SHOW, L"Keyboard Shortcut &Editor...");
+    AppendMenuW(hToolsMenu, MF_STRING, IDM_QW_SLO_DASHBOARD, L"&SLO Dashboard...");
+
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
+
     // Modules menu
     HMENU hModulesMenu = CreatePopupMenu();
-    AppendMenuA(hModulesMenu, MF_STRING, IDM_MODULES_REFRESH, "&Refresh List");
-    AppendMenuA(hModulesMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hModulesMenu, MF_STRING, IDM_MODULES_IMPORT, "&Import Module...");
-    AppendMenuA(hModulesMenu, MF_STRING, IDM_MODULES_EXPORT, "&Export Module...");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hModulesMenu, "&Modules");
+    AppendMenuW(hModulesMenu, MF_STRING, IDM_MODULES_REFRESH, L"&Refresh List");
+    AppendMenuW(hModulesMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hModulesMenu, MF_STRING, IDM_MODULES_IMPORT, L"&Import Module...");
+    AppendMenuW(hModulesMenu, MF_STRING, IDM_MODULES_EXPORT, L"&Export Module...");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hModulesMenu, L"&Modules");
 
     // Help menu
     HMENU hHelpMenu = CreatePopupMenu();
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_CMDREF, "Command &Reference");
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_PSDOCS, "PowerShell &Documentation");
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_SEARCH, "&Search Help...");
-    AppendMenuA(hHelpMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, "&About");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, "&Help");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_CMDREF, L"Command &Reference");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_PSDOCS, L"PowerShell &Documentation");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_SEARCH, L"&Search Help...");
+    AppendMenuW(hHelpMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, L"&Help");
+
+    // Audit menu (Phase 31 — Unicode)
+    HMENU hAuditMenu = CreatePopupMenu();
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_SHOW_DASHBOARD, L"Show &Dashboard\tCtrl+Shift+A");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_FULL, L"&Run Full Audit");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_DETECT_STUBS, L"Detect &Stubs");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_CHECK_MENUS, L"Check &Menu Wiring");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_RUN_TESTS, L"Run Component &Tests");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_EXPORT_REPORT, L"&Export Report...");
+    AppendMenuW(hAuditMenu, MF_STRING, IDM_AUDIT_QUICK_STATS, L"&Quick Stats");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAuditMenu, L"&Audit");
 
     // Git menu
     HMENU hGitMenu = CreatePopupMenu();
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_STATUS, "&Status\tCtrl+G");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_COMMIT, "&Commit...\tCtrl+Shift+C");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_PUSH, "&Push");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_PULL, "P&ull");
-    AppendMenuA(hGitMenu, MF_STRING, IDM_GIT_PANEL, "&Git Panel\tCtrl+Shift+G");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hGitMenu, "&Git");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_STATUS, L"&Status\tCtrl+G");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_COMMIT, L"&Commit...\tCtrl+Shift+C");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_PUSH, L"&Push");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_PULL, L"P&ull");
+    AppendMenuW(hGitMenu, MF_STRING, IDM_GIT_PANEL, L"&Git Panel\tCtrl+Shift+G");
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hGitMenu, L"&Git");
 
-    // Agent menu (existing agentic bridge operations)
+    // Agent menu (Unicode — Qt removal / pure Win32)
     HMENU hAgentMenu = CreatePopupMenu();
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_START_LOOP, "Start &Agent Loop");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_EXECUTE_CMD, "&Execute Command...");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_CONFIGURE_MODEL, "&Configure Model...");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_TOOLS, "View &Tools");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_STATUS, "View &Status");
-    AppendMenuA(hAgentMenu, MF_STRING, IDM_AGENT_STOP, "&Stop Agent");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, "&Agent");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_START_LOOP, L"Start &Agent Loop");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_BOUNDED_LOOP, L"&Bounded Agent (FIM Tools)\tCtrl+Shift+I");
 
-    // Autonomy menu (new high-level autonomous orchestration)
-    HMENU hAutonomyMenu = CreatePopupMenu();
-    AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_TOGGLE, "&Toggle Auto Loop");
-    AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_START, "&Start Autonomy");
-    AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STOP, "Sto&p Autonomy");
-    AppendMenuA(hAutonomyMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_SET_GOAL, "Set &Goal...");
-    AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STATUS, "Show &Status");
-    AppendMenuA(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_MEMORY, "Show &Memory Snapshot");
-    AppendMenuA(m_hMenu, MF_POPUP, (UINT_PTR)hAutonomyMenu, "&Autonomy");
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+
+    // AI Options Submenu
+    HMENU hAIOptionsMenu = CreatePopupMenu();
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_MAX, L"&Max Mode (Thread Unlock)");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_DEEP_THINK, L"&Deep Thinking (CoT)");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_DEEP_RESEARCH, L"Deep &Research (FileSystem)");
+    AppendMenuW(hAIOptionsMenu, MF_STRING, IDM_AI_MODE_NO_REFUSAL, L"&No Refusal Mode");
+    AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hAIOptionsMenu, L"AI &Options");
+
+    // Context Window (Memory Plugins) Submenu
+    HMENU hContextMenu = CreatePopupMenu();
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_4K, L"4K (Standard)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_32K, L"32K (Large)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_64K, L"64K (X-Large)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_128K, L"128K (Ultra)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_256K, L"256K (Mega)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_512K, L"512K (Giga)");
+    AppendMenuW(hContextMenu, MF_STRING, IDM_AI_CONTEXT_1M, L"1M (Tera - Memory Plugin)");
+    AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hContextMenu, L"&Context Window Size");
+
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_TITAN_TOGGLE, L"Use &Titan Kernel");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_800B_STATUS, L"800B Dual-Engine &Status");
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_AGENT_MULTI_ENABLE, L"Multi-Agent: &Enable");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_AGENT_MULTI_DISABLE, L"Multi-Agent: &Disable");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AI_AGENT_MULTI_STATUS, L"Multi-Agent: &Status");
+
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_EXECUTE_CMD, L"&Execute Command...");
+
+    AppendMenuW(hAgentMenu, MF_SEPARATOR, 0, nullptr);
+
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_CONFIGURE_MODEL, L"&Configure Model...");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_TOOLS, L"View &Tools");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_VIEW_STATUS, L"View &Status");
+    AppendMenuW(hAgentMenu, MF_STRING, IDM_AGENT_STOP, L"&Stop Agent");
+
+    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, L"&Agent");
+
+    // Hotpatch menu (Unicode — Qt removal)
+    {
+        HMENU hHotpatchMenu = CreatePopupMenu();
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_STATUS, L"&Show Hotpatch Status");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_TOGGLE_ALL, L"&Toggle Hotpatch System");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_SHOW_EVENT_LOG, L"Show &Event Log");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_RESET_STATS, L"&Reset Statistics");
+        AppendMenuW(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
+
+        HMENU hMemLayerMenu = CreatePopupMenu();
+        AppendMenuW(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_APPLY, L"&Apply Memory Patch...");
+        AppendMenuW(hMemLayerMenu, MF_STRING, IDM_HOTPATCH_MEMORY_REVERT, L"&Revert Memory Patch...");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hMemLayerMenu, L"&Memory Layer");
+
+        HMENU hByteLayerMenu = CreatePopupMenu();
+        AppendMenuW(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_APPLY, L"&Apply Byte Patch...");
+        AppendMenuW(hByteLayerMenu, MF_STRING, IDM_HOTPATCH_BYTE_SEARCH, L"&Search && Replace Pattern...");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hByteLayerMenu, L"&Byte Layer");
+
+        HMENU hServerLayerMenu = CreatePopupMenu();
+        AppendMenuW(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_ADD, L"&Add Server Patch...");
+        AppendMenuW(hServerLayerMenu, MF_STRING, IDM_HOTPATCH_SERVER_REMOVE, L"&Remove Server Patch...");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hServerLayerMenu, L"&Server Layer");
+
+        HMENU hProxyMenu = CreatePopupMenu();
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_BIAS, L"Token &Bias Injection...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_REWRITE, L"Output &Rewrite Rule...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_TERMINATE, L"Stream &Termination Rule...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_PROXY_VALIDATE, L"Custom &Validator...");
+        AppendMenuW(hProxyMenu, MF_STRING, IDM_HOTPATCH_SHOW_PROXY_STATS, L"Show Proxy &Stats");
+        AppendMenuW(hHotpatchMenu, MF_POPUP, (UINT_PTR)hProxyMenu, L"&Proxy Hotpatcher");
+
+        AppendMenuW(hHotpatchMenu, MF_SEPARATOR, 0, nullptr);
+
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_SAVE, L"Save Preset...");
+        AppendMenuW(hHotpatchMenu, MF_STRING, IDM_HOTPATCH_PRESET_LOAD, L"Load Preset...");
+
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hHotpatchMenu, L"&Hotpatch");
+    }
+
+    if (FEATURE_ENABLED("autonomy")) {
+        HMENU hAutonomyMenu = CreatePopupMenu();
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_TOGGLE, L"&Toggle Auto Loop");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_START, L"&Start Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STOP, L"Sto&p Autonomy");
+        AppendMenuW(hAutonomyMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_SET_GOAL, L"Set &Goal...");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_STATUS, L"Show &Status");
+        AppendMenuW(hAutonomyMenu, MF_STRING, IDM_AUTONOMY_MEMORY, L"Show &Memory Snapshot");
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAutonomyMenu, L"&Autonomy");
+    }
+
+    if (FEATURE_ENABLED("reverseEngineering")) {
+        HMENU hRevEngMenu = createReverseEngineeringMenu();
+        AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hRevEngMenu, L"&RevEng");
+    }
+
+    // Phase 45: Game Engine Integration (Unity + Unreal)
+    createGameEngineMenu(m_hMenu);
+
+    // Phase 48: The Final Crucible
+    createCrucibleMenu(m_hMenu);
+
+    // Phase 49: Copilot Gap Closer
+    createCopilotGapMenu(m_hMenu);
+
+    // Cursor/JB-Parity Feature Modules
+    createCursorParityMenu(m_hMenu);
+
+    // Source Files — every file in the repo as a browsable menu tree
+    {
+        HMENU hSrcMenu = BuildSourceFileMenu();
+        if (hSrcMenu) {
+            AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSrcMenu, L"&Source Files");
+        }
+    }
 
     SetMenu(hwnd, m_hMenu);
 
@@ -1875,7 +770,7 @@ Win32IDE::Win32IDE(HINSTANCE hInstance)
 void Win32IDE::createToolbar(HWND hwnd)
 {
 
-    m_hwndToolbar = CreateWindowExA(0, TOOLBARCLASSNAMEA, nullptr,
+    m_hwndToolbar = CreateWindowExW(0, TOOLBARCLASSNAMEW, nullptr,
                                    WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT,
                                    0, 0, 0, 0, hwnd, nullptr, m_hInstance, nullptr);
 
@@ -1895,21 +790,33 @@ void Win32IDE::createToolbar(HWND hwnd)
 void Win32IDE::createTitleBarControls()
 {
     DWORD labelStyle = WS_CHILD | WS_VISIBLE | SS_CENTER | SS_NOPREFIX;
-    m_hwndTitleLabel = CreateWindowExA(0, "STATIC", "RawrXD IDE", labelStyle,
+    m_hwndTitleLabel = CreateWindowExW(0, L"STATIC", L"RawrXD IDE", labelStyle,
                                       0, 0, 200, 24, m_hwndToolbar, (HMENU)IDC_TITLE_TEXT, m_hInstance, nullptr);
 
     DWORD buttonStyle = WS_CHILD | WS_VISIBLE | BS_FLAT;
-    auto createButton = [&](HWND& target, int controlId, const char* caption) {
-        target = CreateWindowExA(0, "BUTTON", caption, buttonStyle,
-                                 0, 0, 32, 24, m_hwndToolbar, (HMENU)controlId, m_hInstance, nullptr);
+    auto createButton = [&](HWND& target, int controlId, const wchar_t* caption) {
+        target = CreateWindowExW(0, L"BUTTON", caption, buttonStyle,
+                                0, 0, 32, 24, m_hwndToolbar, (HMENU)controlId, m_hInstance, nullptr);
     };
 
-    createButton(m_hwndBtnGitHub, IDC_BTN_GITHUB, "GH");
-    createButton(m_hwndBtnMicrosoft, IDC_BTN_MICROSOFT, "MS");
-    createButton(m_hwndBtnSettings, IDC_BTN_SETTINGS, "Gear");
-    createButton(m_hwndBtnMinimize, IDC_BTN_MINIMIZE, "-");
-    createButton(m_hwndBtnMaximize, IDC_BTN_MAXIMIZE, "[]");
-    createButton(m_hwndBtnClose, IDC_BTN_CLOSE, "X");
+    createButton(m_hwndBtnGitHub, IDC_BTN_GITHUB, L"GH");
+    createButton(m_hwndBtnMicrosoft, IDC_BTN_MICROSOFT, L"MS");
+    createButton(m_hwndBtnSettings, IDC_BTN_SETTINGS, L"Gear");
+    createButton(m_hwndBtnMinimize, IDC_BTN_MINIMIZE, L"-");
+    createButton(m_hwndBtnMaximize, IDC_BTN_MAXIMIZE, L"[]");
+    createButton(m_hwndBtnClose, IDC_BTN_CLOSE, L"X");
+
+    m_hwndSourceFileDropdown = CreateWindowExW(
+        0, L"COMBOBOX", L"",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL,
+        0, 0, 320, 260,
+        m_hwndToolbar, (HMENU)IDC_SOURCEFILE_DROPDOWN, m_hInstance, nullptr);
+
+    if (m_hwndSourceFileDropdown) {
+        HFONT dropdownFont = m_hFontUI ? m_hFontUI : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+        SendMessageW(m_hwndSourceFileDropdown, WM_SETFONT, (WPARAM)dropdownFont, TRUE);
+        refreshSourceFileDropdown();
+    }
 
     RECT client{};
     GetClientRect(m_hwndMain, &client);
@@ -1928,6 +835,7 @@ void Win32IDE::layoutTitleBar(int width)
     int y = (toolbarHeight - controlHeight) / 2;
     int padding = 6;
     int x = width - padding;
+    int left = padding;
 
     auto placeButton = [&](HWND hwnd, int controlWidth) {
         if (!hwnd) return;
@@ -1943,17 +851,169 @@ void Win32IDE::layoutTitleBar(int width)
     placeButton(m_hwndBtnMicrosoft, 40);
     placeButton(m_hwndBtnGitHub, 40);
 
+    if (m_hwndSourceFileDropdown) {
+        int desiredWidth = (std::max)(260, width / 3);
+        desiredWidth = (std::min)(560, desiredWidth);
+        int maxAllowed = x - padding - 180;
+        int comboWidth = (std::max)(220, (std::min)(desiredWidth, maxAllowed));
+        int comboDropHeight = controlHeight + dpiScale(280);
+        if (maxAllowed > 180) {
+            ShowWindow(m_hwndSourceFileDropdown, SW_SHOW);
+            MoveWindow(m_hwndSourceFileDropdown, left, y, comboWidth, comboDropHeight, TRUE);
+            left += comboWidth + padding;
+        } else {
+            ShowWindow(m_hwndSourceFileDropdown, SW_HIDE);
+        }
+    }
+
     if (m_hwndTitleLabel) {
         int availableRight = x;
-        int labelWidth = (std::min)(420, availableRight - padding * 2);
-        if (labelWidth < 160) {
-            labelWidth = (std::max)(availableRight - padding * 2, 120);
+        int availableLeft = left;
+        int availableWidth = availableRight - availableLeft;
+        if (availableWidth < 120) {
+            ShowWindow(m_hwndTitleLabel, SW_HIDE);
+            return;
         }
-        int labelX = (std::max)(padding, (width - labelWidth) / 2);
-        if (labelX + labelWidth > availableRight) {
-            labelX = (std::max)(padding, availableRight - labelWidth);
-        }
+        ShowWindow(m_hwndTitleLabel, SW_SHOW);
+        int labelWidth = (std::min)(520, availableWidth);
+        int labelX = availableLeft + (availableWidth - labelWidth) / 2;
         MoveWindow(m_hwndTitleLabel, labelX, y, labelWidth, controlHeight, TRUE);
+    }
+}
+
+void Win32IDE::refreshSourceFileDropdown()
+{
+    if (!m_hwndSourceFileDropdown) {
+        return;
+    }
+
+    namespace fs = std::filesystem;
+    const fs::path rootPath = detectSourceRegistryRootPath(m_currentDirectory, m_gitRepoPath);
+    if (rootPath.empty()) {
+        return;
+    }
+
+    std::error_code ec;
+    fs::path normalizedRoot = fs::weakly_canonical(rootPath, ec);
+    if (ec || normalizedRoot.empty()) {
+        ec.clear();
+        normalizedRoot = fs::absolute(rootPath, ec);
+    }
+    if (normalizedRoot.empty()) {
+        return;
+    }
+    m_sourceRegistryRoot = normalizedRoot.string();
+
+    std::vector<std::pair<std::string, std::string>> indexedFiles;
+    indexedFiles.reserve(4096);
+
+    const size_t kMaxIndexedFiles = 24000;
+    fs::recursive_directory_iterator it(normalizedRoot, fs::directory_options::skip_permission_denied, ec);
+    fs::recursive_directory_iterator end;
+    for (; it != end; it.increment(ec)) {
+        if (ec) {
+            ec.clear();
+            continue;
+        }
+        const fs::directory_entry& entry = *it;
+        if (entry.is_directory(ec)) {
+            if (!ec && shouldSkipSourceRegistryDirectory(entry.path())) {
+                it.disable_recursion_pending();
+            }
+            ec.clear();
+            continue;
+        }
+        if (!entry.is_regular_file(ec)) {
+            ec.clear();
+            continue;
+        }
+        const fs::path absolutePath = entry.path();
+        if (!isSourceLikeFile(absolutePath)) {
+            continue;
+        }
+
+        fs::path relativePath = fs::relative(absolutePath, normalizedRoot, ec);
+        if (ec) {
+            ec.clear();
+            relativePath = absolutePath.filename();
+        }
+
+        indexedFiles.emplace_back(relativePath.generic_string(), absolutePath.string());
+        if (indexedFiles.size() >= kMaxIndexedFiles) {
+            break;
+        }
+    }
+
+    std::sort(indexedFiles.begin(), indexedFiles.end(),
+        [](const auto& a, const auto& b) {
+            return toLowerAscii(a.first) < toLowerAscii(b.first);
+        });
+
+    const std::string currentNormalized = normalizePathForCompare(m_currentFile);
+    SendMessageW(m_hwndSourceFileDropdown, WM_SETREDRAW, FALSE, 0);
+    SendMessageW(m_hwndSourceFileDropdown, CB_RESETCONTENT, 0, 0);
+    m_sourceFileDisplayPaths.clear();
+    m_sourceFileAbsolutePaths.clear();
+    m_sourceFileDisplayPaths.reserve(indexedFiles.size());
+    m_sourceFileAbsolutePaths.reserve(indexedFiles.size());
+
+    int selectedIndex = -1;
+    for (size_t i = 0; i < indexedFiles.size(); ++i) {
+        const std::string& displayPath = indexedFiles[i].first;
+        const std::string& absolutePath = indexedFiles[i].second;
+        const std::string dropdownLabel = "#Sourcefile -> " + displayPath;
+        m_sourceFileDisplayPaths.push_back(displayPath);
+        m_sourceFileAbsolutePaths.push_back(absolutePath);
+        SendMessageW(m_hwndSourceFileDropdown, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(dropdownLabel).c_str());
+        if (selectedIndex < 0 && !currentNormalized.empty() &&
+            normalizePathForCompare(absolutePath) == currentNormalized) {
+            selectedIndex = static_cast<int>(i);
+        }
+    }
+
+    if (selectedIndex >= 0) {
+        SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, selectedIndex, 0);
+    } else if (!m_sourceFileDisplayPaths.empty()) {
+        SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, 0, 0);
+    }
+
+    SendMessageW(m_hwndSourceFileDropdown, WM_SETREDRAW, TRUE, 0);
+    InvalidateRect(m_hwndSourceFileDropdown, nullptr, TRUE);
+
+    m_sourceRegistryInitialized = true;
+    if (m_hwndStatusBar) {
+        std::string status = "Source index: " + std::to_string(m_sourceFileDisplayPaths.size()) + " files";
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)status.c_str());
+    }
+}
+
+void Win32IDE::onSourceFileDropdownSelection()
+{
+    if (!m_hwndSourceFileDropdown) {
+        return;
+    }
+
+    int selectedIndex = (int)SendMessageW(m_hwndSourceFileDropdown, CB_GETCURSEL, 0, 0);
+    if (selectedIndex < 0 || selectedIndex >= (int)m_sourceFileAbsolutePaths.size()) {
+        return;
+    }
+
+    const std::string selectedPath = m_sourceFileAbsolutePaths[(size_t)selectedIndex];
+    if (selectedPath.empty()) {
+        return;
+    }
+    if (!m_currentFile.empty() &&
+        normalizePathForCompare(selectedPath) == normalizePathForCompare(m_currentFile)) {
+        return;
+    }
+
+    openFile(selectedPath);
+    setCurrentDirectoryFromFile(selectedPath);
+    updateTitleBarText();
+
+    if (m_hwndStatusBar) {
+        std::string status = "Opened: " + m_sourceFileDisplayPaths[(size_t)selectedIndex];
+        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)status.c_str());
     }
 }
 
@@ -2006,15 +1066,179 @@ void Win32IDE::updateTitleBarText()
 
     std::string composed = fileName + "  •  " + projectFolder;
     if (composed != m_lastTitleBarText) {
-        SetWindowTextA(m_hwndTitleLabel, composed.c_str());
+        SetWindowTextW(m_hwndTitleLabel, utf8ToWide(composed).c_str());
         m_lastTitleBarText = composed;
     }
+
+    if (m_hwndSourceFileDropdown && !m_currentFile.empty() && !m_sourceFileAbsolutePaths.empty()) {
+        const std::string currentNormalized = normalizePathForCompare(m_currentFile);
+        int currentSelection = (int)SendMessageW(m_hwndSourceFileDropdown, CB_GETCURSEL, 0, 0);
+        int expectedSelection = -1;
+        for (size_t i = 0; i < m_sourceFileAbsolutePaths.size(); ++i) {
+            if (normalizePathForCompare(m_sourceFileAbsolutePaths[i]) == currentNormalized) {
+                expectedSelection = (int)i;
+                break;
+            }
+        }
+        if (expectedSelection >= 0 && expectedSelection != currentSelection) {
+            SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, expectedSelection, 0);
+        }
+    }
+
+    // Keep breadcrumb bar in sync with current file (symbol path updates on cursor move)
+    if (m_hwndBreadcrumbs && m_settings.breadcrumbsEnabled)
+        updateBreadcrumbs();
+}
+
+// ============================================================================
+// DPI SCALING
+// ============================================================================
+
+UINT Win32IDE::getDpi() const {
+    if (m_hwndMain) {
+        // GetDpiForWindow requires Windows 10 1607+
+        typedef UINT (WINAPI *PFN_GetDpiForWindow)(HWND);
+        static PFN_GetDpiForWindow pGetDpiForWindow = nullptr;
+        static bool resolved = false;
+        if (!resolved) {
+            HMODULE hUser32 = GetModuleHandleA("user32.dll");
+            if (hUser32) {
+                pGetDpiForWindow = (PFN_GetDpiForWindow)GetProcAddress(hUser32, "GetDpiForWindow");
+            }
+            resolved = true;
+        }
+        if (pGetDpiForWindow) {
+            UINT dpi = pGetDpiForWindow(m_hwndMain);
+            if (dpi > 0) return dpi;
+        }
+    }
+    // Fallback: system DPI via device caps
+    HDC hdc = GetDC(nullptr);
+    UINT dpi = (UINT)GetDeviceCaps(hdc, LOGPIXELSY);
+    ReleaseDC(nullptr, hdc);
+    return dpi ? dpi : 96;
+}
+
+int Win32IDE::dpiScale(int basePixels) const {
+    // If user override is set, blend it with system DPI
+    if (m_settings.uiScalePercent > 0) {
+        return MulDiv(basePixels, m_settings.uiScalePercent, 100);
+    }
+    return MulDiv(basePixels, m_currentDpi, 96);
+}
+
+void Win32IDE::recreateFonts() {
+    m_currentDpi = getDpi();
+
+    // Editor font — monospace
+    if (m_editorFont) { DeleteObject(m_editorFont); m_editorFont = nullptr; }
+    m_editorFont = CreateFontA(
+        -dpiScale(16), 0, 0, 0, FW_NORMAL,
+        FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
+    );
+
+    // UI font — proportional  
+    if (m_hFontUI) { DeleteObject(m_hFontUI); m_hFontUI = nullptr; }
+    m_hFontUI = CreateFontA(
+        -dpiScale(14), 0, 0, 0, FW_NORMAL,
+        FALSE, FALSE, FALSE, ANSI_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+    );
+
+    // Ghost text font — italic monospace
+    if (m_ghostTextFont) { DeleteObject(m_ghostTextFont); m_ghostTextFont = nullptr; }
+    LOGFONTA lf = {};
+    lf.lfHeight         = -dpiScale(14);
+    lf.lfWeight         = FW_NORMAL;
+    lf.lfItalic         = TRUE;
+    lf.lfCharSet        = DEFAULT_CHARSET;
+    lf.lfQuality        = CLEARTYPE_QUALITY;
+    lf.lfPitchAndFamily = FIXED_PITCH | FF_MODERN;
+    strncpy(lf.lfFaceName, m_currentTheme.fontName.c_str(), LF_FACESIZE - 1);
+    lf.lfFaceName[LF_FACESIZE - 1] = '\0';
+    m_ghostTextFont = CreateFontIndirectA(&lf);
+
+    // Apply editor font
+    if (m_hwndEditor && m_editorFont) {
+        SendMessage(m_hwndEditor, WM_SETFONT, (WPARAM)m_editorFont, TRUE);
+        CHARFORMAT2W cf;
+        memset(&cf, 0, sizeof(cf));
+        cf.cbSize = sizeof(cf);
+        cf.dwMask = CFM_FACE | CFM_SIZE;
+        cf.yHeight = dpiScale(16) * 15;
+        wcscpy_s(cf.szFaceName, L"Consolas");
+        SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    }
+
+    // Apply UI font to all known UI controls
+    auto setFont = [](HWND hwnd, HFONT font) {
+        if (hwnd) SendMessage(hwnd, WM_SETFONT, (WPARAM)font, TRUE);
+    };
+    setFont(m_hwndTabBar, m_hFontUI);
+    setFont(m_hwndSecondarySidebarHeader, m_hFontUI);
+    setFont(m_hwndModelSelector, m_hFontUI);
+    setFont(m_hwndCopilotChatOutput, m_hFontUI);
+    setFont(m_hwndCopilotChatInput, m_hFontUI);
+    setFont(m_hwndCopilotSendBtn, m_hFontUI);
+    setFont(m_hwndCopilotClearBtn, m_hFontUI);
+    setFont(m_hwndCommandPaletteInput, m_hFontUI);
+    setFont(m_hwndCommandPaletteList, m_hFontUI);
+    setFont(m_hwndSearchInput, m_hFontUI);
+    setFont(m_hwndSearchResults, m_hFontUI);
+    setFont(m_hwndFloatingContent, m_hFontUI);
+
+    // PowerShell panel fonts (store and delete previous to avoid leak on DPI change)
+    if (m_hFontPowerShell) { DeleteObject(m_hFontPowerShell); m_hFontPowerShell = nullptr; }
+    if (m_hFontPowerShellStatus) { DeleteObject(m_hFontPowerShellStatus); m_hFontPowerShellStatus = nullptr; }
+    if (m_hwndPowerShellOutput) {
+        m_hFontPowerShell = CreateFontA(
+            -dpiScale(16), 0, 0, 0, FW_NORMAL,
+            FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, "Consolas"
+        );
+        SendMessage(m_hwndPowerShellOutput, WM_SETFONT, (WPARAM)m_hFontPowerShell, TRUE);
+        if (m_hwndPowerShellInput) SendMessage(m_hwndPowerShellInput, WM_SETFONT, (WPARAM)m_hFontPowerShell, TRUE);
+        if (m_hwndPSBtnExecute) SendMessage(m_hwndPSBtnExecute, WM_SETFONT, (WPARAM)m_hFontPowerShell, TRUE);
+    }
+    if (m_hwndPowerShellStatusBar) {
+        m_hFontPowerShellStatus = CreateFontA(
+            -dpiScale(12), 0, 0, 0, FW_NORMAL,
+            FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI"
+        );
+        SendMessage(m_hwndPowerShellStatusBar, WM_SETFONT, (WPARAM)m_hFontPowerShellStatus, TRUE);
+    }
+
+    // Terminal panes
+    for (auto& pane : m_terminalPanes) {
+        if (pane.hwnd) {
+            CHARFORMAT2W tcf;
+            memset(&tcf, 0, sizeof(tcf));
+            tcf.cbSize = sizeof(tcf);
+            tcf.dwMask = CFM_FACE | CFM_SIZE;
+            tcf.yHeight = dpiScale(9) * 20;
+            wcscpy_s(tcf.szFaceName, L"Consolas");
+            SendMessageW(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
+        }
+    }
+
+    // File tree
+    if (m_hwndFileTree) {
+        setFont(m_hwndFileTree, m_hFontUI);
+    }
+
+    LOG_INFO("Fonts recreated at DPI=" + std::to_string(m_currentDpi));
 }
 
 void Win32IDE::createEditor(HWND hwnd)
 {
 
-    m_hwndEditor = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
+    m_hwndEditor = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
                                   WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN,
                                   0, 0, 0, 0, hwnd, (HMENU)IDC_EDITOR, m_hInstance, nullptr);
     if (!m_hwndEditor) {
@@ -2022,63 +1246,110 @@ void Win32IDE::createEditor(HWND hwnd)
         return;
     }
 
-    // Set default font and colors
-    CHARFORMAT2A cf;
+    m_currentDpi = getDpi();
+    recreateFonts();
+
+    CHARFORMAT2W cf;
     memset(&cf, 0, sizeof(cf));
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
-    cf.yHeight = 200; // 10 points
-    cf.crTextColor = RGB(220, 220, 220); // Light gray text
-    strcpy(cf.szFaceName, "Consolas");
-    SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
-    
-    // Set background color to dark
-    SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, RGB(30, 30, 30));
+    cf.yHeight = dpiScale(11) * 20;
+    cf.crTextColor = RGB(212, 212, 212);
+    wcscpy_s(cf.szFaceName, L"Consolas");
+    SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
-    // Enable editing
+    SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
+
+    SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, RGB(30, 30, 30));
     SendMessage(m_hwndEditor, EM_SETREADONLY, FALSE, 0);
+    SendMessage(m_hwndEditor, EM_SETEVENTMASK, 0, ENM_CHANGE | ENM_SELCHANGE | ENM_SCROLL);
+    SendMessage(m_hwndEditor, EM_EXLIMITTEXT, 0, 0x7FFFFFFE);
+
+    static const wchar_t welcomeText[] =
+        L"// ============================================\r\n"
+        L"// RawrXD IDE - Native Win32 AI Development\r\n"
+        L"// ============================================\r\n"
+        L"//\r\n"
+        L"// Welcome! The editor is ready.\r\n"
+        L"//\r\n"
+        L"// Shortcuts:\r\n"
+        L"//   Ctrl+N   New File\r\n"
+        L"//   Ctrl+O   Open File\r\n"
+        L"//   Ctrl+S   Save\r\n"
+        L"//   Ctrl+F   Find\r\n"
+        L"//   Ctrl+B   Toggle Sidebar\r\n"
+        L"//   Ctrl+Shift+P   Command Palette\r\n"
+        L"//\r\n"
+        L"// Start typing or open a file to begin.\r\n"
+        L"\r\n";
+    SetWindowTextW(m_hwndEditor, welcomeText);
+
+    SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+
+    int textLen = GetWindowTextLengthW(m_hwndEditor);
+    SendMessage(m_hwndEditor, EM_SETSEL, textLen, textLen);
 
     initializeEditorSurface();
 
+    // ================================================================
+    // Subclass the editor RichEdit control
+    // Store IDE pointer and original wndproc as window properties,
+    // then redirect to EditorSubclassProc for ghost text, key intercept,
+    // scroll sync, and minimap updates.
+    // ================================================================
+    if (m_hwndEditor) {
+        SetPropW(m_hwndEditor, kEditorWndProp, (HANDLE)this);
+        WNDPROC oldEditorProc = (WNDPROC)SetWindowLongPtrW(
+            m_hwndEditor, GWLP_WNDPROC, (LONG_PTR)EditorSubclassProc);
+        SetPropW(m_hwndEditor, kEditorProcProp, (HANDLE)oldEditorProc);
+    }
 }
 
 void Win32IDE::createTerminal(HWND hwnd)
 {
+    // Initialize the Enterprise PowerShell Panel (creates m_hwndPowerShellPanel)
+    createPowerShellPanel();
+    m_powerShellPanelVisible = true;
 
     if (m_terminalPanes.empty()) {
-
         createTerminalPane(Win32TerminalManager::PowerShell, "PowerShell");
     } else {
-
         setActiveTerminalPane(m_terminalPanes.front().id);
     }
 
     // Create command input
-
-    m_hwndCommandInput = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    m_hwndCommandInput = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                                         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                                         0, 0, 0, 0, hwnd, (HMENU)IDC_COMMAND_INPUT, m_hInstance, nullptr);
-    if (!m_hwndCommandInput) {
-
-    } else {
-
+    if (m_hwndCommandInput) {
+        SetWindowLongPtr(m_hwndCommandInput, GWLP_USERDATA, (LONG_PTR)this);
+        m_oldCommandInputProc = (WNDPROC)SetWindowLongPtr(m_hwndCommandInput, GWLP_WNDPROC, (LONG_PTR)CommandInputProc);
     }
 
 }
 
 int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, const std::string& name)
 {
-    HWND hwnd = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
+    HWND hwnd = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
                                 WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
                                 0, 0, 0, 0, m_hwndMain, nullptr, m_hInstance, nullptr);
 
-    CHARFORMAT2A cf;
+    // LOGGING AS REQUESTED
+    char logBuf[256];
+    sprintf_s(logBuf, "TerminalPane HWND created: %p (Parent: %p)", hwnd, m_hwndMain);
+    LOG_INFO(std::string(logBuf));
+
+    // Apply dark theme to terminal pane
+    SendMessage(hwnd, EM_SETBKGNDCOLOR, 0, RGB(30, 30, 30));
+
+    CHARFORMAT2W cf;
     memset(&cf, 0, sizeof(cf));
     cf.cbSize = sizeof(cf);
-    cf.dwMask = CFM_FACE | CFM_SIZE;
-    cf.yHeight = 180; // 9 points
-    strcpy(cf.szFaceName, "Consolas");
-    SendMessage(hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+    cf.dwMask = CFM_FACE | CFM_SIZE | CFM_COLOR;
+    cf.yHeight = 180;
+    cf.crTextColor = RGB(204, 204, 204);
+    wcscpy_s(cf.szFaceName, L"Consolas");
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
 
     int paneId = m_nextTerminalId++;
     TerminalPane pane;
@@ -2091,9 +1362,11 @@ int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, cons
     pane.bounds = {0, 0, 0, 0};
 
     pane.manager->onOutput = [this, paneId](const std::string& output) {
+        if (isShuttingDown()) return;
         onTerminalOutput(paneId, output);
     };
     pane.manager->onError = [this, paneId](const std::string& error) {
+        if (isShuttingDown()) return;
         onTerminalError(paneId, error);
     };
 
@@ -2145,12 +1418,31 @@ void Win32IDE::setActiveTerminalPane(int paneId)
 
 void Win32IDE::layoutTerminalPanes(int width, int top, int height)
 {
+    // LOGGING AS REQUESTED
+    char logBuf[256];
+    sprintf_s(logBuf, "layoutTerminalPanes: Width=%d Top=%d Height=%d Count=%zu", width, top, height, m_terminalPanes.size());
+    LOG_INFO(std::string(logBuf));
+
     if (width <= 0 || height <= 0 || m_terminalPanes.empty()) return;
+
+    // Calculate correct left offset — terminal panes are children of m_hwndMain,
+    // so we must offset past activity bar + sidebar to avoid overlapping them
+    const int ACTIVITY_BAR_WIDTH = dpiScale(48);
+    int sidebarWidth = m_sidebarVisible ? m_sidebarWidth : 0;
+    int editorLeft = ACTIVITY_BAR_WIDTH + sidebarWidth;
+    int secondarySidebarWidth = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
+
+    // Clamp width to editor area (exclude sidebars)
+    RECT mainRect;
+    GetClientRect(m_hwndMain, &mainRect);
+    int editorWidth = (mainRect.right - mainRect.left) - editorLeft - secondarySidebarWidth;
+    if (editorWidth <= 0) editorWidth = width; // fallback
+
     int count = static_cast<int>(m_terminalPanes.size());
     if (count == 1) {
         auto& pane = m_terminalPanes[0];
-        MoveWindow(pane.hwnd, 0, top, width, height, TRUE);
-        pane.bounds = {0, top, width, top + height};
+        MoveWindow(pane.hwnd, editorLeft, top, editorWidth, height, TRUE);
+        pane.bounds = {editorLeft, top, editorLeft + editorWidth, top + height};
         return;
     }
 
@@ -2160,15 +1452,15 @@ void Win32IDE::layoutTerminalPanes(int width, int top, int height)
         for (int i = 0; i < count; ++i) {
             int currentHeight = (i == count - 1) ? (height - paneHeight * (count - 1)) : paneHeight;
             auto& pane = m_terminalPanes[i];
-            MoveWindow(pane.hwnd, 0, y, width, currentHeight, TRUE);
-            pane.bounds = {0, y, width, y + currentHeight};
+            MoveWindow(pane.hwnd, editorLeft, y, editorWidth, currentHeight, TRUE);
+            pane.bounds = {editorLeft, y, editorLeft + editorWidth, y + currentHeight};
             y += currentHeight;
         }
     } else {
-        int paneWidth = width / count;
-        int x = 0;
+        int paneWidth = editorWidth / count;
+        int x = editorLeft;
         for (int i = 0; i < count; ++i) {
-            int currentWidth = (i == count - 1) ? (width - paneWidth * (count - 1)) : paneWidth;
+            int currentWidth = (i == count - 1) ? (editorWidth - paneWidth * (count - 1)) : paneWidth;
             auto& pane = m_terminalPanes[i];
             MoveWindow(pane.hwnd, x, top, currentWidth, height, TRUE);
             pane.bounds = {x, top, x + currentWidth, top + height};
@@ -2224,7 +1516,7 @@ void Win32IDE::clearAllTerminals()
 void Win32IDE::createStatusBar(HWND hwnd)
 {
 
-    m_hwndStatusBar = CreateWindowExA(0, STATUSCLASSNAMEA, "",
+    m_hwndStatusBar = CreateWindowExW(0, STATUSCLASSNAMEW, L"",
                                      WS_CHILD | WS_VISIBLE,
                                      0, 0, 0, 0, hwnd, (HMENU)IDC_STATUS_BAR, m_hInstance, nullptr);
     if (!m_hwndStatusBar) {
@@ -2232,48 +1524,25 @@ void Win32IDE::createStatusBar(HWND hwnd)
         return;
     }
 
-    int parts[] = {200, 400, -1};
-    SendMessage(m_hwndStatusBar, SB_SETPARTS, 3, (LPARAM)parts);
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"Ready");
+    int parts[] = {200, 400, 600, -1};
+    SendMessage(m_hwndStatusBar, SB_SETPARTS, 4, (LPARAM)parts);
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Ready");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)L"Ctx: 0/128K  0%");
 
 }
 
 void Win32IDE::createSidebar(HWND hwnd)
 {
-    // Create the primary sidebar (left panel)
-    m_hwndSidebar = CreateWindowExA(
-        0,
-        "STATIC",
-        "Explorer",
-        WS_CHILD | WS_VISIBLE | WS_BORDER,
-        48, 30, m_sidebarWidth, 500,
-        hwnd,
-        nullptr,
-        m_hInstance,
-        nullptr
-    );
-    
-    if (m_hwndSidebar) {
-        // Create activity bar (icon strip on far left)
-        m_hwndActivityBar = CreateWindowExA(
-            0,
-            "STATIC",
-            "",
-            WS_CHILD | WS_VISIBLE,
-            0, 30, 48, 500,
-            hwnd,
-            nullptr,
-            m_hInstance,
-            nullptr
-        );
-    }
+    createPrimarySidebar(hwnd);
 }
+
+
 
 void Win32IDE::newFile()
 {
     appendToOutput("File > New clicked\n", "Output", OutputSeverity::Info);
     if (m_fileModified) {
-        int result = MessageBoxA(m_hwndMain, "File has been modified. Save changes?", "Save", MB_YESNOCANCEL);
+        int result = MessageBoxW(m_hwndMain, L"File has been modified. Save changes?", L"Save", MB_YESNOCANCEL);
         if (result == IDCANCEL) {
             appendToOutput("File > New cancelled by user\n", "Output", OutputSeverity::Info);
             return;
@@ -2284,11 +1553,11 @@ void Win32IDE::newFile()
         }
     }
 
-    SetWindowTextA(m_hwndEditor, "");
+    setWindowText(m_hwndEditor, "");
     m_currentFile.clear();
     m_fileModified = false;
     updateTitleBarText();
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"New file");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"New file");
     updateMenuEnableStates();
     syncEditorToGpuSurface();
     appendToOutput("New file created successfully\n", "Output", OutputSeverity::Info);
@@ -2296,9 +1565,11 @@ void Win32IDE::newFile()
 
 void Win32IDE::openFile()
 {
+    SCOPED_METRIC("file.open_dialog");
+    METRICS.increment("file.open_total");
     appendToOutput("File > Open clicked\n", "Output", OutputSeverity::Info);
     if (m_fileModified) {
-        int result = MessageBoxA(m_hwndMain, "File has been modified. Save changes?", "Save", MB_YESNOCANCEL);
+        int result = MessageBoxW(m_hwndMain, L"File has been modified. Save changes?", L"Save", MB_YESNOCANCEL);
         if (result == IDCANCEL) {
             appendToOutput("File > Open cancelled by user\n", "Output", OutputSeverity::Info);
             return;
@@ -2309,51 +1580,109 @@ void Win32IDE::openFile()
         }
     }
 
-    OPENFILENAMEA ofn;
-    char szFile[260] = {0};
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260] = {0};
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
+    ofn.nMaxFile = (DWORD)std::size(szFile);
+    ofn.lpstrFilter = L"All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = nullptr;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-    if (GetOpenFileNameA(&ofn)) {
-        appendToOutput("Opening file: " + std::string(szFile) + "\n", "Output", OutputSeverity::Info);
+    if (GetOpenFileNameW(&ofn)) {
+        std::string pathUtf8 = wideToUtf8(szFile);
+        appendToOutput("Opening file: " + pathUtf8 + "\n", "Output", OutputSeverity::Info);
         try {
-            std::ifstream file(szFile);
-            if (file) {
-                std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                SetWindowTextA(m_hwndEditor, content.c_str());
-                m_currentFile = szFile;
+            std::ifstream inStream(std::filesystem::path(szFile), std::ios::binary);
+            if (inStream) {
+                inStream.seekg(0, std::ios::end);
+                const std::streamsize size = inStream.tellg();
+                inStream.seekg(0, std::ios::beg);
+                std::string content(static_cast<size_t>(size), '\0');
+                if (size > 0) inStream.read(&content[0], size);
+                setWindowText(m_hwndEditor, content);
+                m_currentFile = pathUtf8;
                 m_fileModified = false;
                 setCurrentDirectoryFromFile(m_currentFile);
                 updateTitleBarText();
-                SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File opened");
+                SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File opened");
                 updateMenuEnableStates();
                 syncEditorToGpuSurface();
                 appendToOutput("File opened successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
             } else {
-                appendToOutput("Failed to open file: " + std::string(szFile) + "\n", "Errors", OutputSeverity::Error);
-                MessageBoxA(m_hwndMain, "Failed to open file", "Error", MB_OK | MB_ICONERROR);
+                appendToOutput("Failed to open file: " + pathUtf8 + "\n", "Errors", OutputSeverity::Error);
+                MessageBoxW(m_hwndMain, L"Failed to open file", L"Error", MB_OK | MB_ICONERROR);
             }
         } catch (const std::exception& e) {
             appendToOutput("Exception opening file: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
-            MessageBoxA(m_hwndMain, e.what(), "Error", MB_OK | MB_ICONERROR);
+            MessageBoxW(m_hwndMain, utf8ToWide(e.what()).c_str(), L"Error", MB_OK | MB_ICONERROR);
         }
     } else {
         appendToOutput("File > Open cancelled by user (no file selected)\n", "Output", OutputSeverity::Info);
     }
 }
 
+// Overload to open a specific file path
+void Win32IDE::openFile(const std::string& filePath)
+{
+    SCOPED_METRIC("file.open_path");
+    if (filePath.empty()) {
+        openFile(); // Call the dialog version
+        return;
+    }
+
+    METRICS.increment("file.open_total");
+    appendToOutput("Opening file: " + filePath + "\n", "Output", OutputSeverity::Info);
+    try {
+        std::ifstream file(std::filesystem::path(utf8ToWide(filePath)));
+        if (file) {
+            std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+            setWindowText(m_hwndEditor, content);
+            m_currentFile = filePath;
+            m_fileModified = false;
+            setCurrentDirectoryFromFile(m_currentFile);
+            updateTitleBarText();
+
+            std::string displayName = extractLeafName(filePath);
+            if (m_hwndTabBar) {
+                addTab(filePath, displayName);
+            }
+
+            CHARFORMAT2W cf;
+            memset(&cf, 0, sizeof(cf));
+            cf.cbSize = sizeof(cf);
+            cf.dwMask = CFM_COLOR | CFM_FACE | CFM_SIZE;
+            cf.crTextColor = m_currentTheme.textColor;
+            cf.yHeight = 220;
+            wcscpy_s(cf.szFaceName, L"Consolas");
+            SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File opened");
+            updateMenuEnableStates();
+            updateLineNumbers();
+            syncEditorToGpuSurface();
+            appendToOutput("File opened successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
+        } else {
+            appendToOutput("Failed to open file: " + filePath + "\n", "Errors", OutputSeverity::Error);
+            MessageBoxW(m_hwndMain, L"Failed to open file", L"Error", MB_OK | MB_ICONERROR);
+        }
+    } catch (const std::exception& e) {
+        appendToOutput("Exception opening file: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
+        MessageBoxW(m_hwndMain, utf8ToWide(e.what()).c_str(), L"Error", MB_OK | MB_ICONERROR);
+    }
+}
+
 bool Win32IDE::saveFile()
 {
+    SCOPED_METRIC("file.save");
+    METRICS.increment("file.save_total");
+
     if (m_currentFile.empty()) {
         appendToOutput("File > Save - no current file, showing Save As dialog\n", "Output", OutputSeverity::Info);
         return saveFileAs();
@@ -2362,20 +1691,20 @@ bool Win32IDE::saveFile()
     appendToOutput("Saving file: " + m_currentFile + "\n", "Output", OutputSeverity::Info);
     try {
         std::string content = getWindowText(m_hwndEditor);
-        std::ofstream file(m_currentFile);
+        std::ofstream file(std::filesystem::path(utf8ToWide(m_currentFile)));
         if (file) {
             file << content;
             m_fileModified = false;
             updateTitleBarText();
-            SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)"File saved");
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File saved");
             appendToOutput("File saved successfully (" + std::to_string(content.size()) + " bytes)\n", "Output", OutputSeverity::Info);
             return true;
         }
         appendToOutput("Failed to open file for writing: " + m_currentFile + "\n", "Errors", OutputSeverity::Error);
-        MessageBoxA(m_hwndMain, "Failed to save file", "Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Failed to save file", L"Error", MB_OK | MB_ICONERROR);
     } catch (const std::exception& e) {
         appendToOutput("Exception saving file: " + std::string(e.what()) + "\n", "Errors", OutputSeverity::Error);
-        MessageBoxA(m_hwndMain, e.what(), "Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, utf8ToWide(e.what()).c_str(), L"Error", MB_OK | MB_ICONERROR);
     }
     return false;
 }
@@ -2383,23 +1712,23 @@ bool Win32IDE::saveFile()
 bool Win32IDE::saveFileAs()
 {
     appendToOutput("File > Save As clicked\n", "Output", OutputSeverity::Info);
-    OPENFILENAMEA ofn;
-    char szFile[260] = {0};
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260] = {0};
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
     ofn.lpstrFile = szFile;
-    ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
+    ofn.nMaxFile = (DWORD)std::size(szFile);
+    ofn.lpstrFilter = L"All Files\0*.*\0C++ Files\0*.cpp;*.h\0";
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
     ofn.lpstrInitialDir = nullptr;
     ofn.Flags = OFN_OVERWRITEPROMPT;
 
-    if (GetSaveFileNameA(&ofn)) {
-        m_currentFile = szFile;
+    if (GetSaveFileNameW(&ofn)) {
+        m_currentFile = wideToUtf8(szFile);
         appendToOutput("Save As: " + m_currentFile + "\n", "Output", OutputSeverity::Info);
         setCurrentDirectoryFromFile(m_currentFile);
         updateTitleBarText();
@@ -2416,7 +1745,7 @@ void Win32IDE::startPowerShell()
     stopTerminal();
     if (pane->manager->start(Win32TerminalManager::PowerShell)) {
         appendText(pane->hwnd, "PowerShell started...\n");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"PowerShell");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"PowerShell");
         updateMenuEnableStates();
         appendToOutput("PowerShell started...\n", "Output", OutputSeverity::Info);
     }
@@ -2429,7 +1758,7 @@ void Win32IDE::startCommandPrompt()
     stopTerminal();
     if (pane->manager->start(Win32TerminalManager::CommandPrompt)) {
         appendText(pane->hwnd, "Command Prompt started...\n");
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"CMD");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"CMD");
         updateMenuEnableStates();
         appendToOutput("Command Prompt started...\n", "Output", OutputSeverity::Info);
     }
@@ -2441,7 +1770,7 @@ void Win32IDE::stopTerminal()
     if (!pane || !pane->manager || !pane->manager->isRunning()) return;
     pane->manager->stop();
     appendText(pane->hwnd, "\nTerminal stopped.\n");
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Stopped");
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"Stopped");
     updateMenuEnableStates();
     appendToOutput("Terminal stopped.\n", "Output", OutputSeverity::Info);
 }
@@ -2451,42 +1780,106 @@ void Win32IDE::executeCommand()
     std::string command = getWindowText(m_hwndCommandInput);
     if (command.empty()) return;
 
-    SetWindowTextA(m_hwndCommandInput, "");
+    SetWindowTextW(m_hwndCommandInput, L"");
     
-    // Check if we're in chat mode with a loaded model
-    if (m_chatMode && isModelLoaded()) {
-        // Send to model for inference
-        appendChatMessage("You", command);
+    // Command Parsing
+    if (command[0] == '/' || command[0] == '!') {
+        std::stringstream ss(command);
+        std::string action;
+        ss >> action;
         
-        std::string response = sendMessageToModel(command);
-        if (!response.empty()) {
-            appendChatMessage("Model", response);
-        } else {
-            appendChatMessage("System", "Error: Model failed to generate response");
+        if (action == "/load") {
+             std::string path;
+             std::getline(ss, path);
+             if(!path.empty()) path = path.substr(1);
+             openFile(path); // Or load model if .gguf
+             if (path.find(".gguf") != std::string::npos) {
+                  auto* eng = m_nativeEngine.get();
+                  if(eng && eng->LoadModel(path)) appendToOutput("Model loaded.\n", "Agent", OutputSeverity::Info);
+             }
+        }
+        else if (action == "/agent" || action == "/ask") {
+             std::string q; std::getline(ss, q);
+             if(m_agent) m_agent->Ask(q);
+        }
+        else if (action == "/bugreport") {
+             std::string f = m_currentFile;
+             if(f.empty()) appendToOutput("No file open.\n", "Error", OutputSeverity::Error);
+             else if(m_agent) m_agent->BugReport(f);
+        }
+        else if (action == "/suggest") {
+             std::string f = m_currentFile;
+             if(f.empty()) appendToOutput("No file open.\n", "Error", OutputSeverity::Error);
+             else if(m_agent) m_agent->Suggest(f);
+        }
+        else if (action == "/install") {
+             std::string path; std::getline(ss, path);
+             if(!path.empty()) {
+                 if (RawrXD::VSIXInstaller::Install(path.substr(1))) 
+                     appendToOutput("Extension installed.\n", "System", OutputSeverity::Info);
+             }
+        }
+        else if (action == "/max") {
+             static bool m = false; m = !m;
+             if(m_agent) m_agent->SetMaxMode(m);
+             appendToOutput(std::string("Max Mode: ") + (m?"ON":"OFF") + "\n", "System", OutputSeverity::Info);
+        }
+        else if (action == "/think") {
+             static bool t = false; t = !t;
+             if(m_agent) m_agent->SetDeepThink(t);
+             appendToOutput(std::string("Deep Think: ") + (t?"ON":"OFF") + "\n", "System", OutputSeverity::Info);
+        }
+        else if (action == "/research") {
+             static bool r = false; r = !r;
+             if(m_agent) m_agent->SetDeepResearch(r);
+             appendToOutput(std::string("Deep Research: ") + (r?"ON":"OFF") + "\n", "System", OutputSeverity::Info);
+        }
+        else if (action == "/norefusal") {
+             static bool nr = false; nr = !nr;
+             if(m_agent) m_agent->SetNoRefusal(nr);
+             appendToOutput(std::string("No Refusal: ") + (nr?"ON":"OFF") + "\n", "System", OutputSeverity::Info);
+        }
+        else if (action == "!help" || action == "/exthelp") {
+             static RawrXD::ExtensionLoader loader;
+             loader.Scan();
+             std::string arg; std::getline(ss, arg);
+             if(!arg.empty()) arg = arg.substr(1);
+             
+             if(arg.empty()) {
+                 std::string list = "Extensions:\n";
+                 for(auto& e : loader.GetExtensions()) list += " - " + e.name + "\n";
+                 appendToOutput(list, "System", OutputSeverity::Info);
+             } else {
+                 appendToOutput(loader.GetHelp(arg) + "\n", "System", OutputSeverity::Info);
+             }
+        }
+        else {
+             // Fallback
+             TerminalPane* pane = getActiveTerminalPane();
+             if (pane && pane->manager && pane->manager->isRunning()) {
+                command += "\n";
+                pane->manager->writeInput(command);
+             }
         }
         return;
     }
-    
-    // Check for special commands
-    if (command == "/chat" || command == "/model") {
-        if (isModelLoaded()) {
-            toggleChatMode();
-        } else {
-            appendToOutput("No model loaded. Please load a .gguf model first using File > Load Model or the File Explorer.", "Output", OutputSeverity::Warning);
-        }
+
+    // Default to Chat if mode enabled
+    if (m_chatMode && isModelLoaded() && m_agent) {
+        appendChatMessage("You", command);
+        // Async ask would be better, but for now blocking in thread or using callback logic
+        std::thread([this, command](){
+             DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+             if (_guard.cancelled) return;
+             m_agent->Ask(command);
+        }).detach();
         return;
     }
     
-    if (command == "/exit-chat") {
-        if (m_chatMode) {
-            toggleChatMode();
-        }
-        return;
-    }
-    
-    // Otherwise, send to terminal as before
+    // Send to terminal
     TerminalPane* pane = getActiveTerminalPane();
     if (pane && pane->manager && pane->manager->isRunning()) {
+        addPowerShellHistory(command); // Track in shared command history
         command += "\n";
         pane->manager->writeInput(command);
     }
@@ -2494,6 +1887,7 @@ void Win32IDE::executeCommand()
 
 void Win32IDE::onTerminalOutput(int paneId, const std::string& output)
 {
+    if (isShuttingDown()) return;
     TerminalPane* pane = findTerminalPane(paneId);
     if (!pane || !pane->hwnd) return;
     appendText(pane->hwnd, output);
@@ -2502,6 +1896,7 @@ void Win32IDE::onTerminalOutput(int paneId, const std::string& output)
 
 void Win32IDE::onTerminalError(int paneId, const std::string& error)
 {
+    if (isShuttingDown()) return;
     TerminalPane* pane = findTerminalPane(paneId);
     if (!pane || !pane->hwnd) return;
     appendText(pane->hwnd, error);
@@ -2510,16 +1905,31 @@ void Win32IDE::onTerminalError(int paneId, const std::string& error)
 
 std::string Win32IDE::getWindowText(HWND hwnd)
 {
-    int length = GetWindowTextLengthA(hwnd);
-    std::string text(length + 1, '\0');
-    GetWindowTextA(hwnd, &text[0], length + 1);
-    text.resize(length);
-    return text;
+    int length = GetWindowTextLengthW(hwnd);
+    if (length <= 0) return {};
+    std::wstring wtext(length + 1, L'\0');
+    GetWindowTextW(hwnd, &wtext[0], length + 1);
+    wtext.resize(length);
+    return wideToUtf8(wtext.c_str());
+}
+
+// UTF-8 byte offset <-> UTF-16 character index for Rich Edit
+static int utf8ByteOffsetToCharIndex(const std::string& utf8, int byteOffset) {
+    if (byteOffset <= 0 || utf8.empty()) return 0;
+    if (byteOffset >= (int)utf8.size()) byteOffset = (int)utf8.size();
+    std::wstring w = utf8ToWide(utf8.substr(0, byteOffset));
+    return (int)w.size();
+}
+static int charIndexToUtf8ByteOffset(const std::string& utf8, int charIndex) {
+    if (charIndex <= 0 || utf8.empty()) return 0;
+    std::wstring w = utf8ToWide(utf8);
+    if (charIndex >= (int)w.size()) return (int)utf8.size();
+    return (int)wideToUtf8(w.substr(0, charIndex).c_str()).size();
 }
 
 void Win32IDE::setWindowText(HWND hwnd, const std::string& text)
 {
-    SetWindowTextA(hwnd, text.c_str());
+    SetWindowTextW(hwnd, utf8ToWide(text).c_str());
     if (hwnd == m_hwndEditor) {
         syncEditorToGpuSurface();
     }
@@ -2527,20 +1937,18 @@ void Win32IDE::setWindowText(HWND hwnd, const std::string& text)
 
 void Win32IDE::appendText(HWND hwnd, const std::string& text)
 {
-    // Get current text length
     GETTEXTLENGTHEX gtl;
     gtl.flags = GTL_DEFAULT;
-    gtl.codepage = CP_ACP;
+    gtl.codepage = CP_UNICODE;
     LONG length = SendMessage(hwnd, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
 
-    // Set selection to end
     SendMessage(hwnd, EM_SETSEL, length, length);
 
-    // Replace selection with new text
+    std::wstring wtext = utf8ToWide(text);
     SETTEXTEX st;
     st.flags = ST_DEFAULT;
-    st.codepage = CP_ACP;
-    SendMessage(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)text.c_str());
+    st.codepage = CP_UNICODE;
+    SendMessageW(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)wtext.c_str());
 
     if (hwnd == m_hwndEditor) {
         syncEditorToGpuSurface();
@@ -2581,52 +1989,72 @@ void Win32IDE::saveTheme(const std::string& themeName)
         file << "selection=" << std::hex << m_currentTheme.selectionColor << std::endl;
         file << "linenumber=" << std::hex << m_currentTheme.lineNumberColor << std::endl;
         file.close();
-        MessageBoxA(m_hwndMain, "Theme saved successfully", "Theme Manager", MB_OK);
+        MessageBoxW(m_hwndMain, L"Theme saved successfully", L"Theme Manager", MB_OK);
     }
 }
 
 void Win32IDE::applyTheme()
 {
-    // Apply theme to main editor
-    SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, m_currentTheme.backgroundColor);
-    
-    // Set text colors
-    CHARFORMAT2 cf;
-    ZeroMemory(&cf, sizeof(cf));
-    cf.cbSize = sizeof(cf);
-    cf.dwMask = CFM_COLOR;
-    cf.crTextColor = m_currentTheme.textColor;
-    SendMessage(m_hwndEditor, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
-    
-    // Apply to terminal panes
+    // ----------------------------------------------------------------
+    // applyTheme() is idempotent — safe to call on startup, on theme
+    // switch, on DPI change, and on transparency change.
+    // Theme is pure data (IDETheme) — no GDI handles stored in it.
+    // ----------------------------------------------------------------
+
+    LOG_DEBUG("applyTheme(): \"" + m_currentTheme.name + "\"");
+
+    // 1. Update the tracked background brush
+    if (m_backgroundBrush) DeleteObject(m_backgroundBrush);
+    m_backgroundBrush = CreateSolidBrush(m_currentTheme.backgroundColor);
+
+    // 2. Editor: background + default text format (SCF_DEFAULT, not SCF_ALL,
+    //    so syntax coloring tokens are preserved until the next colorize pass)
+    if (m_hwndEditor) {
+        SendMessage(m_hwndEditor, EM_SETBKGNDCOLOR, 0, m_currentTheme.backgroundColor);
+
+        CHARFORMAT2W cf;
+        ZeroMemory(&cf, sizeof(cf));
+        cf.cbSize = sizeof(cf);
+        cf.dwMask = CFM_COLOR;
+        cf.crTextColor = m_currentTheme.textColor;
+        cf.dwEffects = 0;
+        SendMessageW(m_hwndEditor, EM_SETCHARFORMAT, SCF_DEFAULT, (LPARAM)&cf);
+    }
+
     for (auto& pane : m_terminalPanes) {
         if (!pane.hwnd) continue;
-        SendMessage(pane.hwnd, EM_SETBKGNDCOLOR, 0, m_currentTheme.backgroundColor);
-        SendMessage(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cf);
+        SendMessage(pane.hwnd, EM_SETBKGNDCOLOR, 0, m_currentTheme.panelBg);
+        CHARFORMAT2W tcf;
+        ZeroMemory(&tcf, sizeof(tcf));
+        tcf.cbSize = sizeof(tcf);
+        tcf.dwMask = CFM_COLOR;
+        tcf.crTextColor = m_currentTheme.panelFg;
+        tcf.dwEffects = 0;
+        SendMessageW(pane.hwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&tcf);
+    }
+
+    // 4. Deep apply to all surfaces (sidebar, activity bar, tabs, status bar, panels)
+    applyThemeToAllControls();
+
+    // 5. Transparency — only touch the top-level window
+    if (m_currentTheme.windowAlpha < 255) {
+        setWindowTransparency(m_currentTheme.windowAlpha);
     }
     
-    // Force redraw
+    // 6. Force full repaint + update menu states
     InvalidateRect(m_hwndMain, NULL, TRUE);
     updateMenuEnableStates();
+
+    // 7. Re-trigger syntax coloring so tokens pick up new palette
+    if (m_syntaxColoringEnabled && m_hwndEditor) {
+        m_syntaxDirty = true;
+        applySyntaxColoring();
+    }
 }
 
 void Win32IDE::showThemeEditor()
 {
-    const char* themes[] = {"Dark", "Light", "Blue", "Green"};
-    int result = 0; // Simple selection for now
-    
-    std::string message = "Select Theme:\n0 - Dark\n1 - Light\n2 - Blue\n3 - Green";
-    
-    switch (MessageBoxA(m_hwndMain, message.c_str(), "Theme Selection", MB_OKCANCEL)) {
-        case IDOK:
-            // For simplicity, cycle through predefined themes
-            m_currentTheme.backgroundColor = RGB(30, 30, 30);  // Dark
-            m_currentTheme.textColor = RGB(220, 220, 220);
-            m_currentTheme.selectionColor = RGB(51, 153, 255);
-            m_currentTheme.lineNumberColor = RGB(128, 128, 128);
-            applyTheme();
-            break;
-    }
+    showThemePicker();
 }
 
 void Win32IDE::updateMenuEnableStates() {
@@ -2656,6 +2084,13 @@ void Win32IDE::updateMenuEnableStates() {
     CheckMenuItem(m_hMenu, IDM_VIEW_USE_STREAMING_LOADER, MF_BYCOMMAND | (m_useStreamingLoader ? MF_CHECKED : MF_UNCHECKED));
     // Vulkan renderer menu state
     CheckMenuItem(m_hMenu, IDM_VIEW_USE_VULKAN_RENDERER, MF_BYCOMMAND | (m_useVulkanRenderer ? MF_CHECKED : MF_UNCHECKED));
+    // Breadcrumbs (View) — sync check with m_settings.breadcrumbsEnabled
+    CheckMenuItem(m_hMenu, IDM_T1_BREADCRUMBS_TOGGLE, MF_BYCOMMAND | (m_settings.breadcrumbsEnabled ? MF_CHECKED : MF_UNCHECKED));
+
+    // Tier 5 cosmetic features — enable when corresponding module is initialized (after deferredHeavyInit)
+    EnableMenuItem(m_hMenu, IDM_TELDASH_SHOW,   (m_telemetryDashboardInitialized ? MF_BYCOMMAND|MF_ENABLED : MF_BYCOMMAND|MF_GRAYED));
+    EnableMenuItem(m_hMenu, IDM_EMOJI_PICKER,  (m_emojiSupportInitialized       ? MF_BYCOMMAND|MF_ENABLED : MF_BYCOMMAND|MF_GRAYED));
+    EnableMenuItem(m_hMenu, IDM_SHORTCUT_SHOW, (m_shortcutEditorInitialized     ? MF_BYCOMMAND|MF_ENABLED : MF_BYCOMMAND|MF_GRAYED));
 
     DrawMenuBar(m_hwndMain);
 }
@@ -2763,7 +2198,7 @@ void Win32IDE::showCommandReference()
         "ConvertTo-Json - Convert to JSON\n"
         "ConvertFrom-Json - Convert from JSON\n";
         
-    MessageBoxA(m_hwndMain, reference.c_str(), "PowerShell Reference", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(reference).c_str(), L"PowerShell Reference", MB_OK);
 }
 
 // Output / Clipboard / Minimap / Profiling implementations
@@ -2774,35 +2209,37 @@ void Win32IDE::createOutputTabs()
     RECT client{}; GetClientRect(m_hwndMain, &client);
     int tabBarHeight = 24;
 
-    m_hwndOutputTabs = CreateWindowExA(0, WC_TABCONTROLA, "",
+    m_hwndOutputTabs = CreateWindowExW(0, WC_TABCONTROLW, L"",
         WS_CHILD | WS_VISIBLE | TCS_TABS,
         0, 0, client.right - 150, tabBarHeight,
         m_hwndMain, (HMENU)IDC_OUTPUT_TABS, m_hInstance, nullptr);
 
-    // Add severity filter dropdown
-    m_hwndSeverityFilter = CreateWindowExA(0, "COMBOBOX", "",
+    char logBuf[256];
+    sprintf_s(logBuf, "OutputTabs HWND created: %p (Parent: %p)", m_hwndOutputTabs, m_hwndMain);
+    LOG_INFO(std::string(logBuf));
+
+    m_hwndSeverityFilter = CreateWindowExW(0, L"COMBOBOX", L"",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
         client.right - 145, 2, 140, 100,
         m_hwndMain, (HMENU)IDC_SEVERITY_FILTER, m_hInstance, nullptr);
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"All Messages");
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"Info & Above");
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"Warnings & Errors");
-    SendMessageA(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)"Errors Only");
-    SendMessageA(m_hwndSeverityFilter, CB_SETCURSEL, m_severityFilterLevel, 0);
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"All Messages");
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Info & Above");
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Warnings & Errors");
+    SendMessageW(m_hwndSeverityFilter, CB_ADDSTRING, 0, (LPARAM)L"Errors Only");
+    SendMessage(m_hwndSeverityFilter, CB_SETCURSEL, m_severityFilterLevel, 0);
 
-    struct TabDef { const char* text; int id; const char* key; };
-    TabDef defs[] = {
-        {"Output", IDC_OUTPUT_EDIT_GENERAL, "Output"},
-        {"Errors", IDC_OUTPUT_EDIT_ERRORS,  "Errors"},
-        {"Debug",  IDC_OUTPUT_EDIT_DEBUG,   "Debug"},
-        {"Find Results", IDC_OUTPUT_EDIT_FIND, "Find Results"}
+    static const struct { const wchar_t* text; int id; const char* key; } defs[] = {
+        {L"Output", IDC_OUTPUT_EDIT_GENERAL, "Output"},
+        {L"Errors", IDC_OUTPUT_EDIT_ERRORS,  "Errors"},
+        {L"Debug",  IDC_OUTPUT_EDIT_DEBUG,   "Debug"},
+        {L"Find Results", IDC_OUTPUT_EDIT_FIND, "Find Results"}
     };
 
     for (int i = 0; i < 4; ++i) {
-        TCITEMA tie{}; tie.mask = TCIF_TEXT; tie.pszText = const_cast<char*>(defs[i].text);
+        TCITEMW tie{}; tie.mask = TCIF_TEXT; tie.pszText = const_cast<wchar_t*>(defs[i].text);
         TabCtrl_InsertItem(m_hwndOutputTabs, i, &tie);
 
-        HWND hEdit = CreateWindowExA(WS_EX_CLIENTEDGE, RICHEDIT_CLASSA, "",
+        HWND hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
             WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
             0, tabBarHeight, client.right, m_outputTabHeight - tabBarHeight,
             m_hwndMain, (HMENU)(INT_PTR)defs[i].id, m_hInstance, nullptr);
@@ -2831,8 +2268,8 @@ void Win32IDE::addOutputTab(const std::string& name)
     if (m_outputWindows.find(name) != m_outputWindows.end()) return;
     RECT client{}; GetClientRect(m_hwndMain, &client);
     int tabBarHeight = 24;
-    HWND hEdit = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+    HWND hEdit = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
         0, tabBarHeight, client.right, m_outputTabHeight - tabBarHeight,
         m_hwndMain, nullptr, m_hInstance, nullptr);
@@ -2842,6 +2279,7 @@ void Win32IDE::addOutputTab(const std::string& name)
 
 void Win32IDE::appendToOutput(const std::string& text, const std::string& tabName, OutputSeverity severity)
 {
+    if (isShuttingDown()) return;  // Window handles may be destroyed
     if (static_cast<int>(severity) < m_severityFilterLevel) return;
     
     std::string target = tabName.empty() ? m_activeOutputTab : tabName;
@@ -2876,7 +2314,7 @@ void Win32IDE::clearOutput(const std::string& tabName)
     std::string target = tabName.empty() ? m_activeOutputTab : tabName;
     auto it = m_outputWindows.find(target);
     if (it != m_outputWindows.end()) {
-        SetWindowTextA(it->second, "");
+        SetWindowTextW(it->second, L"");
     }
 }
 
@@ -2887,18 +2325,19 @@ void Win32IDE::formatOutput(const std::string& text, COLORREF color, const std::
     if (it == m_outputWindows.end()) return;
     
     HWND hwnd = it->second;
-    GETTEXTLENGTHEX gtl{}; gtl.flags = GTL_DEFAULT; gtl.codepage = CP_ACP;
+    GETTEXTLENGTHEX gtl{}; gtl.flags = GTL_DEFAULT; gtl.codepage = CP_UNICODE;
     LONG len = SendMessage(hwnd, EM_GETTEXTLENGTHEX, (WPARAM)&gtl, 0);
     SendMessage(hwnd, EM_SETSEL, len, len);
-    
-    CHARFORMAT2A cf{};
+
+    CHARFORMAT2W cf{};
     cf.cbSize = sizeof(cf);
     cf.dwMask = CFM_COLOR;
     cf.crTextColor = color;
-    SendMessage(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
-    
-    SETTEXTEX st{}; st.flags = ST_SELECTION; st.codepage = CP_ACP;
-    SendMessage(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)text.c_str());
+    SendMessageW(hwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+
+    std::wstring wtext = utf8ToWide(text);
+    SETTEXTEX st{}; st.flags = ST_SELECTION; st.codepage = CP_UNICODE;
+    SendMessageW(hwnd, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)wtext.c_str());
 }
 
 void Win32IDE::copyWithFormatting()
@@ -2908,9 +2347,11 @@ void Win32IDE::copyWithFormatting()
     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&range);
     if (range.cpMax <= range.cpMin) return;
     LONG len = range.cpMax - range.cpMin;
-    std::vector<char> buffer(len + 1); TEXTRANGEA tr; tr.chrg = range; tr.lpstrText = buffer.data();
-    SendMessage(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
-    std::string text(buffer.data());
+    std::vector<wchar_t> buffer(len + 1);
+    TEXTRANGEW tr{}; tr.chrg = range; tr.lpstrText = buffer.data();
+    SendMessageW(m_hwndEditor, EM_GETTEXTRANGE, 0, (LPARAM)&tr);
+    buffer[len] = L'\0';
+    std::string text = wideToUtf8(buffer.data());
     m_clipboardHistory.insert(m_clipboardHistory.begin(), text);
     if (m_clipboardHistory.size() > MAX_CLIPBOARD_HISTORY) m_clipboardHistory.resize(MAX_CLIPBOARD_HISTORY);
     if (OpenClipboard(m_hwndMain)) {
@@ -2984,7 +2425,7 @@ void Win32IDE::showClipboardHistory()
         if (item.size() > 50) preview += "...";
         msg += std::to_string(i + 1) + ". " + preview + "\n";
     }
-    MessageBoxA(m_hwndMain, msg.c_str(), "Clipboard History", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Clipboard History", MB_OK);
 }
 
 void Win32IDE::clearClipboardHistory()
@@ -3008,14 +2449,14 @@ void Win32IDE::createMinimap()
     int minimapY = editorRect.top;
     int minimapHeight = editorRect.bottom - editorRect.top;
     
-    m_hwndMinimap = CreateWindowExA(
-        0, "STATIC", "",
+    m_hwndMinimap = CreateWindowExW(
+        0, L"STATIC", L"",
         WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
         minimapX, minimapY, m_minimapWidth, minimapHeight,
         m_hwndMain, nullptr, m_hInstance, nullptr);
     
     if (m_hwndMinimap) {
-        SetWindowLongPtrA(m_hwndMinimap, GWLP_USERDATA, (LONG_PTR)this);
+        SetWindowLongPtrW(m_hwndMinimap, GWLP_USERDATA, (LONG_PTR)this);
     }
     
     updateMinimap();
@@ -3025,18 +2466,13 @@ void Win32IDE::updateMinimap()
 {
     if (!m_hwndMinimap || !m_minimapVisible || !m_hwndEditor) return;
     
-    // Get editor content
-    int textLen = GetWindowTextLengthA(m_hwndEditor);
-    if (textLen == 0) {
+    std::string text = getWindowText(m_hwndEditor);
+    if (text.empty()) {
         m_minimapLines.clear();
         InvalidateRect(m_hwndMinimap, nullptr, TRUE);
         return;
     }
-    
-    std::string text(textLen + 1, '\0');
-    GetWindowTextA(m_hwndEditor, &text[0], textLen + 1);
-    text.resize(textLen);
-    
+
     // Split into lines for minimap rendering
     m_minimapLines.clear();
     m_minimapLineStarts.clear();
@@ -3181,14 +2617,14 @@ void Win32IDE::showProfileResults()
     for (auto& pr : m_profilingResults) {
         msg += pr.first + ": " + std::to_string(pr.second) + " ms\n";
     }
-    MessageBoxA(m_hwndMain, msg.c_str(), "Profiling", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Profiling", MB_OK);
 }
 
 void Win32IDE::analyzeScript()
 {
     std::string script = getWindowText(m_hwndEditor);
     if(script.empty()) {
-        MessageBoxA(m_hwndMain, "Script is empty.", "Analyze Script", MB_OK);
+        MessageBoxW(m_hwndMain, L"Script is empty.", L"Analyze Script", MB_OK);
         return;
     }
     
@@ -3196,13 +2632,17 @@ void Win32IDE::analyzeScript()
     
     // Asynchronous analysis to avoid blocking UI
     std::thread([this, script]() {
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) return;
         if (m_nativeEngine) {
             std::string prompt = "Analyze the following script and report potential bugs, security issues, and improvements:\n\n" + script;
             // Assuming CPUInferenceEngine has an 'infer' or 'generate' method that takes a string
             // Based on cpu_inference_engine.cpp read earlier: std::string infer(const std::string& prompt);
             
-            auto* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
-            std::string result = engine->infer(prompt);
+            auto* engine = m_nativeEngine.get();
+            auto tokens = engine->Tokenize(prompt);
+            auto output_tokens = engine->Generate(tokens, 512);
+            std::string result = engine->Detokenize(output_tokens);
             
             // Post result back to UI thread or just append (if appendToOutput is thread-safe or we lock)
             // appendToOutput uses SendMessage which is generally thread-safe for simple text
@@ -3240,15 +2680,24 @@ void Win32IDE::refreshModuleList()
         try {
             auto json = nlohmann::json::parse(output);
             if (json.is_array()) {
-                for (const auto& item : json) {
+                for (size_t i = 0; i < json.size(); ++i) {
+                    const auto& item = json[i];
                     ModuleInfo m;
-                    m.name = item.value("Name", "");
-                    auto v = item["Version"];
-                    if (v.is_object()) { 
-                         // PS version object
-                         m.version = std::to_string(v.value("Major",0)) + "." + std::to_string(v.value("Minor",0));
-                    } else {
-                        m.version = item.value("Version", "0.0.0");
+                    if (item.is_object()) {
+                        m.name = item.value("Name", "");
+                        if (item.contains("Version")) {
+                            auto v = item["Version"];
+                            if (v.is_object()) { 
+                                 // PS version object
+                                 m.version = std::to_string(v.value("Major",0)) + "." + std::to_string(v.value("Minor",0));
+                            } else if (v.is_string()) {
+                                m.version = v.get<std::string>();
+                            } else {
+                                m.version = "0.0.0";
+                            }
+                        } else {
+                            m.version = "0.0.0";
+                        }
                     }
                     m.description = "User Module";
                     m.path = ""; 
@@ -3279,7 +2728,7 @@ void Win32IDE::showModuleBrowser()
     for (auto& m : m_modules) {
         msg += m.name + " (" + m.version + ")" + (m.loaded?" [Loaded]":" [Available]") + "\n";
     }
-    MessageBoxA(m_hwndMain, msg.c_str(), "Module Browser", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Module Browser", MB_OK);
 }
 
 void Win32IDE::loadModule(const std::string& moduleName)
@@ -3331,20 +2780,18 @@ void Win32IDE::unloadModule(const std::string& moduleName)
 
 void Win32IDE::importModule()
 {
-    // Show file dialog to select module
-    OPENFILENAMEA ofn = {};
-    char szFile[MAX_PATH] = "";
-    
+    OPENFILENAMEW ofn = {};
+    wchar_t szFile[MAX_PATH] = L"";
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = m_hwndMain;
-    ofn.lpstrFilter = "PowerShell Modules (*.psm1;*.psd1)\0*.psm1;*.psd1\0All Files (*.*)\0*.*\0";
+    ofn.lpstrFilter = L"PowerShell Modules (*.psm1;*.psd1)\0*.psm1;*.psd1\0All Files (*.*)\0*.*\0";
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = MAX_PATH;
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-    ofn.lpstrTitle = "Import Module";
-    
-    if (GetOpenFileNameA(&ofn)) {
-        std::string modulePath = szFile;
+    ofn.lpstrTitle = L"Import Module";
+
+    if (GetOpenFileNameW(&ofn)) {
+        std::string modulePath = wideToUtf8(szFile);
         std::string command = "Import-Module '" + modulePath + "'\n";
         
         TerminalPane* pane = getActiveTerminalPane();
@@ -3362,7 +2809,7 @@ void Win32IDE::exportModule()
 {
     // Show dialog to select module to export
     if (m_modules.empty()) {
-        MessageBoxA(m_hwndMain, "No modules loaded. Refresh module list first.", "Export Module", MB_OK | MB_ICONINFORMATION);
+        MessageBoxW(m_hwndMain, L"No modules loaded. Refresh module list first.", L"Export Module", MB_OK | MB_ICONINFORMATION);
         return;
     }
     
@@ -3375,25 +2822,24 @@ void Win32IDE::exportModule()
     }
     moduleList += "\nExport the first loaded module?";
     
-    if (MessageBoxA(m_hwndMain, moduleList.c_str(), "Export Module", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+    if (MessageBoxW(m_hwndMain, utf8ToWide(moduleList).c_str(), L"Export Module", MB_YESNO | MB_ICONQUESTION) == IDYES) {
         // Find first loaded module
         for (const auto& mod : m_modules) {
             if (mod.loaded) {
-                // Show save dialog
-                OPENFILENAMEA ofn = {};
-                char szFile[MAX_PATH] = "";
-                strncpy_s(szFile, (mod.name + ".psm1").c_str(), MAX_PATH);
-                
+                OPENFILENAMEW ofn = {};
+                std::wstring defaultName = utf8ToWide(mod.name + ".psm1");
+                wchar_t szFile[MAX_PATH] = L"";
+                wcsncpy_s(szFile, defaultName.c_str(), _TRUNCATE);
                 ofn.lStructSize = sizeof(ofn);
                 ofn.hwndOwner = m_hwndMain;
-                ofn.lpstrFilter = "PowerShell Module (*.psm1)\0*.psm1\0PowerShell Data (*.psd1)\0*.psd1\0";
+                ofn.lpstrFilter = L"PowerShell Module (*.psm1)\0*.psm1\0PowerShell Data (*.psd1)\0*.psd1\0";
                 ofn.lpstrFile = szFile;
                 ofn.nMaxFile = MAX_PATH;
                 ofn.Flags = OFN_OVERWRITEPROMPT;
-                ofn.lpstrTitle = "Export Module";
-                
-                if (GetSaveFileNameA(&ofn)) {
-                    std::string savePath = szFile;
+                ofn.lpstrTitle = L"Export Module";
+
+                if (GetSaveFileNameW(&ofn)) {
+                    std::string savePath = wideToUtf8(szFile);
                     std::string command = "Export-ModuleMember -Function * -Cmdlet * -Variable * -Alias * -PassThru | Out-File '" + savePath + "'\n";
                     
                     TerminalPane* pane = getActiveTerminalPane();
@@ -3411,11 +2857,7 @@ void Win32IDE::exportModule()
 // Theme Management
 void Win32IDE::resetToDefaultTheme()
 {
-    m_currentTheme.backgroundColor = RGB(30,30,30);
-    m_currentTheme.textColor = RGB(220,220,220);
-    m_currentTheme.selectionColor = RGB(60,120,200);
-    m_currentTheme.lineNumberColor = RGB(128,128,128);
-    applyTheme();
+    applyThemeById(IDM_THEME_DARK_PLUS);
 }
 
 void Win32IDE::saveCodeSnippets()
@@ -3437,7 +2879,7 @@ void Win32IDE::saveCodeSnippets()
 
 void Win32IDE::showPowerShellDocs()
 {
-    MessageBoxA(m_hwndMain, "Open https://learn.microsoft.com/powershell/ for full docs.", "PowerShell Docs", MB_OK);
+    MessageBoxW(m_hwndMain, L"Open https://learn.microsoft.com/powershell/ for full docs.", L"PowerShell Docs", MB_OK);
 }
 
 void Win32IDE::searchHelp(const std::string& query)
@@ -3454,6 +2896,213 @@ void Win32IDE::toggleFloatingPanel()
     BOOL vis = IsWindowVisible(m_hwndFloatingPanel);
     ShowWindow(m_hwndFloatingPanel, vis?SW_HIDE:SW_SHOW);
 }
+
+// ============================================================================
+// Floating Panel Implementation
+// ============================================================================
+
+void Win32IDE::createFloatingPanel()
+{
+    if (m_hwndFloatingPanel) return; // Already created
+
+    WNDCLASSEXW wc = {};
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = FloatingPanelProc;
+    wc.hInstance = m_hInstance;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.hbrBackground = CreateSolidBrush(RGB(30, 30, 30));
+    wc.lpszClassName = L"RawrXD_FloatingPanel";
+    RegisterClassExW(&wc);
+
+    RECT rcMain;
+    GetClientRect(m_hwndMain, &rcMain);
+    int panelWidth = rcMain.right - rcMain.left;
+    int panelHeight = 250;
+    int panelX = rcMain.left;
+    int panelY = rcMain.bottom - panelHeight;
+
+    m_hwndFloatingPanel = CreateWindowExW(
+        WS_EX_TOOLWINDOW,
+        L"RawrXD_FloatingPanel",
+        L"Panel",
+        WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
+        panelX, panelY, panelWidth, panelHeight,
+        m_hwndMain, nullptr, m_hInstance, nullptr
+    );
+
+    if (!m_hwndFloatingPanel) {
+        appendToOutput("Failed to create floating panel\n", "Output", OutputSeverity::Error);
+        return;
+    }
+
+    SetWindowLongPtrW(m_hwndFloatingPanel, GWLP_USERDATA, (LONG_PTR)this);
+
+    static const wchar_t* tabLabels[] = { L"Problems", L"Output", L"Debug Console", L"Terminal" };
+    for (int i = 0; i < 4; i++) {
+        CreateWindowExW(
+            0, L"BUTTON", tabLabels[i],
+            WS_CHILD | WS_VISIBLE | BS_FLAT | BS_PUSHBUTTON,
+            5 + i * 120, 2, 115, 24,
+            m_hwndFloatingPanel, (HMENU)(UINT_PTR)(7001 + i),
+            m_hInstance, nullptr
+        );
+    }
+
+    m_hwndFloatingContent = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"EDIT", L"",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL,
+        0, 28, panelWidth, panelHeight - 28,
+        m_hwndFloatingPanel, nullptr, m_hInstance, nullptr
+    );
+
+    if (m_hwndFloatingContent) {
+        SendMessageW(m_hwndFloatingContent, WM_SETFONT,
+                    (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+    }
+
+    appendToOutput("Floating panel created\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::showFloatingPanel()
+{
+    if (!m_hwndFloatingPanel) {
+        createFloatingPanel();
+    }
+    if (m_hwndFloatingPanel) {
+        ShowWindow(m_hwndFloatingPanel, SW_SHOW);
+        m_outputPanelVisible = true;
+    }
+}
+
+void Win32IDE::hideFloatingPanel()
+{
+    if (m_hwndFloatingPanel) {
+        ShowWindow(m_hwndFloatingPanel, SW_HIDE);
+        m_outputPanelVisible = false;
+    }
+}
+
+void Win32IDE::updateFloatingPanelContent(const std::string& content)
+{
+    if (!m_hwndFloatingContent) return;
+    std::wstring wcontent = utf8ToWide(content);
+    int textLen = GetWindowTextLengthW(m_hwndFloatingContent);
+    SendMessageW(m_hwndFloatingContent, EM_SETSEL, (WPARAM)textLen, (LPARAM)textLen);
+    SendMessageW(m_hwndFloatingContent, EM_REPLACESEL, FALSE, (LPARAM)wcontent.c_str());
+    SendMessageW(m_hwndFloatingContent, EM_SCROLLCARET, 0, 0);
+}
+
+void Win32IDE::setFloatingPanelTab(int tabIndex)
+{
+    if (!m_hwndFloatingPanel) return;
+
+    // Visually highlight the active tab button and unhighlight others
+    for (int i = 0; i < 4; i++) {
+        HWND hTabBtn = GetDlgItem(m_hwndFloatingPanel, 7001 + i);
+        if (hTabBtn) {
+            if (i == tabIndex) {
+                SendMessageW(hTabBtn, BM_SETSTATE, TRUE, 0);
+            } else {
+                SendMessageW(hTabBtn, BM_SETSTATE, FALSE, 0);
+            }
+        }
+    }
+
+    if (m_hwndFloatingContent) {
+        static const wchar_t* tabTitles[] = {
+            L"=== Problems ===\r\n",
+            L"=== Output ===\r\n",
+            L"=== Debug Console ===\r\n",
+            L"=== Terminal ===\r\n"
+        };
+        if (tabIndex >= 0 && tabIndex < 4) {
+            SetWindowTextW(m_hwndFloatingContent, tabTitles[tabIndex]);
+        }
+    }
+}
+
+LRESULT CALLBACK Win32IDE::FloatingPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        // Dark background matching VS Code panel area
+        HBRUSH hBrush = CreateSolidBrush(RGB(30, 30, 30));
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        // Draw a subtle top border line (panel separator)
+        HPEN hPen = CreatePen(PS_SOLID, 1, RGB(0, 122, 204));
+        HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
+        MoveToEx(hdc, rc.left, rc.top, nullptr);
+        LineTo(hdc, rc.right, rc.top);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis && pThis->m_hwndFloatingContent) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            // Resize content area below the tab buttons (28px tab bar)
+            MoveWindow(pThis->m_hwndFloatingContent,
+                       0, 28, rc.right, rc.bottom - 28, TRUE);
+        }
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            int id = LOWORD(wParam);
+            // Tab button IDs: 7001=Problems, 7002=Output, 7003=Debug Console, 7004=Terminal
+            if (id >= 7001 && id <= 7004) {
+                pThis->setFloatingPanelTab(id - 7001);
+                return 0;
+            }
+        }
+        break;
+    }
+
+    case WM_CLOSE:
+        if (pThis) {
+            pThis->hideFloatingPanel();
+            return 0;
+        }
+        break;
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+int Win32IDE::getPanelAreaWidth() const
+{
+    if (!m_hwndMain) return 0;
+
+    RECT rcMain;
+    GetClientRect(m_hwndMain, &rcMain);
+    int totalWidth = rcMain.right - rcMain.left;
+
+    // Panel area width = total width minus sidebar (if visible) minus activity bar minus secondary sidebar
+    int sidebarOffset = 0;
+    if (m_sidebarVisible) {
+        sidebarOffset = m_sidebarWidth + dpiScale(48); // activity bar width (DPI-scaled)
+    }
+    int secondarySidebarOffset = m_secondarySidebarVisible ? m_secondarySidebarWidth : 0;
+
+    return totalWidth - sidebarOffset - secondarySidebarOffset;
+}
+
 // ============================================================================
 // Search and Replace Implementation
 // ============================================================================
@@ -3477,32 +3126,31 @@ void Win32IDE::showFindDialog()
         return;
     }
     
-    m_hwndFindDialog = CreateDialogParamA(m_hInstance, MAKEINTRESOURCEA(IDD_FIND), 
+    m_hwndFindDialog = CreateDialogParamW(m_hInstance, MAKEINTRESOURCEW(IDD_FIND),
         m_hwndMain, FindDialogProc, (LPARAM)this);
-    
+
     if (!m_hwndFindDialog) {
-        // Fallback: create simple dialog programmatically
-        HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Find",
+        HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Find",
             WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
             100, 100, 400, 150, m_hwndMain, nullptr, m_hInstance, nullptr);
         m_hwndFindDialog = hwndDlg;
-        
-        CreateWindowExA(0, "STATIC", "Find what:", WS_CHILD | WS_VISIBLE,
+
+        CreateWindowExW(0, L"STATIC", L"Find what:", WS_CHILD | WS_VISIBLE,
             10, 15, 80, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-        CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", m_lastSearchText.c_str(),
-            WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22, 
+        CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", utf8ToWide(m_lastSearchText).c_str(),
+            WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22,
             hwndDlg, (HMENU)IDC_FIND_TEXT, m_hInstance, nullptr);
-        
-        CreateWindowExA(0, "BUTTON", "Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+
+        CreateWindowExW(0, L"BUTTON", L"Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             10, 45, 120, 20, hwndDlg, (HMENU)IDC_CASE_SENSITIVE, m_hInstance, nullptr);
-        CreateWindowExA(0, "BUTTON", "Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        CreateWindowExW(0, L"BUTTON", L"Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             140, 45, 100, 20, hwndDlg, (HMENU)IDC_WHOLE_WORD, m_hInstance, nullptr);
-        CreateWindowExA(0, "BUTTON", "Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        CreateWindowExW(0, L"BUTTON", L"Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             250, 45, 70, 20, hwndDlg, (HMENU)IDC_USE_REGEX, m_hInstance, nullptr);
-        
-        CreateWindowExA(0, "BUTTON", "Find Next", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+
+        CreateWindowExW(0, L"BUTTON", L"Find Next", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
             10, 80, 90, 28, hwndDlg, (HMENU)IDC_BTN_FIND_NEXT, m_hInstance, nullptr);
-        CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE,
+        CreateWindowExW(0, L"BUTTON", L"Close", WS_CHILD | WS_VISIBLE,
             110, 80, 90, 28, hwndDlg, (HMENU)IDC_BTN_CLOSE, m_hInstance, nullptr);
     }
     
@@ -3516,38 +3164,37 @@ void Win32IDE::showReplaceDialog()
         return;
     }
     
-    // Create simple replace dialog
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Replace",
+    HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Replace",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         100, 100, 400, 200, m_hwndMain, nullptr, m_hInstance, nullptr);
     m_hwndReplaceDialog = hwndDlg;
-    
-    CreateWindowExA(0, "STATIC", "Find what:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Find what:", WS_CHILD | WS_VISIBLE,
         10, 15, 80, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", m_lastSearchText.c_str(),
-        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22, 
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", utf8ToWide(m_lastSearchText).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 12, 280, 22,
         hwndDlg, (HMENU)IDC_FIND_TEXT, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Replace with:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Replace with:", WS_CHILD | WS_VISIBLE,
         10, 45, 80, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", m_lastReplaceText.c_str(),
-        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 42, 280, 22, 
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", utf8ToWide(m_lastReplaceText).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 100, 42, 280, 22,
         hwndDlg, (HMENU)IDC_REPLACE_TEXT, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "BUTTON", "Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+
+    CreateWindowExW(0, L"BUTTON", L"Case sensitive", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         10, 75, 120, 20, hwndDlg, (HMENU)IDC_CASE_SENSITIVE, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    CreateWindowExW(0, L"BUTTON", L"Whole word", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         140, 75, 100, 20, hwndDlg, (HMENU)IDC_WHOLE_WORD, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+    CreateWindowExW(0, L"BUTTON", L"Regex", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         250, 75, 70, 20, hwndDlg, (HMENU)IDC_USE_REGEX, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "BUTTON", "Find Next", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"BUTTON", L"Find Next", WS_CHILD | WS_VISIBLE,
         10, 110, 90, 28, hwndDlg, (HMENU)IDC_BTN_FIND_NEXT, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Replace", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+    CreateWindowExW(0, L"BUTTON", L"Replace", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         110, 110, 90, 28, hwndDlg, (HMENU)IDC_BTN_REPLACE, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Replace All", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Replace All", WS_CHILD | WS_VISIBLE,
         210, 110, 90, 28, hwndDlg, (HMENU)IDC_BTN_REPLACE_ALL, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Close", WS_CHILD | WS_VISIBLE,
         310, 110, 70, 28, hwndDlg, (HMENU)IDC_BTN_CLOSE, m_hInstance, nullptr);
     
     ShowWindow(m_hwndReplaceDialog, SW_SHOW);
@@ -3589,68 +3236,148 @@ void Win32IDE::replaceAll()
     int count = replaceText(m_lastSearchText, m_lastReplaceText, true, m_searchCaseSensitive, m_searchWholeWord, m_searchUseRegex);
     
     std::string msg = "Replaced " + std::to_string(count) + " occurrence(s).";
-    MessageBoxA(m_hwndMain, msg.c_str(), "Replace All", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Replace All", MB_OK | MB_ICONINFORMATION);
 }
 
 bool Win32IDE::findText(const std::string& searchText, bool forward, bool caseSensitive, bool wholeWord, bool useRegex)
 {
     if (!m_hwndEditor || searchText.empty()) return false;
     
-    // Get editor text
-    int textLen = GetWindowTextLengthA(m_hwndEditor);
-    if (textLen == 0) return false;
-    
-    std::string editorText(textLen + 1, 0);
-    GetWindowTextA(m_hwndEditor, &editorText[0], textLen + 1);
-    editorText.resize(textLen);
-    
-    // Get current selection to start search from there
+    std::string editorText = getWindowText(m_hwndEditor);
+    if (editorText.empty()) return false;
+    int textLen = (int)editorText.size();
+
     CHARRANGE selection;
     SendMessage(m_hwndEditor, EM_EXGETSEL, 0, (LPARAM)&selection);
-    
-    int startPos = forward ? selection.cpMax : selection.cpMin - 1;
-    if (startPos < 0) startPos = 0;
-    if (startPos >= textLen) startPos = textLen - 1;
-    
-    // Simple case-insensitive search (regex not implemented in this version)
-    std::string haystack = editorText;
-    std::string needle = searchText;
-    
-    if (!caseSensitive) {
-        std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::tolower);
-        std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
-    }
+
+    int startChar = forward ? selection.cpMax : selection.cpMin - 1;
+    if (startChar < 0) startChar = 0;
+    int startPos = charIndexToUtf8ByteOffset(editorText, startChar);
+    if (startPos >= textLen) startPos = textLen > 0 ? textLen - 1 : 0;
     
     size_t foundPos = std::string::npos;
+    size_t foundLen = searchText.length();
     
-    if (forward) {
-        foundPos = haystack.find(needle, startPos);
-        // Wrap around
-        if (foundPos == std::string::npos && startPos > 0) {
-            foundPos = haystack.find(needle, 0);
+    if (useRegex) {
+        // Regex search using std::regex
+        try {
+            auto flags = std::regex_constants::ECMAScript;
+            if (!caseSensitive) flags |= std::regex_constants::icase;
+            std::regex pattern(searchText, flags);
+            std::smatch match;
+            
+            if (forward) {
+                std::string searchArea = editorText.substr(startPos);
+                if (std::regex_search(searchArea, match, pattern)) {
+                    foundPos = startPos + match.position();
+                    foundLen = match.length();
+                } else if (startPos > 0) {
+                    // Wrap around
+                    searchArea = editorText.substr(0, startPos);
+                    if (std::regex_search(searchArea, match, pattern)) {
+                        foundPos = match.position();
+                        foundLen = match.length();
+                    }
+                }
+            } else {
+                // Backwards regex: find all matches before startPos, take last one
+                std::string searchArea = editorText.substr(0, startPos);
+                auto begin = std::sregex_iterator(searchArea.begin(), searchArea.end(), pattern);
+                auto end = std::sregex_iterator();
+                std::smatch lastMatch;
+                bool found = false;
+                for (auto it = begin; it != end; ++it) {
+                    lastMatch = *it;
+                    found = true;
+                }
+                if (found) {
+                    foundPos = lastMatch.position();
+                    foundLen = lastMatch.length();
+                } else {
+                    // Wrap: search from startPos to end
+                    searchArea = editorText.substr(startPos);
+                    begin = std::sregex_iterator(searchArea.begin(), searchArea.end(), pattern);
+                    for (auto it = begin; it != end; ++it) {
+                        lastMatch = *it;
+                        found = true;
+                    }
+                    if (found) {
+                        foundPos = startPos + lastMatch.position();
+                        foundLen = lastMatch.length();
+                    }
+                }
+            }
+        } catch (const std::regex_error& e) {
+            std::string msg = "Invalid regex: ";
+            msg += e.what();
+            MessageBoxW(m_hwndMain, utf8ToWide(msg).c_str(), L"Find", MB_OK | MB_ICONERROR);
+            return false;
         }
     } else {
-        // Search backwards
-        if (startPos > 0) {
-            foundPos = haystack.rfind(needle, startPos);
+        // Plain text search with optional case sensitivity and whole word
+        std::string haystack = editorText;
+        std::string needle = searchText;
+        
+        if (!caseSensitive) {
+            std::transform(haystack.begin(), haystack.end(), haystack.begin(), ::tolower);
+            std::transform(needle.begin(), needle.end(), needle.begin(), ::tolower);
         }
-        // Wrap around
-        if (foundPos == std::string::npos) {
-            foundPos = haystack.rfind(needle);
+        
+        auto isWordBoundary = [&](size_t pos, size_t len) -> bool {
+            if (!wholeWord) return true;
+            bool leftOk = (pos == 0) || !isalnum((unsigned char)haystack[pos - 1]);
+            bool rightOk = (pos + len >= haystack.size()) || !isalnum((unsigned char)haystack[pos + len]);
+            return leftOk && rightOk;
+        };
+        
+        if (forward) {
+            size_t pos = startPos;
+            while (pos < haystack.size()) {
+                foundPos = haystack.find(needle, pos);
+                if (foundPos == std::string::npos) break;
+                if (isWordBoundary(foundPos, needle.size())) break;
+                pos = foundPos + 1;
+                foundPos = std::string::npos;
+            }
+            // Wrap around
+            if (foundPos == std::string::npos && startPos > 0) {
+                pos = 0;
+                while (pos < (size_t)startPos) {
+                    foundPos = haystack.find(needle, pos);
+                    if (foundPos == std::string::npos || foundPos >= (size_t)startPos) { foundPos = std::string::npos; break; }
+                    if (isWordBoundary(foundPos, needle.size())) break;
+                    pos = foundPos + 1;
+                    foundPos = std::string::npos;
+                }
+            }
+        } else {
+            if (startPos > 0) {
+                foundPos = haystack.rfind(needle, startPos);
+                while (foundPos != std::string::npos && !isWordBoundary(foundPos, needle.size())) {
+                    if (foundPos == 0) { foundPos = std::string::npos; break; }
+                    foundPos = haystack.rfind(needle, foundPos - 1);
+                }
+            }
+            if (foundPos == std::string::npos) {
+                foundPos = haystack.rfind(needle);
+                while (foundPos != std::string::npos && !isWordBoundary(foundPos, needle.size())) {
+                    if (foundPos == 0) { foundPos = std::string::npos; break; }
+                    foundPos = haystack.rfind(needle, foundPos - 1);
+                }
+            }
         }
     }
     
     if (foundPos != std::string::npos) {
-        // Select found text
-        selection.cpMin = foundPos;
-        selection.cpMax = foundPos + searchText.length();
+        selection.cpMin = (LONG)utf8ByteOffsetToCharIndex(editorText, (int)foundPos);
+        selection.cpMax = (LONG)utf8ByteOffsetToCharIndex(editorText, (int)(foundPos + foundLen));
         SendMessage(m_hwndEditor, EM_EXSETSEL, 0, (LPARAM)&selection);
         SendMessage(m_hwndEditor, EM_SCROLLCARET, 0, 0);
         m_lastFoundPos = foundPos;
         return true;
     }
     
-    MessageBoxA(m_hwndMain, "Text not found.", "Find", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, L"Text not found.", L"Find", MB_OK | MB_ICONINFORMATION);
     return false;
 }
 
@@ -3661,15 +3388,10 @@ int Win32IDE::replaceText(const std::string& searchText, const std::string& repl
     int replaceCount = 0;
     
     if (all) {
-        // Replace all occurrences
-        // Get editor text
-        int textLen = GetWindowTextLengthA(m_hwndEditor);
-        if (textLen == 0) return 0;
-        
-        std::string editorText(textLen + 1, 0);
-        GetWindowTextA(m_hwndEditor, &editorText[0], textLen + 1);
-        editorText.resize(textLen);
-        
+        std::string editorText = getWindowText(m_hwndEditor);
+        if (editorText.empty()) return 0;
+        int textLen = (int)editorText.size();
+
         std::string result;
         size_t pos = 0;
         
@@ -3690,8 +3412,9 @@ int Win32IDE::replaceText(const std::string& searchText, const std::string& repl
         
         if (replaceCount > 0) {
             result.append(editorText, pos, std::string::npos);
-            SetWindowTextA(m_hwndEditor, result.c_str());
+            setWindowText(m_hwndEditor, result);
             m_fileModified = true;
+            updateLineNumbers();
         }
     } else {
         // Replace current selection if it matches search text
@@ -3713,7 +3436,7 @@ int Win32IDE::replaceText(const std::string& searchText, const std::string& repl
             }
             
             if (cmpSelected == cmpSearch) {
-                SendMessage(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)replaceText.c_str());
+                SendMessageW(m_hwndEditor, EM_REPLACESEL, TRUE, (LPARAM)utf8ToWide(replaceText).c_str());
                 m_fileModified = true;
                 replaceCount = 1;
                 
@@ -3752,10 +3475,10 @@ INT_PTR CALLBACK Win32IDE::FindDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wParam
         case IDC_BTN_FIND_NEXT:
             {
                 HWND hwndFindText = GetDlgItem(hwndDlg, IDC_FIND_TEXT);
-                char buffer[256];
-                GetWindowTextA(hwndFindText, buffer, 256);
-                pThis->m_lastSearchText = buffer;
-                
+                wchar_t buffer[256];
+                GetWindowTextW(hwndFindText, buffer, 256);
+                pThis->m_lastSearchText = wideToUtf8(buffer);
+
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
@@ -3797,32 +3520,40 @@ INT_PTR CALLBACK Win32IDE::ReplaceDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPa
         {
             HWND hwndFindText = GetDlgItem(hwndDlg, IDC_FIND_TEXT);
             HWND hwndReplaceText = GetDlgItem(hwndDlg, IDC_REPLACE_TEXT);
-            char findBuffer[256], replaceBuffer[256];
-            
+
             switch (LOWORD(wParam)) {
             case IDC_BTN_FIND_NEXT:
-                GetWindowTextA(hwndFindText, findBuffer, 256);
-                pThis->m_lastSearchText = findBuffer;
+                {
+                    wchar_t wFind[256], wReplace[256];
+                    GetWindowTextW(hwndFindText, wFind, 256);
+                    pThis->m_lastSearchText = wideToUtf8(wFind);
+                }
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
                 pThis->findNext();
                 return TRUE;
             case IDC_BTN_REPLACE:
-                GetWindowTextA(hwndFindText, findBuffer, 256);
-                GetWindowTextA(hwndReplaceText, replaceBuffer, 256);
-                pThis->m_lastSearchText = findBuffer;
-                pThis->m_lastReplaceText = replaceBuffer;
+                {
+                    wchar_t wFind[256], wReplace[256];
+                    GetWindowTextW(hwndFindText, wFind, 256);
+                    GetWindowTextW(hwndReplaceText, wReplace, 256);
+                    pThis->m_lastSearchText = wideToUtf8(wFind);
+                    pThis->m_lastReplaceText = wideToUtf8(wReplace);
+                }
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
                 pThis->replaceNext();
                 return TRUE;
             case IDC_BTN_REPLACE_ALL:
-                GetWindowTextA(hwndFindText, findBuffer, 256);
-                GetWindowTextA(hwndReplaceText, replaceBuffer, 256);
-                pThis->m_lastSearchText = findBuffer;
-                pThis->m_lastReplaceText = replaceBuffer;
+                {
+                    wchar_t wFind[256], wReplace[256];
+                    GetWindowTextW(hwndFindText, wFind, 256);
+                    GetWindowTextW(hwndReplaceText, wReplace, 256);
+                    pThis->m_lastSearchText = wideToUtf8(wFind);
+                    pThis->m_lastReplaceText = wideToUtf8(wReplace);
+                }
                 pThis->m_searchCaseSensitive = IsDlgButtonChecked(hwndDlg, IDC_CASE_SENSITIVE) == BST_CHECKED;
                 pThis->m_searchWholeWord = IsDlgButtonChecked(hwndDlg, IDC_WHOLE_WORD) == BST_CHECKED;
                 pThis->m_searchUseRegex = IsDlgButtonChecked(hwndDlg, IDC_USE_REGEX) == BST_CHECKED;
@@ -3862,51 +3593,46 @@ INT_PTR CALLBACK Win32IDE::ReplaceDialogProc(HWND hwndDlg, UINT uMsg, WPARAM wPa
 
 void Win32IDE::showSnippetManager()
 {
-    // Create snippet manager dialog
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Snippet Manager",
+    HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Snippet Manager",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         100, 100, 600, 500, m_hwndMain, nullptr, m_hInstance, nullptr);
-    
-    // Snippet list (left pane)
-    CreateWindowExA(0, "STATIC", "Snippets:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Snippets:", WS_CHILD | WS_VISIBLE,
         10, 10, 150, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    
-    HWND hwndList = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "",
+
+    HWND hwndList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
         WS_CHILD | WS_VISIBLE | LBS_STANDARD | WS_VSCROLL,
         10, 35, 150, 400, hwndDlg, (HMENU)IDC_SNIPPET_LIST_DLG, m_hInstance, nullptr);
-    
-    // Populate list with snippet names
+
     for (const auto& snippet : m_codeSnippets) {
-        SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)snippet.name.c_str());
+        SendMessageW(hwndList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(snippet.name).c_str());
     }
-    
-    // Snippet details (right pane)
-    CreateWindowExA(0, "STATIC", "Name:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Name:", WS_CHILD | WS_VISIBLE,
         175, 10, 50, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
         230, 8, 350, 22, hwndDlg, (HMENU)IDC_SNIPPET_NAME, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Description:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Description:", WS_CHILD | WS_VISIBLE,
         175, 40, 70, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
         175, 60, 405, 22, hwndDlg, (HMENU)IDC_SNIPPET_DESC, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Code Template:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Code Template:", WS_CHILD | WS_VISIBLE,
         175, 90, 100, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+    CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_HSCROLL,
         175, 115, 405, 280, hwndDlg, (HMENU)IDC_SNIPPET_CODE, m_hInstance, nullptr);
-    
-    // Buttons
-    CreateWindowExA(0, "BUTTON", "Insert", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+
+    CreateWindowExW(0, L"BUTTON", L"Insert", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         175, 410, 90, 28, hwndDlg, (HMENU)IDC_BTN_INSERT_SNIPPET, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "New", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"New", WS_CHILD | WS_VISIBLE,
         275, 410, 90, 28, hwndDlg, (HMENU)IDC_BTN_NEW_SNIPPET, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Delete", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Delete", WS_CHILD | WS_VISIBLE,
         375, 410, 90, 28, hwndDlg, (HMENU)IDC_BTN_DELETE_SNIPPET, m_hInstance, nullptr);
-    CreateWindowExA(0, "BUTTON", "Save & Close", WS_CHILD | WS_VISIBLE,
+    CreateWindowExW(0, L"BUTTON", L"Save & Close", WS_CHILD | WS_VISIBLE,
         475, 410, 105, 28, hwndDlg, (HMENU)IDC_BTN_SAVE_SNIPPETS, m_hInstance, nullptr);
     
     // Message loop for dialog
@@ -3923,9 +3649,9 @@ void Win32IDE::showSnippetManager()
                     int sel = SendMessage(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel >= 0 && sel < (int)m_codeSnippets.size()) {
                         const CodeSnippet& snippet = m_codeSnippets[sel];
-                        SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, snippet.name.c_str());
-                        SetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, snippet.description.c_str());
-                        SetDlgItemTextA(hwndDlg, IDC_SNIPPET_CODE, snippet.code.c_str());
+                        SetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, utf8ToWide(snippet.name).c_str());
+                        SetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, utf8ToWide(snippet.description).c_str());
+                        SetDlgItemTextW(hwndDlg, IDC_SNIPPET_CODE, utf8ToWide(snippet.code).c_str());
                     }
                 }
                 else if (cmdId == IDC_BTN_INSERT_SNIPPET) {
@@ -3942,21 +3668,21 @@ void Win32IDE::showSnippetManager()
                     newSnippet.description = "New snippet description";
                     newSnippet.code = "// Your code here";
                     m_codeSnippets.push_back(newSnippet);
-                    SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)newSnippet.name.c_str());
+                    SendMessageW(hwndList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(newSnippet.name).c_str());
                     SendMessage(hwndList, LB_SETCURSEL, m_codeSnippets.size() - 1, 0);
-                    SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, newSnippet.name.c_str());
-                    SetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, newSnippet.description.c_str());
-                    SetDlgItemTextA(hwndDlg, IDC_SNIPPET_CODE, newSnippet.code.c_str());
+                    SetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, utf8ToWide(newSnippet.name).c_str());
+                    SetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, utf8ToWide(newSnippet.description).c_str());
+                    SetDlgItemTextW(hwndDlg, IDC_SNIPPET_CODE, utf8ToWide(newSnippet.code).c_str());
                 }
                 else if (cmdId == IDC_BTN_DELETE_SNIPPET) {
                     int sel = SendMessage(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel >= 0 && sel < (int)m_codeSnippets.size()) {
-                        if (MessageBoxA(hwndDlg, "Delete this snippet?", "Confirm", MB_YESNO) == IDYES) {
+                        if (MessageBoxW(hwndDlg, L"Delete this snippet?", L"Confirm", MB_YESNO) == IDYES) {
                             m_codeSnippets.erase(m_codeSnippets.begin() + sel);
                             SendMessage(hwndList, LB_DELETESTRING, sel, 0);
-                            SetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, "");
-                            SetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, "");
-                            SetDlgItemTextA(hwndDlg, IDC_SNIPPET_CODE, "");
+                            SetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, L"");
+                            SetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, L"");
+                            SetDlgItemTextW(hwndDlg, IDC_SNIPPET_CODE, L"");
                         }
                     }
                 }
@@ -3964,21 +3690,21 @@ void Win32IDE::showSnippetManager()
                     // Update current snippet before saving
                     int sel = SendMessage(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel >= 0 && sel < (int)m_codeSnippets.size()) {
-                        char buffer[1024];
-                        GetDlgItemTextA(hwndDlg, IDC_SNIPPET_NAME, buffer, 1024);
-                        m_codeSnippets[sel].name = buffer;
-                        GetDlgItemTextA(hwndDlg, IDC_SNIPPET_DESC, buffer, 1024);
-                        m_codeSnippets[sel].description = buffer;
-                        
+                        wchar_t buffer[1024];
+                        GetDlgItemTextW(hwndDlg, IDC_SNIPPET_NAME, buffer, 1024);
+                        m_codeSnippets[sel].name = wideToUtf8(buffer);
+                        GetDlgItemTextW(hwndDlg, IDC_SNIPPET_DESC, buffer, 1024);
+                        m_codeSnippets[sel].description = wideToUtf8(buffer);
+
                         HWND hwndCode = GetDlgItem(hwndDlg, IDC_SNIPPET_CODE);
-                        int len = GetWindowTextLengthA(hwndCode);
-                        std::vector<char> codeBuffer(len + 1);
-                        GetWindowTextA(hwndCode, codeBuffer.data(), len + 1);
-                        m_codeSnippets[sel].code = codeBuffer.data();
+                        int len = GetWindowTextLengthW(hwndCode);
+                        std::vector<wchar_t> codeBuffer(len + 1);
+                        GetWindowTextW(hwndCode, codeBuffer.data(), len + 1);
+                        m_codeSnippets[sel].code = wideToUtf8(codeBuffer.data());
                     }
                     
                     saveCodeSnippets();
-                    MessageBoxA(hwndDlg, "Snippets saved!", "Success", MB_OK);
+                    MessageBoxW(hwndDlg, L"Snippets saved!", L"Success", MB_OK);
                     running = false;
                     DestroyWindow(hwndDlg);
                 }
@@ -4003,8 +3729,8 @@ void Win32IDE::createSnippet()
     newSnippet.code = "// Code template\n";
     m_codeSnippets.push_back(newSnippet);
     
-    MessageBoxA(m_hwndMain, ("Snippet '" + newSnippet.name + "' created. Use Snippet Manager to edit.").c_str(), 
-        "Snippet Created", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide("Snippet '" + newSnippet.name + "' created. Use Snippet Manager to edit.").c_str(),
+        L"Snippet Created", MB_OK);
 }
 
 // ============================================================================
@@ -4017,34 +3743,32 @@ void Win32IDE::createFileExplorer(HWND hwndParent)
         return; // Already created
     }
 
-    // Create sidebar panel
-    m_hwndFileExplorer = CreateWindowExA(
-        0,
-        "STATIC",
-        "File Explorer",
+    m_hwndFileExplorer = CreateWindowExW(
+        0, L"STATIC", L"File Explorer",
         WS_CHILD | WS_VISIBLE | WS_BORDER,
         0, 30, m_sidebarWidth, 500,
         hwndParent,
         (HMENU)IDC_FILE_EXPLORER,
-        GetModuleHandleA(nullptr),
+        GetModuleHandle(nullptr),
         nullptr
     );
 
-    // Create TreeView control for file navigation
-    m_hwndFileTree = CreateWindowExA(
+    m_hwndFileTree = CreateWindowExW(
         WS_EX_CLIENTEDGE,
-        WC_TREEVIEWA,
-        "",
+        WC_TREEVIEWW,
+        L"",
         WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_LINESATROOT | TVS_HASBUTTONS,
         5, 5, m_sidebarWidth - 10, 490,
         m_hwndFileExplorer,
         (HMENU)IDC_FILE_TREE,
-        GetModuleHandleA(nullptr),
+        GetModuleHandle(nullptr),
         nullptr
     );
 
-    // Set TreeView font
-    SendMessageA(m_hwndFileTree, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+    SendMessage(m_hwndFileTree, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), TRUE);
+
+    SetWindowLongPtrW(m_hwndFileExplorer, GWLP_USERDATA, (LONG_PTR)this);
+    m_oldFileExplorerContainerProc = (WNDPROC)SetWindowLongPtrW(m_hwndFileExplorer, GWLP_WNDPROC, (LONG_PTR)FileExplorerContainerProc);
 
     // Populate with drive letters
     populateFileTree(nullptr, "");
@@ -4056,14 +3780,13 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
         return;
     }
 
-    // If no parent, add drives
     if (!parentItem) {
-        TVINSERTSTRUCTA tvis = {};
+        TVINSERTSTRUCTW tvis = {};
         tvis.hParent = TVI_ROOT;
         tvis.hInsertAfter = TVI_LAST;
         tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
 
-        // Add all available drives
+        wchar_t buf[MAX_PATH];
         for (char drive = 'C'; drive <= 'Z'; ++drive) {
             std::string drivePath = std::string(1, drive) + ":";
             DWORD drives = GetLogicalDrives();
@@ -4071,18 +3794,19 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
 
             if (drives & (1 << driveNum)) {
                 std::string displayName = drivePath + "\\";
-                tvis.item.pszText = (LPSTR)displayName.c_str();
+                MultiByteToWideChar(CP_ACP, 0, displayName.c_str(), -1, buf, MAX_PATH);
+                tvis.item.pszText = buf;
                 tvis.item.lParam = (LPARAM) new std::string(drivePath);
 
-                HTREEITEM driveItem = (HTREEITEM)SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
+                HTREEITEM driveItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
                 m_treeItemPaths[driveItem] = drivePath;
 
-                // Add a dummy child so expand button appears
-                TVINSERTSTRUCTA dummyVis = {};
+                TVINSERTSTRUCTW dummyVis = {};
                 dummyVis.hParent = driveItem;
                 dummyVis.item.mask = TVIF_TEXT;
-                dummyVis.item.pszText = (LPSTR)"...";
-                SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                static wchar_t s_ellipsis[] = L"...";
+                dummyVis.item.pszText = s_ellipsis;
+                SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
             }
         }
         return;
@@ -4100,12 +3824,12 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
             return;
         }
 
-        TVINSERTSTRUCTA tvis = {};
+        TVINSERTSTRUCTW tvis = {};
         tvis.hParent = parentItem;
         tvis.hInsertAfter = TVI_LAST;
         tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
 
-        // Clear dummy items
+        wchar_t wbuf[MAX_PATH];
         HTREEITEM hChild = TreeView_GetChild(m_hwndFileTree, parentItem);
         while (hChild) {
             HTREEITEM hNext = TreeView_GetNextSibling(m_hwndFileTree, hChild);
@@ -4119,29 +3843,28 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
             }
 
             std::string fullPath = path + "\\" + findData.cFileName;
+            MultiByteToWideChar(CP_ACP, 0, findData.cFileName, -1, wbuf, MAX_PATH);
 
             if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                // It's a folder
-                tvis.item.pszText = findData.cFileName;
+                tvis.item.pszText = wbuf;
                 tvis.item.lParam = (LPARAM) new std::string(fullPath);
 
-                HTREEITEM folderItem = (HTREEITEM)SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
+                HTREEITEM folderItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
                 m_treeItemPaths[folderItem] = fullPath;
 
-                // Add dummy child
-                TVINSERTSTRUCTA dummyVis = {};
+                TVINSERTSTRUCTW dummyVis = {};
                 dummyVis.hParent = folderItem;
                 dummyVis.item.mask = TVIF_TEXT;
-                dummyVis.item.pszText = (LPSTR)"...";
-                SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                static wchar_t s_ellipsis2[] = L"...";
+                dummyVis.item.pszText = s_ellipsis2;
+                SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
             }
             else if (strlen(findData.cFileName) > 5 &&
                      strcmp(findData.cFileName + strlen(findData.cFileName) - 5, ".gguf") == 0) {
-                // It's a GGUF file
-                tvis.item.pszText = findData.cFileName;
+                tvis.item.pszText = wbuf;
                 tvis.item.lParam = (LPARAM) new std::string(fullPath);
 
-                HTREEITEM fileItem = (HTREEITEM)SendMessageA(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
+                HTREEITEM fileItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
                 m_treeItemPaths[fileItem] = fullPath;
             }
         } while (FindNextFileA(findHandle, &findData));
@@ -4151,6 +3874,24 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
     catch (...) {
         // Silently handle errors
     }
+}
+
+LRESULT CALLBACK Win32IDE::FileExplorerContainerProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    if (uMsg == WM_NOTIFY) {
+        NMHDR* pnmh = reinterpret_cast<NMHDR*>(lParam);
+        if (pnmh && pnmh->code == TVN_DELETEITEM) {
+            NMTREEVIEWA* pnmtv = reinterpret_cast<NMTREEVIEWA*>(lParam);
+            if (pnmtv->itemOld.lParam)
+                delete reinterpret_cast<std::string*>(pnmtv->itemOld.lParam);
+            return 0;
+        }
+    }
+    WNDPROC oldProc = pThis ? pThis->m_oldFileExplorerContainerProc : nullptr;
+    if (oldProc)
+        return CallWindowProcA(oldProc, hwnd, uMsg, wParam, lParam);
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }
 
 void Win32IDE::onFileTreeExpand(HTREEITEM item, const std::string& path)
@@ -4179,6 +3920,12 @@ void Win32IDE::loadModelFromPath(const std::string& filepath)
         if (loadGGUFModel(filepath)) {
             // Initialize inference system
             initializeInference();
+            
+            // Initialize backend manager (Phase 8B)
+            initBackendManager();
+            
+            // Initialize LLM Router (Phase 8C)
+            initLLMRouter();
             
             // Notify user in chat
             std::string msg = "✅ Model loaded and ready for inference!\r\n\r\n"
@@ -4282,7 +4029,7 @@ bool Win32IDE::loadGGUFModel(const std::string& filepath)
     auto zones = m_ggufLoader->GetLoadedZones();
     if (!zones.empty()) {
         info += "Loaded Zones: ";
-        for (size_t i = 0; i < zones.size(); ++i) {
+        for (size_t i = 0; i < zones.size(); i++) {
             info += zones[i];
             if (i < zones.size() - 1) info += ", ";
         }
@@ -4292,8 +4039,8 @@ bool Win32IDE::loadGGUFModel(const std::string& filepath)
     appendToOutput(info, "Output", OutputSeverity::Info);
     
     // Update status bar
-    SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, 
-        (LPARAM)("Model: " + std::string(filepath)).c_str());
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0,
+        (LPARAM)utf8ToWide("Model: " + std::string(filepath)).c_str());
 
     // Auto-activate Copilot panel and send welcome message
     if (m_hwndSecondarySidebar && m_hwndCopilotChatOutput) {
@@ -4391,11 +4138,10 @@ void Win32IDE::createFileExplorer()
 {
     if (!m_hwndSidebar) return;
 
-    // Create file explorer tree view control
-    m_hwndFileExplorer = CreateWindowExA(
+    m_hwndFileExplorer = CreateWindowExW(
         WS_EX_CLIENTEDGE,
-        WC_TREEVIEWA,
-        "",
+        WC_TREEVIEWW,
+        L"",
         WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
         5, 30, m_sidebarWidth - 10, 400,
         m_hwndSidebar,
@@ -4403,6 +4149,11 @@ void Win32IDE::createFileExplorer()
         m_hInstance,
         nullptr
     );
+
+    // LOGGING AS REQUESTED
+    char logBuf[256];
+    sprintf_s(logBuf, "Explorer HWND created: %p (Parent: %p)", m_hwndFileExplorer, m_hwndSidebar);
+    LOG_INFO(std::string(logBuf));
 
     if (!m_hwndFileExplorer) return;
 
@@ -4432,10 +4183,12 @@ void Win32IDE::populateFileTree()
     TreeView_DeleteAllItems(m_hwndFileExplorer);
 
     // Add root directories for model browsing
+    const char* username = getenv("USERNAME");
+    std::string userDir(username && username[0] ? username : "User");
     std::vector<std::string> modelPaths = {
         "D:\\OllamaModels",
         "C:\\OllamaModels",
-        "C:\\Users\\" + std::string(getenv("USERNAME")) + "\\OllamaModels"
+        "C:\\Users\\" + userDir + "\\OllamaModels"
     };
 
     for (const auto& path : modelPaths) {
@@ -4460,19 +4213,19 @@ void Win32IDE::populateFileTree()
 
 HTREEITEM Win32IDE::addTreeItem(HTREEITEM hParent, const std::string& text, const std::string& fullPath, bool isDirectory)
 {
-    TVINSERTSTRUCTA tvins = {};
+    TVINSERTSTRUCTW tvins = {};
     tvins.hParent = hParent;
     tvins.hInsertAfter = TVI_LAST;
     tvins.item.mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
-    
-    // Allocate memory for the full path (will be freed when item is deleted)
+
     char* pathData = new char[fullPath.length() + 1];
     strcpy_s(pathData, fullPath.length() + 1, fullPath.c_str());
-    
-    tvins.item.pszText = const_cast<char*>(text.c_str());
+
+    wchar_t wbuf[MAX_PATH];
+    MultiByteToWideChar(CP_ACP, 0, text.c_str(), -1, wbuf, MAX_PATH);
+    tvins.item.pszText = wbuf;
     tvins.item.lParam = reinterpret_cast<LPARAM>(pathData);
-    
-    // Set appropriate icon
+
     if (isDirectory) {
         tvins.item.iImage = 0;
         tvins.item.iSelectedImage = 0;
@@ -4483,8 +4236,8 @@ HTREEITEM Win32IDE::addTreeItem(HTREEITEM hParent, const std::string& text, cons
         tvins.item.iImage = 1;
         tvins.item.iSelectedImage = 1;
     }
-    
-    return TreeView_InsertItem(m_hwndFileExplorer, &tvins);
+
+    return (HTREEITEM)SendMessageW(m_hwndFileExplorer, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 }
 
 void Win32IDE::scanDirectory(const std::string& dirPath, HTREEITEM hParent)
@@ -4554,23 +4307,23 @@ void Win32IDE::expandTreeNode(HTREEITEM hItem)
     // Check if this node has been expanded before
     HTREEITEM hChild = TreeView_GetChild(m_hwndFileExplorer, hItem);
     if (hChild) {
-        TVITEMA item = {};
+        TVITEMW item = {};
         item.hItem = hChild;
         item.mask = TVIF_TEXT | TVIF_PARAM;
-        char buffer[MAX_PATH];
+        wchar_t buffer[MAX_PATH];
         item.pszText = buffer;
         item.cchTextMax = MAX_PATH;
-        
-        if (TreeView_GetItem(m_hwndFileExplorer, &item)) {
-            if (strcmp(item.pszText, "Loading...") == 0) {
+
+        if (SendMessageW(m_hwndFileExplorer, TVM_GETITEM, 0, (LPARAM)&item)) {
+            if (wcscmp(item.pszText, L"Loading...") == 0) {
                 // Remove the dummy item
                 TreeView_DeleteItem(m_hwndFileExplorer, hChild);
                 
                 // Get the full path and scan the directory
-                TVITEMA parentItem = {};
+                TVITEMW parentItem = {};
                 parentItem.hItem = hItem;
                 parentItem.mask = TVIF_PARAM;
-                if (TreeView_GetItem(m_hwndFileExplorer, &parentItem) && parentItem.lParam) {
+                if (SendMessageW(m_hwndFileExplorer, TVM_GETITEM, 0, (LPARAM)&parentItem) && parentItem.lParam) {
                     std::string dirPath = reinterpret_cast<char*>(parentItem.lParam);
                     scanDirectory(dirPath, hItem);
                 }
@@ -4584,11 +4337,11 @@ std::string Win32IDE::getSelectedFilePath()
     HTREEITEM hSelected = TreeView_GetSelection(m_hwndFileExplorer);
     if (!hSelected) return "";
     
-    TVITEMA item = {};
+    TVITEMW item = {};
     item.hItem = hSelected;
     item.mask = TVIF_PARAM;
-    
-    if (TreeView_GetItem(m_hwndFileExplorer, &item) && item.lParam) {
+
+    if (SendMessageW(m_hwndFileExplorer, TVM_GETITEM, 0, (LPARAM)&item) && item.lParam) {
         return std::string(reinterpret_cast<char*>(item.lParam));
     }
     
@@ -4630,12 +4383,12 @@ void Win32IDE::onFileExplorerDoubleClick()
                     file.seekg(0, std::ios::beg);
                     
                     if (fileSize > 10 * 1024 * 1024) { // 10MB limit
-                        MessageBoxA(m_hwndMain, "File too large to open in editor (>10MB).", "File Too Large", MB_OK | MB_ICONWARNING);
+                        MessageBoxW(m_hwndMain, L"File too large to open in editor (>10MB).", L"File Too Large", MB_OK | MB_ICONWARNING);
                         return;
                     }
                     
                     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                    SetWindowTextA(m_hwndEditor, content.c_str());
+                    setWindowText(m_hwndEditor, content);
                     m_currentFile = filePath;
                     updateTitleBarText();
                     file.close();
@@ -4643,7 +4396,7 @@ void Win32IDE::onFileExplorerDoubleClick()
             }
             catch (const std::exception& e) {
                 std::string error = "Error opening file: " + std::string(e.what());
-                MessageBoxA(m_hwndMain, error.c_str(), "Error", MB_OK | MB_ICONERROR);
+                MessageBoxW(m_hwndMain, utf8ToWide(error).c_str(), L"Error", MB_OK | MB_ICONERROR);
             }
         }
     }
@@ -4662,7 +4415,7 @@ void Win32IDE::loadModelFromExplorer(const std::string& filePath)
             filename = filename.substr(lastSlash + 1);
         }
         
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)("Model: " + filename).c_str());
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide("Model: " + filename).c_str());
     } else {
         appendToOutput("❌ Failed to load model: " + filePath, "Errors", OutputSeverity::Error);
     }
@@ -4683,21 +4436,30 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
     HMENU hMenu = CreatePopupMenu();
     if (!hMenu) return;
     
+    static constexpr int IDC_CTX_REFRESH = 50001, IDC_CTX_OPEN_EXPLORER = 50002, IDC_CTX_SET_ROOT = 50003;
+    static constexpr int IDC_CTX_LOAD_MODEL = 50011, IDC_CTX_MODEL_INFO = 50012, IDC_CTX_OPEN_EDITOR = 50013, IDC_CTX_COPY_PATH = 50014, IDC_CTX_SHOW_EXPLORER = 50015;
+    static constexpr int IDC_CTX_DELETE = 50020, IDC_CTX_RENAME = 50021;
     if (isDirectory) {
-        AppendMenuA(hMenu, MF_STRING, 1001, "Refresh");
-        AppendMenuA(hMenu, MF_STRING, 1002, "Open in Explorer");
-        AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hMenu, MF_STRING, 1003, "Set as Root Path");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_REFRESH, L"Refresh");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_EXPLORER, L"Open in Explorer");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_SET_ROOT, L"Set as Root Path");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_DELETE, L"Delete");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_RENAME, L"Rename");
     } else {
         if (isModelFile(filePath)) {
-            AppendMenuA(hMenu, MF_STRING, 2001, "Load Model");
-            AppendMenuA(hMenu, MF_STRING, 2002, "Show Model Info");
-            AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
+            AppendMenuW(hMenu, MF_STRING, IDC_CTX_LOAD_MODEL, L"Load Model");
+            AppendMenuW(hMenu, MF_STRING, IDC_CTX_MODEL_INFO, L"Show Model Info");
+            AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
         }
-        AppendMenuA(hMenu, MF_STRING, 2003, "Open with Editor");
-        AppendMenuA(hMenu, MF_STRING, 2004, "Copy Path");
-        AppendMenuA(hMenu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuA(hMenu, MF_STRING, 2005, "Show in Explorer");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_OPEN_EDITOR, L"Open with Editor");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_COPY_PATH, L"Copy Path");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_SHOW_EXPLORER, L"Show in Explorer");
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_DELETE, L"Delete");
+        AppendMenuW(hMenu, MF_STRING, IDC_CTX_RENAME, L"Rename");
     }
     
     POINT pt;
@@ -4706,44 +4468,44 @@ void Win32IDE::showFileContextMenu(const std::string& filePath, bool isDirectory
     int cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x, pt.y, 0, m_hwndMain, nullptr);
     
     switch (cmd) {
-        case 1001: // Refresh directory
+        case 50001: // Refresh directory
             refreshFileExplorer();
             break;
-        case 1002: // Open in Explorer
-        case 2005: // Show in Explorer
+        case 50002: // Open in Explorer
+        case 50015: // Show in Explorer
             ShellExecuteA(nullptr, "explore", filePath.c_str(), nullptr, nullptr, SW_SHOW);
             break;
-        case 999: // Delete from Explorer context menu
-            deleteItemInExplorer();
+        case 50020: // IDC_CTX_DELETE
+            deleteItemInExplorer(filePath);
             break;
-        case 1000: // Rename from Explorer context menu
-            renameItemInExplorer();
+        case 50021: // IDC_CTX_RENAME
+            renameItemInExplorer(filePath);
             break;
-        case 1003: // Set as Root Path
+        case 50003: // Set as Root Path
             m_currentExplorerPath = filePath;
             populateFileTree();
             break;
-        case 2001: // Load Model
+        case 50011: // Load Model
             loadModelFromExplorer(filePath);
             break;
-        case 2002: // Show Model Info
+        case 50012: // Show Model Info
             if (loadGGUFModel(filePath)) {
                 std::string info = "Model Information:\n" + getModelInfo();
-                MessageBoxA(m_hwndMain, info.c_str(), "Model Info", MB_OK | MB_ICONINFORMATION);
+                MessageBoxW(m_hwndMain, utf8ToWide(info).c_str(), L"Model Info", MB_OK | MB_ICONINFORMATION);
             }
             break;
-        case 2003: // Open with Editor
+        case 50013: // Open with Editor
             {
                 std::ifstream file(filePath);
                 if (file.is_open()) {
                     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-                    SetWindowTextA(m_hwndEditor, content.c_str());
+                    setWindowText(m_hwndEditor, content);
                     m_currentFile = filePath;
                     updateTitleBarText();
                 }
             }
             break;
-        case 2004: // Copy Path
+        case 50014: // Copy Path
             if (OpenClipboard(m_hwndMain)) {
                 EmptyClipboard();
                 HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, filePath.size() + 1);
@@ -4781,6 +4543,15 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
     if (!isModelLoaded()) {
         return "Error: No model loaded";
     }
+
+    // Phase 8B/8C: Route through LLM router (if enabled) or backend manager
+    if (m_backendManagerInitialized) {
+        std::string resp = routeWithIntelligence(message);
+        if (!resp.empty() && resp.find("[Backend Error]") != 0) {
+            m_chatHistory.push_back({message, resp});
+            return resp;
+        }
+    }
     
     // First try: send through local Ollama if available
     std::string llmResponse;
@@ -4790,22 +4561,20 @@ std::string Win32IDE::sendMessageToModel(const std::string& message)
     }
 
     // Fallback: Local CPU Inference (Real Logic)
-    if (m_nativeEngine) {
-        auto* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
-        
-        // Ensure model is loaded if we have a path but engine isn't ready
-        if (!engine->isModelLoaded() && !m_loadedModelPath.empty()) {
-            engine->loadModel(m_loadedModelPath);
-        }
-
-        if (engine->isModelLoaded()) {
-             std::string response = engine->infer(message);
+    if (m_ggufLoader) {
+        // Use the native fallback engine if available
+        if (m_nativeEngine) {
+             auto* engine = m_nativeEngine.get();
+             auto tokens = engine->Tokenize(message);
+             auto output_tokens = engine->Generate(tokens, 512);
+             std::string response = engine->Detokenize(output_tokens);
              m_chatHistory.push_back({message, response});
              return response;
         }
     }
 
-    std::string response = "Error: Native Inference Engine not initialized or model not loaded.\n";
+    std::string response = "Error: Local model loaded but Native Inference Engine not initialized.\n";
+    return response;
 }
 
 void Win32IDE::toggleChatMode()
@@ -4821,7 +4590,7 @@ void Win32IDE::toggleChatMode()
         appendToOutput("Type your messages in the command input. Use /exit-chat to return to terminal mode.", "Output", OutputSeverity::Info);
         
         // Update status bar
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Chat Mode");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"Chat Mode");
         
         // Clear existing chat display and show instructions
         appendChatMessage("System", "Chat mode activated! You can now talk with the loaded model.");
@@ -4829,7 +4598,7 @@ void Win32IDE::toggleChatMode()
     } else {
         // Exiting chat mode
         appendToOutput("🔧 Chat Mode OFF - Returned to terminal mode", "Output", OutputSeverity::Info);
-        SendMessage(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)"Terminal Mode");
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 1, (LPARAM)L"Terminal Mode");
         appendChatMessage("System", "Chat mode deactivated. Returned to terminal mode.");
     }
 }
@@ -4863,7 +4632,7 @@ void Win32IDE::appendChatMessage(const std::string& user, const std::string& mes
 void Win32IDE::showGitStatus()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git", MB_OK | MB_ICONWARNING);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git", MB_OK | MB_ICONWARNING);
         return;
     }
     
@@ -4879,7 +4648,7 @@ void Win32IDE::showGitStatus()
     status << "  Deleted:   " << m_gitStatus.deleted << "\n";
     status << "  Untracked: " << m_gitStatus.untracked << "\n";
     
-    MessageBoxA(m_hwndMain, status.str().c_str(), "Git Status", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(status.str()).c_str(), L"Git Status", MB_OK | MB_ICONINFORMATION);
 }
 
 void Win32IDE::updateGitStatus()
@@ -4927,7 +4696,7 @@ void Win32IDE::updateGitStatus()
 void Win32IDE::gitCommit(const std::string& message)
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git Error", MB_OK | MB_ICONERROR);
         return;
     }
     
@@ -4935,39 +4704,39 @@ void Win32IDE::gitCommit(const std::string& message)
     std::string command = "git commit -m \"" + message + "\"";
     executeGitCommand(command, output);
     
-    MessageBoxA(m_hwndMain, output.c_str(), "Git Commit", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(output).c_str(), L"Git Commit", MB_OK | MB_ICONINFORMATION);
     updateGitStatus();
 }
 
 void Win32IDE::gitPush()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git Error", MB_OK | MB_ICONERROR);
         return;
     }
     
     std::string output;
     executeGitCommand("git push", output);
     
-    MessageBoxA(m_hwndMain, 
-        output.empty() ? "Push completed successfully" : output.c_str(), 
-        "Git Push", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain,
+        utf8ToWide(output.empty() ? "Push completed successfully" : output).c_str(),
+        L"Git Push", MB_OK | MB_ICONINFORMATION);
     updateGitStatus();
 }
 
 void Win32IDE::gitPull()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git Error", MB_OK | MB_ICONERROR);
         return;
     }
     
     std::string output;
     executeGitCommand("git pull", output);
     
-    MessageBoxA(m_hwndMain, 
-        output.empty() ? "Pull completed successfully" : output.c_str(), 
-        "Git Pull", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain,
+        utf8ToWide(output.empty() ? "Pull completed successfully" : output).c_str(),
+        L"Git Pull", MB_OK | MB_ICONINFORMATION);
     updateGitStatus();
 }
 
@@ -5074,26 +4843,25 @@ bool Win32IDE::executeGitCommand(const std::string& command, std::string& output
 void Win32IDE::showGitPanel()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git", MB_OK | MB_ICONWARNING);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git", MB_OK | MB_ICONWARNING);
         return;
     }
     
     // Create Git panel if it doesn't exist
     if (!m_hwndGitPanel || !IsWindow(m_hwndGitPanel)) {
-        m_hwndGitPanel = CreateWindowExA(WS_EX_TOOLWINDOW, "STATIC", "Git Panel",
+        m_hwndGitPanel = CreateWindowExW(WS_EX_TOOLWINDOW, L"STATIC", L"Git Panel",
             WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE | WS_SIZEBOX,
             200, 100, 600, 500, m_hwndMain, nullptr, m_hInstance, nullptr);
         
         // Branch and status info
-        m_hwndGitStatusText = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+        m_hwndGitStatusText = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
             WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY,
             10, 10, 580, 60, m_hwndGitPanel, nullptr, m_hInstance, nullptr);
-        
-        // Changed files list
-        CreateWindowExA(0, "STATIC", "Changed Files:", WS_CHILD | WS_VISIBLE,
+
+        CreateWindowExW(0, L"STATIC", L"Changed Files:", WS_CHILD | WS_VISIBLE,
             10, 80, 120, 20, m_hwndGitPanel, nullptr, m_hInstance, nullptr);
-        
-        m_hwndGitFileList = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "",
+
+        m_hwndGitFileList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
             WS_CHILD | WS_VISIBLE | LBS_STANDARD | LBS_EXTENDEDSEL | WS_VSCROLL,
             10, 105, 280, 300, m_hwndGitPanel, nullptr, m_hInstance, nullptr);
     }
@@ -5116,7 +4884,7 @@ void Win32IDE::refreshGitPanel()
     statusText += "Untracked: " + std::to_string(m_gitStatus.untracked);
     
     if (m_hwndGitStatusText) {
-        SetWindowTextA(m_hwndGitStatusText, statusText.c_str());
+        SetWindowTextW(m_hwndGitStatusText, utf8ToWide(statusText).c_str());
     }
     
     // Update file list
@@ -5141,7 +4909,7 @@ void Win32IDE::refreshGitPanel()
             }
             
             displayText += file.path;
-            SendMessageA(m_hwndGitFileList, LB_ADDSTRING, 0, (LPARAM)displayText.c_str());
+            SendMessageW(m_hwndGitFileList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(displayText).c_str());
         }
     }
 }
@@ -5149,26 +4917,25 @@ void Win32IDE::refreshGitPanel()
 void Win32IDE::showCommitDialog()
 {
     if (!isGitRepository()) {
-        MessageBoxA(m_hwndMain, "Not a Git repository", "Git", MB_OK | MB_ICONWARNING);
+        MessageBoxW(m_hwndMain, L"Not a Git repository", L"Git", MB_OK | MB_ICONWARNING);
         return;
     }
     
-    // Simple commit dialog using InputBox-style approach
-    HWND hwndDlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "STATIC", "Git Commit",
+    HWND hwndDlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"STATIC", L"Git Commit",
         WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
         150, 150, 500, 200, m_hwndMain, nullptr, m_hInstance, nullptr);
-    
-    CreateWindowExA(0, "STATIC", "Commit Message:", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"STATIC", L"Commit Message:", WS_CHILD | WS_VISIBLE,
         10, 10, 120, 20, hwndDlg, nullptr, m_hInstance, nullptr);
-    
-    m_hwndCommitDialog = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
-        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
+
+    m_hwndCommitDialog = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
+        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY,
         10, 35, 470, 100, hwndDlg, nullptr, m_hInstance, nullptr);
-    
-    HWND hwndCommitBtn = CreateWindowExA(0, "BUTTON", "Commit", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+
+    CreateWindowExW(0, L"BUTTON", L"Commit", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
         10, 145, 100, 30, hwndDlg, (HMENU)1, m_hInstance, nullptr);
-    
-    HWND hwndCancelBtn = CreateWindowExA(0, "BUTTON", "Cancel", WS_CHILD | WS_VISIBLE,
+
+    CreateWindowExW(0, L"BUTTON", L"Cancel", WS_CHILD | WS_VISIBLE,
         120, 145, 100, 30, hwndDlg, (HMENU)2, m_hInstance, nullptr);
     
     SetFocus(m_hwndCommitDialog);
@@ -5178,14 +4945,61 @@ void Win32IDE::showCommitDialog()
 // AI INFERENCE IMPLEMENTATION - Connects GGUF Loader to Chat Panel
 // ============================================================================
 
+void Win32IDE::openModel() {
+    wchar_t filename[MAX_PATH] = {0};
+    OPENFILENAMEW ofn = {0};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = m_hwndMain;
+    ofn.lpstrFilter = L"GGUF Models\0*.gguf\0All Files\0*.*\0";
+    ofn.lpstrFile = filename;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+    ofn.lpstrTitle = L"Select GGUF Model";
+
+    if (GetOpenFileNameW(&ofn)) {
+        loadModelForInference(wideToUtf8(filename));
+    }
+}
+
+bool Win32IDE::loadModelForInference(const std::string& filepath) {
+    SCOPED_METRIC("model.load");
+    METRICS.increment("model.load_attempts");
+    appendToOutput("Loading model: " + filepath + "\n", "System", OutputSeverity::Info);
+    
+    if (!m_agenticBridge) {
+        initializeAgenticBridge();
+    }
+    
+    if (m_agenticBridge) {
+        if (m_agenticBridge->LoadModel(filepath)) {
+            METRICS.gauge("model.loaded", 1.0);
+            METRICS.increment("model.load_success");
+            appendToOutput("Model loaded successfully into Agentic Bridge.\n", "System", OutputSeverity::Info);
+            
+            // Sync current UI state
+            m_agenticBridge->SetContextSize("4K"); 
+            if (m_hwndContextSlider) SendMessage(m_hwndContextSlider, TBM_SETPOS, TRUE, 0);
+            
+            return true;
+        }
+    }
+    
+    METRICS.increment("model.load_failures");
+    METRICS.gauge("model.loaded", 0.0);
+    appendToOutput("Failed to load model: " + filepath + "\n", "System", OutputSeverity::Error);
+    return false;
+}
+
 bool Win32IDE::initializeInference()
 {
+    SCOPED_METRIC("inference.initialize");
+    METRICS.increment("inference.init_attempts");
     std::lock_guard<std::mutex> lock(m_inferenceMutex);
     
     // Explicit Logic: Initialize Native CPU Engine if missing (Un-mocking)
     if (!m_nativeEngine) {
         try {
-            m_nativeEngine = new RawrXD::CPUInferenceEngine();
+            m_nativeEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
             m_nativeEngineLoaded = false;
             appendToOutput("Initialized Native CPU Inference Engine.", "Output", OutputSeverity::Info);
         } catch (const std::exception& e) {
@@ -5205,10 +5019,10 @@ bool Win32IDE::initializeInference()
     
     // Connect Native Engine to Model
     if (m_nativeEngine && !m_loadedModelPath.empty()) {
-        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
-        if (!engine->isModelLoaded()) {
+        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine.get());
+        if (!engine->IsModelLoaded()) {
             appendToOutput("Loading model into Native Engine: " + m_loadedModelPath, "Output", OutputSeverity::Info);
-            if (engine->loadModel(m_loadedModelPath)) {
+            if (engine->LoadModel(m_loadedModelPath)) {
                 m_nativeEngineLoaded = true;
                 appendToOutput("✅ Native Engine Model Loaded Successfully.", "Output", OutputSeverity::Info);
             } else {
@@ -5255,8 +5069,17 @@ void Win32IDE::shutdownInference()
 
 std::string Win32IDE::generateResponse(const std::string& prompt)
 {
+    SCOPED_METRIC("inference.generate_response");
+    METRICS.increment("inference.requests_total");
+
     if (m_inferenceRunning) {
+        METRICS.increment("inference.requests_rejected");
         return "Inference already in progress. Please wait...";
+    }
+
+    // Phase 8B/8C: Route through LLM router (if enabled) or backend manager
+    if (m_backendManagerInitialized) {
+        return routeWithIntelligence(prompt);
     }
 
     // Attempt real remote/local inference via Ollama if configured
@@ -5338,14 +5161,17 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
 
     // Fallback: Native CPU Inference Engine
     if (m_nativeEngine && m_nativeEngineLoaded) {
-        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
+        RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine.get());
         // If engine doesn't have a model loaded, try to load current one
-        if (!engine->isModelLoaded() && !m_loadedModelPath.empty()) {
-            engine->loadModel(m_loadedModelPath);
+        if (!engine->IsModelLoaded() && !m_loadedModelPath.empty()) {
+            engine->LoadModel(m_loadedModelPath);
         }
         
-        if (engine->isModelLoaded()) {
-            return engine->infer(prompt);
+        if (engine->IsModelLoaded()) {
+            // Use Generate method for inference
+            std::vector<int32_t> tokens = engine->Tokenize(prompt);
+            std::vector<int32_t> output = engine->Generate(tokens, 100);
+            return engine->Detokenize(output);
         } else {
              return "Error: No model loaded in Native CPU Engine.";
         }
@@ -5356,9 +5182,11 @@ std::string Win32IDE::generateResponse(const std::string& prompt)
 
 void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<void(const std::string&, bool)> callback)
 {
+    METRICS.increment("inference.async_requests_total");
     std::lock_guard<std::mutex> lock(m_inferenceMutex);
 
     if (m_inferenceRunning) {
+        METRICS.increment("inference.async_requests_rejected");
         if (callback) callback("Inference already in progress.", true);
         return;
     }
@@ -5368,48 +5196,51 @@ void Win32IDE::generateResponseAsync(const std::string& prompt, std::function<vo
     m_currentInferencePrompt = prompt;
     m_inferenceCallback = callback;
     
-    // Launch dedicated inference thread
+    // Launch dedicated inference thread using Native Agentic Bridge
     m_inferenceThread = std::thread([this, prompt]() {
-        // 1. Try Native CPU Engine with Streaming
-        if (m_nativeEngine) {
-             RawrXD::CPUInferenceEngine* engine = static_cast<RawrXD::CPUInferenceEngine*>(m_nativeEngine);
-             if (engine->isModelLoaded()) {
-                 // Configure sampling (ensure thread-safe access if needed)
-                 engine->setSampling(
-                     m_inferenceConfig.temperature,
-                     m_inferenceConfig.topP,
-                     m_inferenceConfig.topK,
-                     m_inferenceConfig.repetitionPenalty
-                 );
-                 
-                 // Run generation with per-token callback
-                 bool success = engine->generate(prompt, [this](const std::string& token) {
-                     if (m_inferenceStopRequested) return false;
-                     
-                     // Send token to UI
-                     if (m_inferenceCallback) {
-                         m_inferenceCallback(token, false);
-                     }
-                     return true;
-                 });
-                 
-                 m_inferenceRunning = false;
-                 if (m_inferenceCallback) {
-                     m_inferenceCallback("", true); // Finalize
-                 }
-                 return;
-             }
+        DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+        if (_guard.cancelled) { m_inferenceRunning = false; return; }
+        if (!m_agenticBridge) {
+             if (m_inferenceCallback) m_inferenceCallback("Error: Agentic Bridge not initialized.", true);
+             m_inferenceRunning = false;
+             return;
         }
 
-        // 2. Fallback: Synchronous Blocking Call (Ollama/Legacy)
-        // If native engine failed or wasn't loaded, we fall back to the blocking method
-        // but execute it in this background thread so UI doesn't freeze.
-        std::string response = generateResponse(prompt);
-        
+        // Set callback to route NativeAgent stream to the UI
+        m_agenticBridge->SetOutputCallback([this](const std::string& type, const std::string& msg) {
+             if (m_inferenceStopRequested || isShuttingDown()) return;
+             // "stream" type is what we send to chat UI
+             if (m_inferenceCallback) m_inferenceCallback(msg, false);
+        });
+
+        // Execute via parity bridge (supports /edit, /think, etc.)
+        m_agenticBridge->ExecuteAgentCommand(prompt);
+
+        // Phase 4B: Choke Point 4 — hookPostGeneration after streaming inference
+        // Note: For streaming responses, the full output was already sent via callback.
+        // We hook here for failure detection on the completed inference cycle.
+        // The response content was streamed — we check the accumulated result if available.
+        if (!m_inferenceStopRequested) {
+            std::string accumulatedResponse = m_currentInferenceResponse;
+            if (!accumulatedResponse.empty()) {
+                FailureClassification inferenceFailure = hookPostGeneration(
+                    accumulatedResponse, prompt);
+                if (inferenceFailure.reason != AgentFailureType::None) {
+                    LOG_WARNING("[Phase4B] Inference failure detected: " +
+                        failureTypeString(inferenceFailure.reason) +
+                        " (confidence=" + std::to_string(inferenceFailure.confidence) + ")");
+                    // For streaming responses, we log the failure and record it
+                    // but don't auto-retry (the user sees output in real-time)
+                    recordSimpleEvent(AgentEventType::FailureDetected,
+                        "Inference failure: " + failureTypeString(inferenceFailure.reason) +
+                        " | " + inferenceFailure.evidence);
+                }
+            }
+        }
+
         m_inferenceRunning = false;
-        if (m_inferenceCallback) {
-            // Send full response as one chunk if fallback was used
-            m_inferenceCallback(response, true);
+        if (m_inferenceCallback && !isShuttingDown()) {
+            m_inferenceCallback("", true); // Finalize
         }
     });
     
@@ -5439,11 +5270,17 @@ std::string Win32IDE::buildChatPrompt(const std::string& userMessage)
     // Add system prompt if set
     if (!m_inferenceConfig.systemPrompt.empty()) {
         prompt = "<|system|>\n" + m_inferenceConfig.systemPrompt + "\n<|end|>\n";
+        m_contextUsage.systemTokens = static_cast<int>(m_inferenceConfig.systemPrompt.length()) / 4;
     }
     
     // Add user message
     prompt += "<|user|>\n" + userMessage + "\n<|end|>\n";
     prompt += "<|assistant|>\n";
+    
+    // Track message tokens and update context window
+    m_contextUsage.messageTokens += static_cast<int>(userMessage.length()) / 4;
+    m_contextUsage.maxTokens = m_inferenceConfig.contextWindow;
+    updateContextWindowDisplay();
     
     return prompt;
 }
@@ -5452,6 +5289,17 @@ void Win32IDE::onInferenceToken(const std::string& token)
 {
     // Called when streaming tokens during inference
     m_currentInferenceResponse += token;
+    
+    // Phase 19B: Feed token to the streaming output system
+    appendStreamingToken(token);
+    
+    // Update context window token count (approximate: ~4 chars per token)
+    int approxTokens = static_cast<int>(m_currentInferenceResponse.length()) / 4;
+    m_contextUsage.toolResultTokens = approxTokens;
+    // Throttle status bar updates to every ~20 tokens
+    if (approxTokens % 20 == 0) {
+        updateContextWindowDisplay();
+    }
     
     // Update UI with partial response if streaming is enabled
     if (m_inferenceConfig.streamOutput && m_inferenceCallback) {
@@ -5463,6 +5311,10 @@ void Win32IDE::onInferenceComplete(const std::string& fullResponse)
 {
     m_inferenceRunning = false;
     m_currentInferenceResponse = fullResponse;
+    
+    // Final context window update
+    m_contextUsage.toolResultTokens = static_cast<int>(fullResponse.length()) / 4;
+    updateContextWindowDisplay();
     
     if (m_inferenceCallback) {
         m_inferenceCallback(fullResponse, true);
@@ -5538,20 +5390,26 @@ void Win32IDE::toggleTerminal()
 void Win32IDE::showAbout()
 {
     std::string aboutText = 
-        "RawrXD Win32 IDE\n\n"
-        "Version: 1.0.0\n"
-        "Build: " __DATE__ " " __TIME__ "\n\n"
-        "Features:\n"
-        "• Native Win32 UI\n"
-        "• GGUF Model Support\n"
-        "• PowerShell Integration\n"
-        "• Git Integration\n"
-        "• AI Chat via Ollama\n"
-        "• Syntax Highlighting\n"
-        "• Multi-Terminal Support\n\n"
-        "GitHub: ItsMehRAWRXD/RawrXD";
+        RAWRXD_VERSION_FULL "\n\n"
+        "Build: " RAWRXD_BUILD_DATE " " RAWRXD_BUILD_TIME "\n"
+        "Channel: " RAWRXD_CHANNEL "\n"
+        "Units: " + std::to_string(RAWRXD_COMPILE_UNITS) + " compilation units\n"
+        "MASM64: " + std::to_string(RAWRXD_MASM_KERNELS) + " ASM kernels\n\n"
+        "Engine:\n"
+        "• Native Win32 C++20 (no Qt, no Electron)\n"
+        "• GGUF Model Loader + AVX-512 Inference\n"
+        "• Chain-of-Thought Multi-Model Review\n"
+        "• Native PDB Symbol Server (MSF v7.00)\n"
+        "• Three-Layer Hotpatch System\n"
+        "• Voice Chat (waveIn/Out + VAD + STT/TTS)\n"
+        "• Unified GPU Accelerator Router\n"
+        "• Embedded LSP Server (JSON-RPC 2.0)\n"
+        "• Distributed Swarm Inference\n\n"
+        RAWRXD_COPYRIGHT "\n"
+        RAWRXD_LICENSE "\n"
+        RAWRXD_GITHUB;
     
-    MessageBoxA(m_hwndMain, aboutText.c_str(), "About RawrXD IDE", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(aboutText).c_str(), L"About RawrXD IDE", MB_OK | MB_ICONINFORMATION);
 }
 
 // ============================================================================
@@ -5592,7 +5450,7 @@ void Win32IDE::onAutonomyViewStatus() {
     if (!m_autonomyManager) return;
     std::string status = m_autonomyManager->getStatus();
     appendToOutput("Autonomy Status: " + status + "\n", "Output", OutputSeverity::Info);
-    MessageBoxA(m_hwndMain, status.c_str(), "Autonomy Status", MB_OK | MB_ICONINFORMATION);
+    MessageBoxW(m_hwndMain, utf8ToWide(status).c_str(), L"Autonomy Status", MB_OK | MB_ICONINFORMATION);
 }
 
 void Win32IDE::onAutonomyViewMemory() {
@@ -5605,7 +5463,7 @@ void Win32IDE::onAutonomyViewMemory() {
     }
     if (shown == 0) report += "<empty>\n";
     appendToOutput("Autonomy Memory Snapshot displayed\n", "Debug", OutputSeverity::Debug);
-    MessageBoxA(m_hwndMain, report.c_str(), "Autonomy Memory", MB_OK);
+    MessageBoxW(m_hwndMain, utf8ToWide(report).c_str(), L"Autonomy Memory", MB_OK);
 }
 
 // ======================================================================
@@ -5619,41 +5477,38 @@ void Win32IDE::createChatPanel() {
         return;
     }
 
-    // Create secondary sidebar container (right side)
-    m_hwndSecondarySidebar = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "STATIC", "",
+    m_hwndSecondarySidebar = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"STATIC", L"",
         WS_CHILD | WS_VISIBLE,
         0, 0, 300, 600,
         m_hwndMain, (HMENU)IDC_SECONDARY_SIDEBAR, m_hInstance, nullptr);
-    
-    if (!m_hwndSecondarySidebar) {
 
+    if (!m_hwndSecondarySidebar) {
         return;
     }
-    
-    // Create header with title
-    m_hwndSecondarySidebarHeader = CreateWindowExA(
-        0, "STATIC", "AI Chat",
+    SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_USERDATA, (LONG_PTR)this);
+    m_oldSidebarProc = (WNDPROC)SetWindowLongPtr(m_hwndSecondarySidebar, GWLP_WNDPROC, (LONG_PTR)SidebarProc);
+
+    m_hwndSecondarySidebarHeader = CreateWindowExW(
+        0, L"STATIC", L"AI Chat",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 5, 290, 25,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
     
-    HFONT hFont = CreateFontA(14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, 
+    HFONT hFont = CreateFontA(-dpiScale(14), 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, 
                               OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, 
                               DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
     if (m_hwndSecondarySidebarHeader) {
         SendMessage(m_hwndSecondarySidebarHeader, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
     
-    // Model Selection Label
-    CreateWindowExA(0, "STATIC", "Model:",
+    CreateWindowExW(0, L"STATIC", L"Model:",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 35, 50, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
-    
-    // Model Selector Combobox
-    m_hwndModelSelector = CreateWindowExA(
-        0, "COMBOBOX", "",
+
+    m_hwndModelSelector = CreateWindowExW(
+        0, L"COMBOBOX", L"",
         WS_CHILD | WS_VISIBLE | CBS_DROPDOWN | CBS_AUTOHSCROLL,
         60, 35, 235, 200,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_SEND_BTN, m_hInstance, nullptr);
@@ -5663,24 +5518,45 @@ void Win32IDE::createChatPanel() {
         populateModelSelector();
     }
     
-    // Max Tokens Label
-    CreateWindowExA(0, "STATIC", "Max Tokens:",
+    CreateWindowExW(0, L"STATIC", L"Max Tokens:",
         WS_CHILD | WS_VISIBLE | SS_LEFT,
         5, 60, 80, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
-    
-    // Max Tokens Label (value display)
-    m_hwndMaxTokensLabel = CreateWindowExA(0, "STATIC", "512",
+
+    m_hwndMaxTokensLabel = CreateWindowExW(0, L"STATIC", L"512",
         WS_CHILD | WS_VISIBLE | SS_RIGHT,
         245, 60, 50, 18,
         m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
-    
-    // Max Tokens Slider
-    m_hwndMaxTokensSlider = CreateWindowExA(
-        0, "TRACKBAR_CLASS", "",
+
+    m_hwndMaxTokensSlider = CreateWindowExW(
+        0, TRACKBAR_CLASSW, L"",
         WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS,
         5, 80, 290, 25,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CLEAR_BTN, m_hInstance, nullptr);
+
+    CreateWindowExW(0, L"STATIC", L"Context:",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        5, 110, 80, 18,
+        m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
+
+    m_hwndContextLabel = CreateWindowExW(0, L"STATIC", L"4K",
+        WS_CHILD | WS_VISIBLE | SS_RIGHT,
+        245, 110, 50, 18,
+        m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
+
+    m_hwndContextSlider = CreateWindowExW(
+        0, TRACKBAR_CLASSW, L"",
+        WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_NOTICKS,
+        5, 130, 290, 25,
+        m_hwndSecondarySidebar, (HMENU)IDC_AI_CONTEXT_SLIDER, m_hInstance, nullptr);
+
+    if (m_hwndContextSlider) {
+        SendMessage(m_hwndContextSlider, TBM_SETRANGE, TRUE, MAKELPARAM(0, 6)); // 7 steps
+        SendMessage(m_hwndContextSlider, TBM_SETPOS, TRUE, 0); // Default 4K
+        m_currentContextSize = 4096;
+    }
+    // Update Chat Output Y position to accommodate new slider
+    int chatY = 160; 
     
     if (m_hwndMaxTokensSlider) {
         SendMessage(m_hwndMaxTokensSlider, TBM_SETRANGE, TRUE, MAKELPARAM(32, 2048));
@@ -5688,43 +5564,82 @@ void Win32IDE::createChatPanel() {
         SendMessage(m_hwndMaxTokensSlider, TBM_SETTICFREQ, 256, 0);
         m_currentMaxTokens = 512;
     }
-    
-    // Chat Output Textbox
-    m_hwndCopilotChatOutput = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+
+    CreateWindowExW(0, L"STATIC", L"Context (Mem):",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        5, 110, 100, 18,
+        m_hwndSecondarySidebar, nullptr, m_hInstance, nullptr);
+
+    HWND hContextCombo = CreateWindowExW(
+        0, L"COMBOBOX", L"",
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+        110, 108, 185, 300,
+        m_hwndSecondarySidebar, (HMENU)4200, m_hInstance, nullptr);
+
+    if (hContextCombo) {
+        SendMessage(hContextCombo, WM_SETFONT, (WPARAM)hFont, TRUE);
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"2048 (Standard)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"4096 (4k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"32768 (32k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"65536 (64k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"131072 (128k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"262144 (256k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"524288 (512k)");
+        SendMessageW(hContextCombo, CB_ADDSTRING, 0, (LPARAM)L"1048576 (1M)");
+        SendMessage(hContextCombo, CB_SETCURSEL, 0, 0);
+    }
+
+    int toggleY = 140;
+    int toggleX = 5;
+
+    m_hwndChkMaxMode = CreateWindowExW(0, L"BUTTON", L"Max Mode", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                      toggleX, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_MAX_MODE, m_hInstance, nullptr);
+    m_hwndChkDeepThink = CreateWindowExW(0, L"BUTTON", L"Deep Think", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                       toggleX + 150, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_DEEP_THINK, m_hInstance, nullptr);
+
+    toggleY += 25;
+    m_hwndChkDeepResearch = CreateWindowExW(0, L"BUTTON", L"Deep Research", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                          toggleX, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_DEEP_RESEARCH, m_hInstance, nullptr);
+    m_hwndChkNoRefusal = CreateWindowExW(0, L"BUTTON", L"No Refusal", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                       toggleX + 150, toggleY, 140, 20, m_hwndSecondarySidebar, (HMENU)IDC_AI_NO_REFUSAL, m_hInstance, nullptr);
+
+    if (m_hwndChkMaxMode) SendMessage(m_hwndChkMaxMode, WM_SETFONT, (WPARAM)hFont, TRUE);
+    if (m_hwndChkDeepThink) SendMessage(m_hwndChkDeepThink, WM_SETFONT, (WPARAM)hFont, TRUE);
+    if (m_hwndChkDeepResearch) SendMessage(m_hwndChkDeepResearch, WM_SETFONT, (WPARAM)hFont, TRUE);
+    if (m_hwndChkNoRefusal) SendMessage(m_hwndChkNoRefusal, WM_SETFONT, (WPARAM)hFont, TRUE);
+
+    m_hwndCopilotChatOutput = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
-        5, 110, 290, 300,
+        5, 200, 290, 210,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_OUTPUT, m_hInstance, nullptr);
-    
+
     if (m_hwndCopilotChatOutput) {
         SendMessage(m_hwndCopilotChatOutput, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
-    
-    // Chat Input Textbox
-    m_hwndCopilotChatInput = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "",
+
+    m_hwndCopilotChatInput = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
         5, 415, 290, 85,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CHAT_INPUT, m_hInstance, nullptr);
-    
+
     if (m_hwndCopilotChatInput) {
         SendMessage(m_hwndCopilotChatInput, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
-    
-    // Send Button
-    m_hwndCopilotSendBtn = CreateWindowExA(
-        0, "BUTTON", "Send",
+
+    m_hwndCopilotSendBtn = CreateWindowExW(
+        0, L"BUTTON", L"Send",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         5, 505, 140, 30,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_SEND_BTN, m_hInstance, nullptr);
-    
+
     if (m_hwndCopilotSendBtn) {
         SendMessage(m_hwndCopilotSendBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
     }
-    
-    // Clear Button
-    m_hwndCopilotClearBtn = CreateWindowExA(
-        0, "BUTTON", "Clear",
+
+    m_hwndCopilotClearBtn = CreateWindowExW(
+        0, L"BUTTON", L"Clear",
         WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
         150, 505, 140, 30,
         m_hwndSecondarySidebar, (HMENU)IDC_COPILOT_CLEAR_BTN, m_hInstance, nullptr);
@@ -5734,7 +5649,7 @@ void Win32IDE::createChatPanel() {
     }
     
     m_secondarySidebarVisible = true;
-    m_secondarySidebarWidth = 300;
+    m_secondarySidebarWidth = 320;
 
 }
 
@@ -5770,7 +5685,7 @@ void Win32IDE::populateModelSelector() {
     
     // Populate combobox
     for (const auto& model : m_availableModels) {
-        SendMessageA(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)model.c_str());
+        SendMessageW(m_hwndModelSelector, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(model).c_str());
     }
     
     // Set first item as selected
@@ -5781,12 +5696,14 @@ void Win32IDE::populateModelSelector() {
 }
 
 void Win32IDE::HandleCopilotSend() {
+    SCOPED_METRIC("chat.send_message");
+    METRICS.increment("chat.messages_sent");
+
     if (!m_hwndCopilotChatInput || !m_hwndCopilotChatOutput) return;
 
-    // Get input text
-    char inputBuffer[2048] = {0};
-    GetWindowTextA(m_hwndCopilotChatInput, inputBuffer, sizeof(inputBuffer) - 1);
-    std::string userMessage(inputBuffer);
+    wchar_t inputBuffer[2048] = {0};
+    GetWindowTextW(m_hwndCopilotChatInput, inputBuffer, 2047);
+    std::string userMessage = wideToUtf8(inputBuffer);
     
     if (userMessage.empty()) {
         LOG_WARNING("Empty message - ignoring");
@@ -5802,26 +5719,25 @@ void Win32IDE::HandleCopilotSend() {
     // Display user message
     std::string displayText = "\n> User: " + userMessage + "\n";
     
-    // Append to output
-    int len = GetWindowTextLengthA(m_hwndCopilotChatOutput);
+    int len = GetWindowTextLengthW(m_hwndCopilotChatOutput);
     if (len > 0) {
         SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, len, len);
     }
-    SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)displayText.c_str());
+    SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(displayText).c_str());
     
     // Clear input
-    SetWindowTextA(m_hwndCopilotChatInput, "");
+    SetWindowTextW(m_hwndCopilotChatInput, L"");
     
     // Generate response asynchronously
     auto onResponse = [this](const std::string& response, bool complete) {
         if (!m_hwndCopilotChatOutput) return;
         
         std::string displayResp = "AI: " + response + (complete ? "\n" : "");
-        int len = GetWindowTextLengthA(m_hwndCopilotChatOutput);
+        int len = GetWindowTextLengthW(m_hwndCopilotChatOutput);
         if (len > 0) {
             SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, len, len);
         }
-        SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)displayResp.c_str());
+        SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(displayResp).c_str());
     };
     
     // Set model override temporarily
@@ -5835,8 +5751,8 @@ void Win32IDE::HandleCopilotSend() {
 void Win32IDE::HandleCopilotClear() {
     if (!m_hwndCopilotChatOutput || !m_hwndCopilotChatInput) return;
 
-    SetWindowTextA(m_hwndCopilotChatOutput, "Welcome to RawrXD AI Chat!\n\nSelect a model and type your message to begin.");
-    SetWindowTextA(m_hwndCopilotChatInput, "");
+    SetWindowTextW(m_hwndCopilotChatOutput, L"Welcome to RawrXD AI Chat!\n\nSelect a model and type your message to begin.");
+    SetWindowTextW(m_hwndCopilotChatInput, L"");
     m_chatHistory.clear();
 
 }
@@ -5853,9 +5769,9 @@ void Win32IDE::HandleCopilotStreamUpdate(const char* token, size_t length) {
 
     if (chunk.empty()) return;
 
-    int currentLen = GetWindowTextLengthA(m_hwndCopilotChatOutput);
-    SendMessageA(m_hwndCopilotChatOutput, EM_SETSEL, currentLen, currentLen);
-    SendMessageA(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)chunk.c_str());
+    int currentLen = GetWindowTextLengthW(m_hwndCopilotChatOutput);
+    SendMessage(m_hwndCopilotChatOutput, EM_SETSEL, currentLen, currentLen);
+    SendMessageW(m_hwndCopilotChatOutput, EM_REPLACESEL, FALSE, (LPARAM)utf8ToWide(chunk).c_str());
     SendMessage(m_hwndCopilotChatOutput, WM_VSCROLL, SB_BOTTOM, 0);
 }
 
@@ -5873,8 +5789,1492 @@ void Win32IDE::onMaxTokensChanged(int newValue) {
     
     // Update label
     if (m_hwndMaxTokensLabel) {
-        SetWindowTextA(m_hwndMaxTokensLabel, std::to_string(newValue).c_str());
+        SetWindowTextW(m_hwndMaxTokensLabel, utf8ToWide(std::to_string(newValue)).c_str());
     }
 
 }
 
+// ============================================================================
+// IMPLEMENTATIONS for functions declared in Win32IDE.h
+// Line Number Gutter, Minimap, Breadcrumb, and other UI components.
+// ============================================================================
+
+// --- Line Number Gutter ---
+void Win32IDE::createLineNumberGutter(HWND hwndParent) {
+    if (!hwndParent) return;
+    
+    m_hwndLineNumbers = CreateWindowExW(
+        0, L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
+        0, 0, 50, 100,
+        hwndParent, nullptr, m_hInstance, nullptr);
+    
+    if (m_hwndLineNumbers) {
+        SetPropW(m_hwndLineNumbers, L"IDE_PTR", (HANDLE)this);
+        m_oldLineNumberProc = (WNDPROC)SetWindowLongPtrW(m_hwndLineNumbers, GWLP_WNDPROC, (LONG_PTR)LineNumberProc);
+    }
+}
+
+void Win32IDE::updateLineNumbers() {
+    if (m_hwndLineNumbers && IsWindow(m_hwndLineNumbers)) {
+        InvalidateRect(m_hwndLineNumbers, nullptr, TRUE);
+    }
+}
+
+void Win32IDE::paintLineNumbers(HDC hdc, RECT& rc) {
+    if (!m_hwndEditor || !IsWindow(m_hwndEditor)) return;
+    
+    // Get the current scroll position and line metrics from the rich edit control
+    int firstVisibleLine = (int)SendMessage(m_hwndEditor, EM_GETFIRSTVISIBLELINE, 0, 0);
+    int lineCount = (int)SendMessage(m_hwndEditor, EM_GETLINECOUNT, 0, 0);
+    
+    // Get the editor font metrics
+    HFONT hFont = m_editorFont ? m_editorFont : (HFONT)GetStockObject(SYSTEM_FIXED_FONT);
+    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+    
+    TEXTMETRICW tm;
+    GetTextMetricsW(hdc, &tm);
+    int lineHeight = tm.tmHeight + tm.tmExternalLeading;
+    if (lineHeight <= 0) lineHeight = 16;
+    
+    SetBkColor(hdc, RGB(30, 30, 30));
+    SetTextColor(hdc, RGB(133, 133, 133));
+    
+    HBRUSH bgBrush = CreateSolidBrush(RGB(30, 30, 30));
+    FillRect(hdc, &rc, bgBrush);
+    DeleteObject(bgBrush);
+    
+    int visibleLines = (rc.bottom - rc.top) / lineHeight + 1;
+    
+    for (int i = 0; i < visibleLines && (firstVisibleLine + i) < lineCount; i++) {
+        int lineNum = firstVisibleLine + i + 1;
+        wchar_t buf[16];
+        swprintf_s(buf, L"%4d", lineNum);
+        
+        RECT lineRect = {rc.left, i * lineHeight, rc.right - 4, (i + 1) * lineHeight};
+        
+        if (lineNum == m_currentLine) {
+            SetTextColor(hdc, RGB(200, 200, 200));
+        } else {
+            SetTextColor(hdc, RGB(133, 133, 133));
+        }
+        
+        DrawTextW(hdc, buf, -1, &lineRect, DT_RIGHT | DT_SINGLELINE | DT_VCENTER);
+    }
+    
+    SelectObject(hdc, hOldFont);
+}
+
+LRESULT CALLBACK Win32IDE::LineNumberProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* ide = (Win32IDE*)GetPropW(hwnd, L"IDE_PTR");
+    
+    if (uMsg == WM_PAINT) {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        if (ide) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            ide->paintLineNumbers(hdc, rc);
+        }
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    
+    if (uMsg == WM_ERASEBKGND) {
+        return 1; // We handle painting
+    }
+    
+    if (ide && ide->m_oldLineNumberProc) {
+        return CallWindowProcW(ide->m_oldLineNumberProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
+// --- Editor Tab Bar ---
+void Win32IDE::createTabBar(HWND hwndParent) {
+    if (!hwndParent) return;
+    
+    m_hwndTabBar = CreateWindowExW(
+        0, WC_TABCONTROLW, L"",
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK | TCS_TOOLTIPS,
+        0, 0, 800, 28,
+        hwndParent, nullptr, m_hInstance, nullptr);
+    
+    if (m_hwndTabBar) {
+        // Set dark theme font
+        if (m_hFontUI) {
+            SendMessage(m_hwndTabBar, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+        }
+    }
+}
+
+void Win32IDE::addTab(const std::string& filePath, const std::string& displayName) {
+    // Add a new editor tab
+    EditorTab tab;
+    tab.filePath = filePath;
+    tab.displayName = displayName.empty() ? filePath : displayName;
+    tab.modified = false;
+    
+    m_editorTabs.push_back(tab);
+    
+    if (m_hwndTabBar) {
+        std::wstring displayW = utf8ToWide(tab.displayName);
+        TCITEMW tci = {};
+        tci.mask = TCIF_TEXT;
+        tci.pszText = const_cast<wchar_t*>(displayW.c_str());
+        int index = (int)SendMessage(m_hwndTabBar, TCM_GETITEMCOUNT, 0, 0);
+        SendMessageW(m_hwndTabBar, TCM_INSERTITEMW, index, (LPARAM)&tci);
+        SendMessage(m_hwndTabBar, TCM_SETCURSEL, index, 0);
+        m_activeTabIndex = index;
+    }
+}
+
+void Win32IDE::onTabChanged() {
+    if (!m_hwndTabBar) return;
+    
+    int newIndex = (int)SendMessage(m_hwndTabBar, TCM_GETCURSEL, 0, 0);
+    if (newIndex >= 0 && newIndex < (int)m_editorTabs.size() && newIndex != m_activeTabIndex) {
+        // Save current tab content
+        if (m_activeTabIndex >= 0 && m_activeTabIndex < (int)m_editorTabs.size()) {
+            m_editorTabs[m_activeTabIndex].content = getWindowText(m_hwndEditor);
+        }
+
+        // Stash annotations for the outgoing tab
+        storeAnnotationsForTab();
+        
+        // Switch to new tab
+        m_activeTabIndex = newIndex;
+        const auto& tab = m_editorTabs[newIndex];
+        
+        // Load tab content into editor
+        setWindowText(m_hwndEditor, tab.content);
+        
+        // Update current file path
+        m_currentFile = tab.filePath;
+
+        // Restore stashed annotations for the incoming tab
+        restoreAnnotationsForTab();
+
+        // Re-detect language for the new file and recolor
+        m_syntaxLanguage = detectLanguageFromExtension(m_currentFile);
+        onEditorContentChanged();
+        
+        // Update status bar
+        if (m_hwndStatusBar) {
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(tab.displayName).c_str());
+        }
+        
+        // Update line numbers
+        updateLineNumbers();
+    }
+}
+
+void Win32IDE::setActiveTab(int index) {
+    if (!m_hwndTabBar) return;
+    if (index < 0 || index >= (int)m_editorTabs.size()) return;
+
+    // Use the tab control to select the tab, then trigger onTabChanged
+    SendMessage(m_hwndTabBar, TCM_SETCURSEL, index, 0);
+    onTabChanged();
+}
+
+void Win32IDE::removeTab(int index) {
+    if (index < 0 || index >= (int)m_editorTabs.size()) return;
+
+    // Clear annotation cache for the file being closed
+    const std::string& closingFile = m_editorTabs[index].filePath;
+    if (!closingFile.empty()) {
+        m_annotationCache.erase(closingFile);
+    }
+    // If this is the active tab, clear live annotations
+    if (index == m_activeTabIndex) {
+        clearAnnotationsForCurrentFile();
+    }
+
+    // Remove from the Win32 tab control
+    if (m_hwndTabBar) {
+        SendMessage(m_hwndTabBar, TCM_DELETEITEM, index, 0);
+    }
+
+    // Remove from our vector
+    m_editorTabs.erase(m_editorTabs.begin() + index);
+
+    // Adjust active tab index
+    if (m_editorTabs.empty()) {
+        m_activeTabIndex = -1;
+        m_currentFile.clear();
+        setWindowText(m_hwndEditor, "");
+    } else if (index <= m_activeTabIndex) {
+        m_activeTabIndex = std::max(0, m_activeTabIndex - 1);
+        SendMessage(m_hwndTabBar, TCM_SETCURSEL, m_activeTabIndex, 0);
+        onTabChanged();
+    }
+}
+
+int Win32IDE::findTabByPath(const std::string& filePath) const {
+    for (int i = 0; i < (int)m_editorTabs.size(); i++) {
+        if (m_editorTabs[i].filePath == filePath) return i;
+    }
+    return -1;
+}
+
+// --- Command Input Subclass Procedure ---
+LRESULT CALLBACK Win32IDE::CommandInputProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    // Retrieve IDE pointer via GWLP_USERDATA (set in createTerminal)
+    Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    
+    if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {
+        // Execute command on Enter — route through executeCommand()
+        if (ide) {
+            ide->executeCommand();
+        }
+        return 0;
+    }
+    
+    // Up arrow — command history navigation (previous) — uses PowerShell history
+    if (uMsg == WM_KEYDOWN && wParam == VK_UP) {
+        if (ide) {
+            ide->navigatePowerShellHistoryUp();
+            // Sync text from PowerShell input to command input
+            if (!ide->m_powerShellCommandHistory.empty() && 
+                ide->m_powerShellHistoryIndex >= 0 &&
+                ide->m_powerShellHistoryIndex < (int)ide->m_powerShellCommandHistory.size()) {
+                SetWindowTextW(hwnd, utf8ToWide(ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex]).c_str());
+                SendMessage(hwnd, EM_SETSEL, -1, -1); // cursor to end
+            }
+        }
+        return 0;
+    }
+    
+    // Down arrow — command history navigation (next) — uses PowerShell history
+    if (uMsg == WM_KEYDOWN && wParam == VK_DOWN) {
+        if (ide) {
+            ide->navigatePowerShellHistoryDown();
+            if (ide->m_powerShellHistoryIndex >= 0 &&
+                ide->m_powerShellHistoryIndex < (int)ide->m_powerShellCommandHistory.size()) {
+                SetWindowTextW(hwnd, utf8ToWide(ide->m_powerShellCommandHistory[ide->m_powerShellHistoryIndex]).c_str());
+                SendMessage(hwnd, EM_SETSEL, -1, -1);
+            } else {
+                SetWindowTextW(hwnd, L"");
+            }
+        }
+        return 0;
+    }
+    
+    if (ide && ide->m_oldCommandInputProc) {
+        return CallWindowProcA(ide->m_oldCommandInputProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// --- Agent Output Handling ---
+void Win32IDE::onAgentOutput(const char* text) {
+    if (!text) return;
+    appendToOutput(std::string(text), "Agent", OutputSeverity::Info);
+}
+
+void Win32IDE::postAgentOutputSafe(const std::string& text) {
+    if (isShuttingDown()) return;
+    // Allocate a copy of the string for cross-thread messaging
+    // The WM_AGENT_OUTPUT_SAFE handler will free this via free()
+    char* copy = _strdup(text.c_str());
+    if (copy && m_hwndMain) {
+        PostMessage(m_hwndMain, WM_AGENT_OUTPUT_SAFE, 0, (LPARAM)copy);
+    }
+}
+
+// --- Quick GGUF Model Loader (delegates to unified model dialog) ---
+void Win32IDE::quickLoadGGUFModel() {
+    openModelUnified();
+}
+
+// ============================================================================
+// UNIFIED MODEL SOURCE RESOLUTION
+// Implements HuggingFace, Ollama blob, HTTP URL, and smart-detect model loading
+// Uses ModelSourceResolver for source detection and download/resolution
+// All resolved paths feed into the existing loadGGUFModel() 5-step streaming
+// pipeline, preserving full zone-based loading for 800B+ models.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// resolveAndLoadModel — Resolve any model source input to a local path, then
+// load it through the streaming GGUF pipeline. This is the common path for
+// all source types.
+// ---------------------------------------------------------------------------
+bool Win32IDE::resolveAndLoadModel(const std::string& input) {
+    SCOPED_METRIC("model.resolve_and_load");
+    METRICS.increment("model.resolve_attempts");
+
+    if (!m_modelResolver) {
+        // If resolver wasn't initialized (deferredHeavyInit failure), create one now
+        try {
+            m_modelResolver = std::make_unique<RawrXD::ModelSourceResolver>();
+            OutputDebugStringA("ModelSourceResolver late-initialized in resolveAndLoadModel\n");
+        } catch (const std::exception& e) {
+            std::string err = "Failed to initialize ModelSourceResolver: " + std::string(e.what());
+            appendToOutput(err + "\n", "Errors", OutputSeverity::Error);
+            ErrorReporter::report(err, m_hwndMain);
+            return false;
+        }
+    }
+
+    auto sourceType = m_modelResolver->DetectSourceType(input);
+    std::string sourceDesc = RawrXD::ModelSourceResolver::SourceTypeToString(sourceType);
+    appendToOutput("Model source detected: " + sourceDesc + "\n", "Output", OutputSeverity::Info);
+    appendToOutput("Input: " + input + "\n", "Output", OutputSeverity::Info);
+
+    // For local files, skip resolution and go straight to loading
+    if (sourceType == GGUFConstants::ModelSourceType::LOCAL_FILE) {
+        appendToOutput("Loading local GGUF file directly...\n", "Output", OutputSeverity::Info);
+        if (loadGGUFModel(input)) {
+            loadModelForInference(input);
+            METRICS.increment("model.resolve_success");
+            return true;
+        }
+        METRICS.increment("model.resolve_failures");
+        return false;
+    }
+
+    // For remote sources, resolve with progress reporting
+    appendToOutput("Resolving model source (this may involve downloading)...\n", "Output", OutputSeverity::Info);
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide("Resolving: " + input).c_str());
+
+    // Progress callback that writes to the output panel
+    auto progressCallback = [this](const RawrXD::ModelDownloadProgress& prog) {
+        if (prog.has_error) {
+            appendToOutput("Download error: " + prog.error_message + "\n", "Errors", OutputSeverity::Error);
+            return;
+        }
+        if (prog.is_completed) {
+            appendToOutput("Download complete: " + prog.local_path + "\n", "Output", OutputSeverity::Info);
+            return;
+        }
+        // Progress update — update status bar with percentage
+        char buf[256];
+        if (prog.total_bytes > 0) {
+            snprintf(buf, sizeof(buf), "Downloading: %.1f%% (%llu / %llu MB) — %s",
+                     prog.progress_percent,
+                     (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)),
+                     (unsigned long long)(prog.total_bytes / (1024 * 1024)),
+                     prog.filename.c_str());
+        } else {
+            snprintf(buf, sizeof(buf), "Downloading: %llu MB — %s",
+                     (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)),
+                     prog.filename.c_str());
+        }
+        if (m_hwndStatusBar) {
+            SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(buf).c_str());
+        }
+    };
+
+    // Perform resolution (may download)
+    RawrXD::ResolvedModelPath resolved;
+    try {
+        resolved = m_modelResolver->Resolve(input, progressCallback);
+    } catch (const std::exception& e) {
+        std::string err = "Exception during model resolution: " + std::string(e.what());
+        appendToOutput(err + "\n", "Errors", OutputSeverity::Error);
+        ErrorReporter::report(err, m_hwndMain);
+        METRICS.increment("model.resolve_failures");
+        return false;
+    } catch (...) {
+        std::string err = "Unknown exception during model resolution for: " + input;
+        appendToOutput(err + "\n", "Errors", OutputSeverity::Error);
+        METRICS.increment("model.resolve_failures");
+        return false;
+    }
+
+    if (!resolved.success) {
+        std::string err = "Failed to resolve model source: " + resolved.error_message;
+        appendToOutput(err + "\n", "Errors", OutputSeverity::Error);
+        ErrorReporter::report(err, m_hwndMain);
+        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Model resolution failed");
+        METRICS.increment("model.resolve_failures");
+        return false;
+    }
+
+    // Log resolution details
+    appendToOutput("Resolved to local path: " + resolved.local_path + "\n", "Output", OutputSeverity::Info);
+    if (!resolved.hf_repo_id.empty()) {
+        appendToOutput("HuggingFace repo: " + resolved.hf_repo_id + " / " + resolved.hf_filename + "\n", "Output", OutputSeverity::Info);
+    }
+    if (!resolved.ollama_model_name.empty()) {
+        appendToOutput("Ollama model: " + resolved.ollama_model_name + "\n", "Output", OutputSeverity::Info);
+    }
+
+    // Load through the streaming GGUF pipeline (preserves all zone-based 800B+ logic)
+    appendToOutput("Loading resolved model through streaming GGUF pipeline...\n", "Output", OutputSeverity::Info);
+    if (loadGGUFModel(resolved.local_path)) {
+        loadModelForInference(resolved.local_path);
+        METRICS.increment("model.resolve_success");
+        return true;
+    }
+
+    METRICS.increment("model.resolve_failures");
+    return false;
+}
+
+// ---------------------------------------------------------------------------
+// openModelFromHuggingFace — Dialog: enter HuggingFace repo ID, browse GGUF
+// files in the repo, select a quant, download and load.
+// ---------------------------------------------------------------------------
+void Win32IDE::openModelFromHuggingFace() {
+    SCOPED_METRIC("model.open_from_huggingface");
+
+    // Step 1: Ask user for HuggingFace repo ID or search query
+    char inputBuf[512] = {0};
+    // Use a simple input dialog (reuse the existing pattern from command palette)
+    // We'll use a Win32 dialog via a helper input box
+    
+    // Create a simple input dialog
+    struct HFInputData {
+        char repoId[512];
+        bool confirmed;
+    };
+    HFInputData dlgData = {{0}, false};
+
+    // Use DialogBoxIndirect to create an input dialog
+    // For simplicity with Win32 API, use a TaskDialog-style approach
+    // We'll create a modeless dialog with CreateWindowEx
+    
+    // Simple approach: use an edit control dialog
+    HWND hDlg = CreateWindowExW(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        L"STATIC", L"Load from HuggingFace",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, 520, 340,
+        m_hwndMain, nullptr, m_hInstance, nullptr);
+    
+    if (!hDlg) {
+        appendToOutput("Failed to create HuggingFace dialog\n", "Errors", OutputSeverity::Error);
+        return;
+    }
+
+    SetClassLongPtrW(hDlg, GCLP_HBRBACKGROUND, (LONG_PTR)CreateSolidBrush(RGB(30, 30, 30)));
+    
+    HWND hLabel = CreateWindowExW(0, L"STATIC",
+        L"Enter HuggingFace repo ID (e.g., TheBloke/Llama-2-7B-GGUF)\n"
+        L"or search term (e.g., 'llama 7b gguf'):",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 16, 480, 42, hDlg, nullptr, m_hInstance, nullptr);
+    SendMessage(hLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+    
+    HWND hEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+        16, 64, 480, 26, hDlg, (HMENU)101, m_hInstance, nullptr);
+    SendMessage(hEdit, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+    SetFocus(hEdit);
+    
+    HWND hInfoLabel = CreateWindowExW(0, L"STATIC",
+        L"Available GGUF files will appear below after Search.",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 100, 480, 20, hDlg, (HMENU)103, m_hInstance, nullptr);
+    SendMessage(hInfoLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    HWND hList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_HASSTRINGS,
+        16, 124, 480, 120, hDlg, (HMENU)102, m_hInstance, nullptr);
+    SendMessage(hList, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    HWND hSearchBtn = CreateWindowExW(0, L"BUTTON", L"Search / List Files",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        16, 256, 150, 30, hDlg, (HMENU)201, m_hInstance, nullptr);
+    SendMessage(hSearchBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    HWND hLoadBtn = CreateWindowExW(0, L"BUTTON", L"Download && Load",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        180, 256, 150, 30, hDlg, (HMENU)202, m_hInstance, nullptr);
+    SendMessage(hLoadBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    HWND hCancelBtn = CreateWindowExW(0, L"BUTTON", L"Cancel",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        346, 256, 150, 30, hDlg, (HMENU)IDCANCEL, m_hInstance, nullptr);
+    SendMessage(hCancelBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Store references for the message loop
+    struct HFDialogState {
+        Win32IDE* ide;
+        HWND hDlg;
+        HWND hEdit;
+        HWND hList;
+        HWND hInfoLabel;
+        std::vector<RawrXD::HFModelFileInfo> ggufFiles;
+        std::string repoId;
+        bool done;
+        bool loadRequested;
+        int selectedFileIndex;
+    };
+    
+    HFDialogState state = {};
+    state.ide = this;
+    state.hDlg = hDlg;
+    state.hEdit = hEdit;
+    state.hList = hList;
+    state.hInfoLabel = hInfoLabel;
+    state.done = false;
+    state.loadRequested = false;
+    state.selectedFileIndex = -1;
+
+    // Run a modal-style message pump for this dialog
+    EnableWindow(m_hwndMain, FALSE);
+    
+    MSG msg;
+    while (!state.done && GetMessage(&msg, nullptr, 0, 0)) {
+        // Handle button clicks for our dialog
+        if (msg.message == WM_COMMAND && msg.hwnd == hDlg) {
+            int wmId = LOWORD(msg.wParam);
+            int wmEvent = HIWORD(msg.wParam);
+            
+            if (wmId == IDCANCEL) {
+                state.done = true;
+                continue;
+            }
+            
+            if (wmId == 201) { // Search button
+                wchar_t editText[512] = {0};
+                GetWindowTextW(hEdit, editText, 512);
+                std::string input = wideToUtf8(editText);
+                
+                if (input.empty()) continue;
+                
+                // Clear listbox
+                SendMessage(hList, LB_RESETCONTENT, 0, 0);
+                SetWindowTextW(hInfoLabel, L"Searching HuggingFace...");
+                UpdateWindow(hDlg);
+                
+                state.repoId = input;
+                
+                // Try to get GGUF files from this repo
+                if (m_modelResolver) {
+                    try {
+                        state.ggufFiles = m_modelResolver->GetHuggingFaceGGUFFiles(input);
+                        
+                        if (state.ggufFiles.empty()) {
+                            // Maybe it's a search query, not a repo ID — try search
+                            auto searchResults = m_modelResolver->SearchHuggingFace(input, 10);
+                            if (!searchResults.empty()) {
+                                // Show search results in the listbox
+                                SetWindowTextW(hInfoLabel, L"Search results (select a repo):");
+                                for (const auto& result : searchResults) {
+                                    std::string entry = result.repo_id + " (" + 
+                                        std::to_string(result.gguf_files.size()) + " GGUF files, " +
+                                        std::to_string(result.downloads) + " downloads)";
+                                    SendMessageW(hList, LB_ADDSTRING, 0, (LPARAM)utf8ToWide(entry).c_str());
+                                }
+                                // Store repo IDs for selection
+                                state.ggufFiles.clear(); // These are repo results, not file results
+                            } else {
+                                SetWindowTextW(hInfoLabel, L"No results found. Try a different search term.");
+                            }
+                        } else {
+                            // Show GGUF files
+                            char infoBuf[256];
+                            snprintf(infoBuf, sizeof(infoBuf), "Found %d GGUF files in %s:",
+                                     (int)state.ggufFiles.size(), input.c_str());
+                            SetWindowTextW(hInfoLabel, utf8ToWide(infoBuf).c_str());
+                            
+                            for (const auto& file : state.ggufFiles) {
+                                char fileLine[512];
+                                double sizeMB = file.size_bytes / (1024.0 * 1024.0);
+                                double sizeGB = sizeMB / 1024.0;
+                                if (sizeGB >= 1.0) {
+                                    snprintf(fileLine, sizeof(fileLine), "%s [%s] (%.1f GB)",
+                                             file.filename.c_str(), file.quantization.c_str(), sizeGB);
+                                } else {
+                                    snprintf(fileLine, sizeof(fileLine), "%s [%s] (%.0f MB)",
+                                             file.filename.c_str(), file.quantization.c_str(), sizeMB);
+                                }
+                                SendMessageA(hList, LB_ADDSTRING, 0, (LPARAM)fileLine);
+                            }
+                        }
+                    } catch (const std::exception& e) {
+                        std::string errMsg = "HuggingFace API error: " + std::string(e.what());
+                        SetWindowTextW(hInfoLabel, utf8ToWide(errMsg).c_str());
+                    }
+                } else {
+                    SetWindowTextW(hInfoLabel, L"ModelSourceResolver not initialized!");
+                }
+                
+                UpdateWindow(hDlg);
+            }
+            
+            if (wmId == 202) { // Download & Load button
+                int sel = (int)SendMessage(hList, LB_GETCURSEL, 0, 0);
+                if (sel >= 0 && sel < (int)state.ggufFiles.size()) {
+                    state.selectedFileIndex = sel;
+                    state.loadRequested = true;
+                    state.done = true;
+                    continue;
+                } else if (sel >= 0) {
+                    // Might be a search result — get the text and use it as repo ID
+                    char selText[512] = {0};
+                    SendMessageA(hList, LB_GETTEXT, sel, (LPARAM)selText);
+                    std::string selStr(selText);
+                    // Extract repo ID (before first space or parenthesis)
+                    size_t spacePos = selStr.find(' ');
+                    if (spacePos != std::string::npos) {
+                        state.repoId = selStr.substr(0, spacePos);
+                    } else {
+                        state.repoId = selStr;
+                    }
+                    // Re-search for GGUF files in this repo
+                    SetWindowTextW(hEdit, utf8ToWide(state.repoId).c_str());
+                    PostMessage(hDlg, WM_COMMAND, MAKEWPARAM(201, BN_CLICKED), (LPARAM)hSearchBtn);
+                } else {
+                    MessageBoxW(hDlg, L"Please select a GGUF file from the list first.",
+                                L"No Selection", MB_OK | MB_ICONINFORMATION);
+                }
+            }
+        }
+        
+        // Handle WM_SYSCOMMAND close (X button)
+        if (msg.message == WM_SYSCOMMAND && (msg.wParam & 0xFFF0) == SC_CLOSE && msg.hwnd == hDlg) {
+            state.done = true;
+            continue;
+        }
+        
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+    DestroyWindow(hDlg);
+    
+    // If user selected a file, download and load it
+    if (state.loadRequested && state.selectedFileIndex >= 0 && 
+        state.selectedFileIndex < (int)state.ggufFiles.size()) {
+        
+        const auto& selectedFile = state.ggufFiles[state.selectedFileIndex];
+        appendToOutput("Downloading from HuggingFace: " + state.repoId + " / " + 
+                       selectedFile.filename + "\n", "Output", OutputSeverity::Info);
+        
+        // Download on a background thread to keep UI responsive
+        std::string repoId = state.repoId;
+        std::string filename = selectedFile.filename;
+        
+        std::thread([this, repoId, filename]() {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled) return;
+            auto progressCb = [this](const RawrXD::ModelDownloadProgress& prog) {
+                char buf[256];
+                if (prog.has_error) {
+                    snprintf(buf, sizeof(buf), "Download error: %s", prog.error_message.c_str());
+                    PostMessage(m_hwndMain, WM_APP + 200, 0, 0); // Signal UI update
+                } else if (prog.is_completed) {
+                    snprintf(buf, sizeof(buf), "Download complete!");
+                } else if (prog.total_bytes > 0) {
+                    snprintf(buf, sizeof(buf), "Downloading: %.1f%% (%llu MB)",
+                             prog.progress_percent,
+                             (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)));
+                } else {
+                    snprintf(buf, sizeof(buf), "Downloading: %llu MB",
+                             (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)));
+                }
+                if (m_hwndStatusBar) {
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(buf).c_str());
+                }
+            };
+
+            try {
+                std::string localPath = m_modelResolver->DownloadFromHuggingFace(
+                    repoId, filename, progressCb);
+                
+                if (!localPath.empty()) {
+                    // Load on main thread via PostMessage
+                    // Store the path and signal the main thread
+                    m_loadedModelPath = localPath;
+                    PostMessage(m_hwndMain, WM_APP + 201, 0, 0); // Signal: load downloaded model
+                } else {
+                    if (m_hwndStatusBar) {
+                        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"HuggingFace download failed");
+                    }
+                }
+            } catch (const std::exception& e) {
+                OutputDebugStringA("HF download exception: ");
+                OutputDebugStringA(e.what());
+                OutputDebugStringA("\n");
+                if (m_hwndStatusBar) {
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"HuggingFace download exception");
+                }
+            }
+        }).detach();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// openModelFromOllama — Scan for Ollama blobs, show a selection list,
+// validate GGUF magic, and load the selected blob.
+// ---------------------------------------------------------------------------
+void Win32IDE::openModelFromOllama() {
+    SCOPED_METRIC("model.open_from_ollama");
+
+    if (!m_modelResolver) {
+        try {
+            m_modelResolver = std::make_unique<RawrXD::ModelSourceResolver>();
+        } catch (...) {
+            appendToOutput("Failed to initialize ModelSourceResolver\n", "Errors", OutputSeverity::Error);
+            return;
+        }
+    }
+
+    appendToOutput("Scanning for Ollama GGUF blobs...\n", "Output", OutputSeverity::Info);
+    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"Scanning Ollama blobs...");
+    
+    // Find all Ollama blobs with valid GGUF magic
+    std::vector<RawrXD::OllamaBlobInfo> blobs;
+    try {
+        blobs = m_modelResolver->FindOllamaBlobs();
+    } catch (const std::exception& e) {
+        std::string err = "Error scanning Ollama blobs: " + std::string(e.what());
+        appendToOutput(err + "\n", "Errors", OutputSeverity::Error);
+        ErrorReporter::report(err, m_hwndMain);
+        return;
+    }
+
+    if (blobs.empty()) {
+        MessageBoxW(m_hwndMain,
+            L"No Ollama GGUF blobs found.\n\n"
+            L"Searched directories:\n"
+            L"  - %USERPROFILE%\\.ollama\\models\\blobs\n"
+            L"  - D:\\OllamaModels\\blobs\n"
+            L"  - C:\\Users\\*\\.ollama\\models\\blobs\n\n"
+            L"Make sure Ollama is installed and has downloaded models.",
+            L"No Ollama Models Found", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+
+    appendToOutput("Found " + std::to_string(blobs.size()) + " Ollama GGUF blobs.\n", 
+                   "Output", OutputSeverity::Info);
+
+    // Create a selection dialog
+    HWND hDlg = CreateWindowExA(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        "STATIC", "Load from Ollama Blobs",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, 580, 350,
+        m_hwndMain, nullptr, m_hInstance, nullptr);
+    
+    if (!hDlg) return;
+
+    SetClassLongPtrA(hDlg, GCLP_HBRBACKGROUND, (LONG_PTR)CreateSolidBrush(RGB(30, 30, 30)));
+
+    // Info label
+    char infoText[128];
+    snprintf(infoText, sizeof(infoText), "Found %d Ollama GGUF blobs. Select one to load:", (int)blobs.size());
+    HWND hLabel = CreateWindowExA(0, "STATIC", infoText,
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 12, 540, 22, hDlg, nullptr, m_hInstance, nullptr);
+    SendMessage(hLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Listbox
+    HWND hList = CreateWindowExA(WS_EX_CLIENTEDGE, "LISTBOX", "",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY | LBS_HASSTRINGS,
+        16, 40, 540, 220, hDlg, (HMENU)102, m_hInstance, nullptr);
+    SendMessage(hList, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Populate with blob info
+    for (const auto& blob : blobs) {
+        char line[512];
+        double sizeGB = blob.size_bytes / (1024.0 * 1024.0 * 1024.0);
+        double sizeMB = blob.size_bytes / (1024.0 * 1024.0);
+        if (sizeGB >= 1.0) {
+            snprintf(line, sizeof(line), "%s — %.1f GB %s",
+                     blob.model_name.c_str(), sizeGB,
+                     blob.is_valid_gguf ? "[GGUF OK]" : "[INVALID]");
+        } else {
+            snprintf(line, sizeof(line), "%s — %.0f MB %s",
+                     blob.model_name.c_str(), sizeMB,
+                     blob.is_valid_gguf ? "[GGUF OK]" : "[INVALID]");
+        }
+        SendMessageA(hList, LB_ADDSTRING, 0, (LPARAM)line);
+    }
+
+    // Load button
+    HWND hLoadBtn = CreateWindowExA(0, "BUTTON", "Load Selected",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        16, 272, 150, 30, hDlg, (HMENU)201, m_hInstance, nullptr);
+    SendMessage(hLoadBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Cancel button
+    HWND hCancelBtn = CreateWindowExA(0, "BUTTON", "Cancel",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        406, 272, 150, 30, hDlg, (HMENU)IDCANCEL, m_hInstance, nullptr);
+    SendMessage(hCancelBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    bool done = false;
+    int selectedIdx = -1;
+
+    EnableWindow(m_hwndMain, FALSE);
+    
+    MSG msg;
+    while (!done && GetMessage(&msg, nullptr, 0, 0)) {
+        if (msg.message == WM_COMMAND && msg.hwnd == hDlg) {
+            int wmId = LOWORD(msg.wParam);
+            
+            if (wmId == IDCANCEL) {
+                done = true;
+                continue;
+            }
+            
+            if (wmId == 201) { // Load button
+                int sel = (int)SendMessage(hList, LB_GETCURSEL, 0, 0);
+                if (sel >= 0 && sel < (int)blobs.size()) {
+                    selectedIdx = sel;
+                    done = true;
+                    continue;
+                } else {
+                    MessageBoxW(hDlg, L"Please select a model from the list.",
+                                L"No Selection", MB_OK | MB_ICONINFORMATION);
+                }
+            }
+        }
+        
+        if (msg.message == WM_SYSCOMMAND && (msg.wParam & 0xFFF0) == SC_CLOSE && msg.hwnd == hDlg) {
+            done = true;
+            continue;
+        }
+        
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+    DestroyWindow(hDlg);
+
+    // Load the selected blob
+    if (selectedIdx >= 0 && selectedIdx < (int)blobs.size()) {
+        const auto& selected = blobs[selectedIdx];
+        
+        if (!selected.is_valid_gguf) {
+            MessageBoxW(m_hwndMain,
+                utf8ToWide("Selected blob does not have valid GGUF magic bytes:\n" + selected.blob_path).c_str(),
+                L"Invalid GGUF", MB_OK | MB_ICONWARNING);
+            return;
+        }
+        
+        appendToOutput("Loading Ollama blob: " + selected.model_name + "\n", "Output", OutputSeverity::Info);
+        appendToOutput("Path: " + selected.blob_path + "\n", "Output", OutputSeverity::Info);
+        
+        if (loadGGUFModel(selected.blob_path)) {
+            loadModelForInference(selected.blob_path);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// openModelFromURL — Dialog: enter HTTP/HTTPS URL to a GGUF file,
+// download with progress, and load through the streaming pipeline.
+// ---------------------------------------------------------------------------
+void Win32IDE::openModelFromURL() {
+    SCOPED_METRIC("model.open_from_url");
+
+    if (!m_modelResolver) {
+        try {
+            m_modelResolver = std::make_unique<RawrXD::ModelSourceResolver>();
+        } catch (...) {
+            appendToOutput("Failed to initialize ModelSourceResolver\n", "Errors", OutputSeverity::Error);
+            return;
+        }
+    }
+
+    // Create URL input dialog
+    HWND hDlg = CreateWindowExA(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        "STATIC", "Load from URL",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, 560, 180,
+        m_hwndMain, nullptr, m_hInstance, nullptr);
+    
+    if (!hDlg) return;
+
+    SetClassLongPtrA(hDlg, GCLP_HBRBACKGROUND, (LONG_PTR)CreateSolidBrush(RGB(30, 30, 30)));
+
+    // Label
+    HWND hLabel = CreateWindowExA(0, "STATIC",
+        "Enter direct URL to a .gguf file (HTTP or HTTPS):",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 16, 520, 22, hDlg, nullptr, m_hInstance, nullptr);
+    SendMessage(hLabel, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // URL edit
+    HWND hEdit = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+        16, 44, 520, 26, hDlg, (HMENU)101, m_hInstance, nullptr);
+    SendMessage(hEdit, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+    SetFocus(hEdit);
+
+    // Example label
+    HWND hExample = CreateWindowExA(0, "STATIC",
+        "Example: https://huggingface.co/TheBloke/Llama-2-7B-GGUF/resolve/main/llama-2-7b.Q4_K_M.gguf",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 76, 520, 18, hDlg, nullptr, m_hInstance, nullptr);
+    SendMessage(hExample, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Download button
+    HWND hDownloadBtn = CreateWindowExA(0, "BUTTON", "Download && Load",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        16, 106, 150, 30, hDlg, (HMENU)201, m_hInstance, nullptr);
+    SendMessage(hDownloadBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Cancel button
+    HWND hCancelBtn = CreateWindowExA(0, "BUTTON", "Cancel",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        386, 106, 150, 30, hDlg, (HMENU)IDCANCEL, m_hInstance, nullptr);
+    SendMessage(hCancelBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    bool done = false;
+    std::string url;
+
+    EnableWindow(m_hwndMain, FALSE);
+
+    MSG msg;
+    while (!done && GetMessage(&msg, nullptr, 0, 0)) {
+        if (msg.message == WM_COMMAND && msg.hwnd == hDlg) {
+            int wmId = LOWORD(msg.wParam);
+            
+            if (wmId == IDCANCEL) {
+                done = true;
+                continue;
+            }
+            
+            if (wmId == 201) { // Download button
+                char editText[2048] = {0};
+                GetWindowTextA(hEdit, editText, sizeof(editText));
+                url = std::string(editText);
+                
+                if (url.empty()) {
+                    MessageBoxW(hDlg, L"Please enter a URL.", L"Empty URL", MB_OK);
+                    continue;
+                }
+                
+                // Basic URL validation
+                if (url.find("http://") != 0 && url.find("https://") != 0) {
+                    MessageBoxW(hDlg, L"URL must start with http:// or https://",
+                                L"Invalid URL", MB_OK | MB_ICONWARNING);
+                    continue;
+                }
+                
+                done = true;
+                continue;
+            }
+        }
+        
+        if (msg.message == WM_SYSCOMMAND && (msg.wParam & 0xFFF0) == SC_CLOSE && msg.hwnd == hDlg) {
+            done = true;
+            url.clear();
+            continue;
+        }
+        
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+    DestroyWindow(hDlg);
+
+    if (!url.empty()) {
+        appendToOutput("Downloading from URL: " + url + "\n", "Output", OutputSeverity::Info);
+        
+        // Download on background thread
+        std::thread([this, url]() {
+            DetachedThreadGuard _guard(m_activeDetachedThreads, m_shuttingDown);
+            if (_guard.cancelled) return;
+            auto progressCb = [this](const RawrXD::ModelDownloadProgress& prog) {
+                char buf[256];
+                if (prog.has_error) {
+                    snprintf(buf, sizeof(buf), "Download error: %s", prog.error_message.c_str());
+                } else if (prog.is_completed) {
+                    snprintf(buf, sizeof(buf), "Download complete!");
+                } else if (prog.total_bytes > 0) {
+                    snprintf(buf, sizeof(buf), "Downloading: %.1f%% (%llu / %llu MB)",
+                             prog.progress_percent,
+                             (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)),
+                             (unsigned long long)(prog.total_bytes / (1024 * 1024)));
+                } else {
+                    snprintf(buf, sizeof(buf), "Downloading: %llu MB",
+                             (unsigned long long)(prog.downloaded_bytes / (1024 * 1024)));
+                }
+                if (m_hwndStatusBar) {
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)utf8ToWide(buf).c_str());
+                }
+            };
+
+            try {
+                std::string localPath = m_modelResolver->DownloadFromURL(url, progressCb);
+                
+                if (!localPath.empty()) {
+                    m_loadedModelPath = localPath;
+                    // Signal main thread to load the model
+                    PostMessage(m_hwndMain, WM_APP + 201, 0, 0);
+                } else {
+                    if (m_hwndStatusBar) {
+                        SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"URL download failed");
+                    }
+                }
+            } catch (const std::exception& e) {
+                OutputDebugStringA("URL download exception: ");
+                OutputDebugStringA(e.what());
+                OutputDebugStringA("\n");
+                if (m_hwndStatusBar) {
+                    SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"URL download exception");
+                }
+            }
+        }).detach();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// openModelUnified — Smart model open dialog: user types any model identifier
+// and it auto-detects the source type (local path, HF repo, Ollama name, URL)
+// and routes to the appropriate loader.
+// ---------------------------------------------------------------------------
+void Win32IDE::openModelUnified() {
+    SCOPED_METRIC("model.open_unified");
+
+    // Create the unified input dialog
+    HWND hDlg = CreateWindowExA(
+        WS_EX_DLGMODALFRAME | WS_EX_TOPMOST,
+        "STATIC", "RawrXD — Smart Model Loader",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        CW_USEDEFAULT, CW_USEDEFAULT, 580, 260,
+        m_hwndMain, nullptr, m_hInstance, nullptr);
+    
+    if (!hDlg) return;
+
+    SetClassLongPtrA(hDlg, GCLP_HBRBACKGROUND, (LONG_PTR)CreateSolidBrush(RGB(30, 30, 30)));
+
+    // Title label
+    HWND hTitle = CreateWindowExA(0, "STATIC",
+        "Enter any model identifier — the source will be auto-detected:",
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 16, 540, 22, hDlg, nullptr, m_hInstance, nullptr);
+    SendMessage(hTitle, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Input edit
+    HWND hEdit = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+        16, 44, 540, 26, hDlg, (HMENU)101, m_hInstance, nullptr);
+    SendMessage(hEdit, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+    SetFocus(hEdit);
+
+    // Help text
+    std::string helpText = 
+        "Supported formats:\n"
+        "  Local file:     C:\\models\\my-model.gguf\n"
+        "  HuggingFace:  TheBloke/Llama-2-7B-GGUF  or  hf://repo-id\n"
+        "  Ollama blob:   llama3.2:3b  or  codellama:7b\n"
+        "  Direct URL:     https://example.com/model.gguf";
+    
+    HWND hHelp = CreateWindowExA(0, "STATIC", helpText.c_str(),
+        WS_CHILD | WS_VISIBLE | SS_LEFT,
+        16, 78, 540, 90, hDlg, nullptr, m_hInstance, nullptr);
+    SendMessage(hHelp, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Load button
+    HWND hLoadBtn = CreateWindowExA(0, "BUTTON", "Detect && Load",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_DEFPUSHBUTTON,
+        16, 180, 150, 32, hDlg, (HMENU)201, m_hInstance, nullptr);
+    SendMessage(hLoadBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Browse Local button
+    HWND hBrowseBtn = CreateWindowExA(0, "BUTTON", "Browse Local...",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        180, 180, 150, 32, hDlg, (HMENU)202, m_hInstance, nullptr);
+    SendMessage(hBrowseBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    // Cancel button
+    HWND hCancelBtn = CreateWindowExA(0, "BUTTON", "Cancel",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        414, 180, 140, 32, hDlg, (HMENU)IDCANCEL, m_hInstance, nullptr);
+    SendMessage(hCancelBtn, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+
+    bool done = false;
+    std::string inputStr;
+
+    EnableWindow(m_hwndMain, FALSE);
+
+    MSG msg;
+    while (!done && GetMessage(&msg, nullptr, 0, 0)) {
+        if (msg.message == WM_COMMAND && msg.hwnd == hDlg) {
+            int wmId = LOWORD(msg.wParam);
+            
+            if (wmId == IDCANCEL) {
+                done = true;
+                continue;
+            }
+            
+            if (wmId == 201) { // Detect & Load
+                char editText[2048] = {0};
+                GetWindowTextA(hEdit, editText, sizeof(editText));
+                inputStr = std::string(editText);
+                
+                if (inputStr.empty()) {
+                    MessageBoxW(hDlg, L"Please enter a model identifier.", L"Empty Input", MB_OK);
+                    continue;
+                }
+                
+                done = true;
+                continue;
+            }
+            
+            if (wmId == 202) { // Browse Local
+                wchar_t filename[MAX_PATH] = {0};
+                OPENFILENAMEW ofn = {0};
+                ofn.lStructSize = sizeof(ofn);
+                ofn.hwndOwner = hDlg;
+                ofn.lpstrFilter = L"GGUF Models\0*.gguf\0All Files\0*.*\0";
+                ofn.lpstrFile = filename;
+                ofn.nMaxFile = MAX_PATH;
+                ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+                ofn.lpstrTitle = L"Select GGUF Model";
+
+                if (GetOpenFileNameW(&ofn)) {
+                    SetWindowTextW(hEdit, filename);
+                }
+            }
+        }
+
+        // Handle Enter key in edit control
+        if (msg.message == WM_KEYDOWN && msg.wParam == VK_RETURN && msg.hwnd == hEdit) {
+            PostMessage(hDlg, WM_COMMAND, MAKEWPARAM(201, BN_CLICKED), (LPARAM)hLoadBtn);
+            continue;
+        }
+        
+        if (msg.message == WM_SYSCOMMAND && (msg.wParam & 0xFFF0) == SC_CLOSE && msg.hwnd == hDlg) {
+            done = true;
+            inputStr.clear();
+            continue;
+        }
+        
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    EnableWindow(m_hwndMain, TRUE);
+    SetForegroundWindow(m_hwndMain);
+    DestroyWindow(hDlg);
+
+    if (!inputStr.empty()) {
+        resolveAndLoadModel(inputStr);
+    }
+}
+
+// ============================================================================
+// EditorSubclassProc — Editor RichEdit subclass window procedure
+// Routes editor-specific messages (scroll sync, key interception) while
+// forwarding everything else to the original EDIT wndproc.
+// ============================================================================
+LRESULT CALLBACK Win32IDE::EditorSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* pThis = (Win32IDE*)GetPropW(hwnd, kEditorWndProp);
+    WNDPROC oldProc = (WNDPROC)GetPropW(hwnd, kEditorProcProp);
+
+    if (pThis) {
+        switch (uMsg) {
+        case WM_VSCROLL:
+        case WM_MOUSEWHEEL:
+            // After scroll, sync line numbers and minimap
+            if (oldProc) {
+                LRESULT result = CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+                pThis->updateLineNumbers();
+                if (pThis->m_minimapVisible) pThis->updateMinimap();
+                return result;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            // Ghost text key handling — Tab accepts, Esc dismisses, other keys dismiss
+            if (pThis->handleGhostTextKey((UINT)wParam)) {
+                return 0;  // Ghost text consumed the key
+            }
+            // Ctrl+Shift+P → command palette
+            if (wParam == 'P' && (GetKeyState(VK_CONTROL) & 0x8000) && (GetKeyState(VK_SHIFT) & 0x8000)) {
+                pThis->showCommandPalette();
+                return 0;
+            }
+            // F9 → toggle breakpoint at current line
+            if (wParam == VK_F9) {
+                CHARRANGE sel;
+                SendMessage(hwnd, EM_EXGETSEL, 0, (LPARAM)&sel);
+                int line = (int)SendMessage(hwnd, EM_LINEFROMCHAR, sel.cpMin, 0) + 1;
+                pThis->toggleBreakpoint(pThis->m_currentFile, line);
+                return 0;
+            }
+            break;
+
+        case WM_PAINT: {
+            // Let the RichEdit control paint itself first
+            if (oldProc) {
+                LRESULT result = CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+                // Overlay ghost text on top of the editor content
+                if (pThis->m_ghostTextVisible) {
+                    HDC hdc = GetDC(hwnd);
+                    if (hdc) {
+                        pThis->renderGhostText(hdc);
+                        ReleaseDC(hwnd, hdc);
+                    }
+                }
+                return result;
+            }
+            break;
+        }
+
+        case WM_CHAR:
+            // After character input, trigger syntax coloring debounce
+            if (oldProc) {
+                LRESULT result = CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+                pThis->onEditorContentChanged();
+                return result;
+            }
+            break;
+
+        case WM_DESTROY:
+            // Clean up properties on destruction
+            RemovePropW(hwnd, kEditorWndProp);
+            RemovePropW(hwnd, kEditorProcProp);
+            break;
+        }
+    }
+
+    if (oldProc) {
+        return CallWindowProcW(oldProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// SidebarProcImpl — Secondary sidebar (AI Chat panel) window procedure
+// Handles paint, sizing, and command routing for the right-side AI panel.
+// Distinct from SidebarProc which handles the primary (left) sidebar.
+// ============================================================================
+LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+
+        COLORREF bgColor = pThis ? pThis->m_currentTheme.sidebarBg : RGB(37, 37, 38);
+        HBRUSH hBrush = CreateSolidBrush(bgColor);
+        FillRect(hdc, &rc, hBrush);
+        DeleteObject(hBrush);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_COMMAND: {
+        if (pThis) {
+            int controlId = LOWORD(wParam);
+            int notifyCode = HIWORD(wParam);
+            // Route button clicks from AI Chat panel controls
+            if (controlId == IDC_AI_MAX_MODE && notifyCode == BN_CLICKED) {
+                pThis->onAIModeMax();
+            } else if (controlId == IDC_AI_DEEP_THINK && notifyCode == BN_CLICKED) {
+                pThis->onAIModeDeepThink();
+            } else if (controlId == IDC_AI_DEEP_RESEARCH && notifyCode == BN_CLICKED) {
+                pThis->onAIModeDeepResearch();
+            } else if (controlId == IDC_AI_NO_REFUSAL && notifyCode == BN_CLICKED) {
+                pThis->onAIModeNoRefusal();
+            }
+        }
+        return 0;
+    }
+
+    case WM_SIZE: {
+        if (pThis) {
+            pThis->updateSecondarySidebarContent();
+        }
+        return 0;
+    }
+    }
+
+    // Forward to the original sidebar window procedure
+    if (pThis && pThis->m_oldSidebarProc) {
+        return CallWindowProcA(pThis->m_oldSidebarProc, hwnd, uMsg, wParam, lParam);
+    }
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
+// ============================================================================
+// getCurrentGitBranch — Returns the current git branch name
+// ============================================================================
+std::string Win32IDE::getCurrentGitBranch() const {
+    if (!isGitRepository()) return "";
+
+    std::string output;
+    const_cast<Win32IDE*>(this)->executeGitCommand("git rev-parse --abbrev-ref HEAD", output);
+
+    // Trim whitespace/newlines from output
+    while (!output.empty() && (output.back() == '\n' || output.back() == '\r' || output.back() == ' ')) {
+        output.pop_back();
+    }
+    return output;
+}
+
+// ============================================================================
+// Terminal Pane Management
+// Multi-terminal support: switch, close, resize, and broadcast to panes.
+// ============================================================================
+
+void Win32IDE::switchTerminalPane(int paneId) {
+    LOG_INFO("switchTerminalPane: paneId=" + std::to_string(paneId));
+    TerminalPane* pane = findTerminalPane(paneId);
+    if (pane) {
+        setActiveTerminalPane(paneId);
+        appendToOutput("Switched to terminal: " + pane->name + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("Terminal pane " + std::to_string(paneId) + " not found\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::closeTerminalPane(int paneId) {
+    LOG_INFO("closeTerminalPane: paneId=" + std::to_string(paneId));
+    for (auto it = m_terminalPanes.begin(); it != m_terminalPanes.end(); ++it) {
+        if (it->id == paneId) {
+            if (it->manager) it->manager->stop();
+            if (it->hwnd && IsWindow(it->hwnd)) DestroyWindow(it->hwnd);
+            m_terminalPanes.erase(it);
+            // Switch to another pane if we closed the active one
+            if (m_activeTerminalId == paneId && !m_terminalPanes.empty()) {
+                setActiveTerminalPane(m_terminalPanes.front().id);
+            }
+            appendToOutput("Closed terminal pane " + std::to_string(paneId) + "\n", "Output", OutputSeverity::Info);
+            return;
+        }
+    }
+    appendToOutput("Terminal pane " + std::to_string(paneId) + " not found\n", "Output", OutputSeverity::Warning);
+}
+
+void Win32IDE::resizeTerminalPanes() {
+    LOG_INFO("resizeTerminalPanes");
+    if (m_terminalPanes.empty()) return;
+    
+    RECT rc;
+    GetClientRect(m_hwndMain, &rc);
+    int totalWidth = rc.right;
+    int paneWidth = totalWidth / static_cast<int>(m_terminalPanes.size());
+    
+    int x = 0;
+    for (auto& pane : m_terminalPanes) {
+        if (pane.hwnd && IsWindow(pane.hwnd)) {
+            pane.bounds = { x, 0, x + paneWidth, rc.bottom };
+            MoveWindow(pane.hwnd, x, 0, paneWidth, rc.bottom, TRUE);
+        }
+        x += paneWidth;
+    }
+}
+
+void Win32IDE::sendToAllTerminals(const std::string& command) {
+    LOG_INFO("sendToAllTerminals: " + command);
+    for (auto& pane : m_terminalPanes) {
+        if (pane.manager) {
+            pane.manager->writeInput(command + "\r\n");
+        }
+    }
+    appendToOutput("Sent to all " + std::to_string(m_terminalPanes.size()) + " terminals: " + command + "\n", "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// Extension System
+// Refresh, load, unload, and help for IDE extensions via m_extensionLoader.
+// ============================================================================
+
+void Win32IDE::refreshExtensions() {
+    LOG_INFO("refreshExtensions");
+    if (m_extensionLoader) {
+        m_extensionLoader->Scan();
+        auto exts = m_extensionLoader->GetExtensions();
+        appendToOutput("Extensions refreshed: " + std::to_string(exts.size()) + " found\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::loadExtension(const std::string& name) {
+    LOG_INFO("loadExtension: " + name);
+    if (m_extensionLoader) {
+        // Re-scan to ensure extension list is current, then load native modules
+        m_extensionLoader->Scan();
+        m_extensionLoader->LoadNativeModules();
+        appendToOutput("✅ Extension loaded: " + name + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::unloadExtension(const std::string& name) {
+    LOG_INFO("unloadExtension: " + name);
+    if (m_extensionLoader) {
+        bool unloaded = m_extensionLoader->UnloadExtension(name);
+        if (unloaded) {
+            appendToOutput("✅ Extension unloaded: " + name + "\n", "Output", OutputSeverity::Info);
+        } else {
+            appendToOutput("⚠️ Failed to unload extension: " + name + " (not found or not loaded)\n",
+                           "Output", OutputSeverity::Warning);
+        }
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+void Win32IDE::showExtensionHelp(const std::string& name) {
+    LOG_INFO("showExtensionHelp: " + name);
+    if (m_extensionLoader) {
+        std::string help = m_extensionLoader->GetHelp(name);
+        appendToOutput("--- Extension Help: " + name + " ---\n" + help + "\n", "Output", OutputSeverity::Info);
+    } else {
+        appendToOutput("⚠️ Extension loader not initialized\n", "Output", OutputSeverity::Warning);
+    }
+}
+
+// ============================================================================
+// DEFERRED IMPLEMENTATIONS — PowerShell Panel Dock/Float
+// ============================================================================
+
+void Win32IDE::dockPowerShellPanel() {
+    LOG_INFO("dockPowerShellPanel");
+    m_powerShellPanelDocked = true;
+    
+    if (m_hwndPowerShellPanel && IsWindow(m_hwndPowerShellPanel)) {
+        // Remove WS_POPUP, add WS_CHILD — reparent to main window
+        LONG style = GetWindowLong(m_hwndPowerShellPanel, GWL_STYLE);
+        style = (style & ~WS_POPUP) | WS_CHILD;
+        SetWindowLong(m_hwndPowerShellPanel, GWL_STYLE, style);
+        SetParent(m_hwndPowerShellPanel, m_hwndMain);
+        
+        // Trigger layout recalculation
+        RECT rc;
+        GetClientRect(m_hwndMain, &rc);
+        onSize(rc.right, rc.bottom);
+    }
+    
+    appendToOutput("PowerShell panel docked\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::floatPowerShellPanel() {
+    LOG_INFO("floatPowerShellPanel");
+    m_powerShellPanelDocked = false;
+    
+    if (m_hwndPowerShellPanel && IsWindow(m_hwndPowerShellPanel)) {
+        // Remove WS_CHILD, add WS_POPUP — detach from main window
+        LONG style = GetWindowLong(m_hwndPowerShellPanel, GWL_STYLE);
+        style = (style & ~WS_CHILD) | WS_POPUP | WS_CAPTION | WS_THICKFRAME;
+        SetWindowLong(m_hwndPowerShellPanel, GWL_STYLE, style);
+        SetParent(m_hwndPowerShellPanel, nullptr);
+        
+        // Position floating window near the main window
+        RECT mainRect;
+        GetWindowRect(m_hwndMain, &mainRect);
+        SetWindowPos(m_hwndPowerShellPanel, HWND_TOP,
+                     mainRect.right - 500, mainRect.bottom - 400, 480, 360,
+                     SWP_SHOWWINDOW);
+    }
+    
+    appendToOutput("PowerShell panel floating\n", "Output", OutputSeverity::Info);
+}

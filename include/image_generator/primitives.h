@@ -18,9 +18,6 @@ static inline void plot_aa(Canvas& c, int x, int y, const Color& base, float cov
     c.blend(x, y, src);
 }
 
-inline void fill_circle(Canvas& c, float cx, float cy, float r, const Color& col);
-inline void fill_polygon(Canvas& c, const std::vector<std::pair<float, float>>& pts, const Color& col);
-
 inline void line_aa(Canvas& c, float x0, float y0, float x1, float y1, const Color& col) {
     bool steep = std::abs(y1 - y0) > std::abs(x1 - x0);
     if (steep) { 

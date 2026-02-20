@@ -1,23 +1,19 @@
 #include "kv_cache_optimizer.h"
-#include "../gpu_masm/gpu_masm_bridge.h"
-#include "../ggml_masm/ggml_masm_bridge.h"
+#include "logging/logger.h"
+#include <algorithm>
+
+static Logger s_kvLogger("KVCache");
+
 KVCacheOptimizer::KVCacheOptimizer()
-    
-    , m_cacheSizeLimit(32000) // Default limit: 32k tokens
-    , m_slidingWindowSize(1000) // Default sliding window size
+    : m_cacheSizeLimit(32000)    // Default limit: 32k tokens
+    , m_slidingWindowSize(1000)  // Default sliding window size
+    , m_lastAccessTime{}
     , m_gpuCacheInitialized(false)
 {
-    // Initialize GPU KV cache if available
-    if (KVCacheInit(m_cacheSizeLimit) == 0) {
-        m_gpuCacheInitialized = true;
-    } else {
-        m_gpuCacheInitialized = false;
-    }
 }
 
 KVCacheOptimizer::~KVCacheOptimizer()
 {
-    // No explicit cleanup needed - MASM handles it
 }
 
 void KVCacheOptimizer::setCacheSizeLimit(int limit)
@@ -27,25 +23,13 @@ void KVCacheOptimizer::setCacheSizeLimit(int limit)
 
 void KVCacheOptimizer::addTokens(const std::vector<int> &tokens)
 {
-    if (m_gpuCacheInitialized && !tokens.empty()) {
-        // Use GPU-accelerated token addition
-        std::vector<int> tokenVec = tokens.toVector();
-        int result = KVCacheAddTokens(tokenVec.data(), tokenVec.size());
-        
-        if (result == 0) {
-            // Success - update local copy for queries
-            m_cachedTokens.append(tokens);
-        } else {
-            // CPU fallback
-            m_cachedTokens.append(tokens);
-        }
-    } else {
-        // CPU-only path
-        m_cachedTokens.append(tokens);
-    }
-    
+    m_cachedTokens.insert(m_cachedTokens.end(), tokens.begin(), tokens.end());
     evictIfNeeded();
-    m_lastAccessTime = // DateTime::currentDateTime();
+    m_lastAccessTime = std::chrono::steady_clock::now();
+
+    if (onCacheUpdated) {
+        onCacheUpdated(static_cast<int>(m_cachedTokens.size()));
+    }
 }
 
 std::vector<int> KVCacheOptimizer::getCachedTokens() const
@@ -55,21 +39,17 @@ std::vector<int> KVCacheOptimizer::getCachedTokens() const
 
 void KVCacheOptimizer::evictIfNeeded()
 {
-    if (m_cachedTokens.size() > m_cacheSizeLimit) {
-        int tokensToEvict = m_cachedTokens.size() - m_cacheSizeLimit;
-        
+    if (static_cast<int>(m_cachedTokens.size()) > m_cacheSizeLimit) {
+        // Implement dynamic sliding-window eviction
+        int tokensToEvict = static_cast<int>(m_cachedTokens.size()) - m_cacheSizeLimit;
         if (tokensToEvict > 0) {
-            if (m_gpuCacheInitialized) {
-                // Use GPU-accelerated eviction
-                int result = KVCacheEvict(tokensToEvict);
-                
-                if (result == 0) {
-                } else {
-                }
-            }
-            
-            // Update local cache (both GPU and CPU paths)
+            // Remove tokens from the beginning (oldest tokens)
             m_cachedTokens.erase(m_cachedTokens.begin(), m_cachedTokens.begin() + tokensToEvict);
+            s_kvLogger.info("Evicted {} tokens from KV cache", tokensToEvict);
+
+            if (onCacheEvicted) {
+                onCacheEvicted(tokensToEvict);
+            }
         }
     }
 }
@@ -78,4 +58,3 @@ void KVCacheOptimizer::setSlidingWindowSize(int size)
 {
     m_slidingWindowSize = size;
 }
-

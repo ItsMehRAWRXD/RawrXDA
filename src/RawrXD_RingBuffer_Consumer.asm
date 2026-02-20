@@ -28,6 +28,10 @@ RingBufferContext ENDS
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 align 16
 g_RingContext           RingBufferContext <>

@@ -48,7 +48,7 @@ TransparentRenderer::~TransparentRenderer()
     cleanupSwapChain();
 }
 
-bool TransparentRenderer::initialize(HWND hwnd)
+bool TransparentRenderer::Initialize(HWND hwnd)
 {
     if (!hwnd) return false;
     m_hwnd = hwnd;
@@ -78,11 +78,11 @@ bool TransparentRenderer::initialize(HWND hwnd)
 void TransparentRenderer::setTargetResolution(UINT w, UINT h)
 {
     if (w > 0 && h > 0) {
-        resize(w, h);
+        Resize(w, h);
     }
 }
 
-void TransparentRenderer::resize(UINT width, UINT height)
+void TransparentRenderer::Resize(UINT width, UINT height)
 {
     if (!m_swapChain) return;
     if (width == 0 || height == 0) return;
@@ -268,7 +268,7 @@ void TransparentRenderer::renderChromaticText(HDC hdc, const wchar_t* text, int 
 // ============================================================================
 // Main render loop - optimized for 540Hz
 // ============================================================================
-void TransparentRenderer::render()
+void TransparentRenderer::Render()
 {
     if (!m_context || !m_rtv) return;
     
@@ -787,4 +787,63 @@ void TransparentRenderer::enableGlassEffect()
         SetWindowLongPtr(m_hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
     }
     SetLayeredWindowAttributes(m_hwnd, 0, 255, LWA_ALPHA);
+}
+
+void TransparentRenderer::SetTransparency(float alpha)
+{
+    m_clearColor[3] = alpha;
+}
+
+void TransparentRenderer::DrawText(const std::wstring& text, float x, float y, float size, uint32_t color)
+{
+    if (!m_d2dContext || !m_textBrush || text.empty()) return;
+
+    // Create a temporary text format for the size if needed, or just use default for now
+    // For enterprise implementation, we should cache formats
+    
+    // Simple color conversion from uint32_t (ARGb) to D2D1::ColorF
+    float a = ((color >> 24) & 0xFF) / 255.0f;
+    float r = ((color >> 16) & 0xFF) / 255.0f;
+    float g = ((color >> 8) & 0xFF) / 255.0f;
+    float b = (color & 0xFF) / 255.0f;
+    m_textBrush->SetColor(D2D1::ColorF(r, g, b, a));
+
+    D2D1_RECT_F layoutRect = D2D1::RectF(x, y, x + 1000.0f, y + 100.0f);
+    m_d2dContext->DrawText(
+        text.c_str(), 
+        (UINT32)text.length(), 
+        m_textFormat.Get(), 
+        layoutRect, 
+        m_textBrush.Get()
+    );
+}
+
+void TransparentRenderer::DrawRect(float x, float y, float w, float h, uint32_t color)
+{
+    if (!m_d2dContext || !m_backgroundBrush) return;
+
+    float a = ((color >> 24) & 0xFF) / 255.0f;
+    float r = ((color >> 16) & 0xFF) / 255.0f;
+    float g = ((color >> 8) & 0xFF) / 255.0f;
+    float b = (color & 0xFF) / 255.0f;
+    m_backgroundBrush->SetColor(D2D1::ColorF(r, g, b, a));
+    
+    D2D1_RECT_F rect = D2D1::RectF(x, y, x + w, y + h);
+    m_d2dContext->FillRectangle(rect, m_backgroundBrush.Get());
+}
+
+void TransparentRenderer::BeginFrame()
+{
+    // Begin D2D draw if utilizing D2D overlay during frame
+    if (m_d2dContext && m_d2dTargetBitmap) {
+        m_d2dContext->BeginDraw();
+        m_d2dContext->Clear(D2D1::ColorF(0, 0, 0, 0));
+    }
+}
+
+void TransparentRenderer::EndFrame()
+{
+    if (m_d2dContext && m_d2dTargetBitmap) {
+        m_d2dContext->EndDraw();
+    }
 }

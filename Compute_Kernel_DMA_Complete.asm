@@ -15,6 +15,10 @@
 .686p
 .xmm
 option casemap:none
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 option frame:auto
 option win64:3
 option align:64

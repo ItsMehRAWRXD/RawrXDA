@@ -1,979 +1,969 @@
-MSBuild version 17.14.23+b0019275e for .NET Framework
+[1/915] Building CXX object CMakeFiles\RawrEngine.dir\src\stubs.cpp.obj
+[2/915] Building CXX object CMakeFiles\RawrEngine.dir\src\compression_interface.cpp.obj
+[3/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\inference_kernels.cpp.obj
+[4/915] Building CXX object CMakeFiles\RawrEngine.dir\src\gguf_vocab_resolver.cpp.obj
+[5/915] Building CXX object CMakeFiles\RawrEngine.dir\src\gguf_loader.cpp.obj
+[6/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\gguf_core.cpp.obj
+[7/915] Building CXX object CMakeFiles\RawrEngine.dir\src\utils\Diagnostics.cpp.obj
+[8/915] Building CXX object CMakeFiles\RawrEngine.dir\src\memory_core.cpp.obj
+[9/915] Building CXX object CMakeFiles\RawrEngine.dir\src\hot_patcher.cpp.obj
+[10/915] Building CXX object CMakeFiles\RawrEngine.dir\src\codec\compression.cpp.obj
+[11/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\transformer.cpp.obj
+[12/915] Building CXX object CMakeFiles\RawrEngine.dir\src\streaming_gguf_loader.cpp.obj
+[13/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\sampler.cpp.obj
+[14/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_history.cpp.obj
+[15/915] Building CXX object CMakeFiles\RawrEngine.dir\src\codec\brutal_gzip.cpp.obj
+[16/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\rawr_engine.cpp.obj
+[17/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\core_generator.cpp.obj
+[18/915] Building CXX object CMakeFiles\RawrEngine.dir\src\engine\bpe_tokenizer.cpp.obj
+[19/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_explainability.cpp.obj
+[20/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_engine.cpp.obj
+[21/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent_policy.cpp.obj
+[22/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\confidence_gate.cpp.obj
+[23/915] Building CXX object CMakeFiles\RawrEngine.dir\src\main.cpp.obj
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[24/915] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[25/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\execution_scheduler.cpp.obj
+[26/915] Building CXX object CMakeFiles\RawrEngine.dir\src\cpu_inference_engine.cpp.obj
+[27/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\flash_attention.cpp.obj
+[28/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agent_safety_contract.cpp.obj
+[29/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\model_memory_hotpatch.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[30/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\deterministic_replay.cpp.obj
+[31/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\execution_governor.cpp.obj
+[32/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\byte_level_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[33/915] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\cli_autonomy_loop.cpp.obj
+[34/915] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\cli_headless_systems.cpp.obj
+[35/915] Building CXX object CMakeFiles\RawrEngine.dir\src\subagent_core.cpp.obj
+[36/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_backend_bridge.cpp.obj
+[37/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\multi_response_engine.cpp.obj
+[38/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[39/915] Building CXX object CMakeFiles\RawrEngine.dir\src\server\gguf_server_hotpatch.cpp.obj
+D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\server\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[40/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\proxy_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[41/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_loop_state.cpp.obj
+[42/915] Building CXX object CMakeFiles\RawrEngine.dir\src\auth\rbac_engine.cpp.obj
+[43/915] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\agentic_decision_tree.cpp.obj
+D:\rawrxd\src\cli\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\cli\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[44/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_engine_registry.cpp.obj
+[45/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_repair.cpp.obj
+D:\rawrxd\src\agent\agent_self_repair.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\agent_self_repair.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[46/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp(12): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\agent_self_healing_orchestrator.cpp(12): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[47/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_failure_detector.cpp.obj
+[48/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_hotpatch_manager.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[49/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vision_encoder.cpp.obj
+[50/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\autonomous_subagent.cpp.obj
+[51/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\planner.cpp.obj
+[52/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\agentic_puppeteer.cpp.obj
+[53/915] Building CXX object CMakeFiles\RawrEngine.dir\src\marketplace\extension_marketplace.cpp.obj
+[54/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_kernel_autotuner.cpp.obj
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\gpu_kernel_autotuner.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[55/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\embedding_engine.cpp.obj
+[56/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\llm_http_client.cpp.obj
+D:\rawrxd\src\agent\llm_http_client.cpp(23): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\llm_http_client.cpp(23): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[57/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\webrtc_signaling.cpp.obj
+[58/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_gsi_hash.cpp.obj
+[59/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agentic\../agent/agent_self_repair.hpp(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[60/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_reference_provider.cpp.obj
+[61/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\production_release.cpp.obj
+[62/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license_stubs.cpp.obj
+[63/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agentic_task_graph.cpp.obj
+[64/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\intel_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\intel_gpu_accelerator.h(29): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\intel_gpu_accelerator.h(29): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[65/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_network_stubs.cpp.obj
+[66/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_native.cpp.obj
+[67/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\model_invoker.cpp.obj
+[68/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\streaming_orchestrator_stubs.cpp.obj
+[69/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sandbox_integration.cpp.obj
+D:\rawrxd\src\core\sandbox_integration.h(24): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\sandbox_integration.h(24): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[70/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\analyzer_distiller_stubs.cpp.obj
+[71/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\DiskRecoveryAgent.cpp.obj
+D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\agent\DiskRecoveryAgent.h(22): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[72/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[73/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_decision_bridge.cpp.obj
+[74/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\universal_model_hotpatcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[75/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pt_driver_contract.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[76/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\arm64_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\arm64_gpu_accelerator.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[77/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\feature_registration.cpp.obj
+[78/915] Building CXX object CMakeFiles\RawrEngine.dir\src\tool_registry.cpp.obj
+[79/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\amd_gpu_accelerator.cpp.obj
+D:\rawrxd\src\core\amd_gpu_accelerator.h(26): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\amd_gpu_accelerator.h(26): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[80/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license.cpp.obj
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=const wchar_t *,
+            _Sent=const wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=const wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[81/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\accelerator_router.cpp.obj
+D:\rawrxd\src\core\accelerator_router.h(37): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\accelerator_router.h(37): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[82/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_worker.cpp.obj
+[83/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cerebras_wse_accelerator.cpp.obj
+D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\cerebras_wse_accelerator.h(38): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[84/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\AgentToolHandlers.cpp.obj
+[85/915] Building CXX object CMakeFiles\RawrEngine.dir\src\cli\swarm_orchestrator.cpp.obj
+[86/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_coordinator.cpp.obj
+[87/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\alert_system.cpp.obj
+[88/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\voice_chat.cpp.obj
+[89/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\shortcut_manager.cpp.obj
+[90/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\voice_automation.cpp.obj
+[91/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers_ext.cpp.obj
+[92/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\rawrxd_state_mmf.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[93/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\unified_command_dispatch.cpp.obj
+[94/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\chain_of_thought_engine.cpp.obj
+[95/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\backup_manager.cpp.obj
+[96/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\traversal_strategy.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[97/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\live_binary_patcher.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[98/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_validation.cpp.obj
+[99/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sqlite3_stubs.cpp.obj
+[100/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\convergence_controller.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[101/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_profile.cpp.obj
+[102/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_pipeline_orchestrator.cpp.obj
+[103/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cross_run_tensor_cache.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[104/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\layer_contribution_scorer.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[105/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\iterative_tensor_traversal.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[106/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\semantic_delta_tracker.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[107/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\feature_handlers.cpp.obj
+[108/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\missing_handler_stubs.cpp.obj
+[109/915] Building CXX object CMakeFiles\RawrEngine.dir\src\vulkan_compute.cpp.obj
+[110/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_cot_bridge.cpp.obj
+[111/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\memory_pressure_handler.cpp.obj
+[112/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\ssot_handlers.cpp.obj
+[113/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\thread_pool.cpp.obj
+[114/915] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\gpu_backend.cpp.obj
+[115/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\transaction_journal.cpp.obj
+[116/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\agentic_transaction.cpp.obj
+[117/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\jsonrpc_parser.cpp.obj
+[118/915] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\chat_message_renderer.cpp.obj
+D:\rawrxd\src\ui\chat_message_renderer.cpp(11): warning C4005: 'NOMINMAX': macro redefinition
+D:\rawrxd\src\ui\chat_message_renderer.cpp(11): note: 'NOMINMAX' previously declared on the command line
+[119/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sqlite_wrapper.cpp.obj
+[120/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\model_cascade.cpp.obj
+[121/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\prompt_template_engine.cpp.obj
+[122/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\context_assembler.cpp.obj
+[123/915] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\completion_feedback.cpp.obj
+[124/915] Building CXX object CMakeFiles\RawrEngine.dir\src\lsp\diagnostic_consumer.cpp.obj
+[125/915] Building CXX object CMakeFiles\RawrEngine.dir\src\git\git_context.cpp.obj
+[126/915] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\speculative_decoder.cpp.obj
+[127/915] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\speculative_decoder_v2.cpp.obj
+[128/915] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\replay_telemetry_fusion.cpp.obj
+[129/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\workspace_reasoning_profiles.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[130/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\multi_file_transaction.cpp.obj
+[131/915] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\kv_cache_optimizer.cpp.obj
+[132/915] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\phase2_integration_example.cpp.obj
+D:\rawrxd\src\ui\phase2_integration_example.cpp(6): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\ui\phase2_integration_example.cpp(6): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[133/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\reasoning_schema_versioning.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[134/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vector_index.cpp.obj
+[135/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\input_guard_slicer.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[136/915] Building CXX object CMakeFiles\RawrEngine.dir\src\telemetry\hotpatch_telemetry_safety.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[137/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_controller.cpp.obj
+[138/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\deterministic_swarm.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[139/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
 
-  Automatic MOC for target RawrXDOrchestration
-  RawrXDOrchestration.vcxproj -> D:\rawrxd\build\src\orchestration\Release\RawrXDOrchestration.lib
-  Automatic MOC for target brutal_compression_lib
-  brutal_compression_lib.vcxproj -> D:\rawrxd\build\Release\brutal_compression_lib.lib
-  Automatic MOC for target cpu_inference_engine
-  cpu_inference_engine.vcxproj -> D:\rawrxd\build\Release\cpu_inference_engine.lib
-  ggml-base.vcxproj -> D:\rawrxd\build\3rdparty\ggml\src\Release\ggml-base.lib
-  ggml-cpu.vcxproj -> D:\rawrxd\build\3rdparty\ggml\src\Release\ggml-cpu.lib
-  ggml.vcxproj -> D:\rawrxd\build\3rdparty\ggml\src\Release\ggml.lib
-  masm_bridge.vcxproj -> D:\rawrxd\build\Release\masm_bridge.lib
-  Automatic MOC for target masm_writers
-  masm_writers.vcxproj -> D:\rawrxd\build\src\masm\Release\masm_writers.lib
-  Automatic MOC for target quant_utils
-  quant_utils.vcxproj -> D:\rawrxd\build\Release\quant_utils.lib
-  Automatic MOC for target rawrxd_compiler_qt
-  rawrxd_compiler_qt.vcxproj -> D:\rawrxd\build\Release\rawrxd_compiler_qt.lib
-  Automatic MOC for target self_test_gate
-  self_test_gate.vcxproj -> D:\rawrxd\build\Release\self_test_gate.lib
-  Automatic MOC for target RawrXD-QtShell
-  lsp_client_incremental.cpp
-  language_server_integration_impl.cpp
-D:\rawrxd\src\lsp_client_incremental.cpp(34,16): error C2668: 'QList<QList<RawrXD::DiffOp>>::append': ambiguous call to overloaded function [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(458,10):
-      could be 'void QList<QList<RawrXD::DiffOp>>::append(QList<QList<RawrXD::DiffOp>> &&)'
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(454,10):
-      or       'void QList<QList<RawrXD::DiffOp>>::append(const QList<QList<RawrXD::DiffOp>> &)'
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(446,10):
-      or       'void QList<QList<RawrXD::DiffOp>>::append(QList<RawrXD::DiffOp> &&)'
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qlist.h(444,10):
-      or       'void QList<QList<RawrXD::DiffOp>>::append(const QList<RawrXD::DiffOp> &)'
-      D:\rawrxd\src\lsp_client_incremental.cpp(34,16):
-      while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\lsp_client_incremental.cpp(63,17): error C2039: 'sendIncrementalUpdate': is not a member of 'RawrXD::LSPClient' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\lsp_client.h(69,7):
-      see declaration of 'RawrXD::LSPClient'
-  
-D:\rawrxd\src\lsp_client_incremental.cpp(76,26): error C3861: 'offsetToPosition': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\lsp_client_incremental.cpp(78,15): error C3861: 'offsetToPosition': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\lsp_client_incremental.cpp(106,5): error C3861: 'sendNotification': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\lsp_client_incremental.cpp(110,17): error C2039: 'cancelRequest': is not a member of 'RawrXD::LSPClient' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\lsp_client.h(69,7):
-      see declaration of 'RawrXD::LSPClient'
-  
-D:\rawrxd\src\lsp_client_incremental.cpp(113,5): error C3861: 'sendNotification': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\lsp_client_incremental.cpp(114,5): error C2065: 'm_pendingCancellations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\lsp_client_incremental.cpp(122,21): error C2039: 'offsetToPosition': is not a member of 'RawrXD::LSPClient' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\lsp_client.h(69,7):
-      see declaration of 'RawrXD::LSPClient'
-  
-D:\rawrxd\src\language_server_integration_impl.hpp(4,10): error C1083: Cannot open include file: 'codebase_context_analyzer.hpp': No such file or directory [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-  (compiling source file '../src/language_server_integration_impl.cpp')
-  
-  ide_agent_bridge_hot_patching_integration_lsp.cpp
-D:\rawrxd\src\agent\ide_agent_bridge_hot_patching_integration.hpp(177,1): error C1020: unexpected #endif [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-  (compiling source file '../src/ide_agent_bridge_hot_patching_integration_lsp.cpp')
-  
-  tool_registry_thermal.cpp
-D:\rawrxd\src\tool_registry_thermal.cpp(225,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\include\tool_registry.hpp(193,8):
-      see declaration of 'ToolDefinition'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(225,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-      'nlohmann::json::json': no overloaded function could convert all the argument types
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
-          D:\rawrxd\src\tool_registry_thermal.cpp(225,35):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(239,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(239,28):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(239,28):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(254,34): error C2440: 'initializing': cannot convert from 'initializer list' to 'nlohmann::json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(254,34):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(254,34):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(277,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(277,24):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(277,24):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(310,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\include\tool_registry.hpp(193,8):
-      see declaration of 'ToolDefinition'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(310,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-      'nlohmann::json::json': no overloaded function could convert all the argument types
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
-          D:\rawrxd\src\tool_registry_thermal.cpp(310,35):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(325,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(325,28):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(325,28):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(334,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(334,24):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(334,24):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(358,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\include\tool_registry.hpp(193,8):
-      see declaration of 'ToolDefinition'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(358,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-      'nlohmann::json::json': no overloaded function could convert all the argument types
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
-          D:\rawrxd\src\tool_registry_thermal.cpp(358,35):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(368,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(368,28):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(368,28):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(371,29): error C2440: 'initializing': cannot convert from 'const nlohmann::json' to 'int32_t' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(371,29):
-      No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(375,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(375,28):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(375,28):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(395,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(395,24):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(395,24):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(419,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\include\tool_registry.hpp(193,8):
-      see declaration of 'ToolDefinition'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(419,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-      'nlohmann::json::json': no overloaded function could convert all the argument types
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
-          D:\rawrxd\src\tool_registry_thermal.cpp(419,35):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(431,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(431,28):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(431,28):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(451,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(451,24):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(451,24):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(478,17): error C2039: 'inputSchema': is not a member of 'ToolDefinition' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\include\tool_registry.hpp(193,8):
-      see declaration of 'ToolDefinition'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(478,35): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-      'nlohmann::json::json': no overloaded function could convert all the argument types
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-              'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<nlohmann::json> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<nlohmann::json>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-                  Element '2': no conversion from 'initializer list' to 'nlohmann::json'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-              D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-              'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)': cannot convert argument 1 from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>> &'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-                  Reason: cannot convert from 'initializer list' to 'const std::initializer_list<std::pair<std::string,nlohmann::json>>'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-                  Element '2': no conversion from 'initializer list' to 'std::pair<std::string,nlohmann::json>'
-          D:\rawrxd\src\tool_registry_thermal.cpp(478,35):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(494,28): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(494,28):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(494,28):
-          while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(500,37): error C2064: term does not evaluate to a function taking 0 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\tool_registry_thermal.cpp(506,28): error C2665: 'nlohmann::json::push_back': no overloaded function could convert all the argument types [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\include\nlohmann\json.hpp(299,10):
-      could be 'void nlohmann::json::push_back(nlohmann::json &&)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(506,28):
-          'void nlohmann::json::push_back(nlohmann::json &&)': cannot convert argument 1 from 'initializer list' to 'nlohmann::json &&'
-              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
-              Reason: cannot convert from 'initializer list' to 'nlohmann::json'
-              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
-              'nlohmann::json::json': ambiguous call to overloaded function
-                  D:\rawrxd\include\nlohmann\json.hpp(59,5):
-                  could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-                  D:\rawrxd\include\nlohmann\json.hpp(52,5):
-                  or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
-                  while trying to match the argument list '(initializer list)'
-      D:\rawrxd\include\nlohmann\json.hpp(293,10):
-      or       'void nlohmann::json::push_back(const nlohmann::json &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(506,28):
-          'void nlohmann::json::push_back(const nlohmann::json &)': cannot convert argument 1 from 'initializer list' to 'const nlohmann::json &'
-              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
-              Reason: cannot convert from 'initializer list' to 'const nlohmann::json'
-              D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
-              'nlohmann::json::json': ambiguous call to overloaded function
-                  D:\rawrxd\include\nlohmann\json.hpp(59,5):
-                  could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-                  D:\rawrxd\include\nlohmann\json.hpp(52,5):
-                  or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-                  D:\rawrxd\src\tool_registry_thermal.cpp(506,38):
-                  while trying to match the argument list '(initializer list)'
-      D:\rawrxd\src\tool_registry_thermal.cpp(506,28):
-      while trying to match the argument list '(initializer list)'
-  
-D:\rawrxd\src\tool_registry_thermal.cpp(517,24): error C2440: '<function-style-cast>': cannot convert from 'initializer list' to 'json' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\tool_registry_thermal.cpp(517,24):
-      'nlohmann::json::json': ambiguous call to overloaded function
-          D:\rawrxd\include\nlohmann\json.hpp(59,5):
-          could be 'nlohmann::json::json(const std::initializer_list<nlohmann::json> &)'
-          D:\rawrxd\include\nlohmann\json.hpp(52,5):
-          or       'nlohmann::json::json(const std::initializer_list<std::pair<std::string,nlohmann::json>> &)'
-          D:\rawrxd\src\tool_registry_thermal.cpp(517,24):
-          while trying to match the argument list '(initializer list)'
-  
-  agent_hot_patcher.cpp
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(13,7): error C2614: 'AgentHotPatcher': illegal member initialization: 'm_enabled' is not a base or member [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(14,7): error C2614: 'AgentHotPatcher': illegal member initialization: 'm_idCounter' is not a base or member [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(15,7): error C2614: 'AgentHotPatcher': illegal member initialization: 'm_interceptionPort' is not a base or member [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(25,23): error C2556: 'bool AgentHotPatcher::initialize(const QString &,int)': overloaded function differs only by return type from 'void AgentHotPatcher::initialize(const QString &,int)' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(91,10):
-      see declaration of 'AgentHotPatcher::initialize'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(25,23): error C2371: 'AgentHotPatcher::initialize': redefinition; different basic types [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(91,10):
-      see declaration of 'AgentHotPatcher::initialize'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(29,5): error C2065: 'm_ggufLoaderPath': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(30,5): error C2065: 'm_interceptionPort': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(39,10): error C3861: 'loadCorrectionPatterns': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(45,14): error C3861: 'startInterceptorServer': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(51,5): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(59,10): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(70,19): error C2079: 'doc' uses undefined class 'QJsonDocument' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(70,40): error C2027: use of undefined type 'QJsonDocument' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qmetatype.h(1546,1):
-      see declaration of 'QJsonDocument'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(70,40): error C3861: 'fromJson': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(93,17): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(94,22): error C2660: 'AgentHotPatcher::hallucinationCorrected': function does not take 2 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(194,10):
-      see declaration of 'AgentHotPatcher::hallucinationCorrected'
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(94,22):
-      while trying to match the argument list '(HallucinationDetection, QString)'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(105,13): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(111,14): error C2660: 'AgentHotPatcher::applyBehaviorPatches': function does not take 2 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(129,13):
-      see declaration of 'AgentHotPatcher::applyBehaviorPatches'
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(111,14):
-      while trying to match the argument list '(QJsonObject, const QJsonObject)'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(118,57): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(119,57): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(143,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(153,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(163,19): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(178,64): error C2039: 'year': is not a member of 'QDateTime' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qdatetime.h(286,21):
-      see declaration of 'QDateTime'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(179,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(189,19): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(196,20): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(196,51): error C3536: 'it': cannot be used before it is initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(196,57): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(198,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(215,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(223,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(228,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(233,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(246,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(254,23): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(265,9): error C2039: 'lastApplied': is not a member of 'NavigationFix' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(43,8):
-      see declaration of 'NavigationFix'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(266,9): error C2039: 'timesCorrected': is not a member of 'NavigationFix' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(43,8):
-      see declaration of 'NavigationFix'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(269,10): error C3861: 'validateNavigationPath': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46): error C2663: 'QString::replace': no overloaded function has valid conversion for 'this' pointer [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(566,14):
-      could be 'QString &QString::replace(const QRegularExpression &,const QString &)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(const QRegularExpression &,const QString &)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(564,14):
-      or       'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(563,14):
-      or       'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(561,14):
-      or       'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(560,14):
-      or       'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(559,14):
-      or       'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(558,14):
-      or       'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(556,14):
-      or       'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-          'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,31):
-              Conversion loses qualifiers
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(281,46):
-      while trying to match the argument list '(const char [3], const char [2])'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,42): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,31): error C2530: 'knownFix': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,40): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(309,59): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46): error C2663: 'QString::replace': no overloaded function has valid conversion for 'this' pointer [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(566,14):
-      could be 'QString &QString::replace(const QRegularExpression &,const QString &)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(const QRegularExpression &,const QString &)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(564,14):
-      or       'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(QChar,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(563,14):
-      or       'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(QChar,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(561,14):
-      or       'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(const QString &,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(560,14):
-      or       'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(const QString &,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(559,14):
-      or       'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(QLatin1StringView,const QString &,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(558,14):
-      or       'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(QLatin1StringView,QLatin1StringView,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      C:\Qt\6.7.3\msvc2022_64\include\QtCore\qstring.h(556,14):
-      or       'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)'
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-          'QString &QString::replace(QChar,QChar,Qt::CaseSensitivity)': cannot convert 'this' pointer from 'const QString' to 'QString &'
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,31):
-              Conversion loses qualifiers
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(312,46):
-      while trying to match the argument list '(const QString, const QString)'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(324,30): error C2511: 'QJsonObject AgentHotPatcher::applyBehaviorPatches(const QJsonObject &,const QJsonObject &)': overloaded member function not found in 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
-      see declaration of 'AgentHotPatcher'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C3312: no callable 'begin' function found for type 'unknown' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C3312: no callable 'end' function found for type 'unknown' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,31): error C2530: 'patch': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,37): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C2597: illegal reference to non-static member 'AgentHotPatcher::m_behaviorPatches' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(213,32):
-      see declaration of 'AgentHotPatcher::m_behaviorPatches'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,56): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39): error C2451: a conditional expression of type 'unknown' is not valid [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(328,39):
-      ill-formed reference to a non-static member
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(335,17): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(339,17): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(368,45): error C2352: 'AgentHotPatcher::fixNavigationError': a call of a non-static member function requires an object [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(261,32):
-      see declaration of 'AgentHotPatcher::fixNavigationError'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(379,18): error C2352: 'AgentHotPatcher::behaviorPatchApplied': a call of a non-static member function requires an object [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(196,10):
-      see declaration of 'AgentHotPatcher::behaviorPatchApplied'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(391,9): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(392,9): error C3861: 'saveCorrectionPatterns': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9): error C2679: binary '[': no operator found which takes a right-hand operand of type 'const QString' (or there is no acceptable conversion) [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(1937,40):
-      could be 'const _Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept const'
-          with
-          [
-              _Ty=NavigationFix
-          ]
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9):
-          'const _Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept const': cannot convert argument 2 from 'const QString' to 'const unsigned __int64'
-          with
-          [
-              _Ty=NavigationFix
-          ]
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,33):
-              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(1927,34):
-      or       '_Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept'
-          with
-          [
-              _Ty=NavigationFix
-          ]
-          D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9):
-          '_Ty &std::vector<_Ty,std::allocator<_Ty>>::operator [](const unsigned __int64) noexcept': cannot convert argument 2 from 'const QString' to 'const unsigned __int64'
-          with
-          [
-              _Ty=NavigationFix
-          ]
-              D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,33):
-              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
-      D:\rawrxd\src\agent\agent_hot_patcher.cpp(402,9):
-      while trying to match the argument list '(std::vector<NavigationFix,std::allocator<NavigationFix>>, const QString)'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(403,9): error C3861: 'saveCorrectionPatterns': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(419,27): error C2039: 'append': is not a member of 'std::vector<BehaviorPatch,std::allocator<BehaviorPatch>>' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vector(442,7):
-      see declaration of 'std::vector<BehaviorPatch,std::allocator<BehaviorPatch>>'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(432,61): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,44): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,40): error C2530: 'h': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,42): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(435,68): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,44): error C2065: 'm_detectedHallucinations': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,40): error C2530: 'h': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,42): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(442,68): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(443,16): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,34): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,49): error C2676: binary '[': 'QJsonObject' does not define this operator or a conversion to a type acceptable to the predefined operator [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,74): error C2039: 'hallucationType': is not a member of 'HallucinationDetection' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(28,8):
-      see declaration of 'HallucinationDetection'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(444,89): error C2676: binary '[': 'QJsonObject' does not define this operator or a conversion to a type acceptable to the predefined operator [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(450,61): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(453,10): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,41): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,35): error C2530: 'fix': references must be initialized [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,39): error C2143: syntax error: missing ';' before ':' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(454,58): error C2143: syntax error: missing ';' before ')' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(457,29): error C2065: 'm_navigationFixes': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(471,35): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(472,57): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(480,5): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(486,12): error C2065: 'm_enabled': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(489,41): error C2039: 'analyzeForHallucinations': is not a member of 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
-      see declaration of 'AgentHotPatcher'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(492,12): error C3861: 'detectHallucination': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(495,23): error C2039: 'validateNavigationPath': is not a member of 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
-      see declaration of 'AgentHotPatcher'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(552,28): error C2065: 'm_idCounter': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(555,23): error C2039: 'loadCorrectionPatterns': is not a member of 'AgentHotPatcher' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agent\agent_hot_patcher.hpp(78,7):
-      see declaration of 'AgentHotPatcher'
-  
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(557,26): error C2065: 'm_mutex': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(557,24): error C2641: cannot deduce template arguments for 'QMutexLocker' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(562,5): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(563,5): error C2065: 'm_hallucationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(564,5): error C2065: 'm_navigationPatterns': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agent\agent_hot_patcher.cpp(564,5): error C1003: error count exceeds 100; stopping compilation [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-  ide_agent_bridge_hot_patching_integration.cpp
-D:\rawrxd\src\agent\ide_agent_bridge_hot_patching_integration.hpp(177,1): error C1020: unexpected #endif [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-  (compiling source file '../src/agent/ide_agent_bridge_hot_patching_integration.cpp')
-  
-  ai_model_caller_real.cpp
-D:\rawrxd\src\ai_model_caller_real.cpp(73,5): error C3861: 'va_start': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\ai_model_caller_real.cpp(78,5): error C3861: 'va_end': identifier not found [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\ai_model_caller_real.cpp(131,16): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(133,30): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(138,27): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(458,16): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(467,21): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(468,34): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(562,26): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(563,31): error C2027: use of undefined type 'ggml_tensor' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\ai_model_caller_real.cpp(24,8):
-      see declaration of 'ggml_tensor'
-  
-D:\rawrxd\src\ai_model_caller_real.cpp(563,9): error C2660: 'memcpy': function does not take 2 arguments [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_string.h(43,15):
-      see declaration of 'memcpy'
-      D:\rawrxd\src\ai_model_caller_real.cpp(563,9):
-      while trying to match the argument list '(float *, size_t)'
-  
-  directstorage_real.cpp
-D:\rawrxd\src\directstorage_real.cpp(24,16): error C2011: '_GUID': 'struct' type redefinition [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\guiddef.h(22,16):
-      see declaration of '_GUID'
-  
-D:\rawrxd\src\directstorage_real.cpp(280,10): error C2079: 'IID_IDStorageFactory' uses undefined struct '_GUID' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\directstorage_real.cpp(282,42): error C2664: 'HRESULT (const GUID &,void **)': cannot convert argument 1 from '<error type>' to 'const GUID &' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\directstorage_real.cpp(282,42):
-      Reason: cannot convert from '<error type>' to 'const GUID'
-      D:\rawrxd\src\directstorage_real.cpp(282,42):
-      use of undefined type '_GUID'
-      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\guiddef.h(22,16):
-      see declaration of '_GUID'
-  
-D:\rawrxd\src\directstorage_real.cpp(312,10): error C2079: 'IID_IDStorageQueue' uses undefined struct '_GUID' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\directstorage_real.cpp(314,24): error C2664: 'HRESULT IDStorageFactory::CreateQueue(const DSTORAGE_QUEUE_DESC *,const GUID &,void **)': cannot convert argument 2 from '<error type>' to 'const GUID &' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\directstorage_real.cpp(314,48):
-      Reason: cannot convert from '<error type>' to 'const GUID'
-      D:\rawrxd\src\directstorage_real.cpp(314,48):
-      use of undefined type '_GUID'
-      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared\guiddef.h(22,16):
-      see declaration of '_GUID'
-      D:\rawrxd\src\directstorage_real.cpp(129,21):
-      see declaration of 'IDStorageFactory::CreateQueue'
-      D:\rawrxd\src\directstorage_real.cpp(314,24):
-      while trying to match the argument list '(DSTORAGE_QUEUE_DESC *, <error type>, void **)'
-  
-  vulkan_compute_real.cpp
-D:\rawrxd\src\vulkan_compute_real.cpp(14,1): error C2365: 'vkCreateDebugUtilsMessengerEXT': redefinition; previous definition was 'function' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\VulkanSDK\1.4.328.1\include\vulkan\vulkan_core.h(15280,32):
-      see declaration of 'vkCreateDebugUtilsMessengerEXT'
-  
-D:\rawrxd\src\vulkan_compute_real.cpp(15,1): error C2365: 'vkDestroyDebugUtilsMessengerEXT': redefinition; previous definition was 'function' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\VulkanSDK\1.4.328.1\include\vulkan\vulkan_core.h(15288,28):
-      see declaration of 'vkDestroyDebugUtilsMessengerEXT'
-  
-D:\rawrxd\src\vulkan_compute_real.cpp(16,1): error C2365: 'vkCmdPushDescriptorSetKHR': redefinition; previous definition was 'function' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      C:\VulkanSDK\1.4.328.1\include\vulkan\vulkan_core.h(10464,28):
-      see declaration of 'vkCmdPushDescriptorSetKHR'
-  
-D:\rawrxd\src\vulkan_compute_real.cpp(111,5): error C2659: '=': function as left operand [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\vulkan_compute_real.cpp(113,5): error C2659: '=': function as left operand [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\vulkan_compute_real.cpp(117,9): warning C4551: function call missing argument list [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\vulkan_compute_real.cpp(214,9): error C2065: 'VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME': undeclared identifier [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\vulkan_compute_real.cpp(360,33): warning C4551: function call missing argument list [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-  phase_integration_real.cpp
-D:\rawrxd\src\agentic\phase_integration_real.cpp(16,48): error C2143: syntax error: missing '}' before 'constant' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agentic\phase_integration_real.cpp(16,48): error C2059: syntax error: 'constant' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agentic\phase_integration_real.cpp(16,58): error C2143: syntax error: missing ';' before '}' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agentic\phase_integration_real.cpp(16,58): error C2059: syntax error: '}' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-D:\rawrxd\src\agentic\phase_integration_real.cpp(124,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(124,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(124,13):
-      while trying to match the argument list '(int, const char [54], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(145,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(145,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(145,13):
-      while trying to match the argument list '(int, const char [57], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(166,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(166,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(166,13):
-      while trying to match the argument list '(int, const char [59], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(187,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(187,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(187,13):
-      while trying to match the argument list '(int, const char [58], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(208,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(208,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(208,13):
-      while trying to match the argument list '(int, const char [58], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(229,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(229,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(229,13):
-      while trying to match the argument list '(int, const char [58], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(250,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(250,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(250,13):
-      while trying to match the argument list '(int, const char [58], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(271,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(271,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(271,13):
-      while trying to match the argument list '(int, const char [58], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(302,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(302,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(302,5):
-      while trying to match the argument list '(int, const char [1])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(303,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(303,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(303,5):
-      while trying to match the argument list '(int, const char [55])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(304,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(304,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(304,5):
-      while trying to match the argument list '(int, const char [30])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(305,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(305,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(305,5):
-      while trying to match the argument list '(int, const char [55])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(306,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(306,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(306,5):
-      while trying to match the argument list '(int, const char [41], int)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(307,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(307,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(307,5):
-      while trying to match the argument list '(int, const char [42])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(308,5): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(308,16):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(308,5):
-      while trying to match the argument list '(int, const char [1])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(335,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(335,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(335,13):
-      while trying to match the argument list '(int, const char [44])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(348,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(348,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(348,13):
-      while trying to match the argument list '(int, const char [44])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(361,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(361,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(361,13):
-      while trying to match the argument list '(int, const char [44])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(374,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(374,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(374,13):
-      while trying to match the argument list '(int, const char [44])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(387,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(387,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(387,13):
-      while trying to match the argument list '(int, const char [44])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(400,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(400,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(400,13):
-      while trying to match the argument list '(int, const char [45])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(413,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(413,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(413,13):
-      while trying to match the argument list '(int, const char [43])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(426,13): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(426,24):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(426,13):
-      while trying to match the argument list '(int, const char [40])'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(473,9): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(473,20):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(473,9):
-      while trying to match the argument list '(int, const char [39], const char *)'
-  
-D:\rawrxd\src\agentic\phase_integration_real.cpp(478,9): error C2664: 'void LogMessage(LogLevel,const char *,...)': cannot convert argument 1 from 'int' to 'LogLevel' [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(478,20):
-      Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(18,13):
-      see declaration of 'LogMessage'
-      D:\rawrxd\src\agentic\phase_integration_real.cpp(478,9):
-      while trying to match the argument list '(int, const char [43])'
-  
-  mocs_compilation_Release.cpp
-D:\rawrxd\src\agent\ide_agent_bridge_hot_patching_integration.hpp(177,1): error C1020: unexpected #endif [D:\rawrxd\build\RawrXD-QtShell.vcxproj]
-  (compiling source file 'RawrXD-QtShell_autogen/mocs_compilation_Release.cpp')
-  
-  Generating Code...
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[140/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\autonomous_workflow_engine.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[141/915] Building CXX object CMakeFiles\RawrEngine.dir\src\production_config_manager.cpp.obj
+[142/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[143/915] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_oracle.cpp.obj
+[144/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\safe_refactor_engine.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[145/915] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic_agent_coordinator.cpp.obj
+[146/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[147/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[148/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[149/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[150/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[151/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[152/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[153/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[154/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[155/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[156/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[157/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[158/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[159/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[160/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[161/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cot_fallback_system.cpp.obj
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\../core/model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[162/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[163/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[164/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[165/915] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_mock_inference.cpp.obj
+[166/915] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_reporter.cpp.obj
+[167/915] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_harness.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[168/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[169/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\semantic_code_intelligence.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[170/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\stubs.cpp.obj
+[171/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\hotpatch_control_plane.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[172/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\instructions_provider.cpp.obj
+[173/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\memory_core.cpp.obj
+[174/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\hot_patcher.cpp.obj
+[175/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\static_analysis_engine.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[176/915] Building ASM_MASM object CMakeFiles\RawrEngine.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[177/915] Building CXX object CMakeFiles\RawrEngine.dir\src\test_harness\replay_fixture.cpp.obj
+[178/915] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\model_memory_hotpatch.hpp(11): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[179/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_history.cpp.obj
+[180/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\compression_interface.cpp.obj
+[181/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_explainability.cpp.obj
+[182/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_vocab_resolver.cpp.obj
+[183/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\inference_kernels.cpp.obj
+[184/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\main.cpp.obj
+[185/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\transformer.cpp.obj
+[186/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\streaming_gguf_loader.cpp.obj
+[187/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\utils\Diagnostics.cpp.obj
+[188/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\codec\brutal_gzip.cpp.obj
+[189/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent_policy.cpp.obj
+[190/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\gguf_core.cpp.obj
+[191/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\sampler.cpp.obj
+[192/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\subagent_core.cpp.obj
+[193/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_engine.cpp.obj
+[194/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\codec\compression.cpp.obj
+[195/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cpu_inference_engine.cpp.obj
+[196/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gguf_loader.cpp.obj
+[197/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\bpe_tokenizer.cpp.obj
+[198/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\core_generator.cpp.obj
+[199/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\engine\rawr_engine.cpp.obj
+[200/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\execution_scheduler.cpp.obj
+[201/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\byte_level_hotpatcher.cpp.obj
+[202/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\proxy_hotpatcher.cpp.obj
+[203/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\model_memory_hotpatch.cpp.obj
+[204/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\multi_response_engine.cpp.obj
+[205/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\execution_governor.cpp.obj
+[206/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\flash_attention.cpp.obj
+[207/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\complete_server.cpp.obj
+[208/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\server\gguf_server_hotpatch.cpp.obj
+[209/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\confidence_gate.cpp.obj
+[210/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agent_safety_contract.cpp.obj
+[211/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gpu_backend_bridge.cpp.obj
+[212/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\unified_hotpatch_manager.cpp.obj
+[213/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\streaming_engine_registry.cpp.obj
+[214/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\deterministic_replay.cpp.obj
+[215/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_hotpatch_orchestrator.cpp.obj
+[216/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\cli_autonomy_loop.cpp.obj
+[217/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\agentic_task_graph.cpp.obj
+[218/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\agentic_decision_tree.cpp.obj
+[219/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\cli_headless_systems.cpp.obj
+[220/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_puppeteer.cpp.obj
+[221/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agentic_failure_detector.cpp.obj
+[222/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_loop_state.cpp.obj
+[223/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\auth\rbac_engine.cpp.obj
+[224/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\embedding_engine.cpp.obj
+[225/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agent_self_repair.cpp.obj
+[226/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\agent_self_healing_orchestrator.cpp.obj
+[227/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\llm_http_client.cpp.obj
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\agent\llm_http_client.cpp(220): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\agent\llm_http_client.cpp(219): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'StlHttpClient::platformSend'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<wchar_t*,wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=wchar_t *,
+            _Sent=wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[228/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vision_encoder.cpp.obj
+[229/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\autonomous_subagent.cpp.obj
+[230/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\DiskRecoveryAgent.cpp.obj
+[231/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\planner.cpp.obj
+[232/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\amd_gpu_accelerator.cpp.obj
+[233/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agent\model_invoker.cpp.obj
+[234/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\intel_gpu_accelerator.cpp.obj
+[235/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_gsi_hash.cpp.obj
+[236/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_decision_bridge.cpp.obj
+[237/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license_stubs.cpp.obj
+[238/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\marketplace\extension_marketplace.cpp.obj
+[239/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\gpu_kernel_autotuner.cpp.obj
+[240/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\production_release.cpp.obj
+[241/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_native.cpp.obj
+[242/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pdb_reference_provider.cpp.obj
+[243/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_network_stubs.cpp.obj
+[244/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\arm64_gpu_accelerator.cpp.obj
+[245/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\analyzer_distiller_stubs.cpp.obj
+[246/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sandbox_integration.cpp.obj
+[247/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\streaming_orchestrator_stubs.cpp.obj
+[248/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\webrtc_signaling.cpp.obj
+[249/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\autonomous_recovery_orchestrator.cpp.obj
+[250/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_license.cpp.obj
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): warning C4244: '=': conversion from 'const wchar_t' to 'char', possible loss of data
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xutility(4813): note: the template instantiation context (the oldest one first) is
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see reference to function template instantiation 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string<std::_String_const_iterator<std::_String_val<std::_Simple_types<_Elem>>>,0>(_Iter,_Iter,const _Alloc &)' being compiled
+        with
+        [
+            _Elem=wchar_t,
+            _Iter=std::_String_const_iterator<std::_String_val<std::_Simple_types<wchar_t>>>,
+            _Alloc=std::allocator<char>
+        ]
+D:\rawrxd\src\core\enterprise_license.cpp(301): note: see the first reference to 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string' in 'RawrXD::EnterpriseLicense::InstallLicenseFromFile'
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(812): note: see reference to function template instantiation 'void std::basic_string<char,std::char_traits<char>,std::allocator<char>>::_Construct_from_iter<const wchar_t*,const wchar_t*,_Size_type>(_Iter,const _Sent,_Size)' being compiled
+        with
+        [
+            _Size_type=unsigned __int64,
+            _Iter=const wchar_t *,
+            _Sent=const wchar_t *,
+            _Size=unsigned __int64
+        ]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(968): note: see reference to function template instantiation '_OutIt *std::_Copy_n_unchecked4<const wchar_t*,_Size,char*>(_InIt,_SizeTy,_OutIt)' being compiled
+        with
+        [
+            _OutIt=char *,
+            _Size=unsigned __int64,
+            _InIt=const wchar_t *,
+            _SizeTy=unsigned __int64
+        ]
+[251/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\accelerator_router.cpp.obj
+[252/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_registration.cpp.obj
+[253/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\tool_registry.cpp.obj
+[254/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\shortcut_manager.cpp.obj
+[255/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\pt_driver_contract.cpp.obj
+[256/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\DeterministicReplayEngine.cpp.obj
+[257/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cerebras_wse_accelerator.cpp.obj
+[258/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\AgentToolHandlers.cpp.obj
+[259/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\cli\swarm_orchestrator.cpp.obj
+[260/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_worker.cpp.obj
+[261/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\universal_model_hotpatcher.cpp.obj
+[262/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\voice_chat.cpp.obj
+[263/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\swarm_coordinator.cpp.obj
+[264/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\feature_handlers.cpp.obj
+[265/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\rawrxd_state_mmf.cpp.obj
+[266/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\backup_manager.cpp.obj
+[267/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_validation.cpp.obj
+[268/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\traversal_strategy.cpp.obj
+[269/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_handlers.cpp.obj
+[270/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\unified_command_dispatch.cpp.obj
+[271/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\live_binary_patcher.cpp.obj
+[272/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\ssot_handlers_ext.cpp.obj
+[273/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sqlite3_stubs.cpp.obj
+[274/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\convergence_controller.cpp.obj
+[275/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cross_run_tensor_cache.cpp.obj
+[276/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\alert_system.cpp.obj
+[277/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\iterative_tensor_traversal.cpp.obj
+[278/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_cot_bridge.cpp.obj
+[279/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\semantic_delta_tracker.cpp.obj
+[280/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\sqlite_wrapper.cpp.obj
+[281/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_profile.cpp.obj
+[282/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_pipeline_orchestrator.cpp.obj
+[283/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\voice_automation.cpp.obj
+[284/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\missing_handler_stubs.cpp.obj
+[285/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\thread_pool.cpp.obj
+[286/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\memory_pressure_handler.cpp.obj
+[287/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\chain_of_thought_engine.cpp.obj
+[288/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\layer_contribution_scorer.cpp.obj
+[289/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\gpu_backend.cpp.obj
+[290/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\agentic_transaction.cpp.obj
+[291/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\vulkan_compute.cpp.obj
+[292/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\jsonrpc_parser.cpp.obj
+[293/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\lsp\diagnostic_consumer.cpp.obj
+[294/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\speculative_decoder_v2.cpp.obj
+[295/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\speculative_decoder.cpp.obj
+[296/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\prompt_template_engine.cpp.obj
+[297/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_controller.cpp.obj
+[298/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\vector_index.cpp.obj
+[299/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\completion_feedback.cpp.obj
+[300/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\model_cascade.cpp.obj
+[301/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\gpu\kv_cache_optimizer.cpp.obj
+[302/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\hotpatch_telemetry_safety.cpp.obj
+[303/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\multi_file_transaction.cpp.obj
+[304/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic\context_assembler.cpp.obj
+[305/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\transaction_journal.cpp.obj
+[306/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ui\phase2_integration_example.cpp.obj
+[307/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\telemetry\replay_telemetry_fusion.cpp.obj
+[308/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\ui\chat_message_renderer.cpp.obj
+[309/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\git\git_context.cpp.obj
+[310/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\agentic_agent_coordinator.cpp.obj
+[311/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\cot_fallback_system.cpp.obj
+[312/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_reporter.cpp.obj
+[313/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[314/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\input_guard_slicer.cpp.obj
+[315/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\reasoning_schema_versioning.cpp.obj
+[316/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[317/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[318/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\deterministic_swarm.cpp.obj
+[319/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[320/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\memory_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\memory_patch.asm
+
+[321/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\autonomous_workflow_engine.cpp.obj
+[322/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\byte_search.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\byte_search.asm
+
+[323/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\request_patch.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\request_patch.asm
+
+[324/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[325/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_mock_inference.cpp.obj
+[326/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\model_bridge_x64.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\model_bridge_x64.asm
+
+[327/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\disk_recovery_scsi.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\disk_recovery_scsi.asm
+
+[328/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_oracle.cpp.obj
+[329/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_DualAgent_Orchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DualAgent_Orchestrator.asm
+
+[330/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\workspace_reasoning_profiles.cpp.obj
+[331/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_DiskRecoveryAgent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DiskRecoveryAgent.asm
+
+[332/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_SelfPatch_Agent.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SelfPatch_Agent.asm
+
+[333/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Prometheus_Exporter.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Prometheus_Exporter.asm
+
+[334/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_SourceEdit_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_SourceEdit_Kernel.asm
+
+[335/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\feature_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\feature_dispatch_bridge.asm
+
+[336/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\gui_dispatch_bridge.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\gui_dispatch_bridge.asm
+
+[337/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD-AnalyzerDistiller.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-AnalyzerDistiller.asm
+
+[338/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_CopilotGapCloser.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_CopilotGapCloser.asm
+
+[339/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[340/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\production_config_manager.cpp.obj
+[341/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\safe_refactor_engine.cpp.obj
+[342/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\distributed_pipeline_orchestrator.cpp.obj
+[343/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_harness.cpp.obj
+[344/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\instructions_provider.cpp.obj
+[345/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\hotpatch_control_plane.cpp.obj
+[346/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\test_harness\replay_fixture.cpp.obj
+[347/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\gguf_vocab_resolver.cpp.obj
+[348/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\compression_interface.cpp.obj
+[349/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\semantic_code_intelligence.cpp.obj
+[350/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\stubs.cpp.obj
+[351/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\inference\ultra_fast_inference.cpp.obj
+[352/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\inference\polymorphic_loader.cpp.obj
+[353/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\inference_kernels.cpp.obj
+[354/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\gguf_loader.cpp.obj
+[355/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\inference\inference_standalone_main.cpp.obj
+[356/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\inference\ollama_blob_parser.cpp.obj
+[357/915] Building ASM_MASM object CMakeFiles\RawrXD-InferenceEngine.dir\src\asm\inference_core.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_core.asm
+
+[358/915] Building ASM_MASM object CMakeFiles\RawrXD_Gold.dir\src\asm\RawrXD-StreamingOrchestrator.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
+
+[359/915] Building ASM_MASM object CMakeFiles\RawrXD-InferenceEngine.dir\src\asm\inference_kernels.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\inference_kernels.asm
+
+[360/915] Building ASM_MASM object CMakeFiles\RawrXD-InferenceEngine.dir\src\asm\quant_avx2.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\quant_avx2.asm
+
+[361/915] Building ASM_MASM object CMakeFiles\RawrXD-InferenceEngine.dir\src\asm\RawrXD_KQuant_Dequant.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_KQuant_Dequant.asm
+
+[362/915] Building ASM_MASM object CMakeFiles\RawrXD-InferenceEngine.dir\src\asm\FlashAttention_AVX512.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\FlashAttention_AVX512.asm
+
+[363/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\gguf_core.cpp.obj
+[364/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\transformer.cpp.obj
+[365/915] Building ASM_MASM object CMakeFiles\RawrXD_DynamicPromptEngine.dir\src\asm\RawrXD_DynamicPromptEngine.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_DynamicPromptEngine.asm
+
+[366/915] Building ASM_MASM object CMakeFiles\RawrXD-InferenceEngine.dir\src\asm\RawrXD_Telemetry_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_Telemetry_Kernel.asm
+
+[367/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\codec\compression.cpp.obj
+[368/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+[369/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\memory_core.cpp.obj
+[370/915] Building CXX object CMakeFiles\RawrXD_DynamicPromptEngine.dir\src\core\dynamic_prompt_engine_glue.cpp.obj
+[371/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\sampler.cpp.obj
+[372/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\codec\brutal_gzip.cpp.obj
+[373/915] Building CXX object CMakeFiles\RawrXD_Gold.dir\src\core\static_analysis_engine.cpp.obj
+[374/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\streaming_gguf_loader.cpp.obj
+[375/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\bpe_tokenizer.cpp.obj
+[376/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\rawr_engine.cpp.obj
+[377/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\cpu_inference_engine.cpp.obj
+[378/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\utils\Diagnostics.cpp.obj
+[379/915] Building CXX object CMakeFiles\RawrXD-InferenceEngine.dir\src\engine\core_generator.cpp.obj

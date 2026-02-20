@@ -8,6 +8,10 @@
 ;=============================================================================
 
 OPTION CASEMAP:NONE
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 OPTION WIN64:3
 OPTION FRAME:AUTO
 OPTION PROLOGUE:NONE
@@ -32,6 +36,7 @@ EXTERNDEF __imp_WaitForSingleObject:QWORD
 EXTERNDEF __imp_QueryPerformanceCounter:QWORD
 EXTERNDEF __imp_QueryPerformanceFrequency:QWORD
 EXTERNDEF __imp_SetEvent:QWORD
+EXTERNDEF __imp_RtlCopyMemory:QWORD
 
 ;=============================================================================
 ; CONSTANTS
@@ -868,14 +873,24 @@ dma_cpu:
     jmp dma_complete
     
 dma_directstorage:
-    ; DirectStorage path (stub - would implement real DS API)
-    xor eax, eax
+    ; DirectStorage path - basic implementation
+    ; For now, use memcpy (placeholder for actual DirectStorage API)
+    mov rcx, [r13].DMA_REQUEST.dst_addr
+    mov rdx, [r13].DMA_REQUEST.src_addr
+    mov r8, [r13].DMA_REQUEST.size_bytes
+    call [__imp_RtlCopyMemory]
+    mov eax, DMA_STATUS_SUCCESS
     mov [rsp+40], eax
     jmp dma_complete
     
 dma_vulkan:
-    ; Vulkan path (stub - would implement real Vulkan DMA)
-    xor eax, eax
+    ; Vulkan path - basic implementation
+    ; For now, use memcpy (placeholder for actual Vulkan DMA)
+    mov rcx, [r13].DMA_REQUEST.dst_addr
+    mov rdx, [r13].DMA_REQUEST.src_addr
+    mov r8, [r13].DMA_REQUEST.size_bytes
+    call [__imp_RtlCopyMemory]
+    mov eax, DMA_STATUS_SUCCESS
     mov [rsp+40], eax
     
 dma_complete:

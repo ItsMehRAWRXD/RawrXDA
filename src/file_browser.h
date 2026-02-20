@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include <filesystem>
 
 struct FileInfo {
     std::string name;

@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <memory>
 #include <set>
-#include <chrono>
 
 namespace RawrXD {
 namespace IDE {

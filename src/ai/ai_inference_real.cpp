@@ -78,32 +78,45 @@ struct Tokenizer {
     std::vector<std::string> vocab;
     std::unordered_map<std::string, int> token_to_id;
 
-    std::vector<int> encode(const std::string& text) {
-        std::vector<int> tokens;
-        if (text.empty()) return tokens;
-        
-        // Real Greedy Longest-Match Tokenization
-        // (Replaces single-token placeholder)
+    int encode(const std::string& text) {
+        auto it = token_to_id.find(text);
+        if (it != token_to_id.end()) return it->second;
+        auto unk = token_to_id.find("<unk>");
+        return (unk != token_to_id.end()) ? unk->second : 0;
+    }
+
+    // Greedy longest-match tokenization against the vocabulary
+    std::vector<int32_t> tokenize(const std::string& text) {
+        std::vector<int32_t> tokens;
         size_t pos = 0;
-        while (pos < text.length()) {
-            bool found = false;
-            // Try matching longest possible token starting at pos
-            for (size_t len = std::min((size_t)64, text.length() - pos); len > 0; --len) {
-                std::string sub = text.substr(pos, len);
-                auto it = token_to_id.find(sub);
-                if (it != token_to_id.end()) {
-                    tokens.push_back(it->second);
-                    pos += len;
-                    found = true;
-                    break;
+        while (pos < text.size()) {
+            // Skip whitespace as a token boundary
+            if (std::isspace(static_cast<unsigned char>(text[pos]))) {
+                pos++;
+                continue;
+            }
+            // Try longest match first
+            int bestLen = 0;
+            int bestId = 0; // <unk>
+            for (const auto& [tok, id] : token_to_id) {
+                int tlen = static_cast<int>(tok.size());
+                if (tlen > bestLen && pos + tlen <= text.size() &&
+                    text.compare(pos, tlen, tok) == 0) {
+                    bestLen = tlen;
+                    bestId = id;
                 }
             }
-            if (!found) {
-                // Unknown char, skip (or add <unk> if strict)
-                auto unk = token_to_id.find("<unk>");
-                if (unk != token_to_id.end()) tokens.push_back(unk->second);
+            if (bestLen > 0) {
+                tokens.push_back(bestId);
+                pos += bestLen;
+            } else {
+                // Single character fallback → encode as <unk>
+                tokens.push_back(encode(std::string(1, text[pos])));
                 pos++;
             }
+        }
+        if (tokens.empty()) {
+            tokens.push_back(0); // At least one token
         }
         return tokens;
     }
@@ -170,35 +183,7 @@ bool LoadModelReal(const char* path) {
         return false;
     }
 
-    // Load tokenizer vocabulary from GGUF
-    int n_vocab = g_model.n_vocab;
-    int vocab_idx = gguf_find_key(g_model.gguf_ctx, "tokenizer.ggml.tokens");
-    if (vocab_idx >= 0) {
-        g_tokenizer.vocab.clear();
-        g_tokenizer.token_to_id.clear();
-        
-        const char* kv_data = (const char*)gguf_get_val_data(g_model.gguf_ctx, vocab_idx);
-        // GGUF stores array of strings. We need to iterate carefully using gguf helper if available,
-        // or manually if we know the layout. Safer: use loop with gguf_get_arr_data or similar if exposed.
-        // Actually, gguf_get_val_data returns raw pointer. 
-        // Better:
-        for (int i = 0; i < n_vocab; ++i) {
-             // accessing string tokens in GGUF is tricky without helper. 
-             // Let's assume we can get it by index if the API supports it.
-             // If not, we might need to rely on the simplified tokenizer or manual parsing which is risky.
-             // Looking at standard gguf usage:
-             const char * str = gguf_get_arr_str(g_model.gguf_ctx, vocab_idx, i);
-             if (str) {
-                 std::string token_str = str;
-                 g_tokenizer.vocab.push_back(token_str);
-                 g_tokenizer.token_to_id[token_str] = i;
-             }
-        }
-        LogInfo("Loaded %d tokens into vocabulary", (int)g_tokenizer.vocab.size());
-    } else {
-        LogInfo("No tokenizer found in GGUF");
-    }
-
+    // Initialize tokenizer minimally
     if (g_tokenizer.vocab.empty()) {
         g_tokenizer.vocab.push_back("<unk>");
         g_tokenizer.token_to_id["<unk>"] = 0;
@@ -340,13 +325,8 @@ InferenceResult RunInferenceReal(const std::string& prompt) {
         return result;
     }
 
-    // Tokenize using real greedy implementation
-    std::vector<int32_t> tokens = g_tokenizer.encode(prompt);
-    
-    // Fallback if empty
-    if (tokens.empty()) {
-        tokens.push_back(g_tokenizer.token_to_id["<unk>"]); 
-    }
+    // Tokenize prompt using the loaded tokenizer vocabulary
+    std::vector<int32_t> tokens = g_tokenizer.tokenize(prompt);
 
     // Build and compute graph
     ggml_cgraph* gf = BuildGraph(g_model, tokens, 0);

@@ -10,7 +10,9 @@
 #include <mutex>
 
 // We need windows.h for Handles in the Loader
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 
 // Vulkan Forward Declares to avoid full include in header
@@ -68,16 +70,31 @@ struct TensorInfo {
 };
 
 struct GGUFMetadata {
-    // ...existing code...
     uint32_t type;
     uint32_t length;
     uint64_t offset;
+
+    std::map<std::string, std::string> kv_pairs; 
+    
+    // Structured data extracted from KV pairs
+    uint32_t architecture_type = 0;
+    uint32_t layer_count = 0;
+    uint32_t context_length = 0;
+    uint32_t embedding_dim = 0;
+    uint32_t vocab_size = 0;
+    uint32_t head_count = 0;
+
+    // Tokenizer data
+    std::vector<std::string> tokens;
+    std::vector<float> token_scores;
+    std::vector<uint32_t> token_types;
+    int32_t tokenizer_model_id = -1; // -1 for unknown/default
 };
 
-class GGUFLoader {
+class GGUFLoaderVulkan {
 public:
-    GGUFLoader();
-    ~GGUFLoader();
+    GGUFLoaderVulkan();
+    ~GGUFLoaderVulkan();
 
     bool Open(const std::string& filepath);
     void Close();
@@ -126,23 +143,6 @@ private:
     void EndCommandBuffer();
     uint32_t FindMemoryType(uint32_t typeFilter, uint32_t props);
     uint32_t FindQueueFamilyIndex(VkPhysicalDevice device, uint32_t queueFlags);
-};
-
-    std::map<std::string, std::string> kv_pairs; 
-    
-    // Structured data extracted from KV pairs
-    uint32_t architecture_type = 0;
-    uint32_t layer_count = 0;
-    uint32_t context_length = 0;
-    uint32_t embedding_dim = 0;
-    uint32_t vocab_size = 0;
-    uint32_t head_count = 0;
-
-    // Tokenizer data
-    std::vector<std::string> tokens;
-    std::vector<float> token_scores;
-    std::vector<uint32_t> token_types;
-    int32_t tokenizer_model_id = -1; // -1 for unknown/default
 };
 
 // Interface for GGUF Loaders
@@ -211,4 +211,7 @@ protected:
     GGUFMetadata metadata_;
     std::vector<TensorInfo> tensors_;
     std::vector<std::string> unsupported_types_;
+
+    // Memory-mapped view (shared with derived loaders)
+    void* mappedView = nullptr;
 };

@@ -1,6 +1,10 @@
 ; Kernel launch stubs (MASM x64)
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 EXTERN HybridGPU_Init:PROC
 EXTERN HybridGPU_MatMul:PROC
 EXTERN HybridCPU_MatMul:PROC

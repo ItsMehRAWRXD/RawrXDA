@@ -9,6 +9,7 @@
 #include <atomic>
 #include <thread>
 #include <functional>
+#include <queue>
 // ============================================================================
 // BEACON SYSTEM - Persistent State Checkpoints
 // ============================================================================

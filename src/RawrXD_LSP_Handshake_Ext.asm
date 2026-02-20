@@ -4,6 +4,10 @@
 
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; External Win32 APIs
 EXTERN HeapAlloc:PROC
 EXTERN HeapFree:PROC

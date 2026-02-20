@@ -3,6 +3,10 @@
 ; Uses AVX-512 for 64-byte parallel string scanning if available, SSE4.2 fallback
 ; Exports: DigestionFastScan, DigestionHashChunk
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .code
 ALIGN 16
 

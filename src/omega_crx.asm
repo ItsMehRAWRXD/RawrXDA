@@ -38,6 +38,7 @@ szHD db 0Dh, 0Ah, "Hex:", 0Dh, 0Ah, 0; szHG db 0Dh, 0Ah, "Disasm:", 0Dh, 0Ah, 0
 szSF db "Sec%d VA=%08X VS=%08X Raw=%08X", 0Dh, 0Ah, 0; szIF db "Imp: %s", 0Dh, 0Ah, 0; szEF db "Exp: %s", 0Dh, 0Ah, 0
 szHL db "%08X: ", 0; szHB db "%02X ", 0; szAS db " |%s|", 0Dh, 0Ah, 0; szNL db 0Dh, 0Ah, 0; szDT db ".", 0
 szER db "[-]Err", 0Dh, 0Ah, 0; szOK db "[+]OK", 0Dh, 0Ah, 0; szD db "%d", 0; szX db "%08X", 0; szS db "%s", 0
+szRet db "ret", 0; szRetn db "retn ", 0; szCall db "call ", 0; szJmp db "jmp ", 0; szPush db "push ", 0; szPop db "pop ", 0
 
 .data?
 hIn dd ?, hOut dd ?, hF dd ?, fSz dd ?, bR dd ?, bW dd ?, bP db 260 dup(?), tB db 512 dup(?), fB db MAX_FSZ dup(?)
@@ -64,8 +65,8 @@ AMACH proc; invoke P, addr szHM; invoke P, addr szOK; ret; AMACH endp
 ; Hex Dump (Elegant)
 HD proc a:DWORD, s:DWORD; local i:DWORD, j:DWORD; invoke P, addr szHD; mov i, 0; @@o: mov eax, i; cmp eax, s; jge @@d; add eax, a; invoke wsprintf, addr tB, addr szHL, eax; invoke P, addr tB; mov j, 0; @@h: cmp j, 16; jge @@a; mov eax, i; add eax, j; cmp eax, s; jge @@t; movzx ecx, byte ptr [fB+eax]; invoke wsprintf, addr tB, addr szHB, ecx; invoke P, addr tB; inc j; jmp @@h; @@t: invoke P, addr szS; inc j; jmp @@h; @@a: mov byte ptr [tB], 0; mov j, 0; @@b: cmp j, 16; jge @@n; mov eax, i; add eax, j; cmp eax, s; jge @@n; movzx ecx, byte ptr [fB+eax]; cmp cl, 20h; jl @@x; cmp cl, 7Eh; jg @@x; mov tB[j], cl; jmp @@y; @@x: mov tB[j], '.'; @@y: inc j; jmp @@b; @@n: mov tB[j], 0; invoke P, addr tB; invoke P, addr szNL; add i, 16; jmp @@o; @@d: ret; HD endp
 
-; Disassembler (Stub)
-DIS proc a:DWORD, s:DWORD; local i:DWORD; invoke P, addr szHG; mov i, 0; @@l: mov eax, i; cmp eax, s; jge @@d; add eax, a; invoke wsprintf, addr tB, addr szHL, eax; invoke P, addr tB; movzx ecx, byte ptr [fB+eax]; invoke wsprintf, addr tB, addr szHB, ecx; invoke P, addr tB; invoke P, addr szNL; inc i; jmp @@l; @@d: ret; DIS endp
+; Disassembler (Basic)
+DIS proc a:DWORD, s:DWORD; local i:DWORD; invoke P, addr szHG; mov i, 0; @@l: mov eax, i; cmp eax, s; jge @@d; add eax, a; invoke wsprintf, addr tB, addr szHL, eax; invoke P, addr tB; movzx ecx, byte ptr [fB+eax]; cmp cl, 0C3h; je @@ret; cmp cl, 0C2h; je @@retn; cmp cl, 0E8h; je @@call; cmp cl, 0E9h; je @@jmp; cmp cl, 50h; jl @@db; cmp cl, 5Fh; jle @@push; cmp cl, 58h; jl @@db; cmp cl, 5Fh; jle @@pop; @@db: invoke wsprintf, addr tB, addr szHB, ecx; invoke P, addr tB; invoke P, addr szNL; inc i; jmp @@l; @@ret: invoke P, addr szRet; invoke P, addr szNL; inc i; jmp @@l; @@retn: invoke P, addr szRetn; invoke P, addr szNL; add i, 3; jmp @@l; @@call: invoke P, addr szCall; invoke P, addr szNL; add i, 5; jmp @@l; @@jmp: invoke P, addr szJmp; invoke P, addr szNL; add i, 5; jmp @@l; @@push: sub cl, 50h; add cl, '0'; mov tB, cl; mov tB[1], 0; invoke P, addr szPush; invoke P, addr tB; invoke P, addr szNL; inc i; jmp @@l; @@pop: sub cl, 58h; add cl, '0'; mov tB, cl; mov tB[1], 0; invoke P, addr szPop; invoke P, addr tB; invoke P, addr szNL; inc i; jmp @@l; @@d: ret; DIS endp
 
 ; Conversion & Extraction
 CF proc o:DWORD, f:DWORD; local h:DWORD; invoke CreateFile, o, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0; cmp eax, -1; je @@f; mov h, eax; invoke WriteFile, h, addr fB, fSz, addr bW, 0; invoke CloseHandle, h; invoke P, addr szOK; mov eax, 1; ret; @@f: invoke P, addr szER; xor eax, eax; ret; CF endp

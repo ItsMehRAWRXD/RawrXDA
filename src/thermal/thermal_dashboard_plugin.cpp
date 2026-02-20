@@ -1,8 +1,8 @@
 /**
  * @file thermal_dashboard_plugin.cpp
  * @brief Thermal Dashboard Plugin Implementation
- * 
- * Hot-injectable DLL for thermal monitoring with Qt6 UI
+ *
+ * Hot-injectable DLL for thermal monitoring; Win32/non-Qt.
  */
 
 #include "thermal_dashboard_plugin.hpp"

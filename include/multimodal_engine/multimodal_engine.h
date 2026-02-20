@@ -1,25 +1,27 @@
 #ifndef MULTIMODAL_ENGINE_H
 #define MULTIMODAL_ENGINE_H
 
-#include <QObject>
-#include <QImage>
-#include <QString>
+// C++20, no Qt. Image → base64 prompt; callback replaces signal.
 
-class MultiModalEngine : public QObject
+#include <string>
+#include <vector>
+#include <functional>
+
+class MultiModalEngine
 {
-    Q_OBJECT
-
 public:
-    explicit MultiModalEngine(QObject *parent = nullptr);
+    using VisionPromptReadyFn = std::function<void(const std::string& base64, const std::string& mime)>;
 
-    // Accepts QImage or file path → base-64 PNG/JPG
-    // Auto-detects MIME, resizes > 1024 px longest edge (bicubic)
-    // Emits visionPromptReady(QString base64, QString mime)
-    void processImage(const QImage &image);
-    void processImage(const QString &filePath);
+    MultiModalEngine() = default;
 
-signals:
-    void visionPromptReady(const QString &base64, const QString &mime);
+    void setOnVisionPromptReady(VisionPromptReadyFn f) { m_onVisionPromptReady = std::move(f); }
+
+    /** imageData: RGBA or RGB bytes; width, height, bytesPerPixel. */
+    void processImage(const uint8_t* imageData, int width, int height, int bytesPerPixel = 4);
+    void processImage(const std::string& filePath);
+
+private:
+    VisionPromptReadyFn m_onVisionPromptReady;
 };
 
 #endif // MULTIMODAL_ENGINE_H

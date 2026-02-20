@@ -342,6 +342,10 @@ HEARTBEAT_MONITOR ENDS
 ; GLOBAL DATA SECTION
 ; =============================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 
 ; Global structures - zero-initialized

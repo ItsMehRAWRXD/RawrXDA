@@ -2,6 +2,10 @@
 ; A 100% native x64 Windows executable (Zero-CRT) that generates
 ; LLM dead-weights based on a key-hash for reproducible output.
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERN ExitProcess:PROC
 EXTERN GetStdHandle:PROC
 EXTERN WriteFile:PROC

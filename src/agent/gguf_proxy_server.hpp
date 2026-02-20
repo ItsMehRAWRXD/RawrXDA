@@ -1,65 +1,64 @@
+/**
+ * @file gguf_proxy_server.hpp
+ * @brief TCP proxy between IDE-agent and GGUF model server (Qt-free, WinSock)
+ */
 #pragma once
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
+#include <string>
+#include <map>
 #include <vector>
 #include <mutex>
-#include <thread>
-#include <atomic>
-#include <string>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-// Link against ws2_32.lib
-#pragma comment(lib, "Ws2_32.lib")
+#include <memory>
+#include <functional>
+#include <nlohmann/json.hpp>
+#include <cstdint>
 
 class AgentHotPatcher;
 
 struct ClientConnection {
-    SOCKET clientSocket = INVALID_SOCKET;
-    SOCKET ggufSocket = INVALID_SOCKET;
+    uintptr_t clientSocket = 0;
+    uintptr_t ggufSocket = 0;
     std::vector<uint8_t> requestBuffer;
     std::vector<uint8_t> responseBuffer;
 };
 
 class GGUFProxyServer {
 public:
-    GGUFProxyServer();
+    GGUFProxyServer() = default;
     ~GGUFProxyServer();
-
-    // No copy
     GGUFProxyServer(const GGUFProxyServer&) = delete;
     GGUFProxyServer& operator=(const GGUFProxyServer&) = delete;
 
     void initialize(int listenPort, AgentHotPatcher* hotPatcher, const std::string& ggufEndpoint);
-    
-    // Returns true if started
     bool startServer();
     void stopServer();
+    bool isListening() const;
+    nlohmann::json getServerStatistics() const;
+    void setConnectionPoolSize(int size);
+    void setConnectionTimeout(int ms);
+    std::string parseIncomingRequest(const std::vector<uint8_t>& data);
 
-    bool isListening() const { return m_isListening; }
-
-    // Statistics json string
-    std::string getServerStatistics() const;
+    // Callbacks (replace Qt signals)
+    std::function<void(int)> onServerStarted;
+    std::function<void()> onServerStopped;
 
 private:
-    void acceptLoop();
-    void handleClient(SOCKET clientSocket);
-    SOCKET connectToBackend();
+    void handleIncomingConnection(uintptr_t socketDescriptor);
+    void forwardToGGUF(uintptr_t socketDescriptor);
+    void processGGUFResponse(uintptr_t socketDescriptor);
+    void sendResponseToClient(uintptr_t socketDescriptor, const std::string& response);
 
     int m_listenPort = 0;
     std::string m_ggufEndpoint;
     AgentHotPatcher* m_hotPatcher = nullptr;
-    
-    SOCKET m_listenSocket = INVALID_SOCKET;
-    std::atomic<bool> m_isListening{false};
-    std::thread m_acceptThread;
-    
-    mutable std::mutex m_mutex;
-    std::vector<std::thread> m_clientThreads; // Or detach?
-    
-    std::atomic<long long> m_requestsProcessed{0};
-    std::atomic<long long> m_bytesTransferred{0};
+    uintptr_t m_listenSocket = 0;
+    bool m_listening = false;
+    std::map<uintptr_t, std::unique_ptr<ClientConnection>> m_connections;
+    int m_connectionPoolSize = 10;
+    int m_connectionTimeout = 5000;
+    mutable std::mutex m_statsMutex;
+    int64_t m_requestsProcessed = 0;
+    int64_t m_hallucinationsCorrected = 0;
+    int64_t m_navigationErrorsFixed = 0;
+    int m_activeConnections = 0;
 };

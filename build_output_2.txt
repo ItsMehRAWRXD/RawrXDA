@@ -1,0 +1,109 @@
+-- nlohmann_json not found - using inline JSON parser
+-- libzip not found - compression features disabled
+-- Using brutal compression system - no ZLIB dependency
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: D:/rawrxd/build
+[  1%] Building CXX object CMakeFiles/RawrEngine.dir/src/runtime_core.cpp.obj
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/cpu_inference_engine_real.cpp.obj
+In file included from D:\rawrxd\src\cpu_inference_engine_real.cpp:1:
+D:\rawrxd\src\cpu_inference_engine.h: In constructor 'CPUInference::CPUInferenceEngine::CPUInferenceEngine()':
+D:\rawrxd\src\cpu_inference_engine.h:133:10: warning: 'CPUInference::CPUInferenceEngine::m_modelLoaded' will be initialized after [-Wreorder]
+  133 |     bool m_modelLoaded = false;
+      |          ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:129:12: warning:   'size_t CPUInference::CPUInferenceEngine::m_contextLimit' [-Wreorder]
+  129 |     size_t m_contextLimit = 4096;
+      |            ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp:39:1: warning:   when initialized here [-Wreorder]
+   39 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp: In member function 'bool CPUInference::CPUInferenceEngine::LoadModel(const std::string&)':
+D:\rawrxd\src\cpu_inference_engine_real.cpp:59:27: error: 'struct CPUInference::GGUFMetadata' has no member named 'head_count_kv'; did you mean 'head_count'?
+   59 |     int n_kv_heads = meta.head_count_kv;
+      |                           ^~~~~~~~~~~~~
+      |                           head_count
+D:\rawrxd\src\cpu_inference_engine_real.cpp:70:5: error: 'm_weight_store' was not declared in this scope; did you mean 'm_weights'?
+   70 |     m_weight_store.clear();
+      |     ^~~~~~~~~~~~~~
+      |     m_weights
+D:\rawrxd\src\cpu_inference_engine_real.cpp:73:5: error: 'm_tok_embeddings' was not declared in this scope; did you mean 'm_tokenEmbeddings'?
+   73 |     m_tok_embeddings = (float*)LoadTensorData(m_loader.get(), m_weight_store, "token_embd.weight");
+      |     ^~~~~~~~~~~~~~~~
+      |     m_tokenEmbeddings
+D:\rawrxd\src\cpu_inference_engine_real.cpp:74:5: error: 'm_output_norm' was not declared in this scope; did you mean 'm_outputNorm'?
+   74 |     m_output_norm = (float*)LoadTensorData(m_loader.get(), m_weight_store, "output_norm.weight");
+      |     ^~~~~~~~~~~~~
+      |     m_outputNorm
+D:\rawrxd\src\cpu_inference_engine_real.cpp:75:5: error: 'm_output_weight' was not declared in this scope; did you mean 'm_outputWeights'?
+   75 |     m_output_weight = LoadTensorData(m_loader.get(), m_weight_store, "output.weight");
+      |     ^~~~~~~~~~~~~~~
+      |     m_outputWeights
+D:\rawrxd\src\cpu_inference_engine_real.cpp:81:27: error: 'struct CPUInference::GGUFMetadata' has no member named 'feed_forward_length'
+   81 |     int hidden_dim = meta.feed_forward_length;
+      |                           ^~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp:84:56: error: no matching function for call to 'make_unique<((CPUInference::CPUInferenceEngine*)this)->CPUInference::CPUInferenceEngine::TransformerLayer>(int&, int&, int&, int&)'
+   84 |         auto layer = std::make_unique<TransformerLayer>(m_embeddingDim, m_numHeads, n_kv_heads, hidden_dim);
+      |                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp:84:56: note: there are 3 candidates
+In file included from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/memory:80,
+                 from D:\rawrxd\src\cpu_inference_engine.h:5:
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:1084:5: note: candidate 1: 'template<class _Tp, class ... _Args> std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...)'
+ 1084 |     make_unique(_Args&&... __args)
+      |     ^~~~~~~~~~~
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:1084:5: note: template argument deduction/substitution failed:
+D:\rawrxd\src\cpu_inference_engine_real.cpp:84:56: error: type/value mismatch at argument 1 in template parameter list for 'template<class _Tp, class ... _Args> std::__detail::__unique_ptr_t<_Tp> std::make_unique(_Args&& ...)'
+   84 |         auto layer = std::make_unique<TransformerLayer>(m_embeddingDim, m_numHeads, n_kv_heads, hidden_dim);
+      |                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp:84:56: note:   expected a type, got '((CPUInference::CPUInferenceEngine*)this)->CPUInference::CPUInferenceEngine::TransformerLayer'
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:1099:5: note: candidate 2: 'template<class _Tp> std::__detail::__unique_ptr_array_t<_Tp> std::make_unique(size_t)'
+ 1099 |     make_unique(size_t __num)
+      |     ^~~~~~~~~~~
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:1099:5: note: candidate expects 1 argument, 4 provided
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:1109:5: note: candidate 3: 'template<class _Tp, class ... _Args> std::__detail::__invalid_make_unique_t<_Tp> std::make_unique(_Args&& ...)' (deleted)
+ 1109 |     make_unique(_Args&&...) = delete;
+      |     ^~~~~~~~~~~
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:1109:5: note: template argument deduction/substitution failed:
+D:\rawrxd\src\cpu_inference_engine_real.cpp:84:56: error: type/value mismatch at argument 1 in template parameter list for 'template<class _Tp, class ... _Args> std::__detail::__invalid_make_unique_t<_Tp> std::make_unique(_Args&& ...)'
+   84 |         auto layer = std::make_unique<TransformerLayer>(m_embeddingDim, m_numHeads, n_kv_heads, hidden_dim);
+      |                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp:84:56: note:   expected a type, got '((CPUInference::CPUInferenceEngine*)this)->CPUInference::CPUInferenceEngine::TransformerLayer'
+D:\rawrxd\src\cpu_inference_engine_real.cpp: In member function 'void CPUInference::CPUInferenceEngine::InitKVCache()':
+D:\rawrxd\src\cpu_inference_engine_real.cpp:111:14: error: base operand of '->' has non-pointer type 'CPUInference::CPUInferenceEngine::LayerWeights'
+  111 |         layer->cache_pos = 0;
+      |              ^~
+D:\rawrxd\src\cpu_inference_engine_real.cpp: In member function 'std::vector<float> CPUInference::CPUInferenceEngine::Eval(const std::vector<int>&)':
+D:\rawrxd\src\cpu_inference_engine_real.cpp:212:9: error: 'm_tok_embeddings' was not declared in this scope; did you mean 'm_tokenEmbeddings'?
+  212 |     if (m_tok_embeddings) {
+      |         ^~~~~~~~~~~~~~~~
+      |         m_tokenEmbeddings
+D:\rawrxd\src\cpu_inference_engine_real.cpp:219:14: error: base operand of '->' has non-pointer type 'CPUInference::CPUInferenceEngine::LayerWeights'
+  219 |         layer->forward(x.data(), pos, 1);
+      |              ^~
+D:\rawrxd\src\cpu_inference_engine_real.cpp:223:9: error: 'm_output_norm' was not declared in this scope; did you mean 'm_outputNorm'?
+  223 |     if (m_output_norm) {
+      |         ^~~~~~~~~~~~~
+      |         m_outputNorm
+D:\rawrxd\src\cpu_inference_engine_real.cpp:229:24: error: 'm_output_weight' was not declared in this scope; did you mean 'm_outputWeights'?
+  229 |     float* w = (float*)m_output_weight;
+      |                        ^~~~~~~~~~~~~~~
+      |                        m_outputWeights
+D:\rawrxd\src\cpu_inference_engine_real.cpp: In member function 'void CPUInference::CPUInferenceEngine::ConfigureSampling(float, float, int, float)':
+D:\rawrxd\src\cpu_inference_engine_real.cpp:298:15: error: 'class Sampler' has no member named 'SetTemp'; did you mean 'temp'?
+  298 |     m_sampler.SetTemp(temperature);
+      |               ^~~~~~~
+      |               temp
+D:\rawrxd\src\cpu_inference_engine_real.cpp:299:15: error: 'class Sampler' has no member named 'SetTopP'
+  299 |     m_sampler.SetTopP(top_p); // Assuming Sampler class has these
+      |               ^~~~~~~
+D:\rawrxd\src\cpu_inference_engine_real.cpp: In member function 'size_t CPUInference::CPUInferenceEngine::GetMemoryUsage() const':
+D:\rawrxd\src\cpu_inference_engine_real.cpp:308:27: error: 'm_weight_store' was not declared in this scope; did you mean 'm_weights'?
+  308 |     for (const auto& kv : m_weight_store) total += kv.second.size();
+      |                           ^~~~~~~~~~~~~~
+      |                           m_weights
+D:\rawrxd\src\cpu_inference_engine_real.cpp: At global scope:
+D:\rawrxd\src\cpu_inference_engine_real.cpp:16:17: warning: 'uint8_t* CPUInference::LoadTensorData(StreamingGGUFLoader*, std::map<std::__cxx11::basic_string<char>, std::vector<unsigned char> >&, const std::string&)' defined but not used [-Wunused-function]
+   16 | static uint8_t* LoadTensorData(StreamingGGUFLoader* loader, std::map<std::string, std::vector<uint8_t>>& store, const std::string& name) {
+      |                 ^~~~~~~~~~~~~~
+mingw32-make[2]: *** [CMakeFiles\RawrEngine.dir\build.make:169: CMakeFiles/RawrEngine.dir/src/cpu_inference_engine_real.cpp.obj] Error 1
+mingw32-make[1]: *** [CMakeFiles\Makefile2:89: CMakeFiles/RawrEngine.dir/all] Error 2
+mingw32-make: *** [Makefile:90: all] Error 2

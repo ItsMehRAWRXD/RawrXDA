@@ -1,395 +1,47 @@
 #include "MonacoIntegration.hpp"
+#include "../bridge/Win32IDEBridge.hpp"
+#include "../manifestor/SelfManifestor.hpp"
 #include <stdexcept>
-#include <fstream>
-#include <sstream>
-#include <algorithm>
-#include <cmath>
-
-#pragma comment(lib, "gdiplus.lib")
 
 namespace RawrXD::Agentic::Monaco {
-
-// ==============================================================================
-// Buffer Implementation
-// ==============================================================================
-
-Buffer::Buffer() {
-    m_text.reserve(4096);
-    updateLineCache();
-}
-
-Buffer::~Buffer() {
-    // Cleanup
-}
-
-std::expected<void, std::string> Buffer::insertText(const std::string& text, size_t position) {
-    std::lock_guard lock(m_mutex);
-    
-    if (position > m_text.length()) {
-        return std::unexpected(std::string("Invalid position"));
-    }
-    
-    m_text.insert(position, text);
-    m_modified = true;
-    updateLineCache();
-    
-    if (onTextChanged) onTextChanged(position, text.length());
-    if (onModifiedChanged) onModifiedChanged();
-    
-    return {};
-}
-
-std::expected<void, std::string> Buffer::deleteText(size_t start, size_t end) {
-    std::lock_guard lock(m_mutex);
-    if (start >= m_text.length() || end > m_text.length() || start > end)
-        return std::unexpected(std::string("Invalid range"));
-
-    m_text.erase(start, end - start);
-    m_modified = true;
-    updateLineCache();
-    
-    if (onTextChanged) onTextChanged(start, 0); 
-    if (onModifiedChanged) onModifiedChanged();
-    return {};
-}
-
-std::expected<void, std::string> Buffer::replaceText(const std::string& text, size_t start, size_t end) {
-    std::lock_guard lock(m_mutex);
-    if (start > m_text.length() || end > m_text.length() || start > end)
-         return std::unexpected(std::string("Invalid range"));
-         
-    m_text.replace(start, end - start, text);
-    m_modified = true;
-    updateLineCache();
-    
-    if (onTextChanged) onTextChanged(start, text.length());
-    if (onModifiedChanged) onModifiedChanged();
-    return {};
-}
-
-void Buffer::updateLineCache() {
-    m_lineStarts.clear();
-    m_lineStarts.push_back(0);
-    for (size_t i = 0; i < m_text.length(); ++i) {
-        if (m_text[i] == '\n') {
-            m_lineStarts.push_back(i + 1);
-        }
-    }
-    m_lineCount = m_lineStarts.size();
-}
-
-std::expected<std::string, std::string> Buffer::getLine(size_t lineNumber) const {
-    if (lineNumber >= m_lineStarts.size()) return std::unexpected(std::string("Invalid line number"));
-    size_t start = m_lineStarts[lineNumber];
-    size_t end = (lineNumber + 1 < m_lineStarts.size()) ? m_lineStarts[lineNumber + 1] - 1 : m_text.length();
-    if (end > 0 && end > start && m_text[end-1] == '\r') end--; 
-    return m_text.substr(start, end - start);
-}
-
-std::expected<void, std::string> Buffer::setLine(size_t lineNumber, const std::string& text) {
-    return std::unexpected(std::string("Not implemented for brevity")); 
-}
-
-std::expected<size_t, std::string> Buffer::getLineStart(size_t lineNumber) const {
-    if (lineNumber >= m_lineStarts.size()) return std::unexpected(std::string("Invalid line"));
-    return m_lineStarts[lineNumber];
-}
-
-std::expected<size_t, std::string> Buffer::getLineEnd(size_t lineNumber) const {
-    if (lineNumber >= m_lineStarts.size()) return std::unexpected(std::string("Invalid line"));
-    if (lineNumber + 1 < m_lineStarts.size()) return m_lineStarts[lineNumber + 1]; 
-    return m_text.length();
-}
-
-bool Buffer::isValidPosition(size_t position) const { return position <= m_text.length(); }
-bool Buffer::isValidLine(size_t lineNumber) const { return lineNumber < m_lineStarts.size(); }
-
-size_t Buffer::getLineNumber(size_t position) const {
-    auto it = std::upper_bound(m_lineStarts.begin(), m_lineStarts.end(), position);
-    return (it == m_lineStarts.begin()) ? 0 : std::distance(m_lineStarts.begin(), it) - 1;
-}
-
-size_t Buffer::getColumnNumber(size_t position) const {
-    size_t line = getLineNumber(position);
-    return position - m_lineStarts[line];
-}
-
-void Buffer::reserve(size_t capacity) { m_text.reserve(capacity); }
-void Buffer::shrinkToFit() { m_text.shrink_to_fit(); }
-
-
-// ==============================================================================
-// View Implementation
-// ==============================================================================
-
-View::View(Buffer* buffer) : m_buffer(buffer) {
-    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-    Gdiplus::GdiplusStartup(&m_gdiplusToken, &gdiplusStartupInput, nullptr);
-}
-
-View::~View() {
-    Gdiplus::GdiplusShutdown(m_gdiplusToken);
-}
-
-std::expected<void, std::string> View::renderLine(HDC hdc, size_t lineNumber, int yPos) {
-    if (!m_buffer) return std::unexpected(std::string("No buffer"));
-    auto lineRes = m_buffer->getLine(lineNumber);
-    if (!lineRes) return std::unexpected(lineRes.error());
-
-    std::string line = lineRes.value();
-    
-    HFONT hFont = CreateFont(m_fontSize, 0,0,0, m_fontWeight, FALSE, FALSE, FALSE, 
-                             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, 
-                             DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, m_fontName.c_str());
-                             
-    HFONT hOld = (HFONT)SelectObject(hdc, hFont);
-    RECT rect = {0, yPos, 2000, yPos + getLineHeight()}; // Arbitrary width
-    // Basic text drawing
-    TextOut(hdc, 0, yPos, line.c_str(), (int)line.length());
-    
-    SelectObject(hdc, hOld);
-    DeleteObject(hFont);
-    return {};
-}
-
-std::expected<void, std::string> View::renderAll(HDC hdc) {
-    size_t start = m_firstVisibleLine;
-    size_t end = m_lastVisibleLine; 
-    if (end > m_buffer->getLineCount()) end = m_buffer->getLineCount();
-    
-    for (size_t i = start; i < end; ++i) {
-        renderLine(hdc, i, (int)((i - start) * getLineHeight()));
-    }
-    return {};
-}
-
-void View::scrollToLine(size_t lineNumber) { m_firstVisibleLine = lineNumber; }
-void View::scrollToPosition(size_t position) { }
-
-std::expected<size_t, std::string> View::getFirstVisibleLine() const { return m_firstVisibleLine.load(); }
-std::expected<size_t, std::string> View::getLastVisibleLine() const { return m_lastVisibleLine.load(); }
-
-void View::setCursorPosition(size_t line, size_t column) { 
-    m_cursorPosition = {line, column}; 
-}
-std::pair<size_t, std::string> getCursorPosition() { return {}; } // stub to fix signature if mismatched, but pairs are pair<size_t,size_t>
-
-std::pair<size_t, size_t> View::getCursorPosition() const { return m_cursorPosition; }
-
-void View::setSelection(size_t startLine, size_t startCol, size_t endLine, size_t endCol) {
-    m_selectionStart = {startLine, startCol};
-    m_selectionEnd = {endLine, endCol};
-    m_hasSelection = true;
-}
-
-std::expected<std::string, std::string> View::getSelectedText() const { return std::string(""); }
-void View::clearSelection() { m_hasSelection = false; }
-
-
-// ==============================================================================
-// LSPClient Implementation
-// ==============================================================================
-
-LSPClient::LSPClient() { }
-LSPClient::~LSPClient() { shutdown(); }
-
-std::expected<void, std::string> LSPClient::initialize(const std::string& serverPath) {
-    std::lock_guard lock(m_mutex);
-    if (m_initialized) return std::unexpected(std::string("Already initialized"));
-    m_serverPath = serverPath;
-    
-    auto startRes = startServer();
-    if (!startRes) return std::unexpected(std::string("Failed to start server"));
-    
-    m_initialized = true;
-    m_running = true;
-    m_readerThread = std::thread(&LSPClient::readerLoop, this);
-    return {};
-}
-
-std::expected<void, std::string> LSPClient::shutdown() {
-    m_running = false;
-    if (m_readerThread.joinable()) m_readerThread.join();
-    return {};
-}
-
-std::expected<void, std::string> LSPClient::startServer() {
-    return {}; 
-}
-
-std::expected<void, std::string> LSPClient::sendRequest(const std::string& method, const json& params, std::promise<json>& promise) {
-    return {};
-}
-
-void LSPClient::readerLoop() {
-}
-void LSPClient::handleResponse(const json& response) {}
-void LSPClient::handleNotification(const json& notification) {}
-
-std::expected<std::vector<std::string>, std::string> LSPClient::getCompletions(const std::string& uri, size_t line, size_t column) {
-    return std::vector<std::string>();
-}
-
-std::expected<std::vector<Diagnostic>, std::string> LSPClient::getDiagnostics(const std::string& uri) {
-    return std::vector<Diagnostic>();
-}
-
-std::vector<Diagnostic> LSPClient::parseDiagnostics(const json& diagnostics) { return {}; }
-Diagnostic LSPClient::parseDiagnostic(const json& diagnostic) { return {}; }
-std::vector<std::string> LSPClient::parseCompletions(const json& completions) { return {}; }
-
 
 // ==============================================================================
 // MonacoEditor Implementation
 // ==============================================================================
 
-MonacoEditor::MonacoEditor(MonacoConfig config) 
-    : config_(config), 
-      buffer_(std::make_unique<Buffer>()),
-      view_(std::make_unique<View>(buffer_.get())),
-      diagnosticsManager_(std::make_unique<DiagnosticsManager>()) 
-{
-    if (config.variant == MonacoVariant::Enterprise) {
-        lspClient_ = std::make_unique<LSPClient>();
-    }
+MonacoEditor::MonacoEditor(MonacoConfig config)
+    : config_(config) {
 }
 
-MonacoEditor::~MonacoEditor() { shutdown(); }
+MonacoEditor::~MonacoEditor() {
+    shutdown();
+}
 
-std::expected<void, std::string> MonacoEditor::initialize(HWND parentWindow) {
-    if (initialized_) return {};
+bool MonacoEditor::initialize(HWND parentWindow) {
+    if (initialized_) {
+        return true;
+    }
+    
     parentWindow_ = parentWindow;
     
-    editorWindow_ = CreateWindowEx(0, "EDIT", "", WS_CHILD | WS_VISIBLE, 
-                                   0, 0, 800, 600, parentWindow, NULL, GetModuleHandle(NULL), NULL);
-                                   
-    SetWindowLongPtr(editorWindow_, GWLP_USERDATA, (LONG_PTR)this);
-    SetWindowLongPtr(editorWindow_, GWLP_WNDPROC, (LONG_PTR)EditorWndProc);
+    // Load appropriate ASM module based on variant
+    if (!loadVariantModule()) {
+        return false;
+    }
     
-    initialized_ = true;
-    return {};
-}
-
-void MonacoEditor::shutdown() {
-    if (editorWindow_) DestroyWindow(editorWindow_);
-    initialized_ = false;
-}
-
-std::expected<void, std::string> MonacoEditor::insertText(const std::string& text, uint64_t position) {
-    if (!initialized_) return std::unexpected(std::string("Not initialized"));
-    auto res = buffer_->insertText(text, position);
-    if (res) {
-        InvalidateRect(editorWindow_, NULL, FALSE);
-    }
-    return res;
-}
-
-std::expected<void, std::string> MonacoEditor::loadFile(const std::string& path) {
-    if (!initialized_) return std::unexpected(std::string("Not initialized"));
-    auto content = readFile(path);
-    if (!content) return std::unexpected(content.error());
-    
-    buffer_->replaceText(content.value(), 0, buffer_->getLength()); // Replace all
-    currentFile_ = path;
-    InvalidateRect(editorWindow_, NULL, TRUE);
-    return {};
-}
-
-std::expected<std::string, std::string> MonacoEditor::readFile(const std::string& path) {
-    std::ifstream file(path, std::ios::binary);
-    if (!file) return std::unexpected(std::string("Failed to open file"));
-    std::stringstream ss;
-    ss << file.rdbuf();
-    return ss.str();
-}
-
-LRESULT CALLBACK MonacoEditor::EditorWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    MonacoEditor* editor = (MonacoEditor*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-    if (editor) return editor->handleMessage(hwnd, msg, wParam, lParam);
-    return DefWindowProc(hwnd, msg, wParam, lParam);
-}
-
-LRESULT MonacoEditor::handleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch(msg) {
-        case WM_PAINT: onPaint(hwnd); return 0;
-        case WM_CHAR: handleChar(wParam, lParam); return 0;
-        case WM_KEYDOWN: handleKeyDown(wParam, lParam); return 0;
-    }
-    return DefWindowProc(hwnd, msg, wParam, lParam);
-}
-
-void MonacoEditor::handleChar(WPARAM wParam, LPARAM lParam) {
-    char c = (char)wParam;
-    if (c >= 32) {
-         auto pos = view_->getCursorPosition();
-         size_t bPos = buffer_->getPositionFromLineAndColumn(pos.first, pos.second);
-         buffer_->insertText(std::string(1, c), bPos);
-         view_->setCursorPosition(pos.first, pos.second + 1);
-         InvalidateRect(editorWindow_, NULL, FALSE);
-    }
-}
-
-void MonacoEditor::handleKeyDown(WPARAM wParam, LPARAM lParam) {
-    auto pos = view_->getCursorPosition();
-    if (wParam == VK_DOWN) {
-         view_->setCursorPosition(pos.first + 1, pos.second);
-         InvalidateRect(editorWindow_, NULL, FALSE);
-    }
-}
-
-void MonacoEditor::requestDiagnostics() {
-    if (lspClient_) {
-        // ...
-    }
-}
-
-void MonacoEditor::setThemePreset(MonacoThemePreset preset) {
-    config_.themePreset = preset;
-    config_.colors = Settings::GetThemePresetColors(preset);
-    applyTheme();
-}
-
-void MonacoEditor::applyTheme() {
-    if (editorWindow_) {
-        InvalidateRect(editorWindow_, NULL, TRUE);
-    }
-}
-
-// ==============================================================================
-// MonacoFactory Implementation
-// ==============================================================================
-
-std::unique_ptr<MonacoEditor> MonacoFactory::createEditor(MonacoVariant variant) {
-    MonacoConfig config;
-    config.variant = variant;
-    if (variant == MonacoVariant::NeonCore) config.themePreset = MonacoThemePreset::NeonCyberpunk;
-    else config.themePreset = MonacoThemePreset::Default;
-    
-    config.colors = Settings::GetThemePresetColors(config.themePreset);
-    return std::make_unique<MonacoEditor>(config);
-}
-
-
-// ==============================================================================
-// Settings Implementation
-// ==============================================================================
-
-namespace Settings {
-
-MonacoThemeColors GetThemePresetColors(MonacoThemePreset preset) {
-    MonacoThemeColors c = {};
-    c.background = RGB(30,30,30);
-    c.foreground = RGB(200,200,200);
-    return c;
-}
-
-std::string GetThemePresetName(MonacoThemePreset preset) {
-    return "Default"; 
-}
-
-} // namespace Settings
-
-} // namespace RawrXD::Agentic::Monaco
+    // Create buffer based on variant
+    switch (config_.variant) {
+        case MonacoVariant::Core:
+        case MonacoVariant::NeonCore:
+        case MonacoVariant::NeonHack:
+            bufferHandle_ = BufferCreate();
+            break;
+            
+        case MonacoVariant::ZeroDependency:
+            bufferHandle_ = BufferCreateMinimal();
+            break;
+            
+        case MonacoVariant::Enterprise:
             enterpriseHandle_ = EnterpriseEditorCreate(".");
             break;
     }
@@ -463,21 +115,38 @@ void MonacoEditor::setText(const std::string& text) {
     if (!initialized_) {
         return;
     }
-    g_ShadowContent = text;
+    
     // Clear existing content and insert new
     // Implementation depends on variant
     insertText(text, 0);
 }
 
 std::string MonacoEditor::getText() const {
-    // Return shadow content if available
-    return g_ShadowContent;
+    if (!initialized_ || !bufferHandle_) {
+        return "";
+    }
+
+    // Query buffer for total line count, then extract all lines
+    uint64_t lineCount = BufferGetLineCount(bufferHandle_);
+    if (lineCount == 0) {
+        return "";
+    }
+
+    std::string result;
+    result.reserve(lineCount * 80); // Estimated average line length
+
+    for (uint64_t i = 0; i < lineCount; ++i) {
+        const char* lineText = BufferGetLine(bufferHandle_, i);
+        if (lineText) {
+            if (i > 0) result += '\n';
+            result += lineText;
+        }
+    }
+
+    return result;
 }
 
 void MonacoEditor::setCursorPosition(uint64_t line, uint64_t column) {
-    cursorLine_ = line;
-    cursorColumn_ = column;
-
     // Update cursor in view model
     if (onCursorMoved_) {
         onCursorMoved_(line, column);
@@ -485,7 +154,13 @@ void MonacoEditor::setCursorPosition(uint64_t line, uint64_t column) {
 }
 
 std::pair<uint64_t, uint64_t> MonacoEditor::getCursorPosition() const {
-    return {cursorLine_, cursorColumn_}; 
+    if (!initialized_ || !viewHandle_) {
+        return {0, 0};
+    }
+
+    uint64_t line = 0, column = 0;
+    ViewGetCursorPosition(viewHandle_, &line, &column);
+    return {line, column};
 }
 
 void MonacoEditor::render(HDC hdc) {
@@ -520,14 +195,17 @@ void MonacoEditor::render(HDC hdc) {
             break;
             
         case MonacoVariant::Enterprise:
-            // Render with IntelliSense and diagnostics
-            // Full enterprise rendering pipeline
+            // Render with IntelliSense, diagnostics, and language server markers
             if (viewHandle_ && bufferHandle_) {
-                 ViewRenderLine(viewHandle_, bufferHandle_, 0); 
+                ViewRenderLine(viewHandle_, bufferHandle_, 0);
             }
             if (enterpriseHandle_) {
-                DiagnosticsRenderSquiggles(enterpriseHandle_, hdc, bufferHandle_);
-                IntelliSenseRenderPopup(enterpriseHandle_, hdc);
+                // Render LSP diagnostics (errors, warnings, info)
+                LSPRenderDiagnostics(enterpriseHandle_, hdc);
+                // Render IntelliSense suggestions if active
+                LSPRenderCompletions(enterpriseHandle_, hdc);
+                // Render code lens and references
+                LSPRenderCodeLens(enterpriseHandle_, hdc);
             }
             break;
     }
@@ -543,25 +221,80 @@ void MonacoEditor::onPaint(HWND hwnd) {
 }
 
 bool MonacoEditor::loadFile(const std::string& path) {
-    std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) return false;
-    
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string content = buffer.str();
-    
+    if (!initialized_) {
+        return false;
+    }
+
+    // Read file content
+    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize) || fileSize.QuadPart > 256 * 1024 * 1024) {
+        CloseHandle(hFile);
+        return false; // Reject files > 256MB
+    }
+
+    std::string content(static_cast<size_t>(fileSize.QuadPart), '\0');
+    DWORD bytesRead = 0;
+    BOOL readResult = ReadFile(hFile, content.data(),
+                               static_cast<DWORD>(fileSize.QuadPart), &bytesRead, nullptr);
+    CloseHandle(hFile);
+
+    if (!readResult || bytesRead != static_cast<DWORD>(fileSize.QuadPart)) {
+        return false;
+    }
+
+    // Load content into buffer
     setText(content);
-    g_ShadowContent = content; // Sync shadow
-    
+    modified_ = false;
+
+    // Detect language from extension for syntax highlighting
+    std::string ext = path.substr(path.find_last_of('.') + 1);
+    if (bufferHandle_) {
+        BufferSetLanguage(bufferHandle_, ext.c_str());
+    }
+
+    // Notify LSP if enterprise mode
+    if (config_.variant == MonacoVariant::Enterprise && enterpriseHandle_) {
+        LSPDidOpen(enterpriseHandle_, path.c_str(), content.c_str());
+    }
+
     return true;
 }
 
 bool MonacoEditor::saveFile(const std::string& path) {
-    std::ofstream file(path, std::ios::binary);
-    if (!file.is_open()) return false;
-    
-    file << g_ShadowContent;
+    if (!initialized_) {
+        return false;
+    }
+
+    std::string content = getText();
+
+    HANDLE hFile = CreateFileA(path.c_str(), GENERIC_WRITE, 0,
+                               nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    DWORD bytesWritten = 0;
+    BOOL writeResult = WriteFile(hFile, content.data(),
+                                 static_cast<DWORD>(content.size()), &bytesWritten, nullptr);
+    CloseHandle(hFile);
+
+    if (!writeResult || bytesWritten != static_cast<DWORD>(content.size())) {
+        return false;
+    }
+
     modified_ = false;
+
+    // Notify LSP if enterprise mode
+    if (config_.variant == MonacoVariant::Enterprise && enterpriseHandle_) {
+        LSPDidSave(enterpriseHandle_, path.c_str());
+    }
+
     return true;
 }
 
@@ -626,7 +359,7 @@ void MonacoEditor::setVariant(MonacoVariant variant) {
 
 void MonacoEditor::setThemePreset(MonacoThemePreset preset) {
     config_.themePreset = preset;
-    config_.colors = Settings::GetThemePresetColors(preset);
+    config_.colors = GetMonacoThemePresetColors(preset);
     refreshDisplay();
 }
 
@@ -641,7 +374,7 @@ void MonacoEditor::applySettings(const MonacoSettings& settings) {
     
     // Apply theme colors
     if (settings.themePreset != MonacoThemePreset::Custom) {
-        config_.colors = Settings::GetThemePresetColors(settings.themePreset);
+        config_.colors = GetMonacoThemePresetColors(settings.themePreset);
     }
     
     // Check if variant changed
@@ -835,7 +568,7 @@ std::unique_ptr<MonacoEditor> MonacoFactory::createEditorFromSettings(const Mona
     
     // Apply theme colors based on preset
     if (settings.themePreset != MonacoThemePreset::Custom) {
-        config.colors = Settings::GetThemePresetColors(settings.themePreset);
+        config.colors = GetMonacoThemePresetColors(settings.themePreset);
     }
     
     auto editor = std::make_unique<MonacoEditor>(config);
@@ -846,7 +579,7 @@ std::unique_ptr<MonacoEditor> MonacoFactory::createEditorWithTheme(MonacoVariant
     MonacoConfig config;
     config.variant = variant;
     config.themePreset = theme;
-    config.colors = Settings::GetThemePresetColors(theme);
+    config.colors = GetMonacoThemePresetColors(theme);
     
     auto editor = std::make_unique<MonacoEditor>(config);
     return editor;
@@ -859,7 +592,7 @@ MonacoVariant MonacoFactory::recommendVariant() {
 }
 
 MonacoThemeColors MonacoFactory::getThemeColors(MonacoThemePreset preset) {
-    return Settings::GetThemePresetColors(preset);
+    return GetMonacoThemePresetColors(preset);
 }
 
 std::vector<std::string> MonacoFactory::getAvailableThemeNames() {
@@ -960,7 +693,7 @@ void MonacoIDEIntegration::applyThemeToAll(MonacoThemePreset preset) {
     
     // Update global settings
     globalSettings_.themePreset = preset;
-    globalSettings_.colors = Settings::GetThemePresetColors(preset);
+    globalSettings_.colors = GetMonacoThemePresetColors(preset);
     globalSettings_.dirty = true;
 }
 

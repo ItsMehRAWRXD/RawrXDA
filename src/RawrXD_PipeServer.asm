@@ -4,6 +4,10 @@
 
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 EXTERN CreateNamedPipeW : PROC
 EXTERN CloseHandle : PROC
 EXTERN ConnectNamedPipe : PROC

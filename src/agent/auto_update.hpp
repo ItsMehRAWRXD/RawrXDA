@@ -1,8 +1,7 @@
 #pragma once
-#include <string>
 
 class AutoUpdate {
 public:
-    explicit AutoUpdate() {}
+    AutoUpdate() = default;
     bool checkAndInstall();
 };

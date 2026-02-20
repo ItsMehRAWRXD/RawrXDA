@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
-#include "renderer.h"
+#include "../renderer.h"
 
 #pragma comment(lib, "d3dcompiler.lib")
 
@@ -57,15 +57,27 @@ struct WaveConstants {
     float padding;
 };
 
-class TransparentRenderer : public IRenderer
+class TransparentRenderer : public RawrXD::IRenderer
 {
 public:
     TransparentRenderer();
     ~TransparentRenderer();
 
-    bool initialize(HWND hwnd) override;
-    void resize(UINT width, UINT height);
-    void render() override;
+    // IRenderer Implementation
+    bool Initialize(HWND hWnd) override;
+    void Render() override;
+    void Resize(UINT width, UINT height) override;
+    void SetTransparency(float alpha) override;
+    void DrawText(const std::wstring& text, float x, float y, float size, uint32_t color) override;
+    void DrawRect(float x, float y, float w, float h, uint32_t color) override;
+    void BeginFrame() override;
+    void EndFrame() override;
+
+    // Legacy/Internal accessor (aliases to interface)
+    bool initialize(HWND hwnd) { return Initialize(hwnd); }
+    void resize(UINT width, UINT height) { Resize(width, height); }
+    void render() { Render(); }
+
     void setClearColor(float r, float g, float b, float a);
     void updateEditorText(const std::wstring& text, const RECT& editorRect,
                          size_t caretIndex, size_t caretLine, size_t caretColumn);

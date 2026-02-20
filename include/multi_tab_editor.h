@@ -1,25 +1,26 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
+// ============================================================================
+// MultiTabEditor — C++20, Win32. No Qt. (QWidget, QTabWidget, QString removed)
+// ============================================================================
 
-class QTabWidget;
+#include <map>
+#include <memory>
+#include <string>
 
 namespace RawrXD {
-    class LSPClient;
-    class AgenticTextEdit;
+class LSPClient;
+class AgenticTextEdit;
+class AICompletionProvider;
 }
 
-class MultiTabEditor : public QWidget {
-    Q_OBJECT
+class MultiTabEditor {
 public:
-    explicit MultiTabEditor(QWidget* parent = nullptr);
-    
-    // Two-phase initialization: call after QApplication exists
+    explicit MultiTabEditor(void* parent = nullptr);
+
     void initialize();
-    
-public slots:
-    void openFile(const QString& filepath);
+
+    void openFile(const std::string& filepath);
     void newFile();
     void saveCurrentFile();
     void undo();
@@ -27,17 +28,21 @@ public slots:
     void find();
     void replace();
 
-    QString getCurrentText() const;
-    QString getSelectedText() const;
-    QString getCurrentFilePath() const;
-    
-    // LSP integration
+    std::string getCurrentText() const;
+    std::string getSelectedText() const;
+    std::string getCurrentFilePath() const;
+
     void setLSPClient(RawrXD::LSPClient* client);
     RawrXD::LSPClient* lspClient() const { return m_lspClient; }
+
+    void setAICompletionProvider(RawrXD::AICompletionProvider* provider);
+    RawrXD::AICompletionProvider* aiCompletionProvider() const { return m_aiProvider; }
+
     RawrXD::AgenticTextEdit* getCurrentEditor() const;
 
 private:
-    QTabWidget* tab_widget_;
-    QMap<QWidget*, QString> tab_file_paths_;  // Maps editor widget to file path
-    RawrXD::LSPClient* m_lspClient{};  // Shared LSP client for all tabs
+    void* tab_widget_ = nullptr;  // Win32 tab control or custom
+    std::map<void*, std::string> tab_file_paths_;  // editor handle -> file path
+    RawrXD::LSPClient* m_lspClient = nullptr;
+    RawrXD::AICompletionProvider* m_aiProvider = nullptr;
 };

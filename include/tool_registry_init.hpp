@@ -27,9 +27,10 @@
 #pragma once
 
 #include "tool_registry.hpp"
-#include <QString>
-#include <QProcess>
 #include <memory>
+#include <string>
+#include <vector>
+#include <cstdint>
 
 // ============================================================================
 // Main Initialization Function
@@ -133,8 +134,8 @@ int registerDeploymentTools(ToolRegistry* registry);
 // ============================================================================
 
 /**
- * @brief Execute a QProcess safely with timeout and resource management
- * 
+ * @brief Execute a process safely with timeout and resource management (C++20 / Win32)
+ *
  * @param program Program to execute
  * @param arguments Arguments to pass
  * @param timeoutMs Timeout in milliseconds
@@ -142,87 +143,87 @@ int registerDeploymentTools(ToolRegistry* registry);
  * @return JSON result with {success, output, error, exitCode, executionTimeMs}
  */
 json executeProcessSafely(
-    const QString& program,
-    const QStringList& arguments,
+    const std::string& program,
+    const std::vector<std::string>& arguments,
     int timeoutMs = 30000,
-    const QString& workingDir = QString()
+    const std::string& workingDir = {}
 );
 
 /**
  * @brief Read file contents with size limit and validation
- * 
+ *
  * @param filePath Path to file
  * @param maxSizeBytes Maximum file size to read (default 10MB)
  * @return JSON result with {success, content, error, sizeBytes}
  */
 json readFileSafely(
-    const QString& filePath,
+    const std::string& filePath,
     int64_t maxSizeBytes = 10 * 1024 * 1024
 );
 
 /**
  * @brief Write file contents with backup and atomic write
- * 
+ *
  * @param filePath Path to file
  * @param content Content to write
  * @param createBackup Whether to create a backup of existing file
  * @return JSON result with {success, bytesWritten, error, backupPath}
  */
 json writeFileSafely(
-    const QString& filePath,
-    const QString& content,
+    const std::string& filePath,
+    const std::string& content,
     bool createBackup = true
 );
 
 /**
  * @brief Validate that a path is within allowed workspace boundaries
- * 
+ *
  * @param path Path to validate
  * @param workspaceRoot Root directory of workspace
  * @return true if path is valid and within workspace, false otherwise
  */
-bool validatePathSafety(const QString& path, const QString& workspaceRoot = QString());
+bool validatePathSafety(const std::string& path, const std::string& workspaceRoot = {});
 
 /**
  * @brief Check if a command is potentially destructive
- * 
+ *
  * @param program Program name
  * @param arguments Command arguments
  * @return true if command is destructive (rm, del, format, etc.)
  */
-bool isDestructiveCommand(const QString& program, const QStringList& arguments);
+bool isDestructiveCommand(const std::string& program, const std::vector<std::string>& arguments);
 
 /**
  * @brief Get Git repository root directory from a given path
- * 
+ *
  * @param path Path within repository
  * @return Repository root path, or empty string if not in a git repo
  */
-QString getGitRepositoryRoot(const QString& path);
+std::string getGitRepositoryRoot(const std::string& path);
 
 /**
  * @brief Parse git status output into structured JSON
- * 
+ *
  * @param gitOutput Raw output from git status --porcelain
  * @return JSON with {modified, added, deleted, renamed, untracked} arrays
  */
-json parseGitStatus(const QString& gitOutput);
+json parseGitStatus(const std::string& gitOutput);
 
 /**
  * @brief Detect programming language from file extension
- * 
+ *
  * @param filePath Path to file
  * @return Language identifier (cpp, python, javascript, etc.)
  */
-QString detectLanguage(const QString& filePath);
+std::string detectLanguage(const std::string& filePath);
 
 /**
  * @brief Simple code complexity analyzer
- * 
+ *
  * @param code Source code to analyze
  * @param language Programming language
  * @return JSON with {linesOfCode, cyclomaticComplexity, nestingDepth, functions}
  */
-json analyzeCodeComplexity(const QString& code, const QString& language);
+json analyzeCodeComplexity(const std::string& code, const std::string& language);
 
 // End of file

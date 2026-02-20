@@ -7,6 +7,42 @@
 
 #pragma once
 
+// C++20 Qt-free data structs. For Qt widget implementation, include Qt headers and GhostTextRenderer class.
+#include <string>
+#include <vector>
+
+namespace RawrXD {
+
+/** RGBA color (replaces QColor) */
+struct GhostTextColor {
+    uint8_t r = 0, g = 0, b = 0, a = 255;
+};
+
+/**
+ * \brief Ghost text decoration for inline completions
+ */
+struct GhostTextDecoration {
+    int line = 0;
+    int column = 0;
+    std::string text;
+    std::string type;           // "completion", "diff", "suggestion"
+    GhostTextColor color;
+    bool multiline = false;
+    std::vector<std::string> lines;
+};
+
+/**
+ * \brief Diff preview decoration
+ */
+struct DiffDecoration {
+    int startLine = 0;
+    int endLine = 0;
+    std::string oldText;
+    std::string newText;
+    std::string type;           // "add", "remove", "modify"
+};
+
+#ifdef RAWR_USE_QT
 #include <QWidget>
 #include <QTextEdit>
 #include <QPlainTextEdit>
@@ -15,32 +51,6 @@
 #include <QString>
 #include <QTimer>
 #include <QMap>
-
-namespace RawrXD {
-
-/**
- * \brief Ghost text decoration for inline completions
- */
-struct GhostTextDecoration {
-    int line;                   // Line number (0-indexed)
-    int column;                 // Column position
-    QString text;               // Ghost text to display
-    QString type;               // "completion", "diff", "suggestion"
-    QColor color;              // Ghost text color
-    bool multiline = false;    // Multi-line ghost text
-    QStringList lines;         // For multi-line ghost text
-};
-
-/**
- * \brief Diff preview decoration
- */
-struct DiffDecoration {
-    int startLine;             // Start line (0-indexed)
-    int endLine;               // End line (0-indexed)
-    QString oldText;           // Original text
-    QString newText;           // Suggested text
-    QString type;              // "add", "remove", "modify"
-};
 
 /**
  * \brief Ghost text renderer overlay for QPlainTextEdit

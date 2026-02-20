@@ -1,0 +1,334 @@
+[  1%] Building CXX object CMakeFiles/RawrEngine.dir/src/cpu_inference_engine.cpp.obj
+In file included from D:\rawrxd\src\cpu_inference_engine.cpp:1:
+D:\rawrxd\src\cpu_inference_engine.h:143:33: error: type/value mismatch at argument 1 in template parameter list for 'template<class _Tp, class _Dp> class std::unique_ptr'
+  143 |     std::vector<std::unique_ptr<TransformerLayer>> m_transformerLayers;
+      |                                 ^~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:143:33: note:   expected a type, got 'CPUInference::CPUInferenceEngine::TransformerLayer'
+D:\rawrxd\src\cpu_inference_engine.h:143:33: error: template argument 2 is invalid
+D:\rawrxd\src\cpu_inference_engine.h:143:49: error: template argument 1 is invalid
+  143 |     std::vector<std::unique_ptr<TransformerLayer>> m_transformerLayers;
+      |                                                 ^~
+D:\rawrxd\src\cpu_inference_engine.h:143:49: error: template argument 2 is invalid
+D:\rawrxd\src\cpu_inference_engine.h:143:10: error: '<expression error>' in namespace 'std' does not name a type
+  143 |     std::vector<std::unique_ptr<TransformerLayer>> m_transformerLayers;
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:23:51: error: invalid use of incomplete type 'class RawrXD::IMemoryPlugin'
+   23 |     class StandardMemoryPlugin : public ::RawrXD::IMemoryPlugin {
+      |                                                   ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:15:11: note: forward declaration of 'class RawrXD::IMemoryPlugin'
+   15 |     class IMemoryPlugin;
+      |           ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:25:21: error: 'std::string RawrXD::StandardMemoryPlugin::GetName() const' marked 'override', but does not override
+   25 |         std::string GetName() const override { return "Standard"; }
+      |                     ^~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:26:16: error: 'size_t RawrXD::StandardMemoryPlugin::GetMaxContext() const' marked 'override', but does not override
+   26 |         size_t GetMaxContext() const override { return 4096; }
+      |                ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:27:14: error: 'bool RawrXD::StandardMemoryPlugin::Configure(size_t)' marked 'override', but does not override
+   27 |         bool Configure(size_t) override { return true; }
+      |              ^~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:28:14: error: 'bool RawrXD::StandardMemoryPlugin::Optimize()' marked 'override', but does not override
+   28 |         bool Optimize() override { return true; }
+      |              ^~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:31:49: error: invalid use of incomplete type 'class RawrXD::IMemoryPlugin'
+   31 |     class LargeContextPlugin : public ::RawrXD::IMemoryPlugin {
+      |                                                 ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:15:11: note: forward declaration of 'class RawrXD::IMemoryPlugin'
+   15 |     class IMemoryPlugin;
+      |           ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:33:21: error: 'std::string RawrXD::LargeContextPlugin::GetName() const' marked 'override', but does not override
+   33 |         std::string GetName() const override { return "LargeContext"; }
+      |                     ^~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:34:16: error: 'size_t RawrXD::LargeContextPlugin::GetMaxContext() const' marked 'override', but does not override
+   34 |         size_t GetMaxContext() const override { return 32768; }
+      |                ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:35:14: error: 'bool RawrXD::LargeContextPlugin::Configure(size_t)' marked 'override', but does not override
+   35 |         bool Configure(size_t) override { return true; }
+      |              ^~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:36:14: error: 'bool RawrXD::LargeContextPlugin::Optimize()' marked 'override', but does not override
+   36 |         bool Optimize() override { return true; }
+      |              ^~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In function 'bool CPUInference::LinearTensor(const Tensor&, const float*, int, std::vector<float>&)':
+D:\rawrxd\src\cpu_inference_engine.cpp:270:17: error: 'MatMul' is not a member of 'CPUInference::CPUOps'
+  270 |         CPUOps::MatMul(w_data, input, output.data(), out_dim, 1, input_dim);
+      |                 ^~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In constructor 'CPUInference::CPUInferenceEngine::CPUInferenceEngine()':
+D:\rawrxd\src\cpu_inference_engine.cpp:280:29: error: class 'CPUInference::CPUInferenceEngine' does not have any field named 'm_currentPos'
+  280 |       m_contextLimit(4096), m_currentPos(0) {
+      |                             ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:134:9: warning: 'CPUInference::CPUInferenceEngine::m_numHeads' will be initialized after [-Wreorder]
+  134 |     int m_numHeads = 0;
+      |         ^~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:132:9: warning:   'int CPUInference::CPUInferenceEngine::m_embeddingDim' [-Wreorder]
+  132 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:277:1: warning:   when initialized here [-Wreorder]
+  277 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:135:9: warning: 'CPUInference::CPUInferenceEngine::m_vocabSize' will be initialized after [-Wreorder]
+  135 |     int m_vocabSize = 0;
+      |         ^~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:124:9: warning:   'int CPUInference::CPUInferenceEngine::m_threadCount' [-Wreorder]
+  124 |     int m_threadCount = 1;
+      |         ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:277:1: warning:   when initialized here [-Wreorder]
+  277 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:124:9: warning: 'CPUInference::CPUInferenceEngine::m_threadCount' will be initialized after [-Wreorder]
+  124 |     int m_threadCount = 1;
+      |         ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:122:10: warning:   'bool CPUInference::CPUInferenceEngine::m_modelLoaded' [-Wreorder]
+  122 |     bool m_modelLoaded = false;
+      |          ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:277:1: warning:   when initialized here [-Wreorder]
+  277 | CPUInferenceEngine::CPUInferenceEngine()
+      | ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:282:72: error: cannot convert 'shared_ptr<RawrXD::StandardMemoryPlugin>' to 'shared_ptr<RawrXD::IMemoryPlugin>'
+  282 |     RegisterMemoryPlugin(std::make_shared<RawrXD::StandardMemoryPlugin>());
+      |                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+      |                                                                        |
+      |                                                                        shared_ptr<RawrXD::StandardMemoryPlugin>
+D:\rawrxd\src\cpu_inference_engine.h:77:70: note: initializing argument 1 of 'void CPUInference::CPUInferenceEngine::RegisterMemoryPlugin(std::shared_ptr<RawrXD::IMemoryPlugin>)'
+   77 |     void RegisterMemoryPlugin(std::shared_ptr<RawrXD::IMemoryPlugin> plugin);
+      |                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'bool CPUInference::CPUInferenceEngine::LoadModel(const std::string&)':
+D:\rawrxd\src\cpu_inference_engine.cpp:296:5: error: 'm_vocabIndex' was not declared in this scope; did you mean 'm_vocabSize'?
+  296 |     m_vocabIndex.clear();
+      |     ^~~~~~~~~~~~
+      |     m_vocabSize
+D:\rawrxd\src\cpu_inference_engine.cpp:297:5: error: 'm_tensorInfo' was not declared in this scope; did you mean 'TensorInfo'?
+  297 |     m_tensorInfo.clear();
+      |     ^~~~~~~~~~~~
+      |     TensorInfo
+D:\rawrxd\src\cpu_inference_engine.cpp:298:5: error: 'm_layers' was not declared in this scope
+  298 |     m_layers.clear();
+      |     ^~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:299:5: error: 'm_transformerLayers' was not declared in this scope; did you mean 'TransformerLayer'?
+  299 |     m_transformerLayers.clear();
+      |     ^~~~~~~~~~~~~~~~~~~
+      |     TransformerLayer
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::InitKVCache()':
+D:\rawrxd\src\cpu_inference_engine.cpp:346:5: error: 'm_currentPos' was not declared in this scope
+  346 |     m_currentPos = 0;
+      |     ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'std::vector<int> CPUInference::CPUInferenceEngine::Generate(const std::vector<int>&, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:367:27: error: 'm_eosTokenId' was not declared in this scope
+  367 |         if (next_token == m_eosTokenId) break;
+      |                           ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::GenerateStreaming(const std::vector<int>&, int, std::function<void(const std::__cxx11::basic_string<char>&)>, std::function<void()>, std::function<void(int)>)':
+D:\rawrxd\src\cpu_inference_engine.cpp:381:13: error: 'm_currentPos' was not declared in this scope
+  381 |         if (m_currentPos >= static_cast<int>(m_contextLimit)) break;
+      |             ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:385:36: error: 'struct CPUInference::CPUInferenceEngine::SamplerConfig' has no member named 'Sample'
+  385 |         int next_token = m_sampler.Sample(logits);
+      |                                    ^~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:395:27: error: 'm_eosTokenId' was not declared in this scope
+  395 |         if (next_token == m_eosTokenId) break;
+      |                           ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'std::vector<int> CPUInference::CPUInferenceEngine::Tokenize(const std::string&)':
+D:\rawrxd\src\cpu_inference_engine.cpp:425:31: error: 'm_maxTokenLength' was not declared in this scope
+  425 |         int maxLen = std::min(m_maxTokenLength, static_cast<int>(text.size() - i));
+      |                               ^~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:429:23: error: 'm_vocabIndex' was not declared in this scope; did you mean 'm_vocabSize'?
+  429 |             auto it = m_vocabIndex.find(std::string(candidate));
+      |                       ^~~~~~~~~~~~
+      |                       m_vocabSize
+D:\rawrxd\src\cpu_inference_engine.cpp:441:30: error: 'm_unkTokenId' was not declared in this scope
+  441 |             tokens.push_back(m_unkTokenId);
+      |                              ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'std::string CPUInference::CPUInferenceEngine::Detokenize(const std::vector<int>&)':
+D:\rawrxd\src\cpu_inference_engine.cpp:451:13: error: 'm_eosTokenId' was not declared in this scope
+  451 |         if (m_eosTokenId >= 0 && t == m_eosTokenId) break;
+      |             ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: At global scope:
+D:\rawrxd\src\cpu_inference_engine.cpp:464:6: error: no declaration matches 'bool CPUInference::CPUInferenceEngine::LoadWeights(const std::unordered_map<std::__cxx11::basic_string<char>, CPUInference::Tensor>&)'
+  464 | bool CPUInferenceEngine::LoadWeights(const std::unordered_map<std::string, Tensor>& tensors) {
+      |      ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:119:10: note: candidate is: 'bool CPUInference::CPUInferenceEngine::LoadWeights(const std::map<std::__cxx11::basic_string<char>, CPUInference::Tensor>&)'
+  119 |     bool LoadWeights(const std::map<std::string, Tensor>& tensors); // Changed to map for cleaner look
+      |          ^~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:55:7: note: 'class CPUInference::CPUInferenceEngine' defined here
+   55 | class CPUInferenceEngine {
+      |       ^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::SetThreadCount(int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:487:13: error: 'EnableMultiThreading' is not a member of 'CPUInference::CPUOps'
+  487 |     CPUOps::EnableMultiThreading(m_threadCount > 1);
+      |             ^~~~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::ConfigureSampling(float, float, int, float)':
+D:\rawrxd\src\cpu_inference_engine.cpp:491:15: error: 'struct CPUInference::CPUInferenceEngine::SamplerConfig' has no member named 'temp'
+  491 |     m_sampler.temp = temperature;
+      |               ^~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:494:15: error: 'struct CPUInference::CPUInferenceEngine::SamplerConfig' has no member named 'repeat_penalty'; did you mean 'repetition_penalty'?
+  494 |     m_sampler.repeat_penalty = repeat_penalty;
+      |               ^~~~~~~~~~~~~~
+      |               repetition_penalty
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::MatMul(const float*, const float*, float*, int, int, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:498:13: error: 'MatMul' is not a member of 'CPUInference::CPUOps'
+  498 |     CPUOps::MatMul(A, B, C, m, n, k);
+      |             ^~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::Softmax(float*, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:502:13: error: 'Softmax' is not a member of 'CPUInference::CPUOps'
+  502 |     CPUOps::Softmax(data, size);
+      |             ^~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::RMSNorm(float*, int, float)':
+D:\rawrxd\src\cpu_inference_engine.cpp:506:13: error: 'RMSNorm' is not a member of 'CPUInference::CPUOps'
+  506 |     CPUOps::RMSNorm(data, size, epsilon);
+      |             ^~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::LayerNorm(float*, int, float)':
+D:\rawrxd\src\cpu_inference_engine.cpp:510:13: error: 'LayerNorm' is not a member of 'CPUInference::CPUOps'
+  510 |     CPUOps::LayerNorm(data, size, epsilon);
+      |             ^~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::RoPE(float*, int, int, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:514:13: error: 'RoPE' is not a member of 'CPUInference::CPUOps'
+  514 |     CPUOps::RoPE(data, dim, pos, rotary_dim);
+      |             ^~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In static member function 'static void CPUInference::CPUInferenceEngine::SiLU(float*, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:518:13: error: 'SiLU' is not a member of 'CPUInference::CPUOps'
+  518 |     CPUOps::SiLU(data, size);
+      |             ^~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In static member function 'static void CPUInference::CPUInferenceEngine::GELU(float*, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:522:13: error: 'GELU' is not a member of 'CPUInference::CPUOps'
+  522 |     CPUOps::GELU(data, size);
+      |             ^~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In static member function 'static void CPUInference::CPUInferenceEngine::FeedForward(const float*, float*, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:526:56: error: 'm_layers' was not declared in this scope
+  526 |     if (layer_idx < 0 || layer_idx >= static_cast<int>(m_layers.size())) return;
+      |                                                        ^~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:527:11: error: 'LayerWeights' does not name a type
+  527 |     const LayerWeights& lw = m_layers[layer_idx];
+      |           ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:532:23: error: 'lw' was not declared in this scope
+  532 |     if (!LinearTensor(lw.feed_forward1, input, m_embeddingDim, gate)) return;
+      |                       ^~
+D:\rawrxd\src\cpu_inference_engine.cpp:532:48: error: invalid use of member 'CPUInference::CPUInferenceEngine::m_embeddingDim' in static member function
+  532 |     if (!LinearTensor(lw.feed_forward1, input, m_embeddingDim, gate)) return;
+      |                                                ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:132:9: note: declared here
+  132 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:533:23: error: 'lw' was not declared in this scope
+  533 |     if (!LinearTensor(lw.feed_forward3, input, m_embeddingDim, up)) return;
+      |                       ^~
+D:\rawrxd\src\cpu_inference_engine.cpp:533:48: error: invalid use of member 'CPUInference::CPUInferenceEngine::m_embeddingDim' in static member function
+  533 |     if (!LinearTensor(lw.feed_forward3, input, m_embeddingDim, up)) return;
+      |                                                ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:132:9: note: declared here
+  132 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:544:23: error: 'lw' was not declared in this scope
+  544 |     if (!LinearTensor(lw.feed_forward2, gate.data(), static_cast<int>(gate.size()), down)) return;
+      |                       ^~
+D:\rawrxd\src\cpu_inference_engine.cpp:547:71: error: invalid use of member 'CPUInference::CPUInferenceEngine::m_embeddingDim' in static member function
+  547 |         std::memcpy(output, down.data(), std::min(static_cast<size_t>(m_embeddingDim), down.size()) * sizeof(float));
+      |                                                                       ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:132:9: note: declared here
+  132 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In static member function 'static void CPUInference::CPUInferenceEngine::MultiHeadAttention(const float*, const float*, const float*, float*, int, int, int, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:554:56: error: invalid use of member 'CPUInference::CPUInferenceEngine::m_kv_cache' in static member function
+  554 |     if (layer_idx < 0 || layer_idx >= static_cast<int>(m_kv_cache.size())) return;
+      |                                                        ^~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:146:26: note: declared here
+  146 |     std::vector<KVCache> m_kv_cache;
+      |                          ^~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:557:22: error: invalid use of member 'CPUInference::CPUInferenceEngine::m_kv_cache' in static member function
+  557 |     KVCache& cache = m_kv_cache[layer_idx];
+      |                      ^~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:146:26: note: declared here
+  146 |     std::vector<KVCache> m_kv_cache;
+      |                          ^~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:559:48: error: 'm_currentPos' was not declared in this scope
+  559 |     const size_t needed = (static_cast<size_t>(m_currentPos) + 1) * token_stride;
+      |                                                ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In static member function 'static void CPUInference::CPUInferenceEngine::TransformerLayer(const float*, float*, int, int)':
+D:\rawrxd\src\cpu_inference_engine.cpp:604:56: error: 'm_transformerLayers' was not declared in this scope; did you mean 'TransformerLayer'?
+  604 |     if (layer_idx < 0 || layer_idx >= static_cast<int>(m_transformerLayers.size())) return;
+      |                                                        ^~~~~~~~~~~~~~~~~~~
+      |                                                        TransformerLayer
+D:\rawrxd\src\cpu_inference_engine.cpp:605:10: error: 'm_transformerLayers' was not declared in this scope; did you mean 'TransformerLayer'?
+  605 |     if (!m_transformerLayers[layer_idx]) return;
+      |          ^~~~~~~~~~~~~~~~~~~
+      |          TransformerLayer
+D:\rawrxd\src\cpu_inference_engine.cpp:606:63: error: invalid use of member 'CPUInference::CPUInferenceEngine::m_embeddingDim' in static member function
+  606 |     std::memcpy(output, input, static_cast<size_t>(seq_len) * m_embeddingDim * sizeof(float));
+      |                                                               ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.h:132:9: note: declared here
+  132 |     int m_embeddingDim = 0;
+      |         ^~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:607:5: error: 'm_transformerLayers' was not declared in this scope; did you mean 'TransformerLayer'?
+  607 |     m_transformerLayers[layer_idx]->forward(output, m_currentPos, seq_len);
+      |     ^~~~~~~~~~~~~~~~~~~
+      |     TransformerLayer
+D:\rawrxd\src\cpu_inference_engine.cpp:607:53: error: 'm_currentPos' was not declared in this scope
+  607 |     m_transformerLayers[layer_idx]->forward(output, m_currentPos, seq_len);
+      |                                                     ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'float* CPUInference::CPUInferenceEngine::AllocateTensor(size_t)':
+D:\rawrxd\src\cpu_inference_engine.cpp:612:5: error: 'm_memoryPool' was not declared in this scope
+  612 |     m_memoryPool.emplace_back(ptr);
+      |     ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::ClearCache()':
+D:\rawrxd\src\cpu_inference_engine.cpp:631:5: error: 'm_memoryPool' was not declared in this scope
+  631 |     m_memoryPool.clear();
+      |     ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:633:24: error: 'm_transformerLayers' was not declared in this scope; did you mean 'TransformerLayer'?
+  633 |     for (auto& layer : m_transformerLayers) {
+      |                        ^~~~~~~~~~~~~~~~~~~
+      |                        TransformerLayer
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::UpdateWeights(const std::vector<std::vector<float> >&, float)':
+D:\rawrxd\src\cpu_inference_engine.cpp:639:29: error: 'm_layers' was not declared in this scope
+  639 |     if (gradients.size() != m_layers.size()) return;
+      |                             ^~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:643:9: error: 'LayerWeights' was not declared in this scope; did you mean 'LoadWeights'?
+  643 |         LayerWeights& lw = m_layers[i];
+      |         ^~~~~~~~~~~~
+      |         LoadWeights
+D:\rawrxd\src\cpu_inference_engine.cpp:643:23: error: 'lw' was not declared in this scope; did you mean 'lr'?
+  643 |         LayerWeights& lw = m_layers[i];
+      |                       ^~
+      |                       lr
+D:\rawrxd\src\cpu_inference_engine.cpp:643:28: error: 'm_layers' was not declared in this scope
+  643 |         LayerWeights& lw = m_layers[i];
+      |                            ^~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: In member function 'void CPUInference::CPUInferenceEngine::UpdateOutputWeights(const std::vector<float>&, float)':
+D:\rawrxd\src\cpu_inference_engine.cpp:663:9: error: 'm_outputWeights' was not declared in this scope; did you mean 'UpdateOutputWeights'?
+  663 |     if (m_outputWeights.type != TensorType::F32) return;
+      |         ^~~~~~~~~~~~~~~
+      |         UpdateOutputWeights
+D:\rawrxd\src\cpu_inference_engine.cpp:664:41: error: 'm_outputWeights' was not declared in this scope; did you mean 'UpdateOutputWeights'?
+  664 |     float* w = reinterpret_cast<float*>(m_outputWeights.data.data());
+      |                                         ^~~~~~~~~~~~~~~
+      |                                         UpdateOutputWeights
+In file included from C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/memory:80,
+                 from D:\rawrxd\src\cpu_inference_engine.h:5:
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h: In instantiation of 'void std::default_delete<_Tp>::operator()(_Tp*) const [with _Tp = RawrXD::BPETokenizer]':
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:399:17:   required from 'std::unique_ptr<_Tp, _Dp>::~unique_ptr() [with _Tp = RawrXD::BPETokenizer; _Dp = std::default_delete<RawrXD::BPETokenizer>]'
+  399 |           get_deleter()(std::move(__ptr));
+      |           ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:280:43:   required from here
+  280 |       m_contextLimit(4096), m_currentPos(0) {
+      |                                           ^
+C:/ProgramData/mingw64/mingw64/lib/gcc/x86_64-w64-mingw32/15.2.0/include/c++/bits/unique_ptr.h:91:23: error: invalid application of 'sizeof' to incomplete type 'RawrXD::BPETokenizer'
+   91 |         static_assert(sizeof(_Tp)>0,
+      |                       ^~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp: At global scope:
+D:\rawrxd\src\cpu_inference_engine.cpp:248:13: warning: 'bool CPUInference::LinearTensor(const Tensor&, const float*, int, std::vector<float>&)' defined but not used [-Wunused-function]
+  248 | static bool LinearTensor(const Tensor& weight, const float* input, int input_dim, std::vector<float>& output) {
+      |             ^~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:209:13: warning: 'bool CPUInference::LookupEmbedding(const Tensor&, int, int, std::vector<float>&)' defined but not used [-Wunused-function]
+  209 | static bool LookupEmbedding(const Tensor& emb, int token, int dim, std::vector<float>& out) {
+      |             ^~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:154:13: warning: 'bool CPUInference::LoadTensorToF32(StreamingGGUFLoader*, const std::string&, Tensor&)' defined but not used [-Wunused-function]
+  154 | static bool LoadTensorToF32(StreamingGGUFLoader* loader, const std::string& name, Tensor& out) {
+      |             ^~~~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:137:13: warning: 'bool CPUInference::LoadTensorRaw(StreamingGGUFLoader*, const std::string&, Tensor&, TensorRef*)' defined but not used [-Wunused-function]
+  137 | static bool LoadTensorRaw(StreamingGGUFLoader* loader, const std::string& name, Tensor& out, TensorRef* refOut = nullptr) {
+      |             ^~~~~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:127:12: warning: 'int CPUInference::GetMetaInt(const GGUFMetadata&, const std::string&, int)' defined but not used [-Wunused-function]
+  127 | static int GetMetaInt(const GGUFMetadata& meta, const std::string& key, int fallback) {
+      |            ^~~~~~~~~~
+D:\rawrxd\src\cpu_inference_engine.cpp:81:18: warning: 'ggml_type CPUInference::ToEngineType(TensorType)' defined but not used [-Wunused-function]
+   81 | static ggml_type ToEngineType(TensorType type) {
+      |                  ^~~~~~~~~~~~
+mingw32-make[2]: *** [CMakeFiles\RawrEngine.dir\build.make:169: CMakeFiles/RawrEngine.dir/src/cpu_inference_engine.cpp.obj] Error 1
+mingw32-make[1]: *** [CMakeFiles\Makefile2:89: CMakeFiles/RawrEngine.dir/all] Error 2
+mingw32-make: *** [Makefile:90: all] Error 2

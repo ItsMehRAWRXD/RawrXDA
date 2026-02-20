@@ -5,21 +5,6 @@
 ### Summary
 This folder contains multimodal engine logic for the IDE/CLI project. The code here provides internal implementations for handling multimodal (text, image, etc.) model inference and integration, all without external dependencies.
 
-<!-- QUANT_TYPES -->
-
-Supported quantization types: F32, IQ4_NL, Q2_K, Q3_K_S, Q4_K_M, Q5_K
-
-<!-- END_QUANT_TYPES -->
-
-Install git hook to auto-check updates (optional):
-
-1. Copy the hook into your repo hooks dir (one-liner):
-
-	- Bash: `cp src/multimodal_engine/scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`
-	- PowerShell: `Copy-Item src/multimodal_engine/scripts/git-hooks/pre-commit.ps1 .git\hooks\pre-commit.ps1`
-
-This will run `update_quant_types.py` on every commit and prevent committing without updating the audit file.
-
 ### Contents
 - `multimodal_engine.cpp`: Implements the core multimodal engine for processing and integrating multiple data types in model inference.
 

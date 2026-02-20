@@ -11,6 +11,7 @@
 #endif
 
 #include <windows.h>
+#include <shellapi.h>
 #include <shlobj.h>
 #include <string>
 #include <vector>

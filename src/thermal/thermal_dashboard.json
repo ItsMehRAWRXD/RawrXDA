@@ -7,10 +7,7 @@
   "Description": "Hot-injectable thermal monitoring and burst governor UI",
   "Author": "RawrXD Team",
   "License": "Proprietary",
-  "Dependencies": [
-    "Qt6::Core",
-    "Qt6::Widgets"
-  ],
+  "Dependencies": [],
   "Category": "System Monitoring",
   "Features": [
     "Real-time NVMe temperature polling",

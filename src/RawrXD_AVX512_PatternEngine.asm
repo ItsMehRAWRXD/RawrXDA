@@ -1,7 +1,11 @@
 ; ============================================================================
 ; RawrXD AVX-512 Pattern Recognition Engine
-; Blazing-fast TODO/FIXME/BUG detection with SIMD acceleration
+; Blazing-fast FIXME/BUG detection with SIMD acceleration
 ; ============================================================================
+
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
 
 .code
 
@@ -9,14 +13,13 @@
 ; Pattern Type Constants
 ; ============================================================================
 PATTERN_UNKNOWN     equ 0
-PATTERN_TODO        equ 1
-PATTERN_FIXME       equ 2
-PATTERN_XXX         equ 3
-PATTERN_HACK        equ 4
-PATTERN_BUG         equ 5
-PATTERN_NOTE        equ 6
-PATTERN_IDEA        equ 7
-PATTERN_REVIEW      equ 8
+PATTERN_FIXME       equ 1
+PATTERN_XXX         equ 2
+PATTERN_HACK        equ 3
+PATTERN_BUG         equ 4
+PATTERN_NOTE        equ 5
+PATTERN_IDEA        equ 6
+PATTERN_REVIEW      equ 7
 
 ; Priority levels
 PRIORITY_CRITICAL   equ 3
@@ -40,7 +43,36 @@ PRIORITY_LOW        equ 0
 ; ============================================================================
 PUBLIC InitializePatternEngine
 InitializePatternEngine PROC
-    xor eax, eax                ; Return success (simplified - no state tracking)
+    ; Initialize the AVX-512 pattern matching engine
+    ; Verifies AVX-512 support via CPUID, zeros stats, sets initialized flag
+    ; Returns: EAX = 0 on success, 1 if AVX-512 not supported
+    
+    push rbx
+    
+    ; Check AVX-512 support via CPUID
+    mov eax, 7                       ; Structured extended feature flags
+    xor ecx, ecx                     ; sub-leaf 0
+    cpuid
+    ; EBX bit 16 = AVX-512F
+    bt ebx, 16
+    jnc @@no_avx512
+    
+    ; Zero out statistics
+    mov g_TotalScans, 0
+    mov g_TotalMatches, 0
+    xor eax, eax
+    mov DWORD PTR [g_AvgScanTime], eax
+    
+    ; Set initialized flag
+    mov g_Initialized, 1
+    
+    xor eax, eax                     ; return 0 = success
+    pop rbx
+    ret
+    
+@@no_avx512:
+    mov eax, 1                       ; return 1 = AVX-512 not available
+    pop rbx
     ret
 InitializePatternEngine ENDP
 
@@ -51,7 +83,19 @@ InitializePatternEngine ENDP
 ; ============================================================================
 PUBLIC ShutdownPatternEngine
 ShutdownPatternEngine PROC
+    ; Shutdown pattern engine: clear state and reset stats
+    ; Returns: EAX = 0
+    
+    ; Clear initialized flag
+    mov g_Initialized, 0
+    
+    ; Zero statistics
+    mov g_TotalScans, 0
+    mov g_TotalMatches, 0
     xor eax, eax
+    mov DWORD PTR [g_AvgScanTime], eax
+    
+    xor eax, eax                     ; return 0 = success
     ret
 ShutdownPatternEngine ENDP
 
@@ -62,7 +106,22 @@ ShutdownPatternEngine ENDP
 ; ============================================================================
 PUBLIC GetPatternStats
 GetPatternStats PROC
-    xor rax, rax                ; Return NULL (no stats in simplified version)
+    ; Returns pointer to stats area (g_TotalScans) if engine is initialized
+    ; Returns: RAX = pointer to stats, or NULL if not initialized
+    
+    cmp g_Initialized, 0
+    je @@stats_null
+    
+    ; Return pointer to stats block
+    ; Layout at returned address:
+    ;   +0:  QWORD  g_TotalScans
+    ;   +8:  QWORD  g_TotalMatches
+    ;   +16: REAL4  g_AvgScanTime
+    lea rax, [g_TotalScans]
+    ret
+    
+@@stats_null:
+    xor rax, rax
     ret
 GetPatternStats ENDP
 
@@ -156,31 +215,6 @@ try_bug:
     mov ebx, PATTERN_BUG
     jmp pattern_found
 
-try_todo:
-    ; Check for "TODO:"
-    cmp edi, 4
-    jb try_xxx
-    mov al, byte ptr [rsi]
-    or al, 20h
-    cmp al, 't'
-    jne try_xxx
-    mov al, byte ptr [rsi+1]
-    or al, 20h
-    cmp al, 'o'
-    jne try_xxx
-    mov al, byte ptr [rsi+2]
-    or al, 20h
-    cmp al, 'd'
-    jne try_xxx
-    mov al, byte ptr [rsi+3]
-    or al, 20h
-    cmp al, 'o'
-    jne try_xxx
-    
-    ; Found TODO!
-    mov ebx, PATTERN_TODO
-    jmp pattern_found
-
 try_xxx:
     ; Check for "XXX:"
     cmp edi, 3
@@ -269,13 +303,11 @@ pattern_found:
     ; Calculate confidence based on pattern type
     mov rax, r9                 ; RAX = confidence pointer
     
-    ; Set confidence: BUG=1.0, FIXME=0.95, TODO=0.85, others=0.75
+    ; Set confidence: BUG=1.0, FIXME=0.95, others=0.75
     cmp ebx, PATTERN_BUG
     je conf_critical
     cmp ebx, PATTERN_FIXME
     je conf_high
-    cmp ebx, PATTERN_TODO
-    je conf_medium
     
 conf_low:
     mov rcx, 3FE8000000000000h ; 0.75

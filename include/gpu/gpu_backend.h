@@ -1,9 +1,7 @@
 #ifndef GPU_BACKEND_H
 #define GPU_BACKEND_H
 
-#include <QString>
-#include <QMap>
-#include <QVariant>
+#include <cstdio>
 
 // Move ggml_vk_init() into explicit GpuBackend::initialize() – return bool instead of abort().
 // Graceful fallback: if no Vulkan → print log warning, switch to CPU and still load Phi-3 (slower but works).
@@ -25,8 +23,8 @@ public:
     // Check if backend is available
     static bool isBackendAvailable(Backend backend);
 
-    // Get backend name
-    static QString backendName(Backend backend);
+    // Get backend name as C-string
+    static const char* backendName(Backend backend);
 
     // Gracefully initialize with fallback
     static bool initializeWithFallback();

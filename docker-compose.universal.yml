@@ -1,0 +1,18 @@
+# Consolidated into docker-compose.yml — use:
+#   docker-compose up -d                    # HTTP
+#   docker-compose --profile ssl up -d      # HTTPS
+#   docker-compose --profile desktop up -d  # noVNC IDE
+#   docker-compose --profile soak up -d     # soak tests
+
+version: "3.8"
+
+services:
+  rawrxd-backend:
+    extends:
+      file: docker-compose.yml
+      service: rawrxd-backend
+
+  rawrxd-web:
+    extends:
+      file: docker-compose.yml
+      service: rawrxd-web

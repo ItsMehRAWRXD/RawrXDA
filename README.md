@@ -1,145 +1,119 @@
-# RawrXD v3.0 - Qt-Free Advanced ML IDE
+# RawrXD v3.0 - Native Agentic AI IDE
 
-> **Qt & Instrumentation Removal Complete** | **GUI/CLI Audit Complete** | **Real Inference Engine Integrated**
+> **Win32 Native** | **No Qt Dependencies** | **Agentic Core** | **AVX512 Inference** | **Production Ready**
 
-![Build](https://github.com/ItsMehRAWRXD/RawrXD/actions/workflows/build.yml/badge.svg)
+![Build Status](https://github.com/ItsMehRAWRXD/RawrXD/actions/workflows/build.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows%20x64-lightgrey)
 
-RawrXD v3.0 is a professional-grade C++ ML IDE engineered for high-performance GGUF model loading, Vulkan-accelerated inference, and autonomous agentic workflows. After an extensive architectural overhaul, the codebase is now **100% Qt-free**, utilizing standard C++20/23, native Win32 APIs, and specialized assembly kernels (MASM) for maximum efficiency and minimal footprint.
+**RawrXD v3.0** marks the complete transition to a native Windows architecture, eliminating all legacy Qt dependencies in favor of pure **C++20/Win32 APIs**. It features a fully integrated **Agentic Engine** capable of autonomous deep thinking, file research, and self-correction.
 
-**Status:** ✅ **Qt Removal Phase Complete** (January 30, 2026) | ✅ **GUI/CLI Audit Complete** (February 1, 2026) | ✅ **Real Inference Engine Integrated**
+## 🎯 v3.0 Highlights
 
----
+### 🧠 Agentic Engine
+- **Deep Thinking**: Integrated Chain-of-Thought (CoT) reasoning for complex problem solving without external API calls.
+- **Deep Research**: Autonomous file system scanning (`FileOps`) and context gathering.
+- **Self-Correction**: Automated "Code Surgery" using `AgentHotPatcher` techniques for real-time fixes.
+- **Reactor Generation**: Experimental support for generating React Server Components.
 
-## 🚀 Vision & Evolution
+### ⚡ Native Inference (AVX512)
+- **Custom Inference Engine**: Built from scratch for AVX512-optimized CPU inference (`RawrXDTransformer`).
+- **Universal Model Loader**: Supports standard **GGUF** and the experimental **RawrBlob** (flat float) format.
+- **Direct-to-Hardware**: Hardware-aware scheduling and memory management.
+- **Vulkan Types**: Compute Queue Family detection for hybrid inference.
 
-Originally built on the Qt6 framework, RawrXD has evolved into a lean, "Direct-to-Hardware" development environment. By stripping away heavy framework dependencies, we've achieved:
-- **Zero Runtime Memory Allocations** in core inference paths.
-- **Native Win32 Integration** for ultra-low latency UI and networking.
-- **Enhanced Agentic Autonomy**: Integrated AI agents that can now reason, code, and debug without framework overhead.
+### 💻 Interactive CLI (`rawrxd_cli.exe`)
+The new Native CLI provides a powerful interactive shell for AI interaction and system control:
+- `/load <path>`: Load GGUF/Blob models directly.
+- `/agent <query>`: Dispatch tasks to the **Advanced Coding Agent**.
+- `/patch <target>`: Apply hot-patches to code or running instances.
+- `/bugreport`: Generate security and optimization audits using `CliSecurityIssue` scanners.
+- **Hotkeys**:
+    - `x` : Analyze File (Security/Optimization)
+    - `t` : Generate Test Stubs
+    - `g` : Toggle Overclock Governor
+    - `p` : System Status (Thermal/Power)
 
----
+## 🛠️ Architecture
 
-## 🎯 Key Features
+### AIIntegrationHub
+The **AIIntegrationHub** acts as the central nervous system, routing messages between the CLI, the Inference Engine, and the Agentic Core. It replaces the previous stub-based simulation layer.
 
-### 🧠 Agentic AI Framework (NEW in v3.0)
-- **Autonomous Coding Agents**: Self-correcting implementation loop (AdvancedCodingAgent).
-- **Iterative Reasoning**: Multi-step problem solving with stateful memory.
-- **Zero-Day Agentic Engine**: Rapid adaptation to new codebase structures.
-- **Integrated Observability**: Real-time tracking of agent decisions and tool usage.
+### Native Networking
+- **Winsock API Server**: Built-in REST API (Port 11434) compatible with Ollama/OpenAI clients.
+- **WinHTTP**: Native HTTP client for cloud connectivity.
 
-### 🚄 High-Performance Inference
-- **Pure GGUF Parser**: Native binary reading without external library dependencies.
-- **Vulkan Compute**: Optimized SPIR-V kernels for AMD RDNA3 and NVIDIA architectures.
-- **DirectStorage & I/O**: High-speed weight streaming (90%+ memory reduction via Zone-Based Loading).
-- **GGUF Vocab Resolver**: Robust multi-format tokenizer support.
+## 📦 Build Instructions
 
-### 🌐 Distributed & Enterprise
-- **Distributed Training**: NCCL-backed multi-GPU synchronization and ZeRO optimizations.
-- **Security & RBAC**: AES-256-GCM encryption with HMAC-SHA256 integrity checks.
-- **OAuth2 & Audit Logging**: Enterprise-grade access control and compliance monitoring.
-- **Standardized API**: Drop-in compatible with OpenAI and Ollama endpoints.
+### Prerequisites
+- Visual Studio 2022 (C++20 support)
+- CMake 3.20+
+- AVX512-capable CPU (Recommended)
 
-### 🔥 Recent Achievements (February 1, 2026)
-- **GUI IDE Audit Complete**: Removed all simulated AI logic from `MainWindowSimple`
-- **Real Inference Integration**: Chat interface now uses `CPUInferenceEngine` for local model execution
-- **CLI Compiler Verified**: `rawrxd_cli_compiler` uses real `ModelCaller` with native IPC fallback
-- **Self-Healing System**: `IDEDiagnosticAutoHealer` confirmed as fully functional Win32 implementation
-- **GGUF Loader Fixed**: `GGUFLoaderQt` adapter now properly reads metadata without Qt dependencies
-
----
-
-## 🏗️ Architecture
-
-### Core Engine (Native C++)
-```
-src/
-├── agentic/                # Autonomous Agent Framework
-├── ai/                     # Model Loaders & Completion Providers
-├── backend/                # Vulkan & Compute Shaders
-├── lsp/                    # Language Server Protocol (Native implementation)
-├── net/                    # WinHTTP & Winsock2 Networking (Qt-Free)
-└── gui/                    # Native Win32 UI & Custom Rendering
-```
-
-### MASM Optimized Kernels
-Extensive use of Assembly for performance-critical bottlenecks:
-- `RawrXD_AVX512_SIMD.asm`: Pattern matching and neural core operations.
-- `Titan_InferenceCore.asm`: High-speed streaming orchestrator.
-- `os_interceptor_cli_universal.asm`: Low-level system instrumentation.
-
----
-
-## 📊 Project Statistics
-
-| Metric | v2.0 (Qt-Based) | v3.0 (Qt-Free) | Status |
-|--------|-----------------|----------------|--------|
-| **Executable Size** | ~150 MB | < 15 MB | 📉 90% Reduction |
-| **Dependencies** | Qt6, Boost | STL, Win32, MASM | ✅ Zero-External |
-| **Memory Overhead** | ~400 MB | < 50 MB | 🚀 Optimized |
-| **Agentic Auth** | Minimal | Integrated | 🔥 Complete |
-| **Refactored Files** | 0 | 919 | ✅ Verified |
-| **Simulated Logic Removed** | N/A | 100% | ✅ Complete |
-| **Real Inference Integration** | Partial | Full | ✅ Complete |
-
----
-
-## 🛠️ Technology Stack
-
-| Category | Technology |
-|----------|------------|
-| **Languages** | C++20/23, MASM (64-bit), GLSL |
-| **Networking** | Winsock2, WinHTTP (Direct OS calls) |
-| **Graphics/GPGPU** | Vulkan 1.3, SPIR-V |
-| **Serialization** | nlohmann::json (Static header-only) |
-| **Security** | Windows CNG (Cryptography Next Generation) |
-| **Build System** | CMake 3.25+, MSVC 2022 |
-
----
-
-## 📖 Delivery & Documentation
-
-For detailed technical breakdowns, refer to the following:
-- **[REFACTOR_STATUS.md](REFACTOR_STATUS.md)**: Detailed audit of the Qt-to-Win32 migration.
-- **[ARCHITECTURE_OVERVIEW.md](src/ARCHITECTURE_OVERVIEW.md)**: Deep dive into the v3.0 engine.
-- **[QT_REMOVAL_COMPLETE_STATUS.md](Ship/QT_REMOVAL_COMPLETE_STATUS.md)**: Final audit report of the 919 refactored files.
-- **[COMPLETION_SUMMARY.txt](AGENTIC_FRAMEWORK_COMPLETION_SUMMARY.txt)**: High-level overview for stakeholders.
-
----
-
-## 🚀 Quick Start
-
-### 1. Requirements
-- Visual Studio 2022 (with "Desktop development with C++")
-- Vulkan SDK 1.3.xx
-- CMake 3.25+
-
-### 2. Build Instructions
+### Building (Native Win32)
 ```powershell
-mkdir build && cd build
-cmake .. -G "Visual Studio 17 2022" -A x64
+cd RawrXD
+mkdir build_native
+cd build_native
+cmake .. -DENABLE_QT=OFF -DUSE_AVX512=ON -DRAWRXD_BUILD_CLI=ON
 cmake --build . --config Release
 ```
 
-### 3. Run Tests
+## 🌐 Universal Access (Local-Only)
+
+Run the full API + web experience locally without hosted infrastructure:
+
+- Linux/macOS: `./wrapper/launch-local.sh --open-browser`
+- Windows: `.\wrapper\launch-local.ps1 --open-browser`
+- Docker local profile: `docker compose -f docker-compose.local.yml up --build`
+
+Detailed guide: `docs/LOCAL_UNIVERSAL_ACCESS.md`
+
+## 🏗️ Build Targets
+
+| Target | Description |
+|--------|-------------|
+| `RawrEngine` | CLI inference engine + agentic core |
+| `RawrXD-Win32IDE` | Full Win32 GUI IDE with all subsystems |
+| `RawrXD-InferenceEngine` | **Standalone inference** — loads GGUF, emits tokens, no IDE |
+| `rawrxd-monaco-gen` | Monaco/React IDE generator |
+
+### Standalone Inference Engine (Phase 6)
 ```powershell
-ctest -C Release --output-on-failure
+cmake --build . --config Release --target RawrXD-InferenceEngine
+# Usage:
+bin\RawrXD-InferenceEngine.exe model.gguf --prompt "Hello" --tokens 256
+bin\RawrXD-InferenceEngine.exe model.gguf --interactive
+bin\RawrXD-InferenceEngine.exe model.gguf --benchmark
 ```
 
+## 🔄 Tier System & Phase Deprecation
+
+The original numbered phase system (Phases 0–46) has been superseded by a tier-based maturity model. Phases 7–17 were **merged into core infrastructure**, not abandoned:
+
+| Old Phase | Status | Where It Went |
+|-----------|--------|---------------|
+| Phase 7 (Security/Policy) | Merged | `agent_policy.h/cpp` — T3-C Hotpatch Safety |
+| Phase 8 (Explainability) | Merged | `agent_explainability.cpp` — Agent Transparency |
+| Phase 9 (Swarm I/O) | Merged | ASM init sequence + `swarm_coordinator.cpp` |
+| Phase 10 (Orchestration) | Merged | `SafetyContract`, `ConfidenceGate`, `ExecutionGovernor` |
+| Phase 11 (Swarm Coordinator) | Merged | `RawrXD_Swarm_Network.asm` + `Win32IDE_SwarmPanel.cpp` |
+| Phase 12 (Native Debugger) | Merged | `RawrXD_Debug_Engine.asm` + `Win32IDE_NativeDebugPanel.cpp` |
+| Phase 13 | Never defined | — |
+| Phase 14 (Hotpatch UI) | Merged | `Win32IDE_HotpatchPanel.cpp` + T3-C |
+| Phases 15–16 (CFG/SSA) | Merged | `RawrCodex.asm` prerequisites |
+| Phase 17 (Type Recovery) | Merged | `RawrCodex.asm` + `enterprise_license.cpp` |
+| Phase 18 (Distributed) | Rewritten | Swarm Subsystem (Phase 21) |
+
+### Current Tier Status
+- **T3: COMPLETE** — Telemetry Kernel → Deterministic Replay → Hotpatch Safety
+- **T4: COMPLETE** — Autonomous Recovery Orchestrator (divergence → symbolize → fix → verify → commit)
+- **Inference Engine: Phase 6 compilation target added** — `RawrXD-InferenceEngine.exe`
+
+## ⚠️ Migration Notes (v2.0 → v3.0)
+- **Qt Removal**: All `qtapp/` references are deprecated. The core engine is now `src/agentic_engine.cpp` (Native).
+- **Simulations**: Legacy simulation stubs (`cli_extras_stubs.cpp`, `stubs.cpp`) have been removed or neutralized.
+- **Config**: Settings are now stored in `settings.json` via pure JSON parsing.
+
 ---
-
-## ✅ Final Delivery Summary (February 1, 2026)
-
-The migration from a framework-heavy Qt application to a native, high-performance, agent-driven ML IDE is **complete**. Every `QString`, `QThread`, and `QNetworkAccessManager` has been replaced with its native equivalent, ensuring the future of RawrXD is decoupled from proprietary framework lifecycles and optimized for raw hardware performance.
-
-### Key Accomplishments:
-- **Framework Independence**: Zero Qt dependencies across entire codebase
-- **Real Inference Engine**: GUI and CLI now use `CPUInferenceEngine` for actual model execution
-- **Simulation-Free Code**: All "stub" and "simulate" logic replaced with functional implementations
-- **Self-Healing Architecture**: Autonomous diagnostic and recovery system fully operational
-- **Native GGUF Loading**: Direct model loading without external library overhead
-
-**Ship Status:** 🚢 **Ready for Production Deployment**
-
----
-© 2026 RawrXD Development Team | MISSION ACCOMPLISHED: QT REMOVAL & REAL INFERENCE INTEGRATION
-
+*RawrXD v3.0 - The Future of Native AI Development*

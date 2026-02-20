@@ -2,6 +2,10 @@
 ; High-performance SIMD kernels for Model Loading and Inference
 ; Target: x64 MASM (ml64.exe)
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .code
 
 ; --- Tokenizer SIMD scan ---

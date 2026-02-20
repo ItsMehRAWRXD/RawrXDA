@@ -58,6 +58,7 @@ public:
 
 } // namespace rawrxd::thermal
 
-#define IThermalDashboardPlugin_iid "com.rawrxd.thermal.IThermalDashboardPlugin/1.0"
-Q_DECLARE_INTERFACE(rawrxd::thermal::IThermalDashboardPlugin, IThermalDashboardPlugin_iid)
+// DLL export signature for Win32 LoadLibrary-based plugin loading
+// The DLL must export: IThermalDashboardPlugin* CreateThermalPlugin()
+using CreateThermalPluginFunc = rawrxd::thermal::IThermalDashboardPlugin* (*)();
 

@@ -17,8 +17,8 @@ add_library(rawrxd_feedback STATIC
     ${FEEDBACK_HEADERS}
 )
 
+# Qt-free: pure C++20
 set_target_properties(rawrxd_feedback PROPERTIES
-    AUTOMOC ON
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
 )

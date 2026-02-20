@@ -920,6 +920,7 @@ main PROC
     
     ; Exit
     invoke ExitProcess, dwExitCode
+    ret
 main ENDP
 
 END main

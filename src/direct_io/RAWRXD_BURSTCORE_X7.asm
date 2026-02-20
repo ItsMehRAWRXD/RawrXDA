@@ -7,6 +7,10 @@
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERN GetBurstPlan:PROC                  ; out: rax = pointer to tensor ID array
 EXTERN GetBurstCount:PROC                 ; out: eax = tensor count
 EXTERN GetTensorOffset:PROC                ; rcx = tensor_id → rax=offset

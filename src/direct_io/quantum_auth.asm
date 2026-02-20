@@ -7,6 +7,17 @@
 ; SECURITY: Not cryptographically secure, but tamper-evident for model binding
 ; ═══════════════════════════════════════════════════════════════════════════════
 
+; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+PUBLIC QuantumAuth_CaptureFingerprint
+PUBLIC QuantumAuth_VerifyFingerprint
+PUBLIC QuantumAuth_GetHardwareID
+PUBLIC QuantumAuth_SignModel
+PUBLIC QuantumAuth_VerifyModelSignature
+
 .data
 
 ; ─────────────────────────────────────────────────────────────────────────────

@@ -3,6 +3,10 @@
 
 OPTION CASEMAP:NONE
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 EXTERN GGUF_LoadFile : PROC
 EXTERN Titan_RunInference : PROC
 EXTERN GetCommandLineA : PROC

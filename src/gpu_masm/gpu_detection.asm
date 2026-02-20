@@ -3,6 +3,26 @@
 ; Pure MASM 64 implementation
 ;=============================================================================
 
+; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+PUBLIC GPU_Detect
+PUBLIC GPU_GetDeviceCount
+PUBLIC GPU_GetDevice
+PUBLIC GPU_ScanPCIBus
+PUBLIC GPU_ReadPCIConfig
+PUBLIC GPU_ReadPCIConfigDword
+PUBLIC GPU_GetDeviceProperties
+PUBLIC GPU_GetNVIDIAProperties
+PUBLIC GPU_GetAMDProperties
+PUBLIC GPU_GetIntelProperties
+PUBLIC GPU_GetGenericProperties
+PUBLIC GPU_ReadMemorySize
+PUBLIC GPU_Initialize
+PUBLIC GPU_Shutdown
+
 .code
 
 ; GPU Device Structure

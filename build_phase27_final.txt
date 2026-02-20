@@ -1,0 +1,13 @@
+[  1%] Built target RawrXD-RE-Library
+[  3%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/lsp/RawrXD_LSPServer.cpp.obj
+[  4%] Linking CXX executable bin\RawrXD-Win32IDE.exe
+C:/ProgramData/mingw64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/15.2.0/../../../../x86_64-w64-mingw32/bin/ld.exe: CMakeFiles\RawrXD-Win32IDE.dir/objects.a(swarm_orchestrator.cpp.obj):swarm_orchestrator.cpp:(.text+0x2456): undefined reference to `swarm_build_discovery_packet'
+C:/ProgramData/mingw64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/15.2.0/../../../../x86_64-w64-mingw32/bin/ld.exe: CMakeFiles\RawrXD-Win32IDE.dir/objects.a(swarm_orchestrator.cpp.obj):swarm_orchestrator.cpp:(.text+0x281d): undefined reference to `swarm_build_discovery_packet'
+C:/ProgramData/mingw64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/15.2.0/../../../../x86_64-w64-mingw32/bin/ld.exe: CMakeFiles\RawrXD-Win32IDE.dir/objects.a(swarm_orchestrator.cpp.obj):swarm_orchestrator.cpp:(.text+0x8956): undefined reference to `swarm_receive_header'
+C:/ProgramData/mingw64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/15.2.0/../../../../x86_64-w64-mingw32/bin/ld.exe: CMakeFiles\RawrXD-Win32IDE.dir/objects.a(swarm_orchestrator.cpp.obj):swarm_orchestrator.cpp:(.text+0x8ace): undefined reference to `swarm_compute_layer_crc32'
+collect2.exe: error: ld returned 1 exit status
+mingw32-make[3]: *** [CMakeFiles\RawrXD-Win32IDE.dir\build.make:1922: bin/RawrXD-Win32IDE.exe] Error 1
+mingw32-make[2]: *** [CMakeFiles\Makefile2:180: CMakeFiles/RawrXD-Win32IDE.dir/all] Error 2
+mingw32-make[1]: *** [CMakeFiles\Makefile2:187: CMakeFiles/RawrXD-Win32IDE.dir/rule] Error 2
+mingw32-make: *** [Makefile:149: RawrXD-Win32IDE] Error 2
+

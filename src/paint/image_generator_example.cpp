@@ -1,34 +1,16 @@
-#ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <winsock2.h>
-#endif
-
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "image_generator/stb_image_write.h"
+#include "stb_image_write.h"
 
-#include "image_generator/image_generator.h"
-#include "image_generator/gradients.h"
+#include "logging/logger.h"
+static Logger s_logger("image_generator_example");
+
+#include "image_generator.h"
 #include <iostream>
-
-#ifdef RadialGradient
-#undef RadialGradient
-#endif
-#ifdef LinearGradient
-#undef LinearGradient
-#endif
-#ifdef ig
-#undef ig
-#endif
 
 using namespace ig;
 
 int main() {
-
+    s_logger.info("=== Image Generator Example ===\n\n");
 
     // Create canvas
     const int WIDTH = 1024;
@@ -37,7 +19,7 @@ int main() {
     canvas.clear(Color::rgb(0.08f, 0.09f, 0.11f));
 
     // Background gradient
-    
+    s_logger.info("1. Rendering gradient background...\n");
     auto bg = create_layer(WIDTH, HEIGHT);
     LinearGradient grad(0, 0, WIDTH, HEIGHT);
     grad.add_stop(0.0f, Color::rgb(0.10f, 0.15f, 0.35f));
@@ -52,7 +34,7 @@ int main() {
     canvas.composite(bg);
 
     // Perlin noise fog
-    
+    s_logger.info("2. Adding Perlin noise fog layer...\n");
     auto fog = create_layer(WIDTH, HEIGHT);
     Perlin2D perlin(42);
 
@@ -66,7 +48,7 @@ int main() {
     canvas.composite(fog);
 
     // Draw shapes
-    
+    s_logger.info("3. Drawing shapes...\n");
     fill_rect(canvas, 60, HEIGHT - 160, 320, 100, Color::rgba(0.9f, 0.5f, 0.2f, 0.8f));
     fill_circle(canvas, 860.0f, 160.0f, 90.0f, Color::rgba(0.2f, 0.7f, 0.9f, 0.85f));
     line_aa(canvas, 80.0f, 80.0f, 920.0f, 540.0f, Color::rgba(1.0f, 0.95f, 0.3f, 0.9f));
@@ -77,7 +59,7 @@ int main() {
     fill_polygon(canvas, poly, Color::rgba(0.6f, 0.2f, 0.7f, 0.75f));
 
     // Radial highlight
-    
+    s_logger.info("4. Adding radial highlight...\n");
     RadialGradient radial(860.0f, 160.0f, 140.0f);
     radial.add_stop(0.0f, Color::rgba(1.0f, 1.0f, 1.0f, 0.35f));
     radial.add_stop(1.0f, Color::rgba(1.0f, 1.0f, 1.0f, 0.0f));
@@ -89,32 +71,32 @@ int main() {
     }
 
     // Save as BMP
-    
+    s_logger.info("5. Exporting as BMP...\n");
     const std::string bmp_out = "output.bmp";
     if (!write_bmp(canvas, bmp_out)) {
-        
+        s_logger.error( "Failed to write " << bmp_out << "\n";
         return 1;
     }
-
+    s_logger.info("✓ Wrote ");
 
     // Save as PNG (requires stb_image_write)
-    
+    s_logger.info("6. Exporting as PNG...\n");
     const std::string png_out = "output.png";
     if (!write_png(canvas, png_out)) {
-        
+        s_logger.error( "Failed to write " << png_out << "\n";
         return 1;
     }
-
+    s_logger.info("✓ Wrote ");
 
     // Create a gradient showcase
-    
+    s_logger.info("7. Creating gradient showcase...\n");
     Canvas gradient_demo(512, 512);
     gradient_demo.clear(Color::white());
 
     // Linear gradients
     LinearGradient lin1(0, 0, 256, 256);
     lin1.add_stop(0.0f, Color::red());
-    lin1.add_stop(0.5f, Color::rgb(1.0f, 1.0f, 0.0f));
+    lin1.add_stop(0.5f, Color::yellow());
     lin1.add_stop(1.0f, Color::green());
 
     for (int y = 0; y < 256; ++y) {
@@ -136,12 +118,12 @@ int main() {
     }
 
     if (write_bmp(gradient_demo, "gradients.bmp")) {
-        
+        s_logger.info("✓ Wrote gradients.bmp\n");
     }
     if (write_png(gradient_demo, "gradients.png")) {
-        
+        s_logger.info("✓ Wrote gradients.png\n");
     }
 
-
+    s_logger.info("\n=== Complete! ===\n");
     return 0;
 }

@@ -329,8 +329,63 @@ public:
         tie.pszText = (LPWSTR)L"pwsh";
         SendMessageW(m_hTab, TCM_INSERTITEMW, 0, (LPARAM)&tie);
 
-        // TODO: Start shell process and pipe I/O
-    }
+        // Start PowerShell process with piped I/O
+        SECURITY_ATTRIBUTES sa = { sizeof(sa), nullptr, TRUE };
+        HANDLE hStdoutWrite = nullptr, hStdinRead = nullptr;
+        HANDLE hStdoutRead = nullptr, hStdinWrite = nullptr;
+        
+        if (CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0) &&
+            CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0)) {
+            
+            SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
+            SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0);
+            
+            STARTUPINFOW si = { sizeof(si) };
+            si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+            si.hStdOutput = hStdoutWrite;
+            si.hStdError = hStdoutWrite;
+            si.hStdInput = hStdinRead;
+            si.wShowWindow = SW_HIDE;
+            
+            PROCESS_INFORMATION pi = {};
+            wchar_t cmd[] = L"powershell.exe -NoLogo -NoProfile";
+            
+            if (CreateProcessW(nullptr, cmd, nullptr, nullptr, TRUE,
+                CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+                
+                m_hProcess = pi.hProcess;
+                m_hStdoutRead = hStdoutRead;
+                m_hStdinWrite = hStdinWrite;
+                m_hOutput = hOutput;
+                m_hInput = hInput;
+                
+                CloseHandle(pi.hThread);
+                CloseHandle(hStdoutWrite);
+                CloseHandle(hStdinRead);
+                
+                // Start reader thread to pipe shell output to RichEdit
+                struct ReaderCtx {
+                    HANDLE hRead;
+                    HWND hOutput;
+                    HWND hParent;
+                };
+                ReaderCtx* ctx = new ReaderCtx{ m_hStdoutRead, hOutput, m_parent };
+                
+                m_hReaderThread = CreateThread(nullptr, 0,
+                    [](LPVOID param) -> DWORD {
+                        ReaderCtx* rc = static_cast<ReaderCtx*>(param);
+                        char buf[4096];
+                        DWORD bytesRead;
+                        while (ReadFile(rc->hRead, buf, sizeof(buf) - 1, &bytesRead, nullptr) && bytesRead > 0) {
+                            buf[bytesRead] = '\0';
+                            // Convert to wide string
+                            int wLen = MultiByteToWideChar(CP_UTF8, 0, buf, bytesRead, nullptr, 0);
+                            if (wLen <= 0) wLen = MultiByteToWideChar(CP_ACP, 0, buf, bytesRead, nullptr, 0);
+                            if (wLen > 0) {
+                                wchar_t* wBuf = new wchar_t[wLen + 1];
+                                MultiByteToWideChar(CP_UTF8, 0, buf, bytesRead, wBuf, wLen);
+                                wBuf[wLen] = L'\0';
+                                // Append to output RichEdit on UI thread\n                                int len = GetWindowTextLengthW(rc->hOutput);\n                                SendMessageW(rc->hOutput, EM_SETSEL, len, len);\n                                SendMessageW(rc->hOutput, EM_REPLACESEL, FALSE, (LPARAM)wBuf);\n                                SendMessageW(rc->hOutput, WM_VSCROLL, SB_BOTTOM, 0);\n                                delete[] wBuf;\n                            }\n                        }\n                        delete rc;\n                        return 0;\n                    }, ctx, 0, nullptr);\n                \n                // Subclass input to intercept Enter key\n                SetWindowSubclass(hInput, [](HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam,\n                    UINT_PTR uIdSubclass, DWORD_PTR dwRefData) -> LRESULT {\n                    if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {\n                        HANDLE hStdin = reinterpret_cast<HANDLE>(dwRefData);\n                        int len = GetWindowTextLengthW(hwnd);\n                        if (len > 0 && hStdin) {\n                            wchar_t* buf = new wchar_t[len + 1];\n                            GetWindowTextW(hwnd, buf, len + 1);\n                            // Convert to UTF-8\n                            int utf8Len = WideCharToMultiByte(CP_UTF8, 0, buf, -1, nullptr, 0, nullptr, nullptr);\n                            char* utf8 = new char[utf8Len + 2];\n                            WideCharToMultiByte(CP_UTF8, 0, buf, -1, utf8, utf8Len, nullptr, nullptr);\n                            // Append newline\n                            int sLen = (int)strlen(utf8);\n                            utf8[sLen] = '\\n';\n                            utf8[sLen + 1] = '\\0';\n                            DWORD written;\n                            WriteFile(hStdin, utf8, sLen + 1, &written, nullptr);\n                            delete[] utf8;\n                            delete[] buf;\n                            SetWindowTextW(hwnd, L\"\");\n                        }\n                        return 0;\n                    }\n                    return DefSubclassProc(hwnd, uMsg, wParam, lParam);\n                }, 1, reinterpret_cast<DWORD_PTR>(m_hStdinWrite));\n                \n            } else {\n                // Process creation failed - cleanup\n                CloseHandle(hStdoutRead);\n                CloseHandle(hStdoutWrite);\n                CloseHandle(hStdinRead);\n                CloseHandle(hStdinWrite);\n            }\n        }\n    }
 
     void resize(int x, int y, int width, int height) {
         MoveWindow(m_hTab, x, y, width, height, TRUE);
@@ -341,6 +396,12 @@ public:
 private:
     HWND m_parent = nullptr;
     HWND m_hTab = nullptr;
+    HWND m_hOutput = nullptr;
+    HWND m_hInput = nullptr;
+    HANDLE m_hProcess = nullptr;
+    HANDLE m_hStdoutRead = nullptr;
+    HANDLE m_hStdinWrite = nullptr;
+    HANDLE m_hReaderThread = nullptr;
 };
 
 // Chat Panel

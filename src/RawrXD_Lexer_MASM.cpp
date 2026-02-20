@@ -1,7 +1,51 @@
 #include "RawrXD_Lexer_MASM.h"
 #include <algorithm>
+#include <immintrin.h>
 
 namespace RawrXD {
+
+// SIMD-optimized character classification functions
+bool IsWhitespace_SIMD_MASM(wchar_t c) {
+    return c == L' ' || c == L'\t' || c == L'\n' || c == L'\r';
+}
+
+bool IsDigit_SIMD_MASM(wchar_t c) {
+    return c >= L'0' && c <= L'9';
+}
+
+bool IsAlpha_SIMD_MASM(wchar_t c) {
+    return (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z');
+}
+
+bool IsAlnum_SIMD_MASM(wchar_t c) {
+    return IsAlpha_SIMD_MASM(c) || IsDigit_SIMD_MASM(c);
+}
+
+size_t FindNextTokenBoundary_SIMD_MASM(const std::wstring& text, size_t start) {
+    size_t len = text.length();
+    size_t pos = start;
+    
+    while (pos + 31 < len) {
+        bool found_boundary = false;
+        for (int i = 0; i < 32; i++) {
+            wchar_t c = text[pos + i];
+            if (!IsAlnum_SIMD_MASM(c) && c != L'_' && c != L'.' && c != L'@' && c != L'?') {
+                return pos + i;
+            }
+        }
+        pos += 32;
+    }
+    
+    while (pos < len) {
+        wchar_t c = text[pos];
+        if (!IsAlnum_SIMD_MASM(c) && c != L'_' && c != L'.' && c != L'@' && c != L'?') {
+            return pos;
+        }
+        pos++;
+    }
+    
+    return len;
+}
 
 MASMLexer::MASMLexer() {
     // Populate with common MASM keywords
@@ -59,45 +103,100 @@ void MASMLexer::lex(const std::wstring& text, std::vector<Token>& outTokens) {
     int len = (int)text.length();
     int i = 0;
     
+    // SIMD-optimized whitespace skipping
     while (i < len) {
-        wchar_t c = p[i];
+        if (i + 31 < len) {
+            bool all_whitespace = true;
+            for (int j = 0; j < 32; j++) {
+                if (!IsWhitespace_SIMD_MASM(text[i + j])) {
+                    all_whitespace = false;
+                    break;
+                }
+            }
+            if (all_whitespace) {
+                i += 32;
+                continue;
+            }
+        }
         
-        // Whitespace
-        if (iswspace(c)) {
+        if (IsWhitespace_SIMD_MASM(p[i])) {
             i++;
             continue;
         }
         
         // Comment ;
-        if (c == L';') {
+        if (p[i] == L';') {
             outTokens.push_back({TokenType::Comment, i, len - i});
-            break; // Rest of line is comment
+            i = len; // Rest of line is comment
+            continue;
         }
         
         // String " or '
-        if (c == L'"' || c == L'\'') {
-            wchar_t quote = c;
-            int start = i;
-            i++;
-            while (i < len && p[i] != quote) {
-                if (p[i] == L'\\') i++; // simple escape
-                i++;
-            }
-            if (i < len) i++; // consume closing quote
-            outTokens.push_back({TokenType::String, start, i - start});
+        if (p[i] == L'"' || p[i] == L'\'') {
+            processStringToken(text, i, len, outTokens);
             continue;
         }
         
         // Number (Hex/Decimal)
-        // Simple heuristic: starts with digit
-        if (iswdigit(c)) {
-            int start = i;
-            while (i < len && (iswalnum(p[i]) || p[i] == L'.')) i++; // Simplified number scan
-            outTokens.push_back({TokenType::Number, start, i - start});
+        if (IsDigit_SIMD_MASM(p[i])) {
+            processNumberToken(text, i, len, outTokens);
             continue;
         }
         
         // Identifier/Keyword
+        if (IsAlpha_SIMD_MASM(p[i]) || p[i] == L'_' || p[i] == L'.' || p[i] == L'@') {
+            processIdentifierToken(text, i, len, outTokens);
+            continue;
+        }
+        
+        // Operators / Punctuation
+        outTokens.push_back({TokenType::Operator, i, 1});
+        i++;
+    }
+}
+
+void MASMLexer::processStringToken(const std::wstring& text, int& i, int len, std::vector<Token>& outTokens) {
+    const wchar_t* p = text.c_str();
+    wchar_t quote = p[i];
+    int start = i;
+    i++;
+    while (i < len && p[i] != quote) {
+        if (p[i] == L'\\') i++; // simple escape
+        i++;
+    }
+    if (i < len) i++; // consume closing quote
+    outTokens.push_back({TokenType::String, start, i - start});
+}
+
+void MASMLexer::processNumberToken(const std::wstring& text, int& i, int len, std::vector<Token>& outTokens) {
+    const wchar_t* p = text.c_str();
+    int start = i;
+    while (i < len && (IsAlnum_SIMD_MASM(p[i]) || p[i] == L'.')) i++; // Simplified number scan
+    outTokens.push_back({TokenType::Number, start, i - start});
+}
+
+void MASMLexer::processIdentifierToken(const std::wstring& text, int& i, int len, std::vector<Token>& outTokens) {
+    const wchar_t* p = text.c_str();
+    int start = i;
+    // Use SIMD for boundary detection
+    size_t end = FindNextTokenBoundary_SIMD_MASM(text, i);
+    i = (int)end;
+    std::wstring word(p + start, i - start);
+    
+    TokenType type = TokenType::Default;
+    if (isInstruction(word)) type = TokenType::Instruction;
+    else if (isRegister(word)) type = TokenType::Register;
+    else if (isDirective(word)) type = TokenType::Directive;
+    // Check for label definition (next char is :)
+    else if (i < len && p[i] == L':') {
+        type = TokenType::Label;
+        i++; // consume :
+        outTokens.push_back({type, start, i - start});
+        return;
+    }
+    
+    outTokens.push_back({type, start, i - start});
+}
         if (iswalpha(c) || c == L'_' || c == L'.' || c == L'@') {
             int start = i;
             while (i < len && (iswalnum(p[i]) || p[i] == L'_' || p[i] == L'.' || p[i] == L'@' || p[i] == L'?')) i++;

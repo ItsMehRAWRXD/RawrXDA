@@ -36,14 +36,8 @@ endif()
 add_executable(rxd-digest digestion_cli.cpp)
 target_link_libraries(rxd-digest PRIVATE digestion_core)
 
-# GUI executable (if Qt6 Widgets available)
-if(Qt6Widgets_FOUND)
-    add_executable(rxd-digest-gui 
-        digestion_gui_widget.cpp
-        digestion_gui_widget.h
-        main_gui.cpp
-    )
-endif()
+# GUI executable removed — Qt dependency eliminated
+# Win32 GUI variant can be built separately if needed
 
 # Install
 install(TARGETS rxd-digest RUNTIME DESTINATION bin)

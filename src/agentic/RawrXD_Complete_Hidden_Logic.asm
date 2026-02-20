@@ -133,6 +133,10 @@ IOCP_PACKET ENDS
 ; HIDDEN DATA SECTION - ALL ALIGNMENT EXPOSED
 ; =============================================================================
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .DATA
 
 align 4096                              ; Page alignment for TLB efficiency

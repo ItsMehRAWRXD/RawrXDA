@@ -2,6 +2,10 @@
 ; 64-bit MASM, requires AVX-512F (Foundation)
 ; Scans memory for multiple stub signatures simultaneously
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 .code
 align 16
 
@@ -59,10 +63,24 @@ limit_sigs:
     mov ecx, 8
     
 load_sigs:
-    ; Load signature lengths and data (simplified - assumes 16-byte signatures)
-    ; In production, you'd build a trie or use VPTESTMB with varying lengths
-    ; For this stub, we just do a simple scan
+    ; Load signatures (assume each is a string pointer)
+    ; For demo, assume fixed 16-byte signatures
+    xor r9d, r9d
+load_loop:
+    cmp r9d, ecx
+    jge scan_start
     
+    ; Load signature string
+    mov rdx, [r12 + r9*8]  ; signature pointer
+    ; Assume 16 bytes, load into ZMM
+    ; For simplicity, just use first 16 bytes
+    vmovdqu xmm0, [rdx]
+    ; Store in array or something - simplified
+    
+    inc r9d
+    jmp load_loop
+    
+scan_start:
 scan_loop:
     cmp rbx, 64                     ; Need at least 64 bytes for AVX-512
     jl fallback_scan
@@ -70,10 +88,21 @@ scan_loop:
     ; Load 64 bytes of data
     vmovdqu64 zmm2, [rsi]
     
-    ; [Placeholder for actual signature comparison logic]
-    ; In a real AVX-512 implementation, you'd use VPTERNLOGD or VPCMPB
-    ; For this demo MASM file, we provide the structure.
+    ; Compare with signatures (simplified - check for specific patterns)
+    ; For example, check for "TODO" in data
+    mov eax, 'TODO'
+    vpbroadcastd zmm1, eax
+    vpcmpeqd k1, zmm2, zmm1
+    kortestd k1, k1
+    jz no_match
     
+    ; Found match, record position
+    cmp r8d, r15d
+    jge no_match
+    mov [r14 + r8*4], esi  ; position (relative to start)
+    inc r8d
+    
+no_match:
     add rsi, 64
     sub rbx, 64
     jmp scan_loop

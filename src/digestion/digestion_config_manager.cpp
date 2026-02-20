@@ -1,65 +1,135 @@
+// digestion_config_manager.cpp — C++20, Win32. No Qt. Uses nlohmann::json.
+
 #include "digestion_config_manager.h"
-DigestionModuleConfig DigestionConfigManager::loadFromFile(const std::string &path, std::string *error) {
-    // File operation removed;
-    if (!file.open(std::iostream::ReadOnly | std::iostream::Text)) {
-        if (error) *error = std::string("Failed to open config: %1"));
-        return DigestionModuleConfig();
-    }
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <cctype>
+#include <regex>
 
-    const std::vector<uint8_t> data = file.readAll();
-    const std::string text = std::string::fromUtf8(data);
+namespace {
 
-    if (path.endsWith(".yaml", CaseInsensitive) || path.endsWith(".yml", CaseInsensitive)) {
-        return loadFromYaml(text, error);
-    }
-
-    QJsonParseError parseError;
-    const void* doc = void*::fromJson(data, &parseError);
-    if (parseError.error != QJsonParseError::NoError) {
-        if (error) *error = std::string("JSON parse error: %1"));
-        return DigestionModuleConfig();
-    }
-    return loadFromJson(doc.object(), error);
+std::string trimCopy(std::string s) {
+    auto start = s.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) return {};
+    auto end = s.find_last_not_of(" \t\r\n");
+    return s.substr(start, end == std::string::npos ? std::string::npos : end - start + 1);
 }
 
-DigestionModuleConfig DigestionConfigManager::loadFromJson(const void* &json, std::string *error) {
+bool endsWithIgnoreCase(const std::string& s, const std::string& suffix) {
+    if (suffix.size() > s.size()) return false;
+    return std::equal(suffix.rbegin(), suffix.rend(), s.rbegin(),
+        [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); });
+}
+
+std::vector<std::string> split(const std::string& s, char sep, bool skipEmpty = true) {
+    std::vector<std::string> out;
+    std::stringstream ss(s);
+    std::string part;
+    while (std::getline(ss, part, sep)) {
+        std::string t = trimCopy(part);
+        if (!skipEmpty || !t.empty()) out.push_back(std::move(t));
+    }
+    return out;
+}
+
+int indexOf(const std::string& s, char c, size_t from = 0) {
+    auto pos = s.find(c, from);
+    return pos == std::string::npos ? -1 : static_cast<int>(pos);
+}
+
+std::string left(const std::string& s, size_t n) {
+    return s.substr(0, std::min(n, s.size()));
+}
+
+std::string mid(const std::string& s, size_t pos, size_t len = std::string::npos) {
+    if (pos >= s.size()) return {};
+    return s.substr(pos, len);
+}
+
+bool startsWith(const std::string& s, const std::string& prefix) {
+    return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
+}
+
+int compareIgnoreCase(const std::string& a, const std::string& b) {
+    if (a.size() != b.size()) return a.size() < b.size() ? -1 : 1;
+    for (size_t i = 0; i < a.size(); ++i) {
+        int u = std::tolower(static_cast<unsigned char>(a[i]));
+        int v = std::tolower(static_cast<unsigned char>(b[i]));
+        if (u != v) return u < v ? -1 : 1;
+    }
+    return 0;
+}
+
+} // namespace
+
+DigestionModuleConfig DigestionConfigManager::loadFromFile(const std::string& path, std::string* error) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        if (error) *error = "Failed to open config: " + path;
+        return DigestionModuleConfig();
+    }
+    std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    if (endsWithIgnoreCase(path, ".yaml") || endsWithIgnoreCase(path, ".yml")) {
+        return loadFromYaml(data, error);
+    }
+
+    try {
+        nlohmann::json doc = nlohmann::json::parse(data);
+        if (!doc.is_object()) {
+            if (error) *error = "JSON root is not an object";
+            return DigestionModuleConfig();
+        }
+        return loadFromJson(doc, error);
+    } catch (const nlohmann::json::exception& e) {
+        if (error) *error = std::string("JSON parse error: ") + e.what();
+        return DigestionModuleConfig();
+    }
+}
+
+DigestionModuleConfig DigestionConfigManager::loadFromJson(const nlohmann::json& json, std::string* error) {
     DigestionModuleConfig moduleConfig;
 
-    const void* digestion = json.value("digestion").toObject();
-    const void* database = json.value("database").toObject();
+    auto digestion = json.contains("digestion") && json["digestion"].is_object() ? json["digestion"] : nlohmann::json::object();
+    auto database = json.contains("database") && json["database"].is_object() ? json["database"] : nlohmann::json::object();
 
-    moduleConfig.engineConfig.chunkSize = digestion.value("chunk_size").toInt(moduleConfig.engineConfig.chunkSize);
-    moduleConfig.engineConfig.threadCount = digestion.value("threads").toInt(moduleConfig.engineConfig.threadCount);
-    moduleConfig.engineConfig.maxTasksPerFile = digestion.value("max_tasks_per_file").toInt(moduleConfig.engineConfig.maxTasksPerFile);
-    moduleConfig.engineConfig.maxFiles = digestion.value("max_files").toInt(moduleConfig.engineConfig.maxFiles);
-    moduleConfig.engineConfig.applyExtensions = digestion.value("apply_fixes").toBool(moduleConfig.engineConfig.applyExtensions);
-    moduleConfig.engineConfig.createBackups = digestion.value("create_backups").toBool(moduleConfig.engineConfig.createBackups);
-    moduleConfig.engineConfig.incremental = digestion.value("incremental").toBool(moduleConfig.engineConfig.incremental);
-    moduleConfig.engineConfig.useGitMode = digestion.value("git_mode").toBool(moduleConfig.engineConfig.useGitMode);
-    moduleConfig.engineConfig.backupDir = digestion.value("backup_dir").toString(moduleConfig.engineConfig.backupDir);
+    moduleConfig.engineConfig.chunkSize = digestion.value("chunk_size", moduleConfig.engineConfig.chunkSize);
+    moduleConfig.engineConfig.threadCount = digestion.value("threads", moduleConfig.engineConfig.threadCount);
+    moduleConfig.engineConfig.maxTasksPerFile = digestion.value("max_tasks_per_file", moduleConfig.engineConfig.maxTasksPerFile);
+    moduleConfig.engineConfig.maxFiles = digestion.value("max_files", moduleConfig.engineConfig.maxFiles);
+    moduleConfig.engineConfig.applyExtensions = digestion.value("apply_fixes", moduleConfig.engineConfig.applyExtensions);
+    moduleConfig.engineConfig.createBackups = digestion.value("create_backups", moduleConfig.engineConfig.createBackups);
+    moduleConfig.engineConfig.incremental = digestion.value("incremental", moduleConfig.engineConfig.incremental);
+    moduleConfig.engineConfig.useGitMode = digestion.value("git_mode", moduleConfig.engineConfig.useGitMode);
+    if (digestion.contains("backup_dir") && digestion["backup_dir"].is_string())
+        moduleConfig.engineConfig.backupDir = digestion["backup_dir"].get<std::string>();
 
-    const void* flagsValue = digestion.value("flags");
-    if (flagsValue.isArray()) {
-        for (const void* &flag : flagsValue.toArray()) {
-            moduleConfig.flags.append(flag.toString());
+    if (digestion.contains("flags")) {
+        const auto& f = digestion["flags"];
+        if (f.is_array()) {
+            for (const auto& el : f)
+                if (el.is_string()) moduleConfig.flags.push_back(el.get<std::string>());
+        } else if (f.is_string()) {
+            moduleConfig.flags = split(f.get<std::string>(), ',', true);
         }
-    } else if (flagsValue.isString()) {
-        moduleConfig.flags = flagsValue.toString().split(',', SkipEmptyParts);
     }
 
-    moduleConfig.databasePath = database.value("path").toString("digestion_results.db");
-    moduleConfig.schemaPath = database.value("schema").toString();
-    moduleConfig.enableDatabase = database.value("enabled").toBool(true);
-    moduleConfig.outputPath = digestion.value("output_path").toString();
+    if (database.contains("path") && database["path"].is_string())
+        moduleConfig.databasePath = database["path"].get<std::string>();
+    if (moduleConfig.databasePath.empty())
+        moduleConfig.databasePath = "digestion_results.db";
+    if (database.contains("schema") && database["schema"].is_string())
+        moduleConfig.schemaPath = database["schema"].get<std::string>();
+    moduleConfig.enableDatabase = database.value("enabled", true);
+    if (digestion.contains("output_path") && digestion["output_path"].is_string())
+        moduleConfig.outputPath = digestion["output_path"].get<std::string>();
 
-    if (moduleConfig.engineConfig.chunkSize <= 0) {
+    if (moduleConfig.engineConfig.chunkSize <= 0)
         moduleConfig.engineConfig.chunkSize = 50;
-    }
-
-    if (moduleConfig.engineConfig.threadCount < 0) {
+    if (moduleConfig.engineConfig.threadCount < 0)
         moduleConfig.engineConfig.threadCount = 0;
-    }
-
     if (moduleConfig.databasePath.empty() && moduleConfig.enableDatabase) {
         if (error) *error = "Database path is empty";
         moduleConfig.enableDatabase = false;
@@ -68,65 +138,74 @@ DigestionModuleConfig DigestionConfigManager::loadFromJson(const void* &json, st
     return moduleConfig;
 }
 
-DigestionModuleConfig DigestionConfigManager::loadFromYaml(const std::string &yamlText, std::string *error) {
-    void* json = parseYamlToJson(yamlText, error);
-    return loadFromJson(json, error);
+DigestionModuleConfig DigestionConfigManager::loadFromYaml(const std::string& yamlText, std::string* error) {
+    nlohmann::json j = parseYamlToJson(yamlText, error);
+    if (j.is_null() && error && !error->empty())
+        return DigestionModuleConfig();
+    return loadFromJson(j, error);
 }
 
-void* DigestionConfigManager::parseYamlToJson(const std::string &yamlText, std::string *error) {
-    void* root;
+nlohmann::json DigestionConfigManager::parseYamlToJson(const std::string& yamlText, std::string* error) {
+    nlohmann::json root = nlohmann::json::object();
     std::string currentSection;
     std::string currentListKey;
-    void* currentList;
+    nlohmann::json currentList = nlohmann::json::array();
 
-    const std::stringList lines = yamlText.split(std::regex("\r?\n"));
+    std::regex lineSplit(R"(\r?\n)");
+    std::sregex_token_iterator it(yamlText.begin(), yamlText.end(), lineSplit, -1);
+    std::sregex_token_iterator end;
+
     auto flushList = [&]() {
-        if (!currentListKey.empty()) {
-            void* sectionObj = root.value(currentSection).toObject();
-            sectionObj.insert(currentListKey, currentList);
-            root.insert(currentSection, sectionObj);
-            currentListKey.clear();
-            currentList = void*();
+        if (currentListKey.empty()) return;
+        if (currentSection.empty()) {
+            root[currentListKey] = currentList;
+        } else {
+            if (!root.contains(currentSection)) root[currentSection] = nlohmann::json::object();
+            nlohmann::json& sectionObj = root[currentSection];
+            if (!sectionObj.is_object()) sectionObj = nlohmann::json::object();
+            sectionObj[currentListKey] = currentList;
         }
+        currentListKey.clear();
+        currentList = nlohmann::json::array();
     };
 
-    for (const std::string &rawLine : lines) {
-        std::string line = rawLine;
-        const int commentIndex = line.indexOf('#');
-        if (commentIndex >= 0) line = line.left(commentIndex);
-        line = line.trimmed();
+    for (; it != end; ++it) {
+        std::string rawLine = *it;
+        int commentIndex = indexOf(rawLine, '#');
+        if (commentIndex >= 0) rawLine = rawLine.substr(0, static_cast<size_t>(commentIndex));
+        std::string line = trimCopy(rawLine);
         if (line.empty()) continue;
 
-        if (line.startsWith("- ")) {
+        if (startsWith(line, "- ")) {
             if (currentListKey.empty()) {
                 if (error) *error = "YAML list item without list key";
                 continue;
             }
-            currentList.append(parseScalar(line.mid(2).trimmed()));
+            currentList.push_back(parseScalar(trimCopy(mid(line, 2))));
             continue;
         }
 
-        const int colonIndex = line.indexOf(':');
+        int colonIndex = indexOf(line, ':');
         if (colonIndex < 0) {
-            if (error) *error = std::string("Invalid YAML line: %1");
+            if (error) *error = "Invalid YAML line: " + line;
             continue;
         }
 
-        const std::string key = line.left(colonIndex).trimmed();
-        std::string value = line.mid(colonIndex + 1).trimmed();
+        std::string key = trimCopy(left(line, static_cast<size_t>(colonIndex)));
+        std::string value = trimCopy(mid(line, static_cast<size_t>(colonIndex) + 1));
 
         if (value.empty()) {
             flushList();
             currentSection = key;
-            if (!root.contains(currentSection)) root.insert(currentSection, void*());
+            if (!root.contains(currentSection)) root[currentSection] = nlohmann::json::object();
             continue;
         }
 
-        if (value.startsWith('[') && value.endsWith(']')) {
+        if (value.size() >= 2 && value.front() == '[' && value.back() == ']') {
             flushList();
-            void* list;
-            const std::stringList parts = parseInlineList(value);
-            for (const std::string &part : parts) list.append(parseScalar(part));
+            nlohmann::json list = nlohmann::json::array();
+            std::vector<std::string> parts = parseInlineList(value);
+            for (const auto& part : parts) list.push_back(parseScalar(part));
             assignValue(root, currentSection, key, list);
             continue;
         }
@@ -138,7 +217,7 @@ void* DigestionConfigManager::parseYamlToJson(const std::string &yamlText, std::
 
         if (value == "-") {
             currentListKey = key;
-            currentList = void*();
+            currentList = nlohmann::json::array();
             continue;
         }
 
@@ -150,41 +229,44 @@ void* DigestionConfigManager::parseYamlToJson(const std::string &yamlText, std::
     return root;
 }
 
-void* DigestionConfigManager::parseScalar(const std::string &value) {
-    const std::string trimmed = value.trimmed();
-    if (trimmed.compare("true", CaseInsensitive) == 0) return true;
-    if (trimmed.compare("false", CaseInsensitive) == 0) return false;
+nlohmann::json DigestionConfigManager::parseScalar(const std::string& value) {
+    std::string trimmed = trimCopy(value);
+    if (compareIgnoreCase(trimmed, "true") == 0) return true;
+    if (compareIgnoreCase(trimmed, "false") == 0) return false;
 
-    bool ok = false;
-    const int intValue = trimmed.toInt(&ok);
-    if (ok) return intValue;
-
-    const double doubleValue = trimmed.toDouble(&ok);
-    if (ok) return doubleValue;
+    try {
+        size_t pos = 0;
+        int v = std::stoi(trimmed, &pos);
+        if (pos == trimmed.size()) return v;
+    } catch (...) {}
+    try {
+        size_t pos = 0;
+        double v = std::stod(trimmed, &pos);
+        if (pos == trimmed.size()) return v;
+    } catch (...) {}
 
     std::string cleaned = trimmed;
-    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith('\\'') && cleaned.endsWith('\\''))) {
-        cleaned = cleaned.mid(1, cleaned.size() - 2);
-    }
+    if (cleaned.size() >= 2 && ((cleaned.front() == '"' && cleaned.back() == '"') || (cleaned.front() == '\'' && cleaned.back() == '\'')))
+        cleaned = cleaned.substr(1, cleaned.size() - 2);
     return cleaned;
 }
 
-void DigestionConfigManager::assignValue(void* &root, const std::string &section, const std::string &key, const void* &value) {
+void DigestionConfigManager::assignValue(nlohmann::json& root, const std::string& section, const std::string& key, const nlohmann::json& value) {
     if (section.empty()) {
-        root.insert(key, value);
+        root[key] = value;
         return;
     }
-    void* sectionObj = root.value(section).toObject();
-    sectionObj.insert(key, value);
-    root.insert(section, sectionObj);
+    if (!root.contains(section)) root[section] = nlohmann::json::object();
+    nlohmann::json& sectionObj = root[section];
+    if (!sectionObj.is_object()) sectionObj = nlohmann::json::object();
+    sectionObj[key] = value;
 }
 
-std::stringList DigestionConfigManager::parseInlineList(const std::string &value) {
-    std::string inner = value.mid(1, value.length() - 2).trimmed();
-    std::stringList parts;
-    for (const std::string &part : inner.split(',', SkipEmptyParts)) {
-        parts.append(part.trimmed());
-    }
-    return parts;
+std::vector<std::string> DigestionConfigManager::parseInlineList(const std::string& value) {
+    if (value.size() < 2) return {};
+    std::string inner = trimCopy(value.substr(1, value.size() - 2));
+    std::vector<std::string> parts = split(inner, ',', true);
+    std::vector<std::string> out;
+    for (auto& p : parts) out.push_back(trimCopy(p));
+    return out;
 }
-

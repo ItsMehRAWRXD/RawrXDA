@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 #include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 namespace RawrXD { namespace Backend {
@@ -39,6 +40,8 @@ AgenticToolExecutor::AgenticToolExecutor(const std::string& workspace_root)
 {
     m_git_client = std::make_unique<Tools::GitClient>(workspace_root);
     m_ollama_client = std::make_unique<OllamaClient>("http://localhost:11434");
+    // Load persisted config (if any)
+    loadPersistentConfig();
 }
 
 AgenticToolExecutor::~AgenticToolExecutor() = default;
@@ -150,6 +153,9 @@ std::vector<ToolSchema> AgenticToolExecutor::getToolSchemas() const {
 	add("git_stash_save", "Stash changes", {{"message","Optional stash message"}}, {});
 	add("git_stash_pop", "Apply and drop latest stash", {}, {});
 	add("git_fetch", "Fetch from remote", {{"remote","Remote name"}}, {});
+    // Safety toggle tools
+    add("toggle_block_delete", "Enable/disable blocking of destructive delete commands", {{"enabled","true/false"}}, {"enabled"});
+    add("get_block_delete", "Get current status of delete command blocking", {}, {});
 	return v;
 }
 
@@ -179,7 +185,27 @@ bool AgenticToolExecutor::parseJson(const std::string& json_str, json& out, std:
 
 // Dispatch ---------------------------------------------------------------------
 ToolResult AgenticToolExecutor::executeTool(const std::string& tool_name, const std::string& params_json) {
-	return executeTool(stringToTool(tool_name), params_json);
+    // Handle safety toggle tools directly
+    if (tool_name == "toggle_block_delete") {
+        // params_json expected to be JSON like {"enabled": true}
+        try {
+            auto parsed = json::parse(params_json.empty() ? "{}" : params_json);
+            if (parsed.contains("enabled") && parsed["enabled"].is_boolean()) {
+                m_block_delete_commands = parsed["enabled"].get<bool>();
+                savePersistentConfig();
+                return ToolResult::Ok("toggle_block_delete", std::string("block_delete=") + (m_block_delete_commands ? "true" : "false"));
+            }
+            return ToolResult::Fail("toggle_block_delete", "Missing or invalid 'enabled' boolean parameter");
+        } catch (const std::exception& e) {
+            return ToolResult::Fail("toggle_block_delete", e.what());
+        }
+    }
+
+    if (tool_name == "get_block_delete") {
+        return ToolResult::Ok("get_block_delete", std::string(m_block_delete_commands ? "true" : "false"));
+    }
+
+    return executeTool(stringToTool(tool_name), params_json);
 }
 
 ToolResult AgenticToolExecutor::executeTool(AgenticTool tool, const std::string& params_json) {
@@ -279,7 +305,8 @@ ToolResult AgenticToolExecutor::executeFileDelete(const json& params) {
     std::string path = params["path"];
     std::string fullPath = normalizePath(path);
     if (!isPathSafe(fullPath)) return ToolResult::Fail("file_delete", "Path outside workspace not allowed");
-    
+    if (m_block_delete_commands) return ToolResult::Fail("file_delete", "File deletion is disabled by policy");
+
     auto result = RawrXD::Tools::FileOps::remove(fullPath);
     if (!result.success) return ToolResult::Fail("file_delete", result.message);
     
@@ -390,6 +417,38 @@ ToolResult AgenticToolExecutor::executeFileExists(const json& params) {
     resultJson["path"] = fullPath;
     resultJson["exists"] = exists;
     return ToolResult::Ok("file_exists", resultJson.dump());
+}
+
+void AgenticToolExecutor::loadPersistentConfig()
+{
+    try {
+        std::string cfgPath = (fs::path(m_workspace_root) / ".rawrxd_agent_config.json").string();
+        if (fs::exists(cfgPath)) {
+            std::ifstream in(cfgPath);
+            json j; in >> j;
+            if (j.contains("block_delete_commands") && j["block_delete_commands"].is_boolean()) {
+                m_block_delete_commands = j["block_delete_commands"].get<bool>();
+            }
+        } else {
+            // Write default config
+            savePersistentConfig();
+        }
+    } catch (...) {
+        // Ignore and keep defaults
+    }
+}
+
+void AgenticToolExecutor::savePersistentConfig() const
+{
+    try {
+        json j;
+        j["block_delete_commands"] = m_block_delete_commands;
+        std::string cfgPath = (fs::path(m_workspace_root) / ".rawrxd_agent_config.json").string();
+        std::ofstream out(cfgPath, std::ios::trunc);
+        out << j.dump(2);
+    } catch (...) {
+        // Ignore write errors
+    }
 }
 
 ToolResult AgenticToolExecutor::executeDirCreate(const json& params) {

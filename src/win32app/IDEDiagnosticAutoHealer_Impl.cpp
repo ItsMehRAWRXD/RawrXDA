@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <ctime>
 #include <windows.h>
+#include <psapi.h>
 
 // Singleton instances
 IDEDiagnosticAutoHealer& IDEDiagnosticAutoHealer::Instance() {
@@ -175,22 +176,74 @@ void IDEDiagnosticAutoHealer::ApplyHealing(HealingStrategy strategy) {
 
 void IDEDiagnosticAutoHealer::ExecuteHotkeyResend() {
     OutputDebugStringW(L"[AutoHealer-Heal] Resending hotkey\n");
+    if (!m_ideMainWindow || !IsWindow(m_ideMainWindow)) {
+        m_ideMainWindow = DiagnosticUtils::FindIDEMainWindow(m_ideProcessId);
+    }
+    if (m_ideMainWindow) {
+        SetForegroundWindow(m_ideMainWindow);
+        Sleep(200);
+        DiagnosticUtils::SendHotkey(m_ideMainWindow, 'D', true, true, false);
+        DiagnosticUtils::LogHealing("Hotkey resend (Ctrl+Shift+D)", true);
+    } else {
+        DiagnosticUtils::LogHealing("Hotkey resend", false);
+    }
 }
 
 void IDEDiagnosticAutoHealer::ExecuteFileReopen() {
     OutputDebugStringW(L"[AutoHealer-Heal] Reopening file\n");
+    if (!m_ideMainWindow || !IsWindow(m_ideMainWindow)) {
+        m_ideMainWindow = DiagnosticUtils::FindIDEMainWindow(m_ideProcessId);
+    }
+    if (m_ideMainWindow) {
+        DiagnosticUtils::OpenFileInEditor(m_ideMainWindow, m_config.testFilePath);
+        Sleep(500);
+        DiagnosticUtils::LogHealing("File reopen", true);
+    } else {
+        DiagnosticUtils::LogHealing("File reopen", false);
+    }
 }
 
 void IDEDiagnosticAutoHealer::ExecuteMessageRepost() {
     OutputDebugStringW(L"[AutoHealer-Heal] Reposting message\n");
+    if (m_ideMainWindow && IsWindow(m_ideMainWindow)) {
+        // Send WM_USER-based custom message to trigger re-digest
+        PostMessageW(m_ideMainWindow, WM_USER + 100, 0, 0);
+        DiagnosticUtils::LogHealing("Message repost", true);
+    } else {
+        DiagnosticUtils::LogHealing("Message repost", false);
+    }
 }
 
 void IDEDiagnosticAutoHealer::ExecuteWindowRefocus() {
     OutputDebugStringW(L"[AutoHealer-Heal] Refocusing window\n");
+    m_ideMainWindow = DiagnosticUtils::FindIDEMainWindow(m_ideProcessId);
+    if (m_ideMainWindow) {
+        SetForegroundWindow(m_ideMainWindow);
+        SetFocus(m_ideMainWindow);
+        BringWindowToTop(m_ideMainWindow);
+        DiagnosticUtils::LogHealing("Window refocus", true);
+    } else {
+        DiagnosticUtils::LogHealing("Window refocus", false);
+    }
 }
 
 void IDEDiagnosticAutoHealer::ExecuteProcessRestart() {
     OutputDebugStringW(L"[AutoHealer-Heal] Restarting process\n");
+    // Terminate existing process
+    if (m_ideProcessId != 0) {
+        DiagnosticUtils::TerminateProcessGracefully(m_ideProcessId);
+        Sleep(1000);
+    }
+    // Launch new instance
+    m_ideProcessId = DiagnosticUtils::LaunchIDEProcess(m_config.ideExePath);
+    if (m_ideProcessId != 0) {
+        Sleep(2000); // Wait for startup
+        m_ideMainWindow = DiagnosticUtils::FindIDEMainWindow(m_ideProcessId);
+        DiagnosticUtils::LogHealing("Process restart", m_ideMainWindow != nullptr);
+        EmitBeacon(BeaconStage::IDE_LAUNCH, S_OK, "Recovery: Process restarted");
+    } else {
+        DiagnosticUtils::LogHealing("Process restart", false);
+    }
 }
 
 std::string IDEDiagnosticAutoHealer::GenerateDiagnosticReport() {
@@ -212,15 +265,176 @@ std::string IDEDiagnosticAutoHealer::GenerateHealingLog() {
 }
 
 void IDEDiagnosticAutoHealer::RecoverFromCheckpoint(BeaconStage stage) {
+    OutputDebugStringW(L"[AutoHealer] Recovering from checkpoint\n");
+    EnterCriticalSection(&m_lock);
+
+    // Find the last successful checkpoint at or before the requested stage
+    BeaconCheckpoint lastGood{};
+    bool found = false;
+    for (auto it = m_beaconHistory.rbegin(); it != m_beaconHistory.rend(); ++it) {
+        if (it->stage <= stage && SUCCEEDED(it->result)) {
+            lastGood = *it;
+            found = true;
+            break;
+        }
+    }
+
+    LeaveCriticalSection(&m_lock);
+
+    if (!found) {
+        OutputDebugStringW(L"[AutoHealer] No valid checkpoint found, starting fresh\n");
+        // No valid checkpoint - restart from scratch
+        if (m_running) {
+            StopDiagnostic();
+            StartFullDiagnostic();
+        }
+        return;
+    }
+
+    wchar_t msg[256];
+    swprintf_s(msg, 256, L"[AutoHealer] Recovering from stage %d\n", static_cast<int>(lastGood.stage));
+    OutputDebugStringW(msg);
+
+    // Apply recovery based on the failed stage
+    if (stage >= BeaconStage::HOTKEY_SENT) {
+        // Re-send the hotkey
+        if (m_ideMainWindow && IsWindow(m_ideMainWindow)) {
+            SetFocus(m_ideMainWindow);
+            DiagnosticUtils::SendHotkey(m_ideMainWindow, 'D', true, true, false);
+            EmitBeacon(BeaconStage::HOTKEY_SENT, S_OK, "Recovery: Hotkey re-sent");
+        }
+    } else if (stage >= BeaconStage::FILE_OPENED) {
+        // Re-open the file
+        if (m_ideMainWindow && IsWindow(m_ideMainWindow)) {
+            DiagnosticUtils::OpenFileInEditor(m_ideMainWindow, m_config.testFilePath);
+            EmitBeacon(BeaconStage::FILE_OPENED, S_OK, "Recovery: File re-opened");
+        }
+    } else if (stage >= BeaconStage::WINDOW_CREATED) {
+        // Try to find the window again
+        m_ideMainWindow = DiagnosticUtils::FindIDEMainWindow(m_ideProcessId);
+        if (m_ideMainWindow) {
+            EmitBeacon(BeaconStage::WINDOW_CREATED, S_OK, "Recovery: Window re-found");
+        }
+    }
 }
 
 void IDEDiagnosticAutoHealer::ResumeFromLastKnownGood() {
+    OutputDebugStringW(L"[AutoHealer] Resuming from last known good state\n");
+
+    BeaconCheckpoint lastGood = BeaconStorage::Instance().LoadLastCheckpoint();
+    if (lastGood.timestamp == 0) {
+        OutputDebugStringW(L"[AutoHealer] No known good state found\n");
+        return;
+    }
+
+    wchar_t msg[256];
+    swprintf_s(msg, 256, L"[AutoHealer] Last known good: stage=%d at tick=%lu\n",
+               static_cast<int>(lastGood.stage), lastGood.timestamp);
+    OutputDebugStringW(msg);
+
+    RecoverFromCheckpoint(lastGood.stage);
 }
 
 void IDEDiagnosticAutoHealer::MonitorIDEProcess(DWORD processId) {
+    wchar_t msg[256];
+    swprintf_s(msg, 256, L"[AutoHealer] Monitoring process PID=%lu\n", processId);
+    OutputDebugStringW(msg);
+
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE, FALSE, processId);
+    if (!hProcess) {
+        OutputDebugStringW(L"[AutoHealer] Failed to open process for monitoring\n");
+        return;
+    }
+
+    // Check if process is still alive
+    DWORD exitCode = 0;
+    if (GetExitCodeProcess(hProcess, &exitCode)) {
+        if (exitCode != STILL_ACTIVE) {
+            swprintf_s(msg, 256, L"[AutoHealer] Process exited with code %lu\n", exitCode);
+            OutputDebugStringW(msg);
+            EmitBeacon(BeaconStage::ENGINE_COMPLETE, E_FAIL, "Process exited unexpectedly");
+            CloseHandle(hProcess);
+            return;
+        }
+    }
+
+    // Monitor memory usage
+    PROCESS_MEMORY_COUNTERS pmc = {};
+    pmc.cb = sizeof(pmc);
+    if (GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc))) {
+        // Alert if using more than 2GB
+        if (pmc.WorkingSetSize > 2ULL * 1024 * 1024 * 1024) {
+            OutputDebugStringW(L"[AutoHealer] WARNING: Process memory > 2GB\n");
+            EmitBeacon(BeaconStage::OUTPUT_VERIFIED, S_FALSE, "High memory usage detected");
+        }
+    }
+
+    // Check if window is responding
+    HWND ideWindow = DiagnosticUtils::FindIDEMainWindow(processId);
+    if (ideWindow) {
+        DWORD_PTR result = 0;
+        LRESULT sendResult = SendMessageTimeoutW(ideWindow, WM_NULL, 0, 0,
+                                                  SMTO_ABORTIFHUNG, 3000, &result);
+        if (sendResult == 0) {
+            OutputDebugStringW(L"[AutoHealer] WARNING: Window not responding (hung)\n");
+            EmitBeacon(BeaconStage::OUTPUT_VERIFIED, E_FAIL, "Window hung detected");
+        }
+    }
+
+    CloseHandle(hProcess);
 }
 
 void IDEDiagnosticAutoHealer::DetectAndHealFailures() {
+    if (!m_config.autoHealEnabled) return;
+    OutputDebugStringW(L"[AutoHealer] Running failure detection and auto-healing\n");
+
+    EnterCriticalSection(&m_lock);
+
+    // Analyze beacon history for failure patterns
+    bool windowLost = false;
+    bool hotkeyFailed = false;
+    bool digestTimeout = false;
+    bool processExited = false;
+
+    for (const auto& beacon : m_beaconHistory) {
+        if (FAILED(beacon.result)) {
+            switch (beacon.stage) {
+                case BeaconStage::WINDOW_CREATED:
+                    windowLost = true;
+                    break;
+                case BeaconStage::HOTKEY_SENT:
+                    hotkeyFailed = true;
+                    break;
+                case BeaconStage::ENGINE_COMPLETE:
+                    if (beacon.result == WAIT_TIMEOUT) digestTimeout = true;
+                    else processExited = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    LeaveCriticalSection(&m_lock);
+
+    // Apply healing strategies in order of severity
+    if (processExited) {
+        OutputDebugStringW(L"[AutoHealer] HEAL: Process exited, restarting\n");
+        ApplyHealing(HealingStrategy::PROCESS_RESTART);
+        ExecuteProcessRestart();
+    } else if (windowLost) {
+        OutputDebugStringW(L"[AutoHealer] HEAL: Window lost, refocusing\n");
+        ApplyHealing(HealingStrategy::WINDOW_REFOCUS);
+        ExecuteWindowRefocus();
+    } else if (hotkeyFailed) {
+        OutputDebugStringW(L"[AutoHealer] HEAL: Hotkey failed, resending\n");
+        ApplyHealing(HealingStrategy::HOTKEY_RESEND);
+        ExecuteHotkeyResend();
+    } else if (digestTimeout) {
+        OutputDebugStringW(L"[AutoHealer] HEAL: Digest timeout, reopening file\n");
+        ApplyHealing(HealingStrategy::FILE_REOPEN);
+        ExecuteFileReopen();
+    }
 }
 
 // Beacon storage implementations

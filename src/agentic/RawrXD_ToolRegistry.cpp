@@ -11,6 +11,10 @@ using RawrXD::Agent::ToolResult;
 using RawrXD::Agent::DangerLevel;
 using json = nlohmann::json;
 
+#ifndef LOG_WARNING
+#define LOG_WARNING(msg) do { std::string _lw = (msg); OutputDebugStringA(("[WARN] " + _lw + "\n").c_str()); } while(0)
+#endif
+
 namespace {
 constexpr DWORD kDefaultTimeoutMs = 300000;
 constexpr size_t kMaxOutputBytes = 4 * 1024 * 1024;
@@ -177,7 +181,7 @@ ToolResult ToolRegistry::Execute(const std::string& tool_name, const std::string
             return ToolResult::ValidationFailed;
         }
 
-        json args = json::object_type();
+        json args = json::object();
         if (!json_args.empty()) {
             args = json::parse(json_args);
         }

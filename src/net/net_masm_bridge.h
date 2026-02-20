@@ -18,8 +18,6 @@ long long WebSocketRecv(void* socket_handle, char* buffer, long long buffer_size
 
 // Low-level TCP operations
 void* TcpConnect(const char* host, long long port);
-void TcpClose(void* handle);
-long long TcpSend(void* socket_handle, const char* data, long long data_size);
 long long TcpSend(void* socket_handle, const char* data, long long data_size);
 long long TcpRecv(void* socket_handle, char* buffer, long long buffer_size);
 

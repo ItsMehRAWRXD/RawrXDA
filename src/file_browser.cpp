@@ -2,12 +2,8 @@
 // Features: Lazy loading, performance monitoring, error handling, async operations
 #include "file_browser.h"
 #include <iostream>
-#include <filesystem>
 #include <vector>
-
-#ifdef _WIN32
 #include <windows.h>
-#endif
 
 FileBrowser::FileBrowser() {
 }
@@ -21,19 +17,38 @@ void FileBrowser::initialize() {
 std::vector<FileInfo> FileBrowser::listDirectory(const std::string& dirpath) {
     std::vector<FileInfo> results;
     try {
-        std::filesystem::path p(dirpath);
-        if (!std::filesystem::exists(p) || !std::filesystem::is_directory(p)) {
+        std::string searchPath = dirpath;
+        if (!searchPath.empty() && searchPath.back() != '\\') {
+            searchPath += '\\';
+        }
+        searchPath += '*';
+
+        WIN32_FIND_DATAA findData;
+        HANDLE hFind = FindFirstFileA(searchPath.c_str(), &findData);
+        if (hFind == INVALID_HANDLE_VALUE) {
+            if (onError) onError(dirpath, "Directory not found or access denied");
             return results;
         }
 
-        for (const auto& entry : std::filesystem::directory_iterator(p)) {
+        do {
+            // Skip . and ..
+            if (strcmp(findData.cFileName, ".") == 0 || strcmp(findData.cFileName, "..") == 0) {
+                continue;
+            }
+
             FileInfo info;
-            info.name = entry.path().filename().string();
-            info.path = entry.path().string();
-            info.isDirectory = entry.is_directory();
-            info.size = entry.is_regular_file() ? entry.file_size() : 0;
+            info.name = findData.cFileName;
+            info.path = dirpath;
+            if (!info.path.empty() && info.path.back() != '\\') {
+                info.path += '\\';
+            }
+            info.path += findData.cFileName;
+            info.isDirectory = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+            info.size = info.isDirectory ? 0 : ((uint64_t)findData.nFileSizeHigh << 32) | findData.nFileSizeLow;
             results.push_back(info);
-        }
+        } while (FindNextFileA(hFind, &findData));
+
+        FindClose(hFind);
     } catch (const std::exception& e) {
         if (onError) onError(dirpath, e.what());
     }

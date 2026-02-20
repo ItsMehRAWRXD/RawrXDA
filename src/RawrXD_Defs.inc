@@ -131,3 +131,29 @@ EXTERNDEF QueueInferenceJob : PROC
 EXTERNDEF InferenceEngine_Submit : PROC
 EXTERNDEF AgentRouter_ExecuteTask : PROC
 EXTERNDEF StreamFormatter_WriteToken : PROC
+
+;==============================================================================
+; GPU Backend EXTERNDEFs
+;==============================================================================
+EXTERNDEF AllocateVulkanMemory : PROC
+EXTERNDEF AllocateCUDAMemory : PROC
+EXTERNDEF AllocateROCmMemory : PROC
+EXTERNDEF AllocateCPUMemory : PROC
+EXTERNDEF FreeVulkanMemory : PROC
+EXTERNDEF FreeCUDAMemory : PROC
+EXTERNDEF FreeROCmMemory : PROC
+EXTERNDEF FreeCPUMemory : PROC
+EXTERNDEF ExecuteVulkanKernel : PROC
+EXTERNDEF ExecuteCUDAKernel : PROC
+EXTERNDEF ExecuteROCmKernel : PROC
+EXTERNDEF ExecuteCPUKernel : PROC
+
+;==============================================================================
+; Extension Host EXTERNDEFs
+;==============================================================================
+EXTERNDEF ExtensionHostBridge_Initialize : PROC
+EXTERNDEF ExtensionHostBridge_SendMessage : PROC
+EXTERNDEF ExtensionHostBridge_SendRequest : PROC
+EXTERNDEF ExtensionHost_Shutdown : PROC
+EXTERNDEF ExtensionHost_MessageLoop : PROC
+EXTERNDEF ExtensionHostBridge_ProcessMessages : PROC

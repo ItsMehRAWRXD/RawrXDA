@@ -930,29 +930,30 @@ void ggml_opt_epoch_callback_progress_bar(
         int64_t            ibatch,
         int64_t            ibatch_max,
         int64_t            t_start_us) {
+    fprintf(stderr, "%s[", train ? "train: " : "val:   ");
 
     // The progress bar consists of partially filled blocks, unicode has 8 separate fill levels.
     constexpr int64_t bar_length = 8;
     const int64_t ibatch8 = 8 * ibatch;
     for (int64_t j = 0; j < bar_length; ++j) {
         if        (ibatch_max * (8*j + 8) / bar_length < ibatch8) {
-             // full block
+            fprintf(stderr, "\u2588"); // full block
         } else if (ibatch_max * (8*j + 7) / bar_length < ibatch8) {
-             // 7/8 filled
+            fprintf(stderr, "\u2589"); // 7/8 filled
         } else if (ibatch_max * (8*j + 6) / bar_length < ibatch8) {
-             // 6/8 filled
+            fprintf(stderr, "\u258A"); // 6/8 filled
         } else if (ibatch_max * (8*j + 5) / bar_length < ibatch8) {
-             // 5/8 filled
+            fprintf(stderr, "\u258B"); // 5/8 filled
         } else if (ibatch_max * (8*j + 4) / bar_length < ibatch8) {
-             // 4/8 filled
+            fprintf(stderr, "\u258C"); // 4/8 filled
         } else if (ibatch_max * (8*j + 3) / bar_length < ibatch8) {
-             // 3/8 filled
+            fprintf(stderr, "\u258D"); // 3/8 filled
         } else if (ibatch_max * (8*j + 2) / bar_length < ibatch8) {
-             // 2/8 filled
+            fprintf(stderr, "\u258E"); // 2/8 filled
         } else if (ibatch_max * (8*j + 1) / bar_length < ibatch8) {
-             // 1/8 filled
+            fprintf(stderr, "\u258F"); // 1/8 filled
         } else {
-
+            fprintf(stderr, " ");
         }
     }
 
@@ -982,9 +983,12 @@ void ggml_opt_epoch_callback_progress_bar(
     const int64_t t_eta_m = t_eta_s / 60;
     t_eta_s -= t_eta_m * 60;
 
-
+    fprintf(stderr, "] data=%07" PRId64 "/%07" PRId64 " loss=%.5lf±%.5lf acc=%.2lf±%.2lf%% "
+            "t=%02" PRId64 ":%02" PRId64 ":%02" PRId64 " ETA=%02" PRId64 ":%02" PRId64 ":%02" PRId64 " \r",
+            idata, idata_max, loss, loss_unc, 100.0*accuracy, 100.0*accuracy_unc,
+            t_ibatch_h, t_ibatch_m, t_ibatch_s, t_eta_h, t_eta_m, t_eta_s);
     if (ibatch == ibatch_max) {
-
+        fprintf(stderr, "\n");
     }
     fflush(stderr);
 
@@ -1051,11 +1055,11 @@ void ggml_opt_fit(
         ggml_opt_result_reset(result_val);
 
         if (!silent) {
-
+            fprintf(stderr, "%s: epoch %04" PRId64 "/%04" PRId64 ":\n", __func__, epoch, nepoch);
         }
         ggml_opt_epoch(opt_ctx, dataset, result_train, result_val, idata_split, epoch_callback, epoch_callback);
         if (!silent) {
-
+            fprintf(stderr, "\n");
         }
     }
 
@@ -1065,7 +1069,7 @@ void ggml_opt_fit(
         t_total_s -= t_total_h * 3600;
         const int64_t t_total_m = t_total_s / 60;
         t_total_s -= t_total_m * 60;
-
+        fprintf(stderr, "%s: training took %02" PRId64 ":%02" PRId64 ":%02" PRId64 "\n", __func__, t_total_h, t_total_m, t_total_s);
     }
 
     ggml_opt_free(opt_ctx);

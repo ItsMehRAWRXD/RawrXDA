@@ -10,6 +10,10 @@ include RawrXD_Defs.inc
 ; EXTERNAL IMPORTS (from all previous units)
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; From System_Primitives
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERNDEF System_InitializePrimitives:PROC
 EXTERNDEF Spinlock_Acquire:PROC
 EXTERNDEF Spinlock_Release:PROC
@@ -167,14 +171,55 @@ RawrXD_ShutdownAll ENDP
 ; RCX = Session handle, RDX = Input text, R8 = Output callback
 ; ═══════════════════════════════════════════════════════════════════════════════
 RawrXD_SubmitChatRequest PROC FRAME
+    push rbx
+    push rsi
+    push rdi
+    sub rsp, 40h
     .endprolog
+
+    ; RCX = Session handle, RDX = Input text, R8 = Output callback
+    mov rbx, rcx                    ; session
+    mov rsi, rdx                    ; input text
+    mov rdi, r8                     ; callback
+
+    ; Validate initialized
+    cmp g_GlobalContext.Initialized, 0
+    je @@scr_fail
+
     ; 1. Classify intent via Agentic_Router
-    
+    mov rcx, rsi                    ; input text
+    call AgentRouter_ExecuteTask
+    test eax, eax
+    js @@scr_fail
+    mov ebx, eax                    ; task classification result
+
     ; 2. Select model via Swarm_Orchestrator
-    
+    mov rcx, rbx                    ; model selector from classification
+    call ModelState_AcquireInstance
+    test rax, rax
+    jz @@scr_fail
+
     ; 3. Queue inference job
-    
-    ; 4. Return immediately, callback fires on completion
+    mov rcx, rax                    ; model instance
+    mov rdx, rsi                    ; input text
+    mov r8, rdi                     ; completion callback
+    call InferenceEngine_Submit
+    test eax, eax
+    js @@scr_fail
+
+    ; 4. Increment request counter and return success
+    lock inc g_GlobalContext.TotalRequests
+    xor eax, eax                    ; return 0 = success (async)
+    jmp @@scr_exit
+
+@@scr_fail:
+    mov eax, -1
+
+@@scr_exit:
+    add rsp, 40h
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 RawrXD_SubmitChatRequest ENDP
 

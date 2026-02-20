@@ -6,6 +6,10 @@
 ; ============================================================================
 
 option casemap:none
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 option win64:3
 
 .code

@@ -10,7 +10,7 @@
 #include "llm_http_client.h"
 #include <memory>
 #include <chrono>
-
+#include <queue>
 #include <atomic>
 
 /**
@@ -86,7 +86,8 @@ public:
 
 private:
     std::shared_ptr<LLMHttpClient> m_httpClient;
-
+    std::shared_ptr<Logger> m_logger;
+    
     // State
     LLMBackend m_currentBackend;
     std::string m_currentModel;
@@ -205,12 +206,12 @@ USAGE EXAMPLE 1: Ollama Local Inference
         request,
         [&](const StreamChunk& chunk) {
             fullResponse += chunk.content;
-            
+            std::cout << chunk.content << std::flush;
         }
     );
     
     if (response.success) {
-        
+        std::cout << "\nResponse completed" << std::endl;
     }
 
 
@@ -236,7 +237,7 @@ USAGE EXAMPLE 2: OpenAI GPT-4
     // Execute
     auto response = client->makeRequest(request);
     if (response.success) {
-        
+        std::cout << "Response: " << response.body.dump(2) << std::endl;
     }
 
 
@@ -263,10 +264,10 @@ USAGE EXAMPLE 3: Anthropic Claude
         request,
         [](const StreamChunk& chunk) {
             if (!chunk.content.empty()) {
-                
+                std::cout << chunk.content;
             }
             if (chunk.isComplete) {
-                
+                std::cout << "\n[DONE]" << std::endl;
             }
         }
     );
@@ -294,7 +295,7 @@ USAGE EXAMPLE 4: Integration with AIImplementation
     llmConfig.maxTokens = 2048;
     
     if (!ai.initialize(llmConfig)) {
-        
+        std::cerr << "Failed to initialize AI" << std::endl;
         return;
     }
     
@@ -304,7 +305,7 @@ USAGE EXAMPLE 4: Integration with AIImplementation
     
     auto response = ai.complete(request);
     if (response.success) {
-        
+        std::cout << "Response: " << response.completion << std::endl;
     }
 
 
@@ -322,10 +323,11 @@ USAGE EXAMPLE 5: With Error Handling and Retries
     auto response = client->makeRequest(request);
     
     if (!response.success) {
-
-
+        std::cerr << "Request failed after " << response.retryCount << " retries" << std::endl;
+        std::cerr << "Error: " << response.error << std::endl;
+        std::cerr << "Status: " << response.statusCode << std::endl;
     } else {
-        
+        std::cout << "Success! Response time: " << response.responseTimeMs << "ms" << std::endl;
     }
 
 
@@ -336,6 +338,12 @@ USAGE EXAMPLE 6: Token Management and Pricing
     
     // Track usage
     auto stats = client->getStats();
+    std::cout << "Total requests: " << stats.totalRequests << std::endl;
+    std::cout << "Successful: " << stats.successfulRequests << std::endl;
+    std::cout << "Failed: " << stats.failedRequests << std::endl;
+    std::cout << "Tokens processed: " << stats.totalTokensProcessed << std::endl;
+    std::cout << "Average latency: " 
+              << (stats.totalLatencyMs / stats.totalRequests) << "ms" << std::endl;
 
 
 USAGE EXAMPLE 7: Fallback Strategy
@@ -344,12 +352,12 @@ USAGE EXAMPLE 7: Fallback Strategy
     // Try primary backend (OpenAI)
     auto primaryClient = LLMClientFactory::createOpenAIClient(openaiKey);
     if (!primaryClient->testConnectivity()) {
-
-
+        std::cout << "OpenAI unavailable, using fallback (Ollama)" << std::endl;
+        
         // Fallback to local Ollama
         auto fallbackClient = LLMClientFactory::createOllamaClient();
         if (!fallbackClient->testConnectivity()) {
-            
+            std::cerr << "All backends unavailable!" << std::endl;
             return;
         }
         // Use fallbackClient instead

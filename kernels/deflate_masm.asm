@@ -4,6 +4,10 @@
 
 option casemap:none
 
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+
 ; ---- Constants ----
 HASH_BITS    EQU 15
 HASH_SIZE    EQU (1 SHL HASH_BITS) ; 32768

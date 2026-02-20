@@ -5,6 +5,10 @@
 include ksamd64.inc
 include macamd64.inc
 
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 EXTERN malloc:PROC
 EXTERN free:PROC
 
@@ -289,6 +293,7 @@ rxd_asm_is_cancelled ENDP
 ; void rxd_asm_destroy_cancel_token(rxd_cancel_token_t token)
 rxd_asm_destroy_cancel_token PROC
     jmp     free                ; Tail call
+    ret                         ; MASM PROC/ENDP compliance
 rxd_asm_destroy_cancel_token ENDP
 
 ; void rxd_asm_emit_metric(const char* name, int64_t value_ns)

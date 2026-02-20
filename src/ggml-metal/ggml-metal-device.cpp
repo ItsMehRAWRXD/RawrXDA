@@ -681,7 +681,7 @@ ggml_metal_pipeline_t ggml_metal_library_get_pipeline_mul_mv(ggml_metal_library_
             } break;
         default:
             {
-                GGML_
+                GGML_LOG_ERROR("Asserting on type %d\n", (int) tsrc0);
                 GGML_ABORT("not implemented");
             }
     };
@@ -901,7 +901,7 @@ ggml_metal_pipeline_t ggml_metal_library_get_pipeline_mul_mv_id(ggml_metal_libra
             } break;
         default:
             {
-                GGML_
+                GGML_LOG_ERROR("Asserting on type %d\n", (int)op->src[2]->type);
                 GGML_ABORT("not implemented");
             }
     };

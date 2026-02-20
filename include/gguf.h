@@ -32,15 +32,20 @@
 // Module maintainer: Johannes Gäßler (@JohannesGaessler, johannesg@5d6.de)
 
 #pragma once
-#include <stdint.h>
+
+#include "ggml.h"
+
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdint.h>
 
-#ifndef GGML_API
-#define GGML_API
-#endif
+#define GGUF_MAGIC   "GGUF"
+#define GGUF_VERSION 3
 
-#ifdef __cplusplus
+#define GGUF_KEY_GENERAL_ALIGNMENT "general.alignment"
+
+#define GGUF_DEFAULT_ALIGNMENT 32
+
+#ifdef  __cplusplus
 extern "C" {
 #endif
 

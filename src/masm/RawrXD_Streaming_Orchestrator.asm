@@ -2,6 +2,14 @@
 ; High-performance DMA Ring Buffer Orchestration (AVX-512 Optimized)
 ; 64MB Circular Buffer Management
 
+; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
+PUBLIC RawrXD_Streaming_Write
+PUBLIC RawrXD_Streaming_Read
+
 .code
 
 ; -----------------------------------------------------------------------------
@@ -31,18 +39,18 @@ CACHE_LINE      EQU 64          ; Align to cache line
 align 16
 RawrXD_Streaming_Write proc frame
     push rbx
-    push rsi
-    push rdi
-    push r12
-    push r13
-    push r14
-    push r15
     .pushreg rbx
+    push rsi
     .pushreg rsi
+    push rdi
     .pushreg rdi
+    push r12
     .pushreg r12
+    push r13
     .pushreg r13
+    push r14
     .pushreg r14
+    push r15
     .pushreg r15
     sub rsp, 32
     .allocstack 32
@@ -105,7 +113,9 @@ UpdatePos:
     ; Update writePos atomically (simplified, use real MFENCE in prod)
     lock add [r12 + 16], r14
     
-    ; Signal event? (Stub)
+    ; Signal write event
+    mov rcx, [r12 + 32]  ; hWriteEvent
+    call SetEvent
     
     mov rax, r14        ; return bytes written
     jmp Cleanup
@@ -134,28 +144,54 @@ RawrXD_Streaming_Write endp
 align 16
 RawrXD_Streaming_Read proc frame
     push rbx
-    push rsi
-    push rdi
-    push r12
-    push r13
-    push r14
-    push r15
     .pushreg rbx
+    push rsi
     .pushreg rsi
+    push rdi
     .pushreg rdi
+    push r12
     .pushreg r12
+    push r13
     .pushreg r13
+    push r14
     .pushreg r14
+    push r15
     .pushreg r15
     sub rsp, 32
     .allocstack 32
     .endprolog
     
     ; Logic similar to Write, but reading and updating readPos
-    ; ... (Stub for brevity, same ring logic)
+    mov r12, rcx        ; this
+    mov r13, rdx        ; data buffer
+    mov r14, r8         ; len
     
+    ; Check available data (simplified)
+    mov rax, [r12 + 16] ; writePos
+    sub rax, [r12 + 24] ; readPos
+    cmp rax, r14
+    jb NoData
+    
+    ; Copy data from ring buffer
+    mov rsi, [r12 + 8]  ; ringBuffer
+    mov rdi, r13
+    mov rcx, r14
+    rep movsb
+    
+    ; Update readPos
+    lock add [r12 + 24], r14
+    
+    ; Signal read event
+    mov rcx, [r12 + 40] ; hReadEvent
+    call SetEvent
+    
+    mov rax, r14
+    jmp CleanupRead
+    
+NoData:
     xor rax, rax
     
+CleanupRead:
     add rsp, 32
     pop r15
     pop r14

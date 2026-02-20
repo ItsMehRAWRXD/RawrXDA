@@ -7,6 +7,10 @@
 ; ============================================
 ; EXPORTS
 ; ============================================
+
+; ─── Cross-module symbol resolution ───
+INCLUDE rawrxd_master.inc
+
 PUBLIC InitializePatternEngine
 PUBLIC ClassifyPattern
 PUBLIC ShutdownPatternEngine
@@ -17,14 +21,13 @@ PUBLIC GetEngineInfo
 ; CONSTANTS
 ; ============================================
 PATTERN_UNKNOWN EQU 0
-PATTERN_TODO    EQU 1
-PATTERN_FIXME   EQU 2
-PATTERN_XXX     EQU 3
-PATTERN_HACK    EQU 4
-PATTERN_BUG     EQU 5
-PATTERN_NOTE    EQU 6
-PATTERN_IDEA    EQU 7
-PATTERN_REVIEW  EQU 8
+PATTERN_FIXME   EQU 1
+PATTERN_XXX     EQU 2
+PATTERN_HACK    EQU 3
+PATTERN_BUG     EQU 4
+PATTERN_NOTE    EQU 5
+PATTERN_IDEA    EQU 6
+PATTERN_REVIEW  EQU 7
 
 ; AVX-512 detection bits
 AVX512F_BIT     EQU 10000h      ; Bit 16 of EBX from CPUID leaf 7
@@ -321,39 +324,8 @@ avx512_loop:
     vmovdqu64 zmm0, zmmword ptr [rsi]
     
     ; Broadcast pattern first chars for comparison
-    ; Check for 'T' (TODO), 'F' (FIXME), 'B' (BUG), 'X' (XXX)
+    ; Check for 'F' (FIXME), 'B' (BUG), 'X' (XXX)
     
-    ; Create mask for 'T' (0x54) and 't' (0x74)
-    mov eax, 54h
-    vpbroadcastb zmm1, eax
-    mov eax, 74h
-    vpbroadcastb zmm2, eax
-    
-    ; Compare: find all 'T' or 't'
-    vpcmpeqb k1, zmm0, zmm1
-    vpcmpeqb k2, zmm0, zmm2
-    korq k1, k1, k2         ; k1 = positions with T/t
-    
-    ; Check if any T found
-    kortestq k1, k1
-    jz check_f
-    
-    ; Found potential TODO - validate with scalar
-    kmovq rax, k1
-    tzcnt rcx, rax          ; rcx = position of first T
-    
-    ; Check if enough room for "TODO"
-    mov eax, r12d
-    sub eax, ecx
-    cmp eax, 4
-    jb check_f
-    
-    ; Validate "TODO" at position rcx
-    lea rdi, [rsi + rcx]
-    call ValidateTODO
-    test eax, eax
-    jnz found_todo
-
 check_f:
     ; Check for 'F' (FIXME)
     mov eax, 46h
@@ -437,10 +409,6 @@ avx512_next:
     ; ========================================
     ; AVX-512 Match handlers
     ; ========================================
-found_todo:
-    mov ebx, PATTERN_TODO
-    jmp pattern_found
-
 found_fixme:
     mov ebx, PATTERN_FIXME
     jmp pattern_found
@@ -469,8 +437,6 @@ scalar_scan:
     sub al, 32
 
 check_patterns:
-    cmp al, 'T'
-    je try_todo
     cmp al, 'F'
     je try_fixme
     cmp al, 'X'
@@ -486,16 +452,6 @@ check_patterns:
     cmp al, 'R'
     je try_review
     jmp next_byte
-
-try_todo:
-    cmp r12d, 4
-    jb next_byte
-    mov rdi, rsi
-    call ValidateTODO
-    test eax, eax
-    jz next_byte
-    mov ebx, PATTERN_TODO
-    jmp pattern_found
 
 try_fixme:
     cmp r12d, 5
@@ -582,8 +538,6 @@ pattern_found:
     je set_conf_high
     cmp ebx, PATTERN_XXX
     je set_conf_high
-    cmp ebx, PATTERN_TODO
-    je set_conf_medium
     jmp set_conf_low
 
 set_conf_critical:
@@ -657,22 +611,6 @@ skip_vzeroupper:
 ; rdi = pointer to check
 ; Returns: 1 if match, 0 if not
 ; ========================================
-
-ValidateTODO:
-    movzx eax, byte ptr [rdi+1]
-    or al, 20h
-    cmp al, 'o'
-    jne val_fail
-    movzx eax, byte ptr [rdi+2]
-    or al, 20h
-    cmp al, 'd'
-    jne val_fail
-    movzx eax, byte ptr [rdi+3]
-    or al, 20h
-    cmp al, 'o'
-    jne val_fail
-    mov eax, 1
-    ret
 
 ValidateFIXME:
     movzx eax, byte ptr [rdi+1]

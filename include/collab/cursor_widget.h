@@ -1,36 +1,32 @@
 #ifndef CURSOR_WIDGET_H
 #define CURSOR_WIDGET_H
 
-#include <QWidget>
-#include <QMap>
-#include <QColor>
-#include <QString>
+// C++20 / Win32. Presence cursor widget; no Qt. RGB color as uint32_t.
 
-// Presence: cursor position, user name, avatar color
-class CursorWidget : public QWidget
+#include <string>
+#include <map>
+#include <cstdint>
+
+struct CursorInfo {
+    int position = 0;
+    std::string userName;
+    uint32_t color = 0;  // 0xRRGGBB
+};
+
+class CursorWidget
 {
-    Q_OBJECT
-
 public:
-    explicit CursorWidget(QWidget *parent = nullptr);
+    CursorWidget() = default;
 
-    struct CursorInfo {
-        int position;
-        QString userName;
-        QColor color;
-    };
+    void updateCursor(const std::string& userId, const CursorInfo& info);
+    void removeCursor(const std::string& userId);
 
-    // Add or update a cursor
-    void updateCursor(const QString &userId, const CursorInfo &info);
-
-    // Remove a cursor
-    void removeCursor(const QString &userId);
-
-protected:
-    void paintEvent(QPaintEvent *event) override;
+    void* getWidgetHandle() const { return m_handle; }
+    void setWidgetHandle(void* h) { m_handle = h; }
 
 private:
-    QMap<QString, CursorInfo> m_cursors;
+    void* m_handle = nullptr;
+    std::map<std::string, CursorInfo> m_cursors;
 };
 
 #endif // CURSOR_WIDGET_H

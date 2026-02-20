@@ -360,6 +360,7 @@ main PROC
     ; Exit with code
     push dwExitCode
     call ExitProcess
+    ret
 main ENDP
 
 END main
