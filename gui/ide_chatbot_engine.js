@@ -4844,6 +4844,7 @@ function showEndpoints() {
 // ======================================================================
 function setupDragDrop() {
   var zone = document.getElementById('dropZone');
+  if (!zone) return;
   zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('dragover'); });
   zone.addEventListener('dragleave', function () { zone.classList.remove('dragover'); });
   zone.addEventListener('drop', function (e) { e.preventDefault(); zone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
