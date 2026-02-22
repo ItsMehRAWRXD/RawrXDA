@@ -1,4 +1,0 @@
-def func main() -> int {
-    ret 42
-}
-;

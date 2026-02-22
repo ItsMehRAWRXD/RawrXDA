@@ -1,6 +1,0 @@
-ninja: error: build.ninja:35: loading 'CMakeFiles\rules.ninja': The system cannot find the file specified.
-
-
-include CMakeFiles\rules.ninja
-
-                              ^ near here

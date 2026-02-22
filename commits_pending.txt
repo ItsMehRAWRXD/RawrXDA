@@ -1,5 +1,0 @@
-7dc6bccc chore: Add .gitignore for model files (*.gguf)
-b71cc332 fix: Handle std::bad_alloc in tokenizer initialization
-fc6b484c feat: Enterprise telemetry & real-time monitoring (production-ready)
-c0468528 PRODUCTION: Add comprehensive debug logging to inference pipeline + upgrade all Note: production comments to real implementations
-7a2ae43d Fix GGUF metadata parsing and tensor type handling

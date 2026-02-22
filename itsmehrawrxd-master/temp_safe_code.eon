@@ -1,8 +1,0 @@
-// SAFE EON Code - Won't blue screen!
-module SafeExample
-
-function main() -> int {
-    println("Hello from SAFE ASM Toolchain!")
-    println("No blue screens guaranteed!")
-    return 0
-}

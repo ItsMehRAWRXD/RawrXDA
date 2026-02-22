@@ -1,1 +1,0 @@
-{\n  \"description\": \"A simple hello world plugin\",\n  \"name\": \"HelloWorld\",\n  \"permissions\": [\"file_ops\"],\n  \"version\": \"1.0.0\"\n}

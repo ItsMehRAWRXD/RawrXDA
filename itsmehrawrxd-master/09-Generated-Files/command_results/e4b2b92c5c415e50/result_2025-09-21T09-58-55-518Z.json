@@ -1,7 +1,0 @@
-{
-  "type": "command_result",
-  "commandId": "3fad42c8f72ed580",
-  "result": "error",
-  "details": "Unknown command: stop_reverse_proxy",
-  "timestamp": "2025-09-21T09:58:55.517Z"
-}

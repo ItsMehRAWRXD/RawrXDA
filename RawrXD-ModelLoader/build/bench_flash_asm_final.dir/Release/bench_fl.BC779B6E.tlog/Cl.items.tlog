@@ -1,4 +1,0 @@
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\tests\bench_flash_asm_final.cpp;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\bench_flash_asm_final.obj
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\flash_attn_avx2.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\flash_attn_avx2.obj
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\flash_attn_optimized.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\flash_attn_optimized.obj
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\matmul_kernel_avx2.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\matmul_kernel_avx2.obj

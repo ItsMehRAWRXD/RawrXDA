@@ -1,9 +1,0 @@
-EXIT: EXIT_CODE=0 
----FAILS---
----ERRORS---
----TAIL---
-
- Assembling: D:\rawrxd\src\asm\RawrXD-StreamingOrchestrator.asm
-
-[302/302] Linking CXX executable bin\RawrXD-Win32IDE.exe
-EXIT_CODE=0

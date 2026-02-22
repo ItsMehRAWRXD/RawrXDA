@@ -1,9 +1,0 @@
-{
-  "name": "com.my_company.my_application",
-  "description": "My AI Desktop Helper",
-  "path": "C:\\path\\to\\your\\helper_app.exe", // Path to your compiled executable
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://<your-extension-id>/"
-  ]
-}

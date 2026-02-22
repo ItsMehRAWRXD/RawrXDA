@@ -1,9 +1,0 @@
-{
-  "manifests": [
-    {
-      "name": "SampleManifest",
-      "path": "D:/lazy init ide/sample_script.ps1",
-      "type": "PowerShell"
-    }
-  ]
-}

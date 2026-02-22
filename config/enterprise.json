@@ -1,1 +1,0 @@
-{\n  \"provider\": \"azure-ad\",\n  \"client_id\": \"your-client-id-here\",\n  \"jwks_url\": \"https://login.microsoftonline.com/common/discovery/v2.0/keys\",\n  \"authority\": \"https://login.microsoftonline.com/your-tenant-id/v2.0\"\n}\n

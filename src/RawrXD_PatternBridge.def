@@ -1,9 +1,0 @@
-; RawrXD Pattern Bridge Export Definitions
-; Auto-generated for MASM toolchain
-
-LIBRARY RawrXD_PatternBridge
-EXPORTS
-    ClassifyPattern @1
-    InitializePatternEngine @2
-    ShutdownPatternEngine @3
-    GetPatternStats @4
