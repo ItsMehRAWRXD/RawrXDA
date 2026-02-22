@@ -1,13 +1,12 @@
 #include <immintrin.h>
 #include <cstdint>
-#include <vector>
 #include <cstring>
 #if defined(_MSC_VER)
 #include <intrin.h>
 #endif
 
 extern "C" void q8_0_unpack_64x64(const int8_t* q8, float* fp32, float scale);
-extern "C" void matmul_kernel_avx2(float* A, float* B, float* C, int N, int M, int K);
+extern "C" void matmul_kernel_avx2(const float* A, const float* B, float* C, int M, int N, int K);
 
 static void gemm_q8_0_scalar(int M, int N, int K, const float* A, const int8_t* Bq8, float scale, float* C) {
     for (int i = 0; i < M; ++i) {
@@ -48,6 +47,9 @@ extern "C" void ggml_gemm_q8_0_avx2(int M, int N, int K, const float* A, const i
     constexpr int TN = 64;
     constexpr int TK = 64;
     thread_local static float Btile[TM * TN];
+    thread_local static float Ablk_buf[TM * TK];
+    thread_local static float Bblk_buf[TK * TN];
+    thread_local static float Cblk_buf[TM * TN];
 
     for (int i0 = 0; i0 < M; i0 += TM) {
         int Mb = (i0 + TM <= M) ? TM : (M - i0);
@@ -71,22 +73,18 @@ extern "C" void ggml_gemm_q8_0_avx2(int M, int N, int K, const float* A, const i
                 q8_0_unpack_64x64(q8_panel, Btile, scale);
                 
                 // Blocked GEMM
-                std::vector<float> Ablk(Mb * Kb);
-                std::vector<float> Bblk(Kb * Nb);
-                std::vector<float> Cblk(Mb * Nb);
-                
                 for (int ii = 0; ii < Mb; ++ii) {
-                    std::memcpy(&Ablk[ii * Kb], A + (i0 + ii) * K + k0, sizeof(float) * Kb);
+                    std::memcpy(&Ablk_buf[ii * Kb], A + (i0 + ii) * K + k0, sizeof(float) * Kb);
                 }
                 for (int kk = 0; kk < Kb; ++kk) {
-                    std::memcpy(&Bblk[kk * Nb], &Btile[kk * TN], sizeof(float) * Nb);
+                    std::memcpy(&Bblk_buf[kk * Nb], &Btile[kk * TN], sizeof(float) * Nb);
                 }
                 
-                matmul_kernel_avx2(Ablk.data(), Bblk.data(), Cblk.data(), Mb, Kb, Nb);
+                matmul_kernel_avx2(Ablk_buf, Bblk_buf, Cblk_buf, Mb, Nb, Kb);
                 
                 for (int ii = 0; ii < Mb; ++ii) {
                     float* Cd = C + (i0 + ii) * N + j0;
-                    const float* Cs = &Cblk[ii * Nb];
+                    const float* Cs = &Cblk_buf[ii * Nb];
                     for (int jj = 0; jj < Nb; ++jj) Cd[jj] += Cs[jj];
                 }
             }

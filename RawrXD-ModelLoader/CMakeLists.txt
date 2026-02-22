@@ -495,7 +495,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/tests/bench_q8_0_end2end.cpp")
         kernels/q8_0_avx2.cc
     )
     target_include_directories(bench_q8_0_end2end PRIVATE ${CMAKE_SOURCE_DIR})
-    target_compile_options(bench_q8_0_end2end PRIVATE /arch:AVX2 /O2)
+    if(MSVC)
+        target_compile_options(bench_q8_0_end2end PRIVATE /arch:AVX2 /O2)
+    else()
+        target_compile_options(bench_q8_0_end2end PRIVATE -mavx2 -O2)
+    endif()
     target_compile_definitions(bench_q8_0_end2end PRIVATE __AVX2__=1)
     set_target_properties(bench_q8_0_end2end PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"

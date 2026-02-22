@@ -2,43 +2,6 @@
 #include <cstdint>
 #include <cstring>
 
-// Q8_0 block: 32 int8 weights + 1 float16 scale
-// Simpler than Q4_0 - direct int8 values, no nibble packing
-struct BlockQ8_0 {
-    uint16_t d;      // delta (float16)
-    int8_t qs[32];   // 32 signed bytes
-};
-
-// Convert float16 to float32
-static inline float fp16_to_fp32(uint16_t h) {
-    uint32_t sign = (h & 0x8000) << 16;
-    uint32_t exp = (h & 0x7C00) >> 10;
-    uint32_t mant = (h & 0x03FF);
-    
-    if (exp == 0) {
-        if (mant == 0) return 0.0f;
-        // Denormalized
-        exp = 1;
-        while ((mant & 0x0400) == 0) {
-            mant <<= 1;
-            exp--;
-        }
-        mant &= 0x03FF;
-    }
-    
-    uint32_t f32;
-    if (exp == 0x1F) {
-        // Inf or NaN
-        f32 = sign | 0x7F800000 | (mant << 13);
-    } else {
-        f32 = sign | ((exp + 112) << 23) | (mant << 13);
-    }
-    
-    float result;
-    std::memcpy(&result, &f32, sizeof(float));
-    return result;
-}
-
 // Scalar reference: Q8_0 dequant + dot product for 32 elements
 extern "C" float q8_0_dot_scalar(const int8_t* q8, const float* a, float scale) {
     float sum = 0.0f;

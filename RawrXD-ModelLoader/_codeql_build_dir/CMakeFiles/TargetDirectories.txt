@@ -1,0 +1,4 @@
+/home/runner/work/RawrXD/RawrXD/RawrXD-ModelLoader/_codeql_build_dir/CMakeFiles/RawrXD-Chromatic.dir
+/home/runner/work/RawrXD/RawrXD/RawrXD-ModelLoader/_codeql_build_dir/CMakeFiles/bench_q8_0_end2end.dir
+/home/runner/work/RawrXD/RawrXD/RawrXD-ModelLoader/_codeql_build_dir/CMakeFiles/edit_cache.dir
+/home/runner/work/RawrXD/RawrXD/RawrXD-ModelLoader/_codeql_build_dir/CMakeFiles/rebuild_cache.dir

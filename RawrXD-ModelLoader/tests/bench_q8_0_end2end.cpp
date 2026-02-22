@@ -1,4 +1,3 @@
-#include <immintrin.h>
 #include <cstdint>
 #include <cstdio>
 #include <vector>
@@ -55,9 +54,13 @@ int main() {
     gemm_q8_0_scalar(M, N, K, A.data(), Bq8.data(), scale, Cref.data());
     ggml_gemm_q8_0(M, N, K, A.data(), Bq8.data(), scale, Copt.data());
 
-    float max_abs = 0.0f;
-    for (int i = 0; i < M * N; ++i) max_abs = std::max(max_abs, std::abs(Cref[i] - Copt[i]));
-    std::printf("Max abs diff: %.6f\n", max_abs);
+    float max_abs_diff = 0.0f;
+    for (int i = 0; i < M * N; ++i) max_abs_diff = std::max(max_abs_diff, std::abs(Cref[i] - Copt[i]));
+    std::printf("Max abs diff: %.6f\n", max_abs_diff);
+    if (max_abs_diff > 1e-3f) {
+        std::printf("❌ CORRECTNESS: max diff %.6f exceeds threshold\n", max_abs_diff);
+        return 1;
+    }
 
     const int iters = 100;
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -76,6 +79,10 @@ int main() {
 
     double speedup = ms_scalar / ms_opt;
     std::printf("Scalar: %.2f ms  Opt(AVX2): %.2f ms  Speedup: %.2fx\n", ms_scalar, ms_opt, speedup);
+
+    if (ms_opt < 1e-6) {
+        std::puts("⚠️ WARNING: Optimized time too small to measure reliably");
+    }
 
     if (speedup >= 2.5) {
         std::puts("✅ END-TO-END: >= 2.5× speedup achieved");
