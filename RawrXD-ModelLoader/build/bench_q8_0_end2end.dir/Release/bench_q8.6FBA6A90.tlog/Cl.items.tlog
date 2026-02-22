@@ -1,3 +1,0 @@
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\tests\bench_q8_0_end2end.cpp;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_q8_0_end2end.dir\Release\bench_q8_0_end2end.obj
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\q8_0_avx2.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_q8_0_end2end.dir\Release\q8_0_avx2.obj
-D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\kernels\matmul_kernel_avx2.cc;D:\temp\RawrXD-q8-wire\RawrXD-ModelLoader\build\bench_q8_0_end2end.dir\Release\matmul_kernel_avx2.obj

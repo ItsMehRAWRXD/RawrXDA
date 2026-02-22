@@ -1,4 +1,0 @@
-EXPORTS
-InitModel @1
-GenerateResponse @2
-CleanupModel @3

@@ -1,1 +1,0 @@
-{"name":"cursor-agent","description":"Cursor agent extension","publisher":"anysphere","version":"0.0.1","engines":{"vscode":"^1.43.0"},"main":"./dist/main","activationEvents":["*"],"enabledApiProposals":["control","cursor","cursorTracing"],"extensionDependencies":[],"contributes":{"commands":[{"command":"cursor-agent.disconnect","title":"Cursor Agent: Disconnect"}]}}

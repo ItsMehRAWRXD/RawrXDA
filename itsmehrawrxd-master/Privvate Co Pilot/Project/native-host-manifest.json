@@ -1,1 +1,0 @@
-REG ADD "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.my_company.my_application" /ve /t REG_SZ /d "<path-to-manifest.json>" /f

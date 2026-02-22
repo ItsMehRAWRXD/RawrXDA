@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/Microsoft.ML.OnnxRuntime.nuspec" Id="R691C56B02D390B99" />
-  <Relationship Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="/package/services/metadata/core-properties/ce0c45b5a9474395a32b1707a493e599.psmdcp" Id="RCBB129B6AF65310B" />
-</Relationships>

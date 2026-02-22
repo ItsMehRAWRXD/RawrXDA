@@ -1,7 +1,0 @@
-{
-  "type": "command_result",
-  "commandId": "cf632ae0fac78046",
-  "result": "error",
-  "details": "Unknown command: start_dns_spoofing",
-  "timestamp": "2025-09-21T09:58:53.763Z"
-}

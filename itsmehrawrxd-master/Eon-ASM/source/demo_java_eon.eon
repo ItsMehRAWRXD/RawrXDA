@@ -1,7 +1,0 @@
-// Java EON compiler test
-def func main() -> void {
-    let x: int = 42;
-    let y: int = 10;
-    let result: int = x + y;
-    ret 0;
-}

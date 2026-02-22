@@ -1,3 +1,0 @@
-=== Sovereign NVMe Thermal Governor ===
-Governor Active. Monitoring...
-Agentic Bridge Spurred on Thread ID: 11424

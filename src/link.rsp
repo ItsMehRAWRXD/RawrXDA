@@ -1,9 +1,0 @@
-/subsystem:console
-/entry:main
-dumpbin_final.obj
-kernel32.lib
-user32.lib
-advapi32.lib
-psapi.lib
-crypt32.lib
-shlwapi.lib

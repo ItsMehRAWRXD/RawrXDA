@@ -1,9 +1,0 @@
-{
-  "name": "com.my_company.my_application",
-  "description": "Custom desktop AI helper",
-  "path": "C:\\path\\to\\your\\AIDesktopHelper.Host.exe",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://<your-extension-id>/"
-  ]
-}

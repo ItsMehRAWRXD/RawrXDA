@@ -1,14 +1,0 @@
-========================================
-OMEGA-POLYGLOT PRO v3.0 Builder
-========================================
-
-[1/3] Cleaning...
-[2/3] Assembling...
- Assembling: omega_pro_v3.asm
-Microsoft (R) Macro Assembler Version 6.14.8444
-Copyright (C) Microsoft Corp 1981-1997.  All rights reserved.
-
-MASM : fatal error A1000: cannot open file : omega_pro_v3.asm
-[!] Assembly failed
-Press any key to continue . . . 
-Terminate batch job (Y/N)? 

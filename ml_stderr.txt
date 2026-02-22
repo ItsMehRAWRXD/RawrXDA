@@ -1,3 +1,0 @@
-Microsoft (R) Macro Assembler Version 6.14.8444
-Copyright (C) Microsoft Corp 1981-1997.  All rights reserved.
-

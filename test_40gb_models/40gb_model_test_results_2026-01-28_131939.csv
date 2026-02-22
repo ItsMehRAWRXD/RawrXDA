@@ -1,4 +1,0 @@
-Model,LoadTime_s,ParseTime_s,TensorCount,InitTime_ms,TPS,PipelineTime_s,Memory_GB,Status
-BigDaddyG-F32-FROM-Q4.gguf,0.0005389,6.8E-06,213,103.3996,203.57,0.2060703,28,OK
-BigDaddyG-NO-REFUSE-Q4_K_M.gguf,1.3E-06,3.1E-06,228,76.2169,195.56,0.1724926,30,OK
-BigDaddyG-UNLEASHED-Q4_K_M.gguf,1.1E-06,1.8E-06,226,107.946,176.91,0.1391952,26,OK

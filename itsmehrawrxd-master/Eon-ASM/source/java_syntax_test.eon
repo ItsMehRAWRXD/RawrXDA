@@ -1,4 +1,0 @@
-def func main() {
-    let x = 42
-    ret x
-}
