@@ -100,6 +100,7 @@ EXTERN UnloadModel:PROC
 EXTERN ModelLoaderInit:PROC
 EXTERN HotSwapModel:PROC
 EXTERN GetCurrentModelPath:PROC
+EXTERN GetModelLoadTimestamp:PROC
 
 ; beacon.asm (X+4)
 EXTERN TryBeaconRecv:PROC

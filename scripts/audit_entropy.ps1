@@ -32,7 +32,10 @@ $CanonicalASM = @(
     "beacon.asm",
     "lsp.asm",
     "agent.asm",
-    "model_loader.asm"
+    "model_loader.asm",
+    "dap.asm",
+    "testing.asm",
+    "tasks.asm"
 )
 
 $MonoDir = Join-Path $RepoRoot "src\asm\monolithic"
