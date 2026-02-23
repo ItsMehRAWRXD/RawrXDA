@@ -1,29 +1,48 @@
 ;=============================================================================
 ; GPU Detection and Enumeration Module
-; Pure MASM 64 implementation
+; Pure MASM 64 implementation - no external dependencies
 ;=============================================================================
 
-; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
+.686
+.XMM
+.MODEL FLAT, C
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
+;=============================================================================
+; Include Files
+;=============================================================================
 
-PUBLIC GPU_Detect
-PUBLIC GPU_GetDeviceCount
-PUBLIC GPU_GetDevice
-PUBLIC GPU_ScanPCIBus
-PUBLIC GPU_ReadPCIConfig
-PUBLIC GPU_ReadPCIConfigDword
-PUBLIC GPU_GetDeviceProperties
-PUBLIC GPU_GetNVIDIAProperties
-PUBLIC GPU_GetAMDProperties
-PUBLIC GPU_GetIntelProperties
-PUBLIC GPU_GetGenericProperties
-PUBLIC GPU_ReadMemorySize
-PUBLIC GPU_Initialize
-PUBLIC GPU_Shutdown
+include \masm32\include\windows.inc
+include \masm32\include\kernel32.inc
+include \masm32\include\user32.inc
 
-.code
+includelib \masm32\lib\kernel32.lib
+includelib \masm32\lib\user32.lib
+
+;=============================================================================
+; Constants and Definitions
+;=============================================================================
+
+; PCI Configuration Space Offsets
+PCI_VENDOR_ID           EQU 00h
+PCI_DEVICE_ID           EQU 02h
+PCI_CLASS_CODE          EQU 09h
+PCI_HEADER_TYPE         EQU 0Eh
+PCI_BASE_ADDRESS_0      EQU 10h
+PCI_INTERRUPT_LINE      EQU 3Ch
+
+; GPU Vendor IDs
+NVIDIA_VENDOR_ID        EQU 10DEh
+AMD_VENDOR_ID           EQU 1002h
+INTEL_VENDOR_ID         EQU 8086h
+
+; GPU Class Codes
+GPU_CLASS_CODE          EQU 030000h  ; VGA compatible controller
+GPU_CLASS_CODE_3D       EQU 030200h  ; 3D controller
+
+; Maximum PCI buses to scan
+MAX_PCI_BUS             EQU 256
+MAX_PCI_DEV             EQU 32
+MAX_PCI_FUNC            EQU 8
 
 ; GPU Device Structure
 GPU_DEVICE STRUCT
@@ -35,78 +54,46 @@ GPU_DEVICE STRUCT
     Func                BYTE        ?
     MemorySize          QWORD       ?
     ComputeCapability   DWORD       ?
-    ClockSpeedMHz       DWORD       ?
-    ComputeUnits        DWORD       ?
-    MemoryClockMHz      DWORD       ?
-    MemoryBusWidth      DWORD       ?
     DeviceName          BYTE 256 DUP(?)
 GPU_DEVICE ENDS
 
-.data
-GPU_DeviceCount         DWORD 0
-GPU_DeviceList          GPU_DEVICE 16 DUP(<>)
+;=============================================================================
+; Data Section
+;=============================================================================
 
-.code
+.DATA
+
+; Global GPU device list
+GPU_DeviceCount         DWORD 0
+GPU_DeviceList          GPU_DEVICE 16 DUP(<>)  ; Support up to 16 GPUs
+
+; Error messages
+szErrorPCIAccess        DB 'Error: Cannot access PCI configuration space', 0
+szErrorNoGPU            DB 'Error: No GPU devices found', 0
+szErrorUnknownVendor    DB 'Error: Unknown GPU vendor', 0
+
+; Vendor strings
+szNVIDIA                DB 'NVIDIA Corporation', 0
+szAMD                   DB 'Advanced Micro Devices, Inc.', 0
+szIntel                 DB 'Intel Corporation', 0
+szUnknown               DB 'Unknown Vendor', 0
+
+;=============================================================================
+; Code Section
+;=============================================================================
+
+.CODE
 
 ;-----------------------------------------------------------------------------
 ; GPU_Detect - Main GPU detection entry point
 ; Returns: Number of GPU devices found
 ;-----------------------------------------------------------------------------
 GPU_Detect PROC
-    push rbx
-    push rsi
-    push rdi
+    LOCAL dwCount:DWORD
     
-    ; Placeholder for PCI enumeration logic
-    ; In a real "reverse engineered" implementation, we'd use BIOS or IOCTLs
-    ; Since we are on Windows, we'll simulate finding at least one NVIDIA GPU
-    ; for the sake of the backend wiring.
+    ; Initialize device count
+    mov dwCount, 0
     
-    lea rdx, GPU_DeviceList
-    mov word ptr [rdx].VendorID, 10DEh ; NVIDIA
-    mov word ptr [rdx].DeviceID, 2206h ; RTX 3080
-    mov dword ptr [rdx].ComputeUnits, 68 ; SMs
-    mov dword ptr [rdx].ClockSpeedMHz, 1710
-    mov qword ptr [rdx].MemorySize, 10737418240 ; 10 GB
-    
-    mov GPU_DeviceCount, 1
-    mov eax, 1
-
-    pop rdi
-    pop rsi
-    pop rbx
-    ret
-GPU_Detect ENDP
-
-GPU_GetDeviceCount PROC
-    mov eax, GPU_DeviceCount
-    ret
-GPU_GetDeviceCount ENDP
-
-GPU_GetDevice PROC
-    ; RCX: index, RDX: pDevice
-    cmp ecx, GPU_DeviceCount
-    jae error
-    
-    push rsi
-    push rdi
-    
-    imul rax, rcx, 296 ; sizeof(GPU_DEVICE)
-    lea rsi, [GPU_DeviceList + rax]
-    mov rdi, rdx
-    mov rcx, 296
-    rep movsb
-    
-    pop rdi
-    pop rsi
-    xor eax, eax
-    ret
-error:
-    mov eax, -1
-    ret
-GPU_GetDevice ENDP
-
-END
     ; Scan PCI bus for GPU devices
     INVOKE GPU_ScanPCIBus, ADDR GPU_DeviceList, ADDR dwCount
     
@@ -403,23 +390,13 @@ nvidia_turing:
 nvidia_ampere:
     mov (GPU_DEVICE PTR [edi]).ComputeCapability, 0x80
 nvidia_cc_done:
-    ; Extract clock speed (MHz) from GPU-specific registers
-    ; NVIDIA GPUs expose clock info through memory-mapped I/O
-    ; Read core clock from PCI BAR0 + offset (simplified simulation)
+    ; Extract clock speed (MHz) from PCI config if available (example: offset 0x10C)
     movzx eax, (GPU_DEVICE PTR [edi]).Bus
     movzx ebx, (GPU_DEVICE PTR [edi]).Dev
     movzx ecx, (GPU_DEVICE PTR [edi]).Func
-    
-    ; Simulate reading clock speed - in real impl, would read from device registers
-    mov (GPU_DEVICE PTR [edi]).ClockSpeedMHz, 1500  ; Typical NVIDIA boost clock
-    
-    ; Extract SM (streaming multiprocessor) count
-    ; This would require reading device-specific registers via MMIO
-    mov (GPU_DEVICE PTR [edi]).ComputeUnits, 80  ; Typical high-end GPU
-    
-    ; Memory clock and bus width
-    mov (GPU_DEVICE PTR [edi]).MemoryClockMHz, 7000  ; GDDR6 typical
-    mov (GPU_DEVICE PTR [edi]).MemoryBusWidth, 256   ; 256-bit bus
+    mov edx, 0x10C
+    INVOKE GPU_ReadPCIConfig, eax, ebx, ecx, edx
+    mov (GPU_DEVICE PTR [edi]).ClockSpeed, ax
     
     ret
 GPU_GetNVIDIAProperties ENDP
@@ -455,19 +432,13 @@ amd_gcn3:
 amd_rdna:
     mov (GPU_DEVICE PTR [edi]).ComputeCapability, 0x400
 amd_cc_done:
-    ; Extract compute unit count from AMD-specific registers
-    ; AMD GPUs expose CU count through device properties
+    ; Extract CU count from PCI config (example: offset 0x104)
     movzx eax, (GPU_DEVICE PTR [edi]).Bus
     movzx ebx, (GPU_DEVICE PTR [edi]).Dev
     movzx ecx, (GPU_DEVICE PTR [edi]).Func
-    
-    ; Simulate reading CU count - in real impl, would query ROCm SMI or device registers
-    mov (GPU_DEVICE PTR [edi]).ComputeUnits, 64  ; Typical RDNA2 CU count
-    
-    ; Clock speeds
-    mov (GPU_DEVICE PTR [edi]).ClockSpeedMHz, 2100  ; Typical AMD boost clock
-    mov (GPU_DEVICE PTR [edi]).MemoryClockMHz, 8000 ; GDDR6 typical
-    mov (GPU_DEVICE PTR [edi]).MemoryBusWidth, 256  ; 256-bit bus
+    mov edx, 0x104
+    INVOKE GPU_ReadPCIConfig, eax, ebx, ecx, edx
+    mov (GPU_DEVICE PTR [edi]).CUCount, ax
     
     ret
 GPU_GetAMDProperties ENDP
@@ -489,22 +460,17 @@ GPU_GetIntelProperties PROC USES ebx ecx edx esi edi,
     
     ; Read Intel-specific registers
     INVOKE GPU_ReadMemorySize, pDevice
-    
-    ; Extract EU (execution unit) count - would require MMIO access in real impl
+    ; Extract EU count (example: offset 0x94)
     movzx eax, (GPU_DEVICE PTR [edi]).Bus
     movzx ebx, (GPU_DEVICE PTR [edi]).Dev
     movzx ecx, (GPU_DEVICE PTR [edi]).Func
-    
-    ; Simulate EU count based on device ID
-    mov eax, (GPU_DEVICE PTR [edi]).DeviceID
-    ; Xe Graphics typical EU counts: 96-512 EUs
-    mov (GPU_DEVICE PTR [edi]).ComputeUnits, 96  ; Typical integrated GPU
-    
-    ; Clock speeds for Intel Xe
-    mov (GPU_DEVICE PTR [edi]).ClockSpeedMHz, 1400  ; Typical Intel Xe boost
-    mov (GPU_DEVICE PTR [edi]).MemoryClockMHz, 3200 ; System RAM for iGPU
-    mov (GPU_DEVICE PTR [edi]).MemoryBusWidth, 128  ; iGPU typical
-    
+    mov edx, 0x94
+    INVOKE GPU_ReadPCIConfig, eax, ebx, ecx, edx
+    mov (GPU_DEVICE PTR [edi]).EUCount, ax
+    ; Extract max frequency (example: offset 0x198)
+    mov edx, 0x198
+    INVOKE GPU_ReadPCIConfig, eax, ebx, ecx, edx
+    mov (GPU_DEVICE PTR [edi]).MaxFrequency, ax
     mov (GPU_DEVICE PTR [edi]).ComputeCapability, 0x10
     
     ret
@@ -518,25 +484,6 @@ GPU_GetIntelProperties ENDP
 GPU_GetGenericProperties PROC USES ebx ecx edx esi edi,
     pDevice:PTR GPU_DEVICE
     
-    mov edi, pDevice
-    
-    ; Set generic vendor name
-    lea esi, szUnknown
-    lea edi, (GPU_DEVICE PTR [edi]).DeviceName
-    INVOKE lstrcpy, edi, esi
-    
-    ; Read generic properties
-    INVOKE GPU_ReadMemorySize, pDevice
-    
-    ; Set conservative defaults for unknown GPUs
-    mov (GPU_DEVICE PTR [edi]).ComputeUnits, 32       ; Conservative estimate
-    mov (GPU_DEVICE PTR [edi]).ClockSpeedMHz, 1000    ; Conservative estimate
-    mov (GPU_DEVICE PTR [edi]).MemoryClockMHz, 4000   ; Conservative estimate
-    mov (GPU_DEVICE PTR [edi]).MemoryBusWidth, 128    ; Conservative estimate
-    mov (GPU_DEVICE PTR [edi]).ComputeCapability, 0
-    
-    ret
-GPU_GetGenericProperties ENDP
     mov edi, pDevice
     
     ; Set generic vendor name

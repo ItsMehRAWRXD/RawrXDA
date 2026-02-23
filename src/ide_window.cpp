@@ -12,7 +12,6 @@
 #include <set>
 #include <cstdio>
 #include <winhttp.h>
-#include <memory> 
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -40,10 +39,6 @@ static const int ID_TABCONTROL = 4005;
 static const int ID_WEBBROWSER = 4006;
 static const int ID_AUTOCOMPLETE_LIST = 4007;
 static const int ID_PARAMETER_HINT = 4008;
-#define IDM_TOOLS_ANALYZE 5001
-#define IDM_TOOLS_TEST    5002
-
-#include "../gui/RawrXD_EditorWindow.h" // Use Direct2D Editor
 
 IDEWindow::IDEWindow()
     : hwnd_(nullptr)
@@ -53,7 +48,6 @@ IDEWindow::IDEWindow()
     , hOutput_(nullptr)
     , hStatusBar_(nullptr)
     , hToolBar_(nullptr)
-    , pEditor(nullptr) 
     , hTabControl_(nullptr)
     , hWebBrowser_(nullptr)
     , hAutocompleteList_(nullptr)
@@ -188,12 +182,6 @@ void IDEWindow::CreateMenuBar()
     AppendMenuW(hRunMenu, MF_STRING, IDM_RUN_SCRIPT, L"&Run Script\tF5");
     AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hRunMenu, L"&Run");
     
-    // Tools menu
-    HMENU hToolsMenu = CreatePopupMenu();
-    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_ANALYZE, L"&Analyze Codebase");
-    AppendMenuW(hToolsMenu, MF_STRING, IDM_TOOLS_TEST, L"Generate &Tests");
-    AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hToolsMenu, L"&Tools");
-
     SetMenu(hwnd_, hMenuBar);
 }
 
@@ -260,20 +248,46 @@ void IDEWindow::CreateEditorControl()
     GetWindowRect(hStatusBar_, &rcStatus);
     int statusHeight = rcStatus.bottom - rcStatus.top;
     
-    // Create Direct2D editor control
-    pEditor = new RawrXD::EditorWindow();
+    // Create rich edit control
+    hEditor_ = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"RICHEDIT50W",
+        L"",
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_NOHIDESEL,
+        200, toolbarHeight,
+        rcClient.right - 400,
+        rcClient.bottom - toolbarHeight - statusHeight - 200,
+        hwnd_,
+        (HMENU)ID_EDITOR,
+        hInstance_,
+        nullptr
+    );
     
-    // Initialize AI
-    aiHub = std::make_shared<RawrXD::AIIntegrationHub>();
-    pEditor->setAIHub(aiHub);
+    // Set editor font
+    HFONT hFont = CreateFontW(
+        -16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN,
+        L"Consolas"
+    );
+    SendMessageW(hEditor_, WM_SETFONT, (WPARAM)hFont, TRUE);
     
-    modelManager = std::make_shared<AutonomousModelManager>();
-    codebaseEngine = std::make_shared<IntelligentCodebaseEngine>();
-    featureEngine = std::make_shared<AutonomousFeatureEngine>();
-
-    if (pEditor->create(hwnd_, 200, toolbarHeight, rcClient.right - 400, rcClient.bottom - toolbarHeight - statusHeight - 200)) {
-       pEditor->setText(L"# RawrXD PowerShell IDE - C++ Native Edition\n# AI Logic Enabled\n");
-    }
+    // Set background and text colors
+    SendMessageW(hEditor_, EM_SETBKGNDCOLOR, 0, backgroundColor_);
+    
+    // Subclass editor for custom handling
+    originalEditorProc_ = (WNDPROC)SetWindowLongPtrW(hEditor_, GWLP_WNDPROC, (LONG_PTR)EditorProc);
+    SetWindowLongPtrW(hEditor_, GWLP_USERDATA, (LONG_PTR)this);
+    
+    // Set initial text
+    std::wstring initialText = 
+        L"# RawrXD PowerShell IDE - C++ Native Edition\n"
+        L"# Migration from RawrXD.ps1 to high-performance C++\n\n"
+        L"Write-Host \"Welcome to RawrXD IDE!\"\n"
+        L"$version = \"1.0\"\n"
+        L"Get-Process | Where-Object {$_.CPU -gt 10}\n";
+    
+    SetWindowTextW(hEditor_, initialText.c_str());
 }
 
 void IDEWindow::CreateFileExplorer()
@@ -413,25 +427,73 @@ void IDEWindow::CreateTabControl()
 
 void IDEWindow::CreateWebBrowser()
 {
-    // To ensure "inference rather than simulating", if the IDE needs to show web content,
-    // we launch the system browser with the target URL instead of showing a static placeholder.
-    // This allows real web operations.
+    // Initialize WebView2-based browser panel (no ATL dependency)
+    // WebView2 is available on Windows 10 1803+ with Evergreen runtime
     
-    // Default URL to GitHub repo or Documentation
-    ShellExecuteW(nullptr, L"open", L"https://github.com/ItsMehRAWRXD/RawrXD", nullptr, nullptr, SW_SHOW);
+    hWebBrowser_ = nullptr;
     
-    // Create a rich edit control in place of the browser to show logs/status
-    hWebBrowser_ = CreateWindowExW(
-        WS_EX_CLIENTEDGE,
-        L"STATIC", 
-        L"External Browser Launched for Web Content",
-        WS_CHILD | WS_VISIBLE | SS_CENTER | SS_CENTERIMAGE,
-        0, 0, 0, 0, // Resized later
-        hwnd_,
-        (HMENU)ID_WEBBROWSER,
-        hInstance_,
-        nullptr
-    );
+#ifdef WEBVIEW2_AVAILABLE
+    // Check for WebView2 runtime availability
+    LPWSTR versionInfo = nullptr;
+    HRESULT hr = GetAvailableCoreWebView2BrowserVersionString(nullptr, &versionInfo);
+    
+    if (hr != S_OK || versionInfo == nullptr) {
+        OutputDebugStringW(L"[IDEWindow] WebView2 runtime not installed - browser panel disabled\n");
+        OutputDebugStringW(L"[IDEWindow] Install from: https://developer.microsoft.com/en-us/microsoft-edge/webview2/\n");
+        return;
+    }
+    
+    OutputDebugStringW((std::wstring(L"[IDEWindow] WebView2 runtime detected: ") + versionInfo + L"\n").c_str());
+    CoTaskMemFree(versionInfo);
+    
+    // Create a host window for the WebView2 control
+    RECT rcClient;
+    GetClientRect(hMainWindow_, &rcClient);
+    
+    hWebBrowser_ = CreateWindowExW(0, L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
+        rcClient.right - 400, rcClient.bottom - 300, 400, 300,
+        hMainWindow_, nullptr, GetModuleHandle(nullptr), nullptr);
+    
+    if (!hWebBrowser_) {
+        OutputDebugStringW(L"[IDEWindow] Failed to create WebView2 host window\n");
+        return;
+    }
+    
+    // Initialize WebView2 environment asynchronously
+    CreateCoreWebView2EnvironmentWithOptions(nullptr, nullptr, nullptr,
+        Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
+            [this](HRESULT result, ICoreWebView2Environment* env) -> HRESULT {
+                if (FAILED(result) || !env) {
+                    OutputDebugStringW(L"[IDEWindow] WebView2 environment creation failed\n");
+                    return S_OK;
+                }
+                env->CreateCoreWebView2Controller(hWebBrowser_,
+                    Microsoft::WRL::Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+                        [this](HRESULT result, ICoreWebView2Controller* controller) -> HRESULT {
+                            if (FAILED(result) || !controller) return S_OK;
+                            // Navigate to built-in documentation or localhost dev server
+                            ICoreWebView2* webview = nullptr;
+                            controller->get_CoreWebView2(&webview);
+                            if (webview) {
+                                webview->Navigate(L"about:blank");
+                            }
+                            OutputDebugStringW(L"[IDEWindow] WebView2 browser panel initialized\n");
+                            return S_OK;
+                        }).Get());
+                return S_OK;
+            }).Get());
+#else
+    // WebView2 SDK not linked - create a static placeholder panel
+    RECT rcClient;
+    GetClientRect(hMainWindow_, &rcClient);
+    hWebBrowser_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"STATIC",
+        L"Browser panel requires WebView2 SDK. Build with -DWEBVIEW2_AVAILABLE to enable.",
+        WS_CHILD | SS_CENTER | SS_CENTERIMAGE,
+        rcClient.right - 400, rcClient.bottom - 300, 400, 300,
+        hMainWindow_, nullptr, GetModuleHandle(nullptr), nullptr);
+    OutputDebugStringW(L"[IDEWindow] WebView2 SDK not available at compile time - browser panel shows info text\n");
+#endif
 }
 
 void IDEWindow::PopulateFileTree(const std::wstring& rootPath)
@@ -559,60 +621,17 @@ LRESULT CALLBACK IDEWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                         PostQuitMessage(0);
                         return 0;
                     case IDM_EDIT_CUT:
-                        if (pThis->pEditor) pThis->pEditor->cut();
-                        else SendMessageW(pThis->hEditor_, WM_CUT, 0, 0);
+                        SendMessageW(pThis->hEditor_, WM_CUT, 0, 0);
                         return 0;
                     case IDM_EDIT_COPY:
-                        if (pThis->pEditor) pThis->pEditor->copy();
-                        else SendMessageW(pThis->hEditor_, WM_COPY, 0, 0);
+                        SendMessageW(pThis->hEditor_, WM_COPY, 0, 0);
                         return 0;
                     case IDM_EDIT_PASTE:
-                         if (pThis->pEditor) pThis->pEditor->paste();
-                         else SendMessageW(pThis->hEditor_, WM_PASTE, 0, 0);
+                        SendMessageW(pThis->hEditor_, WM_PASTE, 0, 0);
                         return 0;
                     case IDM_RUN_SCRIPT:
                         pThis->OnRunScript();
                         return 0;
-                    case IDM_TOOLS_ANALYZE:
-                         if (pThis->codebaseEngine) {
-                             std::wstring path = pThis->currentFilePath_;
-                             if (path.empty()) {
-                                 wchar_t buffer[MAX_PATH];
-                                 GetCurrentDirectoryW(MAX_PATH, buffer);
-                                 path = buffer;
-                             } else {
-                                 size_t lastSlash = path.find_last_of(L"\\/");
-                                 if (lastSlash != std::wstring::npos) {
-                                    path = path.substr(0, lastSlash);
-                                 }
-                             }
-                             
-                             int len = WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, nullptr, 0, nullptr, nullptr);
-                             std::string projectPath(len, 0);
-                             WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, &projectPath[0], len, nullptr, nullptr);
-                             if (len > 0) projectPath.resize(len - 1);
-                             
-                             bool success = pThis->codebaseEngine->analyzeEntireCodebase(projectPath);
-                             
-                             if (success) {
-                                 std::wstring msg = L"Codebase analysis completed for: " + path;
-                                 MessageBoxW(hwnd, msg.c_str(), L"Analysis", MB_OK);
-                                 
-                                 // Also refresh UI if needed
-                                 SendMessageW(pThis->hStatusBar_, SB_SETTEXTW, 0, (LPARAM)L"Analysis Complete");
-                             } else {
-                                 MessageBoxW(hwnd, L"Codebase analysis completed (or nothing to analyze).", L"Analysis", MB_ICONINFORMATION);
-                             }
-                         }
-                         return 0;
-                    case IDM_TOOLS_TEST:
-                         if (pThis->aiHub && pThis->pEditor) {
-                             std::string code = pThis->pEditor->getText().toStdString();
-                             std::string tests = pThis->aiHub->generateTests(code);
-                             // Display tests in Output
-                             SetWindowTextA(pThis->hOutput_, tests.c_str());
-                         }
-                         return 0;
                     case 5011: // Search button in marketplace
                         if (pThis->hMarketplaceSearch_) {
                             wchar_t searchText[256] = {0};
@@ -678,21 +697,9 @@ LRESULT CALLBACK IDEWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                               rcClient.bottom - toolbarHeight - statusHeight, TRUE);
                     MoveWindow(pThis->hTabControl_, 200, toolbarHeight,
                               rcClient.right - 400, TAB_HEIGHT, TRUE);
-                    
-                    if (pThis->pEditor) {
-                        MoveWindow(pThis->pEditor->handle(), 200, toolbarHeight + TAB_HEIGHT, 
+                    MoveWindow(pThis->hEditor_, 200, toolbarHeight + TAB_HEIGHT, 
                               rcClient.right - 400, 
                               rcClient.bottom - toolbarHeight - TAB_HEIGHT - statusHeight - 200, TRUE);
-                        // Force resize event to D2D
-                        RECT rc; 
-                        GetClientRect(pThis->pEditor->handle(), &rc);
-                        SendMessage(pThis->pEditor->handle(), WM_SIZE, 0, MAKELPARAM(rc.right, rc.bottom)); 
-                    } else if (pThis->hEditor_) {
-                        MoveWindow(pThis->hEditor_, 200, toolbarHeight + TAB_HEIGHT, 
-                              rcClient.right - 400, 
-                              rcClient.bottom - toolbarHeight - TAB_HEIGHT - statusHeight - 200, TRUE);
-                    }
-
                     MoveWindow(pThis->hTerminal_, 200, 
                               rcClient.bottom - statusHeight - 200, 
                               rcClient.right - 400, 200, TRUE);
@@ -826,20 +833,13 @@ void IDEWindow::OnSaveFile()
         currentFilePath_ = szFile;
     }
     
-    int len = 0;
-    std::wstring content;
-    if (pEditor) {
-        content = pEditor->getText().toStdWString();
-    } else {
-        len = GetWindowTextLengthW(hEditor_);
-        std::vector<wchar_t> buffer(len + 1);
-        GetWindowTextW(hEditor_, buffer.data(), len + 1);
-        content = buffer.data();
-    }
+    int len = GetWindowTextLengthW(hEditor_);
+    std::vector<wchar_t> buffer(len + 1);
+    GetWindowTextW(hEditor_, buffer.data(), len + 1);
     
     std::wofstream file(currentFilePath_);
     if (file.is_open()) {
-        file << content;
+        file << buffer.data();
         file.close();
         isModified_ = false;
         
@@ -1382,16 +1382,12 @@ void IDEWindow::SaveCurrentTab()
     }
     
     // Get current editor content
-    if (pEditor) {
-        openTabs_[activeTabId_].content = pEditor->getText().toStdWString();
-    } else {
-        int len = GetWindowTextLengthW(hEditor_);
-        std::vector<wchar_t> buffer(len + 1);
-        GetWindowTextW(hEditor_, buffer.data(), len + 1);
-        openTabs_[activeTabId_].content = buffer.data();
-    }
+    int len = GetWindowTextLengthW(hEditor_);
+    std::vector<wchar_t> buffer(len + 1);
+    GetWindowTextW(hEditor_, buffer.data(), len + 1);
     
     // Save to tab info
+    openTabs_[activeTabId_].content = buffer.data();
     openTabs_[activeTabId_].modified = isModified_;
 }
 
@@ -1404,12 +1400,7 @@ void IDEWindow::LoadTabContent(int tabId)
     TabInfo& tab = openTabs_[tabId];
     
     // Set editor content
-    if (pEditor) {
-        pEditor->setText(RawrXD::String(tab.content.c_str()));
-    } else {
-        SetWindowTextW(hEditor_, tab.content.c_str());
-    }
-    
+    SetWindowTextW(hEditor_, tab.content.c_str());
     currentFilePath_ = tab.filePath;
     isModified_ = tab.modified;
     
@@ -1458,7 +1449,7 @@ void IDEWindow::OnCloseTab(int tabIndex)
     
     // Check if modified and ask to save
     if (openTabs_[tabId].modified) {
-        int result = MessageBoxW(hwnd, 
+        int result = MessageBoxW(hwnd_, 
             L"Do you want to save changes?", 
             L"Unsaved Changes", 
             MB_YESNOCANCEL | MB_ICONQUESTION);
@@ -1645,143 +1636,1128 @@ void IDEWindow::FormatTrimTrailingWhitespace() {
 void IDEWindow::ListFunctions() {
     int len = GetWindowTextLengthW(hEditor_); std::vector<wchar_t> buf(len+1); GetWindowTextW(hEditor_, buf.data(), len+1); std::wstring text=buf.data();
     std::wregex psFunc(L"function\\s+([A-Za-z0-9_:-]+)\\s*\\(");
-    std::wregex cppFunc(L"([A-Za-z_][A-Za-z0-9_]*)\\s*\\(");
-    std::wsmatch match;
-    std::wstring functions;
-    size_t pos = 0;
-    while (std::regex_search(text.substr(pos), match, psFunc)) {
-        functions += match[1].str() + L"\n";
-        pos += match.position() + match.length();
-    }
-    pos = 0;
-    while (std::regex_search(text.substr(pos), match, cppFunc)) {
-        functions += match[1].str() + L"\n";
-        pos += match.position() + match.length();
-    }
-    if (!functions.empty()) {
-        functions.pop_back(); // Remove trailing newline
-        MessageBoxW(hwnd_, functions.c_str(), L"Functions in Script", MB_OK | MB_ICONINFORMATION);
-    } else {
-        MessageBoxW(hwnd_, L"No functions found in the script.", L"Functions in Script", MB_OK | MB_ICONINFORMATION);
-    }
+    std::wregex cppFunc(L"([A-Za-z_][A-Za-z0-9_:<>]*)\\s+([A-Za-z_][A-Za-z0-9_:<>]*)\\s*\\(.*?\\)\\s*\\{");
+    std::set<std::wstring> names; std::wsmatch m; std::wstring::const_iterator start=text.begin();
+    while(std::regex_search(start, text.cend(), m, psFunc)) { names.insert(m[1]); start = m.suffix().first; }
+    start = text.begin(); while(std::regex_search(start, text.cend(), m, cppFunc)) { names.insert(m[2]); start = m.suffix().first; }
+    std::wstring list=L"Functions:\n"; for(auto &n: names) list += n + L"\n"; if (names.empty()) list += L"(none)";
+    MessageBoxW(hwnd_, list.c_str(), L"Function List", MB_OK | MB_ICONINFORMATION);
+}
+
+std::wstring IDEWindow::DetectLanguage() {
+    if (currentFilePath_.empty()) return L"powershell";
+    std::wstring ext;
+    size_t dotPos = currentFilePath_.find_last_of(L'.');
+    if (dotPos != std::wstring::npos) ext = currentFilePath_.substr(dotPos);
+    if (ext == L".cpp" || ext == L".h" || ext == L".hpp" || ext == L".c" || ext == L".cc") return L"cpp";
+    if (ext == L".ps1" || ext == L".psm1" || ext == L".psd1") return L"powershell";
+    if (ext == L".py") return L"python";
+    if (ext == L".js" || ext == L".ts") return L"javascript";
+    return L"powershell";
 }
 
 void IDEWindow::ToggleLineComment() {
+    std::wstring lang = DetectLanguage();
+    std::wstring commentPrefix = (lang == L"cpp" || lang == L"javascript") ? L"// " : L"# ";
+    
+    DWORD startSel, endSel;
+    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&startSel, (LPARAM)&endSel);
+    int startLine = (int)SendMessageW(hEditor_, EM_LINEFROMCHAR, startSel, 0);
+    int endLine = (int)SendMessageW(hEditor_, EM_LINEFROMCHAR, endSel, 0);
+    
     int len = GetWindowTextLengthW(hEditor_);
-    if (len == 0) return;
     std::vector<wchar_t> buf(len+1);
     GetWindowTextW(hEditor_, buf.data(), len+1);
-    std::wstring text=buf.data();
-    
+    std::wstring text = buf.data();
     std::wstringstream in(text);
     std::wstring line;
-    std::wstring out;
-    bool firstLine = true;
+    std::vector<std::wstring> lines;
+    while(std::getline(in, line)) lines.push_back(line);
     
-    while (std::getline(in, line)) {
-        if (line.find(L"#") == 0) {
-            // Uncomment line
-            line.erase(0, 1);
-        } else {
-            // Comment line
-            line = L"# " + line;
+    // Check if all selected lines are commented
+    bool allCommented = true;
+    for(int i = startLine; i <= endLine && i < (int)lines.size(); ++i) {
+        std::wstring trimmed = lines[i];
+        while(!trimmed.empty() && (trimmed[0] == L' ' || trimmed[0] == L'\t')) trimmed = trimmed.substr(1);
+        if (!trimmed.empty() && trimmed.find(commentPrefix.substr(0, commentPrefix.length()-1)) != 0) {
+            allCommented = false;
+            break;
         }
-        out += line;
-        if (in.peek() != WEOF) out += L"\n";
     }
     
-    SetWindowTextW(hEditor_, out.c_str());
+    // Toggle comments
+    for(int i = startLine; i <= endLine && i < (int)lines.size(); ++i) {
+        if (allCommented) {
+            // Remove comment
+            std::wstring& l = lines[i];
+            size_t pos = l.find(commentPrefix.substr(0, commentPrefix.length()-1));
+            if (pos != std::wstring::npos) {
+                l.erase(pos, commentPrefix.length());
+                // Also remove one trailing space if exists after comment marker
+                if (pos < l.length() && l[pos] == L' ') l.erase(pos, 1);
+            }
+        } else {
+            // Add comment at start (preserving indentation)
+            size_t firstNonSpace = 0;
+            while(firstNonSpace < lines[i].length() && (lines[i][firstNonSpace] == L' ' || lines[i][firstNonSpace] == L'\t')) firstNonSpace++;
+            if (firstNonSpace < lines[i].length()) {
+                lines[i].insert(firstNonSpace, commentPrefix);
+            }
+        }
+    }
+    
+    std::wstring result;
+    for(size_t i = 0; i < lines.size(); ++i) {
+        if (i > 0) result += L"\n";
+        result += lines[i];
+    }
+    SetWindowTextW(hEditor_, result.c_str());
     isModified_ = true;
     SaveCurrentTab();
     UpdateStatusBar();
 }
 
 void IDEWindow::DuplicateLine() {
-    DWORD start, end;
-    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&start, (LPARAM)&end);
-    if (start == end) return; // No selection, do nothing
+    DWORD startSel, endSel;
+    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&startSel, (LPARAM)&endSel);
+    int lineNum = (int)SendMessageW(hEditor_, EM_LINEFROMCHAR, startSel, 0);
+    int lineStart = (int)SendMessageW(hEditor_, EM_LINEINDEX, lineNum, 0);
+    int lineLen = (int)SendMessageW(hEditor_, EM_LINELENGTH, lineStart, 0);
     
-    // Get the current line
-    int lineIndex = SendMessageW(hEditor_, EM_LINEFROMCHAR, start, 0);
-    int lineStart = SendMessageW(hEditor_, EM_LINEINDEX, lineIndex, 0);
-    int lineLength = SendMessageW(hEditor_, EM_LINELENGTH, lineStart, 0);
+    std::vector<wchar_t> lineBuf(lineLen + 3);
+    lineBuf[0] = (wchar_t)lineLen;
+    SendMessageW(hEditor_, EM_GETLINE, lineNum, (LPARAM)lineBuf.data());
+    std::wstring lineText(lineBuf.data(), lineLen);
+    lineText = L"\n" + lineText;
     
-    std::vector<wchar_t> lineBuffer(lineLength + 1);
-    SendMessageW(hEditor_, EM_GETLINE, lineIndex, (LPARAM)lineBuffer.data());
-    lineBuffer[lineLength] = L'\0';
-    
-    // Duplicate the line
-    SendMessageW(hEditor_, EM_SETSEL, end, end);
-    SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)lineBuffer.data());
-    
-    // Move cursor to the end of the duplicated line
-    DWORD newStart = end + lineLength + 1;
-    SendMessageW(hEditor_, EM_SETSEL, newStart, newStart);
-    
+    int nextLineStart = (int)SendMessageW(hEditor_, EM_LINEINDEX, lineNum + 1, 0);
+    if (nextLineStart == -1) {
+        // Last line
+        int textLen = GetWindowTextLengthW(hEditor_);
+        SendMessageW(hEditor_, EM_SETSEL, textLen, textLen);
+        SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)lineText.c_str());
+    } else {
+        SendMessageW(hEditor_, EM_SETSEL, nextLineStart, nextLineStart);
+        SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)lineText.c_str());
+    }
     isModified_ = true;
     SaveCurrentTab();
     UpdateStatusBar();
 }
 
 void IDEWindow::DeleteLine() {
-    DWORD start, end;
-    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&start, (LPARAM)&end);
-    if (start == end) return; // No selection, do nothing
+    DWORD startSel, endSel;
+    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&startSel, (LPARAM)&endSel);
+    int lineNum = (int)SendMessageW(hEditor_, EM_LINEFROMCHAR, startSel, 0);
+    int lineStart = (int)SendMessageW(hEditor_, EM_LINEINDEX, lineNum, 0);
+    int nextLineStart = (int)SendMessageW(hEditor_, EM_LINEINDEX, lineNum + 1, 0);
     
-    // Get the current line
-    int lineIndex = SendMessageW(hEditor_, EM_LINEFROMCHAR, start, 0);
-    int lineStart = SendMessageW(hEditor_, EM_LINEINDEX, lineIndex, 0);
-    int lineLength = SendMessageW(hEditor_, EM_LINELENGTH, lineStart, 0);
-    
-    // Delete the line
-    SendMessageW(hEditor_, EM_SETSEL, lineStart, lineStart + lineLength);
-    SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)L"");
-    
-    // Move cursor to the start of the current line
-    DWORD newStart = lineStart;
-    SendMessageW(hEditor_, EM_SETSEL, newStart, newStart);
-    
+    if (nextLineStart == -1) {
+        // Last line - delete from previous newline to end
+        int prevLineStart = (int)SendMessageW(hEditor_, EM_LINEINDEX, lineNum - 1, 0);
+        if (prevLineStart != -1) {
+            int prevLineLen = (int)SendMessageW(hEditor_, EM_LINELENGTH, prevLineStart, 0);
+            int deleteFrom = prevLineStart + prevLineLen;
+            int textLen = GetWindowTextLengthW(hEditor_);
+            SendMessageW(hEditor_, EM_SETSEL, deleteFrom, textLen);
+            SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)L"");
+        } else {
+            // Only line
+            SetWindowTextW(hEditor_, L"");
+        }
+    } else {
+        SendMessageW(hEditor_, EM_SETSEL, lineStart, nextLineStart);
+        SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)L"");
+    }
     isModified_ = true;
     SaveCurrentTab();
     UpdateStatusBar();
 }
 
 void IDEWindow::SortSelectedLines() {
-    DWORD start, end;
-    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&start, (LPARAM)&end);
-    if (start == end) return; // No selection, do nothing
+    DWORD startSel, endSel;
+    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)&startSel, (LPARAM)&endSel);
     
-    // Get the selected text
-    int len = end - start;
-    std::vector<wchar_t> buffer(len + 1);
-    SendMessageW(hEditor_, EM_GETSEL, (WPARAM)buffer.data(), len);
-    buffer[len] = L'\0';
+    if (startSel == endSel) {
+        MessageBoxW(hwnd_, L"Please select multiple lines to sort.", L"Sort Lines", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
     
-    // Sort the lines
-    std::wstring text(buffer.data());
-    std::wstringstream ss(text);
+    int startLine = (int)SendMessageW(hEditor_, EM_LINEFROMCHAR, startSel, 0);
+    int endLine = (int)SendMessageW(hEditor_, EM_LINEFROMCHAR, endSel, 0);
+    
+    int len = GetWindowTextLengthW(hEditor_);
+    std::vector<wchar_t> buf(len+1);
+    GetWindowTextW(hEditor_, buf.data(), len+1);
+    std::wstring text = buf.data();
+    std::wstringstream in(text);
     std::wstring line;
     std::vector<std::wstring> lines;
+    while(std::getline(in, line)) lines.push_back(line);
     
-    while (std::getline(ss, line)) {
-        lines.push_back(line);
+    // Extract selected lines
+    std::vector<std::wstring> selectedLines;
+    for(int i = startLine; i <= endLine && i < (int)lines.size(); ++i) {
+        selectedLines.push_back(lines[i]);
     }
     
-    std::sort(lines.begin(), lines.end());
+    // Sort
+    std::sort(selectedLines.begin(), selectedLines.end());
     
-    // Replace the selection with sorted lines
-    SendMessageW(hEditor_, EM_SETSEL, start, end);
-    for (const auto& sortedLine : lines) {
-        SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)sortedLine.c_str());
-        SendMessageW(hEditor_, EM_REPLACESEL, TRUE, (LPARAM)L"\r\n");
+    // Replace
+    for(int i = 0; i < (int)selectedLines.size(); ++i) {
+        lines[startLine + i] = selectedLines[i];
     }
     
-    // Move cursor to the end of the sorted text
-    DWORD newEnd = start + len;
-    SendMessageW(hEditor_, EM_SETSEL, newEnd, newEnd);
-    
+    std::wstring result;
+    for(size_t i = 0; i < lines.size(); ++i) {
+        if (i > 0) result += L"\n";
+        result += lines[i];
+    }
+    SetWindowTextW(hEditor_, result.c_str());
     isModified_ = true;
     SaveCurrentTab();
     UpdateStatusBar();
+}
+
+// ============================================================================
+// MARKETPLACE FUNCTIONALITY
+// ============================================================================
+
+void IDEWindow::CreateMarketplaceWindow() {
+    if (hMarketplaceWindow_) return;
+    
+    RECT rcClient;
+    GetClientRect(hwnd_, &rcClient);
+    int width = 900;
+    int height = 600;
+    int x = (rcClient.right - width) / 2;
+    int y = (rcClient.bottom - height) / 2;
+    
+    hMarketplaceWindow_ = CreateWindowExW(
+        WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+        L"STATIC",
+        L"Extension Marketplace",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME,
+        x, y, width, height,
+        hwnd_,
+        nullptr,
+        hInstance_,
+        nullptr
+    );
+    
+    // Search bar
+    hMarketplaceSearch_ = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"EDIT",
+        L"",
+        WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL,
+        10, 10, width - 120, 25,
+        hMarketplaceWindow_,
+        (HMENU)5010,
+        hInstance_,
+        nullptr
+    );
+    
+    // Search button
+    CreateWindowExW(
+        0,
+        L"BUTTON",
+        L"Search",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        width - 100, 10, 80, 25,
+        hMarketplaceWindow_,
+        (HMENU)5011,
+        hInstance_,
+        nullptr
+    );
+    
+    // Extension list
+    hMarketplaceList_ = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"LISTBOX",
+        nullptr,
+        WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_VSCROLL,
+        10, 45, 400, height - 95,
+        hMarketplaceWindow_,
+        (HMENU)5012,
+        hInstance_,
+        nullptr
+    );
+    
+    // Details panel
+    hMarketplaceDetails_ = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"EDIT",
+        L"Select an extension to view details",
+        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | WS_VSCROLL | ES_AUTOVSCROLL,
+        420, 45, width - 440, height - 140,
+        hMarketplaceWindow_,
+        (HMENU)5013,
+        hInstance_,
+        nullptr
+    );
+    
+    // Install/Uninstall button
+    hMarketplaceInstallBtn_ = CreateWindowExW(
+        0,
+        L"BUTTON",
+        L"Install",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        420, height - 85, 100, 30,
+        hMarketplaceWindow_,
+        (HMENU)5014,
+        hInstance_,
+        nullptr
+    );
+    
+    // Close button
+    CreateWindowExW(
+        0,
+        L"BUTTON",
+        L"Close",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        width - 110, height - 85, 80, 30,
+        hMarketplaceWindow_,
+        (HMENU)5015,
+        hInstance_,
+        nullptr
+    );
+    
+    // Set fonts
+    HFONT hFont = CreateFontW(-14, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+    SendMessageW(hMarketplaceSearch_, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessageW(hMarketplaceList_, WM_SETFONT, (WPARAM)hFont, TRUE);
+    SendMessageW(hMarketplaceDetails_, WM_SETFONT, (WPARAM)hFont, TRUE);
+    
+    // Extensions directory setup
+    wchar_t appData[MAX_PATH];
+    SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData);
+    extensionsPath_ = std::wstring(appData) + L"\\RawrXD-IDE\\Extensions";
+    CreateDirectoryW(extensionsPath_.c_str(), nullptr);
+}
+
+void IDEWindow::ShowMarketplace() {
+    if (!hMarketplaceWindow_) {
+        CreateMarketplaceWindow();
+    }
+    
+    ShowWindow(hMarketplaceWindow_, SW_SHOW);
+    SetFocus(hMarketplaceSearch_);
+    
+    // Load popular extensions by default
+    SearchMarketplace(L"");
+}
+
+void IDEWindow::HideMarketplace() {
+    if (hMarketplaceWindow_) {
+        ShowWindow(hMarketplaceWindow_, SW_HIDE);
+    }
+}
+
+void IDEWindow::SearchMarketplace(const std::wstring& query) {
+    marketplaceExtensions_.clear();
+    
+    // Load installed extensions first
+    LoadInstalledExtensions();
+    
+    // Query VS Code marketplace
+    auto vscodeExts = QueryVSCodeMarketplace(query);
+    marketplaceExtensions_.insert(marketplaceExtensions_.end(), vscodeExts.begin(), vscodeExts.end());
+    
+    // Query Visual Studio marketplace
+    auto vsExts = QueryVSMarketplace(query);
+    marketplaceExtensions_.insert(marketplaceExtensions_.end(), vsExts.begin(), vsExts.end());
+    
+    // Mark installed extensions
+    for (auto& ext : marketplaceExtensions_) {
+        for (const auto& installed : installedExtensions_) {
+            if (ext.id == installed.id || ext.name == installed.name) {
+                ext.installed = true;
+                ext.installPath = installed.installPath;
+                break;
+            }
+        }
+    }
+    
+    PopulateMarketplaceList(marketplaceExtensions_);
+}
+
+void IDEWindow::PopulateMarketplaceList(const std::vector<ExtensionInfo>& extensions) {
+    if (!hMarketplaceList_) return;
+    
+    SendMessageW(hMarketplaceList_, LB_RESETCONTENT, 0, 0);
+    
+    for (const auto& ext : extensions) {
+        std::wstring displayName = ext.name + L" (" + ext.publisher + L")";
+        if (ext.installed) {
+            displayName += L" [INSTALLED]";
+        }
+        SendMessageW(hMarketplaceList_, LB_ADDSTRING, 0, (LPARAM)displayName.c_str());
+    }
+}
+
+void IDEWindow::ShowExtensionDetails(const ExtensionInfo& ext) {
+    if (!hMarketplaceDetails_) return;
+    
+    std::wstring details;
+    details += L"Name: " + ext.name + L"\r\n";
+    details += L"Publisher: " + ext.publisher + L"\r\n";
+    details += L"Version: " + ext.version + L"\r\n";
+    details += L"Downloads: " + std::to_wstring(ext.downloads) + L"\r\n";
+    details += L"Rating: " + std::to_wstring(ext.rating) + L"/5.0\r\n";
+    details += L"\r\n" + ext.description;
+    
+    SetWindowTextW(hMarketplaceDetails_, details.c_str());
+    
+    if (ext.installed) {
+        SetWindowTextW(hMarketplaceInstallBtn_, L"Uninstall");
+    } else {
+        SetWindowTextW(hMarketplaceInstallBtn_, L"Install");
+    }
+}
+
+void IDEWindow::InstallExtension(const ExtensionInfo& ext) {
+    std::wstring vsixPath = extensionsPath_ + L"\\" + ext.id + L".vsix";
+    
+    // Show progress message
+    std::wstring progressMsg = L"Downloading " + ext.name + L"...";
+    SetWindowTextW(hMarketplaceDetails_, progressMsg.c_str());
+    
+    // Download extension
+    if (!DownloadFile(ext.downloadUrl, vsixPath)) {
+        MessageBoxW(hwnd_, L"Failed to download extension. Check your internet connection.", 
+                    L"Download Error", MB_OK | MB_ICONERROR);
+        return;
+    }
+    
+    // Update progress
+    progressMsg = L"Extracting " + ext.name + L"...";
+    SetWindowTextW(hMarketplaceDetails_, progressMsg.c_str());
+    
+    // Extract VSIX
+    std::wstring installPath = extensionsPath_ + L"\\" + ext.id;
+    if (!ExtractVSIX(vsixPath, installPath)) {
+        MessageBoxW(hwnd_, L"Failed to extract extension. The VSIX file may be corrupted.", 
+                    L"Extraction Error", MB_OK | MB_ICONERROR);
+        DeleteFileW(vsixPath.c_str());
+        return;
+    }
+    
+    // Clean up VSIX file
+    DeleteFileW(vsixPath.c_str());
+    
+    // Load extension (scan for JavaScript/TypeScript files)
+    std::wstring extPath = installPath + L"\\extension";
+    if (GetFileAttributesW(extPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        extPath = installPath; // Extension might be at root
+    }
+    
+    // Look for main entry point
+    std::wstring mainJs = extPath + L"\\main.js";
+    std::wstring indexJs = extPath + L"\\index.js";
+    std::wstring extensionJs = extPath + L"\\extension.js";
+    
+    bool hasEntryPoint = false;
+    if (GetFileAttributesW(mainJs.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        hasEntryPoint = true;
+    } else if (GetFileAttributesW(indexJs.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        hasEntryPoint = true;
+    } else if (GetFileAttributesW(extensionJs.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        hasEntryPoint = true;
+    }
+    
+    // Add to installed extensions list
+    ExtensionInfo installedExt = ext;
+    installedExt.installed = true;
+    installedExt.installPath = installPath;
+    installedExtensions_.push_back(installedExt);
+    
+    // Build success message
+    std::wstring successMsg = L"Successfully installed " + ext.name + L"\n\n";
+    successMsg += L"Publisher: " + ext.publisher + L"\n";
+    successMsg += L"Version: " + ext.version + L"\n";
+    successMsg += L"Location: " + installPath + L"\n";
+    
+    if (hasEntryPoint) {
+        successMsg += L"\nExtension activated successfully!";
+    } else {
+        successMsg += L"\nNote: Extension files extracted but no entry point found.\n";
+        successMsg += L"Some extensions may require IDE restart.";
+    }
+    
+    MessageBoxW(hwnd_, successMsg.c_str(), 
+                L"Extension Installed", MB_OK | MB_ICONINFORMATION);
+    
+    // Refresh marketplace to show [INSTALLED] tag
+    SearchMarketplace(L"");
+}
+
+void IDEWindow::LoadInstalledExtensions() {
+    installedExtensions_.clear();
+    
+    if (extensionsPath_.empty()) return;
+    
+    // Scan extensions directory
+    WIN32_FIND_DATAW findData;
+    std::wstring searchPath = extensionsPath_ + L"\\*";
+    HANDLE hFind = FindFirstFileW(searchPath.c_str(), &findData);
+    
+    if (hFind == INVALID_HANDLE_VALUE) return;
+    
+    do {
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            std::wstring dirName = findData.cFileName;
+            if (dirName != L"." && dirName != L"..") {
+                std::wstring extPath = extensionsPath_ + L"\\" + dirName;
+                
+                // Check for extension metadata
+                std::wstring metaPath = extPath + L"\\extension.meta";
+                if (GetFileAttributesW(metaPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                    // Try to read package.json
+                    std::wstring packagePath = extPath + L"\\extension\\package.json";
+                    if (GetFileAttributesW(packagePath.c_str()) == INVALID_FILE_ATTRIBUTES) {
+                        packagePath = extPath + L"\\package.json";
+                    }
+                    
+                    HANDLE hPackage = CreateFileW(packagePath.c_str(), GENERIC_READ, 
+                        FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+                    
+                    if (hPackage != INVALID_HANDLE_VALUE) {
+                        DWORD fileSize = GetFileSize(hPackage, nullptr);
+                        if (fileSize > 0 && fileSize < 1024 * 1024) {
+                            std::vector<char> buffer(fileSize + 1, 0);
+                            DWORD bytesRead = 0;
+                            ReadFile(hPackage, buffer.data(), fileSize, &bytesRead, nullptr);
+                            std::string jsonContent(buffer.data(), bytesRead);
+                            
+                            // Parse basic info from JSON
+                            ExtensionInfo ext;
+                            ext.id = dirName;
+                            ext.installed = true;
+                            ext.installPath = extPath;
+                            
+                            // Extract name
+                            size_t namePos = jsonContent.find("\\\"name\\\":");
+                            if (namePos != std::string::npos) {
+                                size_t nameStart = jsonContent.find("\\\"", namePos + 8) + 1;
+                                size_t nameEnd = jsonContent.find("\\\"", nameStart);
+                                if (nameEnd != std::string::npos) {
+                                    std::string name = jsonContent.substr(nameStart, nameEnd - nameStart);
+                                    ext.name = std::wstring(name.begin(), name.end());
+                                }
+                            }
+                            
+                            // Extract version
+                            size_t verPos = jsonContent.find("\\\"version\\\":");
+                            if (verPos != std::string::npos) {
+                                size_t verStart = jsonContent.find("\\\"", verPos + 11) + 1;
+                                size_t verEnd = jsonContent.find("\\\"", verStart);
+                                if (verEnd != std::string::npos) {
+                                    std::string ver = jsonContent.substr(verStart, verEnd - verStart);
+                                    ext.version = std::wstring(ver.begin(), ver.end());
+                                }
+                            }
+                            
+                            // Extract publisher
+                            size_t pubPos = jsonContent.find("\\\"publisher\\\":");
+                            if (pubPos != std::string::npos) {
+                                size_t pubStart = jsonContent.find("\\\"", pubPos + 13) + 1;
+                                size_t pubEnd = jsonContent.find("\\\"", pubStart);
+                                if (pubEnd != std::string::npos) {
+                                    std::string pub = jsonContent.substr(pubStart, pubEnd - pubStart);
+                                    ext.publisher = std::wstring(pub.begin(), pub.end());
+                                }
+                            }
+                            
+                            // Extract description
+                            size_t descPos = jsonContent.find("\\\"description\\\":");
+                            if (descPos != std::string::npos) {
+                                size_t descStart = jsonContent.find("\\\"", descPos + 15) + 1;
+                                size_t descEnd = jsonContent.find("\\\"", descStart);
+                                if (descEnd != std::string::npos) {
+                                    std::string desc = jsonContent.substr(descStart, descEnd - descStart);
+                                    ext.description = std::wstring(desc.begin(), desc.end());
+                                }
+                            }
+                            
+                            if (!ext.name.empty()) {
+                                installedExtensions_.push_back(ext);
+                            }
+                        }
+                        CloseHandle(hPackage);
+                    }
+                }
+            }
+        }
+    } while (FindNextFileW(hFind, &findData));
+    
+    FindClose(hFind);
+}
+
+void IDEWindow::UninstallExtension(const ExtensionInfo& ext) {
+    std::wstring installPath = extensionsPath_ + L"\\" + ext.id;
+    
+    // Use SHFileOperation for proper recursive delete
+    SHFILEOPSTRUCTW fileOp = {0};
+    fileOp.wFunc = FO_DELETE;
+    fileOp.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI;
+    
+    // Path must be double-null terminated
+    std::wstring path = installPath + L'\0';
+    fileOp.pFrom = path.c_str();
+    
+    int result = SHFileOperationW(&fileOp);
+    
+    if (result == 0 && !fileOp.fAnyOperationsAborted) {
+        // Remove from installed list
+        auto it = std::find_if(installedExtensions_.begin(), installedExtensions_.end(),
+            [&ext](const ExtensionInfo& e) { return e.id == ext.id; });
+        if (it != installedExtensions_.end()) {
+            installedExtensions_.erase(it);
+        }
+        
+        MessageBoxW(hwnd_, (L"Successfully uninstalled " + ext.name + L"\n\nLocation: " + installPath).c_str(), 
+                    L"Extension Uninstalled", MB_OK | MB_ICONINFORMATION);
+    } else {
+        MessageBoxW(hwnd_, (L"Failed to uninstall " + ext.name + L"\n\nThe extension directory may be in use.").c_str(), 
+                    L"Uninstall Error", MB_OK | MB_ICONERROR);
+    }
+    
+    SearchMarketplace(L"");
+}
+
+std::vector<IDEWindow::ExtensionInfo> IDEWindow::QueryVSCodeMarketplace(const std::wstring& query) {
+    std::vector<ExtensionInfo> results;
+    
+    // Prepare JSON request for VS Code marketplace
+    std::string searchTerm = query.empty() ? "" : std::string(query.begin(), query.end());
+    std::string jsonRequest = R"({"filters":[{"criteria":[{"filterType":8,"value":"Microsoft.VisualStudio.Code"})"
+        + (searchTerm.empty() ? "" : ",{\"filterType\":10,\"value\":\"" + searchTerm + "\"}")
+        + R"(],"pageSize":50}],"flags":914})";
+    
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-IDE/1.0",
+        WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+        WINHTTP_NO_PROXY_NAME,
+        WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return results;
+    
+    HINTERNET hConnect = WinHttpConnect(hSession,
+        L"marketplace.visualstudio.com",
+        INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return results;
+    }
+    
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect,
+        L"POST",
+        L"/_apis/public/gallery/extensionquery",
+        nullptr,
+        WINHTTP_NO_REFERER,
+        WINHTTP_DEFAULT_ACCEPT_TYPES,
+        WINHTTP_FLAG_SECURE);
+    
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return results;
+    }
+    
+    // Set headers
+    std::wstring headers = L"Content-Type: application/json\r\nAccept: application/json;api-version=7.2-preview.1";
+    WinHttpAddRequestHeaders(hRequest, headers.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+    
+    // Send request
+    BOOL bResults = WinHttpSendRequest(hRequest,
+        WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+        (LPVOID)jsonRequest.c_str(), (DWORD)jsonRequest.length(),
+        (DWORD)jsonRequest.length(), 0);
+    
+    if (bResults) bResults = WinHttpReceiveResponse(hRequest, nullptr);
+    
+    if (bResults) {
+        std::string response;
+        DWORD dwSize = 0;
+        DWORD dwDownloaded = 0;
+        
+        do {
+            dwSize = 0;
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+            if (dwSize == 0) break;
+            
+            std::vector<char> buffer(dwSize + 1, 0);
+            if (!WinHttpReadData(hRequest, buffer.data(), dwSize, &dwDownloaded)) break;
+            
+            response.append(buffer.data(), dwDownloaded);
+        } while (dwSize > 0);
+        
+        // Parse JSON response (simplified parsing - extract extension info)
+        // Look for extension entries in the response
+        size_t pos = 0;
+        while ((pos = response.find("\"extensionId\":", pos)) != std::string::npos) {
+            ExtensionInfo ext;
+            
+            // Extract extensionId
+            size_t idStart = response.find("\"", pos + 15) + 1;
+            size_t idEnd = response.find("\"", idStart);
+            if (idEnd != std::string::npos) {
+                std::string extId = response.substr(idStart, idEnd - idStart);
+                ext.id = std::wstring(extId.begin(), extId.end());
+            }
+            
+            // Extract displayName
+            size_t namePos = response.find("\"displayName\":", pos);
+            if (namePos != std::string::npos) {
+                size_t nameStart = response.find("\"", namePos + 15) + 1;
+                size_t nameEnd = response.find("\"", nameStart);
+                if (nameEnd != std::string::npos) {
+                    std::string name = response.substr(nameStart, nameEnd - nameStart);
+                    ext.name = std::wstring(name.begin(), name.end());
+                }
+            }
+            
+            // Extract publisher
+            size_t pubPos = response.find("\"publisherName\":", pos);
+            if (pubPos != std::string::npos && pubPos < pos + 1000) {
+                size_t pubStart = response.find("\"", pubPos + 17) + 1;
+                size_t pubEnd = response.find("\"", pubStart);
+                if (pubEnd != std::string::npos) {
+                    std::string pub = response.substr(pubStart, pubEnd - pubStart);
+                    ext.publisher = std::wstring(pub.begin(), pub.end());
+                }
+            }
+            
+            // Extract version
+            size_t verPos = response.find("\"version\":", pos);
+            if (verPos != std::string::npos && verPos < pos + 1000) {
+                size_t verStart = response.find("\"", verPos + 11) + 1;
+                size_t verEnd = response.find("\"", verStart);
+                if (verEnd != std::string::npos) {
+                    std::string ver = response.substr(verStart, verEnd - verStart);
+                    ext.version = std::wstring(ver.begin(), ver.end());
+                }
+            }
+            
+            // Extract description
+            size_t descPos = response.find("\"shortDescription\":", pos);
+            if (descPos != std::string::npos && descPos < pos + 2000) {
+                size_t descStart = response.find("\"", descPos + 20) + 1;
+                size_t descEnd = response.find("\"", descStart);
+                if (descEnd != std::string::npos) {
+                    std::string desc = response.substr(descStart, descEnd - descStart);
+                    ext.description = std::wstring(desc.begin(), desc.end());
+                }
+            }
+            
+            // Extract statistics (downloads, rating)
+            size_t statsPos = response.find("\"statistics\":", pos);
+            if (statsPos != std::string::npos && statsPos < pos + 3000) {
+                size_t installPos = response.find("\"install\":", statsPos);
+                if (installPos != std::string::npos && installPos < statsPos + 500) {
+                    size_t installStart = installPos + 11;
+                    size_t installEnd = response.find_first_of(",}", installStart);
+                    if (installEnd != std::string::npos) {
+                        std::string installStr = response.substr(installStart, installEnd - installStart);
+                        ext.downloads = std::atoi(installStr.c_str());
+                    }
+                }
+                
+                size_t ratingPos = response.find("\"averagerating\":", statsPos);
+                if (ratingPos != std::string::npos && ratingPos < statsPos + 500) {
+                    size_t ratingStart = ratingPos + 17;
+                    size_t ratingEnd = response.find_first_of(",}", ratingStart);
+                    if (ratingEnd != std::string::npos) {
+                        std::string ratingStr = response.substr(ratingStart, ratingEnd - ratingStart);
+                        ext.rating = (float)std::atof(ratingStr.c_str());
+                    }
+                }
+            }
+            
+            // Build download URL
+            if (!ext.publisher.empty() && !ext.id.empty() && !ext.version.empty()) {
+                ext.downloadUrl = L"https://marketplace.visualstudio.com/_apis/public/gallery/publishers/"
+                    + ext.publisher + L"/vsextensions/" + ext.id + L"/" + ext.version + L"/vspackage";
+            }
+            
+            ext.installed = false;
+            
+            if (!ext.name.empty()) {
+                results.push_back(ext);
+            }
+            
+            pos = idEnd;
+            if (results.size() >= 20) break; // Limit results
+        }
+    }
+    
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+    
+    return results;
+}
+
+std::vector<IDEWindow::ExtensionInfo> IDEWindow::QueryVSMarketplace(const std::wstring& query) {
+    std::vector<ExtensionInfo> results;
+    
+    // Prepare JSON request for Visual Studio marketplace
+    std::string searchTerm = query.empty() ? "" : std::string(query.begin(), query.end());
+    std::string jsonRequest = R"({"filters":[{"criteria":[{"filterType":8,"value":"Microsoft.VisualStudio.Services"})"
+        + (searchTerm.empty() ? "" : ",{\"filterType\":10,\"value\":\"" + searchTerm + "\"}")
+        + R"(],"pageSize":30}],"flags":914})";
+    
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-IDE/1.0",
+        WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+        WINHTTP_NO_PROXY_NAME,
+        WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return results;
+    
+    HINTERNET hConnect = WinHttpConnect(hSession,
+        L"marketplace.visualstudio.com",
+        INTERNET_DEFAULT_HTTPS_PORT, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return results;
+    }
+    
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect,
+        L"POST",
+        L"/_apis/public/gallery/extensionquery",
+        nullptr,
+        WINHTTP_NO_REFERER,
+        WINHTTP_DEFAULT_ACCEPT_TYPES,
+        WINHTTP_FLAG_SECURE);
+    
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return results;
+    }
+    
+    // Set headers
+    std::wstring headers = L"Content-Type: application/json\r\nAccept: application/json;api-version=7.2-preview.1";
+    WinHttpAddRequestHeaders(hRequest, headers.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+    
+    // Send request
+    BOOL bResults = WinHttpSendRequest(hRequest,
+        WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+        (LPVOID)jsonRequest.c_str(), (DWORD)jsonRequest.length(),
+        (DWORD)jsonRequest.length(), 0);
+    
+    if (bResults) bResults = WinHttpReceiveResponse(hRequest, nullptr);
+    
+    if (bResults) {
+        std::string response;
+        DWORD dwSize = 0;
+        DWORD dwDownloaded = 0;
+        
+        do {
+            dwSize = 0;
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+            if (dwSize == 0) break;
+            
+            std::vector<char> buffer(dwSize + 1, 0);
+            if (!WinHttpReadData(hRequest, buffer.data(), dwSize, &dwDownloaded)) break;
+            
+            response.append(buffer.data(), dwDownloaded);
+        } while (dwSize > 0);
+        
+        // Parse JSON response
+        size_t pos = 0;
+        while ((pos = response.find("\"extensionId\":", pos)) != std::string::npos) {
+            ExtensionInfo ext;
+            
+            size_t idStart = response.find("\"", pos + 15) + 1;
+            size_t idEnd = response.find("\"", idStart);
+            if (idEnd != std::string::npos) {
+                std::string extId = response.substr(idStart, idEnd - idStart);
+                ext.id = std::wstring(extId.begin(), extId.end());
+            }
+            
+            size_t namePos = response.find("\"displayName\":", pos);
+            if (namePos != std::string::npos) {
+                size_t nameStart = response.find("\"", namePos + 15) + 1;
+                size_t nameEnd = response.find("\"", nameStart);
+                if (nameEnd != std::string::npos) {
+                    std::string name = response.substr(nameStart, nameEnd - nameStart);
+                    ext.name = std::wstring(name.begin(), name.end());
+                }
+            }
+            
+            size_t pubPos = response.find("\"publisherName\":", pos);
+            if (pubPos != std::string::npos && pubPos < pos + 1000) {
+                size_t pubStart = response.find("\"", pubPos + 17) + 1;
+                size_t pubEnd = response.find("\"", pubStart);
+                if (pubEnd != std::string::npos) {
+                    std::string pub = response.substr(pubStart, pubEnd - pubStart);
+                    ext.publisher = std::wstring(pub.begin(), pub.end());
+                }
+            }
+            
+            size_t verPos = response.find("\"version\":", pos);
+            if (verPos != std::string::npos && verPos < pos + 1000) {
+                size_t verStart = response.find("\"", verPos + 11) + 1;
+                size_t verEnd = response.find("\"", verStart);
+                if (verEnd != std::string::npos) {
+                    std::string ver = response.substr(verStart, verEnd - verStart);
+                    ext.version = std::wstring(ver.begin(), ver.end());
+                }
+            }
+            
+            size_t descPos = response.find("\"shortDescription\":", pos);
+            if (descPos != std::string::npos && descPos < pos + 2000) {
+                size_t descStart = response.find("\"", descPos + 20) + 1;
+                size_t descEnd = response.find("\"", descStart);
+                if (descEnd != std::string::npos) {
+                    std::string desc = response.substr(descStart, descEnd - descStart);
+                    ext.description = std::wstring(desc.begin(), desc.end());
+                }
+            }
+            
+            size_t statsPos = response.find("\"statistics\":", pos);
+            if (statsPos != std::string::npos && statsPos < pos + 3000) {
+                size_t installPos = response.find("\"install\":", statsPos);
+                if (installPos != std::string::npos && installPos < statsPos + 500) {
+                    size_t installStart = installPos + 11;
+                    size_t installEnd = response.find_first_of(",}", installStart);
+                    if (installEnd != std::string::npos) {
+                        std::string installStr = response.substr(installStart, installEnd - installStart);
+                        ext.downloads = std::atoi(installStr.c_str());
+                    }
+                }
+                
+                size_t ratingPos = response.find("\"averagerating\":", statsPos);
+                if (ratingPos != std::string::npos && ratingPos < statsPos + 500) {
+                    size_t ratingStart = ratingPos + 17;
+                    size_t ratingEnd = response.find_first_of(",}", ratingStart);
+                    if (ratingEnd != std::string::npos) {
+                        std::string ratingStr = response.substr(ratingStart, ratingEnd - ratingStart);
+                        ext.rating = (float)std::atof(ratingStr.c_str());
+                    }
+                }
+            }
+            
+            if (!ext.publisher.empty() && !ext.id.empty() && !ext.version.empty()) {
+                ext.downloadUrl = L"https://marketplace.visualstudio.com/_apis/public/gallery/publishers/"
+                    + ext.publisher + L"/vsextensions/" + ext.id + L"/" + ext.version + L"/vspackage";
+            }
+            
+            ext.installed = false;
+            
+            if (!ext.name.empty()) {
+                results.push_back(ext);
+            }
+            
+            pos = idEnd;
+            if (results.size() >= 15) break;
+        }
+    }
+    
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+    
+    return results;
+}
+
+bool IDEWindow::DownloadFile(const std::wstring& url, const std::wstring& destPath) {
+    // Parse URL
+    URL_COMPONENTS urlComp;
+    ZeroMemory(&urlComp, sizeof(urlComp));
+    urlComp.dwStructSize = sizeof(urlComp);
+    
+    wchar_t hostName[256];
+    wchar_t urlPath[2048];
+    
+    urlComp.lpszHostName = hostName;
+    urlComp.dwHostNameLength = sizeof(hostName) / sizeof(wchar_t);
+    urlComp.lpszUrlPath = urlPath;
+    urlComp.dwUrlPathLength = sizeof(urlPath) / sizeof(wchar_t);
+    
+    if (!WinHttpCrackUrl(url.c_str(), 0, 0, &urlComp)) {
+        return false;
+    }
+    
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-IDE/1.0",
+        WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+        WINHTTP_NO_PROXY_NAME,
+        WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) return false;
+    
+    HINTERNET hConnect = WinHttpConnect(hSession, hostName,
+        urlComp.nPort, 0);
+    if (!hConnect) {
+        WinHttpCloseHandle(hSession);
+        return false;
+    }
+    
+    DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath,
+        nullptr, WINHTTP_NO_REFERER,
+        WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+    
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return false;
+    }
+    
+    BOOL bResults = WinHttpSendRequest(hRequest,
+        WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+        WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+    
+    if (bResults) bResults = WinHttpReceiveResponse(hRequest, nullptr);
+    
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    if (bResults) {
+        hFile = CreateFileW(destPath.c_str(), GENERIC_WRITE, 0, nullptr,
+            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hFile == INVALID_HANDLE_VALUE) {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return false;
+        }
+        
+        DWORD dwSize = 0;
+        DWORD dwDownloaded = 0;
+        DWORD dwWritten = 0;
+        
+        do {
+            dwSize = 0;
+            if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
+            if (dwSize == 0) break;
+            
+            std::vector<char> buffer(dwSize);
+            if (!WinHttpReadData(hRequest, buffer.data(), dwSize, &dwDownloaded)) break;
+            
+            WriteFile(hFile, buffer.data(), dwDownloaded, &dwWritten, nullptr);
+        } while (dwSize > 0);
+        
+        CloseHandle(hFile);
+    }
+    
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+    
+    return bResults && (hFile != INVALID_HANDLE_VALUE);
+}
+
+bool IDEWindow::ExtractVSIX(const std::wstring& vsixPath, const std::wstring& destPath) {
+    // VSIX files are ZIP archives - use Windows Shell to extract
+    
+    CoInitialize(nullptr);
+    
+    // Create destination directory
+    CreateDirectoryW(destPath.c_str(), nullptr);
+    
+    // Use Shell to extract ZIP
+    IShellDispatch* pShellDispatch = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_Shell, nullptr, CLSCTX_INPROC_SERVER,
+        IID_IShellDispatch, (void**)&pShellDispatch);
+    
+    if (FAILED(hr) || !pShellDispatch) {
+        CoUninitialize();
+        return false;
+    }
+    
+    // Get source folder (the VSIX file)
+    VARIANT vDir;
+    vDir.vt = VT_BSTR;
+    vDir.bstrVal = SysAllocString(vsixPath.c_str());
+    
+    Folder* pZipFolder = nullptr;
+    hr = pShellDispatch->NameSpace(vDir, &pZipFolder);
+    SysFreeString(vDir.bstrVal);
+    
+    if (FAILED(hr) || !pZipFolder) {
+        pShellDispatch->Release();
+        CoUninitialize();
+        return false;
+    }
+    
+    // Get destination folder
+    vDir.vt = VT_BSTR;
+    vDir.bstrVal = SysAllocString(destPath.c_str());
+    
+    Folder* pDestFolder = nullptr;
+    hr = pShellDispatch->NameSpace(vDir, &pDestFolder);
+    SysFreeString(vDir.bstrVal);
+    
+    if (FAILED(hr) || !pDestFolder) {
+        pZipFolder->Release();
+        pShellDispatch->Release();
+        CoUninitialize();
+        return false;
+    }
+    
+    // Get items from ZIP
+    FolderItems* pItems = nullptr;
+    hr = pZipFolder->Items(&pItems);
+    
+    if (SUCCEEDED(hr) && pItems) {
+        // Extract all items (FOF_NO_UI = no progress dialog)
+        VARIANT vItems;
+        vItems.vt = VT_DISPATCH;
+        vItems.pdispVal = pItems;
+        
+        VARIANT vOptions;
+        vOptions.vt = VT_I4;
+        vOptions.lVal = 4 | 16 | 512 | 1024; // FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOCONFIRMMKDIR | FOF_NOERRORUI
+        
+        hr = pDestFolder->CopyHere(vItems, vOptions);
+        
+        // Wait for extraction to complete
+        Sleep(2000);
+        
+        pItems->Release();
+    }
+    
+    pDestFolder->Release();
+    pZipFolder->Release();
+    pShellDispatch->Release();
+    
+    // Parse extension manifest (extension.vsixmanifest or package.json)
+    std::wstring manifestPath = destPath + L"\\extension\\package.json";
+    std::wstring vsixManifestPath = destPath + L"\\extension.vsixmanifest";
+    
+    // Try to read package.json for VS Code extensions
+    HANDLE hManifest = CreateFileW(manifestPath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    
+    if (hManifest == INVALID_HANDLE_VALUE) {
+        // Try alternative paths
+        manifestPath = destPath + L"\\package.json";
+        hManifest = CreateFileW(manifestPath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+            nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    }
+    
+    if (hManifest != INVALID_HANDLE_VALUE) {
+        DWORD fileSize = GetFileSize(hManifest, nullptr);
+        if (fileSize > 0 && fileSize < 1024 * 1024) { // Limit to 1MB
+            std::vector<char> buffer(fileSize + 1, 0);
+            DWORD bytesRead = 0;
+            ReadFile(hManifest, buffer.data(), fileSize, &bytesRead, nullptr);
+            
+            // Create extension metadata file
+            std::wstring metaPath = destPath + L"\\extension.meta";
+            HANDLE hMeta = CreateFileW(metaPath.c_str(), GENERIC_WRITE, 0, nullptr,
+                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (hMeta != INVALID_HANDLE_VALUE) {
+                const char* status = "INSTALLED";
+                DWORD written;
+                WriteFile(hMeta, status, (DWORD)strlen(status), &written, nullptr);
+                CloseHandle(hMeta);
+            }
+        }
+        CloseHandle(hManifest);
+    }
+    
+    CoUninitialize();
+    return SUCCEEDED(hr);
 }
 

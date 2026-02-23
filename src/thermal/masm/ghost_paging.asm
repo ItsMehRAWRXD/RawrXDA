@@ -7,16 +7,6 @@ OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
-; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
-PUBLIC GhostPrefetchStart
-PUBLIC GhostDispatchToken
-PUBLIC GhostPrefetchTokenMap
-PUBLIC GhostQueryTokenMap
-
 ; Removed windows.inc dependency for portability
 ; INCLUDELIB kernel32.lib
 ; INCLUDELIB ntdll.lib
@@ -44,61 +34,7 @@ HOTPIN_CACHE             DD 64 DUP(0FFFFFFFFh) ; Invalid slab IDs
 ; GhostPrefetchStart - Initializes the ghost prefetch kernel
 ; ============================================================================
 GhostPrefetchStart PROC
-    ; Initialize ghost prefetch kernel: allocate I/O ring buffer,
-    ; prepare streaming queues, launch prefetch worker thread
-    push rbx
-    push rsi
-    sub rsp, 48
-    
-    ; Allocate prefetch ring buffer: 64 slots * 4KB pages = 256KB
-    xor ecx, ecx
-    mov edx, 262144                  ; 256KB
-    mov r8d, 3000h                   ; MEM_COMMIT | MEM_RESERVE
-    mov r9d, 04h                     ; PAGE_READWRITE
-    call VirtualAlloc
-    test rax, rax
-    jz @@gps_fail
-    
-    mov QWORD PTR [g_prefetch_ring], rax
-    mov DWORD PTR [g_prefetch_head], 0
-    mov DWORD PTR [g_prefetch_tail], 0
-    mov DWORD PTR [g_prefetch_slots], 64
-    
-    ; Initialize the prefetch event (auto-reset)
-    xor ecx, ecx                     ; lpEventAttributes
-    xor edx, edx                     ; bManualReset = FALSE (auto-reset)
-    xor r8d, r8d                     ; bInitialState = FALSE
-    xor r9d, r9d                     ; lpName = NULL
-    call CreateEventA
-    test rax, rax
-    jz @@gps_fail
-    mov QWORD PTR [g_prefetch_event], rax
-    
-    ; Spawn prefetch worker thread
-    xor ecx, ecx                     ; lpThreadAttributes
-    xor edx, edx                     ; dwStackSize = default
-    lea r8, [GhostPrefetchWorker]    ; lpStartAddress
-    xor r9d, r9d                     ; lpParameter
-    push 0                           ; lpThreadId
-    push 0                           ; dwCreationFlags
-    sub rsp, 32
-    call CreateThread
-    add rsp, 32
-    test rax, rax
-    jz @@gps_fail
-    mov QWORD PTR [g_prefetch_thread], rax
-    
-    mov DWORD PTR [g_prefetch_active], 1
-    mov rax, 1
-    add rsp, 48
-    pop rsi
-    pop rbx
-    ret
-@@gps_fail:
-    xor eax, eax
-    add rsp, 48
-    pop rsi
-    pop rbx
+    ; No-op for now (future: IoRing init, stream queues, etc.)
     ret
 GhostPrefetchStart ENDP
 

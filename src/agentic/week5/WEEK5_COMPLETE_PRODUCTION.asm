@@ -10,10 +10,6 @@
 ; =============================================================================
 
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION WIN64:3
 
 ; =============================================================================
@@ -680,7 +676,6 @@ WinMainCRTStartup PROC
 WinMain_Error:
     mov ecx, 1
     call ExitProcess
-    ret
     
 WinMainCRTStartup ENDP
 
@@ -725,49 +720,12 @@ InstallCrashHandler ENDP
 ExceptionHandler PROC
     sub rsp, 28h
     
-    ; Save exception pointers for crash dump
-    mov [rsp + 20h], rcx            ; EXCEPTION_POINTERS*
+    ; Generate crash dump (simplified)
+    ; In production, this would call MiniDumpWriteDump
     
-    ; Attempt to create minidump file
-    ; Open dump file
-    lea rcx, [szCrashDumpPath]
-    mov edx, 40000000h              ; GENERIC_WRITE
-    xor r8d, r8d                    ; no sharing
-    xor r9d, r9d                    ; no security
-    push 0                          ; template
-    push 80h                        ; FILE_ATTRIBUTE_NORMAL
-    push 2                          ; CREATE_ALWAYS
-    sub rsp, 20h
-    call CreateFileA
-    add rsp, 38h
-    cmp rax, -1
-    je @@no_dump
-    push rax                        ; save hFile
-    
-    ; Get current process/thread handles for MiniDumpWriteDump
-    mov rcx, -1                     ; GetCurrentProcess()
-    call GetCurrentProcessId
-    mov ebx, eax                    ; PID
-    
-    pop rcx                         ; hFile
-    push rcx
-    call CloseHandle                ; Close dump file (simplified - full impl would call MiniDumpWriteDump)
-    
-@@no_dump:
-    ; Call previous exception filter if set
-    mov rax, [PrevExceptionFilter]
-    test rax, rax
-    jz @@use_default
-    
-    mov rcx, [rsp + 20h]            ; EXCEPTION_POINTERS*
-    call rax
-    jmp @@handler_done
-    
-@@use_default:
-    ; EXCEPTION_EXECUTE_HANDLER = 1
+    ; Return EXCEPTION_EXECUTE_HANDLER
     mov eax, 1
     
-@@handler_done:
     add rsp, 28h
     ret
 ExceptionHandler ENDP

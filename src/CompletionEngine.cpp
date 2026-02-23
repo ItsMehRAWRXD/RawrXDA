@@ -1,12 +1,9 @@
 #include "CompletionEngine.h"
-#include "cpu_inference_engine.h"
-#include "utils/InferenceSettingsManager.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
 #include <regex>
 #include <nlohmann/json.hpp>
-#include <windows.h>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
@@ -15,24 +12,6 @@ using json = nlohmann::json;
 
 namespace RawrXD {
 namespace IDE {
-
-// Global static engine for completion to ensure persistent model state
-static std::unique_ptr<RawrXD::CPUInferenceEngine> g_completionEngine = nullptr;
-
-static void EnsureEngineLoaded() {
-    if (!g_completionEngine) {
-        g_completionEngine = std::make_unique<RawrXD::CPUInferenceEngine>();
-    }
-    
-    // Check if model is loaded or needs update
-    // For now we assume if it's created, we try to load the default model
-    auto& settings = RawrXD::InferenceSettingsManager::getInstance();
-    std::string modelPath = settings.getCurrentModelPath();
-    
-    if (!g_completionEngine->isModelLoaded() && !modelPath.empty()) {
-        g_completionEngine->LoadModel(modelPath);
-    }
-}
 
 IntelligentCompletionEngine::IntelligentCompletionEngine()
     : m_confidenceThreshold(0.5f), m_maxSuggestions(10),
@@ -82,24 +61,91 @@ std::vector<std::string> IntelligentCompletionEngine::getMultiLineCompletions(
     
     std::vector<std::string> results;
     
-    std::string prompt = "Complete this code:\n" + context.contextBefore + 
-                        "\n// Current line: " + context.currentLine +
-                        "\n// Generate " + std::to_string(maxLines) + " lines of code";
+    std::string prompt = "Complete this code with " + std::to_string(maxLines) +
+                        " lines. Return ONLY code, no explanation.\n\n" +
+                        context.contextBefore + "\n" + context.currentLine;
     
-    EnsureEngineLoaded();
-    
-    if (g_completionEngine && g_completionEngine->isModelLoaded()) {
-        // Real Inference
-        std::string generated = g_completionEngine->infer(prompt, maxLines * 20); // Approx 20 tokens per line
-        if (!generated.empty()) {
-            results.push_back(generated);
+    // Call Ollama /api/generate for multi-line completion
+    try {
+        json payload = {
+            {"model", "codellama"},
+            {"prompt", prompt},
+            {"stream", false},
+            {"options", {
+                {"temperature", 0.2},
+                {"num_predict", maxLines * 40},
+                {"stop", {"\n\n\n"}}
+            }}
+        };
+        std::string payloadStr = payload.dump();
+
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-CompletionEngine/1.0",
+                                          WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                          WINHTTP_NO_PROXY_NAME,
+                                          WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession) return results;
+
+        HINTERNET hConnect = WinHttpConnect(hSession, L"localhost",
+                                             11434, 0);
+        if (!hConnect) { WinHttpCloseHandle(hSession); return results; }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+                                                 L"/api/generate",
+                                                 nullptr, WINHTTP_NO_REFERER,
+                                                 WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+        if (!hRequest) {
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return results;
         }
-    } else {
-        // Fallback or empty if no model
-        std::vector<CompletionSuggestion> single = getCompletions(context, 1);
-        if (!single.empty()) {
-            results.push_back(single[0].text);
+
+        WinHttpSetTimeouts(hRequest, 2000, 5000, 30000, 30000);
+
+        LPCWSTR ct = L"Content-Type: application/json";
+        if (!WinHttpSendRequest(hRequest, ct, -1L,
+                                 (LPVOID)payloadStr.c_str(),
+                                 (DWORD)payloadStr.size(),
+                                 (DWORD)payloadStr.size(), 0) ||
+            !WinHttpReceiveResponse(hRequest, nullptr)) {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            // Fallback to single-line
+            auto single = getCompletions(context, 1);
+            if (!single.empty()) results.push_back(single[0].text);
+            return results;
         }
+
+        std::string responseBody;
+        DWORD bytesAvailable = 0;
+        while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+            std::vector<char> buf(bytesAvailable + 1, 0);
+            DWORD bytesRead = 0;
+            WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+            responseBody.append(buf.data(), bytesRead);
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        // Parse response
+        json resp = json::parse(responseBody, nullptr, false);
+        if (!resp.is_discarded() && resp.contains("response")) {
+            std::string generated = resp["response"].get<std::string>();
+            // Split into lines
+            std::istringstream iss(generated);
+            std::string line;
+            int count = 0;
+            while (std::getline(iss, line) && count < maxLines) {
+                results.push_back(line);
+                count++;
+            }
+        }
+    } catch (...) {
+        // Fallback to single-line completions
+        auto single = getCompletions(context, 1);
+        if (!single.empty()) results.push_back(single[0].text);
     }
     
     return results;
@@ -160,43 +206,102 @@ std::vector<CompletionSuggestion> IntelligentCompletionEngine::inferCompletions(
     
     std::vector<CompletionSuggestion> suggestions;
     
-    // Build prompt
+    // Build prompt for code completion
     std::string prompt = enrichContext(context);
     
-    EnsureEngineLoaded();
+    // Call Ollama /api/generate via WinHTTP
+    try {
+        json payload = {
+            {"model", "codellama"},
+            {"prompt", prompt},
+            {"stream", false},
+            {"options", {
+                {"temperature", 0.3},
+                {"num_predict", 64},
+                {"top_p", 0.9}
+            }}
+        };
+        std::string payloadStr = payload.dump();
 
-    if (g_completionEngine && g_completionEngine->isModelLoaded()) {
-        // Run inference
-        // Suggest completions for the current line
-        std::string result = g_completionEngine->infer(prompt);
-        
-        // Parse result - assume model returns text that completes the line or multiple lines
-        if (!result.empty()) {
-            CompletionSuggestion s;
-            s.text = result;
-            s.label = result.substr(0, std::min(result.length(), (size_t)30));
-            s.confidence = 0.85f; // From model
-            s.priority = 100;
-            s.kind = "ai-generated";
-            suggestions.push_back(s);
+        HINTERNET hSession = WinHttpOpen(L"RawrXD-CompletionEngine/1.0",
+                                          WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                          WINHTTP_NO_PROXY_NAME,
+                                          WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSession) return suggestions;
+
+        HINTERNET hConnect = WinHttpConnect(hSession, L"localhost", 11434, 0);
+        if (!hConnect) { WinHttpCloseHandle(hSession); return suggestions; }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+                                                 L"/api/generate",
+                                                 nullptr, WINHTTP_NO_REFERER,
+                                                 WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+        if (!hRequest) {
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            return suggestions;
         }
+
+        WinHttpSetTimeouts(hRequest, 2000, 5000, 15000, 15000);
+
+        LPCWSTR ct = L"Content-Type: application/json";
+        bool ok = WinHttpSendRequest(hRequest, ct, -1L,
+                                      (LPVOID)payloadStr.c_str(),
+                                      (DWORD)payloadStr.size(),
+                                      (DWORD)payloadStr.size(), 0)
+                  && WinHttpReceiveResponse(hRequest, nullptr);
+
+        std::string responseBody;
+        if (ok) {
+            DWORD bytesAvailable = 0;
+            while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+                std::vector<char> buf(bytesAvailable + 1, 0);
+                DWORD bytesRead = 0;
+                WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+                responseBody.append(buf.data(), bytesRead);
+            }
+        }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        if (!responseBody.empty()) {
+            json resp = json::parse(responseBody, nullptr, false);
+            if (!resp.is_discarded() && resp.contains("response")) {
+                std::string generated = resp["response"].get<std::string>();
+                if (!generated.empty()) {
+                    // Split by double-newline to get multiple suggestions,
+                    // or treat the whole response as a single completion.
+                    CompletionSuggestion s;
+                    s.text = generated;
+                    s.label = generated.substr(0, std::min((size_t)40, generated.size()));
+                    s.confidence = 0.85f;
+                    s.priority = 70;
+                    s.kind = "snippet";
+                    suggestions.push_back(s);
+                }
+            }
+        }
+    } catch (...) {
+        // Model unavailable — fall through to heuristic fallback
     }
-    
-    // If we didn't get results (or as fallback/addition), add structural suggestions
+
+    // Heuristic fallback if no model response
     if (suggestions.empty()) {
-        std::vector<std::string> completions = {
+        std::vector<std::string> fallbacks = {
             context.linePrefix + " = ",
             context.linePrefix + "()",
             "if (" + context.linePrefix + ") {\n}",
             "for (auto " + context.linePrefix + " : ",
         };
         
-        for (const auto& comp : completions) {
+        for (const auto& comp : fallbacks) {
             CompletionSuggestion s;
             s.text = comp;
             s.label = comp.substr(0, 30);
-            s.confidence = 0.2f; // Low confidence for heuristics
-            s.priority = 10;
+            s.confidence = 0.3f;
+            s.priority = 20;
             s.kind = "snippet";
             suggestions.push_back(s);
         }

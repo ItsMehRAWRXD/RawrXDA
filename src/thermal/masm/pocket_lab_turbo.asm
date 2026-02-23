@@ -19,23 +19,6 @@
 ;=====================================================================
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
-; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
-PUBLIC PocketLabRunCycle
-PUBLIC PocketLabGetStats
-PUBLIC PocketLabGetThermal
-PUBLIC DetectTier
-PUBLIC ConnectThermal
-PUBLIC AllocateResources
-PUBLIC SelectOptimalDrive
-PUBLIC BuildSparseBitmap
-PUBLIC BuildHotTable
-PUBLIC PowerInferLoop
-PUBLIC main
-
 ;---------------------------------------------------------------------
 ; Kernel32 Imports
 ;---------------------------------------------------------------------
@@ -304,7 +287,6 @@ main PROC
 @Fail:
     mov ecx, 1
     call ExitProcess
-    ret
 main ENDP
 
 ;---------------------------------------------------------------------
@@ -323,9 +305,11 @@ DetectTier PROC
     mov [g_PhysicalRAM], rax
 
     ; Print RAM
+    push rax
     lea rcx, [szRAM]
     mov edx, lenRAM
     call PrintStr
+    pop rax
 
     mov rcx, 1073741824
     xor edx, edx
@@ -336,16 +320,23 @@ DetectTier PROC
     mov edx, lenGB
     call PrintStr
 
-    ; Determine tier (reuse rax from division)
+    ; Determine tier
     mov rax, [g_PhysicalRAM]
-    cmp rax, RAM_8GB
+
+    mov rcx, RAM_8GB
+    cmp rax, rcx
     jbe @TierMobile
-    cmp rax, RAM_16GB
+
+    mov rcx, RAM_16GB
+    cmp rax, rcx
     jbe @TierWork
+
+    jmp @TierEnterprise
 
 @TierMobile:
     mov dword ptr [g_Tier], TIER_MOBILE
-    mov qword ptr [g_PinSize], PIN_MOBILE_BYTES
+    mov rcx, PIN_MOBILE_BYTES
+    mov [g_PinSize], rcx
     mov dword ptr [g_PrefetchSize], PREFETCH_MOBILE
     mov dword ptr [g_GpuRatio], 100
     mov dword ptr [g_CpuRatio], 0
@@ -356,7 +347,8 @@ DetectTier PROC
 
 @TierWork:
     mov dword ptr [g_Tier], TIER_WORKSTATION
-    mov qword ptr [g_PinSize], PIN_WORKSTATION
+    mov rcx, PIN_WORKSTATION
+    mov [g_PinSize], rcx
     mov dword ptr [g_PrefetchSize], PREFETCH_WORK
     mov dword ptr [g_GpuRatio], 70
     mov dword ptr [g_CpuRatio], 30
@@ -367,7 +359,8 @@ DetectTier PROC
 
 @TierEnterprise:
     mov dword ptr [g_Tier], TIER_ENTERPRISE
-    mov qword ptr [g_PinSize], PIN_ENTERPRISE
+    mov rcx, PIN_ENTERPRISE
+    mov [g_PinSize], rcx
     mov dword ptr [g_PrefetchSize], PREFETCH_ENTERPRISE
     mov dword ptr [g_GpuRatio], 33
     mov dword ptr [g_CpuRatio], 67
@@ -449,9 +442,11 @@ AllocateResources PROC
     mov edx, lenBytes
     call PrintStr
 
-    ; Hot-pin cache (load PinSize directly into edx)
-    mov rdx, [g_PinSize]
+    ; Hot-pin cache
+    mov rax, [g_PinSize]
+    mov [rsp + 38h], rax
     xor ecx, ecx
+    mov edx, eax
     mov r8d, MEM_COMMIT or MEM_RESERVE
     mov r9d, PAGE_READWRITE
     call VirtualAlloc
@@ -462,7 +457,7 @@ AllocateResources PROC
     lea rcx, [szAllocPin]
     mov edx, lenAllocPin
     call PrintStr
-    mov rcx, [g_PinSize]
+    mov rcx, [rsp + 38h]
     call PrintNum
     lea rcx, [szBytes]
     mov edx, lenBytes
@@ -502,7 +497,7 @@ AllocateResources PROC
 AllocateResources ENDP
 
 ;---------------------------------------------------------------------
-; SelectOptimalDrive - Vectorized min-finding (OPTIMIZED)
+; SelectOptimalDrive
 ;---------------------------------------------------------------------
 SelectOptimalDrive PROC
     sub rsp, 38h
@@ -511,20 +506,22 @@ SelectOptimalDrive PROC
     test rax, rax
     jz @UseDefault
 
-    mov r8d, 1000                          ; min temp
-    mov r9d, 0                             ; min index
+    mov r8d, 1000
+    mov r9d, 0
     xor ecx, ecx
 
 @ScanLoop:
     cmp ecx, 5
     jge @ScanDone
     mov edx, [rax + THERMAL_TEMPS_OFF + rcx*4]
-    lea r10d, [rdx - 1]                    ; if edx in [0,100]: r10d < 100
-    cmp r10d, 99
-    ja @NextDrive
+    cmp edx, 0
+    jl @NextDrive
+    cmp edx, 100
+    jg @NextDrive
     cmp edx, r8d
-    cmovl r8d, edx
-    cmovl r9d, ecx
+    jge @NextDrive
+    mov r8d, edx
+    mov r9d, ecx
 @NextDrive:
     inc ecx
     jmp @ScanLoop
@@ -549,10 +546,8 @@ SelectOptimalDrive PROC
     jmp @SelectDone
 
 @UseDefault:
-    xor r8d, r8d
-    xor r9d, r9d
-    mov [g_ActiveDrive], r8d
-    mov [g_DriveTemp], r9d
+    mov dword ptr [g_ActiveDrive], 0
+    mov dword ptr [g_DriveTemp], 0
 
 @SelectDone:
     add rsp, 38h
@@ -560,7 +555,7 @@ SelectOptimalDrive PROC
 SelectOptimalDrive ENDP
 
 ;---------------------------------------------------------------------
-; BuildSparseBitmap - Mark zero-weight slabs (OPTIMIZED: unrolled)
+; BuildSparseBitmap - Mark zero-weight slabs for skip
 ;---------------------------------------------------------------------
 BuildSparseBitmap PROC
     push rbx
@@ -577,44 +572,53 @@ BuildSparseBitmap PROC
     mov ecx, 32
     rep stosq
 
-    ; Simulate sparse detection (~18% skip)
+    ; Simulate sparse detection (~18% skip for demo)
+    ; Mark every 5-6th slab as sparse (pseudo-pattern)
     xor r12d, r12d                          ; slab index
     xor ebx, ebx                            ; skip count
-    lea r9, [SparseBitmap]
 
 @ScanLoop:
-    cmp r12d, 2048
+    cmp r12d, 2048                          ; demo: 2048 slabs
     jge @ScanDone
 
-    ; Branchless: skip if (index & 5) == 0 || (index & 10) == 0
+    ; Pseudo-random: skip if (index % 6) == 0 || (index % 11) == 0
     mov eax, r12d
-    mov ecx, eax
-    and ecx, 5
+    xor edx, edx
+    mov ecx, 6
+    div ecx
+    test edx, edx
     jz @MarkSparse
-    mov ecx, eax
-    and ecx, 10
+
+    mov eax, r12d
+    xor edx, edx
+    mov ecx, 11
+    div ecx
+    test edx, edx
     jnz @NextSlab
 
 @MarkSparse:
+    ; Set bit in bitmap
     mov eax, r12d
-    mov ecx, eax
-    shr eax, 6
-    and ecx, 63
+    shr eax, 6                              ; qword index
+    mov ecx, r12d
+    and ecx, 63                             ; bit index
+    lea r9, [SparseBitmap]
     bts qword ptr [r9 + rax*8], rcx
     inc ebx
 
 @NextSlab:
-    add r12d, 1
-    cmp r12d, 2048
-    jl @ScanLoop
+    inc r12d
+    jmp @ScanLoop
 
 @ScanDone:
     mov [g_SparseSkipCount], rbx
 
+    ; Print skip rate
     lea rcx, [szSparseSkip]
     mov edx, lenSparseSkip
     call PrintStr
 
+    ; Calculate percentage: (skip * 100) / 2048
     mov rax, rbx
     imul rax, 100
     mov rcx, 2048
@@ -634,7 +638,7 @@ BuildSparseBitmap PROC
 BuildSparseBitmap ENDP
 
 ;---------------------------------------------------------------------
-; BuildHotTable - First N slabs = hot (OPTIMIZED: vectorized fill)
+; BuildHotTable - First N slabs = hot (GPU/NPU resident)
 ;---------------------------------------------------------------------
 BuildHotTable PROC
     push rbx
@@ -647,24 +651,17 @@ BuildHotTable PROC
 
     ; Hot count based on GPU ratio
     mov eax, [g_GpuRatio]
-    imul eax, 1024
+    imul eax, 1024                          ; max 1024 slabs for demo
     mov ecx, 100
     xor edx, edx
     div ecx
-    mov r12d, eax
+    mov r12d, eax                           ; hot count
     mov [HotCount], eax
 
-    ; Fill hot table with LBA indices (vectorized)
+    ; Fill hot table with LBA indices
     xor ebx, ebx
     lea r8, [HotLbaTable]
 @FillLoop:
-    cmp ebx, r12d
-    jge @FillDone
-    mov qword ptr [r8 + rbx*8], rbx
-    add ebx, 4
-    cmp ebx, r12d
-    jl @FillLoop
-    sub ebx, 4
     cmp ebx, r12d
     jge @FillDone
     mov qword ptr [r8 + rbx*8], rbx
@@ -672,6 +669,7 @@ BuildHotTable PROC
     jmp @FillLoop
 
 @FillDone:
+    ; Print counts
     lea rcx, [szHotSlabs]
     mov edx, lenHotSlabs
     call PrintStr
@@ -696,7 +694,7 @@ BuildHotTable PROC
 BuildHotTable ENDP
 
 ;---------------------------------------------------------------------
-; PowerInferLoop - Main inference loop (OPTIMIZED: batch counters)
+; PowerInferLoop - Main inference loop with GPU/CPU split
 ;---------------------------------------------------------------------
 PowerInferLoop PROC
     push rbx
@@ -717,64 +715,82 @@ PowerInferLoop PROC
     mov [g_GpuProcessed], rax
     mov [g_CpuProcessed], rax
 
-    lea r13, [SparseBitmap]
-    mov r14, [g_pTokenBitmap]
+    ; Get perf frequency
+    lea rcx, [g_PerfFreq]
+    call QueryPerformanceFrequency
+
     xor r12d, r12d                          ; token counter
-    xor r15d, r15d                          ; local sparse count
-    xor ebx, ebx                            ; local gpu count
-    xor r10d, r10d                          ; local cpu count
 
 @TokenLoop:
     cmp r12d, MAX_TOKENS
-    jge @FlushCounters
+    jge @LoopDone
 
-    ; TurboSparse check
+    ; ---- TurboSparse: check if slab is sparse ----
     mov eax, r12d
-    and eax, 2047
+    and eax, 2047                           ; wrap to 2048 slabs
     mov ecx, eax
-    shr ecx, 6
-    and eax, 63
-    bt qword ptr [r13 + rcx*8], rax
+    shr ecx, 6                              ; qword index
+    mov r8d, eax
+    and r8d, 63                             ; bit index
+    lea r9, [SparseBitmap]
+    bt qword ptr [r9 + rcx*8], r8
     jnc @NotSparse
 
-    inc r15d
+    ; Sparse - skip this slab
+    lock inc qword ptr [g_SparseSkipped]
     jmp @TokenDone
 
 @NotSparse:
-    ; PowerInfer check
+    ; ---- PowerInfer: check if hot (GPU) or cold (CPU) ----
     mov eax, r12d
-    and eax, 1023
+    and eax, 1023                           ; wrap to 1024 slabs
     cmp eax, [HotCount]
     jge @ColdPath
-    inc ebx
-    jmp @MarkToken
 
-@ColdPath:
-    inc r10d
+    ; Hot path (GPU/NPU)
+    lock inc qword ptr [g_GpuProcessed]
 
-@MarkToken:
-    test r14, r14
-    jz @TokenDone
+    ; Simulate GPU work (mark in bitmap)
     mov rax, r12
     shr rax, 6
+    mov r8, [g_pTokenBitmap]
+    test r8, r8
+    jz @TokenDone
     mov ecx, r12d
     and ecx, 63
-    bts qword ptr [r14 + rax*8], rcx
+    bts qword ptr [r8 + rax*8], rcx
+    jmp @SwapBuffer
+
+@ColdPath:
+    ; Cold path (CPU)
+    lock inc qword ptr [g_CpuProcessed]
+
+    ; Simulate CPU ghost-paging load
+    mov rax, r12
+    shr rax, 6
+    mov r8, [g_pTokenBitmap]
+    test r8, r8
+    jz @TokenDone
+    mov ecx, r12d
+    and ecx, 63
+    bts qword ptr [r8 + rax*8], rcx
+
+@SwapBuffer:
+    ; Double-buffer flip every 64 tokens
+    mov eax, r12d
+    and eax, 63
+    jnz @TokenDone
+
+    movzx eax, byte ptr [g_BufferToggle]
+    xor al, 1
+    mov [g_BufferToggle], al
 
 @TokenDone:
+    lock inc qword ptr [g_TokensProcessed]
     inc r12d
     jmp @TokenLoop
 
-@FlushCounters:
-    mov rax, r15
-    add [g_SparseSkipped], rax
-    mov rax, rbx
-    add [g_GpuProcessed], rax
-    mov rax, r10
-    add [g_CpuProcessed], rax
-    mov rax, r12
-    add [g_TokensProcessed], rax
-
+@LoopDone:
     add rsp, 40h
     pop r15
     pop r14
@@ -902,38 +918,40 @@ PrintStr PROC
 PrintStr ENDP
 
 ;---------------------------------------------------------------------
-; PrintNum - RCX=number (OPTIMIZED: reverse-build, no string reversal)
+; PrintNum - RCX=number
 ;---------------------------------------------------------------------
 PrintNum PROC
     push rbx
-    sub rsp, 30h
-    lea rbx, [g_NumBuf + 31]                ; start at end
-    mov byte ptr [rbx], 0                   ; null term
-    dec rbx
-    test rcx, rcx
+    push r12
+    sub rsp, 38h
+    mov r12, rcx
+    lea rbx, [g_NumBuf + 30]
+    mov byte ptr [rbx], 0
+    test r12, r12
     jnz @ConvertLoop
+    dec rbx
     mov byte ptr [rbx], '0'
     jmp @PrintNumStr
-
 @ConvertLoop:
-    test rcx, rcx
+    test r12, r12
     jz @PrintNumStr
-    mov rax, rcx
+    mov rax, r12
     xor edx, edx
-    mov r8, 10
-    div r8
+    mov rcx, 10
+    div rcx
+    mov r12, rax
     add dl, '0'
-    mov [rbx], dl
     dec rbx
-    mov rcx, rax
+    mov [rbx], dl
     jmp @ConvertLoop
-
 @PrintNumStr:
-    lea rcx, [rbx + 1]
-    mov edx, 31
-    sub edx, ebx
+    mov rcx, rbx
+    lea rax, [g_NumBuf + 30]
+    sub rax, rbx
+    mov edx, eax
     call PrintStr
-    add rsp, 30h
+    add rsp, 38h
+    pop r12
     pop rbx
     ret
 PrintNum ENDP

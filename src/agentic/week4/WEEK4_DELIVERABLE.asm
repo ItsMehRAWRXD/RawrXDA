@@ -9,10 +9,6 @@
 ;================================================================================
 
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION WIN64:3
 
 ;================================================================================
@@ -1213,8 +1209,7 @@ GenerateXMLReport PROC FRAME
     sub rsp, 40h
     
     ; Generate JUnit-style XML (stub)
-    ; Basic XML output
-    invoke printf, CSTR("<?xml version='1.0' encoding='UTF-8'?><testsuites><testsuite name='RawrXD Tests' tests='%d' failures='%d'></testsuite></testsuites>"), [gTestCount], [gFailureCount]
+    ; In full version: create XML file with all test results
     
     add rsp, 40h
     RESTORE_REGS
@@ -1226,8 +1221,7 @@ GenerateJSONReport PROC FRAME
     sub rsp, 40h
     
     ; Generate JSON report (stub)
-    ; Basic JSON output
-    invoke printf, CSTR("{\"tests\": %d, \"failures\": %d, \"time\": 0.0}"), [gTestCount], [gFailureCount]
+    ; In full version: create JSON with metrics, timings, etc.
     
     add rsp, 40h
     RESTORE_REGS

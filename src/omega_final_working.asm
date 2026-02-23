@@ -59,9 +59,6 @@ header_sec  db 13, 10, "=== SECTION ENTROPY ANALYSIS ===", 13, 10, 0
 header_str  db 13, 10, "=== STRING EXTRACTION ===", 13, 10, 0
 header_tls  db 13, 10, "=== TLS CALLBACK ANALYSIS ===", 13, 10, 0
 
-; Entropy calculation buffer
-entropy_freq dd 256 dup(0)
-
 ; Format strings for output
 fmt_machine     db "Machine Type:     %04Xh", 13, 10, 0
 fmt_sections    db "Section Count:    %d", 13, 10, 0
@@ -406,69 +403,7 @@ section_loop:
     
     INVOKE print_string, ADDR output_buffer
     
-    ; Calculate basic entropy (simplified)
-    LOCAL entropy:REAL8
-    LOCAL freq[256]:DWORD
-    LOCAL total:DWORD
-    LOCAL i:DWORD
-    
-    ; Initialize freq array
-    mov i, 0
-    .init_loop:
-    cmp i, 256
-    jge .init_done
-    mov freq[i*4], 0
-    inc i
-    jmp .init_loop
-    .init_done:
-    
-    ; Count frequencies in section
-    mov esi, section_start
-    mov ecx, section_size
-    mov total, ecx
-    .count_loop:
-    cmp ecx, 0
-    je .count_done
-    movzx eax, byte ptr [esi]
-    inc freq[eax*4]
-    inc esi
-    dec ecx
-    jmp .count_loop
-    .count_done:
-    
-    ; Calculate entropy (basic approximation)
-    finit
-    fldz ; entropy = 0.0
-    mov i, 0
-    .entropy_loop:
-    cmp i, 256
-    jge .entropy_done
-    mov eax, freq[i*4]
-    cmp eax, 0
-    je .next_byte
-    ; p = freq / total
-    fild total
-    fild freq[i*4]
-    fdiv ; p on st(0)
-    ; compute p * log2(p)
-    fld st(0) ; duplicate p
-    fyl2x ; st(0) = p * log2(p)
-    faddp st(1), st(0) ; add to entropy
-    .next_byte:
-    inc i
-    jmp .entropy_loop
-    .entropy_done:
-    fchs ; entropy = -entropy
-    
-    ; Store and print
-    fstp entropy
-    push dword ptr entropy+4
-    push dword ptr entropy
-    push OFFSET fmt_entropy
-    push OFFSET output_buffer
-    call wsprintf
-    add esp, 16
-    INVOKE print_string, ADDR output_buffer
+    ; TODO: Add entropy calculation here
     
     inc current_section
     jmp section_loop

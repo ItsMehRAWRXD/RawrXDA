@@ -3,10 +3,6 @@
 ; Creates Local\SOVEREIGN_NVME_TEMPS, polls drives, publishes real temps
 ; ============================================================================
 option casemap:none
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 ; option frame:auto (removed for MASM x64)
 ; Struct alignment checks
 ; .errnz (SIZEOF STORAGE_PROPERTY_QUERY - 16) ; Commented out until we debug sizes
@@ -259,7 +255,6 @@ DebugLog PROC FRAME
     mov rcx, [rsp+30h]  ; Restore RCX
     add rsp, 28h
     jmp OutputDebugStringA
-    ret
 DebugLog ENDP
 
 ServiceCtrl PROC FRAME
@@ -271,7 +266,6 @@ ServiceCtrl PROC FRAME
     mov rcx, hStatus
     lea rdx, svcStatus
     jmp SetServiceStatus
-    ret
 ServiceCtrl ENDP
 
 InitMMF PROC FRAME
@@ -412,26 +406,6 @@ _fail:
     ret
 QueryTemp ENDP
 
-QueryWear PROC FRAME
-    ; ecx = driveId
-    ; Return wear level (0-100, or -1 on error)
-    push rbx
-    sub rsp,40h
-    .ENDPROLOG
-    
-    ; For now, return a fake wear level based on drive ID
-    mov eax, ecx
-    imul eax, 10
-    add eax, 20  ; 20-120, but cap at 100
-    cmp eax, 100
-    jle .ok
-    mov eax, 100
-.ok:
-    add rsp,40h
-    pop rbx
-    ret
-QueryWear ENDP
-
 UpdateDrives PROC FRAME
     push rbx
     push r12
@@ -448,8 +422,7 @@ _loop:
     call QueryTemp
     mov [rbx+OFF_TEMPS+r12*4], eax
     ; wear placeholder
-    call QueryWear
-    mov dword ptr [rbx+OFF_WEAR+r12*4], eax
+    mov dword ptr [rbx+OFF_WEAR+r12*4], -1
     inc r12d
     jmp _loop
 _done:

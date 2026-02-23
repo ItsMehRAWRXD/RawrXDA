@@ -1,50 +1,22 @@
 #include "model_tester.h"
-#include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <numeric>
 #include <iomanip>
 #include <ctime>
+
+#ifdef _WIN32
 #include <windows.h>
 #include <winhttp.h>
 #pragma comment(lib, "winhttp.lib")
-
-// Helper
-static std::string TesterHttpPost(const std::wstring& domain, int port, const std::wstring& path, const std::string& body) {
-    HINTERNET hSession = WinHttpOpen(L"RawrXD-Tester/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-    if (!hSession) return "";
-    HINTERNET hConnect = WinHttpConnect(hSession, domain.c_str(), port, 0);
-    if (!hConnect) { WinHttpCloseHandle(hSession); return ""; }
-    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
-    if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return ""; }
-    std::string response;
-    if (WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)body.c_str(), (DWORD)body.length(), (DWORD)body.length(), 0)) {
-        if (WinHttpReceiveResponse(hRequest, NULL)) {
-            DWORD dwSize = 0;
-            DWORD dwDownloaded = 0;
-            do {
-                dwSize = 0;
-                if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
-                if (dwSize == 0) break;
-                std::vector<char> buffer(dwSize + 1);
-                if (WinHttpReadData(hRequest, &buffer[0], dwSize, &dwDownloaded)) response.append(buffer.data(), dwDownloaded);
-            } while (dwSize > 0);
-        }
-    }
-    WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
-    return response;
-}
-
-// Note: This implementation shows the framework structure.
-// For full HTTP integration, link against libcurl:
-// #include <curl/curl.h>
+#endif
 
 ModelTester::ModelTester(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics,
     std::shared_ptr<ResponseParser> parser)
     : m_logger(logger), m_metrics(metrics), m_parser(parser) {
-    if (m_logger) m_
+    if (m_logger) m_logger->info("ModelTester initialized");
 }
 
 ModelTestResult ModelTester::testWithOllama(
@@ -52,7 +24,7 @@ ModelTestResult ModelTester::testWithOllama(
     const std::string& prompt,
     int maxTokens) {
 
-    if (m_logger) m_
+    if (m_logger) m_logger->info("Testing model: {} with prompt: {}...", modelName, prompt.substr(0, 50));
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -73,7 +45,7 @@ ModelTestResult ModelTester::testWithOllama(
                 << "  \"num_predict\": " << maxTokens << "\n"
                 << "}";
 
-        if (m_logger) m_
+        if (m_logger) m_logger->debug("Sending request to Ollama API");
 
         // Make HTTP request to Ollama
         std::string response = makeOllamaRequest("/api/generate", payload.str());
@@ -82,7 +54,7 @@ ModelTestResult ModelTester::testWithOllama(
         result.timeToFirstTokenUs = std::chrono::duration_cast<std::chrono::microseconds>(
             firstTokenTime - startTime).count();
 
-        if (m_logger) m_
+        if (m_logger) m_logger->debug("Received response: {} chars", response.length());
 
         // Parse response
         result.response = parseOllamaStreamingResponse(response);
@@ -123,10 +95,13 @@ ModelTestResult ModelTester::testWithOllama(
             m_metrics->recordHistogram("model_test_quality", result.responseQuality * 100);
         }
 
-        if (m_logger) m_
+        if (m_logger) m_logger->info("Test complete: {} tokens in {} us (avg {} us/token, quality: {:.2f}%)",
+                       result.tokenCount, result.totalLatencyUs, 
+                       static_cast<int>(result.avgTokenLatencyUs),
+                       result.responseQuality * 100);
 
     } catch (const std::exception& e) {
-        if (m_logger) m_
+        if (m_logger) m_logger->error("Test failed: {}", e.what());
         result.responseQuality = 0.0;
         result.parseSuccessful = false;
     }
@@ -139,12 +114,13 @@ std::vector<LatencyBenchmark> ModelTester::benchmarkModels(
     const std::vector<std::string>& testPrompts,
     int runsPerModel) {
 
-    if (m_logger) m_
+    if (m_logger) m_logger->info("Starting benchmark: {} models x {} prompts x {} runs",
+                   modelNames.size(), testPrompts.size(), runsPerModel);
 
     std::vector<LatencyBenchmark> results;
 
     for (const auto& model : modelNames) {
-        if (m_logger) m_
+        if (m_logger) m_logger->info("Benchmarking model: {}", model);
 
         std::vector<int64_t> allLatencies;
 
@@ -179,7 +155,7 @@ std::vector<LatencyBenchmark> ModelTester::benchmarkModels(
             results.push_back(bench);
 
             if (m_logger) {
-
+                m_logger->info("Benchmark results for {}: avg={:.2f}ms, p95={:.2f}ms, p99={:.2f}ms",
                                model, bench.avgLatencyMs,
                                bench.p95LatencyMs, bench.p99LatencyMs);
             }
@@ -190,12 +166,12 @@ std::vector<LatencyBenchmark> ModelTester::benchmarkModels(
 }
 
 std::vector<ParsedCompletion> ModelTester::testResponseParsing(const std::string& modelOutput) {
-    if (m_logger) m_
+    if (m_logger) m_logger->debug("Testing response parsing on {} chars", modelOutput.length());
 
     auto completions = m_parser->parseResponse(modelOutput);
 
     if (m_logger) {
-
+        m_logger->info("Parsed {} completions, confidence scores: {}",
                        completions.size(),
                        completions.empty() ? "N/A" : std::to_string(completions[0].confidence));
     }
@@ -207,7 +183,7 @@ LatencyBenchmark ModelTester::measureLatencyDistribution(
     const std::string& modelName,
     int testCount) {
 
-    if (m_logger) m_
+    if (m_logger) m_logger->info("Measuring latency distribution for {} ({} requests)", modelName, testCount);
 
     std::vector<std::string> testPrompts = {
         "print('hello')",
@@ -245,7 +221,7 @@ bool ModelTester::validateModelResponse(
     const std::string& modelName,
     const std::string& prompt) {
 
-    if (m_logger) m_
+    if (m_logger) m_logger->debug("Validating model response for: {}", modelName);
 
     auto result = testWithOllama(modelName, prompt, 50);
 
@@ -253,7 +229,7 @@ bool ModelTester::validateModelResponse(
                    !result.response.empty() && 
                    result.responseQuality > 0.5;
 
-    if (m_logger) m_
+    if (m_logger) m_logger->info("Validation result: {}", isValid ? "PASS" : "FAIL");
 
     return isValid;
 }
@@ -329,7 +305,7 @@ std::string ModelTester::exportToJSON() const {
 }
 
 void ModelTester::resetResults() {
-    if (m_logger) m_
+    if (m_logger) m_logger->info("Resetting test results");
     m_testResults.clear();
     m_latencyHistory.clear();
 }
@@ -338,22 +314,94 @@ std::string ModelTester::makeOllamaRequest(
     const std::string& endpoint,
     const std::string& payload) {
 
-    // Real logic: HTTP Request via WinHTTP
-    // Assume default Ollama port 11434 for tests if not specified in endpoint string (endpoint is usually just path)
-    // The previous code assumed endpoint was path.
+    if (m_logger) m_logger->debug("Making Ollama request to {} with {} chars payload", 
+                    endpoint, payload.length());
 
-    // Basic domain/port parsing
-    std::wstring domain = L"localhost";
+#ifdef _WIN32
+    // Use WinHTTP to call Ollama at localhost:11434
+    const char* ollamaHostEnv = std::getenv("OLLAMA_HOST");
+    std::string hostStr = ollamaHostEnv ? ollamaHostEnv : "localhost";
     int port = 11434;
-    
-    // Quick conversion of endpoint to wstring
-    std::wstring wpath(endpoint.begin(), endpoint.end());
+    const char* portEnv = std::getenv("OLLAMA_PORT");
+    if (portEnv) port = std::stoi(portEnv);
 
-    std::string response = TesterHttpPost(domain, port, wpath, payload);
-    if (response.empty()) {
-        return "{\"error\": \"Connection failed\"}";
+    std::wstring wHost(hostStr.begin(), hostStr.end());
+    std::wstring wEndpoint(endpoint.begin(), endpoint.end());
+
+    HINTERNET hSession = WinHttpOpen(L"RawrXD-ModelTester/1.0",
+                                      WINHTTP_ACCESS_TYPE_NO_PROXY,
+                                      WINHTTP_NO_PROXY_NAME,
+                                      WINHTTP_NO_PROXY_BYPASS, 0);
+    if (!hSession) {
+        if (m_logger) m_logger->error("WinHttpOpen failed: {}", GetLastError());
+        return "";
     }
+
+    HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(),
+                                         static_cast<INTERNET_PORT>(port), 0);
+    if (!hConnect) {
+        if (m_logger) m_logger->error("WinHttpConnect failed: {}", GetLastError());
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST",
+                                             wEndpoint.c_str(),
+                                             nullptr, WINHTTP_NO_REFERER,
+                                             WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest) {
+        if (m_logger) m_logger->error("WinHttpOpenRequest failed: {}", GetLastError());
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    // Generous timeout for model inference
+    WinHttpSetTimeouts(hRequest, 5000, 10000, 120000, 120000);
+
+    LPCWSTR contentType = L"Content-Type: application/json";
+    BOOL sent = WinHttpSendRequest(hRequest, contentType, -1L,
+                                    (LPVOID)payload.c_str(),
+                                    (DWORD)payload.size(),
+                                    (DWORD)payload.size(), 0);
+    if (!sent) {
+        DWORD err = GetLastError();
+        if (m_logger) m_logger->error("WinHttpSendRequest failed: {} — is Ollama running on {}:{}?",
+                                       err, hostStr, port);
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    if (!WinHttpReceiveResponse(hRequest, nullptr)) {
+        if (m_logger) m_logger->error("WinHttpReceiveResponse failed: {}", GetLastError());
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return "";
+    }
+
+    // Read response body
+    std::string response;
+    DWORD bytesAvailable = 0;
+    while (WinHttpQueryDataAvailable(hRequest, &bytesAvailable) && bytesAvailable > 0) {
+        std::vector<char> buf(bytesAvailable + 1, 0);
+        DWORD bytesRead = 0;
+        WinHttpReadData(hRequest, buf.data(), bytesAvailable, &bytesRead);
+        response.append(buf.data(), bytesRead);
+    }
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+
+    if (m_logger) m_logger->debug("Received response: {} chars", response.length());
     return response;
+#else
+    if (m_logger) m_logger->error("makeOllamaRequest: POSIX requires libcurl (not linked)");
+    return "";
+#endif
 }
 
 std::string ModelTester::parseOllamaStreamingResponse(const std::string& streamResponse) {

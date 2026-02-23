@@ -5,10 +5,6 @@
 
 OPTION DOTNAME
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION WIN64:3
 
 include \masm64\include64\windows.inc
@@ -253,7 +249,6 @@ Aligned_Allocate ENDP
 Aligned_Free PROC FRAME
     mov rcx, [rcx - 8]              ; Get original pointer
     jmp HeapFree                    ; Tail call
-    ret
 Aligned_Free ENDP
 
 ; ═══════════════════════════════════════════════════════════════════════════════
@@ -303,7 +298,6 @@ Thread_AffinitySet PROC FRAME
     mov rdx, r8
     ; RCX already has thread handle
     jmp SetThreadAffinityMask
-    ret
 Thread_AffinitySet ENDP
 
 ; ═══════════════════════════════════════════════════════════════════════════════

@@ -1,10 +1,6 @@
 ; RawrXD_Streaming_Orchestrator.asm - Mock implementation for linking
 ; Provides stubs for High-level API to allow CLI/GUI to link
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 ; OPTION WIN64:3
 
 .CODE

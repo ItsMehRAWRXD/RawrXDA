@@ -1,4 +1,4 @@
-; RawrXD Universal Compiler - x86_64 Assembly Test
+﻿; RawrXD Universal Compiler - x86_64 Assembly Test
 section .data
     msg db "RawrXD ASM Test - Hello from Assembly!", 10, 0
     pass db "All Assembly tests passed!", 10, 0

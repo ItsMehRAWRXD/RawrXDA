@@ -17,10 +17,6 @@
 ;
 ; =============================================================================
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .CODE
 
 ; =============================================================================
@@ -351,7 +347,6 @@ szSuccessTitle      DB "Upload Complete", 0
 szTooManyFiles      DB "Maximum 25 files allowed", 0
 szInvalidFormat     DB "Unsupported file format", 0
 szMemoryError       DB "Insufficient memory for 120B model", 0
-szMetricsText       DB "Metrics: TBD", 0
 szFileFilter        DB "All Supported (*.gguf;*.safetensors;*.bin)", 0, "*.gguf;*.safetensors;*.bin", 0
                     DB "GGUF Models (*.gguf)", 0, "*.gguf", 0
                     DB "Safetensors (*.safetensors)", 0, "*.safetensors", 0
@@ -585,15 +580,12 @@ gen_have_params:
     call GetTickCount64
     mov [rbx].AGENT_CONTEXT.gc_start_time, rax
     
-    ; Run generation loop
-    ; Basic implementation: generate fixed number of tokens
-    mov rcx, 10  ; max tokens
-    .gen_loop:
-    ; Call inference (placeholder)
-    ; Sample token (placeholder)
-    ; Append to output
-    dec rcx
-    jnz .gen_loop
+    ; Placeholder: Run generation loop
+    ; In production, this would:
+    ; 1. Encode prompt to tokens
+    ; 2. Allocate KV slot
+    ; 3. Run inference loop
+    ; 4. Sample tokens with callbacks
     
     ; Update metrics
     mov eax, [rbx].AGENT_CONTEXT.gc_generated_tokens
@@ -887,12 +879,8 @@ ExportMetrics PROC FRAME
     mov rdi, rdx                ; output_buffer
     mov esi, r8d                ; buffer_size
     
-    ; Copy metrics to text format
-    ; Basic: copy "Metrics: TBD"
-    mov rcx, rdi
-    mov rdx, OFFSET szMetricsText
-    call strcpy
-    mov eax, 12  ; length
+    ; Placeholder: Copy metrics to text format
+    xor eax, eax                ; bytes written = 0
     
     add rsp, 32
     pop rdi
@@ -926,46 +914,8 @@ Phase3Shutdown PROC FRAME
     test rcx, rcx
     jz skip_free_kv
     
-    ; Loop through all KV slots and free K/V caches
-    mov rsi, rcx
-    xor edi, edi
-@@free_kv_loop:
-    cmp edi, MAX_KV_SLOTS
-    jae @@kv_loop_done
+    ; TODO: Free individual K/V cache buffers in each slot
     
-    ; Check if slot is occupied
-    cmp [rsi].KV_SLOT.is_occupied, 0
-    je @@next_slot
-    
-    ; Free K cache
-    mov rcx, [rsi].KV_SLOT.k_cache
-    test rcx, rcx
-    jz @@skip_k_free
-    mov rdx, MEM_RELEASE
-    xor r8d, r8d
-    call VirtualFree
-    
-@@skip_k_free:
-    ; Free V cache
-    mov rcx, [rsi].KV_SLOT.v_cache
-    test rcx, rcx
-    jz @@skip_v_free
-    mov rdx, MEM_RELEASE
-    xor r8d, r8d
-    call VirtualFree
-    
-@@skip_v_free:
-    ; Mark slot as free
-    mov [rsi].KV_SLOT.is_occupied, 0
-    
-@@next_slot:
-    add rsi, SIZEOF KV_SLOT
-    inc edi
-    jmp @@free_kv_loop
-    
-@@kv_loop_done:
-    ; Free the KV slots array itself
-    mov rcx, [rbx].AGENT_CONTEXT.kv_slots
     mov rdx, MEM_RELEASE
     xor r8d, r8d
     call VirtualFree

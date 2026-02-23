@@ -3,10 +3,6 @@
 
 OPTION casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 EXTERN SidecarMain:PROC
 EXTERN ExitProcess:PROC
 

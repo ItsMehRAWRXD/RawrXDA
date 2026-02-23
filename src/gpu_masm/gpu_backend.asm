@@ -4,10 +4,6 @@
 ; Replaces external dependencies: Vulkan SDK, CUDA Toolkit, ROCm/HIP SDK
 ; Maintains GPU acceleration through direct hardware access
 
-EXTERN HybridGPU_Init:PROC
-EXTERN VirtualAlloc:PROC
-EXTERN VirtualFree:PROC
-
 section .data
     ; GPU Backend State
     current_backend dq 0          ; 0=CPU, 1=Vulkan, 2=CUDA, 3=ROCm
@@ -251,16 +247,13 @@ InitializeVulkanBackend:
     jmp .done
     
 .has_gpu:
-    ; Initialize via hybrid Vulkan bridge (returns non-zero on success)
-    call HybridGPU_Init
-    test rax, rax
-    jz .vulkan_failed
-
+    ; Initialize Vulkan-like context
+    ; This would include:
+    ; - GPU memory allocation
+    ; - Command buffer setup
+    ; - Shader compilation
+    
     mov rax, 1
-    jmp .done
-
-.vulkan_failed:
-    xor rax, rax
     
 .done:
     pop rbx
@@ -517,22 +510,9 @@ ResetGPUPerformanceCounters:
 ; Input: RCX = size in bytes
 ; Output: RAX = pointer to allocated memory
 AllocateVulkanMemory:
-    ; Use VirtualAlloc for GPU memory simulation
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, 0          ; lpAddress = NULL
-    mov rdx, rcx        ; dwSize (from stack)
-    mov r8, 1000h       ; MEM_COMMIT
-    mov r9, 4           ; PAGE_READWRITE
-    call VirtualAlloc
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement Vulkan-like memory allocation
+    ; This would use direct GPU memory access
+    mov rax, 0
     ret
 
 ; AllocateCUDAMemory
@@ -541,22 +521,9 @@ AllocateVulkanMemory:
 ; Input: RCX = size in bytes
 ; Output: RAX = pointer to allocated memory
 AllocateCUDAMemory:
-    ; Use VirtualAlloc for GPU memory simulation
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, 0          ; lpAddress = NULL
-    mov rdx, rcx        ; dwSize (from stack)
-    mov r8, 1000h       ; MEM_COMMIT
-    mov r9, 4           ; PAGE_READWRITE
-    call VirtualAlloc
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement CUDA-like memory allocation
+    ; This would use NVIDIA GPU memory
+    mov rax, 0
     ret
 
 ; AllocateROCmMemory
@@ -565,22 +532,9 @@ AllocateCUDAMemory:
 ; Input: RCX = size in bytes
 ; Output: RAX = pointer to allocated memory
 AllocateROCmMemory:
-    ; Use VirtualAlloc for GPU memory simulation
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, 0          ; lpAddress = NULL
-    mov rdx, rcx        ; dwSize (from stack)
-    mov r8, 1000h       ; MEM_COMMIT
-    mov r9, 4           ; PAGE_READWRITE
-    call VirtualAlloc
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement ROCm-like memory allocation
+    ; This would use AMD GPU memory
+    mov rax, 0
     ret
 
 ; AllocateCPUMemory
@@ -589,22 +543,9 @@ AllocateROCmMemory:
 ; Input: RCX = size in bytes
 ; Output: RAX = pointer to allocated memory
 AllocateCPUMemory:
-    ; Use VirtualAlloc for CPU memory
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, 0          ; lpAddress = NULL
-    mov rdx, rcx        ; dwSize (from stack)
-    mov r8, 1000h       ; MEM_COMMIT
-    mov r9, 4           ; PAGE_READWRITE
-    call VirtualAlloc
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement CPU memory allocation
+    ; This would use standard memory allocation
+    mov rax, 0
     ret
 
 ; FreeVulkanMemory
@@ -613,21 +554,7 @@ AllocateCPUMemory:
 ; Input: RCX = pointer to memory to free
 ; Output: None
 FreeVulkanMemory:
-    ; Use VirtualFree
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, rcx        ; lpAddress
-    mov rdx, 0          ; dwSize = 0 (decommit all)
-    mov r8, 8000h       ; MEM_RELEASE
-    call VirtualFree
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement Vulkan-like memory deallocation
     ret
 
 ; FreeCUDAMemory
@@ -636,21 +563,7 @@ FreeVulkanMemory:
 ; Input: RCX = pointer to memory to free
 ; Output: None
 FreeCUDAMemory:
-    ; Use VirtualFree (same as Vulkan path)
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, rcx        ; lpAddress
-    mov rdx, 0          ; dwSize = 0
-    mov r8, 8000h       ; MEM_RELEASE
-    call VirtualFree
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement CUDA-like memory deallocation
     ret
 
 ; FreeROCmMemory
@@ -659,21 +572,7 @@ FreeCUDAMemory:
 ; Input: RCX = pointer to memory to free
 ; Output: None
 FreeROCmMemory:
-    ; Use VirtualFree (same as Vulkan path)
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, rcx        ; lpAddress
-    mov rdx, 0          ; dwSize = 0
-    mov r8, 8000h       ; MEM_RELEASE
-    call VirtualFree
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement ROCm-like memory deallocation
     ret
 
 ; FreeCPUMemory
@@ -682,260 +581,47 @@ FreeROCmMemory:
 ; Input: RCX = pointer to memory to free
 ; Output: None
 FreeCPUMemory:
-    ; Use VirtualFree
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, rcx        ; lpAddress
-    mov rdx, 0          ; dwSize = 0
-    mov r8, 8000h       ; MEM_RELEASE
-    call VirtualFree
-    
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
+    ; TODO: Implement CPU memory deallocation
     ret
 
 ; ExecuteVulkanKernel
 ; -------------------
 ; Executes a kernel for Vulkan-like backend
-; CPU fallback: call kernel function pointer with params
 ; Input: RCX = kernel pointer, RDX = parameters pointer, R8 = grid size, R9 = block size
 ; Output: RAX = 0 on success, -1 on failure
 ExecuteVulkanKernel:
-    push rbx
-    push rsi
-    push rdi
-    push r12
-    push r13
-    
-    mov rbx, rcx        ; kernel function ptr
-    mov rsi, rdx        ; params ptr
-    mov r12, r8         ; grid size
-    mov r13, r9         ; block size
-    
-    ; Validate kernel pointer
-    test rbx, rbx
-    jz .vk_kernel_fail
-    
-    ; Execute kernel as CPU fallback (call function pointer)
-    ; Grid loop: iterate grid_x * block_x iterations on CPU
-    xor rdi, rdi        ; iteration counter
-    mov rcx, r12
-    imul rcx, r13       ; total_threads = grid * block
-    test rcx, rcx
-    jz .vk_kernel_done
-    
-.vk_kernel_loop:
-    cmp rdi, rcx
-    jge .vk_kernel_done
-    
-    ; Call kernel(params, thread_id)
-    push rcx
-    mov rcx, rsi        ; params
-    mov rdx, rdi        ; thread_id
-    call rbx
-    pop rcx
-    
-    inc rdi
-    jmp .vk_kernel_loop
-    
-.vk_kernel_done:
-    inc qword [gpu_compute_count]
-    xor rax, rax        ; success
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
-    ret
-    
-.vk_kernel_fail:
-    mov rax, -1
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
+    ; TODO: Implement Vulkan-like kernel execution
+    mov rax, 0
     ret
 
 ; ExecuteCUDAKernel
 ; -----------------
 ; Executes a kernel for CUDA-like backend
-; CPU fallback: call kernel function pointer with params
 ; Input: RCX = kernel pointer, RDX = parameters pointer, R8 = grid size, R9 = block size
 ; Output: RAX = 0 on success, -1 on failure
 ExecuteCUDAKernel:
-    push rbx
-    push rsi
-    push rdi
-    push r12
-    push r13
-    
-    mov rbx, rcx
-    mov rsi, rdx
-    mov r12, r8
-    mov r13, r9
-    
-    test rbx, rbx
-    jz .cuda_kernel_fail
-    
-    xor rdi, rdi
-    mov rcx, r12
-    imul rcx, r13
-    test rcx, rcx
-    jz .cuda_kernel_done
-    
-.cuda_kernel_loop:
-    cmp rdi, rcx
-    jge .cuda_kernel_done
-    
-    push rcx
-    mov rcx, rsi
-    mov rdx, rdi
-    call rbx
-    pop rcx
-    
-    inc rdi
-    jmp .cuda_kernel_loop
-    
-.cuda_kernel_done:
-    inc qword [gpu_compute_count]
-    xor rax, rax
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
-    ret
-    
-.cuda_kernel_fail:
-    mov rax, -1
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
+    ; TODO: Implement CUDA-like kernel execution
+    mov rax, 0
     ret
 
 ; ExecuteROCmKernel
 ; -----------------
 ; Executes a kernel for ROCm-like backend
-; CPU fallback: call kernel function pointer with params
 ; Input: RCX = kernel pointer, RDX = parameters pointer, R8 = grid size, R9 = block size
 ; Output: RAX = 0 on success, -1 on failure
 ExecuteROCmKernel:
-    push rbx
-    push rsi
-    push rdi
-    push r12
-    push r13
-    
-    mov rbx, rcx
-    mov rsi, rdx
-    mov r12, r8
-    mov r13, r9
-    
-    test rbx, rbx
-    jz .rocm_kernel_fail
-    
-    xor rdi, rdi
-    mov rcx, r12
-    imul rcx, r13
-    test rcx, rcx
-    jz .rocm_kernel_done
-    
-.rocm_kernel_loop:
-    cmp rdi, rcx
-    jge .rocm_kernel_done
-    
-    push rcx
-    mov rcx, rsi
-    mov rdx, rdi
-    call rbx
-    pop rcx
-    
-    inc rdi
-    jmp .rocm_kernel_loop
-    
-.rocm_kernel_done:
-    inc qword [gpu_compute_count]
-    xor rax, rax
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
-    ret
-    
-.rocm_kernel_fail:
-    mov rax, -1
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
+    ; TODO: Implement ROCm-like kernel execution
+    mov rax, 0
     ret
 
 ; ExecuteCPUKernel
 ; ----------------
-; Executes a kernel on CPU - direct scalar execution
+; Executes a kernel for CPU backend
 ; Input: RCX = kernel pointer, RDX = parameters pointer, R8 = grid size, R9 = block size
 ; Output: RAX = 0 on success, -1 on failure
 ExecuteCPUKernel:
-    push rbx
-    push rsi
-    push rdi
-    push r12
-    push r13
-    
-    mov rbx, rcx
-    mov rsi, rdx
-    mov r12, r8
-    mov r13, r9
-    
-    test rbx, rbx
-    jz .cpu_kernel_fail
-    
-    xor rdi, rdi
-    mov rcx, r12
-    imul rcx, r13
-    test rcx, rcx
-    jz .cpu_kernel_done
-    
-.cpu_kernel_loop:
-    cmp rdi, rcx
-    jge .cpu_kernel_done
-    
-    push rcx
-    mov rcx, rsi
-    mov rdx, rdi
-    call rbx
-    pop rcx
-    
-    inc rdi
-    jmp .cpu_kernel_loop
-    
-.cpu_kernel_done:
-    inc qword [gpu_compute_count]
-    xor rax, rax
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
-    ret
-    
-.cpu_kernel_fail:
-    mov rax, -1
-    pop r13
-    pop r12
-    pop rdi
-    pop rsi
-    pop rbx
+    ; TODO: Implement CPU kernel execution
+    mov rax, 0
     ret
 
 ; ========================================

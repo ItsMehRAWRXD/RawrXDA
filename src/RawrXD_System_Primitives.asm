@@ -4,7 +4,15 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 OPTION DOTNAME
-include RawrXD_Defs.inc
+OPTION CASEMAP:NONE
+OPTION WIN64:3
+
+include \masm64\include64\windows.inc
+include \masm64\include64\kernel32.inc
+include \masm64\include64\ntdll.inc
+
+includelib \masm64\lib64\kernel32.lib
+includelib \masm64\lib64\ntdll.lib
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CONSTANTS
@@ -16,16 +24,11 @@ MEMORY_ALLOCATION_ALIGNMENT EQU 64  ; For SIMD operations
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .DATA
 align 16
 g_SystemPageSize        QWORD       0
 g_NumberOfProcessors    DWORD       0
 g_AllocationGranularity QWORD       0
-g_hHeap                 QWORD       0
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CODE SECTION
@@ -38,27 +41,22 @@ g_hHeap                 QWORD       0
 ; ═══════════════════════════════════════════════════════════════════════════════
 System_InitializePrimitives PROC FRAME
     push rbx
-    sub rsp, 48                     ; Allocate stack (aligned) + shadow space
-    .endprolog
+    sub rsp, 32
     
-    ; Get Process Heap
-    call GetProcessHeap
-    mov g_hHeap, rax
-
     ; Get system info
-    lea rcx, [rsp + 32]             ; Use stack buffer for SYSTEM_INFO
+    lea rcx, [rsp + 16]
     call GetSystemInfo
     
-    mov eax, [rsp + 32 + SYSTEM_INFO.dwPageSize]
+    mov eax, [rsp + 16 + OFFSET SYSTEM_INFO.dwPageSize]
     mov g_SystemPageSize, rax
     
-    mov eax, [rsp + 32 + SYSTEM_INFO.dwNumberOfProcessors]
+    mov eax, [rsp + 16 + OFFSET SYSTEM_INFO.dwNumberOfProcessors]
     mov g_NumberOfProcessors, eax
     
-    mov eax, [rsp + 32 + SYSTEM_INFO.dwAllocationGranularity]
+    mov eax, [rsp + 16 + OFFSET SYSTEM_INFO.dwAllocationGranularity]
     mov g_AllocationGranularity, rax
     
-    add rsp, 48
+    add rsp, 32
     pop rbx
     ret
 System_InitializePrimitives ENDP
@@ -71,8 +69,6 @@ System_InitializePrimitives ENDP
 Spinlock_Acquire PROC FRAME
     push rbx
     push rsi
-    sub rsp, 40                     ; Alloc shadow (32) + alignment
-    .endprolog
     
     mov rbx, rcx
     xor esi, esi                    ; Retry counter
@@ -104,7 +100,6 @@ Spinlock_Acquire PROC FRAME
     jmp @spin_loop
     
 @acquired:
-    add rsp, 40
     pop rsi
     pop rbx
     ret
@@ -115,7 +110,6 @@ Spinlock_Acquire ENDP
 ; RCX = pointer to lock variable
 ; ═══════════════════════════════════════════════════════════════════════════════
 Spinlock_Release PROC FRAME
-    .endprolog
     mov dword ptr [rcx], 0
     
     ; Memory barrier to ensure prior stores are visible
@@ -131,7 +125,6 @@ Spinlock_Release ENDP
 ; ═══════════════════════════════════════════════════════════════════════════════
 RWLock_AcquireRead PROC FRAME
     push rbx
-    .endprolog
     
     mov rbx, rcx
     
@@ -158,7 +151,6 @@ RWLock_AcquireRead ENDP
 ; RWLock_ReleaseRead
 ; ═══════════════════════════════════════════════════════════════════════════════
 RWLock_ReleaseRead PROC FRAME
-    .endprolog
     lock dec word ptr [rcx]         ; Decrement reader count
     ret
 RWLock_ReleaseRead ENDP
@@ -168,7 +160,6 @@ RWLock_ReleaseRead ENDP
 ; ═══════════════════════════════════════════════════════════════════════════════
 RWLock_AcquireWrite PROC FRAME
     push rbx
-    .endprolog
     
     mov rbx, rcx
     
@@ -203,7 +194,6 @@ RWLock_AcquireWrite ENDP
 ; RWLock_ReleaseWrite
 ; ═══════════════════════════════════════════════════════════════════════════════
 RWLock_ReleaseWrite PROC FRAME
-    .endprolog
     ; Clear write bit and decrement waiting count
     mov eax, [rcx]
     and eax, 7FFFFFFFh              ; Clear writing bit
@@ -221,27 +211,22 @@ RWLock_ReleaseWrite ENDP
 Aligned_Allocate PROC FRAME
     push rbx
     push rsi
-    sub rsp, 32
-    .endprolog
     
     mov rbx, rcx                    ; Size
     mov rsi, rdx                    ; Alignment
     
     ; Overallocate to ensure alignment space + room to store original
-    mov r8, rbx
-    add r8, rsi
-    add r8, 16
-    
-    mov rcx, g_hHeap
-    xor edx, edx                    ; Flags = 0
+    add rcx, rsi
+    add rcx, 16
     call HeapAlloc
     
     test rax, rax
     jz @alloc_fail
     
     ; Calculate aligned address
-    lea rdx, [rax + 8]
+    mov rdx, rax
     add rdx, rsi
+    add rdx, 8
     dec rsi                         ; Alignment - 1
     not rsi                         ; Mask
     and rdx, rsi                    ; Aligned address
@@ -252,7 +237,6 @@ Aligned_Allocate PROC FRAME
     mov rax, rdx
     
 @alloc_fail:
-    add rsp, 32
     pop rsi
     pop rbx
     ret
@@ -263,16 +247,8 @@ Aligned_Allocate ENDP
 ; RCX = aligned pointer from Aligned_Allocate
 ; ═══════════════════════════════════════════════════════════════════════════════
 Aligned_Free PROC FRAME
-    sub rsp, 32
-    .endprolog
-    mov r8, [rcx - 8]               ; Get original pointer
-    
-    mov rcx, g_hHeap
-    xor edx, edx
-    call HeapFree                   ; HeapFree(hHeap, 0, lpMem)
-    
-    add rsp, 32
-    ret
+    mov rcx, [rcx - 8]              ; Get original pointer
+    jmp HeapFree                    ; Tail call
 Aligned_Free ENDP
 
 ; ═══════════════════════════════════════════════════════════════════════════════
@@ -281,7 +257,6 @@ Aligned_Free ENDP
 ; RCX = address, RDX = locality (0=NTA, 1=L1, 2=L2, 3=L3)
 ; ═══════════════════════════════════════════════════════════════════════════════
 Memory_PrefetchRead PROC FRAME
-    .endprolog
     cmp edx, 0
     je @prefetch_nta
     cmp edx, 1
@@ -315,7 +290,6 @@ Memory_PrefetchRead ENDP
 ; RCX = thread handle, RDX = core index
 ; ═══════════════════════════════════════════════════════════════════════════════
 Thread_AffinitySet PROC FRAME
-    .endprolog
     mov r8, 1
     mov rcx, rdx
     shl r8, cl                      ; 1 << core_index
@@ -324,18 +298,7 @@ Thread_AffinitySet PROC FRAME
     mov rdx, r8
     ; RCX already has thread handle
     jmp SetThreadAffinityMask
-    ret
 Thread_AffinitySet ENDP
-
-; ═══════════════════════════════════════════════════════════════════════════════
-; _DllMainCRTStartup
-; DLL Entry Point (replaces CRT default)
-; ═══════════════════════════════════════════════════════════════════════════════
-_DllMainCRTStartup PROC FRAME
-    .endprolog
-    mov eax, 1  ; Return TRUE
-    ret
-_DllMainCRTStartup ENDP
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; EXPORTS
@@ -351,7 +314,5 @@ PUBLIC Aligned_Allocate
 PUBLIC Aligned_Free
 PUBLIC Memory_PrefetchRead
 PUBLIC Thread_AffinitySet
-PUBLIC g_hHeap
-PUBLIC _DllMainCRTStartup
 
 END

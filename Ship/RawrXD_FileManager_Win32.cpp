@@ -157,8 +157,8 @@ public:
         return DeleteFileW(filePath) == TRUE;
     }
     
-    bool CreateDir(const wchar_t* dirPath) {
-        return ::CreateDirectoryW(dirPath, nullptr) == TRUE;
+    bool CreateDirectory(const wchar_t* dirPath) {
+        return CreateDirectoryW(dirPath, nullptr) == TRUE;
     }
     
     void GetCurrentPath(wchar_t* buffer, size_t bufSize) const {

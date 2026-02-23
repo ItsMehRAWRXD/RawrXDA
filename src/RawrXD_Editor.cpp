@@ -92,15 +92,22 @@ Editor::Editor(Window* parent) : Window(parent), stack(), font(L"Consolas", 12.0
     create(parent, L"RawrXD_Editor", WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL);
     renderer.initialize(hwnd);
     
-    // Default metrics
-    // Measure font using DirectWrite
-    SizeF mSize = renderer.measureText(L"M", font);
-    if (mSize.width > 0) {
-        charWidth = mSize.width;
-        // Add a small padding for line height
-        lineHeight = mSize.height * 1.2f; 
+    // Measure monospace font metrics via GDI for accurate character cell dimensions
+    HDC hdc = GetDC(hwnd);
+    if (hdc) {
+        HFONT hFont = CreateFontW(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas");
+        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+        TEXTMETRICW tm = {};
+        GetTextMetricsW(hdc, &tm);
+        charWidth = static_cast<float>(tm.tmAveCharWidth);
+        lineHeight = static_cast<float>(tm.tmHeight + tm.tmExternalLeading);
+        SelectObject(hdc, hOldFont);
+        DeleteObject(hFont);
+        ReleaseDC(hwnd, hdc);
     } else {
-        // Fallback
+        // Fallback if DC unavailable
         charWidth = 9.0f;
         lineHeight = 16.0f;
     }
@@ -325,8 +332,7 @@ void Editor::charEvent(wchar_t c) {
     // Normal char
     // Avoid control chars that slip through
     if (c >= 32) {
-        wchar_t tmp[2] = {c, 0};
-        insert(String(tmp));
+        insert(String(1, c));
     }
 }
 
@@ -406,8 +412,14 @@ void Editor::scrollCursorIntoView() {
 
 
 
-// Removed duplicate charEvent
-
+void Editor::charEvent(wchar_t c) {
+    if (c < 32 && c != '\t' && c != '\r' && c != '\n') return;
+    
+    if (c == '\r') c = '\n'; // Normalize Enter
+    
+    wchar_t str[2] = {c, 0};
+    insert(String(str));
+}
 
 void Editor::updateScrollbars() {
     SCROLLINFO si;

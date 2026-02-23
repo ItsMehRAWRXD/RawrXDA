@@ -100,24 +100,26 @@ LRESULT Window::handleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             mouseReleaseEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), button);
             return 0;
         }
-        case WM_MOUSEMOVE:
-             // Explicit Logic: Extract Modifiers
-             {
-                 int modifiers = 0;
-                 if (wParam & MK_CONTROL) modifiers |= 1; // Control
-                 if (wParam & MK_SHIFT)   modifiers |= 2; // Shift
-                 mouseMoveEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), modifiers);
-             }
+        case WM_MOUSEMOVE: {
+            // Extract modifier flags from wParam
+            int modifiers = 0;
+            if (wParam & MK_SHIFT)   modifiers |= 0x01; // Shift
+            if (wParam & MK_CONTROL) modifiers |= 0x02; // Ctrl
+            if (GetKeyState(VK_MENU) & 0x8000) modifiers |= 0x04; // Alt
+            mouseMoveEvent(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), modifiers);
             return 0;
-        case WM_KEYDOWN:
-            {
-                int modifiers = 0;
-                if (GetKeyState(VK_CONTROL) & 0x8000) modifiers |= 1;
-                if (GetKeyState(VK_SHIFT) & 0x8000)   modifiers |= 2;
-                if (GetKeyState(VK_MENU) & 0x8000)    modifiers |= 4; // Alt
-                keyPressEvent((int)wParam, modifiers);
-            }
+        }
+        case WM_KEYDOWN: {
+            // Extract keyboard modifiers from GetKeyState
+            int modifiers = 0;
+            if (GetKeyState(VK_SHIFT)   & 0x8000) modifiers |= 0x01; // Shift
+            if (GetKeyState(VK_CONTROL) & 0x8000) modifiers |= 0x02; // Ctrl
+            if (GetKeyState(VK_MENU)    & 0x8000) modifiers |= 0x04; // Alt
+            if (GetKeyState(VK_LWIN) & 0x8000 || GetKeyState(VK_RWIN) & 0x8000)
+                modifiers |= 0x08; // Win/Super
+            keyPressEvent((int)wParam, modifiers);
             return 0;
+        }
         case WM_CHAR:
             charEvent((wchar_t)wParam);
             return 0;

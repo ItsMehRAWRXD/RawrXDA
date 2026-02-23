@@ -51,7 +51,7 @@ exit /b 1
 :: Assemble and Link
 :: /Entry:main is crucial because we are not using the CRT (mainCRTStartup)
 :: /Subsystem:console is standard for CLI tools
-ml64.exe /I "D:\RawrXD\include" model-llm-harvester.asm /link /subsystem:console /entry:main /defaultlib:kernel32.lib /out:model-llm-harvester.exe
+ml64.exe model-llm-harvester.asm /link /subsystem:console /entry:main /defaultlib:kernel32.lib /out:model-llm-harvester.exe
 
 if %ERRORLEVEL% equ 0 (
     echo.

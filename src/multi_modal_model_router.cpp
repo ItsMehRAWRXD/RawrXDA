@@ -4,7 +4,7 @@ MultiModalModelRouterIntegration::MultiModalModelRouterIntegration(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics) {
-
+    m_logger->info("MultiModalModelRouter initialized");
     refreshModelInventory();
 }
 
@@ -14,7 +14,7 @@ RoutingDecision MultiModalModelRouterIntegration::routeTask(
     Complexity complexity) {
 
     try {
-
+        m_logger->debug("Routing task of complexity: {}", static_cast<int>(complexity));
 
         // Select best model for this task
         std::string bestModel = "llama3:latest";
@@ -48,8 +48,8 @@ RoutingDecision MultiModalModelRouterIntegration::routeTask(
         return decision;
 
     } catch (const std::exception& e) {
-
-
+        m_logger->error("Error routing task: {}", e.what());
+        
         RoutingDecision fallback;
         fallback.selectedModel = "llama3:latest";
         fallback.reasoning = "Fallback model";
@@ -79,12 +79,12 @@ std::vector<std::string> MultiModalModelRouterIntegration::getRecommendedModels(
 }
 
 bool MultiModalModelRouterIntegration::preloadModel(const std::string& modelName) {
-
+    m_logger->info("Preloading model: {}", modelName);
     return true;
 }
 
 bool MultiModalModelRouterIntegration::switchModel(const std::string& modelName) {
-
+    m_logger->info("Switching to model: {}", modelName);
     m_metrics->incrementCounter("model_switches");
     return true;
 }
@@ -97,7 +97,7 @@ void MultiModalModelRouterIntegration::updateModelPerformance(
 }
 
 void MultiModalModelRouterIntegration::analyzeUsagePatterns() {
-
+    m_logger->info("Analyzing usage patterns");
 }
 
 RoutingDecision MultiModalModelRouterIntegration::routeWithFallback(
@@ -116,7 +116,7 @@ RoutingDecision MultiModalModelRouterIntegration::routeWithFallback(
 }
 
 void MultiModalModelRouterIntegration::refreshModelInventory() {
-
+    m_logger->info("Refreshing model inventory");
     m_availableModels.clear();
     
     // Build list of available models
@@ -155,7 +155,7 @@ bool MultiModalModelRouterIntegration::isModelAvailable(const std::string& model
 }
 
 void MultiModalModelRouterIntegration::buildTaskModelMap() {
-
+    m_logger->debug("Building task-to-model mapping");
 }
 
 ModelProfile MultiModalModelRouterIntegration::createModelProfile(const std::string& modelName) {

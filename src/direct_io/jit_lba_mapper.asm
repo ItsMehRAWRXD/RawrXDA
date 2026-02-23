@@ -7,10 +7,6 @@
 ; AUTHOR: RawrXD Sovereign Architect
 ; ═══════════════════════════════════════════════════════════════════════════════
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .data
 
 ; ─────────────────────────────────────────────────────────────────────────────

@@ -83,7 +83,8 @@ szFmtString db "[0x%08X] %s", 0Dh, 0Ah, 0
 szFmtReconFunc db 0Dh, 0Ah, "// Function at 0x%08X", 0Dh, 0Ah, "void func_%08X() {", 0Dh, 0Ah, 0
 szFmtReconEnd db "}", 0Dh, 0Ah, 0
 szFmtCFBlock db "Basic Block @ 0x%08X - 0x%08X", 0Dh, 0Ah, 0
-szFmtAPI db "    API Call to 0x%08X", 0Dh, 0Ah, 0
+
+; Characteristic Flags
 szCharExec db "EXECUTE", 0
 szCharRead db "READ", 0
 szCharWrite db "WRITE", 0
@@ -768,8 +769,10 @@ ReconstructSource proc
         jmp @@next
         
     @@foundAPICall:
-        mov eax, [bFile + i + 2]  ; Get IAT VA
-        invoke PrintFmt, addr szFmtAPI, eax
+        invoke Print, offset szTab
+        invoke Print, offset szTab
+        invoke Print, offset szS, offset szS  ; Placeholder for API name
+        invoke Print, offset szNewLine
         
     @@next:
         inc i

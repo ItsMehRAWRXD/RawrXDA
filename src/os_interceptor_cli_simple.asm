@@ -207,7 +207,6 @@ main PROC
     
 @@exit:
     invoke ExitProcess, 0
-    ret
 main ENDP
 
 END main

@@ -188,9 +188,9 @@ int main(int argc, char** argv) {
             // matmul_kernel_avx2 expects 64×64 blocks, so we call it in a loop
             constexpr int BLOCK = 64;
             for (int jb = 0; jb < hidden_dim; jb += BLOCK) {
-                for (int kb = 0; kb < embed_dim; kb += BLOCK) {
-                    matmul_kernel_avx2(&hidden[kb],
-                                       &weight_scratch[kb * hidden_dim + jb],
+                for (int kBlock = 0; kBlock < embed_dim; kBlock += BLOCK) {
+                    matmul_kernel_avx2(&hidden[kBlock],
+                                       &weight_scratch[kBlock * hidden_dim + jb],
                                        &output[jb],
                                        1, BLOCK, BLOCK, false);
                 }

@@ -1,207 +1,346 @@
 #include "MultiModalModelRouter.h"
 #include <algorithm>
 #include <numeric>
-#include <iostream>
 
 namespace RawrXD {
 namespace IDE {
 
-MultiModalModelRouter::MultiModalModelRouter() {
-    // Default initialization
+MultiModalModelRouter::MultiModalModelRouter() 
+    : m_completionModelLatency(0), m_chatModelLatency(0), m_editModelLatency(0) {
 }
 
-bool MultiModalModelRouter::initialize(const std::string& ollamaEndpoint) {
-    // In a real implementation, we would probe the endpoint
-    // For now, we seed with some defaults
-    loadModelsFromOllama();
-    return true;
-}
-
-ModelSelection MultiModalModelRouter::selectModel(TaskType taskType, int contextSize, bool prioritizeSpeed) {
-    // Simple selection logic based on task type
+ModelSelection MultiModalModelRouter::selectModel(TaskType task) {
+    ModelSelection selection;
     
-    std::string bestModelName;
-    ModelSelection bestSelection;
-    float bestScore = -1.0f;
-
-    for (const auto& pair : m_availableModels) {
-        float score = scoreModel(pair.second, taskType, contextSize);
-        if (prioritizeSpeed) {
-            score += (1000.0f / (pair.second.expectedLatency + 1.0f)) * 0.5f;
-        }
-
-        if (score > bestScore) {
-            bestScore = score;
-            bestModelName = pair.first;
-            
-            bestSelection.modelName = pair.second.name;
-            bestSelection.modelUrl = pair.second.url;
-            bestSelection.expectedLatency = pair.second.expectedLatency;
-            bestSelection.contextWindow = pair.second.contextWindow;
-            bestSelection.supportsStreaming = pair.second.supportsStreaming;
-            bestSelection.optimalFor = pair.second.optimalFor;
-        }
+    switch (task) {
+        case TaskType::CodeCompletion:
+            return getCompletionModel();
+        case TaskType::Chat:
+            return getChatModel();
+        case TaskType::CodeEdit:
+            return getEditModel();
+        case TaskType::Embedding:
+            return getEmbeddingModel();
+        case TaskType::Debugging:
+            return getDebugModel();
+        case TaskType::Optimization:
+            return getOptimizationModel();
+        case TaskType::Security:
+            return getSecurityModel();
+        case TaskType::Documentation:
+            return getDocumentationModel();
+        default:
+            return getChatModel();  // Default fallback
     }
-
-    if (bestModelName.empty()) {
-        // Fallback
-        bestSelection.modelName = "neural-chat";
-        bestSelection.expectedLatency = 100.0f;
-    }
-
-    return bestSelection;
-}
-
-ModelSelection MultiModalModelRouter::selectModelForUseCase(const std::string& useCase, bool prioritizeSpeed) {
-    // Map string usecase to TaskType if possible, or use generic
-    TaskType task = TaskType::CHAT;
-    if (useCase.find("code") != std::string::npos) task = TaskType::COMPLETION;
-    if (useCase.find("debug") != std::string::npos) task = TaskType::DEBUG;
-    if (useCase.find("doc") != std::string::npos) task = TaskType::DOCUMENTATION;
-    
-    return selectModel(task, 0, prioritizeSpeed);
 }
 
 ModelSelection MultiModalModelRouter::getCompletionModel() {
-    return selectModel(TaskType::COMPLETION, 0, true);
+    // Prefer lightweight, fast models for completions
+    std::vector<std::string> preferences = {
+        "neural-chat",
+        "mistral",
+        "neural-chat:latest",
+        "mistral:latest"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getChatModel() {
-    return selectModel(TaskType::CHAT);
+    // Prefer capable models for conversation
+    std::vector<std::string> preferences = {
+        "neural-chat",
+        "mistral",
+        "dolphin-mixtral",
+        "llama2-uncensored"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getEditModel() {
-    return selectModel(TaskType::EDIT);
+    // Prefer models that understand code modification
+    std::vector<std::string> preferences = {
+        "neural-chat",
+        "mistral",
+        "codegemma",
+        "codellama"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getEmbeddingModel() {
-    return selectModel(TaskType::EMBEDDING);
+    // Specialized embedding models
+    std::vector<std::string> preferences = {
+        "nomic-embed-text",
+        "all-minilm",
+        "bge-base"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getDebugModel() {
-    return selectModel(TaskType::DEBUG);
+    // Prefer analytical models for debugging
+    std::vector<std::string> preferences = {
+        "neural-chat",
+        "mistral",
+        "dolphin-mixtral"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getOptimizationModel() {
-    return selectModel(TaskType::OPTIMIZATION);
+    // Models good at code analysis
+    std::vector<std::string> preferences = {
+        "neural-chat",
+        "mistral",
+        "codegemma"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getSecurityModel() {
-    return selectModel(TaskType::SECURITY);
+    // Models with security awareness
+    std::vector<std::string> preferences = {
+        "mistral",
+        "dolphin-mixtral",
+        "neural-chat"
+    };
+    
+    return selectFromAvailable(preferences);
 }
 
 ModelSelection MultiModalModelRouter::getDocumentationModel() {
-    return selectModel(TaskType::DOCUMENTATION);
-}
-
-void MultiModalModelRouter::registerModel(
-    const std::string& modelName,
-    const std::string& modelUrl,
-    const std::vector<TaskType>& optimalFor,
-    float expectedLatency,
-    int contextWindow,
-    bool supportsStreaming
-) {
-    ModelInfo info;
-    info.name = modelName;
-    info.url = modelUrl;
-    info.optimalFor = optimalFor;
-    info.expectedLatency = expectedLatency;
-    info.contextWindow = contextWindow;
-    info.supportsStreaming = supportsStreaming;
-    info.usageCount = 0;
-    info.totalLatency = 0.0f;
+    // Models good at writing documentation
+    std::vector<std::string> preferences = {
+        "neural-chat",
+        "mistral",
+        "dolphin-mixtral"
+    };
     
-    m_availableModels[modelName] = info;
+    return selectFromAvailable(preferences);
 }
 
-void MultiModalModelRouter::setDefaultModel(TaskType taskType, const std::string& modelName) {
-    // TODO: Store default overrides
-}
-
-std::vector<ModelSelection> MultiModalModelRouter::getAvailableModels() {
-    std::vector<ModelSelection> result;
-    for (const auto& pair : m_availableModels) {
-        ModelSelection sel;
-        sel.modelName = pair.second.name;
-        sel.modelUrl = pair.second.url;
-        sel.expectedLatency = pair.second.expectedLatency;
-        sel.contextWindow = pair.second.contextWindow;
-        sel.supportsStreaming = pair.second.supportsStreaming;
-        sel.optimalFor = pair.second.optimalFor;
-        result.push_back(sel);
-    }
-    return result;
-}
-
-std::vector<ModelSelection> MultiModalModelRouter::getModelsForTask(TaskType taskType) {
-    std::vector<ModelSelection> result;
-    for (const auto& pair : m_availableModels) {
-        for (auto type : pair.second.optimalFor) {
-            if (type == taskType) {
-                ModelSelection sel;
-                sel.modelName = pair.second.name;
-                sel.modelUrl = pair.second.url;
-                sel.expectedLatency = pair.second.expectedLatency;
-                sel.contextWindow = pair.second.contextWindow;
-                sel.supportsStreaming = pair.second.supportsStreaming;
-                sel.optimalFor = pair.second.optimalFor;
-                result.push_back(sel);
-                break;
-            }
-        }
-    }
-    return result;
-}
-
-void MultiModalModelRouter::setSpeedPriority(float speedWeight) {
-    // Store pref
-}
-
-void MultiModalModelRouter::setQualityPriority(float qualityWeight) {
-    // Store pref
-}
-
-void MultiModalModelRouter::setMemoryLimit(int limitMB) {
-    // Store pref
-}
-
-MultiModalModelRouter::RoutingStats MultiModalModelRouter::getStatistics() {
-    RoutingStats stats;
-    stats.totalRequests = 0;
-    for (const auto& pair : m_availableModels) {
-        stats.totalRequests += pair.second.usageCount;
-        stats.modelUsage[pair.first] = pair.second.usageCount;
-        if (pair.second.usageCount > 0)
-            stats.avgLatency[pair.first] = pair.second.totalLatency / pair.second.usageCount;
-        else
-            stats.avgLatency[pair.first] = 0.0f;
-    }
-    return stats;
-}
-
-float MultiModalModelRouter::scoreModel(const ModelInfo& model, TaskType taskType, int contextSize) {
-    float score = 0.5f; // Base score
+ModelSelection MultiModalModelRouter::selectFromAvailable(
+    const std::vector<std::string>& preferences) {
     
-    for (auto type : model.optimalFor) {
-        if (type == taskType) {
-            score += 0.4f;
+    ModelSelection selection;
+    selection.modelName = "neural-chat";  // Default
+    selection.confidence = 0.8f;
+    selection.isAvailable = true;
+    selection.estimatedLatencyMs = 150;
+    
+    // Check preferences against available models
+    for (const auto& pref : preferences) {
+        auto it = m_availableModels.find(pref);
+        if (it != m_availableModels.end()) {
+            selection.modelName = pref;
+            selection.isAvailable = true;
+            selection.estimatedLatencyMs = it->second.estimatedLatencyMs;
             break;
         }
     }
     
-    // Tiny penalty for very small context if we need it (param ignored for now)
-    
-    return score;
+    return selection;
 }
 
-bool MultiModalModelRouter::loadModelsFromOllama() {
-    // Register some defaults for now
-    registerModel("neural-chat", "http://localhost:11434", {TaskType::CHAT, TaskType::COMPLETION}, 150.0f, 4096, true);
-    registerModel("mistral", "http://localhost:11434", {TaskType::CHAT, TaskType::EDIT, TaskType::DOCUMENTATION}, 200.0f, 8192, true);
-    registerModel("codegemma", "http://localhost:11434", {TaskType::COMPLETION, TaskType::OPTIMIZATION}, 100.0f, 2048, true);
-    registerModel("nomic-embed-text", "http://localhost:11434", {TaskType::EMBEDDING}, 50.0f, 2048, false);
+bool MultiModalModelRouter::registerModel(
+    const std::string& modelName, const std::string& description,
+    float performanceScore, int estimatedLatencyMs) {
+    
+    ModelMetadata metadata;
+    metadata.name = modelName;
+    metadata.description = description;
+    metadata.performanceScore = performanceScore;
+    metadata.estimatedLatencyMs = estimatedLatencyMs;
+    metadata.registeredTime = std::chrono::system_clock::now();
+    
+    m_availableModels[modelName] = metadata;
     return true;
+}
+
+std::vector<std::string> MultiModalModelRouter::getAvailableModels() {
+    std::vector<std::string> models;
+    for (const auto& entry : m_availableModels) {
+        models.push_back(entry.first);
+    }
+    return models;
+}
+
+std::vector<std::string> MultiModalModelRouter::getAvailableModels(TaskType task) {
+    std::vector<std::string> compatible;
+    
+    std::vector<std::string> preferences;
+    
+    switch (task) {
+        case TaskType::CodeCompletion:
+            preferences = {"neural-chat", "mistral", "codegemma", "codellama"};
+            break;
+        case TaskType::Chat:
+            preferences = {"neural-chat", "mistral", "dolphin-mixtral", "llama2"};
+            break;
+        case TaskType::CodeEdit:
+            preferences = {"neural-chat", "mistral", "codegemma"};
+            break;
+        case TaskType::Embedding:
+            preferences = {"nomic-embed-text", "all-minilm", "bge-base"};
+            break;
+        case TaskType::Debugging:
+            preferences = {"neural-chat", "mistral", "dolphin-mixtral"};
+            break;
+        case TaskType::Optimization:
+            preferences = {"neural-chat", "mistral", "codegemma"};
+            break;
+        case TaskType::Security:
+            preferences = {"mistral", "dolphin-mixtral", "neural-chat"};
+            break;
+        case TaskType::Documentation:
+            preferences = {"neural-chat", "mistral", "dolphin-mixtral"};
+            break;
+    }
+    
+    for (const auto& pref : preferences) {
+        if (m_availableModels.find(pref) != m_availableModels.end()) {
+            compatible.push_back(pref);
+        }
+    }
+    
+    return compatible;
+}
+
+float MultiModalModelRouter::getModelPerformanceScore(const std::string& modelName) {
+    auto it = m_availableModels.find(modelName);
+    if (it != m_availableModels.end()) {
+        return it->second.performanceScore;
+    }
+    return 0.5f;  // Default neutral score
+}
+
+int MultiModalModelRouter::getEstimatedLatency(const std::string& modelName) {
+    auto it = m_availableModels.find(modelName);
+    if (it != m_availableModels.end()) {
+        return it->second.estimatedLatencyMs;
+    }
+    return 500;  // Default conservative estimate
+}
+
+std::string MultiModalModelRouter::getBestModel(TaskType task) {
+    return selectModel(task).modelName;
+}
+
+void MultiModalModelRouter::recordLatency(
+    TaskType task, const std::string& modelName, int latencyMs) {
+    
+    switch (task) {
+        case TaskType::CodeCompletion:
+            m_completionModelLatency = latencyMs;
+            break;
+        case TaskType::Chat:
+            m_chatModelLatency = latencyMs;
+            break;
+        case TaskType::CodeEdit:
+            m_editModelLatency = latencyMs;
+            break;
+        default:
+            break;
+    }
+    
+    // Update model metadata if tracked
+    auto it = m_availableModels.find(modelName);
+    if (it != m_availableModels.end()) {
+        it->second.estimatedLatencyMs = latencyMs;
+    }
+}
+
+std::vector<ModelUsageStats> MultiModalModelRouter::getModelUsageStats() {
+    std::vector<ModelUsageStats> stats;
+    
+    for (const auto& entry : m_usageStatistics) {
+        stats.push_back(entry.second);
+    }
+    
+    return stats;
+}
+
+void MultiModalModelRouter::updateAvailableModels(
+    const std::vector<std::string>& modelNames) {
+    
+    // Register discovered models
+    for (const auto& name : modelNames) {
+        if (m_availableModels.find(name) == m_availableModels.end()) {
+            registerModel(name, "Auto-discovered model", 0.7f, 150);
+        }
+    }
+}
+
+float MultiModalModelRouter::scoreModel(
+    const std::string& modelName, TaskType task, float latencyMs) {
+    
+    float score = 0.0f;
+    
+    // Base performance score
+    float perfScore = getModelPerformanceScore(modelName);
+    score += perfScore * 0.4f;
+    
+    // Latency score (prefer faster models, but with diminishing returns)
+    float latencyScore = 1.0f / (1.0f + (latencyMs / 100.0f));
+    score += latencyScore * 0.3f;
+    
+    // Task preference score
+    float taskScore = 0.7f;  // Default compatibility
+    if (modelName.find("code") != std::string::npos) {
+        if (task == TaskType::CodeCompletion || task == TaskType::CodeEdit) {
+            taskScore = 1.0f;
+        }
+    }
+    score += taskScore * 0.3f;
+    
+    return std::min(1.0f, score);
+}
+
+void MultiModalModelRouter::recordUsage(
+    const std::string& modelName, TaskType task, int durationMs, bool success) {
+    
+    auto it = m_usageStatistics.find(modelName);
+    if (it == m_usageStatistics.end()) {
+        ModelUsageStats stats;
+        stats.modelName = modelName;
+        stats.totalRequests = 0;
+        stats.successfulRequests = 0;
+        stats.totalDurationMs = 0;
+        m_usageStatistics[modelName] = stats;
+        it = m_usageStatistics.find(modelName);
+    }
+    
+    it->second.totalRequests++;
+    if (success) {
+        it->second.successfulRequests++;
+    }
+    it->second.totalDurationMs += durationMs;
+}
+
+float MultiModalModelRouter::getSuccessRate(const std::string& modelName) {
+    auto it = m_usageStatistics.find(modelName);
+    if (it == m_usageStatistics.end() || it->second.totalRequests == 0) {
+        return 0.0f;
+    }
+    
+    return static_cast<float>(it->second.successfulRequests) / 
+           static_cast<float>(it->second.totalRequests);
+}
+
+float MultiModalModelRouter::getAverageDuration(const std::string& modelName) {
+    auto it = m_usageStatistics.find(modelName);
+    if (it == m_usageStatistics.end() || it->second.totalRequests == 0) {
+        return 0.0f;
+    }
+    
+    return static_cast<float>(it->second.totalDurationMs) / 
+           static_cast<float>(it->second.totalRequests);
 }
 
 } // namespace IDE

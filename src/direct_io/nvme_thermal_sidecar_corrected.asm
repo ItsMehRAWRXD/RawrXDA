@@ -43,10 +43,6 @@ MAP_SIZE                    EQU (OFF_TIMESTAMP + 8)
 ; ════════════════════════════════════════════════════════════════════════════════
 ; External Windows API
 ; ════════════════════════════════════════════════════════════════════════════════
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 EXTERN CreateFileMappingA:PROC
 EXTERN MapViewOfFile:PROC
 EXTERN UnmapViewOfFile:PROC

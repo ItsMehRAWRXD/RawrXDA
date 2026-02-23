@@ -7,8 +7,7 @@ param(
     [switch]$Clean,
     [switch]$BuildOnly,
     [switch]$TestOnly,
-    [switch]$Verbose,
-    [string]$RootDir = ""
+    [switch]$Verbose
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,8 +18,7 @@ Write-Host "MASM Compiler Suite - Build & Test" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Default to D:\RawrXD fortress; use -RootDir "E:\RawrXD" or env RAWRXD_ROOT for legacy
-if (-not $RootDir) { $RootDir = if ($env:RAWRXD_ROOT) { $env:RAWRXD_ROOT } else { "D:\RawrXD" } }
+$RootDir = "E:\RawrXD"
 $BuildDir = "$RootDir\build"
 $TestDir = "$RootDir\tests\masm"
 

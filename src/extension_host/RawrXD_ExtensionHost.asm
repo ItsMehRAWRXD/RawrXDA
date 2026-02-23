@@ -35,59 +35,6 @@ includelib user32.lib
 includelib ntdll.lib
 includelib ole32.lib
 includelib rpcndr.lib
-includelib msvcrt.lib
-
-;==============================================================================
-; EXTERNAL REFERENCES - C Runtime
-;==============================================================================
-EXTERN memcpy:PROC
-EXTERN strcpy:PROC
-EXTERN _itoa:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - Cross-Module
-;==============================================================================
-EXTERN ExtensionHostBridge_RegisterWebview:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - Project Internal (forward declarations)
-;==============================================================================
-EXTERN Observable_Create_ActiveTextEditor:PROC
-EXTERN Observable_Create_VisibleTextEditors:PROC
-EXTERN Observable_Create_WorkspaceFolders:PROC
-EXTERN Path_Join_PackageJson:PROC
-EXTERN Json_ParseFile:PROC
-EXTERN ExtensionManifest_FromJson:PROC
-EXTERN Extension_GetCurrent:PROC
-EXTERN Extension_ValidateCapabilities:PROC
-EXTERN ExtensionContext_Create:PROC
-EXTERN ExtensionStorage_GetPath:PROC
-EXTERN OutputChannel_Create:PROC
-EXTERN OutputChannel_Append:PROC
-EXTERN OutputChannel_AppendLine:PROC
-EXTERN OutputChannel_CreateAPI:PROC
-EXTERN ExtensionModule_Load:PROC
-EXTERN EventFire_ExtensionActivated:PROC
-EXTERN EventFire_ExtensionDeactivated:PROC
-EXTERN Disposable_Create:PROC
-EXTERN DisposableCollection_Create:PROC
-EXTERN DisposableCollection_Dispose:PROC
-EXTERN Extension_CleanupWebviews:PROC
-EXTERN Extension_CleanupLanguageClients:PROC
-EXTERN JsonObject_Create:PROC
-EXTERN HashMap_Create:PROC
-EXTERN ExtensionHostBridge_SendRequest:PROC
-EXTERN ExtensionHostBridge_SendNotification:PROC
-EXTERN ExtensionHostBridge_ProcessMessages:PROC
-EXTERN Provider_FromDocumentSelector:PROC
-EXTERN Provider_Register:PROC
-EXTERN CompletionProvider_Adapter_Create:PROC
-EXTERN HoverProvider_Adapter_Create:PROC
-EXTERN DefinitionProvider_Adapter_Create:PROC
-EXTERN WebviewPanel_CreateAPI:PROC
-EXTERN Telemetry_SanitizeData:PROC
-EXTERN LspClient_ForwardMessage:PROC
-EXTERN EventListener_DisposeInternal:PROC
 
 ;==============================================================================
 ; CONSTANTS - Extension Host Protocol
@@ -514,7 +461,6 @@ g_ExtensionListHead     LIST_ENTRY <>
 g_ExtensionCount        dd 0
 g_NextExtensionHandle   dd 1
 g_ExtensionsLock        dq 0           ; SRWLOCK
-g_NextRequestId         dd 0           ; Atomic request ID counter
 
 ; API singleton
 g_ExtensionHostAPI      EXTENSION_HOST_API <>
@@ -1579,54 +1525,7 @@ API_ShowInformationMessage proc frame uses rbx rsi rdi r12 r13 r14,
     mov byte ptr [rdi], '['
     inc rdi
     
-    ; Serialize items array - each item is a string label
-    ; r15 = items count, items data follows on stack after message
-    mov rcx, r15             ; use count as loop counter
-    mov rsi, [rsp + 520]     ; items array pointer (passed after local buffer)
-    test rsi, rsi
-    jz items_done
-    
-items_loop:
-    test ecx, ecx
-    jz items_done
-    push rcx
-    
-    ; Add comma separator after first
-    cmp ecx, r15d
-    je first_item
-    mov byte ptr [rdi], ','
-    inc rdi
-first_item:
-    ; Write quoted string
-    mov byte ptr [rdi], '"'
-    inc rdi
-    
-    ; Copy item string
-    push rsi
-    mov rcx, rdi
-    mov rdx, rsi
-    call Json_EscapeString
-    add rdi, rax
-    pop rsi
-    
-    ; Advance to next item (null-separated strings)
-    movzx eax, byte ptr [rsi]
-@@:
-    test al, al
-    jz @F
-    inc rsi
-    movzx eax, byte ptr [rsi]
-    jmp @B
-@@:
-    inc rsi             ; skip null terminator
-    
-    mov byte ptr [rdi], '"'
-    inc rdi
-    
-    pop rcx
-    dec ecx
-    jmp items_loop
-items_done:
+    ; TODO: Add items array
     
     mov byte ptr [rdi], ']'
     inc rdi
@@ -1804,12 +1703,7 @@ ExtensionHostBridge_SendMessage proc frame uses rbx rsi rdi r12 r13 r14,
     add rdx, rax                    ; offset by head
     
     mov [rdx].RPC_MESSAGE.MessageType, r12d
-
-    ; Generate unique request ID via atomic increment
-    lock inc dword ptr [g_NextRequestId]
-    mov eax, [g_NextRequestId]
-    mov [rdx].RPC_MESSAGE.RequestId, eax
-
+    mov [rdx].RPC_MESSAGE.RequestId, 0      ; TODO: generate ID
     mov [rdx].RPC_MESSAGE.PayloadLength, r14d
     
     ; Copy payload
@@ -1844,91 +1738,6 @@ no_space:
 ExtensionHostBridge_SendMessage endp
 
 ;------------------------------------------------------------------------------
-; Send request via bridge and wait for response
-; Like SendMessage but tracks request ID for response matching
-;------------------------------------------------------------------------------
-ExtensionHostBridge_SendRequest proc frame uses rbx rsi rdi r12 r13 r14,
-    msgType:dword,
-    payload:qword,
-    payloadLen:dword
-
-    mov r12d, msgType
-    mov r13, payload
-    mov r14d, payloadLen
-
-    mov rbx, offset g_ExtensionHostBridge
-    mov rsi, [rbx].EXTENSION_HOST_BRIDGE.SharedMemoryPtr
-
-    ; Calculate total message size (header + payload aligned to 8)
-    mov edi, r14d
-    add edi, sizeof(RPC_MESSAGE) - 1
-    add edi, 7
-    and edi, -8
-
-    ; Acquire spinlock
-    lea rcx, [rsi+16]
-    call SpinLock_Acquire
-
-    ; Check space in ring buffer
-    mov eax, [rsi]                  ; head
-    mov ecx, [rsi+8]                ; tail
-    sub ecx, eax
-    jae @F
-    add ecx, MSG_QUEUE_MASK + 1
-@@:
-    cmp ecx, edi
-    jb send_req_no_space
-
-    ; Write message header
-    mov rdx, [rbx].EXTENSION_HOST_BRIDGE.MessageQueue
-    add rdx, rax
-
-    ; Set message type with REQUEST flag (high bit)
-    mov eax, r12d
-    or eax, 80000000h              ; Mark as request (needs response)
-    mov [rdx].RPC_MESSAGE.MessageType, eax
-
-    ; Generate unique request ID
-    lock inc dword ptr [g_NextRequestId]
-    mov eax, [g_NextRequestId]
-    mov [rdx].RPC_MESSAGE.RequestId, eax
-
-    mov [rdx].RPC_MESSAGE.PayloadLength, r14d
-
-    ; Copy payload
-    test r14d, r14d
-    jz skip_payload_copy
-    lea rcx, [rdx+sizeof(RPC_MESSAGE)-1]
-    mov rdx, r13
-    mov r8d, r14d
-    call memcpy
-skip_payload_copy:
-
-    ; Update head pointer
-    mov eax, [rsi]
-    add eax, edi
-    and eax, MSG_QUEUE_MASK
-    mov [rsi], eax
-
-    ; Release spinlock
-    lea rcx, [rsi+16]
-    call SpinLock_Release
-
-    ; Signal message available
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.MessageAvailableEvent
-    call SetEvent
-
-    mov rax, 1
-    ret
-
-send_req_no_space:
-    lea rcx, [rsi+16]
-    call SpinLock_Release
-    xor rax, rax
-    ret
-ExtensionHostBridge_SendRequest endp
-
-;------------------------------------------------------------------------------
 ; Spinlock implementation
 ;------------------------------------------------------------------------------
 SpinLock_Acquire proc frame uses rbx, pLock:qword
@@ -1948,79 +1757,6 @@ SpinLock_Release proc frame, pLock:qword
     mov dword ptr [rax], 0
     ret
 SpinLock_Release endp
-
-;------------------------------------------------------------------------------
-; Shutdown extension host - close handles, unmap shared memory, reset state
-;------------------------------------------------------------------------------
-ExtensionHost_Shutdown proc frame uses rbx
-    mov rbx, offset g_ExtensionHostBridge
-
-    ; Mark as shutting down
-    mov [rbx].EXTENSION_HOST_BRIDGE.IsShuttingDown, 1
-    mov [rbx].EXTENSION_HOST_BRIDGE.IsConnected, 0
-
-    ; Close event handles
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.MessageAvailableEvent
-    test rcx, rcx
-    jz @skip_msg_evt
-    call CloseHandle
-    mov [rbx].EXTENSION_HOST_BRIDGE.MessageAvailableEvent, 0
-@skip_msg_evt:
-
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.HostReadyEvent
-    test rcx, rcx
-    jz @skip_ready_evt
-    call CloseHandle
-    mov [rbx].EXTENSION_HOST_BRIDGE.HostReadyEvent, 0
-@skip_ready_evt:
-
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.ShutdownEvent
-    test rcx, rcx
-    jz @skip_shut_evt
-    call CloseHandle
-    mov [rbx].EXTENSION_HOST_BRIDGE.ShutdownEvent, 0
-@skip_shut_evt:
-
-    ; Terminate host process if still running
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.HostProcessHandle
-    test rcx, rcx
-    jz @skip_proc
-    xor edx, edx                   ; exit code 0
-    call TerminateProcess
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.HostProcessHandle
-    call CloseHandle
-    mov [rbx].EXTENSION_HOST_BRIDGE.HostProcessHandle, 0
-@skip_proc:
-
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.HostThreadHandle
-    test rcx, rcx
-    jz @skip_thread
-    call CloseHandle
-    mov [rbx].EXTENSION_HOST_BRIDGE.HostThreadHandle, 0
-@skip_thread:
-
-    ; Unmap shared memory view
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.SharedMemoryPtr
-    test rcx, rcx
-    jz @skip_unmap
-    call UnmapViewOfFile
-    mov [rbx].EXTENSION_HOST_BRIDGE.SharedMemoryPtr, 0
-@skip_unmap:
-
-    ; Close shared memory handle
-    mov rcx, [rbx].EXTENSION_HOST_BRIDGE.SharedMemoryHandle
-    test rcx, rcx
-    jz @skip_shmem
-    call CloseHandle
-    mov [rbx].EXTENSION_HOST_BRIDGE.SharedMemoryHandle, 0
-@skip_shmem:
-
-    ; Zero out message queue pointer
-    mov [rbx].EXTENSION_HOST_BRIDGE.MessageQueue, 0
-
-    mov rax, 1
-    ret
-ExtensionHost_Shutdown endp
 
 ;------------------------------------------------------------------------------
 ; Message loop (extension host main thread)

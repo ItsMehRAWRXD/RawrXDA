@@ -3,10 +3,6 @@
 
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; ============================================================
 ; INLINED STRUCTURES (replacing masm64rt.inc)
 ; ============================================================

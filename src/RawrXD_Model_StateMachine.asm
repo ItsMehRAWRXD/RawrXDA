@@ -4,7 +4,13 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 OPTION DOTNAME
-include RawrXD_Defs.inc
+OPTION CASEMAP:NONE
+OPTION WIN64:3
+
+include \masm64\include64\windows.inc
+include \masm64\include64\kernel32.inc
+
+includelib \masm64\lib64\kernel32.lib
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CONSTANTS
@@ -23,19 +29,15 @@ ModelState STRUCT
     State               DWORD       ?
     RefCount            DWORD       ?
     ModelPath           QWORD       ?
-    ModelHandle         QWORD       ?
+    Handle              QWORD       ?
     LoadTime            QWORD       ?
 ModelState ENDS
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .DATA
-g_ModelStates           BYTE (MAX_MODELS * SIZEOF ModelState) DUP (?)
+g_ModelStates           ModelState MAX_MODELS DUP (<>)
 g_StateLock             DWORD       0
 
 ; ═══════════════════════════════════════════════════════════════════════════════
@@ -48,15 +50,12 @@ g_StateLock             DWORD       0
 ; ═══════════════════════════════════════════════════════════════════════════════
 ModelState_Initialize PROC FRAME
     push rbx
-    sub rsp, 32
-    .endprolog
     
     ; Zero out table
     lea rcx, g_ModelStates
     mov rdx, SIZEOF ModelState * MAX_MODELS
     call RtlZeroMemory
     
-    add rsp, 32
     pop rbx
     ret
 ModelState_Initialize ENDP
@@ -67,18 +66,16 @@ ModelState_Initialize ENDP
 ; ═══════════════════════════════════════════════════════════════════════════════
 ModelState_Transition PROC FRAME
     push rbx
-    .endprolog
     
     ; Bounds check
     cmp rcx, MAX_MODELS
     jge @invalid_index
     
     imul rcx, SIZEOF ModelState
-    lea rbx, g_ModelStates
-    add rbx, rcx
+    lea rbx, g_ModelStates[rcx]
     
     ; Set state atomically (simplified)
-    mov (ModelState PTR [rbx]).State, edx
+    mov [rbx].ModelState.State, edx
     
     mov eax, 1
     jmp @done
@@ -98,21 +95,19 @@ ModelState_Transition ENDP
 ; ═══════════════════════════════════════════════════════════════════════════════
 ModelState_AcquireInstance PROC FRAME
     push rbx
-    .endprolog
     
-    ; Validate Index
+    ; Mock lookup - assume ID is index
     cmp rcx, MAX_MODELS
     jge @fail_acquire
     
     imul rcx, SIZEOF ModelState
-    lea rbx, g_ModelStates
-    add rbx, rcx
+    lea rbx, g_ModelStates[rcx]
     
-    cmp (ModelState PTR [rbx]).State, STATE_READY
+    cmp [rbx].ModelState.State, STATE_READY
     jne @fail_acquire
     
-    lock inc (ModelState PTR [rbx]).RefCount
-    mov rax, (ModelState PTR [rbx]).ModelHandle
+    lock inc dword ptr [rbx].ModelState.RefCount
+    mov rax, [rbx].ModelState.Handle
     
     pop rbx
     ret

@@ -1,4 +1,5 @@
 #include "centralized_exception_handler.h"
+#include "agentic_observability.h"
 
 #include <chrono>
 #include <ctime>
@@ -7,6 +8,8 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+
+static const char* kComponent = "CentralizedExceptionHandler";
 
 #ifdef _WIN32
 #include <windows.h>
@@ -40,6 +43,10 @@ void CentralizedExceptionHandler::installHandler() {
 #ifdef _WIN32
     previousFilter_ = reinterpret_cast<void*>(SetUnhandledExceptionFilter(&CentralizedExceptionHandler::unhandledExceptionFilter));
 #endif
+
+    auto& obs = AgenticObservability::instance();
+    obs.logInfo(kComponent, "Exception handler installed (terminate + SEH)");
+    obs.incrementCounter("exception_handler.installs", 1);
 }
 
 void CentralizedExceptionHandler::uninstallHandler() {
@@ -66,12 +73,20 @@ bool CentralizedExceptionHandler::isAutomaticRecoveryEnabled() const {
 }
 
 void CentralizedExceptionHandler::reportException(const std::exception& ex) noexcept {
+    auto& obs = AgenticObservability::instance();
+    obs.incrementCounter("exception_handler.exceptions_reported", 1);
+    obs.logError(kComponent, std::string("C++ exception: ") + ex.what());
+
     std::string details = "Exception: ";
     details += ex.what();
     handleUnhandledException(details);
 }
 
 void CentralizedExceptionHandler::reportError(const std::string& message, const std::string& context, const std::string& metadata_json) noexcept {
+    auto& obs = AgenticObservability::instance();
+    obs.incrementCounter("exception_handler.errors_reported", 1);
+    obs.logError(kComponent, "Error [" + context + "]: " + message);
+
     std::string details = "Error: " + message + " | Context: " + context;
     if (!metadata_json.empty() && metadata_json != "{}") {
         details += " | Metadata: " + metadata_json;
@@ -80,6 +95,10 @@ void CentralizedExceptionHandler::reportError(const std::string& message, const 
 }
 
 void CentralizedExceptionHandler::handleTerminate() noexcept {
+    auto& obs = AgenticObservability::instance();
+    obs.incrementCounter("exception_handler.terminate_calls", 1);
+    obs.logCritical(kComponent, "std::terminate called — unhandled C++ exception");
+
     std::string message = "Unhandled C++ exception detected.";
     handleUnhandledException(message);
     std::abort();
@@ -123,6 +142,10 @@ void CentralizedExceptionHandler::terminateHandler() noexcept {
 #ifdef _WIN32
 LONG WINAPI CentralizedExceptionHandler::unhandledExceptionFilter(EXCEPTION_POINTERS* exceptionInfo) {
     (void)exceptionInfo;
+    auto& obs = AgenticObservability::instance();
+    obs.incrementCounter("exception_handler.seh_exceptions", 1);
+    obs.logCritical(kComponent, "Windows SEH exception caught");
+
     CentralizedExceptionHandler::instance().handleUnhandledException(
         "Windows structured exception detected.");
     return EXCEPTION_EXECUTE_HANDLER;

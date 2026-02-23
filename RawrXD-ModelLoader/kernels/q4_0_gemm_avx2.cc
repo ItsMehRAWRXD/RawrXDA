@@ -99,16 +99,8 @@ extern "C" void ggml_gemm_q4_0_avx2(int M, int N, int K, const float* A, const u
 #endif
 }
 
-extern "C" void ggml_gemm_q4_0_avx512(int M, int N, int K, const float* A, const uint8_t* Bq4, float scale, float* C);
-
 extern "C" void ggml_gemm_q4_0(int M, int N, int K,
                                 const float* A, const uint8_t* Bq4, float scale, float* C) {
-#if defined(__AVX512F__)
-    if (cpu_has_avx512_rt()) {
-        ggml_gemm_q4_0_avx512(M, N, K, A, Bq4, scale, C);
-        return;
-    }
-#endif
 #if defined(__AVX2__)
     if (cpu_has_avx2_rt()) {
         ggml_gemm_q4_0_avx2(M, N, K, A, Bq4, scale, C);

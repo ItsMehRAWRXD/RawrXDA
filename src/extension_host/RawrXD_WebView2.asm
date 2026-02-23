@@ -19,17 +19,7 @@ option frame:auto
 ;==============================================================================
 include windows.inc
 ; WebView2.h pseudo-definitions for MASM
-include webview2_conf.inc
-
-includelib kernel32.lib
-includelib msvcrt.lib
-
-;==============================================================================
-; EXTERNAL REFERENCES
-;==============================================================================
-EXTERN HeapAlloc:PROC
-EXTERN g_ExtensionHostConfig:QWORD
-EXTERN CreateCoreWebView2EnvironmentWithOptions:PROC
+include webview2_conf.inc 
 
 ;==============================================================================
 ; STRUCTURES

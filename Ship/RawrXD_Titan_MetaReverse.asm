@@ -5,10 +5,6 @@
 
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; ============================================================================
 ; PEB / LDR / PE STRUCTURE OFFSETS (Windows 10/11 x64 - Stable since Vista)
 ; ============================================================================ 
@@ -71,65 +67,93 @@ p_MessageBoxA               QWORD ?
 .code
 
 ; ----------------------------------------------------------------------------
-; HashStringFNV - Case-insensitive FNV-1a hash of ASCII string (Optimized)
+; HashStringFNV - Case-insensitive FNV-1a hash of ASCII string
 ; ----------------------------------------------------------------------------
 HashStringFNV PROC
-    mov r10, FNV_OFFSET_BASIS
-    mov r11, FNV_PRIME
+    push rsi
+    mov rsi, rcx
+    mov rax, FNV_OFFSET_BASIS
+    
     test rdx, rdx
-    jnz @len_loop
+    jnz @len_known
     
 @null_loop:
-    movzx r8d, BYTE PTR [rcx]
-    test r8d, r8d
+    movzx r8, BYTE PTR [rsi]
+    test r8, r8
     jz @done
-    or r8d, 020h
-    xor r10, r8
-    imul r10, r11
-    inc rcx
+    
+    or r8, 020h                 ; lowercase
+    xor rax, r8
+    mov r9, FNV_PRIME
+    mul r9
+    inc rsi
     jmp @null_loop
     
+@len_known:
+    jz @done
 @len_loop:
-    movzx r8d, BYTE PTR [rcx]
-    or r8d, 020h
-    xor r10, r8
-    imul r10, r11
-    inc rcx
+    movzx r8, BYTE PTR [rsi]
+    or r8, 020h
+    xor rax, r8
+    mov r9, FNV_PRIME
+    mul r9
+    inc rsi
     dec rdx
-    jnz @len_loop
+    jmp @len_loop
     
 @done:
-    mov rax, r10
+    pop rsi
     ret
 HashStringFNV ENDP
 
 ; ----------------------------------------------------------------------------
-; GetKernel32Base - Walk PEB InMemoryOrderModuleList (Optimized)
+; GetKernel32Base - Walk PEB InMemoryOrderModuleList
 ; ----------------------------------------------------------------------------
 GetKernel32Base PROC
+    push rbx
+    push rsi
+    push rdi
+    
     mov rax, GS:[OFFSET_TEB_PEB]
+    test rax, rax
+    jz @fail
+    
     mov rax, [rax + OFFSET_PEB_LDR]
-    lea r10, [rax + 20h]
-    mov rax, [r10]
+    test rax, rax
+    jz @fail
+    
+    lea rbx, [rax + 20h]       ; InMemoryOrderModuleList
+    mov rax, [rbx]              ; Flink
     
 @walk_loop:
-    cmp rax, r10
+    cmp rax, rbx
     je @fail
     
-    lea r8, [rax - OFFSET_LDR_MEM_LINKS]
-    lea r9, [r8 + OFFSET_LDR_BASEPORTNAME]
-    movzx ecx, WORD PTR [r9]
-    cmp cx, 24
+    mov rsi, rax
+    sub rsi, OFFSET_LDR_MEM_LINKS   ; Base of LDR entry
+    
+    lea rdi, [rsi + OFFSET_LDR_BASEPORTNAME]
+    movzx ecx, WORD PTR [rdi]
+    shr ecx, 1
+    mov rdx, [rdi + OFFSET_UNICODE_BUFFER]
+    
+    ; Check length (12 for kernel32.dll)
+    cmp ecx, 12
     jne @next
     
-    mov rdx, [r9 + OFFSET_UNICODE_BUFFER]
-    cmp QWORD PTR [rdx], 06E00720065006Bh
-    jne @next
-    cmp QWORD PTR [rdx+8], 000320033006C0065h
+    ; Simplified check: match "kern" and "el32"
+    mov r8, QWORD PTR [rdx]
+    mov r9, 06E00720065006Bh
+    cmp r8, r9
     jne @next
     
-    mov rax, [r8 + OFFSET_LDR_DLLBASE]
-    ret
+    mov r8, QWORD PTR [rdx+8]
+    mov r9, 000320033006C0065h
+    cmp r8, r9
+    jne @next
+    
+    mov rax, [rsi + OFFSET_LDR_DLLBASE]
+    jmp @done
     
 @next:
     mov rax, [rax]
@@ -137,11 +161,15 @@ GetKernel32Base PROC
     
 @fail:
     xor eax, eax
+@done:
+    pop rdi
+    pop rsi
+    pop rbx
     ret
 GetKernel32Base ENDP
 
 ; ----------------------------------------------------------------------------
-; GetProcAddressByHash - Manual Export Table parsing (Binary search optimized)
+; GetProcAddressByHash - Manual Export Table parsing
 ; ----------------------------------------------------------------------------
 GetProcAddressByHash PROC
     push rbx
@@ -150,11 +178,12 @@ GetProcAddressByHash PROC
     push r14
     push r15
     
-    mov r15, rcx
-    mov r12d, edx
+    mov r15, rcx            ; DllBase
+    mov r12, rdx            ; Hash
     
     mov eax, DWORD PTR [r15 + OFFSET_DOS_LFANEW]
-    lea rax, [r15 + rax]
+    add rax, r15
+    
     cmp DWORD PTR [rax], 000004550h
     jne @fail
     
@@ -163,91 +192,51 @@ GetProcAddressByHash PROC
     jz @fail
     
     lea r14, [r15 + rbx]
+    
     mov r13d, DWORD PTR [r14 + OFFSET_EXPORT_NUMBEROFNAMES]
     test r13d, r13d
     jz @fail
     
     mov ebx, DWORD PTR [r14 + OFFSET_EXPORT_NAMES]
     lea r8, [r15 + rbx]
+    
     mov ebx, DWORD PTR [r14 + OFFSET_EXPORT_ORDINALS]
     lea r9, [r15 + rbx]
+    
     mov ebx, DWORD PTR [r14 + OFFSET_EXPORT_FUNCTIONS]
     lea r10, [r15 + rbx]
     
-    ; Linear search with unrolled loop (4x)
-    xor ecx, ecx
-    mov r11d, r13d
-    shr r11d, 2
-    test r11d, r11d
-    jz @remainder
+    xor rcx, rcx
     
-@unroll_loop:
-    mov ebx, DWORD PTR [r8 + rcx*4]
-    lea rdx, [r15 + rbx]
-    push rcx
-    mov rcx, rdx
-    xor edx, edx
-    call HashStringFNV
-    pop rcx
-    cmp eax, r12d
-    je @found
-    
-    inc ecx
-    mov ebx, DWORD PTR [r8 + rcx*4]
-    lea rdx, [r15 + rbx]
-    push rcx
-    mov rcx, rdx
-    xor edx, edx
-    call HashStringFNV
-    pop rcx
-    cmp eax, r12d
-    je @found
-    
-    inc ecx
-    mov ebx, DWORD PTR [r8 + rcx*4]
-    lea rdx, [r15 + rbx]
-    push rcx
-    mov rcx, rdx
-    xor edx, edx
-    call HashStringFNV
-    pop rcx
-    cmp eax, r12d
-    je @found
-    
-    inc ecx
-    mov ebx, DWORD PTR [r8 + rcx*4]
-    lea rdx, [r15 + rbx]
-    push rcx
-    mov rcx, rdx
-    xor edx, edx
-    call HashStringFNV
-    pop rcx
-    cmp eax, r12d
-    je @found
-    
-    inc ecx
-    dec r11d
-    jnz @unroll_loop
-    
-@remainder:
+@search_loop:
     cmp ecx, r13d
     jae @fail
+    
     mov ebx, DWORD PTR [r8 + rcx*4]
-    lea rdx, [r15 + rbx]
+    test ebx, ebx
+    jz @next_name
+    
+    lea r11, [r15 + rbx]
+    
     push rcx
-    mov rcx, rdx
+    mov rcx, r11
     xor edx, edx
     call HashStringFNV
     pop rcx
+    
     cmp eax, r12d
     je @found
+    
+@next_name:
     inc ecx
-    jmp @remainder
+    jmp @search_loop
     
 @found:
     movzx ebx, WORD PTR [r9 + rcx*2]
     mov eax, DWORD PTR [r10 + rbx*4]
-    lea rax, [r15 + rax]
+    test eax, eax
+    jz @fail
+    add rax, r15
     jmp @done
     
 @fail:
@@ -262,13 +251,12 @@ GetProcAddressByHash PROC
 GetProcAddressByHash ENDP
 
 ; ----------------------------------------------------------------------------
-; BootstrapAPIs (Optimized - Batch API resolution)
+; BootstrapAPIs
 ; ----------------------------------------------------------------------------
 BootstrapAPIs PROC
     push rbx
-    push r12
-    push r13
-    sub rsp, 32
+    push rsi
+    push rdi
     
     call GetKernel32Base
     test rax, rax
@@ -280,33 +268,39 @@ BootstrapAPIs PROC
     call GetProcAddressByHash
     test rax, rax
     jz @fatal
-    mov r12, rax
     mov [p_GetProcAddress], rax
     
-    ; Batch resolve APIs using table-driven approach
-    lea r13, [szAPITable]
-    lea r14, [pAPITable]
-    mov r15d, 4
-    
-@resolve_loop:
+    lea rdx, [szLoadLibraryA]
     mov rcx, rbx
-    mov rdx, [r13]
-    call r12
-    mov [r14], rax
-    add r13, 8
-    add r14, 8
-    dec r15d
-    jnz @resolve_loop
+    call rax
+    mov [p_LoadLibraryA], rax
     
+    sub rsp, 32
+    
+    mov rcx, rbx
+    lea rdx, [szVirtualAlloc]
+    call [p_GetProcAddress]
+    mov [p_VirtualAlloc], rax
+    
+    mov rcx, rbx
+    lea rdx, [szVirtualFree]
+    call [p_GetProcAddress]
+    mov [p_VirtualFree], rax
+    
+    mov rcx, rbx
+    lea rdx, [szExitProcess]
+    call [p_GetProcAddress]
+    mov [p_ExitProcess], rax
+    
+    add rsp, 32
     mov eax, 1
     jmp @done
     
 @fatal:
     xor eax, eax
 @done:
-    add rsp, 32
-    pop r13
-    pop r12
+    pop rdi
+    pop rsi
     pop rbx
     ret
 BootstrapAPIs ENDP
@@ -316,17 +310,6 @@ szLoadLibraryA      BYTE "LoadLibraryA", 0
 szVirtualAlloc      BYTE "VirtualAlloc", 0
 szVirtualFree       BYTE "VirtualFree", 0
 szExitProcess       BYTE "ExitProcess", 0
-
-ALIGN 8
-szAPITable          QWORD OFFSET szLoadLibraryA
-                    QWORD OFFSET szVirtualAlloc
-                    QWORD OFFSET szVirtualFree
-                    QWORD OFFSET szExitProcess
-
-pAPITable           QWORD OFFSET p_LoadLibraryA
-                    QWORD OFFSET p_VirtualAlloc
-                    QWORD OFFSET p_VirtualFree
-                    QWORD OFFSET p_ExitProcess
 
 .code
 PUBLIC PEBMain

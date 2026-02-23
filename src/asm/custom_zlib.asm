@@ -3,10 +3,6 @@
 ; High-performance compression/decompression using DEFLATE algorithm
 ; ============================================================================
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .code
 
 ; ============================================================================
@@ -69,103 +65,44 @@ public CustomZlibInit
 public CustomZlibFree
 
 ; ============================================================================
-; CustomZlibInit - Initialize context (OPTIMIZED: SIMD zeroing)
+; CustomZlibInit - Initialize compression/decompression context
 ; Parameters:
-;   RCX = context pointer
+;   RCX = context pointer (COMPRESS_CTX or DECOMPRESS_CTX)
 ;   RDX = context size
 ; Returns:
-;   RAX = 0 on success
+;   RAX = 0 on success, error code otherwise
 ; ============================================================================
 CustomZlibInit proc
+    push rbx
     push rdi
     
+    ; Zero out the context
     mov rdi, rcx
-    mov r8, rdx
-    
-    ; Use XMM for faster zeroing
-    pxor xmm0, xmm0
-    
-    ; Zero 128 bytes at a time
-    shr rdx, 7
-    jz init_remaining
-    
-init_xmm_loop:
-    movdqu [rdi], xmm0
-    movdqu [rdi+16], xmm0
-    movdqu [rdi+32], xmm0
-    movdqu [rdi+48], xmm0
-    movdqu [rdi+64], xmm0
-    movdqu [rdi+80], xmm0
-    movdqu [rdi+96], xmm0
-    movdqu [rdi+112], xmm0
-    add rdi, 128
-    dec rdx
-    jnz init_xmm_loop
-    
-init_remaining:
-    mov rcx, r8
-    and rcx, 127
-    jz init_done
+    mov rcx, rdx
     xor rax, rax
     rep stosb
     
-init_done:
-    xor rax, rax
+    xor rax, rax        ; Return success
     pop rdi
+    pop rbx
     ret
 CustomZlibInit endp
 
 ; ============================================================================
-; CustomZlibFree - OPTIMIZED secure wipe (SIMD)
+; CustomZlibFree - Free compression/decompression context
 ; Parameters:
 ;   RCX = context pointer
 ; Returns:
 ;   RAX = 0 on success
 ; ============================================================================
 CustomZlibFree proc
-    push rdi
-    
-    test rcx, rcx
-    jz czf_done
-    
-    mov rdi, rcx
-    mov edx, SIZEOF DECOMPRESS_CTX
-    
-    ; Use XMM for faster secure wiping
-    pxor xmm0, xmm0
-    
-    ; Wipe 128 bytes at a time
-    shr edx, 7
-    jz free_remaining
-    
-free_xmm_loop:
-    movdqu [rdi], xmm0
-    movdqu [rdi+16], xmm0
-    movdqu [rdi+32], xmm0
-    movdqu [rdi+48], xmm0
-    movdqu [rdi+64], xmm0
-    movdqu [rdi+80], xmm0
-    movdqu [rdi+96], xmm0
-    movdqu [rdi+112], xmm0
-    add rdi, 128
-    dec edx
-    jnz free_xmm_loop
-    
-free_remaining:
-    mov ecx, SIZEOF DECOMPRESS_CTX
-    and ecx, 127
-    jz czf_done
-    xor eax, eax
-    rep stosb
-    
-czf_done:
+    ; Nothing to free in this implementation
     xor rax, rax
-    pop rdi
     ret
 CustomZlibFree endp
 
 ; ============================================================================
-; CustomZlibCompress - OPTIMIZED compression
+; CustomZlibCompress - Compress data using DEFLATE algorithm
 ; Parameters:
 ;   RCX = input buffer pointer
 ;   RDX = input size
@@ -184,11 +121,11 @@ CustomZlibCompress proc
     push r15
     sub rsp, 40h
     
-    ; Keep parameters in registers
-    mov r15, rcx            ; Input buffer
-    mov r14, rdx            ; Input size
-    mov r13, r8             ; Output buffer
-    mov r12, r9             ; Output size
+    ; Save parameters
+    mov [rsp+20h], rcx      ; Input buffer
+    mov [rsp+28h], rdx      ; Input size
+    mov [rsp+30h], r8       ; Output buffer
+    mov [rsp+38h], r9       ; Output size
     
     ; Validate parameters
     test rcx, rcx
@@ -200,65 +137,95 @@ CustomZlibCompress proc
     test r9, r9
     jz compress_error
     
-    ; Write ZLIB header
-    mov word ptr [r13], 9C78h   ; Combined CMF+FLG write
-    mov rdi, r13
-    add rdi, 2
-    mov rbx, 2              ; Output position
+    ; Initialize output position
+    xor r12, r12            ; r12 = output position
     
-    mov rsi, r15            ; Input pointer
+    ; Write ZLIB header (CMF + FLG)
+    mov rdi, r8
+    mov byte ptr [rdi], 78h     ; CMF: compression method 8, window size 32K
+    mov byte ptr [rdi+1], 9Ch   ; FLG: no dictionary, default compression
+    add r12, 2
+    
+    ; Process input in blocks
+    mov rsi, rcx            ; rsi = input pointer
+    mov r13, rdx            ; r13 = remaining input size
+    mov rdi, r8
+    add rdi, r12            ; rdi = current output position
     
 compress_loop:
-    test r14, r14
+    cmp r13, 0
     jle compress_done
     
-    ; Determine block size
-    mov r10, r14
-    cmp r10, 0FFFFh
-    cmova r10, 0FFFFh       ; Conditional move instead of branch
+    ; Determine block size (max 65535 bytes for uncompressed block)
+    mov r14, r13
+    cmp r14, 0FFFFh
+    jle block_size_ok
+    mov r14, 0FFFFh
+block_size_ok:
     
-    ; Check output space
-    lea rax, [rbx + r10 + 5]
-    cmp rax, r12
+    ; Check if we have enough output space
+    mov rax, r12
+    add rax, r14
+    add rax, 5              ; Block header overhead
+    cmp rax, r9
     jg compress_error
     
-    ; Write block header (uncompressed)
+    ; Write block header (uncompressed block for simplicity)
+    ; BFINAL=0, BTYPE=00 (uncompressed)
     mov byte ptr [rdi], 00h
+    inc rdi
+    inc r12
     
-    ; Write LEN and NLEN
-    mov ax, r10w
-    mov [rdi+1], ax
+    ; Write block length (LEN)
+    mov ax, r14w
+    mov [rdi], ax
+    add rdi, 2
+    add r12, 2
+    
+    ; Write complement of length (NLEN)
     not ax
-    mov [rdi+3], ax
-    add rdi, 5
-    add rbx, 5
+    mov [rdi], ax
+    add rdi, 2
+    add r12, 2
     
     ; Copy data
-    mov rcx, r10
+    mov rcx, r14
     rep movsb
-    add rbx, r10
-    sub r14, r10
+    add r12, r14
+    
+    ; Update remaining size
+    sub r13, r14
+    mov rsi, [rsp+20h]
+    add rsi, rdx
+    sub rsi, r13
     
     jmp compress_loop
     
 compress_done:
-    ; Write final block
-    mov dword ptr [rdi], 0FFFF0001h ; Combined write
-    mov byte ptr [rdi+4], 0FFh
-    add rdi, 5
-    add rbx, 5
+    ; Write final block header
+    mov rdi, [rsp+30h]
+    add rdi, r12
+    mov byte ptr [rdi], 01h     ; BFINAL=1, BTYPE=00
+    inc r12
+    mov word ptr [rdi+1], 0     ; LEN=0
+    mov word ptr [rdi+3], 0FFFFh ; NLEN=0xFFFF
+    add r12, 4
     
-    ; Calculate Adler-32
-    mov rcx, r15
+    ; Calculate and write Adler-32 checksum
+    mov rcx, [rsp+20h]
     mov rdx, [rsp+28h]
-    mov [rsp+28h], rbx      ; Save output position
     call CalculateAdler32
-    mov rbx, [rsp+28h]
     
-    ; Write checksum
+    mov rdi, [rsp+30h]
+    add rdi, r12
+    
+    ; Write checksum in big-endian
     bswap eax
     mov [rdi], eax
-    lea rax, [rbx + 4]
+    add r12, 4
+    
+    ; Return compressed size
+    mov rax, r12
     jmp compress_exit
     
 compress_error:
@@ -277,7 +244,7 @@ compress_exit:
 CustomZlibCompress endp
 
 ; ============================================================================
-; CustomZlibDecompress - OPTIMIZED decompression
+; CustomZlibDecompress - Decompress DEFLATE compressed data
 ; Parameters:
 ;   RCX = compressed buffer pointer
 ;   RDX = compressed size
@@ -296,11 +263,11 @@ CustomZlibDecompress proc
     push r15
     sub rsp, 40h
     
-    ; Keep parameters in registers
-    mov r15, rcx            ; Input buffer
-    mov r14, rdx            ; Input size
-    mov r13, r8             ; Output buffer
-    mov r12, r9             ; Output size
+    ; Save parameters
+    mov [rsp+20h], rcx      ; Input buffer
+    mov [rsp+28h], rdx      ; Input size
+    mov [rsp+30h], r8       ; Output buffer
+    mov [rsp+38h], r9       ; Output size
     
     ; Validate parameters
     test rcx, rcx
@@ -312,84 +279,94 @@ CustomZlibDecompress proc
     test r9, r9
     jz decompress_error
     
-    ; Check minimum size
+    ; Check minimum size for ZLIB header
     cmp rdx, 6
     jl decompress_error
     
-    ; Validate ZLIB header
-    mov rsi, r15
+    ; Read and validate ZLIB header
+    mov rsi, rcx
     movzx eax, byte ptr [rsi]
-    and al, 0Fh
-    cmp al, 8
+    movzx ebx, byte ptr [rsi+1]
+    
+    ; Validate CMF
+    mov cl, al
+    and cl, 0Fh
+    cmp cl, 8               ; Check compression method (DEFLATE)
     jne decompress_error
     
     ; Skip header
     add rsi, 2
-    mov r10, r14
-    sub r10, 6              ; Account for header and checksum
+    mov r12, rdx
+    sub r12, 6              ; Account for header and checksum
     
     ; Initialize output
-    mov rdi, r13
-    xor r11, r11            ; Output position
+    mov rdi, r8
+    xor r13, r13            ; r13 = output position
     
 decompress_loop:
-    test r10, r10
+    cmp r12, 0
     jle decompress_done
     
     ; Read block header
     movzx eax, byte ptr [rsi]
     inc rsi
-    dec r10
+    dec r12
     
-    ; Check BFINAL and BTYPE
-    mov ebx, eax
-    and ebx, 1              ; BFINAL
+    ; Check BFINAL bit
+    mov r14b, al
+    and r14b, 1
+    
+    ; Get BTYPE
     shr al, 1
-    and al, 3               ; BTYPE
+    and al, 3
     
-    ; Only support uncompressed blocks
-    test al, al
-    jnz decompress_error
+    ; Handle uncompressed block (BTYPE=00)
+    cmp al, 0
+    jne decompress_error    ; Only supporting uncompressed for now
     
-    ; Read LEN and NLEN
-    movzx ecx, word ptr [rsi]
-    movzx eax, word ptr [rsi+2]
-    add rsi, 4
-    sub r10, 4
+    ; Read LEN
+    movzx r15, word ptr [rsi]
+    add rsi, 2
+    sub r12, 2
     
-    ; Validate NLEN
+    ; Read NLEN (and validate)
+    movzx eax, word ptr [rsi]
+    add rsi, 2
+    sub r12, 2
     not ax
-    cmp ax, cx
+    cmp ax, r15w
     jne decompress_error
     
     ; Check output space
-    lea rax, [r11 + rcx]
-    cmp rax, r12
+    mov rax, r13
+    add rax, r15
+    cmp rax, r9
     jg decompress_error
     
     ; Copy block data
+    mov rcx, r15
     rep movsb
-    add r11, rcx
-    sub r10, rcx
+    add r13, r15
+    sub r12, r15
     
     ; Check if final block
-    test ebx, ebx
+    test r14b, r14b
     jnz decompress_done
     
     jmp decompress_loop
     
 decompress_done:
-    ; Verify Adler-32
-    mov rcx, r13
-    mov rdx, r11
-    mov [rsp+28h], r11      ; Save output size
+    ; Verify Adler-32 checksum
+    mov rcx, [rsp+30h]
+    mov rdx, r13
     call CalculateAdler32
-    mov r11, [rsp+28h]
     
     ; Read stored checksum
-    mov rsi, r15
-    add rsi, r14
+    mov rsi, [rsp+20h]
+    mov rbx, [rsp+28h]
+    add rsi, rbx
     sub rsi, 4
+    
     mov ebx, [rsi]
     bswap ebx
     
@@ -397,7 +374,8 @@ decompress_done:
     cmp eax, ebx
     jne decompress_error
     
-    mov rax, r11
+    ; Return decompressed size
+    mov rax, r13
     jmp decompress_exit
     
 decompress_error:
@@ -416,7 +394,7 @@ decompress_exit:
 CustomZlibDecompress endp
 
 ; ============================================================================
-; CalculateAdler32 - OPTIMIZED Adler-32 checksum
+; CalculateAdler32 - Calculate Adler-32 checksum
 ; Parameters:
 ;   RCX = data pointer
 ;   RDX = data size
@@ -426,90 +404,50 @@ CustomZlibDecompress endp
 CalculateAdler32 proc
     push rbx
     push rsi
-    push r12
     
     mov rsi, rcx
-    mov r12, rdx
+    mov rcx, rdx
     
     ; Initialize Adler-32 (s1=1, s2=0)
     mov eax, 1              ; s1
     xor edx, edx            ; s2
-    mov r11d, 65521         ; Modulo constant
     
-    test r12, r12
+    test rcx, rcx
     jz adler_done
     
-    ; Process in chunks to reduce modulo operations
-    mov r10, r12
-    shr r10, 4              ; Number of 16-byte chunks
-    and r12, 15             ; Remaining bytes
-    
-adler_chunk_loop:
-    test r10, r10
-    jz adler_remaining
-    
-    ; Process 16 bytes without modulo
-    mov ecx, 16
-adler_inner:
+adler_loop:
     movzx ebx, byte ptr [rsi]
     inc rsi
+    
+    ; s1 = (s1 + byte) mod 65521
     add eax, ebx
-    add edx, eax
-    dec ecx
-    jnz adler_inner
-    
-    ; Apply modulo after chunk
-    mov ecx, eax
+    mov ebx, 65521
+    xor edx, edx
+    push rax
     xor eax, eax
-    mov ebx, edx
-    mov edx, ecx
-    div r11d
+    pop rax
+    div ebx
     mov eax, edx
+    inc eax
     
-    mov edx, ebx
-    xor ebx, ebx
-    xchg eax, edx
-    div r11d
-    mov edx, edx
-    xchg eax, edx
-    
-    dec r10
-    jmp adler_chunk_loop
-    
-adler_remaining:
-    test r12, r12
-    jz adler_done
-    
-adler_final_loop:
-    movzx ebx, byte ptr [rsi]
-    inc rsi
-    add eax, ebx
+    ; s2 = (s2 + s1) mod 65521
+    pop rdx
     add edx, eax
-    dec r12
-    jnz adler_final_loop
-    
-    ; Final modulo
-    xor ebx, ebx
-    mov ecx, eax
-    xor eax, eax
-    mov ebx, edx
-    mov edx, ecx
-    div r11d
+    push rax
     mov eax, edx
-    
-    mov edx, ebx
-    xor ebx, ebx
-    xchg eax, edx
-    div r11d
+    xor edx, edx
+    mov ebx, 65521
+    div ebx
     mov edx, edx
-    xchg eax, edx
+    pop rax
+    
+    loop adler_loop
     
 adler_done:
     ; Combine s2 and s1: (s2 << 16) | s1
     shl edx, 16
     or eax, edx
     
-    pop r12
     pop rsi
     pop rbx
     ret

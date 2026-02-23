@@ -4,7 +4,13 @@
 ; ═══════════════════════════════════════════════════════════════════════════════
 
 OPTION DOTNAME
-include RawrXD_Defs.inc
+OPTION CASEMAP:NONE
+OPTION WIN64:3
+
+include \masm64\include64\windows.inc
+include \masm64\include64\kernel32.inc
+
+includelib \masm64\lib64\kernel32.lib
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; CONSTANTS
@@ -28,10 +34,6 @@ RingBufferContext ENDS
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .DATA
 align 16
 g_RingContext           RingBufferContext <>
@@ -48,8 +50,7 @@ g_RingContext           RingBufferContext <>
 RingBufferConsumer_Initialize PROC FRAME
     push rbx
     push rsi
-    sub rsp, 56                     ; Alloc shadow (32) + args (16) + alignment
-    .endprolog
+    sub rsp, 32
     
     ; Init context
     mov g_RingContext.hOutputWindow, rcx
@@ -59,8 +60,8 @@ RingBufferConsumer_Initialize PROC FRAME
     mov g_RingContext.bRunning, 1
     
     ; Allocate buffer
-    mov rcx, 040h                   ; LPTR (Zero init)
-    mov rdx, RING_BUFFER_SIZE
+    mov rcx, RING_BUFFER_SIZE
+    mov rdx, 040h                   ; LPTR (Zero init)
     call LocalAlloc
     mov g_RingContext.BufferStart, rax
     
@@ -84,7 +85,7 @@ RingBufferConsumer_Initialize PROC FRAME
     xor eax, eax
     
 @init_done:
-    add rsp, 56
+    add rsp, 32
     pop rsi
     pop rbx
     ret
@@ -96,7 +97,6 @@ RingBufferConsumer_Initialize ENDP
 RingBufferConsumer_Shutdown PROC FRAME
     push rbx
     sub rsp, 32
-    .endprolog
     
     ; Signal stop
     mov g_RingContext.bRunning, 0
@@ -134,8 +134,7 @@ RingBufferThreadProc PROC FRAME
     push rbx
     push rsi
     push rdi
-    sub rsp, 32
-    .endprolog
+    sub rsp, 40
     
     mov rsi, rcx                    ; Context
     
@@ -165,7 +164,7 @@ RingBufferThreadProc PROC FRAME
     
 @exit_thread:
     xor eax, eax
-    add rsp, 32
+    add rsp, 40
     pop rdi
     pop rsi
     pop rbx

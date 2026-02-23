@@ -14,10 +14,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 includelib kernel32.lib
 includelib ws2_32.lib
 

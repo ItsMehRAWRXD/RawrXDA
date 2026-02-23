@@ -8,20 +8,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
-; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
-PUBLIC Governor_Init
-PUBLIC Governor_ReadThermals
-PUBLIC Governor_RankDrives
-PUBLIC Governor_OpenDrive
-PUBLIC Governor_HotSwap
-PUBLIC Governor_StressCycle
-PUBLIC Governor_Shutdown
-PUBLIC main
-
 ; ============================================================================
 ; WIN32 CONSTANTS (No windows.inc dependency)
 ; ============================================================================
@@ -864,7 +850,6 @@ main PROC FRAME
 @init_failed:
     mov ecx, 1
     call ExitProcess
-    ret
 main ENDP
 
 END

@@ -6,10 +6,6 @@
 ;==============================================================================
 
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 
@@ -1184,43 +1180,16 @@ Vulkan_CreateComputePipeline PROC FRAME
     
     mov rbx, rcx
     
-    ; Create shader module from SPIR-V bytecode
-    ; Build VkShaderModuleCreateInfo
-    sub rsp, 64                ; space for create info struct
-    mov DWORD PTR [rsp], 15    ; sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO
-    mov QWORD PTR [rsp+8], 0   ; pNext
-    mov DWORD PTR [rsp+16], 0  ; flags
-    mov DWORD PTR [rsp+20], r8d ; codeSize
-    mov QWORD PTR [rsp+24], rdx ; pCode (SPIR-V)
+    ; Create shader module from SPIR-V
+    ; vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule)
     
-    ; Resolve vkCreateShaderModule
-    mov rcx, [hVulkanDll]
-    test rcx, rcx
-    jz @@vccp_no_vulkan
-    lea rdx, [sz_vkCreateShaderModule]
-    call GetProcAddress
-    test rax, rax
-    jz @@vccp_no_vulkan
+    ; Create pipeline layout
+    ; vkCreatePipelineLayout(device, &layoutInfo, nullptr, &pipelineLayout)
     
-    ; vkCreateShaderModule(device, &createInfo, NULL, &shaderModule)
-    mov rcx, rbx             ; device
-    lea rdx, [rsp]           ; pCreateInfo
-    xor r8d, r8d             ; pAllocator
-    lea r9, [rsp+48]         ; pShaderModule
-    call rax
-    test eax, eax
-    jnz @@vccp_no_vulkan     ; VK_SUCCESS = 0
+    ; Create compute pipeline
+    ; vkCreateComputePipelines(device, cache, 1, &pipelineInfo, nullptr, &pipeline)
     
-    mov eax, 1               ; success
-    add rsp, 64
-    add rsp, 40
-    pop rbx
-    ret
-    
-@@vccp_no_vulkan:
-    ; Vulkan not available - log and return success (graceful degradation)
-    mov eax, 1
-    add rsp, 64
+    xor eax, eax            ; Placeholder
     
     add rsp, 40
     pop rbx
@@ -1234,35 +1203,8 @@ Vulkan_DispatchCompute PROC FRAME
     .allocstack 40
     .endprolog
     
-    ; Resolve vkCmdDispatch dynamically
-    push rcx
-    push rdx
-    push r8
-    push r9
-    
-    mov rcx, [hVulkanDll]
-    test rcx, rcx
-    jz @@vdc_fallback
-    lea rdx, [sz_vkCmdDispatch]
-    call GetProcAddress
-    test rax, rax
-    jz @@vdc_fallback
-    
     ; vkCmdDispatch(cmdBuffer, groupCountX, groupCountY, groupCountZ)
-    pop r9                   ; groupCountZ
-    pop r8                   ; groupCountY
-    pop rdx                  ; groupCountX
-    pop rcx                  ; cmdBuffer
-    call rax
     
-    add rsp, 40
-    ret
-    
-@@vdc_fallback:
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
     add rsp, 40
     ret
 Vulkan_DispatchCompute ENDP
@@ -1279,36 +1221,10 @@ ThermalGovernor_ReadTemperature PROC FRAME
     .allocstack 40
     .endprolog
     
-    ; User-mode temperature approximation via CPUID Thermal and Power Management
-    ; CPUID leaf 6 (EAX): bit 0 = Digital Thermal Sensor supported
-    ; For accurate readings, use NtQuerySystemInformation or WMI
+    ; Note: rdmsr requires kernel mode or CPUID
+    ; This is a user-mode approximation using WMI or driver
     
-    ; Use CPUID leaf 6 to check thermal sensor support
-    mov eax, 6
-    cpuid
-    test eax, 1              ; DTS supported?
-    jz @@tgrt_default
-    
-    ; Read IA32_THERM_STATUS via CPUID approximation
-    ; Since rdmsr requires ring 0, use the thermal throttle counter
-    ; as a proxy. If throttling is happening, temp is high.
-    mov eax, 80000007h
-    cpuid
-    test edx, 4             ; CPUID.80000007H:EDX.TTP (Thermal Trip)
-    jnz @@tgrt_hot
-    
-    ; Normal temperature range estimate based on power state
-    mov eax, 45              ; ~45C under light load
-    add rsp, 40
-    ret
-    
-@@tgrt_hot:
-    mov eax, 85              ; throttling = high temp
-    add rsp, 40
-    ret
-    
-@@tgrt_default:
-    ; DTS not supported, return conservative estimate
+    ; Placeholder: return 50C
     mov eax, 50
     
     add rsp, 40
@@ -1322,46 +1238,12 @@ OverclockGovernor_SetFrequency PROC FRAME
     .allocstack 40
     .endprolog
     
-    ; Validate frequency range (300 MHz - 6000 MHz)
-    cmp r8d, 300
-    jb @@ogsf_fail
-    cmp r8d, 6000
-    ja @@ogsf_fail
+    ; Note: Requires kernel driver for MSR access
+    ; IA32_PERF_CTL (0x199) controls P-state
     
-    ; In user mode, use SetProcessAffinityMask + SetPriorityClass
-    ; as a soft frequency hint. Real MSR access requires kernel driver.
-    
-    ; Set thread affinity to target core
-    push r8
-    mov rcx, -2              ; GetCurrentThread()
-    mov rax, 1
-    mov cl, dl               ; core_id
-    shl rax, cl              ; affinity mask for target core
-    mov rdx, rax
-    call SetThreadAffinityMask
-    pop r8
-    
-    ; Set process priority to REALTIME for maximum frequency
-    cmp r8d, 4000
-    jb @@ogsf_normal_pri
-    mov rcx, -1              ; GetCurrentProcess()
-    mov edx, 100h            ; REALTIME_PRIORITY_CLASS
-    call SetPriorityClass
-    jmp @@ogsf_success
-    
-@@ogsf_normal_pri:
-    mov rcx, -1
-    mov edx, 20h             ; NORMAL_PRIORITY_CLASS
-    call SetPriorityClass
-    
-@@ogsf_success:
+    ; Placeholder: success
     mov eax, 1
     
-    add rsp, 40
-    ret
-    
-@@ogsf_fail:
-    xor eax, eax
     add rsp, 40
     ret
 OverclockGovernor_SetFrequency ENDP

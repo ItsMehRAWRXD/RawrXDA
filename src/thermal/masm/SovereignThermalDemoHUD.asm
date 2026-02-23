@@ -6,10 +6,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; --- Win32 Externals ---
 extern GetModuleHandleA : PROC
 extern ExitProcess : PROC

@@ -26,10 +26,6 @@
 OPTION WIN64:3
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 INCLUDE \masm64\include64\win64.inc
 INCLUDE \masm64\include64\kernel32.inc
 INCLUDE \masm64\include64\user32.inc
@@ -1547,7 +1543,7 @@ main PROC FRAME
 @@exit:
     xor ecx, ecx
     call ExitProcess
-    ret
+
 main ENDP
 
 ; Additional strings

@@ -1,7 +1,5 @@
 #include "RawrXD_SignalSlot.h"
 #include <map>
-#include <vector>
-#include <string>
 
 namespace RawrXD {
 
@@ -31,6 +29,11 @@ void Timer::start() {
     if (active) stop();
     
     if (!hwnd) {
+        // Create message-only window for timer if not already created or use a shared one?
+        // Ideally we should use a shared message-only window or just the thread's message queue if we use SetTimer with NULL hwnd.
+        // However, SetTimer with NULL hwnd requires a message loop to dispatch WM_TIMER, which we will have in Application::exec().
+        // Using a window is safer for callback routing.
+        
         static const wchar_t* className = L"RawrXD_TimerWindow";
         static bool classRegistered = false;
         
@@ -48,7 +51,18 @@ void Timer::start() {
                                HWND_MESSAGE, nullptr, GetModuleHandleW(nullptr), nullptr);
     }
     
-    id = SetTimer(NULL, 0, interval, TimerProc);
+    // id = SetTimer(hwnd, 0, interval, TimerProc); // If using HWND, TimerProc is optional if we handle WM_TIMER in WndProc
+    // But we are using a DefWindowProc, so we must provide a TimerProc or handle it.
+    // Actually, SetTimer with a callback and HWND works.
+    
+    // We need a unique ID for the timer if we use the same HWND for multiple timers? 
+    // SetTimer returns a new ID if nIDEvent (2nd arg) is 0 and hwnd is NULL.
+    // If hwnd is not NULL, we must manage IDs.
+    
+    // Simplest: use NULL HWND to get a unique ID, but then we depend on the thread message loop content.
+    // The plan said "Replace QTimer with SetTimer/KillTimer + callback map".
+    
+    id = SetTimer(hwnd, 0, interval, TimerProc);
     if (id != 0) {
         timers[id] = this;
         active = true;
@@ -57,10 +71,12 @@ void Timer::start() {
 
 void Timer::stop() {
     if (active && id != 0) {
-        KillTimer(NULL, id);
+        KillTimer(hwnd, id);
         timers.erase(id);
         active = false;
         id = 0;
+        // Don't destroy HWND to keep it simple, or destroy it? 
+        // If we created it per timer, we should destroy it.
         if (hwnd) {
             DestroyWindow(hwnd);
             hwnd = nullptr;
@@ -69,85 +85,142 @@ void Timer::stop() {
 }
 
 void Timer::singleShot(int msec, std::function<void()> cb) {
-    std::thread([msec, cb]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+    // Self-deleting timer: capture pointer, invoke callback, then post deletion
+    // via SetTimer with a 0ms cleanup timer to avoid deleting inside callback.
+    
+    auto* timer = new Timer();
+    timer->setInterval(msec);
+    timer->setSingleShot(true);
+    timer->onTimeout([timer, cb]() {
         if (cb) cb();
-    }).detach();
+        // Schedule deferred deletion — SetTimer(0ms) fires after callback returns
+        // so we don't delete `this` from within the callback stack.
+        SetTimer(nullptr, reinterpret_cast<UINT_PTR>(timer) | 0x80000000u, 0,
+            [](HWND, UINT, UINT_PTR id, DWORD) {
+                KillTimer(nullptr, id);
+                Timer* t = reinterpret_cast<Timer*>(id & ~0x80000000u);
+                delete t;
+            });
+    });
+    timer->start();
 }
 
 // --- FileWatcher Implementation ---
 
-FileWatcher::FileWatcher() : m_running(false), m_hDir(INVALID_HANDLE_VALUE) {
-    memset(&m_overlapped, 0, sizeof(m_overlapped));
+FileWatcher::FileWatcher() {
+    memset(&overlapped, 0, sizeof(overlapped));
+    buffer.resize(4096);
 }
 
 FileWatcher::~FileWatcher() {
-    stop();
+    removePath(path);
 }
 
-void FileWatcher::start(const String& path) {
-    if (m_running) stop();
+bool FileWatcher::addPath(const String& p) {
+    if (p.empty()) return false;
 
-    watchPath = path;
-    // Open directory for monitoring. 
-    // basic blocking mode (no OVERLAPPED) for simplicity in a dedicated thread.
-    m_hDir = CreateFileW(
-        path.c_str(),
+    // Stop existing watch if any
+    if (running) removePath(path);
+
+    path = p;
+
+    // Open directory handle for ReadDirectoryChangesW
+    std::wstring wpath(path.begin(), path.end());
+    hDir = CreateFileW(wpath.c_str(),
         FILE_LIST_DIRECTORY,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS, // Required for directories
-        NULL
-    );
+        nullptr, OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+        nullptr);
 
-    if (m_hDir == INVALID_HANDLE_VALUE) {
-        return;
+    if (hDir == INVALID_HANDLE_VALUE) return false;
+
+    hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (!hEvent) {
+        CloseHandle(hDir);
+        hDir = INVALID_HANDLE_VALUE;
+        return false;
     }
 
-    m_running = true;
-    watcherThread = std::thread(&FileWatcher::watchLoop, this);
+    running = true;
+    watchThread = std::thread([this]() { watchLoop(); });
+
+    return true;
 }
 
-void FileWatcher::stop() {
-    if (!m_running) return;
-    m_running = false;
-    
-    if (m_hDir != INVALID_HANDLE_VALUE) {
-        // Closing handle should cause ReadDirectoryChangesW to fail and exit loop
-        CancelIo(m_hDir);
-        CloseHandle(m_hDir);
-        m_hDir = INVALID_HANDLE_VALUE;
+void FileWatcher::removePath(const String& p) {
+    running = false;
+
+    // Signal the event to unblock WaitForSingleObject in the watch thread
+    if (hEvent) SetEvent(hEvent);
+
+    if (watchThread.joinable()) watchThread.join();
+
+    if (hDir != INVALID_HANDLE_VALUE) {
+        CancelIo(hDir);
+        CloseHandle(hDir);
+        hDir = INVALID_HANDLE_VALUE;
     }
-    
-    if (watcherThread.joinable()) {
-        watcherThread.join();
+    if (hEvent) {
+        CloseHandle(hEvent);
+        hEvent = nullptr;
     }
 }
 
 void FileWatcher::watchLoop() {
-    // 16KB buffer for changes
-    std::vector<uint8_t> changeBuf(16 * 1024);
-    DWORD bytesReturned;
-    
-    while(m_running) {
-        if(ReadDirectoryChangesW(
-            m_hDir,
-            changeBuf.data(),
-            (DWORD)changeBuf.size(),
+    while (running && hDir != INVALID_HANDLE_VALUE) {
+        memset(&overlapped, 0, sizeof(overlapped));
+        overlapped.hEvent = hEvent;
+
+        DWORD notifyFilter = FILE_NOTIFY_CHANGE_FILE_NAME |
+                             FILE_NOTIFY_CHANGE_DIR_NAME |
+                             FILE_NOTIFY_CHANGE_LAST_WRITE |
+                             FILE_NOTIFY_CHANGE_SIZE |
+                             FILE_NOTIFY_CHANGE_CREATION;
+
+        BOOL ok = ReadDirectoryChangesW(
+            hDir, buffer.data(), (DWORD)buffer.size(),
             TRUE, // Watch subtree
-            FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME,
-            &bytesReturned,
-            NULL,
-            NULL
-        )) {
-            if (bytesReturned > 0) {
-                 directoryChanged.emit(watchPath);
-                 // We could parse FILE_NOTIFY_INFORMATION here if needed for fileChanged
+            notifyFilter,
+            nullptr, &overlapped, nullptr);
+
+        if (!ok) break;
+
+        DWORD waitResult = WaitForSingleObject(hEvent, 500); // 500ms polling interval
+        if (!running) break;
+
+        if (waitResult == WAIT_OBJECT_0) {
+            DWORD bytesTransferred = 0;
+            if (!GetOverlappedResult(hDir, &overlapped, &bytesTransferred, FALSE) ||
+                bytesTransferred == 0) {
+                ResetEvent(hEvent);
+                continue;
             }
-        } else {
-             // Error or handle closed
-             break;
+
+            // Parse FILE_NOTIFY_INFORMATION entries
+            auto* info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(buffer.data());
+            while (info) {
+                // Convert wide filename to std::string
+                std::wstring wname(info->FileName, info->FileNameLength / sizeof(WCHAR));
+                std::string name(wname.begin(), wname.end());
+
+                int action = 0;
+                switch (info->Action) {
+                    case FILE_ACTION_ADDED:            action = Action::Added; break;
+                    case FILE_ACTION_REMOVED:          action = Action::Removed; break;
+                    case FILE_ACTION_MODIFIED:         action = Action::Modified; break;
+                    case FILE_ACTION_RENAMED_OLD_NAME: action = Action::RenamedOld; break;
+                    case FILE_ACTION_RENAMED_NEW_NAME: action = Action::RenamedNew; break;
+                }
+
+                fileChanged.emit(String(name), action);
+
+                if (info->NextEntryOffset == 0) break;
+                info = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(
+                    reinterpret_cast<uint8_t*>(info) + info->NextEntryOffset);
+            }
+
+            ResetEvent(hEvent);
         }
     }
 }

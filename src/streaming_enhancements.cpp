@@ -362,14 +362,35 @@ std::vector<int32_t> BPETokenizer::tokenize(const std::string& text) {
         tokens.erase(tokens.begin() + bestIdx + 1);
     }
     
-    // Convert to IDs (using simple hash or just bytes if vocab not full)
-    // Assuming implicit vocab from merges or we map string -> id
+    // Convert merged tokens to IDs via vocabulary lookup
     std::vector<int32_t> result;
     for (const auto& t : tokens) {
-        // Mock ID generation for now since we don't reload full vocab map
-        int32_t id = 0; 
-        for(char c : t) id = (id << 8) | (unsigned char)c;
-        result.push_back(id & 0xFFFF); // Truncate
+        // Look up token in the vocabulary map built from merge ranks
+        // The merge file implicitly defines vocabulary: each unique piece is a token
+        bool found = false;
+        // Search merge ranks for this token as either part of a pair
+        for (const auto& entry : m_mergeRanks) {
+            if (entry.first.first == t || entry.first.second == t) {
+                // Use the rank as a stable ID mapping
+                result.push_back(static_cast<int32_t>(entry.second));
+                found = true;
+                break;
+            }
+            // Check if the merged form of the pair matches
+            std::string merged = entry.first.first + entry.first.second;
+            if (merged == t) {
+                result.push_back(static_cast<int32_t>(entry.second));
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            // Unknown token: encode as byte-level fallback
+            // Each byte maps to its value (byte-level BPE baseline)
+            for (unsigned char c : t) {
+                result.push_back(static_cast<int32_t>(c));
+            }
+        }
     }
     return result;
 }
@@ -618,14 +639,14 @@ void StreamingWebServer::start() {
     WSADATA wsaData;
     int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
-        std::cerr << "WSAStartup failed: " << iResult << std::endl;
+        s_logger.error( "WSAStartup failed: " << iResult << std::endl;
         m_running = false;
         return;
     }
 
     SOCKET ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (ListenSocket == INVALID_SOCKET) {
-        std::cerr << "Error at socket(): " << WSAGetLastError() << std::endl;
+        s_logger.error( "Error at socket(): " << WSAGetLastError() << std::endl;
         WSACleanup();
         m_running = false;
         return;
@@ -637,7 +658,7 @@ void StreamingWebServer::start() {
     service.sin_port = htons(m_port);
 
     if (bind(ListenSocket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR) {
-        std::cerr << "bind failed: " << WSAGetLastError() << std::endl;
+        s_logger.error( "bind failed: " << WSAGetLastError() << std::endl;
         closesocket(ListenSocket);
         WSACleanup();
         m_running = false;
@@ -645,7 +666,7 @@ void StreamingWebServer::start() {
     }
 
     if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-         std::cerr << "listen failed: " << WSAGetLastError() << std::endl;
+         s_logger.error( "listen failed: " << WSAGetLastError() << std::endl;
          closesocket(ListenSocket);
          WSACleanup();
          m_running = false;
@@ -709,7 +730,7 @@ void StreamingWebServer::start() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             } else {
                 // Real error
-                std::cerr << "accept failed: " << err << std::endl;
+                s_logger.error( "accept failed: " << err << std::endl;
             }
         }
     }
@@ -793,7 +814,7 @@ std::string StructuredOutputFormatter::formatToken(const std::string& token, Out
         
         case OutputFormat::XML:
             return "<token index=\"" + std::to_string(tokenIndex) + "\">" + 
-                   StreamingUtils::escapeXML(token) + 
+                   StructuredOutputFormatter::formatToken(token, OutputFormat::TEXT, tokenIndex) + 
                    "</token>\n";
         
         default:

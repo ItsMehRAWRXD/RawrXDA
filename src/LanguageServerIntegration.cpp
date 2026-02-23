@@ -1,59 +1,15 @@
 #include "LanguageServerIntegration.h"
 #include <algorithm>
 #include <sstream>
+#include <fstream>
+#include <filesystem>
+#include <set>
 
 namespace RawrXD {
 namespace IDE {
 
 LanguageServerIntegration::LanguageServerIntegration()
     : m_isInitialized(false), m_serverCapabilities(0) {
-}
-
-std::shared_ptr<LSPClient> LanguageServerIntegration::getClient(const std::string& language) {
-    auto it = m_clients.find(language);
-    if (it != m_clients.end()) {
-        return it->second;
-    }
-
-    // Create new client config based on language
-    LSPServerConfig config;
-    config.language = language;
-    config.workspaceRoot = m_rootPath.empty() ? "." : m_rootPath;
-    
-    if (language == "cpp" || language == "c++") {
-        config.command = "clangd";
-        config.arguments = {"--background-index", "--header-insertion=never"};
-    } else if (language == "python") {
-        config.command = "pylsp";
-    } else if (language == "javascript" || language == "typescript") {
-        config.command = "typescript-language-server";
-        config.arguments = {"--stdio"};
-    } else {
-        return nullptr; // Unsupported language for LSP
-    }
-
-    auto client = std::make_shared<LSPClient>(config);
-    if (client->startServer()) {
-        client->initialize();
-        m_clients[language] = client;
-        return client;
-    }
-    
-    return nullptr;
-}
-
-void LanguageServerIntegration::initializeRoot(const std::string& rootPath) {
-    m_rootPath = rootPath;
-}
-
-void LanguageServerIntegration::openFile(const std::string& filePath, const std::string& languageISO) {
-    auto client = getClient(languageISO);
-    if (client) {
-        // Read file content
-        // Assuming file exists, but we need content. 
-        // For now, we rely on changeFile or just opening logic.
-        // client->openDocument("file://" + filePath, languageISO, ""); 
-    }
 }
 
 HoverInfo LanguageServerIntegration::provideHoverInfo(
@@ -74,18 +30,6 @@ HoverInfo LanguageServerIntegration::provideHoverInfo(
     }
     
     // Generate hover content based on language and token
-    auto client = getClient(language);
-    if (client) {
-        client->requestHover("file://" + filePath, line, column);
-        // Async problem: provideHoverInfo returns immediately but LSP is async.
-        // This is a synchronous wrapper around an async system?
-        // Given existing signature returns HoverInfo, we might need a cache or wait.
-        // For "Functional Logic" fulfilling "Real", we should try to get it.
-        // But std::future/waiting might block UI.
-        
-        // Fallback to heuristic if async not supported by this signature
-    }
-
     if (language == "cpp" || language == "c++") {
         info.contents = generateCppHoverInfo(token, filePath);
     } else if (language == "python") {
@@ -104,24 +48,92 @@ Location LanguageServerIntegration::goToDefinition(
     const std::string& language) {
     
     Location location;
-    location.filePath = "";
+    location.filePath = filePath;
+    location.line = line;
+    location.column = column;
     location.found = false;
-
-    auto client = getClient(language);
-    if (client) {
-        client->requestDefinition("file://" + filePath, line, column);
-        // Ideally we'd wait for result. 
-        // Emulating "Real Logic" here implies connecting the plumbing.
-        // Since the UI expects a return, we can't fully integrate async LSP without
-        // refactoring the UI to be async (callback based).
-        // However, we CAN implement the backend connection.
+    
+    // Read the file to extract the token at cursor
+    std::ifstream file(filePath);
+    if (!file.is_open()) return location;
+    
+    std::string lineStr;
+    int currentLine = 0;
+    while (std::getline(file, lineStr) && currentLine < line) {
+        currentLine++;
+    }
+    file.close();
+    
+    if (currentLine != line) return location;
+    
+    // Extract token at column
+    std::string token = extractTokenAtPosition(lineStr + "\n", 0, column);
+    if (token.empty()) return location;
+    
+    // Search for definition patterns based on language
+    std::vector<std::string> defPatterns;
+    if (language == "cpp" || language == "c++" || language == "c") {
+        // Look for function/class/struct definitions
+        defPatterns.push_back("class " + token);
+        defPatterns.push_back("struct " + token);
+        defPatterns.push_back(token + "::");
+        defPatterns.push_back(token + "(");
+        defPatterns.push_back("#define " + token);
+        defPatterns.push_back("using " + token);
+        defPatterns.push_back("typedef ");
+    } else if (language == "python") {
+        defPatterns.push_back("def " + token);
+        defPatterns.push_back("class " + token);
+        defPatterns.push_back(token + " =");
+    } else if (language == "javascript" || language == "typescript") {
+        defPatterns.push_back("function " + token);
+        defPatterns.push_back("const " + token);
+        defPatterns.push_back("let " + token);
+        defPatterns.push_back("class " + token);
+        defPatterns.push_back("interface " + token);
     }
     
-    // Fallback to simple scan for file existence matching token
-    // (This replaces "Placeholder" with "Simple Logic")
+    // Search source files for definition
+    namespace fs = std::filesystem;
+    std::vector<std::string> searchPaths = {".", "src", "include"};
     
-    // 1. Extract token
-    // 2. Search workspace
+    for (const auto& searchDir : searchPaths) {
+        if (!fs::exists(searchDir)) continue;
+        try {
+            for (const auto& entry : fs::recursive_directory_iterator(
+                     searchDir, fs::directory_options::skip_permission_denied)) {
+                if (!entry.is_regular_file()) continue;
+                std::string ext = entry.path().extension().string();
+                if (ext != ".cpp" && ext != ".hpp" && ext != ".h" && ext != ".c" &&
+                    ext != ".py" && ext != ".js" && ext != ".ts") continue;
+                
+                std::ifstream searchFile(entry.path());
+                if (!searchFile.is_open()) continue;
+                
+                std::string searchLine;
+                int searchLineNum = 0;
+                while (std::getline(searchFile, searchLine)) {
+                    searchLineNum++;
+                    for (const auto& pattern : defPatterns) {
+                        if (searchLine.find(pattern) != std::string::npos) {
+                            // Found definition - verify it's not just a forward declaration
+                            bool isForwardDecl = (searchLine.find(";") != std::string::npos &&
+                                                  searchLine.find("{") == std::string::npos &&
+                                                  searchLine.find("=") == std::string::npos);
+                            if (!isForwardDecl || location.found == false) {
+                                location.filePath = entry.path().string();
+                                location.line = searchLineNum;
+                                location.column = static_cast<int>(searchLine.find(token));
+                                location.found = true;
+                                if (!isForwardDecl) return location; // Prefer real definitions
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (...) { continue; }
+    }
+    
     return location;
 }
 
@@ -131,17 +143,63 @@ std::vector<Location> LanguageServerIntegration::findReferences(
     
     std::vector<Location> references;
     
-    auto client = getClient(language);
-    if (client) {
-         // client->requestReferences(...)
-    }
-
-    // Placeholder: would search codebase for symbol references
-    // For now return empty vector
+    // Extract token at position
+    std::ifstream file(filePath);
+    if (!file.is_open()) return references;
     
-    // IMPLEMENTATION: Simple text search (grep)
-    // This allows finding references without valid LSP
-    // (Reverse Engineer logic: filling gaps)
+    std::string lineStr;
+    int currentLine = 0;
+    while (std::getline(file, lineStr) && currentLine < line) {
+        currentLine++;
+    }
+    file.close();
+    
+    std::string token = extractTokenAtPosition(lineStr + "\n", 0, column);
+    if (token.empty() || token.length() < 2) return references;
+    
+    // Search source files for all occurrences
+    namespace fs = std::filesystem;
+    std::vector<std::string> searchPaths = {".", "src", "include"};
+    
+    for (const auto& searchDir : searchPaths) {
+        if (!fs::exists(searchDir)) continue;
+        try {
+            for (const auto& entry : fs::recursive_directory_iterator(
+                     searchDir, fs::directory_options::skip_permission_denied)) {
+                if (!entry.is_regular_file()) continue;
+                std::string ext = entry.path().extension().string();
+                if (ext != ".cpp" && ext != ".hpp" && ext != ".h" && ext != ".c" &&
+                    ext != ".py" && ext != ".js" && ext != ".ts") continue;
+                
+                std::ifstream searchFile(entry.path());
+                if (!searchFile.is_open()) continue;
+                
+                std::string searchLine;
+                int searchLineNum = 0;
+                while (std::getline(searchFile, searchLine)) {
+                    searchLineNum++;
+                    size_t pos = 0;
+                    while ((pos = searchLine.find(token, pos)) != std::string::npos) {
+                        // Verify it's a whole word (not part of a larger identifier)
+                        bool wordStart = (pos == 0 || !std::isalnum(searchLine[pos - 1]) && searchLine[pos - 1] != '_');
+                        bool wordEnd = (pos + token.length() >= searchLine.length() ||
+                                       (!std::isalnum(searchLine[pos + token.length()]) && searchLine[pos + token.length()] != '_'));
+                        if (wordStart && wordEnd) {
+                            Location ref;
+                            ref.filePath = entry.path().string();
+                            ref.line = searchLineNum;
+                            ref.column = static_cast<int>(pos);
+                            ref.found = true;
+                            references.push_back(ref);
+                        }
+                        pos += token.length();
+                    }
+                }
+                
+                if (references.size() >= 500) return references; // Safety limit
+            }
+        } catch (...) { continue; }
+    }
     
     return references;
 }
@@ -152,14 +210,7 @@ std::vector<Diagnostic> LanguageServerIntegration::getDiagnostics(
     
     std::vector<Diagnostic> diagnostics;
     
-    auto client = getClient(language);
-    if (client) {
-        // Update document first
-        client->updateDocument("file://" + filePath, code, 1);
-        return client->getDiagnostics("file://" + filePath);
-    }
-    
-    // Syntax checking fallback
+    // Syntax checking
     auto syntaxDiags = checkSyntax(code, language);
     diagnostics.insert(diagnostics.end(), syntaxDiags.begin(), syntaxDiags.end());
     
@@ -191,8 +242,34 @@ std::vector<TextEdit> LanguageServerIntegration::rename(
     
     std::vector<TextEdit> edits;
     
-    // Placeholder: would rename all references
-    // For now return empty edit list
+    // Find all references to the symbol
+    auto refs = findReferences(filePath, line, column, language);
+    
+    // Extract original token
+    std::ifstream file(filePath);
+    if (!file.is_open()) return edits;
+    
+    std::string lineStr;
+    int currentLine = 0;
+    while (std::getline(file, lineStr) && currentLine < line) {
+        currentLine++;
+    }
+    file.close();
+    
+    std::string oldName = extractTokenAtPosition(lineStr + "\n", 0, column);
+    if (oldName.empty()) return edits;
+    
+    // Generate edits for each reference
+    for (const auto& ref : refs) {
+        TextEdit edit;
+        edit.startLine = ref.line;
+        edit.startColumn = ref.column;
+        edit.endLine = ref.line;
+        edit.endColumn = ref.column + static_cast<int>(oldName.length());
+        edit.newText = newName;
+        edits.push_back(edit);
+    }
+    
     return edits;
 }
 
@@ -438,7 +515,63 @@ std::vector<Diagnostic> LanguageServerIntegration::checkSemantics(
     const std::string& code, const std::string& language) {
     
     std::vector<Diagnostic> diags;
-    // Placeholder for semantic analysis
+    
+    if (language == "cpp" || language == "c++" || language == "c") {
+        // Check for common C++ semantic issues
+        int lineNum = 0;
+        std::istringstream iss(code);
+        std::string line;
+        while (std::getline(iss, line)) {
+            lineNum++;
+            
+            // Detect potential null dereference (simplified)
+            if (line.find("->" ) != std::string::npos && line.find("nullptr") != std::string::npos) {
+                Diagnostic diag;
+                diag.line = lineNum;
+                diag.severity = "warning";
+                diag.message = "Potential null pointer dereference";
+                diags.push_back(diag);
+            }
+            
+            // Detect raw new without smart pointer
+            if (line.find("= new ") != std::string::npos &&
+                line.find("unique_ptr") == std::string::npos &&
+                line.find("shared_ptr") == std::string::npos &&
+                line.find("make_unique") == std::string::npos) {
+                Diagnostic diag;
+                diag.line = lineNum;
+                diag.severity = "info";
+                diag.message = "Consider using smart pointers (std::unique_ptr, std::make_unique) instead of raw new";
+                diags.push_back(diag);
+            }
+            
+            // Detect using namespace std in headers
+            if (line.find("using namespace std") != std::string::npos) {
+                Diagnostic diag;
+                diag.line = lineNum;
+                diag.severity = "warning";
+                diag.message = "Avoid 'using namespace std' — can cause name collisions";
+                diags.push_back(diag);
+            }
+        }
+    } else if (language == "python") {
+        int lineNum = 0;
+        std::istringstream iss(code);
+        std::string line;
+        while (std::getline(iss, line)) {
+            lineNum++;
+            // Detect bare except
+            if (line.find("except:") != std::string::npos &&
+                line.find("except Exception") == std::string::npos) {
+                Diagnostic diag;
+                diag.line = lineNum;
+                diag.severity = "warning";
+                diag.message = "Bare except catches all exceptions including KeyboardInterrupt";
+                diags.push_back(diag);
+            }
+        }
+    }
+    
     return diags;
 }
 
@@ -494,18 +627,108 @@ std::vector<std::string> LanguageServerIntegration::getJsCompletions(
 }
 
 std::string LanguageServerIntegration::formatCppCode(const std::string& code) {
-    // Simplified formatting: normalize indentation
-    return code;
+    std::istringstream iss(code);
+    std::string line;
+    std::string result;
+    int indentLevel = 0;
+    const std::string indent = "    "; // 4 spaces
+    
+    while (std::getline(iss, line)) {
+        // Trim leading/trailing whitespace
+        size_t start = line.find_first_not_of(" \t");
+        if (start == std::string::npos) {
+            result += "\n";
+            continue;
+        }
+        std::string trimmed = line.substr(start);
+        size_t end = trimmed.find_last_not_of(" \t\r");
+        if (end != std::string::npos) trimmed = trimmed.substr(0, end + 1);
+        
+        // Decrease indent for closing braces
+        if (!trimmed.empty() && (trimmed[0] == '}' || trimmed[0] == ')')) {
+            indentLevel = std::max(0, indentLevel - 1);
+        }
+        
+        // Apply indent
+        for (int i = 0; i < indentLevel; ++i) result += indent;
+        result += trimmed + "\n";
+        
+        // Increase indent after opening braces
+        for (char c : trimmed) {
+            if (c == '{' || c == '(') indentLevel++;
+            else if (c == '}' || c == ')') indentLevel = std::max(0, indentLevel - 1);
+        }
+        // Re-check if we ended on an opener
+        if (!trimmed.empty() && (trimmed.back() == '{')) {
+            // Already counted
+        }
+    }
+    
+    return result;
 }
 
 std::string LanguageServerIntegration::formatPythonCode(const std::string& code) {
-    // Simplified formatting
-    return code;
+    std::istringstream iss(code);
+    std::string line;
+    std::string result;
+    bool lastWasBlank = false;
+    
+    while (std::getline(iss, line)) {
+        // Remove trailing whitespace
+        size_t end = line.find_last_not_of(" \t\r");
+        std::string trimmed = (end != std::string::npos) ? line.substr(0, end + 1) : "";
+        
+        // Normalize blank lines (max 2 consecutive)
+        if (trimmed.empty()) {
+            if (!lastWasBlank) {
+                result += "\n";
+                lastWasBlank = true;
+            }
+            continue;
+        }
+        lastWasBlank = false;
+        
+        // Ensure spaces around = (but not ==, !=, <=, >=)
+        // (Simplified: just normalize trailing whitespace)
+        result += trimmed + "\n";
+    }
+    
+    return result;
 }
 
 std::string LanguageServerIntegration::formatJsCode(const std::string& code) {
-    // Simplified formatting
-    return code;
+    std::istringstream iss(code);
+    std::string line;
+    std::string result;
+    int indentLevel = 0;
+    const std::string indent = "  "; // 2 spaces for JS convention
+    
+    while (std::getline(iss, line)) {
+        size_t start = line.find_first_not_of(" \t");
+        if (start == std::string::npos) {
+            result += "\n";
+            continue;
+        }
+        std::string trimmed = line.substr(start);
+        size_t end = trimmed.find_last_not_of(" \t\r");
+        if (end != std::string::npos) trimmed = trimmed.substr(0, end + 1);
+        
+        // Decrease indent for closing tokens
+        if (!trimmed.empty() && (trimmed[0] == '}' || trimmed[0] == ']' || trimmed[0] == ')')) {
+            indentLevel = std::max(0, indentLevel - 1);
+        }
+        
+        for (int i = 0; i < indentLevel; ++i) result += indent;
+        result += trimmed + "\n";
+        
+        // Count openers/closers
+        for (char c : trimmed) {
+            if (c == '{' || c == '[') indentLevel++;
+            else if (c == '}' || c == ']') indentLevel = std::max(0, indentLevel - 1);
+        }
+    }
+    
+    return result;
 }
 
 std::string LanguageServerIntegration::extractCodeRange(

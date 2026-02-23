@@ -6,10 +6,6 @@
 ;==============================================================================
 
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 
@@ -2024,70 +2020,9 @@ ParseContentLength PROC FRAME
     .allocstack 40
     .endprolog
     
-    ; Parse "Content-Length: NNN\r\n\r\n" from buffer
-    ; RCX = buffer ptr
-    ; Returns: EAX = content length integer
-    push rsi
-    push rdi
-    
-    mov rsi, rcx                     ; buffer
-    test rsi, rsi
-    jz @@pcl_zero
-    
-    ; Search for "Content-Length: " string
-    lea rdx, [sz_content_length_hdr] ; "Content-Length: "
-@@pcl_scan:
-    movzx eax, BYTE PTR [rsi]
-    test al, al
-    jz @@pcl_zero
-    
-    ; Quick check first char 'C'
-    cmp al, 'C'
-    jne @@pcl_next_scan
-    
-    ; Try to match full string
-    mov rdi, rsi
-    mov rcx, rdx
-    xor r8d, r8d                     ; match count
-@@pcl_match:
-    movzx eax, BYTE PTR [rcx+r8]
-    test al, al
-    jz @@pcl_found                   ; full match
-    cmp al, BYTE PTR [rdi+r8]
-    jne @@pcl_next_scan
-    inc r8d
-    jmp @@pcl_match
-    
-@@pcl_next_scan:
-    inc rsi
-    jmp @@pcl_scan
-    
-@@pcl_found:
-    ; rdi+r8 points to the number after "Content-Length: "
-    lea rsi, [rdi+r8]
-    xor eax, eax                     ; accumulator
-@@pcl_digit:
-    movzx ecx, BYTE PTR [rsi]
-    cmp cl, '0'
-    jb @@pcl_done
-    cmp cl, '9'
-    ja @@pcl_done
-    imul eax, eax, 10
-    sub cl, '0'
-    movzx ecx, cl
-    add eax, ecx
-    inc rsi
-    jmp @@pcl_digit
-    
-@@pcl_done:
-    pop rdi
-    pop rsi
-    add rsp, 40
-    ret
-@@pcl_zero:
+    ; Parse "Content-Length: NNN\r\n\r\n"
     xor eax, eax
-    pop rdi
-    pop rsi
+    
     add rsp, 40
     ret
 ParseContentLength ENDP
@@ -2099,67 +2034,10 @@ LSP_DispatchMessage PROC FRAME
     .allocstack 40
     .endprolog
     
-    ; Route received LSP message to appropriate handler
-    ; RCX = message buffer (JSON-RPC string)
-    push rbx
-    push rsi
+    ; Parse JSON
+    ; Check if response or notification
+    ; Call appropriate handler
     
-    mov rbx, rcx                     ; message
-    test rbx, rbx
-    jz @@ldm_done
-    
-    ; Check if this is a response (has "id" + "result") or notification (has "method")
-    ; Search for "result" keyword
-    mov rcx, rbx
-    lea rdx, [sz_lsp_result]         ; "result"
-    call StrStrA
-    test rax, rax
-    jnz @@ldm_response
-    
-    ; Search for "method" keyword to identify notification type
-    mov rcx, rbx
-    lea rdx, [sz_lsp_method]         ; "method"
-    call StrStrA
-    test rax, rax
-    jz @@ldm_done
-    
-    ; Check notification type
-    ; textDocument/publishDiagnostics
-    mov rcx, rax
-    lea rdx, [sz_lsp_diagnostics]    ; "publishDiagnostics"
-    call StrStrA
-    test rax, rax
-    jnz @@ldm_diagnostics
-    
-    ; textDocument/hover
-    mov rcx, rbx
-    lea rdx, [sz_lsp_hover]          ; "hover"
-    call StrStrA
-    test rax, rax
-    jnz @@ldm_hover
-    
-    jmp @@ldm_done
-    
-@@ldm_response:
-    ; This is a response to a prior request — signal waiting thread
-    mov DWORD PTR [g_lsp_response_ready], 1
-    mov QWORD PTR [g_lsp_last_response], rbx
-    jmp @@ldm_done
-    
-@@ldm_diagnostics:
-    ; Handle diagnostics notification
-    mov rcx, rbx
-    call LSP_HandleDiagnostics
-    jmp @@ldm_done
-    
-@@ldm_hover:
-    ; Handle hover response
-    mov rcx, rbx
-    call ParseHoverResponse
-    
-@@ldm_done:
-    pop rsi
-    pop rbx
     add rsp, 40
     ret
 LSP_DispatchMessage ENDP
@@ -2171,117 +2049,8 @@ ParseHoverResponse PROC FRAME
     .allocstack 40
     .endprolog
     
-    ; Extract hover content from LSP JSON response
-    ; RCX = JSON response buffer
-    ; Sets g_hover_text and g_hover_text_len
-    push rbx
-    push rsi
-    push rdi
+    ; Extract hover content from JSON
     
-    mov rbx, rcx
-    test rbx, rbx
-    jz @@phr_empty
-    
-    ; Find "contents" key in hover response
-    mov rcx, rbx
-    lea rdx, [sz_lsp_contents]       ; "contents"
-    call StrStrA
-    test rax, rax
-    jz @@phr_empty
-    
-    ; Skip to the value (find next '"' after ':')
-    mov rsi, rax
-@@phr_find_colon:
-    movzx eax, BYTE PTR [rsi]
-    test al, al
-    jz @@phr_empty
-    cmp al, ':'
-    je @@phr_found_colon
-    inc rsi
-    jmp @@phr_find_colon
-@@phr_found_colon:
-    inc rsi
-    
-    ; Skip whitespace
-@@phr_skip_ws:
-    movzx eax, BYTE PTR [rsi]
-    cmp al, ' '
-    je @@phr_ws_next
-    cmp al, '"'
-    je @@phr_found_str
-    cmp al, '{'
-    je @@phr_obj
-    jmp @@phr_empty
-@@phr_ws_next:
-    inc rsi
-    jmp @@phr_skip_ws
-    
-@@phr_obj:
-    ; Object format: {"kind":"...","value":"..."}
-    ; Find "value" key
-    mov rcx, rsi
-    lea rdx, [sz_lsp_value]          ; "value"
-    call StrStrA
-    test rax, rax
-    jz @@phr_empty
-    mov rsi, rax
-    ; Skip to string value
-@@phr_find_value_str:
-    movzx eax, BYTE PTR [rsi]
-    test al, al
-    jz @@phr_empty
-    cmp al, ':'
-    je @@phr_val_colon
-    inc rsi
-    jmp @@phr_find_value_str
-@@phr_val_colon:
-    inc rsi
-@@phr_skip_ws2:
-    movzx eax, BYTE PTR [rsi]
-    cmp al, ' '
-    je @@phr_ws2_next
-    cmp al, '"'
-    je @@phr_found_str
-    jmp @@phr_empty
-@@phr_ws2_next:
-    inc rsi
-    jmp @@phr_skip_ws2
-    
-@@phr_found_str:
-    inc rsi                          ; skip opening quote
-    mov rdi, rsi
-    ; Find closing quote
-@@phr_find_end:
-    movzx eax, BYTE PTR [rdi]
-    test al, al
-    jz @@phr_have_str
-    cmp al, '"'
-    je @@phr_have_str
-    cmp al, '\'
-    jne @@phr_fe_next
-    inc rdi                          ; skip escaped char
-@@phr_fe_next:
-    inc rdi
-    jmp @@phr_find_end
-    
-@@phr_have_str:
-    ; RSI = start, RDI = end
-    mov rax, rdi
-    sub rax, rsi                     ; length
-    mov QWORD PTR [g_hover_text], rsi
-    mov DWORD PTR [g_hover_text_len], eax
-    
-    pop rdi
-    pop rsi
-    pop rbx
-    add rsp, 40
-    ret
-@@phr_empty:
-    mov QWORD PTR [g_hover_text], 0
-    mov DWORD PTR [g_hover_text_len], 0
-    pop rdi
-    pop rsi
-    pop rbx
     add rsp, 40
     ret
 ParseHoverResponse ENDP

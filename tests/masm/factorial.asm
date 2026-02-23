@@ -3,10 +3,6 @@
 ; Tests arithmetic operations, procedure calls, and recursion
 ; ============================================================================
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .data
     result      dq 0
     testValue   dq 10

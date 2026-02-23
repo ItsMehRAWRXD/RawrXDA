@@ -6,9 +6,7 @@
 #include <cstdint>
 #include <fstream>
 #include <unordered_map>
-#ifndef RAWRXD_NO_VULKAN
 #include "vulkan_compute.h"
-#endif
 #include "brutal_gzip.h"
 #include "deflate_brutal_std.hpp"
 

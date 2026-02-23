@@ -10,6 +10,9 @@
 #include "settings.h"
 #include "gui.h" // for AppState
 
+#include "logging/logger.h"
+static Logger s_logger("bench_main");
+
 // Simple benchmark harness for GGUF parsing + optional Vulkan init
 // Usage: model_loader_bench <path-to-model.gguf> [--no-gpu] [--iter N] [--matmul-size S] [--vec-size V]
 // Outputs JSON line to stdout and writes bench_results.json in working directory.
@@ -89,7 +92,7 @@ static void WriteResultJSON(const BenchResult& r) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        
+        s_logger.error( "Usage: model_loader_bench <model.gguf> [--no-gpu]\n";
         return 1;
     }
 
@@ -132,7 +135,7 @@ int main(int argc, char* argv[]) {
     result.applied_core_offset_mhz = st.applied_core_offset_mhz; // persisted if governor updated before
 
     if (!std::filesystem::exists(modelPath)) {
-        
+        s_logger.error( "Model file not found: " << modelPath << "\n";
         return 2;
     }
 
@@ -154,7 +157,7 @@ int main(int argc, char* argv[]) {
 
     auto t0 = std::chrono::high_resolution_clock::now();
     if (!loader.Open(modelPath)) {
-        
+        s_logger.error( "Failed to open model file." << std::endl;
         return 3;
     }
 
@@ -258,8 +261,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // JSON line to stdout (single object)
-
+    // Emit JSON line to stdout (single object)
+    s_logger.info("{");
 
     WriteResultJSON(result);
     telemetry::Shutdown();

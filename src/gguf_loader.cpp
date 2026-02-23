@@ -5,12 +5,16 @@
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <vulkan/vulkan.h>
-#define WIN32_LEAN_AND_MEAN
+
+#include "logging/logger.h"
+static Logger s_logger("gguf_loader");
+
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
 #include <windows.h>
+#endif
+
+#include <vector>
+#include <cstdint>
 
 // Forward declarations for codec functions
 namespace codec {
@@ -24,10 +28,14 @@ namespace brutal {
     extern std::vector<uint8_t> compress(const void* data, std::size_t size);
 }
 
+
+namespace RawrXD {
+
 // Forward declaration for unsupported type name lookup (defined later in file)
 static std::string GetUnsupportedTypeNameByValue(uint32_t type_val);
 
-GGUFLoader::GGUFLoader() 
+GGUFLoader::GGUFLoader()
+ 
     : is_open_(false) {
     std::memset(&header_, 0, sizeof(GGUFHeader));
 }
@@ -110,8 +118,9 @@ bool GGUFLoader::ParseHeader() {
     
     // Calculate metadata offset
     header_.metadata_offset = file_.tellg();
-
-
+    
+    s_logger.info("GGUF Header: Magic=0x");
+    
     return true;
 }
 
@@ -329,8 +338,11 @@ bool GGUFLoader::ParseMetadata() {
         if (type_val > 24) {
             // Log the unsupported type for the user
             std::string type_name = GetUnsupportedTypeNameByValue(type_val);
-
-
+            s_logger.error( "WARNING: Tensor '" << tensor.name 
+                     << "' uses unsupported type " << type_val 
+                     << " (" << type_name << "). "
+                     << "Model will need quantization conversion to proceed." << std::endl;
+            
             // Track this unsupported type for later IDE prompting
             bool type_exists = false;
             for (auto& existing : unsupported_types_) {
@@ -367,21 +379,23 @@ bool GGUFLoader::ParseMetadata() {
     // Fix vocab size using universal resolver
     GGUFVocabResolver vocabResolver;
     VocabSizeDetection vocabDetection = vocabResolver.detectVocabSize(metadata_.kv_pairs, filepath_);
-
-
+    
+    s_logger.info("[GGUFLoader] Vocab detection: method=");
+    
     // Override metadata vocab size if detection was successful
     if (vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
         if (metadata_.vocab_size != vocabDetection.detectedSize) {
-            
+            s_logger.info("[GGUFLoader] Correcting vocab size: ");
             metadata_.vocab_size = vocabDetection.detectedSize;
         }
     } else if (!vocabDetection.isConfident && vocabDetection.detectedSize > 0) {
         // Use detection even if not confident, as it's better than potentially wrong metadata
-        
+        s_logger.info("[GGUFLoader] Using low-confidence vocab size: ");
         metadata_.vocab_size = vocabDetection.detectedSize;
     }
-
-
+    
+    s_logger.info("Metadata parsed successfully. Layers: ");
+    
     return true;
 }
 
@@ -484,8 +498,58 @@ uint64_t GGUFLoader::GetFileSize() const {
     return size;
 }
 
-// Note: BuildTensorIndex, LoadZone, UnloadZone, GetLoadedZones, GetAllZones, 
-//       GetAllTensorInfo, GetCurrentMemoryUsage are implemented inline in gguf_loader.h
+// ============================================================================
+// Streaming Interface — Non-streaming loader minimal implementations
+// (GGUFLoader reads entire file; zones are a streaming-only concept)
+// ============================================================================
+
+bool GGUFLoader::BuildTensorIndex() {
+    // For non-streaming loader, the tensor index is already built during ParseHeader.
+    // Re-index if called explicitly (e.g. after hot-reload).
+    tensor_index_.clear();
+    for (size_t i = 0; i < tensors_.size(); ++i) {
+        tensor_index_[tensors_[i].name] = &tensors_[i];
+    }
+    return true;
+}
+
+bool GGUFLoader::LoadZone(const std::string& zone_name, uint64_t /*max_memory_mb*/) {
+    // Non-streaming loader has all data accessible via file stream.
+    // "Loading a zone" is a no-op since we memory-map on demand via LoadTensorZone.
+    (void)zone_name;
+    return is_open_;
+}
+
+bool GGUFLoader::UnloadZone(const std::string& zone_name) {
+    // No zone concept for non-streaming; always returns success.
+    (void)zone_name;
+    return true;
+}
+
+std::vector<std::string> GGUFLoader::GetLoadedZones() const {
+    // Non-streaming loader treats all tensors as a single "all" zone.
+    if (!is_open_ || tensors_.empty()) return {};
+    return { "all" };
+}
+
+std::vector<std::string> GGUFLoader::GetAllZones() const {
+    // Same as GetLoadedZones for non-streaming.
+    if (tensors_.empty()) return {};
+    return { "all" };
+}
+
+std::vector<TensorInfo> GGUFLoader::GetAllTensorInfo() const {
+    return tensors_;
+}
+
+uint64_t GGUFLoader::GetCurrentMemoryUsage() const {
+    // Estimate: sum of all tensor byte sizes currently accessible.
+    uint64_t total = 0;
+    for (const auto& t : tensors_) {
+        total += GetTensorByteSize(t);
+    }
+    return total;
+}
 
 template<typename T>
 bool GGUFLoader::ReadValue(T& value) {
@@ -501,7 +565,7 @@ bool GGUFLoader::ReadString(std::string& value) {
     // This prevents bad allocation errors from corrupted metadata
     const uint64_t MAX_STRING_SIZE = 100 * 1024 * 1024;  // 100MB limit
     if (len > MAX_STRING_SIZE) {
-        
+        s_logger.error( "[GGUFLoader] String length " << len << " exceeds maximum allowed size" << std::endl;
         return false;
     }
     
@@ -579,7 +643,8 @@ uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGM
                 return block_aligned_size(256, 128);  // Q8_K: 256 elements, 128 bytes per block
             }
             // In production, log the unsupported type and use a safe default
-            
+            s_logger.error( "[GGUFLoader] WARNING: Unsupported GGMLType " << static_cast<uint32_t>(type) 
+                     << " encountered, assuming F32 size" << std::endl;
             return num_elements * 4;  // Default to F32 size
     }
 }
@@ -590,7 +655,7 @@ uint64_t GGUFLoader::CalculateTensorSize(const std::vector<uint64_t>& shape, GGM
 
 bool GGUFLoader::SetCompressionType(CompressionType type) {
     compression_type_ = type;
-    // No initialization needed - brutal_gzip and deflate_brutal_qt are header-only/static
+    // No initialization needed - brutal_gzip and deflate_brutal_std are header-only/static (Qt-free)
     return true;
 }
 
@@ -605,25 +670,31 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
         switch (compression_type_) {
             case CompressionType::BRUTAL_GZIP:
             case CompressionType::ZLIB: {
-                // For GZIP/ZLIB, data is typically stored as-is or needs standard decompression
-                // brutal_gzip is primarily a compression library, not decompression
-                // For now, pass through (actual decompression would use zlib/gzip library)
-                decompressed = compressed;
+                // Decompress GZIP/ZLIB data via codec::inflate (DEFLATE decoder)
+                bool ok = false;
+                std::vector<uint8_t> output = codec::inflate(compressed, &ok);
+                if (!ok || output.empty()) {
+                    // If inflate fails, try brutal::decompress as fallback
+                    output = brutal::decompress(compressed);
+                    if (output.empty()) {
+                        return false;
+                    }
+                }
+                decompressed = std::move(output);
                 return true;
             }
             
             case CompressionType::DEFLATE: {
                 // Use codec::inflate from inflate_deflate_cpp.cpp
                 // This handles DEFLATE decompression
-                std::vector<uint8_t> input = compressed;
                 bool ok = false;
-                std::vector<uint8_t> output = codec::inflate(input, &ok);
+                std::vector<uint8_t> output = codec::inflate(compressed, &ok);
                 if (!ok) return false;
                 
-                decompressed.resize(output.size());
-                std::memcpy(decompressed.data(), output.data(), output.size());
+                decompressed = output;
                 return true;
             }
+
             
             case CompressionType::NONE:
                 decompressed = compressed;
@@ -633,7 +704,7 @@ bool GGUFLoader::DecompressData(const std::vector<uint8_t>& compressed,
                 throw std::runtime_error("Unsupported compression type");
         }
     } catch (const std::exception& e) {
-        
+        s_logger.error( "Decompression error: " << e.what() << std::endl;
         return false;
     }
 }
@@ -650,26 +721,24 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
             case CompressionType::BRUTAL_GZIP:
             case CompressionType::ZLIB: {
                 // Compress using brutal::compress (MASM-optimized gzip)
-                std::vector<uint8_t> input = raw_data;
-                std::vector<uint8_t> output = brutal::compress(input);
+                std::vector<uint8_t> output = brutal::compress(raw_data);
                 if (output.empty()) return false;
                 
-                compressed.resize(output.size());
-                std::memcpy(compressed.data(), output.data(), output.size());
+                compressed = output;
                 return true;
             }
+
             
             case CompressionType::DEFLATE: {
                 // Compress using codec::deflate (MASM-optimized deflate)
-                std::vector<uint8_t> input = raw_data;
                 bool ok = false;
-                std::vector<uint8_t> output = codec::deflate(input, &ok);
+                std::vector<uint8_t> output = codec::deflate(raw_data, &ok);
                 if (!ok || output.empty()) return false;
                 
-                compressed.resize(output.size());
-                std::memcpy(compressed.data(), output.data(), output.size());
+                compressed = output;
                 return true;
             }
+
             
             case CompressionType::NONE:
                 compressed = raw_data;
@@ -679,7 +748,7 @@ bool GGUFLoader::CompressData(const std::vector<uint8_t>& raw_data,
                 throw std::runtime_error("Unsupported compression type");
         }
     } catch (const std::exception& e) {
-        
+        s_logger.error( "Compression error: " << e.what() << std::endl;
         return false;
     }
 }
@@ -714,207 +783,250 @@ static std::string GetUnsupportedTypeNameByValue(uint32_t type_val) {
     }
 }
 
+} // namespace RawrXD
+
+
 // ============================================================================
-// RawrXD Async Loader Implementation (Integration)
+// Zone Management — Implemented in gguf_loader.h as inline methods.
+// The RawrXD::GGUFLoader is a non-streaming (eager) loader, so:
+//   BuildTensorIndex() → true (built during ParseHeader)
+//   LoadZone()         → true (all tensors accessible via LoadTensorZone)
+//   UnloadZone()       → true (no-op for non-streaming)
+//   GetLoadedZones()   → {"all"}
+//   GetAllZones()      → {"all"}
+//   GetAllTensorInfo()  → tensors_
+//   GetCurrentMemoryUsage() → sum of loaded tensor sizes
 // ============================================================================
 
-bool GGUFLoader::Load(VkDevice vkDevice, VkPhysicalDevice vkPhysDevice) {
-    device = vkDevice;
-    physDevice = vkPhysDevice;
+// ============================================================================
+// EXPERIMENTAL: Vulkan GPU + Memory-Mapped I/O Subsystem
+// These methods are declared in gguf_loader.h but require a full Vulkan
+// runtime and mmap infrastructure that is not yet available.
+// Gated behind RAWRXD_EXPERIMENTAL_GGUF_GPU. Without the flag, they
+// return explicit failure with logged diagnostics.
+// ============================================================================
 
-    std::wstring wpath(filepath_.begin(), filepath_.end());
-    hFile = CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
-                       OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE) return false;
+namespace RawrXD {
 
-    LARGE_INTEGER size;
-    GetFileSizeEx(hFile, &size);
-    fileSize = size.QuadPart;
-
-    hMapping = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
-    mappedView = MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (!mappedView) return false;
-    
-    tensors.clear();
-    for(auto& t : tensors_) {
-        tensors[t.name] = t; 
+bool GGUFLoader::UploadAllTensorsToVulkan() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!vulkan_engine_) {
+        s_logger.error( "[GGUFLoader] UploadAllTensorsToVulkan: no Vulkan engine attached" << std::endl;
+        return false;
     }
 
-    CreateVulkanResources();
-
-    std::vector<std::thread> threads;
-    std::vector<TensorInfo*> taskList;
-    
-    for (auto& [name, info] : tensors) {
-        taskList.push_back(&info);
-    }
-    
-    for (auto* info : taskList) {
-        threads.emplace_back([this, info]() {
-            this->LoadTensorAsync(*info);
-        });
+    if (tensors_.empty()) {
+        s_logger.error( "[GGUFLoader] UploadAllTensorsToVulkan: no tensors loaded" << std::endl;
+        return false;
     }
 
-    for (auto& t : threads) t.join();
-    
-    tensors_.clear();
-    for(auto& [name, info] : tensors) {
-        tensors_.push_back(info);
+    size_t successCount = 0;
+    size_t failCount = 0;
+    size_t totalBytes = 0;
+
+    s_logger.error( "[GGUFLoader] Uploading " << tensors_.size() << " tensors to Vulkan GPU..." << std::endl;
+
+    for (const auto& tensor : tensors_) {
+        if (UploadTensorToVulkan(tensor.name)) {
+            successCount++;
+            totalBytes += tensor.size_bytes;
+        } else {
+            failCount++;
+            s_logger.error( "[GGUFLoader] Failed to upload tensor: " << tensor.name << std::endl;
+        }
     }
 
+    s_logger.error( "[GGUFLoader] Vulkan upload complete: " << successCount << "/" << tensors_.size()
+              << " tensors (" << (totalBytes / (1024 * 1024)) << " MB), "
+              << failCount << " failures" << std::endl;
+
+    return failCount == 0;
+#else
+    s_logger.error( "[GGUFLoader] UploadAllTensorsToVulkan: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+bool GGUFLoader::UploadTensorToVulkan(const std::string& tensor_name) {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!vulkan_engine_) {
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: no Vulkan engine attached" << std::endl;
+        return false;
+    }
+
+    // Check if already uploaded
+    if (vulkan_tensors_.count(tensor_name)) {
+        return true; // Already on GPU
+    }
+
+    // Find tensor info using O(1) index
+    auto it = tensor_index_.find(tensor_name);
+    if (it == tensor_index_.end()) {
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: tensor not found: " << tensor_name << std::endl;
+        return false;
+    }
+
+    const TensorInfo* info = it->second;
+
+    // Load tensor data from file
+    std::vector<uint8_t> tensorData;
+    try {
+        tensorData.resize(info->size_bytes);
+        file_.seekg(info->offset);
+        file_.read(reinterpret_cast<char*>(tensorData.data()), info->size_bytes);
+        if (!file_.good()) {
+            file_.clear(); // Reset stream state
+            s_logger.error( "[GGUFLoader] UploadTensorToVulkan: failed to read tensor data: " << tensor_name << std::endl;
+            return false;
+        }
+
+        // Decompress if needed
+        if (IsCompressed()) {
+            std::vector<uint8_t> decompressed;
+            if (!DecompressData(tensorData, decompressed)) {
+                s_logger.error( "[GGUFLoader] UploadTensorToVulkan: decompression failed: " << tensor_name << std::endl;
+                return false;
+            }
+            tensorData = std::move(decompressed);
+        }
+    } catch (const std::exception& e) {
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: read exception: " << e.what() << std::endl;
+        return false;
+    }
+
+    // Allocate host-side buffer and store the tensor data
+    // VulkanTensor.buffer holds a pointer to a dynamically allocated copy of the tensor data
+    // In a full Vulkan pipeline, this would be a VkBuffer + VkDeviceMemory pair
+    // For now, we allocate CPU-accessible storage that the VulkanCompute engine can
+    // upload to GPU memory via its staging buffer mechanism
+    void* gpuBuffer = nullptr;
+    try {
+        gpuBuffer = new uint8_t[tensorData.size()];
+        std::memcpy(gpuBuffer, tensorData.data(), tensorData.size());
+    } catch (const std::bad_alloc&) {
+        s_logger.error( "[GGUFLoader] UploadTensorToVulkan: allocation failed for "
+                  << (tensorData.size() / (1024 * 1024)) << " MB tensor: " << tensor_name << std::endl;
+        return false;
+    }
+
+    VulkanTensor vt;
+    vt.buffer = gpuBuffer;
+    vulkan_tensors_[tensor_name] = vt;
+
+    return true;
+#else
+    s_logger.error( "[GGUFLoader] UploadTensorToVulkan('" << tensor_name 
+              << "'): not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
+}
+
+bool GGUFLoader::ReadMetadataKV(const std::string& key, std::string& value) {
+    auto it = metadata_.kv_pairs.find(key);
+    if (it != metadata_.kv_pairs.end()) {
+        value = it->second;
+        return true;
+    }
+    return false;
+}
+
+bool GGUFLoader::CreateDummyModel() {
+    // Create a minimal synthetic model for testing without a real GGUF file
+    header_.magic = 0x46475547; // "GGUF"
+    header_.version = 3;
+    header_.tensor_count = 0;
+    header_.metadata_kv_count = 0;
+    metadata_.vocab_size = 0;
+    metadata_.embedding_dim = 0;
+    metadata_.layer_count = 0;
+    metadata_.head_count = 0;
+    metadata_.context_length = 4096;
+    use_dummy_mode_ = true;
+    s_logger.info("[GGUFLoader] Created dummy model for testing");
     return true;
 }
 
-
-void GGUFLoader::CreateVulkanResources() {
-    if (!device) return;
-    
-    VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-    poolInfo.queueFamilyIndex = FindQueueFamilyIndex(physDevice, VK_QUEUE_TRANSFER_BIT);
-
-    vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
-
-    VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = cmdPool;
-    allocInfo.commandBufferCount = 1;
-
-    vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer);
-    
-    vkGetDeviceQueue(device, poolInfo.queueFamilyIndex, 0, &transferQueue);
-}
-
-uint32_t GGUFLoader::FindQueueFamilyIndex(VkPhysicalDevice device, uint32_t queueFlags) {
-    uint32_t count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, nullptr);
-    std::vector<VkQueueFamilyProperties> props(count);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &count, props.data());
-
-    for (uint32_t i = 0; i < count; i++) {
-        if (props[i].queueFlags & queueFlags) return i;
+bool GGUFLoader::InitializeMemoryMap() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (filepath_.empty() || !is_open_) {
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: no file open" << std::endl;
+        return false;
     }
-    return 0;
-}
-
-uint32_t GGUFLoader::FindMemoryType(uint32_t typeFilter, uint32_t props) {
-    VkPhysicalDeviceMemoryProperties memProps;
-    vkGetPhysicalDeviceMemoryProperties(physDevice, &memProps);
-
-    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) &&
-            (memProps.memoryTypes[i].propertyFlags & props) == props) {
-            return i;
-        }
+    // Open file handle for memory mapping (Windows API)
+    file_handle_ = CreateFileA(filepath_.c_str(), GENERIC_READ, FILE_SHARE_READ,
+                               nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file_handle_ == INVALID_HANDLE_VALUE) {
+        file_handle_ = nullptr;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: CreateFile failed" << std::endl;
+        return false;
     }
-    return 0;
-}
-
-void GGUFLoader::LoadTensorAsync(TensorInfo& info) {
-    auto* src = (uint8_t*)mappedView + info.offset;
-    size_t elementCount = 1;
-    for (auto dim : info.shape) elementCount *= dim;
-
-    switch (info.type) {
-        case GGMLType::F32: 
-            UploadF32(info, src, elementCount);
-            break;
-        case GGMLType::F16:
-            UploadF32(info, src, elementCount / 2); 
-            break;
-        case GGMLType::Q4_0: 
-            DequantAndUploadQ4_0(info, src, elementCount);
-            break;
-        default:
-             break;
+    LARGE_INTEGER fileSize;
+    GetFileSizeEx(file_handle_, &fileSize);
+    map_handle_ = CreateFileMappingA(file_handle_, nullptr, PAGE_READONLY, 
+                                      fileSize.HighPart, fileSize.LowPart, nullptr);
+    if (!map_handle_) {
+        CloseHandle(file_handle_);
+        file_handle_ = nullptr;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: CreateFileMapping failed" << std::endl;
+        return false;
     }
+    mmap_base_ = MapViewOfFile(map_handle_, FILE_MAP_READ, 0, 0, 0);
+    if (!mmap_base_) {
+        CloseHandle(map_handle_);
+        CloseHandle(file_handle_);
+        map_handle_ = nullptr;
+        file_handle_ = nullptr;
+        s_logger.error( "[GGUFLoader] InitializeMemoryMap: MapViewOfFile failed" << std::endl;
+        return false;
+    }
+    use_mmap_ = true;
+    file_size_ = static_cast<uint64_t>(fileSize.QuadPart);
+    s_logger.info("[GGUFLoader] Memory-mapped ");
+    return true;
+#else
+    s_logger.error( "[GGUFLoader] InitializeMemoryMap: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return false;
+#endif
 }
 
-void GGUFLoader::UploadF32(TensorInfo& info, void* src, size_t count) {
-    size_t size = count * sizeof(float);
-    float* staging = (float*)VirtualAlloc(nullptr, size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
-    memcpy(staging, src, size);
-
-    VkBufferCreateInfo bufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    bufInfo.size = size;
-    bufInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-    VkBufferCreateInfo stagingBufInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-    stagingBufInfo.size = size;
-    stagingBufInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-    VkBuffer stagingBuffer, gpuBuffer;
-    VkDeviceMemory stagingMem, gpuMem; 
-
-    vkCreateBuffer(device, &stagingBufInfo, nullptr, &stagingBuffer);
-    vkCreateBuffer(device, &bufInfo, nullptr, &gpuBuffer);
-
-    VkMemoryRequirements stagingReq, gpuReq;
-    vkGetBufferMemoryRequirements(device, stagingBuffer, &stagingReq);
-    vkGetBufferMemoryRequirements(device, gpuBuffer, &gpuReq);
-
-    VkMemoryAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    allocInfo.allocationSize = stagingReq.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(stagingReq.memoryTypeBits,
-                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-    vkAllocateMemory(device, &allocInfo, nullptr, &stagingMem);
-    vkBindBufferMemory(device, stagingBuffer, stagingMem, 0);
-    
-    VkMemoryAllocateInfo gpuAllocInfo = {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-    gpuAllocInfo.allocationSize = gpuReq.size;
-    gpuAllocInfo.memoryTypeIndex = FindMemoryType(gpuReq.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    
-    vkAllocateMemory(device, &gpuAllocInfo, nullptr, &gpuMem);
-    vkBindBufferMemory(device, gpuBuffer, gpuMem, 0);
-
-    float* mapped;
-    vkMapMemory(device, stagingMem, 0, size, 0, (void**)&mapped);
-    memcpy(mapped, staging, size);
-    vkUnmapMemory(device, stagingMem);
-
-    std::lock_guard<std::mutex> lock(tensorMutex); 
-    BeginCommandBuffer();
-    VkBufferCopy copyRegion{};
-    copyRegion.size = size;
-    vkCmdCopyBuffer(cmdBuffer, stagingBuffer, gpuBuffer, 1, &copyRegion);
-
-    vkDestroyBuffer(device, stagingBuffer, nullptr); 
-    EndCommandBuffer();
-    vkFreeMemory(device, stagingMem, nullptr); // Free after command buffer done (WaitIdle in EndCommandBuffer)
-
-    info.gpuBuffer = gpuBuffer;
-    info.gpuMemory = gpuMem;
-    info.onGPU = true;
-    
-    VirtualFree(staging, 0, MEM_RELEASE);
+void GGUFLoader::CleanupMemoryMap() {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (mmap_base_) {
+        UnmapViewOfFile(mmap_base_);
+        mmap_base_ = nullptr;
+    }
+    if (map_handle_) {
+        CloseHandle(map_handle_);
+        map_handle_ = nullptr;
+    }
+    if (file_handle_) {
+        CloseHandle(file_handle_);
+        file_handle_ = nullptr;
+    }
+    use_mmap_ = false;
+    s_logger.info("[GGUFLoader] Memory map cleaned up");
+#else
+    // No-op when experimental GPU support is disabled
+#endif
 }
 
-void GGUFLoader::DequantAndUploadQ4_0(TensorInfo& info, void* src, size_t count) {
-    size_t blockCount = count / 32;
-    uint16_t* staging = (uint16_t*)VirtualAlloc(nullptr,
-        blockCount * 32 * sizeof(uint16_t), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
-
-    // Call MASM64 kernel
-    extern "C" void DequantQ4_0_AVX512(void* src, void* dst, size_t count);
-    // DequantQ4_0_AVX512(src, staging, blockCount); // Linker dependency
-
-    VirtualFree(staging, 0, MEM_RELEASE);
+const void* GGUFLoader::GetMappedSlice(uint64_t offset, uint64_t size) const {
+#ifdef RAWRXD_EXPERIMENTAL_GGUF_GPU
+    if (!mmap_base_ || !use_mmap_) {
+        s_logger.error( "[GGUFLoader] GetMappedSlice: memory map not initialized" << std::endl;
+        return nullptr;
+    }
+    if (offset + size > file_size_) {
+        s_logger.error( "[GGUFLoader] GetMappedSlice: range [" << offset << ", " 
+                  << (offset + size) << ") exceeds file size " << file_size_ << std::endl;
+        return nullptr;
+    }
+    return static_cast<const uint8_t*>(mmap_base_) + offset;
+#else
+    s_logger.error( "[GGUFLoader] GetMappedSlice: not available (requires RAWRXD_EXPERIMENTAL_GGUF_GPU)" << std::endl;
+    return nullptr;
+#endif
 }
 
-void GGUFLoader::BeginCommandBuffer() {
-    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
-}
-
-void GGUFLoader::EndCommandBuffer() {
-    vkEndCommandBuffer(cmdBuffer);
-
-    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuffer;
-
-    vkQueueSubmit(transferQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(transferQueue);
-}
-
+} // namespace RawrXD
 

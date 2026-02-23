@@ -82,7 +82,7 @@ int main() {
     double ms_opt = std::chrono::duration<double, std::milli>(t1 - t0).count();
 
     double speedup = ms_scalar / ms_opt;
-    std::printf("Scalar: %.2f ms  Opt: %.2f ms  Speedup: %.2fx\n", ms_scalar, ms_opt, speedup);
+    std::printf("Scalar: %.2f ms  Opt(AVX2): %.2f ms  Speedup: %.2fx\n", ms_scalar, ms_opt, speedup);
 
     if (speedup >= 1.8) {
         std::puts("✅ END-TO-END: >= 1.8× speedup achieved");

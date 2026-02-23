@@ -295,9 +295,110 @@ TransformationResult SmartRewriteEngine::inferTransformation(
     const TransformationRequest& request, const std::string& language) {
     
     TransformationResult result;
-    result.transformedCode = request.originalCode;  // Placeholder
+    std::string code = request.originalCode;
     result.explanation = "Applied " + request.transformationType;
-    result.confidence = 0.75f;
+    result.confidence = 0.85f;
+    
+    std::string type = request.transformationType;
+    
+    if (type == "modernize" || type == "MODERNIZE") {
+        // C++ modernization transforms
+        // Replace NULL with nullptr
+        size_t pos = 0;
+        while ((pos = code.find("NULL", pos)) != std::string::npos) {
+            // Verify it's not part of a larger word
+            bool isBoundary = (pos == 0 || !std::isalnum(code[pos-1])) &&
+                              (pos + 4 >= code.size() || !std::isalnum(code[pos+4]));
+            if (isBoundary) {
+                code.replace(pos, 4, "nullptr");
+                pos += 7;
+            } else {
+                pos += 4;
+            }
+        }
+        // Replace typedef with using
+        pos = 0;
+        while ((pos = code.find("typedef ", pos)) != std::string::npos) {
+            size_t lineEnd = code.find(';', pos);
+            if (lineEnd != std::string::npos) {
+                std::string typeLine = code.substr(pos + 8, lineEnd - pos - 8);
+                // Find last word (the alias name)
+                size_t lastSpace = typeLine.find_last_of(" \t");
+                if (lastSpace != std::string::npos) {
+                    std::string alias = typeLine.substr(lastSpace + 1);
+                    std::string target = typeLine.substr(0, lastSpace);
+                    code.replace(pos, lineEnd - pos, "using " + alias + " = " + target);
+                }
+            }
+            pos++;
+        }
+        result.explanation = "Modernized C++ code (NULL->nullptr, typedef->using)";
+    }
+    else if (type == "optimize" || type == "OPTIMIZE") {
+        // Add const where possible, use reserve() hints
+        // Replace push_back with emplace_back where applicable
+        size_t pos = 0;
+        while ((pos = code.find(".push_back(", pos)) != std::string::npos) {
+            // Check if argument is a constructor call or temporary
+            size_t argStart = pos + 11;
+            size_t argEnd = code.find(')', argStart);
+            if (argEnd != std::string::npos) {
+                std::string arg = code.substr(argStart, argEnd - argStart);
+                if (arg.find('(') != std::string::npos || arg.find('{') != std::string::npos) {
+                    code.replace(pos + 1, 9, "emplace_back(");
+                    result.explanation += "; push_back->emplace_back for temporaries";
+                }
+            }
+            pos++;
+        }
+    }
+    else if (type == "document" || type == "DOCUMENT") {
+        // Add documentation comments
+        std::istringstream iss(code);
+        std::string line;
+        std::string documented;
+        bool prevWasBlank = true;
+        while (std::getline(iss, line)) {
+            // Detect function/method definitions
+            if (prevWasBlank && (line.find('(') != std::string::npos) && 
+                (line.find('{') != std::string::npos || line.find(';') == std::string::npos)) {
+                size_t nameEnd = line.find('(');
+                if (nameEnd != std::string::npos) {
+                    size_t nameStart = line.find_last_of(" \t*&", nameEnd - 1);
+                    if (nameStart == std::string::npos) nameStart = 0; else nameStart++;
+                    std::string funcName = line.substr(nameStart, nameEnd - nameStart);
+                    if (!funcName.empty() && funcName != "if" && funcName != "for" && 
+                        funcName != "while" && funcName != "switch") {
+                        documented += "/**\n * @brief " + funcName + "\n */\n";
+                    }
+                }
+            }
+            documented += line + "\n";
+            prevWasBlank = line.find_first_not_of(" \t") == std::string::npos;
+        }
+        code = documented;
+        result.explanation = "Added documentation comments to functions";
+    }
+    else if (type == "security" || type == "SECURITY") {
+        // Replace unsafe functions
+        size_t pos = 0;
+        while ((pos = code.find("strcpy(", pos)) != std::string::npos) {
+            code.replace(pos, 6, "strncpy(");
+            pos += 7;
+        }
+        pos = 0;
+        while ((pos = code.find("sprintf(", pos)) != std::string::npos) {
+            code.replace(pos, 7, "snprintf(");
+            pos += 8;
+        }
+        result.explanation = "Replaced unsafe C functions with bounded alternatives";
+    }
+    
+    result.transformedCode = code;
+    if (code == request.originalCode) {
+        result.confidence = 0.5f;
+        result.explanation += " (no changes needed)";
+    }
     
     return result;
 }

@@ -20,9 +20,8 @@ AgentTaskResult AdvancedCodingAgent::implementFeature(
     std::string analysis = "Analyzing: " + specification;
     result.steps.push_back(analysis);
     
-    // Step 2: Generate code
+    // Step 2: Generate code from specification and language
     std::string generatedCode = "// Feature: " + specification + "\n";
-    generatedCode += "// Generated code placeholder\n";
     generatedCode += generateFeatureBoilerplate(specification, language);
     
     result.steps.push_back("Code generation complete");
@@ -317,8 +316,58 @@ std::vector<Vulnerability> AdvancedCodingAgent::performStaticAnalysis(
 std::string AdvancedCodingAgent::replaceStringConcatenation(
     const std::string& code) {
     
-    // Placeholder: would actually rewrite concatenations
-    return code;
+    // Detect repeated string concatenation via '+' or '+=' and annotate
+    std::istringstream stream(code);
+    std::string line;
+    std::ostringstream result;
+    int concatCount = 0;
+    std::string lastConcatVar;
+
+    while (std::getline(stream, line)) {
+        std::string trimmed = line;
+        size_t firstNonSpace = trimmed.find_first_not_of(" \t");
+        if (firstNonSpace != std::string::npos) {
+            trimmed = trimmed.substr(firstNonSpace);
+        }
+
+        // Check for string concatenation patterns
+        bool hasPlusEquals = (trimmed.find("+=") != std::string::npos && 
+                              (trimmed.find('"') != std::string::npos || 
+                               trimmed.find("str") != std::string::npos ||
+                               trimmed.find("String") != std::string::npos));
+        
+        // Count consecutive concatenations to the same variable
+        if (hasPlusEquals) {
+            size_t eqPos = trimmed.find("+=");
+            std::string varName = trimmed.substr(0, eqPos);
+            // Trim
+            while (!varName.empty() && varName.back() == ' ') varName.pop_back();
+            
+            if (varName == lastConcatVar) {
+                concatCount++;
+            } else {
+                concatCount = 1;
+                lastConcatVar = varName;
+            }
+
+            if (concatCount >= 3) {
+                result << line << "  // PERF: repeated string concatenation on '" 
+                       << lastConcatVar 
+                       << "'. Use std::ostringstream or .append() for O(n) instead of O(n²).\n";
+            } else {
+                result << line << "\n";
+            }
+        } else {
+            // Reset counter on non-concat line
+            if (concatCount >= 3) {
+                concatCount = 0;
+                lastConcatVar.clear();
+            }
+            result << line << "\n";
+        }
+    }
+
+    return result.str();
 }
 
 std::vector<Vulnerability> AdvancedCodingAgent::scanSecurityIssues(
@@ -354,22 +403,213 @@ std::vector<Vulnerability> AdvancedCodingAgent::scanSecurityIssues(
 std::string AdvancedCodingAgent::extractMethodRefactoring(
     const std::string& code, const std::string& language) {
     
-    // Placeholder implementation
-    return code;
+    // Analyze code for long functions that could benefit from extraction
+    std::istringstream stream(code);
+    std::string line;
+    std::vector<std::string> lines;
+    while (std::getline(stream, line)) {
+        lines.push_back(line);
+    }
+
+    // Find function boundaries and flag those exceeding threshold
+    const size_t MAX_FUNC_LINES = 50;
+    std::ostringstream result;
+    size_t funcStartLine = 0;
+    int braceDepth = 0;
+    bool inFunction = false;
+    std::string currentFuncName;
+
+    for (size_t i = 0; i < lines.size(); ++i) {
+        const std::string& l = lines[i];
+        
+        // Detect function start (simplified heuristic: line with '(' before '{' at depth 0)
+        if (!inFunction && braceDepth == 0) {
+            size_t parenPos = l.find('(');
+            size_t bracePos = l.find('{');
+            if (parenPos != std::string::npos && 
+                (bracePos != std::string::npos || (i + 1 < lines.size() && lines[i+1].find('{') != std::string::npos))) {
+                // Extract function name (word before '(')
+                size_t nameEnd = parenPos;
+                while (nameEnd > 0 && l[nameEnd - 1] == ' ') nameEnd--;
+                size_t nameStart = nameEnd;
+                while (nameStart > 0 && (std::isalnum(l[nameStart - 1]) || l[nameStart - 1] == '_')) nameStart--;
+                currentFuncName = l.substr(nameStart, nameEnd - nameStart);
+                funcStartLine = i;
+                inFunction = true;
+            }
+        }
+
+        for (char c : l) {
+            if (c == '{') braceDepth++;
+            else if (c == '}') braceDepth--;
+        }
+
+        result << l;
+
+        // Function ended
+        if (inFunction && braceDepth == 0) {
+            size_t funcLen = i - funcStartLine + 1;
+            if (funcLen > MAX_FUNC_LINES) {
+                result << "  // REFACTOR: '" << currentFuncName 
+                       << "' is " << funcLen << " lines (>" << MAX_FUNC_LINES 
+                       << "). Consider extracting helper methods.";
+            }
+            inFunction = false;
+            currentFuncName.clear();
+        }
+        result << "\n";
+    }
+
+    return result.str();
 }
 
 std::string AdvancedCodingAgent::reduceComplexity(
     const std::string& code, const std::string& language) {
     
-    // Placeholder implementation
-    return code;
+    // Analyze cyclomatic complexity indicators and annotate
+    std::istringstream stream(code);
+    std::string line;
+    std::ostringstream result;
+    int complexity = 1; // Start at 1 for the function entry
+    bool inFunction = false;
+    int braceDepth = 0;
+    int nestedIfDepth = 0;
+
+    while (std::getline(stream, line)) {
+        std::string trimmed = line;
+        size_t firstNonSpace = trimmed.find_first_not_of(" \t");
+        if (firstNonSpace != std::string::npos) {
+            trimmed = trimmed.substr(firstNonSpace);
+        }
+
+        // Count complexity-increasing constructs
+        bool addedHint = false;
+        if (trimmed.find("if ") == 0 || trimmed.find("if(") == 0 ||
+            trimmed.find("else if") != std::string::npos) {
+            complexity++;
+            nestedIfDepth++;
+            if (nestedIfDepth > 3) {
+                result << line << "  // COMPLEXITY: deeply nested conditional (depth="
+                       << nestedIfDepth << "). Consider early return or guard clause.\n";
+                addedHint = true;
+            }
+        }
+        if (trimmed.find("for ") == 0 || trimmed.find("for(") == 0 ||
+            trimmed.find("while ") == 0 || trimmed.find("while(") == 0) {
+            complexity++;
+        }
+        if (trimmed.find("case ") == 0) complexity++;
+        if (trimmed.find("catch") == 0) complexity++;
+        if (trimmed.find("&&") != std::string::npos ||
+            trimmed.find("||") != std::string::npos) {
+            complexity++;
+        }
+
+        for (char c : line) {
+            if (c == '{') braceDepth++;
+            else if (c == '}') {
+                braceDepth--;
+                if (nestedIfDepth > 0) nestedIfDepth--;
+            }
+        }
+
+        if (!addedHint) {
+            result << line << "\n";
+        }
+
+        // At function end, emit summary
+        if (inFunction && braceDepth == 0) {
+            if (complexity > 10) {
+                result << "// COMPLEXITY WARNING: Cyclomatic complexity ~" << complexity
+                       << " (threshold: 10). Refactor into smaller functions.\n";
+            }
+            complexity = 1;
+            inFunction = false;
+        }
+
+        // Detect function start
+        if (braceDepth == 1 && !inFunction && line.find('(') != std::string::npos) {
+            inFunction = true;
+            complexity = 1;
+        }
+    }
+
+    return result.str();
 }
 
 std::string AdvancedCodingAgent::improveNaming(
     const std::string& code, const std::string& language) {
     
-    // Placeholder implementation
-    return code;
+    // Analyze identifiers for naming quality and annotate improvements
+    std::istringstream stream(code);
+    std::string line;
+    std::ostringstream result;
+
+    // Common poor names to flag
+    const std::vector<std::pair<std::string, std::string>> poorNames = {
+        {" i ", "loop counter 'i' — consider descriptive name for outer loops"},
+        {" j ", "loop counter 'j' — consider 'innerIdx' or similar"},
+        {" k ", "loop counter 'k' — consider descriptive name"},
+        {" tmp ", "'tmp' — use purpose-describing name"},
+        {" temp ", "'temp' — use purpose-describing name"},
+        {" ret ", "'ret' — use purpose-describing name like 'result'"},
+        {" res ", "'res' — use 'result' or more specific name"},
+        {" buf ", "'buf' — use 'buffer' or describe contents"},
+        {" ptr ", "'ptr' — describe what it points to"},
+        {" val ", "'val' — use 'value' or describe the quantity"},
+        {" str ", "'str' — describe the string contents"},
+        {" cb ", "'cb' — use 'callback' or describe the action"},
+        {" fn ", "'fn' — use 'function' or describe purpose"},
+        {" ctx ", "'ctx' — use 'context' or more specific name"},
+    };
+
+    while (std::getline(stream, line)) {
+        std::string padded = " " + line + " ";
+        bool flagged = false;
+
+        // Skip comments
+        std::string trimmed = line;
+        size_t commentPos = trimmed.find("//");
+        bool isComment = (commentPos != std::string::npos && 
+                          trimmed.find_first_not_of(" \t") == commentPos);
+
+        if (!isComment) {
+            for (const auto& [pattern, suggestion] : poorNames) {
+                if (padded.find(pattern) != std::string::npos) {
+                    result << line << "  // NAMING: " << suggestion << "\n";
+                    flagged = true;
+                    break;
+                }
+            }
+
+            // Detect single-letter variables in declarations (not in for loops)
+            if (!flagged && line.find("for") == std::string::npos) {
+                // Look for type declarations with single-char names like "int x;"
+                for (const char* type : {"int ", "float ", "double ", "char ", "bool ", "auto "}) {
+                    size_t pos = padded.find(type);
+                    if (pos != std::string::npos) {
+                        size_t nameStart = pos + strlen(type);
+                        while (nameStart < padded.size() && padded[nameStart] == ' ') nameStart++;
+                        // Check if identifier is just 1 char
+                        if (nameStart < padded.size() - 1 &&
+                            std::isalpha(padded[nameStart]) &&
+                            !std::isalnum(padded[nameStart + 1]) && padded[nameStart + 1] != '_') {
+                            result << line << "  // NAMING: single-letter variable '" 
+                                   << padded[nameStart] << "' — use descriptive name\n";
+                            flagged = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!flagged) {
+            result << line << "\n";
+        }
+    }
+
+    return result.str();
 }
 
 } // namespace IDE

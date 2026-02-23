@@ -6,15 +6,14 @@
 #ifndef RAWRXD_FOUNDATION_H
 #define RAWRXD_FOUNDATION_H
 
-// Critical Order: C++20 Standard Headers FIRST
-#include <compare>
-#include <atomic>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <chrono>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef RAWRXD_NO_QT
+#define RAWRXD_NO_QT
+#endif
 
-// Standard Headers
+#include <windows.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -26,27 +25,11 @@
 #include <cstdint>
 #include <cstring>
 #include <cwchar>
-
-// Platform Headers
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef RAWRXD_NO_QT
-#define RAWRXD_NO_QT
-#endif
-
-#include <windows.h>
-
-// Undefine Helpers
-#ifdef min
-#undef min
-#endif
-#ifdef max
-#undef max
-#endif
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <chrono>
 
 namespace RawrXD {
 
@@ -267,10 +250,10 @@ public:
     static String fromRawData(const wchar_t* s, int len) { 
         return String(std::wstring(s, len)); 
     }
-    static String number(int n, int base = 10) { return String(std::to_wstring(n)); }
-    static String number(uint32_t n, int base = 10) { return String(std::to_wstring(n)); }
-    static String number(int64_t n, int base = 10) { return String(std::to_wstring(n)); }
-    static String number(double n, char fmt = 'g', int prec = 6) { return String(std::to_wstring(n)); }
+    static String number(int n, int base = 10);
+    static String number(uint32_t n, int base = 10);
+    static String number(int64_t n, int base = 10);
+    static String number(double n, char fmt = 'g', int prec = 6);
     static String asprintf(const char* format, ...);
     
     // Iterators
@@ -613,22 +596,6 @@ struct Size {
     bool operator!=(const Size& s) const { return !(*this == s); }
     
     operator SIZE() const { SIZE s = { width, height }; return s; }
-};
-
-struct SizeF {
-    float width, height;
-    SizeF() : width(0.0f), height(0.0f) {}
-    SizeF(float w, float h) : width(w), height(h) {}
-    
-    // Conversion from Size
-    SizeF(const Size& s) : width((float)s.width), height((float)s.height) {}
-
-    bool isNull() const { return width == 0.0f && height == 0.0f; }
-    bool isEmpty() const { return width <= 0.0f || height <= 0.0f; }
-    bool isValid() const { return width >= 0.0f && height >= 0.0f; }
-    
-    bool operator==(const SizeF& s) const { return width == s.width && height == s.height; }
-    bool operator!=(const SizeF& s) const { return !(*this == s); }
 };
 
 struct Rect {

@@ -25,9 +25,15 @@
 #include <sstream>
 #include <regex>
 #include <algorithm>
+
+#include "logging/logger.h"
+static Logger s_logger("hf_hub_client");
+
+#ifdef _WIN32
 #include <windows.h>
 #include <winhttp.h>
 #pragma comment(lib, "winhttp.lib")
+#endif
 
 // Simplified JSON parsing (would use nlohmann/json in production)
 class SimpleJsonParser {
@@ -125,7 +131,7 @@ public:
  *       "llama-2-7b.gguf",
  *       "./models",
  *       [](uint64_t downloaded, uint64_t total) {
- *           
+ *           s_logger.info("Downloaded: ");
  *       }
  *   );
  */
@@ -154,7 +160,7 @@ public:
      * Example:
      *   auto results = client.searchModels("llama", 10);
      *   for (const auto& model : results) {
-     *       
+     *       s_logger.info( model.repo_id << " (" << model.downloads << " downloads)" << std::endl;
      *   }
      */
     std::vector<ModelMetadata> searchModels(const std::string& query, 
@@ -170,11 +176,12 @@ public:
             url += "&limit=" + std::to_string(limit);
             url += "&sort=downloads&direction=-1";  // Sort by popularity
 
+            s_logger.info("🔍 Searching HuggingFace Hub for: ");
 
             // Make HTTP request
             std::string response = fetchJSON(url, token);
             if (response.empty()) {
-                
+                s_logger.error( "❌ No response from HuggingFace API" << std::endl;
                 return results;
             }
 
@@ -184,7 +191,7 @@ public:
             size_t arrayEnd = response.rfind(']');
             
             if (arrayStart == std::string::npos || arrayEnd == std::string::npos) {
-                
+                s_logger.error( "❌ Invalid API response format" << std::endl;
                 return results;
             }
 
@@ -208,11 +215,11 @@ public:
                 }
             }
 
-
+            s_logger.info("✅ Found ");
             return results;
 
         } catch (const std::exception& e) {
-            
+            s_logger.error( "❌ Search error: " << e.what() << std::endl;
             return results;
         }
     }
@@ -227,7 +234,7 @@ public:
      * Example:
      *   auto model = client.getModelInfo("meta-llama/Llama-2-7b-hf");
      *   for (const auto& file : model.files) {
-     *       
+     *       s_logger.info( file << std::endl;
      *   }
      */
     ModelMetadata getModelInfo(const std::string& repo_id, const std::string& token = "") {
@@ -236,11 +243,12 @@ public:
 
         try {
             std::string url = "https://huggingface.co/api/models/" + repo_id;
-
+            
+            s_logger.info("📋 Fetching model info: ");
 
             std::string response = fetchJSON(url, token);
             if (response.empty()) {
-                
+                s_logger.error( "❌ Failed to fetch model info" << std::endl;
                 return meta;
             }
 
@@ -276,11 +284,12 @@ public:
                 }
             }
 
+            s_logger.info("✅ Model has ");
 
             return meta;
 
         } catch (const std::exception& e) {
-            
+            s_logger.error( "❌ Error fetching model info: " << e.what() << std::endl;
             return meta;
         }
     }
@@ -302,7 +311,7 @@ public:
      *       "./models",
      *       [](uint64_t cur, uint64_t total) {
      *           int pct = (cur * 100) / total;
-     *           
+     *           s_logger.info("\r");
      *       }
      *   );
      */
@@ -317,12 +326,15 @@ public:
 
             std::string outputPath = outputDir + "/" + filename;
 
+            s_logger.info("⬇️  Downloading: ");
+            s_logger.info("   From: ");
+            s_logger.info("   To: ");
 
             // Download with resume support
             return downloadFile(url, outputPath, progressCallback, token);
 
         } catch (const std::exception& e) {
-            
+            s_logger.error( "❌ Download error: " << e.what() << std::endl;
             return false;
         }
     }
@@ -350,68 +362,98 @@ private:
     /**
      * Fetch JSON from HuggingFace API
      * 
-     * Uses libcurl for HTTP requests
+     * Uses WinHTTP (Windows) or system curl (POSIX) for HTTP requests
      * Handles:
      * - Authentication (Bearer token in header)
      * - Error responses
      * - Retries on timeout
-     * 
-     * In production, would use:
-     * #include <curl/curl.h>
      */
     std::string fetchJSON(const std::string& url, const std::string& token) {
-        std::string result = "";
-        
-        // Parse URL roughly (assuming https://huggingface.co/...)
-        std::wstring hostName = L"huggingface.co";
-        std::wstring path = L"/api/models"; 
-
-        std::string urlStr = url;
-        if (urlStr.find("https://") == 0) urlStr = urlStr.substr(8);
-        size_t slashPos = urlStr.find("/");
-        if (slashPos != std::string::npos) {
-            std::string host = urlStr.substr(0, slashPos);
-            std::string p = urlStr.substr(slashPos);
-            hostName = std::wstring(host.begin(), host.end());
-            path = std::wstring(p.begin(), p.end());
-        }
-
-        HINTERNET hSession = WinHttpOpen(L"RawrXD-Agent/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-        if(hSession) {
-            HINTERNET hConnect = WinHttpConnect(hSession, hostName.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
-            if(hConnect) {
-                HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-                if(hRequest) {
-                    std::wstring headers;
-                    if(!token.empty()) {
-                        headers = L"Authorization: Bearer " + std::wstring(token.begin(), token.end());
-                    }
-                    
-                    if(WinHttpSendRequest(hRequest, headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : headers.c_str(), headers.length(), WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
-                        if(WinHttpReceiveResponse(hRequest, NULL)) {
-                            DWORD dwSize = 0;
-                            DWORD dwDownloaded = 0;
-                            do {
-                                dwSize = 0;
-                                if(!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
-                                if(dwSize == 0) break;
-                                
-                                std::vector<char> buffer(dwSize+1);
-                                if(WinHttpReadData(hRequest, buffer.data(), dwSize, &dwDownloaded)) {
-                                    buffer[dwDownloaded] = 0;
-                                    result.append(buffer.data(), dwDownloaded);
-                                }
-                            } while(dwSize > 0);
-                        }
-                    }
-                    WinHttpCloseHandle(hRequest);
-                }
-                WinHttpCloseHandle(hConnect);
+        try {
+#ifdef _WIN32
+            // Use WinHTTP for native Windows HTTP requests
+            HINTERNET hSession = WinHttpOpen(L"RawrXD-HFClient/1.0",
+                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+            if (!hSession) return "";
+            
+            // Parse URL
+            URL_COMPONENTS urlComp = {};
+            urlComp.dwStructSize = sizeof(urlComp);
+            wchar_t hostName[256] = {}, urlPath[2048] = {};
+            urlComp.lpszHostName = hostName;
+            urlComp.dwHostNameLength = 256;
+            urlComp.lpszUrlPath = urlPath;
+            urlComp.dwUrlPathLength = 2048;
+            
+            std::wstring wurl(url.begin(), url.end());
+            if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &urlComp)) {
+                WinHttpCloseHandle(hSession);
+                return "";
             }
+            
+            HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort, 0);
+            if (!hConnect) {
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL,
+                WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+            if (!hRequest) {
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            // Add authentication header if token provided
+            if (!token.empty()) {
+                std::wstring authHeader = L"Authorization: Bearer " + std::wstring(token.begin(), token.end());
+                WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+            }
+            
+            if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                    WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+                !WinHttpReceiveResponse(hRequest, NULL)) {
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return "";
+            }
+            
+            std::string response;
+            DWORD bytesRead = 0;
+            char buffer[8192];
+            while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+                response.append(buffer, bytesRead);
+            }
+            
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
+            return response;
+#else
+            // POSIX fallback: use system curl command
+            std::string cmd = "curl -s";
+            if (!token.empty()) {
+                cmd += " -H \"Authorization: Bearer " + token + "\"";
+            }
+            cmd += " \"" + url + "\"";
+            
+            FILE* pipe = popen(cmd.c_str(), "r");
+            if (!pipe) return "";
+            
+            std::string response;
+            char buffer[4096];
+            while (fgets(buffer, sizeof(buffer), pipe)) {
+                response += buffer;
+            }
+            pclose(pipe);
+            return response;
+#endif
+        } catch (...) {
+            return "";
         }
-        
-        return result;
     }
 
     /**
@@ -427,100 +469,110 @@ private:
                      std::function<void(uint64_t, uint64_t)> progressCallback,
                      const std::string& token) {
         try {
-            // Real WinHttp Implementation for "No Stub" Requirement
-            
-            // 1. Parse URL
-            std::string urlStr = url;
-            if (urlStr.find("https://") == 0) urlStr = urlStr.substr(8);
-            size_t slashPos = urlStr.find("/");
-            
-            std::wstring hostName = L"huggingface.co";
-            std::wstring path = L"/";
-            
-            if (slashPos != std::string::npos) {
-                std::string host = urlStr.substr(0, slashPos);
-                std::string p = urlStr.substr(slashPos);
-                hostName = std::wstring(host.begin(), host.end());
-                path = std::wstring(p.begin(), p.end());
-            }
-
-            // 2. Check existing file for resume
-            uint64_t existingSize = 0;
-            {
-                std::ifstream f(outputPath, std::ios::binary | std::ios::ate);
-                if (f) existingSize = f.tellg();
-            }
-
-            // 3. Setup WinHttp
-            HINTERNET hSession = WinHttpOpen(L"RawrXD-Agent/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+#ifdef _WIN32
+            // Use WinHTTP for download with resume support
+            HINTERNET hSession = WinHttpOpen(L"RawrXD-HFClient/1.0",
+                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
             if (!hSession) return false;
-
-            HINTERNET hConnect = WinHttpConnect(hSession, hostName.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+            
+            URL_COMPONENTS urlComp = {};
+            urlComp.dwStructSize = sizeof(urlComp);
+            wchar_t hostName[256] = {}, urlPath[2048] = {};
+            urlComp.lpszHostName = hostName;
+            urlComp.dwHostNameLength = 256;
+            urlComp.lpszUrlPath = urlPath;
+            urlComp.dwUrlPathLength = 2048;
+            
+            std::wstring wurl(url.begin(), url.end());
+            if (!WinHttpCrackUrl(wurl.c_str(), 0, 0, &urlComp)) {
+                WinHttpCloseHandle(hSession);
+                return false;
+            }
+            
+            HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort, 0);
             if (!hConnect) { WinHttpCloseHandle(hSession); return false; }
-
-            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path.c_str(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-            if (!hRequest) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
-
-            // 4. Headers (Auth + Range)
-            std::wstring headers;
+            
+            DWORD flags = (urlComp.nScheme == INTERNET_SCHEME_HTTPS) ? WINHTTP_FLAG_SECURE : 0;
+            HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL,
+                WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, flags);
+            if (!hRequest) {
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return false;
+            }
+            
+            // Check for existing partial file (resume support)
+            uint64_t resumeFrom = 0;
+            std::ifstream existingFile(outputPath, std::ios::binary | std::ios::ate);
+            if (existingFile) {
+                resumeFrom = existingFile.tellg();
+                existingFile.close();
+            }
+            
+            if (resumeFrom > 0) {
+                std::wstring rangeHeader = L"Range: bytes=" + std::to_wstring(resumeFrom) + L"-";
+                WinHttpAddRequestHeaders(hRequest, rangeHeader.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
+            }
+            
+            // Add auth
             if (!token.empty()) {
-                headers += L"Authorization: Bearer " + std::wstring(token.begin(), token.end()) + L"\r\n";
+                std::wstring authHeader = L"Authorization: Bearer " + std::wstring(token.begin(), token.end());
+                WinHttpAddRequestHeaders(hRequest, authHeader.c_str(), -1, WINHTTP_ADDREQ_FLAG_ADD);
             }
-            if (existingSize > 0) {
-                 headers += L"Range: bytes=" + std::to_wstring(existingSize) + L"-\r\n";
+            
+            if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+                    WINHTTP_NO_REQUEST_DATA, 0, 0, 0) ||
+                !WinHttpReceiveResponse(hRequest, NULL)) {
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return false;
             }
-
-            // 5. Send Request
-            if (!WinHttpSendRequest(hRequest, headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS : headers.c_str(), headers.length(), WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
-                WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false;
-            }
-
-            if (!WinHttpReceiveResponse(hRequest, NULL)) {
-                WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false;
-            }
-
-            // 6. Get Content Length for progress
-            uint64_t contentLength = 0;
-            wchar_t lenBuffer[256];
-            DWORD lenBufSize = sizeof(lenBuffer);
-            if (WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_LENGTH, WINHTTP_HEADER_NAME_BY_INDEX, lenBuffer, &lenBufSize, WINHTTP_NO_HEADER_INDEX)) {
-                 contentLength = std::stoull(std::wstring(lenBuffer));
-            }
-            uint64_t totalBytes = existingSize + contentLength;
-
-            // 7. Open Output File
-            std::ofstream outFile(outputPath, std::ios::binary | (existingSize > 0 ? std::ios::app : std::ios::out));
+            
+            // Get content length for progress
+            DWORD headerSize = sizeof(DWORD);
+            DWORD contentLength = 0;
+            WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+                WINHTTP_HEADER_NAME_BY_INDEX, &contentLength, &headerSize, WINHTTP_NO_HEADER_INDEX);
+            uint64_t totalSize = resumeFrom + contentLength;
+            
+            // Open output file in append mode
+            std::ofstream outFile(outputPath, std::ios::binary | std::ios::app);
             if (!outFile) {
-                WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false;
+                WinHttpCloseHandle(hRequest);
+                WinHttpCloseHandle(hConnect);
+                WinHttpCloseHandle(hSession);
+                return false;
             }
-
-            // 8. Download Loop
-            DWORD dwSize = 0;
-            DWORD dwDownloaded = 0;
-            uint64_t totalDownloaded = existingSize;
-            std::vector<char> buffer(65536);
-
-            do {
-                dwSize = 0;
-                if (!WinHttpQueryDataAvailable(hRequest, &dwSize)) break;
-                if (dwSize == 0) break;
-                
-                if (dwSize > buffer.size()) buffer.resize(dwSize);
-
-                if (WinHttpReadData(hRequest, buffer.data(), dwSize, &dwDownloaded)) {
-                    outFile.write(buffer.data(), dwDownloaded);
-                    totalDownloaded += dwDownloaded;
-                    if (progressCallback) progressCallback(totalDownloaded, totalBytes);
-                } else {
-                    break;
+            
+            uint64_t downloaded = resumeFrom;
+            DWORD bytesRead = 0;
+            char buffer[65536];
+            while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+                outFile.write(buffer, bytesRead);
+                downloaded += bytesRead;
+                if (progressCallback) {
+                    progressCallback(downloaded, totalSize);
                 }
-            } while (dwSize > 0);
-
-            // Cleanup
+            }
+            
+            outFile.close();
             WinHttpCloseHandle(hRequest);
             WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
+            
+            s_logger.info("   \xe2\x9c\x85 Downloaded successfully (");
             return true;
+#else
+            // POSIX: use system curl
+            std::string cmd = "curl -L -o \"" + outputPath + "\" -C -";
+            if (!token.empty()) {
+                cmd += " -H \"Authorization: Bearer " + token + "\"";
+            }
+            cmd += " \"" + url + "\"";
+            int result = system(cmd.c_str());
+            return result == 0;
+#endif
 
         } catch (...) {
             return false;

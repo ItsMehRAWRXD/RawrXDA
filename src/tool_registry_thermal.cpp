@@ -222,13 +222,13 @@ int registerThermalTools(ToolRegistry* registry) {
         toolDef.config.enableCaching = true;
         toolDef.config.cacheValidityMs = 500;  // 500ms cache for thermal data
         
-        toolDef.inputSchema = json::object({
+        toolDef.inputSchema = json{
             {"type", "object"},
             {"properties", {
                 {"maxTempC", {{"type", "integer"}, {"default", 70}, {"description", "Blacklist threshold temperature"}}},
                 {"maxWearPct", {{"type", "integer"}, {"default", 95}, {"description", "Blacklist threshold wear level"}}}
             }}
-        });
+        };
 
         toolDef.handler = [](const json& params) -> json {
             int32_t maxTempC = params.value("maxTempC", 70);
@@ -236,11 +236,11 @@ int registerThermalTools(ToolRegistry* registry) {
             
             std::vector<ThermalDataReader::DriveData> drives;
             if (!g_thermalReader.readAllDrives(drives, maxTempC, maxWearPct)) {
-                return json::object({
+                return json{
                     {"success", false},
                     {"error", g_thermalReader.getLastError()},
                     {"serviceRunning", false}
-                });
+                };
             }
             
             json drivesJson = json::array_type();
@@ -274,7 +274,7 @@ int registerThermalTools(ToolRegistry* registry) {
                 drivesJson.push_back(driveJson);
             }
             
-            return json::object({
+            return json{
                 {"success", true},
                 {"serviceRunning", true},
                 {"namespace", g_thermalReader.isUsingLocalNamespace() ? "Local" : "Global"},
@@ -286,7 +286,7 @@ int registerThermalTools(ToolRegistry* registry) {
                 {"coolestTempC", coolestTemp < 999 ? coolestTemp : -1},
                 {"coolestDrive", coolestDrive},
                 {"drives", drivesJson}
-            });
+            };
         };
 
         if (registry->registerTool(toolDef)) count++;

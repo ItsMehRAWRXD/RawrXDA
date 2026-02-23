@@ -24,10 +24,6 @@
 OPTION WIN64:3
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 INCLUDE C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\win64.inc
 INCLUDE C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\kernel32.inc
 INCLUDE C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include\user32.inc
