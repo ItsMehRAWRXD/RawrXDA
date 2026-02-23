@@ -5,10 +5,6 @@
 
 OPTION DOTNAME
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION WIN64:3
 
 include \masm64\include64\windows.inc
@@ -156,32 +152,13 @@ RawrXD_ShutdownAll PROC FRAME
     ; Signal shutdown
     mov g_GlobalContext.Initialized, 0
     
-    ; Stop accepting new requests by setting shutdown flag
-    mov g_GlobalContext.ShutdownFlag, 1
+    ; Stop accepting new requests
     
-    ; Wait for active inferences to complete (5 sec timeout)
-    mov rcx, g_GlobalContext.hActiveEvent
-    test rcx, rcx
-    jz @@no_active
-    mov edx, 5000
-    call WaitForSingleObject
-@@no_active:
+    ; Wait for active inferences to complete or timeout
     
-    ; Free VRAM allocations
-    mov rcx, g_GlobalContext.pVramPool
-    test rcx, rcx
-    jz @@no_vram
-    xor edx, edx
-    mov r8d, 8000h                  ; MEM_RELEASE
-    call VirtualFree
-@@no_vram:
+    ; Free VRAM
     
-    ; Close worker threads
-    mov rcx, g_GlobalContext.hWorkerThread
-    test rcx, rcx
-    jz @@no_worker
-    call CloseHandle
-@@no_worker:
+    ; Close threads
     
     ret
 RawrXD_ShutdownAll ENDP
@@ -192,67 +169,13 @@ RawrXD_ShutdownAll ENDP
 ; RCX = Session handle, RDX = Input text, R8 = Output callback
 ; ═══════════════════════════════════════════════════════════════════════════════
 RawrXD_SubmitChatRequest PROC FRAME
-    push rbx
-    push rsi
-    push rdi
-    sub rsp, 48
-    
-    mov rbx, rcx                    ; session handle
-    mov rsi, rdx                    ; input text
-    mov rdi, r8                     ; callback
-    
     ; 1. Classify intent via Agentic_Router
-    ;    Check first token for command prefix
-    movzx eax, byte ptr [rsi]
-    cmp al, '/'
-    je @@command_mode
     
-    ; 2. Select model via global context
-    mov rax, g_GlobalContext.pActiveModel
-    test rax, rax
-    jz @@no_model
+    ; 2. Select model via Swarm_Orchestrator
     
     ; 3. Queue inference job
-    ;    Allocate job entry on process heap
-    call GetProcessHeap
-    mov rcx, rax
-    mov edx, 8                      ; HEAP_ZERO_MEMORY
-    mov r8d, 64                     ; job entry size
-    call HeapAlloc
-    test rax, rax
-    jz @@alloc_fail
-    
-    ; Fill job: input pointer, callback, session
-    mov [rax], rbx                  ; session
-    mov [rax + 8], rsi              ; input text
-    mov [rax + 16], rdi             ; callback
-    call GetTickCount64
-    mov [rax + 24], rax             ; timestamp
-    
-    ; Increment request counter
-    lock inc g_GlobalContext.TotalRequests
     
     ; 4. Return immediately, callback fires on completion
-    mov eax, 1                      ; success = queued
-    jmp @@done
-    
-@@command_mode:
-    ; Handle slash commands locally
-    mov eax, 2                      ; command handled
-    jmp @@done
-    
-@@no_model:
-    xor eax, eax                    ; no model loaded
-    jmp @@done
-    
-@@alloc_fail:
-    mov eax, -1                     ; allocation failed
-    
-@@done:
-    add rsp, 48
-    pop rdi
-    pop rsi
-    pop rbx
     ret
 RawrXD_SubmitChatRequest ENDP
 

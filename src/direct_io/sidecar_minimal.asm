@@ -1,10 +1,6 @@
 ; src/direct_io/sidecar_minimal.asm
 ; Minimal connectivity test for SYSTEM context
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 EXTERN ExitProcess:PROC
 EXTERN CreateFileA:PROC
 EXTERN WriteFile:PROC
@@ -61,6 +57,5 @@ SidecarMinimalEntry PROC
 _exit:
     xor ecx, ecx
     call ExitProcess
-    ret
 SidecarMinimalEntry ENDP
 END

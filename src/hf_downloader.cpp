@@ -1,48 +1,304 @@
 #include "hf_downloader.h"
+#include <iostream>
+#include <curl/curl.h>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
-HFDownloader::HFDownloader() : is_downloading_(false) {}
-HFDownloader::~HFDownloader() {}
+#include "logging/logger.h"
+static Logger s_logger("hf_downloader");
 
-bool HFDownloader::SearchModels(const std::string& query, std::vector<ModelInfo>& results, const std::string& token) {
-    return false; // Stub
+// Simple HTTP client using Windows API (or curl)
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
+    userp->append((char*)contents, size * nmemb);
+    return size * nmemb;
 }
 
-bool HFDownloader::GetModelInfo(const std::string& repo_id, ModelInfo& info, const std::string& token) {
-    return false;
+HFDownloader::HFDownloader()
+    : is_downloading_(false), cancel_requested_(false) {
+    std::memset(&current_progress_, 0, sizeof(DownloadProgress));
 }
 
-bool HFDownloader::DownloadModel(const std::string& repo_id, const std::string& filename, const std::string& output_dir, ProgressCallback callback, const std::string& token) {
-    return false;
+HFDownloader::~HFDownloader() {
+    CancelDownload();
+    if (download_thread_ && download_thread_->joinable()) {
+        download_thread_->join();
+    }
 }
 
-bool HFDownloader::DownloadModelAsync(const std::string& repo_id, const std::string& filename, const std::string& output_dir, ProgressCallback callback, const std::string& token) {
-    return false;
+bool HFDownloader::SearchModels(const std::string& query, std::vector<ModelInfo>& results, 
+                                const std::string& token) {
+    std::string url = "https://huggingface.co/api/models?search=" + query + "&filter=gguf";
+    std::string response;
+    
+    if (!FetchJSON(url, response, token)) {
+        s_logger.error( "Failed to search models on HuggingFace" << std::endl;
+        return false;
+    }
+    
+    // Parse JSON array of model objects
+    try {
+        auto json = nlohmann::json::parse(response);
+        if (!json.is_array()) return false;
+        
+        results.clear();
+        results.reserve(json.size());
+        
+        for (const auto& item : json) {
+            ModelInfo info;
+            info.repo_id = item.value("modelId", item.value("id", ""));
+            info.model_name = info.repo_id;
+            
+            // Extract description from tags or pipeline_tag
+            if (item.contains("pipeline_tag"))
+                info.description = item["pipeline_tag"].get<std::string>();
+            
+            // Extract sibling files (GGUF files listed under "siblings")
+            if (item.contains("siblings") && item["siblings"].is_array()) {
+                for (const auto& sib : item["siblings"]) {
+                    std::string fname = sib.value("rfilename", "");
+                    if (!fname.empty()) {
+                        info.files.push_back(fname);
+                        // Accumulate total size if available
+                        if (sib.contains("size"))
+                            info.total_size_bytes += sib["size"].get<uint64_t>();
+                    }
+                }
+            }
+            
+            results.push_back(std::move(info));
+        }
+    } catch (const nlohmann::json::exception& e) {
+        s_logger.error( "JSON parse error in SearchModels: " << e.what() << std::endl;
+        return false;
+    }
+    
+    return true;
+}
+
+bool HFDownloader::GetModelInfo(const std::string& repo_id, ModelInfo& info,
+                               const std::string& token) {
+    std::string url = "https://huggingface.co/api/models/" + repo_id;
+    std::string response;
+    
+    if (!FetchJSON(url, response, token)) {
+        s_logger.error( "Failed to fetch model info: " << repo_id << std::endl;
+        return false;
+    }
+    
+    // Parse model info and set info struct
+    info.repo_id = repo_id;
+    info.model_name = repo_id;
+    
+    return ParseModelMetadata(response, info);
+}
+
+bool HFDownloader::DownloadModel(const std::string& repo_id, const std::string& filename,
+                                 const std::string& output_dir, ProgressCallback callback,
+                                 const std::string& token) {
+    std::string url = BuildHFUrl(repo_id, filename);
+    std::string output_path = output_dir + "/" + filename;
+    
+    return DownloadFile(url, output_path, callback, token);
+}
+
+bool HFDownloader::DownloadModelAsync(const std::string& repo_id, const std::string& filename,
+                                      const std::string& output_dir, ProgressCallback callback,
+                                      const std::string& token) {
+    if (is_downloading_.load()) {
+        s_logger.error( "Download already in progress" << std::endl;
+        return false;
+    }
+    
+    cancel_requested_ = false;
+    is_downloading_ = true;
+    progress_callback_ = callback;
+    
+    download_thread_ = std::make_unique<std::thread>([this, repo_id, filename, output_dir, token]() {
+        std::string url = BuildHFUrl(repo_id, filename);
+        std::string output_path = output_dir + "/" + filename;
+        DownloadFile(url, output_path, progress_callback_, token);
+        is_downloading_ = false;
+    });
+    
+    return true;
 }
 
 bool HFDownloader::CancelDownload() {
+    cancel_requested_ = true;
     return true;
 }
 
 bool HFDownloader::ValidateHFToken(const std::string& token) {
-    return false;
+    std::string url = "https://huggingface.co/api/whoami";
+    std::string response;
+    
+    return FetchJSON(url, response, token);
 }
 
-std::vector<std::string> HFDownloader::ParseAvailableFormats(const std::string& repo_id, const std::string& token) {
-    return {};
+std::vector<std::string> HFDownloader::ParseAvailableFormats(const std::string& repo_id,
+                                                             const std::string& token) {
+    std::vector<std::string> formats;
+    
+    std::string url = "https://huggingface.co/api/models/" + repo_id;
+    std::string response;
+    
+    if (FetchJSON(url, response, token)) {
+        // Extract GGUF files from response
+        size_t pos = 0;
+        while ((pos = response.find(".gguf", pos)) != std::string::npos) {
+            size_t start = response.rfind("\"", pos);
+            if (start != std::string::npos) {
+                start++;
+                std::string filename = response.substr(start, pos - start + 5);
+                formats.push_back(filename);
+            }
+            pos++;
+        }
+    }
+    
+    return formats;
 }
 
-bool HFDownloader::FetchJSON(const std::string& url, std::string& response, const std::string& token) {
-    return false;
+bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
+                            const std::string& token) {
+    // Use libcurl to perform an HTTP GET request and capture the response body.
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        s_logger.error( "CURL init failed" << std::endl;
+        return false;
+    }
+
+    struct curl_slist* headers = nullptr;
+    if (!token.empty()) {
+        std::string auth = "Authorization: Bearer " + token;
+        headers = curl_slist_append(headers, auth.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "RawrXD-AgenticIDE/1.0");
+
+    CURLcode res = curl_easy_perform(curl);
+    bool success = (res == CURLE_OK);
+    if (!success) {
+        s_logger.error( "CURL error: " << curl_easy_strerror(res) << std::endl;
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    return success;
 }
 
-bool HFDownloader::DownloadFile(const std::string& url, const std::string& output_path, ProgressCallback callback, const std::string& token) {
-    return false;
+bool HFDownloader::DownloadFile(const std::string& url, const std::string& output_path,
+                               ProgressCallback callback, const std::string& token) {
+    s_logger.info("Downloading: ");
+    
+    // Perform download using libcurl and write directly to file
+    FILE* fp = fopen(output_path.c_str(), "wb");
+    if (!fp) {
+        s_logger.error( "Failed to open output file: " << output_path << std::endl;
+        return false;
+    }
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        s_logger.error( "CURL init failed" << std::endl;
+        fclose(fp);
+        return false;
+    }
+
+    struct curl_slist* headers = nullptr;
+    if (!token.empty()) {
+        std::string auth = "Authorization: Bearer " + token;
+        headers = curl_slist_append(headers, auth.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "RawrXD-AgenticIDE/1.0");
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](void* ptr, size_t size, size_t nmemb, void* stream) -> size_t {
+        return fwrite(ptr, size, nmemb, static_cast<FILE*>(stream));
+    });
+
+    CURLcode res = curl_easy_perform(curl);
+    bool success = (res == CURLE_OK);
+    if (!success) {
+        s_logger.error( "CURL error: " << curl_easy_strerror(res) << std::endl;
+    }
+
+    // Retrieve download size for progress reporting
+    curl_off_t dl_total = 0;
+    curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &dl_total);
+
+    // Clean up
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    fclose(fp);
+
+    // Populate progress information
+    DownloadProgress progress;
+    progress.current_file = output_path;
+    progress.total_bytes = static_cast<uint64_t>(dl_total);
+    progress.bytes_downloaded = success ? static_cast<uint64_t>(dl_total) : 0;
+    progress.progress_percent = success && dl_total ? 100.0f : 0.0f;
+    if (callback) {
+        callback(progress);
+    }
+    current_progress_ = progress;
+
+    return success;
 }
 
-bool HFDownloader::ParseModelMetadata(const std::string& response, ModelInfo& info) {
-    return false;
+std::string HFDownloader::BuildHFUrl(const std::string& repo_id, const std::string& filename) const {
+    return "https://huggingface.co/" + repo_id + "/resolve/main/" + filename;
 }
 
-std::string HFDownloader::BuildHFUrl(const std::string& repo_id, const std::string& filename) {
-    return "";
+std::string HFDownloader::GetAuthHeader(const std::string& token) const {
+    return "Bearer " + token;
+}
+
+bool HFDownloader::ParseModelMetadata(const std::string& json_response, ModelInfo& info) {
+    try {
+        auto json = nlohmann::json::parse(json_response);
+        
+        // Extract model identity
+        info.repo_id = json.value("modelId", json.value("id", info.repo_id));
+        info.model_name = info.repo_id;
+        
+        // Description from cardData or pipeline_tag
+        if (json.contains("cardData") && json["cardData"].contains("model_summary"))
+            info.description = json["cardData"]["model_summary"].get<std::string>();
+        else if (json.contains("pipeline_tag"))
+            info.description = json["pipeline_tag"].get<std::string>();
+        
+        // Extract file list and total size from siblings array
+        info.files.clear();
+        info.total_size_bytes = 0;
+        if (json.contains("siblings") && json["siblings"].is_array()) {
+            for (const auto& sib : json["siblings"]) {
+                std::string fname = sib.value("rfilename", "");
+                if (!fname.empty()) {
+                    info.files.push_back(fname);
+                    if (sib.contains("size"))
+                        info.total_size_bytes += sib["size"].get<uint64_t>();
+                }
+            }
+        }
+        
+        // Fallback: use safetensors size if available
+        if (info.total_size_bytes == 0 && json.contains("safetensors")) {
+            if (json["safetensors"].contains("total"))
+                info.total_size_bytes = json["safetensors"]["total"].get<uint64_t>();
+        }
+        
+        return true;
+    } catch (const nlohmann::json::exception& e) {
+        s_logger.error( "JSON parse error in ParseModelMetadata: " << e.what() << std::endl;
+        return false;
+    }
 }

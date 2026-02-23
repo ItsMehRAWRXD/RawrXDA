@@ -2,10 +2,6 @@
 ; Loops and watches the Sovereign pipe for real-time status reports
 
 option casemap:none
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 extern CreateFileA : PROC
 extern WriteFile : PROC
 extern ReadFile : PROC
@@ -104,7 +100,6 @@ _sleep_retry:
     mov ecx, 500
     call Sleep
     jmp _loop_connect
-    ret
 
 main ENDP
 END

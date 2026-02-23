@@ -7,10 +7,6 @@
 ; x64 MASM directives
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; ═════════════════════════════════════════════════════════════════════════════
 ; WINDOWS API IMPORTS
 ; ═════════════════════════════════════════════════════════════════════════════
@@ -557,9 +553,7 @@ __log_error PROC FRAME
     call __format_error_message
     
     ; OutputDebugString or write to log file would go here
-    ; For now, basic console output
-    lea rcx, [rbp-512]
-    call printf  ; Assuming printf is available or implement basic output
+    ; For now, this is a no-op placeholder
     
     leave
     ret
@@ -1406,7 +1400,6 @@ StartChatServer ENDP
 StopChatServer PROC FRAME
     .endprolog
     jmp ChatServer_Terminate
-    ret
 StopChatServer ENDP
 
 ; ----------------------------------------------------------------------------

@@ -1161,16 +1161,11 @@ ExportCapturedData PROC pPath:PTR BYTE
     invoke wsprintfA, ADDR buffer, CSTR("OS Explorer Interceptor Capture\n"), 0
     invoke WriteFile, hFile, ADDR buffer, eax, NULL, NULL
     
-    ; Write call log (iterate through circular buffer)
-    mov ecx, 0
-    .export_loop:
-    cmp ecx, 10  ; Placeholder for actual count, e.g., g_BufferCount
-    jge .export_done
-    invoke wsprintfA, ADDR buffer, CSTR("Call %d: Function intercepted\n"), ecx
+    ; Write call log (would iterate through circular buffer)
+    ; For now, just write placeholder
+    invoke wsprintfA, ADDR buffer, CSTR("Total Calls: %llu\n"), \
+           g_Interceptor.Stats.TotalCalls
     invoke WriteFile, hFile, ADDR buffer, eax, NULL, NULL
-    inc ecx
-    jmp .export_loop
-    .export_done:
     
     ; Close file
     invoke CloseHandle, hFile

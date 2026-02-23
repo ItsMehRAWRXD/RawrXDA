@@ -6,10 +6,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; ============================================
 ; EXPORTS
 ; ============================================
@@ -23,13 +19,14 @@ PUBLIC GetEngineInfo
 ; CONSTANTS
 ; ============================================
 PATTERN_UNKNOWN EQU 0
-PATTERN_FIXME   EQU 1
-PATTERN_XXX     EQU 2
-PATTERN_HACK    EQU 3
-PATTERN_BUG     EQU 4
-PATTERN_NOTE    EQU 5
-PATTERN_IDEA    EQU 6
-PATTERN_REVIEW  EQU 7
+PATTERN_TODO    EQU 1
+PATTERN_FIXME   EQU 2
+PATTERN_XXX     EQU 3
+PATTERN_HACK    EQU 4
+PATTERN_BUG     EQU 5
+PATTERN_NOTE    EQU 6
+PATTERN_IDEA    EQU 7
+PATTERN_REVIEW  EQU 8
 
 ENGINE_MODE_SCALAR  EQU 1
 ENGINE_MODE_AVX512  EQU 2
@@ -142,6 +139,8 @@ InitCharLookup PROC
     mov byte ptr [rdi + 'N'], PATTERN_NOTE
     mov byte ptr [rdi + 'r'], PATTERN_REVIEW
     mov byte ptr [rdi + 'R'], PATTERN_REVIEW
+    mov byte ptr [rdi + 't'], PATTERN_TODO
+    mov byte ptr [rdi + 'T'], PATTERN_TODO
     mov byte ptr [rdi + 'x'], PATTERN_XXX
     mov byte ptr [rdi + 'X'], PATTERN_XXX
     
@@ -261,7 +260,7 @@ ScanAVX512 PROC FRAME
     xor r14, r14            ; position
     
     ; Broadcast pattern first chars to ZMM for comparison
-    ; We'll search for: B, F, H, I, N, R, X (and lowercase)
+    ; We'll search for: B, F, H, I, N, R, T, X (and lowercase)
     
     ; Create mask with all first chars we're looking for
     mov eax, 'B'
@@ -274,14 +273,14 @@ ScanAVX512 PROC FRAME
     mov eax, 'f'
     vpbroadcastb zmm4, eax
     
-    mov eax, 'X'
+    mov eax, 'T'
     vpbroadcastb zmm5, eax
-    mov eax, 'x'
+    mov eax, 't'
     vpbroadcastb zmm6, eax
     
-    mov eax, 'H'
+    mov eax, 'X'
     vpbroadcastb zmm7, eax
-    mov eax, 'h'
+    mov eax, 'x'
     vpbroadcastb zmm8, eax
     
 avx_loop:
@@ -304,14 +303,14 @@ avx_loop:
     vpcmpeqb k2, zmm0, zmm4     ; 'f'
     korq k1, k1, k2
     
-    vpcmpeqb k2, zmm0, zmm5     ; 'X'
+    vpcmpeqb k2, zmm0, zmm5     ; 'T'
     korq k1, k1, k2
-    vpcmpeqb k2, zmm0, zmm6     ; 'x'
+    vpcmpeqb k2, zmm0, zmm6     ; 't'
     korq k1, k1, k2
     
-    vpcmpeqb k2, zmm0, zmm7     ; 'H'
+    vpcmpeqb k2, zmm0, zmm7     ; 'X'
     korq k1, k1, k2
-    vpcmpeqb k2, zmm0, zmm8     ; 'h'
+    vpcmpeqb k2, zmm0, zmm8     ; 'x'
     korq k1, k1, k2
     
     ; Check for any matches
@@ -380,6 +379,8 @@ check_upper:
     je check_note
     cmp al, 'R'
     je check_review
+    cmp al, 'T'
+    je check_todo
     cmp al, 'X'
     je check_xxx
     jmp not_pattern
@@ -498,6 +499,24 @@ check_review:
     cmp al, 'w'
     jne not_pattern
     mov eax, PATTERN_REVIEW
+    jmp pattern_found
+
+check_todo:
+    cmp rbx, 4
+    jb not_pattern
+    movzx eax, byte ptr [rsi+1]
+    or al, 20h
+    cmp al, 'o'
+    jne not_pattern
+    movzx eax, byte ptr [rsi+2]
+    or al, 20h
+    cmp al, 'd'
+    jne not_pattern
+    movzx eax, byte ptr [rsi+3]
+    or al, 20h
+    cmp al, 'o'
+    jne not_pattern
+    mov eax, PATTERN_TODO
     jmp pattern_found
 
 check_xxx:
@@ -668,6 +687,8 @@ pattern_found:
     je set_conf_high
     cmp ebx, PATTERN_XXX
     je set_conf_high
+    cmp ebx, PATTERN_TODO
+    je set_conf_medium
     jmp set_conf_low
 
 set_conf_critical:

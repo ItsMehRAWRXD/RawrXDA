@@ -25,10 +25,6 @@ public:
     static String applicationDirPath();
     static String applicationFilePath();
     static void setApplicationName(const String& name);
-    
-    // Clipboard methods
-    void clipboardSetText(const String& text);
-    String clipboardText();
 };
 
 // Global macro for accessing the app

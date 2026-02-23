@@ -1,14 +1,45 @@
-// AgenticErrorHandler Implementation
+// AgenticErrorHandler Implementation (Qt-free)
 #include "agentic_error_handler.h"
 #include "agentic_observability.h"
 #include "agentic_loop_state.h"
-
-
+#include <cstdio>
+#include <algorithm>
+#include <random>
+#include <thread>
+#include <chrono>
+#include <cctype>
 #include <exception>
 
-AgenticErrorHandler::AgenticErrorHandler(void* parent)
-    : void(parent)
+// ===== STATIC HELPERS =====
+
+std::string AgenticErrorHandler::generateErrorId()
 {
+    static std::mt19937 rng(static_cast<unsigned>(
+        std::chrono::steady_clock::now().time_since_epoch().count()));
+    static const char hex[] = "0123456789abcdef";
+    std::string id;
+    id.reserve(32);
+    for (int i = 0; i < 32; ++i) {
+        id += hex[rng() % 16];
+    }
+    return id;
+}
+
+bool AgenticErrorHandler::containsCI(const std::string& haystack, const std::string& needle)
+{
+    if (needle.empty()) return true;
+    auto it = std::search(haystack.begin(), haystack.end(),
+                          needle.begin(), needle.end(),
+                          [](char a, char b) {
+                              return std::tolower(static_cast<unsigned char>(a)) ==
+                                     std::tolower(static_cast<unsigned char>(b));
+                          });
+    return it != haystack.end();
+}
+
+AgenticErrorHandler::AgenticErrorHandler()
+{
+    fprintf(stderr, "[AgenticErrorHandler] Initialized - Ready for error handling and recovery\n");
 
     // Set up default recovery policies
     setRecoveryPolicy(RecoveryPolicy{
@@ -16,7 +47,8 @@ AgenticErrorHandler::AgenticErrorHandler(void* parent)
         RecoveryStrategy::Retry,
         3,      // maxRetries
         100,    // initialDelayMs
-        2.0f    // backoffMultiplier
+        2.0f,   // backoffMultiplier
+        false
     });
 
     setRecoveryPolicy(RecoveryPolicy{
@@ -24,7 +56,8 @@ AgenticErrorHandler::AgenticErrorHandler(void* parent)
         RecoveryStrategy::Retry,
         5,
         500,
-        1.5f
+        1.5f,
+        false
     });
 
     setRecoveryPolicy(RecoveryPolicy{
@@ -32,7 +65,8 @@ AgenticErrorHandler::AgenticErrorHandler(void* parent)
         RecoveryStrategy::Fallback,
         2,
         200,
-        2.0f
+        2.0f,
+        true
     });
 
     setRecoveryPolicy(RecoveryPolicy{
@@ -40,7 +74,8 @@ AgenticErrorHandler::AgenticErrorHandler(void* parent)
         RecoveryStrategy::Retry,
         4,
         1000,
-        1.5f
+        1.5f,
+        false
     });
 
     setRecoveryPolicy(RecoveryPolicy{
@@ -48,13 +83,15 @@ AgenticErrorHandler::AgenticErrorHandler(void* parent)
         RecoveryStrategy::Abort,
         1,
         0,
-        1.0f
+        1.0f,
+        false
     });
 }
 
 AgenticErrorHandler::~AgenticErrorHandler()
 {
-             << m_successfulRecoveries << "successful recoveries";
+    fprintf(stderr, "[AgenticErrorHandler] Destroyed - Handled %d errors with %d successful recoveries\n",
+            m_totalErrors, m_successfulRecoveries);
 }
 
 void AgenticErrorHandler::initialize(AgenticObservability* obs, AgenticLoopState* state)
@@ -70,20 +107,20 @@ void AgenticErrorHandler::initialize(AgenticObservability* obs, AgenticLoopState
 
 // ===== ERROR CAPTURE AND HANDLING =====
 
-void* AgenticErrorHandler::handleError(
+nlohmann::json AgenticErrorHandler::handleError(
     const std::exception& e,
     const std::string& component,
-    const void*& context)
+    const nlohmann::json& context)
 {
     std::string errorId = recordError(
         ErrorType::InternalError,
-        std::string::fromStdString(e.what()),
+        std::string(e.what()),
         component,
         extractStackTrace(),
         context
     );
 
-    void* result;
+    nlohmann::json result;
     result["error_id"] = errorId;
     result["handled"] = false;
 
@@ -106,10 +143,10 @@ std::string AgenticErrorHandler::recordError(
     const std::string& message,
     const std::string& component,
     const std::string& stackTrace,
-    const void*& context)
+    const nlohmann::json& context)
 {
     ErrorContext errorContext;
-    errorContext.errorId = QUuid::createUuid().toString();
+    errorContext.errorId = generateErrorId();
     errorContext.type = type;
     errorContext.message = message;
     errorContext.stackTrace = stackTrace;
@@ -122,27 +159,30 @@ std::string AgenticErrorHandler::recordError(
     m_totalErrors++;
 
     // Keep bounded
-    if (m_errorHistory.size() > m_maxErrorMemory) {
-        m_errorHistory.pop_front();
+    if (static_cast<int>(m_errorHistory.size()) > m_maxErrorMemory) {
+        m_errorHistory.erase(m_errorHistory.begin());
     }
 
     if (m_observability) {
-        void* logContext = context;
+        nlohmann::json logContext = context;
         logContext["error_id"] = errorContext.errorId;
-        logContext["error_type"] = std::string::number(static_cast<int>(type));
+        logContext["error_type"] = std::to_string(static_cast<int>(type));
 
         m_observability->logError(component, message, logContext);
     }
 
     if (m_state) {
         m_state->recordError(
-            std::string::number(static_cast<int>(type)),
+            std::to_string(static_cast<int>(type)),
             message,
             stackTrace
         );
     }
 
-    errorRecorded(errorContext.errorId, message);
+    // Fire callback
+    if (m_errorRecordedCb) {
+        m_errorRecordedCb(errorContext.errorId, message, m_errorRecordedUd);
+    }
 
     // Check circuit breaker
     checkCircuitBreaker(component);
@@ -156,7 +196,9 @@ bool AgenticErrorHandler::executeRecovery(const std::string& errorId)
 {
     for (auto& errorContext : m_errorHistory) {
         if (errorContext.errorId == errorId) {
-            recoveryStarted(errorId);
+            if (m_recoveryStartedCb) {
+                m_recoveryStartedCb(errorId, m_recoveryStartedUd);
+            }
 
             bool success = false;
 
@@ -180,9 +222,13 @@ bool AgenticErrorHandler::executeRecovery(const std::string& errorId)
 
             if (success) {
                 m_successfulRecoveries++;
-                recoverySucceeded(errorId);
+                if (m_recoverySucceededCb) {
+                    m_recoverySucceededCb(errorId, m_recoverySucceededUd);
+                }
             } else {
-                recoveryFailed(errorId);
+                if (m_recoveryFailedCb) {
+                    m_recoveryFailedCb(errorId, m_recoveryFailedUd);
+                }
             }
 
             return success;
@@ -210,6 +256,7 @@ bool AgenticErrorHandler::backtrack(const std::string& targetStateId)
 {
     if (!m_state) return false;
 
+    fprintf(stderr, "[AgenticErrorHandler] Backtracking to state: %s\n", targetStateId.c_str());
 
     // In production, would restore from checkpoint
     return true;
@@ -219,6 +266,7 @@ bool AgenticErrorHandler::fallback(const std::string& errorId, const std::string
 {
     for (auto& errorContext : m_errorHistory) {
         if (errorContext.errorId == errorId) {
+            fprintf(stderr, "[AgenticErrorHandler] Executing fallback for %s\n", errorId.c_str());
             return true;
         }
     }
@@ -263,23 +311,24 @@ AgenticErrorHandler::RecoveryPolicy AgenticErrorHandler::getRecoveryPolicy(Error
         RecoveryStrategy::Abort,
         0,
         0,
-        1.0f
+        1.0f,
+        false
     };
 }
 
-void* AgenticErrorHandler::getAllRecoveryPolicies() const
+nlohmann::json AgenticErrorHandler::getAllRecoveryPolicies() const
 {
-    void* policies;
+    nlohmann::json policies = nlohmann::json::array();
 
     for (const auto& policy : m_recoveryPolicies) {
-        void* policyObj;
-        policyObj["error_type"] = std::string::number(static_cast<int>(policy.errorType));
-        policyObj["strategy"] = std::string::number(static_cast<int>(policy.strategy));
+        nlohmann::json policyObj;
+        policyObj["error_type"] = static_cast<int>(policy.errorType);
+        policyObj["strategy"] = static_cast<int>(policy.strategy);
         policyObj["max_retries"] = policy.maxRetries;
         policyObj["initial_delay_ms"] = policy.initialDelayMs;
         policyObj["backoff_multiplier"] = policy.backoffMultiplier;
 
-        policies.append(policyObj);
+        policies.push_back(policyObj);
     }
 
     return policies;
@@ -289,19 +338,19 @@ void* AgenticErrorHandler::getAllRecoveryPolicies() const
 
 AgenticErrorHandler::ErrorType AgenticErrorHandler::classifyError(const std::string& errorMessage)
 {
-    if (errorMessage.contains("timeout", //CaseInsensitive)) {
+    if (containsCI(errorMessage, "timeout")) {
         return ErrorType::TimeoutError;
-    } else if (errorMessage.contains("validation", //CaseInsensitive)) {
+    } else if (containsCI(errorMessage, "validation")) {
         return ErrorType::ValidationError;
-    } else if (errorMessage.contains("resource", //CaseInsensitive) ||
-               errorMessage.contains("memory", //CaseInsensitive)) {
+    } else if (containsCI(errorMessage, "resource") ||
+               containsCI(errorMessage, "memory")) {
         return ErrorType::ResourceError;
-    } else if (errorMessage.contains("network", //CaseInsensitive) ||
-               errorMessage.contains("connection", //CaseInsensitive)) {
+    } else if (containsCI(errorMessage, "network") ||
+               containsCI(errorMessage, "connection")) {
         return ErrorType::NetworkError;
-    } else if (errorMessage.contains("config", //CaseInsensitive)) {
+    } else if (containsCI(errorMessage, "config")) {
         return ErrorType::ConfigurationError;
-    } else if (errorMessage.contains("state", //CaseInsensitive)) {
+    } else if (containsCI(errorMessage, "state")) {
         return ErrorType::StateError;
     }
 
@@ -322,9 +371,9 @@ bool AgenticErrorHandler::isFallbackable(ErrorType type) const
 
 // ===== MONITORING =====
 
-void* AgenticErrorHandler::getErrorStatistics() const
+nlohmann::json AgenticErrorHandler::getErrorStatistics() const
 {
-    void* stats;
+    nlohmann::json stats;
     stats["total_errors"] = m_totalErrors;
     stats["total_recoveries"] = m_totalRecoveries;
     stats["successful_recoveries"] = m_successfulRecoveries;
@@ -345,8 +394,8 @@ int AgenticErrorHandler::getErrorCount(ErrorType type) const
 
 float AgenticErrorHandler::getErrorRate() const
 {
-    // Errors per minute
-    return m_totalErrors > 0 ? m_totalErrors / 10.0f : 0.0f; // Approximate
+    // Errors per minute (approximate)
+    return m_totalErrors > 0 ? m_totalErrors / 10.0f : 0.0f;
 }
 
 std::vector<AgenticErrorHandler::ErrorContext> AgenticErrorHandler::getRecentErrors(int limit)
@@ -356,16 +405,16 @@ std::vector<AgenticErrorHandler::ErrorContext> AgenticErrorHandler::getRecentErr
         m_errorHistory.rend()
     );
 
-    if (limit > 0 && recent.size() > limit) {
+    if (limit > 0 && static_cast<int>(recent.size()) > limit) {
         recent.resize(limit);
     }
 
     return recent;
 }
 
-void* AgenticErrorHandler::getRecoverySuccess() const
+nlohmann::json AgenticErrorHandler::getRecoverySuccess() const
 {
-    void* success;
+    nlohmann::json success;
 
     std::unordered_map<int, int> recoveryByType;
     for (const auto& error : m_errorHistory) {
@@ -374,9 +423,9 @@ void* AgenticErrorHandler::getRecoverySuccess() const
         }
     }
 
-    void* byType;
+    nlohmann::json byType = nlohmann::json::object();
     for (const auto& pair : recoveryByType) {
-        byType[std::string::number(pair.first)] = pair.second;
+        byType[std::to_string(pair.first)] = pair.second;
     }
 
     success["by_type"] = byType;
@@ -396,7 +445,7 @@ void AgenticErrorHandler::enableCircuitBreaker(const std::string& component, int
 AgenticErrorHandler::CircuitBreaker* AgenticErrorHandler::getOrCreateCircuitBreaker(
     const std::string& component)
 {
-    auto it = m_circuitBreakers.find(component.toStdString());
+    auto it = m_circuitBreakers.find(component);
     
     if (it != m_circuitBreakers.end()) {
         return &it->second;
@@ -408,9 +457,9 @@ AgenticErrorHandler::CircuitBreaker* AgenticErrorHandler::getOrCreateCircuitBrea
     breaker.failureThreshold = 5;
     breaker.isTripped = false;
 
-    m_circuitBreakers[component.toStdString()] = breaker;
+    m_circuitBreakers[component] = breaker;
 
-    auto it2 = m_circuitBreakers.find(component.toStdString());
+    auto it2 = m_circuitBreakers.find(component);
     return &it2->second;
 }
 
@@ -421,9 +470,12 @@ void AgenticErrorHandler::checkCircuitBreaker(const std::string& component)
 
     if (!breaker->isTripped && breaker->failureCount >= breaker->failureThreshold) {
         breaker->isTripped = true;
-        breaker->tripTime = std::chrono::system_clock::time_point::currentDateTime();
+        breaker->tripTime = std::chrono::system_clock::now();
 
-        circuitBreakerTripped(component);
+        fprintf(stderr, "[AgenticErrorHandler] Circuit breaker tripped for %s\n", component.c_str());
+        if (m_circuitBreakerCb) {
+            m_circuitBreakerCb(component, m_circuitBreakerUd);
+        }
     }
 }
 
@@ -438,27 +490,30 @@ bool AgenticErrorHandler::executeRetryStrategy(
 
     for (int attempt = 0; attempt < policy.maxRetries; ++attempt) {
         if (attempt > 0) {
-            // Exponential backoff
-            std::thread::msleep(delayMs);
+            // Exponential backoff using std::this_thread::sleep_for
+            std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
             delayMs = static_cast<int>(delayMs * policy.backoffMultiplier);
         }
 
         if (operation()) {
+            fprintf(stderr, "[AgenticErrorHandler] Retry succeeded for %s\n", context.errorId.c_str());
             m_totalRecoveries++;
             return true;
         }
     }
 
+    fprintf(stderr, "[AgenticErrorHandler] All retry attempts failed for %s\n", context.errorId.c_str());
     m_totalRecoveries++;
     return false;
 }
 
 bool AgenticErrorHandler::executeBacktrackStrategy(const ErrorContext& context)
 {
+    fprintf(stderr, "[AgenticErrorHandler] Backtracking from error %s\n", context.errorId.c_str());
 
     if (m_state) {
         // Restore from checkpoint
-        void* snapshot = m_state->getLastSnapshot();
+        nlohmann::json snapshot = m_state->getLastSnapshot();
         if (!snapshot.empty()) {
             m_state->restoreFromSnapshot(snapshot);
             m_totalRecoveries++;
@@ -472,6 +527,7 @@ bool AgenticErrorHandler::executeBacktrackStrategy(const ErrorContext& context)
 
 bool AgenticErrorHandler::executeFallbackStrategy(const ErrorContext& context)
 {
+    fprintf(stderr, "[AgenticErrorHandler] Executing fallback for %s\n", context.errorId.c_str());
 
     // Use alternative code path
     m_totalRecoveries++;
@@ -480,15 +536,17 @@ bool AgenticErrorHandler::executeFallbackStrategy(const ErrorContext& context)
 
 void AgenticErrorHandler::executeEscalateStrategy(const ErrorContext& context)
 {
-                << "- Type:" << std::string::number(static_cast<int>(context.type))
-                << "- Message:" << context.message;
+    fprintf(stderr, "[AgenticErrorHandler] Escalating error %s - Type: %d - Message: %s\n",
+            context.errorId.c_str(),
+            static_cast<int>(context.type),
+            context.message.c_str());
 
     // Would notify higher-level handlers or administrators
 }
 
 std::string AgenticErrorHandler::analyzeError(const std::exception& e)
 {
-    return std::string::fromStdString(e.what());
+    return std::string(e.what());
 }
 
 std::string AgenticErrorHandler::extractStackTrace()
@@ -502,7 +560,7 @@ void AgenticErrorHandler::recordMetrics(const ErrorContext& context)
     if (m_observability) {
         m_observability->incrementCounter("errors_total");
         m_observability->incrementCounter(
-            "errors_by_type_" + std::string::number(static_cast<int>(context.type))
+            "errors_by_type_" + std::to_string(static_cast<int>(context.type))
         );
     }
 }
@@ -520,5 +578,3 @@ ErrorSafeOperation::ErrorSafeOperation(
 ErrorSafeOperation::~ErrorSafeOperation()
 {
 }
-
-

@@ -4,14 +4,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
-; ─── PUBLIC Exports ──────────────────────────────────────────────────────────
-PUBLIC ServiceMain
-PUBLIC Handler
-
 includelib kernel32.lib
 includelib advapi32.lib
 

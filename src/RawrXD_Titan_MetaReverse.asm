@@ -5,10 +5,6 @@
 
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; No includelib statements - we are linking against NOTHING
 ; No EXTERNDEF for WinAPI - we resolve them at runtime via PEB walking
 
@@ -425,7 +421,6 @@ PEBMain PROC
 @@die:
     int 3                           ; Break into debugger on fail
     jmp @@die
-    ret
 PEBMain ENDP
 
 END

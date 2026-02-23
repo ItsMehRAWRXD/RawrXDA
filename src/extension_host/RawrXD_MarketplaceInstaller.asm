@@ -33,54 +33,6 @@ includelib user32.lib
 includelib ntdll.lib
 includelib ole32.lib
 includelib zlib.lib
-includelib msvcrt.lib
-
-;==============================================================================
-; EXTERNAL REFERENCES - C Runtime
-;==============================================================================
-EXTERN strcmp:PROC
-EXTERN strrchr:PROC
-EXTERN memcpy:PROC
-EXTERN sprintf:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - Cross-Module
-;==============================================================================
-EXTERN Path_Join:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - JSON Support
-;==============================================================================
-EXTERN Json_ParseString:PROC
-EXTERN Json_GetStringField:PROC
-EXTERN Json_GetObjectField:PROC
-EXTERN Json_GetArrayField:PROC
-EXTERN Json_GetObjectKeys:PROC
-EXTERN Json_HasField:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - Package/Dependencies
-;==============================================================================
-EXTERN DependencyGraph_Create:PROC
-EXTERN DependencyGraph_AddNode:PROC
-EXTERN SemVer_ParseRange:PROC
-EXTERN SemVer_Parse:PROC
-EXTERN SemVer_Satisfies:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - Registry
-;==============================================================================
-EXTERN Registry_KeyExists:PROC
-EXTERN Registry_CreateKey:PROC
-EXTERN Registry_SetStringValue:PROC
-EXTERN Registry_SetDwordValue:PROC
-EXTERN Registry_SetQwordValue:PROC
-
-;==============================================================================
-; EXTERNAL REFERENCES - Filesystem
-;==============================================================================
-EXTERN CreateDirectoryRecursive:PROC
-EXTERN Marketplace_DownloadExtension:PROC
 
 ;==============================================================================
 ; CONSTANTS

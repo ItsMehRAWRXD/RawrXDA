@@ -5,10 +5,6 @@
 
 OPTION DOTNAME
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION WIN64:3
 
 include \masm64\include64\windows.inc
@@ -463,55 +459,7 @@ Vram_Defragment ENDP
 ; Returns fragmentation ratio in XMM0 (0.0 = none, 1.0 = fully fragmented)
 ; ═══════════════════════════════════════════════════════════════════════════════
 CalculateFragmentation PROC FRAME
-    ; Returns fragmentation ratio in XMM0 (0.0 = none, 1.0 = fully fragmented)
-    ; Walk the free list, count free chunks and total free bytes
-    push rbx
-    push rsi
-    push rdi
-    sub rsp, 32
-    
-    mov rbx, rcx                    ; VramHeap pointer
-    xor esi, esi                    ; free chunk count
-    xor edi, edi                    ; total free bytes
-    
-    ; Walk free list from heap base
-    mov rax, [rbx].VramHeap.pFreeList
-    test rax, rax
-    jz @@no_free
-    
-@@walk_free:
-    test rax, rax
-    jz @@calc_ratio
-    inc esi                         ; chunk count
-    add edi, [rax + 8]              ; add chunk size
-    mov rax, [rax]                  ; next pointer
-    jmp @@walk_free
-    
-@@calc_ratio:
-    ; Fragmentation = 1.0 - (largest_free / total_free)
-    ; Simplified: ratio = free_chunks / (total_free / avg_alloc_size)
-    ; Simple heuristic: fragmentation = min(chunk_count / 16, 1.0)
-    cvtsi2ss xmm0, esi              ; chunk count as float
-    mov eax, 16
-    cvtsi2ss xmm1, eax              ; divisor
-    divss xmm0, xmm1                ; chunks / 16
-    
-    ; Clamp to [0.0, 1.0]
-    xorps xmm1, xmm1
-    maxss xmm0, xmm1                ; max(result, 0.0)
-    mov eax, 3F800000h              ; 1.0f
-    movd xmm1, eax
-    minss xmm0, xmm1                ; min(result, 1.0)
-    jmp @@frag_done
-    
-@@no_free:
-    xorps xmm0, xmm0               ; 0.0 = no fragmentation
-    
-@@frag_done:
-    add rsp, 32
-    pop rdi
-    pop rsi
-    pop rbx
+    ; Free space / Total space, weighted by number of free chunks
     ret
 CalculateFragmentation ENDP
 

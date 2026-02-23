@@ -2,10 +2,18 @@
 
 #include "agentic_agent_coordinator.h"
 #include "production_config_manager.h"
+#include "win32app/IDELogger.h"
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 #include <array>
-
-using RawrXD::Registry::Logger;
+#include <cstdlib>
+#include <cstdio>
+#include <string>
+#include <unordered_map>
 
 namespace RawrXD::IDE {
 
@@ -14,8 +22,9 @@ constexpr int kHeartbeatIntervalMs = 15000;
 }
 
 AgenticController::AgenticController()
-     {
-    // Object::  // Signal connection removed\n}
+{
+    // No signal connections needed — callbacks used instead
+}
 
 AgenticController::~AgenticController() = default;
 
@@ -24,16 +33,22 @@ AgenticResult AgenticController::bootstrap() {
 
     auto coordinationResult = ensureCoordinator();
     if (!coordinationResult.success) {
-        controllerError(std::string::fromStdString(coordinationResult.message));
+        if (onControllerError) {
+            onControllerError(coordinationResult.message);
+        }
         return coordinationResult;
     }
 
     const std::string snapshotHint = resolveSnapshotPreference();
-    layoutHydrationRequested(snapshotHint);
-    controllerReady();
+    if (onLayoutHydrationRequested) {
+        onLayoutHydrationRequested(snapshotHint);
+    }
+    if (onControllerReady) {
+        onControllerReady();
+    }
 
     m_heartbeatTimer.start(kHeartbeatIntervalMs);
-    Logger::instance().info("AgenticController bootstrap completed in {} ms", m_bootTimer.elapsed());
+    LOG_INFO(std::string("AgenticController bootstrap completed in " + std::to_string(m_bootTimer.elapsed()) + " ms").c_str());
     return AgenticResult::Ok("Agentic system bootstrapped");
 }
 
@@ -43,7 +58,7 @@ AgenticResult AgenticController::ensureCoordinator() {
     }
 
     try {
-        m_coordinator = std::make_unique<AgenticAgentCoordinator>(this);
+        m_coordinator = std::make_unique<AgenticAgentCoordinator>();
         const std::array<AgenticAgentCoordinator::AgentRole, 3> seedRoles = {
             AgenticAgentCoordinator::AgentRole::Analyzer,
             AgenticAgentCoordinator::AgentRole::Planner,
@@ -52,7 +67,7 @@ AgenticResult AgenticController::ensureCoordinator() {
 
         for (const auto role : seedRoles) {
             const std::string agentId = m_coordinator->createAgent(role);
-            Logger::instance().debug("Primed agent {} for role {}", agentId, static_cast<int>(role));
+            LOG_DEBUG(std::string("Primed agent " + agentId + " for role " + std::to_string(static_cast<int>(role))).c_str());
         }
 
         return AgenticResult::Ok();
@@ -69,40 +84,63 @@ std::string AgenticController::resolveSnapshotPreference() const {
     auto& config = RawrXD::ProductionConfigManager::instance();
     config.loadConfig();
 
-    const std::any configured = config.value("registry_snapshot_preference", std::stringLiteral("latest"));
-    if (configured.canConvert<std::string>()) {
-        const std::string hint = configured.toString().trimmed();
-        if (!hint.empty()) {
-            return hint;
-        }
+    const std::string configured = config.value("registry_snapshot_preference", nlohmann::json("latest")).get<std::string>();
+    if (!configured.empty()) {
+        return configured;
     }
 
-    const std::string envHint = qEnvironmentVariable("RAWRXD_REGISTRY_SNAPSHOT");
-    if (!envHint.empty()) {
-        return envHint;
+    const char* envHint = std::getenv("RAWRXD_REGISTRY_SNAPSHOT");
+    if (envHint && envHint[0] != '\0') {
+        return std::string(envHint);
     }
 
-    return std::stringLiteral("latest");
+    return std::string("latest");
 }
 
 void AgenticController::publishHeartbeat() {
-    void* payload;
-    payload.insert(std::stringLiteral("timestamp"), // DateTime::currentDateTimeUtc().toString(ISODateWithMs));
-    payload.insert(std::stringLiteral("uptime_ms"), static_cast<int64_t>(m_bootTimer.isValid() ? m_bootTimer.elapsed() : 0));
+    // Build a simple JSON payload manually
+    std::string payload = "{";
 
-    if (m_coordinator) {
-        payload.insert(std::stringLiteral("coordination"), m_coordinator->getCoordinationMetrics());
+    // ISO8601 timestamp
+    {
+        SYSTEMTIME st;
+        GetSystemTime(&st);
+        char tsBuf[64];
+        snprintf(tsBuf, sizeof(tsBuf),
+                 "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+                 st.wYear, st.wMonth, st.wDay,
+                 st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+        payload += "\"timestamp\":\"";
+        payload += tsBuf;
+        payload += "\",";
     }
 
-    const std::string serialized = std::string::fromUtf8(void*(payload).toJson(void*::Compact));
-    telemetryHeartbeat(serialized);
+    payload += "\"uptime_ms\":";
+    payload += std::to_string(m_bootTimer.isValid() ? m_bootTimer.elapsed() : 0);
+
+    if (m_coordinator) {
+        nlohmann::json statuses = m_coordinator->getAllAgentStatuses();
+        payload += ",\"coordination\":" + statuses.dump();
+    }
+
+    payload += "}";
+
+    if (onTelemetryHeartbeat) {
+        onTelemetryHeartbeat(payload);
+    }
+}
+
+void AgenticController::tick() {
+    if (m_heartbeatTimer.shouldFire()) {
+        publishHeartbeat();
+    }
 }
 
 void AgenticController::handleLayoutRestored(const std::string& snapshotId) {
-    Logger::instance().info("Agentic controller acknowledged snapshot {}", snapshotId);
+    LOG_INFO(std::string("Agentic controller acknowledged snapshot " + snapshotId).c_str());
 
     if (m_coordinator) {
-        m_coordinator->saveCheckpoint();
+        m_coordinator->synchronizeState();
     }
 }
 
@@ -111,10 +149,16 @@ void AgenticController::handleWindowActivated() {
         return;
     }
 
-    const auto metrics = m_coordinator->getCoordinationMetrics();
-    Logger::instance().debug("Window activation routed to agentic coordinator: agents={} tasks={}",
-                             metrics.value(std::stringLiteral("total_agents")),
-                             metrics.value(std::stringLiteral("total_tasks_assigned")));
+    const nlohmann::json metrics = m_coordinator->getAllAgentStatuses();
+    auto findOr = [&](const std::string& key, const std::string& def) -> std::string {
+        if (metrics.contains(key)) {
+            const auto& v = metrics[key];
+            if (v.is_string()) return v.get<std::string>();
+            return v.dump();
+        }
+        return def;
+    };
+    LOG_DEBUG(std::string("Window activation routed to agentic coordinator: agents=" + findOr("total_agents", "0") + " tasks=" + findOr("total_tasks_assigned", "0")).c_str());
 }
 
 } // namespace RawrXD::IDE

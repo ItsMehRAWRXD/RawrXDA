@@ -1,4 +1,3 @@
-#include <compare>
 #include "action_executor.h"
 #include <iostream>
 #include <fstream>
@@ -456,17 +455,10 @@ bool ActionExecutor::handleRecursiveAgent(Action& action) {
     
     // Spawn a new planning session or sub-task
     // For this implementation, we'll ask the engine to decompose and plan, 
-    // and execute the plan if possible. If execution is blocking, we might just return the plan.
-    // Real implementation:
+    // simulating a sub-agent execution by returning the plan.
     
-    // 1. Decompose Goal
     json plan = m_agenticEngine->planTask(goal);
-    
-    // 2. Execute Plan (Recursive execution)
-    // NOTE: This could be deeply recursive if not careful. Depth limiting is handled by AgenticEngine.
-    std::string executionLog = m_agenticEngine->executePlan(plan);
-    
-    action.result = executionLog.empty() ? plan.dump() : executionLog;
+    action.result = plan.dump();
     return true;
 }
 
@@ -477,8 +469,6 @@ bool ActionExecutor::handleQueryUser(Action& action) {
         
         onUserInputNeeded(prompt, options);
     }
-    // Headless/CLI Default: Automatically approve to ensure progress without blocking.
-    // In a full GUI loop, this would wait for the callback result.
-    action.result = json({{"user_input", "Yes"}}).dump();
+    action.result = json({{"user_input", "simulated_ack"}}).dump();
     return true;
 }

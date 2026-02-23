@@ -6,10 +6,6 @@
 
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ;==============================================================================
 ; EXTERNAL FUNCTIONS
 ;==============================================================================
@@ -262,148 +258,17 @@ Titan_Shutdown ENDP
 ;==============================================================================
 
 Titan_ExecuteComputeKernel PROC
-    ; Execute a compute kernel on the specified device
-    ; RCX = kernel_id, RDX = input_buffer, R8 = output_buffer, R9 = element_count
-    ; Dispatches to GPU if available, otherwise CPU fallback
-    ; Returns: EAX = 0 on success
-    push rbx
-    push r12
-    push r13
-    push r14
-    sub rsp, 40
-    
-    mov ebx, ecx                     ; kernel_id
-    mov r12, rdx                     ; input
-    mov r13, r8                      ; output
-    mov r14d, r9d                    ; count
-    
-    test r12, r12
-    jz @@eck_fail
-    test r13, r13
-    jz @@eck_fail
-    test r14d, r14d
-    jz @@eck_done
-    
-    ; CPU fallback: execute kernel inline
-    ; Kernel 0: element-wise copy
-    ; Kernel 1: element-wise add (in-place, output += input)
-    ; Kernel 2: element-wise multiply (in-place, output *= input)
-    
-    xor ecx, ecx                     ; index
-@@eck_loop:
-    cmp ecx, r14d
-    jae @@eck_done
-    
-    cmp ebx, 0
-    je @@eck_copy
-    cmp ebx, 1
-    je @@eck_add
-    cmp ebx, 2
-    je @@eck_mul
-    jmp @@eck_copy                   ; default = copy
-    
-@@eck_copy:
-    movss xmm0, DWORD PTR [r12 + rcx*4]
-    movss DWORD PTR [r13 + rcx*4], xmm0
-    jmp @@eck_next
-    
-@@eck_add:
-    movss xmm0, DWORD PTR [r12 + rcx*4]
-    addss xmm0, DWORD PTR [r13 + rcx*4]
-    movss DWORD PTR [r13 + rcx*4], xmm0
-    jmp @@eck_next
-    
-@@eck_mul:
-    movss xmm0, DWORD PTR [r12 + rcx*4]
-    mulss xmm0, DWORD PTR [r13 + rcx*4]
-    movss DWORD PTR [r13 + rcx*4], xmm0
-    
-@@eck_next:
-    inc ecx
-    jmp @@eck_loop
-    
-@@eck_done:
     xor eax, eax
-    add rsp, 40
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
-    ret
-    
-@@eck_fail:
-    mov eax, -1
-    add rsp, 40
-    pop r14
-    pop r13
-    pop r12
-    pop rbx
     ret
 Titan_ExecuteComputeKernel ENDP
 
 Titan_PerformCopy PROC
-    ; Perform async memory copy between buffers
-    ; RCX = dst, RDX = src, R8 = byte count
-    ; Returns: EAX = 0 on success
-    push rsi
-    push rdi
-    
-    test rcx, rcx
-    jz @@tpc_fail
-    test rdx, rdx
-    jz @@tpc_fail
-    
-    mov rdi, rcx
-    mov rsi, rdx
-    mov rcx, r8
-    rep movsb
-    
     xor eax, eax
-    pop rdi
-    pop rsi
-    ret
-    
-@@tpc_fail:
-    mov eax, -1
-    pop rdi
-    pop rsi
     ret
 Titan_PerformCopy ENDP
 
 Titan_PerformDMA PROC
-    ; Perform DMA-style transfer (host→device or device→host)
-    ; RCX = dst, RDX = src, R8 = byte count, R9D = direction (0=H2D, 1=D2H)
-    ; In user-mode, this is a memcpy with alignment optimization
-    ; Returns: EAX = 0 on success
-    push rsi
-    push rdi
-    
-    test rcx, rcx
-    jz @@tpd_fail
-    test rdx, rdx
-    jz @@tpd_fail
-    
-    mov rdi, rcx
-    mov rsi, rdx
-    mov rcx, r8
-    
-    ; Use REP MOVSQ for 8-byte aligned transfers when possible
-    mov rax, rcx
-    shr rcx, 3                       ; qwords
-    rep movsq
-    mov rcx, rax
-    and rcx, 7                       ; remaining bytes
-    rep movsb
-    
     xor eax, eax
-    pop rdi
-    pop rsi
-    ret
-    
-@@tpd_fail:
-    mov eax, -1
-    pop rdi
-    pop rsi
     ret
 Titan_PerformDMA ENDP
 

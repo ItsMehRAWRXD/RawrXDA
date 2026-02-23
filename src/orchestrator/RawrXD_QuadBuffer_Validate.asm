@@ -7,10 +7,6 @@
 ; =============================================================================
 
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION WIN64:3
 
 INCLUDE \masm64\include64\masm64rt.inc

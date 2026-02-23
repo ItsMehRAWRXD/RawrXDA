@@ -20,10 +20,6 @@
 OPTION WIN64:3
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 INCLUDE \masm64\include64\win64.inc
 INCLUDE \masm64\include64\kernel32.inc
 INCLUDE \masm64\include64\user32.inc
@@ -941,7 +937,7 @@ main PROC FRAME
 @@exit:
     xor ecx, ecx
     call ExitProcess
-    ret
+
 main ENDP
 
 ; Additional strings
@@ -966,152 +962,12 @@ szReconEntry            BYTE    13, 10, "/* Entry Point Stub */", 13, 10
                         BYTE    "    return 0;", 13, 10
                         BYTE    "}", 13, 10, 0
 
-szReconTypes            BYTE    13, 10, "/* Reconstructed Types */", 13, 10
-                        BYTE    "// Auto-generated type reconstructions", 13, 10, 0
-
-szReconFunctions        BYTE    13, 10, "/* Reconstructed Functions */", 13, 10
-                        BYTE    "// Auto-generated function reconstructions", 13, 10, 0
-
-; Type and function reconstruction from PE analysis
+; Function placeholders
 WriteReconstructedTypes PROC FRAME
-    ; Reconstruct struct/enum/typedef from PE debug info and RTTI
-    ; Walks .rdata for RTTI type descriptors, formats as C typedefs
-    ; Writes to hSource file handle
-    push rbx
-    .pushreg rbx
-    push r12
-    .pushreg r12
-    sub rsp, 296
-    .allocstack 296
-    .endprolog
-    
-    ; Write section header
-    mov rcx, hSource
-    mov rdx, OFFSET szReconTypes
-    call WriteToFile
-    
-    ; Scan .rdata section for RTTI Complete Object Locator signatures
-    ; COL signature: offset 0 = 1 (64-bit), followed by type descriptor RVA
-    mov rbx, [pMappedBase]
-    test rbx, rbx
-    jz @@wrt_done
-    
-    ; Get .rdata section bounds from PE header
-    movsxd rax, DWORD PTR [rbx + 3Ch]   ; e_lfanew
-    add rax, rbx
-    movzx ecx, WORD PTR [rax + 6]       ; NumberOfSections
-    movzx edx, WORD PTR [rax + 14h]     ; SizeOfOptionalHeader
-    lea r12, [rax + 18h + rdx]          ; first section header
-    
-    ; Search for .rdata section
-@@wrt_sec_scan:
-    test ecx, ecx
-    jz @@wrt_done
-    ; Section name at offset 0 (8 bytes)
-    cmp DWORD PTR [r12], 6164722Eh       ; ".rda" 
-    jne @@wrt_next_sec
-    
-    ; Found .rdata - get VirtualAddress and VirtualSize
-    mov eax, DWORD PTR [r12 + 12]       ; VirtualAddress
-    mov edx, DWORD PTR [r12 + 8]        ; VirtualSize
-    
-    ; Write typedef for each RTTI descriptor found
-    ; (simplified: write generic struct placeholder per RTTI entry)
-    lea rcx, [rsp]
-    lea rdx, [sz_typedef_prefix]
-    call lstrcpyA
-    mov rcx, hSource
-    lea rdx, [rsp]
-    call WriteToFile
-    jmp @@wrt_done
-    
-@@wrt_next_sec:
-    add r12, 40
-    dec ecx
-    jmp @@wrt_sec_scan
-    
-@@wrt_done:
-    add rsp, 296
-    pop r12
-    pop rbx
     ret
 WriteReconstructedTypes ENDP
 
 WriteReconstructedFunctions PROC FRAME
-    ; Reconstruct function signatures from PE export/debug information
-    ; Uses undecorated names, PDATA (.pdata) unwind info for parameter counts
-    ; Writes C function prototypes to hSource
-    push rbx
-    .pushreg rbx
-    push r12
-    .pushreg r12
-    push r13
-    .pushreg r13
-    sub rsp, 296
-    .allocstack 296
-    .endprolog
-    
-    ; Write section header
-    mov rcx, hSource
-    mov rdx, OFFSET szReconFunctions
-    call WriteToFile
-    
-    ; Walk .pdata (exception directory) for function boundaries
-    mov rbx, [pMappedBase]
-    test rbx, rbx
-    jz @@wrf_done
-    
-    movsxd rax, DWORD PTR [rbx + 3Ch]
-    add rax, rbx
-    
-    ; Data Directory[3] = Exception Table (.pdata)
-    mov ecx, DWORD PTR [rax + 88h + 24]  ; RVA (index 3 * 8)
-    mov edx, DWORD PTR [rax + 88h + 28]  ; Size
-    test ecx, ecx
-    jz @@wrf_done
-    test edx, edx
-    jz @@wrf_done
-    
-    add rcx, rbx                        ; pdata base
-    mov r12, rcx
-    ; Each RUNTIME_FUNCTION = 12 bytes (BeginAddress, EndAddress, UnwindData)
-    mov eax, edx
-    xor edx, edx
-    mov ecx, 12
-    div ecx
-    mov r13d, eax                       ; function count
-    
-    ; Write comment with function count
-    lea rcx, [rsp]
-    lea rdx, [sz_func_count_fmt]
-    call lstrcpyA
-    mov rcx, hSource
-    lea rdx, [rsp]
-    call WriteToFile
-    
-    ; For each RUNTIME_FUNCTION, write a prototype
-    ; void sub_XXXXXXXX(void); format
-    xor ebx, ebx
-@@wrf_func_loop:
-    cmp ebx, r13d
-    jae @@wrf_done
-    cmp ebx, 100                        ; limit output to first 100
-    jae @@wrf_done
-    
-    mov eax, DWORD PTR [r12 + rbx*4*3]  ; BeginAddress RVA
-    
-    ; Format: void sub_XXXXXXXX(void);
-    lea rcx, [rsp]
-    ; (simplified: write generic prototypes)
-    
-    inc ebx
-    jmp @@wrf_func_loop
-    
-@@wrf_done:
-    add rsp, 296
-    pop r13
-    pop r12
-    pop rbx
     ret
 WriteReconstructedFunctions ENDP
 

@@ -1,10 +1,18 @@
 #include "smart_rewrite_engine_integration.h"
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <regex>
+
+// Internal undo stack (module-level, not exposed in header)
+static std::vector<std::pair<std::string/*filePath*/, std::string/*previousContent*/>> s_undoStack;
+static const size_t MAX_UNDO_DEPTH = 50;
 
 SmartRewriteEngineIntegration::SmartRewriteEngineIntegration(
     std::shared_ptr<Logger> logger,
     std::shared_ptr<Metrics> metrics)
     : m_logger(logger), m_metrics(metrics) {
-
+    m_logger->info("SmartRewriteEngine initialized");
 }
 
 std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::getRewriteSuggestions(
@@ -15,22 +23,77 @@ std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::getRewriteSuggesti
     std::vector<RewriteSuggestion> suggestions;
 
     try {
+        m_logger->debug("Getting rewrite suggestions for {} chars", code.length());
 
-
-        // Placeholder: would analyze code and generate suggestions
-        RewriteSuggestion s1;
-        s1.originalCode = code;
-        s1.suggestedCode = "// Optimized code";
-        s1.explanation = "This can be optimized";
-        s1.type = type;
-        s1.confidence = 0.85;
-        s1.isSafe = true;
-        suggestions.push_back(s1);
+        // Analyze code based on rewrite type
+        if (type == RewriteType::REFACTOR) {
+            // Detect long functions (> 50 lines)
+            int lineCount = 0;
+            for (char c : code) if (c == '\n') lineCount++;
+            if (lineCount > 50) {
+                suggestions.push_back(createSuggestion(code, code,
+                    "Function is " + std::to_string(lineCount) + " lines. Consider extracting sub-functions.",
+                    type));
+            }
+            
+            // Detect deep nesting (> 4 levels)
+            int maxDepth = 0, depth = 0;
+            for (char c : code) {
+                if (c == '{') { depth++; if (depth > maxDepth) maxDepth = depth; }
+                if (c == '}') depth--;
+            }
+            if (maxDepth > 4) {
+                suggestions.push_back(createSuggestion(code, code,
+                    "Deep nesting detected (" + std::to_string(maxDepth) + " levels). Use early returns or extract helpers.",
+                    type));
+            }
+        }
+        else if (type == RewriteType::OPTIMIZE) {
+            // Detect string concatenation in loops
+            if (code.find("for") != std::string::npos && code.find("+=") != std::string::npos) {
+                std::string optimized = code;
+                suggestions.push_back(createSuggestion(code, optimized,
+                    "String concatenation in loop detected. Consider using std::stringstream or reserve().",
+                    type));
+            }
+            
+            // Detect pass by value that could be const ref
+            std::regex paramPattern(R"((std::string|std::vector|std::map)\s+\w+[,)])");
+            if (std::regex_search(code, paramPattern)) {
+                suggestions.push_back(createSuggestion(code, code,
+                    "Large types passed by value. Use const reference (const T&) for better performance.",
+                    type));
+            }
+        }
+        else if (type == RewriteType::BUG_FIX) {
+            // Check for common bug patterns
+            if (code.find("if (a = ") != std::string::npos || code.find("if(a=") != std::string::npos) {
+                suggestions.push_back(createSuggestion(code, code,
+                    "Assignment in conditional (= instead of ==). Likely a bug.",
+                    type));
+            }
+            if (code.find("delete ") != std::string::npos && code.find("= nullptr") == std::string::npos) {
+                suggestions.push_back(createSuggestion(code, code,
+                    "Pointer not set to nullptr after delete. Risk of use-after-free.",
+                    type));
+            }
+        }
+        else if (type == RewriteType::TEST) {
+            // Generate test skeleton
+            std::string prompt = buildRewritePrompt(code, type, context);
+            std::string testSkeleton = "// Auto-generated test\n";
+            testSkeleton += "TEST(AutoGen, BasicFunctionality) {\n";
+            testSkeleton += "    // TODO: Add assertions\n";
+            testSkeleton += "    EXPECT_TRUE(true);\n";
+            testSkeleton += "}\n";
+            suggestions.push_back(createSuggestion(code, testSkeleton,
+                "Generated test skeleton from code analysis", type));
+        }
 
         m_metrics->recordHistogram("rewrite_suggestions_generated", suggestions.size());
 
     } catch (const std::exception& e) {
-
+        m_logger->error("Error generating rewrite suggestions: {}", e.what());
         m_metrics->incrementCounter("rewrite_errors");
     }
 
@@ -41,6 +104,7 @@ std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::refactorFunction(
     const std::string& functionCode,
     const std::string& goal) {
 
+    m_logger->info("Refactoring function");
     return getRewriteSuggestions(functionCode, RewriteType::REFACTOR, goal);
 }
 
@@ -48,6 +112,7 @@ std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::optimizePerformanc
     const std::string& code,
     const std::string& performanceGoal) {
 
+    m_logger->info("Optimizing performance");
     return getRewriteSuggestions(code, RewriteType::OPTIMIZE, performanceGoal);
 }
 
@@ -55,6 +120,7 @@ std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::generateTests(
     const std::string& functionCode,
     const std::string& testFramework) {
 
+    m_logger->info("Generating tests with framework: {}", testFramework);
     return getRewriteSuggestions(functionCode, RewriteType::TEST, testFramework);
 }
 
@@ -62,32 +128,134 @@ std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::fixBugs(
     const std::string& code,
     const std::string& bugDescription) {
 
+    m_logger->info("Finding and fixing bugs");
     return getRewriteSuggestions(code, RewriteType::BUG_FIX, bugDescription);
 }
 
 bool SmartRewriteEngineIntegration::applySuggestion(const RewriteSuggestion& suggestion) {
     try {
-
+        m_logger->info("Applying rewrite suggestion");
         m_metrics->incrementCounter("rewrite_applied");
-        return true;
+        
+        if (suggestion.affectedFiles.empty()) {
+            m_logger->warn("No affected files specified in suggestion - nothing to apply");
+            return false;
+        }
+        
+        if (!suggestion.isSafe) {
+            m_logger->warn("Suggestion flagged as unsafe - refusing to apply without override");
+            return false;
+        }
+        
+        bool anyApplied = false;
+        for (const auto& filePath : suggestion.affectedFiles) {
+            // Read current file content
+            std::ifstream inFile(filePath);
+            if (!inFile.is_open()) {
+                m_logger->error("Cannot open file for reading: {}", filePath);
+                continue;
+            }
+            std::string content((std::istreambuf_iterator<char>(inFile)),
+                                std::istreambuf_iterator<char>());
+            inFile.close();
+            
+            // Check if original code exists in this file
+            size_t pos = content.find(suggestion.originalCode);
+            if (pos == std::string::npos) {
+                m_logger->debug("Original code not found in {}", filePath);
+                continue;
+            }
+            
+            // Save to undo stack before modification
+            if (s_undoStack.size() >= MAX_UNDO_DEPTH) {
+                s_undoStack.erase(s_undoStack.begin()); // Remove oldest
+            }
+            s_undoStack.push_back({filePath, content});
+            
+            // Replace original with suggested code
+            std::string newContent = content;
+            newContent.replace(pos, suggestion.originalCode.length(), suggestion.suggestedCode);
+            
+            // Write back
+            std::ofstream outFile(filePath, std::ios::trunc);
+            if (!outFile.is_open()) {
+                m_logger->error("Cannot open file for writing: {}", filePath);
+                s_undoStack.pop_back(); // Rollback undo entry
+                continue;
+            }
+            outFile << newContent;
+            outFile.close();
+            
+            m_logger->info("Applied suggestion to {}", filePath);
+            anyApplied = true;
+        }
+        
+        if (anyApplied) {
+            m_metrics->incrementCounter("rewrite_apply_success");
+        }
+        return anyApplied;
+        
     } catch (const std::exception& e) {
-
+        m_logger->error("Error applying suggestion: {}", e.what());
+        m_metrics->incrementCounter("rewrite_apply_error");
         return false;
     }
 }
 
 bool SmartRewriteEngineIntegration::previewSuggestion(const RewriteSuggestion& suggestion) {
     try {
-
+        m_logger->info("Previewing rewrite suggestion");
+        
+        // Generate line-level diff and format it for display
+        auto hunks = generateDiff(suggestion.originalCode, suggestion.suggestedCode);
+        
+        if (hunks.empty()) {
+            m_logger->info("No differences found between original and suggested code");
+            return true;
+        }
+        
+        std::string preview = formatDiff(hunks);
+        
+        m_logger->info("=== REWRITE PREVIEW ===");
+        m_logger->info("Type: {} | Confidence: {:.2f} | Safe: {}",
+            static_cast<int>(suggestion.type),
+            suggestion.confidence,
+            suggestion.isSafe ? "YES" : "NO");
+        m_logger->info("Explanation: {}", suggestion.explanation);
+        m_logger->info("Diff:\n{}", preview);
+        m_logger->info("=== END PREVIEW ===");
+        
+        m_metrics->incrementCounter("rewrite_previewed");
         return true;
+        
     } catch (const std::exception& e) {
-
+        m_logger->error("Error previewing suggestion: {}", e.what());
         return false;
     }
 }
 
 void SmartRewriteEngineIntegration::undoLastChange() {
-
+    m_logger->info("Undoing last change");
+    
+    if (s_undoStack.empty()) {
+        m_logger->warn("No changes to undo - undo stack is empty");
+        return;
+    }
+    
+    auto [filePath, previousContent] = s_undoStack.back();
+    s_undoStack.pop_back();
+    
+    std::ofstream outFile(filePath, std::ios::trunc);
+    if (!outFile.is_open()) {
+        m_logger->error("Cannot open file for undo: {}", filePath);
+        return;
+    }
+    
+    outFile << previousContent;
+    outFile.close();
+    
+    m_logger->info("Reverted {} to previous state ({} bytes)", filePath, previousContent.size());
+    m_metrics->incrementCounter("rewrite_undo");
 }
 
 std::vector<DiffHunk> SmartRewriteEngineIntegration::generateDiff(
@@ -95,23 +263,169 @@ std::vector<DiffHunk> SmartRewriteEngineIntegration::generateDiff(
     const std::string& modified) {
 
     std::vector<DiffHunk> hunks;
-
-    DiffHunk h1;
-    h1.startLine = 1;
-    h1.endLine = 1;
-    h1.removedLines.push_back(original);
-    h1.addedLines.push_back(modified);
-    hunks.push_back(h1);
-
+    
+    if (original == modified) return hunks;
+    
+    // Split into lines
+    auto splitLines = [](const std::string& text) -> std::vector<std::string> {
+        std::vector<std::string> lines;
+        std::istringstream iss(text);
+        std::string line;
+        while (std::getline(iss, line)) {
+            lines.push_back(line);
+        }
+        return lines;
+    };
+    
+    std::vector<std::string> origLines = splitLines(original);
+    std::vector<std::string> modLines = splitLines(modified);
+    
+    size_t n = origLines.size();
+    size_t m = modLines.size();
+    
+    // LCS-based diff: build LCS table
+    std::vector<std::vector<int>> dp(n + 1, std::vector<int>(m + 1, 0));
+    for (size_t i = 1; i <= n; ++i) {
+        for (size_t j = 1; j <= m; ++j) {
+            if (origLines[i - 1] == modLines[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = std::max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    
+    // Backtrack to find diff operations
+    enum class DiffOp { EQUAL, REMOVE, ADD };
+    std::vector<std::pair<DiffOp, std::string>> ops;
+    
+    size_t i = n, j = m;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && origLines[i - 1] == modLines[j - 1]) {
+            ops.push_back({DiffOp::EQUAL, origLines[i - 1]});
+            --i; --j;
+        } else if (j > 0 && (i == 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            ops.push_back({DiffOp::ADD, modLines[j - 1]});
+            --j;
+        } else {
+            ops.push_back({DiffOp::REMOVE, origLines[i - 1]});
+            --i;
+        }
+    }
+    std::reverse(ops.begin(), ops.end());
+    
+    // Group consecutive changes into hunks with 3 lines of context
+    const int CONTEXT_LINES = 3;
+    DiffHunk currentHunk;
+    bool inHunk = false;
+    int origLineNum = 0;
+    int modLineNum = 0;
+    int contextAfter = 0;
+    
+    for (size_t idx = 0; idx < ops.size(); ++idx) {
+        const auto& [op, line] = ops[idx];
+        
+        if (op == DiffOp::EQUAL) {
+            origLineNum++;
+            modLineNum++;
+            
+            if (inHunk) {
+                contextAfter++;
+                // Add context line to current hunk
+                currentHunk.addedLines.push_back(" " + line);
+                currentHunk.removedLines.push_back(" " + line);
+                
+                if (contextAfter >= CONTEXT_LINES) {
+                    // Check if there's another change coming within context range
+                    bool moreChanges = false;
+                    for (size_t k = idx + 1; k < ops.size() && k <= idx + CONTEXT_LINES; ++k) {
+                        if (ops[k].first != DiffOp::EQUAL) {
+                            moreChanges = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!moreChanges) {
+                        // Close hunk
+                        currentHunk.endLine = origLineNum;
+                        hunks.push_back(currentHunk);
+                        inHunk = false;
+                    }
+                }
+            }
+        } else {
+            contextAfter = 0;
+            
+            if (!inHunk) {
+                // Start new hunk with leading context
+                currentHunk = DiffHunk();
+                currentHunk.startLine = std::max(1, origLineNum - CONTEXT_LINES + 1);
+                currentHunk.removedLines.clear();
+                currentHunk.addedLines.clear();
+                
+                // Add leading context lines
+                int contextStart = std::max(0, origLineNum - CONTEXT_LINES);
+                for (int c = contextStart; c < origLineNum; ++c) {
+                    if (c < static_cast<int>(origLines.size())) {
+                        currentHunk.context += " " + origLines[c] + "\n";
+                    }
+                }
+                inHunk = true;
+            }
+            
+            if (op == DiffOp::REMOVE) {
+                currentHunk.removedLines.push_back(line);
+                origLineNum++;
+            } else { // ADD
+                currentHunk.addedLines.push_back(line);
+                modLineNum++;
+            }
+        }
+    }
+    
+    // Close any open hunk
+    if (inHunk) {
+        currentHunk.endLine = origLineNum;
+        hunks.push_back(currentHunk);
+    }
+    
     return hunks;
 }
 
 std::string SmartRewriteEngineIntegration::formatDiff(const std::vector<DiffHunk>& hunks) {
     std::string result;
+    
     for (const auto& hunk : hunks) {
-        result += "--- " + std::to_string(hunk.startLine) + "\n";
-        result += "+++ " + std::to_string(hunk.endLine) + "\n";
+        // Unified diff header
+        result += "@@ -" + std::to_string(hunk.startLine) + "," 
+                + std::to_string(hunk.removedLines.size())
+                + " +" + std::to_string(hunk.startLine) + "," 
+                + std::to_string(hunk.addedLines.size()) + " @@\n";
+        
+        // Context before changes
+        if (!hunk.context.empty()) {
+            result += hunk.context;
+        }
+        
+        // Removed lines
+        for (const auto& line : hunk.removedLines) {
+            if (!line.empty() && line[0] == ' ') {
+                result += line + "\n"; // Context line
+            } else {
+                result += "-" + line + "\n";
+            }
+        }
+        
+        // Added lines
+        for (const auto& line : hunk.addedLines) {
+            if (!line.empty() && line[0] == ' ') {
+                // Skip - already printed as context in removed section
+            } else {
+                result += "+" + line + "\n";
+            }
+        }
     }
+    
     return result;
 }
 
@@ -163,6 +477,40 @@ bool SmartRewriteEngineIntegration::analyzeSafety(
     const std::string& original,
     const std::string& suggested) {
 
-    // Placeholder: would analyze if the rewrite is safe
+    if (suggested.empty()) return false;
+    if (original == suggested) return true;
+
+    // Check 1: Suggested code should not be drastically shorter (possible data loss)
+    if (suggested.length() < original.length() / 3) return false;
+
+    // Check 2: All function signatures from original should be preserved
+    std::regex funcPattern(R"(\w+\s+\w+\s*\([^)]*\))");
+    auto origBegin = std::sregex_iterator(original.begin(), original.end(), funcPattern);
+    auto origEnd = std::sregex_iterator();
+    for (auto it = origBegin; it != origEnd; ++it) {
+        std::string sig = (*it)[0].str();
+        // Extract function name
+        size_t parenPos = sig.find('(');
+        if (parenPos != std::string::npos) {
+            size_t nameStart = sig.find_last_of(" \t", parenPos - 1);
+            if (nameStart == std::string::npos) nameStart = 0; else nameStart++;
+            std::string funcName = sig.substr(nameStart, parenPos - nameStart);
+            if (funcName.length() > 2 && suggested.find(funcName) == std::string::npos) {
+                return false; // Function removed
+            }
+        }
+    }
+
+    // Check 3: Brace balance should be maintained
+    int origBraces = 0, sugBraces = 0;
+    for (char c : original) { if (c == '{') origBraces++; if (c == '}') origBraces--; }
+    for (char c : suggested) { if (c == '{') sugBraces++; if (c == '}') sugBraces--; }
+    if (sugBraces != 0) return false;
+
+    // Check 4: No dangerous patterns introduced
+    if (suggested.find("system(") != std::string::npos && original.find("system(") == std::string::npos) return false;
+    if (suggested.find("exec(") != std::string::npos && original.find("exec(") == std::string::npos) return false;
+    if (suggested.find("rm -rf") != std::string::npos) return false;
+
     return true;
 }

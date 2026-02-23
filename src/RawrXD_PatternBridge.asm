@@ -5,10 +5,6 @@
 
 OPTION CASemap:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 PUBLIC ClassifyPattern
 PUBLIC InitializePatternEngine
 PUBLIC ShutdownPatternEngine
@@ -340,10 +336,6 @@ InitializePatternEngine PROC EXPORT
 InitializePatternEngine ENDP
 
 ShutdownPatternEngine PROC EXPORT
-    ; Flush any pending pattern statistics to log
-    ; Reset pattern analysis state
-    MOV g_TotalCalls, 0
-    MOV g_AVX512Avail, 0
     XOR EAX, EAX
     RET
 ShutdownPatternEngine ENDP
@@ -355,19 +347,7 @@ GetPatternStats ENDP
 
 ; Minimal DLL entry point to satisfy loader
 DllMain PROC EXPORT
-    ; RCX = hinstDLL, EDX = fdwReason, R8 = lpvReserved
-    CMP EDX, 1                      ; DLL_PROCESS_ATTACH
-    JNE @@not_attach
-    ; Initialize pattern engine on load
-    PUSH RCX
-    PUSH RDX
-    PUSH R8
-    CALL InitializePatternEngine
-    POP R8
-    POP RDX
-    POP RCX
-@@not_attach:
-    MOV EAX, 1                      ; Return TRUE
+    MOV EAX, 1
     RET
 DllMain ENDP
 

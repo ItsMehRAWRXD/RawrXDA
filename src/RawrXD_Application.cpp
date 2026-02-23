@@ -66,36 +66,4 @@ void Application::setApplicationName(const String& name) {
     // maybe set registry key or something. For now just unused
 }
 
-void Application::clipboardSetText(const String& text) {
-    if (!OpenClipboard(nullptr)) return;
-    EmptyClipboard();
-    
-    std::wstring ws = text.toStdWString();
-    size_t size = (ws.length() + 1) * sizeof(wchar_t);
-    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
-    if (hGlobal) {
-        void* data = GlobalLock(hGlobal);
-        memcpy(data, ws.c_str(), size);
-        GlobalUnlock(hGlobal);
-        SetClipboardData(CF_UNICODETEXT, hGlobal);
-    }
-    CloseClipboard();
-}
-
-String Application::clipboardText() {
-    String result = L"";
-    if (!OpenClipboard(nullptr)) return result;
-    
-    HANDLE hData = GetClipboardData(CF_UNICODETEXT);
-    if (hData) {
-        wchar_t* pszText = static_cast<wchar_t*>(GlobalLock(hData));
-        if (pszText) {
-            result = String(pszText);
-            GlobalUnlock(hData);
-        }
-    }
-    CloseClipboard();
-    return result;
-}
-
 } // namespace RawrXD

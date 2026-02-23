@@ -35,10 +35,6 @@ NtProtectVirtualMemory proto :handle,:ptr,:ptr,:ULONG,:ptr
 NtAllocateVirtualMemory proto :handle,:ptr,:ULONG_PTR,:SIZE_T,:ULONG,:ULONG
 ZwQuerySystemInformation proto :ULONG,:ptr,:ULONG,:ptr
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .code
 main proc
         sub     rsp,28h

@@ -1,41 +1,28 @@
 @echo off
-echo Building Marketplace Installer Test Suite...
+REM build_tests.bat - Build and run AgentHotPatcher tests on Windows
 
-REM Set paths
-set "VSTOOLS=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\bin\Hostx64\x64"
-set "WINSDK=C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64"
-set "PATH=%VSTOOLS%;%PATH%"
+echo === Building AgentHotPatcher Test Suite ===
 
-REM Create test directories
-if not exist "tests\fixtures" mkdir tests\fixtures
-if not exist "tests\output" mkdir tests\output
+REM Create build directory
+if not exist build_tests mkdir build_tests
+cd build_tests
 
-REM Assemble test suite
-echo Assembling test suite...
-ml64.exe /c /Zi /I "D:\RawrXD\include" /Fo tests\test_marketplace_installer.obj tests\test_marketplace_installer.asm
-if errorlevel 1 (
-    echo Test assembly failed!
-    pause
-    exit /b 1
-)
+REM Configure with CMake
+echo Configuring with CMake...
+cmake .. -DCMAKE_BUILD_TYPE=Release
 
-REM Link test executable
-echo Linking test executable...
-link.exe /OUT:tests\test_marketplace_installer.exe /SUBSYSTEM:CONSOLE ^
-    tests\test_marketplace_installer.obj ^
-    src\agentic\marketplace_installer.obj ^
-    kernel32.lib user32.lib msvcrt.lib ^
-    /LIBPATH:"%WINSDK%"
+REM Build the project
+echo Building tests...
+cmake --build . --config Release
 
-if errorlevel 1 (
-    echo Test linking failed!
-    pause
-    exit /b 1
-)
+echo === Running Tests ===
 
-echo Build successful!
-echo.
-echo Running tests...
-tests\test_marketplace_installer.exe
+REM Run unit tests
+echo Running unit tests...
+.\Release\test_agent_hot_patcher.exe
 
-pause
+REM Run integration tests
+echo Running integration tests...
+.\Release\test_agent_hot_patcher_integration.exe
+
+echo === Test Suite Completed ===

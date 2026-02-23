@@ -1,10 +1,6 @@
 ; nvme_query.asm - Silicon Query Engine (Corrected Structure Offsets)
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; Standard Windows Definitions
 GENERIC_READ             EQU 80000000h
 GENERIC_WRITE            EQU 40000000h

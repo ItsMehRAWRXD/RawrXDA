@@ -1,8 +1,6 @@
 #pragma once
 #include "RawrXD_Win32_Foundation.h"
-#include "KeywordHashTable.h"
 #include <vector>
-#include <unordered_set>
 
 namespace RawrXD {
 
@@ -42,19 +40,6 @@ public:
         lex(text, outTokens);
         return 0; // Default state
     }
-};
-
-class CppLexer : public Lexer {
-public:
-    CppLexer();
-    void lex(const std::wstring& text, std::vector<Token>& outTokens) override;
-private:
-    void processToken(const std::wstring& text, int& i, int n, std::vector<Token>& outTokens);
-    Token Lexer_TokenizeString(const std::wstring& text, int& i, int n);
-    Token Lexer_TokenizeNumber(const std::wstring& text, int& i, int n);
-    Token Lexer_TokenizeIdentifier(const std::wstring& text, int& i, int n);
-    Token Lexer_TokenizeOperator(const std::wstring& text, int& i, int n);
-    KeywordHashTable keywordTable;
 };
 
 } // namespace RawrXD

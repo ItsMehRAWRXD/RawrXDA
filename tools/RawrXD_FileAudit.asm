@@ -34,10 +34,6 @@ ContentLen      db  32 dup(0)
 JsonTemplate    db  '{"model":"dolphin3:latest","prompt":"Audit this PowerShell script for obfuscation, shellcode, AMSI bypass, dynamic invoke, etc. Return JSON: {summary,risks,techniques,ioCs}.\\n\\nScript:\\n'
 JsonEnd         db  "\\n\\nAudit:\\n","\"}",0
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .code
 main proc
         sub     rsp,28h

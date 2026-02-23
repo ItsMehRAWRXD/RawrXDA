@@ -5,6 +5,9 @@
 
 #include "ggml-webgpu.h"
 
+#include "logging/logger.h"
+static Logger s_logger("ggml-webgpu");
+
 #include "ggml-backend-impl.h"
 #include "ggml-impl.h"
 #include "ggml-wgsl-shaders.hpp"
@@ -22,7 +25,7 @@
 #include <vector>
 
 #ifdef GGML_WEBGPU_DEBUG
-#    define WEBGPU_LOG_DEBUG(msg)  std::cout << msg << std::endl
+#    define WEBGPU_LOG_DEBUG(msg)  s_logger.info( msg << std::endl
 #    define WEBGPU_DEBUG_BUF_ELEMS 32
 #else
 #    define WEBGPU_LOG_DEBUG(msg) ((void) 0)
@@ -502,11 +505,11 @@ static void ggml_backend_webgpu_debug(webgpu_context & ctx) {
 
     ggml_backend_webgpu_map_buffer(ctx, ctx->debug_host_buf, wgpu::MapMode::Read, 0, ctx->debug_host_buf.GetSize());
     const uint32_t * debug_data = (const uint32_t *) ctx->debug_host_buf.GetConstMappedRange();
-    std::cout << "debug data:";
+    s_logger.info("debug data:");
     for (size_t i = 0; i < WEBGPU_DEBUG_BUF_ELEMS; i++) {
-        std::cout << "  " << i << ": " << debug_data[i];
+        s_logger.info("  ");
     }
-    std::cout << "\n";
+    s_logger.info("\n");
     ctx->debug_host_buf.Unmap();
 }
 #endif
@@ -693,42 +696,42 @@ static void ggml_backend_webgpu_free(ggml_backend_t backend) {
     WEBGPU_LOG_DEBUG("ggml_backend_webgpu_free(" << ctx->name << ")");
 
 #ifdef GGML_WEBGPU_CPU_PROFILE
-    std::cout << "\n[ggml_webgpu cpu profiling summary]\n";
+    s_logger.info("\n[ggml_webgpu cpu profiling summary]\n");
     double total_cpu = 0.0;
     for (const auto & kv : ctx->webgpu_ctx->cpu_time_ms) {
         total_cpu += kv.second;
     }
-    std::cout << "ggml_webgpu: total cpu time: " << total_cpu << " ms\n";
-    std::cout << "ggml_webgpu: cpu breakdown:\n";
+    s_logger.info("ggml_webgpu: total cpu time: ");
+    s_logger.info("ggml_webgpu: cpu breakdown:\n");
     for (const auto & kv : ctx->webgpu_ctx->cpu_time_ms) {
         double pct = (total_cpu > 0.0) ? (kv.second / total_cpu * 100.0) : 0.0;
-        std::cout << "ggml_webgpu:  " << kv.first << ": " << kv.second << " ms (" << pct << "%)\n";
+        s_logger.info("ggml_webgpu:  ");
     }
     if (ctx->webgpu_ctx->cpu_detail_ms.size() > 0) {
-        std::cout << "ggml_webgpu: cpu detailed breakdown:\n";
+        s_logger.info("ggml_webgpu: cpu detailed breakdown:\n");
     }
     for (const auto & kv : ctx->webgpu_ctx->cpu_detail_ms) {
         double pct = (total_cpu > 0.0) ? (kv.second / total_cpu * 100.0) : 0.0;
-        std::cout << "ggml_webgpu:  " << kv.first << ": " << kv.second << " ms (" << pct << "%)\n";
+        s_logger.info("ggml_webgpu:  ");
     }
 #endif
 
 #ifdef GGML_WEBGPU_GPU_PROFILE
-    std::cout << "\n[ggml_webgpu gpu profiling summary]\n";
+    s_logger.info("\n[ggml_webgpu gpu profiling summary]\n");
     double total_gpu = 0.0;
     for (const auto & kv : ctx->webgpu_ctx->shader_gpu_time_ms) {
         total_gpu += kv.second;
     }
-    std::cout << "ggml_webgpu: total gpu time (all shaders): " << total_gpu << " ms\n";
-    std::cout << "\nggml_webgpu: gpu breakdown:\n";
+    s_logger.info("ggml_webgpu: total gpu time (all shaders): ");
+    s_logger.info("\nggml_webgpu: gpu breakdown:\n");
     for (const auto & kv : ctx->webgpu_ctx->shader_gpu_time_ms) {
         double pct = (total_gpu > 0.0) ? (kv.second / total_gpu * 100.0) : 0.0;
-        std::cout << "ggml_webgpu:  " << kv.first << ": " << kv.second << " ms (" << pct << "%)\n";
+        s_logger.info("ggml_webgpu:  ");
     }
 #endif
 
 #if defined(GGML_WEBGPU_CPU_PROFILE) && defined(GGML_WEBGPU_GPU_PROFILE)
-    std::cout << "ggml_webgpu: gpu/cpu ratio: " << (total_cpu > 0.0 ? total_gpu / total_cpu : 0.0) << "\n";
+    s_logger.info("ggml_webgpu: gpu/cpu ratio: ");
 #endif
 
 #if !defined(GGML_WEBGPU_CPU_PROFILE) && !defined(GGML_WEBGPU_GPU_PROFILE)

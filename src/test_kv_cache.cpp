@@ -7,20 +7,23 @@
 #include <cassert>
 #include <cmath>
 
+#include "logging/logger.h"
+static Logger s_logger("test_kv_cache");
+
 // Simple assertion helper
 #define ASSERT(condition, message) \
     if (!(condition)) { \
-         \
+        s_logger.error( "ASSERTION FAILED: " << message << std::endl; \
         return false; \
     }
 
 // Test 1: Basic KV cache allocation
 bool testKVCacheAllocation() {
-
-
+    s_logger.info("\n=== Test 1: KV Cache Allocation ===");
+    
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
-        
+        s_logger.error( "Failed to initialize Vulkan" << std::endl;
         return false;
     }
     
@@ -32,20 +35,22 @@ bool testKVCacheAllocation() {
     bool success = gpu.AllocateKVCache(num_layers, max_seq_len, head_dim);
     ASSERT(success, "AllocateKVCache should succeed");
     ASSERT(gpu.IsKVCacheAllocated(), "KV cache should be allocated");
-
-
+    
+    s_logger.info("✓ KV cache allocation successful");
+    
     // Clean up
     gpu.ClearKVCache();
     ASSERT(!gpu.IsKVCacheAllocated(), "KV cache should be cleared");
-
-
+    
+    s_logger.info("✓ KV cache cleanup successful");
+    
     return true;
 }
 
 // Test 2: Append to KV cache
 bool testKVCacheAppend() {
-
-
+    s_logger.info("\n=== Test 2: KV Cache Append ===");
+    
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
         return false;
@@ -71,8 +76,9 @@ bool testKVCacheAppend() {
     // Append to layer 0, position 0
     bool success = gpu.AppendToKVCache(0, k_new.data(), v_new.data(), 0);
     ASSERT(success, "AppendToKVCache should succeed");
-
-
+    
+    s_logger.info("✓ Appended K/V to cache at layer 0, pos 0");
+    
     // Append to layer 0, position 1 (different values)
     for (uint32_t i = 0; i < head_dim; ++i) {
         k_new[i] = static_cast<float>(i) + 300.0f;
@@ -81,15 +87,16 @@ bool testKVCacheAppend() {
     
     success = gpu.AppendToKVCache(0, k_new.data(), v_new.data(), 1);
     ASSERT(success, "Second append should succeed");
-
-
+    
+    s_logger.info("✓ Appended K/V to cache at layer 0, pos 1");
+    
     return true;
 }
 
 // Test 3: Retrieve from KV cache
 bool testKVCacheRetrieval() {
-
-
+    s_logger.info("\n=== Test 3: KV Cache Retrieval ===");
+    
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
         return false;
@@ -116,8 +123,9 @@ bool testKVCacheRetrieval() {
     if (!gpu.AppendToKVCache(0, k_write.data(), v_write.data(), 5)) {
         return false;
     }
-
-
+    
+    s_logger.info("✓ Written test data to cache at pos 5");
+    
     // Flush GPU commands to ensure write completes
     gpu.FlushAsyncCommands();
     
@@ -139,15 +147,20 @@ bool testKVCacheRetrieval() {
         ASSERT(std::abs(v_read[i] - v_expected) < epsilon,
                "V value mismatch at index " + std::to_string(i));
     }
-
-
+    
+    s_logger.info("✓ Retrieved and verified K/V cache values");
+    s_logger.info("  K[0] = ");
+    s_logger.info("  K[7] = ");
+    s_logger.info("  V[0] = ");
+    s_logger.info("  V[7] = ");
+    
     return true;
 }
 
 // Test 4: Multi-layer KV cache
 bool testMultiLayerKVCache() {
-
-
+    s_logger.info("\n=== Test 4: Multi-Layer KV Cache ===");
+    
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
         return false;
@@ -177,8 +190,9 @@ bool testMultiLayerKVCache() {
         bool success = gpu.AppendToKVCache(layer, k_layer.data(), v_layer.data(), 0);
         ASSERT(success, "Append to layer " + std::to_string(layer) + " should succeed");
     }
-
-
+    
+    s_logger.info("✓ Written to all ");
+    
     gpu.FlushAsyncCommands();
     
     // Verify each layer has correct values
@@ -194,18 +208,19 @@ bool testMultiLayerKVCache() {
         
         ASSERT(std::abs(k_verify[0] - expected_k) < epsilon,
                "Layer " + std::to_string(layer) + " K[0] mismatch");
-
-
+        
+        s_logger.info("  Layer ");
     }
-
-
+    
+    s_logger.info("✓ All layers verified successfully");
+    
     return true;
 }
 
 // Test 5: Realistic token sequence
 bool testRealisticTokenSequence() {
-
-
+    s_logger.info("\n=== Test 5: Realistic Token Sequence ===");
+    
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
         return false;
@@ -219,8 +234,9 @@ bool testRealisticTokenSequence() {
     if (!gpu.AllocateKVCache(num_layers, max_seq_len, head_dim)) {
         return false;
     }
-
-
+    
+    s_logger.info("✓ Allocated cache for ");
+    
     // Simulate autoregressive token generation (10 tokens)
     uint32_t num_tokens = 10;
     
@@ -245,8 +261,9 @@ bool testRealisticTokenSequence() {
             gpu.FlushAsyncCommands();  // Periodic flush
         }
     }
-
-
+    
+    s_logger.info("✓ Appended ");
+    
     gpu.FlushAsyncCommands();
     
     // Verify we can retrieve full sequence for layer 0
@@ -265,14 +282,19 @@ bool testRealisticTokenSequence() {
            "Token 0 K[0] mismatch");
     ASSERT(std::abs(k_sequence[5 * head_dim] - expected_k_token5) < epsilon,
            "Token 5 K[0] mismatch");
-
-
+    
+    s_logger.info("✓ Verified full sequence retrieval");
+    s_logger.info("  Token 0 K[0] = ");
+    s_logger.info("  Token 5 K[0] = ");
+    
     return true;
 }
 
 int main() {
-
-
+    s_logger.info("========================================");
+    s_logger.info("KV Cache Infrastructure Test Suite");
+    s_logger.info("========================================");
+    
     bool all_passed = true;
     
     all_passed &= testKVCacheAllocation();
@@ -280,16 +302,16 @@ int main() {
     all_passed &= testKVCacheRetrieval();
     all_passed &= testMultiLayerKVCache();
     all_passed &= testRealisticTokenSequence();
-
-
+    
+    s_logger.info("\n========================================");
     if (all_passed) {
-
-
+        s_logger.info("✓✓✓ ALL TESTS PASSED ✓✓✓");
+        s_logger.info("KV Cache infrastructure is working correctly!");
     } else {
-
-
+        s_logger.info("✗✗✗ SOME TESTS FAILED ✗✗✗");
+        s_logger.info("Check error messages above.");
     }
-
-
+    s_logger.info("========================================");
+    
     return all_passed ? 0 : 1;
 }

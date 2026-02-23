@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <atomic>
-#include <memory>
 
 struct AppState {
     std::string governor_status;
@@ -17,10 +16,14 @@ struct AppState {
     bool ryzen_master_detected = false;
     bool adrenalin_cli_detected = false;
 
-    // Inference Engine Integration
-    std::string model_path = "models/model.gguf"; // Default
-    std::shared_ptr<RawrXD::CPUInferenceEngine> inference_engine;
-    bool loaded_model = false;
-    // Legacy/Placeholder flags referenced by APIServer (preserving compatibility)
-    bool gpu_context = true; 
+    // ---- Inference Engine Bridge (Phase 36: API Server -> Model) ----
+    // Non-owning opaque handles set by the model loader when a GGUF is loaded.
+    // Ownership is managed by the subsystem that creates them (ModelLoader / GPUBackend).
+    // TODO: Replace void* with typed std::shared_ptr once interface unification is complete.
+    void* loaded_model = nullptr;    // Non-owning: GGUFModel* or CPUInferenceEngine*
+    void* gpu_context = nullptr;     // Non-owning: VulkanCompute or CPU fallback context
+    void* inference_engine = nullptr; // Non-owning: RawrInference or CPUInferenceEngine
+    std::atomic<bool> model_ready{false};
+    std::string loaded_model_name;
+    uint32_t context_size = 2048;
 };

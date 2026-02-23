@@ -4,10 +4,6 @@
 ;==============================================================================
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 include win64_api.inc
 
 ; SYSTEM EXTERNALS

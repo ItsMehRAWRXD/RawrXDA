@@ -7,10 +7,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; --- Win32 Externals ---
 extern OpenFileMappingA : PROC
 extern MapViewOfFile : PROC
@@ -474,7 +470,6 @@ _complete:
 _exit:
     mov ecx, 0
     call ExitProcess
-    ret
 
 DemoMain ENDP
 

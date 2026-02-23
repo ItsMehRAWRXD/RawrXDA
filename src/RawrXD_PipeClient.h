@@ -19,7 +19,7 @@ namespace RawrXD {
         PipeClient(const std::string& pipeName);
         ~PipeClient();
         
-        bool Connect(int timeoutMs = 1000); // Added back
+        bool // Connect removed;
         void Disconnect();
         
         // Main classification method

@@ -21,10 +21,6 @@ extrn htons:proc
 extrn lstrlenW:proc
 extrn WideCharToMultiByte:proc
 
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .data
 OllamaHost      db  "127.0.0.1",0
 OllamaPort      equ 11434

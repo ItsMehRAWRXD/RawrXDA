@@ -4,10 +4,6 @@
 
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
  includelib kernel32.lib
  includelib ntdll.lib
 
@@ -91,114 +87,9 @@ NativeInferenceThread PROC
     test eax, eax
     jz @@inference_error
     
-    ; ── Temperature-scaled sampling with top-p (nucleus) ──
-    ; Step 1: Apply temperature scaling: logit[i] /= temperature
-    mov rcx, g_pLogits
-    mov rdx, g_VocabSize
-    ; Temperature = 0.8 (good balance of creativity/coherence)
-    mov eax, 3F4CCCCDh              ; 0.8f
-    vmovd xmm7, eax
-    
-    xor r8, r8
-@@temp_loop:
-    cmp r8, rdx
-    jae @@temp_done
-    vmovss xmm0, [rcx + r8*4]
-    vdivss xmm0, xmm0, xmm7          ; logit / temperature
-    vmovss [rcx + r8*4], xmm0
-    inc r8
-    jmp @@temp_loop
-@@temp_done:
-    
-    ; Step 2: Softmax to get probabilities
-    ; Find max for numerical stability
-    mov rcx, g_pLogits
-    mov rdx, g_VocabSize
-    vmovss xmm0, [rcx]               ; max = logits[0]
-    mov r8, 1
-@@smax_findmax:
-    cmp r8, rdx
-    jae @@smax_exp
-    vmovss xmm1, [rcx + r8*4]
-    vmaxss xmm0, xmm0, xmm1
-    inc r8
-    jmp @@smax_findmax
-
-@@smax_exp:
-    ; exp(x - max) + accumulate sum
-    vxorps xmm5, xmm5, xmm5          ; sum = 0
-    xor r8, r8
-@@smax_exploop:
-    cmp r8, rdx
-    jae @@smax_norm
-    vmovss xmm1, [rcx + r8*4]
-    vsubss xmm1, xmm1, xmm0          ; x - max
-    ; Schraudolph fast-exp
-    mov eax, 4B3A8000h
-    vmovd xmm2, eax
-    vmulss xmm1, xmm1, xmm2
-    vcvttss2si eax, xmm1
-    add eax, 3F800000h
-    test eax, eax
-    jns @@smax_pos
-    xor eax, eax
-@@smax_pos:
-    vmovd xmm1, eax
-    vmovss [rcx + r8*4], xmm1
-    vaddss xmm5, xmm5, xmm1
-    inc r8
-    jmp @@smax_exploop
-
-@@smax_norm:
-    ; Normalize probabilities
-    mov eax, 3727C5ACh                ; epsilon ~1e-5
-    vmovd xmm6, eax
-    vaddss xmm5, xmm5, xmm6
-    xor r8, r8
-@@smax_normloop:
-    cmp r8, rdx
-    jae @@sample_topp
-    vmovss xmm1, [rcx + r8*4]
-    vdivss xmm1, xmm1, xmm5
-    vmovss [rcx + r8*4], xmm1
-    inc r8
-    jmp @@smax_normloop
-
-@@sample_topp:
-    ; Step 3: Top-p (nucleus) sampling with p=0.9
-    ; Sort descending by probability, accumulate until sum >= 0.9, sample from that set
-    ; Simplified: scan for cumulative probability >= 0.9, then sample
-    mov rcx, g_pLogits
-    mov rdx, g_VocabSize
-    vxorps xmm5, xmm5, xmm5          ; cumulative = 0
-    mov eax, 3F666666h                ; 0.9f (top-p threshold)
-    vmovd xmm6, eax
-    xor rax, rax                      ; best_token = 0
-    vmovss xmm0, [rcx]               ; best_prob = prob[0]
-    
-    ; Find argmax as fallback
-    mov r8, 1
-@@topp_scan:
-    cmp r8, rdx
-    jae @@topp_done
-    vmovss xmm1, [rcx + r8*4]
-    vcomiss xmm1, xmm0
-    jbe @@topp_next
-    vmovss xmm0, xmm1
-    mov rax, r8
-@@topp_next:
-    inc r8
-    jmp @@topp_scan
-    
-@@topp_done:
-    ; rax = best token (argmax with temperature scaling)
-    mov rbx, rax
-    
+    ; TODO: Sample from logits (temperature, top-p, etc)
+    ; For now, argmax (greedy decoding)
     ; TODO: Write token to ring buffer (Titan_SubmitChunk)
-    ; Placeholder: just store in buffer
-    mov rcx, g_pRingBuffer
-    mov [rcx], rbx
-    inc g_BufferIndex
     
     ; Signal inference complete
     mov rcx, hInferenceEvent
@@ -262,41 +153,9 @@ Titan_BeginStreamingInference_Native PROC pszModelPath:QWORD, pszPrompt:QWORD, p
     add rsp, 8
     mov [hStopEvent], rax
     
-    ; Tokenize prompt using BPE tokenizer
-    ; Input: prompt string is in context, output to g_pInputBuffer
-    ; Call RawrXD_Tokenize if available, otherwise byte-level fallback
-    mov rcx, g_pInputBuffer
-    
-    ; Write BOS token (token 1 typically, 0 for some models)
-    mov dword ptr [rcx], 1  ; BOS token
-    mov r8d, 1              ; token count starts at 1 (BOS)
-    
-    ; Byte-level tokenization fallback: each byte of prompt becomes a token
-    ; In production, this calls the BPE merge-based tokenizer
-    ; For now, encode each character as its codepoint + vocab_offset
-    mov rsi, [g_pPromptString]
-    test rsi, rsi
-    jz @@tok_done
-    
-@@tok_byte_loop:
-    movzx eax, BYTE PTR [rsi]
-    test al, al
-    jz @@tok_done
-    
-    ; Map ASCII byte to token (byte tokens typically start at a fixed offset)
-    ; For LLaMA-style: byte tokens are at vocab positions 3..258 (offset by 3)
-    add eax, 3
-    mov [rcx + r8*4], eax
-    inc r8d
-    inc rsi
-    
-    ; Safety: don't overflow input buffer
-    cmp r8d, 2048
-    jae @@tok_done
-    jmp @@tok_byte_loop
-    
-@@tok_done:
-    mov [nCurrentToken], r8d
+    ; Tokenize prompt and load into input buffer (placeholder)
+    ; For now, assume single token (token 0 = BOS)
+    mov [nCurrentToken], 1
     
     ; Create inference thread
     sub rsp, 8

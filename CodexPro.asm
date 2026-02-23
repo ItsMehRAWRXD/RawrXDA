@@ -18,10 +18,6 @@
 OPTION WIN64:3
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ;============================================================================
 ; INCLUDES & LIBRARIES
 ;============================================================================

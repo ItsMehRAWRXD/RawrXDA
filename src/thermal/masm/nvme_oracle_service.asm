@@ -30,10 +30,6 @@
 
 option casemap:none
 
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
-
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; Windows API Constants
 ; ═══════════════════════════════════════════════════════════════════════════════

@@ -82,10 +82,6 @@ ComputeKernel ENDS
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; DATA SECTION
 ; ═══════════════════════════════════════════════════════════════════════════════
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 .DATA
 align 64
 g_InferenceContext      InferenceContext <>

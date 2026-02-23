@@ -4,28 +4,12 @@ cmake_minimum_required(VERSION 3.20)
 # Windows SDK & MSVC CRT Path Resolution (Phase 41 Build Fix)
 # =============================================================================
 # MUST run before project() because CMake's compiler test needs these paths.
-# Architecture: use RAWR_ARCH (x64|x86), CMAKE_GENERATOR_PLATFORM (-A), or default x64.
-# No VSCMD gate — always plug in explicit x64/x86 compiler paths on Windows.
-if(WIN32)
-    # Architecture: x64 or x86 (Win32)
-    if(DEFINED RAWR_ARCH)
-        set(_RAWR_ARCH "${RAWR_ARCH}")
-    elseif(DEFINED CMAKE_GENERATOR_PLATFORM)
-        set(_RAWR_ARCH "${CMAKE_GENERATOR_PLATFORM}")
-    else()
-        set(_RAWR_ARCH "x64")
-    endif()
-    if(_RAWR_ARCH STREQUAL "Win32" OR _RAWR_ARCH STREQUAL "x86")
-        set(_MSVC_ARCH "x86")
-        set(_SDK_ARCH "x86")
-    else()
-        set(_MSVC_ARCH "x64")
-        set(_SDK_ARCH "x64")
-    endif()
-    # Hostx64 can build both x64 and x86 targets
-    set(_MSVC_HOST "Hostx64")
-    set(_MSVC_BIN "${_MSVC_HOST}/${_MSVC_ARCH}")
-
+# The environment on this machine has partial SDK installs:
+#   10.0.22621.0 — has ucrt, shared, um includes BUT um/x64 libs are separate
+#   10.0.26100.0 — has um/shared includes and um/x64 libs BUT no ucrt
+# We combine them to form a complete toolchain.
+if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
+    # Not running inside a VS Developer Prompt — inject paths manually
     # Auto-detect Windows SDK: try D: first, fall back to C:
     if(EXISTS "D:/Program Files (x86)/Windows Kits/10")
         set(_WIN10_SDK_ROOT "D:/Program Files (x86)/Windows Kits/10")
@@ -63,38 +47,29 @@ if(WIN32)
     endif()
     
     # SDK bin tools (rc.exe, mt.exe)
-    set(_SDK_BIN "${_WIN10_SDK_ROOT}/bin/${_SDK_UCRT_VER}/${_SDK_ARCH}")
+    set(_SDK_BIN "${_WIN10_SDK_ROOT}/bin/${_SDK_UCRT_VER}/x64")
     
     # Build INCLUDE and LIB environment strings
     set(ENV{INCLUDE} "${_MSVC_ROOT}/include;${_WIN10_SDK_ROOT}/Include/${_SDK_UCRT_VER}/ucrt;${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/shared;${_WIN10_SDK_ROOT}/Include/${_SDK_UM_VER}/um")
-    # MSVC 14.50+ ships CRT in lib/onecore/x64 or lib/x86 — include both when x64
-    if(_MSVC_ARCH STREQUAL "x64")
-        set(ENV{LIB} "${_MSVC_ROOT}/lib/x64;${_MSVC_ROOT}/lib/onecore/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
-    else()
-        set(ENV{LIB} "${_MSVC_ROOT}/lib/x86;${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x86;${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x86")
-    endif()
-    set(ENV{PATH} "$ENV{PATH};${_SDK_BIN};${_MSVC_ROOT}/bin/${_MSVC_BIN}")
+    # MSVC 14.50+ ships CRT in lib/onecore/x64 instead of lib/x64, include both
+    set(ENV{LIB} "${_MSVC_ROOT}/lib/x64;${_MSVC_ROOT}/lib/onecore/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UCRT_VER}/ucrt/x64;${_WIN10_SDK_ROOT}/Lib/${_SDK_UM_VER}/um/x64")
+    set(ENV{PATH} "$ENV{PATH};${_SDK_BIN};${_MSVC_ROOT}/bin/Hostx64/x64")
     
-    # Tell CMake where the compiler and SDK tools are
+    # Tell CMake where the SDK tools are
     set(CMAKE_MT "${_SDK_BIN}/mt.exe" CACHE FILEPATH "Manifest Tool" FORCE)
     set(CMAKE_RC_COMPILER "${_SDK_BIN}/rc.exe" CACHE FILEPATH "Resource Compiler" FORCE)
-    set(CMAKE_C_COMPILER "${_MSVC_ROOT}/bin/${_MSVC_BIN}/cl.exe" CACHE FILEPATH "C Compiler" FORCE)
-    set(CMAKE_CXX_COMPILER "${_MSVC_ROOT}/bin/${_MSVC_BIN}/cl.exe" CACHE FILEPATH "C++ Compiler" FORCE)
-    set(CMAKE_LINKER "${_MSVC_ROOT}/bin/${_MSVC_BIN}/link.exe" CACHE FILEPATH "Linker" FORCE)
-    if(_MSVC_ARCH STREQUAL "x64")
-        set(CMAKE_ASM_MASM_COMPILER "${_MSVC_ROOT}/bin/${_MSVC_BIN}/ml64.exe" CACHE FILEPATH "MASM64" FORCE)
-    else()
-        set(CMAKE_ASM_MASM_COMPILER "${_MSVC_ROOT}/bin/${_MSVC_BIN}/ml.exe" CACHE FILEPATH "MASM" FORCE)
-    endif()
+    set(CMAKE_C_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/cl.exe" CACHE FILEPATH "C Compiler" FORCE)
+    set(CMAKE_CXX_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/cl.exe" CACHE FILEPATH "C++ Compiler" FORCE)
+    set(CMAKE_LINKER "${_MSVC_ROOT}/bin/Hostx64/x64/link.exe" CACHE FILEPATH "Linker" FORCE)
+    set(CMAKE_ASM_MASM_COMPILER "${_MSVC_ROOT}/bin/Hostx64/x64/ml64.exe" CACHE FILEPATH "MASM64" FORCE)
     
-    message(STATUS "[SDK Fix] Arch: ${_MSVC_ARCH} | cl: ${_MSVC_ROOT}/bin/${_MSVC_BIN}/cl.exe")
     message(STATUS "[SDK Fix] INCLUDE = $ENV{INCLUDE}")
     message(STATUS "[SDK Fix] LIB     = $ENV{LIB}")
+    message(STATUS "[SDK Fix] MT      = ${_SDK_BIN}/mt.exe")
 endif()
 
-# Force Windows SDK version for VS generator (avoid 10.0.26100.0 — missing ucrt)
+# Force Windows SDK version for VS generator (avoid 10.0.26100.0 if not installed)
 if(WIN32)
-    set(CMAKE_SYSTEM_VERSION "10.0.22621.0" CACHE STRING "Windows SDK version" FORCE)
     set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.22621.0" CACHE STRING "Windows SDK version for VS generator" FORCE)
 endif()
 
@@ -148,21 +123,13 @@ if(WIN32 AND MSVC)
         "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/um"
         "${_WIN10_SDK_ROOT}/Include/${_SDK_VER}/winrt"
     )
-    if(DEFINED _MSVC_ARCH AND _MSVC_ARCH STREQUAL "x86")
-        link_directories(
-            "${_MSVC_BT_ROOT}/lib/x86"
-            "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/ucrt/x86"
-            "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/um/x86"
-        )
-    else()
-        link_directories(
-            "${_MSVC_BT_ROOT}/lib/x64"
-            "${_MSVC_BT_ROOT}/lib/onecore/x64"
-            "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/ucrt/x64"
-            "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/um/x64"
-        )
-    endif()
-    message(STATUS "[Build Paths] MSVC CRT: ${_MSVC_BT_ROOT} (${_MSVC_ARCH})")
+    link_directories(
+        "${_MSVC_BT_ROOT}/lib/x64"
+        "${_MSVC_BT_ROOT}/lib/onecore/x64"
+        "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/ucrt/x64"
+        "${_WIN10_SDK_ROOT}/Lib/${_SDK_VER}/um/x64"
+    )
+    message(STATUS "[Build Paths] MSVC CRT: ${_MSVC_BT_ROOT}")
     message(STATUS "[Build Paths] SDK ${_SDK_VER}: ucrt + um + shared")
 endif()
 
@@ -216,7 +183,6 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_Snapshot.asm
         src/asm/RawrXD_Pyre_Compute.asm
         src/asm/vision_projection_kernel.asm
-        src/asm/RawrXD_Sidebar_x64.asm
         # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
     )
     # Mark ASM files with MASM language property
@@ -226,56 +192,12 @@ if(RAWR_HAS_MASM)
     add_definitions(-DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1)
     add_definitions(-DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1)
     add_definitions(-DRAWRXD_LINK_VISION_PROJECTION_ASM=1)
-    add_definitions(-DRAWRXD_LINK_SIDEBAR_ASM=1)
     add_definitions(-DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1)
 else()
     set(ASM_KERNEL_SOURCES "")
 endif()
 
 find_package(Threads REQUIRED)
-
-# =============================================================================
-# Optional Compression & Utility Libraries
-# =============================================================================
-# Zstandard (zstd) — Fast compression for GGUF model downloading
-find_package(ZSTD QUIET)
-if(ZSTD_FOUND)
-    message(STATUS "[Compression] Zstandard (zstd) found")
-else()
-    message(STATUS "[Compression] Zstandard not found — decompression uses fallback")
-endif()
-
-# zlib — Standard gzip compression
-find_package(ZLIB QUIET)
-if(ZLIB_FOUND)
-    message(STATUS "[Compression] zlib found")
-else()
-    message(STATUS "[Compression] zlib not found — gzip decompression uses fallback")
-endif()
-
-# LZ4 — Ultra-fast compression
-find_package(LZ4 QUIET)
-if(LZ4_FOUND)
-    message(STATUS "[Compression] LZ4 found")
-else()
-    message(STATUS "[Compression] LZ4 not found — LZ4 decompression uses fallback")
-endif()
-
-# nlohmann/json — JSON parsing (header-only)
-find_package(nlohmann_json QUIET)
-if(nlohmann_json_FOUND)
-    message(STATUS "[JSON] nlohmann/json found")
-else()
-    message(STATUS "[JSON] nlohmann/json not found — using included headers")
-endif()
-
-# libcurl — HTTP client for HuggingFace model downloads
-find_package(CURL QUIET)
-if(CURL_FOUND)
-    message(STATUS "[HTTP] libcurl found")
-else()
-    message(STATUS "[HTTP] libcurl not found — using WinHTTP on Windows")
-endif()
 
 set(SOURCES 
     src/main.cpp
@@ -730,19 +652,6 @@ set(SOURCES
 
     # ── Transcendence IDE Panel ────────────────────────────────────────
     src/win32app/Win32IDE_TranscendencePanel.cpp
-
-    # Cursor IDE Reverse Engineering Integration
-    src/editorwidget.cpp
-    src/RawrXD_Editor.cpp
-    src/RawrXD_TextBuffer.cpp
-    src/RawrXD_UndoStack.cpp
-    src/RawrXD_Lexer.cpp
-    src/RawrXD_StyleManager.cpp
-    src/RawrXD_Renderer_D2D.cpp
-    src/RawrXD_Window.cpp
-
-    # ASM Bridge — extern "C" stubs for unresolved ASM EXTERN symbols
-    src/asm_bridge.cpp
 )
 
 # =============================================================================
@@ -781,27 +690,6 @@ target_include_directories(RawrEngine PRIVATE
 )
 
 target_link_libraries(RawrEngine PRIVATE Threads::Threads)
-
-# Link optional compression libraries if available
-if(ZSTD_FOUND)
-    target_link_libraries(RawrEngine PRIVATE ZSTD::ZSTD)
-    target_compile_definitions(RawrEngine PRIVATE HAVE_ZSTD=1)
-endif()
-if(ZLIB_FOUND)
-    target_link_libraries(RawrEngine PRIVATE ZLIB::ZLIB)
-    target_compile_definitions(RawrEngine PRIVATE HAVE_ZLIB=1)
-endif()
-if(LZ4_FOUND)
-    target_link_libraries(RawrEngine PRIVATE LZ4::LZ4)
-    target_compile_definitions(RawrEngine PRIVATE HAVE_LZ4=1)
-endif()
-if(CURL_FOUND)
-    target_link_libraries(RawrEngine PRIVATE CURL::libcurl)
-    target_compile_definitions(RawrEngine PRIVATE HAVE_CURL=1)
-endif()
-if(nlohmann_json_FOUND)
-    target_link_libraries(RawrEngine PRIVATE nlohmann_json::nlohmann_json)
-endif()
 
 # Sources used by missing_handler_stubs: debugger engine + Ollama client
 target_sources(RawrEngine PRIVATE
@@ -851,27 +739,6 @@ target_include_directories(RawrXD_Gold PRIVATE
 
 target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 
-# Link optional compression libraries if available
-if(ZSTD_FOUND)
-    target_link_libraries(RawrXD_Gold PRIVATE ZSTD::ZSTD)
-    target_compile_definitions(RawrXD_Gold PRIVATE HAVE_ZSTD=1)
-endif()
-if(ZLIB_FOUND)
-    target_link_libraries(RawrXD_Gold PRIVATE ZLIB::ZLIB)
-    target_compile_definitions(RawrXD_Gold PRIVATE HAVE_ZLIB=1)
-endif()
-if(LZ4_FOUND)
-    target_link_libraries(RawrXD_Gold PRIVATE LZ4::LZ4)
-    target_compile_definitions(RawrXD_Gold PRIVATE HAVE_LZ4=1)
-endif()
-if(CURL_FOUND)
-    target_link_libraries(RawrXD_Gold PRIVATE CURL::libcurl)
-    target_compile_definitions(RawrXD_Gold PRIVATE HAVE_CURL=1)
-endif()
-if(nlohmann_json_FOUND)
-    target_link_libraries(RawrXD_Gold PRIVATE nlohmann_json::nlohmann_json)
-endif()
-
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
     RAWR_HAS_MASM=1
@@ -889,8 +756,7 @@ if(MSVC)
     target_compile_options(RawrXD_Gold PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/EHsc /O2 /W0 /arch:AVX2>
     )
-    # DEP-free constraint: /NXCOMPAT:NO disables Data Execution Prevention requirement
-    target_link_options(RawrXD_Gold PRIVATE /LARGEADDRESSAWARE:NO /NXCOMPAT:NO)
+    target_link_options(RawrXD_Gold PRIVATE /LARGEADDRESSAWARE:NO)
 else()
     target_compile_options(RawrXD_Gold PRIVATE -march=native -O3 -w -mavx2 -mfma -fopenmp)
 endif()
@@ -921,81 +787,6 @@ target_sources(RawrXD_Gold PRIVATE
 # Vulkan SDK for Gold build — linked later after find_package(Vulkan)
 
 message(STATUS "[Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)")
-
-# ═══════════════════════════════════════════════════════════════════
-# Genesis Engine — Autonomous MASM64 Code Generation (standalone console)
-# No CRT, No deps — pure WinAPI + WinHTTP → Ollama code synthesis
-# ═══════════════════════════════════════════════════════════════════
-if(MSVC)
-    set(GENESIS_ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/genesis.asm")
-    set(GENESIS_ASM_OBJ "${CMAKE_CURRENT_BINARY_DIR}/genesis.obj")
-    add_custom_command(
-        OUTPUT ${GENESIS_ASM_OBJ}
-        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd
-                /I"${CMAKE_CURRENT_SOURCE_DIR}/include"
-                /Fo${GENESIS_ASM_OBJ} ${GENESIS_ASM_SRC}
-        DEPENDS ${GENESIS_ASM_SRC}
-        COMMENT "[MASM] Assembling genesis.asm (Genesis Engine)"
-        VERBATIM
-    )
-    add_executable(RawrXD-Genesis ${GENESIS_ASM_OBJ})
-    set_target_properties(RawrXD-Genesis PROPERTIES LINKER_LANGUAGE CXX)
-    target_link_options(RawrXD-Genesis PRIVATE
-        /SUBSYSTEM:CONSOLE /ENTRY:GenesisMain /MACHINE:X64 /NODEFAULTLIB
-    )
-    target_link_libraries(RawrXD-Genesis PRIVATE kernel32.lib winhttp.lib user32.lib)
-    message(STATUS "[Genesis] Autonomous code-gen engine: RawrXD-Genesis.exe")
-endif()
-
-# ═══════════════════════════════════════════════════════════════════
-# Widget Intelligence Engine — Pipe-based headache eliminator + intent router
-# Zero CRT, Zero deps — pure WinAPI named-pipe IPC
-# ═══════════════════════════════════════════════════════════════════
-if(MSVC)
-    set(WIDGET_ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/RawrXD_WidgetEngine.asm")
-    set(WIDGET_ASM_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_WidgetEngine.obj")
-    add_custom_command(
-        OUTPUT ${WIDGET_ASM_OBJ}
-        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd
-                /I"${CMAKE_CURRENT_SOURCE_DIR}/include"
-                /Fo${WIDGET_ASM_OBJ} ${WIDGET_ASM_SRC}
-        DEPENDS ${WIDGET_ASM_SRC}
-        COMMENT "[MASM] Assembling RawrXD_WidgetEngine.asm (Widget Intelligence)"
-        VERBATIM
-    )
-    add_executable(RawrXD-WidgetEngine ${WIDGET_ASM_OBJ})
-    set_target_properties(RawrXD-WidgetEngine PROPERTIES LINKER_LANGUAGE CXX)
-    target_link_options(RawrXD-WidgetEngine PRIVATE
-        /SUBSYSTEM:CONSOLE /ENTRY:WidgetMain /MACHINE:X64 /NODEFAULTLIB
-    )
-    target_link_libraries(RawrXD-WidgetEngine PRIVATE kernel32.lib)
-    message(STATUS "[Widget] Intelligence engine: RawrXD-WidgetEngine.exe")
-endif()
-
-# ═══════════════════════════════════════════════════════════════════
-# Headless Widget Data Transformers — Completion, Diagnostics, Semantic (AVX-512),
-# Symbol, Folding, References — Shared-memory IPC + Pipe command dispatch
-# ═══════════════════════════════════════════════════════════════════
-if(MSVC)
-    set(HEADLESS_ASM_SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/RawrXD_HeadlessWidgets.asm")
-    set(HEADLESS_ASM_OBJ "${CMAKE_CURRENT_BINARY_DIR}/RawrXD_HeadlessWidgets.obj")
-    add_custom_command(
-        OUTPUT ${HEADLESS_ASM_OBJ}
-        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd
-                /I"${CMAKE_CURRENT_SOURCE_DIR}/include"
-                /Fo${HEADLESS_ASM_OBJ} ${HEADLESS_ASM_SRC}
-        DEPENDS ${HEADLESS_ASM_SRC}
-        COMMENT "[MASM] Assembling RawrXD_HeadlessWidgets.asm (Headless Transformers)"
-        VERBATIM
-    )
-    add_executable(RawrXD-HeadlessWidgets ${HEADLESS_ASM_OBJ})
-    set_target_properties(RawrXD-HeadlessWidgets PROPERTIES LINKER_LANGUAGE CXX)
-    target_link_options(RawrXD-HeadlessWidgets PRIVATE
-        /SUBSYSTEM:CONSOLE /ENTRY:HeadlessMain /MACHINE:X64 /NODEFAULTLIB
-    )
-    target_link_libraries(RawrXD-HeadlessWidgets PRIVATE kernel32.lib)
-    message(STATUS "[Headless] Widget data transformers: RawrXD-HeadlessWidgets.exe")
-endif()
 
 # ═══════════════════════════════════════════════════════════════════
 # MASM x64 Assembly — Phase 20/21 AVX-512 Requantization + Swarm Streaming
@@ -1435,7 +1226,7 @@ if(MSVC)
     set(ASM_DEFLATE_BRUTAL_OBJ "${CMAKE_CURRENT_BINARY_DIR}/deflate_brutal_masm.obj")
     add_custom_command(
         OUTPUT ${ASM_DEFLATE_BRUTAL_OBJ}
-        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /I "${CMAKE_CURRENT_SOURCE_DIR}/include" /I "${CMAKE_CURRENT_SOURCE_DIR}/src/gpu_masm" /Fo${ASM_DEFLATE_BRUTAL_OBJ} ${ASM_DEFLATE_BRUTAL_SRC}
+        COMMAND "${CMAKE_ASM_MASM_COMPILER}" /c /Zi /Zd /Fo${ASM_DEFLATE_BRUTAL_OBJ} ${ASM_DEFLATE_BRUTAL_SRC}
         DEPENDS ${ASM_DEFLATE_BRUTAL_SRC}
         COMMENT "[MASM] Assembling deflate_brutal_masm.asm"
         VERBATIM
@@ -1585,9 +1376,8 @@ if(WIN32)
 endif()
 
 # RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
-# DEP-free constraint: /NXCOMPAT:NO disables Data Execution Prevention requirement
 if(MSVC)
-    target_link_options(RawrEngine PRIVATE /LARGEADDRESSAWARE:NO /NXCOMPAT:NO)
+    target_link_options(RawrEngine PRIVATE /LARGEADDRESSAWARE:NO)
 endif()
 
 if(NOT MSVC)
@@ -1644,27 +1434,6 @@ target_include_directories(RawrXD-InferenceEngine PRIVATE
 
 target_link_libraries(RawrXD-InferenceEngine PRIVATE Threads::Threads)
 
-# Link optional compression libraries if available
-if(ZSTD_FOUND)
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE ZSTD::ZSTD)
-    target_compile_definitions(RawrXD-InferenceEngine PRIVATE HAVE_ZSTD=1)
-endif()
-if(ZLIB_FOUND)
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE ZLIB::ZLIB)
-    target_compile_definitions(RawrXD-InferenceEngine PRIVATE HAVE_ZLIB=1)
-endif()
-if(LZ4_FOUND)
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE LZ4::LZ4)
-    target_compile_definitions(RawrXD-InferenceEngine PRIVATE HAVE_LZ4=1)
-endif()
-if(CURL_FOUND)
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE CURL::libcurl)
-    target_compile_definitions(RawrXD-InferenceEngine PRIVATE HAVE_CURL=1)
-endif()
-if(nlohmann_json_FOUND)
-    target_link_libraries(RawrXD-InferenceEngine PRIVATE nlohmann_json::nlohmann_json)
-endif()
-
 if(WIN32)
     target_link_libraries(RawrXD-InferenceEngine PRIVATE
         shlwapi psapi dbghelp winhttp bcrypt advapi32 crypt32
@@ -1712,9 +1481,8 @@ set_target_properties(RawrXD-InferenceEngine PROPERTIES
 )
 
 # Telemetry_Kernel.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
-# DEP-free constraint: /NXCOMPAT:NO disables Data Execution Prevention requirement
 if(MSVC)
-    target_link_options(RawrXD-InferenceEngine PRIVATE /LARGEADDRESSAWARE:NO /NXCOMPAT:NO)
+    target_link_options(RawrXD-InferenceEngine PRIVATE /LARGEADDRESSAWARE:NO)
 endif()
 
 message(STATUS "[Phase 6] Standalone inference engine target: RawrXD-InferenceEngine")
@@ -1753,7 +1521,6 @@ if(WIN32)
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/IDELogger.h
         src/win32app/Win32IDE_FileOps.cpp
-        src/ide/FileSystemIntegration.cpp
         src/win32app/Win32IDE_SourceFilePicker.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_Debugger.cpp
@@ -1780,8 +1547,6 @@ if(WIN32)
         src/win32app/Win32IDE_FailureDetector.cpp
         src/win32app/Win32IDE_FailureIntelligence.cpp
         src/win32app/Win32IDE_Settings.cpp
-        src/BeaconClient.h
-        src/BeaconClient.cpp
         src/win32app/Win32IDE_LocalServer.cpp
         src/win32app/Win32IDE_BackendSwitcher.cpp
         src/win32app/Win32IDE_LLMRouter.cpp
@@ -2114,18 +1879,6 @@ if(WIN32)
         src/core/live_binary_patcher.cpp
 
         # ═══════════════════════════════════════════════════════════════
-        # Circular Beacon System — Omnidirectional Agentic Connectivity
-        # ═══════════════════════════════════════════════════════════════
-        src/win32app/CircularBeaconSystem.cpp
-        src/win32app/Win32IDE_CircularBeaconIntegration.cpp
-
-        # ═══════════════════════════════════════════════════════════════
-        # Pure MASM64 Sidebar — Qt Elimination Complete (Zero Dependencies)
-        # Memory footprint: 48KB vs 2.1MB Qt bloat (97.7% reduction)
-        # ═══════════════════════════════════════════════════════════════
-        src/win32app/Win32IDE_SidebarBridge.cpp
-
-        # ═══════════════════════════════════════════════════════════════
         # Valuation-Critical Platform Subsystems (linker deps for UnifiedHotpatchManager)
         # ═══════════════════════════════════════════════════════════════
         src/core/autonomous_workflow_engine.cpp
@@ -2369,111 +2122,8 @@ if(WIN32)
         message(STATUS "DynamicPromptEngine DLL skipped (no MASM)")
     endif()
 
-    # =========================================================================
-    # Pure MASM64 Sidebar Integration — Complete Qt Elimination
-    # =========================================================================
-    
-    # Enable MASM64 assembly language
-    enable_language(ASM_MASM)
-    set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /c /Zi /W3 /errorReport:prompt /nologo")
-    
-    # Assemble the pure x64 sidebar with zero Qt dependencies
-    add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sidebar_pure.obj
-        COMMAND ${CMAKE_ASM_MASM_COMPILER} 
-            /c 
-            /Fo${CMAKE_CURRENT_BINARY_DIR}/sidebar_pure.obj 
-            /W3 
-            /errorReport:prompt 
-            /nologo
-            /I"${CMAKE_CURRENT_SOURCE_DIR}/include"
-            /I"${CMAKE_CURRENT_SOURCE_DIR}/src/win32app"
-            /Ta${CMAKE_CURRENT_SOURCE_DIR}/src/win32app/Win32IDE_Sidebar_Pure.asm
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app/Win32IDE_Sidebar_Pure.asm
-        COMMENT "Qt-ectomy: Assembling pure x64 sidebar (48KB vs 2.1MB Qt bloat)..."
-        VERBATIM
-    )
-    
-    # Create assembly target dependency
-    add_custom_target(SidebarPureAsm ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/sidebar_pure.obj)
-    
-    # Kernel Dispatch Layer — ASM Kernel DLL Targets
-    # KernelDispatcher source files
-    set(KERNEL_DISPATCH_SOURCES
-        src/kernel_dispatch/KernelDispatcher.cpp
-    )
-    
-    # Add to RawrXD-Win32IDE sources
-    list(APPEND WIN32IDE_SOURCES ${KERNEL_DISPATCH_SOURCES})
-    
-    # pocket_lab_turbo DLL (TurboSparse + PowerInfer kernel)
-    if(RAWR_HAS_MASM)
-        add_library(pocket_lab_turbo SHARED
-            src/thermal/masm/pocket_lab_turbo_dll.asm
-            src/thermal/masm/pocket_lab_turbo.cpp
-        )
-        set_source_files_properties(src/thermal/masm/pocket_lab_turbo_dll.asm PROPERTIES LANGUAGE ASM_MASM)
-        target_include_directories(pocket_lab_turbo PUBLIC include)
-        set_target_properties(pocket_lab_turbo PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY bin
-            OUTPUT_NAME pocket_lab_turbo
-            PREFIX ""
-            SUFFIX ".dll"
-            LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/src/asm/pocket_lab_turbo.def /ENTRY:_DllMainCRTStartup"
-        )
-        target_link_libraries(pocket_lab_turbo PRIVATE kernel32 ntdll)
-        target_compile_definitions(pocket_lab_turbo PRIVATE POCKET_LAB_EXPORTS=1)
-        message(STATUS "pocket_lab_turbo.dll target enabled")
-        add_definitions(-DRAWRXD_HAS_POCKET_LAB=1)
-    else()
-        message(STATUS "pocket_lab_turbo.dll skipped (no MASM)")
-        add_definitions(-DRAWRXD_HAS_POCKET_LAB=0)
-    endif()
-    
-    # Phase3 Agent Kernel DLL (KV cache + token generation)
-    if(RAWR_HAS_MASM)
-        add_library(Phase3_Agent_Kernel SHARED
-            src/agentic/Phase3_Agent_Kernel_Complete.asm
-            src/agentic/Phase3_Agent_Kernel_Bridge.cpp
-        )
-        set_source_files_properties(src/agentic/Phase3_Agent_Kernel_Complete.asm PROPERTIES LANGUAGE ASM_MASM)
-        target_include_directories(Phase3_Agent_Kernel PUBLIC include)
-        set_target_properties(Phase3_Agent_Kernel PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY bin
-            OUTPUT_NAME Phase3_Agent_Kernel
-            PREFIX ""
-            SUFFIX ".dll"
-            LINK_FLAGS "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/src/asm/Phase3_Agent_Kernel.def"
-        )
-        target_link_libraries(Phase3_Agent_Kernel PRIVATE kernel32 ntdll)
-        target_compile_definitions(Phase3_Agent_Kernel PRIVATE PHASE3_EXPORTS=1)
-        message(STATUS "Phase3_Agent_Kernel.dll target enabled")
-        add_definitions(-DRAWRXD_HAS_PHASE3_KERNEL=1)
-    else()
-        message(STATUS "Phase3_Agent_Kernel.dll skipped (no MASM)")
-        add_definitions(-DRAWRXD_HAS_PHASE3_KERNEL=0)
-    endif()
-
     add_executable(RawrXD-Win32IDE WIN32 ${WIN32IDE_SOURCES} ${ASM_KERNEL_SOURCES}
         src/win32app/RawrXD-Win32IDE.rc)
-    
-    # =============================================================================================
-    # Pure MASM64 Sidebar Integration - Link Assembly Object (Qt Elimination Complete)
-    # =============================================================================================
-    
-    # Add dependency on the pure sidebar assembly target  
-    add_dependencies(RawrXD-Win32IDE SidebarPureAsm)
-    
-    # Link the assembled object file directly for zero Qt dependency
-    target_link_libraries(RawrXD-Win32IDE PRIVATE 
-        ${CMAKE_CURRENT_BINARY_DIR}/sidebar_pure.obj
-    )
-    
-    # Define Qt-ectomy success
-    target_compile_definitions(RawrXD-Win32IDE PRIVATE 
-        RAWRXD_PURE_SIDEBAR=1 
-        RAWRXD_QT_ELIMINATED=1
-    )
 
     # Win32 IDE links sovereign_engines.cpp — avoid duplicate register_sovereign_engines in stubs
     target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_HAS_SOVEREIGN_ENGINES=1)
@@ -2615,9 +2265,8 @@ if(WIN32)
         OUTPUT_NAME RawrXD-Win32IDE
     )
     # RawrCodex.asm uses ADDR32 relocations — require /LARGEADDRESSAWARE:NO
-    # DEP-free constraint: /NXCOMPAT:NO disables Data Execution Prevention requirement
     if(MSVC)
-        target_link_options(RawrXD-Win32IDE PRIVATE /LARGEADDRESSAWARE:NO /NXCOMPAT:NO)
+        target_link_options(RawrXD-Win32IDE PRIVATE /LARGEADDRESSAWARE:NO)
     endif()
 endif()
 
@@ -2647,7 +2296,6 @@ if(WIN32)
         src/win32app/Win32IDE_PowerShell.cpp
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_FileOps.cpp
-        src/ide/FileSystemIntegration.cpp
         src/win32app/Win32IDE_SourceFilePicker.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_Debugger.cpp
@@ -2667,8 +2315,6 @@ if(WIN32)
         src/win32app/Win32IDE_FailureDetector.cpp
         src/win32app/Win32IDE_FailureIntelligence.cpp
         src/win32app/Win32IDE_Settings.cpp
-        src/BeaconClient.h
-        src/BeaconClient.cpp
         src/win32app/Win32IDE_LocalServer.cpp
         src/win32app/Win32IDE_BackendSwitcher.cpp
         src/win32app/Win32IDE_LLMRouter.cpp

@@ -7,10 +7,6 @@
 ; ============================================
 ; EXPORTS
 ; ============================================
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 PUBLIC InitializePatternEngine
 PUBLIC ClassifyPattern
 PUBLIC ShutdownPatternEngine
@@ -20,13 +16,14 @@ PUBLIC GetPatternStats
 ; CONSTANTS
 ; ============================================
 PATTERN_UNKNOWN EQU 0
-PATTERN_FIXME   EQU 1
-PATTERN_XXX     EQU 2
-PATTERN_HACK    EQU 3
-PATTERN_BUG     EQU 4
-PATTERN_NOTE    EQU 5
-PATTERN_IDEA    EQU 6
-PATTERN_REVIEW  EQU 7
+PATTERN_TODO    EQU 1
+PATTERN_FIXME   EQU 2
+PATTERN_XXX     EQU 3
+PATTERN_HACK    EQU 4
+PATTERN_BUG     EQU 5
+PATTERN_NOTE    EQU 6
+PATTERN_IDEA    EQU 7
+PATTERN_REVIEW  EQU 8
 
 PRIORITY_LOW      EQU 0
 PRIORITY_MEDIUM   EQU 1
@@ -166,6 +163,8 @@ scan_loop:
 
 check_patterns:
     ; Quick first-char dispatch
+    cmp al, 'T'
+    je try_todo
     cmp al, 'F'
     je try_fixme
     cmp al, 'X'
@@ -183,6 +182,26 @@ check_patterns:
     jmp next_byte
 
 ; --- Pattern matchers ---
+
+try_todo:
+    cmp r12d, 4
+    jb next_byte
+    ; Check "ODO" (already matched 'T')
+    movzx eax, byte ptr [rsi+1]
+    or al, 20h              ; to lowercase for comparison
+    cmp al, 'o'
+    jne next_byte
+    movzx eax, byte ptr [rsi+2]
+    or al, 20h
+    cmp al, 'd'
+    jne next_byte
+    movzx eax, byte ptr [rsi+3]
+    or al, 20h
+    cmp al, 'o'
+    jne next_byte
+    ; Found TODO!
+    mov ebx, PATTERN_TODO
+    jmp pattern_found
 
 try_fixme:
     cmp r12d, 5
@@ -337,6 +356,8 @@ pattern_found:
     je set_conf_high
     cmp ebx, PATTERN_XXX
     je set_conf_high
+    cmp ebx, PATTERN_TODO
+    je set_conf_medium
     jmp set_conf_low
 
 set_conf_critical:

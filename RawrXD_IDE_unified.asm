@@ -3,10 +3,6 @@
 ; Ready for direct assembly with ml64.exe and integration into the 'lazy init IDE'.
 
 ; ========== Includes ==========
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 includelib kernel32.lib
 includelib user32.lib
 includelib advapi32.lib

@@ -6,10 +6,6 @@
 ; Link: link Titan_FullLogic.obj kernel32.lib /SUBSYSTEM:CONSOLE
 
 OPTION CASEMAP:NONE
-
-; ─── Cross-module symbol resolution ───
-INCLUDE rawrxd_master.inc
-
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
 

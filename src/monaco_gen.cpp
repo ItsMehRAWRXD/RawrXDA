@@ -1,0 +1,74 @@
+#include "engine/react_ide_generator.h"
+#include <filesystem>
+#include <iostream>
+#include <string>
+#include <vector>
+
+namespace {
+struct Args {
+    std::string name = "rawrxd-ide";
+    std::string template_name = "minimal";
+    std::filesystem::path output_dir = std::filesystem::current_path();
+};
+
+void PrintUsage(const char* exe) {
+    s_monacoLogger.info("Usage: {} [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]", exe);
+    s_monacoLogger.info("Examples:");
+    s_monacoLogger.info("  {} --name RawrXD-IDE --template minimal --out .\\rawrxd-ide", exe);
+    s_monacoLogger.info("  {} --template full --out D:\\apps\\rawrxd-ide", exe);
+}
+
+bool ParseArgs(int argc, char** argv, Args& args) {
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--name" && i + 1 < argc) {
+            args.name = argv[++i];
+        } else if (arg == "--template" && i + 1 < argc) {
+            args.template_name = argv[++i];
+        } else if (arg == "--out" && i + 1 < argc) {
+            args.output_dir = std::filesystem::path(argv[++i]);
+        } else if (arg == "--help" || arg == "-h") {
+            return false;
+        } else {
+            s_monacoLogger.error("Unknown argument: {}", arg);
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
+
+int main(int argc, char** argv) {
+    Args args;
+    if (!ParseArgs(argc, argv, args)) {
+        PrintUsage(argv[0]);
+        return 1;
+    }
+
+    ReactIDEGenerator generator;
+    bool success = false;
+
+    if (args.template_name == "minimal") {
+        success = generator.GenerateMinimalIDE(args.name, args.output_dir);
+    } else if (args.template_name == "full") {
+        success = generator.GenerateFullIDE(args.name, args.output_dir);
+    } else if (args.template_name == "agentic") {
+        success = generator.GenerateAgenticIDE(args.name, args.output_dir);
+    } else {
+        s_monacoLogger.error("Unknown template: {}", args.template_name);
+        PrintUsage(argv[0]);
+        return 1;
+    }
+
+    if (!success) {
+        s_monacoLogger.error("Failed to generate Monaco IDE output");
+        return 1;
+    }
+
+    s_monacoLogger.info( "Monaco IDE generated at: " << args.output_dir << "\n";
+    s_monacoLogger.info( "Next steps:\n";
+    s_monacoLogger.info( "  cd " << args.output_dir << "\\" << args.name << "\n";
+    s_monacoLogger.info( "  npm install\n";
+    s_monacoLogger.info( "  npm run dev\n";
+    return 0;
+}
