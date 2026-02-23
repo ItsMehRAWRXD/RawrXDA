@@ -1,5 +1,10 @@
 # Phase X+4: GGUF Hotpatch validation
 # Validates runtime model switching without EXE restart; working set stays under 1.92GB.
+#
+# Production automation (optional): implement Send-Command (inject /hotswap <path> via
+# window message or shared memory), Wait-ForBeaconSignal (MODEL_HOTSWAP_COMPLETE),
+# Get-ProcessMemoryString (read g_currentPathW for path verification).
+#
 # Usage:
 #   .\scripts\test_x4_hotswap.ps1
 #   .\scripts\test_x4_hotswap.ps1 -ModelA "D:\models\tiny.gguf" -ModelB "D:\models\phi3.gguf"

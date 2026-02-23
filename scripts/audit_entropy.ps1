@@ -35,7 +35,9 @@ $CanonicalASM = @(
     "model_loader.asm",
     "dap.asm",
     "testing.asm",
-    "tasks.asm"
+    "tasks.asm",
+    "swarm.asm",
+    "swarm_coordinator.asm"
 )
 
 $MonoDir = Join-Path $RepoRoot "src\asm\monolithic"

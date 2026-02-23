@@ -14,6 +14,7 @@ PUBLIC RegisterAgent
 ; X+4 hotpatch message types (for agent slot dispatch)
 MODEL_HOTSWAP_REQUEST   equ 1001h
 MODEL_HOTSWAP_COMPLETE  equ 1002h
+MODEL_HOTSWAP_FAILED    equ 1003h
 
 .data?
 align 16
@@ -34,7 +35,7 @@ BeaconRouterInit PROC FRAME
     xor     ebx, ebx
 @alloc_loop:
     mov     rcx, qword ptr g_hHeap
-    xor     edx, edx
+    xor     edx, edx                 ; flags = 0
     mov     r8, RING_SIZE
     call    HeapAlloc
     test    rax, rax
@@ -57,23 +58,39 @@ BeaconRouterInit PROC FRAME
     ret
 BeaconRouterInit ENDP
 
-BeaconSend PROC
+BeaconSend PROC FRAME
     ; ECX=beaconID, RDX=pData, R8D=dataLen
+    ; Ring header: [0]=writePos (dword), [4]=readPos (dword)
+    ; Data entries: 16 bytes each (qword pData + dword len + 4 pad)
+    ; FRAME: 1 push (rbp) + 28h alloc = 8+8+40 = 56 → not 16-aligned
+    ;   Fix: 1 push + 20h = 8+8+32 = 48 → 48/16=3 exact. Good.
+    push    rbp
+    .pushreg rbp
+    mov     rbp, rsp
+    .setframe rbp, 0
+    sub     rsp, 20h
+    .allocstack 20h
+    .endprolog
+
     movsxd  rax, ecx
     lea     r10, g_beacons
     mov     r10, [r10 + rax*8]
-    mov     eax, dword ptr [r10]
-    add     eax, 8
-    and     eax, RING_SIZE - 1
-    mov     [r10 + rax], rdx
-    mov     dword ptr [r10 + rax + 8], r8d
-    mov     dword ptr [r10], eax
+    mov     eax, dword ptr [r10]       ; current write offset
+    add     eax, 16                    ; advance one 16-byte entry
+    and     eax, 0FFFF0h               ; wrap within 1MB ring, 16-aligned
+    mov     [r10 + rax], rdx           ; store pData (qword)
+    mov     dword ptr [r10 + rax + 8], r8d  ; store dataLen (dword)
+    mov     dword ptr [r10], eax       ; update write position
     xor     eax, eax
+
+    lea     rsp, [rbp]
+    pop     rbp
     ret
 BeaconSend ENDP
 
 BeaconRecv PROC
     ; ECX=beaconID, RDX=ppData, R8=pLen
+    ; Blocking recv. Spins until writePos != readPos.
     movsxd  rax, ecx
     lea     r10, g_beacons
     mov     r10, [r10 + rax*8]
@@ -82,8 +99,8 @@ BeaconRecv PROC
     mov     r11d, dword ptr [r10+4]
     cmp     eax, r11d
     je      @wait
-    add     r11d, 8
-    and     r11d, RING_SIZE - 1
+    add     r11d, 16
+    and     r11d, 0FFFF0h
     mov     rax, [r10 + r11]
     mov     [rdx], rax
     mov     eax, dword ptr [r10 + r11 + 8]
@@ -96,6 +113,7 @@ BeaconRecv ENDP
 ; TryBeaconRecv(ECX=beaconID, RDX=ppData, R8=pLen) — non-blocking
 ; Returns EAX=1 if message read, 0 if ring empty
 TryBeaconRecv PROC
+    ; Non-blocking recv. Returns EAX=1 if message read, 0 if empty.
     movsxd  rax, ecx
     lea     r10, g_beacons
     mov     r10, [r10 + rax*8]
@@ -103,8 +121,8 @@ TryBeaconRecv PROC
     mov     r11d, dword ptr [r10+4]
     cmp     eax, r11d
     je      @try_none
-    add     r11d, 8
-    and     r11d, RING_SIZE - 1
+    add     r11d, 16
+    and     r11d, 0FFFF0h
     mov     rax, [r10 + r11]
     mov     [rdx], rax
     mov     eax, dword ptr [r10 + r11 + 8]
