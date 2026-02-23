@@ -18,6 +18,7 @@
 #include <memory>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <thread>
 #include <mutex>
 #include <atomic>
@@ -30,7 +31,6 @@
 #include "../model_source_resolver.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Autonomy.h"
-#include "SourceFileRegistry.h"
 #include "Win32IDE_SubAgent.h"
 #include "Win32IDE_WebView2.h"
 #include "../modules/engine_manager.h"
@@ -118,7 +118,6 @@ struct IDWriteTextLayout;
 #define IDC_AI_DEEP_THINK 5002
 #define IDC_AI_DEEP_RESEARCH 5003
 #define IDC_AI_NO_REFUSAL 5004
-#define IDC_SOURCEFILE_DROPDOWN 65001
 
 // Plan Approval Dialog Controls
 #define IDC_PLAN_LIST          7001
@@ -219,6 +218,10 @@ struct IDWriteTextLayout;
 
 // Tier 3: File changed externally — custom window message
 #define WM_FILE_CHANGED_EXTERNAL    (WM_APP + 200)
+
+// Universal Sourcefile dropdown — workspace index ready
+// lParam: heap pointer to payload allocated on background thread, freed on UI thread.
+#define WM_SOURCEFILE_INDEX_READY   (WM_APP + 700)
 
 // Transparency commands (3200 range — routed via handleViewCommand)
 #define IDM_TRANSPARENCY_100        3200
@@ -918,9 +921,10 @@ private:
     void createSidebar(HWND hwnd);
     void createTitleBarControls();
     void layoutTitleBar(int width);
-    void refreshSourceFileDropdown();
-    void onSourceFileDropdownSelection();
     void updateTitleBarText();
+    void startSourceFileIndexingAsync();
+    void onSourceFileIndexReady(void* payloadPtr);
+    void syncSourceFileDropdownSelection();
     std::string extractLeafName(const std::string& path) const;
     void setCurrentDirectoryFromFile(const std::string& filePath);
     void createEditor(HWND hwnd);
@@ -952,8 +956,6 @@ private:
     void saveRecentFiles();
     void clearRecentFiles();
     std::string getFileDialogPath(bool isSave = false);
-    std::string getCurrentFilePath() const { return m_currentFile; }
-    void showSourceFilePicker();
     
     // GGUF Model operations
     bool loadGGUFModel(const std::string& filepath);
@@ -1884,22 +1886,30 @@ private:
     HMENU m_hMenu;
     HWND m_hwndToolbar;
     HWND m_hwndTitleLabel;
-    HWND m_hwndSourceFileDropdown = nullptr;
+    HWND m_hwndSourceFileLabel = nullptr;
+    HWND m_hwndSourceFileCombo = nullptr;
     HWND m_hwndBtnMinimize;
     HWND m_hwndBtnMaximize;
     HWND m_hwndBtnClose;
     HWND m_hwndBtnGitHub;
     HWND m_hwndBtnMicrosoft;
     HWND m_hwndBtnSettings;
-    std::vector<std::string> m_sourceFileDisplayPaths;
-    std::vector<std::string> m_sourceFileAbsolutePaths;
-    std::string m_sourceRegistryRoot;
-    bool m_sourceRegistryInitialized = false;
     std::string m_lastTitleBarText;
 
     // Per-pane terminal managers replace the previous single manager
     std::string m_currentFile;
     bool m_fileModified;
+
+    // Workspace Sourcefile dropdown state
+    struct SourceFileEntry {
+        std::string display;
+        std::string fullPath;
+    };
+    std::vector<SourceFileEntry> m_sourceFileEntries;
+    std::unordered_map<std::string, int> m_sourceFileIndexByPathKey; // normalized key -> combo index
+    std::atomic<bool> m_sourceFileIndexing{false};
+    std::atomic<bool> m_sourceFileIndexReady{false};
+    bool m_sourceFileDropdownInternalChange = false;
     
     // Multi-terminal support
     std::vector<TerminalPane> m_terminalPanes;

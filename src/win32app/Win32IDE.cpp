@@ -30,10 +30,9 @@
 #include <algorithm>
 #include <sstream>
 #include <ctime>
-#include <cctype>
 #include <regex>
 #include <filesystem>
-#include <unordered_set>
+#include <cctype>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
@@ -91,98 +90,6 @@ static std::string wideToUtf8(const wchar_t* wide) {
     return out;
 }
 
-static std::string toLowerAscii(std::string value) {
-    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
-        return static_cast<char>(std::tolower(ch));
-    });
-    return value;
-}
-
-static std::string normalizePathForCompare(std::string path) {
-    std::replace(path.begin(), path.end(), '/', '\\');
-    return toLowerAscii(path);
-}
-
-static bool shouldSkipSourceRegistryDirectory(const std::filesystem::path& dirPath) {
-    static const std::unordered_set<std::string> kSkipDirs = {
-        ".git", ".hg", ".svn", ".idea", ".vscode", ".cursor",
-        "node_modules", "__pycache__", ".venv", "venv", "env",
-        "build", "dist", "out", "bin", "obj", ".vs"
-    };
-    const std::string name = toLowerAscii(dirPath.filename().string());
-    return kSkipDirs.find(name) != kSkipDirs.end();
-}
-
-static bool isSourceLikeFile(const std::filesystem::path& filePath) {
-    static const std::unordered_set<std::string> kExts = {
-        ".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx", ".ipp", ".inl",
-        ".asm", ".s", ".inc",
-        ".cs", ".java", ".go", ".rs",
-        ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
-        ".py",
-        ".ps1", ".psm1", ".psd1",
-        ".sql"
-    };
-    static const std::unordered_set<std::string> kFileNames = {
-        "cmakelists.txt", "makefile", "dockerfile", "meson.build", "build.gradle"
-    };
-
-    const std::string ext = toLowerAscii(filePath.extension().string());
-    if (!ext.empty() && kExts.find(ext) != kExts.end()) {
-        return true;
-    }
-    const std::string name = toLowerAscii(filePath.filename().string());
-    return kFileNames.find(name) != kFileNames.end();
-}
-
-static std::filesystem::path detectSourceRegistryRootPath(
-    const std::string& currentDirectory,
-    const std::string& gitRepoPath
-) {
-    namespace fs = std::filesystem;
-    std::error_code ec;
-
-    if (!gitRepoPath.empty()) {
-        fs::path gitRoot(gitRepoPath);
-        if (fs::exists(gitRoot, ec)) {
-            return fs::absolute(gitRoot, ec);
-        }
-    }
-
-    fs::path start;
-    if (!currentDirectory.empty()) {
-        start = fs::path(currentDirectory);
-    } else {
-        start = fs::current_path(ec);
-    }
-    if (start.empty()) {
-        return {};
-    }
-    if (!fs::is_directory(start, ec)) {
-        start = start.parent_path();
-    }
-    if (start.empty()) {
-        return {};
-    }
-
-    fs::path probe = fs::absolute(start, ec);
-    if (probe.empty()) {
-        return start;
-    }
-
-    while (!probe.empty()) {
-        if (fs::exists(probe / ".git", ec)) {
-            return probe;
-        }
-        fs::path parent = probe.parent_path();
-        if (parent == probe) {
-            break;
-        }
-        probe = parent;
-    }
-    return fs::absolute(start, ec);
-}
-
 #define IDC_EDITOR 1001
 #define IDC_TERMINAL 1002
 #define IDC_COMMAND_INPUT 1003
@@ -209,6 +116,10 @@ static std::filesystem::path detectSourceRegistryRootPath(
 #define IDC_BTN_SETTINGS 1024
 #define IDC_FILE_EXPLORER 1025
 #define IDC_FILE_TREE 1026
+
+// Title-bar "Sourcefile" dropdown
+#define IDC_SOURCEFILE_LABEL 1450
+#define IDC_SOURCEFILE_COMBO 1451
 // Defined in Win32IDE.h
 // #define IDM_AUTONOMY_TOGGLE 4150
 // ... constants moved to header
@@ -493,10 +404,6 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit");
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
 
-    HMENU hSourcefileMenu = CreatePopupMenu();
-    AppendMenuW(hSourcefileMenu, MF_STRING, 1040, L"Open Source File...");
-    AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSourcefileMenu, L"#&Sourcefile");
-
     // Edit menu (Unicode)
     HMENU hEditMenu = CreatePopupMenu();
     AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND, L"&Find...\tCtrl+F");
@@ -755,14 +662,6 @@ void Win32IDE::createMenuBar(HWND hwnd)
     // Cursor/JB-Parity Feature Modules
     createCursorParityMenu(m_hMenu);
 
-    // Source Files — every file in the repo as a browsable menu tree
-    {
-        HMENU hSrcMenu = BuildSourceFileMenu();
-        if (hSrcMenu) {
-            AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hSrcMenu, L"&Source Files");
-        }
-    }
-
     SetMenu(hwnd, m_hMenu);
 
 }
@@ -793,6 +692,23 @@ void Win32IDE::createTitleBarControls()
     m_hwndTitleLabel = CreateWindowExW(0, L"STATIC", L"RawrXD IDE", labelStyle,
                                       0, 0, 200, 24, m_hwndToolbar, (HMENU)IDC_TITLE_TEXT, m_hInstance, nullptr);
 
+    // "Sourcefile" label + dropdown (workspace file quick-open)
+    DWORD sfLabelStyle = WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE | SS_NOPREFIX;
+    m_hwndSourceFileLabel = CreateWindowExW(0, L"STATIC", L"Sourcefile", sfLabelStyle,
+                                           0, 0, 90, 24, m_hwndToolbar, (HMENU)IDC_SOURCEFILE_LABEL, m_hInstance, nullptr);
+
+    DWORD sfComboStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL;
+    // Height controls the dropped list height for COMBOBOX
+    m_hwndSourceFileCombo = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
+                                           sfComboStyle, 0, 0, 420, 300,
+                                           m_hwndToolbar, (HMENU)IDC_SOURCEFILE_COMBO, m_hInstance, nullptr);
+    if (m_hwndSourceFileCombo) {
+        SendMessageW(m_hwndSourceFileCombo, CB_RESETCONTENT, 0, 0);
+        SendMessageW(m_hwndSourceFileCombo, CB_ADDSTRING, 0, (LPARAM)L"Indexing workspace files...");
+        SendMessageW(m_hwndSourceFileCombo, CB_SETCURSEL, 0, 0);
+        EnableWindow(m_hwndSourceFileCombo, FALSE);
+    }
+
     DWORD buttonStyle = WS_CHILD | WS_VISIBLE | BS_FLAT;
     auto createButton = [&](HWND& target, int controlId, const wchar_t* caption) {
         target = CreateWindowExW(0, L"BUTTON", caption, buttonStyle,
@@ -805,18 +721,6 @@ void Win32IDE::createTitleBarControls()
     createButton(m_hwndBtnMinimize, IDC_BTN_MINIMIZE, L"-");
     createButton(m_hwndBtnMaximize, IDC_BTN_MAXIMIZE, L"[]");
     createButton(m_hwndBtnClose, IDC_BTN_CLOSE, L"X");
-
-    m_hwndSourceFileDropdown = CreateWindowExW(
-        0, L"COMBOBOX", L"",
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL,
-        0, 0, 320, 260,
-        m_hwndToolbar, (HMENU)IDC_SOURCEFILE_DROPDOWN, m_hInstance, nullptr);
-
-    if (m_hwndSourceFileDropdown) {
-        HFONT dropdownFont = m_hFontUI ? m_hFontUI : (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-        SendMessageW(m_hwndSourceFileDropdown, WM_SETFONT, (WPARAM)dropdownFont, TRUE);
-        refreshSourceFileDropdown();
-    }
 
     RECT client{};
     GetClientRect(m_hwndMain, &client);
@@ -835,7 +739,6 @@ void Win32IDE::layoutTitleBar(int width)
     int y = (toolbarHeight - controlHeight) / 2;
     int padding = 6;
     int x = width - padding;
-    int left = padding;
 
     auto placeButton = [&](HWND hwnd, int controlWidth) {
         if (!hwnd) return;
@@ -851,169 +754,38 @@ void Win32IDE::layoutTitleBar(int width)
     placeButton(m_hwndBtnMicrosoft, 40);
     placeButton(m_hwndBtnGitHub, 40);
 
-    if (m_hwndSourceFileDropdown) {
-        int desiredWidth = (std::max)(260, width / 3);
-        desiredWidth = (std::min)(560, desiredWidth);
-        int maxAllowed = x - padding - 180;
-        int comboWidth = (std::max)(220, (std::min)(desiredWidth, maxAllowed));
-        int comboDropHeight = controlHeight + dpiScale(280);
-        if (maxAllowed > 180) {
-            ShowWindow(m_hwndSourceFileDropdown, SW_SHOW);
-            MoveWindow(m_hwndSourceFileDropdown, left, y, comboWidth, comboDropHeight, TRUE);
-            left += comboWidth + padding;
-        } else {
-            ShowWindow(m_hwndSourceFileDropdown, SW_HIDE);
-        }
+    // Left-side: Sourcefile label + dropdown
+    int availableRight = x;
+    int left = padding;
+    if (m_hwndSourceFileLabel) {
+        int labelW = dpiScale(92);
+        MoveWindow(m_hwndSourceFileLabel, left, y, labelW, controlHeight, TRUE);
+        left += labelW + padding;
+    }
+    if (m_hwndSourceFileCombo) {
+        int comboW = dpiScale(520);
+        int dropH = controlHeight + dpiScale(260);
+        // Keep within remaining space (leave room for centered title label)
+        comboW = (std::min)(comboW, (std::max)(120, availableRight - left - dpiScale(160)));
+        MoveWindow(m_hwndSourceFileCombo, left, y, comboW, dropH, TRUE);
+        left += comboW + padding;
     }
 
     if (m_hwndTitleLabel) {
-        int availableRight = x;
-        int availableLeft = left;
-        int availableWidth = availableRight - availableLeft;
-        if (availableWidth < 120) {
-            ShowWindow(m_hwndTitleLabel, SW_HIDE);
-            return;
+        int availableLeft = (std::max)(padding, left);
+        int span = (std::max)(0, availableRight - availableLeft);
+        int labelWidth = (std::min)(dpiScale(420), span);
+        if (labelWidth < 160) {
+            labelWidth = (std::max)(span, dpiScale(120));
         }
-        ShowWindow(m_hwndTitleLabel, SW_SHOW);
-        int labelWidth = (std::min)(520, availableWidth);
-        int labelX = availableLeft + (availableWidth - labelWidth) / 2;
+        int labelX = availableLeft + (span - labelWidth) / 2;
+        if (labelX < availableLeft) {
+            labelX = availableLeft;
+        }
+        if (labelX + labelWidth > availableRight) {
+            labelX = (std::max)(availableLeft, availableRight - labelWidth);
+        }
         MoveWindow(m_hwndTitleLabel, labelX, y, labelWidth, controlHeight, TRUE);
-    }
-}
-
-void Win32IDE::refreshSourceFileDropdown()
-{
-    if (!m_hwndSourceFileDropdown) {
-        return;
-    }
-
-    namespace fs = std::filesystem;
-    const fs::path rootPath = detectSourceRegistryRootPath(m_currentDirectory, m_gitRepoPath);
-    if (rootPath.empty()) {
-        return;
-    }
-
-    std::error_code ec;
-    fs::path normalizedRoot = fs::weakly_canonical(rootPath, ec);
-    if (ec || normalizedRoot.empty()) {
-        ec.clear();
-        normalizedRoot = fs::absolute(rootPath, ec);
-    }
-    if (normalizedRoot.empty()) {
-        return;
-    }
-    m_sourceRegistryRoot = normalizedRoot.string();
-
-    std::vector<std::pair<std::string, std::string>> indexedFiles;
-    indexedFiles.reserve(4096);
-
-    const size_t kMaxIndexedFiles = 24000;
-    fs::recursive_directory_iterator it(normalizedRoot, fs::directory_options::skip_permission_denied, ec);
-    fs::recursive_directory_iterator end;
-    for (; it != end; it.increment(ec)) {
-        if (ec) {
-            ec.clear();
-            continue;
-        }
-        const fs::directory_entry& entry = *it;
-        if (entry.is_directory(ec)) {
-            if (!ec && shouldSkipSourceRegistryDirectory(entry.path())) {
-                it.disable_recursion_pending();
-            }
-            ec.clear();
-            continue;
-        }
-        if (!entry.is_regular_file(ec)) {
-            ec.clear();
-            continue;
-        }
-        const fs::path absolutePath = entry.path();
-        if (!isSourceLikeFile(absolutePath)) {
-            continue;
-        }
-
-        fs::path relativePath = fs::relative(absolutePath, normalizedRoot, ec);
-        if (ec) {
-            ec.clear();
-            relativePath = absolutePath.filename();
-        }
-
-        indexedFiles.emplace_back(relativePath.generic_string(), absolutePath.string());
-        if (indexedFiles.size() >= kMaxIndexedFiles) {
-            break;
-        }
-    }
-
-    std::sort(indexedFiles.begin(), indexedFiles.end(),
-        [](const auto& a, const auto& b) {
-            return toLowerAscii(a.first) < toLowerAscii(b.first);
-        });
-
-    const std::string currentNormalized = normalizePathForCompare(m_currentFile);
-    SendMessageW(m_hwndSourceFileDropdown, WM_SETREDRAW, FALSE, 0);
-    SendMessageW(m_hwndSourceFileDropdown, CB_RESETCONTENT, 0, 0);
-    m_sourceFileDisplayPaths.clear();
-    m_sourceFileAbsolutePaths.clear();
-    m_sourceFileDisplayPaths.reserve(indexedFiles.size());
-    m_sourceFileAbsolutePaths.reserve(indexedFiles.size());
-
-    int selectedIndex = -1;
-    for (size_t i = 0; i < indexedFiles.size(); ++i) {
-        const std::string& displayPath = indexedFiles[i].first;
-        const std::string& absolutePath = indexedFiles[i].second;
-        const std::string dropdownLabel = "#Sourcefile -> " + displayPath;
-        m_sourceFileDisplayPaths.push_back(displayPath);
-        m_sourceFileAbsolutePaths.push_back(absolutePath);
-        SendMessageW(m_hwndSourceFileDropdown, CB_ADDSTRING, 0, (LPARAM)utf8ToWide(dropdownLabel).c_str());
-        if (selectedIndex < 0 && !currentNormalized.empty() &&
-            normalizePathForCompare(absolutePath) == currentNormalized) {
-            selectedIndex = static_cast<int>(i);
-        }
-    }
-
-    if (selectedIndex >= 0) {
-        SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, selectedIndex, 0);
-    } else if (!m_sourceFileDisplayPaths.empty()) {
-        SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, 0, 0);
-    }
-
-    SendMessageW(m_hwndSourceFileDropdown, WM_SETREDRAW, TRUE, 0);
-    InvalidateRect(m_hwndSourceFileDropdown, nullptr, TRUE);
-
-    m_sourceRegistryInitialized = true;
-    if (m_hwndStatusBar) {
-        std::string status = "Source index: " + std::to_string(m_sourceFileDisplayPaths.size()) + " files";
-        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)status.c_str());
-    }
-}
-
-void Win32IDE::onSourceFileDropdownSelection()
-{
-    if (!m_hwndSourceFileDropdown) {
-        return;
-    }
-
-    int selectedIndex = (int)SendMessageW(m_hwndSourceFileDropdown, CB_GETCURSEL, 0, 0);
-    if (selectedIndex < 0 || selectedIndex >= (int)m_sourceFileAbsolutePaths.size()) {
-        return;
-    }
-
-    const std::string selectedPath = m_sourceFileAbsolutePaths[(size_t)selectedIndex];
-    if (selectedPath.empty()) {
-        return;
-    }
-    if (!m_currentFile.empty() &&
-        normalizePathForCompare(selectedPath) == normalizePathForCompare(m_currentFile)) {
-        return;
-    }
-
-    openFile(selectedPath);
-    setCurrentDirectoryFromFile(selectedPath);
-    updateTitleBarText();
-
-    if (m_hwndStatusBar) {
-        std::string status = "Opened: " + m_sourceFileDisplayPaths[(size_t)selectedIndex];
-        SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)status.c_str());
     }
 }
 
@@ -1069,25 +841,230 @@ void Win32IDE::updateTitleBarText()
         SetWindowTextW(m_hwndTitleLabel, utf8ToWide(composed).c_str());
         m_lastTitleBarText = composed;
     }
-
-    if (m_hwndSourceFileDropdown && !m_currentFile.empty() && !m_sourceFileAbsolutePaths.empty()) {
-        const std::string currentNormalized = normalizePathForCompare(m_currentFile);
-        int currentSelection = (int)SendMessageW(m_hwndSourceFileDropdown, CB_GETCURSEL, 0, 0);
-        int expectedSelection = -1;
-        for (size_t i = 0; i < m_sourceFileAbsolutePaths.size(); ++i) {
-            if (normalizePathForCompare(m_sourceFileAbsolutePaths[i]) == currentNormalized) {
-                expectedSelection = (int)i;
-                break;
-            }
-        }
-        if (expectedSelection >= 0 && expectedSelection != currentSelection) {
-            SendMessageW(m_hwndSourceFileDropdown, CB_SETCURSEL, expectedSelection, 0);
-        }
-    }
-
     // Keep breadcrumb bar in sync with current file (symbol path updates on cursor move)
     if (m_hwndBreadcrumbs && m_settings.breadcrumbsEnabled)
         updateBreadcrumbs();
+}
+
+// ============================================================================
+// SOURCEFILE DROPDOWN — Workspace file index + quick-open
+// ============================================================================
+
+namespace {
+struct SourceFileIndexPayload {
+    // pair(display, fullPath) — avoid referencing private nested types here
+    std::vector<std::pair<std::string, std::string>> entries;
+};
+
+static std::string normalizePathKey(std::string s) {
+    // Normalize slashes + case for stable lookups on Windows
+    for (auto& ch : s) {
+        if (ch == '/') ch = '\\';
+    }
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    // Trim trailing spaces
+    while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r' || s.back() == '\n')) s.pop_back();
+    return s;
+}
+
+static std::filesystem::path getModuleDirFs() {
+    wchar_t buf[MAX_PATH]{};
+    DWORD n = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    if (n == 0 || n >= MAX_PATH) return std::filesystem::current_path();
+    return std::filesystem::path(buf).parent_path();
+}
+
+static std::filesystem::path getCurrentDirFs() {
+    wchar_t buf[MAX_PATH]{};
+    DWORD n = GetCurrentDirectoryW(MAX_PATH, buf);
+    if (n == 0 || n >= MAX_PATH) return std::filesystem::current_path();
+    return std::filesystem::path(buf);
+}
+
+static bool looksLikeWorkspaceRoot(const std::filesystem::path& p) {
+    std::error_code ec;
+    if (!std::filesystem::exists(p, ec)) return false;
+    const bool hasSrc = std::filesystem::exists(p / "src", ec);
+    const bool hasInclude = std::filesystem::exists(p / "include", ec);
+    const bool hasShip = std::filesystem::exists(p / "Ship", ec);
+    const bool hasCMake = std::filesystem::exists(p / "CMakeLists.txt", ec);
+    const bool hasBuildScripts = std::filesystem::exists(p / "BUILD_ORCHESTRATOR.ps1", ec);
+    return (hasSrc && (hasInclude || hasShip) && (hasCMake || hasBuildScripts));
+}
+
+static std::filesystem::path discoverWorkspaceRootFs() {
+    std::filesystem::path candidates[] = { getCurrentDirFs(), getModuleDirFs() };
+    for (const auto& start : candidates) {
+        std::filesystem::path cur = start;
+        for (int i = 0; i < 16; ++i) {
+            if (looksLikeWorkspaceRoot(cur)) return cur;
+            if (cur.has_parent_path()) {
+                auto parent = cur.parent_path();
+                if (parent == cur) break;
+                cur = parent;
+            } else {
+                break;
+            }
+        }
+    }
+    return getCurrentDirFs();
+}
+
+static std::string fsPathToUtf8(const std::filesystem::path& p) {
+    std::wstring w = p.wstring();
+    return wideToUtf8(w.c_str());
+}
+
+static bool shouldSkipDirName(const std::wstring& name) {
+    static const std::unordered_set<std::wstring> kSkip{
+        L".git", L".vs", L".vscode", L".idea", L"node_modules",
+        L"build", L"dist", L"out", L"bin", L"obj",
+        L".venv", L"venv", L"__pycache__", L".pytest_cache",
+        L"cmake-build-debug", L"cmake-build-release"
+    };
+    return kSkip.find(name) != kSkip.end();
+}
+} // namespace
+
+void Win32IDE::startSourceFileIndexingAsync() {
+    if (m_sourceFileIndexReady.load(std::memory_order_acquire)) return;
+    bool expected = false;
+    if (!m_sourceFileIndexing.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        return; // already indexing
+    }
+
+    if (m_hwndSourceFileCombo && IsWindow(m_hwndSourceFileCombo)) {
+        SendMessageW(m_hwndSourceFileCombo, CB_RESETCONTENT, 0, 0);
+        SendMessageW(m_hwndSourceFileCombo, CB_ADDSTRING, 0, (LPARAM)L"Indexing workspace files...");
+        SendMessageW(m_hwndSourceFileCombo, CB_SETCURSEL, 0, 0);
+        EnableWindow(m_hwndSourceFileCombo, FALSE);
+    }
+
+    std::thread([this]() {
+        DetachedThreadGuard guard(m_activeDetachedThreads, m_shuttingDown);
+        if (guard.cancelled) return;
+
+        auto payload = std::make_unique<SourceFileIndexPayload>();
+        try {
+            namespace fs = std::filesystem;
+            const fs::path root = discoverWorkspaceRootFs();
+
+            std::vector<std::pair<std::string, std::string>> entries;
+            entries.reserve(4096);
+
+            std::error_code ec;
+            fs::recursive_directory_iterator it(root, fs::directory_options::skip_permission_denied, ec);
+            fs::recursive_directory_iterator end;
+            for (; it != end && !isShuttingDown(); ++it) {
+                const fs::directory_entry& de = *it;
+                if (de.is_directory(ec)) {
+                    std::wstring name = de.path().filename().wstring();
+                    if (shouldSkipDirName(name)) {
+                        it.disable_recursion_pending();
+                    }
+                    continue;
+                }
+                if (!de.is_regular_file(ec)) continue;
+
+                fs::path full = de.path();
+                fs::path rel = fs::relative(full, root, ec);
+                std::string display;
+                if (!ec) {
+                    // Prefer forward slashes for readability in dropdown
+                    std::wstring rw = rel.generic_wstring();
+                    display = wideToUtf8(rw.c_str());
+                } else {
+                    std::wstring fw = full.filename().wstring();
+                    display = wideToUtf8(fw.c_str());
+                    ec.clear();
+                }
+                std::string fullUtf8 = fsPathToUtf8(full);
+                if (display.empty() || fullUtf8.empty()) continue;
+
+                entries.emplace_back(std::move(display), std::move(fullUtf8));
+            }
+
+            std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+
+            payload->entries = std::move(entries);
+        } catch (...) {
+            // Keep payload empty — UI will show a failure placeholder
+        }
+
+        if (isShuttingDown() || !m_hwndMain || !IsWindow(m_hwndMain)) return;
+        PostMessageA(m_hwndMain, WM_SOURCEFILE_INDEX_READY, 0, (LPARAM)payload.release());
+    }).detach();
+}
+
+void Win32IDE::onSourceFileIndexReady(void* payloadPtr) {
+    std::unique_ptr<SourceFileIndexPayload> payload(reinterpret_cast<SourceFileIndexPayload*>(payloadPtr));
+
+    m_sourceFileEntries.clear();
+    m_sourceFileIndexByPathKey.clear();
+    if (payload) {
+        m_sourceFileEntries.reserve(payload->entries.size());
+        for (auto& p : payload->entries) {
+            SourceFileEntry e;
+            e.display = std::move(p.first);
+            e.fullPath = std::move(p.second);
+            m_sourceFileEntries.push_back(std::move(e));
+        }
+    }
+
+    if (m_hwndSourceFileCombo && IsWindow(m_hwndSourceFileCombo)) {
+        SendMessageW(m_hwndSourceFileCombo, CB_RESETCONTENT, 0, 0);
+
+        std::wstring header = L"(select) — Sourcefile  [" + std::to_wstring(m_sourceFileEntries.size()) + L" files]";
+        SendMessageW(m_hwndSourceFileCombo, CB_ADDSTRING, 0, (LPARAM)header.c_str());
+
+        for (size_t i = 0; i < m_sourceFileEntries.size(); ++i) {
+            const auto& e = m_sourceFileEntries[i];
+            std::wstring w = utf8ToWide(e.display);
+            int comboIndex = (int)SendMessageW(m_hwndSourceFileCombo, CB_ADDSTRING, 0, (LPARAM)w.c_str());
+            (void)comboIndex;
+            // Stored index should match selection index; placeholder is index 0.
+            m_sourceFileIndexByPathKey[normalizePathKey(e.fullPath)] = (int)i + 1;
+        }
+
+        EnableWindow(m_hwndSourceFileCombo, TRUE);
+        m_sourceFileDropdownInternalChange = true;
+        SendMessageW(m_hwndSourceFileCombo, CB_SETCURSEL, 0, 0);
+        m_sourceFileDropdownInternalChange = false;
+    }
+
+    m_sourceFileIndexReady.store(true, std::memory_order_release);
+    m_sourceFileIndexing.store(false, std::memory_order_release);
+
+    if (m_hwndStatusBar) {
+        std::string msg = "Sourcefile index ready (" + std::to_string(m_sourceFileEntries.size()) + " files)";
+        SendMessageA(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)msg.c_str());
+    }
+
+    syncSourceFileDropdownSelection();
+}
+
+void Win32IDE::syncSourceFileDropdownSelection() {
+    if (!m_hwndSourceFileCombo || !IsWindow(m_hwndSourceFileCombo)) return;
+    if (!m_sourceFileIndexReady.load(std::memory_order_acquire)) return;
+
+    if (m_currentFile.empty()) {
+        m_sourceFileDropdownInternalChange = true;
+        SendMessageW(m_hwndSourceFileCombo, CB_SETCURSEL, 0, 0);
+        m_sourceFileDropdownInternalChange = false;
+        return;
+    }
+
+    std::string key = normalizePathKey(m_currentFile);
+    auto it = m_sourceFileIndexByPathKey.find(key);
+    if (it == m_sourceFileIndexByPathKey.end()) return;
+
+    m_sourceFileDropdownInternalChange = true;
+    SendMessageW(m_hwndSourceFileCombo, CB_SETCURSEL, (WPARAM)it->second, 0);
+    m_sourceFileDropdownInternalChange = false;
 }
 
 // ============================================================================
@@ -1557,6 +1534,7 @@ void Win32IDE::newFile()
     m_currentFile.clear();
     m_fileModified = false;
     updateTitleBarText();
+    syncSourceFileDropdownSelection();
     SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"New file");
     updateMenuEnableStates();
     syncEditorToGpuSurface();
@@ -1611,6 +1589,7 @@ void Win32IDE::openFile()
                 m_fileModified = false;
                 setCurrentDirectoryFromFile(m_currentFile);
                 updateTitleBarText();
+                syncSourceFileDropdownSelection();
                 SendMessageW(m_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)L"File opened");
                 updateMenuEnableStates();
                 syncEditorToGpuSurface();
@@ -1648,6 +1627,7 @@ void Win32IDE::openFile(const std::string& filePath)
             m_fileModified = false;
             setCurrentDirectoryFromFile(m_currentFile);
             updateTitleBarText();
+            syncSourceFileDropdownSelection();
 
             std::string displayName = extractLeafName(filePath);
             if (m_hwndTabBar) {
