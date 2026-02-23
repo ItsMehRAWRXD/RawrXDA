@@ -5,7 +5,7 @@
 param(
     [string]$ObjDir = (Join-Path $PSScriptRoot "..\build\monolithic\obj"),
     [string]$OutExe = (Join-Path $PSScriptRoot "..\build\monolithic\RawrXD.exe"),
-    [string]$LinkExe = "link.exe",
+    [string]$LinkExe = "C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe",
     [string]$LibPath = ""
 )
 
@@ -14,15 +14,16 @@ $objs = @(
     "main.obj", "inference.obj", "ui.obj",
     "beacon.obj", "lsp.obj", "agent.obj", "model_loader.obj",
     "dap.obj", "testing.obj", "tasks.obj",
-    "swarm.obj", "swarm_coordinator.obj"
+    "swarm.obj", "swarm_coordinator.obj",
+    "stream_loader.obj", "webview2_shell.obj", "extension_host.obj"
 )
 $objPaths = $objs | ForEach-Object { Join-Path $ObjDir $_ }
 
 $outDir = Split-Path -Parent $OutExe
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 
-$libArgs = @()
-if ($LibPath) { $libArgs = @("/LIBPATH:$LibPath") }
+$libArgs = @("/LIBPATH:C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\lib\x64", "/LIBPATH:C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64")
+if ($LibPath) { $libArgs += "/LIBPATH:$LibPath" }
 
 & $LinkExe /OUT:$OutExe /SUBSYSTEM:WINDOWS /ENTRY:WinMainCRTStartup `
     /LARGEADDRESSAWARE /FIXED:NO /DYNAMICBASE /NXCOMPAT /OPT:REF /OPT:ICF `

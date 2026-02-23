@@ -21,6 +21,8 @@ EXTERN CreateFileMappingW:PROC
 EXTERN MapViewOfFile:PROC
 EXTERN UnmapViewOfFile:PROC
 EXTERN CloseHandle:PROC
+EXTERN ReadFile:PROC
+EXTERN WriteFile:PROC
 EXTERN CreatePipe:PROC
 EXTERN CreateProcessW:PROC
 EXTERN GetLastError:PROC
@@ -92,6 +94,7 @@ EXTERN SpawnTask:PROC
 ; lsp.asm
 EXTERN LSPBridgeInit:PROC
 EXTERN LSPSendRequest:PROC
+EXTERN LSPBridgeShutdown:PROC
 
 ; model_loader.asm
 EXTERN LoadModel:PROC
@@ -101,6 +104,7 @@ EXTERN ModelLoaderInit:PROC
 EXTERN HotSwapModel:PROC
 EXTERN GetCurrentModelPath:PROC
 EXTERN GetModelLoadTimestamp:PROC
+EXTERN ValidateModelCompat:PROC
 
 ; beacon.asm (X+4)
 EXTERN TryBeaconRecv:PROC
@@ -148,6 +152,49 @@ EXTERN SwarmCoord_GetWorkerStatus:PROC
 EXTERN SwarmCoord_Shutdown:PROC
 EXTERN g_coordReady:DWORD
 EXTERN g_workerCount:DWORD
+
+; stream_loader.asm — Tier 1: demand-paged GGUF VMM
+EXTERN StreamLoaderInit:PROC
+EXTERN StreamMapModel:PROC
+EXTERN StreamUnmap:PROC
+EXTERN StreamPrefetch:PROC
+EXTERN StreamEvictCold:PROC
+EXTERN StreamGetStats:PROC
+
+; stream_loader.asm — Tier 2: per-tensor slot-ring paging (200B+)
+EXTERN SlotRing_Init:PROC
+EXTERN SlotRing_Destroy:PROC
+EXTERN SlotRing_Attach:PROC
+EXTERN SlotRing_Detach:PROC
+EXTERN SlotRing_GetTensor:PROC
+EXTERN SlotRing_Tick:PROC
+EXTERN SlotRing_SetBudget:PROC
+EXTERN SlotRing_GetSlotStats:PROC
+EXTERN SlotRing_EvictAll:PROC
+
+; webview2_shell.asm (P1 — WebView2 Monaco embedding)
+EXTERN WebView2Init:PROC
+EXTERN WebView2Navigate:PROC
+EXTERN WebView2PostMessage:PROC
+EXTERN WebView2Resize:PROC
+EXTERN WebView2IsReady:PROC
+EXTERN WebView2Shutdown:PROC
+EXTERN WebView2CreateEnvironment:PROC
+EXTERN WebView2NavigateToString:PROC
+EXTERN WebView2ExecuteScript:PROC
+
+; extension_host.asm (P2 — sandboxed DLL extension loader)
+EXTERN ExtHostInit:PROC
+EXTERN ExtHostLoad:PROC
+EXTERN ExtHostUnload:PROC
+EXTERN ExtHostSendMessage:PROC
+EXTERN ExtHostGetCount:PROC
+EXTERN ExtHostShutdown:PROC
+
+; main.asm (CLI globals)
+EXTERN g_benchMode:DWORD
+EXTERN g_pModelPath:QWORD
+EXTERN g_pPrompt:QWORD
 
 ; ── Win32 Constants ──────────────────────────────────────────────
 ; Window Styles
@@ -252,5 +299,5 @@ AGENT_ID_UI          equ 0A3h
 AGENT_ID_LSP         equ 0A4h
 
 ; ═══════════════════════════════════════════════════════════════════
-; End of rawrxd.inc — 12 modules, 1 EXE, zero deps.
+; End of rawrxd.inc — 15 modules, 1 EXE, zero deps.
 ; ═══════════════════════════════════════════════════════════════════

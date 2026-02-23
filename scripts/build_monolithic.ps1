@@ -3,8 +3,8 @@
 
 param(
     [string]$AsmDir = (Join-Path $PSScriptRoot "..\src\asm\monolithic"),
-    [string]$ObjDir = (Join-Path $PSScriptRoot "..\build\monolithic\obj"),
-    [string]$OutExe = (Join-Path $PSScriptRoot "..\build\monolithic\RawrXD.exe")
+    [string]$ObjDir = (Join-Path $PSScriptRoot "..\build\obj"),
+    [string]$OutExe = (Join-Path $PSScriptRoot "..\build\RawrXD.exe")
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,7 +60,7 @@ if (-not $libPath -and (Test-Path "C:\Program Files (x86)\Windows Kits\10\Lib"))
 
 if (-not (Test-Path $ObjDir)) { New-Item -ItemType Directory -Path $ObjDir -Force | Out-Null }
 
-$asms = @("main", "inference", "ui", "beacon", "lsp", "agent", "model_loader", "dap", "testing", "tasks", "swarm", "swarm_coordinator")
+$asms = @("main", "inference", "ui", "beacon", "lsp", "agent", "model_loader", "dap", "testing", "tasks", "swarm", "swarm_coordinator", "stream_loader", "webview2_shell", "extension_host")
 foreach ($name in $asms) {
     $asmPath = Join-Path $AsmDir "$name.asm"
     $objPath = Join-Path $ObjDir "$name.obj"
