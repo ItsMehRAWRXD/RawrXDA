@@ -33,7 +33,7 @@ RawrXD has extensive analysis and audit documentation. This guide helps you find
 | **Stub/Partial**         | 23 (26.1%)   |
 | **Build Blockers**       | 4 critical    |
 | **Runtime Failures**     | 4 high        |
-| **Min Viable Build**     | ~90 minutes   |
+| **Time to Viable Build** | ~90 minutes   |
 | **Full Fix Estimate**    | ~4-5 hours    |
 
 ---
@@ -71,7 +71,7 @@ Root Analysis Docs
 ├── ANALYSIS_COMPLETE.md           ← Final analysis report
 ├── ANALYSIS_NEXT_STEPS.md         ← Planned improvements
 ├── COMPETITIVE_ANALYSIS.md        ← vs VS Code, Cursor, JetBrains
-├── STRATEGIC_TECHNICAL_ANALYSIS.md← Inference engine deep-dive
+├── STRATEGIC_TECHNICAL_ANALYSIS.md ← Inference engine deep-dive
 ├── STUB_IMPLEMENTATION_ANALYSIS.md← Stub function inventory
 ├── MISSING_FEATURES_AUDIT.md      ← Detailed gap audit
 ├── MISSING_FEATURES_SUMMARY.md    ← Executive summary
