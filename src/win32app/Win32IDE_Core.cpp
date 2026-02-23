@@ -25,6 +25,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <cctype>
 #include <nlohmann/json.hpp>
 
 // Menu command IDs — must match Win32IDE.cpp definitions
@@ -489,6 +490,11 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
             showFileChangedToast();
             return 0;
         }
+        // Sourcefile dropdown: background workspace index is ready
+        if (uMsg == WM_SOURCEFILE_INDEX_READY) {
+            onSourceFileIndexReady(reinterpret_cast<void*>(lParam));
+            return 0;
+        }
         // Handle "load downloaded model" signal from background download threads
         // (HuggingFace / URL downloads complete, m_loadedModelPath already set)
         if (uMsg == WM_APP + 201) {
@@ -805,7 +811,6 @@ void Win32IDE::onSize(int width, int height) {
     // Toolbar
     if (m_hwndToolbar) {
         MoveWindow(m_hwndToolbar, 0, 0, width, TOOLBAR_HEIGHT, TRUE);
-        layoutTitleBar(width);
     }
 
     // Activity bar (far left)
@@ -1038,6 +1043,9 @@ void Win32IDE::onCreate(HWND hwnd) {
     createMenuBar(hwnd);  // ESP:m_hMenu — menus/submenus wired end-to-end
     OutputDebugStringA("[onCreate] createToolbar...\n");
     createToolbar(hwnd);
+
+    // Sourcefile dropdown: build workspace index asynchronously (non-blocking)
+    startSourceFileIndexingAsync();
 
     OutputDebugStringA("[onCreate] createActivityBar...\n");
     createActivityBar(hwnd);
@@ -1662,16 +1670,54 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
         return; // Don't route editor notifications through the command system
     }
 
-    // Source-file dropdown bridge: every indexed source entry maps to openFile(path)
-    if (hwndCtl == m_hwndSourceFileDropdown) {
-        if (codeNotify == CBN_DROPDOWN) {
-            refreshSourceFileDropdown();
+    // Sourcefile dropdown selection changed
+    if (hwndCtl == m_hwndSourceFileCombo && codeNotify == CBN_SELCHANGE) {
+        if (m_sourceFileDropdownInternalChange) return;
+        if (!m_sourceFileIndexReady.load(std::memory_order_acquire)) return;
+
+        int sel = (int)SendMessageW(m_hwndSourceFileCombo, CB_GETCURSEL, 0, 0);
+        if (sel <= 0) return; // placeholder
+        size_t idx = (size_t)(sel - 1);
+        if (idx >= m_sourceFileEntries.size()) return;
+
+        const std::string& filePath = m_sourceFileEntries[idx].fullPath;
+        if (filePath.empty()) return;
+
+        // Respect unsaved changes before switching
+        if (m_fileModified && !promptSaveChanges()) {
+            syncSourceFileDropdownSelection();
             return;
         }
-        if (codeNotify == CBN_SELCHANGE) {
-            onSourceFileDropdownSelection();
+
+        // Safety: prevent loading huge binaries into the text editor
+        WIN32_FILE_ATTRIBUTE_DATA fad{};
+        if (GetFileAttributesExA(filePath.c_str(), GetFileExInfoStandard, &fad)) {
+            uint64_t size = (uint64_t(fad.nFileSizeHigh) << 32) | uint64_t(fad.nFileSizeLow);
+            if (size > 10ull * 1024ull * 1024ull) {
+                MessageBoxA(m_hwndMain,
+                            "Selected file is too large to open in the editor (>10MB).",
+                            "Sourcefile", MB_OK | MB_ICONWARNING);
+                syncSourceFileDropdownSelection();
+                return;
+            }
+        }
+
+        // Treat GGUF as a model load (never load into editor as text)
+        std::string lower = filePath;
+        std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+        if (lower.size() >= 5 && lower.rfind(".gguf") == lower.size() - 5) {
+            if (loadGGUFModel(filePath)) {
+                appendToOutput("✅ Model loaded: " + filePath + "\n\n" + getModelInfo(), "Output", OutputSeverity::Info);
+                MessageBoxA(m_hwndMain, "Model loaded successfully! Check Output panel.", "Model Loaded", MB_OK | MB_ICONINFORMATION);
+            } else {
+                appendToOutput("Failed to load GGUF model: " + filePath + "\n", "Errors", OutputSeverity::Error);
+                MessageBoxA(m_hwndMain, "Failed to load GGUF model. Check Errors panel.", "Model Load Failed", MB_OK | MB_ICONERROR);
+            }
             return;
         }
+
+        openFile(filePath);
+        return;
     }
 
     // First try the unified command router
@@ -1680,19 +1726,6 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
         return;
     }
     
-    // Source File menu items — open the selected file in the editor
-    if (IsSourceFileCommand(static_cast<UINT>(id))) {
-        const wchar_t* wpath = GetSourceFilePath(static_cast<UINT>(id));
-        if (wpath) {
-            int len = WideCharToMultiByte(CP_UTF8, 0, wpath, -1, nullptr, 0, nullptr, nullptr);
-            std::string filePath(len - 1, '\0');
-            WideCharToMultiByte(CP_UTF8, 0, wpath, -1, &filePath[0], len, nullptr, nullptr);
-            openFile(filePath);
-            LOG_INFO("Source Files: opened " + filePath);
-        }
-        return;
-    }
-
     // ── UNIFIED DISPATCH — The ONE AND ONLY command path ────────────────
     // All commands live in COMMAND_TABLE (command_registry.hpp).
     // No legacy fallback. No dual routing. Drift is structurally impossible.
