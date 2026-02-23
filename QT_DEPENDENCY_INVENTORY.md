@@ -6,12 +6,15 @@
 ║                                                                                ║
 ╚════════════════════════════════════════════════════════════════════════════════╝
 
+**Note (2026-02-14):** Many Phase 0 paths below (e.g. src/settings.cpp, src/qtapp/,
+src/ui/monaco_settings_dialog Qt version) no longer exist in the repo or are already
+Win32. See docs/QT_TO_WIN32_IDE_AUDIT.md for current Qt→Win32 IDE/CLI status.
 
 ═══════════════════════════════════════════════════════════════════════════════════
  FILES NEEDING IMMEDIATE ATTENTION (PHASE 0 - Partial Migrations)
 ═══════════════════════════════════════════════════════════════════════════════════
 
-1. D:\RawrXD\src\settings.cpp
+1. D:\RawrXD\src\settings.cpp  [REMOVED — file not in repo; config via Registry/Win32]
    ────────────────────────────────────────────────────────────────────────────
    Status: ⚠️  PARTIALLY MIGRATED (Work started, incomplete)
    

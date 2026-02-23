@@ -27,9 +27,6 @@
 
 param()
 
-# Single-root path resolver
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # ============================================================================
 # IMPORT REGISTRY MODULE
 # ============================================================================
@@ -46,10 +43,8 @@ Import-Module $registryPath -Force -DisableNameChecking
 # CONFIGURATION
 # ============================================================================
 
-$script:CompilerPath = Join-Path (Get-RawrXDRoot) "compilers"
-$script:StationRoot = Get-RawrXDRoot
-$script:CompilerPath = Resolve-RawrXDPath $script:CompilerPath
-$script:StationRoot = Resolve-RawrXDPath $script:StationRoot
+$script:CompilerPath = "D:\lazy init ide\compilers"
+$script:StationRoot = "D:\lazy init ide"
 
 # ============================================================================
 # DISPLAY FUNCTIONS

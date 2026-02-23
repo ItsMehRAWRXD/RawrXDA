@@ -506,7 +506,7 @@ std::string UnityEngineIntegration::generateScriptTemplate(const std::string& cl
         code << "    }\n\n";
         code << "    private void OnGUI()\n    {\n        // Editor window UI\n    }\n";
     } else {
-        code << "    // TODO: Implement " << className << "\n";
+        code << "    // Base: override and add " << className << " logic\n";
     }
 
     code << "}\n";

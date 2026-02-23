@@ -2,6 +2,15 @@
 #include "IDEConfig.h"
 #include <sstream>
 
+// SCAFFOLD_056: AutonomyManager executeAction
+
+
+// SCAFFOLD_055: AutonomyManager planNextAction
+
+
+// SCAFFOLD_021: Autonomy manager and goal loop
+
+
 AutonomyManager::AutonomyManager(AgenticBridge* bridge)
     : m_bridge(bridge), m_running(false), m_autoLoop(false),
       m_maxActionsPerMinute(30), m_actionsThisWindow(0) {

@@ -19,6 +19,9 @@
 #include <vector>
 #include <algorithm>
 
+// SCAFFOLD_042: GUILayout hotpatch application
+
+
 namespace {
 
 // UTF-8 (std::string) to UTF-16 (std::wstring) for Unicode Win32 APIs

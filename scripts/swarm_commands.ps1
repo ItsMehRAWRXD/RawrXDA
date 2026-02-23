@@ -21,11 +21,9 @@
     swarm-memory
 #>
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
-$script:SwarmRoot = Get-RawrXDRoot
-$script:SwarmModesScript = Join-Path $script:SwarmRoot "scripts" "swarm_modes.ps1"
-$script:SwarmBeaconScript = Join-Path $script:SwarmRoot "scripts" "swarm_beacon_runner.ps1"
+$script:SwarmRoot = "D:\lazy init ide"
+$script:SwarmModesScript = Join-Path $SwarmRoot "scripts\swarm_modes.ps1"
+$script:SwarmBeaconScript = Join-Path $SwarmRoot "scripts\swarm_beacon_runner.ps1"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # QUICK SWARM LAUNCHERS

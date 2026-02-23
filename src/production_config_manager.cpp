@@ -43,11 +43,7 @@ bool ProductionConfigManager::loadConfig(const std::string& path) {
         
         std::string content((std::istreambuf_iterator<char>(file)),
                              std::istreambuf_iterator<char>());
-        config_ = nlohmann::json::parse(content, nullptr, false);
-        if (config_.is_discarded()) {
-            config_ = nlohmann::json::object();
-            return false;
-        }
+        config_ = nlohmann::json::parse(content);
         
         if (config_.contains("environment") && config_["environment"].is_string()) {
             environment_ = config_["environment"].get<std::string>();

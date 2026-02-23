@@ -26,17 +26,19 @@ class Win32IDE;
 // GUI OUTPUT CALLBACK — Routes to Win32 IDE status bar / output panel
 // ============================================================================
 
-// Output callback type for GUI context
-// The userData points to the Win32IDE instance
+// Optional IDE append-output callback (set by Win32IDE init so handler output goes to output panel)
+typedef void (*IdeAppendOutputFn)(void* ide, const char* text);
+static IdeAppendOutputFn s_ideAppendOutput = nullptr;
+static void setIdeAppendOutput(IdeAppendOutputFn fn) { s_ideAppendOutput = fn; }
+
+// Output callback for GUI context — routes handler output to IDE output panel when registered
 static void gui_status_output(const char* text, void* userData) {
     if (!text || !userData) return;
-    // Cast userData → Win32IDE* and route to status bar.
-    // We use PostMessage with a custom message to avoid cross-thread issues.
-    // The Win32IDE receives this via WM_APP+0x100 and displays in status/output panel.
-    Win32IDE* ide = static_cast<Win32IDE*>(userData);
-    (void)ide;
-    // Fallback: OutputDebugStringA for development visibility
-    OutputDebugStringA(text);
+    if (s_ideAppendOutput) {
+        s_ideAppendOutput(userData, text);
+    } else {
+        OutputDebugStringA(text);
+    }
 }
 
 // ============================================================================
@@ -47,7 +49,7 @@ static void gui_status_output(const char* text, void* userData) {
 // Returns false if it should fall through to Win32IDE's legacy routeCommand().
 // ============================================================================
 
-static bool routeCommandUnified(int commandId, void* idePtr) {
+static bool routeCommandUnified(int commandId, void* idePtr, HWND hwndMain = nullptr) {
     // ═══════════════════════════════════════════════════════════════════
     // PRIMARY PATH: Direct dispatch from g_commandRegistry[] (SSOT)
     // No hash map lookup, no manual registration required.
@@ -59,6 +61,7 @@ static bool routeCommandUnified(int commandId, void* idePtr) {
     ctx.rawInput = "";
     ctx.args = "";
     ctx.idePtr = idePtr;
+    ctx.hwnd = hwndMain;  // Handlers use for PostMessage (audit, etc.)
     ctx.cliStatePtr = nullptr;
     ctx.commandId = static_cast<uint32_t>(commandId);
     ctx.isGui = true;

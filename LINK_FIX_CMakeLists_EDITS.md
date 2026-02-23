@@ -29,3 +29,8 @@ All link errors for RawrXD-Win32IDE have been addressed. Summary of what was don
 ## Qt
 
 - No Qt in the Win32 IDE build; remaining references are in legacy `qtapp/` or comments. Core and Win32 IDE paths are Qt-free.
+
+## RawrXD-Gold: RAWRXD_WIN32_STATIC_BUILD
+
+- For **RawrXD-Gold** to use the same Qt-converted Win32 components (FileManager, etc.) as the IDE, add this in `CMakeLists.txt` inside `target_compile_definitions(RawrXD-Gold PRIVATE ...)` (e.g. after `RAWRXD_GOLD_BUILD=1`):
+  - `RAWRXD_WIN32_STATIC_BUILD=1`

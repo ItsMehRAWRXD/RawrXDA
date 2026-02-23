@@ -1,16 +1,10 @@
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QJsonObject>
+#include <string>
 #include <vector>
 #include <map>
-
-class QComboBox;
-class QCheckBox;
-class QSpinBox;
-class QLineEdit;
-class QTabWidget;
+#include <tuple>
+#include <cstdint>
 
 /**
  * @class CICDSettings
@@ -28,11 +22,16 @@ class QTabWidget;
  * - Rollback capabilities
  * - Pipeline templates and presets
  */
-class CICDSettings : public QObject
+class CICDSettings
 {
-    Q_OBJECT
-
 public:
+    /** Show the CI/CD settings window (Win32 IDE integration). Invokes setShowCallback when set. */
+    void show() { if (m_showCb) m_showCb(m_showCtx); }
+
+    /** Register callback for show() — IDE sets this to display the CI/CD settings dialog. */
+    using ShowCallback = void(*)(void* ctx);
+    void setShowCallback(ShowCallback cb, void* ctx) { m_showCb = cb; m_showCtx = ctx; }
+
     enum class JobStatus {
         Pending,
         Queued,
@@ -60,73 +59,73 @@ public:
     };
 
     struct TrainingJob {
-        QString jobId;
-        QString jobName;
-        QString description;
-        QString modelName;
-        QString datasetPath;
+        std::string jobId;
+        std::string jobName;
+        std::string description;
+        std::string modelName;
+        std::string datasetPath;
         int epochs;
         int batchSize;
         float learningRate;
-        QString optimizer;
+        std::string optimizer;
         int numGPUs;
-        QString priority;   // "low", "normal", "high"
+        std::string priority;   // "low", "normal", "high"
         TriggerType trigger;
-        QString cronSchedule;  // For scheduled jobs (e.g., "0 2 * * *" = 2 AM daily)
+        std::string cronSchedule;  // For scheduled jobs (e.g., "0 2 * * *" = 2 AM daily)
         bool enabled;
-        qint64 createdAt;
-        qint64 lastRunAt;
+        int64_t createdAt;
+        int64_t lastRunAt;
         int successCount;
         int failureCount;
     };
 
     struct PipelineStage {
-        QString stageName;
-        QString description;
+        std::string stageName;
+        std::string description;
         bool enabled;
         int timeoutSeconds;
-        std::vector<QString> commands;  // Shell commands to run
+        std::vector<std::string> commands;  // Shell commands to run
         bool continueOnError;
     };
 
     struct DeploymentConfig {
-        QString modelPath;
+        std::string modelPath;
         DeploymentStrategy strategy;
         float canaryPercentage;     // 0.0 to 1.0, for Canary strategy
-        QString targetEnvironment;  // "staging", "production"
+        std::string targetEnvironment;  // "staging", "production"
         bool requireApproval;
-        std::vector<QString> approvers;
+        std::vector<std::string> approvers;
         bool rollbackOnFailure;
         int maxConcurrentRequests;
     };
 
     struct NotificationConfig {
         bool enableSlack;
-        QString slackWebhookUrl;
-        QString slackChannel;
+        std::string slackWebhookUrl;
+        std::string slackChannel;
         bool enableEmail;
-        std::vector<QString> emailRecipients;
+        std::vector<std::string> emailRecipients;
         bool notifyOnSuccess;
         bool notifyOnFailure;
         bool notifyOnStart;
     };
 
     struct JobRunLog {
-        QString jobId;
-        QString runId;
+        std::string jobId;
+        std::string runId;
         JobStatus status;
-        qint64 startTime;
-        qint64 endTime;
-        QString logOutput;
+        int64_t startTime;
+        int64_t endTime;
+        std::string logOutput;
         float accuracy;
         float loss;
-        QString artifactPath;
-        QString errorMessage;
+        std::string artifactPath;
+        std::string errorMessage;
     };
 
     // Constructor
-    explicit CICDSettings(QObject* parent = nullptr);
-    ~CICDSettings() override;
+    CICDSettings() = default;
+    ~CICDSettings() = default;
 
     // ===== Job Management =====
     /**
@@ -142,14 +141,14 @@ public:
      * @param job Updated configuration
      * @return true if successful
      */
-    bool updateJob(const QString& jobId, const TrainingJob& job);
+    bool updateJob(const std::string& jobId, const TrainingJob& job);
 
     /**
      * @brief Get job by ID
      * @param jobId Job identifier
      * @return Job configuration or empty if not found
      */
-    TrainingJob getJob(const QString& jobId) const;
+    TrainingJob getJob(const std::string& jobId) const;
 
     /**
      * @brief List all jobs
@@ -162,7 +161,7 @@ public:
      * @param jobId Job identifier
      * @return true if successful
      */
-    bool deleteJob(const QString& jobId);
+    bool deleteJob(const std::string& jobId);
 
     /**
      * @brief Enable/disable job
@@ -170,7 +169,7 @@ public:
      * @param enabled Enable state
      * @return true if successful
      */
-    bool setJobEnabled(const QString& jobId, bool enabled);
+    bool setJobEnabled(const std::string& jobId, bool enabled);
 
     // ===== Job Execution =====
     /**
@@ -178,28 +177,28 @@ public:
      * @param jobId Job identifier
      * @return Run ID or empty if failed
      */
-    QString queueJob(const QString& jobId);
+    std::string queueJob(const std::string& jobId);
 
     /**
      * @brief Cancel running job
      * @param runId Run identifier
      * @return true if successful
      */
-    bool cancelJob(const QString& runId);
+    bool cancelJob(const std::string& runId);
 
     /**
      * @brief Retry failed job
      * @param runId Original run ID
      * @return New run ID or empty if failed
      */
-    QString retryJob(const QString& runId);
+    std::string retryJob(const std::string& runId);
 
     /**
      * @brief Get job execution logs
      * @param runId Run identifier
      * @return Execution log entry
      */
-    JobRunLog getJobRunLog(const QString& runId) const;
+    JobRunLog getJobRunLog(const std::string& runId) const;
 
     /**
      * @brief List job run history
@@ -207,14 +206,14 @@ public:
      * @param limit Number of recent runs to return
      * @return List of run logs
      */
-    std::vector<JobRunLog> getJobRunHistory(const QString& jobId, int limit = 20) const;
+    std::vector<JobRunLog> getJobRunHistory(const std::string& jobId, int limit = 20) const;
 
     /**
      * @brief Get job statistics
      * @param jobId Job identifier
      * @return (totalRuns, successCount, failureCount, avgDuration) tuple
      */
-    std::tuple<int, int, int, float> getJobStatistics(const QString& jobId) const;
+    std::tuple<int, int, int, float> getJobStatistics(const std::string& jobId) const;
 
     // ===== Pipeline Configuration =====
     /**
@@ -223,14 +222,14 @@ public:
      * @param stages Pipeline stages
      * @return true if successful
      */
-    bool definePipeline(const QString& jobId, const std::vector<PipelineStage>& stages);
+    bool definePipeline(const std::string& jobId, const std::vector<PipelineStage>& stages);
 
     /**
      * @brief Get pipeline for job
      * @param jobId Job identifier
      * @return Pipeline stages
      */
-    std::vector<PipelineStage> getPipeline(const QString& jobId) const;
+    std::vector<PipelineStage> getPipeline(const std::string& jobId) const;
 
     // ===== Deployment Configuration =====
     /**
@@ -239,14 +238,14 @@ public:
      * @param config Deployment settings
      * @return true if successful
      */
-    bool setDeploymentConfig(const QString& jobId, const DeploymentConfig& config);
+    bool setDeploymentConfig(const std::string& jobId, const DeploymentConfig& config);
 
     /**
      * @brief Get deployment configuration
      * @param jobId Job identifier
      * @return Deployment settings
      */
-    DeploymentConfig getDeploymentConfig(const QString& jobId) const;
+    DeploymentConfig getDeploymentConfig(const std::string& jobId) const;
 
     /**
      * @brief Deploy model
@@ -254,7 +253,7 @@ public:
      * @param runId Specific run to deploy
      * @return Deployment ID or empty if failed
      */
-    QString deployModel(const QString& jobId, const QString& runId);
+    std::string deployModel(const std::string& jobId, const std::string& runId);
 
     /**
      * @brief Rollback deployment
@@ -262,7 +261,7 @@ public:
      * @param targetRunId Previous run ID to restore
      * @return true if successful
      */
-    bool rollbackDeployment(const QString& deploymentId, const QString& targetRunId);
+    bool rollbackDeployment(const std::string& deploymentId, const std::string& targetRunId);
 
     // ===== Webhook Integration =====
     /**
@@ -273,15 +272,15 @@ public:
      * @param branch Branch to monitor
      * @return Webhook URL for registration
      */
-    QString registerWebhook(const QString& jobId, const QString& platform,
-                           const QString& repository, const QString& branch);
+    std::string registerWebhook(const std::string& jobId, const std::string& platform,
+                           const std::string& repository, const std::string& branch);
 
     /**
      * @brief Handle incoming webhook
      * @param webhookData JSON from webhook
      * @return Run ID if job was triggered, or empty
      */
-    QString handleWebhook(const QJsonObject& webhookData);
+    std::string handleWebhook(const std::string& webhookData);
 
     // ===== Notifications =====
     /**
@@ -311,22 +310,22 @@ public:
      * @param metadata JSON metadata
      * @return true if successful
      */
-    bool storeArtifact(const QString& artifactId, const QString& artifactPath,
-                      const QJsonObject& metadata);
+    bool storeArtifact(const std::string& artifactId, const std::string& artifactPath,
+                      const std::string& metadata);
 
     /**
      * @brief Retrieve artifact
      * @param artifactId Artifact identifier
      * @return Local file path or empty if not found
      */
-    QString getArtifact(const QString& artifactId) const;
+    std::string getArtifact(const std::string& artifactId) const;
 
     /**
      * @brief List artifacts for job
      * @param jobId Job identifier
      * @return Vector of artifact IDs
      */
-    std::vector<QString> listArtifacts(const QString& jobId) const;
+    std::vector<std::string> listArtifacts(const std::string& jobId) const;
 
     /**
      * @brief Cleanup old artifacts
@@ -340,72 +339,86 @@ public:
      * @brief Export all CI/CD configuration
      * @return Configuration as JSON
      */
-    QJsonObject exportConfiguration() const;
+    std::string exportConfiguration() const;
 
     /**
      * @brief Import CI/CD configuration
      * @param config Configuration to import
      * @return true if successful
      */
-    bool importConfiguration(const QJsonObject& config);
+    bool importConfiguration(const std::string& config);
 
     /**
      * @brief Save configuration to file
      * @param filePath Output file path
      * @return true if successful
      */
-    bool saveToFile(const QString& filePath) const;
+    bool saveToFile(const std::string& filePath) const;
 
     /**
      * @brief Load configuration from file
      * @param filePath Input file path
      * @return true if successful
      */
-    bool loadFromFile(const QString& filePath);
+    bool loadFromFile(const std::string& filePath);
 
     /**
      * @brief Get pipeline templates
      * @return Map of template_name -> template_config
      */
-    std::map<QString, QJsonObject> getPipelineTemplates() const;
+    std::map<std::string, std::string> getPipelineTemplates() const;
 
-signals:
-    /// Emitted when job is queued
-    void jobQueued(const QString& jobId, const QString& runId);
+    // --- Callbacks (replaces Qt signals) ---
+    using JobCb = void(*)(void* ctx, const char* jobId, const char* runId);
+    using JobCompletedCb = void(*)(void* ctx, const char* runId, bool success);
+    using JobFailedCb = void(*)(void* ctx, const char* runId, const char* error);
+    using DeployCb = void(*)(void* ctx, const char* deploymentId);
+    using DeployCompletedCb = void(*)(void* ctx, const char* deploymentId, bool success);
+    using StageCb = void(*)(void* ctx, const char* runId, const char* stageName);
+    using WebhookCb = void(*)(void* ctx, const char* platform, const char* action);
 
-    /// Emitted when job run completes
-    void jobCompleted(const QString& runId, bool success);
-
-    /// Emitted when job fails
-    void jobFailed(const QString& runId, const QString& error);
-
-    /// Emitted when deployment starts
-    void deploymentStarted(const QString& deploymentId);
-
-    /// Emitted when deployment completes
-    void deploymentCompleted(const QString& deploymentId, bool success);
-
-    /// Emitted when rollback occurs
-    void deploymentRolledBack(const QString& deploymentId);
-
-    /// Emitted when pipeline stage completes
-    void pipelineStageCompleted(const QString& runId, const QString& stageName);
-
-    /// Emitted on pipeline error
-    void pipelineError(const QString& runId, const QString& error);
-
-    /// Emitted when webhook is received
-    void webhookReceived(const QString& platform, const QString& action);
+    void setJobQueuedCb(JobCb cb, void* ctx) { m_queuedCb = cb; m_queuedCtx = ctx; }
+    void setJobCompletedCb(JobCompletedCb cb, void* ctx) { m_completedCb = cb; m_completedCtx = ctx; }
+    void setJobFailedCb(JobFailedCb cb, void* ctx) { m_failedCb = cb; m_failedCtx = ctx; }
+    void setDeployStartedCb(DeployCb cb, void* ctx) { m_deployStartCb = cb; m_deployStartCtx = ctx; }
+    void setDeployCompletedCb(DeployCompletedCb cb, void* ctx) { m_deployCompCb = cb; m_deployCompCtx = ctx; }
+    void setDeployRollbackCb(DeployCb cb, void* ctx) { m_rollbackCb = cb; m_rollbackCtx = ctx; }
+    void setPipelineStageCb(StageCb cb, void* ctx) { m_stageCb = cb; m_stageCtx = ctx; }
+    void setPipelineErrorCb(StageCb cb, void* ctx) { m_pipeErrCb = cb; m_pipeErrCtx = ctx; }
+    void setWebhookCb(WebhookCb cb, void* ctx) { m_webhookCb = cb; m_webhookCtx = ctx; }
 
 private:
-    std::map<QString, TrainingJob> m_jobs;              // jobId -> job config
-    std::map<QString, JobRunLog> m_runLogs;             // runId -> run log
-    std::map<QString, std::vector<PipelineStage>> m_pipelines;  // jobId -> stages
-    std::map<QString, DeploymentConfig> m_deploymentConfigs;  // jobId -> config
+    std::map<std::string, TrainingJob> m_jobs;              // jobId -> job config
+    std::map<std::string, JobRunLog> m_runLogs;             // runId -> run log
+    std::map<std::string, std::vector<PipelineStage>> m_pipelines;  // jobId -> stages
+    std::map<std::string, DeploymentConfig> m_deploymentConfigs;  // jobId -> config
     NotificationConfig m_notificationConfig;
-    std::map<QString, QJsonObject> m_artifacts;         // artifactId -> metadata
+    std::map<std::string, std::string> m_artifacts;         // artifactId -> metadata
 
-    QString generateJobId();
-    QString generateRunId();
-    QString generateDeploymentId();
+    std::string generateJobId();
+    std::string generateRunId();
+    std::string generateDeploymentId();
+
+    // Callback pointers
+    JobCb m_queuedCb = nullptr;
+    void* m_queuedCtx = nullptr;
+    JobCompletedCb m_completedCb = nullptr;
+    void* m_completedCtx = nullptr;
+    JobFailedCb m_failedCb = nullptr;
+    void* m_failedCtx = nullptr;
+    DeployCb m_deployStartCb = nullptr;
+    void* m_deployStartCtx = nullptr;
+    DeployCompletedCb m_deployCompCb = nullptr;
+    void* m_deployCompCtx = nullptr;
+    DeployCb m_rollbackCb = nullptr;
+    void* m_rollbackCtx = nullptr;
+    StageCb m_stageCb = nullptr;
+    void* m_stageCtx = nullptr;
+    StageCb m_pipeErrCb = nullptr;
+    void* m_pipeErrCtx = nullptr;
+    WebhookCb m_webhookCb = nullptr;
+    void* m_webhookCtx = nullptr;
+
+    ShowCallback m_showCb = nullptr;
+    void* m_showCtx = nullptr;
 };

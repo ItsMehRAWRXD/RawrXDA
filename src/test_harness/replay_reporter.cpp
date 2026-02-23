@@ -13,9 +13,6 @@
 #include <sstream>
 #include <cstring>
 
-#include "logging/logger.h"
-static Logger s_logger("replay_reporter");
-
 using json = nlohmann::json;
 
 // ============================================================================
@@ -24,34 +21,39 @@ using json = nlohmann::json;
 
 void ReplayReporter::printVerdict(const std::string& fixtureId,
                                   const OracleVerdict& verdict) {
-    s_logger.info("  ");
+    std::cout << "  " << passFailTag(verdict.pass) << " " << fixtureId;
 
     if (verdict.pass) {
-        s_logger.info(" — ");
+        std::cout << " — " << formatPercent(verdict.successRate)
+                  << " match, " << verdict.matchedFiles << " files"
+                  << ", " << formatDuration(verdict.replayDurationMs);
     } else {
-        s_logger.info(" — ");
+        std::cout << " — " << verdict.failureReason;
     }
 
     if (verdict.sequenceDeviations > 0) {
-        s_logger.info(" [");
+        std::cout << " [" << verdict.sequenceDeviations << " deviations]";
     }
 
-    s_logger.info("\n");
+    std::cout << "\n";
 }
 
 void ReplayReporter::printBatchSummary(const BatchResult& batch) {
-    s_logger.info("────────────────────────────────────────────────────\n");
-    s_logger.info("  Replay Harness Results\n");
-    s_logger.info("────────────────────────────────────────────────────\n");
+    std::cout << "────────────────────────────────────────────────────\n";
+    std::cout << "  Replay Harness Results\n";
+    std::cout << "────────────────────────────────────────────────────\n";
 
     for (const auto& entry : batch.entries) {
         printVerdict(entry.fixtureId, entry.verdict);
     }
 
-    s_logger.info("────────────────────────────────────────────────────\n");
-    s_logger.info("  Total: ");
-    s_logger.info("  Duration: ");
-    s_logger.info("────────────────────────────────────────────────────\n");
+    std::cout << "────────────────────────────────────────────────────\n";
+    std::cout << "  Total: " << batch.total
+              << "  Passed: " << batch.passed
+              << "  Failed: " << batch.failed
+              << "  Skipped: " << batch.skipped << "\n";
+    std::cout << "  Duration: " << formatDuration(batch.totalDurationMs) << "\n";
+    std::cout << "────────────────────────────────────────────────────\n";
 }
 
 // ============================================================================

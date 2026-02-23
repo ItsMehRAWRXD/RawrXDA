@@ -19,11 +19,13 @@
 #include <unordered_map>
 #include <cstdint>
 
-// Forward declarations
-
+#include <nlohmann/json.hpp>
 
 namespace rawrxd::auth {
 
+using json = nlohmann::json;
+
+// Win32: void* parent in wizard/page/dialog classes is HWND (CreateWindowExW parent).
 // ═══════════════════════════════════════════════════════════════════════════════
 // Data Structures
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -78,7 +80,7 @@ enum class KeyStrength {
 };
 
 /**
- * @brief Generated key metadata
+ * @brief Generated key metadata (C++20 / no Qt)
  */
 struct KeyMetadata {
     std::string keyId;
@@ -86,26 +88,26 @@ struct KeyMetadata {
     KeyAlgorithm algorithm;
     KeyStrength strength;
     KeyPurposes purposes;
-    
-    // DateTime created;
-    // DateTime expires;
-    // DateTime lastUsed;
-    
+
+    int64_t created = 0;
+    int64_t expires = 0;
+    int64_t lastUsed = 0;
+
     std::string hardwareFingerprint;
     std::string systemFingerprint;
-    bool isBoundToHardware;
-    
-    int usageCount;
-    int maxUsages;  // 0 = unlimited
-    
-    bool isRevoked;
+    bool isBoundToHardware = false;
+
+    int usageCount = 0;
+    int maxUsages = 0;  // 0 = unlimited
+
+    bool isRevoked = false;
     std::string revocationReason;
-    // DateTime revocationDate;
-    
-    std::unordered_map<std::string, std::string> customMetadata;
-    
-    void* toJson() const;
-    static KeyMetadata fromJson(const void*& obj);
+    int64_t revocationDate = 0;
+
+    std::map<std::string, json> customMetadata;
+
+    json toJson() const;
+    static KeyMetadata fromJson(const json& obj);
 };
 
 /**
@@ -163,7 +165,7 @@ using EntropyCallback = std::function<void(double entropyBits, int samplesCollec
 class EntropyVisualizer
 {public:
     explicit EntropyVisualizer(void* parent = nullptr);
-    ~EntropyVisualizer() override;
+    ~EntropyVisualizer();
 
     void setEntropyLevel(double level);  // 0.0 - 1.0
     void addEntropySample(uint8_t sample);
@@ -172,16 +174,17 @@ class EntropyVisualizer
     double getCurrentEntropy() const;
     int getSampleCount() const;
 
-\npublic:\n    void entropyReady();
+public:
+    void entropyReady();
 
 protected:
-    void paintEvent(void* event) override;
+    void paintEvent(void* event);
 
 private:
     std::vector<uint8_t> m_samples;
-    double m_entropyLevel;
-    int m_targetSamples;
-    std::unique_ptr<void> m_animationTimer;
+    double m_entropyLevel = 0.0;
+    int m_targetSamples = 0;
+    uintptr_t m_animationTimerId = 0;  // Win32 timer ID or 0
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -192,12 +195,12 @@ private:
  * @class IntroductionPage
  * @brief Wizard introduction and overview
  */
-class IntroductionPage
-{public:
+class IntroductionPage {
+public:
     explicit IntroductionPage(void* parent = nullptr);
-    
-    void initializePage() override;
-    bool isComplete() const override;
+
+    virtual void initializePage() {}
+    virtual bool isComplete() const { return true; }
 
 private:
     void* m_welcomeLabel;
@@ -213,13 +216,14 @@ class AlgorithmSelectionPage
 {public:
     explicit AlgorithmSelectionPage(void* parent = nullptr);
     
-    void initializePage() override;
-    bool validatePage() override;
+    virtual void initializePage() {}
+    virtual bool validatePage() { return true; }
     
     KeyAlgorithm getSelectedAlgorithm() const;
     KeyStrength getSelectedStrength() const;
 
-\nprivate:\n    void onAlgorithmChanged();
+private:
+    void onAlgorithmChanged();
     void onStrengthChanged();
     void updateDescription();
     void checkHardwareCapabilities();
@@ -248,8 +252,8 @@ class KeyPurposePage
 {public:
     explicit KeyPurposePage(void* parent = nullptr);
     
-    void initializePage() override;
-    bool validatePage() override;
+    virtual void initializePage() {}
+    virtual bool validatePage() { return true; }
     
     KeyPurposes getSelectedPurposes() const;
 
@@ -271,19 +275,20 @@ class KeyNamingPage
 {public:
     explicit KeyNamingPage(void* parent = nullptr);
     
-    void initializePage() override;
-    bool validatePage() override;
-    bool isComplete() const override;
+    virtual void initializePage() {}
+    virtual bool validatePage() { return true; }
+    virtual bool isComplete() const { return true; }
     
     std::string getKeyName() const;
     std::string getKeyDescription() const;
     // DateTime getExpirationDate() const;
 
-\nprivate:\n    void onNameChanged(const std::string& text);
+private:
+    void onNameChanged(const std::string& text);
     void updatePreview();
 
 private:
-    voidEdit* m_nameEdit;
+    void* m_nameEdit;
     void* m_descriptionEdit;
     void* m_expirationCombo;
     void* m_hardwareBindCheck;
@@ -299,17 +304,20 @@ class EntropyCollectionPage
 {public:
     explicit EntropyCollectionPage(void* parent = nullptr);
     
-    void initializePage() override;
-    bool isComplete() const override;
+    virtual void initializePage() {}
+    virtual bool isComplete() const { return true; }
     
     KeyGenerationResult getResult() const;
 
-\npublic:\n    void startGeneration();
+public:
+    void startGeneration();
     void cancelGeneration();
 
-\npublic:\n    void generationComplete(bool success);
+public:
+    void generationComplete(bool success);
 
-\nprivate:\n    void onEntropyTick();
+private:
+    void onEntropyTick();
     void onGenerationFinished();
 
 private:
@@ -325,7 +333,7 @@ private:
     void* m_startBtn;
     void* m_cancelBtn;
     
-    std::unique_ptr<void> m_entropyTimer;
+    uintptr_t m_entropyTimerId = 0;
     std::vector<uint8_t> m_entropyPool;
     KeyGenerationResult m_result;
     bool m_generating;
@@ -340,11 +348,12 @@ class KeyVerificationPage
 {public:
     explicit KeyVerificationPage(void* parent = nullptr);
     
-    void initializePage() override;
-    bool validatePage() override;
-    bool isComplete() const override;
+    virtual void initializePage() {}
+    virtual bool validatePage() { return true; }
+    virtual bool isComplete() const { return true; }
 
-\nprivate:\n    void onExportKey();
+private:
+    void onExportKey();
     void onVerifyKey();
     void onCopyFingerprint();
 
@@ -369,15 +378,18 @@ class EnrollmentPage
 {public:
     explicit EnrollmentPage(void* parent = nullptr);
     
-    void initializePage() override;
-    bool validatePage() override;
-    bool isComplete() const override;
+    virtual void initializePage() {}
+    virtual bool validatePage() { return true; }
+    virtual bool isComplete() const { return true; }
 
-\npublic:\n    void startEnrollment();
+public:
+    void startEnrollment();
 
-\npublic:\n    void enrollmentComplete(bool success);
+public:
+    void enrollmentComplete(bool success);
 
-\nprivate:\n    void onEnrollmentFinished();
+private:
+    void onEnrollmentFinished();
 
 private:
     void* m_statusLabel;
@@ -399,7 +411,7 @@ class CompletionPage
 {public:
     explicit CompletionPage(void* parent = nullptr);
     
-    void initializePage() override;
+    virtual void initializePage() {}
 
 private:
     void* m_summaryLabel;
@@ -429,7 +441,7 @@ class KeyGenerationWizard
     };
 
     explicit KeyGenerationWizard(void* parent = nullptr);
-    ~KeyGenerationWizard() override;
+    ~KeyGenerationWizard();
 
     // Callbacks
     void setKeyGeneratedCallback(KeyGeneratedCallback callback);
@@ -439,11 +451,12 @@ class KeyGenerationWizard
     KeyGenerationResult getResult() const;
     EnrollmentStatus getEnrollmentStatus() const;
 
-\npublic:\n    void keyGenerated(const KeyGenerationResult& result);
+public:
+    void keyGenerated(const KeyGenerationResult& result);
     void keyEnrolled(const EnrollmentStatus& status);
 
 protected:
-    void accept() override;
+    void accept();
 
 private:
     void setupPages();
@@ -473,7 +486,7 @@ private:
 class KeyManagerDialog
 {public:
     explicit KeyManagerDialog(void* parent = nullptr);
-    ~KeyManagerDialog() override;
+    ~KeyManagerDialog();
 
 \npublic:\n    void refreshKeyList();
     void generateNewKey();
@@ -536,7 +549,7 @@ class KeyStorage
 
 private:
     KeyStorage();
-    ~KeyStorage() override;
+    ~KeyStorage();
     
     void loadFromDisk();
     void saveToDisk();

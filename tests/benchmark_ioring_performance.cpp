@@ -4,20 +4,17 @@
 #include <chrono>
 #include "io/backend_interface.hpp"
 
-#include "logging/logger.h"
-static Logger s_logger("benchmark_ioring_performance");
-
 // RAWRXD v1.1.0 IORing Cold-Load Benchmark
 // Goal: Validate sub-5ms latency for kernel-bypass I/O
 
 int main(int argc, char** argv) {
     const char* test_file = (argc > 1) ? argv[1] : "test_ioring_loader.exe";
-    s_logger.info("--- RAWRXD v1.1.0 IORing Benchmark ---");
-    s_logger.info("Target File: ");
+    std::cout << "--- RAWRXD v1.1.0 IORing Benchmark ---" << std::endl;
+    std::cout << "Target File: " << test_file << std::endl;
 
     auto backend = CreateIOBackend(IOBackendType::IORING_WINDOWS);
     if (!backend || !backend->Initialize(test_file)) {
-        s_logger.error( "Failed to initialize IORing backend" << std::endl;
+        std::cerr << "Failed to initialize IORing backend" << std::endl;
         return 1;
     }
 
@@ -27,7 +24,7 @@ int main(int argc, char** argv) {
 
     void* buffer = _aligned_malloc(RING_SIZE, 4096);
     if (!backend->RegisterBuffers(buffer, RING_SIZE, ZONE_COUNT)) {
-        s_logger.error( "Failed to register buffers" << std::endl;
+        std::cerr << "Failed to register buffers" << std::endl;
         return 1;
     }
 
@@ -54,9 +51,9 @@ int main(int argc, char** argv) {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    s_logger.info("✓ Performed ");
-    s_logger.info("✓ Total Time: ");
-    s_logger.info("✓ Average Latency per Read: ");
+    std::cout << "✓ Performed " << NUM_READS << " reads of " << (ZONE_SIZE/1024) << "KB each" << std::endl;
+    std::cout << "✓ Total Time: " << duration << " us" << std::endl;
+    std::cout << "✓ Average Latency per Read: " << (double)duration / NUM_READS << " us" << std::endl;
 
     backend->Shutdown();
     delete backend;

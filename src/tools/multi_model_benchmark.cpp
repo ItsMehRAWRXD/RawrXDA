@@ -7,9 +7,6 @@
 #include "../nlohmann/json.hpp"
 #include "cpu_inference_engine.h"
 
-#include "logging/logger.h"
-static Logger s_logger("multi_model_benchmark");
-
 // Alias for legacy benchmark code
 using InferenceEngine = RawrXD::CPUInferenceEngine;
 
@@ -44,7 +41,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
         // Measure load time
         auto load_start = std::chrono::high_resolution_clock::now();
         if (!engine.LoadModel(model_path)) {
-            s_logger.error( "Failed to load model: " << model_path << std::endl;
+            std::cerr << "Failed to load model: " << model_path << std::endl;
             return result;
         }
         auto load_end = std::chrono::high_resolution_clock::now();
@@ -70,7 +67,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
         result.success = true;
         
     } catch (const std::exception& e) {
-        s_logger.error( "Exception benchmarking model: " << e.what() << std::endl;
+        std::cerr << "Exception benchmarking model: " << e.what() << std::endl;
     }
     
     return result;
@@ -78,7 +75,7 @@ BenchmarkResult benchmarkModel(const std::string& model_path, int num_tokens = 2
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        s_logger.error( "Usage: multi_model_benchmark <model_path> [num_tokens]" << std::endl;
+        std::cerr << "Usage: multi_model_benchmark <model_path> [num_tokens]" << std::endl;
         return 1;
     }
 
@@ -99,7 +96,7 @@ int main(int argc, char* argv[]) {
     output["tokens_per_sec"] = static_cast<double>(result.tokens_per_sec);
     output["avg_latency_ms"] = static_cast<double>(result.avg_latency_ms);
 
-    s_logger.info( output.dump();
+    std::cout << output.dump();
 
     return result.success ? 0 : 1;
 }

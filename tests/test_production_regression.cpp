@@ -59,6 +59,9 @@ static int g_total  = 0;
         return;                                                        \
     }
 
+using ErrorType = AgenticErrorHandler::ErrorType;
+using RecoveryStrategy = AgenticErrorHandler::RecoveryStrategy;
+
 // =============================================================================
 // §1: Observability Tests
 // =============================================================================

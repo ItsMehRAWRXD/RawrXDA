@@ -10,10 +10,15 @@
 
 #include "native_inference_pipeline.hpp"
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstring>
 #include <cstdio>
+
+// SCAFFOLD_084: Native inference pipeline and instructions
+
 
 namespace RawrXD {
 

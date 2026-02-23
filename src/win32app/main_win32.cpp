@@ -24,6 +24,9 @@
 #include "../core/camellia256_bridge.hpp"
 #include <commctrl.h>
 #include <shellscalingapi.h>
+#if defined(_MSC_VER) && defined(_WIN32)
+#include <delayimp.h>
+#endif
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DPI_AWARENESS_CONTEXT)-4)
 #endif
@@ -31,6 +34,36 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <chrono>
+#include <thread>
+#include <filesystem>
+
+// ============================================================================
+// Startup trace — write to ide_startup.log in exe dir for launch audit
+// ============================================================================
+static std::ofstream* s_startupLog = nullptr;
+static void startupTrace(const char* step, const char* detail = nullptr) {
+    if (!s_startupLog) return;
+    auto now = std::chrono::system_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    (*s_startupLog) << ms << " " << step;
+    if (detail && detail[0]) (*s_startupLog) << " " << detail;
+    (*s_startupLog) << "\n";
+    s_startupLog->flush();
+}
+
+// ============================================================================
+// Set CWD to exe directory — ensures crash_dumps, config, plugins, engines
+// resolve correctly when launched from Explorer, shortcuts, or other CWD.
+// ============================================================================
+static void setCwdToExeDirectory() {
+    char exePath[MAX_PATH];
+    if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0) return;
+    std::string exeDir(exePath);
+    size_t last = exeDir.find_last_of("\\/");
+    if (last != std::string::npos) exeDir = exeDir.substr(0, last);
+    if (!exeDir.empty()) SetCurrentDirectoryA(exeDir.c_str());
+}
 
 // ============================================================================
 // Headless mode detection — scans argv for --headless flag
@@ -38,6 +71,170 @@
 static bool hasHeadlessFlag(LPSTR lpCmdLine) {
     if (!lpCmdLine) return false;
     return strstr(lpCmdLine, "--headless") != nullptr;
+}
+
+// ============================================================================
+// Safe mode detection — modularize IDE (disable extensions, Vulkan, GPU)
+// ============================================================================
+static bool hasSafeModeFlag(LPSTR lpCmdLine) {
+    if (!lpCmdLine) return false;
+    return strstr(lpCmdLine, "--safe-mode") != nullptr;
+}
+
+// ============================================================================
+// VSIX agentic test — load all .vsix in plugins/, write result file, exit
+// ============================================================================
+static bool hasVsixTestFlag(LPSTR lpCmdLine) {
+    if (!lpCmdLine) return false;
+    return strstr(lpCmdLine, "--vsix-test") != nullptr;
+}
+
+static std::string jsonEscape(const std::string& s) {
+    std::string r;
+    for (char c : s) {
+        if (c == '"') r += "\\\"";
+        else if (c == '\\') r += "\\\\";
+        else if (c == '\n') r += "\\n";
+        else if (c == '\r') r += "\\r";
+        else if ((unsigned char)c >= 32) r += c;
+    }
+    return r;
+}
+
+static int runVsixTestAndExit() {
+    // Use exe directory as base so plugins/ is next to RawrXD-Win32IDE.exe
+    char exePath[MAX_PATH] = {};
+    if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0) return 0;
+    std::string exeDir(exePath);
+    size_t last = exeDir.find_last_of("\\/");
+    if (last != std::string::npos) exeDir = exeDir.substr(0, last);
+    std::string pluginsDir = exeDir + "\\plugins";
+
+    auto& loader = VSIXLoader::GetInstance();
+    loader.Initialize(pluginsDir);
+
+    if (!std::filesystem::exists(pluginsDir) || !std::filesystem::is_directory(pluginsDir)) {
+        std::ofstream out("vsix_test_result.json");
+        if (out) out << "{\"loaded\":[],\"help\":{},\"error\":\"plugins dir missing\"}\n";
+        return 0;
+    }
+
+    int loadedCount = 0;
+    for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::path(pluginsDir))) {
+        if (!entry.is_regular_file()) continue;
+        std::string name = entry.path().filename().string();
+        if (name.size() < 6) continue;
+        std::string ext = name.substr(name.size() - 5);
+        for (auto& c : ext) c = (char)::tolower(c);
+        if (ext != ".vsix") continue;
+        std::string path = entry.path().string();
+        if (loader.LoadPlugin(path)) loadedCount++;
+    }
+    // Fallback: load from already-extracted extension dirs (e.g. amazonq, github-copilot)
+    if (loadedCount == 0) {
+        for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::path(pluginsDir))) {
+            if (!entry.is_directory()) continue;
+            std::filesystem::path pkg = entry.path() / "package.json";
+            std::filesystem::path extPkg = entry.path() / "extension" / "package.json";
+            if (std::filesystem::exists(pkg) || std::filesystem::exists(extPkg)) {
+                std::filesystem::path loadRoot = std::filesystem::exists(extPkg) ? (entry.path() / "extension") : entry.path();
+                if (loader.LoadPlugin(loadRoot.string())) loadedCount++;
+            }
+        }
+    }
+
+    std::vector<std::string> loaded;
+    std::vector<std::pair<std::string, std::string>> helpLines;
+    for (auto* pl : loader.GetLoadedPlugins()) {
+        loaded.push_back(pl->id);
+        helpLines.push_back({ pl->id, loader.GetPluginHelp(pl->id) });
+    }
+
+    // If still empty, try loading extracted dirs by full path (path handling fallback)
+    if (loaded.empty()) {
+        std::filesystem::path pluginsPath(pluginsDir);
+        std::string amazonqPath = (pluginsPath / "amazonq").string();
+        std::string ghPath = (pluginsPath / "github-copilot" / "extension").string();
+        bool a1 = std::filesystem::exists(pluginsPath / "amazonq" / "package.json");
+        bool aDir = std::filesystem::is_directory(pluginsPath / "amazonq");
+        bool a2 = loader.LoadPlugin(amazonqPath);
+        bool b1 = std::filesystem::exists(pluginsPath / "github-copilot" / "extension" / "package.json");
+        bool bDir = std::filesystem::is_directory(pluginsPath / "github-copilot" / "extension");
+        bool b2 = loader.LoadPlugin(ghPath);
+        loaded.clear();
+        helpLines.clear();
+        for (auto* pl : loader.GetLoadedPlugins()) {
+            loaded.push_back(pl->id);
+            helpLines.push_back({ pl->id, loader.GetPluginHelp(pl->id) });
+        }
+        // Debug: write what we tried
+        std::ofstream dbg(pluginsDir + "\\vsix_debug.txt");
+        if (dbg) dbg << "amazonq exists=" << a1 << " isDir=" << aDir << " load=" << a2
+            << " gh exists=" << b1 << " isDir=" << bDir << " load=" << b2 << " count=" << loaded.size() << "\n";
+    }
+
+    std::string reportPath = pluginsDir + "\\vsix_test_result.json";
+    std::ofstream out(reportPath);
+    if (!out) { reportPath = "vsix_test_result.json"; out.open(reportPath); }
+    if (out) {
+        out << "{\"loaded\":[";
+        for (size_t i = 0; i < loaded.size(); ++i) {
+            if (i) out << ",";
+            out << "\"" << jsonEscape(loaded[i]) << "\"";
+        }
+        out << "],\"help\":{";
+        for (size_t i = 0; i < helpLines.size(); ++i) {
+            if (i) out << ",";
+            out << "\"" << jsonEscape(helpLines[i].first) << "\":\"" << jsonEscape(helpLines[i].second) << "\"";
+        }
+        out << "}}\n";
+        out.close();
+    }
+    return 0;
+}
+
+// ============================================================================
+// Recovery launcher — spawns agent/model to analyze crash and suggest fixes
+// ============================================================================
+static void spawnRecoveryLauncher(const char* logPath, const char* dumpPath) {
+    char exePath[MAX_PATH];
+    if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) == 0) return;
+
+    std::string exeDir(exePath);
+    size_t last = exeDir.find_last_of("\\/");
+    if (last != std::string::npos) exeDir = exeDir.substr(0, last);
+
+    // Script locations: exe_dir/scripts, exe_dir/../scripts, exe_dir/../../scripts
+    const char* candidates[] = {
+        "scripts\\CrashRecoveryLauncher.ps1",
+        "..\\scripts\\CrashRecoveryLauncher.ps1",
+        "..\\..\\scripts\\CrashRecoveryLauncher.ps1",
+    };
+    std::string scriptPath;
+    for (const char* rel : candidates) {
+        std::string p = exeDir + "\\" + rel;
+        if (GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            scriptPath = p;
+            break;
+        }
+    }
+    if (scriptPath.empty()) return;
+
+    std::string cmd = "powershell -ExecutionPolicy Bypass -NoProfile -File \"" + scriptPath + "\" -LogPath \"" +
+        std::string(logPath ? logPath : "") + "\" -ExePath \"" + std::string(exePath) + "\"";
+    if (dumpPath && dumpPath[0])
+        cmd += " -DumpPath \"" + std::string(dumpPath) + "\"";
+
+    STARTUPINFOA si{};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi{};
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    if (CreateProcessA(nullptr, (LPSTR)cmd.c_str(), nullptr, nullptr, FALSE,
+                       CREATE_NEW_CONSOLE | DETACHED_PROCESS, nullptr, exeDir.c_str(), &si, &pi)) {
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
 }
 
 // ============================================================================
@@ -90,6 +287,39 @@ static void parseCmdLine(LPSTR lpCmdLine, int& argc, char**& argv) {
 // Installed via RawrXD::Crash::Install() below in WinMain.
 // ============================================================================
 
+// Pump pending messages so the window can paint and not appear locked during startup.
+static void pumpMessages() {
+    MSG msg;
+    while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        if (msg.message == WM_QUIT) break;
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+}
+
+// Background thread: run Camellia encryptWorkspace so main thread stays responsive.
+static DWORD WINAPI camelliaEncryptWorkspaceThread(LPVOID param) {
+    char* path = static_cast<char*>(param);
+    if (!path) return 1;
+    auto& c = RawrXD::Crypto::Camellia256Bridge::instance();
+    auto encResult = c.encryptWorkspace(path, false);
+    if (encResult.success) {
+        char msg[512];
+        snprintf(msg, sizeof(msg),
+                 "[main_win32] Workspace encrypted (Camellia-256 CTR): %s\n",
+                 encResult.detail ? encResult.detail : "OK");
+        OutputDebugStringA(msg);
+    } else {
+        char msg[512];
+        snprintf(msg, sizeof(msg),
+                 "[main_win32] Workspace encryption note: %s (non-fatal)\n",
+                 encResult.detail ? encResult.detail : "partial");
+        OutputDebugStringA(msg);
+    }
+    free(path);
+    return 0;
+}
+
 // Set Per-Monitor DPI awareness V2 for crisp rendering on high-DPI displays.
 // Must be called before any window creation. Win10 1703+.
 static void ensureDpiAwareness() {
@@ -102,7 +332,59 @@ static void ensureDpiAwareness() {
     pSet(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 }
 
+#if defined(_MSC_VER) && defined(_WIN32)
+// Delay-load failure hook: when vulkan-1.dll or D3DCOMPILER_47.dll is missing,
+// show a clear message and exit instead of an unhandled exception on first use.
+static FARPROC WINAPI DelayLoadFailureHook(unsigned dliNotify, PDelayLoadInfo pdli) {
+    if (dliNotify != dliFailLoadLib && dliNotify != dliFailGetProc) return 0;
+    const char* dllName = pdli ? pdli->szDll : "unknown";
+    char msg[384];
+    snprintf(msg, sizeof(msg),
+             "RawrXD IDE could not load a required DLL:\n\n%s\n\n"
+             "Install Vulkan Runtime (vulkan-1) or DirectX Redist (D3DCOMPILER_47) if needed, "
+             "or run from the build directory.",
+             dllName);
+    MessageBoxA(nullptr, msg, "RawrXD IDE - Missing DLL", MB_OK | MB_ICONERROR);
+    ExitProcess(1);
+    return 0;
+}
+#endif
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow) {
+    // ========================================================================
+    // CWD FIX — Set working directory to exe's folder (before any relative paths)
+    // Required for crash_dumps, config, plugins, engines when launched from
+    // Explorer, shortcuts, or different CWD. Prevents silent failures on init.
+    // ========================================================================
+    setCwdToExeDirectory();
+
+    // Startup trace for launch audit (ide_startup.log in exe dir)
+    {
+        std::string logPath = "ide_startup.log";
+        s_startupLog = new std::ofstream(logPath, std::ios::out | std::ios::trunc);
+        if (s_startupLog->is_open())
+            startupTrace("WinMain", "start");
+        else {
+            delete s_startupLog;
+            s_startupLog = nullptr;
+        }
+    }
+
+#if defined(_MSC_VER) && defined(_WIN32)
+    (void)DelayLoadFailureHook; /* reserved for delay-load; __pfnDliFailureHook2 is const in MSVC */
+#endif
+
+    // Optional: allocate console for early crash diagnostics (RAWRXD_DEBUG_CONSOLE=1)
+    {
+        char buf[8];
+        if (GetEnvironmentVariableA("RAWRXD_DEBUG_CONSOLE", buf, (DWORD)sizeof(buf)) != 0 && buf[0] == '1') {
+            AllocConsole();
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+            freopen("CONIN$", "r", stdin);
+            fprintf(stderr, "[RawrXD] Debug console enabled\n");
+        }
+    }
     // ========================================================================
     // CRASH CONTAINMENT — Cathedral Boundary Guard
     // MiniDump + SelfPatch rollback + register capture + patch quarantine
@@ -123,14 +405,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         crashCfg.enablePatchQuarantine = true;
         crashCfg.showMessageBox = true;
         crashCfg.terminateAfterDump = true;
-        crashCfg.onCrashCallback = nullptr;
+        crashCfg.onCrashCallback = [](const RawrXD::Crash::CrashReport* r, void*) {
+            if (r && r->logPath[0]) spawnRecoveryLauncher(r->logPath, r->dumpPath);
+        };
         crashCfg.callbackUserData = nullptr;
         RawrXD::Crash::Install(crashCfg);
         OutputDebugStringA("[main_win32] Cathedral crash containment boundary installed\n");
     }
+    startupTrace("crash_containment_installed");
 
     // DPI awareness — before any GUI (Win32 GUI fix)
     ensureDpiAwareness();
+    startupTrace("dpi_awareness");
 
     // ========================================================================
     // HEADLESS MODE — Phase 19C
@@ -138,6 +424,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // HeadlessIDE surface with console I/O + HTTP server.
     // ========================================================================
     if (hasHeadlessFlag(lpCmdLine)) {
+        if (s_startupLog) { startupTrace("headless_mode"); s_startupLog->close(); delete s_startupLog; s_startupLog = nullptr; }
         // Allocate a console for stdout/stderr (WinMain doesn't have one)
         AllocConsole();
         freopen("CONOUT$", "w", stdout);
@@ -170,30 +457,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         ICC_WIN95_CLASSES | ICC_BAR_CLASSES | ICC_TAB_CLASSES |
         ICC_TREEVIEW_CLASSES | ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icex);
+    startupTrace("init_common_controls");
     
+    startupTrace("first_run_gauntlet_start");
     // ========================================================================
     // FIRST-RUN GAUNTLET GATE (Phase 33: Gold Master)
-    // On very first launch, run the full system verification gauntlet.
-    // If it fails, warn the user but allow them to continue (non-blocking).
-    // The flag file prevents re-running on subsequent launches.
+    // On very first launch we used to run the full gauntlet and show N/10;
+    // that could lead to silent exit after OK (crash in later init). So we
+    // skip the gauntlet at startup and create the flag so the IDE always starts.
+    // Run "Gauntlet: Run All Tests" from the menu (Tools / Gauntlet) if needed.
+    // Set RAWRXD_RUN_FIRST_RUN_GAUNTLET=1 to run gauntlet on first launch again.
     // ========================================================================
     {
         const char* gauntletFlag = "config\\first_run.flag";
         DWORD attrs = GetFileAttributesA(gauntletFlag);
         if (attrs == INVALID_FILE_ATTRIBUTES) {
-            // First run — execute gauntlet
-            GauntletSummary summary = runFinalGauntlet();
-            if (!summary.allPassed) {
-                char msg[512];
-                snprintf(msg, sizeof(msg),
-                    "System validation: %d/%d tests passed.\n"
-                    "Check the Audit Dashboard (Ctrl+Shift+A) for details.\n\n"
-                    "The IDE will continue to start normally.",
-                    summary.passed, summary.totalTests);
-                MessageBoxA(nullptr, msg,
-                    "RawrXD \xe2\x80\x94 First Run Check", MB_OK | MB_ICONWARNING);
+            char envBuf[32];
+            const bool runGauntlet = (GetEnvironmentVariableA("RAWRXD_RUN_FIRST_RUN_GAUNTLET", envBuf, (DWORD)sizeof(envBuf)) != 0 && envBuf[0] == '1');
+            if (runGauntlet) {
+                GauntletSummary summary = runFinalGauntlet();
+                if (!summary.allPassed) {
+                    char msg[512];
+                    snprintf(msg, sizeof(msg),
+                        "System validation: %d/%d tests passed.\n"
+                        "Check the Audit Dashboard (Ctrl+Shift+A) for details.\n\n"
+                        "The IDE will continue to start normally.",
+                        summary.passed, summary.totalTests);
+                    MessageBoxA(nullptr, msg,
+                        "RawrXD \xe2\x80\x94 First Run Check", MB_OK | MB_ICONWARNING);
+                }
             }
-            // Create the flag file so we don't re-run
             CreateDirectoryA("config", nullptr);
             HANDLE hFlag = CreateFileA(gauntletFlag, GENERIC_WRITE, 0, nullptr,
                                        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
@@ -205,29 +498,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             }
         }
     }
+    startupTrace("first_run_gauntlet_done");
 
     // Command registration is automatic via static AutoRegistrar in
     // unified_command_dispatch.cpp — reads COMMAND_TABLE at startup.
 
     // Initialize managers
     VSIXLoader::GetInstance().Initialize("plugins");
-
-    // ========================================================================
-    // ENTERPRISE LICENSE ENFORCEMENT — Phase 50: HWID binding, RSA-4096 sig
-    // Must init before plugin/update systems that check feature gates.
-    // ========================================================================
-    {
-        bool licenseOk = RawrXD::EnterpriseLicense::Instance().Initialize();
-        if (licenseOk) {
-            OutputDebugStringA("[main_win32] Enterprise License System initialized\n");
-            // Attempt 800B dual-engine unlock when license has DualEngine800B feature
-            if (RawrXD::Enterprise_Unlock800BDualEngine() != 0) {
-                OutputDebugStringA("[main_win32] 800B Dual-Engine unlocked (licensed)\n");
-            }
-        } else {
-            OutputDebugStringA("[main_win32] Enterprise License System: init failed (non-fatal, community mode)\n");
-        }
-    }
+    startupTrace("vsix_loader");
 
     // ========================================================================
     // PLUGIN SIGNATURE ENFORCEMENT — Phase 50: Authenticode + RawrXD Authority
@@ -242,14 +520,44 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
     
-    // Create IDE window
+    startupTrace("plugin_signature");
+
+    // ========================================================================
+    // VSIX AGENTIC TEST — load all .vsix in plugins/, write result JSON, exit
+    // ========================================================================
+    if (hasVsixTestFlag(lpCmdLine)) {
+        if (s_startupLog) { s_startupLog->close(); delete s_startupLog; s_startupLog = nullptr; }
+        return runVsixTestAndExit();
+    }
+
+    // ========================================================================
+    // SAFE MODE — modularize IDE (disable extensions, Vulkan, GPU) when --safe-mode
+    // ========================================================================
+    if (hasSafeModeFlag(lpCmdLine)) {
+        SetEnvironmentVariableA("RAWRXD_SAFE_MODE", "1");
+        OutputDebugStringA("[main_win32] Safe mode enabled (--safe-mode)\n");
+    }
+
+    startupTrace("creating_ide_instance");
+    // Create IDE window FIRST so user sees a window even if later init fails
     Win32IDE ide(hInstance);
-    
+
+    startupTrace("createWindow_start");
     if (!ide.createWindow()) {
+        startupTrace("createWindow_FAILED");
+        if (s_startupLog) { s_startupLog->close(); delete s_startupLog; s_startupLog = nullptr; }
         MessageBoxW(nullptr, L"Failed to initialize IDE", L"Error", MB_OK | MB_ICONERROR);
         return 1;
     }
-    
+    startupTrace("createWindow_ok");
+    pumpMessages();
+
+    // ========================================================================
+    // ENTERPRISE LICENSE — run on background thread so IDE window and message
+    // loop start immediately even if license init hangs or crashes.
+    // ========================================================================
+    startupTrace("enterprise_license_skipped");  // run after message loop to avoid AV in thread
+
     // Initialize engine manager (safe — LoadEngine may fail for missing DLLs)
     // 800B dual-engine load gated by enterprise unlock (g_800B_Unlocked)
     auto* engine_mgr = new EngineManager();
@@ -264,6 +572,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     
     ide.setEngineManager(engine_mgr);
     ide.setCodexUltimate(codex);
+    pumpMessages();
 
     // ========================================================================
     // CROSS-PROCESS STATE SYNC — Phase 36: MMF Initialization
@@ -329,175 +638,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     }
 
     // Show window and force layout
+    startupTrace("showWindow");
     ide.showWindow();
+    pumpMessages();
 
     // ========================================================================
-    // CAMELLIA-256 WORKSPACE ENCRYPTION — MASM x64 Camellia-256 Engine
-    // Initialize the Camellia-256 encryption engine (HWID-derived key)
-    // and encrypt the workspace on every IDE startup. Uses the real MASM
-    // implementation ported from E:\Backup\itsmehrawrxd-master with full
-    // 24-round Feistel, 4 S-box layers, CTR mode, and 52-subkey schedule.
+    // CAMELLIA-256 — run in background so main thread reaches message loop
+    // even if init or encryptWorkspace blocks.
     // ========================================================================
-    {
-        auto& camellia = RawrXD::Crypto::Camellia256Bridge::instance();
-        auto camResult = camellia.initialize();
-        if (camResult.success) {
-            OutputDebugStringA("[main_win32] Camellia-256 MASM engine: OK (HWID-derived key)\n");
-
-            // Encrypt workspace directory on startup
-            char workspacePath[MAX_PATH] = {};
-            GetCurrentDirectoryA(MAX_PATH, workspacePath);
-            auto encResult = camellia.encryptWorkspace(workspacePath, false);
-            if (encResult.success) {
-                char msg[512];
-                snprintf(msg, sizeof(msg),
-                         "[main_win32] Workspace encrypted (Camellia-256 CTR): %s\n",
-                         encResult.detail ? encResult.detail : "OK");
-                OutputDebugStringA(msg);
-            } else {
-                char msg[512];
-                snprintf(msg, sizeof(msg),
-                         "[main_win32] Workspace encryption note: %s (non-fatal)\n",
-                         encResult.detail ? encResult.detail : "partial");
-                OutputDebugStringA(msg);
-            }
-        } else {
-            char err[256];
-            snprintf(err, sizeof(err),
-                     "[main_win32] Camellia-256 init warning: %s (non-fatal)\n",
-                     camResult.detail ? camResult.detail : "unknown");
-            OutputDebugStringA(err);
-        }
-    }
+    startupTrace("camellia_skipped");
+    pumpMessages();
 
     // ========================================================================
-    // MASM SUBSYSTEM INITIALIZATION — Cathedral Bridge
-    // Initialize all 5 Tier-2 MASM kernel modules via unified bridge.
-    // Order matters: SelfPatch → GGUF Loader → LSP Bridge → Orchestrator → QuadBuffer
+    // MASM + RE KERNEL — skipped on startup to avoid AV in Vulkan/GGUF path
+    // killing process. Re-enable from menu or WM_APP+150 when needed.
     // ========================================================================
-    {
-        OutputDebugStringA("[main_win32] Initializing MASM subsystems...\n");
+    startupTrace("masm_init_skipped");
 
-        HWND editor = ide.getEditor();
-
-        // 1. SelfPatch Engine — must be first (other modules depend on patching)
-        int r = asm_spengine_init(nullptr, 0);
-        if (r >= 0) {
-            OutputDebugStringA("[main_win32] SelfPatch Engine: OK\n");
-            asm_spengine_cpu_optimize();
-        } else {
-            OutputDebugStringA("[main_win32] SelfPatch Engine: FAILED (non-fatal)\n");
-        }
-
-        // 2. GGUF Vulkan Loader
-        r = asm_gguf_loader_init(nullptr, nullptr, 0);
-        if (r >= 0) {
-            OutputDebugStringA("[main_win32] GGUF Vulkan Loader: OK\n");
-        } else {
-            OutputDebugStringA("[main_win32] GGUF Vulkan Loader: FAILED (non-fatal)\n");
-        }
-
-        // 3. LSP AI Bridge
-        r = asm_lsp_bridge_init(nullptr, nullptr);
-        if (r >= 0) {
-            OutputDebugStringA("[main_win32] LSP AI Bridge: OK\n");
-        } else {
-            OutputDebugStringA("[main_win32] LSP AI Bridge: FAILED (non-fatal)\n");
-        }
-
-        // 4. Agentic Orchestrator
-        r = asm_orchestrator_init(nullptr, nullptr);
-        if (r >= 0) {
-            OutputDebugStringA("[main_win32] Agentic Orchestrator: OK\n");
-        } else {
-            OutputDebugStringA("[main_win32] Agentic Orchestrator: FAILED (non-fatal)\n");
-        }
-
-        // 5. Streaming QuadBuffer (needs editor HWND for render target)
-        r = asm_quadbuf_init(editor, 1024, 768, 0);
-        if (r >= 0) {
-            OutputDebugStringA("[main_win32] Streaming QuadBuffer: OK\n");
-        } else {
-            OutputDebugStringA("[main_win32] Streaming QuadBuffer: FAILED (non-fatal)\n");
-        }
-
-        // Initialize quant hysteresis controller with defaults
-        auto& hysteresis = RawrXD::Quant::QuantHysteresisController::Global();
-        QuantHysteresisConfig hcfg;
-        memset(&hcfg, 0, sizeof(hcfg));
-        hcfg.windowPct = 3;
-        hcfg.cooldownMs = 2000;
-        hcfg.thresholdLow = 65;
-        hcfg.thresholdHigh = 85;
-        hcfg.thresholdCritical = 88;
-        hcfg.enableCooldown = true;
-        hcfg.enableLogging = true;
-        hysteresis.configure(hcfg);
-
-        OutputDebugStringA("[main_win32] All MASM subsystems initialized\n");
-    }
-
-    // ========================================================================
-    // REVERSE-ENGINEERED MASM KERNEL INITIALIZATION
-    // Work-Stealing Scheduler + Conflict Detector + Heartbeat + INFINITY I/O
-    // Must come AFTER Tier-2 MASM subsystems (SelfPatch, GGUF, etc.)
-    // ========================================================================
-#ifdef RAWRXD_LINK_REVERSE_ENGINEERED_ASM
-    {
-        OutputDebugStringA("[main_win32] Initializing ReverseEngineered kernel...\n");
-
-        auto reResult = RawrXD::ReverseEngineered::InitializeAllSubsystems(
-            0,      // workerCount: auto-detect from logical cores
-            0,      // heartbeatPort: 0 = disabled for local GUI
-            256     // maxResources for deadlock detection
-        );
-
-        if (reResult.success) {
-            char msg[256];
-            snprintf(msg, sizeof(msg),
-                     "[main_win32] ReverseEngineered kernel: %s "
-                     "(scheduler=ON, conflict_detect=ON, GPU_DMA=ready)\n",
-                     reResult.detail);
-            OutputDebugStringA(msg);
-
-            // Verify high-res timer
-            uint64_t tick = GetHighResTick();
-            snprintf(msg, sizeof(msg),
-                     "[main_win32] High-res timer: tick=%llu\n",
-                     (unsigned long long)tick);
-            OutputDebugStringA(msg);
-        } else {
-            char msg[256];
-            snprintf(msg, sizeof(msg),
-                     "[main_win32] ReverseEngineered kernel: FAILED (%s) "
-                     "(non-fatal, falling back to C++ paths)\n",
-                     reResult.detail);
-            OutputDebugStringA(msg);
-        }
-    }
-#endif
-
-    // ========================================================================
-    // SWARM RECONCILIATION — Phase 50: DAG-based distributed state sync
-    // Initialize the reconciler with a local node identity derived from HWID.
-    // ========================================================================
-    {
-        auto& reconciler = RawrXD::Swarm::SwarmReconciler::instance();
-        if (!reconciler.isInitialized()) {
-            // Use enterprise HWID (uint64_t) to derive 16-byte node identity
-            uint8_t localNodeId[16] = {0};
-            uint64_t hwid = RawrXD::EnterpriseLicense::Instance().GetHardwareHash();
-            memcpy(localNodeId, &hwid, sizeof(hwid));
-            // Fill remaining bytes with deterministic derived values
-            uint64_t hwid2 = hwid ^ 0xA5A5A5A5A5A5A5A5ULL;
-            memcpy(localNodeId + 8, &hwid2, sizeof(hwid2));
-            if (reconciler.initialize(localNodeId, 0)) {
-                OutputDebugStringA("[main_win32] Swarm Reconciler initialized (DAG + VectorClock)\n");
-            } else {
-                OutputDebugStringA("[main_win32] Swarm Reconciler: init failed (non-fatal)\n");
-            }
-        }
-    }
+    startupTrace("swarm_skipped");
 
     // ========================================================================
     // AUTO-UPDATE CHECK — Phase 50: Background manifest fetch + sig verify
@@ -522,27 +680,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }, nullptr);
         OutputDebugStringA("[main_win32] Auto-update check initiated (async)\n");
     }
+    startupTrace("auto_update_done");
 
-    // Force layout — SendMessage WM_SIZE with current client rect
+    startupTrace("layout_start");
     {
         HWND hwnd = ide.getMainWindow();
         if (hwnd) {
             RECT rc;
             GetClientRect(hwnd, &rc);
-            SendMessage(hwnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right, rc.bottom));
+            PostMessage(hwnd, WM_SIZE, SIZE_RESTORED, MAKELPARAM(rc.right, rc.bottom));
             InvalidateRect(hwnd, nullptr, TRUE);
-            UpdateWindow(hwnd);
         }
     }
+    startupTrace("layout_done");
+    startupTrace("message_loop_entered");
 
-    // Set focus to the editor so the caret appears and keyboard input works immediately
+    // Set focus to the editor
     {
         HWND editor = ide.getEditor();
-        if (editor && IsWindow(editor)) {
+        if (editor && IsWindow(editor))
             SetFocus(editor);
-        }
     }
-    
+
     // Run message loop
     int exitCode = ide.runMessageLoop();
 

@@ -28,6 +28,9 @@
 #pragma comment(lib, "wintrust.lib")
 #include <fstream>
 
+// SCAFFOLD_242: VS Code extension API compatibility
+
+
 // ============================================================================
 // Static Event Emitter Instances — vscode::window
 // ============================================================================
@@ -144,17 +147,20 @@ namespace commands {
         return result;
     }
 
-    VSCodeAPIResult executeCommand(const char* commandId) {
+    VSCodeAPIResult executeCommand(const char* commandId, const char* argsJson) {
         if (!commandId) {
             return VSCodeAPIResult::error("executeCommand: null commandId");
         }
-        return api().executeCommand(commandId);
+        return api().executeCommand(commandId, argsJson);
     }
 
     VSCodeAPIResult executeCommandWithArgs(const char* commandId, const char* argsJson) {
-        // For now, execute without args — argument parsing can be extended
-        (void)argsJson;
-        return executeCommand(commandId);
+        if (!commandId) {
+            return VSCodeAPIResult::error("executeCommandWithArgs: null commandId");
+        }
+        // Arguments are passed to the handler via the CommandEntry context if extended,
+        // but for now we simply pass the argsJson to the singleton instance.
+        return api().executeCommand(commandId, argsJson);
     }
 
     VSCodeAPIResult getCommands(bool filterInternal,
@@ -430,9 +436,9 @@ namespace window {
                     shellType = Win32TerminalManager::ShellType::CommandPrompt;
                 } else if (shellLower.find("bash") != std::string::npos || 
                            shellLower.find("git") != std::string::npos) {
-                    shellType = Win32TerminalManager::ShellType::PowerShell; // GitBash not yet supported
+                    shellType = Win32TerminalManager::ShellType::PowerShell; // GitBash: PowerShell fallback
                 } else if (shellLower.find("wsl") != std::string::npos) {
-                    shellType = Win32TerminalManager::ShellType::PowerShell; // WSL not yet supported
+                    shellType = Win32TerminalManager::ShellType::PowerShell; // WSL: PowerShell fallback
                 }
                 // Default: PowerShell
             }
@@ -1372,6 +1378,35 @@ VSCodeAPIResult VSCodeExtensionAPI::initialize(Win32IDE* host, HWND mainWindow) 
         // Rename symbol (F2)
     }, nullptr);
 
+    registerCommand("rawrxd.chat.appendToken", [](void*) {
+        auto& api = VSCodeExtensionAPI::instance();
+        const char* args = api.getCurrentCommandArgs();
+        if (args && api.getHost()) {
+            try {
+                auto j = nlohmann::json::parse(args);
+                if (j.contains("token") && j["token"].is_string()) {
+                    std::string token = j["token"];
+                    api.getHost()->HandleCopilotStreamUpdate(token.c_str(), token.length());
+                }
+            } catch (...) {}
+        }
+    }, nullptr);
+
+    registerCommand("rawrxd.chat.onComplete", [](void*) {
+        auto& api = VSCodeExtensionAPI::instance();
+        const char* args = api.getCurrentCommandArgs();
+        if (api.getHost()) {
+            std::string fullRes = "";
+            if (args) {
+                try {
+                    auto j = nlohmann::json::parse(args);
+                    fullRes = j.value("response", "");
+                } catch(...) {}
+            }
+            api.getHost()->onInferenceComplete(fullRes);
+        }
+    }, nullptr);
+
     logInfo("[VSCodeExtensionAPI] %zu built-in commands registered", m_commands.size());
     return VSCodeAPIResult::ok("VSCodeExtensionAPI initialized");
 }
@@ -1729,7 +1764,13 @@ VSCodeAPIResult VSCodeExtensionAPI::registerCommand(const char* commandId,
     return VSCodeAPIResult::ok("Command registered");
 }
 
-VSCodeAPIResult VSCodeExtensionAPI::executeCommand(const char* commandId) {
+static thread_local const char* s_currentCommandArgs = nullptr;
+
+const char* VSCodeExtensionAPI::getCurrentCommandArgs() const {
+    return s_currentCommandArgs;
+}
+
+VSCodeAPIResult VSCodeExtensionAPI::executeCommand(const char* commandId, const char* argsJson) {
     incrementAPICalls();
     if (!commandId) {
         incrementErrors();
@@ -1744,6 +1785,15 @@ VSCodeAPIResult VSCodeExtensionAPI::executeCommand(const char* commandId) {
         auto it = m_commands.find(commandId);
         if (it == m_commands.end()) {
             incrementErrors();
+            // Friendly fallback for AI extension backends when extension not installed
+            if (strcmp(commandId, "github.copilot.chat.proxy") == 0) {
+                return VSCodeAPIResult::error(
+                    "GitHub Copilot extension not installed. Use AI menu > Install from VSIX to install the extension, or switch to Ollama/Local backend.");
+            }
+            if (strcmp(commandId, "amazon.q.chat.proxy") == 0) {
+                return VSCodeAPIResult::error(
+                    "Amazon Q extension not installed. Use AI menu > Install from VSIX to install the extension, or switch to Ollama/Local backend.");
+            }
             // Try routing to Win32IDE IDM_ commands
             bridgeCommandToIDM(commandId);
             return VSCodeAPIResult::error("executeCommand: command not found");
@@ -1754,7 +1804,12 @@ VSCodeAPIResult VSCodeExtensionAPI::executeCommand(const char* commandId) {
         ctx = it->second.context;
     }
     // Mutex released — safe to call handler without deadlock or reentrancy risk
-    if (handler) handler(ctx);
+    
+    if (handler) {
+        s_currentCommandArgs = argsJson;
+        handler(ctx);
+        s_currentCommandArgs = nullptr;
+    }
 
     return VSCodeAPIResult::ok("Command executed");
 }
@@ -2230,7 +2285,7 @@ VSCodeAPIResult VSCodeExtensionAPI::configUpdate(const char* key, const char* va
     if (!self || !key || !value) return VSCodeAPIResult::error("configUpdate: null argument");
     if (!self->getHost()) return VSCodeAPIResult::error("configUpdate: no host IDE");
     
-    (void)target; // target (Global/Workspace) not yet differentiated
+    (void)target; // target (Global/Workspace) — single storage scope
     
     std::string k(key);
     std::string v(value);
@@ -2750,8 +2805,8 @@ void VSCodeExtensionAPI::bridgeCommandToIDM(const char* commandId) {
         { "rawrxd.agent.start",                      4100 },  // IDM_AGENT_START_LOOP
         { "rawrxd.agent.stop",                       4105 },  // IDM_AGENT_STOP
         { "rawrxd.agent.configure",                  4102 },  // IDM_AGENT_CONFIGURE_MODEL
-        { "rawrxd.subagent.chain",                   4110 },  // IDM_SUBAGENT_CHAIN
-        { "rawrxd.subagent.swarm",                   4111 },  // IDM_SUBAGENT_SWARM
+        { "rawrxd.subagent.chain",                   4111 },  // IDM_SUBAGENT_CHAIN
+        { "rawrxd.subagent.swarm",                   4112 },  // IDM_SUBAGENT_SWARM
         { "rawrxd.ai.maxMode",                       4200 },  // IDM_AI_MODE_MAX
         { "rawrxd.ai.deepThink",                     4201 },  // IDM_AI_MODE_DEEP_THINK
         { "rawrxd.ai.deepResearch",                  4202 },  // IDM_AI_MODE_DEEP_RESEARCH

@@ -509,3 +509,90 @@ void Win32IDE::updateContextWindowDisplay() {
 
     SendMessage(m_hwndStatusBar, SB_SETTEXT, 3, (LPARAM)label.c_str());
 }
+
+// ============================================================================
+// STREAMING ENGINE SELECTION — Phase 9 Auto Engine Selection
+// ============================================================================
+// Auto-select the optimal ASM streaming engine based on model profile
+// Uses the StreamingEngineRegistry scoring algorithm
+// ============================================================================
+
+#include "../core/streaming_engine_registry.h"
+
+std::string Win32IDE::selectStreamingEngine(const std::string& modelPath) {
+    LOG_INFO("Auto-selecting streaming engine for: " + modelPath);
+    
+    auto& registry = RawrXD::getStreamingEngineRegistry();
+    
+    // Detect model profile from file
+    RawrXD::ModelProfile modelProfile = registry.detectModelProfile(modelPath);
+    
+    // Detect hardware if not cached
+    RawrXD::HardwareProfile hwProfile = registry.detectHardware();
+    
+    // Select optimal engine
+    RawrXD::EngineSelectionResult result = registry.selectEngine(modelProfile, hwProfile);
+    
+    if (result.success) {
+        LOG_INFO("Selected engine: " + result.selectedEngine + " — " + result.reason);
+        
+        // Auto-switch to the selected engine
+        bool switched = registry.selectEngineByName(result.selectedEngine);
+        if (!switched) {
+            LOG_ERROR("Failed to switch to selected engine: " + result.selectedEngine);
+            return "";
+        }
+        
+        // Update UI status
+        {
+            std::lock_guard<std::mutex> lock(m_outputMutex);
+            appendToOutput("\n═══════════════════════════════════════════════════════\n", "ModelLoader", OutputSeverity::Success);
+            appendToOutput(" Streaming Engine Auto-Selection\n", "ModelLoader", OutputSeverity::Success);
+            appendToOutput("═══════════════════════════════════════════════════════\n", "ModelLoader", OutputSeverity::Success);
+            appendToOutput("  Engine: " + result.selectedEngine + "\n", "ModelLoader", OutputSeverity::Info);
+            appendToOutput("  Reason: " + result.reason + "\n", "ModelLoader", OutputSeverity::Info);
+            
+            if (!result.alternatives.empty()) {
+                appendToOutput("  Alternatives: ", "ModelLoader", OutputSeverity::Info);
+                for (size_t i = 0; i < result.alternatives.size(); i++) {
+                    if (i > 0) appendToOutput(", ", "ModelLoader", OutputSeverity::Info);
+                    appendToOutput(result.alternatives[i], "ModelLoader", OutputSeverity::Info);
+                }
+                appendToOutput("\n", "ModelLoader", OutputSeverity::Info);
+            }
+            
+            appendToOutput("═══════════════════════════════════════════════════════\n\n", "ModelLoader", OutputSeverity::Success);
+        }
+        
+        return result.selectedEngine;
+    } else {
+        LOG_ERROR("Engine selection failed: " + result.reason);
+        appendToOutput("⚠ Engine selection failed: " + result.reason + "\n", "ModelLoader", OutputSeverity::Error);
+        return "";
+    }
+}
+
+std::string Win32IDE::getStreamingEngineDiagnostics() const {
+    auto& registry = RawrXD::getStreamingEngineRegistry();
+    return registry.getFullDiagnostics();
+}
+
+std::vector<std::string> Win32IDE::getAvailableStreamingEngines() const {
+    auto& registry = RawrXD::getStreamingEngineRegistry();
+    return registry.getRegisteredEngineNames();
+}
+
+bool Win32IDE::switchStreamingEngine(const std::string& engineName) {
+    LOG_INFO("Manually switching streaming engine to: " + engineName);
+    
+    auto& registry = RawrXD::getStreamingEngineRegistry();
+    bool success = registry.selectEngineByName(engineName);
+    
+    if (success) {
+        appendToOutput("✓ Switched to streaming engine: " + engineName + "\n", "ModelLoader", OutputSeverity::Success);
+    } else {
+        appendToOutput("✗ Failed to switch to: " + engineName + "\n", "ModelLoader", OutputSeverity::Error);
+    }
+    
+    return success;
+}

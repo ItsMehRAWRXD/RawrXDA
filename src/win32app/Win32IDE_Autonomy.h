@@ -13,7 +13,7 @@
 // AutonomyManager: high-level autonomous orchestration layer.
 // Responsibilities:
 //  - Maintain goal & working memory
-//  - Plan next action (very simple heuristic placeholder)
+//  - Plan next action (goal + memory; prompt-driven tool loop)
 //  - Rate limit actions (max actions per minute)
 //  - Execute actions via AgenticBridge (tool / prompt)
 //  - Background loop thread when auto loop enabled

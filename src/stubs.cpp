@@ -1,6 +1,7 @@
 #include "engine/inference_kernels.h"
 #include <windows.h>
 #include <debugapi.h>
+#include <iostream>
 #include <vector>
 #include <string>
 

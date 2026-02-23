@@ -15,7 +15,7 @@
 //     3100–3117   Theme/UI
 //     3200–3211   Transparency
 //     4000–4009   Terminal
-//     4100–4114   Agent & Sub-Agent
+//     4100–4115   Agent & Sub-Agent
 //     4150–4155   Autonomy
 //     4200–4216   AI Modes & Context Windows
 //     4300–4319   Reverse Engineering
@@ -123,12 +123,12 @@ static const CommandDescriptor g_commandTable[] = {
     { 4108, "Agent: Memory Clear",       FeatureCategory::AI, nullptr, "Clear agent memory" },
     { 4109, "Agent: Memory Export",      FeatureCategory::AI, nullptr, "Export agent memory to file" },
 
-    // ── Sub-Agent (4110 range) ─────────────────────────────────────────
-    { 4110, "SubAgent: Chain",           FeatureCategory::AI, nullptr, "Chain sub-agent execution" },
-    { 4111, "SubAgent: Swarm",           FeatureCategory::AI, nullptr, "Swarm sub-agent coordination" },
-    { 4112, "SubAgent: TODO List",       FeatureCategory::AI, nullptr, "Sub-agent TODO list view" },
-    { 4113, "SubAgent: TODO Clear",      FeatureCategory::AI, nullptr, "Clear sub-agent TODO list" },
-    { 4114, "SubAgent: Status",          FeatureCategory::AI, nullptr, "Sub-agent status panel" },
+    // ── Sub-Agent (4111–4115) ─────────────────────────────────────────
+    { 4111, "SubAgent: Chain",           FeatureCategory::AI, nullptr, "Chain sub-agent execution" },
+    { 4112, "SubAgent: Swarm",           FeatureCategory::AI, nullptr, "Swarm sub-agent coordination" },
+    { 4113, "SubAgent: TODO List",       FeatureCategory::AI, nullptr, "Sub-agent TODO list view" },
+    { 4114, "SubAgent: TODO Clear",      FeatureCategory::AI, nullptr, "Clear sub-agent TODO list" },
+    { 4115, "SubAgent: Status",          FeatureCategory::AI, nullptr, "Sub-agent status panel" },
 
     // ── Autonomy (4150 range) ──────────────────────────────────────────
     { 4150, "Autonomy: Toggle",          FeatureCategory::AI, nullptr, "Toggle autonomous mode" },

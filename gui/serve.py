@@ -82,6 +82,48 @@ GGUF_SCAN_DIRS = [
 ]
 
 BLOB_DIR = "D:/OllamaModels/blobs"
+BLOB_DIRS = [
+    "D:/OllamaModels/blobs",
+    os.path.expanduser("~/.ollama/models/blobs"),
+]
+MANIFEST_BASE_DIRS = [
+    "D:/OllamaModels",
+    os.path.expanduser("~/.ollama/models"),
+]
+
+
+def _load_ollama_manifests(base_dir):
+    """Load Ollama manifest files to map blob hashes to model names."""
+    manifest_map = {}
+    manifests_dir = os.path.join(base_dir, "manifests", "registry.ollama.ai")
+    if not os.path.exists(manifests_dir):
+        return manifest_map
+    for root, _dirs, files in os.walk(manifests_dir):
+        for filename in files:
+            manifest_path = os.path.join(root, filename)
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+                if not isinstance(manifest, dict):
+                    continue
+                rel_path = os.path.relpath(manifest_path, manifests_dir)
+                path_parts = rel_path.replace("\\", "/").split("/")
+                if len(path_parts) >= 2:
+                    namespace, model_name = path_parts[0], path_parts[1]
+                    tag = path_parts[2] if len(path_parts) > 2 else "latest"
+                    display_name = f"{namespace}/{model_name}:{tag}"
+                    if "layers" in manifest and isinstance(manifest["layers"], list):
+                        for layer in manifest["layers"]:
+                            if isinstance(layer, dict) and "digest" in layer:
+                                blob_hash = layer["digest"].replace("sha256:", "sha256-")
+                                manifest_map[blob_hash] = display_name
+                    if "config" in manifest and isinstance(manifest["config"], dict):
+                        if "digest" in manifest["config"]:
+                            blob_hash = manifest["config"]["digest"].replace("sha256:", "sha256-")
+                            manifest_map[blob_hash] = display_name
+            except (json.JSONDecodeError, OSError, KeyError, TypeError, AttributeError):
+                pass
+    return manifest_map
 
 DEFAULT_PORT = 11435
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
@@ -296,23 +338,35 @@ def scan_gguf_models():
 
 
 def scan_blobs():
-    """Scan D:/OllamaModels/blobs for large blob files (model weights)."""
+    """Scan Ollama blob directories for large model weight files.
+    Uses manifest files to map sha256-xxx blobs to friendly names (e.g. library/llama3.2:latest).
+    """
     models = []
-    if not os.path.isdir(BLOB_DIR):
-        return models
-    for fpath in glob.glob(os.path.join(BLOB_DIR, "sha256-*")):
-        fname = os.path.basename(fpath)
-        size_bytes = os.path.getsize(fpath)
-        size_gb = size_bytes / (1024 ** 3)
-        if size_gb < 0.1:  # Skip small metadata blobs
+    manifest_map = {}
+    for base in MANIFEST_BASE_DIRS:
+        if os.path.exists(base):
+            manifest_map.update(_load_ollama_manifests(base))
+    seen_paths = set()
+    for blob_dir in BLOB_DIRS:
+        if not os.path.isdir(blob_dir):
             continue
-        display_name = f"blob:{fname[:19]}"
-        models.append({
-            "name": display_name,
-            "type": "blob",
-            "size": f"{size_gb:.1f}GB",
-            "path": fpath.replace("\\", "/"),
-        })
+        for fpath in glob.glob(os.path.join(blob_dir, "sha256-*")):
+            fpath_norm = os.path.normpath(fpath)
+            if fpath_norm in seen_paths:
+                continue
+            seen_paths.add(fpath_norm)
+            fname = os.path.basename(fpath)
+            size_bytes = os.path.getsize(fpath)
+            size_gb = size_bytes / (1024 ** 3)
+            if size_gb < 0.1:  # Skip small metadata blobs
+                continue
+            display_name = manifest_map.get(fname, f"blob:{fname[:19]}")
+            models.append({
+                "name": display_name,
+                "type": "blob",
+                "size": f"{size_gb:.1f}GB",
+                "path": fpath.replace("\\", "/"),
+            })
     return models
 
 

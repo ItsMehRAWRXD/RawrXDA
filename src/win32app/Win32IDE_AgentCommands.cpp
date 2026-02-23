@@ -9,6 +9,15 @@
 #include <sstream>
 #include <algorithm>
 
+// SCAFFOLD_040: SubAgent chain/swarm/todo handlers
+
+
+// SCAFFOLD_039: Agent commands menu dispatch
+
+
+// SCAFFOLD_017: AI mode toggles (Max, Deep Think, etc.)
+
+
 // Initialize the Agentic Bridge
 void Win32IDE::initializeAgenticBridge() {
     LOG_INFO("Initializing Agentic Bridge");
@@ -547,6 +556,18 @@ void Win32IDE::handleAgentCommand(int commandId) {
         case IDM_REVENG_ANALYZE:
             handleReverseEngineeringAnalyze();
             break;
+        case IDM_REVENG_SET_BINARY_FROM_ACTIVE:
+            handleReverseEngineeringSetBinaryFromActive();
+            break;
+        case IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET:
+            handleReverseEngineeringSetBinaryFromDebugTarget();
+            break;
+        case IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT:
+            handleReverseEngineeringSetBinaryFromBuildOutput();
+            break;
+        case IDM_REVENG_DISASM_AT_RIP:
+            handleReverseEngineeringDisassembleAtRIP();
+            break;
         case IDM_REVENG_DISASM:
             handleReverseEngineeringDisassemble();
             break;
@@ -683,6 +704,35 @@ void Win32IDE::onAIModeNoRefusal() {
     if (m_agenticBridge) m_agenticBridge->SetNoRefusal(newState);
     if (m_hwndChkNoRefusal) SendMessage(m_hwndChkNoRefusal, BM_SETCHECK, newState ? BST_CHECKED : BST_UNCHECKED, 0);
     appendToOutput(std::string("No Refusal Mode ") + (newState ? "ENABLED" : "DISABLED") + "\n", "Output", OutputSeverity::Info);
+}
+
+// ============================================================================
+// AGENTIC MODE SWITCHER — Plan / Agent / Ask (three-mode chat behavior)
+// ============================================================================
+
+void Win32IDE::setAgenticMode(RawrXD::AgenticMode mode) {
+    m_agenticMode = mode;
+    LOG_INFO("Agentic mode set to " + std::string(RawrXD::AgenticModeToString(mode)));
+    if (m_hwndAgenticModeAsk) SendMessage(m_hwndAgenticModeAsk, BM_SETCHECK, (mode == RawrXD::AgenticMode::Ask) ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_hwndAgenticModePlan) SendMessage(m_hwndAgenticModePlan, BM_SETCHECK, (mode == RawrXD::AgenticMode::Plan) ? BST_CHECKED : BST_UNCHECKED, 0);
+    if (m_hwndAgenticModeAgent) SendMessage(m_hwndAgenticModeAgent, BM_SETCHECK, (mode == RawrXD::AgenticMode::Agent) ? BST_CHECKED : BST_UNCHECKED, 0);
+    appendToOutput("Chat mode: " + std::string(RawrXD::AgenticModeToString(mode)) + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::onAgenticModeChanged(RawrXD::AgenticMode mode) {
+    setAgenticMode(mode);
+}
+
+void Win32IDE::onAgenticModeAsk() {
+    setAgenticMode(RawrXD::AgenticMode::Ask);
+}
+
+void Win32IDE::onAgenticModePlan() {
+    setAgenticMode(RawrXD::AgenticMode::Plan);
+}
+
+void Win32IDE::onAgenticModeAgent() {
+    setAgenticMode(RawrXD::AgenticMode::Agent);
 }
 
 void Win32IDE::onAIContextSize(int sizeEnum) {

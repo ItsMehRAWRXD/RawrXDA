@@ -50,8 +50,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # VOICE-ENABLED ASSISTANT
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -106,9 +104,7 @@ class VoiceAssistant {
     }
     
     [void] LoadDigestedKB() {
-        $projectRoot = Get-RawrXDRoot
-        $kbPath = Join-Path $projectRoot "data" "knowledge_base.json"
-        $kbPath = Resolve-RawrXDPath $kbPath
+        $kbPath = "D:\lazy init ide\data\knowledge_base.json"
         
         if (Test-Path $kbPath) {
             try {

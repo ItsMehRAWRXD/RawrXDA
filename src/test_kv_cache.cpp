@@ -7,23 +7,20 @@
 #include <cassert>
 #include <cmath>
 
-#include "logging/logger.h"
-static Logger s_logger("test_kv_cache");
-
 // Simple assertion helper
 #define ASSERT(condition, message) \
     if (!(condition)) { \
-        s_logger.error( "ASSERTION FAILED: " << message << std::endl; \
+        std::cerr << "ASSERTION FAILED: " << message << std::endl; \
         return false; \
     }
 
 // Test 1: Basic KV cache allocation
 bool testKVCacheAllocation() {
-    s_logger.info("\n=== Test 1: KV Cache Allocation ===");
+    std::cout << "\n=== Test 1: KV Cache Allocation ===" << std::endl;
     
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
-        s_logger.error( "Failed to initialize Vulkan" << std::endl;
+        std::cerr << "Failed to initialize Vulkan" << std::endl;
         return false;
     }
     
@@ -36,20 +33,20 @@ bool testKVCacheAllocation() {
     ASSERT(success, "AllocateKVCache should succeed");
     ASSERT(gpu.IsKVCacheAllocated(), "KV cache should be allocated");
     
-    s_logger.info("✓ KV cache allocation successful");
+    std::cout << "✓ KV cache allocation successful" << std::endl;
     
     // Clean up
     gpu.ClearKVCache();
     ASSERT(!gpu.IsKVCacheAllocated(), "KV cache should be cleared");
     
-    s_logger.info("✓ KV cache cleanup successful");
+    std::cout << "✓ KV cache cleanup successful" << std::endl;
     
     return true;
 }
 
 // Test 2: Append to KV cache
 bool testKVCacheAppend() {
-    s_logger.info("\n=== Test 2: KV Cache Append ===");
+    std::cout << "\n=== Test 2: KV Cache Append ===" << std::endl;
     
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
@@ -77,7 +74,7 @@ bool testKVCacheAppend() {
     bool success = gpu.AppendToKVCache(0, k_new.data(), v_new.data(), 0);
     ASSERT(success, "AppendToKVCache should succeed");
     
-    s_logger.info("✓ Appended K/V to cache at layer 0, pos 0");
+    std::cout << "✓ Appended K/V to cache at layer 0, pos 0" << std::endl;
     
     // Append to layer 0, position 1 (different values)
     for (uint32_t i = 0; i < head_dim; ++i) {
@@ -88,14 +85,14 @@ bool testKVCacheAppend() {
     success = gpu.AppendToKVCache(0, k_new.data(), v_new.data(), 1);
     ASSERT(success, "Second append should succeed");
     
-    s_logger.info("✓ Appended K/V to cache at layer 0, pos 1");
+    std::cout << "✓ Appended K/V to cache at layer 0, pos 1" << std::endl;
     
     return true;
 }
 
 // Test 3: Retrieve from KV cache
 bool testKVCacheRetrieval() {
-    s_logger.info("\n=== Test 3: KV Cache Retrieval ===");
+    std::cout << "\n=== Test 3: KV Cache Retrieval ===" << std::endl;
     
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
@@ -124,7 +121,7 @@ bool testKVCacheRetrieval() {
         return false;
     }
     
-    s_logger.info("✓ Written test data to cache at pos 5");
+    std::cout << "✓ Written test data to cache at pos 5" << std::endl;
     
     // Flush GPU commands to ensure write completes
     gpu.FlushAsyncCommands();
@@ -148,18 +145,18 @@ bool testKVCacheRetrieval() {
                "V value mismatch at index " + std::to_string(i));
     }
     
-    s_logger.info("✓ Retrieved and verified K/V cache values");
-    s_logger.info("  K[0] = ");
-    s_logger.info("  K[7] = ");
-    s_logger.info("  V[0] = ");
-    s_logger.info("  V[7] = ");
+    std::cout << "✓ Retrieved and verified K/V cache values" << std::endl;
+    std::cout << "  K[0] = " << k_read[0] << " (expected 0)" << std::endl;
+    std::cout << "  K[7] = " << k_read[7] << " (expected 70)" << std::endl;
+    std::cout << "  V[0] = " << v_read[0] << " (expected 0)" << std::endl;
+    std::cout << "  V[7] = " << v_read[7] << " (expected 140)" << std::endl;
     
     return true;
 }
 
 // Test 4: Multi-layer KV cache
 bool testMultiLayerKVCache() {
-    s_logger.info("\n=== Test 4: Multi-Layer KV Cache ===");
+    std::cout << "\n=== Test 4: Multi-Layer KV Cache ===" << std::endl;
     
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
@@ -191,7 +188,7 @@ bool testMultiLayerKVCache() {
         ASSERT(success, "Append to layer " + std::to_string(layer) + " should succeed");
     }
     
-    s_logger.info("✓ Written to all ");
+    std::cout << "✓ Written to all " << num_layers << " layers" << std::endl;
     
     gpu.FlushAsyncCommands();
     
@@ -209,17 +206,18 @@ bool testMultiLayerKVCache() {
         ASSERT(std::abs(k_verify[0] - expected_k) < epsilon,
                "Layer " + std::to_string(layer) + " K[0] mismatch");
         
-        s_logger.info("  Layer ");
+        std::cout << "  Layer " << layer << " K[0] = " << k_verify[0] 
+                  << " (expected " << expected_k << ") ✓" << std::endl;
     }
     
-    s_logger.info("✓ All layers verified successfully");
+    std::cout << "✓ All layers verified successfully" << std::endl;
     
     return true;
 }
 
 // Test 5: Realistic token sequence
 bool testRealisticTokenSequence() {
-    s_logger.info("\n=== Test 5: Realistic Token Sequence ===");
+    std::cout << "\n=== Test 5: Realistic Token Sequence ===" << std::endl;
     
     VulkanCompute gpu;
     if (!gpu.Initialize()) {
@@ -235,7 +233,8 @@ bool testRealisticTokenSequence() {
         return false;
     }
     
-    s_logger.info("✓ Allocated cache for ");
+    std::cout << "✓ Allocated cache for " << num_layers << " layers, "
+              << max_seq_len << " max tokens, " << head_dim << " head_dim" << std::endl;
     
     // Simulate autoregressive token generation (10 tokens)
     uint32_t num_tokens = 10;
@@ -262,7 +261,7 @@ bool testRealisticTokenSequence() {
         }
     }
     
-    s_logger.info("✓ Appended ");
+    std::cout << "✓ Appended " << num_tokens << " tokens across " << num_layers << " layers" << std::endl;
     
     gpu.FlushAsyncCommands();
     
@@ -283,17 +282,17 @@ bool testRealisticTokenSequence() {
     ASSERT(std::abs(k_sequence[5 * head_dim] - expected_k_token5) < epsilon,
            "Token 5 K[0] mismatch");
     
-    s_logger.info("✓ Verified full sequence retrieval");
-    s_logger.info("  Token 0 K[0] = ");
-    s_logger.info("  Token 5 K[0] = ");
+    std::cout << "✓ Verified full sequence retrieval" << std::endl;
+    std::cout << "  Token 0 K[0] = " << k_sequence[0] << std::endl;
+    std::cout << "  Token 5 K[0] = " << k_sequence[5 * head_dim] << std::endl;
     
     return true;
 }
 
 int main() {
-    s_logger.info("========================================");
-    s_logger.info("KV Cache Infrastructure Test Suite");
-    s_logger.info("========================================");
+    std::cout << "========================================" << std::endl;
+    std::cout << "KV Cache Infrastructure Test Suite" << std::endl;
+    std::cout << "========================================" << std::endl;
     
     bool all_passed = true;
     
@@ -303,15 +302,15 @@ int main() {
     all_passed &= testMultiLayerKVCache();
     all_passed &= testRealisticTokenSequence();
     
-    s_logger.info("\n========================================");
+    std::cout << "\n========================================" << std::endl;
     if (all_passed) {
-        s_logger.info("✓✓✓ ALL TESTS PASSED ✓✓✓");
-        s_logger.info("KV Cache infrastructure is working correctly!");
+        std::cout << "✓✓✓ ALL TESTS PASSED ✓✓✓" << std::endl;
+        std::cout << "KV Cache infrastructure is working correctly!" << std::endl;
     } else {
-        s_logger.info("✗✗✗ SOME TESTS FAILED ✗✗✗");
-        s_logger.info("Check error messages above.");
+        std::cout << "✗✗✗ SOME TESTS FAILED ✗✗✗" << std::endl;
+        std::cout << "Check error messages above." << std::endl;
     }
-    s_logger.info("========================================");
+    std::cout << "========================================" << std::endl;
     
     return all_passed ? 0 : 1;
 }

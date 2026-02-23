@@ -6,6 +6,9 @@
 #include <algorithm>
 #include "../inference/ultra_fast_inference.h"
 
+// SCAFFOLD_123: Speculative decoder
+
+
 SpeculativeDecoder::SpeculativeDecoder()
     : m_gpuAccelerated(false)
     , m_draftModelLoaded(false)

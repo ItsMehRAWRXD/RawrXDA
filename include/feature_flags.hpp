@@ -1,4 +1,3 @@
-#pragma once
 // feature_flags.hpp
 namespace rxd::features {
     constexpr bool LSP_SEMANTIC_TOKENS = false;      // Deferred (high complexity)

@@ -8,7 +8,9 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "live_binary_patcher.hpp"
 #include "hotpatch_telemetry_safety.h" // T3-D: Safety layer for counter-guarded patching
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstring>
 #include <cstdio>

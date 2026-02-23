@@ -16,9 +16,9 @@
 #include "engine/sovereign_engines.h"
 #include "modules/react_generator.h"
 
-// Forward declarations for things that might be in other headers not yet created or linked
-namespace MemoryPlugins { void init(size_t); } 
-void register_rawr_inference(); // Defined in src/modules/inference_engine.cpp
+// Forward declarations: MemoryPlugins::init in memory_plugins.cpp; register_rawr_inference in tool_registry_init.cpp or inference_engine.cpp or rawr_engine.cpp (per-target).
+namespace MemoryPlugins { void init(size_t); }
+void register_rawr_inference();
 
 static std::atomic<bool> running = true;
 

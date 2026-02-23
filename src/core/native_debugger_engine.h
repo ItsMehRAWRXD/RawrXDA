@@ -69,6 +69,7 @@ public:
     DebugResult terminateTarget();
     DebugSessionState getState() const { return m_state.load(std::memory_order_acquire); }
     const std::string& getTargetName() const { return m_targetName; }
+    const std::string& getTargetPath() const { return m_targetPath; }
     uint32_t getTargetPID() const { return m_targetPID; }
 
     // ---- Execution Control ----

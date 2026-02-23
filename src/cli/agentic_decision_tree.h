@@ -10,7 +10,7 @@
 // All without a GUI — pure terminal-driven autonomy.
 //
 // Architecture:
-//   DecisionNode    — A single decision point in the tree
+//   ADTDecisionNode    — A single decision point in the tree
 //   DecisionOutcome — Structured result of tree evaluation
 //   TreeContext     — Mutable state carried through traversal
 //   AgenticDecisionTree — Root orchestrator: evaluator + action executor
@@ -101,8 +101,8 @@ enum class AutonomyRisk : uint8_t {
 // STRUCTS
 // ============================================================================
 
-// A single node in the decision tree
-struct DecisionNode {
+// A single node in the autonomy decision tree (ADT prefix avoids clash with agent_explainability::DecisionNode)
+struct ADTDecisionNode {
     uint32_t            nodeId;
     DecisionNodeType    type;
     AutonomyRisk        risk;
@@ -252,13 +252,13 @@ public:
     void buildDefaultTree();
 
     // Add a custom decision node.
-    uint32_t addNode(const DecisionNode& node);
+    uint32_t addNode(const ADTDecisionNode& node);
 
     // Link parent → child.
     void linkNode(uint32_t parentId, uint32_t childId);
 
     // Get a node by ID.
-    const DecisionNode* getNode(uint32_t nodeId) const;
+    const ADTDecisionNode* getNode(uint32_t nodeId) const;
 
     // ---- Tree Evaluation ----
 
@@ -339,18 +339,18 @@ private:
     AgenticDecisionTree& operator=(const AgenticDecisionTree&) = delete;
 
     // ---- Internal Node Evaluators ----
-    NodeVerdict evalRoot(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalObservation(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalClassification(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalSSALift(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalFailureDetect(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalCorrectionPlan(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalMemoryHotpatch(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalByteHotpatch(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalServerPatch(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalVerification(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalEscalation(const DecisionNode& node, TreeContext& ctx);
-    NodeVerdict evalTerminal(const DecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalRoot(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalObservation(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalClassification(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalSSALift(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalFailureDetect(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalCorrectionPlan(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalMemoryHotpatch(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalByteHotpatch(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalServerPatch(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalVerification(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalEscalation(const ADTDecisionNode& node, TreeContext& ctx);
+    NodeVerdict evalTerminal(const ADTDecisionNode& node, TreeContext& ctx);
 
     // Recursive traversal
     NodeVerdict traverseNode(uint32_t nodeId, TreeContext& ctx, int depth);
@@ -362,7 +362,7 @@ private:
 
     // ---- State ----
     mutable std::mutex                              m_mutex;
-    std::unordered_map<uint32_t, DecisionNode>      m_nodes;
+    std::unordered_map<uint32_t, ADTDecisionNode>      m_nodes;
     uint32_t                                        m_rootNodeId;
     uint32_t                                        m_nextNodeId;
     DecisionTreeStats                               m_stats;

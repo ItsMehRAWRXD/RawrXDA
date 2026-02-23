@@ -5,6 +5,7 @@
 #pragma once
 #include "local_reasoning_engine.hpp"
 #include <memory>
+#include <string>
 
 /**
  * Singleton accessor for LocalReasoningEngine
@@ -40,5 +41,11 @@ public:
 
     static void disableVerboseMode() {
         instance().disableVerboseLogging();
+    }
+
+    /** One-shot analysis of prompt/context text; returns summary string for routing. */
+    static std::string analyzeCurrentContext(const std::string& prompt) {
+        auto result = analyzeCode(prompt, "text", true, true);
+        return result.summary.empty() ? "[No analysis]" : result.summary;
     }
 };

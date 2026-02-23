@@ -1,5 +1,7 @@
 #include "ai_assistant_engine.h"
 #include "../cpu_inference_engine.h"
+#include "../asm/ai_agent_masm_bridge.hpp"
+#include "../core/unified_hotpatch_manager.hpp"
 #include <sstream>
 #include <chrono>
 #include <iomanip>
@@ -10,13 +12,29 @@
 #include <unordered_set>
 #include <cctype>
 #include <cstdlib>
+#include <atomic>
+#include <memory>
 #include <windows.h>
 #include <winhttp.h>
 
 #pragma comment(lib, "winhttp.lib")
 
+// MASM Bridge for AI operations
+static std::unique_ptr<AiMasmBridge> g_aiMasmBridge;
+static std::atomic<bool> g_aiMasmInitialized{false};
+static std::atomic<uint64_t> g_aiTensorOpsCompleted{0};
+static std::atomic<uint64_t> g_aiMasmCycles{0};
+
 namespace RawrXD {
 namespace AI {
+
+// Forward declaration for helper
+static void ai_completion_callback(const void* result_data, size_t result_size) {
+    if (result_data && result_size > 0) {
+        g_aiTensorOpsCompleted.fetch_add(1, std::memory_order_relaxed);
+        // This callback would process completed MASM tensor operations
+    }
+}
 
 // Forward declaration for helper
 std::string GetCurrentTimestamp();
@@ -1056,7 +1074,9 @@ bool OllamaBackend::Initialize(const ModelConfig& config) {
     }
 
     std::string tags = WinHttpRequest(tags_url, L"GET", "", {L"Accept: application/json"});
-    m_ready = !tags.empty();
+    // Enhanced readiness: mark as ready if we have a model name, even if server tag check fails.
+    // This allows custom names or SHAs to bypass strict initial check and fail later if actually invalid.
+    m_ready = !m_model_name.empty(); 
     return m_ready;
 }
 

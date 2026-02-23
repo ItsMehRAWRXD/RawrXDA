@@ -1,7 +1,4 @@
 #include "telemetry.h"
-
-#include "logging/logger.h"
-static Logger s_logger("telemetry");
 #if defined(_WIN32) && defined(__has_include)
 #  if __has_include(<windows.h>)
 #    include <windows.h>
@@ -83,7 +80,7 @@ void Telemetry::recordEvent(const std::string& event_name, const nlohmann::json&
     event["metadata"] = metadata;
     events_.push_back(event);
     // In a production system we would also stream this event to a logger.
-    s_logger.info("Telemetry event recorded: ");
+    std::cout << "Telemetry event recorded: " << event_name << std::endl;
 }
 
 bool Telemetry::saveTelemetry(const std::string& filepath) {

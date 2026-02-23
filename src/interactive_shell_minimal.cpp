@@ -3,6 +3,9 @@
 #include <sstream>
 #include <algorithm>
 
+// SCAFFOLD_093: interactive_shell /agent commands
+
+
 std::unique_ptr<InteractiveShell> g_shell;
 
 InteractiveShell::InteractiveShell(const ShellConfig& config) 
@@ -79,5 +82,6 @@ void InteractiveShell::DisplayPrompt() {
     if (output_callback_) output_callback_(">> ");
 }
 
+// Minimal shell: no persistent history; override in a full shell if needed.
 void InteractiveShell::SaveHistory() {}
 void InteractiveShell::LoadHistory() {}

@@ -9,12 +9,14 @@
 // ============================================================================
 
 #include "perf_telemetry.hpp"
+#include "license_enforcement.h"
 
-#include "logging/logger.h"
-static Logger s_logger("perf_telemetry");
-
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <intrin.h>
 #include <cstring>
@@ -24,8 +26,16 @@ static Logger s_logger("perf_telemetry");
 #include <iomanip>
 #include <algorithm>
 
+// SCAFFOLD_266: Perf telemetry
+
+
 namespace RawrXD {
 namespace Perf {
+
+static bool allow_inference_stats(const char* caller) {
+    return RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+        RawrXD::License::FeatureID::InferenceStatistics, caller);
+}
 
 // ============================================================================
 // ScopedMeasurement — read elapsed without ending
@@ -72,12 +82,16 @@ PerfResult PerfTelemetry::initialize() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_initialized) return PerfResult::ok("Already initialized");
+    if (!allow_inference_stats(__FUNCTION__)) {
+        return PerfResult::error("[LICENSE] Inference statistics requires Professional license", -1);
+    }
 
     asm_perf_init();
     registerDefaultKernels();
     m_initialized = true;
 
-    s_logger.info("[PerfTelemetry] Initialized — ");
+    std::cout << "[PerfTelemetry] Initialized — " << MAX_PERF_SLOTS
+              << " measurement slots available" << std::endl;
 
     return PerfResult::ok("Initialized");
 }
@@ -267,6 +281,7 @@ PerfPercentiles PerfTelemetry::computePercentiles(const PerfSlotData& data) cons
 }
 
 PerfSlotReport PerfTelemetry::generateReport(uint32_t slotIndex) const {
+    if (!allow_inference_stats(__FUNCTION__)) return {};
     PerfSlotReport r = {};
     if (slotIndex >= MAX_PERF_SLOTS) return r;
 
@@ -304,12 +319,14 @@ PerfSlotReport PerfTelemetry::generateReport(uint32_t slotIndex) const {
 // ============================================================================
 
 void PerfTelemetry::resetAllSlots() {
+    if (!allow_inference_stats(__FUNCTION__)) return;
     for (uint32_t i = 0; i < MAX_PERF_SLOTS; ++i) {
         asm_perf_reset_slot(i);
     }
 }
 
 void PerfTelemetry::resetSlot(uint32_t slotIndex) {
+    if (!allow_inference_stats(__FUNCTION__)) return;
     if (slotIndex < MAX_PERF_SLOTS) {
         asm_perf_reset_slot(slotIndex);
     }
@@ -320,6 +337,7 @@ void PerfTelemetry::resetSlot(uint32_t slotIndex) {
 // ============================================================================
 
 void PerfTelemetry::captureBaseline() {
+    if (!allow_inference_stats(__FUNCTION__)) return;
     std::lock_guard<std::mutex> lock(m_mutex);
 
     for (uint32_t i = 0; i < MAX_PERF_SLOTS; ++i) {
@@ -333,7 +351,8 @@ void PerfTelemetry::captureBaseline() {
     }
     m_baselineCaptured = true;
 
-    s_logger.info("[PerfTelemetry] Baseline captured across ");
+    std::cout << "[PerfTelemetry] Baseline captured across " << getActiveSlotCount()
+              << " active slots" << std::endl;
 }
 
 bool PerfTelemetry::checkDrift(uint32_t slotIndex, double threshold) const {
@@ -373,6 +392,9 @@ uint32_t PerfTelemetry::getActiveSlotCount() const {
 // ============================================================================
 
 std::string PerfTelemetry::exportJSON() const {
+    if (!allow_inference_stats(__FUNCTION__)) {
+        return "{\n  \"error\": \"[LICENSE] Inference statistics requires Professional license\"\n}\n";
+    }
     std::ostringstream ss;
     ss << "{\n  \"perf_telemetry\": {\n";
     ss << "    \"active_slots\": " << getActiveSlotCount() << ",\n";
@@ -422,6 +444,9 @@ std::string PerfTelemetry::exportJSON() const {
 // ============================================================================
 
 std::string PerfTelemetry::exportCSV() const {
+    if (!allow_inference_stats(__FUNCTION__)) {
+        return "error,detail\nLICENSE,Inference statistics requires Professional license\n";
+    }
     std::ostringstream ss;
     ss << "slot,name,count,min,max,mean,p50,p90,p95,p99,p999,stddev,drift_ratio,drift";
     for (uint32_t b = 0; b < HISTOGRAM_BUCKETS; ++b) {
@@ -465,6 +490,9 @@ std::string PerfTelemetry::exportCSV() const {
 // ============================================================================
 
 std::string PerfTelemetry::getDiagnostics() const {
+    if (!allow_inference_stats(__FUNCTION__)) {
+        return "[LICENSE] Inference statistics requires Professional license\n";
+    }
     std::ostringstream ss;
     ss << "=== PerfTelemetry Diagnostics ===\n";
     ss << "Initialized: " << (m_initialized ? "Yes" : "No") << "\n";

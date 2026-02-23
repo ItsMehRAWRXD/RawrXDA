@@ -13,6 +13,9 @@
 #include <sstream>
 #include <algorithm>
 
+// SCAFFOLD_028: Breadcrumbs and navigation
+
+
 #ifndef RAWRXD_LOG_INFO
 #define RAWRXD_LOG_INFO(msg) do { \
     std::ostringstream _oss; _oss << "[INFO] " << msg << "\n"; \
@@ -310,6 +313,9 @@ void Win32IDE::paintBreadcrumbs(HDC hdc, RECT& rc)
 
     if (m_breadcrumbPath.empty()) return;
 
+    m_breadcrumbRects.clear();
+    m_breadcrumbRects.reserve(m_breadcrumbPath.size());
+
     // Set font and text properties
     HFONT oldFont = (HFONT)SelectObject(hdc, m_breadcrumbFont ? m_breadcrumbFont : GetStockObject(DEFAULT_GUI_FONT));
     SetBkMode(hdc, TRANSPARENT);
@@ -318,6 +324,7 @@ void Win32IDE::paintBreadcrumbs(HDC hdc, RECT& rc)
 
     for (size_t i = 0; i < m_breadcrumbPath.size(); i++) {
         const auto& item = m_breadcrumbPath[i];
+        int itemLeft = xPos;
 
         // Draw separator before items (except first)
         if (i > 0) {
@@ -360,6 +367,9 @@ void Win32IDE::paintBreadcrumbs(HDC hdc, RECT& rc)
         RECT textRect = { xPos, rc.top, xPos + textSize.cx, rc.bottom };
         DrawTextA(hdc, item.label.c_str(), -1, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
         xPos += textSize.cx + 4;
+
+        RECT hitRect = { itemLeft, rc.top, xPos, rc.bottom };
+        m_breadcrumbRects.push_back(hitRect);
     }
 
     SelectObject(hdc, oldFont);
@@ -402,20 +412,16 @@ LRESULT CALLBACK Win32IDE::BreadcrumbProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
     case WM_LBUTTONUP:
     {
         if (pThis) {
-            int mouseX = LOWORD(lParam);
-            // Determine which breadcrumb was clicked based on position
-            // Simple hit-test: divide bar evenly among items
-            int itemCount = static_cast<int>(pThis->m_breadcrumbPath.size());
-            if (itemCount > 0) {
-                RECT rc;
-                GetClientRect(hwnd, &rc);
-                // Approximate: use proportional widths
-                int totalWidth = rc.right - 16; // margins
-                int avgWidth = totalWidth / itemCount;
-                int clickedIndex = (mouseX - 8) / (avgWidth > 0 ? avgWidth : 1);
-                clickedIndex = (std::max)(0, (std::min)(clickedIndex, itemCount - 1));
-                pThis->onBreadcrumbClick(clickedIndex);
+            POINT pt = { LOWORD(lParam), HIWORD(lParam) };
+            int clickedIndex = -1;
+            for (size_t i = 0; i < pThis->m_breadcrumbRects.size(); i++) {
+                if (PtInRect(&pThis->m_breadcrumbRects[i], pt)) {
+                    clickedIndex = static_cast<int>(i);
+                    break;
+                }
             }
+            if (clickedIndex >= 0)
+                pThis->onBreadcrumbClick(clickedIndex);
         }
         return 0;
     }

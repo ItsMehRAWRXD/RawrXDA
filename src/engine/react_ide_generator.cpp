@@ -3,9 +3,6 @@
 #include <sstream>
 #include <iostream>
 
-#include "logging/logger.h"
-static Logger s_logger("react_ide_generator");
-
 // ╔════════════════════════════════════════════════════════════════════════════╗
 // ║  RAW-STRING DISCIPLINE — READ BEFORE EDITING THIS FILE                   ║
 // ║                                                                          ║
@@ -811,7 +808,7 @@ import { Terminal, Bot, Clock, Shield, Eye, Zap, GitBranch, Layers } from 'lucid
 
 function App() {
   const { connect, isConnected, logs, agenticReady } = useEngineStore();
-  const [code, setCode] = useState('// RawrXD Monaco IDE\n#include <iostream>\n\nint main() {\n    s_logger.info("Hello, RawrXD");\n    return 0;\n}\n');
+  const [code, setCode] = useState('// RawrXD Monaco IDE\n#include <iostream>\n\nint main() {\n    std::cout << "Hello, RawrXD" << std::endl;\n    return 0;\n}\n');
   const [status, setStatus] = useState({
     ready: false,
     model_loaded: false,
@@ -1220,14 +1217,14 @@ void ReactIDEGenerator::CreateDirectoryStructure(const std::filesystem::path& ba
 bool ReactIDEGenerator::GenerateIDE(const std::string& name, const std::string& template_name,
                                    const std::filesystem::path& output_dir) {
     if (templates.find(template_name) == templates.end()) {
-        s_logger.error( "Template not found: " << template_name << std::endl;
+        std::cerr << "Template not found: " << template_name << std::endl;
         return false;
     }
 
     const auto& tmpl = templates[template_name];
     std::filesystem::path project_path = output_dir / name;
     
-    s_logger.info("Genering ");
+    std::cout << "Genering " << name << " using " << template_name << " template..." << std::endl;
 
     CreateDirectoryStructure(project_path);
 
@@ -1340,8 +1337,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 )");
 
-    s_logger.info("Project generated successfully at: ");
-    s_logger.info("Run 'npm install' and 'npm run dev' to start.");
+    std::cout << "Project generated successfully at: " << project_path.string() << std::endl;
+    std::cout << "Run 'npm install' and 'npm run dev' to start." << std::endl;
 
     return true;
 }
@@ -1615,6 +1612,9 @@ export const defaultCppTemplate = `// ==========================================
 #include <cstdio>
 #include <mutex>
 
+// SCAFFOLD_253: React IDE generator and agentic template
+
+
 struct PatchResult {
     bool success;
     const char* detail;
@@ -1887,7 +1887,7 @@ export const CompilerPanel: React.FC = () => {
 };
 )");
 
-    s_logger.info("[ReactIDE] C++ language configuration overlaid for: ");
+    std::cout << "[ReactIDE] C++ language configuration overlaid for: " << name << std::endl;
     return true;
 }
 
@@ -2184,7 +2184,7 @@ export const CompilerPanel: React.FC = () => {
 };
 )");
 
-    s_logger.info("[ReactIDE] Rust language configuration overlaid for: ");
+    std::cout << "[ReactIDE] Rust language configuration overlaid for: " << name << std::endl;
     return true;
 }
 
@@ -2509,7 +2509,7 @@ export const CompilerPanel: React.FC = () => {
 };
 )");
 
-    s_logger.info("[ReactIDE] Python language configuration overlaid for: ");
+    std::cout << "[ReactIDE] Python language configuration overlaid for: " << name << std::endl;
     return true;
 }
 
@@ -2697,7 +2697,7 @@ export const LanguageSwitcher: React.FC<Props> = ({ currentLanguage, onLanguageC
 };
 )");
 
-    s_logger.info("[ReactIDE] Multi-language configuration overlaid for: ");
+    std::cout << "[ReactIDE] Multi-language configuration overlaid for: " << name << std::endl;
     return true;
 }
 
@@ -2917,7 +2917,7 @@ npx vitest --coverage   # With coverage report
 - `components.test.tsx` — Component smoke/render tests
 )");
 
-    s_logger.info("[ReactIDE] Test suite generated for: ");
+    std::cout << "[ReactIDE] Test suite generated for: " << name << std::endl;
     return true;
 }
 
@@ -3112,7 +3112,7 @@ export default [
   ]
 })");
 
-    s_logger.info("[ReactIDE] CI/CD pipeline generated for: ");
+    std::cout << "[ReactIDE] CI/CD pipeline generated for: " << name << std::endl;
     return true;
 }
 
@@ -3394,7 +3394,7 @@ networks:
   rawrxd-net:
 )");
 
-    s_logger.info("[ReactIDE] Docker containerization generated for: ");
+    std::cout << "[ReactIDE] Docker containerization generated for: " << name << std::endl;
     return true;
 }
 

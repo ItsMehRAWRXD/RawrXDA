@@ -1,3 +1,4 @@
+#include <iostream>
 #include <windows.h>
 #include <csignal>
 #include "ThermalGovernor.h"

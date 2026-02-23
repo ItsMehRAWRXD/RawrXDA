@@ -243,6 +243,8 @@ private:
                          SwarmConfig& config) const;
     bool parseBulkFixCall(const std::string& text, std::string& strategyName,
                            std::vector<std::string>& targetPaths, std::string& context) const;
+    bool parseShellCall(const std::string& text, std::string& cmd, bool& isPowerShell) const;
+    bool parseFileCall(const std::string& text, std::string& type, std::string& path, std::string& content) const;
 
     // Logging/metrics helpers
     void logInfo(const std::string& msg) const  { if (m_logCb) m_logCb(1, msg); }

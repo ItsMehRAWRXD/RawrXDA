@@ -259,7 +259,7 @@ void StreamingTokenProgressBar::updateMetrics() {
         if (remaining > 0) {
             double remSec = remaining / m_tokensPerSecond;
             wchar_t etaBuf[64];
-            swprintf_s(etaBuf, L"\x1F4CA ETA: %.1fs", remSec);
+            swprintf_s(etaBuf, L"\xD83D\xDCCA ETA: %.1fs", remSec); /* U+1F4CA chart */
             wcscat_s(m_metricsText, etaBuf);
         }
     }

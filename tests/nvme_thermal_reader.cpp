@@ -3,9 +3,6 @@
 #include <iostream>
 #include <vector>
 
-#include "logging/logger.h"
-static Logger s_logger("nvme_thermal_reader");
-
 namespace {
 constexpr const char* kMapName = "Global\\SOVEREIGN_NVME_TEMPS";
 constexpr const char* kMapNameLocal = "Local\\SOVEREIGN_NVME_TEMPS";
@@ -33,7 +30,7 @@ int main() {
         if (!mapping) {
             mapping = OpenFileMappingA(FILE_MAP_READ, FALSE, kMapNameBare);
             if (!mapping) {
-                s_logger.error( "OpenFileMappingA failed: " << GetLastError() << "\n";
+                std::cerr << "OpenFileMappingA failed: " << GetLastError() << "\n";
                 return 1;
             }
             namespaceLabel = "bare";
@@ -44,14 +41,14 @@ int main() {
 
     void* view = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, sizeof(SharedLayout));
     if (!view) {
-        s_logger.error( "MapViewOfFile failed: " << GetLastError() << "\n";
+        std::cerr << "MapViewOfFile failed: " << GetLastError() << "\n";
         CloseHandle(mapping);
         return 1;
     }
 
     const auto* data = reinterpret_cast<const SharedLayout*>(view);
     if (data->signature != kSignature || data->version != kVersion) {
-        s_logger.error( "Invalid signature/version in shared memory.\n";
+        std::cerr << "Invalid signature/version in shared memory.\n";
         UnmapViewOfFile(view);
         CloseHandle(mapping);
         return 1;
@@ -62,10 +59,12 @@ int main() {
         count = kMaxDrives;
     }
 
-    s_logger.info("Sovereign NVMe Temps (count=");
-    s_logger.info("Timestamp(ms): ");
+    std::cout << "Sovereign NVMe Temps (count=" << count << ")"
+              << " [" << namespaceLabel << "]\n";
+    std::cout << "Timestamp(ms): " << data->timestampMs << "\n";
     for (uint32_t i = 0; i < count; ++i) {
-        s_logger.info("Drive ");
+        std::cout << "Drive " << i << ": temp=" << data->temps[i]
+                  << "C wear=" << data->wear[i] << "\n";
     }
 
     UnmapViewOfFile(view);

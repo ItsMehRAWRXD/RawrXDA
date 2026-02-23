@@ -1,9 +1,10 @@
 #include "core_generator.h"
+#include "../../include/enterprise_license.h"
 #include <iostream>
 #include <fstream>
 
-#include "logging/logger.h"
-static Logger s_logger("core_generator");
+// SCAFFOLD_284: Core generator Unity scaffolding
+
 
 CoreGenerator* CoreGenerator::instance = nullptr;
 
@@ -19,13 +20,15 @@ CoreGenerator& CoreGenerator::GetInstance() {
 }
 
 void CoreGenerator::Initialize() {
-    s_logger.info("[Core Generator] Initializing...\n");
+    std::cout << "[Core Generator] Initializing...\n";
     // UniversalGenerator auto-initializes languages and templates in its constructor.
     // Re-creating the generator ensures a fresh config state.
     if (!generator) {
         generator = std::make_unique<UniversalGenerator>();
     }
-    s_logger.info("[Core Generator] Ready — ");
+    std::cout << "[Core Generator] Ready — "
+              << GetLanguageCount() << " languages, "
+              << GetTemplateCount() << " templates\n";
 }
 
 bool CoreGenerator::Generate(const std::string& name, LanguageType language, 
@@ -99,6 +102,12 @@ size_t CoreGenerator::GetTemplateCount() const {
 
 bool CoreGenerator::GenerateWithAllFeatures(const std::string& name, LanguageType language,
                                             const std::filesystem::path& output_dir) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::BatchProcessing,
+            "CoreGenerator::GenerateWithAllFeatures")) {
+        std::cerr << "[Core Generator] Batch Processing requires a Professional license.\n";
+        return false;
+    }
     if (!generator) return false;
     // Generate base project, then layer tests + CI + Docker
     bool ok = generator->GenerateWithTests(name, language, output_dir);
@@ -132,7 +141,7 @@ void UniversalGenerator::InitializeLanguages() {
     };
     language_configs[LanguageType::CPP] = {
         "C++", ".cpp", "CMake", "vcpkg",
-        {"src", "include"}, {"tests"}, {{"main", "#include <iostream>\n\nint main(int argc, char* argv[]) {\n    s_logger.info( \"Hello, World!\" << std::endl;\n    return 0;\n}\n"}},
+        {"src", "include"}, {"tests"}, {{"main", "#include <iostream>\n\nint main(int argc, char* argv[]) {\n    std::cout << \"Hello, World!\" << std::endl;\n    return 0;\n}\n"}},
         true, false, {}
     };
     language_configs[LanguageType::RUST] = {
@@ -356,7 +365,7 @@ void UniversalGenerator::InitializeTemplates() {
         t.language = LanguageType::CPP;
         t.files = {
             {"CMakeLists.txt", "cmake_minimum_required(VERSION 3.20)\nproject({{PROJECT_NAME}} LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 20)\nadd_executable(${PROJECT_NAME} src/main.cpp)\n"},
-            {"src/main.cpp", "#include <iostream>\n\nint main(int argc, char* argv[]) {\n    s_logger.info( \"Hello from {{PROJECT_NAME}}!\" << std::endl;\n    return 0;\n}\n"},
+            {"src/main.cpp", "#include <iostream>\n\nint main(int argc, char* argv[]) {\n    std::cout << \"Hello from {{PROJECT_NAME}}!\" << std::endl;\n    return 0;\n}\n"},
             {".gitignore", "build/\n*.o\n*.exe\nCMakeCache.txt\nCMakeFiles/\n"}
         };
         t.build_commands = {"cmake -B build", "cmake --build build"};
@@ -443,7 +452,7 @@ void UniversalGenerator::InitializeTemplates() {
             {"CMakeLists.txt", "cmake_minimum_required(VERSION 3.20)\nproject({{PROJECT_NAME}} LANGUAGES CXX)\nset(CMAKE_CXX_STANDARD 20)\n\nadd_library(${PROJECT_NAME} STATIC src/{{PROJECT_NAME}}.cpp)\ntarget_include_directories(${PROJECT_NAME} PUBLIC include)\n\nadd_executable(${PROJECT_NAME}_test tests/main.cpp)\ntarget_link_libraries(${PROJECT_NAME}_test PRIVATE ${PROJECT_NAME})\n"},
             {"include/{{PROJECT_NAME}}.h", "#pragma once\n\nnamespace {{PROJECT_NAME}} {\n    int add(int a, int b);\n}\n"},
             {"src/{{PROJECT_NAME}}.cpp", "#include \"{{PROJECT_NAME}}.h\"\n\nnamespace {{PROJECT_NAME}} {\n    int add(int a, int b) { return a + b; }\n}\n"},
-            {"tests/main.cpp", "#include \"{{PROJECT_NAME}}.h\"\n#include <cassert>\n#include <iostream>\n\nint main() {\n    assert({{PROJECT_NAME}}::add(2, 3) == 5);\n    s_logger.info( \"All tests passed!\" << std::endl;\n    return 0;\n}\n"},
+            {"tests/main.cpp", "#include \"{{PROJECT_NAME}}.h\"\n#include <cassert>\n#include <iostream>\n\nint main() {\n    assert({{PROJECT_NAME}}::add(2, 3) == 5);\n    std::cout << \"All tests passed!\" << std::endl;\n    return 0;\n}\n"},
             {".gitignore", "build/\n*.o\n*.a\n*.lib\n"}
         };
         t.build_commands = {"cmake -B build", "cmake --build build"};
@@ -509,7 +518,7 @@ void UniversalGenerator::WriteFile(const std::filesystem::path& path, const std:
     std::ofstream ofs(path);
     if (ofs.is_open()) {
         ofs << content;
-        s_logger.info("  [gen] ");
+        std::cout << "  [gen] " << path.string() << "\n";
     }
 }
 
@@ -541,13 +550,13 @@ bool UniversalGenerator::GenerateProject(const std::string& name, LanguageType l
                                           const std::filesystem::path& output_dir) {
     auto it = language_configs.find(language);
     if (it == language_configs.end()) {
-        s_logger.error( "[gen] Unknown language type " << (int)language << "\n";
+        std::cerr << "[gen] Unknown language type " << (int)language << "\n";
         return false;
     }
     const LanguageConfig& cfg = it->second;
 
     std::filesystem::path root = output_dir / name;
-    s_logger.info("[gen] Generating ");
+    std::cout << "[gen] Generating " << cfg.name << " project '" << name << "' -> " << root.string() << "\n";
 
     // Create directory structure
     CreateDirectoryStructure(root, cfg.source_folders);
@@ -598,7 +607,7 @@ bool UniversalGenerator::GenerateProject(const std::string& name, LanguageType l
     // Create README
     WriteFile(root / "README.md", "# " + name + "\n\nA " + cfg.name + " project generated by RawrXD IDE.\n");
 
-    s_logger.info("[gen] Project '");
+    std::cout << "[gen] Project '" << name << "' created successfully.\n";
     return true;
 }
 
@@ -610,13 +619,13 @@ bool UniversalGenerator::GenerateFromTemplate(const std::string& template_name,
                                                const std::filesystem::path& output_dir) {
     auto it = templates.find(template_name);
     if (it == templates.end()) {
-        s_logger.error( "[gen] Unknown template: " << template_name << "\n";
+        std::cerr << "[gen] Unknown template: " << template_name << "\n";
         return false;
     }
     const ProjectTemplate& tmpl = it->second;
 
     std::filesystem::path root = output_dir / project_name;
-    s_logger.info("[gen] Generating from template '");
+    std::cout << "[gen] Generating from template '" << template_name << "' -> '" << project_name << "' at " << root.string() << "\n";
 
     for (const auto& [relPath, content] : tmpl.files) {
         std::string expandedPath = expandTemplate(relPath, project_name);
@@ -633,7 +642,7 @@ bool UniversalGenerator::GenerateFromTemplate(const std::string& template_name,
                [&]() { std::string s; for (const auto& c : tmpl.run_commands) s += expandTemplate(c, project_name) + "\n"; return s; }()) +
               "```\n");
 
-    s_logger.info("[gen] Template '");
+    std::cout << "[gen] Template '" << template_name << "' applied to '" << project_name << "'.\n";
     return true;
 }
 
@@ -660,14 +669,14 @@ std::vector<std::string> UniversalGenerator::ListLanguages() const {
 bool UniversalGenerator::AddCustomTemplate(const ProjectTemplate& tmpl) {
     if (tmpl.name.empty()) return false;
     templates[tmpl.name] = tmpl;
-    s_logger.info("[gen] Custom template '");
+    std::cout << "[gen] Custom template '" << tmpl.name << "' registered.\n";
     return true;
 }
 
 bool UniversalGenerator::AddCustomLanguage(const LanguageConfig& config) {
     // Find a matching LanguageType by name, or add to a custom bucket
     // For now, log and return true — the config is stored via the programmatic API
-    s_logger.info("[gen] Custom language '");
+    std::cout << "[gen] Custom language '" << config.name << "' registered.\n";
     return true;
 }
 
@@ -740,7 +749,7 @@ bool UniversalGenerator::GenerateWithTests(const std::string& name, LanguageType
     // Generate a basic test file
     if (language == LanguageType::CPP || language == LanguageType::C) {
         WriteFile(root / "tests/test_main.cpp",
-                  "#include <cassert>\n#include <iostream>\n\nint main() {\n    assert(1 + 1 == 2);\n    s_logger.info( \"All tests passed!\" << std::endl;\n    return 0;\n}\n");
+                  "#include <cassert>\n#include <iostream>\n\nint main() {\n    assert(1 + 1 == 2);\n    std::cout << \"All tests passed!\" << std::endl;\n    return 0;\n}\n");
     } else if (language == LanguageType::PYTHON) {
         WriteFile(root / "tests/test_main.py",
                   "import unittest\n\nclass TestMain(unittest.TestCase):\n    def test_basic(self):\n        self.assertEqual(1 + 1, 2)\n\nif __name__ == '__main__':\n    unittest.main()\n");
@@ -796,7 +805,7 @@ bool UniversalGenerator::GenerateWithDocker(const std::string& name, LanguageTyp
     } else if (language == LanguageType::JAVASCRIPT || language == LanguageType::TYPESCRIPT || language == LanguageType::REACT) {
         dockerfile = "FROM node:20-slim\nWORKDIR /app\nCOPY package*.json .\nRUN npm install\nCOPY . .\nRUN npm run build\nCMD [\"npm\", \"start\"]\n";
     } else {
-        dockerfile = "FROM ubuntu:latest\nWORKDIR /app\nCOPY . .\n# TODO: add language-specific build steps\n";
+        dockerfile = "FROM ubuntu:latest\nWORKDIR /app\nCOPY . .\nRUN if [ -f CMakeLists.txt ]; then cmake -B build && cmake --build build; elif [ -f Makefile ]; then make; else echo 'Add build steps for your project'; fi\nCMD [\"./build/main\"]\n";
     }
 
     WriteFile(root / "Dockerfile", dockerfile);

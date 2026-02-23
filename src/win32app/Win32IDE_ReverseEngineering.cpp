@@ -1,5 +1,7 @@
 // Win32IDE_ReverseEngineering.cpp - Reverse Engineering UI Integration
 #include "Win32IDE.h"
+#include "../core/native_debugger_engine.h"
+#include "../core/native_debugger_types.h"
 #include "../reverse_engineering/RawrCodex.hpp"
 #include "../reverse_engineering/RawrDumpBin.hpp"
 #include "../reverse_engineering/RawrCompiler.hpp"
@@ -39,23 +41,6 @@ static std::string OpenBinaryDialog(HWND hwnd) {
     return "";
 }
 
-// Helper: Display results in output window
-static void ShowOutput(HWND hwnd, const std::string& title, const std::string& content) {
-    // Find or create output window
-    HWND outputWnd = FindWindowExA(hwnd, NULL, "EDIT", NULL);
-    if (!outputWnd) {
-        MessageBoxA(hwnd, content.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
-        return;
-    }
-    
-    std::string fullText = "\r\n=== " + title + " ===\r\n" + content + "\r\n";
-    
-    int len = GetWindowTextLengthA(outputWnd);
-    SendMessageA(outputWnd, EM_SETSEL, len, len);
-    SendMessageA(outputWnd, EM_REPLACESEL, FALSE, (LPARAM)fullText.c_str());
-    SendMessageA(outputWnd, EM_SCROLLCARET, 0, 0);
-}
-
 } // namespace RawrXD_RE_Internals
 
 using namespace RawrXD_RE_Internals;
@@ -73,7 +58,7 @@ void Win32IDE::handleReverseEngineeringAnalyze() {
     }
     
     s_reCurrentBinary = path;
-    
+
     std::stringstream ss;
     ss << "Binary: " << path << "\n\n";
     
@@ -108,7 +93,98 @@ void Win32IDE::handleReverseEngineeringAnalyze() {
     }
     if (strings.size() > 10) ss << "  ... and " << (strings.size() - 10) << " more\n";
     
-    ShowOutput(m_hwndMain, "Binary Analysis", ss.str());
+    appendToOutput("\n=== Binary Analysis ===\n\n" + ss.str(), "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::setCurrentBinaryForReverseEngineering(const std::string& path) {
+    s_reCurrentBinary = path;
+}
+
+void Win32IDE::handleReverseEngineeringSetBinaryFromActive() {
+    if (m_currentFile.empty()) {
+        MessageBoxA(m_hwndMain, "No active document. Open an .exe, .dll, or .obj file first.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    const std::string& path = m_currentFile;
+    size_t dot = path.find_last_of(".\\/");
+    if (dot == std::string::npos || path[dot] != '.') {
+        MessageBoxA(m_hwndMain, "Active document is not a binary. Open an .exe, .dll, or .obj file.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    std::string ext = path.substr(dot + 1);
+    if (ext != "exe" && ext != "dll" && ext != "obj" && ext != "o" && ext != "so") {
+        MessageBoxA(m_hwndMain, "Active document is not a binary. Open an .exe, .dll, or .obj file.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    s_reCurrentBinary = path;
+    appendToOutput("[RE] Current binary set to: " + path + " (Disassemble, DumpBin, CFG, etc. will use this.)\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::handleReverseEngineeringSetBinaryFromDebugTarget() {
+    auto& engine = RawrXD::Debugger::NativeDebuggerEngine::Instance();
+    if (!engine.isInitialized()) {
+        MessageBoxA(m_hwndMain, "Debugger not initialized. Launch or attach to a target first.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    const std::string& path = engine.getTargetPath();
+    if (path.empty()) {
+        MessageBoxA(m_hwndMain, "No debug target path. Launch or attach to a process first.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    setCurrentBinaryForReverseEngineering(path);
+    appendToOutput("[RE] Binary set from debug target: " + path + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::handleReverseEngineeringSetBinaryFromBuildOutput() {
+    char path[MAX_PATH] = {};
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = m_hwndMain;
+    ofn.lpstrFilter = "Executables\0*.exe;*.dll\0All Files\0*.*\0";
+    ofn.lpstrFile = path;
+    ofn.nMaxFile = MAX_PATH;
+    ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+    ofn.lpstrTitle = "Select built binary (e.g. build\\Debug\\*.exe)";
+    if (!GetOpenFileNameA(&ofn)) return;
+    setCurrentBinaryForReverseEngineering(path);
+    appendToOutput("[RE] Binary set from build output: " + std::string(path) + "\n", "Output", OutputSeverity::Info);
+}
+
+void Win32IDE::handleReverseEngineeringDisassembleAtRIP() {
+    auto& engine = RawrXD::Debugger::NativeDebuggerEngine::Instance();
+    if (!engine.isInitialized()) {
+        MessageBoxA(m_hwndMain, "Debugger not initialized. Launch and break the target first.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    if (engine.getState() != RawrXD::Debugger::DebugSessionState::Broken) {
+        MessageBoxA(m_hwndMain, "Target must be paused (breakpoint or pause). Use Break or set a breakpoint.", "RE", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
+    RawrXD::Debugger::RegisterSnapshot snap;
+    RawrXD::Debugger::DebugResult r = engine.captureRegisters(snap);
+    if (!r.success) {
+        appendToOutput(std::string("[RE] Failed to capture registers: ") + r.detail + "\n", "Output", OutputSeverity::Error);
+        return;
+    }
+    uint64_t rip = snap.rip;
+    std::vector<RawrXD::Debugger::DisassembledInstruction> instructions;
+    r = engine.disassembleAt(rip, 30, instructions);
+    if (!r.success) {
+        appendToOutput(std::string("[RE] Disassembly failed: ") + r.detail + "\n", "Output", OutputSeverity::Error);
+        return;
+    }
+    const std::string& targetPath = engine.getTargetPath();
+    if (!targetPath.empty())
+        setCurrentBinaryForReverseEngineering(targetPath);
+    std::ostringstream ss;
+    ss << "\n=== Disassembly at RIP 0x" << std::hex << rip << " ===\n\n";
+    for (const auto& inst : instructions) {
+        ss << "  0x" << std::hex << inst.address << "  " << inst.fullText;
+        if (inst.isCurrentIP) ss << "  <-- RIP";
+        ss << "\n";
+    }
+    ss << "\n";
+    appendToOutput(ss.str(), "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_DISASM
@@ -128,7 +204,7 @@ void Win32IDE::handleReverseEngineeringDisassemble() {
     size_t count = 50;
     
     std::string result = s_reDumpbin.DumpDisassembly(s_reCurrentBinary, addr, count);
-    ShowOutput(m_hwndMain, "Disassembly", result);
+    appendToOutput("\n=== Disassembly ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_DUMPBIN
@@ -141,7 +217,7 @@ void Win32IDE::handleReverseEngineeringDumpBin() {
     }
     
     std::string result = s_reDumpbin.DumpAll(s_reCurrentBinary);
-    ShowOutput(m_hwndMain, "Binary Dump", result);
+    appendToOutput("\n=== Binary Dump ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_COMPILE
@@ -173,11 +249,13 @@ void Win32IDE::handleReverseEngineeringCompile() {
     auto result = s_reCompiler.CompileSource(filename);
     
     if (result.success) {
-        ss << "✓ Compilation successful\n";
+        ss << "Compilation successful\n";
         ss << "  Object file: " << result.objectFile << "\n";
         ss << "  Time: " << result.compileTimeMs << " ms\n";
+        setCurrentBinaryForReverseEngineering(result.objectFile);
+        ss << "  RE binary set to object file (Disassemble/DumpBin/CFG available).\n";
     } else {
-        ss << "✗ Compilation failed\n";
+        ss << "Compilation failed\n";
         for (const auto& err : result.errors) {
             ss << "  Error: " << err << "\n";
         }
@@ -190,7 +268,7 @@ void Win32IDE::handleReverseEngineeringCompile() {
         }
     }
     
-    ShowOutput(m_hwndMain, "Compilation", ss.str());
+    appendToOutput("\n=== Compilation ===\n\n" + ss.str(), "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_COMPARE
@@ -204,7 +282,7 @@ void Win32IDE::handleReverseEngineeringCompare() {
     if (path2.empty()) return;
     
     std::string result = s_reDumpbin.CompareBinaries(path1, path2);
-    ShowOutput(m_hwndMain, "Binary Comparison", result);
+    appendToOutput("\n=== Binary Comparison ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_DETECT_VULNS
@@ -217,7 +295,7 @@ void Win32IDE::handleReverseEngineeringDetectVulns() {
     }
     
     std::string result = s_reDumpbin.DumpVulnerabilities(s_reCurrentBinary);
-    ShowOutput(m_hwndMain, "Vulnerability Detection", result);
+    appendToOutput("\n=== Vulnerability Detection ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_EXPORT_IDA
@@ -293,6 +371,10 @@ HMENU Win32IDE::createReverseEngineeringMenu() {
     HMENU menu = CreateMenu();
     
     AppendMenuA(menu, MF_STRING, IDM_REVENG_ANALYZE, "&Analyze Binary\tCtrl+R");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_SET_BINARY_FROM_ACTIVE, "Set binary from &active document");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_SET_BINARY_FROM_DEBUG_TARGET, "Set binary from &debug target");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_SET_BINARY_FROM_BUILD_OUTPUT, "Set binary from &build output...");
+    AppendMenuA(menu, MF_STRING, IDM_REVENG_DISASM_AT_RIP, "Disassemble at current &RIP (debugger)");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DISASM, "&Disassemble\tCtrl+D");
     AppendMenuA(menu, MF_STRING, IDM_REVENG_DUMPBIN, "Dump &Binary\tCtrl+B");
     AppendMenuA(menu, MF_SEPARATOR, 0, NULL);
@@ -345,7 +427,7 @@ void Win32IDE::handleReverseEngineeringCFG() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.AnalyzeCFG(entryAddr);
-    ShowOutput(m_hwndMain, "Control Flow Graph", result);
+    appendToOutput("\n=== Control Flow Graph ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_FUNCTIONS
@@ -359,7 +441,7 @@ void Win32IDE::handleReverseEngineeringFunctions() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.RecoverFunctions();
-    ShowOutput(m_hwndMain, "Function Recovery", result);
+    appendToOutput("\n=== Function Recovery ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_DEMANGLE
@@ -373,7 +455,7 @@ void Win32IDE::handleReverseEngineeringDemangle() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.DemangleAll();
-    ShowOutput(m_hwndMain, "Symbol Demangling", result);
+    appendToOutput("\n=== Symbol Demangling ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_SSA
@@ -402,7 +484,7 @@ void Win32IDE::handleReverseEngineeringSSA() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.LiftSSA(entryAddr);
-    ShowOutput(m_hwndMain, "SSA Lifting", result);
+    appendToOutput("\n=== SSA Lifting ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_RECURSIVE_DISASM
@@ -431,7 +513,7 @@ void Win32IDE::handleReverseEngineeringRecursiveDisasm() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.RecursiveDisassemble(entryAddr);
-    ShowOutput(m_hwndMain, "Recursive Descent Disassembly", result);
+    appendToOutput("\n=== Recursive Descent Disassembly ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_TYPE_RECOVERY
@@ -459,7 +541,7 @@ void Win32IDE::handleReverseEngineeringTypeRecovery() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.RecoverTypes(entryAddr);
-    ShowOutput(m_hwndMain, "Type Recovery", result);
+    appendToOutput("\n=== Type Recovery ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_DATA_FLOW
@@ -488,7 +570,7 @@ void Win32IDE::handleReverseEngineeringDataFlow() {
     // RecoverTypes includes def-use chain output
     s_reEngine.LoadBinary(s_reCurrentBinary);
     std::string result = s_reEngine.RecoverTypes(entryAddr);
-    ShowOutput(m_hwndMain, "Data Flow Analysis", result);
+    appendToOutput("\n=== Data Flow Analysis ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // Menu handler for IDM_REVENG_LICENSE_INFO
@@ -497,7 +579,7 @@ void Win32IDE::handleReverseEngineeringLicenseInfo() {
     
     s_reEngine.LoadBinary(s_reCurrentBinary.empty() ? "" : s_reCurrentBinary);
     std::string result = s_reEngine.GetLicenseInfo();
-    ShowOutput(m_hwndMain, "License Info", result);
+    appendToOutput("\n=== License Info ===\n\n" + result, "Output", OutputSeverity::Info);
 }
 
 // ============================================================================

@@ -4,8 +4,13 @@
 
 #include "RawrXD_Agent.hpp"
 #include <iostream>
+#include <filesystem>
+#include <map>
+#include <chrono>
+#include <ctime>
 
 using namespace RawrXD;
+namespace fs = std::filesystem;
 
 // Demo: Direct tool execution
 void demoToolExecution() {
@@ -20,7 +25,7 @@ void demoToolExecution() {
     params[L"startLine"] = static_cast<int64_t>(1);
     params[L"endLine"] = static_cast<int64_t>(10);
 
-    auto result = engine.execute(QString("read_file"), params);
+    auto result = engine.execute(String(L"read_file"), params);
     if (result.isSuccess()) {
         std::wcout << L"Read file successfully\n";
         std::wcout << L"Output: " << JsonParser::Serialize(result.output, 2).c_str() << L"\n";
@@ -33,7 +38,7 @@ void demoToolExecution() {
     params[L"path"] = String(L"D:\\RawrXD\\Ship");
     params[L"recursive"] = false;
 
-    result = engine.execute(QString("list_directory"), params);
+    result = engine.execute(String(L"list_directory"), params);
     if (result.isSuccess()) {
         std::wcout << L"Listed directory successfully\n";
     }
@@ -44,7 +49,7 @@ void demoToolExecution() {
     params[L"pattern"] = String(L"*.hpp");
     params[L"maxResults"] = static_cast<int64_t>(10);
 
-    result = engine.execute(QString("search_files"), params);
+    result = engine.execute(String(L"search_files"), params);
     if (result.isSuccess()) {
         std::wcout << L"Found matching files\n";
     }
@@ -54,7 +59,7 @@ void demoToolExecution() {
 void demoLLMClient() {
     std::wcout << L"\n=== LLM Client Demo ===\n";
 
-    LLMClient client("localhost", 11434);
+    LLMClient client(L"localhost", 11434);
 
     if (!client.isAvailable()) {
         std::wcout << L"Ollama not available, skipping LLM demo\n";
@@ -71,8 +76,8 @@ void demoLLMClient() {
 
     // Simple prompt
     std::wcout << L"\nSending test prompt...\n";
-    QString response = client.prompt(QString("What is 2+2? Answer briefly."));
-    if (!response.isEmpty()) {
+    String response = client.prompt(String(L"What is 2+2? Answer briefly."));
+    if (!response.empty()) {
         std::wcout << L"Response: " << response.c_str() << L"\n";
     }
 }
@@ -101,44 +106,35 @@ void demoJsonParsing() {
     }
 }
 
-// Demo: Qt replacements
-void demoQtReplacements() {
-    std::wcout << L"\n=== Qt Replacements Demo ===\n";
+// Demo: C++20 String and STL (no Qt)
+void demoStdReplacements() {
+    std::wcout << L"\n=== C++20 String Demo ===\n";
 
-    // QString
-    QString str("Hello, World!");
-    std::wcout << L"QString: " << str.c_str() << L"\n";
-    std::wcout << L"Upper: " << str.toUpper().c_str() << L"\n";
-    std::wcout << L"Contains 'World': " << (str.contains(QString("World")) ? L"yes" : L"no") << L"\n";
+    String str(L"Hello, World!");
+    std::wcout << L"String: " << str.c_str() << L"\n";
+    std::wcout << L"Upper: " << StringUtils::ToUpper(str).c_str() << L"\n";
+    std::wcout << L"Contains 'World': " << (str.find(L"World") != String::npos ? L"yes" : L"no") << L"\n";
 
-    // QStringList
-    QStringList list;
-    list.push_back(QString("one"));
-    list.push_back(QString("two"));
-    list.push_back(QString("three"));
-    std::wcout << L"Joined: " << list.join(QString(", ")).c_str() << L"\n";
+    Vector<String> list = { L"one", L"two", L"three" };
+    std::wcout << L"Joined: " << StringUtils::Join(list, L", ").c_str() << L"\n";
 
-    // QMap
-    QMap<QString, int> map;
-    map.insert(QString("a"), 1);
-    map.insert(QString("b"), 2);
-    std::wcout << L"Map contains 'a': " << (map.contains(QString("a")) ? L"yes" : L"no") << L"\n";
+    std::map<String, int> map;
+    map[L"a"] = 1;
+    map[L"b"] = 2;
+    std::wcout << L"Map contains 'a': " << (map.count(L"a") ? L"yes" : L"no") << L"\n";
 
-    // QFile
-    QString path("D:\\RawrXD\\Ship\\README.md");
-    std::wcout << L"File exists: " << (QFile::exists(path) ? L"yes" : L"no") << L"\n";
+    fs::path path(L"D:\\RawrXD\\Ship\\README.md");
+    std::wcout << L"File exists: " << (fs::exists(path) ? L"yes" : L"no") << L"\n";
 
-    // QDir
-    QDir dir("D:\\RawrXD\\Ship");
-    std::wcout << L"Dir exists: " << (dir.exists() ? L"yes" : L"no") << L"\n";
+    fs::path dir(L"D:\\RawrXD\\Ship");
+    std::wcout << L"Dir exists: " << (fs::exists(dir) ? L"yes" : L"no") << L"\n";
 
-    // QDateTime
-    auto now = QDateTime::currentDateTime();
-    std::wcout << L"Current time: " << now.toString().c_str() << L"\n";
-
-    // QUuid
-    auto uuid = QUuid::createUuid();
-    std::wcout << L"UUID: " << uuid.toString().c_str() << L"\n";
+    std::time_t t = std::time(nullptr);
+    std::tm tm_buf;
+    localtime_s(&tm_buf, &t);
+    wchar_t timeBuf[64];
+    std::wcsftime(timeBuf, 64, L"%Y-%m-%d %H:%M:%S", &tm_buf);
+    std::wcout << L"Current time: " << timeBuf << L"\n";
 }
 
 // Demo: Full agent
@@ -148,7 +144,7 @@ void demoFullAgent() {
     Agent agent;
 
     AgentConfig config;
-    config.workingDirectory = QString("D:\\RawrXD\\Ship");
+    config.workingDirectory = String(L"D:\\RawrXD\\Ship");
 
     if (!agent.initialize(config)) {
         std::wcout << L"Failed to initialize agent\n";
@@ -174,7 +170,7 @@ void demoFullAgent() {
     // Execute a tool directly
     JsonObject params;
     params[L"path"] = String(L"D:\\RawrXD\\Ship");
-    auto result = agent.executeTool(QString("list_directory"), params);
+    auto result = agent.executeTool(String(L"list_directory"), params);
 
     if (result.isSuccess()) {
         std::wcout << L"Tool executed successfully\n";
@@ -200,7 +196,7 @@ int wmain(int argc, wchar_t* argv[]) {
 
     // Run demos
     demoJsonParsing();
-    demoQtReplacements();
+    demoStdReplacements();
     demoToolExecution();
     demoLLMClient();
     demoFullAgent();

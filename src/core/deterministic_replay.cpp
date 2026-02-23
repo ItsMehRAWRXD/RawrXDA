@@ -21,6 +21,9 @@
 #include <windows.h>
 #else
 #include <sys/stat.h>
+
+// SCAFFOLD_268: Deterministic replay for audit
+
 #endif
 
 // ============================================================================

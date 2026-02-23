@@ -35,6 +35,9 @@
 // MASM Telemetry Kernel bridge — lock-free counters + ring buffer + Prometheus
 #include "rawrxd_telemetry_exports.h"
 
+// SCAFFOLD_264: Win32IDE_Telemetry and events
+
+
 // ============================================================================
 // Telemetry Data Structures (no Qt, no STL allocators in hot path)
 // ============================================================================

@@ -8,6 +8,7 @@
 //     Port | Label | Protocol | Local Address | Forwarded Address | Status
 //   Supports add/remove/toggle operations via toolbar buttons.
 //
+// Status: Production UI (ListView, toolbar); port-forwarding backend may be extended (e.g. SSH tunnel).
 // Architecture: C++20 | Win32 | No exceptions | No Qt
 // Pattern:      PatchResult-compatible returns
 // Rule:         NO SOURCE FILE IS TO BE SIMPLIFIED
@@ -176,6 +177,193 @@ static LRESULT handleNetworkCustomDraw(LPNMLVCUSTOMDRAW lpcd) {
 }
 
 // ============================================================================
+// TCP Port-Forwarding Relay Backend
+// ============================================================================
+
+static void portForwardRelayThread(PortForwardEntry* entry, SOCKET clientSock) {
+    // Connect to the remote (forwarded) address
+    struct addrinfo hints{}, *result = nullptr;
+    hints.ai_family   = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    std::string remoteHost = "127.0.0.1";
+    uint16_t remotePort    = entry->remotePort;
+
+    // Parse forwardAddress if it contains host:port
+    if (!entry->forwardAddress.empty()) {
+        size_t colon = entry->forwardAddress.rfind(':');
+        if (colon != std::string::npos) {
+            std::string h = entry->forwardAddress.substr(0, colon);
+            if (h == "localhost") h = "127.0.0.1";
+            if (!h.empty()) remoteHost = h;
+            int p = std::atoi(entry->forwardAddress.c_str() + colon + 1);
+            if (p > 0 && p <= 65535) remotePort = static_cast<uint16_t>(p);
+        }
+    }
+
+    std::string portStr = std::to_string(remotePort);
+    if (getaddrinfo(remoteHost.c_str(), portStr.c_str(), &hints, &result) != 0 || !result) {
+        closesocket(clientSock);
+        return;
+    }
+
+    SOCKET remoteSock = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (remoteSock == INVALID_SOCKET) {
+        freeaddrinfo(result);
+        closesocket(clientSock);
+        return;
+    }
+
+    if (connect(remoteSock, result->ai_addr, (int)result->ai_addrlen) != 0) {
+        freeaddrinfo(result);
+        closesocket(remoteSock);
+        closesocket(clientSock);
+        return;
+    }
+    freeaddrinfo(result);
+
+    // Bidirectional relay: use select() to shuttle data between client <-> remote
+    char buf[8192];
+    fd_set readfds;
+    while (entry->running.load()) {
+        FD_ZERO(&readfds);
+        FD_SET(clientSock, &readfds);
+        FD_SET(remoteSock, &readfds);
+
+        struct timeval tv;
+        tv.tv_sec  = 1;
+        tv.tv_usec = 0;
+
+        SOCKET maxFd = (clientSock > remoteSock ? clientSock : remoteSock) + 1;
+        int sel = select((int)maxFd, &readfds, nullptr, nullptr, &tv);
+        if (sel <= 0) continue;
+
+        // Client -> Remote
+        if (FD_ISSET(clientSock, &readfds)) {
+            int n = recv(clientSock, buf, sizeof(buf), 0);
+            if (n <= 0) break;
+            int sent = 0;
+            while (sent < n) {
+                int s = send(remoteSock, buf + sent, n - sent, 0);
+                if (s <= 0) goto relay_done;
+                sent += s;
+            }
+            entry->bytesTransferred += (uint64_t)n;
+        }
+
+        // Remote -> Client
+        if (FD_ISSET(remoteSock, &readfds)) {
+            int n = recv(remoteSock, buf, sizeof(buf), 0);
+            if (n <= 0) break;
+            int sent = 0;
+            while (sent < n) {
+                int s = send(clientSock, buf + sent, n - sent, 0);
+                if (s <= 0) goto relay_done;
+                sent += s;
+            }
+            entry->bytesTransferred += (uint64_t)n;
+        }
+    }
+
+relay_done:
+    closesocket(remoteSock);
+    closesocket(clientSock);
+}
+
+static void portForwardListenThread(PortForwardEntry* entry) {
+    struct addrinfo hints{}, *result = nullptr;
+    hints.ai_family   = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags    = AI_PASSIVE;
+
+    std::string portStr = std::to_string(entry->localPort);
+    if (getaddrinfo(nullptr, portStr.c_str(), &hints, &result) != 0 || !result) {
+        entry->running.store(false);
+        entry->active = false;
+        return;
+    }
+
+    SOCKET listenSock = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (listenSock == INVALID_SOCKET) {
+        freeaddrinfo(result);
+        entry->running.store(false);
+        entry->active = false;
+        return;
+    }
+
+    // Allow address reuse
+    int optval = 1;
+    setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof(optval));
+
+    if (bind(listenSock, result->ai_addr, (int)result->ai_addrlen) != 0) {
+        freeaddrinfo(result);
+        closesocket(listenSock);
+        entry->running.store(false);
+        entry->active = false;
+        return;
+    }
+    freeaddrinfo(result);
+
+    if (listen(listenSock, SOMAXCONN) != 0) {
+        closesocket(listenSock);
+        entry->running.store(false);
+        entry->active = false;
+        return;
+    }
+
+    entry->listenSocket = listenSock;
+
+    // Set socket to non-blocking for clean shutdown via running flag
+    u_long nonBlocking = 1;
+    ioctlsocket(listenSock, FIONBIO, &nonBlocking);
+
+    while (entry->running.load()) {
+        fd_set acceptSet;
+        FD_ZERO(&acceptSet);
+        FD_SET(listenSock, &acceptSet);
+
+        struct timeval tv;
+        tv.tv_sec  = 1;
+        tv.tv_usec = 0;
+
+        int sel = select((int)(listenSock + 1), &acceptSet, nullptr, nullptr, &tv);
+        if (sel <= 0) continue;
+
+        SOCKET clientSock = accept(listenSock, nullptr, nullptr);
+        if (clientSock == INVALID_SOCKET) continue;
+
+        // Spawn relay thread for this connection
+        PortForwardEntry* e = entry;
+        SOCKET cs = clientSock;
+        std::thread([e, cs]() {
+            portForwardRelayThread(e, cs);
+        }).detach();
+    }
+
+    closesocket(listenSock);
+    entry->listenSocket = INVALID_SOCKET;
+    entry->active = false;
+}
+
+static void startPortForward(PortForwardEntry* entry) {
+    if (entry->running.load()) return;
+    entry->running.store(true);
+    entry->active = true;
+    std::thread(portForwardListenThread, entry).detach();
+}
+
+static void stopPortForward(PortForwardEntry* entry) {
+    entry->running.store(false);
+    if (entry->listenSocket != INVALID_SOCKET) {
+        closesocket(entry->listenSocket);
+        entry->listenSocket = INVALID_SOCKET;
+    }
+    entry->active = false;
+}
+
+// ============================================================================
 // Window Procedure
 // ============================================================================
 
@@ -283,7 +471,12 @@ static LRESULT CALLBACK networkPanelWndProc(HWND hwnd, UINT msg, WPARAM wParam, 
             if (sel >= 0) {
                 std::lock_guard<std::mutex> lock(s_portMutex);
                 if (sel < (int)s_portEntries.size()) {
-                    s_portEntries[sel]->active = !s_portEntries[sel]->active;
+                    PortForwardEntry* e = s_portEntries[sel];
+                    if (e->active) {
+                        stopPortForward(e);
+                    } else {
+                        startPortForward(e);
+                    }
                 }
             }
             refreshPortListView();
@@ -392,6 +585,7 @@ void Win32IDE::cmdNetworkShowPanel() {
         refreshPortListView();
         ShowWindow(s_hwndNetworkPanel, SW_SHOW);
         UpdateWindow(s_hwndNetworkPanel);
+        if (m_hwndStatusBar) SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)"Network: Port Forwarding");
     }
 }
 
@@ -472,15 +666,25 @@ void Win32IDE::cmdNetworkTogglePort() {
     if (!s_hwndPortListView) return;
 
     int sel = (int)SendMessageW(s_hwndPortListView, LVM_GETNEXTITEM, -1, LVNI_SELECTED);
-    if (sel < 0) return;
+    if (sel < 0) {
+        appendToOutput("[NetworkPanel] No port selected.\n");
+        return;
+    }
 
     {
         std::lock_guard<std::mutex> lock(s_portMutex);
         if (sel < (int)s_portEntries.size()) {
             PortForwardEntry* e = s_portEntries[sel];
-            e->active = !e->active;
-            appendToOutput("[NetworkPanel] Port " + std::to_string(e->localPort) +
-                          (e->active ? " activated\n" : " deactivated\n"));
+            if (e->active) {
+                stopPortForward(e);
+                appendToOutput("[NetworkPanel] Port " + std::to_string(e->localPort) +
+                              " stopped (socket closed, relay threads terminating)\n");
+            } else {
+                startPortForward(e);
+                appendToOutput("[NetworkPanel] Port " + std::to_string(e->localPort) +
+                              " started (TCP relay listening on 0.0.0.0:" +
+                              std::to_string(e->localPort) + ")\n");
+            }
         }
     }
     refreshPortListView();

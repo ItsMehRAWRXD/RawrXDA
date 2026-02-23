@@ -1,3 +1,5 @@
+// SCAFFOLD_241: ExtensionLoader load and unload
+
 #pragma once
 #include <string>
 #include <vector>
@@ -6,8 +8,10 @@
 #include <fstream>
 #include <map>
 #include <windows.h>
+#include <shlobj.h>
 
 // Extension Loader Logic (VSIX -> Native)
+// Uses %APPDATA%\RawrXD\extensions (same as VSIXInstaller) so installs work without runtime changes.
 namespace RawrXD {
 
 struct ExtensionInfo {
@@ -18,13 +22,26 @@ struct ExtensionInfo {
     HMODULE nativeModule = nullptr;  // Loaded DLL handle (null if not loaded)
 };
 
+inline std::string GetExtensionsRoot() {
+    wchar_t appData[MAX_PATH] = {};
+    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+        char buf[MAX_PATH * 2] = {};
+        WideCharToMultiByte(CP_UTF8, 0, appData, -1, buf, sizeof(buf), nullptr, nullptr);
+        std::string root(buf);
+        if (!root.empty() && root.back() != '\\') root += '\\';
+        root += "RawrXD\\extensions\\";
+        return root;
+    }
+    return "RawrXD_extensions\\";
+}
+
 class ExtensionLoader {
 private:
     std::map<std::string, ExtensionInfo> m_extensions;
-    const std::string m_extensionsDir = "E:\\RawrXD\\extensions\\";
+    std::string m_extensionsDir;
 
 public:
-    ExtensionLoader() {
+    ExtensionLoader() : m_extensionsDir(GetExtensionsRoot()) {
         if (!std::filesystem::exists(m_extensionsDir)) {
             std::filesystem::create_directories(m_extensionsDir);
         }

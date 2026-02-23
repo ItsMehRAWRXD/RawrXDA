@@ -8,7 +8,9 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "patch_rollback_ledger.h"
 
 #include <windows.h>

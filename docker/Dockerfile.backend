@@ -1,24 +1,14 @@
-# RawrXD Backend Container
-# Exposes RawrEngine-compatible HTTP API on 23959.
-
 FROM python:3.11-slim
-
-ENV PYTHONUNBUFFERED=1
-ENV RAWRXD_HOST=0.0.0.0
-ENV RAWRXD_PORT=23959
 
 WORKDIR /opt/rawrxd
 
-COPY Ship/ /opt/rawrxd/backend/
+COPY Ship/ /opt/rawrxd/Ship/
+COPY backend/ /opt/rawrxd/backend/
+COPY docker/run-backend.sh /usr/local/bin/run-backend.sh
 
-# Install optional project requirements when provided.
-RUN pip install --no-cache-dir --upgrade pip && \
-    if [ -f /opt/rawrxd/backend/requirements.txt ]; then pip install --no-cache-dir -r /opt/rawrxd/backend/requirements.txt; fi && \
-    pip install --no-cache-dir flask
+RUN pip install --no-cache-dir flask
+RUN chmod +x /usr/local/bin/run-backend.sh
 
 EXPOSE 23959
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:23959/status', timeout=3)"
-
-CMD ["/bin/sh", "-c", "if [ -f /opt/rawrxd/backend/RawrEngine.py ]; then exec python3 /opt/rawrxd/backend/RawrEngine.py; elif [ -f /opt/rawrxd/backend/chat_server.py ]; then exec python3 /opt/rawrxd/backend/chat_server.py; else echo 'No backend entrypoint found.' >&2; exit 1; fi"]
+CMD ["/usr/local/bin/run-backend.sh"]

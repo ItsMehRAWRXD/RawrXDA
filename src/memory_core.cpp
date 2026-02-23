@@ -4,9 +4,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include "logging/logger.h"
-static Logger s_logger("memory_core");
-
 MemoryCore::MemoryCore() : max_tokens_(0), current_tokens_(0), head_index_(0), is_allocated_(false) {}
 
 MemoryCore::~MemoryCore() {
@@ -32,10 +29,10 @@ bool MemoryCore::Allocate(ContextTier tier) {
         current_tokens_ = 0;
         head_index_ = 0;
         
-        s_logger.info("[MEMORY] Heap allocation successful: ");
+        std::cout << "[MEMORY] Heap allocation successful: " << max_tokens_ << " token slots reserved.\n";
         return true;
     } catch (const std::bad_alloc& e) {
-        s_logger.error( "[MEMORY CRITICAL] Allocation failed: " << e.what() << "\n";
+        std::cerr << "[MEMORY CRITICAL] Allocation failed: " << e.what() << "\n";
         return false;
     }
 }
@@ -53,7 +50,7 @@ bool MemoryCore::Deallocate() {
     max_tokens_ = 0;
     current_tokens_ = 0;
     
-    s_logger.info("[MEMORY] Context window released.\n");
+    std::cout << "[MEMORY] Context window released.\n";
     return true;
 }
 
@@ -66,7 +63,7 @@ void MemoryCore::Wipe() {
 }
 
 bool MemoryCore::Reallocate(ContextTier new_tier) {
-    s_logger.info("[MEMORY] Hot-swapping context window...\n");
+    std::cout << "[MEMORY] Hot-swapping context window...\n";
     
     // 1. Snapshot current context
     std::string preserved_context = RetrieveContext();

@@ -5,80 +5,77 @@
 #include <iostream>
 #include <cassert>
 
-#include "logging/logger.h"
-static Logger s_logger("test_missing_logic");
-
 void TestAdvancedFeatures() {
-    s_logger.info("=== Testing Advanced AI Features ===");
+    std::cout << "=== Testing Advanced AI Features ===" << std::endl;
     
     RawrXD::CPUInferenceEngine engine;
     
     // Test Max Mode
     engine.SetMaxMode(true);
-    s_logger.info("✓ Max Mode enabled");
+    std::cout << "✓ Max Mode enabled" << std::endl;
     
     // Test Deep Thinking
     engine.SetDeepThinking(true);
-    s_logger.info("✓ Deep Thinking enabled");
+    std::cout << "✓ Deep Thinking enabled" << std::endl;
     
     // Test Deep Research
     engine.SetDeepResearch(true);
-    s_logger.info("✓ Deep Research enabled");
+    std::cout << "✓ Deep Research enabled" << std::endl;
     
     // Test Context Scaling
     engine.SetContextLimit(32768);
-    s_logger.info("✓ Context scaling to 32k");
+    std::cout << "✓ Context scaling to 32k" << std::endl;
     
     engine.SetContextLimit(1048576);
-    s_logger.info("✓ Context scaling to 1M");
+    std::cout << "✓ Context scaling to 1M" << std::endl;
 }
 
 void TestMemoryPlugins() {
-    s_logger.info("\n=== Testing Memory Plugins ===");
+    std::cout << "\n=== Testing Memory Plugins ===" << std::endl;
     
     RawrXD::CPUInferenceEngine engine;
     
     // Register standard memory plugin
     auto stdPlugin = std::make_shared<RawrXD::StandardMemoryPlugin>();
     engine.RegisterMemoryPlugin(stdPlugin);
-    s_logger.info("✓ Standard Memory Plugin registered");
+    std::cout << "✓ Standard Memory Plugin registered" << std::endl;
     
     // Register large context plugin
     auto largePlugin = std::make_shared<RawrXD::LargeContextPlugin>();
     engine.RegisterMemoryPlugin(largePlugin);
-    s_logger.info("✓ Large Context Plugin registered");
+    std::cout << "✓ Large Context Plugin registered" << std::endl;
     
     // Test context scaling with plugins
     engine.SetContextLimit(1048576);
-    s_logger.info("✓ Large context configured with plugins");
+    std::cout << "✓ Large context configured with plugins" << std::endl;
 }
 
 void TestMultiEngineSystem() {
-    s_logger.info("\n=== Testing Multi-Engine System ===");
+    std::cout << "\n=== Testing Multi-Engine System ===" << std::endl;
     
     RawrXD::MultiEngineSystem multiEngine;
     
     // Test drive configuration
     auto drives = multiEngine.GetDriveInfo();
-    s_logger.info("✓ 5-drive setup configured");
+    std::cout << "✓ 5-drive setup configured" << std::endl;
     
     // Test model distribution
     bool distributed = multiEngine.DistributeModel("test_model");
-    s_logger.info("✓ Model distribution across drives");
+    std::cout << "✓ Model distribution across drives" << std::endl;
     
-    s_logger.info("Note: 800B model loading requires actual model files");
+    std::cout << "Note: 800B model loading requires actual model files" << std::endl;
 }
 
 void TestReverseEngineeringIntegration() {
-    s_logger.info("\n=== Testing Reverse Engineering Integration ===");
+    std::cout << "\n=== Testing Reverse Engineering Integration ===" << std::endl;
     
     // These would require actual binary files to test
-    s_logger.info("✓ Reverse engineering commands available in CLI");
-    s_logger.info("✓ /disasm, /dumpbin, /analyze_binary, /compile commands implemented");
+    std::cout << "✓ Reverse engineering commands available in CLI" << std::endl;
+    std::cout << "✓ /disasm, /dumpbin, /analyze_binary, /compile commands implemented" << std::endl;
 }
 
 int main() {
-    s_logger.info("=== RawrXD Missing Logic Implementation Test ===");
+    std::cout << "=== RawrXD Missing Logic Implementation Test ===" << std::endl;
     
     try {
         TestAdvancedFeatures();
@@ -86,12 +83,12 @@ int main() {
         TestMultiEngineSystem();
         TestReverseEngineeringIntegration();
         
-        s_logger.info("\n=== ALL TESTS PASSED ===");
-        s_logger.info("All missing logic has been successfully implemented!");
-        s_logger.info("The engine/agent/IDE can now perform real inference rather than just simulating it.");
+        std::cout << "\n=== ALL TESTS PASSED ===" << std::endl;
+        std::cout << "All missing logic has been successfully implemented!" << std::endl;
+        std::cout << "The engine/agent/IDE can now perform real inference rather than just simulating it." << std::endl;
         
     } catch (const std::exception& e) {
-        s_logger.error( "Test failed: " << e.what() << std::endl;
+        std::cerr << "Test failed: " << e.what() << std::endl;
         return 1;
     }
     

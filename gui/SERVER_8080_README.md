@@ -47,6 +47,16 @@ Then open **http://localhost:8080** (or **http://localhost:3000/launcher.html** 
 
 - **tool_server** (or Win32 IDE with built-in server) must be running on **port 11435**. Start it first, e.g. `tool_server.exe --port 11435` from `src\` (build with `src\build_tool_server.bat`), or `RawrXD-Shell.exe --headless --port 11435`. If the backend is down, API requests return 502. When using `launch_rawrxd.bat` with `server_8080.exe` present, the launcher starts `src\tool_server.exe` automatically.
 
+### Standalone HTML IDE backend (no-dep exe)
+
+For the **HTML IDE only**, a separate **non-dep** CLI exe can serve the same API without Node, Qt, or the full tool_server stack:
+
+- **RawrXD-HTML-Backend** — single exe (static CRT, Win32 + Winsock + WinHTTP). Same API parity as tool_server for the routes the HTML IDE uses: `/health`, `/status`, `/api/tags`, `/api/generate`, `/api/read-file`, `/api/list-dir`, `/api/cli`, `/api/failures`, `/api/agents/status`, `/api/metrics`. Proxies generate/tags to Ollama; implements read-file, list-dir, cli via Win32. Bridged to MASM/C++ backend (optional model bridge link).
+
+- **Build:** `cmake --build . --config Release --target RawrXD-HTML-Backend` → `bin\RawrXD-HTML-Backend.exe`
+- **Run:** `RawrXD-HTML-Backend.exe [--port 11435] [--bind 127.0.0.1]`
+- Point the HTML IDE (or server.js backend URL) at `http://127.0.0.1:11435`.
+
 ## Design
 
 - Single-threaded accept loop; one request at a time.

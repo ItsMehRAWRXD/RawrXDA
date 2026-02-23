@@ -12,6 +12,7 @@
 
 #include "HeadlessIDE.h"
 #include "IOutputSink.h"
+#include "../agentic_engine.h"
 #include "../../include/chain_of_thought_engine.h"
 #include "../core/instructions_provider.hpp"
 
@@ -37,6 +38,9 @@
 #include <csignal>
 #include <cstring>
 #include <algorithm>
+
+// SCAFFOLD_130: Headless inference and model load
+
 
 // ============================================================================
 // Global shutdown flag for SIGINT/SIGTERM handler
@@ -999,8 +1003,17 @@ bool HeadlessIDE::setActiveBackend(AIBackendType type) {
 
     // Probe health before switching
     if (!probeBackendHealth(type)) {
-        char buf[256];
-        snprintf(buf, sizeof(buf), "Backend '%s' health check failed — switch aborted", backendNames[idx]);
+        const char* hint = "";
+        switch (type) {
+            case AIBackendType::LocalGGUF: hint = " (load a model first)"; break;
+            case AIBackendType::Ollama:    hint = " (ensure Ollama is running on port 11434)"; break;
+            case AIBackendType::OpenAI:   hint = " (set OPENAI_API_KEY)"; break;
+            case AIBackendType::Claude:   hint = " (set ANTHROPIC_API_KEY)"; break;
+            case AIBackendType::Gemini:   hint = " (set GOOGLE_API_KEY or GEMINI_API_KEY)"; break;
+            default: break;
+        }
+        char buf[384];
+        snprintf(buf, sizeof(buf), "Backend '%s' health check failed — switch aborted%s", backendNames[idx], hint);
         m_outputSink->appendOutput(buf, OutputSeverity::Warning);
         return false;
     }

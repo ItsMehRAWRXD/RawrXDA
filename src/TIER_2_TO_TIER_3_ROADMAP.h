@@ -85,17 +85,14 @@
        EFFORT: 2 hours
 
     2. Logger.cpp Qt dependency removal
-       STATUS: include/telemetry/logger.h is pure C++ (std::mutex, std::ofstream)
-               src/telemetry/logger.cpp STILL uses QFile, QJsonDocument, QDateTime
-       TODO:   Rewrite logger.cpp to match the non-Qt header.
-               Use std::filesystem for rotation, std::chrono for timestamps.
-       EFFORT: 4 hours
+       STATUS: DONE — src/telemetry/ has no logger.cpp; telemetry uses
+               UnifiedTelemetryCore and C++20. Any logger use std::chrono, std::ofstream.
+       EFFORT: N/A
 
     3. TelemetryCollector Qt dependency removal
-       STATUS: src/agent/telemetry_collector.{hpp,cpp} uses QNetworkAccessManager
-       TODO:   Replace with WinHTTP or libcurl for batch upload.
-               Privacy-first model is correct, just needs transport swap.
-       EFFORT: 6 hours
+       STATUS: DONE — src/agent/telemetry_collector.{hpp,cpp} is Qt-free (C++20/Win32,
+               callbacks replace Qt signals; no QNetworkAccessManager).
+       EFFORT: N/A
 
     4. Replay Engine → BoundedAgentLoop integration
        STATUS: DeterministicReplayEngine exists but is not wired into

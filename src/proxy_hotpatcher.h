@@ -1,3 +1,5 @@
+// SCAFFOLD_220: Proxy hotpatcher and agentic
+
 #pragma once
 #include <vector>
 #include <string>

@@ -110,7 +110,9 @@ AgenticLoopState::Iteration* AgenticLoopState::getCurrentIteration()
 
 void AgenticLoopState::setCurrentPhase(ReasoningPhase phase)
 {
+    m_lastPhaseFinished = m_currentPhase;
     m_currentPhase = phase;
+    m_lastPhaseStarted = phase;
     m_lastUpdateTime = std::chrono::system_clock::now();
 
     if (m_debugMode) {
@@ -148,6 +150,24 @@ std::vector<std::string> AgenticLoopState::getAllPhaseTransitions() const
         transitions.push_back(phaseToString(iteration.currentPhase));
     }
     return transitions;
+}
+
+const AgenticLoopState::Iteration* AgenticLoopState::getLastStartedIteration() const
+{
+    if (m_iterations.empty()) return nullptr;
+    return &m_iterations.back();
+}
+
+const AgenticLoopState::Iteration* AgenticLoopState::getLastCompletedIteration() const
+{
+    if (!m_contextWindow.empty())
+        return &m_contextWindow.back();
+    for (auto it = m_iterations.crbegin(); it != m_iterations.crend(); ++it) {
+        if (it->status == IterationStatus::Completed || it->status == IterationStatus::Failed ||
+            it->status == IterationStatus::MaxAttemptsReached)
+            return &(*it);
+    }
+    return nullptr;
 }
 
 // ===== DECISION TRACKING =====
@@ -336,7 +356,7 @@ std::string AgenticLoopState::generateErrorAnalysis() const
     return analysis.dump(2);
 }
 
-// ===== STATE SNAPSHOTS =====
+// ===== SNAPSHOTS =====
 
 nlohmann::json AgenticLoopState::takeSnapshot()
 {

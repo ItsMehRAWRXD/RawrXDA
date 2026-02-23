@@ -6,9 +6,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "logging/logger.h"
-static Logger s_logger("cli_streaming_enhancements");
-
 // Global instances
 static std::unique_ptr<AsyncStreamingEngine> g_asyncEngine;
 static std::unique_ptr<BatchProcessingEngine> g_batchEngine;
@@ -26,10 +23,10 @@ void initializeStreamingEnhancements() {
     g_cacheManager = std::make_unique<KVCacheManager>(512 * 1024 * 1024);  // 512MB
     g_enhancedEngine = std::make_unique<EnhancedCLIEngine>();
     
-    s_logger.info("[INIT] Streaming enhancements initialized");
-    s_logger.info("  - Async streaming engine: Ready");
-    s_logger.info("  - Batch processing engine: Ready (4 workers)");
-    s_logger.info("  - KV-cache manager: Ready (512MB)");
+    std::cout << "[INIT] Streaming enhancements initialized" << std::endl;
+    std::cout << "  - Async streaming engine: Ready" << std::endl;
+    std::cout << "  - Batch processing engine: Ready (4 workers)" << std::endl;
+    std::cout << "  - KV-cache manager: Ready (512MB)" << std::endl;
 }
 
 // ============================================================================
@@ -37,7 +34,7 @@ void initializeStreamingEnhancements() {
 // ============================================================================
 
 void cmdStreamAsync(const std::string& prompt) {
-    s_logger.info("[INFO] Starting async streaming (non-blocking)...");
+    std::cout << "[INFO] Starting async streaming (non-blocking)..." << std::endl;
     
     int tokenCount = 0;
     std::string fullResponse;
@@ -45,41 +42,41 @@ void cmdStreamAsync(const std::string& prompt) {
     g_asyncEngine->streamAsync(
         prompt,
         [&tokenCount, &fullResponse](const std::string& token) {
-            s_logger.info( token;
+            std::cout << token;
             std::cout.flush();
             fullResponse += token;
             tokenCount++;
         },
         [&tokenCount](const std::string& response, bool success) {
-            s_logger.info("\n");
+            std::cout << "\n" << std::endl;
             if (success) {
-                s_logger.info("[SUCCESS] Async streaming complete: ");
+                std::cout << "[SUCCESS] Async streaming complete: " << tokenCount << " tokens" << std::endl;
             } else {
-                s_logger.info("[ERROR] ");
+                std::cout << "[ERROR] " << response << std::endl;
             }
         }
     );
     
     // Don't block - async operation continues
-    s_logger.info("[INFO] Streaming in background. CLI remains responsive.");
+    std::cout << "[INFO] Streaming in background. CLI remains responsive." << std::endl;
 }
 
 void cmdWaitStream(int timeoutMs) {
-    s_logger.info("[INFO] Waiting for async stream to complete...");
+    std::cout << "[INFO] Waiting for async stream to complete..." << std::endl;
     
     if (g_asyncEngine->waitForCompletion(timeoutMs)) {
-        s_logger.info("[SUCCESS] Stream completed");
+        std::cout << "[SUCCESS] Stream completed" << std::endl;
     } else {
-        s_logger.info("[WARNING] Stream timeout after ");
+        std::cout << "[WARNING] Stream timeout after " << timeoutMs << "ms" << std::endl;
     }
 }
 
 void cmdCancelStream() {
     if (g_asyncEngine->isStreaming()) {
         g_asyncEngine->cancelStreaming();
-        s_logger.info("[INFO] Streaming cancelled");
+        std::cout << "[INFO] Streaming cancelled" << std::endl;
     } else {
-        s_logger.info("[INFO] No stream in progress");
+        std::cout << "[INFO] No stream in progress" << std::endl;
     }
 }
 
@@ -88,7 +85,7 @@ void cmdCancelStream() {
 // ============================================================================
 
 void cmdBatchProcess(const std::vector<std::string>& prompts) {
-    s_logger.info("[INFO] Submitting ");
+    std::cout << "[INFO] Submitting " << prompts.size() << " requests to batch queue..." << std::endl;
     
     std::vector<std::string> requestIds;
     
@@ -101,33 +98,35 @@ void cmdBatchProcess(const std::vector<std::string>& prompts) {
         g_batchEngine->submitBatch(req);
         requestIds.push_back(req.id);
         
-        s_logger.info("[BATCH ");
+        std::cout << "[BATCH " << i + 1 << "/" << prompts.size() << "] "
+                  << "Request ID: " << req.id << std::endl;
     }
     
-    s_logger.info("\n[INFO] All requests submitted. Processing in parallel...");
+    std::cout << "\n[INFO] All requests submitted. Processing in parallel..." << std::endl;
     
     // Retrieve results
-    s_logger.info("\n[INFO] Retrieving results...\n");
+    std::cout << "\n[INFO] Retrieving results...\n" << std::endl;
     for (size_t i = 0; i < requestIds.size(); ++i) {
         auto result = g_batchEngine->getBatchResult(requestIds[i], 30000);  // 30s timeout
         
-        s_logger.info("[RESULT ");
-        s_logger.info("  ID: ");
-        s_logger.info("  Success: ");
-        s_logger.info("  Tokens: ");
-        s_logger.info("  Duration: ");
-        s_logger.info("  Response: ");
-        s_logger.info( std::endl;
+        std::cout << "[RESULT " << i + 1 << "/" << requestIds.size() << "]" << std::endl;
+        std::cout << "  ID: " << result.requestId << std::endl;
+        std::cout << "  Success: " << (result.success ? "Yes" : "No") << std::endl;
+        std::cout << "  Tokens: " << result.tokensGenerated << std::endl;
+        std::cout << "  Duration: " << result.duration.count() << "ms" << std::endl;
+        std::cout << "  Response: " << result.response.substr(0, 100) << "..." << std::endl;
+        std::cout << std::endl;
     }
 }
 
 void cmdBatchStatus() {
     auto stats = g_batchEngine->getBatchStats();
     
-    s_logger.info("\n[BATCH STATUS]");
-    s_logger.info("  Queued: ");
-    s_logger.info("  Completed: ");
-    s_logger.info("  Workers: ");
+    std::cout << "\n[BATCH STATUS]" << std::endl;
+    std::cout << "  Queued: " << stats["queued_requests"] << std::endl;
+    std::cout << "  Completed: " << stats["completed_requests"] << std::endl;
+    std::cout << "  Workers: " << stats["active_workers"] << "/" 
+              << stats["max_parallel_workers"] << std::endl;
 }
 
 // ============================================================================
@@ -135,38 +134,41 @@ void cmdBatchStatus() {
 // ============================================================================
 
 void cmdLoadBPETokenizer(const std::string& mergesFile) {
-    s_logger.info("[INFO] Loading BPE tokenizer from: ");
+    std::cout << "[INFO] Loading BPE tokenizer from: " << mergesFile << std::endl;
     
     auto tokenizer = TokenizerFactory::createBPETokenizer(mergesFile);
     
     if (tokenizer) {
-        s_logger.info("[SUCCESS] BPE tokenizer loaded");
+        std::cout << "[SUCCESS] BPE tokenizer loaded" << std::endl;
     } else {
-        s_logger.info("[ERROR] Failed to load BPE tokenizer");
+        std::cout << "[ERROR] Failed to load BPE tokenizer" << std::endl;
     }
 }
 
 void cmdLoadSPTokenizer(const std::string& modelPath) {
-    s_logger.info("[INFO] Loading SentencePiece tokenizer from: ");
+    std::cout << "[INFO] Loading SentencePiece tokenizer from: " << modelPath << std::endl;
     
     auto tokenizer = TokenizerFactory::createSentencePieceTokenizer(modelPath);
     
     if (tokenizer) {
-        s_logger.info("[SUCCESS] SentencePiece tokenizer loaded");
+        std::cout << "[SUCCESS] SentencePiece tokenizer loaded" << std::endl;
     } else {
-        s_logger.info("[ERROR] Failed to load SentencePiece tokenizer");
+        std::cout << "[ERROR] Failed to load SentencePiece tokenizer" << std::endl;
     }
 }
 
 void cmdAutoTokenizer(const std::string& modelPath) {
-    s_logger.info("[INFO] Auto-detecting tokenizer for: ");
+    std::cout << "[INFO] Auto-detecting tokenizer for: " << modelPath << std::endl;
     
     auto tokenizer = TokenizerFactory::createAutoTokenizer(modelPath);
     
     if (tokenizer) {
-        s_logger.info("[SUCCESS] Tokenizer loaded: ");
+        std::cout << "[SUCCESS] Tokenizer loaded: " << 
+                     (tokenizer->getType() == TokenizerType::BPE ? "BPE" : 
+                      tokenizer->getType() == TokenizerType::SENTENCEPIECE ? "SentencePiece" : 
+                      "Unknown") << std::endl;
     } else {
-        s_logger.info("[ERROR] Failed to auto-detect tokenizer");
+        std::cout << "[ERROR] Failed to auto-detect tokenizer" << std::endl;
     }
 }
 
@@ -175,7 +177,7 @@ void cmdAutoTokenizer(const std::string& modelPath) {
 // ============================================================================
 
 void cmdCacheContext(const std::string& prompt) {
-    s_logger.info("[INFO] Caching context for prompt...");
+    std::cout << "[INFO] Caching context for prompt..." << std::endl;
     
     std::string promptHash = StreamingUtils::hashPrompt(prompt);
     
@@ -187,49 +189,51 @@ void cmdCacheContext(const std::string& prompt) {
     
     g_cacheManager->cacheContext(promptHash, entry);
     
-    s_logger.info("[SUCCESS] Context cached with hash: ");
+    std::cout << "[SUCCESS] Context cached with hash: " << promptHash << std::endl;
 }
 
 void cmdRetrieveCache(const std::string& prompt) {
-    s_logger.info("[INFO] Retrieving cached context...");
+    std::cout << "[INFO] Retrieving cached context..." << std::endl;
     
     std::string promptHash = StreamingUtils::hashPrompt(prompt);
     CacheEntry entry;
     
     if (g_cacheManager->retrieveContext(promptHash, entry)) {
-        s_logger.info("[SUCCESS] Cache hit!");
-        s_logger.info("  Sequence length: ");
-        s_logger.info("  Key cache size: ");
-        s_logger.info("  Value cache size: ");
+        std::cout << "[SUCCESS] Cache hit!" << std::endl;
+        std::cout << "  Sequence length: " << entry.sequenceLength << std::endl;
+        std::cout << "  Key cache size: " << entry.keyCache.size() << std::endl;
+        std::cout << "  Value cache size: " << entry.valueCache.size() << std::endl;
     } else {
-        s_logger.info("[MISS] Context not cached");
+        std::cout << "[MISS] Context not cached" << std::endl;
     }
 }
 
 void cmdClearCache() {
-    s_logger.info("[INFO] Clearing cache...");
+    std::cout << "[INFO] Clearing cache..." << std::endl;
     g_cacheManager->clearAll();
-    s_logger.info("[SUCCESS] Cache cleared");
+    std::cout << "[SUCCESS] Cache cleared" << std::endl;
 }
 
 void cmdCacheStats() {
     auto stats = g_cacheManager->getCacheStats();
     
-    s_logger.info("\n[CACHE STATISTICS]");
-    s_logger.info("  Entries: ");
-    s_logger.info("  Size: ");
-    s_logger.info("  Usage: ");
-    s_logger.info("  Policy: ");
+    std::cout << "\n[CACHE STATISTICS]" << std::endl;
+    std::cout << "  Entries: " << stats["cached_entries"] << std::endl;
+    std::cout << "  Size: " << (stats["current_size_bytes"].get<size_t>() / 1024 / 1024) << " MB / "
+              << (stats["max_size_bytes"].get<size_t>() / 1024 / 1024) << " MB" << std::endl;
+    std::cout << "  Usage: " << std::fixed << std::setprecision(1) 
+              << stats["usage_percent"].get<double>() << "%" << std::endl;
+    std::cout << "  Policy: " << stats["eviction_policy"].get<std::string>() << std::endl;
 }
 
 void cmdSetCachePolicy(const std::string& policy) {
     if (policy != "LRU" && policy != "LFU" && policy != "FIFO") {
-        s_logger.info("[ERROR] Invalid policy. Use: LRU, LFU, or FIFO");
+        std::cout << "[ERROR] Invalid policy. Use: LRU, LFU, or FIFO" << std::endl;
         return;
     }
     
     g_cacheManager->setEvictionPolicy(policy);
-    s_logger.info("[SUCCESS] Cache eviction policy set to: ");
+    std::cout << "[SUCCESS] Cache eviction policy set to: " << policy << std::endl;
 }
 
 // ============================================================================
@@ -237,24 +241,24 @@ void cmdSetCachePolicy(const std::string& policy) {
 // ============================================================================
 
 void cmdStartWebServer(int port) {
-    s_logger.info("[INFO] Starting web server on port ");
+    std::cout << "[INFO] Starting web server on port " << port << "..." << std::endl;
     
     auto webServer = std::make_unique<StreamingWebServer>(port);
     webServer->startAsync();
     
-    s_logger.info("[SUCCESS] Web server started");
-    s_logger.info("  API endpoints:");
-    s_logger.info("    POST /api/generate - Generate text");
-    s_logger.info("    GET /api/generate/stream - Streaming generation (SSE)");
-    s_logger.info("    POST /api/batch/generate - Batch generation");
-    s_logger.info("    POST /api/tokenize - Tokenize text");
-    s_logger.info("    POST /api/detokenize - Detokenize tokens");
-    s_logger.info("    GET /api/status - Server status");
+    std::cout << "[SUCCESS] Web server started" << std::endl;
+    std::cout << "  API endpoints:" << std::endl;
+    std::cout << "    POST /api/generate - Generate text" << std::endl;
+    std::cout << "    GET /api/generate/stream - Streaming generation (SSE)" << std::endl;
+    std::cout << "    POST /api/batch/generate - Batch generation" << std::endl;
+    std::cout << "    POST /api/tokenize - Tokenize text" << std::endl;
+    std::cout << "    POST /api/detokenize - Detokenize tokens" << std::endl;
+    std::cout << "    GET /api/status - Server status" << std::endl;
 }
 
 void cmdStopWebServer() {
-    s_logger.info("[INFO] Stopping web server...");
-    s_logger.info("[SUCCESS] Web server stopped");
+    std::cout << "[INFO] Stopping web server..." << std::endl;
+    std::cout << "[SUCCESS] Web server stopped" << std::endl;
 }
 
 // ============================================================================
@@ -264,35 +268,35 @@ void cmdStopWebServer() {
 void cmdSetOutputFormat(const std::string& format) {
     if (format == "text" || format == "plain") {
         g_currentFormat = OutputFormat::TEXT;
-        s_logger.info("[SUCCESS] Output format set to: TEXT");
+        std::cout << "[SUCCESS] Output format set to: TEXT" << std::endl;
     } else if (format == "json") {
         g_currentFormat = OutputFormat::JSON;
-        s_logger.info("[SUCCESS] Output format set to: JSON");
+        std::cout << "[SUCCESS] Output format set to: JSON" << std::endl;
     } else if (format == "jsonl") {
         g_currentFormat = OutputFormat::JSONL;
-        s_logger.info("[SUCCESS] Output format set to: JSONL (JSON Lines)");
+        std::cout << "[SUCCESS] Output format set to: JSONL (JSON Lines)" << std::endl;
     } else if (format == "xml") {
         g_currentFormat = OutputFormat::XML;
-        s_logger.info("[SUCCESS] Output format set to: XML");
+        std::cout << "[SUCCESS] Output format set to: XML" << std::endl;
     } else {
-        s_logger.info("[ERROR] Unknown format. Use: text, json, jsonl, or xml");
+        std::cout << "[ERROR] Unknown format. Use: text, json, jsonl, or xml" << std::endl;
     }
 }
 
 void cmdFormatSample(const std::string& text) {
-    s_logger.info("\n[FORMATTED OUTPUT SAMPLES]\n");
+    std::cout << "\n[FORMATTED OUTPUT SAMPLES]\n" << std::endl;
     
-    s_logger.info("=== TEXT ===");
-    s_logger.info( StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::TEXT) << std::endl;
+    std::cout << "=== TEXT ===" << std::endl;
+    std::cout << StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::TEXT) << std::endl;
     
-    s_logger.info("\n=== JSON ===");
-    s_logger.info( StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::JSON).dump(2) << std::endl;
+    std::cout << "\n=== JSON ===" << std::endl;
+    std::cout << StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::JSON).dump(2) << std::endl;
     
-    s_logger.info("\n=== JSONL ===");
-    s_logger.info( StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::JSONL) << std::endl;
+    std::cout << "\n=== JSONL ===" << std::endl;
+    std::cout << StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::JSONL) << std::endl;
     
-    s_logger.info("\n=== XML ===");
-    s_logger.info( StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::XML) << std::endl;
+    std::cout << "\n=== XML ===" << std::endl;
+    std::cout << StructuredOutputFormatter::formatComplete(text, 42, 1500, OutputFormat::XML) << std::endl;
 }
 
 // ============================================================================
@@ -302,8 +306,8 @@ void cmdFormatSample(const std::string& text) {
 void cmdEnhancedStats() {
     auto stats = g_enhancedEngine->getCompleteStats();
     
-    s_logger.info("\n[ENHANCED ENGINE STATISTICS]\n");
-    s_logger.info( stats.dump(2) << std::endl;
+    std::cout << "\n[ENHANCED ENGINE STATISTICS]\n" << std::endl;
+    std::cout << stats.dump(2) << std::endl;
 }
 
 // ============================================================================
@@ -311,38 +315,38 @@ void cmdEnhancedStats() {
 // ============================================================================
 
 void printEnhancementsHelp() {
-    s_logger.info("\n=== STREAMING ENHANCEMENTS COMMANDS ===\n");
+    std::cout << "\n=== STREAMING ENHANCEMENTS COMMANDS ===\n" << std::endl;
     
-    s_logger.info("ASYNC STREAMING (Non-blocking):");
-    s_logger.info("  streamasync <prompt>     - Start streaming without blocking CLI");
-    s_logger.info("  waitstream [timeout_ms]  - Wait for async stream to complete");
-    s_logger.info("  cancelstream             - Cancel ongoing streaming");
+    std::cout << "ASYNC STREAMING (Non-blocking):" << std::endl;
+    std::cout << "  streamasync <prompt>     - Start streaming without blocking CLI" << std::endl;
+    std::cout << "  waitstream [timeout_ms]  - Wait for async stream to complete" << std::endl;
+    std::cout << "  cancelstream             - Cancel ongoing streaming" << std::endl;
     
-    s_logger.info("\nBATCH PROCESSING:");
-    s_logger.info("  batch <prompt1> | <prompt2> | ... - Process multiple prompts in parallel");
-    s_logger.info("  batchstatus              - Show batch queue status");
+    std::cout << "\nBATCH PROCESSING:" << std::endl;
+    std::cout << "  batch <prompt1> | <prompt2> | ... - Process multiple prompts in parallel" << std::endl;
+    std::cout << "  batchstatus              - Show batch queue status" << std::endl;
     
-    s_logger.info("\nTOKENIZERS:");
-    s_logger.info("  loadbpe <merges_file>    - Load BPE tokenizer");
-    s_logger.info("  loadsp <model_path>      - Load SentencePiece tokenizer");
-    s_logger.info("  autotokenizer <path>     - Auto-detect tokenizer");
+    std::cout << "\nTOKENIZERS:" << std::endl;
+    std::cout << "  loadbpe <merges_file>    - Load BPE tokenizer" << std::endl;
+    std::cout << "  loadsp <model_path>      - Load SentencePiece tokenizer" << std::endl;
+    std::cout << "  autotokenizer <path>     - Auto-detect tokenizer" << std::endl;
     
-    s_logger.info("\nKV-CACHE MANAGEMENT:");
-    s_logger.info("  cachecontext <prompt>    - Cache context for prompt");
-    s_logger.info("  retrievecache <prompt>   - Retrieve cached context");
-    s_logger.info("  clearcache               - Clear all cached contexts");
-    s_logger.info("  cachestats               - Show cache statistics");
-    s_logger.info("  setcachepolicy <policy>  - Set eviction policy (LRU/LFU/FIFO)");
+    std::cout << "\nKV-CACHE MANAGEMENT:" << std::endl;
+    std::cout << "  cachecontext <prompt>    - Cache context for prompt" << std::endl;
+    std::cout << "  retrievecache <prompt>   - Retrieve cached context" << std::endl;
+    std::cout << "  clearcache               - Clear all cached contexts" << std::endl;
+    std::cout << "  cachestats               - Show cache statistics" << std::endl;
+    std::cout << "  setcachepolicy <policy>  - Set eviction policy (LRU/LFU/FIFO)" << std::endl;
     
-    s_logger.info("\nWEB SERVER:");
-    s_logger.info("  startwebserver [port]    - Start REST API server (default: 8080)");
-    s_logger.info("  stopwebserver            - Stop web server");
+    std::cout << "\nWEB SERVER:" << std::endl;
+    std::cout << "  startwebserver [port]    - Start REST API server (default: 8080)" << std::endl;
+    std::cout << "  stopwebserver            - Stop web server" << std::endl;
     
-    s_logger.info("\nOUTPUT FORMAT:");
-    s_logger.info("  setformat <format>       - Set output format (text/json/jsonl/xml)");
-    s_logger.info("  formatsample <text>      - Show format samples");
+    std::cout << "\nOUTPUT FORMAT:" << std::endl;
+    std::cout << "  setformat <format>       - Set output format (text/json/jsonl/xml)" << std::endl;
+    std::cout << "  formatsample <text>      - Show format samples" << std::endl;
     
-    s_logger.info("\nSTATUS:");
-    s_logger.info("  enhancedstats            - Show all enhancement statistics");
-    s_logger.info("\n");
+    std::cout << "\nSTATUS:" << std::endl;
+    std::cout << "  enhancedstats            - Show all enhancement statistics" << std::endl;
+    std::cout << "\n" << std::endl;
 }

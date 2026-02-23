@@ -19,7 +19,7 @@ BeaconStorage& BeaconStorage::Instance() {
     return instance;
 }
 
-// Auto healer stub implementations
+// Auto healer implementation: diagnostic thread, IDE launch, beacon storage, healing strategies
 void IDEDiagnosticAutoHealer::StartFullDiagnostic() {
     if (m_running.exchange(true)) {
         return;

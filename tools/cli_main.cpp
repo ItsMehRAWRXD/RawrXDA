@@ -1,40 +1,29 @@
+// tools/cli_main.cpp - Minimal CLI launcher (legacy/stub)
+// For full chat + agentic CLI (101% Win32 parity), build from repo root:
+//   cmake -B build_ide -G Ninja && cmake --build build_ide --target RawrXD_CLI
+// See Ship/CLI_PARITY.md for details.
+
 #include <windows.h>
+#include <iostream>
 #include <string>
-#include <vector>
-#include "logging/logger.h"
 
-static Logger s_logger("CLI");
-
-void PrintHelp() {
-    s_logger.info("RawrXD Agent v1.0 (Qt-Free)");
-    s_logger.info("USAGE: RawrXD_CLI [OPTIONS]");
-    s_logger.info("OPTIONS:");
-    s_logger.info("  --help, -h      Show help");
-    s_logger.info("  --version, -v   Show version");
-    s_logger.info("  --list, -l      List models");
-    s_logger.info("  --port <n>      Server port");
-    s_logger.info("  --host <ip>     Bind address");
-}
-
-void PrintVersion() {
-    s_logger.info("RawrXD Agent v1.0.0 (Qt-Free Build)");
-    s_logger.info("Architecture: x64");
+static void PrintHelp() {
+    std::cout << "RawrXD CLI Stub v1.0 (minimal)\n\n";
+    std::cout << "For full agentic CLI (chat, /agent, /smoke, /tools, HTTP API):\n";
+    std::cout << "  cmake --build build_ide --target RawrXD_CLI\n";
+    std::cout << "  build_ide\\bin\\RawrXD_CLI.exe\n\n";
+    std::cout << "Options: --help -h --version -v  (this stub only)\n";
+    std::cout << "See Ship/CLI_PARITY.md\n";
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        PrintHelp();
-        return 0;
+    if (argc > 1) {
+        std::string arg = argv[1];
+        if (arg == "--help" || arg == "-h" || arg == "--version" || arg == "-v") {
+            PrintHelp();
+            return 0;
+        }
     }
-    
-    std::string arg = argv[1];
-    if (arg == "--help" || arg == "-h") { PrintHelp(); return 0; }
-    if (arg == "--version" || arg == "-v") { PrintVersion(); return 0; }
-    if (arg == "--list" || arg == "-l") { 
-        s_logger.info("Available models:\n  - gpt-oss:120b\n  - llama3");
-        return 0; 
-    }
-    
-    s_logger.info("Starting RawrXD Agent...");
+    PrintHelp();
     return 0;
 }

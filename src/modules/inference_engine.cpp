@@ -11,12 +11,12 @@
 #include <chrono>
 #include <atomic>
 
-#include "logging/logger.h"
-static Logger s_logger("inference_engine");
-
 #include "tokenizer.h"
 #include "gguf_loader.h"
 #include "sampler.h"
+
+// SCAFFOLD_106: CPU inference fallback
+
 
 // blob_client.h does not exist as a header — BlobClient is defined inline
 // in blob_client.cpp. Forward-declare what we need or skip.
@@ -172,7 +172,7 @@ class RawrInference : public Engine {
     
 public:
     RawrInference() {
-        s_logger.info("RawrInference: AVX-512 Zero-Sim Core Initialized.");
+        std::cout << "RawrInference: AVX-512 Zero-Sim Core Initialized." << std::endl;
         // Preload tokenizer if standard path exists, otherwise wait
         // In a real scenario, tokenizer model is part of GGUF or separate file
         tokenizer.load("tokenizer.model"); 
@@ -180,14 +180,14 @@ public:
     
     bool load_model(const std::string& path) override {
         model_path = path;
-        s_logger.info("Loading GGUF from ");
+        std::cout << "Loading GGUF from " << path << " with MMap + AVX-512..." << std::endl;
 
         // ---- Step 1: Load via GGUFLoader (parses header, builds tensor index) ----
         if (loader.Load(path)) {
             loaded = true;
-            s_logger.info("Model loaded successfully. Size: ");
+            std::cout << "Model loaded successfully. Size: " << loader.get_size() << " bytes." << std::endl;
         } else {
-            s_logger.info("Failed to load model via GGUFLoader.");
+            std::cout << "Failed to load model via GGUFLoader." << std::endl;
             return false;
         }
 
@@ -195,11 +195,16 @@ public:
         // This loads model metadata (vocab_size, embedding_dim, layer_count, head_count)
         // and prepares the transformer pipeline with KV cache allocation.
         if (!cpuEngine.LoadModel(path)) {
-            s_logger.info("WARNING: CPUInferenceEngine::LoadModel failed for ");
-            s_logger.info("Falling back to simulation mode for forward pass.");
+            std::cout << "WARNING: CPUInferenceEngine::LoadModel failed for " << path << std::endl;
+            std::cout << "Falling back to simulation mode for forward pass." << std::endl;
             // Don't fail — we can still use the GGUFLoader tensor data
         } else {
-            s_logger.info("CPUInferenceEngine loaded: ");
+            std::cout << "CPUInferenceEngine loaded: "
+                      << "vocab=" << cpuEngine.GetVocabSize()
+                      << " embed=" << cpuEngine.GetEmbeddingDim()
+                      << " layers=" << cpuEngine.GetNumLayers()
+                      << " heads=" << cpuEngine.GetNumHeads()
+                      << std::endl;
         }
 
         return true;

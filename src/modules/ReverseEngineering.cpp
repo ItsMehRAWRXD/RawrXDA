@@ -6,6 +6,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <map>
 
 namespace RawrXD {
 namespace ReverseEngineering {
@@ -93,9 +94,9 @@ void NativeDisassembler::DecodeX64Instruction(const uint8_t* bytes, size_t& leng
             else inst.operands = src + ", " + dst; // MOV r, r/m
         } else {
             // Memory access
-            std::string ptr = qword_ptr(dst); // Helper logic assumed
-            if (opcode & 2) inst.operands = "qword [" + dst + "], " + src;
-            else inst.operands = src + ", qword [" + dst + "]";
+            std::string ptr = "qword [" + dst + "]";
+            if (opcode & 2) inst.operands = ptr + ", " + src;
+            else inst.operands = src + ", " + ptr;
         }
     }
     // CALL/JMP Rel32
@@ -405,7 +406,20 @@ std::vector<RECodex::Pattern> RECodex::GetCommonPatterns() {
     // Function prologue
     Pattern prologue;
     prologue.name = "Function Prologue";
-    return "AI analysis would be performed here using the agent's inference capabilities.";
+    prologue.signature = {0x55, 0x48, 0x8B, 0xEC}; // push rbp; mov rbp, rsp (x64)
+    prologue.mask = {0xFF, 0xFF, 0xFF, 0xFF};
+    prologue.description = "Standard x64 function prologue";
+    patterns.push_back(prologue);
+
+    // Exception handler setup
+    Pattern exception;
+    exception.name = "SEH Setup";
+    exception.signature = {0x64, 0x48, 0x89, 0x25}; // mov fs:[offset], rsp
+    exception.mask = {0xFF, 0xFF, 0xFF, 0xFF};
+    exception.description = "Structured exception handler setup";
+    patterns.push_back(exception);
+
+    return patterns;
 }
 
 std::vector<RECodex::Pattern> RECodex::GetMalwarePatterns() {
@@ -457,17 +471,6 @@ std::vector<std::pair<uint64_t, std::string>> RECodex::ScanForPatterns(
 }
 
 // ===============================================================
-    
-    // Exception handler setup
-    Pattern exception;
-    exception.name = "SEH Setup";
-    exception.signature = {0x64, 0x48, 0x89, 0x25}; // mov fs:[offset], rsp
-    exception.mask = {0xFF, 0xFF, 0xFF, 0xFF};
-    exception.description = "Structured exception handler setup";
-    patterns.push_back(exception);
-    
-    return patterns;
-}
 
 std::vector<RECodex::KnownFunction> RECodex::GetWindowsAPIDatabase() {
     std::vector<KnownFunction> functions;

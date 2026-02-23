@@ -12,6 +12,7 @@
 #endif
 
 #include <windows.h>
+#include <shlobj.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -23,6 +24,20 @@
 namespace fs = std::filesystem;
 
 namespace RawrXD {
+
+// Resolve %APPDATA%\RawrXD so extensions install without drive/path changes.
+static inline std::string GetRawrXDAppDataRoot() {
+    wchar_t appData[MAX_PATH] = {};
+    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+        char buf[MAX_PATH * 2] = {};
+        WideCharToMultiByte(CP_UTF8, 0, appData, -1, buf, sizeof(buf), nullptr, nullptr);
+        std::string root(buf);
+        if (!root.empty() && root.back() != '\\') root += '\\';
+        root += "RawrXD\\";
+        return root;
+    }
+    return "RawrXD\\";
+}
 
 struct Extension {
     std::string name;
@@ -36,9 +51,11 @@ struct Extension {
 class ExtensionManager {
 public:
     ExtensionManager() {
-        extensionRoot_ = "d:\\RawrXD\\extensions";
-        moduleStore_ = "d:\\RawrXD\\scripts\\modules";
-        registryPath_ = "d:\\RawrXD\\extensions\\registry.json";
+        std::string appRoot = GetRawrXDAppDataRoot();
+        extensionRoot_ = appRoot + "extensions";
+        moduleStore_ = appRoot + "scripts\\modules";
+        registryPath_ = extensionRoot_ + "\\registry.json";
+        apiKey_ = "key_1bbe2f4d33423a095fc03d9f873eb4a161a680df099e82410be7bb19e65c319f";
 
         try {
             if (!fs::exists(extensionRoot_)) fs::create_directories(extensionRoot_);
@@ -72,7 +89,7 @@ public:
     bool installExtension(const std::string& name) {
         if (registry_.find(name) == registry_.end()) return false;
         
-        std::string scriptPath = "d:\\RawrXD\\ExtensionManager.ps1";
+        std::string scriptPath = GetRawrXDAppDataRoot() + "ExtensionManager.ps1";
         std::string cmd = ". '" + scriptPath + "'; Install-Extension -Name '" + name + "'";
         
         std::string output;
@@ -91,7 +108,7 @@ public:
             if (!installExtension(name)) return false;
         }
         
-        std::string scriptPath = "d:\\RawrXD\\ExtensionManager.ps1";
+        std::string scriptPath = GetRawrXDAppDataRoot() + "ExtensionManager.ps1";
         std::string cmd = ". '" + scriptPath + "'; Enable-Extension -Name '" + name + "'";
         
         std::string output;
@@ -106,7 +123,7 @@ public:
     bool disableExtension(const std::string& name) {
         if (registry_.find(name) == registry_.end()) return false;
         
-        std::string scriptPath = "d:\\RawrXD\\ExtensionManager.ps1";
+        std::string scriptPath = GetRawrXDAppDataRoot() + "ExtensionManager.ps1";
         std::string cmd = ". '" + scriptPath + "'; Disable-Extension -Name '" + name + "'";
         
         std::string output;
@@ -138,10 +155,37 @@ public:
         return _pclose(pipe) == 0;
     }
 
+    void setApiKey(const std::string& key) {
+        apiKey_ = key;
+    }
+    
+    std::string getApiKey() const {
+        return apiKey_;
+    }
+    
+    bool installAmazonQ() {
+        Extension ext;
+        ext.name = "amazonq-ide";
+        ext.type = "vsix";
+        ext.path = extensionRoot_ + "\\amazonq";
+        registry_[ext.name] = ext;
+        return installExtension("amazonq-ide");
+    }
+    
+    bool installGitHubCopilot() {
+        Extension ext;
+        ext.name = "github-copilot";
+        ext.type = "vsix";
+        ext.path = extensionRoot_ + "\\copilot";
+        registry_[ext.name] = ext;
+        return installExtension("github-copilot");
+    }
+
 private:
     std::string extensionRoot_;
     std::string moduleStore_;
     std::string registryPath_;
+    std::string apiKey_;
     std::map<std::string, Extension> registry_;
 
     bool parseRegistryJson(const std::string& json) {

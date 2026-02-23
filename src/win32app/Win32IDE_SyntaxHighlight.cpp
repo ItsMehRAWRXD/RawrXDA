@@ -24,6 +24,9 @@
 #include <cctype>
 #include <unordered_set>
 
+// SCAFFOLD_027: Syntax highlighting by language
+
+
 // ============================================================================
 // RAII guard for EM_HIDESELECTION — guarantees selection visibility is restored
 // even if the coloring path exits early (e.g. tokenization failure, OOM).

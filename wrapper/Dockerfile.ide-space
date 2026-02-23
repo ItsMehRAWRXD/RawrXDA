@@ -1,0 +1,10 @@
+# RawrXD IDE bootable space — Wine + Xvfb + VNC. Build from repo root: docker build -f wrapper/Dockerfile.ide-space .
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive WINEPREFIX=/data/space DISPLAY=:99
+RUN apt-get update && apt-get install -y --no-install-recommends wine64 xvfb x11vnc wget unzip ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN useradd -m -s /bin/bash rawrxd && mkdir -p /data/space /data/repo /data/ide && chown -R rawrxd:rawrxd /data
+COPY wrapper/entrypoint-ide-space.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 5900
+USER rawrxd
+ENTRYPOINT ["/entrypoint.sh"]

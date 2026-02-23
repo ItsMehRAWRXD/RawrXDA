@@ -1,0 +1,1112 @@
+{
+  "missing": [
+    "SCAFFOLD_016",
+    "SCAFFOLD_045",
+    "SCAFFOLD_046",
+    "SCAFFOLD_047",
+    "SCAFFOLD_075",
+    "SCAFFOLD_088",
+    "SCAFFOLD_091",
+    "SCAFFOLD_104",
+    "SCAFFOLD_109",
+    "SCAFFOLD_113",
+    "SCAFFOLD_114",
+    "SCAFFOLD_132",
+    "SCAFFOLD_133",
+    "SCAFFOLD_139",
+    "SCAFFOLD_140",
+    "SCAFFOLD_141",
+    "SCAFFOLD_146",
+    "SCAFFOLD_171",
+    "SCAFFOLD_172",
+    "SCAFFOLD_175",
+    "SCAFFOLD_179",
+    "SCAFFOLD_182",
+    "SCAFFOLD_184",
+    "SCAFFOLD_185",
+    "SCAFFOLD_188",
+    "SCAFFOLD_189",
+    "SCAFFOLD_192",
+    "SCAFFOLD_193",
+    "SCAFFOLD_194",
+    "SCAFFOLD_195",
+    "SCAFFOLD_197",
+    "SCAFFOLD_198",
+    "SCAFFOLD_199",
+    "SCAFFOLD_201",
+    "SCAFFOLD_215",
+    "SCAFFOLD_217",
+    "SCAFFOLD_218",
+    "SCAFFOLD_221",
+    "SCAFFOLD_222",
+    "SCAFFOLD_223",
+    "SCAFFOLD_224",
+    "SCAFFOLD_225",
+    "SCAFFOLD_227",
+    "SCAFFOLD_228",
+    "SCAFFOLD_229",
+    "SCAFFOLD_230",
+    "SCAFFOLD_231",
+    "SCAFFOLD_232",
+    "SCAFFOLD_233",
+    "SCAFFOLD_235",
+    "SCAFFOLD_236",
+    "SCAFFOLD_238",
+    "SCAFFOLD_244",
+    "SCAFFOLD_247",
+    "SCAFFOLD_249",
+    "SCAFFOLD_250",
+    "SCAFFOLD_252",
+    "SCAFFOLD_261",
+    "SCAFFOLD_265",
+    "SCAFFOLD_269",
+    "SCAFFOLD_272",
+    "SCAFFOLD_273",
+    "SCAFFOLD_275",
+    "SCAFFOLD_276",
+    "SCAFFOLD_277",
+    "SCAFFOLD_298",
+    "SCAFFOLD_301",
+    "SCAFFOLD_302",
+    "SCAFFOLD_303",
+    "SCAFFOLD_304",
+    "SCAFFOLD_305",
+    "SCAFFOLD_306",
+    "SCAFFOLD_307",
+    "SCAFFOLD_308",
+    "SCAFFOLD_309",
+    "SCAFFOLD_310",
+    "SCAFFOLD_311",
+    "SCAFFOLD_312",
+    "SCAFFOLD_313",
+    "SCAFFOLD_314",
+    "SCAFFOLD_315",
+    "SCAFFOLD_316",
+    "SCAFFOLD_317",
+    "SCAFFOLD_318",
+    "SCAFFOLD_319",
+    "SCAFFOLD_320",
+    "SCAFFOLD_321",
+    "SCAFFOLD_326",
+    "SCAFFOLD_341",
+    "SCAFFOLD_342",
+    "SCAFFOLD_350",
+    "SCAFFOLD_351",
+    "SCAFFOLD_353",
+    "SCAFFOLD_354",
+    "SCAFFOLD_355",
+    "SCAFFOLD_356",
+    "SCAFFOLD_367"
+  ],
+  "expected": 367,
+  "totalFound": 270,
+  "timestamp": "2026-02-16 00:47:41",
+  "totalReferences": 465.0,
+  "found": {
+    "SCAFFOLD_143": [
+      "src\\lsp\\RawrXD_LSPServer.cpp"
+    ],
+    "SCAFFOLD_090": [
+      "src\\RawrXD_Agentic_Router.asm"
+    ],
+    "SCAFFOLD_080": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_267": [
+      "src\\core\\subsystem_health_monitor.cpp"
+    ],
+    "SCAFFOLD_186": [
+      "src\\asm\\RawrXD_AuditSystem_Pure.asm",
+      "src\\audit\\codebase_audit_system.cpp",
+      "src\\audit\\codebase_audit_system.hpp",
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_255": [
+      "src\\modules\\engine_manager.cpp"
+    ],
+    "SCAFFOLD_242": [
+      "src\\modules\\vscode_extension_api.cpp"
+    ],
+    "SCAFFOLD_094": [
+      "src\\cli_shell.cpp"
+    ],
+    "SCAFFOLD_057": [
+      "src\\win32app\\Win32IDE_SubAgent.cpp"
+    ],
+    "SCAFFOLD_136": [
+      "src\\asm\\inference_core.asm",
+      "src\\asm\\RawrXD_DualEngine_Pure.asm",
+      "src\\core\\dual_engine_system.h"
+    ],
+    "SCAFFOLD_325": [
+      "src\\asm\\RawrXD_AuditSystem_Pure.asm",
+      "src\\audit\\codebase_audit_system.cpp",
+      "src\\audit\\codebase_audit_system.hpp"
+    ],
+    "SCAFFOLD_334": [
+      "src\\ai\\digestion_engine.cpp"
+    ],
+    "SCAFFOLD_165": [
+      "src\\win32app\\Win32IDE_Tier2Cosmetics.cpp"
+    ],
+    "SCAFFOLD_234": [
+      "src\\core\\WebView2EditorEngine.cpp"
+    ],
+    "SCAFFOLD_246": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_346": [
+      "src\\orchestration\\OrchestrationUI.h"
+    ],
+    "SCAFFOLD_187": [
+      "src\\tools\\license_validator_manifest.cpp"
+    ],
+    "SCAFFOLD_099": [
+      "src\\core\\agentic_task_graph.cpp"
+    ],
+    "SCAFFOLD_266": [
+      "src\\core\\perf_telemetry.cpp"
+    ],
+    "SCAFFOLD_344": [
+      "src\\auth\\QuantumAuthUI.cpp"
+    ],
+    "SCAFFOLD_202": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_359": [
+      "src\\win32app\\IDELogger.h"
+    ],
+    "SCAFFOLD_357": [
+      "src\\win32app\\IocpFileWatcher.cpp"
+    ],
+    "SCAFFOLD_173": [
+      "src\\win32app\\Win32IDE_Commands.cpp"
+    ],
+    "SCAFFOLD_043": [
+      "src\\win32app\\Win32IDE_GameEnginePanel.cpp"
+    ],
+    "SCAFFOLD_107": [
+      "src\\engine\\bpe_tokenizer.cpp"
+    ],
+    "SCAFFOLD_079": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_296": [
+      "src\\mcp_integration.cpp"
+    ],
+    "SCAFFOLD_258": [
+      "src\\modules\\crucible_engine.cpp"
+    ],
+    "SCAFFOLD_070": [
+      "src\\agentic\\DeterministicReplayEngine.cpp"
+    ],
+    "SCAFFOLD_203": [
+      "src\\security\\hsm_integration.cpp"
+    ],
+    "SCAFFOLD_040": [
+      "src\\win32app\\Win32IDE_AgentCommands.cpp"
+    ],
+    "SCAFFOLD_348": [
+      "src\\zero_day_agentic_engine.hpp"
+    ],
+    "SCAFFOLD_253": [
+      "src\\engine\\react_ide_generator.cpp"
+    ],
+    "SCAFFOLD_061": [
+      "src\\agentic\\AgentOrchestrator.cpp"
+    ],
+    "SCAFFOLD_008": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_105": [
+      "src\\vulkan_compute.cpp"
+    ],
+    "SCAFFOLD_245": [
+      "src\\plugin_system\\win32_plugin_loader.cpp"
+    ],
+    "SCAFFOLD_220": [
+      "src\\proxy_hotpatcher.h"
+    ],
+    "SCAFFOLD_207": [
+      "src\\security\\sovereign_keymgmt.cpp"
+    ],
+    "SCAFFOLD_101": [
+      "src\\gguf_loader.cpp"
+    ],
+    "SCAFFOLD_093": [
+      "src\\interactive_shell_minimal.cpp"
+    ],
+    "SCAFFOLD_279": [
+      "src\\core\\ide_linker_bridge.cpp"
+    ],
+    "SCAFFOLD_039": [
+      "src\\win32app\\Win32IDE_AgentCommands.cpp"
+    ],
+    "SCAFFOLD_151": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_196": [
+      "src\\asm\\RawrXD_OverclockGov_Pure.asm",
+      "src\\core\\unified_overclock_governor.h"
+    ],
+    "SCAFFOLD_191": [
+      "src\\mcp_integration.cpp"
+    ],
+    "SCAFFOLD_119": [
+      "src\\inference\\ultra_fast_inference.cpp"
+    ],
+    "SCAFFOLD_018": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_041": [
+      "src\\win32app\\Win32IDE_WebView2.cpp"
+    ],
+    "SCAFFOLD_021": [
+      "src\\win32app\\Win32IDE_Autonomy.cpp"
+    ],
+    "SCAFFOLD_058": [
+      "src\\win32app\\Win32IDE_SubAgent.cpp"
+    ],
+    "SCAFFOLD_121": [
+      "src\\core\\vision_embedding_cache.cpp"
+    ],
+    "SCAFFOLD_329": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_010": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_328": [
+      "src\\core\\enterprise_licensev2_impl.cpp"
+    ],
+    "SCAFFOLD_026": [
+      "src\\win32app\\Win32IDE_Themes.cpp"
+    ],
+    "SCAFFOLD_283": [
+      "src\\ide\\resource_generator.cpp"
+    ],
+    "SCAFFOLD_024": [
+      "src\\win32app\\Win32IDE_VSCodeUI.cpp"
+    ],
+    "SCAFFOLD_155": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_256": [
+      "src\\modules\\codex_ultimate.cpp"
+    ],
+    "SCAFFOLD_327": [
+      "src\\tools\\enterprise_license_unified_creator.cpp"
+    ],
+    "SCAFFOLD_200": [
+      "src\\win32app\\RawrXD_SettingsManager_Win32.cpp"
+    ],
+    "SCAFFOLD_042": [
+      "src\\win32app\\Win32IDE_GUILayoutHotpatch.cpp"
+    ],
+    "SCAFFOLD_226": [
+      "src\\asm\\RawrXD_OverclockGov_Pure.asm",
+      "src\\core\\unified_overclock_governor.h"
+    ],
+    "SCAFFOLD_125": [
+      "src\\modules\\engine_manager.cpp"
+    ],
+    "SCAFFOLD_065": [
+      "src\\agentic\\AgentOllamaClient.cpp"
+    ],
+    "SCAFFOLD_323": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_092": [
+      "src\\agentic_engine.cpp"
+    ],
+    "SCAFFOLD_160": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_089": [
+      "src\\action_executor.cpp"
+    ],
+    "SCAFFOLD_286": [
+      "src\\core\\auto_feature_registry_guards.hpp"
+    ],
+    "SCAFFOLD_216": [
+      "src\\ggml-opencl\\ggml-opencl.cpp"
+    ],
+    "SCAFFOLD_098": [
+      "src\\core\\prompt_template_engine.cpp"
+    ],
+    "SCAFFOLD_190": [
+      "src\\core\\js_extension_host_stub.cpp"
+    ],
+    "SCAFFOLD_087": [
+      "src\\MultiModalModelRouter.cpp"
+    ],
+    "SCAFFOLD_053": [
+      "src\\win32app\\Win32IDE_AgenticBridge.cpp"
+    ],
+    "SCAFFOLD_169": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_003": [
+      "src\\win32app\\Win32IDE_VSCodeUI.cpp"
+    ],
+    "SCAFFOLD_068": [
+      "src\\agent\\agentic_puppeteer.cpp"
+    ],
+    "SCAFFOLD_106": [
+      "src\\modules\\inference_engine.cpp"
+    ],
+    "SCAFFOLD_239": [
+      "src\\win32app\\multi_file_search_stub.cpp"
+    ],
+    "SCAFFOLD_219": [
+      "src\\core\\memory_patch_byte_search_stubs.cpp"
+    ],
+    "SCAFFOLD_144": [
+      "src\\lsp\\diagnostic_consumer.cpp"
+    ],
+    "SCAFFOLD_294": [
+      "src\\agentic\\DeterministicReplayEngine.cpp"
+    ],
+    "SCAFFOLD_108": [
+      "src\\engine\\sentencepiece_tokenizer.cpp"
+    ],
+    "SCAFFOLD_268": [
+      "src\\core\\deterministic_replay.cpp"
+    ],
+    "SCAFFOLD_149": [
+      "src\\win32app\\Win32IDE_LSPClient.cpp"
+    ],
+    "SCAFFOLD_352": [
+      "src\\asm\\RawrXD_AuditSystem_Pure.asm",
+      "src\\audit\\codebase_audit_system.hpp"
+    ],
+    "SCAFFOLD_290": [
+      "src\\core\\swarm_conflict_resolver.cpp"
+    ],
+    "SCAFFOLD_164": [
+      "src\\win32app\\Win32IDE_Tier2Cosmetics.cpp"
+    ],
+    "SCAFFOLD_067": [
+      "src\\agent\\agentic_failure_detector.cpp"
+    ],
+    "SCAFFOLD_263": [
+      "src\\telemetry\\telemetry_export.cpp"
+    ],
+    "SCAFFOLD_157": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_336": [
+      "src\\core\\vision_gpu_staging.cpp"
+    ],
+    "SCAFFOLD_340": [
+      "src\\win32app\\multi_file_search_stub.cpp"
+    ],
+    "SCAFFOLD_365": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_048": [
+      "src\\plugin_system\\win32_plugin_loader.cpp"
+    ],
+    "SCAFFOLD_271": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_069": [
+      "src\\agent\\agentic_hotpatch_orchestrator.cpp"
+    ],
+    "SCAFFOLD_002": [
+      "src\\win32app\\Win32IDE_VSCodeUI.cpp"
+    ],
+    "SCAFFOLD_260": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_011": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_176": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_158": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_110": [
+      "src\\cpu_inference_engine.cpp"
+    ],
+    "SCAFFOLD_281": [
+      "src\\ide\\chat_panel_integration.cpp"
+    ],
+    "SCAFFOLD_117": [
+      "src\\ide\\chat_panel_integration.cpp"
+    ],
+    "SCAFFOLD_168": [
+      "src\\win32app\\IocpFileWatcher.cpp"
+    ],
+    "SCAFFOLD_299": [
+      "src\\core\\auto_repair_orchestrator.cpp"
+    ],
+    "SCAFFOLD_204": [
+      "src\\security\\fips_compliance.cpp"
+    ],
+    "SCAFFOLD_178": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_240": [
+      "src\\win32app\\digestion_engine_stub.cpp"
+    ],
+    "SCAFFOLD_324": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_118": [
+      "src\\agentic\\FIMPromptBuilder.cpp"
+    ],
+    "SCAFFOLD_123": [
+      "src\\gpu\\speculative_decoder.cpp"
+    ],
+    "SCAFFOLD_029": [
+      "src\\win32app\\Win32IDE_VoiceChat.cpp"
+    ],
+    "SCAFFOLD_322": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_128": [
+      "src\\action_executor.cpp"
+    ],
+    "SCAFFOLD_072": [
+      "src\\core\\autonomous_workflow_engine.cpp"
+    ],
+    "SCAFFOLD_284": [
+      "src\\engine\\core_generator.cpp"
+    ],
+    "SCAFFOLD_023": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_056": [
+      "src\\win32app\\Win32IDE_Autonomy.cpp"
+    ],
+    "SCAFFOLD_257": [
+      "src\\modules\\game_engine_manager.cpp"
+    ],
+    "SCAFFOLD_131": [
+      "src\\action_executor.cpp"
+    ],
+    "SCAFFOLD_122": [
+      "src\\core\\vision_kv_isolation.cpp"
+    ],
+    "SCAFFOLD_126": [
+      "src\\modules\\codex_ultimate.cpp"
+    ],
+    "SCAFFOLD_081": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_293": [
+      "src\\core\\reasoning_cot_bridge.cpp"
+    ],
+    "SCAFFOLD_059": [
+      "src\\win32app\\Win32IDE_SubAgent.cpp"
+    ],
+    "SCAFFOLD_020": [
+      "src\\win32app\\Win32IDE_AgenticBridge.cpp"
+    ],
+    "SCAFFOLD_027": [
+      "src\\win32app\\Win32IDE_SyntaxHighlight.cpp"
+    ],
+    "SCAFFOLD_064": [
+      "src\\agentic\\OllamaProvider.cpp"
+    ],
+    "SCAFFOLD_210": [
+      "src\\core\\agent_safety_contract.cpp"
+    ],
+    "SCAFFOLD_243": [
+      "src\\win32app\\Win32IDE_MarketplacePanel.cpp"
+    ],
+    "SCAFFOLD_137": [
+      "src\\asm\\feature_dispatch_bridge.asm",
+      "src\\asm\\RawrXD_DualEngine_Pure.asm",
+      "src\\core\\dual_engine_system.h"
+    ],
+    "SCAFFOLD_183": [
+      "src\\test_harness\\replay_harness.cpp"
+    ],
+    "SCAFFOLD_073": [
+      "src\\core\\swarm_decision_bridge.cpp"
+    ],
+    "SCAFFOLD_161": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_083": [
+      "src\\ui\\tool_action_status.cpp"
+    ],
+    "SCAFFOLD_034": [
+      "src\\win32app\\Win32IDE_FileOps.cpp"
+    ],
+    "SCAFFOLD_066": [
+      "src\\agentic\\agentic_executor.cpp"
+    ],
+    "SCAFFOLD_366": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_086": [
+      "src\\mcp_integration.cpp"
+    ],
+    "SCAFFOLD_361": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_213": [
+      "src\\setup\\SetupWizard.cpp"
+    ],
+    "SCAFFOLD_248": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_278": [
+      "src\\ai_integration_hub.cpp"
+    ],
+    "SCAFFOLD_060": [
+      "src\\agentic\\BoundedAgentLoop.cpp"
+    ],
+    "SCAFFOLD_259": [
+      "src\\modules\\copilot_gap_closer.cpp"
+    ],
+    "SCAFFOLD_129": [
+      "src\\action_executor.cpp"
+    ],
+    "SCAFFOLD_209": [
+      "src\\core\\sandbox_integration.cpp"
+    ],
+    "SCAFFOLD_147": [
+      "src\\win32app\\Win32IDE_CursorParity.cpp"
+    ],
+    "SCAFFOLD_337": [
+      "src\\ggml-opencl\\ggml-opencl.cpp"
+    ],
+    "SCAFFOLD_153": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_025": [
+      "src\\win32app\\Win32IDE_Tier2Cosmetics.cpp"
+    ],
+    "SCAFFOLD_335": [
+      "src\\agent\\agentic_deep_thinking_engine_stub.cpp"
+    ],
+    "SCAFFOLD_211": [
+      "src\\core\\enterprise_license_panel.cpp"
+    ],
+    "SCAFFOLD_358": [
+      "src\\win32app\\TransparentRenderer.cpp"
+    ],
+    "SCAFFOLD_036": [
+      "src\\win32app\\Win32IDE_FailureIntelligence.cpp"
+    ],
+    "SCAFFOLD_095": [
+      "src\\validate_agentic_tools.cpp"
+    ],
+    "SCAFFOLD_214": [
+      "src\\auth\\QuantumAuthUI.cpp"
+    ],
+    "SCAFFOLD_288": [
+      "src\\core\\universal_model_hotpatcher.cpp"
+    ],
+    "SCAFFOLD_134": [
+      "src\\agentic\\gpu_dma_complete_final.asm",
+      "src\\agentic\\GPU_DMA_COMPLETE_IMPLEMENTATIONS.asm",
+      "src\\agentic\\gpu_dma_complete_production_FIXED.asm",
+      "src\\agentic\\gpu_dma_complete_production.asm",
+      "src\\agentic\\memory_cleanup_phase_integration.asm",
+      "src\\agentic\\memory_cleanup.asm",
+      "src\\agentic\\Phase3_Agent_Kernel_Complete.asm",
+      "src\\agentic\\RawrXD_Absolutely_Complete.asm",
+      "src\\agentic\\RawrXD_Compiler_Engine_Complete.asm",
+      "src\\agentic\\RawrXD_Compiler_Engine_Stubs_BACKUP.asm",
+      "src\\agentic\\RawrXD_Complete_Explicit.asm",
+      "src\\agentic\\RawrXD_Complete_Hidden_Logic.asm",
+      "src\\agentic\\rawrxd_complete_master_implementation.asm",
+      "src\\agentic\\RawrXD_Complete_Production_Fix.asm",
+      "src\\agentic\\RawrXD_Complete_Production_System.asm",
+      "src\\agentic\\RawrXD_Complete_ReverseEngineered.asm",
+      "src\\agentic\\RawrXD_Critical_Blockers_P0.asm",
+      "src\\agentic\\rawrxd_final_complete_implementation.asm",
+      "src\\agentic\\RawrXD_High_Priority_P1.asm",
+      "src\\agentic\\RawrXD_Low_Priority_P3.asm",
+      "src\\agentic\\RawrXD_Medium_Priority_P2.asm",
+      "src\\agentic\\RawrXD_Production_ReverseEngineered.asm",
+      "src\\agentic\\RawrXD_Titan_Master_GodSource_REVERSE_ENGINEERED.asm",
+      "src\\agentic\\Titan_FullLogic_Simplified_vs_Production.asm",
+      "src\\agentic\\titan_masm_real.asm",
+      "src\\agentic\\Titan_Streaming_Orchestrator_Complete.asm",
+      "src\\agentic\\Titan_Streaming_Orchestrator.asm",
+      "src\\ai\\digestion_scanner.asm",
+      "src\\asm\\agentic_deep_thinking_kernels_fixed.asm",
+      "src\\asm\\agentic_deep_thinking_kernels.asm",
+      "src\\asm\\agentic_puppeteer_byte_ops_fixed.asm",
+      "src\\asm\\agentic_puppeteer_byte_ops.asm",
+      "src\\asm\\ai_agent_masm_core.asm",
+      "src\\asm\\ai_completion_provider_masm_fixed.asm",
+      "src\\asm\\ai_completion_provider_masm.asm",
+      "src\\asm\\byte_search.asm",
+      "src\\asm\\custom_zlib.asm",
+      "src\\asm\\DirectML_Bridge.asm",
+      "src\\asm\\disk_recovery_scsi.asm",
+      "src\\asm\\feature_dispatch_bridge.asm",
+      "src\\asm\\FlashAttention_AVX512.asm",
+      "src\\asm\\gguf_dump.asm",
+      "src\\asm\\gpu_requantize_rocm.asm",
+      "src\\asm\\gui_dispatch_bridge.asm",
+      "src\\asm\\inference_core.asm",
+      "src\\asm\\inference_kernels.asm",
+      "src\\asm\\MASM_STACK_ALIGNMENT_AUDIT_REPORT.asm",
+      "src\\asm\\memory_patch.asm",
+      "src\\asm\\model_bridge_x64.asm",
+      "src\\asm\\native_speed_kernels.asm",
+      "src\\asm\\quant_avx2.asm",
+      "src\\asm\\quantum_autonomous_todo_masm.asm",
+      "src\\asm\\quantum_beaconism_backend.asm",
+      "src\\asm\\RawrCodex.asm",
+      "src\\asm\\RawrXD_AgenticOrchestrator.asm",
+      "src\\asm\\RawrXD_AgenticShellBridge.asm",
+      "src\\asm\\RawrXD_AgentToolExecutor.asm",
+      "src\\asm\\RawrXD_Camellia256_Auth.asm",
+      "src\\asm\\RawrXD_Camellia256.asm",
+      "src\\asm\\RawrXD_CodebaseAuditSystem.asm",
+      "src\\asm\\RawrXD_CopilotGapCloser.asm",
+      "src\\asm\\rawrxd_cot_dll_entry.asm",
+      "src\\asm\\rawrxd_cot_engine.asm",
+      "src\\asm\\rawrxd_cot_phase39.asm",
+      "src\\asm\\RawrXD_Debug_Engine.asm",
+      "src\\asm\\RawrXD_DiskKernel.asm",
+      "src\\asm\\RawrXD_DiskRecoveryAgent.asm",
+      "src\\asm\\RawrXD_DualAgent_Orchestrator.asm",
+      "src\\asm\\RawrXD_DualEngine_QuantumBeacon.asm",
+      "src\\asm\\RawrXD_DynamicPromptEngine.asm",
+      "src\\asm\\RawrXD_EnterpriseLicense.asm",
+      "src\\asm\\RawrXD_GGUF_Vulkan_Loader.asm",
+      "src\\asm\\RawrXD_GSIHash.asm",
+      "src\\asm\\RawrXD_HardwareSynthesizer.asm",
+      "src\\asm\\RawrXD_Hotpatch_Kernel.asm",
+      "src\\asm\\RawrXD_KQuant_Dequant.asm",
+      "src\\asm\\RawrXD_KQuant_Kernel.asm",
+      "src\\asm\\RawrXD_License_Shield.asm",
+      "src\\asm\\rawrxd_link.asm",
+      "src\\asm\\RawrXD_LSP_AI_Bridge.asm",
+      "src\\asm\\RawrXD_LSP_SymbolIndex.asm",
+      "src\\asm\\RawrXD_MeshBrain.asm",
+      "src\\asm\\RawrXD_MonacoCore.asm",
+      "src\\asm\\RawrXD_MultiWindow_Kernel.asm",
+      "src\\asm\\RawrXD_NanoDiskBridge.asm",
+      "src\\asm\\RawrXD_NanoQuant_Engine.asm",
+      "src\\asm\\RawrXD_NanoQuant_Streaming.asm",
+      "src\\asm\\RawrXD_NeuralBridge.asm",
+      "src\\asm\\RawrXD_OllamaTuner.asm",
+      "src\\asm\\RawrXD_OmegaOrchestrator.asm",
+      "src\\asm\\RawrXD_PDBKernel.asm",
+      "src\\asm\\RawrXD_PerfCounters.asm",
+      "src\\asm\\RawrXD_Prometheus_Exporter.asm",
+      "src\\asm\\RawrXD_Pyre_Compute.asm",
+      "src\\asm\\RawrXD_QuadBuffer_Streamer.asm",
+      "src\\asm\\RawrXD_RefProvider.asm",
+      "src\\asm\\RawrXD_RouterBridge.asm",
+      "src\\asm\\rawrxd_scc.asm",
+      "src\\asm\\RawrXD_SelfHost_Engine.asm",
+      "src\\asm\\RawrXD_SelfPatch_Agent.asm",
+      "src\\asm\\RawrXD_SelfPatch_Engine.asm",
+      "src\\asm\\RawrXD_ShellIntegration.asm",
+      "src\\asm\\RawrXD_Snapshot.asm",
+      "src\\asm\\RawrXD_SocketResponder.asm",
+      "src\\asm\\RawrXD_SourceEdit_Kernel.asm",
+      "src\\asm\\RawrXD_Speciator.asm",
+      "src\\asm\\RawrXD_Streaming_QuadBuffer.asm",
+      "src\\asm\\RawrXD_StreamingWeights.asm",
+      "src\\asm\\RawrXD_StubDetector.asm",
+      "src\\asm\\RawrXD_Swarm_Network.asm",
+      "src\\asm\\RawrXD_Telemetry_Kernel.asm",
+      "src\\asm\\RawrXD_TridentBeacon_GPU.asm",
+      "src\\asm\\RawrXD_TridentBeacon.asm",
+      "src\\asm\\RawrXD_UnifiedOverclock_Governor.asm",
+      "src\\asm\\RawrXD_UnifiedOverclockGovernor.asm",
+      "src\\asm\\RawrXD_VulkanBridge.asm",
+      "src\\asm\\RawrXD_Watchdog.asm",
+      "src\\asm\\RawrXD-AnalyzerDistiller.asm",
+      "src\\asm\\RawrXD-StreamingOrchestrator.asm",
+      "src\\asm\\RawrXD-VulkanKernel.asm",
+      "src\\asm\\requantize_q4km_to_q2k_avx512.asm",
+      "src\\asm\\request_patch.asm",
+      "src\\asm\\solo_standalone_compiler.asm",
+      "src\\asm\\swarm_tensor_stream.asm",
+      "src\\asm\\vision_projection_kernel.asm",
+      "src\\core\\quantum_beaconism_backend.h",
+      "src\\digestion\\digestion_asm_x64.asm",
+      "src\\digestion\\RawrXD_DigestionEngine.asm",
+      "src\\direct_io\\adaptive_burst_router.asm",
+      "src\\direct_io\\ghost_handshake.asm",
+      "src\\direct_io\\jit_lba_mapper.asm",
+      "src\\direct_io\\nvme_oracle_service.asm",
+      "src\\direct_io\\nvme_query.asm",
+      "src\\direct_io\\nvme_thermal_sidecar_clean.asm",
+      "src\\direct_io\\nvme_thermal_sidecar_corrected.asm",
+      "src\\direct_io\\nvme_thermal_sidecar_entry.asm",
+      "src\\direct_io\\nvme_thermal_sidecar.asm",
+      "src\\direct_io\\nvme_thermal_stressor.asm",
+      "src\\direct_io\\quantum_auth.asm",
+      "src\\direct_io\\RAWRXD_BURSTCORE_X7.asm",
+      "src\\direct_io\\sidecar_minimal.asm",
+      "src\\direct_io\\test_mmf.asm",
+      "src\\extension_host\\RawrXD_DAP.asm",
+      "src\\extension_host\\RawrXD_ExtensionHost.asm",
+      "src\\extension_host\\RawrXD_MarketplaceInstaller.asm",
+      "src\\extension_host\\RawrXD_WebView2.asm",
+      "src\\foundation\\Phase1_Master.asm",
+      "src\\ggml_masm\\attention.asm",
+      "src\\ggml_masm\\compression.asm",
+      "src\\ggml_masm\\ggml_backend.asm",
+      "src\\ggml_masm\\kv_cache.asm",
+      "src\\ggml_masm\\quantization.asm",
+      "src\\ggml_masm\\tensor_ops.asm",
+      "src\\gpu\\cuda_impl.asm",
+      "src\\gpu\\rocm_impl.asm",
+      "src\\gpu\\vulkan_impl.asm",
+      "src\\gpu_masm\\cuda_api.asm",
+      "src\\gpu_masm\\deflate_brutal_masm.asm",
+      "src\\gpu_masm\\gpu_backend.asm",
+      "src\\gpu_masm\\gpu_detection.asm",
+      "src\\gpu_masm\\gpu_kernels.asm",
+      "src\\gpu_masm\\gpu_memory.asm",
+      "src\\gpu_masm\\vk_instance.asm",
+      "src\\loader\\Phase2_Master.asm",
+      "src\\masm\\masm_solo_compiler_fixed.asm",
+      "src\\masm\\masm_solo_compiler.asm",
+      "src\\masm\\RawrXD_HttpChatServer.asm",
+      "src\\masm\\RawrXD_LazyTensorPager.asm",
+      "src\\masm\\RawrXD_NativeHttpServer.asm",
+      "src\\masm\\RawrXD_Streaming_Orchestrator.asm",
+      "src\\masm\\robust_tools.asm",
+      "src\\net\\net.asm",
+      "src\\orchestrator\\Phase5_Master_Complete.asm",
+      "src\\orchestrator\\RawrXD_QuadBuffer_DMA_Orchestrator.asm",
+      "src\\orchestrator\\RawrXD_QuadBuffer_Validate.asm",
+      "src\\orchestrator\\RawrXD_Titan_Extensions.asm",
+      "src\\win32app\\mcp_hooks.asm",
+      "src\\x64\\rawrxd_audit.asm",
+      "src\\x64\\rawrxd_dual_engine.asm",
+      "src\\x64\\rawrxd_governor.asm",
+      "src\\x64\\rawrxd_quantum_beaconism.asm"
+    ],
+    "SCAFFOLD_264": [
+      "src\\win32app\\Win32IDE_Telemetry.cpp"
+    ],
+    "SCAFFOLD_270": [
+      "src\\win32app\\Win32IDE_VSCodeUI.cpp"
+    ],
+    "SCAFFOLD_115": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_014": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_013": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_362": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_112": [
+      "src\\gpu\\cuda_inference_engine.cpp"
+    ],
+    "SCAFFOLD_295": [
+      "src\\agentic\\BoundedAgentLoop.cpp"
+    ],
+    "SCAFFOLD_074": [
+      "src\\cli\\agentic_decision_tree.cpp"
+    ],
+    "SCAFFOLD_331": [
+      "src\\win32app\\Win32IDE_SwarmPanel.cpp"
+    ],
+    "SCAFFOLD_205": [
+      "src\\core\\license_anti_tampering.cpp"
+    ],
+    "SCAFFOLD_289": [
+      "src\\agent\\model_invoker.cpp"
+    ],
+    "SCAFFOLD_287": [
+      "src\\core\\ssot_handlers_ext.cpp"
+    ],
+    "SCAFFOLD_009": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_012": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_082": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_049": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_084": [
+      "src\\core\\native_inference_pipeline.cpp"
+    ],
+    "SCAFFOLD_166": [
+      "src\\win32app\\Win32IDE_Tier2Cosmetics.cpp"
+    ],
+    "SCAFFOLD_360": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_212": [
+      "src\\setup\\SetupWizard.cpp"
+    ],
+    "SCAFFOLD_285": [
+      "src\\engine\\react_server_generator.cpp"
+    ],
+    "SCAFFOLD_339": [
+      "src\\win32app\\benchmark_menu_stub.cpp"
+    ],
+    "SCAFFOLD_033": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_156": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_292": [
+      "src\\core\\self_host_engine.cpp"
+    ],
+    "SCAFFOLD_364": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_282": [
+      "src\\ide\\chat_panel_integration.cpp"
+    ],
+    "SCAFFOLD_347": [
+      "src\\mainwindow.cpp"
+    ],
+    "SCAFFOLD_237": [
+      "src\\win32app\\benchmark_runner_stub.cpp"
+    ],
+    "SCAFFOLD_078": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_333": [
+      "src\\lsp\\lsp_hotpatch_bridge.cpp"
+    ],
+    "SCAFFOLD_262": [
+      "src\\win32app\\Win32IDE_TelemetryDashboard.cpp"
+    ],
+    "SCAFFOLD_052": [
+      "src\\win32app\\Win32IDE_AgenticBridge.cpp"
+    ],
+    "SCAFFOLD_159": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_111": [
+      "src\\core\\multi_gpu_manager.cpp"
+    ],
+    "SCAFFOLD_103": [
+      "src\\model_source_resolver.cpp"
+    ],
+    "SCAFFOLD_055": [
+      "src\\win32app\\Win32IDE_Autonomy.cpp"
+    ],
+    "SCAFFOLD_028": [
+      "src\\win32app\\Win32IDE_Breadcrumbs.cpp"
+    ],
+    "SCAFFOLD_097": [
+      "src\\lsp\\diagnostic_consumer.cpp"
+    ],
+    "SCAFFOLD_274": [
+      "src\\win32app\\Win32IDE_TelemetryDashboard.cpp"
+    ],
+    "SCAFFOLD_152": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_063": [
+      "src\\agentic\\agentic_composer_ux.cpp"
+    ],
+    "SCAFFOLD_208": [
+      "src\\core\\plugin_signature.cpp"
+    ],
+    "SCAFFOLD_338": [
+      "src\\win32app\\Win32IDE_LSPServer.cpp"
+    ],
+    "SCAFFOLD_163": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_077": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_127": [
+      "src\\modules\\crucible_engine.cpp"
+    ],
+    "SCAFFOLD_096": [
+      "src\\tool_server.cpp"
+    ],
+    "SCAFFOLD_180": [
+      "src\\tool_server.cpp"
+    ],
+    "SCAFFOLD_124": [
+      "src\\gpu\\kv_cache_optimizer.cpp"
+    ],
+    "SCAFFOLD_332": [
+      "src\\smart_rewrite_engine_integration.cpp"
+    ],
+    "SCAFFOLD_343": [
+      "src\\setup\\SetupWizard.cpp"
+    ],
+    "SCAFFOLD_291": [
+      "src\\core\\webrtc_signaling.cpp"
+    ],
+    "SCAFFOLD_085": [
+      "src\\core\\instructions_provider.cpp"
+    ],
+    "SCAFFOLD_032": [
+      "src\\win32app\\Win32IDE_TestExplorerTree.cpp"
+    ],
+    "SCAFFOLD_148": [
+      "src\\win32app\\Win32IDE_LSPClient.cpp"
+    ],
+    "SCAFFOLD_330": [
+      "src\\win32app\\Win32IDE_FeatureManifest.cpp"
+    ],
+    "SCAFFOLD_130": [
+      "src\\win32app\\HeadlessIDE.cpp"
+    ],
+    "SCAFFOLD_035": [
+      "src\\win32app\\Win32IDE_FailureDetector.cpp"
+    ],
+    "SCAFFOLD_142": [
+      "src\\lsp\\diagnostic_consumer.cpp"
+    ],
+    "SCAFFOLD_019": [
+      "src\\win32app\\Win32IDE_PlanExecutor.cpp"
+    ],
+    "SCAFFOLD_297": [
+      "src\\git\\git_context.cpp"
+    ],
+    "SCAFFOLD_170": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_100": [
+      "src\\core\\subsystem_agent_bridge.hpp"
+    ],
+    "SCAFFOLD_167": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_116": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_174": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_162": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_004": [
+      "src\\win32app\\Win32IDE_VSCodeUI.cpp"
+    ],
+    "SCAFFOLD_007": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_300": [
+      "src\\core\\alert_system.cpp"
+    ],
+    "SCAFFOLD_062": [
+      "src\\agentic\\OrchestratorBridge.cpp"
+    ],
+    "SCAFFOLD_145": [
+      "src\\lsp\\lsp_hotpatch_bridge.cpp"
+    ],
+    "SCAFFOLD_031": [
+      "src\\win32app\\Win32IDE_TelemetryDashboard.cpp"
+    ],
+    "SCAFFOLD_001": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_150": [
+      "src\\win32app\\Win32IDE_LSPClient.cpp"
+    ],
+    "SCAFFOLD_017": [
+      "src\\win32app\\Win32IDE_AgentCommands.cpp"
+    ],
+    "SCAFFOLD_181": [
+      "src\\digestion\\digestion_cli.cpp"
+    ],
+    "SCAFFOLD_051": [
+      "src\\win32app\\Win32IDE_AgenticBridge.cpp"
+    ],
+    "SCAFFOLD_254": [
+      "src\\monaco_gen.cpp"
+    ],
+    "SCAFFOLD_102": [
+      "src\\streaming_gguf_loader.cpp"
+    ],
+    "SCAFFOLD_005": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_138": [
+      "src\\engine\\pyre_compute.cpp"
+    ],
+    "SCAFFOLD_037": [
+      "src\\win32app\\Win32IDE_CursorParity.cpp"
+    ],
+    "SCAFFOLD_251": [
+      "src\\ggml-opencl\\ggml-opencl.cpp"
+    ],
+    "SCAFFOLD_030": [
+      "src\\win32app\\Win32IDE_VoiceAutomation.cpp"
+    ],
+    "SCAFFOLD_241": [
+      "src\\modules\\ExtensionLoader.hpp"
+    ],
+    "SCAFFOLD_071": [
+      "src\\core\\agentic_task_graph.cpp"
+    ],
+    "SCAFFOLD_363": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_349": [
+      "src\\core\\thermal_plugin_loader.hpp"
+    ],
+    "SCAFFOLD_135": [
+      "src\\asm\\custom_zlib.asm",
+      "src\\core\\quantum_beaconism_backend.h"
+    ],
+    "SCAFFOLD_154": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_038": [
+      "src\\win32app\\Win32IDE_AgentHistory.cpp"
+    ],
+    "SCAFFOLD_120": [
+      "src\\core\\inference_state_machine.cpp"
+    ],
+    "SCAFFOLD_022": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_177": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_076": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_054": [
+      "src\\win32app\\Win32IDE_AgenticBridge.cpp"
+    ],
+    "SCAFFOLD_345": [
+      "src\\thermal\\thermal_dashboard_plugin.cpp"
+    ],
+    "SCAFFOLD_044": [
+      "src\\win32app\\Win32IDE_CopilotGapPanel.cpp"
+    ],
+    "SCAFFOLD_006": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_015": [
+      "src\\win32app\\Win32IDE.cpp"
+    ],
+    "SCAFFOLD_206": [
+      "src\\asm\\RawrXD_AuditSystem_Pure.asm",
+      "src\\audit\\codebase_audit_system.hpp",
+      "src\\security\\audit_log_immutable.cpp"
+    ],
+    "SCAFFOLD_280": [
+      "src\\ide\\chat_panel_integration.cpp"
+    ],
+    "SCAFFOLD_050": [
+      "src\\win32app\\Win32IDE.cpp"
+    ]
+  }
+}

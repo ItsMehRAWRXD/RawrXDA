@@ -1,157 +1,81 @@
 #pragma once
 
-#include <QWidget>
-#include <QString>
-#include <QDateTime>
-#include <QSqlDatabase>
-#include <QVector>
-
-// Forward declarations
-class QTableWidget;
-class QPushButton;
-class QLabel;
-class QLineEdit;
-class QComboBox;
+#include <string>
+#include <vector>
+#include <functional>
+#include <cstdint>
 
 /**
- * @brief Model version for registry tracking
+ * @brief Model version for registry tracking (Win32/Qt-free)
  */
 struct ModelVersion
 {
-    int id;                      // Database ID
-    QString name;                // Model name/identifier
-    QString path;                // File path to .gguf file
-    QString baseModel;           // Base model used for fine-tuning
-    QString dataset;             // Dataset used for training
-    QDateTime createdAt;         // Timestamp
-    float finalLoss;             // Final training loss
-    float perplexity;            // Validation perplexity
-    int epochs;                  // Number of training epochs
-    float learningRate;          // Learning rate used
-    int batchSize;               // Batch size used
-    QString tags;                // User-defined tags (comma-separated)
-    QString notes;               // User notes
-    qint64 fileSize;             // File size in bytes
-    bool isActive;               // Currently selected/active model
+    int id = 0;
+    std::string name;
+    std::string path;
+    std::string baseModel;
+    std::string dataset;
+    int64_t createdAt = 0;
+    float finalLoss = 0.f;
+    float perplexity = 0.f;
+    int epochs = 0;
+    float learningRate = 0.f;
+    int batchSize = 0;
+    std::string tags;
+    std::string notes;
+    int64_t fileSize = 0;
+    bool isActive = false;
 };
 
 /**
- * @brief Model registry for managing trained model versions
- * 
+ * @brief Model registry for managing trained model versions (Win32, no Qt)
+ *
  * Provides:
- * - SQLite-backed persistent storage of model metadata
+ * - In-memory or SQLite-backed storage of model metadata
  * - Version listing and comparison
  * - Rollback to previous versions
- * - Tagging and annotation
- * - Search and filtering
+ * - Optional callbacks for selection/deletion/update
  */
-class ModelRegistry : public QWidget
+class ModelRegistry
 {
-    Q_OBJECT
-
 public:
-    explicit ModelRegistry(QWidget* parent = nullptr);
-    ~ModelRegistry() override;
-    
-    /**
-     * Two-phase initialization - call after QApplication is ready
-     * Sets up database, creates Qt widgets, and loads models
-     */
+    using UpdatedCallback = void (*)(void* ctx);
+    using DeletedCallback = void (*)(void* ctx, int id);
+    using SelectedCallback = void (*)(void* ctx, const char* modelPath);
+
+    explicit ModelRegistry(void* parent = nullptr);
+    ~ModelRegistry();
+
     void initialize();
 
-    /**
-     * @brief Register a newly trained model
-     * @param version Model metadata
-     * @return true if registration successful
-     */
     bool registerModel(const ModelVersion& version);
-
-    /**
-     * @brief Get all registered models
-     * @return Vector of all model versions
-     */
-    QVector<ModelVersion> getAllModels() const;
-
-    /**
-     * @brief Get a specific model by ID
-     * @param id Database ID
-     * @return Model version or empty if not found
-     */
+    std::vector<ModelVersion> getAllModels() const;
     ModelVersion getModel(int id) const;
-
-    /**
-     * @brief Delete a model from registry (does not delete file)
-     * @param id Database ID
-     * @return true if deletion successful
-     */
     bool deleteModel(int id);
-
-    /**
-     * @brief Set a model as the active model
-     * @param id Database ID
-     * @return true if successful
-     */
     bool setActiveModel(int id);
-
-    /**
-     * @brief Get the currently active model
-     * @return Active model version or empty if none
-     */
     ModelVersion getActiveModel() const;
 
-signals:
-    /**
-     * @brief Emitted when a model is selected for use
-     * @param modelPath Path to the selected model file
-     */
-    void modelSelected(const QString& modelPath);
+    void setUpdatedCallback(void* ctx, UpdatedCallback cb) { m_updatedCtx = ctx; m_updatedCb = cb; }
+    void setDeletedCallback(void* ctx, DeletedCallback cb) { m_deletedCtx = ctx; m_deletedCb = cb; }
+    void setSelectedCallback(void* ctx, SelectedCallback cb) { m_selectedCtx = ctx; m_selectedCb = cb; }
 
-    /**
-     * @brief Emitted when a model is deleted
-     * @param id Database ID of deleted model
-     */
-    void modelDeleted(int id);
-
-    /**
-     * @brief Emitted when registry is updated
-     */
-    void registryUpdated();
-
-private slots:
-    void onRefreshClicked();
-    void onDeleteClicked();
-    void onActivateClicked();
-    void onCompareClicked();
-    void onExportClicked();
-    void onSearchTextChanged(const QString& text);
-    void onFilterChanged(int index);
-    void onRowSelectionChanged();
+    using ShowCallback = std::function<void(void*)>;
+    void setShowCallback(ShowCallback cb, void* ctx);
+    void show();
 
 private:
-    void setupUI();
-    void setupDatabase();
-    void setupConnections();
-    void loadModels();
-    void populateTable(const QVector<ModelVersion>& models);
-    QString formatFileSize(qint64 bytes) const;
-    QString formatTimestamp(const QDateTime& dt) const;
+    void* m_parent;
+    std::vector<ModelVersion> m_models;
+    int m_selectedModelId = 0;
+    void* m_dbHandle = nullptr;
 
-    // UI Components
-    QTableWidget* m_tableWidget;
-    QPushButton* m_refreshButton;
-    QPushButton* m_deleteButton;
-    QPushButton* m_activateButton;
-    QPushButton* m_compareButton;
-    QPushButton* m_exportButton;
-    QLineEdit* m_searchEdit;
-    QComboBox* m_filterCombo;
-    QLabel* m_statusLabel;
+    void* m_updatedCtx = nullptr;
+    UpdatedCallback m_updatedCb = nullptr;
+    void* m_deletedCtx = nullptr;
+    DeletedCallback m_deletedCb = nullptr;
+    void* m_selectedCtx = nullptr;
+    SelectedCallback m_selectedCb = nullptr;
 
-    // Database
-    QSqlDatabase m_db;
-    QString m_dbPath;
-
-    // State
-    QVector<ModelVersion> m_models;
-    int m_selectedModelId;
+    ShowCallback m_showCb;
+    void* m_showCtx = nullptr;
 };

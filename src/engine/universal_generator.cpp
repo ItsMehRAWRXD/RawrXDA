@@ -5,9 +5,6 @@
 #include <algorithm>
 #include <cctype>
 
-#include "logging/logger.h"
-static Logger s_logger("universal_generator");
-
 UniversalGenerator::UniversalGenerator() {
     InitializeLanguages();
     InitializeTemplates();
@@ -25,7 +22,7 @@ void UniversalGenerator::InitializeLanguages() {
     language_configs[LanguageType::CPP] = {
         "C++", ".cpp", "CMake", "",
         {"src", "include"}, {"tests"},
-        {{"main.cpp", "#include <iostream>\n\nint main() {\n    s_logger.info( \"Hello, World!\" << std::endl;\n    return 0;\n}"}},
+        {{"main.cpp", "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, World!\" << std::endl;\n    return 0;\n}"}},
         true, false, {}
     };
     
@@ -273,7 +270,7 @@ void UniversalGenerator::InitializeTemplates() {
         {
             {"CMakeLists.txt", GenerateCMakeLists},
             {"include/library.h", "#pragma once\n\nnamespace mylib {\n    void hello();\n}"},
-            {"src/library.cpp", "#include \"library.h\"\n#include <iostream>\n\nnamespace mylib {\n    void hello() {\n        s_logger.info( \"Hello from library!\" << std::endl;\n    }\n}"},
+            {"src/library.cpp", "#include \"library.h\"\n#include <iostream>\n\nnamespace mylib {\n    void hello() {\n        std::cout << \"Hello from library!\" << std::endl;\n    }\n}"},
             {"tests/test_main.cpp", "#include \"library.h\"\n\nint main() {\n    mylib::hello();\n    return 0;\n}"}
         },
         {"cmake -B build", "cmake --build build"},

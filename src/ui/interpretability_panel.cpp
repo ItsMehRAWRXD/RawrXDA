@@ -705,3 +705,30 @@ void InterpretabilityPanel_Resize(int x, int y, int w, int h) {
 }
 
 } // extern "C"
+
+// ============================================================================
+// C++ class wrapper (IDE integration)
+// ============================================================================
+#include "../../include/interpretability_panel.h"
+
+InterpretabilityPanel::InterpretabilityPanel() = default;
+
+InterpretabilityPanel::~InterpretabilityPanel() = default;
+
+void InterpretabilityPanel::setParent(void* parent) {
+    m_parent = parent;
+}
+
+void InterpretabilityPanel::initialize() {
+    // Panel is ready to show once setParent has been called (done in Win32IDE::onCreate).
+}
+
+void InterpretabilityPanel::show() {
+    if (!m_parent) return;
+    if (!m_hwnd) m_hwnd = InterpretabilityPanel_Create(static_cast<HWND>(m_parent));
+    InterpretabilityPanel_Show(TRUE);
+}
+
+void InterpretabilityPanel::hide() {
+    InterpretabilityPanel_Show(FALSE);
+}

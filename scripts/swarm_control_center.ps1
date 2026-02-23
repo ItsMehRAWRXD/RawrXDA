@@ -25,13 +25,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$script:SwarmRoot = Get-RawrXDRoot
+$script:SwarmRoot = "D:\lazy init ide"
 $script:ConfigDir = Join-Path $SwarmRoot "logs/swarm_config"
 $script:BeaconDir = Join-Path $SwarmRoot "logs/swarm_beacon"
 $script:MemoryDir = Join-Path $SwarmRoot "logs/swarm_memory"

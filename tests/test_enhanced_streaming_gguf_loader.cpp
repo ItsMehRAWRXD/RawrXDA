@@ -4,9 +4,6 @@
 #include <iostream>
 #include <chrono>
 
-#include "logging/logger.h"
-static Logger s_logger("test_enhanced_streaming_gguf_loader");
-
 class EnhancedStreamingGGUFLoaderTest : public ::testing::Test {
 protected:
     EnhancedStreamingGGUFLoader loader;
@@ -264,7 +261,7 @@ TEST_F(EnhancedStreamingGGUFLoaderTest, Stress_RapidAccessPatternUpdates)
     auto elapsed = std::chrono::high_resolution_clock::now() - start;
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
     
-    s_logger.info("1000 pattern updates: ");
+    std::cout << "1000 pattern updates: " << duration_ms.count() << " ms\n";
     
     // Should be very fast (<10ms for 1000 updates)
     EXPECT_LT(duration_ms.count(), 10);
@@ -306,7 +303,7 @@ TEST_F(EnhancedLoaderBenchmark, Benchmark_PredictorLookup)
     auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed);
     
     double avg_us = static_cast<double>(duration_us.count()) / 100000.0;
-    s_logger.info("Predictor lookup: ");
+    std::cout << "Predictor lookup: " << avg_us << " μs (avg)\n";
     
     // Should be sub-microsecond
     EXPECT_LT(avg_us, 1.0);
@@ -330,7 +327,7 @@ TEST_F(EnhancedLoaderBenchmark, Benchmark_PredictionGeneration)
     auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed);
     
     double avg_us = static_cast<double>(duration_us.count()) / 10000.0;
-    s_logger.info("Prediction generation: ");
+    std::cout << "Prediction generation: " << avg_us << " μs (avg)\n";
     
     // Should be <100μs
     EXPECT_LT(avg_us, 100.0);

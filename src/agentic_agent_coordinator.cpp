@@ -8,9 +8,6 @@
 #include <sstream>
 #include <iomanip>
 
-#include "logging/logger.h"
-static Logger s_logger("agentic_agent_coordinator");
-
 static std::string generateUUID() {
     static std::random_device rd;
     static std::mt19937_64 gen(rd());
@@ -30,12 +27,14 @@ static std::string generateUUID() {
 AgenticAgentCoordinator::AgenticAgentCoordinator()
     : m_coordinationStartTime(std::chrono::system_clock::now())
 {
-    s_logger.info("[AgenticAgentCoordinator] Initialized - Ready for multi-agent coordination");
+    std::cout << "[AgenticAgentCoordinator] Initialized - Ready for multi-agent coordination" << std::endl;
 }
 
 AgenticAgentCoordinator::~AgenticAgentCoordinator()
 {
-    s_logger.info("[AgenticAgentCoordinator] Destroyed - Managed ");
+    std::cout << "[AgenticAgentCoordinator] Destroyed - Managed "
+              << m_agents.size() << " agents and "
+              << m_assignments.size() << " task assignments" << std::endl;
 }
 
 void AgenticAgentCoordinator::initialize(AgenticEngine* engine, CPUInference::CPUInferenceEngine* inference)
@@ -43,7 +42,7 @@ void AgenticAgentCoordinator::initialize(AgenticEngine* engine, CPUInference::CP
     m_engine = engine;
     m_inference = inference;
 
-    s_logger.info("[AgenticAgentCoordinator] Initialized with AgenticEngine and InferenceEngine");
+    std::cout << "[AgenticAgentCoordinator] Initialized with AgenticEngine and InferenceEngine" << std::endl;
 }
 
 // ===== AGENT MANAGEMENT =====
@@ -64,7 +63,7 @@ std::string AgenticAgentCoordinator::createAgent(AgentRole role)
 
     m_agents[agentId] = std::move(agent);
 
-    s_logger.info("[AgenticAgentCoordinator] Created agent: ");
+    std::cout << "[AgenticAgentCoordinator] Created agent: " << agentId << " with role: " << static_cast<int>(role) << std::endl;
 
     return agentId;
 }
@@ -73,7 +72,7 @@ void AgenticAgentCoordinator::removeAgent(const std::string& agentId)
 {
     m_agents.erase(agentId);
 
-    s_logger.info("[AgenticAgentCoordinator] Removed agent: ");
+    std::cout << "[AgenticAgentCoordinator] Removed agent: " << agentId << std::endl;
 }
 
 AgenticAgentCoordinator::AgentInstance* AgenticAgentCoordinator::getAgent(const std::string& agentId)
@@ -148,7 +147,7 @@ std::string AgenticAgentCoordinator::assignTask(
     std::string agentId = selectBestAgentForTask(taskDescription);
 
     if (agentId.empty()) {
-        s_logger.error( "[AgenticAgentCoordinator] No available agent for task" << std::endl;
+        std::cerr << "[AgenticAgentCoordinator] No available agent for task" << std::endl;
         return "";
     }
 
@@ -171,7 +170,7 @@ std::string AgenticAgentCoordinator::assignTask(
         agent->utilization = 1.0f;
     }
 
-    s_logger.info("[AgenticAgentCoordinator] Assigned task: ");
+    std::cout << "[AgenticAgentCoordinator] Assigned task: " << taskId << " to agent: " << agentId << std::endl;
 
     return taskId;
 }
@@ -201,7 +200,7 @@ json AgenticAgentCoordinator::getTaskResult(const std::string& taskId)
 
 void AgenticAgentCoordinator::resolveConflicts()
 {
-    s_logger.info("[AgenticAgentCoordinator] Resolving conflicts");
+    std::cout << "[AgenticAgentCoordinator] Resolving conflicts" << std::endl;
 }
 
 void AgenticAgentCoordinator::synchronizeState()
@@ -211,7 +210,7 @@ void AgenticAgentCoordinator::synchronizeState()
             // Synchronize agent state
         }
     }
-    s_logger.info("[AgenticAgentCoordinator] Synchronized all agent states");
+    std::cout << "[AgenticAgentCoordinator] Synchronized all agent states" << std::endl;
 }
 
 json AgenticAgentCoordinator::performJointInference(const std::vector<std::string>& agentIds, const std::string& prompt)
@@ -249,5 +248,5 @@ std::string AgenticAgentCoordinator::selectBestAgentForTask(const std::string& t
 
 void AgenticAgentCoordinator::logCoordination(const std::string& message)
 {
-    s_logger.info("[AgenticAgentCoordinator] ");
+    std::cout << "[AgenticAgentCoordinator] " << message << std::endl;
 }

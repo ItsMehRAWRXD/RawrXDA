@@ -8,9 +8,6 @@
 #include <filesystem>
 #include <fstream>
 
-#include "logging/logger.h"
-static Logger s_logger("ai_completion_provider_real");
-
 AICompletionProvider::AICompletionProvider() {
     // Initialize language keywords
     registerLanguage("cpp", {
@@ -61,12 +58,12 @@ AICompletionProvider::~AICompletionProvider() {
 
 bool AICompletionProvider::initialize(const std::string& modelPath, const std::string& tokenizerPath) {
     if (!loadModel(modelPath)) {
-        s_logger.error( "[AICompletion] Failed to load model: " << modelPath << std::endl;
+        std::cerr << "[AICompletion] Failed to load model: " << modelPath << std::endl;
         return false;
     }
 
     if (!loadTokenizer(tokenizerPath)) {
-        s_logger.error( "[AICompletion] Failed to load tokenizer: " << tokenizerPath << std::endl;
+        std::cerr << "[AICompletion] Failed to load tokenizer: " << tokenizerPath << std::endl;
         return false;
     }
 
@@ -75,7 +72,7 @@ bool AICompletionProvider::initialize(const std::string& modelPath, const std::s
 }
 
 bool AICompletionProvider::loadModel(const std::string& modelPath) {
-    s_logger.info("[AICompletion] Loading model: ");
+    std::cout << "[AICompletion] Loading model: " << modelPath << std::endl;
     auto* engine = new CPUInference::CPUInferenceEngine();
     if (!engine->LoadModel(modelPath)) {
         delete engine;
@@ -89,7 +86,7 @@ bool AICompletionProvider::loadModel(const std::string& modelPath) {
 }
 
 bool AICompletionProvider::loadTokenizer(const std::string& tokenizerPath) {
-    s_logger.info("[AICompletion] Loading tokenizer: ");
+    std::cout << "[AICompletion] Loading tokenizer: " << tokenizerPath << std::endl;
     if (m_modelHandle) {
         m_tokenizerHandle = m_modelHandle;
         return true;

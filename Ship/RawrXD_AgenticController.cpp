@@ -216,10 +216,10 @@ private:
     std::map<std::wstring, std::wstring> m_layoutHints;
     
 public:
-    // Events (replace Qt signals)
-    Event<std::wstring> ControllerError;           // emit controllerError(QString)
-    Event<> ControllerReady;                       // emit controllerReady()
-    Event<std::wstring> LayoutHydrationRequested;  // emit layoutHydrationRequested(QString)
+    // Events (C++20, no Qt)
+    Event<std::wstring> ControllerError;           // emit controllerError(std::wstring)
+    Event<> ControllerReady;                        // emit controllerReady()
+    Event<std::wstring> LayoutHydrationRequested;  // emit layoutHydrationRequested(std::wstring)
     Event<std::wstring> HeartbeatPublished;        // emit heartbeatPublished()
     
     AgenticController() 

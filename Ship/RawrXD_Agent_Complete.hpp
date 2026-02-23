@@ -9,7 +9,6 @@
 #define RAWRXD_AGENT_COMPLETE_HPP
 
 #include "agent_kernel_main.hpp"
-#include "QtReplacements.hpp"
 #include "ToolExecutionEngine.hpp"
 #include "LLMClient.hpp"
 #include "AgentOrchestrator.hpp"

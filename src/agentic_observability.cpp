@@ -36,6 +36,11 @@ static double SamplingRoll() {
 // Construction / Destruction
 // ---------------------------------------------------------------------------
 
+AgenticObservability& AgenticObservability::instance() {
+    static AgenticObservability inst;
+    return inst;
+}
+
 AgenticObservability::AgenticObservability()
     : m_systemStartTime(std::chrono::system_clock::now())
 {
@@ -103,15 +108,7 @@ void AgenticObservability::logDebug(
     const std::string& message,
     const nlohmann::json& context)
 {
-    log(LogLevel::DEBUG, component, message, context);
-}
-
-void AgenticObservability::logInfo(
-    const std::string& component,
-    const std::string& message,
-    const nlohmann::json& context)
-{
-    log(LogLevel::INFO, component, message, context);
+    log(LogLevel::ObsDebug, component, message, context);
 }
 
 void AgenticObservability::logWarn(
@@ -119,7 +116,15 @@ void AgenticObservability::logWarn(
     const std::string& message,
     const nlohmann::json& context)
 {
-    log(LogLevel::WARN, component, message, context);
+    log(LogLevel::ObsWarn, component, message, context);
+}
+
+void AgenticObservability::logInfo(
+    const std::string& component,
+    const std::string& message,
+    const nlohmann::json& context)
+{
+    log(LogLevel::ObsError, component, message, context);
 }
 
 void AgenticObservability::logError(
@@ -127,7 +132,7 @@ void AgenticObservability::logError(
     const std::string& message,
     const nlohmann::json& context)
 {
-    log(LogLevel::ERROR, component, message, context);
+    log(LogLevel::ObsError, component, message, context);
     m_errorCounts[component]++;
 }
 
@@ -136,7 +141,7 @@ void AgenticObservability::logCritical(
     const std::string& message,
     const nlohmann::json& context)
 {
-    log(LogLevel::CRITICAL, component, message, context);
+    log(LogLevel::ObsCritical, component, message, context);
     m_errorCounts[component]++;
 }
 
@@ -641,7 +646,7 @@ std::string AgenticObservability::generateReport(
     report << "=== OBSERVABILITY REPORT ===\n\n";
 
     report << "LOGS:\n";
-    auto logs = getLogs(100, LogLevel::DEBUG);
+    auto logs = getLogs(100, LogLevel::ObsDebug);
     for (const auto& log : logs) {
         if (log.timestamp < startTime || log.timestamp > endTime) continue;
         report << "[" << timePointToISO(log.timestamp) << "] "
@@ -716,11 +721,11 @@ std::string AgenticObservability::generateSpanId()
 std::string AgenticObservability::levelToString(LogLevel level) const
 {
     switch (level) {
-        case LogLevel::DEBUG: return "DEBUG";
-        case LogLevel::INFO: return "INFO";
-        case LogLevel::WARN: return "WARN";
-        case LogLevel::ERROR: return "ERROR";
-        case LogLevel::CRITICAL: return "CRITICAL";
+        case LogLevel::ObsDebug: return "DEBUG";
+        case LogLevel::ObsInfo: return "INFO";
+        case LogLevel::ObsWarn: return "WARN";
+        case LogLevel::ObsError: return "ERROR";
+        case LogLevel::ObsCritical: return "CRITICAL";
         default: return "UNKNOWN";
     }
 }

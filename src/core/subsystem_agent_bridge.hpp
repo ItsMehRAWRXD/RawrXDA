@@ -1,3 +1,5 @@
+// SCAFFOLD_100: SubsystemAgentBridge and failure callback
+
 /**
  * @file subsystem_agent_bridge.hpp
  * @brief Bridges SubsystemRegistry into the agentic action execution pipeline

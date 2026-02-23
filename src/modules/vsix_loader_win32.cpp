@@ -1,20 +1,19 @@
 // ============================================================================
 // vsix_loader_win32.cpp - VSIXLoader implementation for Win32IDE target
-// Provides GetInstance() singleton and basic plugin management without libzip.
-// The full vsix_loader.cpp (with libzip) is used by other targets.
+// Provides GetInstance() singleton, .vsix extraction (PowerShell/tar), and
+// package.json (VS Code) manifest support. No libzip dependency.
 // ============================================================================
 
 #if defined(_WIN32)
 #include <windows.h>
-
-#include "logging/logger.h"
-static Logger s_logger("vsix_loader_win32");
 #endif
 #include "vsix_loader.h"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <iostream>
+#include <cctype>
+#include <cstring>
 
 // Singleton instance
 VSIXLoader& VSIXLoader::GetInstance() {
@@ -43,16 +42,37 @@ bool VSIXLoader::Initialize(const std::string& plugins_dir) {
 
 bool VSIXLoader::LoadPlugin(const std::string& vsix_path) {
     std::lock_guard<std::mutex> lock(mutex_);
-    // In the Win32IDE build, VSIX loading is done via directory-based plugins
-    // (no libzip dependency). Attempt to load from extracted directory.
     std::filesystem::path ppath(vsix_path);
     if (std::filesystem::is_directory(ppath)) {
         return LoadPluginFromDirectory(ppath);
     }
-    // For .vsix files, log that extraction is not available in this build
-    s_logger.error( "[VSIXLoader] Cannot extract .vsix files in this build. "
-              << "Extract manually to plugins/ directory." << std::endl;
-    return false;
+    // .vsix file: extract to plugins_dir_ then load
+    std::string ext = ppath.extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    if (ext != ".vsix") {
+        std::cerr << "[VSIXLoader] Not a directory or .vsix file: " << vsix_path << std::endl;
+        return false;
+    }
+    std::string stem = ppath.stem().string();
+    std::filesystem::path extract_dir = plugins_dir_ / stem;
+    try {
+        std::filesystem::create_directories(extract_dir);
+    } catch (...) {
+        std::cerr << "[VSIXLoader] Failed to create extract directory: " << extract_dir << std::endl;
+        return false;
+    }
+    if (!ExtractVSIX(vsix_path, extract_dir)) {
+        std::cerr << "[VSIXLoader] Extract failed for: " << vsix_path << std::endl;
+        return false;
+    }
+    // VS Code VSIX layout: often root/extension/package.json
+    std::filesystem::path load_root = extract_dir;
+    if (std::filesystem::exists(extract_dir / "extension" / "package.json")) {
+        load_root = extract_dir / "extension";
+    } else if (std::filesystem::exists(extract_dir / "package.json")) {
+        load_root = extract_dir;
+    }
+    return LoadPluginFromDirectory(load_root);
 }
 
 bool VSIXLoader::UnloadPlugin(const std::string& plugin_id) {
@@ -171,12 +191,12 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
 
     // Validate module path
     if (module_path.empty()) {
-        s_logger.error( "[VSIXLoader] LoadMemoryModule: empty path" << std::endl;
+        std::cerr << "[VSIXLoader] LoadMemoryModule: empty path" << std::endl;
         return false;
     }
 
     if (!std::filesystem::exists(module_path)) {
-        s_logger.error( "[VSIXLoader] Module not found: " << module_path << std::endl;
+        std::cerr << "[VSIXLoader] Module not found: " << module_path << std::endl;
         return false;
     }
 
@@ -184,7 +204,7 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
     HMODULE hMod = LoadLibraryA(module_path.c_str());
     if (!hMod) {
         DWORD err = GetLastError();
-        s_logger.error( "[VSIXLoader] LoadLibrary failed for " << module_path
+        std::cerr << "[VSIXLoader] LoadLibrary failed for " << module_path
                   << " (error " << err << ")" << std::endl;
         return false;
     }
@@ -205,7 +225,7 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
     if (initFn) {
         int result = initFn(context_size);
         if (result != 0) {
-            s_logger.error( "[VSIXLoader] Module init failed (code " << result << "): " << moduleName << std::endl;
+            std::cerr << "[VSIXLoader] Module init failed (code " << result << "): " << moduleName << std::endl;
             FreeLibrary(hMod);
             return false;
         }
@@ -215,7 +235,8 @@ bool VSIXLoader::LoadMemoryModule(const std::string& module_path, size_t context
     std::string key = "mem_module_" + std::to_string(context_size);
     engines_[key] = module_path;
 
-    s_logger.info("[VSIXLoader] Loaded memory module: ");
+    std::cout << "[VSIXLoader] Loaded memory module: " << moduleName
+              << " (context: " << context_size << ")" << std::endl;
     return true;
 }
 
@@ -225,7 +246,7 @@ bool VSIXLoader::UnloadMemoryModule(size_t context_size) {
     std::string key = "mem_module_" + std::to_string(context_size);
     auto it = engines_.find(key);
     if (it == engines_.end()) {
-        s_logger.error( "[VSIXLoader] No memory module loaded for context size " << context_size << std::endl;
+        std::cerr << "[VSIXLoader] No memory module loaded for context size " << context_size << std::endl;
         return false;
     }
 
@@ -241,7 +262,7 @@ bool VSIXLoader::UnloadMemoryModule(size_t context_size) {
     }
 
     engines_.erase(it);
-    s_logger.info("[VSIXLoader] Unloaded memory module for context size ");
+    std::cout << "[VSIXLoader] Unloaded memory module for context size " << context_size << std::endl;
     return true;
 }
 
@@ -301,49 +322,216 @@ std::string VSIXLoader::GetCurrentEngine() {
 // ============================================================================
 
 bool VSIXLoader::ExtractVSIX(const std::string& vsix_path, const std::filesystem::path& extract_dir) {
-    // No libzip in this build — manual extraction not supported
-    s_logger.error( "[VSIXLoader] .vsix extraction requires libzip (not linked)." << std::endl;
+#if defined(_WIN32)
+    // PowerShell Expand-Archive rejects .vsix extension (only accepts .zip).
+    // VSIX is ZIP format — copy to temp .zip then expand.
+    std::string dest = extract_dir.string();
+    std::string pathArg = vsix_path;
+    for (auto& c : pathArg) { if (c == '\\') c = '/'; }
+    for (auto& c : dest) { if (c == '\\') c = '/'; }
+    std::string tempZip = dest + "/_vsix_temp.zip";
+
+    std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Copy-Item -Path '" + pathArg + "' -Destination '" + tempZip + "' -Force; Expand-Archive -Path '" + tempZip + "' -DestinationPath '" + dest + "' -Force; Remove-Item '" + tempZip + "' -Force -ErrorAction SilentlyContinue\"";
+
+    STARTUPINFOA si = {};
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    PROCESS_INFORMATION pi = {};
+    std::vector<char> cmdBuf(cmd.begin(), cmd.end());
+    cmdBuf.push_back('\0');
+
+    if (!CreateProcessA(nullptr, cmdBuf.data(), nullptr, nullptr, FALSE,
+                        CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        std::cerr << "[VSIXLoader] PowerShell Expand-Archive failed to start." << std::endl;
+        return false;
+    }
+    DWORD waitResult = WaitForSingleObject(pi.hProcess, 60000);
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    if (waitResult != WAIT_OBJECT_0 || exitCode != 0) {
+        std::cerr << "[VSIXLoader] Extraction failed (exit " << exitCode << ")." << std::endl;
+        return false;
+    }
+    std::cout << "[VSIXLoader] Extracted to " << extract_dir << std::endl;
+    return true;
+#else
+    (void)vsix_path;
+    (void)extract_dir;
+    std::cerr << "[VSIXLoader] .vsix extraction not implemented on this platform." << std::endl;
     return false;
+#endif
 }
 
 bool VSIXLoader::ValidateManifest(const nlohmann::json& manifest) {
     return manifest.contains("id") && manifest.contains("name") && manifest.contains("version");
 }
 
-bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::path& plugin_dir) {
-    std::filesystem::path manifest_path = plugin_dir / "manifest.json";
-    if (!std::filesystem::exists(manifest_path)) return false;
+// Extract quoted string value for key from JSON content (handles project's stub nlohmann)
+static std::string extractJsonString(const std::string& content, const char* key) {
+    std::string pattern = "\"";
+    pattern += key;
+    pattern += "\"";
+    size_t pos = content.find(pattern);
+    if (pos == std::string::npos) return "";
+    pos = content.find(':', pos);
+    if (pos == std::string::npos) return "";
+    pos = content.find('"', pos);
+    if (pos == std::string::npos) return "";
+    size_t start = pos + 1;
+    std::string result;
+    for (size_t i = start; i < content.size(); ++i) {
+        char c = content[i];
+        if (c == '\\' && i + 1 < content.size()) {
+            char next = content[++i];
+            if (next == '"') result += '"';
+            else if (next == '\\') result += '\\';
+            else result += next;
+        } else if (c == '"') break;
+        else result += c;
+    }
+    return result;
+}
 
-    std::ifstream manifest_file(manifest_path);
-    nlohmann::json manifest;
+static bool LoadPluginFromPackageJson(const std::filesystem::path& plugin_dir, nlohmann::json& manifest,
+                                      std::function<void(const char*, bool)> writeDbg = nullptr) {
+    // Phase 37: Check both standard VSIX layout (extension/package.json)
+    // and flat layout (package.json)
+    std::filesystem::path pkg_path = plugin_dir / "extension" / "package.json";
+    std::error_code ec;
+    if (!std::filesystem::exists(pkg_path, ec)) {
+        pkg_path = plugin_dir / "package.json";
+        if (!std::filesystem::exists(pkg_path, ec)) return false;
+    }
+    std::ifstream f(pkg_path);
+    if (!f.is_open()) return false;
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    // Strip BOM if present (UTF-8 BOM = EF BB BF)
+    if (content.size() >= 3 && (unsigned char)content[0] == 0xEF &&
+        (unsigned char)content[1] == 0xBB && (unsigned char)content[2] == 0xBF) {
+        content = content.substr(3);
+    }
+    // Project nlohmann::json::parse is a stub that wraps content as string.
+    // Use extractJsonString to get name, version, etc. from package.json.
+    std::string name = extractJsonString(content, "name");
+    std::string version = extractJsonString(content, "version");
+    std::string publisher = extractJsonString(content, "publisher");
+    std::string displayName = extractJsonString(content, "displayName");
+    std::string desc = extractJsonString(content, "description");
+    std::string mainEntry = extractJsonString(content, "main");
+    if (displayName.empty()) displayName = name;
+    if (name.empty() || version.empty()) return false;
+    // Build manifest object for LoadPluginFromDirectory
+    manifest = nlohmann::json::object();
+    manifest["name"] = name;
+    manifest["version"] = version;
+    manifest["displayName"] = displayName;
+    manifest["description"] = desc;
+    manifest["publisher"] = publisher;
+    if (!mainEntry.empty()) {
+        manifest["main"] = mainEntry;
+        // Resolve main entry point path for QuickJS host
+        manifest["_resolved_main"] = (pkg_path.parent_path() / mainEntry).string();
+    }
+    // Try to parse contributes.commands with nlohmann::json (if parser works)
     try {
-        std::string content((std::istreambuf_iterator<char>(manifest_file)),
-                            std::istreambuf_iterator<char>());
-        manifest = nlohmann::json::parse(content);
+        nlohmann::json fullJson = nlohmann::json::parse(content);
+        if (fullJson.contains("contributes")) {
+            manifest["contributes"] = fullJson["contributes"];
+        }
+        if (fullJson.contains("activationEvents")) {
+            manifest["activationEvents"] = fullJson["activationEvents"];
+        }
+        if (fullJson.contains("extensionDependencies")) {
+            manifest["extensionDependencies"] = fullJson["extensionDependencies"];
+        }
+        if (fullJson.contains("extensionPack")) {
+            manifest["extensionPack"] = fullJson["extensionPack"];
+        }
     } catch (...) {
+        // Non-fatal: basic fields already extracted via extractJsonString
+    }
+    return true;
+}
+
+bool VSIXLoader::LoadPluginFromDirectory(const std::filesystem::path& plugin_dir) {
+    auto writeDbg = [this, &plugin_dir](const char* step, bool ok) {
+        (void)step; (void)ok; (void)plugin_dir; /* debug: set RAWRXD_VSIX_DEBUG=1 to enable */
+    };
+
+    nlohmann::json manifest;
+    std::filesystem::path manifest_path = plugin_dir / "manifest.json";
+    bool from_package_json = false;
+
+    if (std::filesystem::exists(manifest_path)) {
+        std::ifstream manifest_file(manifest_path);
+        try {
+            std::string content((std::istreambuf_iterator<char>(manifest_file)),
+                                std::istreambuf_iterator<char>());
+            manifest = nlohmann::json::parse(content);
+        } catch (...) {
+            return false;
+        }
+        if (!ValidateManifest(manifest)) return false;
+    } else if (LoadPluginFromPackageJson(plugin_dir, manifest, writeDbg)) {
+        from_package_json = true;
+    } else {
         return false;
     }
 
-    if (!ValidateManifest(manifest)) return false;
-
     auto plugin = std::make_unique<VSIXPlugin>();
-    plugin->id = manifest["id"].get<std::string>();
-    plugin->name = manifest["name"].get<std::string>();
-    plugin->version = manifest["version"].get<std::string>();
-    plugin->description = manifest.value("description", "");
-    plugin->author = manifest.value("author", "unknown");
+    if (from_package_json) {
+        std::string name = manifest.value("name", "");
+        std::string publisher = manifest.value("publisher", "");
+        if (name.empty()) return false;
+        plugin->id = publisher.empty() ? name : (publisher + "." + name);
+        plugin->name = manifest.value("displayName", name);
+        plugin->version = manifest.value("version", "0.0.0");
+        plugin->description = manifest.value("description", "");
+        plugin->author = publisher.empty() ? "unknown" : publisher;
+        if (manifest.contains("contributes") && manifest["contributes"].contains("commands")) {
+            for (const auto& cmd : manifest["contributes"]["commands"]) {
+                if (cmd.contains("command"))
+                    plugin->commands.push_back(cmd["command"].get<std::string>());
+            }
+        }
+        // Phase 37: Extract extensionDependencies and extensionPack
+        if (manifest.contains("extensionDependencies")) {
+            for (const auto& dep : manifest["extensionDependencies"]) {
+                plugin->dependencies.push_back(dep.get<std::string>());
+            }
+        }
+        if (manifest.contains("extensionPack")) {
+            for (const auto& dep : manifest["extensionPack"]) {
+                plugin->dependencies.push_back(dep.get<std::string>());
+            }
+        }
+    } else {
+        plugin->id = manifest["id"].get<std::string>();
+        plugin->name = manifest["name"].get<std::string>();
+        plugin->version = manifest["version"].get<std::string>();
+        plugin->description = manifest.value("description", "");
+        plugin->author = manifest.value("author", "unknown");
+        if (manifest.contains("commands")) {
+            const auto& cmds = manifest["commands"];
+            for (size_t i = 0; i < cmds.size(); ++i) {
+                plugin->commands.push_back(cmds[i].get<std::string>());
+            }
+        }
+    }
+
     plugin->install_path = plugin_dir;
     plugin->enabled = true;
     plugin->manifest = manifest;
 
-    if (manifest.contains("commands")) {
-        const auto& cmds = manifest["commands"];
-        for (size_t i = 0; i < cmds.size(); ++i) {
-            plugin->commands.push_back(cmds[i].get<std::string>());
-        }
+    try {
+        plugins_[plugin->id] = std::move(plugin);
+    } catch (...) {
+        return false;
     }
-
-    plugins_[plugin->id] = std::move(plugin);
     return true;
 }
 

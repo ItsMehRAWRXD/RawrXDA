@@ -14,7 +14,7 @@ This folder contains Windows-specific application logic and integration for the 
 - `simple_test.cpp`, `simple_test_log.txt`: Simple test routines and logs.
 - `test_runner.cpp`: Test runner for Windows IDE.
 - `TransparentRenderer.cpp`, `TransparentRenderer.h`: Transparent rendering routines for Windows UI.
-- `VulkanRenderer.cpp`: (Stubbed) Vulkan renderer for Windows, implemented without external Vulkan dependencies.
+- `VulkanRenderer.cpp`: Production Vulkan 1.2 backend with dynamic loading (vulkan-1.dll); init, swapchain, render loop implemented; optional when Vulkan runtime absent.
 - `Win32IDE.cpp`, `Win32IDE.h`: Core Windows IDE logic and interface.
 - `Win32IDE_AgentCommands.cpp`: Agent command integration for Windows IDE.
 - `Win32IDE_AgenticBridge.cpp`, `Win32IDE_AgenticBridge.h`: Agentic bridge for Windows IDE.
@@ -31,7 +31,7 @@ This folder contains Windows-specific application logic and integration for the 
 ### Dependency Status
 - **No external dependencies.**
 - All Windows-specific logic is implemented in-house.
-- `VulkanRenderer.cpp` is stubbed and does not require external Vulkan libraries.
+- `VulkanRenderer.cpp` implements a full Vulkan pipeline (init, swapchain, render) with dynamic loading; no compile-time Vulkan SDK required.
 - No references to external Windows, Vulkan, or UI libraries.
 
 ### TODOs
@@ -41,6 +41,6 @@ This folder contains Windows-specific application logic and integration for the 
 - [ ] Add developer documentation for extending Windows IDE features.
 
 ### Audit Status
-- **Audit complete.**
-- No external dependencies found.
-- Ready for productionization, pending documentation and test coverage improvements.
+- **Audit complete.** Completion and stub counts are tracked via Tools > Audit (Phase 31) and the FeatureRegistry.
+- No external dependencies for core IDE; Vulkan optional.
+- Ready for productionization; component tests and replay gate (`.github/workflows/replay_gate.yml`) support CI.

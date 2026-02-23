@@ -1,3 +1,5 @@
+// SCAFFOLD_359: IDELogger and RAWRXD_LOG_*
+
 #pragma once
 
 #include <string>

@@ -8,6 +8,7 @@
 #include "../core/proxy_hotpatcher.hpp"
 #include <sstream>
 #include <iomanip>
+#include <string>
 #include <commdlg.h>
 
 // ============================================================================
@@ -47,6 +48,7 @@ void Win32IDE::handleHotpatchCommand(int commandId) {
         case IDM_HOTPATCH_PROXY_TERMINATE:  cmdHotpatchProxyTerminate();  break;
         case IDM_HOTPATCH_PROXY_VALIDATE:   cmdHotpatchProxyValidate();   break;
         case IDM_HOTPATCH_SHOW_PROXY_STATS: cmdHotpatchShowProxyStats();  break;
+        case IDM_HOTPATCH_SET_TARGET_TPS:  cmdHotpatchSetTargetTps();     break;
         case IDM_HOTPATCH_PRESET_SAVE:      cmdHotpatchPresetSave();      break;
         case IDM_HOTPATCH_PRESET_LOAD:      cmdHotpatchPresetLoad();      break;
         default:
@@ -71,6 +73,8 @@ void Win32IDE::cmdHotpatchShowStatus() {
     std::ostringstream ss;
     ss << "=== RawrXD Hotpatch System Status ===\n";
     ss << "  System Enabled:    " << (m_hotpatchEnabled ? "YES" : "NO") << "\n";
+    double targetTps = mgr.get_target_tps();
+    ss << "  Target TPS:        " << (targetTps > 0.0 ? std::to_string(targetTps) + " (force hotpatching)" : "off (run normally)") << "\n";
     ss << "\n--- Unified Manager ---\n";
     ss << "  Memory Patches:    " << stats.memoryPatchCount.load()  << "\n";
     ss << "  Byte Patches:      " << stats.bytePatchCount.load()    << "\n";
@@ -93,6 +97,36 @@ void Win32IDE::cmdHotpatchShowStatus() {
 
     appendToOutput(ss.str());
     MessageBoxA(m_hwndMain, ss.str().c_str(), "Hotpatch System Status", MB_OK | MB_ICONINFORMATION);
+}
+
+void Win32IDE::cmdHotpatchSetTargetTps() {
+    auto& mgr = UnifiedHotpatchManager::instance();
+    char buf[64] = {};
+    if (OpenClipboard(m_hwndMain)) {
+        HANDLE h = GetClipboardData(CF_TEXT);
+        if (h) {
+            const char* p = static_cast<const char*>(GlobalLock(h));
+            if (p) {
+                strncpy(buf, p, sizeof(buf) - 1);
+                GlobalUnlock(h);
+            }
+        }
+        CloseClipboard();
+    }
+    double value = 0.0;
+    if (buf[0]) {
+        try { value = std::stod(buf); } catch (...) {}
+        if (value < 0.0) value = 0.0;
+    }
+    mgr.set_target_tps(value);
+    std::ostringstream ss;
+    if (value > 0.0) {
+        ss << "[Hotpatch] Target TPS set to " << value << " (force hotpatching). Clear clipboard and run again to set 0 (run normally).\n";
+    } else {
+        ss << "[Hotpatch] Target TPS cleared — run normally. To set: copy a number (e.g. 50) to clipboard and run Hotpatch > Set target TPS again.\n";
+    }
+    appendToOutput(ss.str());
+    MessageBoxA(m_hwndMain, ss.str().c_str(), "Target TPS", MB_OK | MB_ICONINFORMATION);
 }
 
 void Win32IDE::cmdHotpatchToggleAll() {

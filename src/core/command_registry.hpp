@@ -618,7 +618,7 @@ enum CmdFlags : uint32_t {
     X(603,  HELP_SHORTCUTS,        "help.shortcuts",        "!shortcuts",        BOTH, "Help",        handleHelpShortcuts,        CMD_NONE) \
     \
     /* ═══════════════════ DECOMPILER CONTEXT MENU (8001-8006) ═══════════════════ */ \
-    X(8001, DECOMP_RENAME_VAR,     "decomp.renameVar",      "!decomp_rename",    BOTH, "ReverseEng",  handleDecompRenameVar,      CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
+    X(8001, DECOMP_RENAME_VAR,     "decomp.renameVar",      "!decomp_rename_var",BOTH, "ReverseEng",  handleDecompRenameVar,      CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
     X(8002, DECOMP_GOTO_DEF,       "decomp.gotoDef",        "!decomp_goto",      BOTH, "ReverseEng",  handleDecompGotoDef,        CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
     X(8003, DECOMP_FIND_REFS,      "decomp.findRefs",       "!decomp_refs",      BOTH, "ReverseEng",  handleDecompFindRefs,       CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
     X(8004, DECOMP_COPY_LINE,      "decomp.copyLine",       "!decomp_copyline",  BOTH, "ReverseEng",  handleDecompCopyLine,       CMD_REQUIRES_FILE | CMD_REQUIRES_CARET) \
@@ -659,7 +659,7 @@ enum CmdFlags : uint32_t {
     \
     /* ═══════════════════ MODEL MANAGEMENT (11001-11050) ═══════════════════ */ \
     X(11001, MODEL_LIST,           "model.list",            "!model_list",       BOTH, "Models",      handleModelList,            CMD_NONE) \
-    X(11002, MODEL_LOAD,           "model.load",            "!model_load",       BOTH, "Models",      handleModelLoad,            CMD_NONE) \
+    X(11002, MODEL_LOAD,           "model.load",            "!load_model",       BOTH, "Models",      handleModelLoad,            CMD_NONE) \
     X(11003, MODEL_UNLOAD,         "model.unload",          "!model_unload",     BOTH, "Models",      handleModelUnload,          CMD_NONE) \
     X(11004, MODEL_QUANTIZE,       "model.quantize",        "!model_quantize",   BOTH, "Models",      handleModelQuantize,        CMD_ASYNC) \
     X(11005, MODEL_FINETUNE,       "model.finetune",        "!model_finetune",   BOTH, "Models",      handleModelFinetune,        CMD_ASYNC) \

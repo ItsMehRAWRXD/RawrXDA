@@ -286,55 +286,7 @@ set_target_properties(RawrXD-IDE PROPERTIES
 )
 endif()
 
-if(FALSE) # Disabled until headers exist
-# Simple C++ IDE with advanced features stubs
-add_executable(RawrXD-SimpleIDE
-    src/qtapp/main_simple.cpp
-    src/qtapp/MainWindowSimple.cpp
-    src/qtapp/MainWindowSimple.h
-    src/editor_buffer.cpp
-    src/syntax_engine.cpp
-    src/overclock_vendor.cpp
-    src/overclock_governor.cpp
-    src/settings.cpp
-    src/telemetry.cpp
-    src/baseline_profile.cpp
-    src/gguf_loader.cpp
-    src/telemetry/ai_metrics.cpp
-    src/session/ai_session.cpp
-    src/backend/ollama_client.cpp
-    src/backend/websocket_server.cpp
-    src/backend/agentic_tools.cpp
-    src/tools/file_ops.cpp
-    src/tools/git_client.cpp
-    src/context/indexer.cpp
-    src/context/semantic_store.cpp
-    src/ui/split_layout.cpp
-    src/ui/chat_panel.cpp
-)
-
-target_include_directories(RawrXD-SimpleIDE PRIVATE include)
-target_link_libraries(RawrXD-SimpleIDE PRIVATE 
-    user32 
-    gdi32 
-    wbemuuid 
-    pdh
-    winhttp
-    ws2_32
-)
-
-set_target_properties(RawrXD-SimpleIDE PROPERTIES 
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
-# Enable standard exception semantics and optimization for SimpleIDE
-if(MSVC)
-    target_compile_options(RawrXD-SimpleIDE PRIVATE /EHsc /O2)
-else()
-    target_compile_options(RawrXD-SimpleIDE PRIVATE -fexceptions -O2)
-endif()
-target_compile_definitions(RawrXD-SimpleIDE PRIVATE _CRT_SECURE_NO_WARNINGS)
-endif()
+# [REMOVED] RawrXD-SimpleIDE (legacy Qt/qtapp target — replaced by RawrXD-IDE Win32)
 
 # Chromatic Wave Demo - Chameleon/Neon effects with D3D11
 # Target: 540Hz @ 3840x2160 (4K UHD)

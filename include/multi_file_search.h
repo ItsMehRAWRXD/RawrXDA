@@ -3,7 +3,7 @@
  * @brief VS Code-style multi-file search widget for RawrXD IDE.
  *
  * Provides a complete implementation of project-wide text search with:
- * - Asynchronous file traversal and search (QtConcurrent)
+ * - Asynchronous file traversal and search (std::async)
  * - .gitignore-aware file filtering
  * - Regex and literal text search modes
  * - Case-sensitive/insensitive matching
@@ -12,9 +12,9 @@
  * - Interactive tree view with file grouping
  *
  * @par Architecture:
- * The widget uses QFutureWatcher to run searches on a background thread,
- * collecting results via thread-safe queue protected by QMutex. Results
- * are batched and emitted to the UI thread via queued signal connections.
+ * The widget uses std::future to run searches on a background thread,
+ * collecting results via thread-safe queue protected by std::mutex. Results
+ * are batched and dispatched to registered callback handlers.
  *
  * @par Keyboard Shortcuts:
  * - Enter: Start search / Navigate to selected result
@@ -22,7 +22,7 @@
  * - Ctrl+Shift+F: Global shortcut to focus search input
  *
  * @note Thread Safety: Search operations run on background threads.
- *       UI updates are marshalled to the main thread via signals.
+ *       UI updates are marshalled to the main thread via callbacks.
  *
  * @author RawrXD IDE Team
  * @version 2.0.0
@@ -32,19 +32,18 @@
  */
 #pragma once
 
-#include <QWidget>
-#include <QLineEdit>
-#include <QTreeWidget>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QMutex>
-#include <QFutureWatcher>
-#include <QRegularExpression>
-#include <atomic>
+#include <string>
 #include <vector>
+#include <mutex>
+#include <future>
+#include <regex>
+#include <atomic>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 #include "file_manager.h"
 
@@ -58,26 +57,25 @@
  *
  * @par Usage Example:
  * @code
- * MultiFileSearchWidget* searchWidget = new MultiFileSearchWidget(this);
- * searchWidget->setProjectRoot("/path/to/project");
+ * MultiFileSearchWidget searchWidget;
+ * searchWidget.setProjectRoot("/path/to/project");
  *
- * connect(searchWidget, &MultiFileSearchWidget::resultClicked,
- *         this, &MainWindow::navigateToSearchResult);
+ * searchWidget.setResultClickedCb([](void*, const MultiFileSearchResult* r) {
+ *     // Navigate to match location
+ * }, nullptr);
  *
  * // Optionally trigger search programmatically:
- * searchWidget->setSearchQuery("TODO:");
- * searchWidget->startSearch();
+ * searchWidget.setSearchQuery("TODO:");
+ * searchWidget.startSearch();
  * @endcode
  *
- * @par Signal/Slot Connections:
- * - resultClicked(MultiFileSearchResult): Emitted when user double-clicks a result
- * - searchCompleted(int): Emitted when search finishes with total result count
+ * @par Callback Connections:
+ * - ResultClickedCb: Invoked when user double-clicks a result
+ * - SearchCompletedCb: Invoked when search finishes with total result count
  *
  * @see MultiFileSearchResult for the result data structure
  */
-class MultiFileSearchWidget : public QWidget {
-    Q_OBJECT
-
+class MultiFileSearchWidget {
 public:
     /**
      * @brief Constructs the search widget with all UI components.
@@ -90,12 +88,19 @@ public:
      * - Results tree view with custom item delegate
      * - Progress indicator and status label
      */
-    explicit MultiFileSearchWidget(QWidget* parent = nullptr);
+    MultiFileSearchWidget() = default;
 
     /**
      * @brief Destructor - cancels any running search and cleans up.
      */
     ~MultiFileSearchWidget();
+
+    /** Show the multi-file search window (Win32 IDE integration). Invokes setShowCallback when set. */
+    void show() { if (m_showCb) m_showCb(m_showCtx); }
+
+    /** Register callback for show() — IDE sets this to display the Find-in-Files dialog. */
+    using ShowCallback = void(*)(void* ctx);
+    void setShowCallback(ShowCallback cb, void* ctx) { m_showCb = cb; m_showCtx = ctx; }
 
     /**
      * @brief Sets the root directory for project-wide searches.
@@ -106,13 +111,13 @@ public:
      * - Relative path display in results
      * - .gitignore file discovery
      */
-    void setProjectRoot(const QString& path);
+    void setProjectRoot(const std::string& path);
 
     /**
      * @brief Gets the currently configured project root.
      * @return Absolute path to the project root, or empty if not set
      */
-    QString projectRoot() const { return m_projectRoot; }
+    std::string projectRoot() const { return m_projectRoot; }
 
     /**
      * @brief Programmatically sets the search query.
@@ -120,13 +125,13 @@ public:
      *
      * Does not automatically start the search - call startSearch() afterward.
      */
-    void setSearchQuery(const QString& query);
+    void setSearchQuery(const std::string& query);
 
     /**
      * @brief Gets the current search query text.
      * @return Current contents of the search input field
      */
-    QString searchQuery() const;
+    std::string searchQuery() const;
 
     /**
      * @brief Checks if a search is currently in progress.
@@ -134,7 +139,7 @@ public:
      */
     bool isSearching() const { return m_isSearching; }
 
-public slots:
+public:
     /**
      * @brief Initiates an asynchronous search operation.
      *
@@ -172,42 +177,51 @@ public slots:
      */
     void focusSearchInput();
 
-signals:
+    // ─────────────────────────────────────────────────────────────────────
+    // Callbacks (replaces Qt signals)
+    // ─────────────────────────────────────────────────────────────────────
+
     /**
-     * @brief Emitted when user double-clicks or presses Enter on a result.
+     * @brief Callback type invoked when user double-clicks or presses Enter on a result.
+     * @param ctx User-provided context pointer
      * @param result The selected search result with file/line/column info
      *
-     * Connect to this signal to implement navigation to the match location:
+     * Register via setResultClickedCb() to implement navigation to the match location:
      * @code
-     * connect(searchWidget, &MultiFileSearchWidget::resultClicked,
-     *         [this](const MultiFileSearchResult& r) {
-     *             openFile(r.file);
-     *             goToLine(r.line, r.column);
-     *         });
+     * searchWidget.setResultClickedCb([](void*, const MultiFileSearchResult* r) {
+     *     openFile(r->file);
+     *     goToLine(r->line, r->column);
+     * }, nullptr);
      * @endcode
      */
-    void resultClicked(const MultiFileSearchResult& result);
+    using ResultClickedCb = void(*)(void* ctx, const MultiFileSearchResult* result);
 
     /**
-     * @brief Emitted when a search operation completes (success or cancelled).
+     * @brief Callback type invoked when a search operation completes (success or cancelled).
+     * @param ctx User-provided context pointer
      * @param totalResults Total number of matches found
      */
-    void searchCompleted(int totalResults);
+    using SearchCompletedCb = void(*)(void* ctx, int totalResults);
 
     /**
-     * @brief Emitted periodically during search with progress updates.
+     * @brief Callback type invoked periodically during search with progress updates.
+     * @param ctx User-provided context pointer
      * @param filesSearched Number of files searched so far
      * @param matchesFound Number of matches found so far
      */
-    void searchProgress(int filesSearched, int matchesFound);
+    using SearchProgressCb = void(*)(void* ctx, int filesSearched, int matchesFound);
 
-private slots:
+    void setResultClickedCb(ResultClickedCb cb, void* ctx) { m_clickedCb = cb; m_clickedCtx = ctx; }
+    void setSearchCompletedCb(SearchCompletedCb cb, void* ctx) { m_completedCb = cb; m_completedCtx = ctx; }
+    void setSearchProgressCb(SearchProgressCb cb, void* ctx) { m_progressCb = cb; m_progressCtx = ctx; }
+
+private:
     /**
      * @brief Handles double-click on a tree item.
      * @param item The clicked tree widget item
      * @param column The column that was clicked
      */
-    void onResultItemDoubleClicked(QTreeWidgetItem* item, int column);
+    void onResultItemDoubleClicked(void* item, int column);
 
     /**
      * @brief Processes batched results from the background thread.
@@ -217,7 +231,7 @@ private slots:
     void onSearchResultsReady();
 
     /**
-     * @brief Handles search completion from QFutureWatcher.
+     * @brief Handles search completion from async search task.
      */
     void onSearchFinished();
 
@@ -233,18 +247,18 @@ private:
      * Traverses the project directory, respects .gitignore rules, and
      * collects matches into the thread-safe results queue.
      */
-    void performSearch(const QString& searchText,
-                       const QString& rootPath,
+    void performSearch(const std::string& searchText,
+                       const std::string& rootPath,
                        bool useRegex,
                        bool caseSensitive,
-                       const QString& fileFilter);
+                       const std::string& fileFilter);
 
     /**
      * @brief Parses .gitignore files and builds exclusion patterns.
      * @param rootPath Project root containing .gitignore
      * @return List of compiled regex patterns for ignored paths
      */
-    QVector<QRegularExpression> loadGitignorePatterns(const QString& rootPath);
+    std::vector<std::regex> loadGitignorePatterns(const std::string& rootPath);
 
     /**
      * @brief Checks if a file path should be excluded from search.
@@ -252,8 +266,8 @@ private:
      * @param patterns Compiled gitignore patterns
      * @return true if the file should be skipped
      */
-    bool isIgnored(const QString& filePath,
-                   const QVector<QRegularExpression>& patterns);
+    bool isIgnored(const std::string& filePath,
+                   const std::vector<std::regex>& patterns);
 
     /**
      * @brief Adds a result to the tree view, grouped by file.
@@ -267,35 +281,50 @@ private:
      * @brief Updates the status label with current search state.
      * @param message Status message to display
      */
-    void updateStatus(const QString& message);
+    void updateStatus(const std::string& message);
 
     // ─────────────────────────────────────────────────────────────────────
     // UI Components
     // ─────────────────────────────────────────────────────────────────────
 
-    QLineEdit* m_searchInput;          ///< Main search query input field
-    QLineEdit* m_fileFilterInput;      ///< File pattern filter (e.g., "*.cpp, *.h")
-    QCheckBox* m_caseSensitiveCheck;   ///< Case sensitivity toggle
-    QCheckBox* m_regexCheck;           ///< Regex mode toggle
-    QCheckBox* m_wholeWordCheck;       ///< Whole word matching toggle
-    QPushButton* m_searchButton;       ///< Search/Cancel button
-    QTreeWidget* m_resultsTree;        ///< Grouped results display
-    QLabel* m_statusLabel;             ///< Search status and result count
+    HWND m_searchInput = nullptr;          ///< Main search query input field
+    HWND m_fileFilterInput = nullptr;      ///< File pattern filter (e.g., "*.cpp, *.h")
+    HWND m_caseSensitiveCheck = nullptr;   ///< Case sensitivity toggle
+    HWND m_regexCheck = nullptr;           ///< Regex mode toggle
+    HWND m_wholeWordCheck = nullptr;       ///< Whole word matching toggle
+    HWND m_searchButton = nullptr;         ///< Search/Cancel button
+    HWND m_resultsTree = nullptr;          ///< Grouped results display
+    HWND m_statusLabel = nullptr;          ///< Search status and result count
 
     // ─────────────────────────────────────────────────────────────────────
     // Search State
     // ─────────────────────────────────────────────────────────────────────
 
-    QString m_projectRoot;                                    ///< Project root directory
+    std::string m_projectRoot;                                ///< Project root directory
+    std::string m_searchQuery;                                ///< Current search query (set via setSearchQuery)
     std::atomic<bool> m_searchCancelled{false};               ///< Cancellation flag (atomic for thread safety)
     bool m_isSearching = false;                               ///< Search-in-progress flag
-    QFutureWatcher<void>* m_searchWatcher = nullptr;          ///< Async search monitor
+    std::future<void> m_searchFuture;                         ///< Async search task
 
     // ─────────────────────────────────────────────────────────────────────
     // Thread-Safe Result Collection
     // ─────────────────────────────────────────────────────────────────────
 
-    mutable QMutex m_resultsMutex;                            ///< Protects m_pendingResults
+    mutable std::mutex m_resultsMutex;                        ///< Protects m_pendingResults
     std::vector<MultiFileSearchResult> m_pendingResults;      ///< Results waiting for UI update
     int m_totalResultCount = 0;                               ///< Running total of matches found
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Callback Pointers (replaces Qt signals)
+    // ─────────────────────────────────────────────────────────────────────
+
+    ResultClickedCb m_clickedCb = nullptr;                    ///< Result clicked callback
+    void* m_clickedCtx = nullptr;                             ///< Result clicked callback context
+    SearchCompletedCb m_completedCb = nullptr;                ///< Search completed callback
+    void* m_completedCtx = nullptr;                           ///< Search completed callback context
+    SearchProgressCb m_progressCb = nullptr;                  ///< Search progress callback
+    void* m_progressCtx = nullptr;                            ///< Search progress callback context
+
+    ShowCallback m_showCb = nullptr;                          ///< IDE show-dialog callback
+    void* m_showCtx = nullptr;
 };

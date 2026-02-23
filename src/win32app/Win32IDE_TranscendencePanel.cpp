@@ -16,6 +16,7 @@
 //   2. Command handlers (IDM_TRANSCEND_* 6000-6099)
 //   3. HTTP endpoint handlers (/api/transcendence/*)
 //
+// Status: Production UI and command/HTTP wiring; backend depth varies by phase (E–Ω).
 // Pattern:  PatchResult-style results, no exceptions
 // Rule:     NO SOURCE FILE IS TO BE SIMPLIFIED
 // =============================================================================
@@ -171,14 +172,17 @@ bool Win32IDE::handleTranscendenceCommand(int cmdId) {
     switch (cmdId) {
     case 6000: { // Init all
         initTranscendence();
+        if (m_hwndStatusBar) SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)"Transcendence: E-Omega initialized");
         return true;
     }
     case 6001: { // Shutdown all
         shutdownTranscendence();
+        if (m_hwndStatusBar) SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)"Transcendence: shut down");
         return true;
     }
     case 6002: { // Health check
         auto health = coord.checkHealth();
+        if (m_hwndStatusBar) SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)"Transcendence: health check done");
         std::ostringstream oss;
         oss << "{\"level\":\"" << healthToString(health.level) << "\","
             << "\"activePhasesCount\":" << health.activePhasesCount << ","

@@ -20,6 +20,9 @@
 #endif
 #include <windows.h>
 
+// SCAFFOLD_259: Copilot gap closer module
+
+
 namespace RawrXD {
 
 // ============================================================================

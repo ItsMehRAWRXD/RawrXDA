@@ -10,9 +10,6 @@
 #include <cmath>
 #include <iomanip>
 
-#include "logging/logger.h"
-static Logger s_logger("test_thermal_tools");
-
 // MMF structures (matching the service)
 constexpr uint32_t kSidecarSignature = 0x534F5645;
 constexpr uint32_t kMaxDrives = 16;
@@ -30,22 +27,22 @@ struct SovereignThermalMMF {
 #pragma pack(pop)
 
 int main() {
-    s_logger.info("╔════════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║        SOVEREIGN THERMAL TOOLS - INTEGRATION TEST          ║\n");
-    s_logger.info("╚════════════════════════════════════════════════════════════╝\n\n");
+    std::cout << "╔════════════════════════════════════════════════════════════╗\n";
+    std::cout << "║        SOVEREIGN THERMAL TOOLS - INTEGRATION TEST          ║\n";
+    std::cout << "╚════════════════════════════════════════════════════════════╝\n\n";
 
     // Try to open the MMF
     HANDLE mapping = OpenFileMappingA(FILE_MAP_READ, FALSE, "Global\\SOVEREIGN_NVME_TEMPS");
     if (!mapping) {
         mapping = OpenFileMappingA(FILE_MAP_READ, FALSE, "Local\\SOVEREIGN_NVME_TEMPS");
         if (!mapping) {
-            s_logger.info("[ERROR] NVMe Oracle service not running!\n");
-            s_logger.info("        Run: sc.exe start SovereignNVMeOracle\n");
+            std::cout << "[ERROR] NVMe Oracle service not running!\n";
+            std::cout << "        Run: sc.exe start SovereignNVMeOracle\n";
             return 1;
         }
-        s_logger.info("[INFO] Using Local namespace MMF\n");
+        std::cout << "[INFO] Using Local namespace MMF\n";
     } else {
-        s_logger.info("[INFO] Using Global namespace MMF\n");
+        std::cout << "[INFO] Using Global namespace MMF\n";
     }
 
     auto* view = static_cast<SovereignThermalMMF*>(
@@ -53,30 +50,30 @@ int main() {
     );
     
     if (!view) {
-        s_logger.info("[ERROR] Failed to map view\n");
+        std::cout << "[ERROR] Failed to map view\n";
         CloseHandle(mapping);
         return 1;
     }
 
     // Validate signature
     if (view->signature != kSidecarSignature) {
-        s_logger.info("[ERROR] Invalid signature: 0x");
+        std::cout << "[ERROR] Invalid signature: 0x" << std::hex << view->signature << std::dec << "\n";
         UnmapViewOfFile(view);
         CloseHandle(mapping);
         return 1;
     }
 
-    s_logger.info("[OK] Signature valid: 0x");
-    s_logger.info("[OK] Version: ");
-    s_logger.info("[OK] Drive count: ");
-    s_logger.info("[OK] Last update: ");
+    std::cout << "[OK] Signature valid: 0x" << std::hex << view->signature << std::dec << "\n";
+    std::cout << "[OK] Version: " << view->version << "\n";
+    std::cout << "[OK] Drive count: " << view->driveCount << "\n";
+    std::cout << "[OK] Last update: " << view->timestampMs << " ms\n\n";
 
     // Display drive rankings
-    s_logger.info("╔════════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║                    DRIVE RANKING                           ║\n");
-    s_logger.info("╠════════╦══════════╦══════════╦══════════╦═════════════════╣\n");
-    s_logger.info("║ Drive  ║ Temp (C) ║ Wear (%) ║ Score    ║ Status          ║\n");
-    s_logger.info("╠════════╬══════════╬══════════╬══════════╬═════════════════╣\n");
+    std::cout << "╔════════════════════════════════════════════════════════════╗\n";
+    std::cout << "║                    DRIVE RANKING                           ║\n";
+    std::cout << "╠════════╦══════════╦══════════╦══════════╦═════════════════╣\n";
+    std::cout << "║ Drive  ║ Temp (C) ║ Wear (%) ║ Score    ║ Status          ║\n";
+    std::cout << "╠════════╬══════════╬══════════╬══════════╬═════════════════╣\n";
 
     struct DriveInfo {
         int id;
@@ -118,10 +115,14 @@ int main() {
         [](const DriveInfo& a, const DriveInfo& b) { return a.score < b.score; });
 
     for (const auto& d : drives) {
-        s_logger.info("║ ");
+        std::cout << "║ " << std::setw(6) << d.id << " ║ "
+                  << std::setw(8) << d.temp << " ║ "
+                  << std::setw(8) << d.wear << " ║ "
+                  << std::setw(8) << (std::isinf(d.score) ? -1.0 : d.score) << " ║ "
+                  << std::setw(15) << d.status << " ║\n";
     }
 
-    s_logger.info("╚════════╩══════════╩══════════╩══════════╩═════════════════╝\n\n");
+    std::cout << "╚════════╩══════════╩══════════╩══════════╩═════════════════╝\n\n";
 
     // Find best drive
     int bestDrive = -1;
@@ -134,10 +135,10 @@ int main() {
     }
 
     if (bestDrive >= 0) {
-        s_logger.info("[RESULT] Best drive for I/O: Drive ");
-        s_logger.info("         Path: \\\\.\\PhysicalDrive");
+        std::cout << "[RESULT] Best drive for I/O: Drive " << bestDrive << " @ " << coolestTemp << "C\n";
+        std::cout << "         Path: \\\\.\\PhysicalDrive" << bestDrive << "\n";
     } else {
-        s_logger.info("[WARNING] No valid drives available!\n");
+        std::cout << "[WARNING] No valid drives available!\n";
     }
 
     // Thermal headroom check
@@ -148,15 +149,15 @@ int main() {
         }
     }
 
-    s_logger.info("\n[THERMAL CHECK]\n");
-    s_logger.info("  Hottest valid drive: ");
-    s_logger.info("  Throttle threshold:  65C\n");
-    s_logger.info("  Headroom:            ");
-    s_logger.info("  Recommendation:      ");
+    std::cout << "\n[THERMAL CHECK]\n";
+    std::cout << "  Hottest valid drive: " << maxValidTemp << "C\n";
+    std::cout << "  Throttle threshold:  65C\n";
+    std::cout << "  Headroom:            " << (65 - maxValidTemp) << "C\n";
+    std::cout << "  Recommendation:      " << (maxValidTemp < 65 ? "PROCEED with heavy I/O" : "THROTTLE or wait") << "\n";
 
     UnmapViewOfFile(view);
     CloseHandle(mapping);
 
-    s_logger.info("\n[SUCCESS] Thermal tools integration test passed!\n");
+    std::cout << "\n[SUCCESS] Thermal tools integration test passed!\n";
     return 0;
 }

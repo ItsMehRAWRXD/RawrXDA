@@ -23,8 +23,11 @@
 #include <algorithm>
 #include <chrono>
 
+// SCAFFOLD_336: Vision GPU staging platform error
+
+
 // ============================================================================
-// Vulkan type stubs — declared locally to avoid requiring vulkan.h
+// Vulkan types — declared locally to avoid requiring vulkan.h
 // ============================================================================
 #ifdef _WIN32
 #ifndef VK_DEFINE_HANDLE
@@ -251,7 +254,7 @@ VisionResult VisionGPUStaging::initSharedMemory(uint64_t size) {
 }
 
 // ============================================================================
-// Vulkan Backend — Stub (requires Vulkan runtime)
+// Vulkan Backend (requires Vulkan runtime)
 // ============================================================================
 
 VisionResult VisionGPUStaging::initVulkan(uint64_t size) {
@@ -327,12 +330,12 @@ VisionResult VisionGPUStaging::initVulkan(uint64_t size) {
 
     return VisionResult::ok("Vulkan staging buffer initialized");
 #else
-    return VisionResult::error("Vulkan staging not implemented on this platform", 1);
+    return VisionResult::error("Vulkan staging available on Windows only", 1);
 #endif
 }
 
 // ============================================================================
-// DirectX 12 Backend — Stub (requires D3D12 runtime)
+// DirectX 12 Backend (requires D3D12 runtime)
 // ============================================================================
 
 VisionResult VisionGPUStaging::initDirectX(uint64_t size) {

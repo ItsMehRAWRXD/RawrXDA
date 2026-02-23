@@ -27,15 +27,9 @@
 #include <iomanip>
 #include <cstdlib>
 
-// Core RawrXD includes
+// Core RawrXD includes — C++20 only (no Qt)
 #include "../include/inference_engine_stub.hpp"
 #include "../src/utils/sovereign_bridge.hpp"
-#include "../src/qtapp/ProdIntegration.h"
-
-// Qt minimal for QCoreApplication
-#include <QCoreApplication>
-#include <QString>
-#include <QDebug>
 
 using namespace std;
 using namespace std::chrono;
@@ -286,9 +280,8 @@ bool testInferenceEngine(TestConfig& config, const SystemInfo& sys_info) {
     if (config.benchmark) {
         cout << "\n⚡ Running inference benchmark...\n";
         
-        // Simple tokenization test
-        QString test_prompt = "What is the purpose of machine learning in modern AI systems?";
-        cout << "  Prompt: \"" << test_prompt.toStdString() << "\"\n";
+        std::string test_prompt = "What is the purpose of machine learning in modern AI systems?";
+        cout << "  Prompt: \"" << test_prompt << "\"\n";
         
         auto token_start = steady_clock::now();
         auto tokens = engine.tokenize(test_prompt);
@@ -304,7 +297,7 @@ bool testInferenceEngine(TestConfig& config, const SystemInfo& sys_info) {
         auto gen_end = steady_clock::now();
         
         auto gen_ms = duration_cast<milliseconds>(gen_end - gen_start).count();
-        double tokens_per_sec = (config.inference_tokens * 1000.0) / gen_ms;
+        double tokens_per_sec = gen_ms > 0 ? (config.inference_tokens * 1000.0) / gen_ms : 0.0;
         
         cout << "  Generation: " << result.size() << " tokens (" << gen_ms << " ms)\n";
         cout << "  Throughput: " << fixed << setprecision(2) << tokens_per_sec << " tokens/sec\n";
@@ -323,9 +316,11 @@ bool testInferenceEngine(TestConfig& config, const SystemInfo& sys_info) {
         
         // Detokenize a sample
         if (!result.empty()) {
-            auto sample_tokens = vector<int32_t>(result.begin(), result.begin() + min(10, (int)result.size()));
-            QString detokenized = engine.detokenize(sample_tokens);
-            cout << "  Sample output: \"" << detokenized.left(100).toStdString() << "...\"\n";
+            size_t n = (std::min)(static_cast<size_t>(10), result.size());
+            auto sample_tokens = vector<int32_t>(result.begin(), result.begin() + n);
+            std::string detokenized = engine.detokenize(sample_tokens);
+            if (detokenized.size() > 100) detokenized.resize(100);
+            cout << "  Sample output: \"" << detokenized << "...\"\n";
         }
     }
     
@@ -333,9 +328,6 @@ bool testInferenceEngine(TestConfig& config, const SystemInfo& sys_info) {
 }
 
 int main(int argc, char* argv[]) {
-    // Initialize Qt core (required for InferenceEngine)
-    QCoreApplication app(argc, argv);
-    
     printHeader();
     
     TestConfig config = parseArgs(argc, argv);

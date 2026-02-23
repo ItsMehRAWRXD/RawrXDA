@@ -1,29 +1,13 @@
+# test_chat_integration — C++20 stub, no Qt.
+# Chat/inference is covered by Win32 IDE (Win32IDE_LLMRouter, agentic bridge).
 cmake_minimum_required(VERSION 3.16)
-project(test_chat_integration)
+project(test_chat_integration LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_AUTOMOC ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Qt6
-find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/include)
 
-# Include directories
-include_directories(${CMAKE_SOURCE_DIR})
-include_directories(${CMAKE_SOURCE_DIR}/src)
-include_directories(${CMAKE_SOURCE_DIR}/src/qtapp)
-include_directories(${CMAKE_SOURCE_DIR}/include)
+add_executable(test_chat_integration test_chat_integration.cpp)
 
-# Add the test executable
-add_executable(test_chat_integration
-    test_chat_integration.cpp
-    src/qtapp/inference_engine.cpp
-    src/qtapp/gguf_loader.cpp
-    src/qtapp/vocabulary_loader.cpp
-)
-
-# Link libraries
-target_link_libraries(test_chat_integration PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Widgets
-)
+# No Qt — stub only

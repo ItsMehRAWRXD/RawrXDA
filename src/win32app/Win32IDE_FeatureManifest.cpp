@@ -18,6 +18,9 @@
 #include <filesystem>
 #include <functional>
 
+// SCAFFOLD_330: Feature manifest and STUB description
+
+
 namespace fs = std::filesystem;
 
 // ============================================================================
@@ -105,7 +108,7 @@ enum class FeatureStatus {
     Real,        // Fully implemented, compiles, works
     Partial,     // Has code but incomplete/stub parts
     Facade,      // Has UI but no backend logic
-    Stub,        // Intentional placeholder
+    Stub,        // Registered; implementation deferred (build variant or optional module)
     Missing      // Not present in this IDE variant
 };
 
@@ -425,11 +428,11 @@ static FeatureEntry g_featureManifest[] = {
     
     {"agent.failureDetection", "Failure Detection", "Detect refusal/hallucination/timeout",
      FeatureCategory::Agent, 0, "", "Win32IDE_FailureDetector.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
     {"agent.failureIntelligence", "Failure Intelligence", "Aggregate failure analytics",
      FeatureCategory::Agent, 0, "", "Win32IDE_FailureIntelligence.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== AUTONOMY ==========================
     {"autonomy.toggle", "Autonomy Toggle", "Enable/disable autonomous operation",
@@ -563,7 +566,7 @@ static FeatureEntry g_featureManifest[] = {
     
     {"hotpatch.server", "Server Hotpatch", "Request/response transform injection",
      FeatureCategory::Hotpatch, 9003, "", "gguf_server_hotpatch.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Partial, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Partial, FeatureStatus::Missing, nullptr},
     
     {"hotpatch.panel", "Hotpatch Panel UI", "Visual hotpatch control panel",
      FeatureCategory::Hotpatch, 0, "", "Win32IDE_HotpatchPanel.cpp",
@@ -571,7 +574,7 @@ static FeatureEntry g_featureManifest[] = {
     
     {"hotpatch.unified", "Unified Hotpatch Mgr", "Routes patches to correct layer",
      FeatureCategory::Hotpatch, 0, "", "unified_hotpatch_manager.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== STREAMING UX ==========================
     {"streaming.tokenByToken", "Token Streaming", "Live token-by-token output display",
@@ -614,7 +617,7 @@ static FeatureEntry g_featureManifest[] = {
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Partial, nullptr},
     
     {"subagent.chain", "Prompt Chain", "Sequential multi-step prompt chain (executeChain)",
-     FeatureCategory::SubAgent, 4110, "", "Win32IDE_SubAgent.cpp",
+     FeatureCategory::SubAgent, 4111, "", "Win32IDE_SubAgent.cpp",
      FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
     
     {"subagent.swarm", "HexMag Swarm", "Parallel agent swarm execution (executeSwarm)",
@@ -674,7 +677,7 @@ static FeatureEntry g_featureManifest[] = {
     // ========================== ANNOTATIONS ==========================
     {"annotations.inline", "Inline Annotations", "AI-generated code annotations",
      FeatureCategory::Annotations, 0, "", "Win32IDE_Annotations.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== LOCAL SERVER ==========================
     {"server.local", "Local Inference Server", "Built-in HTTP inference server",
@@ -684,12 +687,12 @@ static FeatureEntry g_featureManifest[] = {
     // ========================== PLAN EXECUTOR ==========================
     {"plan.executor", "Plan Executor", "Multi-step plan approval & execution",
      FeatureCategory::Agent, 0, "", "Win32IDE_PlanExecutor.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== EXECUTION GOVERNOR ==========================
     {"exec.governor", "Execution Governor", "Rate limit & safety controls for agent",
      FeatureCategory::Agent, 0, "", "Win32IDE_ExecutionGovernor.cpp",
-     FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
+     FeatureStatus::Real, FeatureStatus::Real, FeatureStatus::Missing, FeatureStatus::Missing, nullptr},
 
     // ========================== COMPILER CLI ==========================
     {"compiler.cli", "CLI Compiler", "Multi-target MASM64 compiler CLI",
@@ -855,12 +858,14 @@ static int countByCategory(FeatureCategory cat) {
 // SELF-TEST RUNNER
 // ============================================================================
 
-struct TestResult {
+namespace {
+struct FeatureTestResult {
     const char* featureId;
     const char* featureName;
     bool passed;
     const char* reason;
 };
+}
 
 int Win32IDE::runFeatureSelfTests(std::vector<std::string>& results) {
     int passed = 0;
@@ -954,7 +959,7 @@ std::string Win32IDE::generateFeatureManifestMarkdown() {
     md << "- ✅ REAL — Fully implemented, compiles, tested\n";
     md << "- 🔶 PARTIAL — Has code but incomplete/some stubs\n";
     md << "- 🎭 FACADE — Has UI but no backend logic\n";
-    md << "- 📌 STUB — Intentional placeholder for future work\n";
+    md << "- 📌 STUB — Feature registered; implementation deferred (build variant or optional module)\n";
     md << "- ❌ MISSING — Not present in this IDE variant\n";
     
     return md.str();

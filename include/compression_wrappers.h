@@ -12,7 +12,7 @@
 #include <windows.h>
 #endif
 
-// Forward-declare zlib functions when header available; otherwise stub
+// Forward-declare zlib functions when header available; otherwise no-op/minimal
 #if __has_include(<zlib.h>)
 #include <zlib.h>
 #define RAWRXD_HAS_ZLIB 1

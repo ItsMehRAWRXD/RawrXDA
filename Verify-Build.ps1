@@ -1,6 +1,9 @@
 # Verify-Build.ps1
 # Comprehensive build verification and validation
-# Checks for Qt dependencies, DLL loading, functionality, and integrity
+# Checks for Qt dependencies, DLL loading, functionality, and integrity.
+#
+# Policy: RawrXD is Qt-free. Use Ship/StdReplacements.hpp and Win32/C++20 only.
+# Any #include <QString>, <QtCore>, etc. in src/ or Ship/ fails this script.
 
 param(
     [string]$BuildDir = "D:\RawrXD\build_clean\Release"
@@ -16,6 +19,13 @@ if (-not (Test-Path $BuildDir)) {
     exit 1
 }
 
+# Resolve repo root from BuildDir (e.g. D:\rawrxd\build -> D:\rawrxd)
+$BuildDirResolved = (Resolve-Path -LiteralPath $BuildDir -ErrorAction SilentlyContinue).Path
+if (-not $BuildDirResolved) { $BuildDirResolved = $BuildDir }
+$repoRoot = (Get-Item -LiteralPath $BuildDirResolved).Parent.FullName
+$srcDir = Join-Path $repoRoot "src"
+$shipDir = Join-Path $repoRoot "Ship"
+
 $verificationsPassed = 0
 $verificationsFailed = 0
 
@@ -26,13 +36,20 @@ Write-Host "`n📦 Checking output binaries..." -ForegroundColor Yellow
 
 $exePath = $null
 $possiblePaths = @(
+    "$BuildDir\bin\RawrXD-Win32IDE.exe",
+    "$BuildDir\RawrXD-Win32IDE.exe",
     "$BuildDir\RawrXD_Agent_GUI.exe",
     "$BuildDir\Release\RawrXD_Agent_GUI.exe",
     "$BuildDir\Release\RawrXD_IDE.exe",
     "$BuildDir\Debug\RawrXD_IDE.exe",
     "$BuildDir\RawrXD_IDE.exe",
     "$BuildDir\..\Release\RawrXD_IDE.exe",
-    "$BuildDir\..\Debug\RawrXD_IDE.exe"
+    "$BuildDir\..\Debug\RawrXD_IDE.exe",
+    "$repoRoot\build_ide\bin\RawrXD-Win32IDE.exe",
+    "$repoRoot\build_ide\RawrXD-Win32IDE.exe",
+    "$repoRoot\build_ide\RawrXD_Agent_GUI.exe",
+    "$repoRoot\build_ide\Release\RawrXD_Agent_GUI.exe",
+    "$repoRoot\build_ide\Release\RawrXD-Win32IDE.exe"
 )
 
 foreach ($path in $possiblePaths) {
@@ -42,12 +59,29 @@ foreach ($path in $possiblePaths) {
     }
 }
 
+# Fallback: search recursively under BuildDir and repo build_ide for any known IDE/agent exe
+if (-not $exePath) {
+    $exeNames = @("RawrXD-Win32IDE.exe", "RawrXD_Agent_GUI.exe", "RawrXD_IDE.exe", "RawrEngine.exe", "RawrXD_Gold.exe")
+    foreach ($dir in @($BuildDir, (Join-Path $repoRoot "build_ide"))) {
+        if (-not (Test-Path $dir)) { continue }
+        foreach ($name in $exeNames) {
+            $found = Get-ChildItem -Path $dir -Recurse -Filter $name -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+                $exePath = $found.FullName
+                break
+            }
+        }
+        if ($exePath) { break }
+    }
+}
+
 if ($exePath) {
     $size = (Get-Item $exePath).Length / 1MB
-    Write-Host "  ✅ RawrXD_IDE.exe ($([math]::Round($size, 2)) MB)" -ForegroundColor Green
+    $name = Split-Path $exePath -Leaf
+    Write-Host "  ✅ $name ($([math]::Round($size, 2)) MB)" -ForegroundColor Green
     $verificationsPassed++
 } else {
-    Write-Host "  ❌ RawrXD_IDE.exe NOT FOUND" -ForegroundColor Red
+    Write-Host "  ❌ IDE executable NOT FOUND" -ForegroundColor Red
     Write-Host "     Searched: $BuildDir and variants" -ForegroundColor DarkRed
     $verificationsFailed++
 }
@@ -97,17 +131,42 @@ if ($exePath -and (Test-Path $exePath)) {
                 Write-Host "  ❌ FOUND Qt DLLs: $($qtDllsFound -join ', ')" -ForegroundColor Red
                 $verificationsFailed++
             }
+            # Check for vulkan-1.dll (load-time dep — missing causes startup crash)
+            if ($dumpOutput -match "vulkan-1\.dll") {
+                $vkPath = Join-Path (Split-Path $exePath) "vulkan-1.dll"
+                if (-not (Test-Path $vkPath)) {
+                    Write-Host "  ⚠️  vulkan-1.dll required (load-time). If IDE crashes on startup:" -ForegroundColor Yellow
+                    Write-Host "     Install Vulkan Runtime: https://vulkan.lunarg.com/sdk/home" -ForegroundColor Yellow
+                }
+            }
         }
     }
 }
 
 # ============================================================================
-# 3. CHECK FOR REMAINING Qt INCLUDES IN SOURCE
+# 3. CHECK FOR Qt INCLUDES IN SOURCE (ZERO TOLERANCE)
 # ============================================================================
-Write-Host "`n🔎 Checking for remaining Qt #includes in source..." -ForegroundColor Yellow
+# Policy: NO .cpp/.h/.hpp in src/ or Ship/ may contain #include <Q...>. <queue> excluded.
+Write-Host "`n🔎 Checking for Qt #includes in source (src + Ship)..." -ForegroundColor Yellow
 
-$srcDir = "D:\RawrXD\src"
-$qtIncludePattern = '#include\s+<Q\w+>'
+# Match Qt framework headers only (QString, QObject, QtCore, etc.) — NOT STL <queue>
+# Use case-sensitive match (-cmatch) so "#include <queue>" is never counted as Qt.
+$qtIncludePattern = '#include\s+<Q[A-Z]\w*>'
+$commentLinePattern = '^\s*(\/\/|\*|\/\*)'
+# STL/system headers that must never be reported as Qt
+$qtExcludePattern = '#include\s+<queue>\s*$'
+
+function Test-FileHasQtInclude {
+    param([string]$path, [string]$pattern, [string]$commentPattern, [string]$excludePattern)
+    $lines = Get-Content -LiteralPath $path -ErrorAction SilentlyContinue
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -match $commentPattern) { continue }
+        if ($trimmed -cmatch $excludePattern) { continue }
+        if ($trimmed -cmatch $pattern) { return $true }
+    }
+    return $false
+}
 
 $qtScanExcludes = @(
     "self_code.cpp",
@@ -116,38 +175,67 @@ $qtScanExcludes = @(
 
 $filesWithQt = @()
 $allSourceFiles = Get-ChildItem -Path $srcDir -Recurse -Include "*.cpp", "*.h", "*.hpp" -ErrorAction SilentlyContinue |
-    Where-Object { $_.Name -notmatch '^QtReplacements.*\.hpp$' } |
     Where-Object { $qtScanExcludes -notcontains $_.Name }
 
 foreach ($file in $allSourceFiles) {
-    $content = Get-Content $file.FullName -ErrorAction SilentlyContinue
-    if ($content -match $qtIncludePattern) {
+    if (Test-FileHasQtInclude -path $file.FullName -pattern $qtIncludePattern -commentPattern $commentLinePattern -excludePattern $qtExcludePattern) {
         $filesWithQt += $file.FullName
     }
 }
 
+# Also scan Ship for Qt includes (same policy: no Qt)
+$shipSourceFiles = @()
+if (Test-Path $shipDir) {
+    $shipSourceFiles = Get-ChildItem -Path $shipDir -Recurse -Include "*.cpp", "*.h", "*.hpp" -ErrorAction SilentlyContinue
+}
+foreach ($file in $shipSourceFiles) {
+    if (Test-FileHasQtInclude -path $file.FullName -pattern $qtIncludePattern -commentPattern $commentLinePattern -excludePattern $qtExcludePattern) {
+        $filesWithQt += $file.FullName
+    }
+}
+
+$totalScanned = $allSourceFiles.Count + $shipSourceFiles.Count
 if ($filesWithQt.Count -eq 0) {
-    Write-Host "  ✅ No Qt #includes found in source ($($allSourceFiles.Count) files scanned)" -ForegroundColor Green
+    Write-Host "  ✅ No Qt #includes found ($totalScanned files in src + Ship)" -ForegroundColor Green
     $verificationsPassed++
 } else {
-    Write-Host "  ⚠️  Found Qt includes in $($filesWithQt.Count) files:" -ForegroundColor Magenta
-    $filesWithQt | Select-Object -First 10 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkMagenta }
+    Write-Host "  ❌ Found Qt includes in $($filesWithQt.Count) files:" -ForegroundColor Red
+    $filesWithQt | Select-Object -First 10 | ForEach-Object { Write-Host "     $_" -ForegroundColor DarkRed }
     if ($filesWithQt.Count -gt 10) {
-        Write-Host "     ... and $($filesWithQt.Count - 10) more" -ForegroundColor DarkMagenta
+        Write-Host "     ... and $($filesWithQt.Count - 10) more" -ForegroundColor DarkRed
     }
+    Write-Host "     Remove Qt; use Ship/StdReplacements.hpp and Win32/C++20." -ForegroundColor Yellow
     $verificationsFailed++
 }
 
 # ============================================================================
-# 4. CHECK FOR Q_OBJECT MACROS
+# 4. CHECK FOR Q_OBJECT MACROS (code only; ignore comment lines)
 # ============================================================================
 Write-Host "`n🔎 Checking for remaining Q_OBJECT macros..." -ForegroundColor Yellow
 
+$qObjectMacroPattern = 'Q_OBJECT|Q_PROPERTY|Q_ENUM|Q_GADGET'
 $qObjectCount = 0
 foreach ($file in $allSourceFiles) {
-    $content = Get-Content $file.FullName -ErrorAction SilentlyContinue
-    if ($content -match 'Q_OBJECT|Q_PROPERTY|Q_ENUM|Q_GADGET') {
-        $qObjectCount++
+    $lines = Get-Content $file.FullName -ErrorAction SilentlyContinue
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -match '^\s*(\/\/|\*|\/\*)') { continue }
+        if ($trimmed -match $qObjectMacroPattern) {
+            $qObjectCount++
+            break
+        }
+    }
+}
+# Include Ship in Q_OBJECT scan
+foreach ($file in $shipSourceFiles) {
+    $lines = Get-Content $file.FullName -ErrorAction SilentlyContinue
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -match '^\s*(\/\/|\*|\/\*)') { continue }
+        if ($trimmed -match $qObjectMacroPattern) {
+            $qObjectCount++
+            break
+        }
     }
 }
 
@@ -160,25 +248,30 @@ if ($qObjectCount -eq 0) {
 }
 
 # ============================================================================
-# 5. CHECK FOR QtReplacements.hpp USAGE
+# 5. CHECK FOR StdReplacements.hpp USAGE (Ship / STL replacement layer)
 # ============================================================================
-Write-Host "`n🔎 Checking for QtReplacements.hpp integration..." -ForegroundColor Yellow
+Write-Host "`n🔎 Checking for StdReplacements.hpp integration..." -ForegroundColor Yellow
 
-$qtReplacementsIncluded = 0
-foreach ($file in $allSourceFiles) {
+$stdReplacementsIncluded = 0
+$filesToScan = @()
+if (Test-Path $shipDir) {
+    $filesToScan = Get-ChildItem -Path $shipDir -Recurse -Include "*.cpp", "*.h", "*.hpp" -ErrorAction SilentlyContinue
+}
+$filesToScan += $allSourceFiles
+foreach ($file in $filesToScan) {
     if ($file.Extension -eq ".h" -or $file.Extension -eq ".hpp" -or $file.Extension -eq ".cpp") {
         $content = Get-Content $file.FullName -ErrorAction SilentlyContinue
-        if ($content -match '#include.*QtReplacements\.hpp') {
-            $qtReplacementsIncluded++
+        if ($content -match '#include.*StdReplacements\.hpp') {
+            $stdReplacementsIncluded++
         }
     }
 }
 
-if ($qtReplacementsIncluded -gt 0) {
-    Write-Host "  ✅ QtReplacements.hpp included in $qtReplacementsIncluded files" -ForegroundColor Green
+if ($stdReplacementsIncluded -gt 0) {
+    Write-Host "  ✅ StdReplacements.hpp included in $stdReplacementsIncluded files" -ForegroundColor Green
     $verificationsPassed++
 } else {
-    Write-Host "  ⚠️  QtReplacements.hpp not found in any source files" -ForegroundColor Magenta
+    Write-Host "  ⚠️  StdReplacements.hpp not found in any source files" -ForegroundColor Magenta
     $verificationsFailed++
 }
 
@@ -244,7 +337,8 @@ Write-Host "Status:  $passPercentage%" -ForegroundColor Cyan
 
 if ($verificationsFailed -eq 0) {
     Write-Host "`n✅ ALL VERIFICATIONS PASSED!" -ForegroundColor Green
-    Write-Host "`n🚀 RawrXD is ready for Qt-free execution!" -ForegroundColor Green
+    Write-Host "`n🚀 RawrXD is ready for Qt-free execution." -ForegroundColor Green
+    Write-Host "   Optional: .\scripts\Digest-SourceManifest.ps1 -OutDir `"$BuildDir`" -Format both" -ForegroundColor DarkGray
     exit 0
 } else {
     Write-Host "`n⚠️  Some verifications failed. Review above for details." -ForegroundColor Yellow

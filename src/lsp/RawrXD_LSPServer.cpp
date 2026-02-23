@@ -20,9 +20,6 @@
 #define NOMINMAX
 #include "lsp/RawrXD_LSPServer.h"
 
-#include "logging/logger.h"
-static Logger s_logger("RawrXD_LSPServer");
-
 #include <nlohmann/json.hpp>
 
 #include <iostream>
@@ -42,6 +39,9 @@ static Logger s_logger("RawrXD_LSPServer");
 #include <fcntl.h>
 #else
 #include <unistd.h>
+
+// SCAFFOLD_143: LSP server RawrXD (if present)
+
 #endif
 
 using json = nlohmann::json;
@@ -228,7 +228,7 @@ bool RawrXDLSPServer::readMessage(std::string& outMessage) {
 
 void RawrXDLSPServer::writeMessage(const std::string& jsonBody) {
     std::string header = "Content-Length: " + std::to_string(jsonBody.size()) + "\r\n\r\n";
-    s_logger.info( header << jsonBody;
+    std::cout << header << jsonBody;
     std::cout.flush();
 
     // Also queue for in-process polling

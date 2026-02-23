@@ -9,6 +9,17 @@
 std::unique_ptr<AutonomousAgent> AutonomousAgent::s_instance;
 std::atomic<bool> AutonomousAgent::s_initialized{false};
 
+// Resolve agent log/report paths to %APPDATA%\RawrXD\Agent (create dir)
+static std::string GetAgentDataDir() {
+    char buf[MAX_PATH] = {};
+    if (SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, buf) != S_OK)
+        return {};
+    std::string dir = std::string(buf) + "\\RawrXD\\Agent";
+    CreateDirectoryA((std::string(buf) + "\\RawrXD").c_str(), nullptr);
+    CreateDirectoryA(dir.c_str(), nullptr);
+    return dir;
+}
+
 // Constructor
 AutonomousAgent::AutonomousAgent()
     : m_state(AgentState::IDLE)
@@ -51,12 +62,26 @@ void AutonomousAgent::Initialize(const AgentConfig& config)
     
     auto* agent = Instance();
     agent->m_config = config;
-    
+    std::string agentDir = GetAgentDataDir();
+    if (!agentDir.empty()) {
+        if (agent->m_config.beaconLogPath.empty() || agent->m_config.beaconLogPath.find("C:\\RawrXD") == 0)
+            agent->m_config.beaconLogPath = agentDir + "\\beacons.log";
+        if (agent->m_config.diagnosticReportPath.empty() || agent->m_config.diagnosticReportPath.find("C:\\RawrXD") == 0)
+            agent->m_config.diagnosticReportPath = agentDir + "\\diagnostics.json";
+        if (agent->m_config.recoveryLogPath.empty() || agent->m_config.recoveryLogPath.find("C:\\RawrXD") == 0)
+            agent->m_config.recoveryLogPath = agentDir + "\\recovery.log";
+    } else if (agent->m_config.beaconLogPath.empty())
+        agent->m_config.beaconLogPath = "RawrXD_Agent_Beacons.log";
+    if (agent->m_config.diagnosticReportPath.empty())
+        agent->m_config.diagnosticReportPath = "RawrXD_Diagnostics.json";
+    if (agent->m_config.recoveryLogPath.empty())
+        agent->m_config.recoveryLogPath = "RawrXD_Recovery.log";
+
     // Create subsystems
-    agent->m_beaconManager = std::make_unique<BeaconManager>(config.beaconLogPath);
+    agent->m_beaconManager = std::make_unique<BeaconManager>(agent->m_config.beaconLogPath);
     agent->m_diagnosticEngine = std::make_unique<DiagnosticEngine>();
     agent->m_selfHealingEngine = std::make_unique<SelfHealingEngine>(config.maxRecoveryAttempts);
-    agent->m_reporter = std::make_unique<DiagnosticReporter>(config.diagnosticReportPath);
+    agent->m_reporter = std::make_unique<DiagnosticReporter>(agent->m_config.diagnosticReportPath);
     
     // Register default diagnostic tests
     agent->m_diagnosticEngine->AddTest("Engine Load", DiagnosticEngine::TestEngineLoad);
@@ -78,7 +103,7 @@ void AutonomousAgent::Initialize(const AgentConfig& config)
     agent->m_selfHealingEngine->RegisterAction(HealingAction::FULL_RESTART, SelfHealingEngine::PerformFullRestart);
     
     // Ensure log directory exists
-    AgentUtils::EnsureDirectoryExists(config.beaconLogPath);
+    AgentUtils::EnsureDirectoryExists(agent->m_config.beaconLogPath);
     
     // startup beacon
     agent->EmitBeacon(BeaconType::STARTUP, S_OK, "Agent initialized");
@@ -1420,7 +1445,10 @@ namespace AgentUtils {
         OutputDebugStringA(logEntry.c_str());
         
         // Also write to file if path is set
-        static std::string logPath = "C:\\RawrXD_Agent.log";
+        static std::string logPath = []() {
+            std::string dir = GetAgentDataDir();
+            return dir.empty() ? "RawrXD_Agent.log" : (dir + "\\agent.log");
+        }();
         WriteLogEntry(logPath, logEntry);
     }
 }

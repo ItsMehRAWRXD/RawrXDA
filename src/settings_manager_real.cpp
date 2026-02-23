@@ -5,9 +5,6 @@
 #include <filesystem>
 #include <mutex>
 
-#include "logging/logger.h"
-static Logger s_logger("settings_manager_real");
-
 SettingsManager::SettingsManager(const std::string& configPath)
     : m_configPath(configPath) {
     loadDefaults();
@@ -210,9 +207,9 @@ std::vector<SettingsManager::Keybinding> SettingsManager::getKeybindingsByKeys(c
     std::vector<Keybinding> results;
     auto allBindings = listKeybindings();
     
-    for (const auto& binding : allBindings) {
-        if (binding.keys == keys) {
-            results.push_back(binding);
+    for (const auto& kb : allBindings) {
+        if (kb.keys == keys) {
+            results.push_back(kb);
         }
     }
 
@@ -542,7 +539,7 @@ bool SettingsManager::importFromFile(const std::string& filePath) {
 }
 
 void SettingsManager::printAllSettings() const {
-    s_logger.info( m_settings.dump(2) << std::endl;
+    std::cout << m_settings.dump(2) << std::endl;
 }
 
 void SettingsManager::loadDefaults() {
@@ -640,22 +637,22 @@ SettingsManager::Theme SettingsManager::deserializeTheme(const json& data) const
     return theme;
 }
 
-json SettingsManager::serializeKeybinding(const Keybinding& keybinding) const {
+json SettingsManager::serializeKeybinding(const Keybinding& kb) const {
     json j;
-    j["command"] = keybinding.command;
-    j["keys"] = keybinding.keys;
-    j["description"] = keybinding.description;
-    j["enabled"] = keybinding.enabled;
+    j["command"] = kb.command;
+    j["keys"] = kb.keys;
+    j["description"] = kb.description;
+    j["enabled"] = kb.enabled;
     return j;
 }
 
 SettingsManager::Keybinding SettingsManager::deserializeKeybinding(const json& data) const {
-    Keybinding keybinding;
-    keybinding.command = data.value("command", "");
-    keybinding.keys = data.value("keys", "");
-    keybinding.description = data.value("description", "");
-    keybinding.enabled = data.value("enabled", true);
-    return keybinding;
+    Keybinding kb;
+    kb.command = data.value("command", "");
+    kb.keys = data.value("keys", "");
+    kb.description = data.value("description", "");
+    kb.enabled = data.value("enabled", true);
+    return kb;
 }
 
 json SettingsManager::serializeModel(const ModelConfig& model) const {
@@ -691,7 +688,7 @@ bool SettingsManager::readFromDisk() {
             return true;
         }
     } catch (const std::exception& e) {
-        s_logger.error( "[SettingsManager] Error reading config: " << e.what() << std::endl;
+        std::cerr << "[SettingsManager] Error reading config: " << e.what() << std::endl;
     }
 
     return false;
@@ -708,7 +705,7 @@ bool SettingsManager::writeToDisk() {
         m_dirty = false;
         return true;
     } catch (const std::exception& e) {
-        s_logger.error( "[SettingsManager] Error writing config: " << e.what() << std::endl;
+        std::cerr << "[SettingsManager] Error writing config: " << e.what() << std::endl;
         return false;
     }
 }

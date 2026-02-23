@@ -8,23 +8,20 @@
 #include <iostream>
 #include <fstream>
 
-#include "logging/logger.h"
-static Logger s_logger("test_runner");
-
 int main(int argc, char* argv[]) {
-    s_logger.info("Test runner entry point reached\n");
+    std::cout << "Test runner entry point reached\n";
     std::ofstream test("test_file_write.txt");
     test << "File write test successful" << std::endl;
     test.close();
-    s_logger.info("RawrXD IDE Test Runner\n");
-    s_logger.info("======================\n\n");
+    std::cout << "RawrXD IDE Test Runner\n";
+    std::cout << "======================\n\n";
 
     // Initialize logging to a specific test log file
-    s_logger.info("Step 1: Initializing logger...\n");
+    std::cout << "Step 1: Initializing logger...\n";
     IDELogger::getInstance().initialize();
-    s_logger.info("Step 2: Logger initialized\n");
+    std::cout << "Step 2: Logger initialized\n";
     LOG_INFO("Test runner started");
-    s_logger.info("Step 3: Log message sent\n");
+    std::cout << "Step 3: Log message sent\n";
 
     try {
         // Create IDE instance
@@ -35,7 +32,7 @@ int main(int argc, char* argv[]) {
         // Create main window (but don't show it if in automated mode)
         if (!ide.createWindow()) {
             LOG_ERROR("Failed to create IDE window");
-            s_logger.error( "ERROR: Failed to create IDE window\n";
+            std::cerr << "ERROR: Failed to create IDE window\n";
             return 1;
         }
         LOG_INFO("IDE window created");
@@ -64,35 +61,39 @@ int main(int argc, char* argv[]) {
         LOG_INFO("Test agent created");
 
         // Run all tests
-        s_logger.info("Running comprehensive IDE tests...\n\n");
+        std::cout << "Running comprehensive IDE tests...\n\n";
         testAgent.runAllTests();
 
         // Get results
         const auto& results = testAgent.getResults();
         
         // Print results to console
-        s_logger.info("\n===========================================\n");
-        s_logger.info("Test Results Summary\n");
-        s_logger.info("===========================================\n");
+        std::cout << "\n===========================================\n";
+        std::cout << "Test Results Summary\n";
+        std::cout << "===========================================\n";
         
         int passed = 0, failed = 0;
         for (const auto& result : results) {
             if (result.passed) {
                 passed++;
-                s_logger.info("✓ ");
+                std::cout << "✓ " << result.testName << " (" << result.durationMs << "ms)\n";
             } else {
                 failed++;
-                s_logger.info("✗ ");
+                std::cout << "✗ " << result.testName << " - " << result.errorMessage << "\n";
             }
         }
         
-        s_logger.info("\nTotal: ");
-        s_logger.info("Passed: ");
-        s_logger.info("Failed: ");
-        s_logger.info("===========================================\n");
+        std::cout << "\nTotal: " << results.size() << " tests\n";
+        std::cout << "Passed: " << passed << " (" << (results.size() > 0 ? (passed * 100 / results.size()) : 0) << "%)\n";
+        std::cout << "Failed: " << failed << "\n";
+        std::cout << "===========================================\n";
 
-        // Write detailed results to file
-        std::ofstream resultFile("C:\\RawrXD_IDE_TestResults.txt");
+        // Write detailed results to file (temp dir or cwd)
+        char tempPath[MAX_PATH] = {};
+        std::string resultPath = "RawrXD_IDE_TestResults.txt";
+        if (GetTempPathA(MAX_PATH, tempPath))
+            resultPath = std::string(tempPath) + "RawrXD_IDE_TestResults.txt";
+        std::ofstream resultFile(resultPath);
         if (resultFile.is_open()) {
             resultFile << "RawrXD IDE Test Results\n";
             resultFile << "=======================\n\n";
@@ -114,17 +115,17 @@ int main(int argc, char* argv[]) {
             resultFile << "Failed: " << failed << "\n";
             resultFile.close();
             
-            s_logger.info("\nDetailed results written to: C:\\RawrXD_IDE_TestResults.txt\n");
+            std::cout << "\nDetailed results written to: " << resultPath << "\n";
             LOG_INFO("Test results written to file");
         }
 
-        s_logger.info("Log file: C:\\RawrXD_IDE_TestRun.log\n");
+        std::cout << "Log file: see IDELogger output (e.g. %APPDATA%\\RawrXD\\ide.log or cwd)\n";
         
         LOG_INFO("Test runner completed");
         
         // If not headless, keep window open for manual inspection
         if (!headless) {
-            s_logger.info("\nPress Enter to close IDE and exit...\n");
+            std::cout << "\nPress Enter to close IDE and exit...\n";
             std::cin.get();
         }
 
@@ -132,11 +133,11 @@ int main(int argc, char* argv[]) {
 
     } catch (const std::exception& e) {
         LOG_CRITICAL("Test runner exception: " + std::string(e.what()));
-        s_logger.error( "CRITICAL ERROR: " << e.what() << "\n";
+        std::cerr << "CRITICAL ERROR: " << e.what() << "\n";
         return 2;
     } catch (...) {
         LOG_CRITICAL("Unknown test runner exception");
-        s_logger.error( "CRITICAL ERROR: Unknown exception\n";
+        std::cerr << "CRITICAL ERROR: Unknown exception\n";
         return 2;
     }
 }

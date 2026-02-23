@@ -20,7 +20,7 @@
 #include "metrics/metrics.h"
 
 int main() {
-    s_logger.info("\n=== Testing AI Code Completion Chain ===\n\n");
+    std::cout << "\n=== Testing AI Code Completion Chain ===\n\n";
 
     try {
         // 1. Initialize logging and metrics
@@ -30,41 +30,41 @@ int main() {
         logger->info("Test initialized");
 
         // 2. Create InferenceEngine
-        s_logger.info("[1/5] Creating InferenceEngine...\n");
+        std::cout << "[1/5] Creating InferenceEngine...\n";
         InferenceEngine engine(nullptr);
 
         // 3. Load a GGUF model
-        s_logger.info("[2/5] Loading GGUF model...\n");
+        std::cout << "[2/5] Loading GGUF model...\n";
         std::string modelPath = "models/ministral-3b-instruct-v0.3-Q4_K_M.gguf";
         bool loaded = engine.Initialize(modelPath);
 
         if (!loaded) {
-            s_logger.error( "✗ Failed to load model: " << modelPath << "\n";
-            s_logger.error( "  Tip: Place a GGUF model in the models/ directory\n";
+            std::cerr << "✗ Failed to load model: " << modelPath << "\n";
+            std::cerr << "  Tip: Place a GGUF model in the models/ directory\n";
             return 1;
         }
 
-        s_logger.info("✓ Model loaded successfully\n");
-        s_logger.info("  Vocab size: ");
-        s_logger.info("  Embedding dim: ");
+        std::cout << "✓ Model loaded successfully\n";
+        std::cout << "  Vocab size: " << engine.GetVocabSize() << "\n";
+        std::cout << "  Embedding dim: " << engine.GetEmbeddingDim() << "\n\n";
 
         // 4. Create RealTimeCompletionEngine
-        s_logger.info("[3/5] Initializing CompletionEngine...\n");
+        std::cout << "[3/5] Initializing CompletionEngine...\n";
         RealTimeCompletionEngine completionEngine(logger, metrics);
         completionEngine.setInferenceEngine(&engine);
-        s_logger.info("✓ CompletionEngine initialized\n\n");
+        std::cout << "✓ CompletionEngine initialized\n\n";
 
         // 5. Test completion generation
-        s_logger.info("[4/5] Generating test completion...\n");
+        std::cout << "[4/5] Generating test completion...\n";
         
         std::string testPrefix = "void calculate() {\n    int result = ";
         std::string testSuffix = ";\n}";
         std::string testContext = "// Calculate sum of array";
 
-        s_logger.info("Input:\n");
-        s_logger.info("  Prefix:  \");
-        s_logger.info("  Suffix:  \");
-        s_logger.info("  Context: \");
+        std::cout << "Input:\n";
+        std::cout << "  Prefix:  \"" << testPrefix << "\"\n";
+        std::cout << "  Suffix:  \"" << testSuffix << "\"\n";
+        std::cout << "  Context: \"" << testContext << "\"\n\n";
 
         auto startTime = std::chrono::high_resolution_clock::now();
         
@@ -80,48 +80,49 @@ int main() {
             endTime - startTime
         ).count();
 
-        s_logger.info("✓ Completions generated in ");
-        s_logger.info("  Count: ");
+        std::cout << "✓ Completions generated in " << latencyMs << " ms\n";
+        std::cout << "  Count: " << completions.size() << "\n\n";
 
         // 6. Display completions
-        s_logger.info("[5/5] Completions:\n");
+        std::cout << "[5/5] Completions:\n";
         for (size_t i = 0; i < completions.size(); ++i) {
             const auto& comp = completions[i];
-            s_logger.info("\n  [");
-            s_logger.info("      Text: \");
-            s_logger.info("      Detail: ");
+            std::cout << "\n  [" << (i + 1) << "] " << comp.kind << " (confidence: " 
+                      << (comp.confidence * 100) << "%)\n";
+            std::cout << "      Text: \"" << comp.text << "\"\n";
+            std::cout << "      Detail: " << comp.detail << "\n";
         }
 
         // 7. Check performance metrics
-        s_logger.info("\n=== Performance Metrics ===\n");
+        std::cout << "\n=== Performance Metrics ===\n";
         auto perfMetrics = completionEngine.getMetrics();
-        s_logger.info("  Average latency: ");
-        s_logger.info("  P95 latency: ");
-        s_logger.info("  P99 latency: ");
-        s_logger.info("  Cache hit rate: ");
-        s_logger.info("  Total requests: ");
-        s_logger.info("  Errors: ");
+        std::cout << "  Average latency: " << perfMetrics.avgLatencyMs << " ms\n";
+        std::cout << "  P95 latency: " << perfMetrics.p95LatencyMs << " ms\n";
+        std::cout << "  P99 latency: " << perfMetrics.p99LatencyMs << " ms\n";
+        std::cout << "  Cache hit rate: " << (perfMetrics.cacheHitRate * 100) << "%\n";
+        std::cout << "  Total requests: " << perfMetrics.requestCount << "\n";
+        std::cout << "  Errors: " << perfMetrics.errorCount << "\n";
 
         // Verify latency target
-        s_logger.info("\n=== Verification ===\n");
+        std::cout << "\n=== Verification ===\n";
         if (perfMetrics.avgLatencyMs < 100.0) {
-            s_logger.info("✓ PASS: Latency under 100ms target\n");
+            std::cout << "✓ PASS: Latency under 100ms target\n";
         } else {
-            s_logger.info("✗ WARNING: Latency above 100ms target\n");
+            std::cout << "✗ WARNING: Latency above 100ms target\n";
         }
 
         if (completions.size() > 0) {
-            s_logger.info("✓ PASS: Completions generated successfully\n");
+            std::cout << "✓ PASS: Completions generated successfully\n";
         } else {
-            s_logger.info("✗ FAIL: No completions generated\n");
+            std::cout << "✗ FAIL: No completions generated\n";
             return 1;
         }
 
-        s_logger.info("\n✅ All tests passed!\n\n");
+        std::cout << "\n✅ All tests passed!\n\n";
         return 0;
 
     } catch (const std::exception& e) {
-        s_logger.error( "\n✗ Test failed with exception: " << e.what() << "\n\n";
+        std::cerr << "\n✗ Test failed with exception: " << e.what() << "\n\n";
         return 1;
     }
 }

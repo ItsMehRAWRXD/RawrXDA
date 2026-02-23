@@ -12,7 +12,9 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "convergence_stress_harness.h"
 #include "perf_telemetry.hpp"
 

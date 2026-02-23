@@ -914,9 +914,28 @@ void Win32IDE::showLanguageModeSelector() {
         m_statusBarInfo.languageMode = languages[index].name;
         updateEnhancedStatusBar();
 
-        // Re-trigger syntax highlighting with new language
-        if (m_syntaxColoringEnabled) {
-            onEditorContentChanged();
+        // Map status bar language name to SyntaxLanguage and apply immediately
+        const std::string& name = m_statusBarInfo.languageMode;
+        if (name == "C++" || name == "C" || name == "C/C++ Header") {
+            m_syntaxLanguage = SyntaxLanguage::Cpp;
+        } else if (name == "Python") {
+            m_syntaxLanguage = SyntaxLanguage::Python;
+        } else if (name == "JavaScript" || name == "JavaScript React" || name == "TypeScript" || name == "TypeScript React") {
+            m_syntaxLanguage = SyntaxLanguage::JavaScript;
+        } else if (name == "PowerShell") {
+            m_syntaxLanguage = SyntaxLanguage::PowerShell;
+        } else if (name == "JSON") {
+            m_syntaxLanguage = SyntaxLanguage::JSON;
+        } else if (name == "Markdown") {
+            m_syntaxLanguage = SyntaxLanguage::Markdown;
+        } else if (name == "Assembly") {
+            m_syntaxLanguage = SyntaxLanguage::Assembly;
+        } else {
+            m_syntaxLanguage = SyntaxLanguage::None;
+        }
+        if (m_syntaxColoringEnabled && m_syntaxLanguage != SyntaxLanguage::None) {
+            m_syntaxDirty = true;
+            applySyntaxColoring();
         }
 
         LOG_INFO("Language mode changed to: " + m_statusBarInfo.languageMode);
@@ -1131,32 +1150,19 @@ bool Win32IDE::handleTier3Timer(UINT_PTR timerId) {
 // ============================================================================
 // TIER 3 STATUS BAR CLICK HANDLER
 // ============================================================================
-// Detects clicks on the Language Mode (part 10) or Encoding (part 8) segments
-// of the status bar and shows the appropriate popup selector.
+// Dispatches by status bar part index (NM_CLICK supplies dwItemSpec).
+// Part 8 = Encoding, Part 10 = Language Mode → popup selectors.
 // ============================================================================
 
-void Win32IDE::handleStatusBarClick(int x, int y) {
+void Win32IDE::handleStatusBarClick(int partIndex) {
     if (!m_hwndStatusBar) return;
-
-    // Get the status bar part information
-    RECT partRect;
-
-    // Check Language Mode segment (part 10)
-    if (SendMessage(m_hwndStatusBar, SB_GETRECT, 10, (LPARAM)&partRect)) {
-        POINT pt = { x, y };
-        if (PtInRect(&partRect, pt)) {
-            showLanguageModeSelector();
-            return;
-        }
+    if (partIndex == 10) {
+        showLanguageModeSelector();
+        return;
     }
-
-    // Check Encoding segment (part 8)
-    if (SendMessage(m_hwndStatusBar, SB_GETRECT, 8, (LPARAM)&partRect)) {
-        POINT pt = { x, y };
-        if (PtInRect(&partRect, pt)) {
-            showEncodingSelector();
-            return;
-        }
+    if (partIndex == 8) {
+        showEncodingSelector();
+        return;
     }
 }
 

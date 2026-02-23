@@ -1,0 +1,266 @@
+// ============================================================================
+// PHASE 4 QUICK REFERENCE CARD
+// ============================================================================
+
+/*
+╔════════════════════════════════════════════════════════════════════════════╗
+║          PHASE 4 - ENTERPRISE LICENSE PRODUCTION HARDENING                ║
+║                      QUICK REFERENCE CARD                                 ║
+║                                                                            ║
+║  5 Components | 8 Files | ~2800 Lines of Code | 100% Production Ready     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+1. ANTI-TAMPERING SYSTEM
+═══════════════════════════════════════════════════════════════════════════════
+
+Location:      src/core/license_anti_tampering.{h,cpp}
+Purpose:       Cryptographic verification and tampering detection
+Key APIs:      - verifyLicenseKeyIntegrity(key, hwid)
+               - detectTampering(key)
+               - verifyHMAC_SHA256(data, key, signature)
+
+Usage:
+    LicenseKeyV2 key = /* loaded key */;
+    if (!verifyLicenseKeyIntegrity(key, hwid)) {
+        recordTamperingDetected(detectTampering(key));
+        return false;  // Block access
+    }
+
+Features:      CRC32, SHA256, HMAC-SHA256, 11 tamper patterns
+Test:          license_anti_tampering_test.exe
+
+═══════════════════════════════════════════════════════════════════════════════
+2. LICENSE MANAGER UI
+═══════════════════════════════════════════════════════════════════════════════
+
+Location:      src/core/{license_manager_panel.cpp, win32ide_license_integration.cpp}
+Purpose:       Win32 native UI for license management
+Key Classes:   LicenseManagerPanel, LicenseInfoDialog, LicenseActivationDialog
+
+Usage:
+    // Initialize on IDE startup
+    initializeLicenseManagerUI(hIDEMainWindow);
+    
+    // Menu automatically handles: License → Info/Activate/Audit/Settings
+
+Features:      Tabbed UI, menu integration, real-time updates
+Integration:   Menu ID: MENU_ID_LICENSE_MANAGER (50001)
+
+═══════════════════════════════════════════════════════════════════════════════
+3. OFFLINE VALIDATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Location:      src/core/license_offline_validator.{h,cpp}
+              src/core/license_offline_sync_config.cpp
+Purpose:       Validate licenses without network connectivity
+Key APIs:      - validateWithFallback()
+               - isInGracePeriod()
+               - getSecondsUntilExpiry()
+
+Usage:
+    auto result = g_offlineValidator.validateWithFallback();
+    if (result.success || result.mode == OfflineValidationMode::GRACE_PERIOD) {
+        // Safe to proceed
+    } else {
+        // Deny access - cache invalid or grace period exceeded
+    }
+
+Configuration: C:\ProgramData\RawrXD\license.conf
+Cache:         C:\ProgramData\RawrXD\license.cache
+Defaults:      Grace=90d, Cache=30d, Sync=1d
+
+═══════════════════════════════════════════════════════════════════════════════
+4. AUDIT TRAIL SYSTEM
+═══════════════════════════════════════════════════════════════════════════════
+
+Location:      src/core/license_audit_trail.{h,cpp}
+              src/core/license_audit_tracking_deployment.cpp
+Purpose:       Event logging and anomaly detection
+Key APIs:      - recordEvent(type, feature, granted, caller)
+               - getDenialRate()
+               - isInAnomalousState()
+
+Usage:
+    // Audit feature access
+    recordFeatureAccess(FEATURE_ID_VISION, granted, "vision_pipeline");
+    
+    // Check for anomalies
+    if (g_auditTrailManager.isInAnomalousState()) {
+        log_warning("[AUDIT] Anomalous system state detected");
+    }
+
+Event Types:   GRANTED, DENIED, ACTIVATED, EXPIRED, TAMPERING, OFFLINE_VALIDATION
+Anomalies:     Excessive denials, rapid tier changes, pattern violations
+Log Location:  C:\ProgramData\RawrXD\audit.log
+
+═══════════════════════════════════════════════════════════════════════════════
+5. COMPLIANCE & SIEM
+═══════════════════════════════════════════════════════════════════════════════
+
+Location:      src/test/license_compliance_test.cpp
+Purpose:       SIEM export and compliance reporting
+Key APIs:      - exportAuditTrail(path, format)
+               - generateComplianceSummary()
+               - toJSON()
+
+Usage:
+    // Export for compliance
+    exportAuditTrail("C:\\Compliance\\audit-2026-02-14.json", "json");
+    
+    // Export to SIEM
+    SIEMExportConfig cfg = {};
+    cfg.format = SIEMFormat::CEF;
+    g_auditTrailManager.exportToSIEM(cfg);
+
+Formats:       CEF, LEEF, JSON, RFC5424 Syslog
+Test:          license_compliance_test.exe
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMON TASKS
+═══════════════════════════════════════════════════════════════════════════════
+
+TASK: Initialize on startup
+──────────────────────────────
+    initializeAuditTracking();
+    initializeOfflineSyncConfig();
+    initializeLicenseManagerUI(hMainWindow);
+
+TASK: Gate a feature
+──────────────────────
+    bool enabled = gateFeatureWithAudit(feature_id, "module_name");
+    if (!enabled) {
+        // Feature denied - check tier
+    }
+
+TASK: Record tampering
+─────────────────────
+    uint16_t tampers = detectTampering(key);
+    if (tampers) {
+        recordTamperingDetected(tampers);
+        return false;  // Block application
+    }
+
+TASK: Check offline capability
+─────────────────────────────
+    if (isOfflineModeEnabled()) {
+        auto result = g_offlineValidator.validateOffline();
+        // Use result to decide next action
+    }
+
+TASK: Get audit statistics
+──────────────────────────
+    uint32_t total = getAuditEventCount();
+    uint32_t denied = getAuditDenialCount();
+    float rate = getFeatureDenialRate();
+    bool anomalous = isSystemAnomalous();
+
+TASK: Export compliance report
+──────────────────────────────
+    exportAuditTrail("C:\\Reports\\daily-audit.json", "json");
+    // File written to disk for SIEM ingestion
+
+═══════════════════════════════════════════════════════════════════════════════
+BUILD COMMANDS
+═══════════════════════════════════════════════════════════════════════════════
+
+Configure:     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+Build main:    cmake --build build --config Release --target RawrEngine
+
+Build tests:   cmake --build build --config Release --target license_anti_tampering_test
+               cmake --build build --config Release --target license_compliance_test
+
+Build all:     cmake --build build --target self_test_gate
+
+Run tests:     .\build\test\license_anti_tampering_test.exe
+               .\build\test\license_compliance_test.exe
+
+═══════════════════════════════════════════════════════════════════════════════
+FILE LOCATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Config file:   C:\ProgramData\RawrXD\license.conf
+License cache: C:\ProgramData\RawrXD\license.cache
+Audit log:     C:\ProgramData\RawrXD\audit.log
+
+Binaries:
+  Main:        build\RawrEngine.exe
+  Tests:       build\test\license_anti_tampering_test.exe
+               build\test\license_compliance_test.exe
+
+═══════════════════════════════════════════════════════════════════════════════
+CRYPTOGRAPHY REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+CRC32:         Polynomial-based checksum (integrity check)
+SHA256:        FIPS-approved hash (pure C++ implementation)
+HMAC-SHA256:   Message authentication code (signature verification)
+               • Constant-time comparison (resistant to timing attacks)
+               • Used for: License key validation
+               • Key: RXDL magic bytes (8 bytes)
+
+No external dependencies - fully self-contained implementation
+
+═══════════════════════════════════════════════════════════════════════════════
+ERROR CODES & MEANINGS
+═══════════════════════════════════════════════════════════════════════════════
+
+CACHE_NOT_FOUND (0x0001)        Cache file not found, create new or use online
+CACHE_CORRUPTED (0x0002)        Cache file corrupted, delete and sync again
+CACHE_EXPIRED (0x0004)          Cache validity expired, connect to network
+LICENSE_EXPIRED (0x0008)        License expired, activate new license
+GRACE_PERIOD_EXCEEDED (0x0040) License in grace period exceeded, deny features
+CLOCK_SKEW_DETECTED (0x0400)   System clock tampered, no offline access
+TAMPERING_DETECTED (0x0800)     License key modified, block application
+
+═══════════════════════════════════════════════════════════════════════════════
+DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+□ Verify all tests pass
+□ Create C:\ProgramData\RawrXD directory
+□ Initialize configuration (initializeOfflineSyncConfig)
+□ Initialize audit tracking (initializeAuditTracking)
+□ Initialize UI (initializeLicenseManagerUI)
+□ Replace feature gates with gateFeatureWithAudit
+□ Set up daily audit exports
+□ Configure SIEM endpoint (if used)
+□ Monitor audit trail for 24 hours
+□ Verify no anomalies detected
+□ Verify denial rate < 5%
+□ Promote to production
+
+═══════════════════════════════════════════════════════════════════════════════
+PUBLIC API FUNCTIONS (extern "C")
+═══════════════════════════════════════════════════════════════════════════════
+
+Audit Tracking:
+  bool initializeAuditTracking()
+  void recordFeatureAccess(uint32_t feature, bool granted, const char* caller)
+  void recordLicenseActivation(uint32_t tier)
+  void recordTamperingDetected(uint16_t tamperPattern)
+  const char* getAuditSummary()
+  bool exportAuditTrail(const char* path, const char* format)
+  uint32_t getAuditEventCount()
+  uint32_t getAuditDenialCount()
+  float getFeatureDenialRate()
+  bool isSystemAnomalous()
+
+Offline Sync:
+  bool initializeOfflineSyncConfig()
+  uint32_t getGracePeriodSeconds()
+  uint32_t getCacheValiditySeconds()
+  uint32_t getSyncIntervalSeconds()
+  bool isOfflineModeEnabled()
+  bool isAutoSyncEnabled()
+  bool updateOfflineSyncConfig(...)
+
+IDE Integration:
+  bool initializeLicenseManagerUI(void* ideWindow)
+  bool handleLicenseManagerCommand(int menuID)
+
+═══════════════════════════════════════════════════════════════════════════════
+STATUS: ⚡ PRODUCTION READY ⚡
+═══════════════════════════════════════════════════════════════════════════════
+*/

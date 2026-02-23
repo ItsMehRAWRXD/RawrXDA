@@ -13,6 +13,9 @@
 #include <windows.h>
 #include <shlobj.h>
 
+// SCAFFOLD_347: Mainwindow void* parent doc
+
+
 using RawrXD::Registry::Logger;
 using json = nlohmann::json;
 
@@ -198,7 +201,7 @@ AgenticResult loadSnapshotEnvelope(const std::string& requestHint, SnapshotEnvel
 
 } // namespace (anonymous)
 
-RawrXD::IDE::MainWindow::MainWindow(void* parent) {
+RawrXD::IDE::MainWindow::MainWindow(void* parent) {  // Win32: parent is HWND when provided
     // Initialize defaults - actual Win32 window created in initialize()
     m_hwnd = nullptr;
     m_x = 100;

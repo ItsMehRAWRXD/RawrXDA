@@ -1,113 +1,309 @@
-// digestion_gui_widget.cpp
+// digestion_gui_widget.cpp — Pure C++20/Win32 (zero Qt)
 #include "digestion_gui_widget.h"
-DigestionGuiWidget::DigestionGuiWidget(void* parent) : // Widget(parent) {
-    m_digester = new DigestionReverseEngineeringSystem(this);
-    
-    auto *layout = new void(this);
-    
-    // Path selection
-    auto *pathLayout = new void;
-    m_pathEdit = new voidEdit(this);
-    auto *browseBtn = new void("Browse...", this);
-    pathLayout->addWidget(new void("Root Directory:"));
-    pathLayout->addWidget(m_pathEdit);
-    pathLayout->addWidget(browseBtn);
-    layout->addLayout(pathLayout);
-    
-    // Options
-    auto *optionsLayout = new void;
-    m_applyFixesCheck = new void("Apply Fixes", this);
-    m_gitModeCheck = new void("Git Mode Only", this);
-    m_incrementalCheck = new void("Incremental (Cached)", this);
-    m_incrementalCheck->setChecked(true);
-    optionsLayout->addWidget(m_applyFixesCheck);
-    optionsLayout->addWidget(m_gitModeCheck);
-    optionsLayout->addWidget(m_incrementalCheck);
-    optionsLayout->addStretch();
-    layout->addLayout(optionsLayout);
-    
-    // Progress
-    m_progressBar = new void(this);
-    layout->addWidget(m_progressBar);
-    
-    // Results table
-    m_resultsTable = nullptr;
-    m_resultsTable->setColumnCount(4);
-    m_resultsTable->setHorizontalHeaderLabels({"File", "Language", "Stubs", "Status"});
-    m_resultsTable->horizontalHeader()->setStretchLastSection(true);
-    layout->addWidget(m_resultsTable);
-    
-    // Buttons
-    auto *btnLayout = new void;
-    m_startBtn = new void("Start Digestion", this);
-    m_stopBtn = new void("Stop", this);
-    m_stopBtn->setEnabled(false);
-    btnLayout->addWidget(m_startBtn);
-    btnLayout->addWidget(m_stopBtn);
-    btnLayout->addStretch();
-    layout->addLayout(btnLayout);
-    
-    // Connections  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n}
+#include <shlobj.h>
+#include <string>
 
-void DigestionGuiWidget::setRootDirectory(const std::string &path) {
-    m_pathEdit->setText(path);
+#pragma comment(lib, "comctl32.lib")
+
+// ============================================================================
+// Construction / Destruction
+// ============================================================================
+
+DigestionGuiWidget::DigestionGuiWidget(HWND hwndParent)
+    : m_hwndParent(hwndParent)
+{
+    m_digester = new DigestionReverseEngineeringSystem();
 }
 
-void DigestionGuiWidget::browseDirectory() {
-    std::string dir = // Dialog::getExistingDirectory(this, "Select Source Directory");
-    if (!dir.empty()) m_pathEdit->setText(dir);
+DigestionGuiWidget::~DigestionGuiWidget()
+{
+    if (m_hDlg && IsWindow(m_hDlg)) DestroyWindow(m_hDlg);
+    delete m_digester;
 }
 
-void DigestionGuiWidget::startDigestion() {
-    if (m_pathEdit->text().empty()) return;
-    
-    m_resultsTable->setRowCount(0);
-    m_startBtn->setEnabled(false);
-    m_stopBtn->setEnabled(true);
-    
-    DigestionConfig config;
-    config.applyExtensions = m_applyFixesCheck->isChecked();
-    config.useGitMode = m_gitModeCheck->isChecked();
-    config.incremental = m_incrementalCheck->isChecked();
-    config.chunkSize = 100; // GUI mode uses larger chunks
-    
-    m_digester->runFullDigestionPipeline(m_pathEdit->text(), config);
+// ============================================================================
+// Public API
+// ============================================================================
+
+void DigestionGuiWidget::show()
+{
+    if (m_hDlg && IsWindow(m_hDlg)) {
+        SetForegroundWindow(m_hDlg);
+        return;
+    }
+
+    // Build the dialog as a popup window (no .rc needed)
+    const int W = 700, H = 520;
+    RECT rc;
+    if (m_hwndParent) GetWindowRect(m_hwndParent, &rc);
+    else { rc.left = 200; rc.top = 150; }
+    int x = rc.left + 80, y = rc.top + 60;
+
+    m_hDlg = CreateWindowExW(WS_EX_DLGMODALFRAME | WS_EX_TOOLWINDOW,
+        L"STATIC", L"Digestion Pipeline",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        x, y, W, H, m_hwndParent, nullptr, GetModuleHandle(nullptr), nullptr);
+
+    if (!m_hDlg) return;
+    SetWindowLongPtrW(m_hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    onInitDialog(m_hDlg);
+    ShowWindow(m_hDlg, SW_SHOW);
+    UpdateWindow(m_hDlg);
 }
 
-void DigestionGuiWidget::stopDigestion() {
-    m_digester->stop();
-    m_stopBtn->setEnabled(false);
-    m_startBtn->setEnabled(true);
-}
-
-void DigestionGuiWidget::onProgress(int done, int total, int stubs, int percent) {
-    m_progressBar->setMaximum(total);
-    m_progressBar->setValue(done);
-    m_progressBar->setFormat(std::string("Scanned: %1/%2 | Stubs: %3 (%p%)"));
-}
-
-void DigestionGuiWidget::onFileScanned(const std::string &path, const std::string &lang, int stubs) {
-    int row = m_resultsTable->rowCount();
-    m_resultsTable->insertRow(row);
-    m_resultsTable->setItem(row, 0, nullptr);
-    m_resultsTable->setItem(row, 1, nullptr);
-    m_resultsTable->setItem(row, 2, nullptr));
-    m_resultsTable->setItem(row, 3, nullptr);
-    
-    if (stubs > 0) {
-        m_resultsTable->item(row, 2)->setBackground(yellow);
+void DigestionGuiWidget::setRootDirectory(const std::string& path)
+{
+    m_rootDir = path;
+    if (m_hwndPathEdit) {
+        std::wstring wpath(path.begin(), path.end());
+        SetWindowTextW(m_hwndPathEdit, wpath.c_str());
     }
 }
 
-void DigestionGuiWidget::onFinished(const void* &report, int64_t elapsed) {
-    m_startBtn->setEnabled(true);
-    m_stopBtn->setEnabled(false);
-    
-    int stubs = report["statistics"].toObject()["stubs_found"];
-    void::information(this, "Digestion Complete", 
-        std::string("Scanned %1 files in %2 seconds\nFound %3 stubs")
-        ["scanned_files"])
-        
-        );
+// ============================================================================
+// Dialog Init — create child controls
+// ============================================================================
+
+void DigestionGuiWidget::onInitDialog(HWND hDlg)
+{
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    int y = 12;
+
+    // Row 1: path + browse
+    CreateWindowExW(0, L"STATIC", L"Root Directory:",
+        WS_CHILD | WS_VISIBLE, 12, y + 2, 100, 20, hDlg, nullptr, hInst, nullptr);
+
+    m_hwndPathEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT",
+        m_rootDir.empty() ? L"" : std::wstring(m_rootDir.begin(), m_rootDir.end()).c_str(),
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
+        116, y, 440, 22, hDlg, reinterpret_cast<HMENU>(IDC_DIG_PATH), hInst, nullptr);
+
+    m_hwndBrowseBtn = CreateWindowExW(0, L"BUTTON", L"Browse...",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        564, y, 110, 24, hDlg, reinterpret_cast<HMENU>(IDC_DIG_BROWSE), hInst, nullptr);
+    y += 34;
+
+    // Row 2: options checkboxes
+    m_hwndApplyFixes = CreateWindowExW(0, L"BUTTON", L"Apply Fixes",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        12, y, 120, 20, hDlg, reinterpret_cast<HMENU>(IDC_DIG_APPLY), hInst, nullptr);
+
+    m_hwndGitMode = CreateWindowExW(0, L"BUTTON", L"Git Mode Only",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        140, y, 120, 20, hDlg, reinterpret_cast<HMENU>(IDC_DIG_GIT), hInst, nullptr);
+
+    m_hwndIncremental = CreateWindowExW(0, L"BUTTON", L"Incremental (Cached)",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        268, y, 160, 20, hDlg, reinterpret_cast<HMENU>(IDC_DIG_INCR), hInst, nullptr);
+    SendMessage(m_hwndIncremental, BM_SETCHECK, BST_CHECKED, 0);
+    y += 30;
+
+    // Row 3: progress bar
+    m_hwndProgress = CreateWindowExW(0, PROGRESS_CLASSW, nullptr,
+        WS_CHILD | WS_VISIBLE | PBS_SMOOTH,
+        12, y, 660, 18, hDlg, reinterpret_cast<HMENU>(IDC_DIG_PROG), hInst, nullptr);
+    y += 26;
+
+    // Row 4: results list-view
+    m_hwndResultsLV = CreateWindowExW(WS_EX_CLIENTEDGE, WC_LISTVIEWW, nullptr,
+        WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_SINGLESEL,
+        12, y, 660, 320, hDlg, reinterpret_cast<HMENU>(IDC_DIG_LIST), hInst, nullptr);
+    ListView_SetExtendedListViewStyle(m_hwndResultsLV,
+        LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+
+    // Columns
+    auto addCol = [&](int idx, const wchar_t* title, int cx) {
+        LVCOLUMNW col{};
+        col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+        col.iSubItem = idx;
+        col.pszText = const_cast<LPWSTR>(title);
+        col.cx = cx;
+        ListView_InsertColumn(m_hwndResultsLV, idx, &col);
+    };
+    addCol(0, L"File",     300);
+    addCol(1, L"Language", 100);
+    addCol(2, L"Stubs",     80);
+    addCol(3, L"Status",   160);
+    y += 330;
+
+    // Row 5: start / stop buttons
+    m_hwndStartBtn = CreateWindowExW(0, L"BUTTON", L"Start Digestion",
+        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        12, y, 140, 28, hDlg, reinterpret_cast<HMENU>(IDC_DIG_START), hInst, nullptr);
+
+    m_hwndStopBtn = CreateWindowExW(0, L"BUTTON", L"Stop",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_DISABLED,
+        160, y, 90, 28, hDlg, reinterpret_cast<HMENU>(IDC_DIG_STOP), hInst, nullptr);
+
+    // Subclass to handle button clicks via our own WndProc
+    SetWindowLongPtrW(hDlg, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DialogProc));
+}
+
+// ============================================================================
+// Window Procedure
+// ============================================================================
+
+INT_PTR CALLBACK DigestionGuiWidget::DialogProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    auto* self = reinterpret_cast<DigestionGuiWidget*>(GetWindowLongPtrW(hDlg, GWLP_USERDATA));
+    if (self) return self->handleMessage(hDlg, msg, wParam, lParam);
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
+}
+
+INT_PTR DigestionGuiWidget::handleMessage(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case IDC_DIG_BROWSE: browseDirectory(); return TRUE;
+        case IDC_DIG_START:  startDigestion();  return TRUE;
+        case IDC_DIG_STOP:   stopDigestion();   return TRUE;
+        }
+        break;
+    case WM_DIG_PROGRESS: {
+        struct ProgMsg { int d, t, s, p; };
+        auto* p = reinterpret_cast<ProgMsg*>(lParam);
+        if (p) {
+            onProgress(p->d, p->t, p->s, p->p);
+            delete p;
+        }
+        return 0;
+    }
+    case WM_DIG_FILE: {
+        auto* m = reinterpret_cast<FileScannedMsg*>(lParam);
+        if (m) {
+            onFileScanned(m->path, m->lang, m->stubs);
+            delete m;
+        }
+        return 0;
+    }
+    case WM_DIG_FINISHED: {
+        struct FinMsg { int tf; int ts; int64_t ems; };
+        auto* p = reinterpret_cast<FinMsg*>(lParam);
+        if (p) {
+            onFinished(p->tf, p->ts, p->ems);
+            delete p;
+        }
+        return 0;
+    }
+    case WM_CLOSE:
+        DestroyWindow(hDlg);
+        m_hDlg = nullptr;
+        return TRUE;
+    case WM_DESTROY:
+        m_hDlg = nullptr;
+        return TRUE;
+    }
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
+}
+
+// ============================================================================
+// Actions
+// ============================================================================
+
+void DigestionGuiWidget::browseDirectory()
+{
+    wchar_t path[MAX_PATH] = {};
+    BROWSEINFOW bi{};
+    bi.hwndOwner = m_hDlg;
+    bi.lpszTitle = L"Select Source Directory";
+    bi.ulFlags   = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+    PIDLIST_ABSOLUTE pidl = SHBrowseForFolderW(&bi);
+    if (pidl) {
+        SHGetPathFromIDListW(pidl, path);
+        CoTaskMemFree(pidl);
+        char utf8[MAX_PATH * 3];
+        WideCharToMultiByte(CP_UTF8, 0, path, -1, utf8, sizeof(utf8), nullptr, nullptr);
+        m_rootDir = utf8;
+        SetWindowTextW(m_hwndPathEdit, path);
+    }
+}
+
+void DigestionGuiWidget::startDigestion()
+{
+    wchar_t wbuf[MAX_PATH * 2];
+    GetWindowTextW(m_hwndPathEdit, wbuf, static_cast<int>(sizeof(wbuf) / sizeof(wbuf[0])));
+    char buf[MAX_PATH * 3];
+    WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, buf, sizeof(buf), nullptr, nullptr);
+    m_rootDir = buf;
+    if (m_rootDir.empty()) return;
+
+    ListView_DeleteAllItems(m_hwndResultsLV);
+    EnableWindow(m_hwndStartBtn, FALSE);
+    EnableWindow(m_hwndStopBtn,  TRUE);
+
+    DigestionConfig config;
+    config.applyExtensions = (SendMessage(m_hwndApplyFixes, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config.useGitMode      = (SendMessage(m_hwndGitMode,    BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config.incremental     = (SendMessage(m_hwndIncremental, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    config.chunkSize       = 100;
+
+    HWND hDlg = m_hDlg;
+    m_digester->onProgressUpdate = [hDlg](int done, int total, int stubs, int percent) {
+        struct ProgMsg { int d, t, s, p; };
+        PostMessageW(hDlg, WM_DIG_PROGRESS, 0, reinterpret_cast<LPARAM>(new ProgMsg{done, total, stubs, percent}));
+    };
+    m_digester->onFileScanned = [hDlg](const std::string& path, const std::string& lang, int stubs) {
+        auto* m = new FileScannedMsg{ path, lang, stubs };
+        PostMessageW(hDlg, WM_DIG_FILE, 0, reinterpret_cast<LPARAM>(m));
+    };
+    m_digester->onPipelineFinished = [hDlg](const DigestionReport& r, int64_t elapsedMs) {
+        struct FinMsg { int tf; int ts; int64_t ems; };
+        PostMessageW(hDlg, WM_DIG_FINISHED, 0, reinterpret_cast<LPARAM>(new FinMsg{r.scannedFiles, r.stubsFound, elapsedMs}));
+    };
+
+    std::thread([this, config]() {
+        m_digester->runFullDigestionPipeline(m_rootDir, config);
+    }).detach();
+}
+
+void DigestionGuiWidget::stopDigestion()
+{
+    m_digester->stop();
+    EnableWindow(m_hwndStopBtn,  FALSE);
+    EnableWindow(m_hwndStartBtn, TRUE);
+}
+
+// ============================================================================
+// Progress Callbacks
+// ============================================================================
+
+void DigestionGuiWidget::onProgress(int done, int total, int /*stubs*/, int /*percent*/)
+{
+    if (!m_hwndProgress) return;
+    SendMessage(m_hwndProgress, PBM_SETRANGE32, 0, total);
+    SendMessage(m_hwndProgress, PBM_SETPOS, done, 0);
+}
+
+void DigestionGuiWidget::onFileScanned(const std::string& path, const std::string& lang, int stubs)
+{
+    if (!m_hwndResultsLV) return;
+    int row = ListView_GetItemCount(m_hwndResultsLV);
+
+    std::wstring wPath(path.begin(), path.end());
+    std::wstring wLang(lang.begin(), lang.end());
+    std::wstring wStubs = std::to_wstring(stubs);
+
+    LVITEMW item{};
+    item.mask     = LVIF_TEXT;
+    item.iItem    = row;
+    item.iSubItem = 0;
+    item.pszText  = const_cast<LPWSTR>(wPath.c_str());
+    ListView_InsertItem(m_hwndResultsLV, &item);
+    ListView_SetItemText(m_hwndResultsLV, row, 1, const_cast<LPWSTR>(wLang.c_str()));
+    ListView_SetItemText(m_hwndResultsLV, row, 2, const_cast<LPWSTR>(wStubs.c_str()));
+    ListView_SetItemText(m_hwndResultsLV, row, 3, stubs > 0 ? const_cast<LPWSTR>(L"Stubs Found") : const_cast<LPWSTR>(L"OK"));
+}
+
+void DigestionGuiWidget::onFinished(int totalFiles, int totalStubs, int64_t elapsedMs)
+{
+    EnableWindow(m_hwndStartBtn, TRUE);
+    EnableWindow(m_hwndStopBtn,  FALSE);
+
+    wchar_t msg[256];
+    _snwprintf_s(msg, _countof(msg), _TRUNCATE,
+        L"Digestion Complete\n\nScanned %d files in %.1f seconds\nFound %d stubs",
+        totalFiles, elapsedMs / 1000.0, totalStubs);
+    MessageBoxW(m_hDlg, msg, L"Digestion Pipeline", MB_OK | MB_ICONINFORMATION);
 }
 

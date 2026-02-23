@@ -40,7 +40,7 @@ bool ReactServerGenerator::Generate(const std::string& project_dir, const ReactS
         
         return true;
     } catch (const std::exception& e) {
-        s_logger.error( "Generation error: " << e.what() << std::endl;
+        std::cerr << "Generation error: " << e.what() << std::endl;
         return false;
     }
 }

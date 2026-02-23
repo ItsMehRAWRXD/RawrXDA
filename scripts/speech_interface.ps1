@@ -54,8 +54,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # SPEECH INTERFACE ENGINE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -74,8 +72,7 @@ class SpeechInterface {
         $this.SpeechSynthesizer = New-Object System.Speech.Synthesis.SpeechSynthesizer
         $this.RecognizedText = [System.Collections.ArrayList]::new()
         $this.IsListening = $false
-        $this.SubtitleFile = Join-Path (Get-RawrXDRoot) "data" "current_subtitles.txt"
-        $this.SubtitleFile = Resolve-RawrXDPath $this.SubtitleFile
+        $this.SubtitleFile = "D:\lazy init ide\data\current_subtitles.txt"
         
         # Initialize recognizer
         try {

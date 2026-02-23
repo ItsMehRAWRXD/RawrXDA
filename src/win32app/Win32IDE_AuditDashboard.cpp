@@ -30,6 +30,7 @@
 
 #include "Win32IDE.h"
 #include "../../include/feature_registry.h"
+#include "../../include/agentic_autonomous_config.h"
 
 #include <cstdio>
 #include <cstring>
@@ -464,10 +465,25 @@ static LRESULT CALLBACK auditDashboardWndProc(HWND hwnd, UINT msg,
 
                 state->auditRun = true;
 
+                // Production readiness: estimated model round-trips for top-N difficult (no token/time/complexity constraints)
+                {
+                    int estimatedRedos = 0, taskCategories = 0;
+                    RawrXD::AgenticAutonomousConfig::instance().estimateProductionAuditIterations(
+                        "full", 20, &estimatedRedos, &taskCategories);
+                    wchar_t buf[256];
+                    swprintf_s(buf, L"Audit complete. Est. round-trips for top 20 difficult: %d (%d categories).",
+                               estimatedRedos, taskCategories);
+                    SetWindowTextW(state->hwndStatusBar, buf);
+                    if (state->ide) {
+                        std::ostringstream oss;
+                        oss << "[Production Audit] Estimated model round-trips for top 20 most difficult tasks (no simplification): "
+                            << estimatedRedos << " (" << taskCategories << " categories). Cycle/balance from agentic config.\n";
+                        state->ide->appendToOutput(oss.str(), "Audit", Win32IDE::OutputSeverity::Info);
+                    }
+                }
+
                 // Refresh display
                 populateAuditListView(state);
-
-                SetWindowTextW(state->hwndStatusBar, L"Audit complete (auto-discovery refreshed).");
                 return 0;
             }
 
@@ -595,6 +611,9 @@ bool Win32IDE::handleAuditCommand(int commandId) {
         case IDM_AUDIT_RUN_TESTS:       cmdAuditRunTests();       return true;
         case IDM_AUDIT_EXPORT_REPORT:   cmdAuditExportReport();   return true;
         case IDM_AUDIT_QUICK_STATS:     cmdAuditQuickStats();     return true;
+        case IDM_SECURITY_SCAN_SECRETS:      RunSecretsScan();         return true;
+        case IDM_SECURITY_SCAN_SAST:         RunSastScan();            return true;
+        case IDM_SECURITY_SCAN_DEPENDENCIES: RunDependencyAudit();     return true;
         default: return false;
     }
 }
@@ -660,6 +679,20 @@ void Win32IDE::cmdAuditDetectStubs() {
 
     size_t stubs = FeatureRegistry::instance().getCountByStatus(ImplStatus::Stub);
     size_t total = FeatureRegistry::instance().getFeatureCount();
+
+    // Append detailed report to IDE output panel for audit trail
+    std::ostringstream oss;
+    oss << "=== Stub Detection Complete ===\n"
+        << "Total Features: " << total << "\n"
+        << "Stubs Found: " << stubs << "\n";
+    if (stubs > 0) {
+        oss << "\nStub features:\n";
+        for (const auto& e : FeatureRegistry::instance().getByStatus(ImplStatus::Stub)) {
+            oss << "  [STUB] " << (e.name ? e.name : "?")
+                << "  (" << (e.file ? e.file : "?") << ":" << e.line << ")\n";
+        }
+    }
+    appendToOutput(oss.str(), "Audit", Win32IDE::OutputSeverity::Info);
 
     wchar_t msg[256];
     _snwprintf_s(msg, 255,

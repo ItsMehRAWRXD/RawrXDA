@@ -7,9 +7,8 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 
-// Core foundations
+// Core foundations (C++20 String = std::wstring, no Qt)
 #include "agent_kernel_main.hpp"
-#include "QtReplacements.hpp"
 
 // Tool system
 #include "ToolExecutionEngine.hpp"
@@ -73,10 +72,10 @@ public:
         // Set tool context
         ToolContext ctx;
         ctx.workingDirectory = config.workingDirectory;
-        ctx.onOutput = [this](const QString& output) {
+        ctx.onOutput = [this](const String& output) {
             if (m_outputCallback) m_outputCallback(output);
         };
-        ctx.onConfirmation = [this](const QString& tool, const QString& desc) {
+        ctx.onConfirmation = [this](const String& tool, const String& desc) {
             if (m_confirmCallback) return m_confirmCallback(tool, desc);
             return m_config.autoApproveTools;
         };
@@ -101,14 +100,14 @@ public:
         m_initialized = false;
     }
 
-    // Process a message from the user
-    void processMessage(const QString& message) {
+    // Process a message from the user (C++20 std::wstring API — Qt-free)
+    void processMessage(const String& message) {
         if (!m_initialized || !m_orchestrator) return;
         m_orchestrator->processMessage(message);
     }
 
     // Process message asynchronously
-    void processMessageAsync(const QString& message) {
+    void processMessageAsync(const String& message) {
         if (!m_initialized || !m_orchestrator) return;
         m_orchestrator->runAgentLoopAsync(message);
     }
@@ -128,8 +127,8 @@ public:
         return m_orchestrator && m_orchestrator->isLLMAvailable();
     }
 
-    // List available models
-    QStringList listModels() {
+    // List available models (C++20 Vector<String>)
+    Vector<String> listModels() {
         if (!m_orchestrator) return {};
         return m_orchestrator->listModels();
     }
@@ -146,13 +145,13 @@ public:
         }
     }
 
-    // Set output callback
-    void setOutputCallback(std::function<void(const QString&)> callback) {
+    // Set output callback (C++20 String)
+    void setOutputCallback(std::function<void(const String&)> callback) {
         m_outputCallback = std::move(callback);
     }
 
-    // Set confirmation callback
-    void setConfirmCallback(std::function<bool(const QString&, const QString&)> callback) {
+    // Set confirmation callback (C++20 String)
+    void setConfirmCallback(std::function<bool(const String&, const String&)> callback) {
         m_confirmCallback = std::move(callback);
     }
 
@@ -172,9 +171,9 @@ public:
         }
     }
 
-    // Execute tool directly
-    ToolResult executeTool(const QString& name, const JsonObject& params) {
-        if (!m_toolEngine) return ToolResult::Error("Tool engine not initialized");
+    // Execute tool directly (C++20 String)
+    ToolResult executeTool(const String& name, const JsonObject& params) {
+        if (!m_toolEngine) return ToolResult::Error(L"Tool engine not initialized");
         return m_toolEngine->execute(name, params);
     }
 
@@ -183,8 +182,8 @@ private:
     AgentConfig m_config;
     UniquePtr<ToolExecutionEngine> m_toolEngine;
     UniquePtr<AgentOrchestrator> m_orchestrator;
-    std::function<void(const QString&)> m_outputCallback;
-    std::function<bool(const QString&, const QString&)> m_confirmCallback;
+    std::function<void(const String&)> m_outputCallback;
+    std::function<bool(const String&, const String&)> m_confirmCallback;
 };
 
 // Agent application with UI
@@ -198,16 +197,14 @@ public:
             return false;
         }
 
-        if (!m_window.create(m_hInstance, QString("RawrXD Agent - ") + QString(AGENT_VERSION))) {
+        if (!m_window.create(m_hInstance, String(L"RawrXD Agent - ") + AGENT_VERSION)) {
             return false;
         }
 
-        m_window.setAgent(m_agent.orchestrator());
-
-        // Set up event handling
-        m_agent.setEventCallback([this](const AgentEvent& event) {
+        m_window.setAgentEventCallback([this](const AgentEvent& event) {
             handleEvent(event);
         });
+        m_window.setAgent(m_agent.orchestrator());
 
         return true;
     }
@@ -222,35 +219,36 @@ public:
 
 private:
     void handleEvent(const AgentEvent& event) {
+        const String& msg = event.message;
         switch (event.type) {
             case AgentEvent::Type::StateChanged:
-                m_window.statusBar().setState(event.message);
+                m_window.statusBar().setState(msg);
                 break;
 
             case AgentEvent::Type::MessageReceived:
-                m_window.chatPanel().appendAssistantMessage(event.message);
+                m_window.chatPanel().appendAssistantMessage(msg);
                 break;
 
             case AgentEvent::Type::ToolCalled:
-                m_window.chatPanel().appendToolCall(event.message,
-                    QString(JsonParser::Serialize(event.data, 2)));
+                m_window.chatPanel().appendToolCall(msg,
+                    StringUtils::FromUtf8(JsonParser::Serialize(event.data, 2)));
                 break;
 
             case AgentEvent::Type::ToolResult:
-                m_window.statusBar().setMessage(QString("Tool completed"));
+                m_window.statusBar().setMessage(L"Tool completed");
                 break;
 
             case AgentEvent::Type::Error:
-                m_window.chatPanel().appendError(event.message);
-                m_window.statusBar().setState(QString("Error"));
+                m_window.chatPanel().appendError(msg);
+                m_window.statusBar().setState(L"Error");
                 break;
 
             case AgentEvent::Type::StreamChunk:
-                m_window.chatPanel().appendStreamChunk(event.message);
+                m_window.chatPanel().appendStreamChunk(msg);
                 break;
 
             case AgentEvent::Type::Completed:
-                m_window.statusBar().setState(QString("Ready"));
+                m_window.statusBar().setState(L"Ready");
                 break;
         }
     }

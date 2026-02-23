@@ -1,0 +1,10 @@
+# ninja log v6
+32	1475	7927858134053921	CMakeFiles/RawrXD-LicenseCreatorV2.dir/src/core/enterprise_license.cpp.obj	5e57dde11dae095f
+23	1219	7927858133955225	CMakeFiles/RawrXD-LicenseCreatorV2.dir/src/license_creator.cpp.obj	38645607d861bc37
+29	1171	7927858134022069	CMakeFiles/RawrXD-LicenseCreatorV2.dir/src/enterprise_license.cpp.obj	c615fedf60e6e9fc
+39	62	7927858134116955	CMakeFiles/RawrXD-LicenseCreatorV2.dir/src/asm/RawrXD_License_Shield.asm.obj	9db81133d4d6ea5f
+35	61	7927858134085810	CMakeFiles/RawrXD-LicenseCreatorV2.dir/src/asm/RawrXD_EnterpriseLicense.asm.obj	f51739f6ab792dcf
+30	4071	7927858701442085	build.ninja	2731fe5fdf76f3b0
+30	4071	7927858701442085	D:/rawrxd/build_licv2/cmake_install.cmake	2731fe5fdf76f3b0
+30	4071	7927858701442085	D:/rawrxd/build_licv2/src/reverse_engineering/cmake_install.cmake	2731fe5fdf76f3b0
+29	1168	7927858703291143	bin/RawrXD-LicenseCreatorV2.exe	15ed5909e5c8bdf0

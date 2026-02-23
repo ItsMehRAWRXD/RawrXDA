@@ -1,7 +1,8 @@
 // Simple test to verify Titan Streaming Orchestrator integration
+#include <iostream>
+#include <iomanip>
 #include <windows.h>
 #include "Titan_API.h"
-#include "logging/logger.h"
 
 const char* GetErrorDescription(int32_t code) {
     switch (code) {
@@ -21,7 +22,7 @@ int main() {
     GlobalMemoryStatusEx(&memInfo);
 
 
-    // Titan integration test uses Logger for output
+    std::cout.flush();
     
     // Initialize Titan
     void* titanHandle = nullptr;

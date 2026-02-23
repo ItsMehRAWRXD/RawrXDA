@@ -447,7 +447,7 @@ private:
 
     /// Run one transformer layer forward pass
     PatchResult ForwardLayer(uint32_t layerIdx, float* hidden, uint32_t seqLen,
-                             uint32_t startPos);
+                             uint32_t startPos, uint32_t deviceId = 0);
 
     /// Attention sub-layer
     PatchResult ForwardAttention(uint32_t layerIdx, float* hidden,

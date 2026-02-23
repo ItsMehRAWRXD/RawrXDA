@@ -3,9 +3,6 @@
 #include <sstream>
 #include <algorithm>
 
-#include "logging/logger.h"
-static Logger s_logger("react_ide_generator");
-
 namespace RawrXD {
 
 // IDE-specific component generation
@@ -831,7 +828,7 @@ import HotpatchControls from './HotpatchControls';
 import REToolsPanel from './REToolsPanel';
 
 const IDEApp = () => {
-    const [code, setCode] = useState('// Welcome to RawrXD AI IDE\n#include <iostream>\n\nint main() {\n    s_logger.info("Hello, World!");\n    return 0;\n}');
+    const [code, setCode] = useState('// Welcome to RawrXD AI IDE\n#include <iostream>\n\nint main() {\n    std::cout << "Hello, World!" << std::endl;\n    return 0;\n}');
     const [agentSettings, setAgentSettings] = useState({
         mode: 'ask',
         deepThinking: false,

@@ -24,6 +24,9 @@
 #include <chrono>
 #include <numeric>
 
+// SCAFFOLD_122: Vision KV isolation
+
+
 namespace RawrXD {
 namespace Vision {
 

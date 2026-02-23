@@ -38,6 +38,15 @@
 #include <thread>
 #include <condition_variable>
 
+// SCAFFOLD_150: Semantic tokens (if used)
+
+
+// SCAFFOLD_149: Hover and document link
+
+
+// SCAFFOLD_148: Completion and signature help
+
+
 // nlohmann/json already included via Win32IDE.h
 
 // ============================================================================
@@ -889,6 +898,45 @@ void Win32IDE::onDiagnosticsReceived(const std::string& uri,
     {
         std::lock_guard<std::mutex> lock(m_lspDiagnosticsMutex);
         m_lspDiagnostics[uri] = diagnostics;
+    }
+
+    // Bridge to Problems panel (Output > Problems tab)
+    std::string filePath = uriToFilePath(uri);
+    if (!filePath.empty() && m_hwndProblemsListView) {
+        // Clear existing problems for this file
+        m_problems.erase(
+            std::remove_if(m_problems.begin(), m_problems.end(),
+                [&filePath](const ProblemItem& p) { return p.file == filePath; }),
+            m_problems.end());
+        m_errorCount = m_warningCount = 0;
+        for (const auto& p : m_problems) {
+            if (p.severity == 0) m_errorCount++;
+            else if (p.severity == 1) m_warningCount++;
+        }
+        ListView_DeleteAllItems(m_hwndProblemsListView);
+        // Rebuild list from remaining problems (other files)
+        for (size_t i = 0; i < m_problems.size(); ++i) {
+            const auto& p = m_problems[i];
+            LVITEMA lvi = { LVIF_TEXT };
+            lvi.iItem = static_cast<int>(i);
+            lvi.pszText = const_cast<char*>((p.severity == 0) ? "Error" : (p.severity == 1) ? "Warning" : "Info");
+            ListView_InsertItem(m_hwndProblemsListView, &lvi);
+            LVITEMA lviSet = { 0 };
+            lviSet.iSubItem = 1; lviSet.pszText = const_cast<char*>(p.message.c_str());
+            SendMessage(m_hwndProblemsListView, LVM_SETITEMTEXTA, lvi.iItem, (LPARAM)&lviSet);
+            lviSet.iSubItem = 2; lviSet.pszText = const_cast<char*>(p.file.c_str());
+            SendMessage(m_hwndProblemsListView, LVM_SETITEMTEXTA, lvi.iItem, (LPARAM)&lviSet);
+            char ln[32]; _snprintf_s(ln, 32, _TRUNCATE, "%d", p.line);
+            lviSet.iSubItem = 3; lviSet.pszText = ln;
+            SendMessage(m_hwndProblemsListView, LVM_SETITEMTEXTA, lvi.iItem, (LPARAM)&lviSet);
+        }
+        // Add new diagnostics (LSP: 1=Error, 2=Warning, 3=Info, 4=Hint → our 0=Error, 1=Warning, 2=Info)
+        for (const auto& d : diagnostics) {
+            int sev = (d.severity == 1) ? 0 : (d.severity == 2) ? 1 : 2;
+            addProblem(filePath, d.range.start.line + 1, d.range.start.character + 1, d.message, sev);
+        }
+        updatePanelContent();
+        updateEnhancedStatusBar();
     }
 
     // Map diagnostics to the existing annotation system for visual display

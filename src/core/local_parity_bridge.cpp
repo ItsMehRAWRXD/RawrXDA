@@ -90,7 +90,7 @@ int LocalParity_ManifestGet(const char* url, char* outBuf, uint64_t cap, uint64_
     // Fallback: WinHTTP GET (no auth). Requires winhttp.lib
     if (!url || !outBuf || cap == 0 || !outLen) return 0;
     *outLen = 0;
-    // Minimal WinHTTP implementation would go here; for now return 0 (stub)
+    // Minimal WinHTTP implementation would go here; for now return 0 when WinHTTP path not used
 #endif
     return 0;
 }

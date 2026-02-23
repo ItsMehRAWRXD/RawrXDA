@@ -9,7 +9,9 @@
 // Threading: std::mutex + std::lock_guard + SuspendThread barrier
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstdint>
 #include <mutex>

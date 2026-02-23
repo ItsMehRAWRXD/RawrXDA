@@ -1,0 +1,17 @@
+# RawrXD IDE bootable space. From repo root: docker compose -f wrapper/docker-compose.ide-space.yml up -d
+services:
+  rawrxd-ide-space:
+    build:
+      context: .
+      dockerfile: wrapper/Dockerfile.ide-space
+    image: rawrxd-ide-space
+    ports:
+      - "5900:5900"
+    volumes:
+      - rawrxd-space-data:/data/space
+      - .:/data/repo:ro
+    environment:
+      - WINEPREFIX=/data/space
+      - VNC_PASSWORD=rawrxd
+volumes:
+  rawrxd-space-data:

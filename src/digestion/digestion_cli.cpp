@@ -11,6 +11,9 @@
 #include <fstream>
 #include <chrono>
 
+// SCAFFOLD_181: digestion_cli and apply agentic fixes
+
+
 static void printUsage(const char* progName) {
     fprintf(stderr,
         "RawrXD Digestion Engine v1.0.0\n"

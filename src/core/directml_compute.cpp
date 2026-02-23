@@ -15,11 +15,12 @@
 #include "streaming_engine_registry.h"
 #include "gguf_dml_bridge.h"
 
-#include "logging/logger.h"
-static Logger s_logger("directml_compute");
-
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <unknwn.h>
 #include <iostream>
@@ -766,7 +767,7 @@ void DirectMLCompute::log(int level, const char* msg) {
     const char* prefix = (level == 0) ? "[DML:DBG]" :
                          (level == 1) ? "[DML:INF]" :
                          (level == 2) ? "[DML:WRN]" : "[DML:ERR]";
-    s_logger.info( prefix << " " << msg << std::endl;
+    std::cout << prefix << " " << msg << std::endl;
 }
 
 // ============================================================================

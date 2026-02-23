@@ -13,6 +13,12 @@
 #include <map>
 #include <functional>
 
+#ifndef RAWRXD_WIN32_STATIC_BUILD
+#define RAWRXD_SHIP_EXPORT __declspec(dllexport)
+#else
+#define RAWRXD_SHIP_EXPORT
+#endif
+
 // Window class names
 const wchar_t CLASS_MAINWINDOW[] = L"RawrXD_MainWindow";
 const wchar_t CLASS_TEXTEDITOR[] = L"RawrXD_TextEditor";
@@ -205,9 +211,9 @@ public:
 // Global instance
 static RawrXDMainWindow* g_mainWindow = nullptr;
 
-// DLL exports
+// C exports (DLL or static)
 extern "C" {
-    __declspec(dllexport) void* __stdcall CreateMainWindow(void* hInstance, const wchar_t* title) {
+    RAWRXD_SHIP_EXPORT void* __stdcall CreateMainWindow(void* hInstance, const wchar_t* title) {
         if (!g_mainWindow) {
             g_mainWindow = new RawrXDMainWindow((HINSTANCE)hInstance);
             if (g_mainWindow->Create(title, CW_USEDEFAULT, CW_USEDEFAULT, 1200, 800)) {
@@ -219,35 +225,37 @@ extern "C" {
         return g_mainWindow;
     }
     
-    __declspec(dllexport) void __stdcall DestroyMainWindow(void* window) {
+    RAWRXD_SHIP_EXPORT void __stdcall DestroyMainWindow(void* window) {
         if (window && window == g_mainWindow) {
             delete g_mainWindow;
             g_mainWindow = nullptr;
         }
     }
     
-    __declspec(dllexport) void __stdcall MainWindow_SetStatus(void* window, const wchar_t* text) {
+    RAWRXD_SHIP_EXPORT void __stdcall MainWindow_SetStatus(void* window, const wchar_t* text) {
         RawrXDMainWindow* w = static_cast<RawrXDMainWindow*>(window);
         if (w) w->SetStatusText(text);
     }
     
-    __declspec(dllexport) int __stdcall MainWindow_RunMessageLoop(void* window) {
+    RAWRXD_SHIP_EXPORT int __stdcall MainWindow_RunMessageLoop(void* window) {
         RawrXDMainWindow* w = static_cast<RawrXDMainWindow*>(window);
         return w ? w->MessageLoop() : -1;
     }
     
-    __declspec(dllexport) void* __stdcall MainWindow_GetHandle(void* window) {
+    RAWRXD_SHIP_EXPORT void* __stdcall MainWindow_GetHandle(void* window) {
         RawrXDMainWindow* w = static_cast<RawrXDMainWindow*>(window);
         return w ? (void*)w->GetHandle() : nullptr;
     }
 }
 
-// DLL entry
+#ifndef RAWRXD_WIN32_STATIC_BUILD
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugStringW(L"RawrXD_MainWindow_Win32 loaded\n");
     } else if (fdwReason == DLL_PROCESS_DETACH && g_mainWindow) {
         delete g_mainWindow;
+        g_mainWindow = nullptr;
     }
     return TRUE;
 }
+#endif

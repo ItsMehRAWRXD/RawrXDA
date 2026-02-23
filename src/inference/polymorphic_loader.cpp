@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include <filesystem>
+#include <functional>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -205,6 +206,34 @@ Slot* SlotLattice::findSlot(SlotType type) const {
 // SECTION 3: Format Adapters
 // ============================================================================
 
+namespace {
+bool skipGGUFValueRec(std::istream& file, uint32_t type) {
+    switch (type) {
+        case 0: case 1: case 7: file.seekg(1, std::ios::cur); break;
+        case 2: case 3: file.seekg(2, std::ios::cur); break;
+        case 4: case 5: case 6: file.seekg(4, std::ios::cur); break;
+        case 10: case 11: case 12: file.seekg(8, std::ios::cur); break;
+        case 8: {
+            uint64_t slen = 0;
+            file.read(reinterpret_cast<char*>(&slen), sizeof(slen));
+            file.seekg(static_cast<std::streamoff>(slen), std::ios::cur);
+            break;
+        }
+        case 9: {
+            uint32_t arrType = 0; uint64_t arrLen = 0;
+            file.read(reinterpret_cast<char*>(&arrType), sizeof(arrType));
+            file.read(reinterpret_cast<char*>(&arrLen), sizeof(arrLen));
+            for (uint64_t a = 0; a < arrLen && file; ++a) {
+                if (!skipGGUFValueRec(file, arrType)) return false;
+            }
+            break;
+        }
+        default: return false;
+    }
+    return file.good();
+}
+} // namespace
+
 std::vector<TensorDesc> GGUFAdapter::enumerate(const std::string& path) {
     std::vector<TensorDesc> descs;
     
@@ -235,38 +264,12 @@ std::vector<TensorDesc> GGUFAdapter::enumerate(const std::string& path) {
         file.read(out.data(), static_cast<std::streamsize>(len));
         return file.good();
     };
-    auto skipGGUFValue = [&](uint32_t type) -> bool {
-        switch (type) {
-            case 0: case 1: case 7: file.seekg(1, std::ios::cur); break; // u8/i8/bool
-            case 2: case 3: file.seekg(2, std::ios::cur); break;          // u16/i16
-            case 4: case 5: case 6: file.seekg(4, std::ios::cur); break;  // u32/i32/f32
-            case 10: case 11: case 12: file.seekg(8, std::ios::cur); break; // u64/i64/f64
-            case 8: { // string
-                uint64_t slen = 0;
-                file.read(reinterpret_cast<char*>(&slen), sizeof(slen));
-                file.seekg(static_cast<std::streamoff>(slen), std::ios::cur);
-                break;
-            }
-            case 9: { // array
-                uint32_t arrType = 0; uint64_t arrLen = 0;
-                file.read(reinterpret_cast<char*>(&arrType), sizeof(arrType));
-                file.read(reinterpret_cast<char*>(&arrLen), sizeof(arrLen));
-                for (uint64_t a = 0; a < arrLen && file; ++a) {
-                    if (!skipGGUFValue(arrType)) return false;
-                }
-                break;
-            }
-            default: return false;
-        }
-        return file.good();
-    };
-
     for (uint64_t m = 0; m < metadata_count && file; ++m) {
         std::string key;
         if (!readGGUFString(key)) break;
         uint32_t valType = 0;
         file.read(reinterpret_cast<char*>(&valType), sizeof(valType));
-        if (!skipGGUFValue(valType)) break;
+        if (!skipGGUFValueRec(file, valType)) break;
     }
 
     // --- Parse tensor info entries ---

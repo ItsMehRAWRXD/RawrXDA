@@ -3,7 +3,12 @@
 // =============================================================================
 #include "OrchestratorBridge.h"
 #include "DiskRecoveryToolHandler.h"
+#include "../config/IDEConfig.h"
 #include <chrono>
+#include <algorithm>
+
+// SCAFFOLD_062: OrchestratorBridge and native bridge
+
 
 using RawrXD::Agent::OrchestratorBridge;
 using RawrXD::Agent::LLMChatRequest;
@@ -96,9 +101,9 @@ bool OrchestratorBridge::Initialize(const std::string& workingDir,
     // Wire tool schemas
     WireToolSchemas();
 
-    // Configure BoundedAgentLoop
+    // Configure BoundedAgentLoop (cycle count from config)
     AgentLoopConfig loopConfig;
-    loopConfig.maxSteps = 8;
+    loopConfig.maxSteps = std::clamp(IDEConfig::getInstance().getInt("agent.cycleCount", 10), 1, 50);
     loopConfig.maxTokensPerRequest = 8192;
     loopConfig.model = m_ollamaConfig.chat_model;
     loopConfig.ollamaBaseUrl = ollamaUrl.empty() ? "http://localhost:11434" : ollamaUrl;

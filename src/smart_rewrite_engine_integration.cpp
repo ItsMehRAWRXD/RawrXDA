@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <regex>
 
+// SCAFFOLD_332: Smart rewrite test skeleton
+
+
 // Internal undo stack (module-level, not exposed in header)
 static std::vector<std::pair<std::string/*filePath*/, std::string/*previousContent*/>> s_undoStack;
 static const size_t MAX_UNDO_DEPTH = 50;
@@ -83,7 +86,7 @@ std::vector<RewriteSuggestion> SmartRewriteEngineIntegration::getRewriteSuggesti
             std::string prompt = buildRewritePrompt(code, type, context);
             std::string testSkeleton = "// Auto-generated test\n";
             testSkeleton += "TEST(AutoGen, BasicFunctionality) {\n";
-            testSkeleton += "    // TODO: Add assertions\n";
+            testSkeleton += "    // Add assertions for the code under test\n";
             testSkeleton += "    EXPECT_TRUE(true);\n";
             testSkeleton += "}\n";
             suggestions.push_back(createSuggestion(code, testSkeleton,

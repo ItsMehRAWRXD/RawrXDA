@@ -1,0 +1,230 @@
+[
+  {
+    "Test": "VSIX File Exists: Amazon Q",
+    "Result": "PASS",
+    "Details": "Found at: d:\\rawrxd\\amazon-q-vscode-latest.vsix",
+    "Timestamp": "2026-02-14T22:50:23.3709857-05:00"
+  },
+  {
+    "Test": "VSIX File Integrity: Amazon Q",
+    "Result": "PASS",
+    "Details": "Size: 17.85 MB",
+    "Timestamp": "2026-02-14T22:50:23.3890102-05:00"
+  },
+  {
+    "Test": "VSIX Structure: Amazon Q",
+    "Result": "PASS",
+    "Details": "311 entries found",
+    "Timestamp": "2026-02-14T22:50:23.3992821-05:00"
+  },
+  {
+    "Test": "VSIX File Exists: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "Found at: d:\\rawrxd\\copilot-latest.vsix",
+    "Timestamp": "2026-02-14T22:50:23.400852-05:00"
+  },
+  {
+    "Test": "VSIX File Integrity: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "Size: 18.98 MB",
+    "Timestamp": "2026-02-14T22:50:23.402353-05:00"
+  },
+  {
+    "Test": "VSIX Structure: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "62 entries found",
+    "Timestamp": "2026-02-14T22:50:23.4050785-05:00"
+  },
+  {
+    "Test": "VSIX File Exists: Amazon Q",
+    "Result": "PASS",
+    "Details": "Found at: d:\\rawrxd\\amazon-q-vscode-latest.vsix",
+    "Timestamp": "2026-02-14T22:50:23.4080439-05:00"
+  },
+  {
+    "Test": "VSIX File Integrity: Amazon Q",
+    "Result": "PASS",
+    "Details": "Size: 17.85 MB",
+    "Timestamp": "2026-02-14T22:50:23.4094618-05:00"
+  },
+  {
+    "Test": "VSIX Structure: Amazon Q",
+    "Result": "PASS",
+    "Details": "311 entries found",
+    "Timestamp": "2026-02-14T22:50:23.4115531-05:00"
+  },
+  {
+    "Test": "CLI Load: amazonwebservices.amazon-q-vscode",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4274245-05:00"
+  },
+  {
+    "Test": "Plugin Directory: amazon-q-vscode",
+    "Result": "FAIL",
+    "Details": "Directory not found: d:\\rawrxd\\plugins\\amazon-q-vscode",
+    "Timestamp": "2026-02-14T22:50:23.4341647-05:00"
+  },
+  {
+    "Test": "Command: !plugin list",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4436337-05:00"
+  },
+  {
+    "Test": "Command: !plugin config amazonwebservices.amazon-q-vscode",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4484363-05:00"
+  },
+  {
+    "Test": "Command: !plugin help amazonwebservices.amazon-q-vscode",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4516084-05:00"
+  },
+  {
+    "Test": "VSIX File Exists: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "Found at: d:\\rawrxd\\copilot-latest.vsix",
+    "Timestamp": "2026-02-14T22:50:23.4550116-05:00"
+  },
+  {
+    "Test": "VSIX File Integrity: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "Size: 18.98 MB",
+    "Timestamp": "2026-02-14T22:50:23.4565482-05:00"
+  },
+  {
+    "Test": "VSIX Structure: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "62 entries found",
+    "Timestamp": "2026-02-14T22:50:23.4586291-05:00"
+  },
+  {
+    "Test": "CLI Load: github.copilot",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.462497-05:00"
+  },
+  {
+    "Test": "Plugin Directory: copilot",
+    "Result": "FAIL",
+    "Details": "Directory not found: d:\\rawrxd\\plugins\\copilot",
+    "Timestamp": "2026-02-14T22:50:23.4654103-05:00"
+  },
+  {
+    "Test": "Command: !plugin list",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4696502-05:00"
+  },
+  {
+    "Test": "Command: !plugin config github.copilot",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4755976-05:00"
+  },
+  {
+    "Test": "Command: !plugin help github.copilot",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4799071-05:00"
+  },
+  {
+    "Test": "Copilot Chat Response",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4908093-05:00"
+  },
+  {
+    "Test": "Amazon Q Chat Response",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:23.4984663-05:00"
+  },
+  {
+    "Test": "VSIX File Exists: Amazon Q",
+    "Result": "PASS",
+    "Details": "Found at: d:\\rawrxd\\amazon-q-vscode-latest.vsix",
+    "Timestamp": "2026-02-14T22:50:23.5055457-05:00"
+  },
+  {
+    "Test": "VSIX File Integrity: Amazon Q",
+    "Result": "PASS",
+    "Details": "Size: 17.85 MB",
+    "Timestamp": "2026-02-14T22:50:23.5079038-05:00"
+  },
+  {
+    "Test": "VSIX Structure: Amazon Q",
+    "Result": "PASS",
+    "Details": "311 entries found",
+    "Timestamp": "2026-02-14T22:50:23.5107992-05:00"
+  },
+  {
+    "Test": "GUI Launch: amazonwebservices.amazon-q-vscode",
+    "Result": "PASS",
+    "Details": "IDE started (PID: 39496)",
+    "Timestamp": "2026-02-14T22:50:28.5458926-05:00"
+  },
+  {
+    "Test": "GUI Launch: amazonwebservices.amazon-q-vscode",
+    "Result": "FAIL",
+    "Details": "The 'Raw' and 'Tail' parameters cannot be specified in the same command.",
+    "Timestamp": "2026-02-14T22:50:31.5614657-05:00"
+  },
+  {
+    "Test": "Plugin Directory: amazon-q-vscode",
+    "Result": "FAIL",
+    "Details": "Directory not found: d:\\rawrxd\\plugins\\amazon-q-vscode",
+    "Timestamp": "2026-02-14T22:50:31.5676768-05:00"
+  },
+  {
+    "Test": "VSIX File Exists: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "Found at: d:\\rawrxd\\copilot-latest.vsix",
+    "Timestamp": "2026-02-14T22:50:31.5696304-05:00"
+  },
+  {
+    "Test": "VSIX File Integrity: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "Size: 18.98 MB",
+    "Timestamp": "2026-02-14T22:50:31.5711152-05:00"
+  },
+  {
+    "Test": "VSIX Structure: GitHub Copilot",
+    "Result": "PASS",
+    "Details": "62 entries found",
+    "Timestamp": "2026-02-14T22:50:31.5729807-05:00"
+  },
+  {
+    "Test": "GUI Launch: github.copilot",
+    "Result": "PASS",
+    "Details": "IDE started (PID: 17340)",
+    "Timestamp": "2026-02-14T22:50:36.5812437-05:00"
+  },
+  {
+    "Test": "GUI Launch: github.copilot",
+    "Result": "FAIL",
+    "Details": "The 'Raw' and 'Tail' parameters cannot be specified in the same command.",
+    "Timestamp": "2026-02-14T22:50:39.5952505-05:00"
+  },
+  {
+    "Test": "Plugin Directory: copilot",
+    "Result": "FAIL",
+    "Details": "Directory not found: d:\\rawrxd\\plugins\\copilot",
+    "Timestamp": "2026-02-14T22:50:39.5965512-05:00"
+  },
+  {
+    "Test": "Extension Registry",
+    "Result": "INFO",
+    "Details": "Registry not yet created",
+    "Timestamp": "2026-02-14T22:50:39.5987001-05:00"
+  },
+  {
+    "Test": "Simultaneous Loading",
+    "Result": "FAIL",
+    "Details": "A parameter cannot be found that matches parameter name 'TimeoutSec'.",
+    "Timestamp": "2026-02-14T22:50:39.6102693-05:00"
+  }
+]

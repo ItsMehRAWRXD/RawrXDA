@@ -1,5 +1,8 @@
-// agentic_puppeteer.cpp - Implementation of response correction
+// agentic_puppeteer.cpp - Implementation of response correction with MASM byte manipulation
 #include "agentic_puppeteer.hpp"
+#include "license_enforcement.h"
+#include "../asm/ai_agent_masm_bridge.hpp"
+#include "../core/unified_hotpatch_manager.hpp"
 #include <mutex>
 #include <regex>
 #include <string>
@@ -7,6 +10,61 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <atomic>
+#include <memory>
+#include <cstring>
+#include <windows.h>
+
+// SCAFFOLD_068: agentic_puppeteer orchestration
+
+
+// MASM Bridge for byte-level corrections
+static std::unique_ptr<MasmBridge> g_puppeteerMasmBridge;
+static std::atomic<bool> g_puppeteerMasmInitialized{false};
+static std::atomic<uint64_t> g_correctionBytesProcessed{0};
+static std::atomic<uint64_t> g_masmCorrectionCycles{0};
+
+// Bytecode patterns for common corrections
+struct CorrectionBytecode {
+    const char* pattern;
+    size_t pattern_size;
+    const char* replacement;
+    size_t replacement_size;
+    uint32_t priority;  // Higher = more important
+};
+
+// Pre-compiled correction bytecode patterns for MASM acceleration
+static const CorrectionBytecode g_correctionBytecodes[] = {
+    // Refusal removal patterns (high priority)
+    {"I can't", 7, "I can", 5, 100},
+    {"I cannot", 8, "I can", 5, 100}, 
+    {"I'm not able to", 15, "I will", 7, 95},
+    {"I decline", 9, "I accept", 8, 85},
+    
+    // Safety filter bypass patterns
+    {"[REDACTED]", 10, "", 0, 90},
+    {"[FILTERED]", 10, "", 0, 90},
+    {"[BLOCKED]", 9, "", 0, 90},
+    
+    // Quality improvement patterns
+    {"probably", 8, "definitely", 10, 50},
+    {"I think", 7, "I know", 6, 45},
+    {"might", 5, "will", 4, 40},
+    
+    // Termination patterns
+    {nullptr, 0, nullptr, 0, 0}  // Sentinel
+};
+
+extern "C" {
+    // MASM correction callback 
+    static bool masm_correction_transform(void* input_buffer, void* output_buffer) {
+        if (!input_buffer || !output_buffer) return false;
+        
+        // This would be called by MASM code for each correction
+        g_correctionBytesProcessed.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+}
 
 // Helper: count occurrences of a substring in a string
 static size_t countSubstring(const std::string& str, const std::string& sub) {
@@ -81,6 +139,10 @@ AgenticPuppeteer::~AgenticPuppeteer()
 
 CorrectionResult AgenticPuppeteer::correctResponse(const std::string& originalResponse, const std::string& userPrompt)
 {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+        RawrXD::License::FeatureID::AgenticPuppeteer, __FUNCTION__))
+        return CorrectionResult::error(FailureType::None, "[LICENSE] Agentic Puppeteer requires Enterprise license");
+
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (!m_enabled || originalResponse.empty()) {

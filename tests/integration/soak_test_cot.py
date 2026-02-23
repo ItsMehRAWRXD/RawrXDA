@@ -154,13 +154,13 @@ def scenario_hello_spam(host: str, count: int, concurrency: int = 10) -> Dict:
 
 
 # =============================================================================
-# Scenario 2: Large Payloads — 50 x 100 KiB
+# Scenario 2: Large Payloads — 50 x 100KB
 # =============================================================================
 def scenario_large_payloads(host: str, count: int = 50,
-                            size_kib: int = 100, concurrency: int = 5) -> Dict:
+                            size_kb: int = 100, concurrency: int = 5) -> Dict:
     """Stress test with large inputs to verify truncation + memory safety."""
     print(f"\n{'='*60}")
-    print(f"Scenario 2: Large Payloads — {count} x {size_kib} KiB")
+    print(f"Scenario 2: Large Payloads — {count} x {size_kb}KB")
     print(f"  Concurrency: {concurrency}")
     print(f"{'='*60}")
 
@@ -170,7 +170,7 @@ def scenario_large_payloads(host: str, count: int = 50,
         """Generate a large but valid prompt."""
         base = f"Request #{idx}: Please analyze this large codebase for issues.\n"
         # Pad with realistic-looking content
-        padding = "".join(random.choices(string.ascii_letters + " \n", k=size_kib * 1024))
+        padding = "".join(random.choices(string.ascii_letters + " \n", k=size_kb * 1024))
         return base + padding
 
     def worker(i):

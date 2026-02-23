@@ -15,11 +15,14 @@
 // Rule:        NO SOURCE FILE IS TO BE SIMPLIFIED
 // ============================================================================
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include "layer_offload_manager.hpp"
 #include "model_memory_hotpatch.hpp"  // PatchResult
 #include "../engine/pyre_compute.h"   // PyreLayerConfig, PyreDataType
+#include "../../include/enterprise_license.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -154,6 +157,11 @@ LayerOffloadManager::~LayerOffloadManager() {
 PatchResult LayerOffloadManager::initialize(const char* modelPath,
                                              const PyreLayerConfig& config,
                                              const OffloadConfig& offloadConfig) {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::ModelSharding,
+            "LayerOffloadManager::initialize")) {
+        return PatchResult::error("Model Sharding requires an Enterprise license", -1);
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_initialized) {

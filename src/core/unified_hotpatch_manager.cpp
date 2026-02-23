@@ -2,6 +2,7 @@
 // Routes patches to proper layer, tracks stats, preset save/load via manual JSON.
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 #include "unified_hotpatch_manager.hpp"
+#include "license_enforcement.h"
 #include "../server/gguf_server_hotpatch.hpp"
 #include "live_binary_patcher.hpp"
 #include "shadow_page_detour.hpp"
@@ -23,7 +24,9 @@
 
 // Forward-declare SwarmTrace for determinism check
 struct SwarmTrace;
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstring>
 #include <cstdio>
@@ -72,6 +75,12 @@ void UnifiedHotpatchManager::emit_event(HotpatchEvent::Type type, const char* de
 // Memory Layer (Layer 1)
 // ---------------------------------------------------------------------------
 UnifiedResult UnifiedHotpatchManager::apply_memory_patch(void* addr, size_t size, const void* data) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "memory", next_sequence());
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     PatchResult r = ::apply_memory_patch(addr, size, data);
     m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
@@ -85,6 +94,12 @@ UnifiedResult UnifiedHotpatchManager::apply_memory_patch(void* addr, size_t size
 }
 
 UnifiedResult UnifiedHotpatchManager::apply_memory_patch_tracked(MemoryPatchEntry* entry) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "memory", next_sequence());
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     PatchResult r = ::apply_memory_patch_tracked(entry);
     m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
@@ -98,6 +113,12 @@ UnifiedResult UnifiedHotpatchManager::apply_memory_patch_tracked(MemoryPatchEntr
 }
 
 UnifiedResult UnifiedHotpatchManager::revert_memory_patch(MemoryPatchEntry* entry) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "memory", next_sequence());
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     PatchResult r = ::revert_memory_patch(entry);
     m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
@@ -112,7 +133,13 @@ UnifiedResult UnifiedHotpatchManager::revert_memory_patch(MemoryPatchEntry* entr
 // ---------------------------------------------------------------------------
 // Byte Layer (Layer 2)
 // ---------------------------------------------------------------------------
-UnifiedResult UnifiedHotpatchManager::apply_byte_patch(const char* filename, const BytePatch& patch) {
+UnifiedResult UnifiedHotpatchManager::apply_byte_patch(const char* filename, const BytePatchEnhanced& patch) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "byte", next_sequence());
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     PatchResult r = ::patch_bytes(filename, patch);
     m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
@@ -131,6 +158,12 @@ UnifiedResult UnifiedHotpatchManager::apply_byte_search_patch(
     const std::vector<uint8_t>& pattern,
     const std::vector<uint8_t>& replacement)
 {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "byte", next_sequence());
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
     PatchResult r = ::search_and_patch_bytes(filename, pattern, replacement);
     m_stats.totalOperations.fetch_add(1, std::memory_order_relaxed);
@@ -148,6 +181,12 @@ UnifiedResult UnifiedHotpatchManager::apply_byte_search_patch(
 // Server Layer (Layer 3)
 // ---------------------------------------------------------------------------
 UnifiedResult UnifiedHotpatchManager::add_server_patch(ServerHotpatch* patch) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "server", next_sequence());
+    }
     if (!patch || !patch->name || !patch->transform) {
         return UnifiedResult::from(PatchResult::error("Null server patch or missing fields", 1), "server", next_sequence());
     }
@@ -161,6 +200,12 @@ UnifiedResult UnifiedHotpatchManager::add_server_patch(ServerHotpatch* patch) {
 }
 
 UnifiedResult UnifiedHotpatchManager::remove_server_patch(const char* name) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::UnifiedHotpatchManager, __FUNCTION__)) {
+        return UnifiedResult::from(
+            PatchResult::error("[LICENSE] Unified hotpatch manager requires Professional license", -1),
+            "server", next_sequence());
+    }
     if (!name) {
         return UnifiedResult::from(PatchResult::error("Null name", 1), "server", next_sequence());
     }
@@ -594,7 +639,7 @@ PatchResult UnifiedHotpatchManager::load_preset(const char* filename, HotpatchPr
                 if (objEnd == std::string::npos) break;
                 std::string objStr = arrStr.substr(objPos, objEnd - objPos + 1);
 
-                BytePatch entry;
+                BytePatchEnhanced entry;
                 entry.offset = 0;
                 // Extract offset
                 size_t offPos = objStr.find("\"offset\"");
@@ -682,6 +727,32 @@ void UnifiedHotpatchManager::resetStats() {
     m_stats.liveBinaryCount.store(0, std::memory_order_relaxed);
     m_stats.totalOperations.store(0, std::memory_order_relaxed);
     m_stats.totalFailures.store(0, std::memory_order_relaxed);
+}
+
+// ---------------------------------------------------------------------------
+// Force TPS (tokens per second) hotpatching — throttle delivery to target rate
+// ---------------------------------------------------------------------------
+void UnifiedHotpatchManager::set_target_tps(double tps) {
+    m_targetTPS.store((tps > 0.0) ? tps : 0.0, std::memory_order_relaxed);
+}
+
+void UnifiedHotpatchManager::throttle_token_delivery(uint64_t tokenIndex1Based) {
+    double target = m_targetTPS.load(std::memory_order_relaxed);
+    if (target <= 0.0 || tokenIndex1Based == 0) return;
+
+    std::lock_guard<std::mutex> lock(m_tpsMutex);
+    uint64_t nowMs = GetTickCount64();
+    if (tokenIndex1Based == 1) {
+        m_tpsStreamStartMs = static_cast<double>(nowMs);
+        return;
+    }
+    // Desired elapsed ms for this many tokens at target TPS
+    double expectedElapsedMs = (static_cast<double>(tokenIndex1Based) / target) * 1000.0;
+    double actualElapsedMs = static_cast<double>(nowMs) - m_tpsStreamStartMs;
+    if (actualElapsedMs < expectedElapsedMs) {
+        DWORD sleepMs = static_cast<DWORD>(expectedElapsedMs - actualElapsedMs);
+        if (sleepMs > 0) Sleep(sleepMs);
+    }
 }
 
 void UnifiedHotpatchManager::clearAllPatches() {

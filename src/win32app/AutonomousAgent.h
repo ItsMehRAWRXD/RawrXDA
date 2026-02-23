@@ -76,9 +76,9 @@ struct AgentConfig {
     DWORD beaconIntervalMs = 1000;
     DWORD maxRecoveryAttempts = 3;
     DWORD recoveryTimeoutMs = 30000;
-    std::string beaconLogPath = "C:\\RawrXD_Agent_Beacons.log";
-    std::string diagnosticReportPath = "C:\\RawrXD_Diagnostics.json";
-    std::string recoveryLogPath = "C:\\RawrXD_Recovery.log";
+    std::string beaconLogPath;       // default: resolved to %APPDATA%\RawrXD\Agent\beacons.log
+    std::string diagnosticReportPath; // default: %APPDATA%\RawrXD\Agent\diagnostics.json
+    std::string recoveryLogPath;     // default: %APPDATA%\RawrXD\Agent\recovery.log
 };
 
 // Forward Declarations

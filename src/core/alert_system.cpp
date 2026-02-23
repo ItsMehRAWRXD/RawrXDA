@@ -15,6 +15,9 @@
 #include <psapi.h>
 #include <iphlpapi.h>
 #include <dxgi1_4.h>
+
+// SCAFFOLD_300: Alert system
+
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "iphlpapi.lib")

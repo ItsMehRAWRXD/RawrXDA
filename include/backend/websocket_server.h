@@ -91,6 +91,10 @@ private:
     std::unordered_map<std::string, std::shared_ptr<WSConnection>> m_connections;
     mutable std::mutex m_connections_mutex;
 
+    // Client thread tracking for join-on-shutdown (replaces fire-and-forget .detach())
+    std::vector<std::thread> m_clientThreads;
+    std::mutex m_threads_mutex;
+
     MessageCallback m_on_message;
     ConnectionCallback m_on_connect;
     ConnectionCallback m_on_disconnect;

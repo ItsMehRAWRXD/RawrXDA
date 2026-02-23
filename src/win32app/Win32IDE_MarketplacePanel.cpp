@@ -11,9 +11,12 @@
 // Architecture: C++20 | Win32 | No exceptions | No Qt
 // Pattern:      PatchResult-compatible returns
 // Rule:         NO SOURCE FILE IS TO BE SIMPLIFIED
+// Status:       Production — ListView, search, install from marketplace, local DLLs.
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "VSIXInstaller.hpp"
+#include "VSCodeMarketplaceAPI.hpp"
 #include <commctrl.h>
 #include <sstream>
 #include <iomanip>
@@ -22,6 +25,9 @@
 #include <mutex>
 #include <fstream>
 #include <commdlg.h>
+
+// SCAFFOLD_243: Marketplace panel and VSIX install
+
 
 // ============================================================================
 // Extension data model
@@ -40,6 +46,10 @@ struct MarketplaceExtension {
     float       rating;      // 0.0 – 5.0
     ExtensionStatus status;
     std::string dllPath;     // local path if installed
+    // VS Code Marketplace: for Download & Install from marketplace
+    std::string publisher;
+    std::string extensionName;
+    bool        fromLiveMarketplace = false;
 };
 
 static std::vector<MarketplaceExtension> s_extensions;
@@ -243,10 +253,13 @@ static LRESULT handleMarketplaceCustomDraw(LPNMLVCUSTOMDRAW lpcd) {
 // Window Procedure
 // ============================================================================
 
-#define IDC_MP_SEARCH    5001
-#define IDC_MP_INSTALL   5002
-#define IDC_MP_UNINSTALL 5003
-#define IDC_MP_REFRESH   5004
+#define IDC_MP_SEARCH      5001
+#define IDC_MP_INSTALL     5002
+#define IDC_MP_UNINSTALL   5003
+#define IDC_MP_REFRESH     5004
+#define IDC_MP_INSTALL_VSIX 5005
+#define IDC_MP_LOAD_VSCODE 5006   // Load from VS Code Marketplace (reverse-engineered API)
+#define IDC_MP_DOWNLOAD_INSTALL 5007  // Download .vsix from marketplace & install
 
 static LRESULT CALLBACK marketplaceWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -256,7 +269,7 @@ static LRESULT CALLBACK marketplaceWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
             10, 8, 200, 24, hwnd, (HMENU)IDC_MP_SEARCH,
             GetModuleHandleW(nullptr), nullptr);
-        // Placeholder via EM_SETCUEBANNER
+        // Cue banner (hint text) via EM_SETCUEBANNER
         SendMessageW(s_hwndSearchEdit, 0x1501 /*EM_SETCUEBANNER*/, TRUE,
                      (LPARAM)L"Search extensions...");
 
@@ -274,6 +287,21 @@ static LRESULT CALLBACK marketplaceWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
         CreateWindowExW(0, L"BUTTON", L"\u21BB Refresh",
             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
             380, 5, 80, 28, hwnd, (HMENU)IDC_MP_REFRESH,
+            GetModuleHandleW(nullptr), nullptr);
+
+        CreateWindowExW(0, L"BUTTON", L"Install .vsix...",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            465, 5, 100, 28, hwnd, (HMENU)IDC_MP_INSTALL_VSIX,
+            GetModuleHandleW(nullptr), nullptr);
+
+        CreateWindowExW(0, L"BUTTON", L"Load from VS Code Marketplace",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            575, 5, 200, 28, hwnd, (HMENU)IDC_MP_LOAD_VSCODE,
+            GetModuleHandleW(nullptr), nullptr);
+
+        CreateWindowExW(0, L"BUTTON", L"Download & Install",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            780, 5, 120, 28, hwnd, (HMENU)IDC_MP_DOWNLOAD_INSTALL,
             GetModuleHandleW(nullptr), nullptr);
 
         // ListView
@@ -341,6 +369,100 @@ static LRESULT CALLBACK marketplaceWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
             refreshExtensionListView();
         } else if (wmId == IDC_MP_REFRESH) {
             refreshExtensionListView();
+        } else if (wmId == IDC_MP_INSTALL_VSIX) {
+            wchar_t path[MAX_PATH] = {};
+            OPENFILENAMEW ofn = {};
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = hwnd;
+            ofn.lpstrFilter = L"VSIX Packages (*.vsix)\0*.vsix\0All Files (*.*)\0*.*\0";
+            ofn.lpstrFile = path;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+            if (GetOpenFileNameW(&ofn)) {
+                char pathA[MAX_PATH * 2] = {};
+                WideCharToMultiByte(CP_UTF8, 0, path, -1, pathA, sizeof(pathA), nullptr, nullptr);
+                if (RawrXD::VSIXInstaller::Install(pathA)) {
+                    MessageBoxW(hwnd, L"Extension installed successfully.", L"VSIX Install", MB_OK | MB_ICONINFORMATION);
+                    refreshExtensionListView();
+                } else {
+                    MessageBoxW(hwnd, L"Installation failed. Check Output panel for details.", L"VSIX Install", MB_OK | MB_ICONWARNING);
+                }
+            }
+        } else if (wmId == IDC_MP_LOAD_VSCODE) {
+            wchar_t searchW[256] = {};
+            if (s_hwndSearchEdit) GetWindowTextW(s_hwndSearchEdit, searchW, 255);
+            char searchA[256] = {};
+            WideCharToMultiByte(CP_UTF8, 0, searchW, -1, searchA, 255, nullptr, nullptr);
+            std::string searchTerm(searchA);
+            std::vector<VSCodeMarketplace::MarketplaceEntry> entries;
+            if (!VSCodeMarketplace::Query(searchTerm, 50, 1, entries)) {
+                MessageBoxW(hwnd, L"Failed to reach VS Code Marketplace. Check network.", L"Marketplace", MB_OK | MB_ICONWARNING);
+                return 0;
+            }
+            {
+                std::lock_guard<std::mutex> lock(s_extMutex);
+                for (const auto& e : entries) {
+                    MarketplaceExtension ext;
+                    ext.id = e.id;
+                    ext.name = e.displayName;
+                    ext.version = e.version;
+                    ext.author = e.publisher;
+                    ext.description = e.shortDescription;
+                    ext.category = "Marketplace";
+                    ext.downloads = (uint32_t)(e.installCount > 0xFFFFFFFFu ? 0xFFFFFFFFu : e.installCount);
+                    ext.rating = (float)e.averageRating;
+                    ext.status = ExtensionStatus::Available;
+                    ext.publisher = e.publisher;
+                    ext.extensionName = e.extensionName;
+                    ext.fromLiveMarketplace = true;
+                    s_extensions.push_back(ext);
+                }
+            }
+            refreshExtensionListView();
+            wchar_t msg[128];
+            swprintf(msg, 128, L"Loaded %zu extensions from VS Code Marketplace.", entries.size());
+            MessageBoxW(hwnd, msg, L"Marketplace", MB_OK | MB_ICONINFORMATION);
+        } else if (wmId == IDC_MP_DOWNLOAD_INSTALL) {
+            int sel = (int)SendMessageW(s_hwndExtListView, LVM_GETNEXTITEM, -1, LVNI_SELECTED);
+            if (sel < 0) {
+                MessageBoxW(hwnd, L"Select an extension from the list first.", L"Download & Install", MB_OK | MB_ICONINFORMATION);
+                return 0;
+            }
+            MarketplaceExtension* ext = nullptr;
+            {
+                std::lock_guard<std::mutex> lock(s_extMutex);
+                if (sel >= 0 && sel < (int)s_extensions.size())
+                    ext = &s_extensions[sel];
+            }
+            if (!ext || !ext->fromLiveMarketplace || ext->publisher.empty() || ext->extensionName.empty()) {
+                MessageBoxW(hwnd, L"Selected extension is not from VS Code Marketplace. Use \"Load from VS Code Marketplace\" first, or \"Install .vsix...\" for a local file.", L"Download & Install", MB_OK | MB_ICONINFORMATION);
+                return 0;
+            }
+            if (ext->version.empty()) {
+                MessageBoxW(hwnd, L"No version available for this extension.", L"Download & Install", MB_OK | MB_ICONWARNING);
+                return 0;
+            }
+            wchar_t tempDir[MAX_PATH] = {};
+            if (GetTempPathW(MAX_PATH, tempDir) == 0) {
+                MessageBoxW(hwnd, L"Could not get temp path.", L"Download & Install", MB_OK | MB_ICONERROR);
+                return 0;
+            }
+            char tempDirA[MAX_PATH * 2] = {};
+            WideCharToMultiByte(CP_UTF8, 0, tempDir, -1, tempDirA, sizeof(tempDirA), nullptr, nullptr);
+            std::string vsixPathA = std::string(tempDirA) + ext->extensionName + "-" + ext->version + ".vsix";
+            if (!VSCodeMarketplace::DownloadVsix(ext->publisher, ext->extensionName, ext->version, vsixPathA)) {
+                MessageBoxW(hwnd, L"Download failed. Check network and try again.", L"Download & Install", MB_OK | MB_ICONWARNING);
+                return 0;
+            }
+            if (RawrXD::VSIXInstaller::Install(vsixPathA.c_str())) {
+                MessageBoxW(hwnd, L"Downloaded and installed successfully.", L"Download & Install", MB_OK | MB_ICONINFORMATION);
+                std::lock_guard<std::mutex> lock(s_extMutex);
+                if (sel >= 0 && sel < (int)s_extensions.size())
+                    s_extensions[sel].status = ExtensionStatus::Installed;
+                refreshExtensionListView();
+            } else {
+                MessageBoxW(hwnd, L"Installation failed. Check Output panel. Set RAWRXD_ALLOW_UNSIGNED_EXTENSIONS=1 for unsigned extensions.", L"Download & Install", MB_OK | MB_ICONWARNING);
+            }
         }
         return 0;
     }
@@ -392,7 +514,7 @@ void Win32IDE::initMarketplace() {
     seedMarketplace();
     OutputDebugStringA("[Marketplace] Tier 5 — Extension Marketplace Browser initialized.\n");
     m_marketplaceInitialized = true;
-    appendToOutput("[Marketplace] Extension Marketplace ready. Browse/install extensions.\n");
+    appendToOutput("[Marketplace] Extension Marketplace ready. Use \"Load from VS Code Marketplace\" to browse/download like VS Code and Cursor.\n");
 }
 
 // ============================================================================
@@ -431,15 +553,16 @@ void Win32IDE::cmdMarketplaceShow() {
     s_hwndMarketplace = CreateWindowExW(
         WS_EX_OVERLAPPEDWINDOW,
         MARKETPLACE_CLASS,
-        L"RawrXD — Extension Marketplace",
+        L"RawrXD — Extension Marketplace (VS Code compatible)",
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-        CW_USEDEFAULT, CW_USEDEFAULT, 800, 500,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1000, 500,
         m_hwndMain, nullptr,
         GetModuleHandleW(nullptr), nullptr);
 
     if (s_hwndMarketplace) {
         ShowWindow(s_hwndMarketplace, SW_SHOW);
         UpdateWindow(s_hwndMarketplace);
+        if (m_hwndStatusBar) SendMessageA(m_hwndStatusBar, SB_SETTEXTA, 0, (LPARAM)"Extensions: Marketplace");
     }
 }
 

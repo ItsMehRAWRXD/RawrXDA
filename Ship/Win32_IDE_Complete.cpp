@@ -2,6 +2,7 @@
 // Replaces: mainwindow.cpp, agentic_ide.cpp, chat_interface.cpp, file_browser.cpp
 //           multi_tab_editor.cpp, terminal_pool.cpp, model_router_widget.cpp
 // Pure Win32 API + ComCtl32 + RichEdit + Shell API
+// Status: Standalone Win32 build; file tree uses "Loading..." dummy then repopulates on expand.
 
 #ifndef UNICODE
 #define UNICODE
@@ -165,6 +166,7 @@ static HWND g_hTreeView = NULL;
 static HWND g_hTerminalTab = NULL;
 static HWND g_hChatHistory = NULL;
 static HWND g_hChatInput = NULL;
+static HWND g_hChatSend = NULL;
 static HWND g_hModelCombo = NULL;
 static HWND g_hStatusBar = NULL;
 static HWND g_hToolbar = NULL;
@@ -321,6 +323,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
         { FVIRTKEY, VK_F7, IDM_BUILD_BUILD },
         { FCONTROL | FVIRTKEY, VK_OEM_3, IDM_VIEW_TERMINAL },  // Ctrl+`
         { FCONTROL | FSHIFT | FVIRTKEY, 'C', IDM_VIEW_CHAT },
+        { FVIRTKEY, VK_F11, IDM_VIEW_FULLSCREEN },
     };
     HACCEL hAccel = CreateAcceleratorTableW(accelTable, sizeof(accelTable) / sizeof(accelTable[0]));
     MSG msg;
@@ -424,7 +427,28 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) 
             g_bChatVisible = !g_bChatVisible;
             ShowWindow(g_hChatHistory, g_bChatVisible ? SW_SHOW : SW_HIDE);
             ShowWindow(g_hChatInput, g_bChatVisible ? SW_SHOW : SW_HIDE);
+            if (g_hChatSend) ShowWindow(g_hChatSend, g_bChatVisible ? SW_SHOW : SW_HIDE);
             LayoutControls(hWnd);
+            break;
+        case IDM_VIEW_FULLSCREEN: {
+            g_bFullscreen = !g_bFullscreen;
+            if (g_bFullscreen) {
+                SetWindowLongW(hWnd, GWL_STYLE, GetWindowLongW(hWnd, GWL_STYLE) & ~(WS_CAPTION | WS_THICKFRAME));
+                ShowWindow(hWnd, SW_MAXIMIZE);
+            } else {
+                SetWindowLongW(hWnd, GWL_STYLE, GetWindowLongW(hWnd, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
+                ShowWindow(hWnd, SW_RESTORE);
+            }
+            LayoutControls(hWnd);
+            break;
+        }
+        case IDM_AI_CHAT:
+            g_bChatVisible = TRUE;
+            ShowWindow(g_hChatHistory, SW_SHOW);
+            ShowWindow(g_hChatInput, SW_SHOW);
+            if (g_hChatSend) ShowWindow(g_hChatSend, SW_SHOW);
+            LayoutControls(hWnd);
+            if (g_hChatInput) SetFocus(g_hChatInput);
             break;
             
         case IDM_BUILD_RUN:
@@ -497,6 +521,30 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         case IDM_TOOLS_TERMINAL:
             CreateNewTerminal();
             break;
+            
+        case IDM_HELP_DOCS: {
+            char exePath[MAX_PATH] = {};
+            char docsPath[MAX_PATH] = {};
+            docsPath[0] = '\0';
+            if (GetModuleFileNameA(nullptr, exePath, MAX_PATH) > 0) {
+                char* lastSlash = strrchr(exePath, '\\');
+                if (lastSlash) *(lastSlash + 1) = '\0';
+                const char* candidates[] = { "..\\docs", "..\\..\\docs", "docs" };
+                for (int i = 0; i < 3; i++) {
+                    snprintf(docsPath, MAX_PATH, "%s%s", exePath, candidates[i]);
+                    DWORD att = GetFileAttributesA(docsPath);
+                    if (att != INVALID_FILE_ATTRIBUTES && (att & FILE_ATTRIBUTE_DIRECTORY))
+                        break;
+                    docsPath[0] = '\0';
+                }
+            }
+            if (docsPath[0]) {
+                ShellExecuteA(nullptr, "open", docsPath, nullptr, nullptr, SW_SHOWNORMAL);
+            } else {
+                ShellExecuteW(nullptr, L"open", L"https://rawrxd.dev/docs", nullptr, nullptr, SW_SHOWNORMAL);
+            }
+            break;
+        }
             
         case IDM_HELP_ABOUT:
             MessageBoxW(hWnd, 
@@ -883,7 +931,7 @@ static void OnTreeViewItemExpand(HWND hTree, NMTREEVIEW* pnm) {
         TreeView_GetItem(hTree, &tvi);
         if (tvi.lParam != 0) return;  // Already populated
         
-        // Remove placeholder
+        // Remove expandable dummy node before repopulating with real children
         TreeView_DeleteItem(hTree, hChild);
     }
     
@@ -1400,6 +1448,18 @@ static DWORD WINAPI TerminalReaderThread(LPVOID param) {
 // ============================================================================
 // CHAT PANEL
 // ============================================================================
+static LRESULT CALLBACK ChatInputSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
+    if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {
+        wchar_t msg[4096] = {0};
+        if (GetWindowTextW(hwnd, msg, 4096) > 0) {
+            SendChatMessage(msg);
+            SetWindowTextW(hwnd, L"");
+        }
+        return 0;
+    }
+    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+}
+
 static void CreateChatPanel(HWND hWnd) {
     // Chat history (RichEdit)
     g_hChatHistory = CreateWindowExW(WS_EX_CLIENTEDGE,
@@ -1421,11 +1481,18 @@ static void CreateChatPanel(HWND hWnd) {
     AppendRichText(g_hChatHistory, L"RawrXD AI Chat\r\n", RGB(86, 156, 214));
     AppendRichText(g_hChatHistory, L"Load a model to start chatting.\r\n\r\n", RGB(128, 128, 128));
     
-    // Chat input
+    // Chat input (Enter sends via ChatInputSubclassProc)
     g_hChatInput = CreateWindowExW(WS_EX_CLIENTEDGE,
         L"EDIT", NULL,
         WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
         0, 0, 200, 24, hWnd, (HMENU)IDC_CHAT_INPUT, g_hInstance, NULL);
+    if (g_hChatInput)
+        SetWindowSubclass(g_hChatInput, ChatInputSubclassProc, 0, 0);
+    
+    // Send button — so user can send chat to the model
+    g_hChatSend = CreateWindowExW(0, L"BUTTON", L"Send",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        0, 0, 56, 24, hWnd, (HMENU)IDC_CHAT_SEND, g_hInstance, NULL);
     
     // Model combo
     g_hModelCombo = CreateWindowExW(0, WC_COMBOBOXW, NULL,
@@ -1705,11 +1772,15 @@ static void LayoutControls(HWND hWnd) {
         }
     }
     
-    // Chat panel (right side)
+    // Chat panel (right side): model combo, history, input + Send button
     if (g_bChatVisible) {
         int chatX = rc.right - chatW;
+        const int sendBtnW = 56;
+        const int inputH = 24;
         MoveWindow(g_hModelCombo, chatX, top, chatW, 24, TRUE);
         MoveWindow(g_hChatHistory, chatX, top + 26, chatW, clientH - 60, TRUE);
-        MoveWindow(g_hChatInput, chatX, bottom - 30, chatW, 24, TRUE);
+        MoveWindow(g_hChatInput, chatX, bottom - 30, chatW - sendBtnW - 4, inputH, TRUE);
+        if (g_hChatSend)
+            MoveWindow(g_hChatSend, chatX + chatW - sendBtnW, bottom - 30, sendBtnW, inputH, TRUE);
     }
 }

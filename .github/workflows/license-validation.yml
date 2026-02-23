@@ -1,0 +1,81 @@
+# =============================================================================
+# Track A: License Gate Validation — run after build
+# Generates tier keys, runs 65×4 gate tests, publishes HTML report.
+# =============================================================================
+name: License Gate Validation
+
+on:
+  push:
+    branches: [main, agentic-ide-production]
+  pull_request:
+    branches: [main, agentic-ide-production]
+  workflow_dispatch:
+
+jobs:
+  license-validation:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: Configure CMake
+        shell: pwsh
+        run: |
+          mkdir build_license -Force
+          cd build_license
+          cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTING=ON -G "Visual Studio 17 2022" -A x64 ..
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cd build_license
+          msbuild RawrEngine.sln /p:Configuration=Release /p:Platform=x64 /m:4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          msbuild RawrEngine.sln /t:license_key_generator;license_gate_validator /p:Configuration=Release /p:Platform=x64 /m:4
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Generate license keys
+        shell: pwsh
+        run: |
+          $keyDir = "build_license/tools"
+          if (Test-Path "build_license/tools/Release") { $keyDir = "build_license/tools/Release" }
+          $keygen = "build_license/tools/license_key_generator.exe"
+          if (Test-Path "build_license/tools/Release/license_key_generator.exe") { $keygen = "build_license/tools/Release/license_key_generator.exe" }
+          if (Test-Path $keygen) {
+            & $keygen $keyDir
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          }
+
+      - name: Run gate validator
+        shell: pwsh
+        run: |
+          $keyDir = "build_license/tools"
+          if (Test-Path "build_license/tools/Release") { $keyDir = "build_license/tools/Release" }
+          $validator = "build_license/tools/license_gate_validator.exe"
+          if (Test-Path "build_license/tools/Release/license_gate_validator.exe") { $validator = "build_license/tools/Release/license_gate_validator.exe" }
+          if (Test-Path $validator) {
+            & $validator $keyDir
+            if ($LASTEXITCODE -ne 0) { exit 1 }
+          } else {
+            Write-Error "license_gate_validator.exe not found"
+            exit 1
+          }
+          $report = "build_license/validation_report.html"
+          if (!(Test-Path $report)) { $report = "validation_report.html" }
+          if (Test-Path $report) {
+            Get-Content $report | Select-Object -First 30
+          }
+
+      - name: Upload validation report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: license-validation-report
+          path: |
+            build_license/validation_report.html
+            validation_report.html
+          retention-days: 30

@@ -68,6 +68,21 @@ if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
     message(STATUS "[SDK Fix] MT      = ${_SDK_BIN}/mt.exe")
 endif()
 
+# ============================================================================
+# Scaffold/Placeholder Enforcement Target
+# ============================================================================
+if(WIN32)
+    add_custom_target(enforce_no_scaffold
+        COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                -File ${CMAKE_SOURCE_DIR}/tools/enforce_no_scaffold.ps1
+                -Root ${CMAKE_SOURCE_DIR}
+                -FailOnMatch
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Enforcing zero scaffold/placeholder language in source tree"
+        VERBATIM
+    )
+endif()
+
 # Force Windows SDK version for VS generator (avoid 10.0.26100.0 if not installed)
 if(WIN32)
     set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "10.0.22621.0" CACHE STRING "Windows SDK version for VS generator" FORCE)
@@ -160,8 +175,8 @@ if(RAWR_HAS_MASM)
         src/asm/FlashAttention_AVX512.asm
         src/asm/quant_avx2.asm
         src/asm/RawrXD_KQuant_Dequant.asm
-        src/asm/memory_patch.asm
-        src/asm/byte_search.asm
+        # src/asm/memory_patch.asm   # excluded: MASM syntax/alignment errors; use memory_patch_byte_search_stubs.cpp
+        # src/asm/byte_search.asm     # excluded: NASM-style %define; use memory_patch_byte_search_stubs.cpp
         src/asm/request_patch.asm
         src/asm/inference_kernels.asm
         src/asm/model_bridge_x64.asm
@@ -183,6 +198,14 @@ if(RAWR_HAS_MASM)
         src/asm/RawrXD_Snapshot.asm
         src/asm/RawrXD_Pyre_Compute.asm
         src/asm/vision_projection_kernel.asm
+        src/asm/quantum_beaconism_backend.asm
+        src/asm/RawrXD_DualEngine_QuantumBeacon.asm
+        src/asm/RawrXD_DualEngine_Pure.asm
+        src/asm/RawrXD_OverclockGov_Pure.asm
+        src/asm/RawrXD_AuditSystem_Pure.asm
+        src/asm/Advanced_Code_Deobfuscator.asm
+        src/asm/Code_Pattern_Reconstructor.asm
+        # User-provided production ASM (need ML64 syntax fixes: .endprolog, REAL4, scale): agentic_deep_thinking_kernels.asm, ai_completion_provider_masm.asm, agentic_puppeteer_byte_ops.asm
         # src/RawrXD_Complete_ReverseEngineered.asm  # excluded: fragment missing struct defs/includes
     )
     # Mark ASM files with MASM language property
@@ -193,6 +216,11 @@ if(RAWR_HAS_MASM)
     add_definitions(-DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1)
     add_definitions(-DRAWRXD_LINK_VISION_PROJECTION_ASM=1)
     add_definitions(-DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1)
+    add_definitions(-DRAWRXD_LINK_DUAL_ENGINE_QUANTUM_BEACON_ASM=1)
+    add_definitions(-DRAWRXD_LINK_UNIFIED_OVERCLOCK_GOVERNOR_ASM=1)
+    add_definitions(-DRAWRXD_LINK_CODEBASE_AUDIT_SYSTEM_ASM=1)
+    add_definitions(-DRAWRXD_LINK_ADVANCED_DEOBFUSCATOR_ASM=1)
+    add_definitions(-DRAWRXD_LINK_PATTERN_RECONSTRUCTOR_ASM=1)
 else()
     set(ASM_KERNEL_SOURCES "")
 endif()
@@ -231,10 +259,12 @@ set(SOURCES
     src/codec/brutal_gzip.cpp
 
     src/core/execution_scheduler.cpp
+    src/asm/quantum_beaconism_backend.asm
     
     # Agentic Decision Tree + CLI Autonomy (Phase 19)
     src/cli/agentic_decision_tree.cpp
     src/cli/cli_autonomy_loop.cpp
+    src/cli/deep_iteration_engine.cpp
     
     # Headless CLI Systems (Phase 20: Safety, Confidence, Replay, Governor, Multi-Response, History, Policy, Explainability)
     src/cli/cli_headless_systems.cpp
@@ -258,6 +288,7 @@ set(SOURCES
     # Three-layer hotpatch system (needed by decision tree)
     src/core/model_memory_hotpatch.cpp
     src/core/byte_level_hotpatcher.cpp
+    src/core/memory_patch_byte_search_stubs.cpp
     src/core/unified_hotpatch_manager.cpp
     src/core/proxy_hotpatcher.cpp
     src/core/model_bruteforce_engine.cpp
@@ -366,11 +397,99 @@ set(SOURCES
     # Missing link dependencies (enterprise license, swarm, flash attn stubs, tool registry)
     src/core/enterprise_license.cpp
     src/core/enterprise_license_stubs.cpp
+    src/core/enterprise_licensev2_impl.cpp
     src/core/camellia256_bridge.cpp
     src/core/swarm_coordinator.cpp
     src/core/swarm_worker.cpp
     src/core/swarm_network_stubs.cpp
     src/tool_registry.cpp
+
+    # License enforcement + feature manifest (LicenseEnforcer, g_FeatureManifest, featureName) — required by complete_server, hotpatch, perf_telemetry, enterprise_licensev2_impl
+    src/license_enforcement.cpp
+    src/feature_flags_runtime.cpp
+    src/tools/license_validator_manifest.cpp
+
+    # Agentic config + enterprise feature manager + model name utils — required by complete_server, subagent_core
+    src/core/agentic_autonomous_config.cpp
+    src/core/enterprise_feature_manager.cpp
+    src/model_name_utils.cpp
+
+    # Multi-GPU manager (RawrXD::Enterprise::MultiGPUManager) — required by complete_server, execution_scheduler, local_ai_core
+    src/core/multi_gpu.cpp
+
+    # Engine registry (register_engine) — required by sovereign_engines
+    src/core/engine_registry.cpp
+
+    # Telemetry + observability — required by model_bruteforce_engine, auto_feature_registry, AgentOrchestrator
+    src/agent/telemetry_collector.cpp
+    src/agentic_observability.cpp
+
+    # BoundedAgentLoop + FIMPromptBuilder — required by agentic_task_graph, OrchestratorBridge, auto_feature_registry, AgentOrchestrator
+    src/agentic/BoundedAgentLoop.cpp
+    src/agentic/FIMPromptBuilder.cpp
+
+    # Subsystem registry — required by AgentOrchestrator, ToolRegistry, feature_handlers
+    src/core/rawrxd_subsystem_api.cpp
+
+    # IDEConfig — required by OrchestratorBridge
+    src/config/IDEConfig.cpp
+
+    # Disk recovery ASM agent + tool handler — required by ToolRegistry
+    src/agentic/DiskRecoveryAgent.cpp
+    src/agentic/DiskRecoveryToolHandler.cpp
+
+    # Agentic bridge (ExecuteAgentCommand) — headless stub for RawrEngine
+    src/win32app/agentic_bridge_headless.cpp
+
+    # Agent failure detect SIMD stub (masm_agent_failure_detect_simd) — required by agentic_failure_detector
+    src/core/ai_agent_masm_stubs.cpp
+
+    # Context deterioration hotpatch + LSP hotpatch + symbol provider — required by feature_handlers, auto_feature_registry
+    src/core/context_deterioration_hotpatch.cpp
+    src/lsp/lsp_hotpatch_bridge.cpp
+    src/lsp/hotpatch_symbol_provider.cpp
+
+    # License anti-tampering (computeHMAC_SHA256, verifyLicenseKeyIntegrity) — required by enterprise_licensev2_impl
+    src/core/license_anti_tampering.cpp
+
+    # Reverse-engineered bridge stubs (Heartbeat_Shutdown, GPU_*, GetHighResTick, TicksTo*, CalculateCRC32, AllocateDMABuffer, Tensor_QuantizedMatMul)
+    src/win32app/reverse_engineered_stubs.cpp
+
+    # Support tier manager (SupportTierManager::Instance, GenerateStatusReport) — required by main, complete_server
+    src/core/support_tier.cpp
+
+    # Subsystem mode stubs (CompileMode, EncryptMode, InjectMode, etc.) — required by rawrxd_subsystem_api
+    src/core/subsystem_mode_stubs.cpp
+
+    # Feature registry (FeatureRegistry::instance, registerFeature) — required by enterprise_feature_manager
+    src/core/feature_registry.cpp
+    # Menu auditor (RawrXD::Audit::verifyCommandInMenu) — required by feature_registry
+    src/core/menu_auditor.cpp
+
+    # GGUF diagnostic provider + LSP server — required by lsp_hotpatch_bridge
+    src/lsp/gguf_diagnostic_provider.cpp
+    src/lsp/RawrXD_LSPServer.cpp
+
+    # Extension polyfill engine + VSCode API — required by js_extension_host
+    src/core/extension_polyfill_engine.cpp
+    src/modules/vscode_extension_api.cpp
+
+    # JS extension host — required by ssot_handlers_ext
+    src/core/js_extension_host.cpp
+
+    # Model source resolver — required by auto_feature_registry
+    src/model_source_resolver.cpp
+
+    # ReverseEngineering (NativeDisassembler, BinaryAnalyzer, RECodex, NativeCompiler) — required by auto_feature_registry
+    src/modules/ReverseEngineering.cpp
+
+    # AgenticDeepThinkingEngine stub — required by auto_feature_registry (full .cpp has ScopedMeasurement/KernelSlot/duplicate defs; use stub for RawrEngine)
+    src/agent/agentic_deep_thinking_engine_stub.cpp
+
+    # Win32IDE::logMessage stub (for RawrEngine / Gold when linking TranscendencePanel without full IDE)
+    src/win32app/Win32IDE_logMessage_stub.cpp
+    # Win32IDE output/copilot/tree stubs (for RawrEngine / Gold when linking vscode_extension_api without full IDE)
+    src/win32app/Win32IDE_headless_stubs.cpp
 
     # Stubgen: AnalyzerDistiller + StreamingOrchestrator (C++ fallbacks, guarded by RAWR_HAS_MASM)
     src/core/analyzer_distiller_stubs.cpp
@@ -501,6 +620,9 @@ set(SOURCES
     # GAP 9: Speculative Decoder v2 (Draft-Verify-Accept)
     src/gpu/speculative_decoder_v2.cpp
 
+    # Autonomous inference engine (required by speculative_decoder.cpp for draft token generation)
+    src/inference/ultra_fast_inference.cpp
+
     # GAP 10: Completion Feedback (Online Logistic Regression)
     src/telemetry/completion_feedback.cpp
 
@@ -587,6 +709,27 @@ set(SOURCES
     # Phase 15: Static Analysis Engine — CFG/SSA, dominators, optimizations
     src/core/static_analysis_engine.cpp
 
+    # Top-50: Unified Problems (LSP + SAST + SCA + Secrets)
+    src/core/problems_aggregator.cpp
+
+    # Top-50: Secrets scanning (API keys, high-entropy) — Security
+    src/security/secrets_scanner.cpp
+
+    # Top-50: In-house SCA (manifest parsing, no external deps)
+    src/security/dependency_audit.cpp
+
+    # Top-50: SBOM export (CycloneDX 1.4, in-house)
+    src/security/sbom_export.cpp
+
+    # Top-50: In-house SAST (regex/source rules, no external SAST lib)
+    src/security/sast_rule_engine.cpp
+
+    # Google Dork Scanner + bug-safe SQLi (maxIterations, replaceSuffix, boolean payloads)
+    src/security/RawrXD_GoogleDork_Scanner.cpp
+
+    # Universal Dorker — LDOAGTIAC, XOR obfuscation, hotpatch, result reversal
+    src/security/RawrXD_Universal_Dorker.cpp
+
     # Phase 15b: Code Linter — Real-time syntax/semantic linting (C++, ASM, Python, JS)
     src/core/code_linter.cpp
 
@@ -641,10 +784,14 @@ set(SOURCES
     src/context/semantic_index.cpp
     src/ide/resource_generator.cpp
 
+    # P0: Codebase RAG (in-house TF-IDF)
+    src/ai/codebase_rag.cpp
+
     # ── Transcendence Architecture (Phases E → Ω) ─────────────────────
     src/core/self_host_engine.cpp
     src/core/hardware_synthesizer.cpp
     src/core/mesh_brain.cpp
+    src/core/mesh_brain_asm_stubs.cpp
     src/core/speciator_engine.cpp
     src/core/neural_bridge.cpp
     src/core/omega_orchestrator.cpp
@@ -673,6 +820,7 @@ target_include_directories(RawrEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/engine
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/security
     ${CMAKE_CURRENT_SOURCE_DIR}/src/server
     ${CMAKE_CURRENT_SOURCE_DIR}/src/agent
     ${CMAKE_CURRENT_SOURCE_DIR}/src/agentic
@@ -681,6 +829,7 @@ target_include_directories(RawrEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/git
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lsp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/modules
     ${CMAKE_CURRENT_SOURCE_DIR}/src/tools
     ${CMAKE_CURRENT_SOURCE_DIR}/src/telemetry
     ${CMAKE_CURRENT_SOURCE_DIR}/src/test_harness
@@ -691,9 +840,15 @@ target_include_directories(RawrEngine PRIVATE
 
 target_link_libraries(RawrEngine PRIVATE Threads::Threads)
 
-# Sources used by missing_handler_stubs: debugger engine + Ollama client
+# Avoid duplicate register_sovereign_engines (real impl in sovereign_engines.cpp)
+target_compile_definitions(RawrEngine PRIVATE RAWR_HAS_SOVEREIGN_ENGINES=1)
+# When linking both ssot_handlers and auto_feature_registry, use auto's definitions for overlapping handlers (avoid LNK2005)
+target_compile_definitions(RawrEngine PRIVATE RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1)
+
+# Sources used by missing_handler_stubs: debugger engine + symbols + Ollama client
 target_sources(RawrEngine PRIVATE
     src/core/native_debugger_engine.cpp
+    src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
 )
 
@@ -741,6 +896,7 @@ target_link_libraries(RawrXD_Gold PRIVATE Threads::Threads)
 
 target_compile_definitions(RawrXD_Gold PRIVATE
     RAWRXD_GOLD_BUILD=1
+    RAWR_AUTO_FEATURE_REGISTRY_PROVIDES_HANDLERS=1
     RAWR_HAS_MASM=1
     RAWRXD_LINK_QUADBUFFER_ASM=1
     RAWRXD_LINK_INFERENCE_KERNELS_ASM=1
@@ -781,6 +937,7 @@ endif()
 # Gold-only sources: modules used by missing_handler_stubs but not in main SOURCES
 target_sources(RawrXD_Gold PRIVATE
     src/core/native_debugger_engine.cpp
+    src/core/native_debugger_symbols.cpp
     src/agentic/AgentOllamaClient.cpp
 )
 
@@ -1521,12 +1678,12 @@ if(WIN32)
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/IDELogger.h
         src/win32app/Win32IDE_FileOps.cpp
-        src/win32app/Win32IDE_SourceFilePicker.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_Debugger.cpp
         src/win32app/Win32IDE_AgenticBridge.h
         src/win32app/Win32IDE_AgenticBridge.cpp
         src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/plan_mode_handler.cpp
         src/win32app/Win32IDE_Autonomy.h
         src/win32app/Win32IDE_Autonomy.cpp
         src/win32app/Win32IDE_SyntaxHighlight.cpp
@@ -1667,12 +1824,16 @@ if(WIN32)
         src/core/streaming_engine_registry.cpp
         src/core/gpu_backend_bridge.cpp
         src/core/enterprise_license.cpp
+        src/core/enterprise_licensev2_impl.cpp
+        src/tools/license_validator_manifest.cpp
+        src/core/license_anti_tampering.cpp
         src/core/camellia256_bridge.cpp
         src/core/watchdog_service.cpp
         src/core/multi_response_engine.cpp
         src/core/flash_attention.cpp
         src/core/execution_scheduler.cpp
         src/core/execution_governor.cpp
+        src/core/multi_gpu.cpp
         src/core/agent_safety_contract.cpp
         src/core/deterministic_replay.cpp
         src/core/confidence_gate.cpp
@@ -1693,13 +1854,15 @@ if(WIN32)
         # Dual-Agent Orchestrator (Phase 41)
         src/win32app/Win32IDE_DualAgentPanel.cpp
         
-        # Native Debugger Engine (Phase 12)
+        # Native Debugger Engine (Phase 12) + P0 source-level symbols (dbghelp)
         src/core/native_debugger_engine.cpp
+        src/core/native_debugger_symbols.cpp
         src/win32app/Win32IDE_NativeDebugPanel.cpp
         
         # Three-Layer Hotpatch System (Phase 14.2)
         src/core/model_memory_hotpatch.cpp
         src/core/byte_level_hotpatcher.cpp
+        src/core/memory_patch_byte_search_stubs.cpp
         src/core/unified_hotpatch_manager.cpp
         src/core/proxy_hotpatcher.cpp
         src/core/model_bruteforce_engine.cpp
@@ -1723,6 +1886,7 @@ if(WIN32)
         src/agent/eval_framework.cpp
         src/agent/autonomous_subagent.cpp
         src/agent/agentic_failure_detector.cpp
+        src/core/ai_agent_masm_stubs.cpp
         src/agent/agentic_puppeteer.cpp
 
         # LocalReasoningEngine — API-free static analysis + pattern detection
@@ -1946,6 +2110,14 @@ if(WIN32)
         src/lsp/diagnostic_consumer.cpp
         src/win32app/Win32IDE_StaticAnalysisPanel.cpp
 
+        # P0: Unified Problems Panel (LSP, SAST, SCA, Secrets, Build)
+        src/win32app/Win32IDE_ProblemsPanel.cpp
+        src/win32app/Win32IDE_BuildRunner.cpp
+        src/win32app/Win32IDE_SecurityScans.cpp
+        src/win32app/Win32IDE_SecurityDashboard.cpp
+        src/core/problems_panel_bridge.cpp
+        src/win32app/Win32IDE_AgentStreamingBridge.cpp
+
         # Phase 16: Semantic Code Intelligence
         src/core/semantic_code_intelligence.cpp
         src/win32app/Win32IDE_SemanticPanel.cpp
@@ -2053,7 +2225,48 @@ if(WIN32)
         src/win32app/Win32IDE_AIReverseEngineering.cpp
         src/win32app/Win32IDE_AirgappedEnterprise.cpp
         src/win32app/Win32IDE_FlagshipFeatures.cpp
+
+        # Linker deps: ProjectContext, UniversalModelRouter, ModelRegistry, CheckpointManager
+        src/project_context.cpp
+        src/universal_model_router.cpp
+        src/model_registry.cpp
+        src/model_name_utils.cpp
+        src/core/checkpoint_manager.cpp
+        # AgenticAutonomousConfig, EnterpriseFeatureManager, ContextDeteriorationHotpatch
+        src/core/agentic_autonomous_config.cpp
+        src/core/enterprise_feature_manager.cpp
+        src/core/context_deterioration_hotpatch.cpp
+        # Win32 panels and dialogs
+        src/ui/interpretability_panel.cpp
+        src/win32app/benchmark_menu_stub.cpp
+        src/win32app/benchmark_runner_stub.cpp
+        src/win32app/feature_registry_panel.cpp
+        src/ui/monaco_settings_dialog.cpp
+        src/thermal/RAWRXD_ThermalDashboard.cpp
+        src/win32app/VSCodeMarketplaceAPI.cpp
+        src/win32app/multi_file_search_stub.cpp
+        # License Creator + Feature Registry dialogs (showLicenseCreatorDialog, showFeatureRegistryDialog)
+        src/win32app/Win32IDE_LicenseCreator.cpp
+        # License enforcement + manifest (g_FeatureManifest + featureName from license_validator_manifest.cpp; LicenseEnforcer from license_enforcement.cpp)
+        src/license_enforcement.cpp
+        src/feature_flags_runtime.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # 10x Dual Engine + Unified Overclock + Quantum Beaconism Fusion
+        # ═══════════════════════════════════════════════════════════════
+        src/asm/RawrXD_DualEngine_QuantumBeacon.asm
+        src/asm/RawrXD_UnifiedOverclock_Governor.asm
+        src/asm/quantum_beaconism_backend.asm
     )
+
+    if(RAWR_HAS_MASM)
+        set_source_files_properties(
+            src/asm/RawrXD_DualEngine_QuantumBeacon.asm
+            src/asm/RawrXD_UnifiedOverclock_Governor.asm
+            src/asm/quantum_beaconism_backend.asm
+            PROPERTIES LANGUAGE ASM_MASM
+        )
+    endif()
     
     # =========================================================================
     # MultiWindow Task Scheduler Kernel (MASM64 DLL)
@@ -2296,11 +2509,11 @@ if(WIN32)
         src/win32app/Win32IDE_PowerShell.cpp
         src/win32app/Win32IDE_Logger.cpp
         src/win32app/Win32IDE_FileOps.cpp
-        src/win32app/Win32IDE_SourceFilePicker.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_Debugger.cpp
         src/win32app/Win32IDE_AgenticBridge.cpp
         src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/plan_mode_handler.cpp
         src/win32app/Win32IDE_Autonomy.cpp
         src/win32app/Win32IDE_SyntaxHighlight.cpp
         src/win32app/Win32IDE_Themes.cpp
@@ -2560,6 +2773,7 @@ if(WIN32)
         src/core/semantic_code_intelligence.cpp
         src/core/enterprise_telemetry_compliance.cpp
         src/core/native_debugger_engine.cpp
+        src/core/native_debugger_symbols.cpp
         src/core/quantum_safe_transport.cpp
         src/core/adaptive_pipeline_parallel.cpp
         src/core/universal_model_merger.cpp
@@ -2830,6 +3044,14 @@ endif()
 #
 # ASAN (MSVC): /fsanitize=address — detects heap overflows, use-after-free
 option(RAWR_ASAN "Enable AddressSanitizer (MSVC /fsanitize=address)" OFF)
+
+# PMASSA: bye Ollama — prefer local GGUF / inference; Ollama code can be excluded when ON
+# See docs/PMASSA_BYE_OLLAMA.md
+option(RAWRXD_PMASSA "PMASSA: phase out Ollama (prefer local GGUF; define RAWRXD_PMASSA)" OFF)
+if(RAWRXD_PMASSA)
+    add_compile_definitions(RAWRXD_PMASSA=1)
+    message(STATUS "[PMASSA] Bye Ollama — RAWRXD_PMASSA=ON")
+endif()
 
 if(RAWR_ASAN AND MSVC)
     message(STATUS "[CI] AddressSanitizer ENABLED (/fsanitize=address)")

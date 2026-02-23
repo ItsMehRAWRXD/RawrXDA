@@ -184,7 +184,7 @@ void GPUBackendSelector::detectBackends() {
                 BackendInfo& b = m_backends[m_backendCount++];
                 b.backend = BACKEND_CUDA;
                 wcscpy_s(b.displayName, L"CUDA");
-                wcscpy_s(b.icon, L"\x1F3AE");
+                wcscpy_s(b.icon, L"\xD83C\xDFAE"); /* U+1F3AE */
                 b.available = true;
 
                 // Parse GPU name
@@ -245,7 +245,7 @@ void GPUBackendSelector::detectBackends() {
         BackendInfo& b = m_backends[m_backendCount++];
         b.backend = BACKEND_DIRECTML;
         wcscpy_s(b.displayName, L"DirectML");
-        wcscpy_s(b.icon, L"\x1FA9F");
+        wcscpy_s(b.icon, L"\xD83E\xDE9F"); /* U+1FA9F */
         wcscpy_s(b.deviceName, L"Windows ML");
         b.vramMB = 0;
         b.available = true;
@@ -257,7 +257,7 @@ void GPUBackendSelector::detectBackends() {
         BackendInfo& b = m_backends[m_backendCount++];
         b.backend = BACKEND_AUTO;
         wcscpy_s(b.displayName, L"Auto");
-        wcscpy_s(b.icon, L"\x1F504");
+        wcscpy_s(b.icon, L"\xD83D\xDD04"); /* U+1F504 */
         wcscpy_s(b.deviceName, L"Best Available");
         b.vramMB = 0;
         b.available = true;
@@ -336,7 +336,7 @@ void GPUBackendSelector::paint(HDC hdc, const RECT& rc) {
     SelectObject(hdc, m_font);
     SetTextColor(hdc, ACCENT_CLR);
     RECT iconRect = { 2, 0, 22, h };
-    DrawTextW(hdc, L"\x1F5A5", -1, &iconRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    DrawTextW(hdc, L"\xD83D\xDDA5", -1, &iconRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE); /* U+1F5A5 */
 
     // Status text (right of combo)
     int statusX = 210;

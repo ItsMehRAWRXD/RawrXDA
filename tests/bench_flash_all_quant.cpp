@@ -8,9 +8,6 @@
 #include <random>
 #include <algorithm>
 
-#include "logging/logger.h"
-static Logger s_logger("bench_flash_all_quant");
-
 using namespace std::chrono;
 
 // Inline stubs for flash-attention symbols - full implementation not linked in this benchmark
@@ -29,8 +26,8 @@ int main() {
     const int seqLen = 4096;
     const int headDim = 64;
     
-    s_logger.info("Flash-Attention All-Quant Benchmark\n");
-    s_logger.info("Shape: ");
+    std::cout << "Flash-Attention All-Quant Benchmark\n";
+    std::cout << "Shape: " << seqLen << " × " << headDim << " (4K context)\n\n";
     
     // Allocate buffers
     std::vector<float> Q(seqLen * headDim);
@@ -47,19 +44,19 @@ int main() {
     for (auto& x : V) x = dist(rng);
     
     // Warmup
-    s_logger.info("Warming up...\n");
+    std::cout << "Warming up...\n";
     attention_baseline(Q.data(), K.data(), V.data(), O_baseline.data(), seqLen, headDim);
     flash_attention(Q.data(), K.data(), V.data(), O_flash.data(), seqLen, headDim);
     
     // Benchmark FP32 baseline (full materialization)
-    s_logger.info("Running FP32 baseline (O(n²) memory)...\n");
+    std::cout << "Running FP32 baseline (O(n²) memory)...\n";
     auto t0 = high_resolution_clock::now();
     attention_baseline(Q.data(), K.data(), V.data(), O_baseline.data(), seqLen, headDim);
     auto t1 = high_resolution_clock::now();
     double ms_fp32 = duration<double, std::milli>(t1 - t0).count();
     
     // Benchmark Flash-Attention (tiled online-softmax)
-    s_logger.info("Running Flash-Attention (O(n) memory)...\n");
+    std::cout << "Running Flash-Attention (O(n) memory)...\n";
     t0 = high_resolution_clock::now();
     flash_attention(Q.data(), K.data(), V.data(), O_flash.data(), seqLen, headDim);
     t1 = high_resolution_clock::now();
@@ -73,17 +70,17 @@ int main() {
     
     // Report
     double speedup = ms_fp32 / ms_flash;
-    s_logger.info("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-    s_logger.info("Max abs diff: ");
-    s_logger.info("FP32 baseline: ");
-    s_logger.info("Flash (O(n)):  ");
-    s_logger.info("Speedup: ");
+    std::cout << "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    std::cout << "Max abs diff: " << maxDiff << "\n";
+    std::cout << "FP32 baseline: " << ms_fp32 << " ms\n";
+    std::cout << "Flash (O(n)):  " << ms_flash << " ms\n";
+    std::cout << "Speedup: " << speedup << "x\n";
     
     if (speedup >= 10.0) {
-        s_logger.info("✅ END-TO-END: >= 10× speedup achieved\n");
+        std::cout << "✅ END-TO-END: >= 10× speedup achieved\n";
         return 0;
     } else {
-        s_logger.info("❌ END-TO-END: < 10× speedup (got ");
+        std::cout << "❌ END-TO-END: < 10× speedup (got " << speedup << "x)\n";
         return 1;
     }
 }

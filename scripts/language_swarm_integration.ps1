@@ -39,26 +39,20 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # LANGUAGE-SWARM INTEGRATION CORE
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class LanguageSwarmIntegration {
-    [string]$RegistryPath = ""
-    [string]$CompilerRoot = ""
-    [string]$BeaconPath = ""
+    [string]$RegistryPath = "D:\lazy init ide\scripts\language_model_registry.psm1"
+    [string]$CompilerRoot = "D:\lazy init ide\compilers"
+    [string]$BeaconPath = "D:\lazy init ide\logs\swarm_config"
     [hashtable]$LanguageRegistry = @{}
     [hashtable]$CompilerCache = @{}
     [System.Collections.ArrayList]$LoadedLanguages
     [datetime]$InitializationTime
     
     LanguageSwarmIntegration() {
-        $root = Get-RawrXDRoot
-        $this.RegistryPath = Resolve-RawrXDPath (Join-Path $root "scripts" "language_model_registry.psm1")
-        $this.CompilerRoot = Resolve-RawrXDPath (Join-Path $root "compilers")
-        $this.BeaconPath = Resolve-RawrXDPath (Join-Path $root "logs" "swarm_config")
         $this.LoadedLanguages = [System.Collections.ArrayList]::new()
         $this.InitializationTime = Get-Date
         $this.ValidatePaths()

@@ -1,8 +1,10 @@
+// SCAFFOLD_346: OrchestrationUI void* parent doc
+
 #pragma once
 
 #include "TaskOrchestrator.h"
 
-
+// Win32: parent is HWND for CreateWindowExW when embedding the orchestration UI.
 namespace RawrXD {
 
 class OrchestrationUI {public:

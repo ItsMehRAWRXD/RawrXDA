@@ -81,12 +81,15 @@ enum class AuditEventType : uint8_t {
     ComplianceReport  = 17,
 };
 
+#ifndef RAWRXD_LICENSE_TIER_DEFINED
+#define RAWRXD_LICENSE_TIER_DEFINED
 enum class LicenseTier : uint8_t {
     Community   = 0,
     Professional = 1,
     Enterprise  = 2,
     OEM         = 3,
 };
+#endif
 
 enum class MetricType : uint8_t {
     Counter   = 0,

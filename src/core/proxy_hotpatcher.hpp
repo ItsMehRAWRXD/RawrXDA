@@ -109,6 +109,14 @@ public:
     const ProxyHotpatchStats& getStats() const;
     void resetStats();
 
+    // ---- Enable/Disable ----
+    void setEnabled(bool enable);
+    bool isEnabled() const;
+
+    // ---- Advanced Rewriting (Boyer-Moore powered) ----
+    size_t apply_rewrites_advanced(char* output, size_t outputLen,
+                                   size_t bufferCapacity, bool useBoyer = true);
+
 private:
     ProxyHotpatcher();
     ~ProxyHotpatcher();
@@ -117,6 +125,7 @@ private:
 
     std::mutex                          m_mutex;
     ProxyHotpatchStats                  m_stats;
+    bool                                m_enabled{true};
 
     std::vector<TokenBias>              m_biases;
     std::vector<StreamTerminationRule>  m_terminationRules;

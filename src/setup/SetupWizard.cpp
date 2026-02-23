@@ -12,10 +12,13 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <shellapi.h>
+#include <shlobj.h>
 #include <bcrypt.h>
 #include <intrin.h>
 #pragma comment(lib, "bcrypt.lib")
 #endif
+#include <algorithm>
 #include <random>
 #include <sstream>
 #include <iomanip>
@@ -23,6 +26,15 @@
 #include <fstream>
 #include <filesystem>
 #include <thread>
+
+// SCAFFOLD_343: SetupWizard void* parent doc
+
+
+// SCAFFOLD_213: Entropy key path AppData/RawrXD
+
+
+// SCAFFOLD_212: SetupWizard importKey/exportKey
+
 
 namespace rawrxd::setup {
 
@@ -110,6 +122,8 @@ void HardwarePage::onDetectionError(const std::string&)
     m_detectionComplete = false;
     hardwareDetectionComplete(false);
 }
+
+void HardwarePage::hardwareDetectionComplete(bool) { /* Host can override or subscribe */ }
 
 void HardwarePage::populateHardwareInfo() {}
 void HardwarePage::runDetection() { startDetection(); }
@@ -200,12 +214,69 @@ void SecurityPage::generateKey()
 
 void SecurityPage::importKey()
 {
-    (void)this;
+    namespace fs = std::filesystem;
+    std::string path;
+    const char* envPath = std::getenv("RAWRXD_ENTROPY_KEY_FILE");
+    if (envPath && envPath[0]) {
+        path = envPath;
+    } else {
+#ifdef _WIN32
+        char appData[MAX_PATH] = {};
+        if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData)))
+            path = std::string(appData) + "\\RawrXD\\entropy.key";
+        else
+            path = ".\\rawrxd_entropy.key";
+#else
+        const char* home = std::getenv("HOME");
+        path = (home ? home : ".") + std::string("/.rawrxd/entropy.key");
+#endif
+    }
+    std::ifstream f(path);
+    if (!f.is_open()) return;
+    std::string line;
+    if (std::getline(f, line)) {
+        size_t start = line.find_first_not_of(" \t\r\n");
+        if (start == std::string::npos) return;
+        line.erase(0, start);
+        size_t end = line.find_last_not_of(" \t\r\n");
+        if (end != std::string::npos) line.erase(end + 1);
+        if (line.size() >= 32 && line.size() <= 128 &&
+            std::all_of(line.begin(), line.end(), [](char c) {
+                return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+            })) {
+            m_entropyKey = line;
+        }
+    }
 }
 
 void SecurityPage::exportKey()
 {
-    (void)this;
+    if (m_entropyKey.empty()) return;
+    namespace fs = std::filesystem;
+    std::string path;
+    const char* envPath = std::getenv("RAWRXD_ENTROPY_KEY_FILE");
+    if (envPath && envPath[0]) {
+        path = envPath;
+    } else {
+#ifdef _WIN32
+        char appData[MAX_PATH] = {};
+        if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+            path = std::string(appData) + "\\RawrXD";
+            fs::create_directories(path);
+            path += "\\entropy.key";
+        } else {
+            path = ".\\rawrxd_entropy.key";
+        }
+#else
+        const char* home = std::getenv("HOME");
+        std::string dir = (home ? home : ".") + std::string("/.rawrxd");
+        fs::create_directories(dir);
+        path = dir + "/entropy.key";
+#endif
+    }
+    std::ofstream f(path, std::ios::out | std::ios::trunc);
+    if (f.is_open())
+        f << m_entropyKey << "\n";
 }
 
 std::string SecurityPage::generateRDRANDKey()
@@ -461,6 +532,9 @@ void SetupWizard::saveConfiguration()
     writeConfigFiles();
 }
 
+void SetupWizard::setupComplete(bool) { /* Host can override or subscribe */ }
+void SetupWizard::configurationSaved(const std::string&) { /* Host can override or subscribe */ }
+
 void SetupWizard::done(int result)
 {
     if (result == WizardAccepted)
@@ -474,6 +548,10 @@ void SetupWizard::done(int result)
 HardwareDetector::HardwareDetector(void*)
 {
 }
+
+void HardwareDetector::progress(int, const std::string&) { /* internal; callbacks invoked by lambda */ }
+void HardwareDetector::complete(const DetectedHardware&) { /* internal; callbacks invoked by lambda */ }
+void HardwareDetector::error(const std::string&) { /* internal; callbacks invoked by lambda */ }
 
 void HardwareDetector::detect()
 {
@@ -624,7 +702,7 @@ std::string HardwareDetector::generateFingerprint(const DetectedHardware& hw)
         BCryptCloseAlgorithmProvider(hAlg, 0);
         return "";
     }
-    BCryptHashData(hHash, reinterpret_cast<const UCHAR*>(source.data()), (ULONG)source.size(), 0);
+    BCryptHashData(hHash, const_cast<PUCHAR>(reinterpret_cast<const UCHAR*>(source.data())), (ULONG)source.size(), 0);
     uint8_t hash[32];
     status = BCryptFinishHash(hHash, hash, 32, 0);
     BCryptDestroyHash(hHash);

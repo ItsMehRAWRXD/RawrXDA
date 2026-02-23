@@ -6,6 +6,12 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#ifndef RAWRXD_WIN32_STATIC_BUILD
+#define RAWRXD_SHIP_EXPORT __declspec(dllexport)
+#else
+#define RAWRXD_SHIP_EXPORT
+#endif
 #include <vector>
 #include <string>
 #include <map>
@@ -17,6 +23,7 @@ struct ProcessInfo {
     HANDLE hThread;
     HANDLE hStdOut;
     HANDLE hStdErr;
+    HANDLE hStdInWrite;
     DWORD dwProcessId;
     bool running;
 };
@@ -41,34 +48,54 @@ public:
             if (pair.second.hThread) CloseHandle(pair.second.hThread);
             if (pair.second.hStdOut) CloseHandle(pair.second.hStdOut);
             if (pair.second.hStdErr) CloseHandle(pair.second.hStdErr);
+            if (pair.second.hStdInWrite) CloseHandle(pair.second.hStdInWrite);
         }
         LeaveCriticalSection(&m_criticalSection);
         DeleteCriticalSection(&m_criticalSection);
     }
     
     DWORD ExecuteCommand(const wchar_t* command, const wchar_t* workingDir = nullptr) {
-        // Simplified - just launch the process without output redirection for now
+        SECURITY_ATTRIBUTES sa = {sizeof(sa), nullptr, TRUE};
+        HANDLE hStdoutRead = nullptr, hStdoutWrite = nullptr;
+        HANDLE hStdinRead = nullptr, hStdinWrite = nullptr;
+        
+        if (!CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0)) return 0;
+        if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0)) {
+            CloseHandle(hStdoutRead); CloseHandle(hStdoutWrite);
+            return 0;
+        }
+        SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0);
+        
         STARTUPINFOW si = {0};
         si.cb = sizeof(STARTUPINFOW);
-        si.dwFlags = STARTF_USESHOWWINDOW;
+        si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+        si.hStdOutput = hStdoutWrite;
+        si.hStdError = hStdoutWrite;
+        si.hStdInput = hStdinRead;
         si.wShowWindow = SW_HIDE;
         
         PROCESS_INFORMATION pi = {0};
-        
         wchar_t cmdLine[32768];
         wcscpy_s(cmdLine, sizeof(cmdLine) / sizeof(wchar_t), L"cmd.exe /c ");
         wcscat_s(cmdLine, sizeof(cmdLine) / sizeof(wchar_t), command);
         
-        if (!CreateProcessW(nullptr, cmdLine, nullptr, nullptr, FALSE,
+        if (!CreateProcessW(nullptr, cmdLine, nullptr, nullptr, TRUE,
             CREATE_NO_WINDOW, nullptr, workingDir, &si, &pi)) {
+            CloseHandle(hStdoutRead); CloseHandle(hStdoutWrite);
+            CloseHandle(hStdinRead); CloseHandle(hStdinWrite);
             return 0;
         }
+        
+        CloseHandle(hStdoutWrite);
+        CloseHandle(hStdinRead);
         
         ProcessInfo pinfo;
         pinfo.hProcess = pi.hProcess;
         pinfo.hThread = pi.hThread;
-        pinfo.hStdOut = nullptr;
+        pinfo.hStdOut = hStdoutRead;
         pinfo.hStdErr = nullptr;
+        pinfo.hStdInWrite = hStdinWrite;
         pinfo.dwProcessId = pi.dwProcessId;
         pinfo.running = true;
         
@@ -164,26 +191,26 @@ public:
 static RawrXDTerminalManager* g_terminalManager = nullptr;
 
 extern "C" {
-    __declspec(dllexport) void* __stdcall CreateTerminalManager() {
+    RAWRXD_SHIP_EXPORT void* __stdcall CreateTerminalManager() {
         if (!g_terminalManager) {
             g_terminalManager = new RawrXDTerminalManager();
         }
         return g_terminalManager;
     }
     
-    __declspec(dllexport) void __stdcall DestroyTerminalManager(void* mgr) {
+    RAWRXD_SHIP_EXPORT void __stdcall DestroyTerminalManager(void* mgr) {
         if (mgr && mgr == g_terminalManager) {
             delete g_terminalManager;
             g_terminalManager = nullptr;
         }
     }
     
-    __declspec(dllexport) DWORD __stdcall Terminal_ExecuteCommand(void* mgr, const wchar_t* command, const wchar_t* workingDir) {
+    RAWRXD_SHIP_EXPORT DWORD __stdcall Terminal_ExecuteCommand(void* mgr, const wchar_t* command, const wchar_t* workingDir) {
         RawrXDTerminalManager* m = static_cast<RawrXDTerminalManager*>(mgr);
         return m ? m->ExecuteCommand(command, workingDir) : 0;
     }
     
-    __declspec(dllexport) bool __stdcall Terminal_ReadOutput(void* mgr, DWORD processId, char* buffer, size_t bufSize, size_t* bytesRead) {
+    RAWRXD_SHIP_EXPORT bool __stdcall Terminal_ReadOutput(void* mgr, DWORD processId, char* buffer, size_t bufSize, size_t* bytesRead) {
         RawrXDTerminalManager* m = static_cast<RawrXDTerminalManager*>(mgr);
         size_t read = 0;
         bool result = m ? m->ReadOutput(processId, buffer, bufSize, read) : false;
@@ -191,28 +218,31 @@ extern "C" {
         return result;
     }
     
-    __declspec(dllexport) bool __stdcall Terminal_IsProcessRunning(void* mgr, DWORD processId) {
+    RAWRXD_SHIP_EXPORT bool __stdcall Terminal_IsProcessRunning(void* mgr, DWORD processId) {
         RawrXDTerminalManager* m = static_cast<RawrXDTerminalManager*>(mgr);
         return m ? m->IsProcessRunning(processId) : false;
     }
     
-    __declspec(dllexport) DWORD __stdcall Terminal_GetExitCode(void* mgr, DWORD processId) {
+    RAWRXD_SHIP_EXPORT DWORD __stdcall Terminal_GetExitCode(void* mgr, DWORD processId) {
         RawrXDTerminalManager* m = static_cast<RawrXDTerminalManager*>(mgr);
         return m ? m->GetExitCode(processId) : -1;
     }
     
-    __declspec(dllexport) bool __stdcall Terminal_TerminateProcess(void* mgr, DWORD processId) {
+    RAWRXD_SHIP_EXPORT bool __stdcall Terminal_TerminateProcess(void* mgr, DWORD processId) {
         RawrXDTerminalManager* m = static_cast<RawrXDTerminalManager*>(mgr);
         return m ? m->TerminateProcess(processId) : false;
     }
 }
 
+#ifndef RAWRXD_WIN32_STATIC_BUILD
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugStringW(L"RawrXD_TerminalManager_Win32 loaded\n");
     } else if (fdwReason == DLL_PROCESS_DETACH && g_terminalManager) {
         g_terminalManager->KillAllProcesses();
         delete g_terminalManager;
+        g_terminalManager = nullptr;
     }
     return TRUE;
 }
+#endif

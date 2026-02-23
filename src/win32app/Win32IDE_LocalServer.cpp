@@ -18,8 +18,10 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+#include "../core/unified_hotpatch_manager.hpp"
 #include "../../include/chain_of_thought_engine.h"
 #include "../core/instructions_provider.hpp"
+#include "../core/model_name_util.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <thread>
@@ -28,6 +30,8 @@
 #include <chrono>
 #include <algorithm>
 #include <cstring>
+#include <iomanip>
+#include <vector>
 
 // Forward: socket type
 using LocalServerSocket = SOCKET;
@@ -397,6 +401,12 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
     // ========== HTML Frontend: /models — list all local GGUF + Ollama models ==========
     else if (method == "GET" && path == "/models") {
         handleModelsEndpoint(client);
+        closesocket(client);
+        return;
+    }
+    // ========== Cursor / OpenAI: /v1/models, /api/models — model list for Settings > Models ==========
+    else if (method == "GET" && (path == "/v1/models" || path == "/api/models")) {
+        handleV1ModelsEndpoint(client);
         closesocket(client);
         return;
     }
@@ -860,6 +870,11 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    if (method == "POST" && path == "/api/re/set-binary") {
+        handleReSetBinaryEndpoint(client, body);
+        closesocket(client);
+        return;
+    }
     // ========== Phase 32A: Chain-of-Thought Multi-Model Review ==========
     else if (method == "GET" && path == "/api/cot/status") {
         handleCoTStatusEndpoint(client);
@@ -1015,6 +1030,11 @@ void Win32IDE::handleLocalServerClient(SOCKET clientFd) {
         closesocket(client);
         return;
     }
+    else if ((method == "POST" || method == "GET") && path == "/api/hotpatch/target-tps") {
+        handleHotpatchTargetTpsEndpoint(client, method, body);
+        closesocket(client);
+        return;
+    }
     // ========== Phase 34: Production Instructions Context ==========
     else if (method == "GET" && path == "/api/instructions") {
         handleInstructionsEndpoint(client, "full");
@@ -1056,10 +1076,8 @@ void Win32IDE::handleOllamaApiTags(SOCKET client) {
     j << "{\"models\":[";
 
     if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty()) {
-        // Extract model name from path
-        std::string name = m_loadedModelPath;
-        size_t slash = name.find_last_of("/\\");
-        if (slash != std::string::npos) name = name.substr(slash + 1);
+        // Use automatic namer so model is READ correctly (e.g. BigDaddyG-F32-FROM-Q4.gguf -> BigDaddyG-F32-FROM-Q4)
+        std::string name = RawrXD::DeriveModelNameFromPath(m_loadedModelPath);
 
         j << "{"
           << "\"name\":\"" << LocalServerUtil::escapeJson(name) << "\""
@@ -1323,7 +1341,7 @@ void Win32IDE::handleOpenAIChatCompletions(SOCKET client, const std::string& bod
 }
 
 // ============================================================================
-// FRONTEND: /models — scan D:/OllamaModels for .gguf files + loaded model
+// FRONTEND: /models — scan candidate model roots for .gguf + blobs (dynamic paths)
 // ============================================================================
 
 void Win32IDE::handleModelsEndpoint(SOCKET client) {
@@ -1332,14 +1350,9 @@ void Win32IDE::handleModelsEndpoint(SOCKET client) {
 
     int count = 0;
 
-    // 1. Currently loaded model (if any)
+    // 1. Currently loaded model (if any) — use automatic namer for correct API name
     if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty()) {
-        std::string name = m_loadedModelPath;
-        size_t slash = name.find_last_of("/\\");
-        if (slash != std::string::npos) name = name.substr(slash + 1);
-        // Strip .gguf extension for display
-        size_t dot = name.rfind(".gguf");
-        std::string displayName = (dot != std::string::npos) ? name.substr(0, dot) : name;
+        std::string displayName = RawrXD::DeriveModelNameFromPath(m_loadedModelPath);
 
         if (count > 0) j << ",";
         j << "{\"name\":\"" << LocalServerUtil::escapeJson(displayName)
@@ -1348,76 +1361,98 @@ void Win32IDE::handleModelsEndpoint(SOCKET client) {
         count++;
     }
 
-    // 2. Scan D:/OllamaModels for .gguf files
+    // 2. Scan each candidate model root for .gguf and blobs (OLLAMA_MODELS, %LOCALAPPDATA%\Ollama, D:\OllamaModels, ...)
+    std::vector<std::string> roots = Win32IDE::getCandidateModelRootPaths();
     WIN32_FIND_DATAA findData;
-    HANDLE hFind = FindFirstFileA("D:\\OllamaModels\\*.gguf", &findData);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            std::string fname = findData.cFileName;
-            std::string fullPath = "D:/OllamaModels/" + fname;
-
-            // Skip if it's the already-loaded model
-            if (fullPath == m_loadedModelPath) continue;
-
-            // Display name without .gguf
-            size_t dot = fname.rfind(".gguf");
-            std::string displayName = (dot != std::string::npos) ? fname.substr(0, dot) : fname;
-
-            // File size
-            LARGE_INTEGER fileSize;
-            fileSize.LowPart  = findData.nFileSizeLow;
-            fileSize.HighPart = findData.nFileSizeHigh;
-            double sizeGB = (double)fileSize.QuadPart / (1024.0 * 1024.0 * 1024.0);
-
-            std::ostringstream sizeFmt;
-            sizeFmt << std::fixed;
-            sizeFmt.precision(1);
-            sizeFmt << sizeGB << "GB";
-
-            if (count > 0) j << ",";
-            j << "{\"name\":\"" << LocalServerUtil::escapeJson(displayName)
-              << "\",\"type\":\"gguf\",\"size\":\"" << sizeFmt.str()
-              << "\",\"path\":\"" << LocalServerUtil::escapeJson(fullPath) << "\"}";
-            count++;
-        } while (FindNextFileA(hFind, &findData));
-        FindClose(hFind);
-    }
-
-    // 3. Scan D:/OllamaModels/blobs for blob files
-    hFind = FindFirstFileA("D:\\OllamaModels\\blobs\\sha256-*", &findData);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            std::string fname = findData.cFileName;
-            std::string fullPath = "D:/OllamaModels/blobs/" + fname;
-
-            LARGE_INTEGER fileSize;
-            fileSize.LowPart  = findData.nFileSizeLow;
-            fileSize.HighPart = findData.nFileSizeHigh;
-            double sizeGB = (double)fileSize.QuadPart / (1024.0 * 1024.0 * 1024.0);
-
-            // Only include blobs > 100MB (likely model weights, not metadata)
-            if (sizeGB < 0.1) continue;
-
-            std::ostringstream sizeFmt;
-            sizeFmt << std::fixed;
-            sizeFmt.precision(1);
-            sizeFmt << sizeGB << "GB";
-
-            // Short display name: first 12 chars of sha256 hash
-            std::string displayName = "blob:" + fname.substr(0, std::min((size_t)19, fname.size()));
-
-            if (count > 0) j << ",";
-            j << "{\"name\":\"" << LocalServerUtil::escapeJson(displayName)
-              << "\",\"type\":\"blob\",\"size\":\"" << sizeFmt.str()
-              << "\",\"path\":\"" << LocalServerUtil::escapeJson(fullPath) << "\"}";
-            count++;
-        } while (FindNextFileA(hFind, &findData));
-        FindClose(hFind);
+    for (const auto& root : roots) {
+        std::string pattern = root + "\\*.gguf";
+        HANDLE hFind = FindFirstFileA(pattern.c_str(), &findData);
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                std::string fname = findData.cFileName;
+                std::string fullPath = root + "/" + fname;
+                if (fullPath == m_loadedModelPath) continue;
+                size_t dot = fname.rfind(".gguf");
+                std::string displayName = (dot != std::string::npos) ? fname.substr(0, dot) : fname;
+                LARGE_INTEGER fileSize;
+                fileSize.LowPart = findData.nFileSizeLow;
+                fileSize.HighPart = findData.nFileSizeHigh;
+                double sizeGB = (double)fileSize.QuadPart / (1024.0 * 1024.0 * 1024.0);
+                std::ostringstream sizeFmt;
+                sizeFmt << std::fixed << std::setprecision(1) << sizeGB << "GB";
+                if (count > 0) j << ",";
+                j << "{\"name\":\"" << LocalServerUtil::escapeJson(displayName)
+                  << "\",\"type\":\"gguf\",\"size\":\"" << sizeFmt.str()
+                  << "\",\"path\":\"" << LocalServerUtil::escapeJson(fullPath) << "\"}";
+                count++;
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
+        }
+        std::string blobPattern = root + "\\blobs\\sha256-*";
+        hFind = FindFirstFileA(blobPattern.c_str(), &findData);
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                std::string fname = findData.cFileName;
+                std::string fullPath = root + "/blobs/" + fname;
+                LARGE_INTEGER fileSize;
+                fileSize.LowPart = findData.nFileSizeLow;
+                fileSize.HighPart = findData.nFileSizeHigh;
+                double sizeGB = (double)fileSize.QuadPart / (1024.0 * 1024.0 * 1024.0);
+                if (sizeGB < 0.1) continue;
+                std::ostringstream sizeFmt;
+                sizeFmt << std::fixed << std::setprecision(1) << sizeGB << "GB";
+                std::string displayName = "blob:" + fname.substr(0, std::min((size_t)19, fname.size()));
+                if (count > 0) j << ",";
+                j << "{\"name\":\"" << LocalServerUtil::escapeJson(displayName)
+                  << "\",\"type\":\"blob\",\"size\":\"" << sizeFmt.str()
+                  << "\",\"path\":\"" << LocalServerUtil::escapeJson(fullPath) << "\"}";
+                count++;
+            } while (FindNextFileA(hFind, &findData));
+            FindClose(hFind);
+        }
     }
 
     j << "]}";
 
     std::string response = LocalServerUtil::buildHttpResponse(200, j.str());
+    LocalServerUtil::sendAll(client, response);
+}
+
+// ============================================================================
+// CURSOR/OPENAI: /v1/models, /api/models — model list for Cursor Settings > Models
+// Uses automatic namer so loaded models (e.g. BigDaddyG-F32-FROM-Q4.gguf) are READ correctly.
+// ============================================================================
+
+void Win32IDE::handleV1ModelsEndpoint(SOCKET client) {
+    std::vector<std::string> ids;
+    if (m_nativeEngine && m_nativeEngine->IsModelLoaded() && !m_loadedModelPath.empty()) {
+        std::string name = RawrXD::DeriveModelNameFromPath(m_loadedModelPath);
+        if (!name.empty() && name != "rawrxd") ids.push_back(name);
+    }
+    if (ids.empty()) ids.push_back("rawrxd");
+    const std::string known[] = {
+        "llama3", "llama2", "neural-chat", "mistral", "codellama", "phi", "gemma",
+        "BigDaddyG-Q4_K_M", "BigDaddyG-F32-FROM-Q4", "BigDaddyG-NO-REFUSE-Q4_K_M",
+        "BigDaddyG-UNLEASHED-Q4_K_M"
+    };
+    for (const auto& k : known) {
+        if (std::find(ids.begin(), ids.end(), k) == ids.end()) ids.push_back(k);
+    }
+    std::ostringstream out;
+    out << "{\"object\":\"list\",\"data\":[";
+    for (size_t i = 0; i < ids.size(); ++i) {
+        if (i) out << ",";
+        std::string escaped;
+        for (char c : ids[i]) {
+            if (c == '"') escaped += "\\\"";
+            else if (c == '\\') escaped += "\\\\";
+            else if (c == '\n') escaped += "\\n";
+            else escaped += c;
+        }
+        out << "{\"id\":\"" << escaped << "\",\"object\":\"model\",\"created\":1700000000}";
+    }
+    out << "]}";
+    std::string response = LocalServerUtil::buildHttpResponse(200, out.str());
     LocalServerUtil::sendAll(client, response);
 }
 
@@ -1761,7 +1796,9 @@ void Win32IDE::handleCliEndpoint(SOCKET client, const std::string& body) {
         } else {
             std::string filePath = cmdArgs;
             if (filePath[0] != '/' && (filePath.size() < 2 || filePath[1] != ':')) {
-                filePath = "D:\\\\rawrxd\\\\" + filePath;
+                char cwd[MAX_PATH] = {};
+                if (GetCurrentDirectoryA(MAX_PATH, cwd))
+                    filePath = std::string(cwd) + "\\" + filePath;
             }
             try {
                 auto canonical = std::filesystem::weakly_canonical(filePath);
@@ -1887,6 +1924,46 @@ void Win32IDE::handleHotpatchEndpoint(SOCKET client, const std::string& path, co
          << "}";
 
     std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+    LocalServerUtil::sendAll(client, resp);
+}
+
+// ============================================================================
+// Hotpatch target TPS: GET/POST /api/hotpatch/target-tps
+// ============================================================================
+// GET: returns current target TPS (0 = disabled, run normally).
+// POST: body {"targetTps": N} — set target tokens/sec; 0 or omit = run normally.
+// ============================================================================
+void Win32IDE::handleHotpatchTargetTpsEndpoint(SOCKET client, const std::string& method, const std::string& body) {
+    auto& hmgr = UnifiedHotpatchManager::instance();
+    if (method == "GET") {
+        double tps = hmgr.get_target_tps();
+        std::ostringstream json;
+        json << "{\"targetTps\":" << tps << ",\"enabled\":" << (tps > 0.0 ? "true" : "false") << "}";
+        std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+        LocalServerUtil::sendAll(client, resp);
+        return;
+    }
+    if (method == "POST") {
+        double value = 0.0;
+        size_t pos = body.find("\"targetTps\"");
+        if (pos != std::string::npos) {
+            size_t colon = body.find(':', pos);
+            if (colon != std::string::npos) {
+                try {
+                    value = std::stod(body.substr(colon + 1));
+                } catch (...) {}
+                if (value < 0.0) value = 0.0;
+            }
+        }
+        hmgr.set_target_tps(value);
+        std::ostringstream json;
+        json << "{\"success\":true,\"targetTps\":" << value << ",\"message\":\""
+             << (value > 0.0 ? "Force TPS hotpatching enabled" : "Run normally (target TPS cleared)") << "\"}";
+        std::string resp = LocalServerUtil::buildHttpResponse(200, json.str());
+        LocalServerUtil::sendAll(client, resp);
+        return;
+    }
+    std::string resp = LocalServerUtil::buildHttpResponse(405, "{\"error\":\"Method not allowed\"}");
     LocalServerUtil::sendAll(client, resp);
 }
 

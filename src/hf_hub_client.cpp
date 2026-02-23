@@ -26,9 +26,6 @@
 #include <regex>
 #include <algorithm>
 
-#include "logging/logger.h"
-static Logger s_logger("hf_hub_client");
-
 #ifdef _WIN32
 #include <windows.h>
 #include <winhttp.h>
@@ -131,7 +128,7 @@ public:
  *       "llama-2-7b.gguf",
  *       "./models",
  *       [](uint64_t downloaded, uint64_t total) {
- *           s_logger.info("Downloaded: ");
+ *           std::cout << "Downloaded: " << downloaded << "/" << total << std::endl;
  *       }
  *   );
  */
@@ -160,7 +157,7 @@ public:
      * Example:
      *   auto results = client.searchModels("llama", 10);
      *   for (const auto& model : results) {
-     *       s_logger.info( model.repo_id << " (" << model.downloads << " downloads)" << std::endl;
+     *       std::cout << model.repo_id << " (" << model.downloads << " downloads)" << std::endl;
      *   }
      */
     std::vector<ModelMetadata> searchModels(const std::string& query, 
@@ -176,12 +173,12 @@ public:
             url += "&limit=" + std::to_string(limit);
             url += "&sort=downloads&direction=-1";  // Sort by popularity
 
-            s_logger.info("🔍 Searching HuggingFace Hub for: ");
+            std::cout << "🔍 Searching HuggingFace Hub for: " << query << std::endl;
 
             // Make HTTP request
             std::string response = fetchJSON(url, token);
             if (response.empty()) {
-                s_logger.error( "❌ No response from HuggingFace API" << std::endl;
+                std::cerr << "❌ No response from HuggingFace API" << std::endl;
                 return results;
             }
 
@@ -191,7 +188,7 @@ public:
             size_t arrayEnd = response.rfind(']');
             
             if (arrayStart == std::string::npos || arrayEnd == std::string::npos) {
-                s_logger.error( "❌ Invalid API response format" << std::endl;
+                std::cerr << "❌ Invalid API response format" << std::endl;
                 return results;
             }
 
@@ -215,11 +212,11 @@ public:
                 }
             }
 
-            s_logger.info("✅ Found ");
+            std::cout << "✅ Found " << results.size() << " models" << std::endl;
             return results;
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Search error: " << e.what() << std::endl;
+            std::cerr << "❌ Search error: " << e.what() << std::endl;
             return results;
         }
     }
@@ -234,7 +231,7 @@ public:
      * Example:
      *   auto model = client.getModelInfo("meta-llama/Llama-2-7b-hf");
      *   for (const auto& file : model.files) {
-     *       s_logger.info( file << std::endl;
+     *       std::cout << file << std::endl;
      *   }
      */
     ModelMetadata getModelInfo(const std::string& repo_id, const std::string& token = "") {
@@ -244,11 +241,11 @@ public:
         try {
             std::string url = "https://huggingface.co/api/models/" + repo_id;
             
-            s_logger.info("📋 Fetching model info: ");
+            std::cout << "📋 Fetching model info: " << repo_id << std::endl;
 
             std::string response = fetchJSON(url, token);
             if (response.empty()) {
-                s_logger.error( "❌ Failed to fetch model info" << std::endl;
+                std::cerr << "❌ Failed to fetch model info" << std::endl;
                 return meta;
             }
 
@@ -284,12 +281,13 @@ public:
                 }
             }
 
-            s_logger.info("✅ Model has ");
+            std::cout << "✅ Model has " << meta.files.size() << " files, total: " 
+                     << formatBytes(meta.total_size) << std::endl;
 
             return meta;
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Error fetching model info: " << e.what() << std::endl;
+            std::cerr << "❌ Error fetching model info: " << e.what() << std::endl;
             return meta;
         }
     }
@@ -311,7 +309,7 @@ public:
      *       "./models",
      *       [](uint64_t cur, uint64_t total) {
      *           int pct = (cur * 100) / total;
-     *           s_logger.info("\r");
+     *           std::cout << "\r" << pct << "%" << std::flush;
      *       }
      *   );
      */
@@ -326,15 +324,15 @@ public:
 
             std::string outputPath = outputDir + "/" + filename;
 
-            s_logger.info("⬇️  Downloading: ");
-            s_logger.info("   From: ");
-            s_logger.info("   To: ");
+            std::cout << "⬇️  Downloading: " << filename << std::endl;
+            std::cout << "   From: " << repo_id << std::endl;
+            std::cout << "   To: " << outputPath << std::endl;
 
             // Download with resume support
             return downloadFile(url, outputPath, progressCallback, token);
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Download error: " << e.what() << std::endl;
+            std::cerr << "❌ Download error: " << e.what() << std::endl;
             return false;
         }
     }
@@ -561,7 +559,7 @@ private:
             WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
             
-            s_logger.info("   \xe2\x9c\x85 Downloaded successfully (");
+            std::cout << "   \xe2\x9c\x85 Downloaded successfully (" << formatBytes(downloaded) << ")" << std::endl;
             return true;
 #else
             // POSIX: use system curl

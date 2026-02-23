@@ -1,0 +1,6 @@
+Microsoft (R) Macro Assembler (x64) Version 14.44.35221.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: .\src\masm\interconnect\RawrXD_Model_StateMachine.asm
+.\src\masm\interconnect\RawrXD_Model_StateMachine.asm(8) : error A2008:syntax error : WIN64
+.\src\masm\interconnect\RawrXD_Model_StateMachine.asm(10) : fatal error A1000:cannot open file : \masm64\include64\windows.inc

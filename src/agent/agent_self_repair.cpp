@@ -9,13 +9,16 @@
 // Threading: std::mutex + std::lock_guard + SuspendThread barrier
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstdint>
 #include <mutex>
 #include <vector>
 #include <tlhelp32.h>
 #include "agent_self_repair.hpp"
+#include "license_enforcement.h"
 #include "../core/sentinel_watchdog.hpp"
 #include <cstring>
 #include <cstdio>
@@ -436,6 +439,10 @@ bool AgentSelfRepair::isAddressOnAnyStack(uintptr_t addr) const {
 // Self-Repair: Function-Level Redirection
 // ---------------------------------------------------------------------------
 PatchResult AgentSelfRepair::verifyAndRepairAll() {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::AgenticSelfCorrection, __FUNCTION__)) {
+        return PatchResult::error("Agentic Self-Correction requires Enterprise license");
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (!m_initialized) {

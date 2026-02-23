@@ -18,9 +18,6 @@
 #include <cassert>
 #include <cstring>
 
-#include "logging/logger.h"
-static Logger s_logger("test_xss_sanitizer");
-
 // ============================================================================
 // Minimal HTML Sanitizer (mirrors the inline sanitizer in ide_chatbot.html)
 // ============================================================================
@@ -189,37 +186,37 @@ void runTest(const char* name, const char* payload) {
     // Test 1: escapeHtml should neutralize all vectors
     std::string escaped = XSSSanitizer::escapeHtml(payload);
     if (XSSSanitizer::containsUnsafeHtml(escaped)) {
-        s_logger.error( "  [FAIL] escapeHtml still contains unsafe HTML: " << name << "\n";
-        s_logger.error( "    Escaped: " << escaped.substr(0, 200) << "\n";
+        std::cerr << "  [FAIL] escapeHtml still contains unsafe HTML: " << name << "\n";
+        std::cerr << "    Escaped: " << escaped.substr(0, 200) << "\n";
         g_failed++;
     } else {
-        s_logger.info("  [PASS] escapeHtml: ");
+        std::cout << "  [PASS] escapeHtml: " << name << "\n";
         g_passed++;
     }
 
     // Test 2: stripTags should remove all tags
     std::string stripped = XSSSanitizer::stripTags(payload);
     if (stripped.find('<') != std::string::npos) {
-        s_logger.error( "  [FAIL] stripTags still contains '<': " << name << "\n";
+        std::cerr << "  [FAIL] stripTags still contains '<': " << name << "\n";
         g_failed++;
     } else {
-        s_logger.info("  [PASS] stripTags: ");
+        std::cout << "  [PASS] stripTags: " << name << "\n";
         g_passed++;
     }
 }
 
 int main() {
-    s_logger.info("============================================\n");
-    s_logger.info("XSS Adversarial Test Suite\n");
-    s_logger.info("============================================\n\n");
+    std::cout << "============================================\n";
+    std::cout << "XSS Adversarial Test Suite\n";
+    std::cout << "============================================\n\n";
 
     for (int i = 0; kXSSVectors[i].name; ++i) {
         runTest(kXSSVectors[i].name, kXSSVectors[i].payload);
     }
 
-    s_logger.info("\n============================================\n");
-    s_logger.info("Results: ");
-    s_logger.info("============================================\n");
+    std::cout << "\n============================================\n";
+    std::cout << "Results: " << g_passed << " passed, " << g_failed << " failed\n";
+    std::cout << "============================================\n";
 
     return g_failed > 0 ? 1 : 0;
 }

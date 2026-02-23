@@ -126,7 +126,9 @@ void Win32IDE::cmdDbgLaunch() {
 
     DebugResult r = NativeDebuggerEngine::Instance().launchProcess(exePath);
     if (r.success) {
+        setCurrentBinaryForReverseEngineering(exePath);
         appendToOutput("[Debug] Launched: " + std::string(exePath) + "\n");
+        appendToOutput("[RE] Binary set for analysis (Reverse Engineering menu: Disassemble, DumpBin, CFG, etc.)\n", "Output", OutputSeverity::Info);
     } else {
         appendToOutput("[Debug] Launch failed: " + std::string(r.detail) + "\n");
     }
@@ -165,6 +167,11 @@ void Win32IDE::cmdDbgAttach() {
         std::ostringstream msg;
         msg << "[Debug] Attached to PID " << pid << "\n";
         appendToOutput(msg.str());
+        const std::string& path = NativeDebuggerEngine::Instance().getTargetPath();
+        if (!path.empty()) {
+            setCurrentBinaryForReverseEngineering(path);
+            appendToOutput("[RE] Binary set from debug target (Reverse Engineering menu).\n", "Output", OutputSeverity::Info);
+        }
     } else {
         appendToOutput("[Debug] Attach failed: " + std::string(r.detail) + "\n");
     }
@@ -783,6 +790,7 @@ void Win32IDE::handleDbgLaunchEndpoint(SOCKET client, const std::string& body) {
 
     DebugResult r = NativeDebuggerEngine::Instance().launchProcess(path, args, workDir);
     if (r.success) {
+        setCurrentBinaryForReverseEngineering(path);
         sendHttpOk(client, r.detail);
     } else {
         sendHttpError(client, r.detail);
@@ -807,6 +815,9 @@ void Win32IDE::handleDbgAttachEndpoint(SOCKET client, const std::string& body) {
 
     DebugResult r = NativeDebuggerEngine::Instance().attachToProcess(pid);
     if (r.success) {
+        const std::string& path = NativeDebuggerEngine::Instance().getTargetPath();
+        if (!path.empty())
+            setCurrentBinaryForReverseEngineering(path);
         sendHttpOk(client, r.detail);
     } else {
         sendHttpError(client, r.detail);
@@ -831,6 +842,26 @@ void Win32IDE::handlePhase12StatusEndpoint(SOCKET client) {
     j << "\"engine\":" << NativeDebuggerEngine::Instance().toJsonStatus();
     j << "}";
     sendHttpJson(client, j.str());
+}
+
+void Win32IDE::handleReSetBinaryEndpoint(SOCKET client, const std::string& body) {
+    // Parse {"path":"C:\\...\\file.exe"} — set as current RE binary for Disassemble/DumpBin/CFG etc.
+    std::string path;
+    size_t pathPos = body.find("\"path\"");
+    if (pathPos != std::string::npos) {
+        size_t colonPos = body.find(':', pathPos);
+        size_t qStart = body.find('"', colonPos + 1);
+        size_t qEnd = body.find('"', qStart + 1);
+        if (qStart != std::string::npos && qEnd != std::string::npos)
+            path = body.substr(qStart + 1, qEnd - qStart - 1);
+    }
+    if (path.empty()) {
+        sendHttpError(client, "Missing 'path' field");
+        return;
+    }
+    setCurrentBinaryForReverseEngineering(path);
+    appendToOutput("[RE] Binary set via API: " + path + " (Reverse Engineering menu)\n", "Output", OutputSeverity::Info);
+    sendHttpOk(client, "RE binary set to " + path);
 }
 
 #endif // _WIN32

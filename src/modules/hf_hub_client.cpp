@@ -6,9 +6,6 @@
 #include <sstream>
 #include <filesystem>
 
-#include "logging/logger.h"
-static Logger s_logger("hf_hub_client");
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <wininet.h>
@@ -84,7 +81,7 @@ public:
         std::string local_file = model_dir + "\\" + filename;
         fs::create_directories(model_dir);
         
-        s_logger.info("Downloading ");
+        std::cout << "Downloading " << filename << " from " << repo_id << "..." << std::endl;
         if (download_file(url, local_file)) {
             // Create snapshot structure
             std::string snapshot_dir = model_dir + "\\snapshots\\main";

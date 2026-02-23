@@ -253,11 +253,22 @@ void IDEAgentBridge::retryPlanGeneration()
 
     fprintf(stderr, "[IDEAgentBridge] Retrying plan generation in %d ms (%d left)\n", backoff, m_retriesLeft);
 
-    std::thread([this, backoff]() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
+    // Join any previous retry thread before starting a new one
+    if (m_retryThread.joinable()) {
+        m_retryThread.join();
+    }
+    m_retryThread = std::thread([this, backoff]() {
+        // Sleep in small increments to allow early cancellation
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(backoff);
+        while (std::chrono::steady_clock::now() < deadline) {
+            if (m_isShuttingDown.load(std::memory_order_acquire)) return;
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        if (m_isShuttingDown.load(std::memory_order_acquire)) return;
         if (onAgentThinkingStarted) onAgentThinkingStarted(m_lastParams.wish + " (retry)");
         m_invoker->invokeAsync(m_lastParams);
-    }).detach();
+    });
+    // Thread is NOT detached — joined in destructor or before next retry
 }
 
 // ─────────────────────────────────────────────────────────────────────────

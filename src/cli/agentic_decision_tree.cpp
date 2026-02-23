@@ -22,6 +22,9 @@
 #include <cstring>
 #include <cmath>
 
+// SCAFFOLD_074: agentic_decision_tree CLI
+
+
 // ============================================================================
 // Singleton
 // ============================================================================
@@ -77,7 +80,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nextNodeId = 1;
 
     // ---- Root Node (ID=1) ----
-    DecisionNode root{};
+    ADTDecisionNode root{};
     root.nodeId             = m_nextNodeId++;
     root.type               = DecisionNodeType::Root;
     root.risk               = AutonomyRisk::ReadOnly;
@@ -91,7 +94,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[root.nodeId] = root;
 
     // ---- Observation Node (ID=2) ----
-    DecisionNode observe{};
+    ADTDecisionNode observe{};
     observe.nodeId          = m_nextNodeId++;
     observe.type            = DecisionNodeType::Observation;
     observe.risk            = AutonomyRisk::ReadOnly;
@@ -105,7 +108,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[root.nodeId].childIds.push_back(observe.nodeId);
 
     // ---- Failure Detection Node (ID=3) ----
-    DecisionNode failDetect{};
+    ADTDecisionNode failDetect{};
     failDetect.nodeId       = m_nextNodeId++;
     failDetect.type         = DecisionNodeType::FailureDetect;
     failDetect.risk         = AutonomyRisk::ReadOnly;
@@ -119,7 +122,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[observe.nodeId].childIds.push_back(failDetect.nodeId);
 
     // ---- Classification Node (ID=4) ----
-    DecisionNode classify{};
+    ADTDecisionNode classify{};
     classify.nodeId         = m_nextNodeId++;
     classify.type           = DecisionNodeType::Classification;
     classify.risk           = AutonomyRisk::ReadOnly;
@@ -133,7 +136,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[failDetect.nodeId].childIds.push_back(classify.nodeId);
 
     // ---- SSA Lift Node (ID=5) ----
-    DecisionNode ssaLift{};
+    ADTDecisionNode ssaLift{};
     ssaLift.nodeId          = m_nextNodeId++;
     ssaLift.type            = DecisionNodeType::SSALift;
     ssaLift.risk            = AutonomyRisk::Low;
@@ -147,7 +150,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[classify.nodeId].childIds.push_back(ssaLift.nodeId);
 
     // ---- Correction Plan Node (ID=6) ----
-    DecisionNode plan{};
+    ADTDecisionNode plan{};
     plan.nodeId             = m_nextNodeId++;
     plan.type               = DecisionNodeType::CorrectionPlan;
     plan.risk               = AutonomyRisk::Low;
@@ -161,7 +164,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[classify.nodeId].childIds.push_back(plan.nodeId);
 
     // ---- Memory Hotpatch Node (ID=7) ----
-    DecisionNode memPatch{};
+    ADTDecisionNode memPatch{};
     memPatch.nodeId         = m_nextNodeId++;
     memPatch.type           = DecisionNodeType::MemoryHotpatch;
     memPatch.risk           = AutonomyRisk::Medium;
@@ -175,7 +178,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[plan.nodeId].childIds.push_back(memPatch.nodeId);
 
     // ---- Byte Hotpatch Node (ID=8) ----
-    DecisionNode bytePatch{};
+    ADTDecisionNode bytePatch{};
     bytePatch.nodeId        = m_nextNodeId++;
     bytePatch.type          = DecisionNodeType::ByteHotpatch;
     bytePatch.risk          = AutonomyRisk::High;
@@ -189,7 +192,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[plan.nodeId].childIds.push_back(bytePatch.nodeId);
 
     // ---- Server Patch Node (ID=9) ----
-    DecisionNode srvPatch{};
+    ADTDecisionNode srvPatch{};
     srvPatch.nodeId         = m_nextNodeId++;
     srvPatch.type           = DecisionNodeType::ServerPatch;
     srvPatch.risk           = AutonomyRisk::Low;
@@ -203,7 +206,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[plan.nodeId].childIds.push_back(srvPatch.nodeId);
 
     // ---- Verification Node (ID=10) ----
-    DecisionNode verify{};
+    ADTDecisionNode verify{};
     verify.nodeId           = m_nextNodeId++;
     verify.type             = DecisionNodeType::Verification;
     verify.risk             = AutonomyRisk::ReadOnly;
@@ -220,7 +223,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[srvPatch.nodeId].childIds.push_back(verify.nodeId);
 
     // ---- Escalation Node (ID=11) ----
-    DecisionNode escalate{};
+    ADTDecisionNode escalate{};
     escalate.nodeId         = m_nextNodeId++;
     escalate.type           = DecisionNodeType::Escalation;
     escalate.risk           = AutonomyRisk::ReadOnly;
@@ -234,7 +237,7 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[verify.nodeId].childIds.push_back(escalate.nodeId);
 
     // ---- Terminal Success Node (ID=12) ----
-    DecisionNode termOk{};
+    ADTDecisionNode termOk{};
     termOk.nodeId           = m_nextNodeId++;
     termOk.type             = DecisionNodeType::Terminal;
     termOk.risk             = AutonomyRisk::ReadOnly;
@@ -248,9 +251,9 @@ void AgenticDecisionTree::buildDefaultTree() {
     m_nodes[verify.nodeId].childIds.push_back(termOk.nodeId);
 }
 
-uint32_t AgenticDecisionTree::addNode(const DecisionNode& node) {
+uint32_t AgenticDecisionTree::addNode(const ADTDecisionNode& node) {
     std::lock_guard<std::mutex> lock(m_mutex);
-    DecisionNode n = node;
+    ADTDecisionNode n = node;
     n.nodeId = m_nextNodeId++;
     m_nodes[n.nodeId] = n;
     return n.nodeId;
@@ -266,7 +269,7 @@ void AgenticDecisionTree::linkNode(uint32_t parentId, uint32_t childId) {
     }
 }
 
-const DecisionNode* AgenticDecisionTree::getNode(uint32_t nodeId) const {
+const ADTDecisionNode* AgenticDecisionTree::getNode(uint32_t nodeId) const {
     std::lock_guard<std::mutex> lock(m_mutex);
     auto it = m_nodes.find(nodeId);
     return (it != m_nodes.end()) ? &it->second : nullptr;
@@ -382,7 +385,7 @@ NodeVerdict AgenticDecisionTree::traverseNode(uint32_t nodeId, TreeContext& ctx,
         return NodeVerdict::Abort;
     }
 
-    const DecisionNode& node = it->second;
+    const ADTDecisionNode& node = it->second;
     m_stats.nodesVisited++;
 
     ctx.addTrace("[NODE:" + std::to_string(node.nodeId) + "] " + std::string(node.name)
@@ -495,7 +498,7 @@ NodeVerdict AgenticDecisionTree::traverseNode(uint32_t nodeId, TreeContext& ctx,
 // Individual Node Evaluators
 // ============================================================================
 
-NodeVerdict AgenticDecisionTree::evalRoot(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalRoot(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
     // Root just triages — check if we have valid input
     if (ctx.inferenceOutput.empty()) {
@@ -506,7 +509,7 @@ NodeVerdict AgenticDecisionTree::evalRoot(const DecisionNode& node, TreeContext&
     return NodeVerdict::Continue;
 }
 
-NodeVerdict AgenticDecisionTree::evalObservation(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalObservation(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
     // Gather output metadata
     size_t len = ctx.inferenceOutput.size();
@@ -541,7 +544,7 @@ NodeVerdict AgenticDecisionTree::evalObservation(const DecisionNode& node, TreeC
     return NodeVerdict::Continue;
 }
 
-NodeVerdict AgenticDecisionTree::evalFailureDetect(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalFailureDetect(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     // Delegate to the hotpatch orchestrator's detection engine
@@ -578,7 +581,7 @@ NodeVerdict AgenticDecisionTree::evalFailureDetect(const DecisionNode& node, Tre
     return NodeVerdict::Continue;
 }
 
-NodeVerdict AgenticDecisionTree::evalClassification(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalClassification(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     // Route based on failure type
@@ -614,7 +617,7 @@ NodeVerdict AgenticDecisionTree::evalClassification(const DecisionNode& node, Tr
     return NodeVerdict::Continue;
 }
 
-NodeVerdict AgenticDecisionTree::evalSSALift(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalSSALift(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     if (ctx.targetBinaryPath.empty()) {
@@ -641,7 +644,7 @@ NodeVerdict AgenticDecisionTree::evalSSALift(const DecisionNode& node, TreeConte
     }
 }
 
-NodeVerdict AgenticDecisionTree::evalCorrectionPlan(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalCorrectionPlan(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     // Determine which correction to apply based on failure type and confidence
@@ -713,7 +716,7 @@ NodeVerdict AgenticDecisionTree::evalCorrectionPlan(const DecisionNode& node, Tr
     return NodeVerdict::Continue;
 }
 
-NodeVerdict AgenticDecisionTree::evalMemoryHotpatch(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalMemoryHotpatch(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     // Only attempt if correction plan calls for memory patch
@@ -740,7 +743,7 @@ NodeVerdict AgenticDecisionTree::evalMemoryHotpatch(const DecisionNode& node, Tr
     }
 }
 
-NodeVerdict AgenticDecisionTree::evalByteHotpatch(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalByteHotpatch(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     if (ctx.correctionPlan.find("ByteHotpatch") == std::string::npos) {
@@ -766,7 +769,7 @@ NodeVerdict AgenticDecisionTree::evalByteHotpatch(const DecisionNode& node, Tree
     }
 }
 
-NodeVerdict AgenticDecisionTree::evalServerPatch(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalServerPatch(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     if (ctx.correctionPlan.find("ServerPatch") == std::string::npos) {
@@ -787,7 +790,7 @@ NodeVerdict AgenticDecisionTree::evalServerPatch(const DecisionNode& node, TreeC
     }
 }
 
-NodeVerdict AgenticDecisionTree::evalVerification(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalVerification(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     if (!ctx.patchApplied) {
@@ -810,7 +813,7 @@ NodeVerdict AgenticDecisionTree::evalVerification(const DecisionNode& node, Tree
     }
 }
 
-NodeVerdict AgenticDecisionTree::evalEscalation(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalEscalation(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
 
     m_stats.escalations++;
@@ -822,7 +825,7 @@ NodeVerdict AgenticDecisionTree::evalEscalation(const DecisionNode& node, TreeCo
     return NodeVerdict::Escalate;
 }
 
-NodeVerdict AgenticDecisionTree::evalTerminal(const DecisionNode& node, TreeContext& ctx) {
+NodeVerdict AgenticDecisionTree::evalTerminal(const ADTDecisionNode& node, TreeContext& ctx) {
     (void)node;
     ctx.addTrace("[TERMINAL] Decision path complete");
     return NodeVerdict::Success;

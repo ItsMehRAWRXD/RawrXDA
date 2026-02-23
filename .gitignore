@@ -47,6 +47,15 @@ Makefile
 *.swp
 *.swo
 *~
+*.bak
+
+# Wine rawrxd-space prefix (Mac/Linux wrapper)
+.rawrxd/
+*.clean
+
+# Wine rawrxd-space prefix (Mac/Linux wrapper)
+.rawrxd/
+wrapper/rawrxd-space.env
 
 # OS
 .DS_Store
@@ -74,8 +83,6 @@ models/*.bin
 tmp/
 temp/
 *.tmp
-soak_logs/
-soak_evidence*.json
 
 # Python
 __pycache__/
@@ -100,4 +107,3 @@ Fixed_Reverse_Engineered/
 Consolidated_Modules_*/
 *.exe.WebView2/
 build_universal/
-itsmehrawrxd-master.zip

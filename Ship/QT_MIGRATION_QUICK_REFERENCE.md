@@ -63,7 +63,7 @@ Get-Content D:\RawrXD\src\path\file.cpp | Select-String "#include\s*<Q"
 ### Migration Tracking
 ```cpp
 // In C++ code - use migration tracker
-#include "QtMigrationTracker.hpp"
+#include "Win32MigrationTracker.hpp"
 
 auto& tracker = RawrXD::Migration::MigrationTracker::Instance();
 tracker.Initialize();
