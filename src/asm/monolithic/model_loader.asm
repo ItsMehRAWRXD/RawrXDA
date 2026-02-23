@@ -1,6 +1,7 @@
 ; RawrXD Model Loader — GGUF mapping with SRWLOCK-protected hot-swap
 ; Exports: LoadModel, GetTensor, UnloadModel, ModelLoaderInit,
-;          HotSwapModel, GetCurrentModelPath, GetModelLoadTimestamp
+;          HotSwapModel, GetCurrentModelPath, GetModelLoadTimestamp,
+;          ValidateModelCompat
 
 EXTERN CreateFileW:PROC
 EXTERN CreateFileMappingW:PROC
@@ -24,9 +25,11 @@ PUBLIC ModelLoaderInit
 PUBLIC HotSwapModel
 PUBLIC GetCurrentModelPath
 PUBLIC GetModelLoadTimestamp
+PUBLIC ValidateModelCompat
 
 ; Beacon message type (match beacon.asm)
 MODEL_HOTSWAP_COMPLETE  equ 1002h
+MODEL_HOTSWAP_FAILED    equ 1003h
 
 .data?
 hFile         dq ?
@@ -43,6 +46,13 @@ g_currentPathW   db 520 dup(?)
 ; X+4 production: timestamp and KV-preserve flag for cache validation
 g_loadTimestamp dq ?
 g_preservedKV   db ?
+
+; ── Model metadata snapshot (for hot-swap compatibility checks) ──
+align 8
+g_curGgufVersion   dd ?         ; GGUF format version (offset +4)
+g_curTensorCount   dq ?         ; tensor count from current model
+g_curMetaKVCount   dq ?         ; metadata KV pair count
+g_curAlignment     dq ?         ; data section alignment
 
 .const
 GENERIC_READ     equ 80000000h
@@ -118,9 +128,18 @@ LoadModel PROC FRAME
     mov     eax, dword ptr [rax]
     cmp     eax, GGUF_MAGIC
     jne     @unload
+    ; ── Cache GGUF header metadata for compatibility checks ──
+    ; GGUF layout: [0]=magic(4), [4]=version(4), [8]=tensorCount(8), [10h]=metaKVCount(8)
     mov     rax, pBase
-    mov     rax, [rax+10h]
-    mov     qTensorCount, rax
+    mov     ecx, dword ptr [rax+4]       ; version
+    mov     g_curGgufVersion, ecx
+    mov     rcx, [rax+8]                 ; tensor_count (u64)
+    mov     g_curTensorCount, rcx
+    mov     qTensorCount, rcx
+    mov     rcx, [rax+10h]               ; metadata_kv_count (u64)
+    mov     g_curMetaKVCount, rcx
+    ; Default alignment = 32 (GGUF spec); real value lives in metadata
+    mov     qword ptr g_curAlignment, 32
     add     rsp, 40h
     pop     rbx
     xor     eax, eax
@@ -141,12 +160,18 @@ LoadModel PROC FRAME
 LoadModel ENDP
 
 ; ────────────────────────────────────────────────────────────────
-; GetTensor — stub: return base + 100h
+; GetTensor — return base + header skip (GGUF tensors start past metadata)
+;   RCX = tensor name (currently unused; sequential access)
+;   Returns: RAX = pointer into mapped region, or 0 if unmapped
 ; ────────────────────────────────────────────────────────────────
 GetTensor PROC
-    ; RCX = name
     mov     rax, pBase
+    test    rax, rax
+    jz      @tensor_null
     add     rax, 100h
+    ret
+@tensor_null:
+    xor     eax, eax
     ret
 GetTensor ENDP
 
@@ -190,18 +215,29 @@ UnloadModel ENDP
 ;   RCX = newPath (LPCWSTR), DL = preserveKV (0 = clear, 1 = keep)
 ;   Returns: EAX = 1 on success, 0 on failure
 ;   Takes exclusive SRWLOCK for the entire swap.
+;   When preserveKV=1, runs ValidateModelCompat first.
 ; ────────────────────────────────────────────────────────────────
 HotSwapModel PROC FRAME
     push    rbx
     .pushreg rbx
     push    rsi
     .pushreg rsi
-    sub     rsp, 28h
-    .allocstack 28h
+    push    rdi
+    .pushreg rdi
+    sub     rsp, 40h
+    .allocstack 40h
     .endprolog
 
     mov     rbx, rcx                    ; rbx = newPath
     movzx   esi, dl                     ; esi = preserveKV
+
+    ; ── Snapshot current model metadata before swap ──
+    mov     eax, g_curGgufVersion
+    mov     [rsp+20h], eax              ; save old version
+    mov     rax, g_curTensorCount
+    mov     [rsp+28h], rax              ; save old tensor count
+    mov     rax, g_curMetaKVCount
+    mov     [rsp+30h], rax              ; save old meta KV count
 
     ; Acquire exclusive lock
     lea     rcx, g_modelLock
@@ -220,6 +256,21 @@ HotSwapModel PROC FRAME
     test    eax, eax
     jnz     @swap_fail                  ; LoadModel returns 0 on success
 
+    ; ── Compatibility guard when preserving KV ──
+    test    esi, esi
+    jz      @skip_compat                ; preserveKV=0 → no check needed
+
+    ; Compare tensor count: old vs new
+    mov     rax, [rsp+28h]              ; old tensor count
+    cmp     rax, g_curTensorCount
+    jne     @compat_fail                ; tensor count mismatch
+
+    ; Compare GGUF version: old vs new
+    mov     eax, [rsp+20h]              ; old version
+    cmp     eax, g_curGgufVersion
+    jne     @compat_fail                ; version mismatch
+
+@skip_compat:
     ; Copy new path into g_currentPathW
     lea     rcx, g_currentPathW
     mov     rdx, rbx
@@ -250,18 +301,32 @@ HotSwapModel PROC FRAME
     mov     r8d, MODEL_HOTSWAP_COMPLETE
     call    BeaconSend
 
-    add     rsp, 28h
+    add     rsp, 40h
+    pop     rdi
     pop     rsi
     pop     rbx
     mov     eax, 1                      ; success
     ret
+
+@compat_fail:
+    ; Model is incompatible — unload it, restore null state
+    call    UnloadModel
+    xor     eax, eax
+    mov     g_modelbase, rax
+
+    ; Signal failure via Beacon
+    mov     ecx, 0
+    mov     rdx, rbx
+    mov     r8d, MODEL_HOTSWAP_FAILED
+    call    BeaconSend
 
 @swap_fail:
     ; Release lock even on failure
     lea     rcx, g_modelLock
     call    ReleaseSRWLockExclusive
 
-    add     rsp, 28h
+    add     rsp, 40h
+    pop     rdi
     pop     rsi
     pop     rbx
     xor     eax, eax                    ; failure
@@ -282,5 +347,43 @@ GetModelLoadTimestamp PROC
     mov     rax, g_loadTimestamp
     ret
 GetModelLoadTimestamp ENDP
+
+; ────────────────────────────────────────────────────────────────
+; ValidateModelCompat — check if a candidate GGUF is compatible
+;   with the currently loaded model (for KV cache preservation)
+;   RCX = pCandidateBase (mapped GGUF region)
+;   Returns: EAX = 1 (compatible), 0 (incompatible)
+;
+;   Checks:
+;     1. GGUF magic matches
+;     2. GGUF version matches current
+;     3. Tensor count matches current
+; ────────────────────────────────────────────────────────────────
+ValidateModelCompat PROC
+    test    rcx, rcx
+    jz      @compat_no
+
+    ; 1. Magic check
+    mov     eax, dword ptr [rcx]
+    cmp     eax, GGUF_MAGIC
+    jne     @compat_no
+
+    ; 2. Version match
+    mov     eax, dword ptr [rcx+4]
+    cmp     eax, g_curGgufVersion
+    jne     @compat_no
+
+    ; 3. Tensor count match
+    mov     rax, [rcx+8]
+    cmp     rax, g_curTensorCount
+    jne     @compat_no
+
+    mov     eax, 1
+    ret
+
+@compat_no:
+    xor     eax, eax
+    ret
+ValidateModelCompat ENDP
 
 END
