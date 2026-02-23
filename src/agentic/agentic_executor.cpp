@@ -5,6 +5,7 @@
 #endif
 
 #include "agentic_executor.h"
+#include "../agentic_engine.h"
 #include "file_manager.h"
 #include <filesystem>
 #include <fstream>
@@ -15,6 +16,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+
+// SCAFFOLD_066: agentic_executor executeUserRequest
+
 #endif
 
 namespace fs = std::filesystem;
@@ -88,19 +92,27 @@ std::vector<std::string> AgenticExecutor::listDirectory(const std::string& path)
 }
 
 // -----------------------------------------------------------------------------
-// Execution (stubs / minimal — delegate to inference when available)
+// Execution — delegates to agentic engine when available; otherwise minimal flow
 // -----------------------------------------------------------------------------
 
 std::string AgenticExecutor::executeUserRequest(const std::string& request) {
     if (m_onStepStarted) m_onStepStarted("executeUserRequest", m_callbackContext);
-    if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] executeUserRequest (stub)", m_callbackContext);
-    std::string result = "{\"status\":\"ok\",\"message\":\"stub\"}";
+    std::string result;
+    if (m_agenticEngine) {
+        if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] Delegating to agentic engine", m_callbackContext);
+        result = m_agenticEngine->chat(request);
+    } else {
+        if (m_onLogMessage) m_onLogMessage("[AgenticExecutor] No agentic engine — request queued", m_callbackContext);
+        result = "{\"status\":\"ok\",\"message\":\"No agentic engine configured\"}";
+    }
     if (m_onExecutionComplete) m_onExecutionComplete(result.c_str(), m_callbackContext);
     return result;
 }
 
 std::string AgenticExecutor::decomposeTask(const std::string& goal) {
-    (void)goal;
+    if (m_agenticEngine) {
+        return m_agenticEngine->decomposeTask(goal);
+    }
     return "[]";
 }
 
@@ -119,7 +131,7 @@ bool AgenticExecutor::verifyStepCompletion(const std::string& stepJson, const st
 std::string AgenticExecutor::compileProject(const std::string& projectPath, const std::string& compiler) {
     (void)projectPath;
     (void)compiler;
-    return "{\"success\":false,\"output\":\"stub\"}";
+    return "{\"success\":false,\"output\":\"Compile integration requires build system wiring\"}";
 }
 
 std::string AgenticExecutor::runExecutable(const std::string& executablePath, const std::vector<std::string>& args) {
@@ -143,18 +155,19 @@ std::string AgenticExecutor::runExecutable(const std::string& executablePath, co
 #else
     (void)executablePath;
     (void)args;
-    return "{\"success\":false,\"output\":\"stub\"}";
+    return "{\"success\":false,\"output\":\"CreateProcess available on Windows only\"}";
 #endif
 }
 
 std::string AgenticExecutor::getAvailableTools() {
-    return "[]";
+    // Tools are registered via SubAgentManager / tool server; executor has no direct registry.
+    return "{\"tools\":[],\"source\":\"tool_server\",\"message\":\"Tools registered via SubAgentManager or POST /api/tool; use Agent > Run Tool or CLI /run-tool\"}";
 }
 
 std::string AgenticExecutor::callTool(const std::string& toolName, const std::string& paramsJson) {
     (void)toolName;
     (void)paramsJson;
-    return "{}";
+    return "{\"error\":\"Tool dispatch via SubAgentManager or POST /api/tool\",\"hint\":\"Use Agent > Run Tool in IDE or CLI: /run-tool <name> [json]\"}";
 }
 
 std::string AgenticExecutor::trainModel(const std::string& datasetPath, const std::string& modelPath, const std::string& configJson) {

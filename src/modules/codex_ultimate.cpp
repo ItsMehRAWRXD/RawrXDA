@@ -11,6 +11,12 @@
 #include <iostream>
 #include <filesystem>
 
+// SCAFFOLD_256: Codex ultimate module
+
+
+// SCAFFOLD_126: modules/codex_ultimate
+
+
 using namespace RawrXD::ReverseEngineering;
 
 std::unique_ptr<CodexUltimate> g_codex;

@@ -25,6 +25,9 @@
 #pragma comment(lib, "dwmapi.lib")
 #include <dwmapi.h>
 
+// SCAFFOLD_026: Theme picker and color application
+
+
 // ============================================================================
 // COLOR UTILITY
 // ============================================================================

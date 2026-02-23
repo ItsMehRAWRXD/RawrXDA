@@ -11,6 +11,9 @@
 #include <sstream>
 #include <algorithm>
 
+// SCAFFOLD_257: Game engine manager
+
+
 namespace fs = std::filesystem;
 
 namespace RawrXD {

@@ -29,9 +29,7 @@
 // ============================================================================
 
 #include "swarm_orchestrator.h"
-
-#include "logging/logger.h"
-static Logger s_logger("swarm_orchestrator");
+#include "../core/enterprise_license.h"
 
 #include <iostream>
 #include <sstream>
@@ -88,6 +86,11 @@ std::string SwarmOrchestrator::generateNodeId() {
 // ============================================================================
 
 SwarmResult SwarmOrchestrator::initialize(NodeRole role, const std::string& bindAddr) {
+    // Enterprise gate: DistributedSwarm (0x04) requires Enterprise license
+    if (!RawrXD::EnterpriseLicense::isFeatureEnabled(0x04)) {
+        return SwarmResult::error("Distributed Swarm requires Enterprise license (feature 0x04)");
+    }
+
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_running.load()) {
@@ -205,7 +208,12 @@ SwarmResult SwarmOrchestrator::initialize(NodeRole role, const std::string& bind
     const char* roleStr = (role == NodeRole::Coordinator) ? "COORDINATOR" :
                           (role == NodeRole::Worker) ? "WORKER" : "HYBRID";
 
-    s_logger.info("[SWARM] Node ");
+    std::cout << "[SWARM] Node " << m_nodeId << " initialized as " << roleStr
+              << " on " << bindAddr << ":" << SWARM_DISCOVERY_PORT
+              << "/" << SWARM_DATA_PORT << "\n"
+              << "  VRAM: " << (selfNode.totalVRAM / (1024ULL*1024ULL)) << "MB total, "
+              << (selfNode.freeVRAM / (1024ULL*1024ULL)) << "MB free"
+              << " GPU=" << (selfNode.gpuAccel ? "YES" : "NO") << "\n";
 
     return SwarmResult::ok("Swarm node initialized successfully");
 }
@@ -213,7 +221,7 @@ SwarmResult SwarmOrchestrator::initialize(NodeRole role, const std::string& bind
 void SwarmOrchestrator::shutdown() {
     if (!m_running.exchange(false)) return;
 
-    s_logger.info("[SWARM] Shutting down node ");
+    std::cout << "[SWARM] Shutting down node " << m_nodeId << "...\n";
 
     // Send shutdown broadcast
     broadcastUDP(MSG_SHUTDOWN, nullptr, 0);
@@ -244,7 +252,9 @@ void SwarmOrchestrator::shutdown() {
     m_nodes.clear();
     m_shards.clear();
 
-    s_logger.info("[SWARM] Shutdown complete. Nodes joined: ");
+    std::cout << "[SWARM] Shutdown complete. Nodes joined: "
+              << m_stats.nodesJoined.load() << " Layers distributed: "
+              << m_stats.layersDistributed.load() << "\n";
 }
 
 // ============================================================================
@@ -260,7 +270,7 @@ SwarmResult SwarmOrchestrator::joinSwarm(const std::string& coordinatorIp) {
         // Become coordinator
         m_role = NodeRole::Coordinator;
         m_coordinatorId = m_nodeId;
-        s_logger.info("[SWARM] Promoted to COORDINATOR\n");
+        std::cout << "[SWARM] Promoted to COORDINATOR\n";
         return SwarmResult::ok("Became swarm coordinator");
     }
 
@@ -294,7 +304,7 @@ SwarmResult SwarmOrchestrator::joinSwarm(const std::string& coordinatorIp) {
     m_coordinatorId = ""; // Will be set when coordinator responds
     m_stats.discoveryBeacons.fetch_add(1, std::memory_order_relaxed);
 
-    s_logger.info("[SWARM] Join request sent to ");
+    std::cout << "[SWARM] Join request sent to " << coordinatorIp << "\n";
     return SwarmResult::ok("Join request sent");
 }
 
@@ -313,7 +323,7 @@ void SwarmOrchestrator::leaveSwarm() {
     }
 
     m_stats.nodesLeft.fetch_add(1, std::memory_order_relaxed);
-    s_logger.info("[SWARM] Left the swarm\n");
+    std::cout << "[SWARM] Left the swarm\n";
 }
 
 void SwarmOrchestrator::sendDiscoveryBeacon() {
@@ -370,7 +380,8 @@ SwarmResult SwarmOrchestrator::distributeModel(const std::string& modelPath, uin
     for (const auto& l : layers) totalSize += l.sizeBytes;
     uint64_t avgShardSize = totalSize / numShards;
 
-    s_logger.info("[SWARM] Distributing ");
+    std::cout << "[SWARM] Distributing " << totalLayers << " layers across "
+              << m_nodes.size() << " nodes (" << numShards << " shards)\n";
 
     for (uint32_t i = 0; i < numShards; ++i) {
         LayerShard shard;
@@ -403,7 +414,9 @@ SwarmResult SwarmOrchestrator::distributeModel(const std::string& modelPath, uin
         m_stats.layersDistributed.fetch_add(shard.layerEnd - shard.layerStart + 1,
                                              std::memory_order_relaxed);
 
-        s_logger.info("[SWARM] Assigned layers ");
+        std::cout << "[SWARM] Assigned layers " << shard.layerStart << "-"
+                  << shard.layerEnd << " to node " << shard.nodeId
+                  << " (Q" << static_cast<int>(shard.quant) << ")\n";
     }
 
     // Trigger topology update
@@ -429,7 +442,9 @@ SwarmResult SwarmOrchestrator::rebalance() {
             // Find a less loaded node
             std::string newNode = selectOptimalNode(shard.layerStart);
             if (newNode != shard.nodeId && !newNode.empty()) {
-                s_logger.info("[SWARM] Rebalancing layers ");
+                std::cout << "[SWARM] Rebalancing layers " << shard.layerStart << "-"
+                          << shard.layerEnd << " from " << shard.nodeId
+                          << " to " << newNode << "\n";
 
                 if (migrateLayer(shard.layerStart, shard.nodeId, newNode)) {
                     shard.nodeId = newNode;
@@ -445,7 +460,9 @@ SwarmResult SwarmOrchestrator::rebalance() {
         if (nodeIt == m_nodes.end() || nodeIt->second.state == NodeState::Failed) {
             std::string newNode = selectOptimalNode(shard.layerStart);
             if (!newNode.empty() && newNode != shard.nodeId) {
-                s_logger.info("[SWARM] Recovering layers ");
+                std::cout << "[SWARM] Recovering layers " << shard.layerStart << "-"
+                          << shard.layerEnd << " to " << newNode
+                          << " (node failed)\n";
                 shard.nodeId = newNode;
                 migrations++;
             }
@@ -621,7 +638,8 @@ void SwarmOrchestrator::detectDeadNodes() {
             now - it->second.lastHeartbeat).count();
 
         if (elapsed > HEARTBEAT_TIMEOUT_S) {
-            s_logger.info("[SWARM] Node ");
+            std::cout << "[SWARM] Node " << it->first << " timed out (last seen "
+                      << elapsed << "s ago)\n";
 
             if (m_nodeEventCb) {
                 m_nodeEventCb(&it->second, "timeout", m_nodeEventUserData);
@@ -631,7 +649,8 @@ void SwarmOrchestrator::detectDeadNodes() {
             for (auto& shard : m_shards) {
                 if (shard.nodeId == it->first) {
                     shard.nodeId = selectOptimalNode(shard.layerStart);
-                    s_logger.info("[SWARM] Reassigned layers ");
+                    std::cout << "[SWARM] Reassigned layers " << shard.layerStart << "-"
+                              << shard.layerEnd << " to " << shard.nodeId << " (failover)\n";
                 }
             }
 
@@ -777,7 +796,7 @@ void SwarmOrchestrator::discoveryListenerThread() {
                     for (auto it = m_nodes.begin(); it != m_nodes.end(); ++it) {
                         if (it->second.address.sin_addr.s_addr == from.sin_addr.s_addr &&
                             it->first != m_nodeId) {
-                            s_logger.info("[SWARM] Node ");
+                            std::cout << "[SWARM] Node " << it->first << " left the swarm\n";
                             if (m_nodeEventCb) {
                                 m_nodeEventCb(&it->second, "left", m_nodeEventUserData);
                             }
@@ -839,7 +858,7 @@ void SwarmOrchestrator::dataListenerThread() {
                             uint32_t expectedCRC = *reinterpret_cast<uint32_t*>(header + 20);
                             uint32_t actualCRC = swarm_compute_layer_crc32(payload.data(), received);
                             if (expectedCRC != 0 && actualCRC != expectedCRC) {
-                                s_logger.error( "[SWARM] CRC mismatch on received layer data!\n";
+                                std::cerr << "[SWARM] CRC mismatch on received layer data!\n";
                                 m_stats.errors.fetch_add(1, std::memory_order_relaxed);
                             }
                         }
@@ -936,7 +955,8 @@ void SwarmOrchestrator::inferenceWorkerThread() {
         // Process inference request through the layer pipeline
         // Each layer in the path needs to be processed by its owning node
 
-        s_logger.info("[SWARM] Processing inference request ");
+        std::cout << "[SWARM] Processing inference request " << req.requestId
+                  << " (" << req.layerPath.size() << " layers)\n";
 
         for (uint32_t layerIdx : req.layerPath) {
             // Find which node owns this layer
@@ -1027,7 +1047,9 @@ void SwarmOrchestrator::handleNodeJoin(const sockaddr_in& addr, const char* payl
         m_nodeEventCb(&node, "joined", m_nodeEventUserData);
     }
 
-    s_logger.info("[SWARM] Node joined: ");
+    std::cout << "[SWARM] Node joined: " << nodeId << " VRAM="
+              << (totalVRAM / (1024ULL*1024ULL)) << "MB free="
+              << (freeVRAM / (1024ULL*1024ULL)) << "MB\n";
 
     // If we're coordinator, send back an acknowledgment
     if (m_role == NodeRole::Coordinator) {
@@ -1075,7 +1097,7 @@ void SwarmOrchestrator::handlePressureUpdate(const std::string& nodeId, VRAMPres
 
     if (pressure >= VRAMPressure::Critical) {
         it->second.state = NodeState::Overloaded;
-        s_logger.info("[SWARM] Node ");
+        std::cout << "[SWARM] Node " << nodeId << " reports critical VRAM pressure\n";
 
         // Coordinator triggers rebalance
         if (m_role == NodeRole::Coordinator) {
@@ -1112,7 +1134,9 @@ void SwarmOrchestrator::handleRebalanceCmd(const uint8_t* payload, int payloadLe
     uint32_t layerEnd = *reinterpret_cast<const uint32_t*>(payload + 4);
     uint32_t quant = *reinterpret_cast<const uint32_t*>(payload + 8);
 
-    s_logger.info("[SWARM] Received rebalance command: prepare layers ");
+    std::cout << "[SWARM] Received rebalance command: prepare layers "
+              << layerStart << "-" << layerEnd
+              << " quant=" << quant << "\n";
 
     // In production: trigger UniversalModelHotpatcher to prepare these layers
     auto& hotpatcher = UniversalModelHotpatcher::instance();

@@ -1,4 +1,5 @@
 // bench_deflate_masm.cpp — Compare custom gzip (stored block) vs zlib deflate
+// MASM (3-arg) and NASM/godmode (4-arg) must be called with correct signatures for parity.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -9,14 +10,16 @@
 #ifdef DEFLATE_NASM
 extern "C" void* deflate_nasm(const void* src, size_t len, size_t* out_len, void* hash_buf);
 #define HASH_SIZE (1u << 15)
-#define deflate_custom deflate_nasm
+#define DEFLATE_4ARG 1
 #elif defined(DEFLATE_GODMODE)
 extern "C" void* deflate_godmode(const void* src, size_t len, size_t* out_len, void* hash_buf);
 #define HASH_SIZE 8192
-#define deflate_custom deflate_godmode
+#define DEFLATE_4ARG 1
 #else
+// MASM: 3-arg signature (no hash_buf) — must match deflate_masm.asm / deflate_brutal_masm
 extern "C" void* deflate_masm(const void* src, size_t len, size_t* out_len);
-#define deflate_custom deflate_masm
+#define HASH_SIZE 0
+#define DEFLATE_4ARG 0
 #endif
 
 // zlib reference (optional)
@@ -55,16 +58,30 @@ static void run_case(const char* label, size_t words, size_t avg_len) {
     
     printf("Benchmarking %s (size=%zu bytes)...\n", label, src_len);
 
-    // Warmup
+    void* hash_buf = (HASH_SIZE > 0) ? malloc(static_cast<size_t>(HASH_SIZE) * 4) : nullptr;
     size_t out_len = 0;
-    void* hash_buf = malloc(HASH_SIZE * 4);
-    void* out = deflate_custom(src, src_len, &out_len, hash_buf);
+    void* out;
+
+#if defined(DEFLATE_NASM)
+    out = deflate_nasm(src, src_len, &out_len, hash_buf);
+#elif defined(DEFLATE_GODMODE)
+    out = deflate_godmode(src, src_len, &out_len, hash_buf);
+#else
+    (void)hash_buf;
+    out = deflate_masm(src, src_len, &out_len);
+#endif
     if (out) free(out);
 
     // Measure
     auto t0 = clk::now();
     for (int i = 0; i < 10; ++i) {
-        out = deflate_custom(src, src_len, &out_len, hash_buf);
+#if defined(DEFLATE_NASM)
+        out = deflate_nasm(src, src_len, &out_len, hash_buf);
+#elif defined(DEFLATE_GODMODE)
+        out = deflate_godmode(src, src_len, &out_len, hash_buf);
+#else
+        out = deflate_masm(src, src_len, &out_len);
+#endif
         if (out) free(out);
     }
     auto t1 = clk::now();
@@ -73,7 +90,7 @@ static void run_case(const char* label, size_t words, size_t avg_len) {
     printf("  Time: %.3f ms\n", ms);
     printf("  Throughput: %.2f MB/s\n", (src_len / 1024.0 / 1024.0) / (ms / 1000.0));
     
-    free(hash_buf);
+    if (hash_buf) free(hash_buf);
 }
 
 int main() {

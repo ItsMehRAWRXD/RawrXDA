@@ -2,7 +2,6 @@
 
 #include <windows.h>
 #include <string>
-#include <memory>
 
 class IRenderer {
 public:
@@ -15,4 +14,4 @@ public:
 };
 
 // Optional Vulkan backend factory (implemented when ENABLE_VULKAN is ON)
-std::unique_ptr<IRenderer> CreateVulkanRenderer();
+IRenderer* CreateVulkanRenderer();

@@ -23,6 +23,7 @@
 
 namespace rawrxd::thermal {
 
+// Win32: void* parent in EnhancedDynamicLoadBalancer ctor is HWND when provided.
 // ═══════════════════════════════════════════════════════════════════════════════
 // Health Metrics Structures
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -423,9 +424,9 @@ private:
     std::map<std::string, DriveHealthProfile> m_drives;
     EnhancedLoadBalancerConfig m_config;
     
-    // Monitoring
-    std::unique_ptr<void*> m_healthTimer;
-    std::unique_ptr<void*> m_thermalTimer;
+    // Monitoring (Win32: timer stubs, was QTimer; no-op for backend)
+    void* m_healthTimer = nullptr;
+    void* m_thermalTimer = nullptr;
     std::atomic<bool> m_monitoring{false};
     
     // Callbacks

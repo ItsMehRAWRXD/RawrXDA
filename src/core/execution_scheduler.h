@@ -39,6 +39,10 @@
 
 namespace RawrXD {
 
+namespace Enterprise {
+enum class DispatchStrategy : uint32_t;
+}
+
 // ============================================================================
 // Forward declarations
 // ============================================================================
@@ -163,6 +167,10 @@ struct SchedulerConfig {
     
     // Threading
     int         computeThreads;         // Threads for MatMul/attention (default: hw cores)
+
+    // Multi-GPU dispatch
+    bool        enableMultiGPUDispatch; // Allow scheduler to plan multi-GPU execution
+    Enterprise::DispatchStrategy multiGPUDispatchStrategy;
     
     SchedulerConfig()
         : prefetchAhead(1)
@@ -173,6 +181,8 @@ struct SchedulerConfig {
         , enableTelemetry(true)
         , enablePrefetchHinting(true)
         , computeThreads(0)             // 0 = auto-detect
+        , enableMultiGPUDispatch(false)
+        , multiGPUDispatchStrategy(static_cast<Enterprise::DispatchStrategy>(0))
     {}
 };
 
@@ -289,6 +299,7 @@ private:
     std::vector<LayerManifest>  m_manifests;
     int                         m_numLayers;
     int                         m_embeddingDim;
+    uint64_t                    m_modelBytes;
     
     // Tensor tracking
     std::unordered_map<std::string, TensorSlot> m_tensorSlots;
@@ -322,6 +333,8 @@ private:
     // Bind state
     bool                        m_bound;
     bool                        m_manifestsBuilt;
+    bool                        m_multiGpuPlanned;
+    uint32_t                    m_lastPlannedLayers;
 };
 
 // ============================================================================

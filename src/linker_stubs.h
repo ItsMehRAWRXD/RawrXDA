@@ -10,6 +10,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#include <cstdint>
 #endif
 
 // Forward declaration for nlohmann::json
@@ -60,8 +64,33 @@ public:
                 name.c_str(), patchData.size());
         return true;
 #else
-        fprintf(stderr, "[WARN] [HotPatcher] POSIX patching not yet wired\n");
-        return false;
+        size_t pageSize = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+        if (pageSize == 0) pageSize = 4096;
+        uintptr_t addr = reinterpret_cast<uintptr_t>(targetAddr);
+        uintptr_t pageStart = addr & ~(pageSize - 1);
+        size_t offsetInPage = addr - pageStart;
+        size_t span = offsetInPage + patchData.size();
+        size_t numPages = (span + pageSize - 1) / pageSize;
+        size_t len = numPages * pageSize;
+        void* region = reinterpret_cast<void*>(pageStart);
+        if (mprotect(region, len, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+            fprintf(stderr, "[ERROR] [HotPatcher] mprotect(RWX) failed for '%s'\n", name.c_str());
+            return false;
+        }
+        std::vector<unsigned char> original(patchData.size());
+        memcpy(original.data(), targetAddr, patchData.size());
+        memcpy(targetAddr, patchData.data(), patchData.size());
+#if defined(__GNUC__) || defined(__clang__)
+        __builtin___clear_cache(reinterpret_cast<char*>(targetAddr),
+                               reinterpret_cast<char*>(targetAddr) + patchData.size());
+#endif
+        mprotect(region, len, PROT_READ | PROT_EXEC);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_patches[name] = { targetAddr, original, patchData };
+        m_patchCount++;
+        fprintf(stderr, "[INFO] [HotPatcher] Applied '%s' (%zu bytes) [POSIX]\n",
+                name.c_str(), patchData.size());
+        return true;
 #endif
     }
 
@@ -91,7 +120,28 @@ public:
         fprintf(stderr, "[INFO] [HotPatcher] Reverted '%s'\n", name.c_str());
         return true;
 #else
-        return false;
+        auto& info = it->second;
+        size_t pageSize = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+        if (pageSize == 0) pageSize = 4096;
+        uintptr_t addr = reinterpret_cast<uintptr_t>(info.addr);
+        uintptr_t pageStart = addr & ~(pageSize - 1);
+        size_t offsetInPage = addr - pageStart;
+        size_t span = offsetInPage + info.original.size();
+        size_t numPages = (span + pageSize - 1) / pageSize;
+        size_t len = numPages * pageSize;
+        void* region = reinterpret_cast<void*>(pageStart);
+        if (mprotect(region, len, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+            return false;
+        }
+        memcpy(info.addr, info.original.data(), info.original.size());
+#if defined(__GNUC__) || defined(__clang__)
+        __builtin___clear_cache(reinterpret_cast<char*>(info.addr),
+                               reinterpret_cast<char*>(info.addr) + info.original.size());
+#endif
+        mprotect(region, len, PROT_READ | PROT_EXEC);
+        m_patches.erase(it);
+        fprintf(stderr, "[INFO] [HotPatcher] Reverted '%s' [POSIX]\n", name.c_str());
+        return true;
 #endif
     }
 

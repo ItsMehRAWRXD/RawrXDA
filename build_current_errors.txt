@@ -1,0 +1,141 @@
+ninja: warning: premature end of file; recovering
+[1/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\crash_containment.cpp.obj
+D:\rawrxd\src\core\crash_containment.cpp(144): warning C4477: 'snprintf' : format string '%d' requires an argument of type 'int', but variadic argument 24 has type 'unsigned __int64'
+D:\rawrxd\src\core\crash_containment.cpp(144): note: consider using '%lld' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(144): note: consider using '%Id' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(144): note: consider using '%I64d' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(144): warning C4477: 'snprintf' : format string '%u' requires an argument of type 'unsigned int', but variadic argument 25 has type 'unsigned __int64'
+D:\rawrxd\src\core\crash_containment.cpp(144): note: consider using '%llu' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(144): note: consider using '%Iu' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(144): note: consider using '%I64u' in the format string
+D:\rawrxd\src\core\crash_containment.cpp(144): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 26 has type 'int'
+D:\rawrxd\src\core\crash_containment.cpp(144): warning C4313: 'snprintf': '%s' in format string conflicts with argument 26 of type 'int'
+D:\rawrxd\src\core\crash_containment.cpp(144): warning C4477: 'snprintf' : format string '%s' requires an argument of type 'char *', but variadic argument 27 has type 'unsigned int'
+D:\rawrxd\src\core\crash_containment.cpp(144): warning C4313: 'snprintf': '%s' in format string conflicts with argument 27 of type 'unsigned int'
+[2/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\quant_hysteresis.cpp.obj
+[3/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\patch_rollback_ledger.cpp.obj
+[4/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\masm_stress_harness.cpp.obj
+[5/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\enterprise_license.cpp.obj
+FAILED: CMakeFiles/RawrEngine.dir/src/enterprise_license.cpp.obj 
+C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\inference -ID:\rawrxd\src\core -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\config -ID:\rawrxd\src\agent -ID:\rawrxd\src\server -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\include\enterprise -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\enterprise_license.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\enterprise_license.cpp
+D:\rawrxd\src\enterprise_license.cpp(41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\enterprise_license.cpp(41): error C2146: syntax error: missing ';' before identifier 'g_FeatureManifest'
+D:\rawrxd\src\enterprise_license.cpp(41): error C2065: 'TOTAL_FEATURES': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(41): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+D:\rawrxd\src\enterprise_license.cpp(43): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(43): error C2065: 'BasicGGUFLoading': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(43): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(43): error C2065: 'Community': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(44): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(44): error C2065: 'Q4Quantization': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(44): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(44): error C2065: 'Community': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(45): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(45): error C2065: 'CPUInference': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(45): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(45): error C2065: 'Community': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(46): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(46): error C2065: 'BasicChatUI': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(46): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(46): error C2065: 'Community': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(47): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(47): error C2065: 'ConfigFileSupport': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(47): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(47): error C2065: 'Community': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(48): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(48): error C2065: 'SingleModelSession': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(48): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(48): error C2065: 'Community': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(51): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(51): error C2065: 'MemoryHotpatching': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(51): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(51): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(52): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(52): error C2065: 'ByteLevelHotpatching': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(52): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(52): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(53): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(53): error C2065: 'ServerHotpatching': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(53): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(53): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(54): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(54): error C2065: 'UnifiedHotpatchManager': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(54): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(54): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(55): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(55): error C2065: 'Q5Q8F16Quantization': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(55): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(55): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(56): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(56): error C2065: 'MultiModelLoading': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(56): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(56): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(57): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(57): error C2065: 'CUDABackend': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(57): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(57): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(58): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(58): error C2065: 'AdvancedSettingsPanel': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(58): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(58): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(59): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(59): error C2065: 'PromptTemplates': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(59): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(59): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(60): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(60): error C2065: 'TokenStreaming': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(60): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(60): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(61): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(61): error C2065: 'InferenceStatistics': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(61): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(61): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(62): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(62): error C2065: 'KVCacheManagement': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(62): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(62): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(63): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(63): error C2065: 'ModelComparison': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(63): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(63): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(64): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(64): error C2065: 'BatchProcessing': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(64): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(64): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(65): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(65): error C2065: 'CustomStopSequences': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(65): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(65): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(66): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(66): error C2065: 'GrammarConstrainedGen': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(66): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(66): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(67): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(67): error C2065: 'LoRAAdapterSupport': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(67): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(67): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(68): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(68): error C2065: 'ResponseCaching': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(68): error C2653: 'LicenseTierV2': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(68): error C2065: 'Professional': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(69): error C2653: 'FeatureID': is not a class or namespace name
+D:\rawrxd\src\enterprise_license.cpp(69): error C2065: 'PromptLibrary': undeclared identifier
+D:\rawrxd\src\enterprise_license.cpp(69): fatal error C1003: error count exceeds 100; stopping compilation
+[6/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\convergence_stress_harness.cpp.obj
+[7/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\perf_telemetry.cpp.obj
+[8/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\chat_panel.cpp.obj
+[9/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\tool_action_status.cpp.obj
+[10/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\jsonrpc_parser.cpp.obj
+[11/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\transaction_journal.cpp.obj
+[12/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\context_assembler.cpp.obj
+[13/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\agentic_transaction.cpp.obj
+[14/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\gpu\speculative_decoder_v2.cpp.obj
+[15/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\ui\chat_message_renderer.cpp.obj
+[16/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\model_cascade.cpp.obj
+[17/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\lsp\diagnostic_consumer.cpp.obj
+[18/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\git\git_context.cpp.obj
+[19/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\prompt_template_engine.cpp.obj
+[20/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\multi_file_transaction.cpp.obj
+[21/1270] Building CXX object CMakeFiles\RawrEngine.dir\src\core\vector_index.cpp.obj
+[22/1270] Building C object CMakeFiles\RawrEngine.dir\src\core\sqlite3.c.obj
+ninja: build stopped: subcommand failed.

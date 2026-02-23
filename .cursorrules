@@ -5,7 +5,7 @@
 ## 🎯 PROJECT OVERVIEW
 
 **Project**: RawrXD IDE - Custom C++ IDE with AI Integration  
-**Architecture**: Qt-based core with PowerShell bridge and SQLite registry  
+**Architecture**: Win32/C++20, zero Qt. Use Ship/StdReplacements.hpp and Win32 API. PowerShell bridge, SQLite via Win32/native.  
 **Goal**: Build a high-performance IDE that integrates Cursor features and Codex reverse engineering
 
 ---
@@ -69,42 +69,35 @@ std::cout << "Processing file: " << filename << std::endl;
 qDebug() << "Error occurred";
 ```
 
-### **Qt Conventions**
-- Use `QString` for UI strings, `std::string` for core logic
-- Use `QProcess` for PowerShell bridging (async only)
-- Use `QSqlDatabase` for SQLite operations
-- Use `QHttpServer` for REST API endpoints
-- **NEVER** mix Qt and std containers in public APIs
+### **No Qt — Win32 + StdReplacements only**
+- **NEVER** add `#include <QString>`, `<QtCore>`, or any Qt header. RawrXD is Qt-free.
+- Use `Ship/StdReplacements.hpp`: `WideString`, `WideStringList`, `Variant`, `StdMap`, `StdFile`, `StdDir`, `JsonDoc`, etc.
+- Use `std::string` for core logic; `WideString` (or `std::wstring`) for UI/Win32 when needed.
+- Use Win32 APIs for process (CreateProcess), HTTP (winhttp), SQLite (native/sqlite3), UI (HWND, GDI/Direct2D).
 
 **Correct**:
 ```cpp
-// Core logic uses std
+#include "StdReplacements.hpp"
 std::expected<std::string, Error> processCoreLogic(const std::string& input);
-
-// UI layer uses QString
-QString displayResult = QString::fromStdString(result.value());
+WideString displayResult = WideString::fromStdString(result.value());
 ```
 
 **Incorrect**:
 ```cpp
-// ❌ Never do this
-std::vector<QString> mixedContainer;  // Wrong!
-QString coreLogicResult;  // Should be std::string
+// ❌ Never do this — no Qt
+#include <QString>
+std::vector<QString> mixedContainer;
 ```
 
 ### **Memory Management**
 - Use smart pointers (`std::unique_ptr`, `std::shared_ptr`)
-- **NEVER** use raw `new`/`delete`
-- For Qt objects, use parent-child hierarchy
-- For non-Qt objects, use RAII
+- **NEVER** use raw `new`/`delete` without ownership
+- For Win32 HWND, use parent/child or explicit DestroyWindow; use RAII for all other resources
 
 **Correct**:
 ```cpp
 auto logger = std::make_unique<Logger>();
 auto db = std::make_shared<Database>();
-
-// Qt objects
-auto* widget = new QWidget(parent);  // Will be deleted with parent
 ```
 
 **Incorrect**:
@@ -142,19 +135,19 @@ private:
 ### **Layer Architecture**
 ```
 ┌─────────────────────────────────────┐
-│  UI Layer (Qt Widgets/QML)         │
+│  UI Layer (Win32 / HWND, GDI/D2D)   │
 ├─────────────────────────────────────┤
 │  Business Logic Layer (std)        │
 ├─────────────────────────────────────┤
-│  Data Layer (SQLite via QtSql)     │
+│  Data Layer (SQLite / Win32/native) │
 ├─────────────────────────────────────┤
-│  PowerShell Bridge (QProcess)      │
+│  PowerShell Bridge (CreateProcess)  │
 └─────────────────────────────────────┘
 ```
 
 ### **Communication Flow**
 ```
-VS Code Extension → QHttpServer → Business Logic → QProcess (PowerShell)
+VS Code Extension → HTTP server (Win32/native) → Business Logic → CreateProcess (PowerShell)
                     ↓
                     SQLite (Registry)
 ```
@@ -228,7 +221,7 @@ VS Code Extension → QHttpServer → Business Logic → QProcess (PowerShell)
 1. **Check for `std::cout`**: Replace with `Logger::info()`
 2. **Check for exceptions**: Replace with `std::expected`
 3. **Check for raw pointers**: Replace with smart pointers
-4. **Check for Qt/std mixing**: Separate UI and core logic
+4. **Check for Qt**: No Qt; use StdReplacements and Win32 only
 5. **Check for sync I/O**: Make it async with callbacks
 
 ### **Code Generation Prompts**
@@ -240,20 +233,18 @@ Use Logger for logging, not std::cout.
 Return std::expected<Result, Error>.
 ```
 
-**For Qt UI**:
+**For Win32 UI**:
 ```
-Create a QWidget that [DESCRIPTION].
-Use QString for UI strings.
-Connect signals to slots using modern syntax.
-Keep business logic separate.
+Create Win32 controls (HWND) or use existing Win32 IDE helpers.
+Use WideString / std::wstring for UI strings (Ship/StdReplacements.hpp).
+Keep business logic separate; no Qt.
 ```
 
 **For PowerShell Bridge**:
 ```
-Create a QProcess that runs [COMMAND] asynchronously.
-Capture stdout and stderr.
-Use std::expected for error handling.
-Log output with Logger.
+Use CreateProcess (or Win32 process API) to run [COMMAND] asynchronously.
+Capture stdout/stderr via pipes or native server.
+Use std::expected for error handling; log output with Logger.
 ```
 
 ---
@@ -291,6 +282,12 @@ d:\lazy init ide\
 ```
 
 ---
+
+## 🔀 BRANCH & MERGE (SINGLE DRIVE)
+
+- **One drive:** main is the only line; all branches are brought into main. No removal or deletion of branch content when merging.
+- **Overlap:** If main and a branch have the same or similar code, combine into one source file—add the branch's ideas to the solid base; do not discard either.
+- **Do the work:** Prefer changing code and merging over treating READMEs/instructions as checklists to "circle." Act on the repo; make no shapes.
 
 ## 🚀 DEVELOPMENT WORKFLOW
 
@@ -340,14 +337,13 @@ d:\lazy init ide\
 - Concepts - https://en.cppreference.com/w/cpp/language/constraints
 - Ranges - https://en.cppreference.com/w/cpp/ranges
 
-### **Qt6 Documentation**
-- QHttpServer - https://doc.qt.io/qt-6/qhttpserver.html
-- QProcess - https://doc.qt.io/qt-6/qprocess.html
-- QSqlDatabase - https://doc.qt.io/qt-6/qsqldatabase.html
+### **Win32 / C++20**
+- StdReplacements.hpp (Ship/) — WideString, JsonDoc, StdFile, StdDir, Variant
+- Win32 API: CreateProcess, winhttp, SQLite C API or native wrappers
 
 ### **PowerShell 7+**
 - Install-Module - https://docs.microsoft.com/en-us/powershell/module/powershellget/install-module
-- QProcess integration - https://doc.qt.io/qt-6/qprocess.html#details
+- Win32 CreateProcess / pipes for subprocess I/O
 
 ---
 
@@ -381,26 +377,25 @@ delete logger;
 auto logger = std::make_unique<Logger>();
 ```
 
-### **❌ Mistake 4: Mixing Qt/std**
+### **❌ Mistake 4: Using Qt**
 ```cpp
-// Wrong
+// Wrong — no Qt in RawrXD
+#include <QString>
 std::vector<QString> mixed;
 
 // Right
+#include "StdReplacements.hpp"
 std::vector<std::string> coreData;
-QString uiString = QString::fromStdString(coreData[0]);
+WideString uiString = WideString::fromStdString(coreData[0]);
 ```
 
 ### **❌ Mistake 5: Sync I/O**
 ```cpp
-// Wrong
-QProcess process;
-process.start("command");
-process.waitForFinished();  // Blocks UI!
+// Wrong — blocking UI
+CreateProcess(...);
+WaitForSingleObject(pi.hProcess, INFINITE);
 
-// Right
-connect(&process, &QProcess::finished, this, &MyClass::onFinished);
-process.start("command");
+// Right — async: use overlapped I/O, completion ports, or fire-and-forget with callbacks
 ```
 
 ---

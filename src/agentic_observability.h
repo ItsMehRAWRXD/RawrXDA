@@ -21,11 +21,11 @@
 // Log level enum
 // ---------------------------------------------------------------------------
 enum class LogLevel : int {
-    DEBUG    = 0,
-    INFO     = 1,
-    WARN     = 2,
-    ERROR    = 3,
-    CRITICAL = 4
+    ObsDebug    = 0,
+    ObsInfo     = 1,
+    ObsWarn     = 2,
+    ObsError    = 3,
+    ObsCritical = 4
 };
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,8 @@ public:
     // -----------------------------------------------------------------------
     AgenticObservability();
     ~AgenticObservability();
+
+    static AgenticObservability& instance();
 
     // -----------------------------------------------------------------------
     // Structured Logging
@@ -71,12 +73,12 @@ public:
                      const nlohmann::json& context = {});
 
     std::vector<LogEntry> getLogs(int limit = 100,
-                                 LogLevel minLevel = LogLevel::DEBUG,
+                                 LogLevel minLevel = LogLevel::ObsDebug,
                                  const std::string& component = "") const;
 
     std::vector<LogEntry> getLogsByTimeRange(const TimePoint& start,
                                              const TimePoint& end,
-                                             LogLevel minLevel = LogLevel::DEBUG) const;
+                                             LogLevel minLevel = LogLevel::ObsDebug) const;
 
     // Log callback
     using LogCallback = void(*)(const LogEntry& entry, void* userData);

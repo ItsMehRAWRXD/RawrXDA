@@ -1,0 +1,43 @@
+# Full CLI + Win32 IDE Manifestation Tests
+# Runs every CLI contract mode and Win32 IDE window test for real (no simulation).
+# Requires CMake build to have produced RawrXD-Win32IDE.exe and/or RawrEngine.exe.
+
+name: Full Manifestation (CLI + IDE)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/Full-Manifestation-Tests.ps1'
+      - 'CLI_CONTRACT_v1.1.md'
+      - 'src/**'
+      - 'CMakeLists.txt'
+
+jobs:
+  manifestation:
+    name: CLI + Win32 IDE (no sim)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure and build (Release)
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --config Release -- /m /v:minimal
+        shell: pwsh
+        continue-on-error: false
+
+      - name: Run full manifestation tests
+        run: |
+          pwsh -ExecutionPolicy Bypass -File tests/Full-Manifestation-Tests.ps1 `
+            -BuildDir "${{ github.workspace }}/build" `
+            -WorkDir "${{ github.workspace }}" `
+            -SkipPersist `
+            -SkipElevated `
+            -IDELaunchTimeoutSec 45 `
+            -LatencyThresholdMs 10000
+        shell: pwsh
+        env:
+          RAWRXD_BUILD_DIR: ${{ github.workspace }}/build

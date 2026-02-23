@@ -35,6 +35,12 @@
 #include "ide/resource_generator.h"
 #include "cursor_github_parity_bridge.h"
 
+// SCAFFOLD_147: Go to definition / references
+
+
+// SCAFFOLD_037: Cursor parity (fuzzy search, references)
+
+
 // Win32-native debug logging
 #ifndef RAWRXD_LOG_INFO
 #define RAWRXD_LOG_INFO(msg) do { \

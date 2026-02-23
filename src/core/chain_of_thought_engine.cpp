@@ -9,6 +9,7 @@
 // ============================================================================
 
 #include "../include/chain_of_thought_engine.h"
+#include "../../include/enterprise_license.h"
 #include <chrono>
 #include <sstream>
 #include <algorithm>
@@ -260,6 +261,13 @@ std::string ChainOfThoughtEngine::buildUserMessage(
 CoTChainResult ChainOfThoughtEngine::executeChain(const std::string& userQuery) {
     CoTChainResult result;
     result.userQuery = userQuery;
+
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::ModelComparison,
+            "ChainOfThoughtEngine::executeChain")) {
+        result.error = "Model Comparison requires a Professional or Enterprise license.";
+        return result;
+    }
 
     // Capture callbacks and steps under lock
     CoTInferenceCallback inferCb;

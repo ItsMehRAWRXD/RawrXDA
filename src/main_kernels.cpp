@@ -326,7 +326,7 @@ static int decodeSymbol(BitReader& br, const HuffNode* tree) {
 // Diagnostic stubs
 namespace Diagnostics {
     void error(const std::string& title, const std::string& message) {
-        s_logger.error( "[ERROR] " << title << ": " << message << std::endl;
+        std::cerr << "[ERROR] " << title << ": " << message << std::endl;
     }
 }
 

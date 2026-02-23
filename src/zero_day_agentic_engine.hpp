@@ -1,3 +1,5 @@
+// SCAFFOLD_348: Zero day agentic engine void*
+
 #pragma once
 
 #include <string>
@@ -15,7 +17,7 @@ public:
     explicit ZeroDayAgenticEngine(RawrXD::UniversalModelRouter* router = nullptr,
                                   RawrXD::ToolRegistry* tools = nullptr,
                                   RawrXD::PlanOrchestrator* planner = nullptr,
-                                  void* parent = nullptr);
+                                  void* parent = nullptr);  // Win32: HWND when provided
     ~ZeroDayAgenticEngine();
 
     void startMission(const std::string& userGoal);

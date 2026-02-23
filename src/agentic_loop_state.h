@@ -115,6 +115,7 @@ public:
     // ----- Snapshots -----
     nlohmann::json takeSnapshot();
     bool restoreFromSnapshot(const nlohmann::json& snapshot);
+    nlohmann::json getLastSnapshot() const { return m_lastSnapshot; }
 
     // ----- Memory management (json-based) -----
     void addToMemory(const std::string& key, const nlohmann::json& value);
@@ -173,6 +174,12 @@ public:
     int getIterationCount() const { return static_cast<int>(m_iterations.size()); }
     const std::vector<Iteration>& getIterations() const { return m_iterations; }
 
+    // ----- Last started/finished phase and iteration (observability) -----
+    ReasoningPhase getLastStartedPhase() const { return m_lastPhaseStarted; }
+    ReasoningPhase getLastFinishedPhase() const { return m_lastPhaseFinished; }
+    const Iteration* getLastStartedIteration() const;
+    const Iteration* getLastCompletedIteration() const;
+
 private:
     // ----- Helpers -----
     std::string timePointToISO(const TimePoint& tp) const;
@@ -187,6 +194,10 @@ private:
     IterationStatus m_currentStatus;
     TimePoint m_stateStartTime;
     TimePoint m_lastUpdateTime;
+
+    // Last started/finished tracking (observability)
+    ReasoningPhase m_lastPhaseStarted = ReasoningPhase::Analysis;
+    ReasoningPhase m_lastPhaseFinished = ReasoningPhase::Analysis;
 
     // ----- Core data -----
     std::vector<Iteration> m_iterations;

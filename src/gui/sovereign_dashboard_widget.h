@@ -43,6 +43,8 @@ public:
     void hide();
     void resize(int x, int y, int w, int h);
 
+    static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 private:
     void createWindow(HWND parent);
     void updateDashboard();
@@ -52,7 +54,6 @@ private:
     void paintThermalBar(HDC hdc, int x, int y, int w, int h, float tempC, int driveIdx);
     void paintTierIndicator(HDC hdc, int x, int y, int w, int h);
 
-    static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     static void CALLBACK TimerCallback(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 
     HWND m_hwnd = nullptr;

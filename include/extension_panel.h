@@ -4,6 +4,7 @@
 // ============================================================================
 // ExtensionPanel — C++20, Win32. No Qt. (QWidget, QListWidget, signals removed)
 // ============================================================================
+// Win32: parent is HWND for CreateWindowExW when embedding; may be nullptr.
 
 #include <functional>
 #include <string>
@@ -17,7 +18,7 @@ public:
     using ExtensionDisabledFn = std::function<void(const std::string&)>;
     using ExtensionInstalledFn = std::function<void(const std::string&)>;
 
-    explicit ExtensionPanel(void* parent = nullptr);
+    explicit ExtensionPanel(void* parent = nullptr);  // Win32: HWND
     ~ExtensionPanel();
 
     void refreshExtensionList();

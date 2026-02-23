@@ -37,6 +37,9 @@
 #include <nlohmann/json.hpp>
 #include <commctrl.h>
 
+// SCAFFOLD_036: Failure intelligence and remediation
+
+
 // ============================================================================
 // RetryStrategy — TYPE STRING
 // ============================================================================

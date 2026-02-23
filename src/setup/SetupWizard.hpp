@@ -12,11 +12,14 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 #include <functional>
 #include <atomic>
+#include <cstdint>
 
 namespace rawrxd::setup {
 
+// Win32: void* parent parameters in wizard/page classes are HWND (CreateWindowExW parent).
 // Forward declarations
 class HardwareDetector;
 struct DetectedHardware;

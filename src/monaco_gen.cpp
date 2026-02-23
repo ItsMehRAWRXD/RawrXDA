@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+// SCAFFOLD_254: monaco_gen and agentic template
+
+
 namespace {
 struct Args {
     std::string name = "rawrxd-ide";
@@ -12,10 +15,10 @@ struct Args {
 };
 
 void PrintUsage(const char* exe) {
-    s_monacoLogger.info("Usage: {} [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]", exe);
-    s_monacoLogger.info("Examples:");
-    s_monacoLogger.info("  {} --name RawrXD-IDE --template minimal --out .\\rawrxd-ide", exe);
-    s_monacoLogger.info("  {} --template full --out D:\\apps\\rawrxd-ide", exe);
+    std::cout << "Usage: " << exe << " [--name <name>] [--template <minimal|full|agentic>] [--out <dir>]\n";
+    std::cout << "Examples:\n";
+    std::cout << "  " << exe << " --name RawrXD-IDE --template minimal --out .\\rawrxd-ide\n";
+    std::cout << "  " << exe << " --template full --out D:\\apps\\rawrxd-ide\n";
 }
 
 bool ParseArgs(int argc, char** argv, Args& args) {
@@ -30,7 +33,7 @@ bool ParseArgs(int argc, char** argv, Args& args) {
         } else if (arg == "--help" || arg == "-h") {
             return false;
         } else {
-            s_monacoLogger.error("Unknown argument: {}", arg);
+            std::cerr << "Unknown argument: " << arg << "\n";
             return false;
         }
     }
@@ -55,20 +58,20 @@ int main(int argc, char** argv) {
     } else if (args.template_name == "agentic") {
         success = generator.GenerateAgenticIDE(args.name, args.output_dir);
     } else {
-        s_monacoLogger.error("Unknown template: {}", args.template_name);
+        std::cerr << "Unknown template: " << args.template_name << "\n";
         PrintUsage(argv[0]);
         return 1;
     }
 
     if (!success) {
-        s_monacoLogger.error("Failed to generate Monaco IDE output");
+        std::cerr << "Failed to generate Monaco IDE output.\n";
         return 1;
     }
 
-    s_monacoLogger.info( "Monaco IDE generated at: " << args.output_dir << "\n";
-    s_monacoLogger.info( "Next steps:\n";
-    s_monacoLogger.info( "  cd " << args.output_dir << "\\" << args.name << "\n";
-    s_monacoLogger.info( "  npm install\n";
-    s_monacoLogger.info( "  npm run dev\n";
+    std::cout << "Monaco IDE generated at: " << args.output_dir << "\n";
+    std::cout << "Next steps:\n";
+    std::cout << "  cd " << args.output_dir << "\\" << args.name << "\n";
+    std::cout << "  npm install\n";
+    std::cout << "  npm run dev\n";
     return 0;
 }

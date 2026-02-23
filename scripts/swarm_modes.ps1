@@ -23,7 +23,7 @@ param(
     [string]$Mode,
     
     [int]$Agents = 4,
-    [string]$RepoRoot = "",
+    [string]$RepoRoot = "D:\lazy init ide",
     [string]$Topic = "",
     [string]$MemoryFile = "",
     [switch]$SkipPrompt = $false,
@@ -32,11 +32,6 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
-if (-not $RepoRoot -or -not $RepoRoot.Trim()) { $RepoRoot = Get-RawrXDRoot }
-$RepoRoot = Resolve-RawrXDPath $RepoRoot
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MEMORY SYSTEM - Persistent context across sessions

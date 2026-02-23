@@ -1,11 +1,11 @@
 /*
  * RawrXD_InferenceEngine_Win32.cpp
  * Pure Win32 replacement for Qt-based InferenceEngine
- * Replaces: QThread, QMutexLocker, QtConcurrent, QString
- * Uses: CRITICAL_SECTION, CreateThread, STL containers
+ * Pure C++20/Win32: CRITICAL_SECTION, CreateThread, std::thread, STL.
  */
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #include <thread>
 #include <mutex>
@@ -520,6 +520,65 @@ extern "C" {
     __declspec(dllexport) void __stdcall InferenceEngine_SetTemperature(void* engine, float temp) {
         RawrXDInferenceEngine* e = static_cast<RawrXDInferenceEngine*>(engine);
         if (e) e->SetTemperature(temp);
+    }
+
+    // ------------------------------------------------------------------------
+    // Compatibility exports for RawrXD_Win32_IDE (LoadModel/UnloadModel/ForwardPass/SampleNext)
+    // ------------------------------------------------------------------------
+    static HMODULE s_hBridge = nullptr;
+    static int (*s_pfnForward)(void*, int*, int, float*) = nullptr;
+    static int (*s_pfnSample)(float*, int, float, float, int) = nullptr;
+    static int (*s_pfnLoadModel)(const char*) = nullptr;
+    static void (*s_pfnCleanup)(void) = nullptr;
+
+    static void EnsureBridge() {
+        if (s_hBridge) return;
+        s_hBridge = LoadLibraryW(L"RawrXD_NativeModelBridge.dll");
+        if (s_hBridge) {
+            s_pfnForward = (int (*)(void*, int*, int, float*))GetProcAddress(s_hBridge, "ForwardPass");
+            s_pfnSample = (int (*)(float*, int, float, float, int))GetProcAddress(s_hBridge, "SampleNext");
+            s_pfnLoadModel = (int (*)(const char*))GetProcAddress(s_hBridge, "LoadModelNative");
+            s_pfnCleanup = (void (*)(void))GetProcAddress(s_hBridge, "CleanupMathTables");
+        }
+    }
+
+    static std::string WideToUtf8(const wchar_t* path) {
+        if (!path || !*path) return "";
+        int n = WideCharToMultiByte(CP_UTF8, 0, path, -1, nullptr, 0, nullptr, nullptr);
+        if (n <= 0) return "";
+        std::string s(n - 1, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, path, -1, &s[0], n, nullptr, nullptr);
+        return s;
+    }
+
+    __declspec(dllexport) void* __stdcall LoadModel(const wchar_t* path) {
+        if (!path) return nullptr;
+        if (!g_engine) g_engine = new RawrXDInferenceEngine();
+        EnsureBridge();
+        if (s_pfnLoadModel) {
+            std::string utf8 = WideToUtf8(path);
+            if (s_pfnLoadModel(utf8.c_str()) != 0) return nullptr;
+        }
+        g_engine->LoadModel(path);
+        return g_engine;
+    }
+
+    __declspec(dllexport) void __stdcall UnloadModel(void* ctx) {
+        (void)ctx;
+        if (s_pfnCleanup) s_pfnCleanup();
+    }
+
+    __declspec(dllexport) int __stdcall ForwardPass(void* ctx, int* tokens, int n_tokens, float* logits) {
+        (void)ctx;
+        EnsureBridge();
+        if (!s_pfnForward) return -1;
+        return s_pfnForward(nullptr, tokens, n_tokens, logits);
+    }
+
+    __declspec(dllexport) int __stdcall SampleNext(float* logits, int vocab_size, float temperature, float top_p, int top_k) {
+        EnsureBridge();
+        if (!s_pfnSample) return -1;
+        return s_pfnSample(logits, vocab_size, temperature, top_p, top_k);
     }
 }
 

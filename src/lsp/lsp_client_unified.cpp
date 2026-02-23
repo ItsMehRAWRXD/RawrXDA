@@ -21,8 +21,13 @@
 #include <chrono>
 #include <algorithm>
 #include <queue>
+#include <future>
 
 #pragma comment(lib, "ws2_32.lib")
+
+extern "C" int GetLocalFallbackCompletions(
+    const char* content, int cursorPos, const char* language,
+    void* outItems, int maxItems);
 
 namespace RawrXD::LSP {
 
@@ -99,6 +104,12 @@ struct Location {
     Range range;
 };
 
+// Text edit (must precede CompletionItem which uses it)
+struct TextEdit {
+    Range range;
+    std::string new_text;
+};
+
 // Completion item
 struct CompletionItem {
     std::string label;
@@ -109,12 +120,6 @@ struct CompletionItem {
     std::string filter_text;
     std::string sort_text;
     std::optional<TextEdit> text_edit;
-};
-
-// Text edit
-struct TextEdit {
-    Range range;
-    std::string new_text;
 };
 
 // Hover information
@@ -459,10 +464,6 @@ private:
             float confidence;
             char category[32];
         };
-
-        extern "C" int GetLocalFallbackCompletions(
-            const char* content, int cursorPos, const char* language,
-            void* outItems, int maxItems);
 
         static const int MAX_FB = 30;
         std::vector<FallbackBuf> buf(MAX_FB);

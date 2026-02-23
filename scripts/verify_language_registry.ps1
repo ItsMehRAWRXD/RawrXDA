@@ -25,14 +25,11 @@ param(
     [switch]$QuickTest = $false
 )
 
-# Single-root path resolver
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-$script:BaseDir = Get-RawrXDRoot
+$script:BaseDir = "D:\lazy init ide"
 $script:ScriptsDir = Join-Path $script:BaseDir "scripts"
 $script:CompilerPath = Join-Path $script:BaseDir "compilers"
 $script:ConfigDir = Join-Path $script:BaseDir "logs\swarm_config"
@@ -41,9 +38,9 @@ $script:RegistryModule = Join-Path $script:ScriptsDir "language_model_registry.p
 $script:ManagerScript = Join-Path $script:ScriptsDir "language_model_manager.ps1"
 $script:IntegrationScript = Join-Path $script:ScriptsDir "language_model_integration.ps1"
 
-$script:FullDocsFile = Join-Path $script:BaseDir "LANGUAGE_MODEL_REGISTRY_DOCUMENTATION.md"
-$script:QuickStartFile = Join-Path $script:BaseDir "LANGUAGE_MODEL_REGISTRY_QUICKSTART.md"
-$script:DeliveryFile = Join-Path $script:BaseDir "LANGUAGE_MODEL_REGISTRY_DELIVERY.md"
+$script:FullDocsFile = "D:\LANGUAGE_MODEL_REGISTRY_DOCUMENTATION.md"
+$script:QuickStartFile = "D:\LANGUAGE_MODEL_REGISTRY_QUICKSTART.md"
+$script:DeliveryFile = "D:\LANGUAGE_MODEL_REGISTRY_DELIVERY.md"
 
 # ============================================================================
 # DISPLAY FUNCTIONS
@@ -398,7 +395,7 @@ Write-Host ""
 Write-Host "🚀 NEXT STEPS:" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  1. Import module:" -ForegroundColor White
-Write-Host "     Import-Module (Join-Path (Get-RawrXDRoot) 'scripts' 'language_model_registry.psm1')" -ForegroundColor Cyan
+Write-Host "     Import-Module 'D:\lazy init ide\scripts\language_model_registry.psm1'" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  2. View languages:" -ForegroundColor White
 Write-Host "     \$all = Get-AllAvailableLanguages" -ForegroundColor Cyan

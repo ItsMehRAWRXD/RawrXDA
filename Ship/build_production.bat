@@ -59,7 +59,7 @@ if errorlevel 1 (
     goto :error
 )
 
-echo [5/5] Building Win32 IDE and CLI...
+echo [5/6] Building Win32 IDE and lightweight CLI...
 cl /O2 /DNDEBUG /DUNICODE /D_UNICODE /EHsc ^
     /I"%MSVC_INC%" /I"%SDK_INC%\um" /I"%SDK_INC%\shared" /I"%SDK_INC%\ucrt" ^
     RawrXD_Win32_IDE.cpp ^
@@ -75,18 +75,24 @@ cl /O2 /DNDEBUG /EHsc ^
     RawrXD_CLI_Standalone.cpp ^
     /link /LIBPATH:"%MSVC_LIB%" /LIBPATH:"%SDK_UM%" /LIBPATH:"%SDK_UCRT%" ^
     user32.lib ^
-    /OUT:RawrXD_CLI.exe /SUBSYSTEM:CONSOLE
+    /OUT:RawrXD_CLI_Lite.exe /SUBSYSTEM:CONSOLE
 if errorlevel 1 (
-    echo [WARNING] CLI build failed (continuing...)
+    echo [WARNING] Lightweight CLI build failed (continuing...)
+) else (
+    echo [NOTE] RawrXD_CLI_Lite.exe = basic GGUF chat. For full agentic: run build_ship_cli.bat
 )
 
+echo [6/6] Full agentic CLI (optional): run build_ship_cli.bat in Ship folder
 echo.
+
 echo ===============================================
 echo  Build Complete!
 echo ===============================================
 echo.
 echo Artifacts:
 dir /B *.dll *.exe 2>nul | findstr /i "RawrXD"
+echo.
+echo For full agentic CLI (chat + tools + Ollama): cd Ship ^&^& build_ship_cli.bat
 echo.
 goto :end
 

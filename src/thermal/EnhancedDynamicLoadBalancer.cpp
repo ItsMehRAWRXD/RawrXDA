@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <chrono>
 
-#ifdef 
+#ifdef _WIN32
 #include <Windows.h>
 #include <comdef.h>
 #include <Wbemidl.h>
@@ -28,10 +28,10 @@ namespace rawrxd::thermal {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 EnhancedDynamicLoadBalancer::EnhancedDynamicLoadBalancer(void* parent)
-    : void(parent)
-    , m_healthTimer(std::make_unique<void*>(this))
-    , m_thermalTimer(std::make_unique<void*>(this))
+    : m_healthTimer(nullptr)
+    , m_thermalTimer(nullptr)
 {
+    (void)parent;
 // Qt connect removed
 // Qt connect removed
 }
@@ -58,11 +58,8 @@ void EnhancedDynamicLoadBalancer::setConfig(const EnhancedLoadBalancerConfig& co
         m_config.healthWeight /= total;
     }
     
-    // Update timer intervals
-    if (m_monitoring) {
-        m_healthTimer->setInterval(m_config.healthPollIntervalMs);
-        m_thermalTimer->setInterval(m_config.thermalPollIntervalMs);
-    }
+    // Timer stubs: no-op for Win32 backend (was QTimer::setInterval)
+    (void)m_monitoring;
     
     recalculateScores();
 }
@@ -429,11 +426,7 @@ void EnhancedDynamicLoadBalancer::startMonitoring()
     
     m_monitoring = true;
     
-    m_healthTimer->setInterval(m_config.healthPollIntervalMs);
-    m_thermalTimer->setInterval(m_config.thermalPollIntervalMs);
-    
-    m_healthTimer->start();
-    m_thermalTimer->start();
+    // Timer stubs: no-op for Win32 backend (was QTimer)
     
     // Initial refresh
     refreshHealthData();
@@ -446,9 +439,7 @@ void EnhancedDynamicLoadBalancer::stopMonitoring()
     if (!m_monitoring) return;
     
     m_monitoring = false;
-    m_healthTimer->stop();
-    m_thermalTimer->stop();
-    
+    // Timer stubs: no-op for Win32 backend
 }
 
 bool EnhancedDynamicLoadBalancer::isMonitoring() const

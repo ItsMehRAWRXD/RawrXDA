@@ -7,8 +7,7 @@
 //   extensions, and marketplace packages. Wraps WinVerifyTrust (Authenticode)
 //   and RSA-4096 manifest verification.
 //
-//   Addresses the TODO stub at extension_marketplace.cpp L710:
-//     "Signature verification not implemented"
+//   Addresses signature verification at extension_marketplace.cpp L710.
 //
 // PATTERN:  PatchResult-compatible, no exceptions, no std::function
 // RULE:     NO SOURCE FILE IS TO BE SIMPLIFIED

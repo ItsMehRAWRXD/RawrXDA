@@ -10,9 +10,6 @@
 #include <algorithm>
 #include <iostream>
 
-#include "logging/logger.h"
-static Logger s_logger("intelligent_refactorer");
-
 class IntelligentRefactorer {
 public:
     enum class RefactoringType {
@@ -369,7 +366,7 @@ extern "C" {
     void InitIntelligentRefactorer() {
         if (!g_refactorer) {
             g_refactorer = new IntelligentRefactorer();
-            s_logger.info("[REFACTORER] Intelligent refactoring engine initialized\n");
+            std::cout << "[REFACTORER] Intelligent refactoring engine initialized\n";
         }
     }
     

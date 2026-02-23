@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <iostream>
 #include <vector>
 
 // --- Exports provided to ASM ---

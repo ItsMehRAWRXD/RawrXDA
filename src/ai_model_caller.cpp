@@ -36,9 +36,6 @@
 #include <algorithm>
 #include <cstdlib>
 
-#include "logging/logger.h"
-static Logger s_logger("ai_model_caller");
-
 #ifdef _WIN32
 #include <windows.h>
 #include <winhttp.h>
@@ -100,7 +97,7 @@ public:
      * int main() {
      *     std::vector<int> vec = {1, 2, 3};
      *     for (auto v : vec) {
-     *         s_logger.info( v << std::endl;  // <- cursor here
+     *         std::cout << v << std::endl;  // <- cursor here
      * ```
      */
     struct Completion {
@@ -122,7 +119,7 @@ public:
             // Build completion-optimized prompt
             std::string prompt = buildCompletionPrompt(prefix, suffix, fileType, context);
 
-            s_logger.info("🤖 Generating code completions...");
+            std::cout << "🤖 Generating code completions..." << std::endl;
 
             // Call model
             GenerationParams params;
@@ -132,7 +129,7 @@ public:
 
             auto response = callModel(prompt, params);
             if (response.empty()) {
-                s_logger.error( "❌ Model returned empty response" << std::endl;
+                std::cerr << "❌ Model returned empty response" << std::endl;
                 return results;
             }
 
@@ -159,12 +156,12 @@ public:
                 results.resize(numCompletions);
             }
 
-            s_logger.info("✅ Generated ");
+            std::cout << "✅ Generated " << results.size() << " completions" << std::endl;
 
             return results;
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Completion error: " << e.what() << std::endl;
+            std::cerr << "❌ Completion error: " << e.what() << std::endl;
             return results;
         }
     }
@@ -211,7 +208,7 @@ public:
         result.original_code = code;
 
         try {
-            s_logger.info("🔧 Generating ");
+            std::cout << "🔧 Generating " << refactorType << " refactoring..." << std::endl;
 
             // Build refactoring prompt
             std::string prompt = buildRefactoringPrompt(code, refactorType, context);
@@ -222,7 +219,7 @@ public:
 
             auto response = callModel(prompt, params);
             if (response.empty()) {
-                s_logger.error( "❌ Model returned empty refactoring" << std::endl;
+                std::cerr << "❌ Model returned empty refactoring" << std::endl;
                 return result;
             }
 
@@ -238,12 +235,13 @@ public:
             // Add benefits based on refactor type
             result.benefits = getRefactoringBenefits(refactorType);
 
-            s_logger.info("✅ Generated refactoring (confidence: ");
+            std::cout << "✅ Generated refactoring (confidence: " 
+                     << (result.confidence * 100) << "%)" << std::endl;
 
             return result;
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Refactoring error: " << e.what() << std::endl;
+            std::cerr << "❌ Refactoring error: " << e.what() << std::endl;
             return result;
         }
     }
@@ -292,7 +290,7 @@ public:
         std::vector<TestCase> results;
 
         try {
-            s_logger.info("🧪 Generating test cases...");
+            std::cout << "🧪 Generating test cases..." << std::endl;
 
             std::string prompt = buildTestPrompt(functionCode, language);
 
@@ -302,7 +300,7 @@ public:
 
             auto response = callModel(prompt, params);
             if (response.empty()) {
-                s_logger.error( "❌ Model returned empty tests" << std::endl;
+                std::cerr << "❌ Model returned empty tests" << std::endl;
                 return results;
             }
 
@@ -318,12 +316,12 @@ public:
                 results.push_back(testCase);
             }
 
-            s_logger.info("✅ Generated ");
+            std::cout << "✅ Generated " << results.size() << " test cases" << std::endl;
 
             return results;
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Test generation error: " << e.what() << std::endl;
+            std::cerr << "❌ Test generation error: " << e.what() << std::endl;
             return results;
         }
     }
@@ -361,7 +359,7 @@ public:
         std::vector<Diagnostic> results;
 
         try {
-            s_logger.info("🔍 Analyzing code for issues...");
+            std::cout << "🔍 Analyzing code for issues..." << std::endl;
 
             std::string prompt = buildDiagnosticsPrompt(code, language);
 
@@ -398,12 +396,12 @@ public:
                 }
             }
 
-            s_logger.info("✅ Found ");
+            std::cout << "✅ Found " << results.size() << " diagnostics" << std::endl;
 
             return results;
 
         } catch (const std::exception& e) {
-            s_logger.error( "❌ Diagnostic error: " << e.what() << std::endl;
+            std::cerr << "❌ Diagnostic error: " << e.what() << std::endl;
             return results;
         }
     }
@@ -516,7 +514,8 @@ private:
         int ollamaPort = getOllamaPort();
         std::string model = getOllamaModel();
 
-        s_logger.info("🤖 Calling Ollama (");
+        std::cout << "🤖 Calling Ollama (" << ollamaHost << ":" << ollamaPort
+                  << " model=" << model << ") ..." << std::endl;
 
         // Build JSON payload for /api/generate
         std::string payload = "{";
@@ -539,14 +538,14 @@ private:
                                           WINHTTP_NO_PROXY_NAME,
                                           WINHTTP_NO_PROXY_BYPASS, 0);
         if (!hSession) {
-            s_logger.error( "❌ WinHttpOpen failed: " << GetLastError() << std::endl;
+            std::cerr << "❌ WinHttpOpen failed: " << GetLastError() << std::endl;
             return "";
         }
 
         HINTERNET hConnect = WinHttpConnect(hSession, wHost.c_str(),
                                              static_cast<INTERNET_PORT>(ollamaPort), 0);
         if (!hConnect) {
-            s_logger.error( "❌ WinHttpConnect failed: " << GetLastError() << std::endl;
+            std::cerr << "❌ WinHttpConnect failed: " << GetLastError() << std::endl;
             WinHttpCloseHandle(hSession);
             return "";
         }
@@ -556,7 +555,7 @@ private:
                                                  nullptr, WINHTTP_NO_REFERER,
                                                  WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
         if (!hRequest) {
-            s_logger.error( "❌ WinHttpOpenRequest failed: " << GetLastError() << std::endl;
+            std::cerr << "❌ WinHttpOpenRequest failed: " << GetLastError() << std::endl;
             WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
             return "";
@@ -573,9 +572,9 @@ private:
                                         (DWORD)payload.size(), 0);
         if (!sent) {
             DWORD err = GetLastError();
-            s_logger.error( "❌ WinHttpSendRequest failed: " << err << std::endl;
+            std::cerr << "❌ WinHttpSendRequest failed: " << err << std::endl;
             if (err == ERROR_WINHTTP_CANNOT_CONNECT) {
-                s_logger.error( "   Is Ollama running on " << ollamaHost << ":" << ollamaPort << "?" << std::endl;
+                std::cerr << "   Is Ollama running on " << ollamaHost << ":" << ollamaPort << "?" << std::endl;
             }
             WinHttpCloseHandle(hRequest);
             WinHttpCloseHandle(hConnect);
@@ -584,7 +583,7 @@ private:
         }
 
         if (!WinHttpReceiveResponse(hRequest, nullptr)) {
-            s_logger.error( "❌ WinHttpReceiveResponse failed: " << GetLastError() << std::endl;
+            std::cerr << "❌ WinHttpReceiveResponse failed: " << GetLastError() << std::endl;
             WinHttpCloseHandle(hRequest);
             WinHttpCloseHandle(hConnect);
             WinHttpCloseHandle(hSession);
@@ -617,9 +616,9 @@ private:
         double latencyMs = std::chrono::duration<double, std::milli>(elapsed).count();
 
         if (statusCode != 200) {
-            s_logger.error( "❌ Ollama returned HTTP " << statusCode << std::endl;
+            std::cerr << "❌ Ollama returned HTTP " << statusCode << std::endl;
             if (!responseBody.empty()) {
-                s_logger.error( "   Body: " << responseBody.substr(0, 512) << std::endl;
+                std::cerr << "   Body: " << responseBody.substr(0, 512) << std::endl;
             }
             return "";
         }
@@ -627,7 +626,8 @@ private:
         // Extract the "response" field from Ollama JSON
         std::string modelResponse = extractJsonString(responseBody, "response");
 
-        s_logger.info("✅ Model responded in ");
+        std::cout << "✅ Model responded in " << (int)latencyMs << " ms ("
+                  << modelResponse.size() << " chars)" << std::endl;
 
         return modelResponse;
     }
@@ -636,7 +636,7 @@ private:
      * POSIX fallback: use libcurl if available, otherwise return empty.
      */
     static std::string callModel(const std::string& prompt, const GenerationParams& params) {
-        s_logger.error( "❌ callModel: POSIX implementation requires libcurl (not yet linked)" << std::endl;
+        std::cerr << "❌ callModel: POSIX implementation requires libcurl (not yet linked)" << std::endl;
         return "";
     }
 #endif

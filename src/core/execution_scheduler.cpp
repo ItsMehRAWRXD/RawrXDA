@@ -7,6 +7,9 @@
 
 #include "execution_scheduler.h"
 #include "../cpu_inference_engine.h"
+#include "enterprise_license.h"
+#include "enterprise/multi_gpu.h"
+#include "unified_hotpatch_manager.hpp"
 
 // Forward-declared: StreamingEngineRegistry is only used via pointer.
 // We don't include its header here to avoid link dependencies in
@@ -74,6 +77,7 @@ ExecutionScheduler::ExecutionScheduler()
     , m_registry(nullptr)
     , m_numLayers(0)
     , m_embeddingDim(0)
+    , m_modelBytes(0)
     , m_pinnedBytes(0)
     , m_totalStreamed(0)
     , m_prefetchRunning(false)
@@ -82,6 +86,8 @@ ExecutionScheduler::ExecutionScheduler()
     , m_tickCounter(0)
     , m_bound(false)
     , m_manifestsBuilt(false)
+    , m_multiGpuPlanned(false)
+    , m_lastPlannedLayers(0)
 {
     std::memset(&m_stats, 0, sizeof(m_stats));
 }
@@ -98,7 +104,9 @@ void ExecutionScheduler::configure(const SchedulerConfig& config) {
     std::cout << "[Scheduler] Configured: prefetchAhead=" << config.prefetchAhead
               << " asyncPrefetch=" << config.enableAsyncPrefetch
               << " maxPinned=" << (config.maxPinnedBytes / (1024*1024)) << "MB"
-              << " threads=" << config.computeThreads << std::endl;
+              << " threads=" << config.computeThreads
+              << " multiGPU=" << (config.enableMultiGPUDispatch ? "on" : "auto")
+              << std::endl;
 }
 
 SchedulerConfig ExecutionScheduler::getConfig() const {
@@ -174,6 +182,9 @@ bool ExecutionScheduler::buildManifests(int numLayers, int embeddingDim,
     // Log manifest summary
     uint64_t totalRaw = 0;
     for (auto& m : m_manifests) totalRaw += m.totalRawBytes;
+    m_modelBytes = totalRaw;
+    m_multiGpuPlanned = false;
+    m_lastPlannedLayers = static_cast<uint32_t>(numLayers);
     
     std::cout << "[Scheduler] Built " << numLayers << " layer manifests"
               << " | Total raw=" << (totalRaw / (1024*1024)) << "MB"
@@ -248,6 +259,39 @@ bool ExecutionScheduler::runForwardPass(float* state, float* scratch, int seqPos
     }
     
     double t0 = hires_now_ms();
+
+    bool multiGpuEnabled = m_config.enableMultiGPUDispatch;
+    if (!multiGpuEnabled && EnterpriseLicense::isFeatureEnabled(LicenseFeature::MultiGPU)) {
+        multiGpuEnabled = true;
+    }
+
+    if (multiGpuEnabled) {
+        auto& mgr = RawrXD::Enterprise::MultiGPUManager::Instance();
+        if (!mgr.IsInitialized()) {
+            auto initResult = mgr.Initialize();
+            if (!initResult.success) {
+                std::cerr << "[Scheduler] WARN: multi-GPU init failed: "
+                          << (initResult.detail ? initResult.detail : "unknown") << std::endl;
+            }
+        }
+
+        if (mgr.IsInitialized() && mgr.GetDeviceCount() > 1 && mgr.AllDevicesHealthy()) {
+            if (!m_multiGpuPlanned || m_lastPlannedLayers != static_cast<uint32_t>(m_numLayers)) {
+                uint32_t batchId = static_cast<uint32_t>(m_tickCounter.fetch_add(1));
+                auto r = mgr.DispatchBatch(batchId,
+                                           static_cast<uint32_t>(m_numLayers),
+                                           m_modelBytes,
+                                           m_config.multiGPUDispatchStrategy);
+                if (!r.success) {
+                    std::cerr << "[Scheduler] WARN: multi-GPU dispatch failed: "
+                              << (r.detail ? r.detail : "unknown") << std::endl;
+                } else {
+                    m_multiGpuPlanned = true;
+                    m_lastPlannedLayers = static_cast<uint32_t>(m_numLayers);
+                }
+            }
+        }
+    }
     
     // Kick off prefetch for layer 0 (and layer 1 if prefetchAhead > 1)
     for (int ahead = 0; ahead < m_config.prefetchAhead && ahead < m_numLayers; ++ahead) {
@@ -276,7 +320,10 @@ bool ExecutionScheduler::runForwardPass(float* state, float* scratch, int seqPos
             m_stats.tokensPerSecond = m_stats.tokensGenerated / (m_stats.totalForwardMs / 1000.0);
         }
     }
-    
+
+    // Force TPS hotpatching: throttle to target tokens/sec if set (0 = run normally)
+    UnifiedHotpatchManager::instance().throttle_token_delivery(m_stats.tokensGenerated);
+
     return true;
 }
 
@@ -336,7 +383,21 @@ bool ExecutionScheduler::runScheduledLayer(float* state, float* scratch, int lay
     // pre-loaded (hot) via the prefetch path.
     double t_exec_start = hires_now_ms();
     
-    m_engine->TransformerLayer(state, scratch, layerIdx, 1);
+    uint32_t deviceId = 0;
+    if (m_config.enableMultiGPUDispatch) {
+        auto& mgr = Enterprise::MultiGPUManager::Instance();
+        if (mgr.IsInitialized()) {
+            const auto& assignments = mgr.GetLayerAssignments();
+            for (const auto& a : assignments) {
+                if (layerIdx >= (int)a.startLayer && layerIdx <= (int)a.endLayer) {
+                    deviceId = a.deviceId;
+                    break;
+                }
+            }
+        }
+    }
+
+    m_engine->TransformerLayer(state, scratch, layerIdx, 1, deviceId);
     
     double t_exec_end = hires_now_ms();
     double execMs = t_exec_end - t_exec_start;
@@ -894,6 +955,9 @@ void ExecutionScheduler::shutdown() {
     m_pinnedBytes.store(0);
     m_manifests.clear();
     m_manifestsBuilt = false;
+    m_modelBytes = 0;
+    m_multiGpuPlanned = false;
+    m_lastPlannedLayers = 0;
     
     std::cout << "[Scheduler] Shutdown complete" << std::endl;
 }

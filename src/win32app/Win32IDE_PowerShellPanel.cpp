@@ -393,24 +393,39 @@ void Win32IDE::executePowerShellInput() {
 }
 
 void Win32IDE::executePowerShellPanelCommand(const std::string& command) {
+    // Route to active terminal: tabbed terminals (Tier2) or dedicated PowerShell session
+    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 && m_activeTerminalTab < static_cast<int>(m_terminalTabs.size())) {
+        auto& tab = m_terminalTabs[m_activeTerminalTab];
+        if (tab.manager && tab.manager->isRunning()) {
+            m_powerShellExecuting = true;
+            updatePowerShellStatus();
+            tab.manager->writeInput(command + "\r\n");
+            m_powerShellExecuting = false;
+            updatePowerShellStatus();
+            return;
+        }
+    }
     if (!m_dedicatedPowerShellTerminal || !m_powerShellSessionActive) {
-        appendPowerShellOutput("[ERROR] PowerShell session not active\n", RGB(255, 0, 0));
+        appendPowerShellOutput("[ERROR] Terminal session not active. Start a terminal from the panel or add a tab.\n", RGB(255, 0, 0));
         return;
     }
-    
     m_powerShellExecuting = true;
     updatePowerShellStatus();
-    
-    // Send command to PowerShell
     m_dedicatedPowerShellTerminal->writeInput(command + "\r\n");
-    
     m_powerShellExecuting = false;
     updatePowerShellStatus();
 }
 
 void Win32IDE::stopPowerShellExecution() {
+    if (!m_terminalTabs.empty() && m_activeTerminalTab >= 0 && m_activeTerminalTab < static_cast<int>(m_terminalTabs.size())) {
+        auto& tab = m_terminalTabs[m_activeTerminalTab];
+        if (tab.manager && tab.manager->isRunning()) {
+            tab.manager->writeInput("\x03");
+            appendPowerShellOutput("\n[Execution stopped]\n", RGB(255, 255, 0));
+            return;
+        }
+    }
     if (m_dedicatedPowerShellTerminal && m_powerShellSessionActive) {
-        // Send Ctrl+C
         m_dedicatedPowerShellTerminal->writeInput("\x03");
         appendPowerShellOutput("\n[Execution stopped]\n", RGB(255, 255, 0));
     }

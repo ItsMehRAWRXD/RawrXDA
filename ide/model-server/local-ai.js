@@ -65,12 +65,13 @@ app.get('/health', async (req, res) => {
 // Real code completions via Ollama
 app.post('/codewhisperer/generateCompletions', async (req, res) => {
   try {
-    const { context, language, prefix, suffix } = req.body || {};
+    const { context, language, prefix, suffix, model } = req.body || {};
     const codeCtx = context || prefix || '';
     const lang = language || '';
+    const targetModel = model || ollamaCfg.model;
     const prompt = `You are a code completion engine. Complete the following ${lang} code. Output ONLY the completion code, nothing else:\n\n${codeCtx}`;
     const result = await ollamaRequest('/api/generate', {
-      model: ollamaCfg.model,
+      model: targetModel,
       prompt,
       stream: false,
       options: { temperature: 0.1, num_predict: 256 }
@@ -81,7 +82,7 @@ app.post('/codewhisperer/generateCompletions', async (req, res) => {
       completions: [{
         content: result.response || '',
         references: [],
-        model: result.model || ollamaCfg.model,
+        model: result.model || targetModel,
         evalCount: result.eval_count || 0,
         tokensPerSec: result.eval_count && result.eval_duration
           ? (result.eval_count / (result.eval_duration / 1e9)).toFixed(1)
@@ -93,7 +94,7 @@ app.post('/codewhisperer/generateCompletions', async (req, res) => {
     res.status(502).json({
       completions: [],
       error: e.message,
-      hint: `Ensure Ollama is running at ${ollamaCfg.baseUrl} with model '${ollamaCfg.model}' pulled`
+      hint: `Ensure Ollama is running at ${ollamaCfg.baseUrl} with model '${req.body?.model || ollamaCfg.model}' pulled`
     });
   }
 });

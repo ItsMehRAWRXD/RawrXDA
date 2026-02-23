@@ -27,7 +27,7 @@ public:
     static void setApplicationName(const String& name);
 };
 
-// Global macro for accessing the app
-#define qApp RawrXD::Application::getInstance()
+// Global accessor (C++20/Win32; no Qt)
+#define rawrxdApp RawrXD::Application::getInstance()
 
 } // namespace RawrXD

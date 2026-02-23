@@ -6,6 +6,7 @@
 // Rule: No exceptions. Structured PatchResult returns only.
 // Rule: All threading via std::mutex + std::lock_guard. No recursive locks.
 #include "enterprise_telemetry_compliance.hpp"
+#include "license_enforcement.h"
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -55,6 +56,10 @@ SpanId EnterpriseTelemetryCompliance::generateSpanId() {
 
 SpanId EnterpriseTelemetryCompliance::startSpan(const std::string& name, SpanKind kind,
                                                  TraceId traceId, SpanId parentSpan) {
+    if (!RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+            RawrXD::License::FeatureID::AuditLogging, __FUNCTION__)) {
+        return SpanId{0};
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_level.load() == TelemetryLevel::Off) {

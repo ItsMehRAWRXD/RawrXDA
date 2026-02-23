@@ -127,8 +127,16 @@ void Win32IDE::initVSCodeExtensionAPI() {
                         std::string manifestPath = entry.path().string() + "/package.json";
                         if (std::filesystem::exists(manifestPath)) {
                             std::string extPath = entry.path().string();
-                            std::string extId = entry.path().filename().string();
-                            jsHost.loadJSExtension(extId.c_str(), extPath.c_str(), nullptr);
+                            auto extResult = jsHost.loadPreInstalledExtension(extPath.c_str());
+                            if (extResult.success) {
+                                appendToOutput(std::string("[Phase 36] Loaded JS extension: ") +
+                                               entry.path().filename().string() + " — " +
+                                               extResult.detail + "\r\n");
+                            } else {
+                                appendToOutput(std::string("[Phase 36] Failed to load '") +
+                                               entry.path().filename().string() + "': " +
+                                               extResult.detail + "\r\n");
+                            }
                         }
                     }
                 }

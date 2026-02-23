@@ -10,9 +10,6 @@
 #include "settings.h"
 #include "gui.h" // for AppState
 
-#include "logging/logger.h"
-static Logger s_logger("bench_main");
-
 // Simple benchmark harness for GGUF parsing + optional Vulkan init
 // Usage: model_loader_bench <path-to-model.gguf> [--no-gpu] [--iter N] [--matmul-size S] [--vec-size V]
 // Outputs JSON line to stdout and writes bench_results.json in working directory.
@@ -92,7 +89,7 @@ static void WriteResultJSON(const BenchResult& r) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        s_logger.error( "Usage: model_loader_bench <model.gguf> [--no-gpu]\n";
+        std::cerr << "Usage: model_loader_bench <model.gguf> [--no-gpu]\n";
         return 1;
     }
 
@@ -135,7 +132,7 @@ int main(int argc, char* argv[]) {
     result.applied_core_offset_mhz = st.applied_core_offset_mhz; // persisted if governor updated before
 
     if (!std::filesystem::exists(modelPath)) {
-        s_logger.error( "Model file not found: " << modelPath << "\n";
+        std::cerr << "Model file not found: " << modelPath << "\n";
         return 2;
     }
 
@@ -157,7 +154,7 @@ int main(int argc, char* argv[]) {
 
     auto t0 = std::chrono::high_resolution_clock::now();
     if (!loader.Open(modelPath)) {
-        s_logger.error( "Failed to open model file." << std::endl;
+        std::cerr << "Failed to open model file." << std::endl;
         return 3;
     }
 
@@ -262,7 +259,35 @@ int main(int argc, char* argv[]) {
     }
 
     // Emit JSON line to stdout (single object)
-    s_logger.info("{");
+    std::cout << "{"
+              << "\"timestamp_utc\":\"" << result.timestamp_utc << "\"," 
+              << "\"model_path\":\"" << result.model_path << "\"," 
+              << "\"file_size\":" << result.file_size << ","
+              << "\"header_ok\":" << (result.header_ok?"true":"false") << ","
+              << "\"metadata_ok\":" << (result.metadata_ok?"true":"false") << ","
+              << "\"tensor_count\":" << result.tensor_count << ","
+              << "\"parse_ms\":" << result.parse_ms << ","
+              << "\"gpu_enabled\":" << (result.gpu_enabled?"true":"false") << ","
+              << "\"gpu_init_ok\":" << (result.gpu_init_ok?"true":"false") << ","
+              << "\"gpu_init_ms\":" << result.gpu_init_ms << ","\
+              << "\"matmul_ran\":" << (result.matmul_ran?"true":"false") << ","\
+              << "\"matmul_iterations\":" << result.matmul_iterations << ","\
+              << "\"matmul_avg_ms\":" << result.matmul_avg_ms << ","\
+              << "\"rmsnorm_ran\":" << (result.rmsnorm_ran?"true":"false") << ","\
+              << "\"rmsnorm_iterations\":" << result.rmsnorm_iterations << ","\
+              << "\"rmsnorm_avg_ms\":" << result.rmsnorm_avg_ms << ","\
+              << "\"silu_ran\":" << (result.silu_ran?"true":"false") << ","\
+              << "\"silu_iterations\":" << result.silu_iterations << ","\
+              << "\"silu_avg_ms\":" << result.silu_avg_ms << ","\
+              << "\"attention_ran\":" << (result.attention_ran?"true":"false") << ","\
+              << "\"attention_iterations\":" << result.attention_iterations << ","\
+              << "\"attention_avg_ms\":" << result.attention_avg_ms << ","\
+              << "\"overclock_governor_enabled\":" << (result.overclock_governor_enabled?"true":"false") << ","\
+              << "\"cpu_temp_c\":" << result.cpu_temp_c << ","\
+              << "\"gpu_hotspot_c\":" << result.gpu_hotspot_c << ","\
+              << "\"cpu_temp_headroom_c\":" << result.cpu_temp_headroom_c << ","\
+              << "\"gpu_temp_headroom_c\":" << result.gpu_temp_headroom_c << ","\
+              << "\"applied_core_offset_mhz\":" << result.applied_core_offset_mhz << "}" << std::endl;
 
     WriteResultJSON(result);
     telemetry::Shutdown();

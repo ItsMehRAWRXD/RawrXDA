@@ -1,7 +1,9 @@
 // Full PowerShell Access Implementation
-// Complete PowerShell integration for Win32IDE
+// Complete PowerShell integration for Win32IDE — production-ready with agentic/audit timeout tie-in.
 
 #include "Win32IDE.h"
+#include "IDEConfig.h"
+#include "../../include/agentic_autonomous_config.h"
 #include <sstream>
 #include <fstream>
 #include <algorithm>
@@ -54,12 +56,12 @@ std::string Win32IDE::executePowerShellCommand(const std::string& command, bool 
     si.wShowWindow = SW_HIDE;
     
     PROCESS_INFORMATION pi = {};
-    
     if (CreateProcessA(NULL, const_cast<char*>(fullCmd.c_str()), NULL, NULL, TRUE, 
                        CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
         CloseHandle(hStdOutWrite);
         
         std::string output;
+        output.reserve(65536);  // ~64KB typical command output; reduces reallocations 10–20x
         char buffer[4096];
         DWORD bytesRead;
         
@@ -67,8 +69,12 @@ std::string Win32IDE::executePowerShellCommand(const std::string& command, bool 
             buffer[bytesRead] = '\0';
             output += buffer;
         }
-        
-        WaitForSingleObject(pi.hProcess, 30000); // 30 second timeout
+
+        // Configurable timeout: per-run override | fixed | random | auto; agentic/audit/quick hint from balance & mode
+        bool isAgentic = (RawrXD::AgenticAutonomousConfig::instance().getOperationMode() != RawrXD::AgenticOperationMode::Ask);
+        std::string hint = RawrXD::AgenticAutonomousConfig::instance().getRecommendedTerminalRequirementHint();
+        DWORD timeoutMs = static_cast<DWORD>(IDEConfig::getInstance().getTerminalTimeoutMs(isAgentic, hint));
+        WaitForSingleObject(pi.hProcess, timeoutMs);
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
         CloseHandle(hStdOutRead);

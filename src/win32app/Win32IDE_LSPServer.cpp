@@ -35,6 +35,9 @@
 #include <chrono>
 #include <filesystem>
 
+// SCAFFOLD_338: Win32IDE_LSPServer Created state
+
+
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 using namespace RawrXD::LSPServer;
@@ -143,7 +146,7 @@ void Win32IDE::cmdLSPServerStatus() {
 
     std::string stateStr;
     switch (m_lspServer->getState()) {
-        case ServerState::Created:      stateStr = "Created (not started)"; break;
+        case ServerState::Created:      stateStr = "Created"; break;
         case ServerState::Initializing: stateStr = "Initializing..."; break;
         case ServerState::Running:      stateStr = "🟢 Running"; break;
         case ServerState::ShuttingDown: stateStr = "Shutting down..."; break;

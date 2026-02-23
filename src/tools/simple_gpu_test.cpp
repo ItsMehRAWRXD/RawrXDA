@@ -12,19 +12,16 @@
 #include <cstring>
 #include "../inference/InferenceEngine.hpp"
 
-#include "logging/logger.h"
-static Logger s_logger("simple_gpu_test");
-
 void printUsage(const char* prog_name) {
-    s_logger.info("Simple GPU Test - GGUF Model Inference Tool\n\n");
-    s_logger.info("Usage: ");
-    s_logger.info("Options:\n");
-    s_logger.info("  --model <path>   Path to GGUF model file (required)\n");
-    s_logger.info("  --tokens <num>   Number of tokens to generate (required)\n");
-    s_logger.info("  --prompt <text>  Prompt text (default: 'Test')\n");
-    s_logger.info("  --help           Show this help message\n\n");
-    s_logger.info("Output Format (JSON):\n");
-    s_logger.info("  {\");
+    std::cout << "Simple GPU Test - GGUF Model Inference Tool\n\n";
+    std::cout << "Usage: " << prog_name << " --model <path> --tokens <num> [--prompt <text>]\n\n";
+    std::cout << "Options:\n";
+    std::cout << "  --model <path>   Path to GGUF model file (required)\n";
+    std::cout << "  --tokens <num>   Number of tokens to generate (required)\n";
+    std::cout << "  --prompt <text>  Prompt text (default: 'Test')\n";
+    std::cout << "  --help           Show this help message\n\n";
+    std::cout << "Output Format (JSON):\n";
+    std::cout << "  {\"success\": true, \"tokens_per_sec\": 75.3, \"total_time_ms\": 1698.2, \"tokens\": 128}\n";
 }
 
 struct TestConfig {
@@ -67,7 +64,7 @@ int main(int argc, char* argv[]) {
     
     if (!config.valid) {
         printUsage(argv[0]);
-        s_logger.error( "\nError: Missing required arguments\n";
+        std::cerr << "\nError: Missing required arguments\n";
         return 1;
     }
     
@@ -81,7 +78,7 @@ int main(int argc, char* argv[]) {
         auto load_end = std::chrono::high_resolution_clock::now();
         
         if (!loaded) {
-            s_logger.info("{\");
+            std::cout << "{\"success\": false, \"error\": \"Failed to load model\"}\n";
             return 1;
         }
         
@@ -96,8 +93,15 @@ int main(int argc, char* argv[]) {
         double tokens_per_sec = (config.num_tokens * 1000.0) / total_time_ms;
         
         // Output JSON result
-        s_logger.info( std::fixed << std::setprecision(2);
-        s_logger.info("{");
+        std::cout << std::fixed << std::setprecision(2);
+        std::cout << "{"
+                  << "\"success\": true, "
+                  << "\"tokens_per_sec\": " << tokens_per_sec << ", "
+                  << "\"total_time_ms\": " << total_time_ms << ", "
+                  << "\"load_time_ms\": " << load_time_ms << ", "
+                  << "\"tokens\": " << config.num_tokens << ", "
+                  << "\"output_length\": " << output.length()
+                  << "}\n";
         
         // Unload
         engine.unloadModel();
@@ -105,7 +109,7 @@ int main(int argc, char* argv[]) {
         return 0;
         
     } catch (const std::exception& e) {
-        s_logger.info("{\");
+        std::cout << "{\"success\": false, \"error\": \"" << e.what() << "\"}\n";
         return 1;
     }
 }

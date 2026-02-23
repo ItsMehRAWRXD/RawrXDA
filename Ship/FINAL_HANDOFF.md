@@ -135,7 +135,8 @@ Replace "QWidget {" CSS references
 cmake --build . --config Release
 
 ### TODO #7: Verify Binary (15 min)
-dumpbin check for 0 Qt DLL imports
+Run **root** verification script (replaces manual dumpbin):  
+`.\Verify-Build.ps1 -BuildDir "D:\rawrxd\build"` — must pass 7/7 (exe found, no Qt DLLs, no Qt #includes in src/Ship, no Q_OBJECT, StdReplacements used, artifacts, Win32 linked).
 
 ### TODO #8: Runtime Test (1-2 hours)
 Launch app, test features
@@ -190,7 +191,7 @@ Automation (Already Executed):
   └─ QT-REMOVAL-PHASE5.ps1 ✅
 
 Support Files:
-  ├─ QtReplacements.hpp ................. Stub library
+  ├─ StdReplacements.hpp ............... STL/Win32 replacement library
   ├─ CMakeLists.txt ..................... Build config
   └─ Verify-QtRemoval.ps1 ............... Verification
 ```

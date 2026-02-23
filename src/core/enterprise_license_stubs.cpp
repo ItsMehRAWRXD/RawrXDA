@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
+#include <cstdlib>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -160,17 +161,23 @@ static struct {
 
 extern "C" {
 
+// Forward declarations of globals (defined at end of this extern "C" block)
+extern int32_t  g_800B_Unlocked;
+extern uint64_t g_EnterpriseFeatures;
+extern uint64_t g_FlashAttnCalls;
+extern uint64_t g_FlashAttnTiles;
+
 // ============================================================================
 // RawrXD_EnterpriseLicense.asm — Production C++ fallbacks
 // ============================================================================
 
 int64_t Enterprise_InitLicenseSystem() {
-    if (g_licenseState.initialized) return 1;
+    if (g_licenseState.initialized) return 0; // Already initialized — success
     g_licenseState.hwid = generate_hardware_id();
     g_licenseState.status = 0; // Community until validated
     g_licenseState.features = 0;
     g_licenseState.initialized = true;
-    return 1;
+    return 0; // 0 = success per header contract
 }
 
 int64_t Enterprise_ValidateLicense() {
@@ -187,7 +194,7 @@ int64_t Enterprise_ValidateLicense() {
     if ((h1 & 0xFF) == 0xAA) {
         g_licenseState.status = 2; // Enterprise
         g_licenseState.features = 0xFFFFFFFFFFFFFFFFULL;
-        return 1;
+        return 0; // 0 = valid license per header contract
     }
     return -1; // Invalid
 }
@@ -228,18 +235,20 @@ int32_t Enterprise_GetLicenseStatus() {
 
 int64_t Enterprise_GetFeatureString(char* buf, uint64_t bufSize) {
     if (!g_licenseState.initialized) Enterprise_InitLicenseSystem();
-    const char* editions[] = {
-        "Community Edition",
-        "Professional Edition",
-        "Enterprise Edition"
-    };
-    int idx = g_licenseState.status;
-    if (idx < 0 || idx > 2) idx = 0;
-    const char* msg = editions[idx];
+    // Map LicenseState enum values to edition strings
+    // 0=Invalid(Community), 1=ValidTrial, 2=ValidEnterprise, 3=OEM, 7=ValidPro
+    const char* edition = "Community Edition";
+    switch (g_licenseState.status) {
+        case 1:  edition = "Trial Edition";        break;
+        case 2:  edition = "Enterprise Edition";    break;
+        case 3:  edition = "OEM Edition";           break;
+        case 7:  edition = "Professional Edition";  break;
+        default: edition = "Community Edition";     break;
+    }
     if (buf && bufSize > 0) {
-        size_t len = strlen(msg);
+        size_t len = strlen(edition);
         if (len >= bufSize) len = bufSize - 1;
-        memcpy(buf, msg, len);
+        memcpy(buf, edition, len);
         buf[len] = '\0';
         return (int64_t)len;
     }
@@ -257,9 +266,7 @@ int32_t Enterprise_RuntimeIntegrityCheck() {
     HMODULE hMod = GetModuleHandleA(NULL);
     if (!hMod) return 0; // Can't verify
     
-    MODULEINFO mi = {0};
-    // We could use GetModuleInformation but it requires psapi.lib
-    // Instead, check the PE header directly
+    // Check the PE header directly (avoids psapi.lib dependency)
     auto* dos = (IMAGE_DOS_HEADER*)hMod;
     if (dos->e_magic != IMAGE_DOS_SIGNATURE) return 0;
     auto* nt = (IMAGE_NT_HEADERS*)((uintptr_t)hMod + dos->e_lfanew);
@@ -285,6 +292,35 @@ void Enterprise_Shutdown() {
     g_licenseState.hwid = 0;
 }
 
+// ============================================================================
+// Dev / License Creator: unlock enterprise on this machine (dev builds only)
+// Brute-forces a license_hash such that ValidateLicense() passes.
+// Set RAWRXD_ENTERPRISE_DEV=1 to allow. Returns 1 if unlocked, 0 if disabled/failed.
+// ============================================================================
+/*
+int64_t Enterprise_DevUnlock() {
+    if (getenv("RAWRXD_ENTERPRISE_DEV") == nullptr) return 0;
+    if (!g_licenseState.initialized) Enterprise_InitLicenseSystem();
+
+    uint64_t hwid = g_licenseState.hwid;
+    uint64_t payload[2] = { hwid, 0 };
+    for (uint64_t x = 0; x < 0x100000000ULL; x++) {
+        payload[1] = x;
+        uint64_t h1, h2;
+        murmurhash3_x64_128(payload, 16, 0xDA4DED42ULL, &h1, &h2);
+        if ((h1 & 0xFF) == 0xAA) {
+            g_licenseState.license_hash = x;
+            g_licenseState.features = 0xFFFFFFFFFFFFFFFFULL;
+            g_licenseState.status = 2;  // Enterprise
+            g_800B_Unlocked = 1;
+            g_EnterpriseFeatures = 0xFFFFFFFFFFFFFFFFULL;
+            return 1;
+        }
+    }
+    return 0;
+}
+*/
+
 int32_t Titan_CheckEnterpriseUnlock() {
     if (!g_licenseState.initialized) Enterprise_InitLicenseSystem();
     return g_licenseState.status;
@@ -292,15 +328,17 @@ int32_t Titan_CheckEnterpriseUnlock() {
 
 int32_t Streaming_CheckEnterpriseBudget(uint64_t requestedSize) {
     if (!g_licenseState.initialized) Enterprise_InitLicenseSystem();
-    // Community: 4GB limit, Pro: 32GB, Enterprise: unlimited
-    const uint64_t limits[] = {
-        4ULL * 1024 * 1024 * 1024,   // Community: 4GB
-        32ULL * 1024 * 1024 * 1024,  // Pro: 32GB
-        UINT64_MAX                    // Enterprise: unlimited
-    };
-    int idx = g_licenseState.status;
-    if (idx < 0 || idx > 2) idx = 0;
-    return (requestedSize <= limits[idx]) ? 1 : 0;
+    // Map LicenseState status to allocation budget
+    // 0=Invalid(Community), 1=ValidTrial, 2=ValidEnterprise, 3=OEM, 7=ValidPro
+    uint64_t budget = 4ULL * 1024 * 1024 * 1024;  // Default: Community 4GB
+    switch (g_licenseState.status) {
+        case 1:  budget = 16ULL * 1024 * 1024 * 1024;  break;  // Trial: 16GB
+        case 2:  budget = UINT64_MAX;                   break;  // Enterprise: unlimited
+        case 3:  budget = UINT64_MAX;                   break;  // OEM: unlimited
+        case 7:  budget = 32ULL * 1024 * 1024 * 1024;  break;  // Pro: 32GB
+        default: budget = 4ULL * 1024 * 1024 * 1024;   break;  // Community: 4GB
+    }
+    return (requestedSize <= budget) ? 1 : 0;
 }
 
 // ============================================================================
@@ -491,20 +529,26 @@ int32_t  g_800B_Unlocked     = 0;
 uint64_t g_EnterpriseFeatures = 0;
 
 // ============================================================================
-// FlashAttention AVX-512 stubs (non-MSVC only)
+// FlashAttention AVX-512 stubs
 // ============================================================================
-#ifndef _MSC_VER
 
 int32_t FlashAttention_CheckAVX512() {
     // Real CPUID check for AVX-512F support
-#ifdef __x86_64__
+#if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_AMD64))
+    int cpuInfo[4] = {0};
+    __cpuidex(cpuInfo, 7, 0);
+    // EBX bit 16 = AVX-512F
+    return (cpuInfo[1] & (1 << 16)) ? 1 : 0;
+#elif defined(__x86_64__) && !defined(_MSC_VER)
     unsigned int eax, ebx, ecx, edx;
     // Check CPUID leaf 7 for AVX-512F (bit 16 of EBX)
     if (__get_cpuid_count(7, 0, &eax, &ebx, &ecx, &edx)) {
         return (ebx & (1 << 16)) ? 1 : 0; // AVX-512F
     }
+    return 0; // CPUID leaf 7 query failed
+#else
+    return 0; // Unsupported platform
 #endif
-    return 0;
 }
 
 int32_t FlashAttention_Init() {
@@ -538,8 +582,6 @@ int32_t FlashAttention_GetTileConfig(void* out) {
 
 uint64_t g_FlashAttnCalls = 0;
 uint64_t g_FlashAttnTiles = 0;
-
-#endif // !_MSC_VER
 
 } // extern "C"
 

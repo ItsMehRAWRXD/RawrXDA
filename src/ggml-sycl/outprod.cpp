@@ -41,7 +41,7 @@ void ggml_sycl_op_out_prod(ggml_backend_sycl_context& ctx, ggml_tensor* dst) {
                                                ne0, ne1, ne01, alpha, src0_d, ne00, src1_d, ldb, beta, dst_d, ne0);
     }
     catch (sycl::exception const& exc) {
-        s_logger.error( exc.what() << std::endl;
+        std::cerr << exc.what() << std::endl;
         GGML_ASSERT(false);
     }
 }

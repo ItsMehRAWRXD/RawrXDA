@@ -11,7 +11,9 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 // ============================================================================
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include "shadow_page_detour.hpp"
 #include <cstring>
@@ -109,12 +111,12 @@ AssembledBuffer AgenticAssembler::Compile(const std::string& masmSource) {
     GetTempPathA(MAX_PATH, tempDir);
 
     char asmPath[MAX_PATH];
-    snprintf(asmPath, MAX_PATH, "%srawrxd_patch_%u.asm",
-             tempDir, GetCurrentThreadId());
+    snprintf(asmPath, MAX_PATH, "%srawrxd_patch_%lu.asm",
+             tempDir, (unsigned long)GetCurrentThreadId());
 
     char objPath[MAX_PATH];
-    snprintf(objPath, MAX_PATH, "%srawrxd_patch_%u.obj",
-             tempDir, GetCurrentThreadId());
+    snprintf(objPath, MAX_PATH, "%srawrxd_patch_%lu.obj",
+             tempDir, (unsigned long)GetCurrentThreadId());
 
     // Write source file
     HANDLE hFile = CreateFileA(asmPath, GENERIC_WRITE, 0, nullptr,
@@ -147,7 +149,7 @@ AssembledBuffer AgenticAssembler::Compile(const std::string& masmSource) {
     if (!created) {
         snprintf(s_lastError, sizeof(s_lastError),
                  "AgenticAssembler: Failed to launch ml64.exe (err=%lu)",
-                 GetLastError());
+                 (unsigned long)GetLastError());
         DeleteFileA(asmPath);
         return result;
     }

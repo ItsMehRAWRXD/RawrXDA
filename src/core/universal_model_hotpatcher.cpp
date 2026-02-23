@@ -13,9 +13,6 @@
 #include "byte_level_hotpatcher.hpp"
 #include "unified_hotpatch_manager.hpp"
 
-#include "logging/logger.h"
-static Logger s_logger("universal_model_hotpatcher");
-
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -29,6 +26,9 @@ static Logger s_logger("universal_model_hotpatcher");
 #include <cmath>
 #include <chrono>
 #include <thread>
+
+// SCAFFOLD_288: Universal model hotpatcher
+
 
 // ============================================================================
 // Singleton
@@ -78,12 +78,17 @@ bool UniversalModelHotpatcher::initialize() {
     // Start VRAM pressure monitoring thread
     m_hPressureThread = CreateThread(nullptr, 0, pressureMonitorThread, this, 0, nullptr);
     if (!m_hPressureThread) {
-        s_logger.error( "[MODEL-HOTPATCH] Failed to start pressure monitor thread\n";
+        std::cerr << "[MODEL-HOTPATCH] Failed to start pressure monitor thread\n";
         return false;
     }
 
     m_initialized.store(true);
-    s_logger.info("[MODEL-HOTPATCH] Universal Model Hotpatcher initialized.\n");
+    std::cout << "[MODEL-HOTPATCH] Universal Model Hotpatcher initialized.\n"
+              << "  GPU accel: " << (m_gpuAccelEnabled.load() ? "ENABLED" : "DISABLED") << "\n"
+              << "  Pressure thresholds: high=" << m_thresholdHigh
+              << "% critical=" << m_thresholdCritical
+              << "% emergency=" << m_thresholdEmergency << "%\n"
+              << "  Supported: 120B-800B via streaming quantization\n";
 
     return true;
 }
@@ -100,7 +105,9 @@ void UniversalModelHotpatcher::shutdown() {
         m_hPressureThread = nullptr;
     }
 
-    s_logger.info("[MODEL-HOTPATCH] Shutdown. Surgeries performed: ");
+    std::cout << "[MODEL-HOTPATCH] Shutdown. Surgeries performed: "
+              << m_stats.totalSurgeries.load()
+              << " Memory saved: " << (m_stats.totalMemorySaved.load() / (1024*1024)) << "MB\n";
 }
 
 // ============================================================================
@@ -165,7 +172,8 @@ void UniversalModelHotpatcher::setPressureThresholds(float high, float critical,
 
 void UniversalModelHotpatcher::setGPUAccelEnabled(bool enabled) {
     m_gpuAccelEnabled.store(enabled, std::memory_order_release);
-    s_logger.info("[MODEL-HOTPATCH] GPU acceleration: ");
+    std::cout << "[MODEL-HOTPATCH] GPU acceleration: "
+              << (enabled ? "ENABLED" : "DISABLED") << "\n";
 }
 
 // ============================================================================
@@ -182,7 +190,7 @@ bool UniversalModelHotpatcher::analyzeModel(const std::string& modelPath) {
     // In production, this uses the streaming GGUF loader
     FILE* f = fopen(modelPath.c_str(), "rb");
     if (!f) {
-        s_logger.error( "[MODEL-HOTPATCH] Cannot open model: " << modelPath << "\n";
+        std::cerr << "[MODEL-HOTPATCH] Cannot open model: " << modelPath << "\n";
         return false;
     }
 
@@ -191,7 +199,7 @@ bool UniversalModelHotpatcher::analyzeModel(const std::string& modelPath) {
     fread(&magic, 4, 1, f);
     if (magic != 0x46475547) { // 'GGUF'
         fclose(f);
-        s_logger.error( "[MODEL-HOTPATCH] Not a valid GGUF file\n";
+        std::cerr << "[MODEL-HOTPATCH] Not a valid GGUF file\n";
         return false;
     }
 
@@ -255,7 +263,10 @@ bool UniversalModelHotpatcher::analyzeModel(const std::string& modelPath) {
 
     m_stats.layersAnalyzed.fetch_add(estimatedLayers, std::memory_order_relaxed);
 
-    s_logger.info("[MODEL-HOTPATCH] Analyzed model: ");
+    std::cout << "[MODEL-HOTPATCH] Analyzed model: " << modelPath << "\n"
+              << "  Estimated params: " << (m_totalParams / 1000000000ULL) << "B\n"
+              << "  Layers: " << estimatedLayers << "\n"
+              << "  File size: " << (fileSize / (1024*1024)) << "MB\n";
 
     return true;
 }
@@ -534,7 +545,9 @@ SurgeryResult UniversalModelHotpatcher::requantizeLayer(uint32_t layerIndex, Qua
 
     m_stats.layersRequantized.fetch_add(1, std::memory_order_relaxed);
 
-    s_logger.info("[MODEL-HOTPATCH] Layer ");
+    std::cout << "[MODEL-HOTPATCH] Layer " << layerIndex << " (" << layer.name
+              << "): " << static_cast<int>(oldQuant) << " → " << static_cast<int>(targetQuant)
+              << " saved " << (savings / 1024) << "KB\n";
 
     return SurgeryResult::ok(SurgeryOp::RequantizeLayer, 1, savings,
                              "Layer requantized successfully");
@@ -639,7 +652,9 @@ SurgeryResult UniversalModelHotpatcher::splitLayerGPUCPU(uint32_t layerIndex, fl
     layer.loadedInVRAM = true;
     layer.loadedInRAM = true;
 
-    s_logger.info("[MODEL-HOTPATCH] Layer ");
+    std::cout << "[MODEL-HOTPATCH] Layer " << layerIndex << " split: "
+              << (gpuFraction * 100.0f) << "% GPU, "
+              << ((1.0f - gpuFraction) * 100.0f) << "% CPU\n";
 
     return SurgeryResult::ok(SurgeryOp::SplitLayer, 1, 0, "Layer split across GPU/CPU");
 }
@@ -649,7 +664,7 @@ SurgeryResult UniversalModelHotpatcher::mergeShards(const std::vector<std::strin
         return SurgeryResult::error(SurgeryOp::MergeShards, "No shard paths provided");
     }
 
-    s_logger.info("[MODEL-HOTPATCH] Merging ");
+    std::cout << "[MODEL-HOTPATCH] Merging " << shardPaths.size() << " shards...\n";
 
     // In production: memory-map each shard and create a unified virtual tensor view
     m_stats.totalSurgeries.fetch_add(1, std::memory_order_relaxed);
@@ -663,7 +678,7 @@ SurgeryResult UniversalModelHotpatcher::compressKVCache(float targetRatio) {
         return SurgeryResult::error(SurgeryOp::CompressKVCache, "Target ratio must be 0.0-1.0");
     }
 
-    s_logger.info("[MODEL-HOTPATCH] Compressing KV cache to ");
+    std::cout << "[MODEL-HOTPATCH] Compressing KV cache to " << (targetRatio * 100.0f) << "%\n";
 
     m_stats.totalSurgeries.fetch_add(1, std::memory_order_relaxed);
 
@@ -677,7 +692,8 @@ SurgeryResult UniversalModelHotpatcher::compressKVCache(float targetRatio) {
 
 void UniversalModelHotpatcher::enableAutoPressureResponse(bool enable) {
     m_autoPressureResponse.store(enable, std::memory_order_release);
-    s_logger.info("[MODEL-HOTPATCH] Auto pressure response: ");
+    std::cout << "[MODEL-HOTPATCH] Auto pressure response: "
+              << (enable ? "ENABLED" : "DISABLED") << "\n";
 }
 
 bool UniversalModelHotpatcher::isAutoPressureResponseEnabled() const {
@@ -692,7 +708,9 @@ SurgeryResult UniversalModelHotpatcher::triggerPressureResponse() {
         return SurgeryResult::ok(SurgeryOp::RequantizeAll, 0, 0, "No action needed — pressure is low");
     }
 
-    s_logger.info("[MODEL-HOTPATCH] Pressure response triggered: level=");
+    std::cout << "[MODEL-HOTPATCH] Pressure response triggered: level="
+              << static_cast<int>(budget.pressure)
+              << " utilization=" << budget.utilizationPercent << "%\n";
 
     // Emergency: evict expendable layers first
     if (budget.pressure == VRAMPressure::Emergency) {
@@ -707,7 +725,7 @@ SurgeryResult UniversalModelHotpatcher::triggerPressureResponse() {
             }
         }
         if (evicted > 0) {
-            s_logger.info("[MODEL-HOTPATCH] Emergency: evicted ");
+            std::cout << "[MODEL-HOTPATCH] Emergency: evicted " << evicted << " expendable layers\n";
         }
     }
 
@@ -875,7 +893,10 @@ void UniversalModelHotpatcher::monitorPressure() {
 
         // Detect pressure transitions
         if (budget.pressure != lastPressure) {
-            s_logger.info("[MODEL-HOTPATCH] VRAM pressure changed: ");
+            std::cout << "[MODEL-HOTPATCH] VRAM pressure changed: "
+                      << static_cast<int>(lastPressure) << " → "
+                      << static_cast<int>(budget.pressure)
+                      << " (utilization: " << budget.utilizationPercent << "%)\n";
 
             // Fire callback
             if (m_pressureCb) {

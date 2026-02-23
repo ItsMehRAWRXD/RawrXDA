@@ -21,10 +21,10 @@
 #ifdef RAWR_QUICKJS_STUB
 
 // ============================================================================
-// STUB MODE — QuickJS library not available
-// Provides minimal singleton with native-only extension support.
-// JS extensions are unavailable, but native DLL extensions and VSIX unpack
-// for native components still work via Win32 LoadLibrary.
+// BUILD VARIANT: QuickJS not linked (RAWR_QUICKJS_STUB)
+// Minimal singleton with native-only extension support. JS extensions unavailable;
+// native DLL extensions and VSIX unpack for native components work via Win32 LoadLibrary.
+// Error strings below use "QuickJS stub" for user-facing clarity; treat as intentional fallback.
 // ============================================================================
 
 QuickJSExtensionHost& QuickJSExtensionHost::instance() {
@@ -80,6 +80,9 @@ VSCodeAPIResult QuickJSExtensionHost::loadJSExtension(const char* extId, const c
         }
     }
     return VSCodeAPIResult::error("QuickJS stub: JS extensions require QuickJS library");
+}
+VSCodeAPIResult QuickJSExtensionHost::loadPreInstalledExtension(const char* extensionDir) {
+    return loadJSExtension(extensionDir, extensionDir, nullptr);
 }
 VSCodeAPIResult QuickJSExtensionHost::activateExtension(const char* extId) {
     OutputDebugStringA(("[QuickJS Stub] Cannot activate JS extension: " + std::string(extId ? extId : "?")).c_str());
@@ -428,6 +431,43 @@ VSCodeAPIResult QuickJSExtensionHost::installVSIX(const char* vsixPath) {
         logInfo("[QuickJS Host] VSIX installed: '%s' in %lld ms", manifest.id.c_str(), durationMs);
     }
 
+    return result;
+}
+
+VSCodeAPIResult QuickJSExtensionHost::loadPreInstalledExtension(const char* extensionDirPath) {
+    if (!m_initialized) {
+        return VSCodeAPIResult::error("QuickJS host not initialized");
+    }
+    if (!extensionDirPath) {
+        return VSCodeAPIResult::error("loadPreInstalledExtension: null path");
+    }
+
+    std::filesystem::path extDir(extensionDirPath);
+    if (!std::filesystem::is_directory(extDir)) {
+        return VSCodeAPIResult::error("loadPreInstalledExtension: not a directory");
+    }
+
+    // Parse package.json
+    VSCodeExtensionManifest manifest;
+    if (!parsePackageJson(extDir, manifest)) {
+        return VSCodeAPIResult::error("loadPreInstalledExtension: failed to parse package.json");
+    }
+
+    // Validate
+    if (!validateManifest(manifest)) {
+        return VSCodeAPIResult::error("loadPreInstalledExtension: invalid manifest");
+    }
+
+    // Register with the C++ VS Code API bridge
+    auto& api = vscode::VSCodeExtensionAPI::instance();
+    api.loadExtension(&manifest);
+
+    // Load into QuickJS runtime
+    auto result = loadJSExtension(manifest.id.c_str(), extDir.string().c_str(), &manifest);
+    if (result.success) {
+        logInfo("[QuickJS Host] Pre-installed extension loaded: '%s' v%s",
+                manifest.id.c_str(), manifest.version.c_str());
+    }
     return result;
 }
 
@@ -1690,7 +1730,32 @@ void QuickJSExtensionHost::processEvents(QuickJSExtensionRuntime* rt) {
             case QuickJSEventType::NativeCallback: {
                 // Execute a queued JS callback with payload
                 m_totalCallbacksDispatched.fetch_add(1, std::memory_order_relaxed);
-                // The actual callback invocation is handled by the bindings layer
+
+                // event.callbackHandle is a JSValue handle (JSValue is uint64_t)
+                JSValue fn = JS_MKVAL(JS_TAG_OBJECT, static_cast<int32_t>(event.callbackHandle));
+                
+                if (JS_IsFunction(rt->context, fn)) {
+                    JSValue arg = JS_UNDEFINED;
+                    int argc = 0;
+                    if (!event.payload.empty()) {
+                        arg = JS_ParseJSON(rt->context, event.payload.c_str(), event.payload.length(), "<event>");
+                        argc = 1;
+                    }
+
+                    JSValue result = JS_Call(rt->context, fn, JS_UNDEFINED, argc, &arg);
+                    
+                    if (JS_IsException(result)) {
+                        JSValue exc = JS_GetException(rt->context);
+                        const char* errStr = JS_ToCString(rt->context, exc);
+                        logError("[QuickJS Host] Callback throw for '%s': %s",
+                                 rt->extensionId.c_str(), errStr ? errStr : "unknown");
+                        if (errStr) JS_FreeCString(rt->context, errStr);
+                        JS_FreeValue(rt->context, exc);
+                    }
+
+                    if (argc > 0) JS_FreeValue(rt->context, arg);
+                    JS_FreeValue(rt->context, result);
+                }
                 break;
             }
 

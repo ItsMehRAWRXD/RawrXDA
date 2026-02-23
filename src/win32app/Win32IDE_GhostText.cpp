@@ -18,6 +18,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "../../include/ghost_text_renderer.h"
 #include "IDELogger.h"
 #include <richedit.h>
 #include <algorithm>
@@ -48,6 +49,12 @@ void Win32IDE::initGhostText() {
     m_ghostTextLine           = -1;
     m_ghostTextColumn         = -1;
     m_ghostTextFont           = nullptr;
+
+    // Wire ghost text overlay to editor so overlay can render/draw when used
+    if (m_ghostTextRendererOverlay && m_hwndEditor) {
+        m_ghostTextRendererOverlay->setEditorHwnd(m_hwndEditor);
+        m_ghostTextRendererOverlay->initialize();
+    }
 
     // Create ghost text font — italic version of editor font (DPI-scaled)
     LOGFONTA lf = {};
@@ -197,7 +204,7 @@ std::string Win32IDE::requestGhostTextCompletion(const std::string& context,
         m_predictionProvider = std::make_unique<OllamaProvider>(baseUrl);
 
         PredictionConfig cfg;
-        cfg.model       = m_ollamaModelOverride.empty() ? "qwen2.5-coder:14b" : m_ollamaModelOverride;
+        cfg.model       = getResolvedOllamaModel().empty() ? "qwen2.5-coder:14b" : getResolvedOllamaModel();
         cfg.temperature = 0.2f;
         cfg.maxTokens   = 256;
         cfg.maxLines    = GHOST_TEXT_MAX_LINES;

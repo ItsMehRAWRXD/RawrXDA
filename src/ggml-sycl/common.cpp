@@ -37,7 +37,7 @@ void* ggml_sycl_host_malloc(size_t size) try {
 
   return ptr;
 } catch (sycl::exception const& exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -46,7 +46,7 @@ void ggml_sycl_host_free(void* ptr) try {
   // allow to use dpct::get_in_order_queue() for host malloc
   SYCL_CHECK(CHECK_TRY_ERROR(sycl::free(ptr, dpct::get_in_order_queue())));
 } catch (sycl::exception const& exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }

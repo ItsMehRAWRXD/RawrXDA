@@ -20,7 +20,9 @@
 #include <thread>
 
 #ifdef _WIN32
-#  define WIN32_LEAN_AND_MEAN
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
 #  include <windows.h>
 #  include <winhttp.h>
 #  pragma comment(lib, "winhttp.lib")
@@ -216,9 +218,8 @@ HttpResponse StlHttpClient::platformSend(const HttpRequest& req) {
     if (!hConnect) {
         DWORD err = GetLastError();
         WinHttpCloseHandle(hSession);
-        return HttpResponse::fail("WinHttpConnect failed to " +
-            std::string(parsed.host.begin(), parsed.host.end()) + ":" +
-            std::to_string(parsed.port) + " (err=" + std::to_string(err) + ")",
+        return HttpResponse::fail("WinHttpConnect failed to " + req.url +
+            " (err=" + std::to_string(err) + ")",
             static_cast<int>(nowMs() - startT));
     }
 

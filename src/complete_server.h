@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <string>
 #include <thread>
-#include <unordered_set>
 #include <vector>
 #include "inference_engine.h"
 
@@ -38,12 +37,12 @@ private:
     void Run(uint16_t port);
     void HandleClient(int client_fd);
     std::string HandleCompleteRequest(const std::string& body);
-    void HandleCompleteStreamRequest(int client_fd, const std::string& headers, const std::string& body);
+    void HandleCompleteStreamRequest(int client_fd, const std::string& body);
 
     // Agentic API handlers
     std::string HandleChatRequest(const std::string& body);
-    void HandleChatStreamRequest(int client_fd, const std::string& headers, const std::string& body);
     std::string HandleAgentWishRequest(const std::string& body);
+    std::string HandleToolRequest(const std::string& body);  // POST /api/tool — Win32 IDE Run Tool parity
     std::string HandleSubAgentRequest(const std::string& body);
     std::string HandleChainRequest(const std::string& body);
     std::string HandleSwarmRequest(const std::string& body);
@@ -51,11 +50,6 @@ private:
     std::string HandleAgentsStatusRequest();
     std::string HandleHistoryRequest(const std::string& path, const std::string& body);
     std::string HandleReplayRequest(const std::string& body);
-    
-    // Universal Access compatibility endpoints (Web client)
-    std::string HandleV1ModelsRequest();
-    std::string HandleToolsRequest();
-    std::string HandleAgenticConfigRequest(const std::string& body);
 
     // Phase 7 — Policy API handlers
     std::string HandlePoliciesRequest(const std::string& path, const std::string& body);
@@ -87,6 +81,11 @@ private:
     std::string HandleFlashAttnStatusRequest();
     std::string HandleFlashAttnConfigRequest();
     std::string HandleFlashAttnBenchmarkRequest(const std::string& body);
+
+    // Phase 11 (alias) + Feature parity endpoints
+    std::string HandleEngine800BStatusRequest();
+    std::string HandleAVX512StatusRequest();
+    std::string HandleTunerStatusRequest();
 
     // Phase 12 — Extreme Compression API handlers
     std::string HandleCompressionStatusRequest();
@@ -129,6 +128,30 @@ private:
     std::string HandleTelemetryMetricsRequest();
     std::string HandleTelemetryExportRequest(const std::string& body);
 
+    // Phase 20 — WebRTC P2P Signaling
+    std::string HandleWebrtcStatusRequest();
+    // Phase 21 — Swarm Bridge + Universal Model Hotpatcher
+    std::string HandleSwarmBridgeStatusRequest();
+    std::string HandleHotpatchModelStatusRequest();
+    // Phase 22 — Production Release
+    std::string HandleReleaseStatusRequest();
+    // Phase 23 — GPU Kernel Auto-Tuner run
+    std::string HandleTunerRunRequest(const std::string& body);
+    // Phase 24 — Windows Sandbox
+    std::string HandleSandboxListRequest();
+    std::string HandleSandboxCreateRequest(const std::string& body);
+    // Phase 25 — AMD GPU Acceleration
+    std::string HandleGpuStatusRequest();
+    std::string HandleGpuToggleRequest();
+    std::string HandleGpuFeaturesRequest();
+    std::string HandleGpuMemoryRequest();
+
+    // Phase 51 — Security (Dork Scanner + Universal Dorker) API handlers
+    std::string HandleSecurityDorkStatusRequest();
+    std::string HandleSecurityDorkScanRequest(const std::string& body);
+    std::string HandleSecurityDorkUniversalRequest(const std::string& body);
+    std::string HandleSecurityDashboardRequest();
+
     // Phase 26 — ReverseEngineered Kernel API handlers
     std::string HandleSchedulerStatusRequest();
     std::string HandleSchedulerSubmitRequest(const std::string& body);
@@ -140,6 +163,23 @@ private:
     std::string HandleTimerRequest();
     std::string HandleCrc32Request(const std::string& body);
 
+    // Enterprise License API handlers
+    std::string HandleLicenseStatusRequest();
+    std::string HandleLicenseFeaturesRequest();
+    std::string HandleLicenseAuditRequest();
+    std::string HandleLicenseHwidRequest();
+    std::string HandleLicenseSupportStatusRequest();
+    std::string HandleLicenseMultiGPUStatusRequest();
+
+    // Agentic Autonomous config (operation mode, model selection, cap 99, cycle 1x-99x)
+    std::string HandleAgenticConfigGetRequest();
+    std::string HandleAgenticConfigPostRequest(const std::string& body);
+    // Production audit estimate (GET /api/agentic/audit-estimate?codebase=full&topN=20)
+    std::string HandleAgenticAuditEstimateRequest(const std::string& path);
+
+    // Models list for Cursor Settings > Models (GET /v1/models, GET /api/models)
+    std::string HandleModelsListRequest();
+
     std::atomic<bool> running_;
     std::thread server_thread_;
     InferenceEngine* engine_;
@@ -150,12 +190,12 @@ private:
     PolicyEngine* policy_engine_ = nullptr;
     ExplainabilityEngine* explain_engine_ = nullptr;
     AIBackendManager* backend_mgr_ = nullptr;
-
-    // Universal Access: CORS + API key auth config
-    std::vector<std::string> cors_allowed_origins_;
-    std::unordered_set<std::string> api_keys_;
-    bool require_auth_ = false;
-    std::string selected_model_id_;
 };
 
 } // namespace RawrXD
+
+// Shared with CLI (main.cpp) for full parity: chat via Ollama when no GGUF loaded
+bool OllamaGenerateSync(const std::string& host, int port, const std::string& model,
+                        const std::string& prompt, std::string& outResponse);
+// List Ollama models (for CLI --list). Returns true if request succeeded; outNames may be empty if none.
+bool OllamaListModelsSync(const std::string& host, int port, std::vector<std::string>& outNames);

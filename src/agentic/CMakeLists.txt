@@ -54,14 +54,8 @@ set(VULKAN_SOURCES
 )
 
 # Source files - Assembly (NEON Vulkan Fabric)
-# Using stub while full production assembly is validated for ml64 compatibility
-if(MSVC)
-    set(VULKAN_ASM_SOURCES
-        vulkan/NEON_VULKAN_FABRIC_STUB.asm
-    )
-else()
-    set(VULKAN_ASM_SOURCES)
-endif()
+# NOTE: The ml64-compatible implementation is pending; do not link placeholder ASM.
+set(VULKAN_ASM_SOURCES)
 
 # Source files - Bridge
 set(BRIDGE_SOURCES

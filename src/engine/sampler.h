@@ -2,6 +2,7 @@
 #include <vector>
 #include <random>
 #include <cstdint>
+#include <string>
 
 // ============================================================================
 // PCG32 — Fast, high-quality PRNG (O'Neill). 10-20x faster than mt19937
@@ -52,7 +53,13 @@ public:
     Sampler();
     int sample(float* logits, int n_vocab);
 
+    bool setCustomStopSequences(const std::vector<std::string>& sequences);
+    bool setGrammarConstraints(const std::string& grammar);
+
 private:
     void ensureBuffers(int n_vocab);
     int sampleFromProbs(float* probs, int n);
+
+    std::vector<std::string> custom_stop_sequences_;
+    std::string grammar_constraints_;
 };

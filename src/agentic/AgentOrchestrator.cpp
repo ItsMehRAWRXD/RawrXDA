@@ -15,6 +15,9 @@
 #include <iomanip>
 #include <cstdio>
 
+// SCAFFOLD_061: AgentOrchestrator task dispatch
+
+
 // Shared observability instance for structured logging, metrics, tracing
 static AgenticObservability& GetObservability() {
     static AgenticObservability instance;

@@ -78,6 +78,8 @@
 | 1300–1332 | Panel, Output Tabs, Debugger |
 | 1400–1411 | Status bar items |
 | 1500–1502 | Command Palette |
+| 6000–6099 | Transcendence (handleTranscendenceCommand: Init/Shutdown/Health/6010–6015) |
+| 6100–6199 | Modules (handleModulesCommand: 6101 Refresh, 6102 Import, 6103 Export, 6104 Browser) |
 | 6001–6070 | Sidebar views (Explorer, Search, SCM, Debug, Extensions, Recovery) |
 | 7001–7032 | Plan Approval, Retry |
 | 9825 | IDC_BREADCRUMB_BAR |
@@ -94,7 +96,7 @@
 8. **Minimap** — Right of editor
 9. **Output Tabs** — Bottom
 10. **PowerShell Panel** — Bottom
-11. **Secondary Sidebar** — Right (Copilot)
+11. **Secondary Sidebar** — Right (AI Chat)
 12. **Status Bar** — Bottom full width
 
 ## Wiring Verification
@@ -103,3 +105,10 @@
 - **Breadcrumbs:** createBreadcrumbBar (onCreate) → onSize positions → View → Breadcrumbs toggle
 - **File Explorer:** createPrimarySidebar → createExplorerView → setSidebarView(Explorer)
 - **Activity Bar → Sidebar:** Activity buttons → setSidebarView → ShowWindow per view
+- **Tools > License Creator (3015), Feature Registry (3016):** handleViewCommand (3000–4000) → showLicenseCreatorDialog / showFeatureRegistryDialog; registered in command registry; shortcuts **Ctrl+Shift+L** and **Ctrl+Shift+F** (handled before Ctrl+F Find in key loop).
+- **Startup hints:** Sidebar init appends View > File Explorer (Ctrl+Shift+E), View > AI Chat (Ctrl+Shift+C), Tools > License Creator, Tools > Feature Registry to Output.
+- **Panel status bar:** Network (Port Forwarding) and Marketplace (Extensions) set status bar when panel is shown; Transcendence sets status bar on init/shutdown/health (E–Ω).
+- **Cursor Parity:** `verifyCursorParityWiring` implemented in `RawrXD::Parity` in `src/core/cursor_github_parity_bridge.cpp` (in Win32IDE target). Optional stub in `production_link_stubs.cpp` when `RAWRXD_STUB_CURSOR_PARITY_WIRING` is defined.
+- **Transcendence routing:** Command IDs 6000–6099 are routed to `handleTranscendenceCommand` (Init/Shutdown/Health/Emergency/Run Cycle/Diagnostics and phase inits 6010–6015). Modules use 6100–6199 (`handleModulesCommand`: 6101 Refresh, 6102 Import, 6103 Export, 6104 Browser). Modules menu uses IDM_MODULES_* 3050–3052 and is handled in `handleViewCommand`.
+- **Output panel tabs:** `IDC_OUTPUT_TABS` (1005) `TCN_SELCHANGE` in main WndProc updates `m_activeOutputTab` and shows/hides the corresponding Output/Errors/Debug/Find Results pane.
+- **File Explorer:** Double-click on file in `m_hwndExplorerTree` opens file in editor (`ExplorerTreeProc` WM_LBUTTONDBLCLK → `openFile`); folder double-click toggles expand.

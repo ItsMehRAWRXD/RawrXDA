@@ -9,8 +9,11 @@
 // ============================================================================
 
 #include "native_speed_layer.hpp"
+#include "license_enforcement.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <intrin.h>
 #include <cstring>
@@ -607,8 +610,11 @@ PatchResult NativeSpeedLayer::Shutdown() {
 }
 
 PatchResult NativeSpeedLayer::PopulateDispatchTable() {
+    bool avx512Allowed = RawrXD::Enforce::LicenseEnforcer::Instance().allow(
+        RawrXD::License::FeatureID::AVX512Acceleration, "PopulateDispatchTable");
+
     // SGEMM/SGEMV: pick best available
-    if (m_cpu.hasAVX512F) {
+    if (m_cpu.hasAVX512F && avx512Allowed) {
         m_dispatch.sgemm = sgemm_avx512;
         m_dispatch.sgemv = sgemv_avx512;
     } else if (m_cpu.hasAVX2 && m_cpu.hasFMA3) {
@@ -631,7 +637,7 @@ PatchResult NativeSpeedLayer::PopulateDispatchTable() {
     }
 
     // RMSNorm
-    if (m_cpu.hasAVX512F) {
+    if (m_cpu.hasAVX512F && avx512Allowed) {
         m_dispatch.rmsnorm = native_rmsnorm_avx512;
     } else if (m_cpu.hasAVX2) {
         m_dispatch.rmsnorm = native_rmsnorm_avx2;
@@ -640,7 +646,7 @@ PatchResult NativeSpeedLayer::PopulateDispatchTable() {
     }
 
     // SoftMax
-    if (m_cpu.hasAVX512F) {
+    if (m_cpu.hasAVX512F && avx512Allowed) {
         m_dispatch.softmax = native_softmax_avx512;
     } else if (m_cpu.hasAVX2) {
         m_dispatch.softmax = native_softmax_avx2;
@@ -656,7 +662,7 @@ PatchResult NativeSpeedLayer::PopulateDispatchTable() {
     }
 
     // Vector dot product
-    if (m_cpu.hasAVX512F) {
+    if (m_cpu.hasAVX512F && avx512Allowed) {
         m_dispatch.vdot = [](const float* a, const float* b, int n) -> float {
             float result = 0.0f;
             native_vdot_avx512(a, b, n, &result);
@@ -677,7 +683,9 @@ PatchResult NativeSpeedLayer::PopulateDispatchTable() {
         m_dispatch.qgemv = [](const void* A, QuantType aType, const float* x,
                               float* y, int M, int K) {
             switch (aType) {
-                case QuantType::Q4_0: qgemv_q4_0_avx2(A, x, y, M, K); break;
+                case QuantType::Q4_0: 
+                    qgemv_q4_0_avx2(A, x, y, M, K); 
+                    break;
                 case QuantType::Q8_0: qgemv_q8_0_avx2(A, x, y, M, K); break;
                 default: break; // Fallback dequant + SGEMV
             }

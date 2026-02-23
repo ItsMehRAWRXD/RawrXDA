@@ -178,8 +178,32 @@ public:
     // Apply environment variable overrides (RAWRXD_* prefix)
     void applyEnvironmentOverrides();
 
+    // Apply safe-mode overrides (disable extensions, Vulkan, GPU)
+    void applySafeModeOverrides();
+
     // Get all config keys
     std::vector<std::string> getAllKeys() const;
+
+    // Resolve effective terminal timeout (ms): fixed | random [min,max] | auto.
+    // If requirementHint is non-empty, used for auto/agentic: "agentic" | "audit" | "quick" | "default".
+    // Per-run override (setTerminalTimeoutPerRunMs) takes precedence when > 0.
+    unsigned int getTerminalTimeoutMs(bool isAgenticTask = false,
+                                     const std::string& requirementHint = "") const;
+
+    // Per-run PWSH/terminal timeout: set once for current run (e.g. random or user-chosen ms).
+    // When > 0, getTerminalTimeoutMs returns this and optionally clears it (clearAfterUse = true).
+    void setTerminalTimeoutPerRunMs(unsigned int ms);
+    unsigned int getTerminalTimeoutPerRunMs() const;
+    void clearTerminalTimeoutPerRunMs();
+
+    // Auto-adjust per-run timeout: computes timeout from config (fixed/random/auto) and sets it
+    // for the current run. Use before agentic/audit tasks. Returns the computed value.
+    unsigned int setTerminalTimeoutPerRunFromConfig(bool isAgenticTask = false,
+                                                    const std::string& requirementHint = "");
+
+    // Compute next random/auto timeout without setting. For UI display or pre-flight checks.
+    unsigned int computeTerminalTimeoutMs(bool isAgenticTask = false,
+                                          const std::string& requirementHint = "") const;
 
 private:
     IDEConfig() { setDefaults(); }
@@ -187,6 +211,7 @@ private:
 
     mutable std::mutex m_mutex;
     std::unordered_map<std::string, std::string> m_values;
+    unsigned int m_terminalTimeoutPerRunMs = 0;  // volatile per-run override; 0 = use config
 };
 
 // ============================================================================

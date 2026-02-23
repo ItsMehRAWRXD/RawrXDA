@@ -11,6 +11,9 @@
 #include <sstream>
 #include <cstdio>
 
+// SCAFFOLD_083: ToolActionStatus and bubbles in chat
+
+
 namespace RawrXD {
 namespace UI {
 

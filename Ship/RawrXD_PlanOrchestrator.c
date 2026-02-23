@@ -257,12 +257,32 @@ PlanningResult* PlanOrch_GeneratePlan(
     
     // Check for inference engine
     if (!orch->inference_generate) {
-        // No AI available - create manual plan stub
+        // No AI available - create a single-step manual plan from the user goal
         orch->current_plan.success = TRUE;
-        wcscpy_s(orch->current_plan.plan_description, 1024, 
-            L"Manual planning mode (no AI inference engine configured)");
-        orch->current_plan.estimated_changes = 0;
-        
+        wcscpy_s(orch->current_plan.plan_description, 1024,
+            L"Manual planning mode (no AI inference engine configured). One step: apply the goal yourself.");
+        orch->current_plan.estimated_changes = 1;
+        orch->current_plan.task_count = 1;
+        orch->current_plan.tasks[0].operation = EDIT_OP_REPLACE;
+        orch->current_plan.tasks[0].priority = 1;
+        orch->current_plan.tasks[0].status = TASK_STATUS_PENDING;
+        orch->current_plan.tasks[0].old_text = NULL;
+        orch->current_plan.tasks[0].new_text = NULL;
+        orch->current_plan.tasks[0].file_path[0] = L'\0';
+        orch->current_plan.tasks[0].start_line = 0;
+        orch->current_plan.tasks[0].end_line = 0;
+        orch->current_plan.tasks[0].error_message[0] = L'\0';
+        wcsncpy_s(orch->current_plan.tasks[0].description, 512, user_prompt, _TRUNCATE);
+        if (context_file_count > 0 && context_files) {
+            orch->current_plan.affected_file_count = (context_file_count < MAX_FILES) ? context_file_count : MAX_FILES;
+            for (int i = 0; i < orch->current_plan.affected_file_count; i++)
+                orch->current_plan.affected_files[i] = _wcsdup(context_files[i]);
+        } else {
+            orch->current_plan.affected_file_count = 0;
+        }
+        if (gathered_count > 0) {
+            for (int i = 0; i < gathered_count; i++) free(gathered_files[i]);
+        }
         LeaveCriticalSection(&orch->cs);
         return &orch->current_plan;
     }

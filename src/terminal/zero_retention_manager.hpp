@@ -1,7 +1,7 @@
 #pragma once
 // zero_retention_manager.hpp — Qt-free GDPR/privacy data retention (Win32 + STL)
-// Purged: QObject, QString, QMutex, QTimer, QVector, QPair, QDateTime, QMap,
-//         QJsonObject, QCryptographicHash, QUuid, Q_OBJECT, signals/slots
+// Purged: prior GUI-framework types (object, string, mutex, timer, vector, map,
+//         json, crypto, uuid, meta-object, signals/slots).
 // Replaced with: std::mutex, std::thread, std::chrono, std::unordered_map,
 //                std::function callbacks, Win32 crypto RNG
 #ifndef WIN32_LEAN_AND_MEAN
@@ -10,6 +10,8 @@
 #include <windows.h>
 #include <bcrypt.h>
 #pragma comment(lib, "bcrypt.lib")
+
+#include "../json_types.hpp"  // JsonObject for logStructured/logAudit
 
 #include <string>
 #include <vector>
@@ -140,12 +142,29 @@ private:
     // Cleanup thread (replaces QTimer)
     std::thread    m_cleanupThread;
     std::atomic<bool> m_running{false};
+    std::function<void()>* m_cleanupTimer = nullptr;
     void cleanupThreadFunc();
+
+    // Callback emitters (invoked internally, dispatch to public callbacks)
+    void performAutoCleanup();
+    void dataDeleted(const std::string& id, int64_t sizeBytes);
+    void dataExpired(const std::string& id);
+    void sessionCleaned(const std::string& sessionId);
+    void cleanupCompleted(int itemsDeleted, int64_t bytesDeleted);
+    void errorOccurred(const std::string& error);
+    void metricsUpdated(const Metrics& metrics);
 
     // Helpers
     void        logStructured(const char* level, const std::string& message,
                               const std::string& contextJson = "{}");
+    void        logStructured(const std::string& level, const std::string& message,
+                              const std::string& contextJson = "{}");
+    void        logStructured(const char* level, const std::string& message,
+                              const JsonObject& context);
+    void        logStructured(const std::string& level, const std::string& message,
+                              const JsonObject& context);
     void        logAudit(const std::string& action, const std::string& detailsJson);
+    void        logAudit(const std::string& action, const JsonObject& details);
     void        recordLatency(const std::string& operation,
                               const std::chrono::milliseconds& duration);
     bool        secureDelete(const std::string& path);

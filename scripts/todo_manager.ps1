@@ -42,7 +42,7 @@ param(
     [string]$Priority = "Medium",
     [ValidateSet('pending', 'in-progress', 'completed', 'blocked', 'cancelled')]
     [string]$Status = "pending",
-    [string]$StoragePath = "",
+    [string]$StoragePath = "D:\lazy init ide\data\todos.json",
     [string]$ExportPath = "",
     [switch]$AgenticMode,
     [switch]$Watch,
@@ -51,13 +51,6 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
-if (-not $StoragePath -or -not $StoragePath.Trim()) {
-    $StoragePath = Join-Path (Get-RawrXDRoot) "data" "todos.json"
-}
-$StoragePath = Resolve-RawrXDPath $StoragePath
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TODO DATA STRUCTURES
@@ -758,9 +751,8 @@ switch ($Operation) {
     
     "export" {
         if (-not $ExportPath) {
-            $ExportPath = Join-Path (Get-RawrXDRoot) "data" "todos_export_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
+            $ExportPath = "D:\lazy init ide\data\todos_export_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
         }
-        $ExportPath = Resolve-RawrXDPath $ExportPath
         
         $todoList.Save()
         Copy-Item $StoragePath $ExportPath -Force

@@ -166,6 +166,15 @@ void WebSocketServer::stop() {
     if (m_accept_thread.joinable()) {
         m_accept_thread.join();
     }
+
+    // Join all client threads (production: no fire-and-forget)
+    {
+        std::lock_guard<std::mutex> tlock(m_threads_mutex);
+        for (auto& t : m_clientThreads) {
+            if (t.joinable()) t.join();
+        }
+        m_clientThreads.clear();
+    }
 }
 
 void WebSocketServer::broadcast(const std::string& message) {
@@ -294,9 +303,19 @@ void WebSocketServer::acceptLoop() {
             m_on_connect(client_id);
         }
         
-        // Handle client in new thread
-        std::thread client_thread(&WebSocketServer::handleClient, this, client_socket, client_id);
-        client_thread.detach();
+        // Handle client in tracked thread (joined on shutdown)
+        {
+            std::lock_guard<std::mutex> tlock(m_threads_mutex);
+            // Clean up finished threads first
+            m_clientThreads.erase(
+                std::remove_if(m_clientThreads.begin(), m_clientThreads.end(),
+                    [](std::thread& t) {
+                        // Can't check if done without join; keep joinable ones
+                        return !t.joinable();
+                    }),
+                m_clientThreads.end());
+            m_clientThreads.emplace_back(&WebSocketServer::handleClient, this, client_socket, client_id);
+        }
     }
 }
 

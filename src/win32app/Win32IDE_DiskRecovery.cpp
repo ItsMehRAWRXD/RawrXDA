@@ -10,7 +10,7 @@
 
 #include "Win32IDE.h"
 #include "../agent/DiskRecoveryAgent.h"
-
+#include <shlobj.h>
 #include <cstdio>
 #include <sstream>
 #include <iomanip>
@@ -105,13 +105,20 @@ void Win32IDE::createDiskRecoveryView(HWND hwndParent)
         hwndParent, (HMENU)(INT_PTR)IDC_RECOVERY_BADMAP, m_hInstance, nullptr);
     y += 32;
 
-    // Output path row
+    // Output path row (default: %APPDATA%\RawrXD\recovery_output)
+    std::string defaultRecoveryOut = "recovery_output";
+    char appData[MAX_PATH] = {};
+    if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+        std::string dir = std::string(appData) + "\\RawrXD";
+        CreateDirectoryA(dir.c_str(), nullptr);
+        defaultRecoveryOut = dir + "\\recovery_output";
+    }
     CreateWindowExA(0, "STATIC", "Output:",
         WS_CHILD,
         8, y + 3, 50, 18,
         hwndParent, nullptr, m_hInstance, nullptr);
     m_hwndRecoveryOutPath = CreateWindowExA(
-        WS_EX_CLIENTEDGE, "EDIT", "D:\\recovery_output",
+        WS_EX_CLIENTEDGE, "EDIT", defaultRecoveryOut.c_str(),
         WS_CHILD | ES_AUTOHSCROLL,
         60, y, w - 110, 22,
         hwndParent, (HMENU)(INT_PTR)IDC_RECOVERY_OUTPATH, m_hInstance, nullptr);

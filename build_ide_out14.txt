@@ -1,0 +1,61 @@
+[1/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\dual_engine_inference.cpp.obj
+[2/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\perf_telemetry.cpp.obj
+[3/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\feature_registry_panel.cpp.obj
+[4/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\ide_linker_bridge.cpp.obj
+[5/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\core\enterprise_telemetry_compliance.cpp.obj
+[6/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_EmojiSupport.cpp.obj
+[7/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AirgappedEnterprise.cpp.obj
+[8/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ShortcutEditor.cpp.obj
+[9/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_GUILayoutHotpatch.cpp.obj
+[10/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TestExplorerTree.cpp.obj
+[11/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_FlagshipFeatures.cpp.obj
+[12/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_NetworkPanel.cpp.obj
+[13/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_ProvableAgent.cpp.obj
+[14/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TelemetryDashboard.cpp.obj
+[15/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_MarketplacePanel.cpp.obj
+[16/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_TranscendencePanel.cpp.obj
+[17/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_AIReverseEngineering.cpp.obj
+[18/19] Building CXX object CMakeFiles\RawrXD-Win32IDE.dir\src\win32app\Win32IDE_CursorParity.cpp.obj
+[19/19] Linking CXX executable bin\RawrXD-Win32IDE.exe
+FAILED: bin/RawrXD-Win32IDE.exe 
+C:\WINDOWS\system32\cmd.exe /C "cd . && "C:\Program Files\CMake\bin\cmake.exe" -E vs_link_exe --msvc-ver=1950 --intdir=CMakeFiles\RawrXD-Win32IDE.dir --rc=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\rc.exe --mt=C:\PROGRA~2\WI3CF2~1\10\bin\100226~1.0\x64\mt.exe --manifests  -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp  /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO && cd ."
+LINK: command "C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\link.exe /nologo @CMakeFiles\RawrXD-Win32IDE.rsp /out:bin\RawrXD-Win32IDE.exe /implib:RawrXD-Win32IDE.lib /pdb:bin\RawrXD-Win32IDE.pdb /version:0.0 /machine:x64 /INCREMENTAL:NO /subsystem:windows /LARGEADDRESSAWARE:NO /MANIFEST:EMBED,ID=1" failed (exit code 1120) with the following output:
+ide_linker_bridge.cpp.obj : error LNK2005: "public: bool __cdecl EnterpriseFeatureManager::Initialize(void)" (?Initialize@EnterpriseFeatureManager@@QEAA_NXZ) already defined in enterprise_feature_manager.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: bool __cdecl RawrXD::EnterpriseLicense::Initialize(void)" (?Initialize@EnterpriseLicense@RawrXD@@QEAA_NXZ) already defined in enterprise_license.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: static class EnterpriseFeatureManager & __cdecl EnterpriseFeatureManager::Instance(void)" (?Instance@EnterpriseFeatureManager@@SAAEAV1@XZ) already defined in enterprise_feature_manager.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: static class RawrXD::License::EnterpriseLicenseV2 & __cdecl RawrXD::License::EnterpriseLicenseV2::Instance(void)" (?Instance@EnterpriseLicenseV2@License@RawrXD@@SAAEAV123@XZ) already defined in enterprise_licensev2_impl.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: static class RawrXD::Flags::FeatureFlagsRuntime & __cdecl RawrXD::Flags::FeatureFlagsRuntime::Instance(void)" (?Instance@FeatureFlagsRuntime@Flags@RawrXD@@SAAEAV123@XZ) already defined in feature_flags_runtime.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: static class RawrXD::Enforce::LicenseEnforcer & __cdecl RawrXD::Enforce::LicenseEnforcer::Instance(void)" (?Instance@LicenseEnforcer@Enforce@RawrXD@@SAAEAV123@XZ) already defined in license_enforcement.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: void __cdecl EnterpriseFeatureManager::Shutdown(void)" (?Shutdown@EnterpriseFeatureManager@@QEAAXXZ) already defined in enterprise_feature_manager.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: struct RawrXD::License::LicenseResult __cdecl RawrXD::License::EnterpriseLicenseV2::initialize(void)" (?initialize@EnterpriseLicenseV2@License@RawrXD@@QEAA?AULicenseResult@23@XZ) already defined in enterprise_licensev2_impl.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: bool __cdecl RawrXD::Enforce::LicenseEnforcer::initialize(void)" (?initialize@LicenseEnforcer@Enforce@RawrXD@@QEAA_NXZ) already defined in license_enforcement.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: "public: void __cdecl RawrXD::Flags::FeatureFlagsRuntime::refreshFromLicense(void)" (?refreshFromLicense@FeatureFlagsRuntime@Flags@RawrXD@@QEAAXXZ) already defined in feature_flags_runtime.cpp.obj
+
+ide_linker_bridge.cpp.obj : error LNK2005: Enterprise_DevUnlock already defined in RawrXD_EnterpriseLicense.asm.obj
+
+license_enforcement.cpp.obj : error LNK2019: unresolved external symbol "struct RawrXD::License::FeatureDefV2 const * const RawrXD::License::g_FeatureManifest" (?g_FeatureManifest@License@RawrXD@@3QBUFeatureDefV2@12@B) referenced in function "public: struct RawrXD::Enforce::EnforcementResult __cdecl RawrXD::Enforce::LicenseEnforcer::checkGate(enum RawrXD::License::FeatureID,char const *)" (?checkGate@LicenseEnforcer@Enforce@RawrXD@@QEAA?AUEnforcementResult@23@W4FeatureID@License@3@PEBD@Z)
+
+feature_flags_runtime.cpp.obj : error LNK2001: unresolved external symbol "struct RawrXD::License::FeatureDefV2 const * const RawrXD::License::g_FeatureManifest" (?g_FeatureManifest@License@RawrXD@@3QBUFeatureDefV2@12@B)
+
+Win32IDE_LicenseCreator.cpp.obj : error LNK2001: unresolved external symbol "struct RawrXD::License::FeatureDefV2 const * const RawrXD::License::g_FeatureManifest" (?g_FeatureManifest@License@RawrXD@@3QBUFeatureDefV2@12@B)
+
+feature_registry_panel.cpp.obj : error LNK2001: unresolved external symbol "struct RawrXD::License::FeatureDefV2 const * const RawrXD::License::g_FeatureManifest" (?g_FeatureManifest@License@RawrXD@@3QBUFeatureDefV2@12@B)
+
+Win32IDE_LicenseCreator.cpp.obj : error LNK2019: unresolved external symbol "public: struct RawrXD::License::LicenseResult __cdecl RawrXD::License::EnterpriseLicenseV2::createKey(enum RawrXD::License::LicenseTierV2,unsigned int,char const *,struct RawrXD::License::LicenseKeyV2 *)const " (?createKey@EnterpriseLicenseV2@License@RawrXD@@QEBA?AULicenseResult@23@W4LicenseTierV2@23@IPEBDPEAULicenseKeyV2@23@@Z) referenced in function "bool __cdecl `anonymous namespace'::createV2LicenseInline(enum RawrXD::License::LicenseTierV2,unsigned int,wchar_t const *,char const *,bool)" (?createV2LicenseInline@?A0x72ec9a1f@@YA_NW4LicenseTierV2@License@RawrXD@@IPEB_WPEBD_N@Z)
+
+feature_registry_panel.cpp.obj : error LNK2019: unresolved external symbol "char const * __cdecl RawrXD::License::featureName(enum RawrXD::License::FeatureID)" (?featureName@License@RawrXD@@YAPEBDW4FeatureID@12@@Z) referenced in function "public: static void __cdecl FeatureRegistryPanel::printAuditReport(void)" (?printAuditReport@FeatureRegistryPanel@@SAXXZ)
+
+
+bin\RawrXD-Win32IDE.exe : fatal error LNK1120: 3 unresolved externals
+
+
+ninja: build stopped: subcommand failed.

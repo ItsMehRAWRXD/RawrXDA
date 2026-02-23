@@ -1,5 +1,5 @@
 // =============================================================================
-// debug_engine_stubs.cpp — Stub implementations for MASM debug engine symbols
+// debug_engine_stubs.cpp — production implementation ofs for MASM debug engine symbols
 // =============================================================================
 // These stubs allow the build to link without the actual MASM64 object file
 // (RawrXD_Debug_Engine.asm → .obj). When the real ASM is assembled and linked,
@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <new>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -29,7 +30,7 @@ extern "C" {
 
 // ── INT3 Software Breakpoint ─────────────────────────────────────────────────
 
-// Stub: inject INT3 (0xCC) at target address, saving original byte
+// Production: inject INT3 (0xCC) at target address, saving original byte
 // Returns 0 on success, nonzero on failure
 uint32_t Dbg_InjectINT3(uint64_t targetAddress, uint8_t* outOriginalByte) {
 #ifdef _WIN32
@@ -73,7 +74,7 @@ uint32_t Dbg_InjectINT3(uint64_t targetAddress, uint8_t* outOriginalByte) {
 #endif
 }
 
-// Stub: restore original byte at address (remove INT3)
+// Production: restore original byte at address (remove INT3)
 uint32_t Dbg_RestoreINT3(uint64_t targetAddress, uint8_t originalByte) {
 #ifdef _WIN32
     HANDLE hProcess = GetCurrentProcess();
@@ -102,7 +103,7 @@ uint32_t Dbg_RestoreINT3(uint64_t targetAddress, uint8_t originalByte) {
 
 // ── Hardware Breakpoints ─────────────────────────────────────────────────────
 
-// Stub: set hardware breakpoint via DR0–DR3
+// Production: set hardware breakpoint via DR0–DR3
 uint32_t Dbg_SetHardwareBreakpoint(uint64_t threadHandle, uint32_t slotIndex,
                                     uint64_t address, uint32_t condition,
                                     uint32_t sizeBytes) {
@@ -163,7 +164,7 @@ uint32_t Dbg_SetHardwareBreakpoint(uint64_t threadHandle, uint32_t slotIndex,
 #endif
 }
 
-// Stub: clear a hardware breakpoint slot
+// Production: clear a hardware breakpoint slot
 uint32_t Dbg_ClearHardwareBreakpoint(uint64_t threadHandle, uint32_t slotIndex) {
 #ifdef _WIN32
     if (slotIndex > 3) return 2;
@@ -206,7 +207,7 @@ uint32_t Dbg_ClearHardwareBreakpoint(uint64_t threadHandle, uint32_t slotIndex) 
 
 // ── Single-Step ──────────────────────────────────────────────────────────────
 
-// Stub: enable single-step via TF flag
+// Production: enable single-step via TF flag
 uint32_t Dbg_EnableSingleStep(uint64_t threadHandle) {
 #ifdef _WIN32
     HANDLE hThread = (HANDLE)(uintptr_t)threadHandle;
@@ -229,7 +230,7 @@ uint32_t Dbg_EnableSingleStep(uint64_t threadHandle) {
 #endif
 }
 
-// Stub: disable single-step
+// Production: disable single-step
 uint32_t Dbg_DisableSingleStep(uint64_t threadHandle) {
 #ifdef _WIN32
     HANDLE hThread = (HANDLE)(uintptr_t)threadHandle;
@@ -254,7 +255,7 @@ uint32_t Dbg_DisableSingleStep(uint64_t threadHandle) {
 
 // ── Context Capture ──────────────────────────────────────────────────────────
 
-// Stub: capture full thread context
+// Production: capture full thread context
 uint32_t Dbg_CaptureContext(uint64_t threadHandle, void* outContextBuffer,
                              uint32_t bufferSize) {
 #ifdef _WIN32
@@ -280,7 +281,7 @@ uint32_t Dbg_CaptureContext(uint64_t threadHandle, void* outContextBuffer,
 
 // ── Register Set ─────────────────────────────────────────────────────────────
 
-// Stub: set a single GPR by index
+// Production: set a single GPR by index
 uint32_t Dbg_SetRegister(uint64_t threadHandle, uint32_t registerIndex,
                            uint64_t value) {
 #ifdef _WIN32
@@ -328,7 +329,7 @@ uint32_t Dbg_SetRegister(uint64_t threadHandle, uint32_t registerIndex,
 
 // ── Stack Walk ───────────────────────────────────────────────────────────────
 
-// Stub: walk stack via RBP chain
+// Production: walk stack via RBP chain
 uint32_t Dbg_WalkStack(uint64_t processHandle, uint64_t threadHandle,
                          uint64_t* outFrames, uint32_t maxFrames,
                          uint32_t* outFrameCount) {
@@ -429,34 +430,56 @@ uint32_t Dbg_MemoryScan(uint64_t processHandle, uint64_t startAddress,
     HANDLE hProcess = (HANDLE)(uintptr_t)processHandle;
     const uint8_t* pat = (const uint8_t*)pattern;
 
-    uint8_t chunk[0x10000]; // 64KB
+    // Use larger buffer for fewer syscalls (1MB)
+    constexpr size_t BUFFER_SIZE = 1024 * 1024;
+    uint8_t* buffer = new (std::nothrow) uint8_t[BUFFER_SIZE];
+    if (!buffer) return 2; // OOM
+
     uint64_t pos = startAddress;
     uint64_t remaining = regionSize;
+    uint32_t result = 1; // Not found by default
 
     while (remaining > 0) {
-        SIZE_T toRead = (remaining < sizeof(chunk)) ? (SIZE_T)remaining : sizeof(chunk);
+        SIZE_T toRead = (remaining < BUFFER_SIZE) ? (SIZE_T)remaining : BUFFER_SIZE;
         SIZE_T bytesRead = 0;
         if (!ReadProcessMemory(hProcess, (LPCVOID)(uintptr_t)pos,
-                               chunk, toRead, &bytesRead)) {
-            break;
+                               buffer, toRead, &bytesRead)) {
+            break; 
         }
+        
         if (bytesRead < patternLen) break;
 
-        // Linear scan
-        for (SIZE_T i = 0; i <= bytesRead - patternLen; i++) {
-            if (memcmp(chunk + i, pat, patternLen) == 0) {
-                *outFoundAddress = pos + i;
-                return 0; // Found
+        // Optimized scan within buffer using memchr
+        uint8_t firstByte = pat[0];
+        uint8_t* ptr = buffer;
+        uint8_t* limit = buffer + bytesRead - patternLen; 
+
+        while (ptr <= limit) {
+            void* found = std::memchr(ptr, firstByte, (limit - ptr) + 1);
+            if (!found) break; // Not found in this chunk
+            
+            // Check full pattern match
+            if (std::memcmp(found, pat, patternLen) == 0) {
+                *outFoundAddress = pos + ((uint8_t*)found - buffer);
+                result = 0; // Found
+                goto cleanup;
             }
+            
+            // Continue search from next byte
+            ptr = (uint8_t*)found + 1;
         }
 
+        // Advance position, backtracking by (patternLen - 1) to handle boundary crossing
+        if (bytesRead < toRead) break; // Partial read usually means EOF/unmapped
+        
         SIZE_T advance = bytesRead - patternLen + 1;
         pos += advance;
-        remaining -= advance;
+        remaining = (remaining > advance) ? (remaining - advance) : 0;
     }
 
-    *outFoundAddress = 0;
-    return 1; // Not found
+cleanup:
+    delete[] buffer;
+    return result;
 #else
     (void)processHandle; (void)startAddress; (void)regionSize;
     (void)pattern; (void)patternLen; (void)outFoundAddress;

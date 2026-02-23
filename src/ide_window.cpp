@@ -21,16 +21,50 @@
 
 // Window class name
 static const wchar_t* IDE_WINDOW_CLASS = L"RawrXDIDE";
+
+// File Menu IDs
 static const int IDM_FILE_NEW = 1001;
 static const int IDM_FILE_OPEN = 1002;
 static const int IDM_FILE_OPEN_FOLDER = 1003;
 static const int IDM_FILE_SAVE = 1004;
-static const int IDM_FILE_EXIT = 1005;
+static const int IDM_FILE_SAVE_AS = 1005;
+static const int IDM_FILE_EXIT = 1006;
+
+// Edit Menu IDs
 static const int IDM_EDIT_CUT = 2001;
 static const int IDM_EDIT_COPY = 2002;
 static const int IDM_EDIT_PASTE = 2003;
-static const int IDM_RUN_SCRIPT = 3001;
-static const int IDM_VIEW_BROWSER = 3002;
+static const int IDM_EDIT_FIND = 2004;
+static const int IDM_EDIT_REPLACE = 2005;
+
+// View Menu IDs
+static const int IDM_VIEW_EXPLORER = 3001;
+static const int IDM_VIEW_CHAT = 3002;
+static const int IDM_VIEW_TERMINAL = 3003;
+static const int IDM_VIEW_OUTPUT = 3004;
+static const int IDM_VIEW_GITHUB_CHAT = 3005;
+
+// AI Menu IDs
+static const int IDM_AI_GITHUB_COPILOT = 4001;
+static const int IDM_AI_AMAZON_Q = 4002;
+static const int IDM_AI_LOCAL_AGENT = 4003;
+static const int IDM_AI_SWITCH_PROVIDER = 4004;
+
+// Extensions Menu IDs
+static const int IDM_EXT_MANAGE = 5001;
+static const int IDM_EXT_INSTALL = 5002;
+static const int IDM_EXT_COPILOT = 5003;
+static const int IDM_EXT_AMAZONQ = 5004;
+static const int IDM_EXT_BROWSE = 5005;
+
+// Run Menu IDs
+static const int IDM_RUN_SCRIPT = 6001;
+static const int IDM_RUN_TERMINAL = 6002;
+
+// Help Menu IDs
+static const int IDM_HELP_ABOUT = 7001;
+static const int IDM_HELP_EXTENSIONS = 7002;
+
 static const int ID_EDITOR = 4001;
 static const int ID_FILETREE = 4002;
 static const int ID_TERMINAL = 4003;
@@ -101,6 +135,10 @@ bool IDEWindow::Initialize(HINSTANCE hInstance)
     // Load RichEdit library
     LoadLibraryW(L"Msftedit.dll");
     
+    // Initialize AI and Extension systems
+    extensionLoader_ = std::make_unique<rawrxd::marketplace::VsixLoader>();
+    chatPanel_ = std::make_unique<rawrxd::ide::ChatPanelIntegration>(extensionLoader_.get());
+    
     CreateMainWindow(hInstance);
     
     if (!hwnd_) {
@@ -160,27 +198,70 @@ void IDEWindow::CreateMenuBar()
 {
     HMENU hMenuBar = CreateMenu();
     
-    // File menu
+    // ========== FILE MENU ==========
     HMENU hFileMenu = CreatePopupMenu();
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_NEW, L"&New\tCtrl+N");
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_OPEN, L"&Open File...\tCtrl+O");
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_OPEN_FOLDER, L"Open &Folder...");
+    AppendMenuW(hFileMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVE, L"&Save\tCtrl+S");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVE_AS, L"Save &As...\tCtrl+Shift+S");
     AppendMenuW(hFileMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_EXIT, L"E&xit");
     AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hFileMenu, L"&File");
     
-    // Edit menu
+    // ========== EDIT MENU ==========
     HMENU hEditMenu = CreatePopupMenu();
     AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_CUT, L"Cu&t\tCtrl+X");
     AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_COPY, L"&Copy\tCtrl+C");
     AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_PASTE, L"&Paste\tCtrl+V");
+    AppendMenuW(hEditMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_FIND, L"&Find...\tCtrl+F");
+    AppendMenuW(hEditMenu, MF_STRING, IDM_EDIT_REPLACE, L"&Replace...\tCtrl+H");
     AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hEditMenu, L"&Edit");
     
-    // Run menu
+    // ========== VIEW MENU ==========
+    HMENU hViewMenu = CreatePopupMenu();
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_EXPLORER, L"File &Explorer\tCtrl+B");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_CHAT, L"Chat &Panel\tCtrl+Alt+C");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_GITHUB_CHAT, L"&GitHub Chat\tCtrl+Shift+C");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_TERMINAL, L"&Terminal\tCtrl+`");
+    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_OUTPUT, L"&Output");
+    AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hViewMenu, L"&View");
+    
+    // ========== AI MENU ==========
+    HMENU hAIMenu = CreatePopupMenu();
+    AppendMenuW(hAIMenu, MF_STRING, IDM_AI_GITHUB_COPILOT, L"&GitHub Copilot Chat");
+    AppendMenuW(hAIMenu, MF_STRING, IDM_AI_AMAZON_Q, L"Amazon &Q Chat");
+    AppendMenuW(hAIMenu, MF_STRING, IDM_AI_LOCAL_AGENT, L"&Local Agent (GGUF)");
+    AppendMenuW(hAIMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hAIMenu, MF_STRING, IDM_AI_SWITCH_PROVIDER, L"&Switch Provider...");
+    AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hAIMenu, L"&AI");
+    
+    // ========== EXTENSIONS MENU ==========
+    HMENU hExtMenu = CreatePopupMenu();
+    AppendMenuW(hExtMenu, MF_STRING, IDM_EXT_INSTALL, L"&Install Extension...");
+    AppendMenuW(hExtMenu, MF_STRING, IDM_EXT_MANAGE, L"&Manage Extensions");
+    AppendMenuW(hExtMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hExtMenu, MF_STRING, IDM_EXT_COPILOT, L"Install GitHub &Copilot");
+    AppendMenuW(hExtMenu, MF_STRING, IDM_EXT_AMAZONQ, L"Install Amazon &Q");
+    AppendMenuW(hExtMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hExtMenu, MF_STRING, IDM_EXT_BROWSE, L"&Browse Extensions...");
+    AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hExtMenu, L"E&xtensions");
+    
+    // ========== RUN MENU ==========
     HMENU hRunMenu = CreatePopupMenu();
     AppendMenuW(hRunMenu, MF_STRING, IDM_RUN_SCRIPT, L"&Run Script\tF5");
+    AppendMenuW(hRunMenu, MF_STRING, IDM_RUN_TERMINAL, L"&Open Terminal\tCtrl+Alt+T");
     AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hRunMenu, L"&Run");
+    
+    // ========== HELP MENU ==========
+    HMENU hHelpMenu = CreatePopupMenu();
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_EXTENSIONS, L"Extensions &Guide");
+    AppendMenuW(hHelpMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About RawrXD");
+    AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hHelpMenu, L"&Help");
     
     SetMenu(hwnd_, hMenuBar);
 }
@@ -484,7 +565,7 @@ void IDEWindow::CreateWebBrowser()
                 return S_OK;
             }).Get());
 #else
-    // WebView2 SDK not linked - create a static placeholder panel
+    // Build variant: WebView2 SDK not linked — show static info panel until built with WEBVIEW2_AVAILABLE
     RECT rcClient;
     GetClientRect(hMainWindow_, &rcClient);
     hWebBrowser_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"STATIC",
@@ -608,6 +689,7 @@ LRESULT CALLBACK IDEWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                 
             case WM_COMMAND:
                 switch (LOWORD(wParam)) {
+                    // ===== FILE MENU =====
                     case IDM_FILE_NEW:
                         pThis->OnNewFile();
                         return 0;
@@ -617,9 +699,14 @@ LRESULT CALLBACK IDEWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                     case IDM_FILE_SAVE:
                         pThis->OnSaveFile();
                         return 0;
+                    case IDM_FILE_SAVE_AS:
+                        pThis->OnSaveFile();  // Save As dialog
+                        return 0;
                     case IDM_FILE_EXIT:
                         PostQuitMessage(0);
                         return 0;
+
+                    // ===== EDIT MENU =====
                     case IDM_EDIT_CUT:
                         SendMessageW(pThis->hEditor_, WM_CUT, 0, 0);
                         return 0;
@@ -629,9 +716,159 @@ LRESULT CALLBACK IDEWindow::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
                     case IDM_EDIT_PASTE:
                         SendMessageW(pThis->hEditor_, WM_PASTE, 0, 0);
                         return 0;
+                    case IDM_EDIT_FIND:
+                        // Open Find dialog
+                        return 0;
+                    case IDM_EDIT_REPLACE:
+                        // Open Replace dialog
+                        return 0;
+
+                    // ===== VIEW MENU =====
+                    case IDM_VIEW_EXPLORER:
+                        // Toggle file explorer visibility
+                        ShowWindow(pThis->hFileTree_, 
+                                  IsWindowVisible(pThis->hFileTree_) ? SW_HIDE : SW_SHOW);
+                        return 0;
+                    case IDM_VIEW_CHAT:
+                        // Show chat panel
+                        if (pThis->chatPanel_) {
+                            pThis->chatPanel_->showPanel(true);
+                        }
+                        return 0;
+                    case IDM_VIEW_GITHUB_CHAT:
+                        // Invoke GitHub Copilot Chat
+                        if (pThis->chatPanel_) {
+                            pThis->chatPanel_->invokeGithubChat();
+                        }
+                        return 0;
+                    case IDM_VIEW_TERMINAL:
+                        // Show/toggle terminal
+                        ShowWindow(pThis->hTerminal_,
+                                  IsWindowVisible(pThis->hTerminal_) ? SW_HIDE : SW_SHOW);
+                        return 0;
+                    case IDM_VIEW_OUTPUT:
+                        // Show/toggle output panel
+                        ShowWindow(pThis->hOutput_,
+                                  IsWindowVisible(pThis->hOutput_) ? SW_HIDE : SW_SHOW);
+                        return 0;
+
+                    // ===== AI MENU =====
+                    case IDM_AI_GITHUB_COPILOT:
+                        if (pThis->chatPanel_) {
+                            pThis->chatPanel_->switchProvider("github-copilot");
+                            pThis->chatPanel_->showPanel(true);
+                        }
+                        return 0;
+                    case IDM_AI_AMAZON_Q:
+                        if (pThis->chatPanel_) {
+                            pThis->chatPanel_->switchProvider("amazonq");
+                            pThis->chatPanel_->showPanel(true);
+                        }
+                        return 0;
+                    case IDM_AI_LOCAL_AGENT:
+                        if (pThis->chatPanel_) {
+                            pThis->chatPanel_->switchProvider("local-agent");
+                            pThis->chatPanel_->activateAgent("local-gguf");
+                            pThis->chatPanel_->showPanel(true);
+                        }
+                        return 0;
+                    case IDM_AI_SWITCH_PROVIDER:
+                        // Open provider selection dialog
+                        return 0;
+
+                    // ===== EXTENSIONS MENU =====
+                    case IDM_EXT_INSTALL:
+                        // Open file browse dialog for VSIX files
+                        if (pThis->extensionLoader_) {
+                            wchar_t szFile[260] = {0};
+                            OPENFILENAMEW ofn = {0};
+                            ofn.lStructSize = sizeof(ofn);
+                            ofn.hwndOwner = pThis->hwnd_;
+                            ofn.lpstrFile = szFile;
+                            ofn.nMaxFile = sizeof(szFile) / sizeof(*szFile);
+                            ofn.lpstrFilter = L"VS Code Extensions\0*.vsix\0All Files\0*.*\0";
+                            ofn.nFilterIndex = 1;
+                            ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+                            
+                            if (GetOpenFileNameW(&ofn)) {
+                                char szFileA[260];
+                                WideCharToMultiByte(CP_UTF8, 0, szFile, -1, szFileA, 260, NULL, NULL);
+                                
+                                pThis->extensionLoader_->loadVsixFile(
+                                    szFileA,
+                                    [](int pct, const std::string& msg) {
+                                        OutputDebugStringA((msg + "\n").c_str());
+                                    },
+                                    [](bool success, const std::string& msg) {
+                                        MessageBoxA(NULL, msg.c_str(), 
+                                                   success ? "Success" : "Error", MB_OK);
+                                    }
+                                );
+                            }
+                        }
+                        return 0;
+                    case IDM_EXT_MANAGE:
+                        // Open extension manager dialog
+                        return 0;
+                    case IDM_EXT_COPILOT:
+                        // Install GitHub Copilot
+                        if (pThis->extensionLoader_) {
+                            pThis->extensionLoader_->installGithubCopilot(
+                                [pThis](bool success, const std::string& msg) {
+                                    MessageBoxA(NULL, msg.c_str(),
+                                               success ? "Installed" : "Error", MB_OK);
+                                    if (success && pThis->chatPanel_) {
+                                        pThis->chatPanel_->syncWithExtensions();
+                                    }
+                                }
+                            );
+                        }
+                        return 0;
+                    case IDM_EXT_AMAZONQ:
+                        // Install Amazon Q
+                        if (pThis->extensionLoader_) {
+                            pThis->extensionLoader_->installAmazonQ(
+                                [pThis](bool success, const std::string& msg) {
+                                    MessageBoxA(NULL, msg.c_str(),
+                                               success ? "Installed" : "Error", MB_OK);
+                                    if (success && pThis->chatPanel_) {
+                                        pThis->chatPanel_->syncWithExtensions();
+                                    }
+                                }
+                            );
+                        }
+                        return 0;
+                    case IDM_EXT_BROWSE:
+                        // Open VSCode marketplace browser
+                        ShellExecuteW(NULL, L"open", 
+                                     L"https://marketplace.visualstudio.com/",
+                                     NULL, NULL, SW_SHOW);
+                        return 0;
+
+                    // ===== RUN MENU =====
                     case IDM_RUN_SCRIPT:
                         pThis->OnRunScript();
                         return 0;
+                    case IDM_RUN_TERMINAL:
+                        ShowWindow(pThis->hTerminal_, SW_SHOW);
+                        SetFocus(pThis->hTerminal_);
+                        return 0;
+
+                    // ===== HELP MENU =====
+                    case IDM_HELP_EXTENSIONS:
+                        ShellExecuteW(NULL, L"open",
+                                     L"https://code.visualstudio.com/api/get-started/extension-basics",
+                                     NULL, NULL, SW_SHOW);
+                        return 0;
+                    case IDM_HELP_ABOUT:
+                        MessageBoxW(pThis->hwnd_,
+                                   L"RawrXD PowerShell IDE - C++20 Edition\n"
+                                   L"With Native GGUF Integration & AI Chat\n"
+                                   L"GitHub Copilot & Amazon Q Support",
+                                   L"About RawrXD", MB_OK | MB_ICONINFORMATION);
+                        return 0;
+
+                    // ===== Legacy marketplace handlers =====
                     case 5011: // Search button in marketplace
                         if (pThis->hMarketplaceSearch_) {
                             wchar_t searchText[256] = {0};

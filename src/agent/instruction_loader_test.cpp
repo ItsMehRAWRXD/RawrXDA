@@ -8,6 +8,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -52,7 +53,7 @@ public:
 
         // Cleanup
         std::filesystem::remove(tmp);
-        // Test passed (assertion-driven; no output needed for passing tests).
+        fprintf(stderr, "[INFO] InstructionLoaderTest::testLoadAndReload PASSED\n");
     }
 };
 

@@ -1,4 +1,5 @@
-name: CI
+<<<<<<< HEAD
+name: HexMag Swarm & IDE Build Test
 
 on:
   push:
@@ -11,24 +12,9 @@ on:
       - hotfix/**
   pull_request:
   workflow_dispatch:
-    inputs:
-      run_hexmag:
-        type: boolean
-        default: false
-      run_cmake_matrix:
-        type: boolean
-        default: false
-      run_ggml_ci:
-        type: boolean
-        default: false
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
-  cancel-in-progress: true
 
 jobs:
   build-and-test:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_hexmag }}
     runs-on: windows-latest
 
     steps:
@@ -93,8 +79,21 @@ jobs:
         shell: pwsh
         run: |
           Get-Process python -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+=======
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
   build:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_cmake_matrix }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
@@ -147,7 +146,6 @@ jobs:
 
 # TODO: simplify the following workflows using a matrix
   ggml-ci-x64-cpu-low-perf:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: ubuntu-22.04
 
     steps:
@@ -173,7 +171,6 @@ jobs:
           LLAMA_ARG_THREADS=$(nproc) GG_BUILD_LOW_PERF=1 bash ./ci/run.sh ./tmp/results ./tmp/mnt
 
   ggml-ci-arm64-cpu-low-perf:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: ubuntu-22.04-arm
 
     steps:
@@ -199,7 +196,6 @@ jobs:
           LLAMA_ARG_THREADS=$(nproc) GG_BUILD_LOW_PERF=1 bash ./ci/run.sh ./tmp/results ./tmp/mnt
 
   ggml-ci-x64-cpu-high-perf:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: ubuntu-22.04
 
     steps:
@@ -225,7 +221,6 @@ jobs:
           LLAMA_ARG_THREADS=$(nproc) bash ./ci/run.sh ./tmp/results ./tmp/mnt
 
   ggml-ci-arm64-cpu-high-perf:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: ubuntu-22.04-arm
 
     steps:
@@ -251,7 +246,6 @@ jobs:
           LLAMA_ARG_THREADS=$(nproc) GG_BUILD_NO_SVE=1 GG_BUILD_NO_BF16=1 GG_BUILD_EXTRA_TESTS_0=1 bash ./ci/run.sh ./tmp/results ./tmp/mnt
 
   ggml-ci-arm64-cpu-high-perf-sve:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: ubuntu-22.04-arm
 
     steps:
@@ -277,7 +271,6 @@ jobs:
           LLAMA_ARG_THREADS=$(nproc) GG_BUILD_NO_BF16=1 GG_BUILD_EXTRA_TESTS_0=1 bash ./ci/run.sh ./tmp/results ./tmp/mnt
 
   ggml-ci-x64-nvidia-cuda:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: [self-hosted, Linux, X64, NVIDIA]
 
     steps:
@@ -292,7 +285,6 @@ jobs:
           GG_BUILD_CUDA=1 bash ./ci/run.sh ~/results/ggml /mnt/ggml
 
   ggml-ci-x64-nvidia-vulkan-cm:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: [self-hosted, Linux, X64, NVIDIA]
 
     steps:
@@ -307,7 +299,6 @@ jobs:
           GG_BUILD_VULKAN=1 GGML_VK_DISABLE_COOPMAT2=1 bash ./ci/run.sh ~/results/ggml /mnt/ggml
 
   ggml-ci-x64-nvidia-vulkan-cm2:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: [self-hosted, Linux, X64, NVIDIA, COOPMAT2]
 
     steps:
@@ -322,7 +313,6 @@ jobs:
           GG_BUILD_VULKAN=1 bash ./ci/run.sh ~/results/ggml /mnt/ggml
 
   ggml-ci-x64-cpu-amx:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: [self-hosted, Linux, X64, CPU, AMX]
 
     steps:
@@ -336,7 +326,6 @@ jobs:
           bash ./ci/run.sh ~/results/ggml /mnt/ggml
 
   ggml-ci-mac-metal:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: [self-hosted, macOS, ARM64]
 
     steps:
@@ -350,7 +339,6 @@ jobs:
           GG_BUILD_METAL=1 bash ./ci/run.sh ~/results/ggml ~/mnt/ggml
 
   ggml-ci-mac-vulkan:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_ggml_ci }}
     runs-on: [self-hosted, macOS, ARM64]
 
     steps:
@@ -363,3 +351,4 @@ jobs:
         run: |
           vulkaninfo --summary
           GG_BUILD_VULKAN=1 bash ./ci/run.sh ~/results/ggml ~/mnt/ggml
+>>>>>>> upstream/master

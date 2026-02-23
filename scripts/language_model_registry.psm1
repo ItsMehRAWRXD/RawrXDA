@@ -2,8 +2,6 @@
 # Manages 60+ custom languages paired with models for specific tasks
 # Supports runtime language switching and complete state reset
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 $script:LanguageRegistry = @{}
 $script:ModelLanguageMap = @{}
 $script:ActiveLanguages = @{}
@@ -669,13 +667,8 @@ function Load-LanguageForModel {
         [string]$ModelName,
         
         [Parameter(Mandatory=$false)]
-        [string]$CompilerPath = ""
+        [string]$CompilerPath = "D:\lazy init ide\compilers"
     )
-
-    if (-not $CompilerPath -or -not $CompilerPath.Trim()) {
-        $CompilerPath = Join-Path (Get-RawrXDRoot) "compilers"
-    }
-    $CompilerPath = Resolve-RawrXDPath $CompilerPath
     
     # Verify language exists
     if (-not $script:AllLanguages.ContainsKey($Language)) {
@@ -881,13 +874,8 @@ function Initialize-LanguageForModel {
         [string[]]$Languages,
         
         [Parameter(Mandatory=$false)]
-        [string]$CompilerPath = ""
+        [string]$CompilerPath = "D:\lazy init ide\compilers"
     )
-
-    if (-not $CompilerPath -or -not $CompilerPath.Trim()) {
-        $CompilerPath = Join-Path (Get-RawrXDRoot) "compilers"
-    }
-    $CompilerPath = Resolve-RawrXDPath $CompilerPath
     
     <#
     .SYNOPSIS

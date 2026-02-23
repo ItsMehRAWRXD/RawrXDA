@@ -10,8 +10,13 @@
 // ============================================================================
 
 #include "local_ai_core.hpp"
+#include "enterprise/multi_gpu.h"
+#include "enterprise_license.h"
+#include "license_enforcement.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <cstring>
 #include <cstdio>
@@ -675,6 +680,26 @@ PatchResult LocalAICore::LoadModel(const char* ggufPath) {
     // 4. Compute derived config values
     m_modelConfig.ComputeDerived();
 
+    // ---- Phase 3: License Enforcement ----
+    // 800B Dual-Engine Gate
+    if (m_modelConfig.nLayers > 80 || m_modelConfig.hiddenDim > 8192) {
+        if (!Enforce::LicenseEnforcer::Instance().allow(Enforce::SubsystemID::DualEngine, 
+             License::FeatureID::DualEngine800B, "LoadModel")) {
+            m_speed.UnmapGGUF();
+            return PatchResult::error("800B+ model requires Enterprise license");
+        }
+    }
+
+    // Advanced Quantization Gate
+    if (m_modelConfig.weightQuant != NativeSpeed::QuantType::Q4_0 &&
+        m_modelConfig.weightQuant != NativeSpeed::QuantType::Q4_1) {
+        if (!Enforce::LicenseEnforcer::Instance().allow(Enforce::SubsystemID::Quantization, 
+             License::FeatureID::Q5Q8F16Quantization, "LoadModel")) {
+            m_speed.UnmapGGUF();
+            return PatchResult::error("Advanced quantization requires Professional license");
+        }
+    }
+
     // 5. Resolve layer weight pointers
     r = ResolveLayerWeights();
     if (!r.success) {
@@ -1023,6 +1048,20 @@ InferenceResult LocalAICore::InferTokens(const uint32_t* tokens, uint32_t nToken
     // Configure sampler
     m_sampler.Configure(sampler);
 
+    // ---- Enterprise: Multi-GPU Planning ----
+    bool multiGpuActive = false;
+    auto& multiGpu = Enterprise::MultiGPUManager::Instance();
+    if (Enforce::LicenseEnforcer::Instance().allow(Enforce::SubsystemID::Inference, 
+         License::FeatureID::MultiGPULoadBalance, "InferTokens")) {
+        if (!multiGpu.IsInitialized()) {
+            multiGpu.Initialize();
+        }
+        if (multiGpu.IsInitialized() && multiGpu.GetDeviceCount() > 1) {
+            multiGpu.BuildLayerAssignments(cfg.nLayers, 0, Enterprise::DispatchStrategy::LayerParallel);
+            multiGpuActive = true;
+        }
+    }
+
     // ---- Phase 1: Prefill (process all prompt tokens at once) ----
     auto prefillStart = std::chrono::high_resolution_clock::now();
 
@@ -1056,7 +1095,18 @@ InferenceResult LocalAICore::InferTokens(const uint32_t* tokens, uint32_t nToken
 
     // Run through all transformer layers (prefill: all tokens at once)
     for (uint32_t l = 0; l < cfg.nLayers; ++l) {
-        PatchResult r = ForwardLayer(l, m_hidden, nTokens, m_seqPos);
+        uint32_t deviceId = 0;
+        if (multiGpuActive) {
+            const auto& assignments = multiGpu.GetLayerAssignments();
+            for (const auto& a : assignments) {
+                if (l >= a.startLayer && l <= a.endLayer) {
+                    deviceId = a.deviceId;
+                    break;
+                }
+            }
+        }
+
+        PatchResult r = ForwardLayer(l, m_hidden, nTokens, m_seqPos, deviceId);
         if (!r.success) {
             return InferenceResult::error(r.detail, r.errorCode);
         }
@@ -1137,7 +1187,18 @@ InferenceResult LocalAICore::InferTokens(const uint32_t* tokens, uint32_t nToken
 
         // Forward through all layers (single token, seqLen=1)
         for (uint32_t l = 0; l < cfg.nLayers; ++l) {
-            r = ForwardLayer(l, m_hidden, 1, m_seqPos);
+            uint32_t deviceId = 0;
+            if (multiGpuActive) {
+                const auto& assignments = multiGpu.GetLayerAssignments();
+                for (const auto& a : assignments) {
+                    if (l >= a.startLayer && l <= a.endLayer) {
+                        deviceId = a.deviceId;
+                        break;
+                    }
+                }
+            }
+
+            r = ForwardLayer(l, m_hidden, 1, m_seqPos, deviceId);
             if (!r.success) {
                 VirtualFree(outputTokens, 0, MEM_RELEASE);
                 return InferenceResult::error(r.detail, r.errorCode);
@@ -1179,7 +1240,8 @@ InferenceResult LocalAICore::InferTokens(const uint32_t* tokens, uint32_t nToken
 // Transformer Layer Forward Pass
 // ============================================================================
 PatchResult LocalAICore::ForwardLayer(uint32_t layerIdx, float* hidden,
-                                       uint32_t seqLen, uint32_t startPos) {
+                                       uint32_t seqLen, uint32_t startPos,
+                                       uint32_t deviceId) {
     if (layerIdx >= m_nLayers) {
         return PatchResult::error("ForwardLayer: layer index out of range");
     }
@@ -1187,6 +1249,10 @@ PatchResult LocalAICore::ForwardLayer(uint32_t layerIdx, float* hidden,
     const ModelConfig& cfg = m_modelConfig;
     const LayerWeights& lw = m_layers[layerIdx];
 
+    // If deviceId > 0, we should dispatch to a GPU bridge here.
+    // However, for this implementation, we focus on CPU or unified dispatch
+    // via NativeSpeedLayer.
+    
     // 1. Pre-norm (attention)
     if (lw.attnNorm) {
         for (uint32_t s = 0; s < seqLen; ++s) {

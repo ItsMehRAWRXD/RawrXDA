@@ -1880,7 +1880,7 @@ static void ggml_mul_mat_q4_0_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -1995,7 +1995,7 @@ static void ggml_mul_mat_q4_1_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2110,7 +2110,7 @@ static void ggml_mul_mat_q5_0_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2225,7 +2225,7 @@ static void ggml_mul_mat_q5_1_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2340,7 +2340,7 @@ static void ggml_mul_mat_q8_0_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2461,7 +2461,7 @@ static void ggml_mul_mat_q2_K_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2591,7 +2591,7 @@ static void ggml_mul_mat_q3_K_q8_1_sycl(const void *vx, const void *vy,
 #endif
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2712,7 +2712,7 @@ static void ggml_mul_mat_q4_K_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2833,7 +2833,7 @@ static void ggml_mul_mat_q5_K_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -2954,7 +2954,7 @@ static void ggml_mul_mat_q6_K_q8_1_sycl(const void *vx, const void *vy,
     }
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }
@@ -3024,7 +3024,7 @@ void ggml_sycl_op_mul_mat_q(
     GGML_UNUSED(src1_ddf_i);
 }
 catch (sycl::exception const &exc) {
-  s_logger.error( exc.what() << "Exception caught at file:" << __FILE__
+  std::cerr << exc.what() << "Exception caught at file:" << __FILE__
             << ", line:" << __LINE__ << std::endl;
   std::exit(1);
 }

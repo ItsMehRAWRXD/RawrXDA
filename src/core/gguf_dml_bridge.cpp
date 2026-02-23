@@ -14,8 +14,12 @@
 #include "gguf_dml_bridge.h"
 #include "directml_compute.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <cstring>
 #include <cmath>

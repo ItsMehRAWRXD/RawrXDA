@@ -3,13 +3,18 @@
 #pragma once
 
 #include "agent_kernel_main.hpp"
-#include "QtReplacements.hpp"
 #include "AgentOrchestrator.hpp"
+#include <fstream>
+#include <functional>
+#include <filesystem>
 #include <commctrl.h>
 #include <richedit.h>
 #include <windowsx.h>
+#include <shlobj.h>
 
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -46,6 +51,19 @@ constexpr int ID_FILE_TREE = 1101;
 constexpr int ID_TERMINAL_TABS = 1102;
 constexpr int ID_MAIN_SPLITTER_V = 1103;
 constexpr int ID_MAIN_SPLITTER_H = 1104;
+
+constexpr UINT WM_AGENT_EVENT = WM_APP + 0x100;
+
+// Menu IDs
+constexpr int IDM_FILE_OPEN = 1201;
+constexpr int IDM_FILE_OPEN_FOLDER = 1202;
+constexpr int IDM_FILE_EXIT = 1203;
+constexpr int IDM_VIEW_TERMINAL = 1211;
+constexpr int IDM_VIEW_FILEBROWSER = 1212;
+constexpr int IDM_AI_AUTO_APPROVE = 1221;
+constexpr int IDM_AI_CLEAR = 1222;
+constexpr int IDM_AI_REFRESH_MODELS = 1223;
+constexpr int IDM_SETTINGS_OLLAMA = 1231;
 
 // File Browser
 class FileBrowser {
@@ -135,7 +153,7 @@ public:
     }
 
     void getItemPath(HTREEITEM hItem, wchar_t* buffer) {
-        Vector<QString> parts;
+        Vector<String> parts;
         HTREEITEM hCur = hItem;
         while (hCur) {
             TVITEMW tvi = {0};
@@ -145,14 +163,14 @@ public:
             tvi.pszText = text;
             tvi.cchTextMax = MAX_PATH;
             SendMessageW(m_hTree, TVM_GETITEMW, 0, (LPARAM)&tvi);
-            parts.push_back(QString(text));
+            parts.push_back(String(text));
             hCur = (HTREEITEM)SendMessageW(m_hTree, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)hCur);
         }
 
-        QString fullPath;
-        for (int i = parts.size() - 1; i >= 0; i--) {
+        String fullPath;
+        for (int i = (int)parts.size() - 1; i >= 0; i--) {
             fullPath += parts[i];
-            if (i > 0 && !parts[i].endsWith(L"\\")) fullPath += L"\\";
+            if (i > 0 && (parts[i].empty() || parts[i].back() != L'\\')) fullPath += L"\\";
         }
         wcscpy(buffer, fullPath.c_str());
     }
@@ -164,10 +182,10 @@ private:
     HWND m_hTree = nullptr;
 };
 
-// Editor Tabs
+// Editor Tabs — C++20 String, no Qt
 struct EditorInstance {
     HWND hEdit = nullptr;
-    QString filePath;
+    String filePath;
     bool modified = false;
 };
 
@@ -193,7 +211,7 @@ public:
         return true;
     }
 
-    void openFile(const QString& path) {
+    void openFile(const String& path) {
         // Check if already open
         for (size_t i = 0; i < m_editors.size(); i++) {
             if (m_editors[i].filePath == path) {
@@ -203,11 +221,12 @@ public:
             }
         }
 
-        // Read file
-        QFile f(path);
-        if (!f.open(L"r")) return;
-        QString content = f.readAll();
+        // Read file (C++20 / std::filesystem, no Qt)
+        std::ifstream f(std::filesystem::path(path));
+        if (!f.is_open()) return;
+        std::string contentNarrow((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
         f.close();
+        String content = StringUtils::FromUtf8(contentNarrow);
 
         // Create new editor
         RECT rc;
@@ -230,7 +249,7 @@ public:
         cf.dwMask = CFM_COLOR | CFM_FACE | CFM_SIZE;
         cf.crTextColor = RGB(212, 212, 212);
         wcscpy_s(cf.szFaceName, L"Consolas");
-        cf.yHeight = 200; 
+        cf.yHeight = 200;
         SendMessageW(hEdit, EM_SETCHARFORMAT, SCF_ALL, reinterpret_cast<LPARAM>(&cf));
 
         SetWindowTextW(hEdit, content.c_str());
@@ -238,7 +257,8 @@ public:
         // Add tab
         TCITEMW tie = {0};
         tie.mask = TCIF_TEXT;
-        QString fileName = path.mid(path.lastIndexOf(L'\\') + 1);
+        size_t lastSlash = path.find_last_of(L"\\/");
+        String fileName = (lastSlash != String::npos) ? path.substr(lastSlash + 1) : path;
         tie.pszText = const_cast<LPWSTR>(fileName.c_str());
         int idx = (int)SendMessageW(m_hTab, TCM_INSERTITEMW, m_editors.size(), (LPARAM)&tie);
 
@@ -385,7 +405,49 @@ public:
                                 wchar_t* wBuf = new wchar_t[wLen + 1];
                                 MultiByteToWideChar(CP_UTF8, 0, buf, bytesRead, wBuf, wLen);
                                 wBuf[wLen] = L'\0';
-                                // Append to output RichEdit on UI thread\n                                int len = GetWindowTextLengthW(rc->hOutput);\n                                SendMessageW(rc->hOutput, EM_SETSEL, len, len);\n                                SendMessageW(rc->hOutput, EM_REPLACESEL, FALSE, (LPARAM)wBuf);\n                                SendMessageW(rc->hOutput, WM_VSCROLL, SB_BOTTOM, 0);\n                                delete[] wBuf;\n                            }\n                        }\n                        delete rc;\n                        return 0;\n                    }, ctx, 0, nullptr);\n                \n                // Subclass input to intercept Enter key\n                SetWindowSubclass(hInput, [](HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam,\n                    UINT_PTR uIdSubclass, DWORD_PTR dwRefData) -> LRESULT {\n                    if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {\n                        HANDLE hStdin = reinterpret_cast<HANDLE>(dwRefData);\n                        int len = GetWindowTextLengthW(hwnd);\n                        if (len > 0 && hStdin) {\n                            wchar_t* buf = new wchar_t[len + 1];\n                            GetWindowTextW(hwnd, buf, len + 1);\n                            // Convert to UTF-8\n                            int utf8Len = WideCharToMultiByte(CP_UTF8, 0, buf, -1, nullptr, 0, nullptr, nullptr);\n                            char* utf8 = new char[utf8Len + 2];\n                            WideCharToMultiByte(CP_UTF8, 0, buf, -1, utf8, utf8Len, nullptr, nullptr);\n                            // Append newline\n                            int sLen = (int)strlen(utf8);\n                            utf8[sLen] = '\\n';\n                            utf8[sLen + 1] = '\\0';\n                            DWORD written;\n                            WriteFile(hStdin, utf8, sLen + 1, &written, nullptr);\n                            delete[] utf8;\n                            delete[] buf;\n                            SetWindowTextW(hwnd, L\"\");\n                        }\n                        return 0;\n                    }\n                    return DefSubclassProc(hwnd, uMsg, wParam, lParam);\n                }, 1, reinterpret_cast<DWORD_PTR>(m_hStdinWrite));\n                \n            } else {\n                // Process creation failed - cleanup\n                CloseHandle(hStdoutRead);\n                CloseHandle(hStdoutWrite);\n                CloseHandle(hStdinRead);\n                CloseHandle(hStdinWrite);\n            }\n        }\n    }
+                                int len = GetWindowTextLengthW(rc->hOutput);
+                                SendMessageW(rc->hOutput, EM_SETSEL, len, len);
+                                SendMessageW(rc->hOutput, EM_REPLACESEL, FALSE, (LPARAM)wBuf);
+                                SendMessageW(rc->hOutput, WM_VSCROLL, SB_BOTTOM, 0);
+                                delete[] wBuf;
+                            }
+                        }
+                        delete rc;
+                        return 0;
+                    }, ctx, 0, nullptr);
+
+                SetWindowSubclass(hInput, [](HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
+                    UINT_PTR, DWORD_PTR dwRefData) -> LRESULT {
+                    if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {
+                        HANDLE hStdin = reinterpret_cast<HANDLE>(dwRefData);
+                        int len = GetWindowTextLengthW(hwnd);
+                        if (len > 0 && hStdin) {
+                            wchar_t* buf = new wchar_t[len + 1];
+                            GetWindowTextW(hwnd, buf, len + 1);
+                            int utf8Len = WideCharToMultiByte(CP_UTF8, 0, buf, -1, nullptr, 0, nullptr, nullptr);
+                            char* utf8 = new char[utf8Len + 2];
+                            WideCharToMultiByte(CP_UTF8, 0, buf, -1, utf8, utf8Len, nullptr, nullptr);
+                            size_t sLen = strlen(utf8);
+                            utf8[sLen] = '\n';
+                            utf8[sLen + 1] = '\0';
+                            DWORD written;
+                            WriteFile(hStdin, utf8, (DWORD)(sLen + 1), &written, nullptr);
+                            delete[] utf8;
+                            delete[] buf;
+                            SetWindowTextW(hwnd, L"");
+                        }
+                        return 0;
+                    }
+                    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+                }, 1, reinterpret_cast<DWORD_PTR>(m_hStdinWrite));
+            } else {
+                CloseHandle(hStdoutRead);
+                CloseHandle(hStdoutWrite);
+                CloseHandle(hStdinRead);
+                CloseHandle(hStdinWrite);
+            }
+        }
+    }
 
     void resize(int x, int y, int width, int height) {
         MoveWindow(m_hTab, x, y, width, height, TRUE);
@@ -494,7 +556,7 @@ public:
         return true;
     }
 
-    void appendMessage(const QString& sender, const QString& message, COLORREF color) {
+    void appendMessage(const String& sender, const String& message, COLORREF color) {
         // Move to end
         int length = GetWindowTextLengthW(m_chatDisplay);
         SendMessageW(m_chatDisplay, EM_SETSEL, length, length);
@@ -508,7 +570,7 @@ public:
         SendMessageW(m_chatDisplay, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
 
         // Add sender
-        QString senderLine = sender + QString(": ");
+        String senderLine = sender + L": ";
         SendMessageW(m_chatDisplay, EM_REPLACESEL, FALSE, reinterpret_cast<LPARAM>(senderLine.c_str()));
 
         // Set color for message (not bold)
@@ -517,22 +579,22 @@ public:
         SendMessageW(m_chatDisplay, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
 
         // Add message
-        QString msgLine = message + QString("\n\n");
+        String msgLine = message + L"\n\n";
         SendMessageW(m_chatDisplay, EM_REPLACESEL, FALSE, reinterpret_cast<LPARAM>(msgLine.c_str()));
 
         // Scroll to bottom
         SendMessageW(m_chatDisplay, WM_VSCROLL, SB_BOTTOM, 0);
     }
 
-    void appendUserMessage(const QString& message) {
-        appendMessage(QString("You"), message, m_colors.userMessage);
+    void appendUserMessage(const String& message) {
+        appendMessage(L"You", message, m_colors.userMessage);
     }
 
-    void appendAssistantMessage(const QString& message) {
-        appendMessage(QString("Assistant"), message, m_colors.assistantMessage);
+    void appendAssistantMessage(const String& message) {
+        appendMessage(L"Assistant", message, m_colors.assistantMessage);
     }
 
-    void appendToolCall(const QString& tool, const QString& args) {
+    void appendToolCall(const String& tool, const String& args) {
         int length = GetWindowTextLengthW(m_chatDisplay);
         SendMessageW(m_chatDisplay, EM_SETSEL, length, length);
 
@@ -543,16 +605,16 @@ public:
         cf.dwEffects = CFE_ITALIC;
         SendMessageW(m_chatDisplay, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
 
-        QString text = QString("[Tool: ") + tool + QString("]\n") + args + QString("\n\n");
+        String text = L"[Tool: " + tool + L"]\n" + args + L"\n\n";
         SendMessageW(m_chatDisplay, EM_REPLACESEL, FALSE, reinterpret_cast<LPARAM>(text.c_str()));
         SendMessageW(m_chatDisplay, WM_VSCROLL, SB_BOTTOM, 0);
     }
 
-    void appendError(const QString& error) {
-        appendMessage(QString("Error"), error, m_colors.error);
+    void appendError(const String& error) {
+        appendMessage(L"Error", error, m_colors.error);
     }
 
-    void appendStreamChunk(const QString& chunk) {
+    void appendStreamChunk(const String& chunk) {
         int length = GetWindowTextLengthW(m_chatDisplay);
         SendMessageW(m_chatDisplay, EM_SETSEL, length, length);
 
@@ -570,14 +632,14 @@ public:
         SetWindowTextW(m_chatDisplay, L"");
     }
 
-    QString getInputText() const {
+    String getInputText() const {
         int length = GetWindowTextLengthW(m_chatInput);
-        if (length == 0) return QString();
+        if (length == 0) return String();
 
         std::wstring buffer(length + 1, L'\0');
         GetWindowTextW(m_chatInput, buffer.data(), length + 1);
         buffer.resize(length);
-        return QString(buffer);
+        return String(buffer);
     }
 
     void clearInput() {
@@ -637,16 +699,16 @@ public:
         return true;
     }
 
-    void setState(const QString& state) {
+    void setState(const String& state) {
         SendMessageW(m_statusBar, SB_SETTEXTW, 0, reinterpret_cast<LPARAM>(state.c_str()));
     }
 
-    void setModel(const QString& model) {
-        QString text = QString("Model: ") + model;
+    void setModel(const String& model) {
+        String text = L"Model: " + model;
         SendMessageW(m_statusBar, SB_SETTEXTW, 1, reinterpret_cast<LPARAM>(text.c_str()));
     }
 
-    void setMessage(const QString& message) {
+    void setMessage(const String& message) {
         SendMessageW(m_statusBar, SB_SETTEXTW, 2, reinterpret_cast<LPARAM>(message.c_str()));
     }
 
@@ -699,30 +761,30 @@ public:
         return true;
     }
 
-    void showDiff(const QString& original, const QString& modified, const QString& filename) {
+    void showDiff(const String& original, const String& modified, const String& filename) {
         SetWindowTextW(m_window, L"");
 
-        appendLine(QString("=== ") + filename + QString(" ==="), m_colors.foreground);
-        appendLine(QString(""), m_colors.foreground);
+        appendLine(L"=== " + filename + L" ===", m_colors.foreground);
+        appendLine(L"", m_colors.foreground);
 
-        auto origLines = original.split(QString("\n"));
-        auto modLines = modified.split(QString("\n"));
+        auto origLines = StringUtils::Split(original, L"\n");
+        auto modLines = StringUtils::Split(modified, L"\n");
 
         // Simple line-by-line diff
         size_t maxLines = (std::max)(origLines.size(), modLines.size());
 
         for (size_t i = 0; i < maxLines; ++i) {
-            QString origLine = i < origLines.size() ? origLines[i] : QString();
-            QString modLine = i < modLines.size() ? modLines[i] : QString();
+            String origLine = i < origLines.size() ? origLines[i] : String();
+            String modLine = i < modLines.size() ? modLines[i] : String();
 
             if (origLine == modLine) {
-                appendLine(QString("  ") + origLine, m_colors.foreground);
+                appendLine(L"  " + origLine, m_colors.foreground);
             } else {
-                if (!origLine.isEmpty()) {
-                    appendLine(QString("- ") + origLine, RGB(244, 71, 71));
+                if (!origLine.empty()) {
+                    appendLine(L"- " + origLine, RGB(244, 71, 71));
                 }
-                if (!modLine.isEmpty()) {
-                    appendLine(QString("+ ") + modLine, RGB(78, 201, 176));
+                if (!modLine.empty()) {
+                    appendLine(L"+ " + modLine, RGB(78, 201, 176));
                 }
             }
         }
@@ -738,7 +800,7 @@ public:
     HWND handle() const { return m_window; }
 
 private:
-    void appendLine(const QString& line, COLORREF color) {
+    void appendLine(const String& line, COLORREF color) {
         int length = GetWindowTextLengthW(m_window);
         SendMessageW(m_window, EM_SETSEL, length, length);
 
@@ -748,7 +810,7 @@ private:
         cf.crTextColor = color;
         SendMessageW(m_window, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
 
-        QString text = line + QString("\n");
+        String text = line + L"\n";
         SendMessageW(m_window, EM_REPLACESEL, FALSE, reinterpret_cast<LPARAM>(text.c_str()));
     }
 
@@ -761,7 +823,7 @@ class AgentWindow {
 public:
     AgentWindow() = default;
 
-    bool create(HINSTANCE hInstance, const QString& title, int width = 1400, int height = 900) {
+    bool create(HINSTANCE hInstance, const String& title, int width = 1400, int height = 900) {
         m_hInstance = hInstance;
 
         // Register window class
@@ -796,13 +858,39 @@ public:
         // Load fonts
         m_hFontUI = CreateFontW(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
 
+        // Create menu bar
+        HMENU hMenuBar = CreateMenu();
+        HMENU hFile = CreatePopupMenu();
+        AppendMenuW(hFile, MF_STRING, IDM_FILE_OPEN, L"&Open File...");
+        AppendMenuW(hFile, MF_STRING, IDM_FILE_OPEN_FOLDER, L"Open &Folder (Working Dir)...");
+        AppendMenuW(hFile, MF_SEPARATOR, 0, nullptr);
+        AppendMenuW(hFile, MF_STRING, IDM_FILE_EXIT, L"E&xit");
+        AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hFile, L"&File");
+
+        HMENU hView = CreatePopupMenu();
+        AppendMenuW(hView, MF_STRING, IDM_VIEW_TERMINAL, L"&Terminal");
+        AppendMenuW(hView, MF_STRING, IDM_VIEW_FILEBROWSER, L"&File Browser");
+        AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hView, L"&View");
+
+        HMENU hAI = CreatePopupMenu();
+        AppendMenuW(hAI, MF_STRING, IDM_AI_AUTO_APPROVE, L"&Auto-approve Tools");
+        AppendMenuW(hAI, MF_STRING, IDM_AI_CLEAR, L"&Clear Chat");
+        AppendMenuW(hAI, MF_STRING, IDM_AI_REFRESH_MODELS, L"Refresh &Models");
+        AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hAI, L"&AI");
+
+        HMENU hSettings = CreatePopupMenu();
+        AppendMenuW(hSettings, MF_STRING, IDM_SETTINGS_OLLAMA, L"&Ollama Host...");
+        AppendMenuW(hMenuBar, MF_POPUP, (UINT_PTR)hSettings, L"&Settings");
+
+        SetMenu(m_window, hMenuBar);
+
         // Create UI components
         if (!m_statusBar.create(m_window)) return false;
 
         layout();
 
-        m_statusBar.setState(QString("Ready"));
-        m_statusBar.setModel(QString("Not connected"));
+        m_statusBar.setState(L"Ready");
+        m_statusBar.setModel(L"Not connected");
 
         return true;
     }
@@ -820,11 +908,29 @@ public:
         int bottomHeight = 220;
         int centerWidth = w - leftWidth - rightWidth;
         int centerHeight = contentHeight - bottomHeight;
+        int chatTopY = 0;
+        int modelComboHeight = 26;
+        int chatHeight = contentHeight - modelComboHeight;
 
         m_fileBrowser.create(m_window, 0, 0, leftWidth, contentHeight);
         m_editorTabs.create(m_window, leftWidth, 0, centerWidth, centerHeight);
         m_terminalPanel.create(m_window, leftWidth, centerHeight, centerWidth, bottomHeight);
-        m_chatPanel.create(m_window, leftWidth + centerWidth, 0, rightWidth, contentHeight);
+        m_chatPanel.create(m_window, leftWidth + centerWidth, chatTopY + modelComboHeight, rightWidth, chatHeight);
+
+        // Model selector combo
+        if (!m_modelCombo) {
+            m_modelCombo = CreateWindowExW(0, L"COMBOBOX", L"",
+                WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_HASSTRINGS,
+                leftWidth + centerWidth + 4, 2, rightWidth - 50, 200,
+                m_window, (HMENU)ID_MODEL_COMBO, GetModuleHandleW(nullptr), nullptr);
+            if (m_modelCombo && m_hFontUI) {
+                SendMessageW(m_modelCombo, WM_SETFONT, (WPARAM)m_hFontUI, TRUE);
+                SendMessageW(m_modelCombo, CB_ADDSTRING, 0, (LPARAM)L"(Select model)");
+                SendMessageW(m_modelCombo, CB_SETCURSEL, 0, 0);
+            }
+        } else {
+            MoveWindow(m_modelCombo, leftWidth + centerWidth + 4, 2, rightWidth - 50, 200, TRUE);
+        }
     }
 
     void show() {
@@ -832,15 +938,26 @@ public:
         UpdateWindow(m_window);
     }
 
+    void setAgentEventCallback(std::function<void(const AgentEvent&)> cb) {
+        m_agentEventCallback = std::move(cb);
+    }
+
     void setAgent(AgentOrchestrator* agent) {
         m_agent = agent;
         if (agent) {
             agent->setEventCallback([this](const AgentEvent& event) {
-                handleAgentEvent(event);
+                if (m_agentEventCallback) {
+                    AgentEvent* copy = new AgentEvent(event);
+                    PostMessageW(m_window, WM_AGENT_EVENT, 0, (LPARAM)copy);
+                } else {
+                    handleAgentEvent(event);
+                }
             });
-
+            populateModels();
             if (agent->isLLMAvailable()) {
                 m_statusBar.setModel(agent->config().model);
+            } else {
+                m_statusBar.setModel(L"Connect Ollama");
             }
         }
     }
@@ -893,11 +1010,14 @@ private:
                 int bottomHeight = 220;
                 int centerWidth = w - leftWidth - rightWidth;
                 int centerHeight = contentHeight - bottomHeight;
+                int modelComboHeight = 26;
+                int chatHeight = contentHeight - modelComboHeight;
 
                 if (m_fileBrowser.getHWND()) MoveWindow(m_fileBrowser.getHWND(), 0, 0, leftWidth, contentHeight, TRUE);
                 if (m_editorTabs.getHWND()) m_editorTabs.resize(leftWidth, 0, centerWidth, centerHeight);
                 if (m_terminalPanel.getHWND()) m_terminalPanel.resize(leftWidth, centerHeight, centerWidth, bottomHeight);
-                if (m_chatPanel.chatDisplay()) m_chatPanel.resize(leftWidth + centerWidth, 0, rightWidth, contentHeight);
+                if (m_chatPanel.chatDisplay()) m_chatPanel.resize(leftWidth + centerWidth, modelComboHeight, rightWidth, chatHeight);
+                if (m_modelCombo) MoveWindow(m_modelCombo, leftWidth + centerWidth + 4, 2, rightWidth - 50, 200, TRUE);
                 
                 return 0;
             }
@@ -911,6 +1031,27 @@ private:
                 } else if (id == ID_CLEAR_BUTTON) {
                     m_chatPanel.clear();
                     if (m_agent) m_agent->clearConversation();
+                } else if (id == IDM_FILE_OPEN) {
+                    openFile();
+                } else if (id == IDM_FILE_OPEN_FOLDER) {
+                    openFolder();
+                } else if (id == IDM_FILE_EXIT) {
+                    PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                } else if (id == IDM_VIEW_TERMINAL) {
+                    toggleTerminal();
+                } else if (id == IDM_VIEW_FILEBROWSER) {
+                    toggleFileBrowser();
+                } else if (id == IDM_AI_AUTO_APPROVE) {
+                    toggleAutoApprove();
+                } else if (id == IDM_AI_CLEAR) {
+                    m_chatPanel.clear();
+                    if (m_agent) m_agent->clearConversation();
+                } else if (id == IDM_AI_REFRESH_MODELS) {
+                    populateModels();
+                } else if (id == IDM_SETTINGS_OLLAMA) {
+                    showOllamaSettings();
+                } else if (id == ID_MODEL_COMBO && HIWORD(wParam) == CBN_SELCHANGE) {
+                    onModelSelected();
                 }
                 return 0;
             }
@@ -925,8 +1066,21 @@ private:
                         TVITEMW tvi = {0};
                         tvi.hItem = ((LPNMTREEVIEWW)lParam)->itemNew.hItem;
                         m_fileBrowser.getItemPath(tvi.hItem, path);
-                        m_editorTabs.openFile(QString(path));
+                        m_editorTabs.openFile(String(path));
                     }
+                }
+                return 0;
+            }
+
+            case WM_AGENT_EVENT: {
+                AgentEvent* ev = reinterpret_cast<AgentEvent*>(lParam);
+                if (ev) {
+                    if (m_agentEventCallback) {
+                        m_agentEventCallback(*ev);
+                    } else {
+                        handleAgentEvent(*ev);
+                    }
+                    delete ev;
                 }
                 return 0;
             }
@@ -940,8 +1094,8 @@ private:
     }
 
     void sendMessage() {
-        QString text = m_chatPanel.getInputText();
-        if (text.isEmpty()) return;
+        String text = m_chatPanel.getInputText();
+        if (text.empty()) return;
 
         m_chatPanel.clearInput();
         m_chatPanel.appendUserMessage(text);
@@ -951,15 +1105,107 @@ private:
         }
     }
 
+    void populateModels() {
+        if (!m_modelCombo || !m_agent) return;
+        SendMessageW(m_modelCombo, CB_RESETCONTENT, 0, 0);
+        auto models = m_agent->listModels();
+        for (const auto& m : models) {
+            SendMessageW(m_modelCombo, CB_ADDSTRING, 0, (LPARAM)m.c_str());
+        }
+        if (models.empty()) {
+            SendMessageW(m_modelCombo, CB_ADDSTRING, 0, (LPARAM)L"(No models - start Ollama)");
+        }
+        SendMessageW(m_modelCombo, CB_SETCURSEL, 0, 0);
+        for (size_t i = 0; i < models.size(); i++) {
+            if (models[i] == m_agent->config().model) {
+                SendMessageW(m_modelCombo, CB_SETCURSEL, (WPARAM)i, 0);
+                break;
+            }
+        }
+    }
+
+    void onModelSelected() {
+        if (!m_modelCombo || !m_agent) return;
+        int idx = (int)SendMessageW(m_modelCombo, CB_GETCURSEL, 0, 0);
+        if (idx < 0) return;
+        wchar_t buf[256];
+        if (SendMessageW(m_modelCombo, CB_GETLBTEXT, idx, (LPARAM)buf) > 0) {
+            String model(buf);
+            if (!model.empty() && model != L"(No models - start Ollama)" && model != L"(Select model)") {
+                m_agent->setModel(model);
+                m_statusBar.setModel(model);
+            }
+        }
+    }
+
+    void openFile() {
+        wchar_t path[MAX_PATH] = {};
+        OPENFILENAMEW ofn = { sizeof(ofn) };
+        ofn.hwndOwner = m_window;
+        ofn.lpstrFile = path;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrFilter = L"All Files (*.*)\0*.*\0";
+        ofn.Flags = OFN_FILEMUSTEXIST;
+        if (GetOpenFileNameW(&ofn)) {
+            m_editorTabs.openFile(String(path));
+        }
+    }
+
+    void openFolder() {
+        BROWSEINFOW bi = {};
+        bi.hwndOwner = m_window;
+        bi.lpszTitle = L"Select Working Directory";
+        bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+        LPITEMIDLIST pidl = SHBrowseForFolderW(&bi);
+        if (pidl) {
+            wchar_t path[MAX_PATH];
+            if (SHGetPathFromIDListW(pidl, path)) {
+                if (m_agent) {
+                    m_agent->setWorkingDirectory(String(path));
+                    m_statusBar.setMessage(String(L"Working dir: ") + path);
+                }
+            }
+            CoTaskMemFree(pidl);
+        }
+    }
+
+    void toggleTerminal() {
+        m_terminalVisible = !m_terminalVisible;
+        if (m_terminalPanel.getHWND()) {
+            ShowWindow(m_terminalPanel.getHWND(), m_terminalVisible ? SW_SHOW : SW_HIDE);
+        }
+    }
+
+    void toggleFileBrowser() {
+        m_fileBrowserVisible = !m_fileBrowserVisible;
+        if (m_fileBrowser.getHWND()) {
+            ShowWindow(m_fileBrowser.getHWND(), m_fileBrowserVisible ? SW_SHOW : SW_HIDE);
+        }
+    }
+
+    void toggleAutoApprove() {
+        if (m_agent) {
+            m_agent->config().autoApproveTools = !m_agent->config().autoApproveTools;
+            m_statusBar.setMessage(m_agent->config().autoApproveTools ? L"Auto-approve ON" : L"Auto-approve OFF");
+        }
+    }
+
+    void showOllamaSettings() {
+        if (!m_agent) return;
+        const auto& c = m_agent->config();
+        String msg = L"Ollama: " + c.ollamaHost + L":" + std::to_wstring(c.ollamaPort) + L"\nModel: " + c.model;
+        MessageBoxW(m_window, msg.c_str(), L"Settings", MB_OK);
+    }
+
     void handleAgentEvent(const AgentEvent& event) {
-        // Direct update for now, ideally use PostMessage for thread safety
+        String qmsg(event.message);
         switch (event.type) {
-            case AgentEvent::Type::StateChanged: m_statusBar.setState(event.message); break;
-            case AgentEvent::Type::MessageReceived: m_chatPanel.appendAssistantMessage(event.message); break;
-            case AgentEvent::Type::ToolCalled: m_chatPanel.appendToolCall(event.message, QString(JsonParser::Serialize(event.data, 2))); break;
-            case AgentEvent::Type::Error: m_chatPanel.appendError(event.message); break;
-            case AgentEvent::Type::StreamChunk: m_chatPanel.appendStreamChunk(event.message); break;
-            case AgentEvent::Type::Completed: m_statusBar.setState(QString("Ready")); break;
+            case AgentEvent::Type::StateChanged: m_statusBar.setState(qmsg); break;
+            case AgentEvent::Type::MessageReceived: m_chatPanel.appendAssistantMessage(qmsg); break;
+            case AgentEvent::Type::ToolCalled: m_chatPanel.appendToolCall(qmsg, StringUtils::FromUtf8(JsonParser::Serialize(event.data, 2))); break;
+            case AgentEvent::Type::Error: m_chatPanel.appendError(qmsg); break;
+            case AgentEvent::Type::StreamChunk: m_chatPanel.appendStreamChunk(qmsg); break;
+            case AgentEvent::Type::Completed: m_statusBar.setState(L"Ready"); break;
         }
     }
 
@@ -970,8 +1216,12 @@ private:
     TerminalPanel m_terminalPanel;
     ChatPanel m_chatPanel;
     StatusBar m_statusBar;
+    HWND m_modelCombo = nullptr;
     AgentOrchestrator* m_agent = nullptr;
     HFONT m_hFontUI = nullptr;
+    bool m_terminalVisible = true;
+    bool m_fileBrowserVisible = true;
+    std::function<void(const AgentEvent&)> m_agentEventCallback;
 };
 
 } // namespace UI

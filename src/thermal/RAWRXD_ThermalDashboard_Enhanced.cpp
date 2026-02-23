@@ -107,10 +107,11 @@ ThermalDashboardEnhanced::~ThermalDashboardEnhanced()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// UI Setup Stubs
+// UI Setup Stubs (ThermalDashboardEnhanced — shared / web path)
 // ═══════════════════════════════════════════════════════════════════════════════
-// These are no-ops when running under the web IDE. The Win32IDE variant
-// creates real HWND controls via CreateWindowExW in the IDE shell.
+// Win32 IDE uses ThermalDashboard (RAWRXD_ThermalDashboard.cpp) for the real
+// panel: createControls(), progress bars, NVMe/GPU/CPU labels, burst mode combo.
+// These stubs exist for the Enhanced variant used in web/shared code paths only.
 
 void ThermalDashboardEnhanced::setupUI() { /* Win32 or Web IDE handles layout */ }
 void ThermalDashboardEnhanced::setupMainTab() { /* stub */ }

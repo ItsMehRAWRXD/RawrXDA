@@ -1,0 +1,12 @@
+---
+alwaysApply: false
+---
+# Single drive, merge everything, combine ideas
+
+- **One drive only.** Main branch is the single line. All work is brought into main.
+- **No removal or deletion when merging.** When bringing a branch into main, do not delete or remove anything from the branch being merged. Bring it in as-is; then consolidate if needed.
+- **Inspect every branch.** Before merging, inspect the branch: what it adds, what overlaps with main.
+- **Overlap = consolidate, don't discard.** If main and the branch both have "the same" or similar code/feature:
+  - Do not pick one version and delete the other.
+  - Merge both into a single source file: keep the solid base and add the other branch's ideas, so one file contains the combined ideas from both.
+- **Action over manuals.** Prefer changing code and repo state over following READMEs or instruction docs as checklists. Do the merge and consolidation work; don't just "circle" documentation.

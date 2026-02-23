@@ -14,8 +14,8 @@
 #include <cstdio>
 #include <cstdlib>
 
-#define QVERIFY(x)   assert(x)
-#define QCOMPARE(a,b) assert((a)==(b))
+#define TEST_VERIFY(x)   assert(x)
+#define TEST_COMPARE(a,b) assert((a)==(b))
 
 static void initTestCase() {}
 static void cleanupTestCase() {}
@@ -35,9 +35,9 @@ void testTransformerRealAttention()
     TransformerBlockScalar transformer;
     
     // Test dimensions match production architecture
-    QCOMPARE(transformer.getHiddenDim(), 4096u);
-    QCOMPARE(transformer.getHeadCount(), 32u);
-    QCOMPARE(transformer.getHeadDim(), 128u); // 4096 / 32 = 128
+    TEST_COMPARE(transformer.getHiddenDim(), 4096u);
+    TEST_COMPARE(transformer.getHeadCount(), 32u);
+    TEST_COMPARE(transformer.getHeadDim(), 128u); // 4096 / 32 = 128
     
     // Create test input (batch_size=1, seq_len=16, hidden_dim=4096)
     std::vector<float> input(1 * 16 * 4096, 0.1f);
@@ -46,12 +46,12 @@ void testTransformerRealAttention()
     std::vector<float> output = transformer.selfAttention(input, 16);
     
     // Validate output dimensions
-    QCOMPARE(output.size(), input.size());
+    TEST_COMPARE(output.size(), input.size());
     
     // Validate numerical properties
     for (float val : output) {
-        QVERIFY(std::isfinite(val)); // No NaN or infinity
-        QVERIFY(val != 0.0f); // Non-zero output
+        TEST_VERIFY(std::isfinite(val)); // No NaN or infinity
+        TEST_VERIFY(val != 0.0f); // Non-zero output
     }
     
     std::printf("✓ Real attention test passed\n");
@@ -64,7 +64,7 @@ void testTransformerRealFFN()
     TransformerBlockScalar transformer;
     
     // Test FFN dimensions
-    QCOMPARE(transformer.getFFNHiddenDim(), 16384u); // 4096 * 4
+    TEST_COMPARE(transformer.getFFNHiddenDim(), 16384u); // 4096 * 4
     
     // Create test input
     std::vector<float> input(4096, 0.1f);
@@ -73,13 +73,13 @@ void testTransformerRealFFN()
     std::vector<float> output = transformer.feedForward(input);
     
     // Validate output
-    QCOMPARE(output.size(), 4096u);
+    TEST_COMPARE(output.size(), 4096u);
     
     // Test SiLU activation properties
     for (float val : output) {
-        QVERIFY(std::isfinite(val));
+        TEST_VERIFY(std::isfinite(val));
         // SiLU should produce values between ~-0.28 and infinity
-        QVERIFY(val > -0.3f);
+        TEST_VERIFY(val > -0.3f);
     }
     
     std::printf("✓ Real FFN test passed\n");
@@ -119,15 +119,15 @@ void testTransformerLayerNorm()
     variance /= output.size();
     
     // Mean should be near 0, variance near 1
-    QVERIFY(std::abs(mean) < 1e-5f);
-    QVERIFY(std::abs(variance - 1.0f) < 1e-5f);
+    TEST_VERIFY(std::abs(mean) < 1e-5f);
+    TEST_VERIFY(std::abs(variance - 1.0f) < 1e-5f);
     
-    qDebug() << "✓ Layer normalization test passed";
+    std::printf("✓ Layer normalization test passed\n");
 }
 
 void testTransformerForwardPass()
 {
-    qDebug() << "Testing Complete Forward Pass...";
+    std::printf("Testing Complete Forward Pass...\n");
     
     TransformerBlockScalar transformer;
     
@@ -136,25 +136,25 @@ void testTransformerForwardPass()
     std::vector<uint32_t> tokens = {100, 200, 300}; // Test tokens
     
     std::vector<float> hiddenStates = transformer.embedTokens(tokens, embeddings);
-    QCOMPARE(hiddenStates.size(), tokens.size() * 4096);
+    TEST_COMPARE(hiddenStates.size(), tokens.size() * 4096);
     
     // Test full forward pass
     std::vector<float> logits = transformer.runForwardPass(hiddenStates, tokens.size());
     
     // Validate output dimensions
-    QCOMPARE(logits.size(), tokens.size() * 32000); // vocab_size = 32000
+    TEST_COMPARE(logits.size(), tokens.size() * 32000); // vocab_size = 32000
     
     // Validate logits properties
     for (float val : logits) {
-        QVERIFY(std::isfinite(val));
+        TEST_VERIFY(std::isfinite(val));
     }
     
-    qDebug() << "✓ Complete forward pass test passed";
+    std::printf("✓ Complete forward pass test passed\n");
 }
 
 void testTransformerNumericalStability()
 {
-    qDebug() << "Testing Numerical Stability...";
+    std::printf("Testing Numerical Stability...\n");
     
     TransformerBlockScalar transformer;
     
@@ -167,7 +167,7 @@ void testTransformerNumericalStability()
     // Test attention with extreme values
     std::vector<float> attentionOutput = transformer.selfAttention(extremeInput, 1);
     for (float val : attentionOutput) {
-        QVERIFY(std::isfinite(val)); // Should handle extremes without NaN
+        TEST_VERIFY(std::isfinite(val)); // Should handle extremes without NaN
     }
     
     // Test softmax stability
@@ -178,34 +178,34 @@ void testTransformerNumericalStability()
     float sum = 0.0f;
     for (float prob : probs) {
         sum += prob;
-        QVERIFY(prob >= 0.0f && prob <= 1.0f);
+        TEST_VERIFY(prob >= 0.0f && prob <= 1.0f);
     }
-    QVERIFY(std::abs(sum - 1.0f) < 1e-5f);
+    TEST_VERIFY(std::abs(sum - 1.0f) < 1e-5f);
     
-    qDebug() << "✓ Numerical stability test passed";
+    std::printf("✓ Numerical stability test passed\n");
 }
 
 // ===== ModelTrainer Validation Tests =====
 
 void testModelTrainerInitialization()
 {
-    qDebug() << "Testing ModelTrainer Initialization...";
+    std::printf("Testing ModelTrainer Initialization...\n");
     
     ModelTrainer trainer;
     
     // Test default configuration
     ModelTrainer::TrainingConfig config;
-    QCOMPARE(config.epochs, 3);
-    QCOMPARE(config.learningRate, 1e-4f);
-    QCOMPARE(config.batchSize, 4);
-    QCOMPARE(config.sequenceLength, 512);
+    TEST_COMPARE(config.epochs, 3);
+    TEST_COMPARE(config.learningRate, 1e-4f);
+    TEST_COMPARE(config.batchSize, 4);
+    TEST_COMPARE(config.sequenceLength, 512);
     
     // Test initialization state
-    QVERIFY(!trainer.isTraining());
-    QCOMPARE(trainer.getCurrentEpoch(), 0);
-    QCOMPARE(trainer.getCurrentLoss(), 0.0f);
+    TEST_VERIFY(!trainer.isTraining());
+    TEST_COMPARE(trainer.getCurrentEpoch(), 0);
+    TEST_COMPARE(trainer.getCurrentLoss(), 0.0f);
     
-    qDebug() << "✓ ModelTrainer initialization test passed";
+    std::printf("✓ ModelTrainer initialization test passed\n");
 }
 
 void testDatasetLoading()
@@ -225,9 +225,9 @@ void testDatasetLoading()
         }
     }
     auto format1 = trainer.detectDatasetFormat("test_plain.txt");
-    QCOMPARE(format1, ModelTrainer::DatasetFormat::PlainText);
+    TEST_COMPARE(format1, ModelTrainer::DatasetFormat::PlainText);
     auto format2 = trainer.detectDatasetFormat("test_jsonl.jsonl");
-    QCOMPARE(format2, ModelTrainer::DatasetFormat::JsonLines);
+    TEST_COMPARE(format2, ModelTrainer::DatasetFormat::JsonLines);
     std::remove("test_plain.txt");
     std::remove("test_jsonl.jsonl");
     std::printf("✓ Dataset loading test passed\n");
@@ -235,7 +235,7 @@ void testDatasetLoading()
 
 void testTokenization()
 {
-    qDebug() << "Testing Tokenization...";
+    std::printf("Testing Tokenization...\n");
     
     ModelTrainer trainer;
     
@@ -247,9 +247,9 @@ void testTokenization()
     std::vector<uint32_t> tokens = trainer.tokenizeText(sampleText);
     
     // Basic validation
-    QVERIFY(tokens.size() > 0); // Should produce tokens
+    TEST_VERIFY(tokens.size() > 0); // Should produce tokens
     for (uint32_t token : tokens) {
-        QVERIFY(token < 32000); // Within vocabulary range
+        TEST_VERIFY(token < 32000); // Within vocabulary range
     }
     
     std::printf("✓ Tokenization test passed\n");
@@ -276,11 +276,11 @@ void testTrainingConfiguration()
     config.validateEveryEpoch = false;
     
     // Validate configuration values
-    QCOMPARE(config.epochs, 5);
-    QCOMPARE(config.learningRate, 2e-4f);
-    QCOMPARE(config.batchSize, 8);
-    QCOMPARE(config.sequenceLength, 1024);
-    QCOMPARE(config.gradientClip, 2.0f);
+    TEST_COMPARE(config.epochs, 5);
+    TEST_COMPARE(config.learningRate, 2e-4f);
+    TEST_COMPARE(config.batchSize, 8);
+    TEST_COMPARE(config.sequenceLength, 1024);
+    TEST_COMPARE(config.gradientClip, 2.0f);
     
     std::printf("✓ Training configuration test passed\n");
 }
@@ -298,9 +298,9 @@ void testOptimizerOperations()
     float lr3 = trainer.getLearningRate(900, 1000); // 90% through training
     
     // Learning rate should follow warmup then decay pattern
-    QVERIFY(lr1 > 0.0f);
-    QVERIFY(lr2 > 0.0f);
-    QVERIFY(lr3 > 0.0f);
+    TEST_VERIFY(lr1 > 0.0f);
+    TEST_VERIFY(lr2 > 0.0f);
+    TEST_VERIFY(lr3 > 0.0f);
     
     // Test gradient clipping
     std::vector<float> gradients = {10.0f, -5.0f, 3.0f, -8.0f};
@@ -312,7 +312,7 @@ void testOptimizerOperations()
     }
     norm = std::sqrt(norm);
     
-    QVERIFY(norm <= 5.0f + 1e-5f); // Should be clipped
+    TEST_VERIFY(norm <= 5.0f + 1e-5f); // Should be clipped
     
     std::printf("✓ Optimizer operations test passed\n");
 }
@@ -327,14 +327,14 @@ void testModelValidation()
     float perplexity = trainer.calculatePerplexity();
     
     // Perplexity should be positive finite value
-    QVERIFY(std::isfinite(perplexity));
-    QVERIFY(perplexity > 0.0f);
+    TEST_VERIFY(std::isfinite(perplexity));
+    TEST_VERIFY(perplexity > 0.0f);
     
     // Test validation workflow
     bool validationSuccess = trainer.validateModel();
     
     // Validation should complete without errors
-    QVERIFY(validationSuccess);
+    TEST_VERIFY(validationSuccess);
     
     std::printf("✓ Model validation test passed\n");
 }

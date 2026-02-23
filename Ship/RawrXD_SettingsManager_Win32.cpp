@@ -6,6 +6,12 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#ifndef RAWRXD_WIN32_STATIC_BUILD
+#define RAWRXD_SHIP_EXPORT __declspec(dllexport)
+#else
+#define RAWRXD_SHIP_EXPORT
+#endif
 #include <map>
 #include <string>
 #include <vector>
@@ -107,46 +113,49 @@ public:
 static RawrXDSettingsManager* g_settings = nullptr;
 
 extern "C" {
-    __declspec(dllexport) void* __stdcall CreateSettingsManager() {
+    RAWRXD_SHIP_EXPORT void* __stdcall CreateSettingsManager() {
         if (!g_settings) {
             g_settings = new RawrXDSettingsManager();
         }
         return g_settings;
     }
     
-    __declspec(dllexport) void __stdcall DestroySettingsManager(void* mgr) {
+    RAWRXD_SHIP_EXPORT void __stdcall DestroySettingsManager(void* mgr) {
         if (mgr && mgr == g_settings) {
             delete g_settings;
             g_settings = nullptr;
         }
     }
     
-    __declspec(dllexport) bool __stdcall Settings_SetString(void* mgr, const wchar_t* key, const wchar_t* value) {
+    RAWRXD_SHIP_EXPORT bool __stdcall Settings_SetString(void* mgr, const wchar_t* key, const wchar_t* value) {
         RawrXDSettingsManager* m = static_cast<RawrXDSettingsManager*>(mgr);
         return m ? m->SetString(key, value) : false;
     }
     
-    __declspec(dllexport) bool __stdcall Settings_GetString(void* mgr, const wchar_t* key, wchar_t* buffer, size_t bufSize) {
+    RAWRXD_SHIP_EXPORT bool __stdcall Settings_GetString(void* mgr, const wchar_t* key, wchar_t* buffer, size_t bufSize) {
         RawrXDSettingsManager* m = static_cast<RawrXDSettingsManager*>(mgr);
         return m ? m->GetString(key, buffer, bufSize) : false;
     }
     
-    __declspec(dllexport) bool __stdcall Settings_SetInt(void* mgr, const wchar_t* key, int value) {
+    RAWRXD_SHIP_EXPORT bool __stdcall Settings_SetInt(void* mgr, const wchar_t* key, int value) {
         RawrXDSettingsManager* m = static_cast<RawrXDSettingsManager*>(mgr);
         return m ? m->SetInt(key, value) : false;
     }
     
-    __declspec(dllexport) int __stdcall Settings_GetInt(void* mgr, const wchar_t* key, int defaultValue) {
+    RAWRXD_SHIP_EXPORT int __stdcall Settings_GetInt(void* mgr, const wchar_t* key, int defaultValue) {
         RawrXDSettingsManager* m = static_cast<RawrXDSettingsManager*>(mgr);
         return m ? m->GetInt(key, defaultValue) : defaultValue;
     }
 }
 
+#ifndef RAWRXD_WIN32_STATIC_BUILD
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugStringW(L"RawrXD_SettingsManager_Win32 loaded\n");
     } else if (fdwReason == DLL_PROCESS_DETACH && g_settings) {
         delete g_settings;
+        g_settings = nullptr;
     }
     return TRUE;
 }
+#endif

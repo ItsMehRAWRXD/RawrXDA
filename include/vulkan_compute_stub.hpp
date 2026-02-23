@@ -1,5 +1,5 @@
 // ============================================================================
-// vulkan_compute_stub.hpp — CPU Compute Fallback with Vulkan-Ready API
+// vulkan_compute_stub.hpp — IDE/build variant: CPU Compute Fallback with Vulkan-Ready API
 // ============================================================================
 // Full CPU compute implementation for matrix operations, providing a
 // drop-in replacement when Vulkan GPU compute is unavailable. Implements

@@ -1,0 +1,14 @@
+--- CMakeLists.txt
++++ CMakeLists.txt
+@@ -2083,7 +2083,6 @@
+         src/win32app/Win32IDE_LicenseCreator.cpp
+         # License enforcement + manifest (LicenseEnforcer, EnterpriseLicenseV2, g_FeatureManifest)
+         src/license_enforcement.cpp
+-        src/tools/license_validator_manifest.cpp
+         src/feature_flags_runtime.cpp
+     )
+
+Apply this change so RawrXD-Win32IDE builds: the file src/tools/license_validator_manifest.cpp
+does not exist. The IDE already gets g_FeatureManifest from src/core/enterprise_license.cpp.
+Either delete the line "src/tools/license_validator_manifest.cpp" from CMakeLists.txt (around line 2086)
+or close CMakeLists.txt and re-run the fix.

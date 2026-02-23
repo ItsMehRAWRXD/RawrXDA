@@ -1,6 +1,6 @@
 /**
  * \file benchmark_menu_widget.hpp
- * \brief Benchmark menu and test selector widget for the IDE
+ * \brief Benchmark menu and test selector — Qt-free C++20/Win32
  * \author RawrXD Team
  * \date 2025-12-13
  *
@@ -13,107 +13,99 @@
 
 #pragma once
 
-#include <QString>
-#include <QWidget>
-#include <QMainWindow>
-#include <QMenu>
-#include <QAction>
-#include <QCheckBox>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QProgressBar>
-#include <QThread>
-#include <QComboBox>
-#include <memory>
-#include <vector>
 #include <string>
+#include <vector>
+#include <memory>
+#include <cstdint>
+#include <thread>
+#include <atomic>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 class BenchmarkRunner;
 
 // Local TestResult struct for benchmark results display
 struct TestResult {
-    QString testName;
-    bool passed;
-    double avgLatencyMs;
-    double p95LatencyMs;
-    double successRate;
+    std::string testName;
+    bool passed = false;
+    double avgLatencyMs = 0.0;
+    double p95LatencyMs = 0.0;
+    double successRate = 0.0;
 };
 
 /**
  * @brief Widget for selecting which benchmarks to run
  */
-class BenchmarkSelector : public QWidget {
-    Q_OBJECT
-
+class BenchmarkSelector {
 public:
-    explicit BenchmarkSelector(QWidget* parent = nullptr);
+    BenchmarkSelector() = default;
 
     // Get selected tests
     std::vector<std::string> getSelectedTests() const;
     
     // Get configuration
-    QString getModelPath() const;
+    std::string getModelPath() const;
     bool isGPUEnabled() const;
     bool isVerbose() const;
 
-public slots:
     void selectAll();
     void deselectAll();
 
 private:
     void setupUI();
 
-    // Test selection checkboxes
-    std::vector<QCheckBox*> testCheckboxes_;
+    // Test selection checkboxes (HWND handles)
+    std::vector<HWND> testCheckboxes_;
     
     // Configuration widgets
-    QComboBox* modelCombo_;
-    QCheckBox* gpuCheckbox_;
-    QCheckBox* verboseCheckbox_;
+    HWND modelCombo_ = nullptr;
+    HWND gpuCheckbox_ = nullptr;
+    HWND verboseCheckbox_ = nullptr;
 };
 
 /**
  * @brief Real-time logging output for benchmark execution
  */
-class BenchmarkLogOutput : public QTextEdit {
-    Q_OBJECT
-
+class BenchmarkLogOutput {
 public:
-    explicit BenchmarkLogOutput(QWidget* parent = nullptr);
+    BenchmarkLogOutput() = default;
 
     enum LogLevel {
         DEBUG = 0,
         INFO = 1,
         SUCCESS = 2,
         WARNING = 3,
-        ERROR = 4
+        LOG_ERROR = 4   // was ERROR; renamed to avoid Windows ERROR macro
     };
 
-public slots:
-    void logMessage(const QString& message, LogLevel level = INFO);
+    void logMessage(const std::string& message, LogLevel level = INFO);
     void logProgress(int current, int total);
-    void logTestResult(const QString& testName, bool passed, double latencyMs);
+    void logTestResult(const std::string& testName, bool passed, double latencyMs);
     void clear();
 
 private:
-    void formatLog(const QString& message, LogLevel level);
-    QString levelToString(LogLevel level);
-    QString levelToColor(LogLevel level);
+    void formatLog(const std::string& message, LogLevel level);
+    std::string levelToString(LogLevel level);
+    uint32_t levelToColor(LogLevel level);
+
+    HWND m_hwnd = nullptr;  // RichEdit or multiline EDIT control
 };
 
 /**
  * @brief Progress and results display
  */
-class BenchmarkResultsDisplay : public QWidget {
-    Q_OBJECT
-
+class BenchmarkResultsDisplay {
 public:
-    explicit BenchmarkResultsDisplay(QWidget* parent = nullptr);
+    BenchmarkResultsDisplay() = default;
 
-public slots:
     void setTotalTests(int count);
     void updateProgress(int current);
-    void addResult(const QString& testName, bool passed, 
+    void addResult(const std::string& testName, bool passed, 
                    double avgLatencyMs, double p95LatencyMs, double successRate);
     void showSummary(int passed, int total, double executionTimeSec);
     void reset();
@@ -121,26 +113,29 @@ public slots:
 private:
     void setupUI();
 
-    QProgressBar* progressBar_;
-    QTextEdit* resultsDisplay_;
-    int totalTests_;
+    HWND progressBar_ = nullptr;
+    HWND resultsDisplay_ = nullptr;
+    int totalTests_ = 0;
     std::vector<TestResult> results_;
 };
 
 /**
  * @brief Main benchmark menu integration for the IDE
  */
-class BenchmarkMenu : public QObject {
-    Q_OBJECT
-
+class BenchmarkMenu {
 public:
-    explicit BenchmarkMenu(QMainWindow* mainWindow);
+    explicit BenchmarkMenu(HWND mainWindow = nullptr);
     ~BenchmarkMenu();
+
+    /** Set main window (call before initialize when constructed without one). */
+    void setMainWindow(HWND hwnd) { mainWindow_ = hwnd; }
 
     // Register the benchmark menu
     void initialize();
 
-public slots:
+    /** Show the benchmark UI (opens dialog). */
+    void show() { openBenchmarkDialog(); }
+
     void openBenchmarkDialog();
     void runSelectedBenchmarks();
     void stopBenchmarks();
@@ -149,19 +144,20 @@ public slots:
 private:
     void createMenu();
     void createDialog();
-    void connectSignals();
+    void connectHandlers();
 
-    QMainWindow* mainWindow_;
-    QMenu* benchmarkMenu_;
+    HWND mainWindow_ = nullptr;
+    HMENU benchmarkMenu_ = nullptr;
     
     // Dialog components
-    BenchmarkSelector* selector_;
-    BenchmarkLogOutput* logOutput_;
-    BenchmarkResultsDisplay* resultsDisplay_;
+    BenchmarkSelector* selector_ = nullptr;
+    BenchmarkLogOutput* logOutput_ = nullptr;
+    BenchmarkResultsDisplay* resultsDisplay_ = nullptr;
     
     // Benchmark runner thread
     std::unique_ptr<BenchmarkRunner> runner_;
-    QThread* runnerThread_;
+    std::thread runnerThread_;
+    std::atomic<bool> runnerActive_{false};
 };
 
 // End of benchmark_menu_widget.hpp

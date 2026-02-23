@@ -422,25 +422,27 @@ struct AuditResult {
     size_t nullHandlers;
     size_t duplicateIds;
     size_t duplicateAliases;
+    const char* firstDuplicateAlias;  // first duplicate alias string found (for diagnostic)
     bool   isClean;
 };
 
 inline AuditResult auditRegistry() {
     AuditResult result = {};
     result.totalCommands = g_commandRegistrySize;
-    
+    result.firstDuplicateAlias = nullptr;
+
     for (size_t i = 0; i < g_commandRegistrySize; ++i) {
         const auto& cmd = g_commandRegistry[i];
-        
+
         // Count by exposure
         if (cmd.id != 0) result.guiCommands++;
         if (cmd.exposure == CmdExposure::CLI_ONLY || cmd.exposure == CmdExposure::BOTH) {
             result.cliCommands++;
         }
-        
+
         // Check for null handlers
         if (!cmd.handler) result.nullHandlers++;
-        
+
         // Check for duplicate IDs (skip CLI-only which all have 0)
         if (cmd.id != 0) {
             for (size_t j = i + 1; j < g_commandRegistrySize; ++j) {
@@ -449,20 +451,21 @@ inline AuditResult auditRegistry() {
                 }
             }
         }
-        
+
         // Check for duplicate CLI aliases
         if (cmd.cliAlias) {
             for (size_t j = i + 1; j < g_commandRegistrySize; ++j) {
                 if (g_commandRegistry[j].cliAlias &&
                     std::strcmp(cmd.cliAlias, g_commandRegistry[j].cliAlias) == 0) {
                     result.duplicateAliases++;
+                    if (!result.firstDuplicateAlias) result.firstDuplicateAlias = cmd.cliAlias;
                 }
             }
         }
     }
-    
-    result.isClean = (result.nullHandlers == 0 && 
-                      result.duplicateIds == 0 && 
+
+    result.isClean = (result.nullHandlers == 0 &&
+                      result.duplicateIds == 0 &&
                       result.duplicateAliases == 0);
     return result;
 }

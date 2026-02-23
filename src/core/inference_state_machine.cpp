@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <sstream>
 
+// SCAFFOLD_120: Inference state machine
+
+
 namespace RawrXD {
 namespace Inference {
 

@@ -1,0 +1,11 @@
+?allow@LicenseEnforcer@Enforce@RawrXD@@QEAA_NW4FeatureID@License@3@PEBD@Z
+?compress@brutal@@YA?AV?$vector@EV?$allocator@E@std@@@std@@AEBV23@@Z
+?ensureLayerResident@LayerOffloadManager@RawrXD@@QEAA?AUPatchResult@@I@Z
+?gate@EnterpriseLicenseV2@License@RawrXD@@QEAA_NW4FeatureID@23@PEBD@Z
+?Instance@EnterpriseLicenseV2@License@RawrXD@@SAAEAV123@XZ
+?instance@LayerOffloadManager@RawrXD@@SAAEAV12@XZ
+?Instance@LicenseEnforcer@Enforce@RawrXD@@SAAEAV123@XZ
+?prefetchLayer@LayerOffloadManager@RawrXD@@QEAA?AUPatchResult@@I@Z
+?register_engine@EngineRegistry@@SAXPEAVEngine@@@Z
+?releaseLayer@LayerOffloadManager@RawrXD@@QEAA?AUPatchResult@@I@Z
+?shouldSkipLayer@LayerOffloadManager@RawrXD@@QEBA_NI@Z

@@ -6,6 +6,12 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#ifndef RAWRXD_WIN32_STATIC_BUILD
+#define RAWRXD_SHIP_EXPORT __declspec(dllexport)
+#else
+#define RAWRXD_SHIP_EXPORT
+#endif
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -202,56 +208,59 @@ public:
 static RawrXDTextEditor* g_textEditor = nullptr;
 
 extern "C" {
-    __declspec(dllexport) void* __stdcall CreateTextEditor() {
+    RAWRXD_SHIP_EXPORT void* __stdcall CreateTextEditor() {
         if (!g_textEditor) {
             g_textEditor = new RawrXDTextEditor();
         }
         return g_textEditor;
     }
     
-    __declspec(dllexport) void __stdcall DestroyTextEditor(void* editor) {
+    RAWRXD_SHIP_EXPORT void __stdcall DestroyTextEditor(void* editor) {
         if (editor && editor == g_textEditor) {
             delete g_textEditor;
             g_textEditor = nullptr;
         }
     }
     
-    __declspec(dllexport) void __stdcall TextEditor_InsertText(void* editor, const char* text, size_t length) {
+    RAWRXD_SHIP_EXPORT void __stdcall TextEditor_InsertText(void* editor, const char* text, size_t length) {
         RawrXDTextEditor* e = static_cast<RawrXDTextEditor*>(editor);
         if (e) e->InsertText(text, length);
     }
     
-    __declspec(dllexport) void __stdcall TextEditor_DeleteChar(void* editor, size_t count) {
+    RAWRXD_SHIP_EXPORT void __stdcall TextEditor_DeleteChar(void* editor, size_t count) {
         RawrXDTextEditor* e = static_cast<RawrXDTextEditor*>(editor);
         if (e) e->DeleteChar(count);
     }
     
-    __declspec(dllexport) void __stdcall TextEditor_NewLine(void* editor) {
+    RAWRXD_SHIP_EXPORT void __stdcall TextEditor_NewLine(void* editor) {
         RawrXDTextEditor* e = static_cast<RawrXDTextEditor*>(editor);
         if (e) e->NewLine();
     }
     
-    __declspec(dllexport) void __stdcall TextEditor_SetText(void* editor, const char* text) {
+    RAWRXD_SHIP_EXPORT void __stdcall TextEditor_SetText(void* editor, const char* text) {
         RawrXDTextEditor* e = static_cast<RawrXDTextEditor*>(editor);
         if (e) e->SetText(text);
     }
     
-    __declspec(dllexport) void __stdcall TextEditor_GetText(void* editor, char* buffer, size_t bufSize) {
+    RAWRXD_SHIP_EXPORT void __stdcall TextEditor_GetText(void* editor, char* buffer, size_t bufSize) {
         RawrXDTextEditor* e = static_cast<RawrXDTextEditor*>(editor);
         if (e) e->GetText(buffer, bufSize);
     }
     
-    __declspec(dllexport) size_t __stdcall TextEditor_GetLineCount(void* editor) {
+    RAWRXD_SHIP_EXPORT size_t __stdcall TextEditor_GetLineCount(void* editor) {
         RawrXDTextEditor* e = static_cast<RawrXDTextEditor*>(editor);
         return e ? e->GetLineCount() : 0;
     }
 }
 
+#ifndef RAWRXD_WIN32_STATIC_BUILD
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugStringW(L"RawrXD_TextEditor_Win32 loaded\n");
     } else if (fdwReason == DLL_PROCESS_DETACH && g_textEditor) {
         delete g_textEditor;
+        g_textEditor = nullptr;
     }
     return TRUE;
 }
+#endif

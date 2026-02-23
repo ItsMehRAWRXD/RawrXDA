@@ -172,7 +172,7 @@ private:
     void mergeSettings(const json& defaults, json& current);
     json serializeTheme(const Theme& theme) const;
     Theme deserializeTheme(const json& data) const;
-    json serializeKeybinding(const Keybinding& keybinding) const;
+    json serializeKeybinding(const Keybinding& kb) const;
     Keybinding deserializeKeybinding(const json& data) const;
     json serializeModel(const ModelConfig& model) const;
     ModelConfig deserializeModel(const json& data) const;

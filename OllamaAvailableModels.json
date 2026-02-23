@@ -1,0 +1,1164 @@
+{
+  "ollama_host": "http://localhost:11434",
+  "ollama_list_cli": [
+    "NAME                                                           ID              SIZE      MODIFIED     ",
+    "gpt-oss:120b                                                   a951a23b46a1    65 GB     2 weeks ago     ",
+    "gemma3:27b                                                     a418f5838eaf    17 GB     2 weeks ago     ",
+    "gpt-oss:20b                                                    17052f91a42e    13 GB     2 weeks ago     ",
+    "ministral-3:latest                                             1922accd5827    6.0 GB    2 weeks ago     ",
+    "codellama:latest                                               8fdf8f752f6e    3.8 GB    3 weeks ago     ",
+    "kimi-k2-thinking:cloud                                         9752ffb77f53    -         3 weeks ago     ",
+    "deepseek-coder:latest                                          3ddd2d3fc8d2    776 MB    6 weeks ago     ",
+    "qwen2.5-coder:latest                                           dae161e27b0e    4.7 GB    6 weeks ago     ",
+    "qwen2.5-coder:1.5b                                             d7372fd82851    986 MB    7 weeks ago     ",
+    "qwen3-coder:30b                                                06c1097efce0    18 GB     7 weeks ago     ",
+    "dolphin3:latest                                                d5ab9ae8e1f2    4.9 GB    2 months ago    ",
+    "gemma3:latest                                                  a2af6cc3eb7f    3.3 GB    2 months ago    ",
+    "quantumide-feature:latest                                      02b66b2f326d    10 GB     2 months ago    ",
+    "quantumide-performance:latest                                  e92fbf182086    4.7 GB    2 months ago    ",
+    "quantumide-security:latest                                     57282ea3606a    2.0 GB    2 months ago    ",
+    "quantumide-architect:latest                                    e9a941593692    4.7 GB    2 months ago    ",
+    "unlocked-60M:latest                                            b4c2dc75059a    2.0 GB    2 months ago    ",
+    "unlocked-125M:latest                                           b4c2dc75059a    2.0 GB    2 months ago    ",
+    "unlocked-1B:latest                                             b4c2dc75059a    2.0 GB    2 months ago    ",
+    "unlocked-350M:latest                                           9b60e3f6a47f    2.0 GB    2 months ago    ",
+    "bigdaddy-balanced-agentic:latest                               92debe152715    4.2 GB    2 months ago    ",
+    "llama3-comprehensive-agentic:latest                            10079c74589a    4.7 GB    2 months ago    ",
+    "cheetah-speed-agentic:latest                                   038e9980c30f    2.0 GB    2 months ago    ",
+    "bigdaddyg-q2k-ultra-productive:latest                          c0c108cd3fb5    25 GB     2 months ago    ",
+    "cheetah-stealth-agentic-q5km-full:latest                       c5aa0db856dc    2.0 GB    2 months ago    ",
+    "cheetah-stealth-agentic-5gb:latest                             c11aaa52ac0c    2.0 GB    2 months ago    ",
+    "deepseek-v3.1:671b-cloud                                       d3749919e45f    -         2 months ago    ",
+    "minimax-m2:cloud                                               698ab6d56142    -         2 months ago    ",
+    "llama3.2:3b                                                    a80c4f17acd5    2.0 GB    2 months ago    ",
+    "bigdaddyg-16gb:latest                                          c0dfad216374    16 GB     2 months ago    ",
+    "bigdaddyg-q2-ultra:latest                                      b52763c70578    25 GB     2 months ago    ",
+    "bigdaddyg-cheetah:latest                                       c33e8df52677    25 GB     2 months ago    ",
+    "bigdaddy-7b-cheetah:latest                                     27c1503ba3fd    4.2 GB    2 months ago    ",
+    "bg40-f32:latest                                                6afef0d4e4c3    38 GB     2 months ago    ",
+    "huihui_ai/llama3.3-abliterated:latest                          694ca93d4b6e    42 GB     2 months ago    ",
+    "mannix/llama3.1-8b-abliterated:latest                          f7d729db9832    4.7 GB    2 months ago    ",
+    "bg-test:latest                                                 0f64f2dce2f6    38 GB     2 months ago    ",
+    "bg-ide-agentic:latest                                          16cdc656759f    38 GB     2 months ago    ",
+    "bg40-unleashed:latest                                          6afef0d4e4c3    38 GB     2 months ago    ",
+    "bg40-f32-from-q4:latest                                        6afef0d4e4c3    38 GB     2 months ago    ",
+    "bg40:latest                                                    d8da5108cf3b    38 GB     2 months ago    ",
+    "hf.co/bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M              e0c34783aa7a    2.0 GB    2 months ago    ",
+    "hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M    4163ad56d6c3    10 GB     2 months ago    ",
+    "hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q3_K_S    4b79e38c246f    7.5 GB    2 months ago    ",
+    "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M              042cf58aa32f    807 MB    2 months ago    ",
+    "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:latest              042cf58aa32f    807 MB    2 months ago    ",
+    "qwen2.5:7b                                                     845dbda0ea48    4.7 GB    2 months ago    ",
+    "llama2:latest                                                  78e26419b446    3.8 GB    2 months ago    ",
+    "bigdaddyg-personalized-agentic:latest                          6f7f06b30cc9    2.0 GB    2 months ago    ",
+    "cheetah-stealth-agentic:latest                                 8427850d14b4    2.0 GB    2 months ago    ",
+    "bigdaddyg-agentic:latest                                       b8707b3ed023    2.0 GB    2 months ago    ",
+    "bigdaddyg-fast-agentic:latest                                  55b9440e1555    2.0 GB    2 months ago    ",
+    "bigdaddyg-personalized:latest                                  8b34169d1456    2.0 GB    2 months ago    ",
+    "gpt-oss:20b-cloud                                              875e8e3a629a    -         2 months ago    ",
+    "llama3:latest                                                  365c0bd3c000    4.7 GB    2 months ago    ",
+    "qwen3:4b                                                       359d7dd4bcda    2.5 GB    2 months ago    ",
+    "qwen3-vl:4b                                                    1343d82ebee3    3.3 GB    2 months ago    ",
+    "qwen3:8b                                                       500a1f067a9f    5.2 GB    2 months ago    ",
+    "qwen3-coder:480b-cloud                                         e30e45586389    -         2 months ago    ",
+    "phi:latest                                                     e2fd6321a5fe    1.6 GB    2 months ago    ",
+    "bigdaddyg-fast:latest                                          c281bcbc9c35    2.0 GB    2 months ago    ",
+    "cheetah-stealth:latest                                         64fe04baca57    2.0 GB    3 months ago    ",
+    "bigdaddyg:latest                                               476eba99c6b6    2.0 GB    3 months ago    ",
+    "gemma3:1b                                                      8648f39daa8f    815 MB    3 months ago    ",
+    "gemma3:12b                                                     f4031aab637d    8.1 GB    3 months ago    ",
+    "llama3.2:latest                                                a80c4f17acd5    2.0 GB    3 months ago    ",
+    "gpt-oss:120b-cloud                                             569662207105    -         3 months ago    ",
+    "qwen3-vl:235b-cloud                                            7fc468f95411    -         3 months ago    "
+  ],
+  "models": [
+    {
+      "name": "gpt-oss:120b",
+      "digest": "a951a23b46a1f6093dafee2ea481d634b4e31ac720a8a16f3f91e04f5a40ecd9",
+      "size": 65369818941,
+      "modified_at": "2026-01-28T10:57:23.0251693-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gptoss",
+        "families": [
+          "gptoss"
+        ],
+        "parameter_size": "116.8B",
+        "quantization_level": "MXFP4"
+      }
+    },
+    {
+      "name": "gemma3:27b",
+      "digest": "a418f5838eaf7fe2cfe0a3046c8384b68ba43a4435542c942f9db00a5f342203",
+      "size": 17396936941,
+      "modified_at": "2026-01-28T10:40:45.4290927-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma3",
+        "families": [
+          "gemma3"
+        ],
+        "parameter_size": "27.4B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "gpt-oss:20b",
+      "digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
+      "size": 13793441244,
+      "modified_at": "2026-01-28T10:39:08.6524497-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gptoss",
+        "families": [
+          "gptoss"
+        ],
+        "parameter_size": "20.9B",
+        "quantization_level": "MXFP4"
+      }
+    },
+    {
+      "name": "ministral-3:latest",
+      "digest": "1922accd5827ebe6829e536369195db25eaf664528dc66206d646ea3bb386b71",
+      "size": 6022236616,
+      "modified_at": "2026-01-24T18:57:49.8529629-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "mistral3",
+        "families": [
+          "mistral3"
+        ],
+        "parameter_size": "8.9B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "codellama:latest",
+      "digest": "8fdf8f752f6e80de33e82f381aba784c025982752cd1ae9377add66449d2225f",
+      "size": 3825910662,
+      "modified_at": "2026-01-24T15:13:46.0237818-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": null,
+        "parameter_size": "7B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "kimi-k2-thinking:cloud",
+      "digest": "9752ffb77f53ac4d60b9d21712231f17550e46a4acd3d1c46d104ff2fb675cf5",
+      "size": 393,
+      "modified_at": "2026-01-19T11:02:24.5213234-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "deepseek2",
+        "families": [
+          "deepseek2"
+        ],
+        "parameter_size": "1T",
+        "quantization_level": "INT4"
+      }
+    },
+    {
+      "name": "deepseek-coder:latest",
+      "digest": "3ddd2d3fc8d2b5fe039d18f859271132fd9c7960ef0be1864984442dc2a915d3",
+      "size": 776080839,
+      "modified_at": "2025-12-28T09:00:37.9838104-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "1B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "qwen2.5-coder:latest",
+      "digest": "dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364",
+      "size": 4683087561,
+      "modified_at": "2025-12-28T08:35:58.9430619-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+          "qwen2"
+        ],
+        "parameter_size": "7.6B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "qwen2.5-coder:1.5b",
+      "digest": "d7372fd828518a4d38b1eb196c673c31a85f2ed302b3d1e406c4c2d1b64a0668",
+      "size": 986062089,
+      "modified_at": "2025-12-26T07:52:45.5550753-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+          "qwen2"
+        ],
+        "parameter_size": "1.5B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "qwen3-coder:30b",
+      "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+      "size": 18556700761,
+      "modified_at": "2025-12-22T00:01:08.6081601-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3moe",
+        "families": [
+          "qwen3moe"
+        ],
+        "parameter_size": "30.5B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "dolphin3:latest",
+      "digest": "d5ab9ae8e1f22619a6be52e5694df422b7183a3883990a000188c363781ecb78",
+      "size": 4920757726,
+      "modified_at": "2025-12-05T16:23:12.226476-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "gemma3:latest",
+      "digest": "a2af6cc3eb7fa8be8504abaf9b04e88f17a119ec3f04a3addf55f92841195f5a",
+      "size": 3338801804,
+      "modified_at": "2025-12-05T11:42:18.5157009-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma3",
+        "families": [
+          "gemma3"
+        ],
+        "parameter_size": "4.3B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "quantumide-feature:latest",
+      "digest": "02b66b2f326de9ef11a6d70e61e354cf5ce7fbb8d3cb3580eb400b5f72d2808c",
+      "size": 10364420410,
+      "modified_at": "2025-11-30T22:11:21.7539816-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "deepseek2",
+        "families": [
+          "deepseek2"
+        ],
+        "parameter_size": "15.7B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "quantumide-security:latest",
+      "digest": "57282ea3606a14229a3a95b273c9870a1939e1bba786b79c52f4c132a037666a",
+      "size": 2019395959,
+      "modified_at": "2025-11-30T22:11:21.8453157-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "quantumide-performance:latest",
+      "digest": "e92fbf182086d82e61fc73ef20334c1fdb150c20a93addefdd906ccac50cbbef",
+      "size": 4683090114,
+      "modified_at": "2025-11-30T22:11:21.9398602-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+          "qwen2"
+        ],
+        "parameter_size": "7.6B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "quantumide-architect:latest",
+      "digest": "e9a9415936924bce3922caec5e375edf14b4b4b303f5ab62ffa37475dab9d9a7",
+      "size": 4661227306,
+      "modified_at": "2025-11-30T22:11:18.6198736-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "unlocked-60M:latest",
+      "digest": "b4c2dc75059a1d59fe7e6e1af2c031a68f8f7651a48b5942e09db1932cf31b02",
+      "size": 2019378487,
+      "modified_at": "2025-11-30T13:49:19.5597608-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "unlocked-125M:latest",
+      "digest": "b4c2dc75059a1d59fe7e6e1af2c031a68f8f7651a48b5942e09db1932cf31b02",
+      "size": 2019378487,
+      "modified_at": "2025-11-30T13:49:12.9787427-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "unlocked-1B:latest",
+      "digest": "b4c2dc75059a1d59fe7e6e1af2c031a68f8f7651a48b5942e09db1932cf31b02",
+      "size": 2019378487,
+      "modified_at": "2025-11-30T12:46:57.7221323-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "unlocked-350M:latest",
+      "digest": "9b60e3f6a47f4c7b6e28e1fd8d133cce1e769aa3fcfb837b9510e6811d59b593",
+      "size": 2019378244,
+      "modified_at": "2025-11-30T12:34:57.8502286-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "llama3-comprehensive-agentic:latest",
+      "digest": "10079c74589a50b7ebc9e2129bcdf5c1c5820eebaa9858dc4b8908729436ef6e",
+      "size": 4661225409,
+      "modified_at": "2025-11-29T22:20:14.5323646-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bigdaddy-balanced-agentic:latest",
+      "digest": "92debe15271502f82135c3b3a131f6b508d6583192e428bbe2ff9ed3dbefe2d3",
+      "size": 4215127763,
+      "modified_at": "2025-11-29T22:20:14.2818598-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "7.4B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "cheetah-speed-agentic:latest",
+      "digest": "038e9980c30ffaab33f185c64f864247c36e3629418180072e08eeb01da9f000",
+      "size": 2019393916,
+      "modified_at": "2025-11-29T22:20:13.951079-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "bigdaddyg-q2k-ultra-productive:latest",
+      "digest": "c0c108cd3fb572ff38d726694c7618d1fda0868b3c5501532ce6c64c4e7cfbb4",
+      "size": 25463415185,
+      "modified_at": "2025-11-29T22:18:57.3761407-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q2_K"
+      }
+    },
+    {
+      "name": "cheetah-stealth-agentic-q5km-full:latest",
+      "digest": "c5aa0db856dcafe7d129b311d7353bf24bbb611ed6c3ef896e04315b4625d3ad",
+      "size": 2019394438,
+      "modified_at": "2025-11-29T22:11:45.7470448-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "cheetah-stealth-agentic-5gb:latest",
+      "digest": "c11aaa52ac0c0862bbda653a6d479fca1cec8f39d84e368fd16fe646bd87c19e",
+      "size": 2019393801,
+      "modified_at": "2025-11-29T22:08:22.922274-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "deepseek-v3.1:671b-cloud",
+      "digest": "d3749919e45f955731da7a7e76849e20f7ed310725d3b8b52822e811f55d0a90",
+      "size": 405,
+      "modified_at": "2025-11-29T17:06:58.7362781-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "deepseek2",
+        "families": [
+          "deepseek2"
+        ],
+        "parameter_size": "671.0B",
+        "quantization_level": "FP8_E4M3"
+      }
+    },
+    {
+      "name": "minimax-m2:cloud",
+      "digest": "698ab6d56142621ba4c208e06cb65004035556a51c01dbd7d7bfca16af0e94c1",
+      "size": 382,
+      "modified_at": "2025-11-29T17:06:40.8073714-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "minimaxm2",
+        "families": [
+          "minimaxm2"
+        ],
+        "parameter_size": "230B",
+        "quantization_level": "FP8"
+      }
+    },
+    {
+      "name": "llama3.2:3b",
+      "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+      "size": 2019393189,
+      "modified_at": "2025-11-29T10:33:33.5999804-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "bigdaddyg-16gb:latest",
+      "digest": "c0dfad216374ef0c4b9ec349a3add44fdc13e5a34ea1caf1dc020f82cbb9a80e",
+      "size": 16971701757,
+      "modified_at": "2025-11-29T10:32:15.4253616-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "45.9B",
+        "quantization_level": "Q2_K"
+      }
+    },
+    {
+      "name": "bigdaddyg-q2-ultra:latest",
+      "digest": "b52763c705781bec89935d473933bd96049157b327e6018efadafbbe0c04402f",
+      "size": 25463412417,
+      "modified_at": "2025-11-29T10:20:46.1512155-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q2_K"
+      }
+    },
+    {
+      "name": "bigdaddyg-cheetah:latest",
+      "digest": "c33e8df526772369467a9b4e2535f4929c920965fba18f22712760ab6f1eba40",
+      "size": 25463413440,
+      "modified_at": "2025-11-29T09:55:12.0283542-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q2_K"
+      }
+    },
+    {
+      "name": "bigdaddy-7b-cheetah:latest",
+      "digest": "27c1503ba3fd26e08f134e7c04024269386064e6e46a76cc49490fabcd1b4857",
+      "size": 4215127246,
+      "modified_at": "2025-11-29T09:51:01.9829122-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "7.4B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bg40-f32:latest",
+      "digest": "6afef0d4e4c3f0bdc3f01d14a73c021c634e7a97154ec3694cc67bdf5fe32ae1",
+      "size": 38873224521,
+      "modified_at": "2025-11-26T08:27:13.3285546-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "huihui_ai/llama3.3-abliterated:latest",
+      "digest": "694ca93d4b6e7664fed85131a233a227f1126843ed1cb86a003bfcc09a1f3a97",
+      "size": 42520413980,
+      "modified_at": "2025-11-26T07:53:49.9845021-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "70.6B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "mannix/llama3.1-8b-abliterated:latest",
+      "digest": "f7d729db98322bb294940917317966342e4d04d411caa9641b3d593235394180",
+      "size": 4675906716,
+      "modified_at": "2025-11-26T07:46:10.6429625-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bg-test:latest",
+      "digest": "0f64f2dce2f624c9150589bf81ca86fa369e1edb7a61ebbc0450b48b094e4d71",
+      "size": 38873224966,
+      "modified_at": "2025-11-26T07:21:26.1583061-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bg-ide-agentic:latest",
+      "digest": "16cdc656759f6652084c78cfcffba4ee66de7680f6a8ad6a2e09d0cd60157e20",
+      "size": 38873227585,
+      "modified_at": "2025-11-26T07:00:22.0313668-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bg40-unleashed:latest",
+      "digest": "6afef0d4e4c3f0bdc3f01d14a73c021c634e7a97154ec3694cc67bdf5fe32ae1",
+      "size": 38873224521,
+      "modified_at": "2025-11-26T06:23:40.3364683-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bg40-f32-from-q4:latest",
+      "digest": "6afef0d4e4c3f0bdc3f01d14a73c021c634e7a97154ec3694cc67bdf5fe32ae1",
+      "size": 38873224521,
+      "modified_at": "2025-11-26T05:05:47.5164498-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bg40:latest",
+      "digest": "d8da5108cf3b3cf90645a0ffdf4c125b0afa3a16741c750334a71e0ec33d866a",
+      "size": 38873224340,
+      "modified_at": "2025-11-26T02:27:00.7913118-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "69.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "hf.co/bartowski/Llama-3.2-3B-Instruct-GGUF:Q4_K_M",
+      "digest": "e0c34783aa7ac4096568c6dbaafe7b5d1c3a17ab71f7cced31d201e987a5ef9a",
+      "size": 2019379794,
+      "modified_at": "2025-11-25T19:57:12.3879372-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.21B",
+        "quantization_level": "unknown"
+      }
+    },
+    {
+      "name": "hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M",
+      "digest": "4163ad56d6c3bce50a392cd5a3fc7991d141d576307f4d4a068650ff19d4bea0",
+      "size": 10364418068,
+      "modified_at": "2025-11-25T19:33:07.2874274-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "deepseek2",
+        "families": [
+          "deepseek2"
+        ],
+        "parameter_size": "15.7B",
+        "quantization_level": "unknown"
+      }
+    },
+    {
+      "name": "hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q3_K_S",
+      "digest": "4b79e38c246f210173a5f52c5c2dbe1e28b74a4d828f06da9d6e7aab750db918",
+      "size": 7487665172,
+      "modified_at": "2025-11-25T19:32:33.8080247-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "deepseek2",
+        "families": [
+          "deepseek2"
+        ],
+        "parameter_size": "15.7B",
+        "quantization_level": "unknown"
+      }
+    },
+    {
+      "name": "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:Q4_K_M",
+      "digest": "042cf58aa32fa6ce631caff838fc9efd05313a629530756ccf59308eaa49b8aa",
+      "size": 807696561,
+      "modified_at": "2025-11-25T19:16:54.0241056-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "1.24B",
+        "quantization_level": "unknown"
+      }
+    },
+    {
+      "name": "hf.co/bartowski/Llama-3.2-1B-Instruct-GGUF:latest",
+      "digest": "042cf58aa32fa6ce631caff838fc9efd05313a629530756ccf59308eaa49b8aa",
+      "size": 807696561,
+      "modified_at": "2025-11-25T19:16:28.2770274-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "1.24B",
+        "quantization_level": "unknown"
+      }
+    },
+    {
+      "name": "qwen2.5:7b",
+      "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+      "size": 4683087332,
+      "modified_at": "2025-11-25T19:13:23.4048389-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen2",
+        "families": [
+          "qwen2"
+        ],
+        "parameter_size": "7.6B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "llama2:latest",
+      "digest": "78e26419b4469263f75331927a00a0284ef6544c1975b826b15abdaef17bb962",
+      "size": 3826793677,
+      "modified_at": "2025-11-25T18:56:44.8835737-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "7B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bigdaddyg-personalized-agentic:latest",
+      "digest": "6f7f06b30cc98f0bd49243146f1cf2b6343d2f440906a914c0b2315de6c4ccd7",
+      "size": 2019396418,
+      "modified_at": "2025-11-25T03:07:46.1637177-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "cheetah-stealth-agentic:latest",
+      "digest": "8427850d14b40c8298653ef51e06d21fdd8359c01679918f7a0caec18213234b",
+      "size": 2019394534,
+      "modified_at": "2025-11-25T03:06:34.5372986-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "bigdaddyg-agentic:latest",
+      "digest": "b8707b3ed0230c1b837581565d09f3f574cab7095088ee01bddc258419b53375",
+      "size": 2019394534,
+      "modified_at": "2025-11-25T03:06:33.6349606-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "bigdaddyg-fast-agentic:latest",
+      "digest": "55b9440e1555c3b157f390e99e902b2948384473c0febbfad832658d4b673af1",
+      "size": 2019394546,
+      "modified_at": "2025-11-25T03:06:32.2563928-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "bigdaddyg-personalized:latest",
+      "digest": "8b34169d14563b0f7cf645b9e57dc6596e7eebe581496ba5d5f6fdd19397a4dd",
+      "size": 2019394980,
+      "modified_at": "2025-11-25T03:03:13.391866-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "gpt-oss:20b-cloud",
+      "digest": "875e8e3a629ad3c2e66f1f1c461e3d140474212f44a34f4687ae1d927db41690",
+      "size": 381,
+      "modified_at": "2025-11-22T15:06:42.5488516-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "gptoss",
+        "families": [
+          "gptoss"
+        ],
+        "parameter_size": "20.9B",
+        "quantization_level": "MXFP4"
+      }
+    },
+    {
+      "name": "llama3:latest",
+      "digest": "365c0bd3c000a25d28ddbf732fe1c6add414de7275464c4e4d1c3b5fcb5d8ad1",
+      "size": 4661224676,
+      "modified_at": "2025-11-22T06:53:13.7878633-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "8.0B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "qwen3:4b",
+      "digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+      "size": 2497293931,
+      "modified_at": "2025-11-22T02:37:53.7856175-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "4.0B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "qwen3-vl:4b",
+      "digest": "1343d82ebee38e26a4dd6b0180b915eb91550184e67c505dea97509571c8f683",
+      "size": 3295636135,
+      "modified_at": "2025-11-22T02:12:44.513466-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3vl",
+        "families": [
+          "qwen3vl"
+        ],
+        "parameter_size": "4.4B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "qwen3:8b",
+      "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "size": 5225388164,
+      "modified_at": "2025-11-22T02:12:24.8947838-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "8.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "qwen3-coder:480b-cloud",
+      "digest": "e30e45586389a1eb8d7616d16c7b692c89b903b58456ec5f20219cd4c9737f7e",
+      "size": 382,
+      "modified_at": "2025-11-22T02:11:48.1602837-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "qwen3moe",
+        "families": [
+          "qwen3moe"
+        ],
+        "parameter_size": "480B",
+        "quantization_level": "BF16"
+      }
+    },
+    {
+      "name": "phi:latest",
+      "digest": "e2fd6321a5fe6bb3ac8a4e6f1cf04477fd2dea2924cf53237a995387e152ee9c",
+      "size": 1602463378,
+      "modified_at": "2025-11-22T02:10:56.2681123-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "phi2",
+        "families": [
+          "phi2"
+        ],
+        "parameter_size": "3B",
+        "quantization_level": "Q4_0"
+      }
+    },
+    {
+      "name": "bigdaddyg-fast:latest",
+      "digest": "c281bcbc9c351204e3dcfb8e654c13cf12180b34480db9e6af08b9cad27d53cb",
+      "size": 2019393586,
+      "modified_at": "2025-11-18T15:52:22.2033072-05:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "cheetah-stealth:latest",
+      "digest": "64fe04baca576352d2ce86f4431b03d4da6aa179f48709eaf7108e936ae8e26c",
+      "size": 2019393622,
+      "modified_at": "2025-10-29T07:59:04.3027022-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "bigdaddyg:latest",
+      "digest": "476eba99c6b6ab28ed60529fb248783a4ba0a67a62ec00341862f4df500c2da9",
+      "size": 2019394793,
+      "modified_at": "2025-10-25T11:33:22.9913436-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "gemma3:1b",
+      "digest": "8648f39daa8fbf5b18c7b4e6a8fb4990c692751d49917417b8842ca5758e7ffc",
+      "size": 815319791,
+      "modified_at": "2025-10-22T18:29:09.7044641-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma3",
+        "families": [
+          "gemma3"
+        ],
+        "parameter_size": "999.89M",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "gemma3:12b",
+      "digest": "f4031aab637d1ffa37b42570452ae0e4fad0314754d17ded67322e4b95836f8a",
+      "size": 8149190253,
+      "modified_at": "2025-10-21T08:05:46.7262001-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "gemma3",
+        "families": [
+          "gemma3"
+        ],
+        "parameter_size": "12.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "llama3.2:latest",
+      "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+      "size": 2019393189,
+      "modified_at": "2025-10-21T07:21:42.2582728-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": [
+          "llama"
+        ],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      }
+    },
+    {
+      "name": "gpt-oss:120b-cloud",
+      "digest": "569662207105c69bb0eca2f79a3fdf8691ad6301def477a5ec66f8e8bae237e3",
+      "size": 384,
+      "modified_at": "2025-10-21T02:30:18.6752328-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "gptoss",
+        "families": [
+          "gptoss"
+        ],
+        "parameter_size": "116.8B",
+        "quantization_level": "MXFP4"
+      }
+    },
+    {
+      "name": "qwen3-vl:235b-cloud",
+      "digest": "7fc468f95411e68ec77dd4ff79936303702e2d5bc8a4bf521ca87029f6489675",
+      "size": 384,
+      "modified_at": "2025-10-20T22:25:09.3261947-04:00",
+      "details": {
+        "parent_model": "",
+        "format": "",
+        "family": "qwen3moe",
+        "families": [
+          "qwen3moe"
+        ],
+        "parameter_size": "235B",
+        "quantization_level": "FP8"
+      }
+    }
+  ],
+  "generated": "2026-02-14T15:27:03.2870573-05:00",
+  "count": 68
+}

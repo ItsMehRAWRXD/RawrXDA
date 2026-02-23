@@ -14,6 +14,7 @@
 #include "swarm_coordinator.h"
 #include "swarm_protocol.h"
 #include "gpu_backend_bridge.h"
+#include "../../include/enterprise_license.h"
 
 #include <iostream>
 #include <sstream>
@@ -65,6 +66,11 @@ AdaptivePipelineParallel::~AdaptivePipelineParallel() {
 // ============================================================================
 
 PipelineResult AdaptivePipelineParallel::initialize() {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::TensorParallel,
+            "AdaptivePipelineParallel::initialize")) {
+        return PipelineResult::error(-1, "Tensor Parallel requires an Enterprise license");
+    }
     std::lock_guard<std::mutex> lock(m_mutex);
 
     if (m_initialized.load(std::memory_order_relaxed)) {

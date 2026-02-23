@@ -4,13 +4,16 @@
 #include <sstream>
 #include <iostream>
 
+// SCAFFOLD_285: React server generator
+
+
 namespace RawrXD {
 
 static void write_file(const std::filesystem::path& path, const std::string& content) {
     std::filesystem::create_directories(path.parent_path());
     std::ofstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        s_logger.error( "[ReactServerGenerator] Failed to write " << path.string() << "\n";
+        std::cerr << "[ReactServerGenerator] Failed to write " << path.string() << "\n";
         return;
     }
     file.write(content.data(), static_cast<std::streamsize>(content.size()));

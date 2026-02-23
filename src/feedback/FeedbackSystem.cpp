@@ -1,1021 +1,703 @@
 /**
  * @file FeedbackSystem.cpp
- * @brief Community Feedback System Implementation
- * 
- * Full production implementation with dialogs, submission handling,
- * telemetry management, and local draft storage.
- * 
+ * @brief Community Feedback System — pure C++20/Win32 (zero Qt).
  * @copyright RawrXD IDE 2026
  */
-
 #include "FeedbackSystem.hpp"
+#include <nlohmann/json.hpp>
+#include <commdlg.h>
+#include <shlobj.h>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+
+#pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "comdlg32.lib")
 
 namespace rawrxd::feedback {
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FeedbackDialog Implementation
+// Helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-FeedbackDialog::FeedbackDialog(void* parent)
-    : void(parent)
+static std::string isoNow()
 {
-    setWindowTitle(tr("RawrXD IDE - Submit Feedback"));
-    setMinimumSize(700, 550);
-    setModal(true);
-    
-    // Generate unique ID
-    m_entry.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    m_entry.created = // DateTime::currentDateTime();
-    m_entry.status = SubmissionStatus::Draft;
-    
-    setupUI();
-    setupValidation();
+    SYSTEMTIME st;
+    GetSystemTime(&st);
+    char buf[64];
+    _snprintf_s(buf, sizeof(buf), _TRUNCATE,
+        "%04d-%02d-%02dT%02d:%02d:%02dZ",
+        st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+    return buf;
+}
+
+static std::string generateUID()
+{
+    GUID guid;
+    CoCreateGuid(&guid);
+    char buf[40];
+    _snprintf_s(buf, sizeof(buf), _TRUNCATE,
+        "%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+        guid.Data1, guid.Data2, guid.Data3,
+        guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+        guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+    return buf;
+}
+
+static std::string getEditText(HWND h)
+{
+    int len = GetWindowTextLengthA(h);
+    if (len <= 0) return {};
+    std::string s(len + 1, '\0');
+    GetWindowTextA(h, s.data(), len + 1);
+    s.resize(len);
+    return s;
+}
+
+static std::wstring utf8ToWide(const std::string& s)
+{
+    if (s.empty()) return {};
+    int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+    std::wstring w(n, 0);
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, w.data(), n);
+    if (!w.empty() && w.back() == 0) w.pop_back();
+    return w;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FeedbackDialog
+// ═══════════════════════════════════════════════════════════════════════════════
+
+FeedbackDialog::FeedbackDialog(HWND hwndParent)
+    : m_hwndParent(hwndParent)
+{
+    m_entry.id      = generateUID();
+    m_entry.createdISO = isoNow();
+    m_entry.status  = SubmissionStatus::Draft;
+}
+
+FeedbackDialog::~FeedbackDialog()
+{
+    if (m_hDlg && IsWindow(m_hDlg)) DestroyWindow(m_hDlg);
+}
+
+INT_PTR FeedbackDialog::showModal()
+{
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    const int W = 660, H = 560;
+
+    RECT rc;
+    if (m_hwndParent) GetWindowRect(m_hwndParent, &rc);
+    else { rc.left = 150; rc.top = 100; }
+
+    m_hDlg = CreateWindowExW(WS_EX_DLGMODALFRAME,
+        L"STATIC", L"RawrXD IDE - Submit Feedback",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        rc.left + 80, rc.top + 40, W, H,
+        m_hwndParent, nullptr, hInst, nullptr);
+    if (!m_hDlg) return IDCANCEL;
+
+    SetWindowLongPtrW(m_hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    SetWindowLongPtrW(m_hDlg, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DlgProc));
+    initControls(m_hDlg);
     collectSystemInfo();
+
+    // Run modal message loop
+    if (m_hwndParent) EnableWindow(m_hwndParent, FALSE);
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!IsWindow(m_hDlg)) break;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    if (m_hwndParent) EnableWindow(m_hwndParent, TRUE);
+    return IDOK;
 }
 
-FeedbackDialog::~FeedbackDialog() = default;
-
-void FeedbackDialog::setupUI()
+INT_PTR CALLBACK FeedbackDialog::DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    auto* mainLayout = new void(this);
-    
-    // Header
-    auto* headerLabel = new void(tr(
-        "<h2>🌟 Your Feedback Matters!</h2>"
-        "<p>Help us improve RawrXD IDE by sharing your thoughts, reporting issues, "
-        "or suggesting new features.</p>"
-    ));
-    headerLabel->setWordWrap(true);
-    mainLayout->addWidget(headerLabel);
-    
-    // Tab widget
-    m_tabWidget = new void;
-    mainLayout->addWidget(m_tabWidget);
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Tab 1: Feedback Content
-    // ═══════════════════════════════════════════════════════════════════════════
-    auto* feedbackTab = new void;
-    auto* feedbackLayout = new void(feedbackTab);
-    
-    auto* feedbackForm = new QFormLayout;
-    
-    // Category
-    m_categoryCombo = new void;
-    m_categoryCombo->addItem(tr("🐛 Bug Report"), static_cast<int>(FeedbackCategory::BugReport));
-    m_categoryCombo->addItem(tr("💡 Feature Request"), static_cast<int>(FeedbackCategory::FeatureRequest));
-    m_categoryCombo->addItem(tr("⚡ Performance Issue"), static_cast<int>(FeedbackCategory::PerformanceIssue));
-    m_categoryCombo->addItem(tr("🔥 Thermal Issue"), static_cast<int>(FeedbackCategory::ThermalIssue));
-    m_categoryCombo->addItem(tr("🎨 UI/UX Feedback"), static_cast<int>(FeedbackCategory::UIFeedback));
-    m_categoryCombo->addItem(tr("📚 Documentation"), static_cast<int>(FeedbackCategory::Documentation));
-    m_categoryCombo->addItem(tr("🔒 Security Concern"), static_cast<int>(FeedbackCategory::Security));
-    m_categoryCombo->addItem(tr("📝 Other"), static_cast<int>(FeedbackCategory::Other));  // Signal connection removed\nfeedbackForm->addRow(tr("Category:"), m_categoryCombo);
-    
-    // Priority
-    m_priorityCombo = new void;
-    m_priorityCombo->addItem(tr("🟢 Low"), static_cast<int>(FeedbackPriority::Low));
-    m_priorityCombo->addItem(tr("🟡 Medium"), static_cast<int>(FeedbackPriority::Medium));
-    m_priorityCombo->addItem(tr("🟠 High"), static_cast<int>(FeedbackPriority::High));
-    m_priorityCombo->addItem(tr("🔴 Critical"), static_cast<int>(FeedbackPriority::Critical));
-    m_priorityCombo->setCurrentIndex(1);  // Default to Medium  // Signal connection removed\nfeedbackForm->addRow(tr("Priority:"), m_priorityCombo);
-    
-    // Title
-    m_titleEdit = new voidEdit;
-    m_titleEdit->setPlaceholderText(tr("Brief summary of your feedback"));
-    m_titleEdit->setMaxLength(200);
-    feedbackForm->addRow(tr("Title:"), m_titleEdit);
-    
-    feedbackLayout->addLayout(feedbackForm);
-    
-    // Description
-    auto* descLabel = new void(tr("Description:"));
-    feedbackLayout->addWidget(descLabel);
-    
-    m_descriptionEdit = new void;
-    m_descriptionEdit->setPlaceholderText(tr(
-        "Please provide as much detail as possible:\n\n"
-        "• What were you trying to do?\n"
-        "• What happened instead?\n"
-        "• Steps to reproduce (if applicable)\n"
-        "• Expected behavior\n"
-        "• Any error messages"
-    ));
-    m_descriptionEdit->setMinimumHeight(200);
-    feedbackLayout->addWidget(m_descriptionEdit);
-    
-    m_tabWidget->addTab(feedbackTab, tr("📝 Feedback"));
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Tab 2: Contact Information
-    // ═══════════════════════════════════════════════════════════════════════════
-    auto* contactTab = new void;
-    auto* contactLayout = new void(contactTab);
-    
-    auto* contactGroup = new void(tr("Contact Information (Optional)"));
-    auto* contactForm = nullptr;
-    
-    m_nameEdit = new voidEdit;
-    m_nameEdit->setPlaceholderText(tr("Your name"));
-    contactForm->addRow(tr("Name:"), m_nameEdit);
-    
-    m_emailEdit = new voidEdit;
-    m_emailEdit->setPlaceholderText(tr("your.email@example.com"));
-    contactForm->addRow(tr("Email:"), m_emailEdit);
-    
-    m_consentContact = new void(tr("I consent to being contacted about this feedback"));
-    contactForm->addRow("", m_consentContact);
-    
-    contactLayout->addWidget(contactGroup);
-    
-    auto* privacyNote = new void(tr(
-        "<p><i>📋 Your privacy is important to us. Contact information is only used "
-        "to follow up on your specific feedback and is never shared with third parties.</i></p>"
-    ));
-    privacyNote->setWordWrap(true);
-    contactLayout->addWidget(privacyNote);
-    
-    contactLayout->addStretch();
-    
-    m_tabWidget->addTab(contactTab, tr("👤 Contact"));
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Tab 3: System Information
-    // ═══════════════════════════════════════════════════════════════════════════
-    auto* systemTab = new void;
-    auto* systemLayout = new void(systemTab);
-    
-    auto* systemGroup = new void(tr("System Information"));
-    auto* systemGroupLayout = new void(systemGroup);
-    
-    m_includeSystemInfo = new void(tr("Include basic system information"));
-    m_includeSystemInfo->setChecked(true);
-    systemGroupLayout->addWidget(m_includeSystemInfo);
-    
-    m_includeThermalData = new void(tr("Include thermal management data"));
-    m_includeThermalData->setChecked(true);
-    systemGroupLayout->addWidget(m_includeThermalData);
-    
-    auto* previewLabel = new void(tr("Information that will be included:"));
-    systemGroupLayout->addWidget(previewLabel);
-    
-    m_systemInfoPreview = new void;
-    m_systemInfoPreview->setReadOnly(true);
-    m_systemInfoPreview->setMaximumHeight(200);
-    systemGroupLayout->addWidget(m_systemInfoPreview);
-    
-    systemLayout->addWidget(systemGroup);  // Signal connection removed\n  // Signal connection removed\nsystemLayout->addStretch();
-    
-    m_tabWidget->addTab(systemTab, tr("💻 System Info"));
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Tab 4: Attachments
-    // ═══════════════════════════════════════════════════════════════════════════
-    auto* attachTab = new void;
-    auto* attachLayout = new void(attachTab);
-    
-    auto* attachGroup = new void(tr("Attachments"));
-    auto* attachGroupLayout = new void(attachGroup);
-    
-    m_attachmentsList = nullptr;  // Win32 HWND list control (was QListWidget)
-    // m_attachmentsList->setMinimumHeight(150);
-    attachGroupLayout->addWidget(m_attachmentsList);
-    
-    auto* attachBtnLayout = new void;
-    
-    m_attachFileBtn = new void(tr("📎 Attach File"));  // Signal connection removed\nattachBtnLayout->addWidget(m_attachFileBtn);
-    
-    m_attachScreenshotBtn = new void(tr("📷 Capture Screenshot"));  // Signal connection removed\nattachBtnLayout->addWidget(m_attachScreenshotBtn);
-    
-    m_removeAttachmentBtn = new void(tr("🗑️ Remove"));
-    m_removeAttachmentBtn->setEnabled(false);
-    attachBtnLayout->addWidget(m_removeAttachmentBtn);
-    
-    attachBtnLayout->addStretch();
-    attachGroupLayout->addLayout(attachBtnLayout);
-    
-    attachLayout->addWidget(attachGroup);
-    
-    auto* attachNote = new void(tr(
-        "<p><i>💡 Screenshots and logs can help us understand and resolve issues faster. "
-        "Maximum 5 attachments, 10MB each.</i></p>"
-    ));
-    attachNote->setWordWrap(true);
-    attachLayout->addWidget(attachNote);
-    
-    attachLayout->addStretch();  // Signal connection removed\n});  // Signal connection removed\nfor (auto* item : items) {
-            int row = m_attachmentsList->row(item);
-            if (row >= 0 && row < m_entry.attachmentPaths.size()) {
-                m_entry.attachmentPaths.removeAt(row);
-            }
-            delete m_attachmentsList->takeItem(row);
+    auto* self = reinterpret_cast<FeedbackDialog*>(GetWindowLongPtrW(hDlg, GWLP_USERDATA));
+    if (self) return self->handleMsg(hDlg, msg, wParam, lParam);
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
+}
+
+INT_PTR FeedbackDialog::handleMsg(HWND hDlg, UINT msg, WPARAM wParam, LPARAM /*lParam*/)
+{
+    switch (msg) {
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case IDC_FB_SUBMIT: onSubmit(); return TRUE;
+        case IDC_FB_DRAFT:  onSaveDraft(); return TRUE;
+        case IDCANCEL:
+            DestroyWindow(hDlg);
+            m_hDlg = nullptr;
+            PostQuitMessage(0);
+            return TRUE;
         }
-    });
-    
-    m_tabWidget->addTab(attachTab, tr("📎 Attachments"));
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Tab 5: Preview
-    // ═══════════════════════════════════════════════════════════════════════════
-    auto* previewTab = new void;
-    auto* previewLayout = new void(previewTab);
-    
-    auto* previewHeaderLabel = new void(tr("<b>Preview your submission:</b>"));
-    previewLayout->addWidget(previewHeaderLabel);
-    
-    m_previewText = new void;
-    m_previewText->setReadOnly(true);
-    previewLayout->addWidget(m_previewText);
-    
-    auto* refreshBtn = new void(tr("🔄 Refresh Preview"));  // Signal connection removed\npreviewLayout->addWidget(refreshBtn);
-    
-    m_tabWidget->addTab(previewTab, tr("👁️ Preview"));
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Progress and Status
-    // ═══════════════════════════════════════════════════════════════════════════
-    m_progressBar = new void;
-    m_progressBar->setVisible(false);
-    mainLayout->addWidget(m_progressBar);
-    
-    m_statusLabel = new void;
-    mainLayout->addWidget(m_statusLabel);
-    
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Buttons
-    // ═══════════════════════════════════════════════════════════════════════════
-    m_buttonBox = new voidButtonBox;
-    
-    m_saveDraftBtn = new void(tr("💾 Save Draft"));  // Signal connection removed\nm_buttonBox->addButton(m_saveDraftBtn, voidButtonBox::ActionRole);
-    
-    m_submitBtn = new void(tr("📤 Submit Feedback"));
-    m_submitBtn->setDefault(true);  // Signal connection removed\nm_buttonBox->addButton(m_submitBtn, voidButtonBox::AcceptRole);
-    
-    m_buttonBox->addButton(voidButtonBox::Cancel);  // Signal connection removed\nmainLayout->addWidget(m_buttonBox);
+        break;
+    case WM_CLOSE:
+        DestroyWindow(hDlg);
+        m_hDlg = nullptr;
+        PostQuitMessage(0);
+        return TRUE;
+    }
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
 }
 
-void FeedbackDialog::setupValidation()
+void FeedbackDialog::initControls(HWND hDlg)
 {
-    // Title validation
-    // Connect removed {
-        bool valid = text.length() >= 10;
-        m_titleEdit->setStyleSheet(valid ? "" : "border: 1px solid orange;");
-    });
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    int y = 10;
+
+    // Header
+    CreateWindowExW(0, L"STATIC",
+        L"Your Feedback Matters!  Help us improve RawrXD IDE.",
+        WS_CHILD | WS_VISIBLE | SS_LEFT, 12, y, 620, 20, hDlg, nullptr, hInst, nullptr);
+    y += 28;
+
+    // Category
+    CreateWindowExW(0, L"STATIC", L"Category:",
+        WS_CHILD | WS_VISIBLE, 12, y + 4, 70, 18, hDlg, nullptr, hInst, nullptr);
+    m_hwndCategoryCombo = CreateWindowExW(0, L"COMBOBOX", nullptr,
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 90, y, 220, 200,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_CATEGORY), hInst, nullptr);
+    const wchar_t* cats[] = { L"Bug Report", L"Feature Request", L"Performance Issue",
+        L"Thermal Issue", L"UI/UX Feedback", L"Documentation", L"Security", L"Other" };
+    for (auto c : cats) SendMessageW(m_hwndCategoryCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(c));
+    SendMessageW(m_hwndCategoryCombo, CB_SETCURSEL, 0, 0);
+
+    // Priority
+    CreateWindowExW(0, L"STATIC", L"Priority:",
+        WS_CHILD | WS_VISIBLE, 320, y + 4, 60, 18, hDlg, nullptr, hInst, nullptr);
+    m_hwndPriorityCombo = CreateWindowExW(0, L"COMBOBOX", nullptr,
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 385, y, 140, 200,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_PRIORITY), hInst, nullptr);
+    const wchar_t* pris[] = { L"Low", L"Medium", L"High", L"Critical" };
+    for (auto p : pris) SendMessageW(m_hwndPriorityCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(p));
+    SendMessageW(m_hwndPriorityCombo, CB_SETCURSEL, 1, 0);
+    y += 30;
+
+    // Title
+    CreateWindowExW(0, L"STATIC", L"Title:",
+        WS_CHILD | WS_VISIBLE, 12, y + 4, 50, 18, hDlg, nullptr, hInst, nullptr);
+    m_hwndTitleEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 70, y, 560, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_TITLE), hInst, nullptr);
+    SendMessageW(m_hwndTitleEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Brief summary of your feedback"));
+    y += 30;
+
+    // Description
+    CreateWindowExW(0, L"STATIC", L"Description:",
+        WS_CHILD | WS_VISIBLE, 12, y, 80, 18, hDlg, nullptr, hInst, nullptr);
+    y += 20;
+    m_hwndDescEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL,
+        12, y, 620, 140, hDlg, reinterpret_cast<HMENU>(IDC_FB_DESC), hInst, nullptr);
+    SendMessageW(m_hwndDescEdit, EM_SETCUEBANNER, TRUE,
+        reinterpret_cast<LPARAM>(L"What happened? Steps to reproduce? Expected behavior?"));
+    y += 148;
+
+    // Contact
+    CreateWindowExW(0, L"STATIC", L"Name (optional):",
+        WS_CHILD | WS_VISIBLE, 12, y + 4, 110, 18, hDlg, nullptr, hInst, nullptr);
+    m_hwndNameEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 126, y, 180, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_NAME), hInst, nullptr);
+
+    CreateWindowExW(0, L"STATIC", L"Email (optional):",
+        WS_CHILD | WS_VISIBLE, 316, y + 4, 110, 18, hDlg, nullptr, hInst, nullptr);
+    m_hwndEmailEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 430, y, 200, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_EMAIL), hInst, nullptr);
+    y += 28;
+
+    m_hwndConsentCheck = CreateWindowExW(0, L"BUTTON", L"I consent to being contacted about this feedback",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 12, y, 350, 20,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_CONSENT), hInst, nullptr);
+    y += 28;
+
+    // System info options
+    m_hwndSysInfoCheck = CreateWindowExW(0, L"BUTTON", L"Include system info",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 12, y, 160, 20,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_SYSINFO), hInst, nullptr);
+    SendMessage(m_hwndSysInfoCheck, BM_SETCHECK, BST_CHECKED, 0);
+
+    m_hwndThermalCheck = CreateWindowExW(0, L"BUTTON", L"Include thermal data",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 180, y, 160, 20,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_THERMAL), hInst, nullptr);
+    SendMessage(m_hwndThermalCheck, BM_SETCHECK, BST_CHECKED, 0);
+    y += 28;
+
+    // Buttons
+    m_hwndProgress = CreateWindowExW(0, PROGRESS_CLASSW, nullptr,
+        WS_CHILD | PBS_SMOOTH, 12, y, 400, 16,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_PROGRESS), hInst, nullptr);
+
+    m_hwndStatusLabel = CreateWindowExW(0, L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE | SS_LEFT, 12, y + 20, 400, 18,
+        hDlg, reinterpret_cast<HMENU>(IDC_FB_STATUS), hInst, nullptr);
+
+    m_hwndDraftBtn = CreateWindowExW(0, L"BUTTON", L"Save Draft",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        420, y, 100, 28, hDlg, reinterpret_cast<HMENU>(IDC_FB_DRAFT), hInst, nullptr);
+
+    m_hwndSubmitBtn = CreateWindowExW(0, L"BUTTON", L"Submit Feedback",
+        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        526, y, 105, 28, hDlg, reinterpret_cast<HMENU>(IDC_FB_SUBMIT), hInst, nullptr);
 }
 
 void FeedbackDialog::collectSystemInfo()
 {
-    m_systemInfo["os"] = QSysInfo::prettyProductName();
-    m_systemInfo["architecture"] = QSysInfo::currentCpuArchitecture();
-    m_systemInfo["kernelType"] = QSysInfo::kernelType();
-    m_systemInfo["kernelVersion"] = QSysInfo::kernelVersion();
-    m_systemInfo["qtVersion"] = qVersion();
-    m_systemInfo["rawrxdVersion"] = "2.0.0";
-    
+    OSVERSIONINFOW ovi{};
+    ovi.dwOSVersionInfoSize = sizeof(ovi);
+
+    // Basic system info via Win32
+    SYSTEM_INFO si{};
+    GetNativeSystemInfo(&si);
+
+    m_sysInfo["os"] = "Windows";
+    m_sysInfo["arch"] = (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64) ? "x64" : "x86";
+    m_sysInfo["rawrxdVersion"] = "2.0.0";
+
     // Screen info
-    if (auto* screen = void::primaryScreen()) {
-        m_systemInfo["screenSize"] = std::string("%1x%2")
-            .width())
-            .height());
-        m_systemInfo["screenDpi"] = screen->logicalDotsPerInch();
-    }
-    
-    updatePreview();
+    int screenW = GetSystemMetrics(SM_CXSCREEN);
+    int screenH = GetSystemMetrics(SM_CYSCREEN);
+    char buf[64];
+    _snprintf_s(buf, sizeof(buf), _TRUNCATE, "%dx%d", screenW, screenH);
+    m_sysInfo["screenSize"] = buf;
 }
 
-void FeedbackDialog::setThermalData(double currentTemp, double avgTemp, int throttleCount)
+void FeedbackDialog::setThermalData(double currentTemp, double avgTemp, int throttles)
 {
     m_entry.currentTemperature = currentTemp;
     m_entry.averageTemperature = avgTemp;
-    m_entry.throttleCount = throttleCount;
-    updatePreview();
+    m_entry.throttleCount      = throttles;
 }
 
-void FeedbackDialog::setThermalSnapshot(const std::anyMap& snapshot)
+void FeedbackDialog::setThermalSnapshot(const std::unordered_map<std::string,std::string>& snap)
 {
-    m_entry.thermalSnapshot = snapshot;
-    m_thermalSnapshot = snapshot;
-    updatePreview();
+    m_thermalSnap = snap;
 }
 
-void FeedbackDialog::setSystemInfo(const std::anyMap& sysInfo)
+void FeedbackDialog::setSystemInfo(const std::unordered_map<std::string,std::string>& info)
 {
-    for (auto it = sysInfo.begin(); it != sysInfo.end(); ++it) {
-        m_systemInfo[it.key()] = it.value();
-    }
-    updatePreview();
-}
-
-void FeedbackDialog::updatePreview()
-{
-    std::string preview;
-    
-    if (m_includeSystemInfo->isChecked()) {
-        preview += tr("=== System Information ===\n");
-        for (auto it = m_systemInfo.begin(); it != m_systemInfo.end(); ++it) {
-            preview += std::string("%1: %2\n"), it.value().toString());
-        }
-        preview += "\n";
-    }
-    
-    if (m_includeThermalData->isChecked() && !m_thermalSnapshot.empty()) {
-        preview += tr("=== Thermal Data ===\n");
-        for (auto it = m_thermalSnapshot.begin(); it != m_thermalSnapshot.end(); ++it) {
-            preview += std::string("%1: %2\n"), it.value().toString());
-        }
-        
-        if (m_entry.currentTemperature) {
-            preview += std::string("Current Temperature: %1°C\n");
-        }
-        if (m_entry.averageTemperature) {
-            preview += std::string("Average Temperature: %1°C\n");
-        }
-        if (m_entry.throttleCount) {
-            preview += std::string("Throttle Events: %1\n");
-        }
-    }
-    
-    m_systemInfoPreview->setPlainText(preview);
+    for (auto& [k, v] : info) m_sysInfo[k] = v;
 }
 
 FeedbackEntry FeedbackDialog::getFeedback() const
 {
-    FeedbackEntry entry = m_entry;
-    
-    entry.title = m_titleEdit->text();
-    entry.description = m_descriptionEdit->toPlainText();
-    entry.category = static_cast<FeedbackCategory>(m_categoryCombo->currentData());
-    entry.priority = static_cast<FeedbackPriority>(m_priorityCombo->currentData());
-    
-    entry.userName = m_nameEdit->text();
-    entry.userEmail = m_emailEdit->text();
-    entry.consentToContact = m_consentContact->isChecked();
-    
-    entry.includedSystemInfo = m_includeSystemInfo->isChecked();
-    if (entry.includedSystemInfo) {
-        entry.systemInfo = m_systemInfo;
+    FeedbackEntry e = m_entry;
+    e.title       = getEditText(m_hwndTitleEdit);
+    e.description = getEditText(m_hwndDescEdit);
+    e.category    = static_cast<FeedbackCategory>(SendMessage(m_hwndCategoryCombo, CB_GETCURSEL, 0, 0));
+    e.priority    = static_cast<FeedbackPriority>(SendMessage(m_hwndPriorityCombo, CB_GETCURSEL, 0, 0));
+    e.userName    = getEditText(m_hwndNameEdit);
+    e.userEmail   = getEditText(m_hwndEmailEdit);
+    e.consentToContact = (SendMessage(m_hwndConsentCheck, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    e.includedSystemInfo = (SendMessage(m_hwndSysInfoCheck, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    if (e.includedSystemInfo) e.systemInfo = m_sysInfo;
+    if (SendMessage(m_hwndThermalCheck, BM_GETCHECK, 0, 0) != BST_CHECKED) {
+        e.thermalSnapshot.clear();
+        e.currentTemperature.reset();
+        e.averageTemperature.reset();
+        e.throttleCount.reset();
     }
-    
-    if (!m_includeThermalData->isChecked()) {
-        entry.thermalSnapshot.clear();
-        entry.currentTemperature.reset();
-        entry.averageTemperature.reset();
-        entry.throttleCount.reset();
-    }
-    
-    entry.modified = // DateTime::currentDateTime();
-    
-    return entry;
-}
-
-void FeedbackDialog::setSubmitCallback(FeedbackSubmittedCallback callback)
-{
-    m_submitCallback = std::move(callback);
-}
-
-void FeedbackDialog::onCategoryChanged(int index)
-{
-    (void)(index);
-    auto category = static_cast<FeedbackCategory>(m_categoryCombo->currentData());
-    
-    // Auto-suggest priority for certain categories
-    if (category == FeedbackCategory::Security) {
-        m_priorityCombo->setCurrentIndex(2);  // High
-    } else if (category == FeedbackCategory::ThermalIssue) {
-        m_includeThermalData->setChecked(true);
-    }
-}
-
-void FeedbackDialog::onPriorityChanged(int index)
-{
-    (void)(index);
-}
-
-void FeedbackDialog::onAttachFile()
-{
-    if (m_entry.attachmentPaths.size() >= 5) {
-        void::warning(this, tr("Limit Reached"), 
-            tr("Maximum 5 attachments allowed."));
-        return;
-    }
-    
-    std::string filePath = // Dialog::getOpenFileName(this, 
-        tr("Select File to Attach"),
-        std::string(),
-        tr("All Files (*.*);;Log Files (*.log *.txt);;Images (*.png *.jpg *.gif)"));
-    
-    if (!filePath.empty()) {
-        // Info info(filePath);
-        if (info.size() > 10 * 1024 * 1024) {
-            void::warning(this, tr("File Too Large"),
-                tr("Maximum file size is 10MB."));
-            return;
-        }
-        
-        m_entry.attachmentPaths.append(filePath);
-        m_attachmentsList->addItem(std::string("📄 %1 (%2 KB)")
-            )
-             / 1024));
-    }
-}
-
-void FeedbackDialog::onAttachScreenshot()
-{
-    if (m_entry.screenshotPaths.size() >= 3) {
-        void::warning(this, tr("Limit Reached"),
-            tr("Maximum 3 screenshots allowed."));
-        return;
-    }
-    
-    // Hide dialog temporarily for screenshot
-    hide();
-    // processEvents();
-    
-    // Wait for dialog to fully hide
-    std::thread::msleep(500);
-    
-    // Capture screenshot
-    if (auto* screen = void::primaryScreen()) {
-        void screenshot = screen->grabWindow(0);
-        
-        std::string tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-        std::string fileName = std::string("rawrxd_screenshot_%1.png")
-            .toString("yyyyMMdd_hhmmss"));
-        std::string fullPath = // (tempPath).filePath(fileName);
-        
-        if (screenshot.save(fullPath, "PNG")) {
-            m_entry.screenshotPaths.append(fullPath);
-            m_attachmentsList->addItem(std::string("📷 %1"));
-        }
-    }
-    
-    show();
-}
-
-void FeedbackDialog::onPreviewSubmission()
-{
-    FeedbackEntry entry = getFeedback();
-    
-    std::string preview;
-    preview += tr("=== Feedback Preview ===\n\n");
-    preview += std::string("ID: %1\n");
-    preview += std::string("Title: %1\n");
-    preview += std::string("Category: %1\n"));
-    preview += std::string("Priority: %1\n"));
-    preview += std::string("\n--- Description ---\n%1\n");
-    
-    if (!entry.userName.empty()) {
-        preview += std::string("\n--- Contact ---\nName: %1\nEmail: %2\n")
-            ;
-    }
-    
-    if (entry.includedSystemInfo) {
-        preview += tr("\n--- System Info Included ---\n");
-    }
-    
-    if (!entry.thermalSnapshot.empty()) {
-        preview += tr("--- Thermal Data Included ---\n");
-    }
-    
-    if (!entry.attachmentPaths.empty() || !entry.screenshotPaths.empty()) {
-        preview += std::string("\n--- Attachments: %1 files ---\n")
-             + entry.screenshotPaths.size());
-    }
-    
-    m_previewText->setPlainText(preview);
-    m_tabWidget->setCurrentIndex(4);  // Switch to preview tab
+    e.modifiedISO = isoNow();
+    return e;
 }
 
 bool FeedbackDialog::validateInput()
 {
-    if (m_titleEdit->text().length() < 10) {
-        void::warning(this, tr("Validation Error"),
-            tr("Title must be at least 10 characters."));
-        m_tabWidget->setCurrentIndex(0);
-        m_titleEdit->setFocus();
+    std::string title = getEditText(m_hwndTitleEdit);
+    if (title.size() < 10) {
+        MessageBoxW(m_hDlg, L"Title must be at least 10 characters.", L"Validation", MB_OK | MB_ICONWARNING);
+        SetFocus(m_hwndTitleEdit);
         return false;
     }
-    
-    if (m_descriptionEdit->toPlainText().length() < 30) {
-        void::warning(this, tr("Validation Error"),
-            tr("Description must be at least 30 characters."));
-        m_tabWidget->setCurrentIndex(0);
-        m_descriptionEdit->setFocus();
+    std::string desc = getEditText(m_hwndDescEdit);
+    if (desc.size() < 30) {
+        MessageBoxW(m_hDlg, L"Description must be at least 30 characters.", L"Validation", MB_OK | MB_ICONWARNING);
+        SetFocus(m_hwndDescEdit);
         return false;
     }
-    
-    if (m_consentContact->isChecked() && m_emailEdit->text().empty()) {
-        void::warning(this, tr("Validation Error"),
-            tr("Email is required if you consent to being contacted."));
-        m_tabWidget->setCurrentIndex(1);
-        m_emailEdit->setFocus();
+    if (SendMessage(m_hwndConsentCheck, BM_GETCHECK, 0, 0) == BST_CHECKED &&
+        getEditText(m_hwndEmailEdit).empty()) {
+        MessageBoxW(m_hDlg, L"Email required when consenting to contact.", L"Validation", MB_OK | MB_ICONWARNING);
+        SetFocus(m_hwndEmailEdit);
         return false;
     }
-    
     return true;
 }
 
 void FeedbackDialog::onSubmit()
 {
-    if (!validateInput()) {
-        return;
-    }
-    
-    FeedbackEntry entry = getFeedback();
-    entry.status = SubmissionStatus::Pending;
-    entry.submitted = // DateTime::currentDateTime();
-    
-    m_progressBar->setVisible(true);
-    m_progressBar->setRange(0, 0);  // Indeterminate
-    m_submitBtn->setEnabled(false);
-    m_statusLabel->setText(tr("Submitting feedback..."));
-    
-    // Simulate submission (in production, this would be async network call)
-    // Timer::singleShot(1500, [this, entry]() {
-        m_progressBar->setVisible(false);
-        m_statusLabel->setText(tr("✅ Feedback submitted successfully!"));
-        
-        feedbackSubmitted(entry);
-        
-        if (m_submitCallback) {
-            m_submitCallback(entry, true);
-        }
-        
-        // Timer operation removed
+    if (!validateInput()) return;
+
+    FeedbackEntry e = getFeedback();
+    e.status       = SubmissionStatus::Pending;
+    e.submittedISO = isoNow();
+
+    ShowWindow(m_hwndProgress, SW_SHOW);
+    SendMessage(m_hwndProgress, PBM_SETMARQUEE, TRUE, 30);
+    EnableWindow(m_hwndSubmitBtn, FALSE);
+    SetWindowTextW(m_hwndStatusLabel, L"Submitting feedback...");
+
+    // In production: async WinHTTP POST. For now, simulate success.
+    SetTimer(m_hDlg, 1, 1500, [](HWND hWnd, UINT, UINT_PTR id, DWORD) {
+        KillTimer(hWnd, id);
+        auto* self = reinterpret_cast<FeedbackDialog*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+        if (!self) return;
+        ShowWindow(self->m_hwndProgress, SW_HIDE);
+        SetWindowTextW(self->m_hwndStatusLabel, L"Feedback submitted successfully!");
+
+        FeedbackEntry submitted = self->getFeedback();
+        submitted.status = SubmissionStatus::Submitted;
+        if (self->m_submitCb) self->m_submitCb(submitted, true);
     });
 }
 
 void FeedbackDialog::onSaveDraft()
 {
-    FeedbackEntry entry = getFeedback();
-    entry.status = SubmissionStatus::Draft;
-    entry.modified = // DateTime::currentDateTime();
-    
-    draftSaved(entry);
-    
-    m_statusLabel->setText(tr("💾 Draft saved."));
-    // Timer::singleShot(2000, [this]() {
-        m_statusLabel->clear();
-    });
+    FeedbackEntry e = getFeedback();
+    e.status      = SubmissionStatus::Draft;
+    e.modifiedISO = isoNow();
+
+    FeedbackManager::instance().saveDraft(e);
+    SetWindowTextW(m_hwndStatusLabel, L"Draft saved.");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TelemetryConsentDialog Implementation
+// TelemetryConsentDialog
 // ═══════════════════════════════════════════════════════════════════════════════
 
-TelemetryConsentDialog::TelemetryConsentDialog(void* parent)
-    : void(parent)
+TelemetryConsentDialog::TelemetryConsentDialog(HWND hwndParent)
+    : m_hwndParent(hwndParent) {}
+
+TelemetryConsentDialog::~TelemetryConsentDialog()
 {
-    setWindowTitle(tr("RawrXD IDE - Telemetry & Privacy Settings"));
-    setMinimumSize(550, 500);
-    setModal(true);
-    
-    setupUI();
+    if (m_hDlg && IsWindow(m_hDlg)) DestroyWindow(m_hDlg);
 }
 
-TelemetryConsentDialog::~TelemetryConsentDialog() = default;
-
-void TelemetryConsentDialog::setupUI()
+INT_PTR TelemetryConsentDialog::showModal()
 {
-    auto* mainLayout = new void(this);
-    
-    // Header
-    auto* headerLabel = new void(tr(
-        "<h2>🔒 Privacy & Telemetry Settings</h2>"
-        "<p>Help us improve RawrXD IDE by sharing anonymous usage data. "
-        "Your privacy is important - you control what data is shared.</p>"
-    ));
-    headerLabel->setWordWrap(true);
-    mainLayout->addWidget(headerLabel);
-    
-    // Options group
-    auto* optionsGroup = new void(tr("Telemetry Options"));
-    auto* optionsLayout = new void(optionsGroup);
-    
-    m_basicCheck = new void(tr("📊 Basic telemetry (app version, crashes)"));
-    m_basicCheck->setToolTip(tr("Anonymous app usage and crash data"));  // Signal connection removed\noptionsLayout->addWidget(m_basicCheck);
-    
-    m_performanceCheck = new void(tr("⚡ Performance metrics (startup time, memory)"));
-    m_performanceCheck->setToolTip(tr("Performance data to help optimize the IDE"));  // Signal connection removed\noptionsLayout->addWidget(m_performanceCheck);
-    
-    m_thermalCheck = new void(tr("🌡️ Thermal data (temperatures, throttling events)"));
-    m_thermalCheck->setToolTip(tr("Helps improve thermal management algorithms"));  // Signal connection removed\noptionsLayout->addWidget(m_thermalCheck);
-    
-    m_crashCheck = new void(tr("🔧 Crash reports (stack traces, error logs)"));
-    m_crashCheck->setToolTip(tr("Detailed crash information to fix bugs faster"));  // Signal connection removed\noptionsLayout->addWidget(m_crashCheck);
-    
-    m_featureCheck = new void(tr("🎯 Feature usage (which features you use most)"));
-    m_featureCheck->setToolTip(tr("Helps prioritize development of popular features"));  // Signal connection removed\noptionsLayout->addWidget(m_featureCheck);
-    
-    m_hardwareCheck = new void(tr("💻 Hardware info (CPU, GPU, storage types)"));
-    m_hardwareCheck->setToolTip(tr("Helps optimize for different hardware configurations"));  // Signal connection removed\noptionsLayout->addWidget(m_hardwareCheck);
-    
-    mainLayout->addWidget(optionsGroup);
-    
-    // Quick buttons
-    auto* quickBtnLayout = new void;
-    m_selectAllBtn = new void(tr("✅ Select All"));  // Signal connection removed\nquickBtnLayout->addWidget(m_selectAllBtn);
-    
-    m_selectNoneBtn = new void(tr("❌ Select None"));  // Signal connection removed\nquickBtnLayout->addWidget(m_selectNoneBtn);
-    
-    quickBtnLayout->addStretch();
-    mainLayout->addLayout(quickBtnLayout);
-    
-    // Summary
-    m_summaryLabel = new void;
-    m_summaryLabel->setWordWrap(true);
-    mainLayout->addWidget(m_summaryLabel);
-    
-    // Details
-    auto* detailsGroup = new void(tr("What We Collect"));
-    auto* detailsLayout = new void(detailsGroup);
-    
-    m_detailsText = new void;
-    m_detailsText->setReadOnly(true);
-    m_detailsText->setMaximumHeight(120);
-    m_detailsText->setPlainText(tr(
-        "• All data is anonymized - no personal information is collected\n"
-        "• Data is transmitted securely using encryption\n"
-        "• We never sell or share your data with third parties\n"
-        "• You can change these settings at any time\n"
-        "• Disabling telemetry does not affect functionality"
-    ));
-    detailsLayout->addWidget(m_detailsText);
-    
-    mainLayout->addWidget(detailsGroup);
-    
-    // Legal agreement
-    m_agreedToPrivacy = new void(tr("I have read and agree to the Privacy Policy"));
-    mainLayout->addWidget(m_agreedToPrivacy);
-    
-    m_privacyLink = new void(tr("<a href='https://rawrxd.dev/privacy'>View Privacy Policy</a>"));
-    m_privacyLink->setOpenExternalLinks(true);
-    mainLayout->addWidget(m_privacyLink);
-    
-    // Buttons
-    auto* buttonBox = new voidButtonBox;
-    auto* saveBtn = new void(tr("💾 Save Settings"));  // Signal connection removed\nbuttonBox->addButton(saveBtn, voidButtonBox::AcceptRole);
-    buttonBox->addButton(voidButtonBox::Cancel);  // Signal connection removed\nmainLayout->addWidget(buttonBox);
-    
-    updateSummary();
-}
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    RECT rc;
+    if (m_hwndParent) GetWindowRect(m_hwndParent, &rc);
+    else { rc.left = 200; rc.top = 120; }
 
-void TelemetryConsentDialog::setCurrentConsent(const TelemetryConsent& consent)
-{
-    m_consent = consent;
-    
-    m_basicCheck->setChecked(consent.basicTelemetry);
-    m_performanceCheck->setChecked(consent.performanceTelemetry);
-    m_thermalCheck->setChecked(consent.thermalTelemetry);
-    m_crashCheck->setChecked(consent.crashReporting);
-    m_featureCheck->setChecked(consent.featureUsage);
-    m_hardwareCheck->setChecked(consent.hardwareInfo);
-    
-    updateSummary();
-}
+    m_hDlg = CreateWindowExW(WS_EX_DLGMODALFRAME,
+        L"STATIC", L"RawrXD IDE - Privacy & Telemetry",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        rc.left + 100, rc.top + 60, 500, 400,
+        m_hwndParent, nullptr, hInst, nullptr);
+    if (!m_hDlg) return IDCANCEL;
 
-TelemetryConsent TelemetryConsentDialog::getConsent() const
-{
-    TelemetryConsent consent;
-    consent.basicTelemetry = m_basicCheck->isChecked();
-    consent.performanceTelemetry = m_performanceCheck->isChecked();
-    consent.thermalTelemetry = m_thermalCheck->isChecked();
-    consent.crashReporting = m_crashCheck->isChecked();
-    consent.featureUsage = m_featureCheck->isChecked();
-    consent.hardwareInfo = m_hardwareCheck->isChecked();
-    consent.consentDate = // DateTime::currentDateTime();
-    consent.consentVersion = "1.0";
-    return consent;
-}
+    SetWindowLongPtrW(m_hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    SetWindowLongPtrW(m_hDlg, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DlgProc));
+    initControls(m_hDlg);
 
-void TelemetryConsentDialog::setConsentCallback(TelemetryConsentCallback callback)
-{
-    m_consentCallback = std::move(callback);
-}
-
-void TelemetryConsentDialog::onSelectAll()
-{
-    m_basicCheck->setChecked(true);
-    m_performanceCheck->setChecked(true);
-    m_thermalCheck->setChecked(true);
-    m_crashCheck->setChecked(true);
-    m_featureCheck->setChecked(true);
-    m_hardwareCheck->setChecked(true);
-}
-
-void TelemetryConsentDialog::onSelectNone()
-{
-    m_basicCheck->setChecked(false);
-    m_performanceCheck->setChecked(false);
-    m_thermalCheck->setChecked(false);
-    m_crashCheck->setChecked(false);
-    m_featureCheck->setChecked(false);
-    m_hardwareCheck->setChecked(false);
-}
-
-void TelemetryConsentDialog::onShowDetails(const std::string& category)
-{
-    (void)(category);
-}
-
-void TelemetryConsentDialog::updateSummary()
-{
-    int count = 0;
-    if (m_basicCheck->isChecked()) count++;
-    if (m_performanceCheck->isChecked()) count++;
-    if (m_thermalCheck->isChecked()) count++;
-    if (m_crashCheck->isChecked()) count++;
-    if (m_featureCheck->isChecked()) count++;
-    if (m_hardwareCheck->isChecked()) count++;
-    
-    std::string summary;
-    if (count == 0) {
-        summary = tr("📵 No telemetry will be collected. RawrXD IDE works fully offline.");
-    } else if (count <= 2) {
-        summary = tr("🔒 Minimal telemetry: %1 category(ies) selected.");
-    } else if (count <= 4) {
-        summary = tr("📊 Moderate telemetry: %1 categories selected. Thank you for helping improve RawrXD IDE!");
-    } else {
-        summary = tr("🌟 Full telemetry: All categories selected. You're awesome! This really helps us improve.");
+    if (m_hwndParent) EnableWindow(m_hwndParent, FALSE);
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!IsWindow(m_hDlg)) break;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
-    
-    m_summaryLabel->setText(summary);
+    if (m_hwndParent) EnableWindow(m_hwndParent, TRUE);
+    return IDOK;
 }
 
-void TelemetryConsentDialog::onSaveConsent()
+INT_PTR CALLBACK TelemetryConsentDialog::DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    if (!m_agreedToPrivacy->isChecked()) {
-        void::warning(this, tr("Agreement Required"),
-            tr("Please read and agree to the Privacy Policy to continue."));
-        return;
-    }
-    
-    TelemetryConsent consent = getConsent();
-    consentUpdated(consent);
-    
-    if (m_consentCallback) {
-        m_consentCallback(consent);
-    }
-    
-    accept();
+    auto* self = reinterpret_cast<TelemetryConsentDialog*>(GetWindowLongPtrW(hDlg, GWLP_USERDATA));
+    if (self) return self->handleMsg(hDlg, msg, wParam, lParam);
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ContributionDialog Implementation
-// ═══════════════════════════════════════════════════════════════════════════════
-
-ContributionDialog::ContributionDialog(void* parent)
-    : void(parent)
+INT_PTR TelemetryConsentDialog::handleMsg(HWND hDlg, UINT msg, WPARAM wParam, LPARAM /*lParam*/)
 {
-    setWindowTitle(tr("RawrXD IDE - Submit Contribution"));
-    setMinimumSize(600, 500);
-    setModal(true);
-    
-    m_entry.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    
-    setupUI();
-}
-
-ContributionDialog::~ContributionDialog() = default;
-
-void ContributionDialog::setupUI()
-{
-    auto* mainLayout = new void(this);
-    
-    // Header
-    auto* headerLabel = new void(tr(
-        "<h2>🎁 Contribute to RawrXD IDE</h2>"
-        "<p>Share your thermal profiles, configurations, or improvements with the community!</p>"
-    ));
-    headerLabel->setWordWrap(true);
-    mainLayout->addWidget(headerLabel);
-    
-    // Form
-    auto* formLayout = new QFormLayout;
-    
-    m_typeCombo = new void;
-    m_typeCombo->addItem(tr("🌡️ Thermal Profile"), static_cast<int>(ContributionEntry::Type::ThermalProfile));
-    m_typeCombo->addItem(tr("💾 Drive Configuration"), static_cast<int>(ContributionEntry::Type::DriveConfiguration));
-    m_typeCombo->addItem(tr("🧮 Algorithm"), static_cast<int>(ContributionEntry::Type::Algorithm));
-    m_typeCombo->addItem(tr("📚 Documentation"), static_cast<int>(ContributionEntry::Type::Documentation));
-    m_typeCombo->addItem(tr("🌍 Translation"), static_cast<int>(ContributionEntry::Type::Translation));
-    m_typeCombo->addItem(tr("📝 Other"), static_cast<int>(ContributionEntry::Type::Other));  // Signal connection removed\nformLayout->addRow(tr("Type:"), m_typeCombo);
-    
-    m_titleEdit = new voidEdit;
-    m_titleEdit->setPlaceholderText(tr("Name of your contribution"));
-    formLayout->addRow(tr("Title:"), m_titleEdit);
-    
-    m_nameEdit = new voidEdit;
-    m_nameEdit->setPlaceholderText(tr("Your name or handle"));
-    formLayout->addRow(tr("Contributor:"), m_nameEdit);
-    
-    m_emailEdit = new voidEdit;
-    m_emailEdit->setPlaceholderText(tr("email@example.com (optional)"));
-    formLayout->addRow(tr("Email:"), m_emailEdit);
-    
-    mainLayout->addLayout(formLayout);
-    
-    // Description
-    auto* descLabel = new void(tr("Description:"));
-    mainLayout->addWidget(descLabel);
-    
-    m_descriptionEdit = new void;
-    m_descriptionEdit->setPlaceholderText(tr(
-        "Describe your contribution:\n\n"
-        "• What does it do?\n"
-        "• How was it tested?\n"
-        "• What hardware/configuration was it designed for?"
-    ));
-    m_descriptionEdit->setMaximumHeight(120);
-    mainLayout->addWidget(m_descriptionEdit);
-    
-    // File
-    auto* fileGroup = new void(tr("File"));
-    auto* fileLayout = new void(fileGroup);
-    
-    m_filePathEdit = new voidEdit;
-    m_filePathEdit->setReadOnly(true);
-    fileLayout->addWidget(m_filePathEdit);
-    
-    m_selectFileBtn = new void(tr("📂 Select..."));  // Signal connection removed\nfileLayout->addWidget(m_selectFileBtn);
-    
-    mainLayout->addWidget(fileGroup);
-    
-    m_fileSizeLabel = new void;
-    mainLayout->addWidget(m_fileSizeLabel);
-    
-    m_checksumLabel = new void;
-    mainLayout->addWidget(m_checksumLabel);
-    
-    // License
-    auto* licenseGroup = new void(tr("License"));
-    auto* licenseLayout = new void(licenseGroup);
-    
-    m_licenseCombo = new void;
-    m_licenseCombo->addItem(tr("MIT License"));
-    m_licenseCombo->addItem(tr("Apache 2.0"));
-    m_licenseCombo->addItem(tr("BSD 3-Clause"));
-    m_licenseCombo->addItem(tr("CC BY 4.0"));
-    m_licenseCombo->addItem(tr("Public Domain (CC0)"));
-    licenseLayout->addWidget(m_licenseCombo);
-    
-    m_agreedToTerms = new void(tr("I agree to license my contribution under the selected license"));
-    licenseLayout->addWidget(m_agreedToTerms);
-    
-    mainLayout->addWidget(licenseGroup);
-    
-    // Buttons
-    auto* buttonBox = new voidButtonBox;
-    
-    auto* previewBtn = new void(tr("👁️ Preview"));  // Signal connection removed\nbuttonBox->addButton(previewBtn, voidButtonBox::ActionRole);
-    
-    auto* submitBtn = new void(tr("📤 Submit"));  // Signal connection removed\nbuttonBox->addButton(submitBtn, voidButtonBox::AcceptRole);
-    
-    buttonBox->addButton(voidButtonBox::Cancel);  // Signal connection removed\nmainLayout->addWidget(buttonBox);
-}
-
-void ContributionDialog::setContributionCallback(ContributionCallback callback)
-{
-    m_contributionCallback = std::move(callback);
-}
-
-ContributionEntry ContributionDialog::getContribution() const
-{
-    return m_entry;
-}
-
-void ContributionDialog::onTypeChanged(int index)
-{
-    (void)(index);
-}
-
-void ContributionDialog::onSelectFile()
-{
-    std::string filter;
-    auto type = static_cast<ContributionEntry::Type>(m_typeCombo->currentData());
-    
-    switch (type) {
-        case ContributionEntry::Type::ThermalProfile:
-        case ContributionEntry::Type::DriveConfiguration:
-            filter = tr("JSON Files (*.json);;All Files (*.*)");
-            break;
-        case ContributionEntry::Type::Algorithm:
-            filter = tr("Source Files (*.cpp *.hpp *.h);;All Files (*.*)");
-            break;
-        case ContributionEntry::Type::Documentation:
-            filter = tr("Markdown Files (*.md);;All Files (*.*)");
-            break;
-        default:
-            filter = tr("All Files (*.*)");
-    }
-    
-    std::string filePath = // Dialog::getOpenFileName(this, tr("Select File"), std::string(), filter);
-    
-    if (!filePath.empty()) {
-        // File operation removed;
-        if (file.open(std::iostream::ReadOnly)) {
-            m_entry.fileContent = file.readAll();
-            m_entry.fileName = // FileInfo: filePath).fileName();
-            m_entry.fileChecksum = calculateChecksum(m_entry.fileContent);
-            
-            m_filePathEdit->setText(filePath);
-            m_fileSizeLabel->setText(tr("Size: %1 KB") / 1024));
-            m_checksumLabel->setText(tr("SHA-256: %1...")));
+    switch (msg) {
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case IDC_TC_ALL:
+            for (HWND h : { m_hwndBasic, m_hwndPerf, m_hwndThermal, m_hwndCrash, m_hwndFeature, m_hwndHardware })
+                SendMessage(h, BM_SETCHECK, BST_CHECKED, 0);
+            return TRUE;
+        case IDC_TC_NONE:
+            for (HWND h : { m_hwndBasic, m_hwndPerf, m_hwndThermal, m_hwndCrash, m_hwndFeature, m_hwndHardware })
+                SendMessage(h, BM_SETCHECK, BST_UNCHECKED, 0);
+            return TRUE;
+        case IDC_TC_SAVE:
+            m_consent.basicTelemetry       = (SendMessage(m_hwndBasic,    BM_GETCHECK, 0, 0) == BST_CHECKED);
+            m_consent.performanceTelemetry = (SendMessage(m_hwndPerf,     BM_GETCHECK, 0, 0) == BST_CHECKED);
+            m_consent.thermalTelemetry     = (SendMessage(m_hwndThermal,  BM_GETCHECK, 0, 0) == BST_CHECKED);
+            m_consent.crashReporting       = (SendMessage(m_hwndCrash,    BM_GETCHECK, 0, 0) == BST_CHECKED);
+            m_consent.featureUsage         = (SendMessage(m_hwndFeature,  BM_GETCHECK, 0, 0) == BST_CHECKED);
+            m_consent.hardwareInfo         = (SendMessage(m_hwndHardware, BM_GETCHECK, 0, 0) == BST_CHECKED);
+            m_consent.consentDateISO       = isoNow();
+            m_consent.consentVersion       = "2.0";
+            if (m_consentCb) m_consentCb(m_consent);
+            DestroyWindow(hDlg);
+            m_hDlg = nullptr;
+            PostQuitMessage(0);
+            return TRUE;
+        case IDCANCEL:
+            DestroyWindow(hDlg);
+            m_hDlg = nullptr;
+            PostQuitMessage(0);
+            return TRUE;
         }
+        break;
+    case WM_CLOSE:
+        DestroyWindow(hDlg);
+        m_hDlg = nullptr;
+        PostQuitMessage(0);
+        return TRUE;
     }
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
 }
 
-std::string ContributionDialog::calculateChecksum(const std::vector<uint8_t>& data)
+void TelemetryConsentDialog::initControls(HWND hDlg)
 {
-    return QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex();
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    int y = 10;
+
+    CreateWindowExW(0, L"STATIC",
+        L"Privacy & Telemetry Settings\r\n\r\nHelp us improve RawrXD IDE by sharing anonymous data.\r\nYou control what is shared.",
+        WS_CHILD | WS_VISIBLE | SS_LEFT, 12, y, 460, 52, hDlg, nullptr, hInst, nullptr);
+    y += 60;
+
+    auto makeCheck = [&](HWND& hw, const wchar_t* text, UINT_PTR id, bool checked) {
+        hw = CreateWindowExW(0, L"BUTTON", text,
+            WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+            20, y, 440, 20, hDlg, reinterpret_cast<HMENU>(id), hInst, nullptr);
+        if (checked) SendMessage(hw, BM_SETCHECK, BST_CHECKED, 0);
+        y += 26;
+    };
+
+    makeCheck(m_hwndBasic,    L"Basic telemetry (app version, crashes)",        IDC_TC_BASIC,    m_consent.basicTelemetry);
+    makeCheck(m_hwndPerf,     L"Performance metrics (startup time, memory)",    IDC_TC_PERF,     m_consent.performanceTelemetry);
+    makeCheck(m_hwndThermal,  L"Thermal data (temperatures, throttling events)",IDC_TC_THERMAL,  m_consent.thermalTelemetry);
+    makeCheck(m_hwndCrash,    L"Crash reporting (anonymous dumps)",             IDC_TC_CRASH,    m_consent.crashReporting);
+    makeCheck(m_hwndFeature,  L"Feature usage tracking",                        IDC_TC_FEATURE,  m_consent.featureUsage);
+    makeCheck(m_hwndHardware, L"Hardware information",                          IDC_TC_HARDWARE, m_consent.hardwareInfo);
+    y += 8;
+
+    m_hwndPrivacy = CreateWindowExW(0, L"STATIC",
+        L"Your privacy is important. Data is never shared with third parties.",
+        WS_CHILD | WS_VISIBLE | SS_LEFT, 20, y, 440, 36, hDlg, nullptr, hInst, nullptr);
+    y += 44;
+
+    // Select All / None
+    CreateWindowExW(0, L"BUTTON", L"Select All",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        20, y, 100, 26, hDlg, reinterpret_cast<HMENU>(IDC_TC_ALL), hInst, nullptr);
+    CreateWindowExW(0, L"BUTTON", L"Select None",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        128, y, 100, 26, hDlg, reinterpret_cast<HMENU>(IDC_TC_NONE), hInst, nullptr);
+
+    CreateWindowExW(0, L"BUTTON", L"Save",
+        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        360, y, 100, 26, hDlg, reinterpret_cast<HMENU>(IDC_TC_SAVE), hInst, nullptr);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ContributionDialog
+// ═══════════════════════════════════════════════════════════════════════════════
+
+ContributionDialog::ContributionDialog(HWND hwndParent)
+    : m_hwndParent(hwndParent) { m_entry.id = generateUID(); }
+
+ContributionDialog::~ContributionDialog()
+{
+    if (m_hDlg && IsWindow(m_hDlg)) DestroyWindow(m_hDlg);
+}
+
+INT_PTR ContributionDialog::showModal()
+{
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    RECT rc;
+    if (m_hwndParent) GetWindowRect(m_hwndParent, &rc);
+    else { rc.left = 200; rc.top = 120; }
+
+    m_hDlg = CreateWindowExW(WS_EX_DLGMODALFRAME,
+        L"STATIC", L"RawrXD IDE - Submit Contribution",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        rc.left + 80, rc.top + 40, 560, 480,
+        m_hwndParent, nullptr, hInst, nullptr);
+    if (!m_hDlg) return IDCANCEL;
+
+    SetWindowLongPtrW(m_hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    SetWindowLongPtrW(m_hDlg, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DlgProc));
+    initControls(m_hDlg);
+
+    if (m_hwndParent) EnableWindow(m_hwndParent, FALSE);
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!IsWindow(m_hDlg)) break;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    if (m_hwndParent) EnableWindow(m_hwndParent, TRUE);
+    return IDOK;
+}
+
+INT_PTR CALLBACK ContributionDialog::DlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    auto* self = reinterpret_cast<ContributionDialog*>(GetWindowLongPtrW(hDlg, GWLP_USERDATA));
+    if (self) return self->handleMsg(hDlg, msg, wParam, lParam);
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
+}
+
+INT_PTR ContributionDialog::handleMsg(HWND hDlg, UINT msg, WPARAM wParam, LPARAM /*lParam*/)
+{
+    switch (msg) {
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case IDC_CT_BROWSE: {
+            OPENFILENAMEA ofn{};
+            char file[MAX_PATH] = {};
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner   = hDlg;
+            ofn.lpstrFilter = "All Files\0*.*\0";
+            ofn.lpstrFile   = file;
+            ofn.nMaxFile    = MAX_PATH;
+            ofn.Flags       = OFN_FILEMUSTEXIST;
+            if (GetOpenFileNameA(&ofn))
+                SetWindowTextA(m_hwndFileEdit, file);
+            return TRUE;
+        }
+        case IDC_CT_SUBMIT:
+            if (validateInput()) {
+                m_entry.title       = getEditText(m_hwndTitleEdit);
+                m_entry.description = getEditText(m_hwndDescEdit);
+                m_entry.type        = static_cast<ContributionEntry::Type>(SendMessage(m_hwndTypeCombo, CB_GETCURSEL, 0, 0));
+                m_entry.contributorName  = getEditText(m_hwndNameEdit);
+                m_entry.contributorEmail = getEditText(m_hwndEmailEdit);
+                m_entry.fileName    = getEditText(m_hwndFileEdit);
+                m_entry.agreedToTerms = (SendMessage(m_hwndAgreeCheck, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                m_entry.status      = SubmissionStatus::Submitted;
+                if (m_cb) m_cb(m_entry, true);
+                DestroyWindow(hDlg);
+                m_hDlg = nullptr;
+                PostQuitMessage(0);
+            }
+            return TRUE;
+        case IDCANCEL:
+            DestroyWindow(hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+            return TRUE;
+        }
+        break;
+    case WM_CLOSE:
+        DestroyWindow(hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+        return TRUE;
+    }
+    return DefWindowProcW(hDlg, msg, wParam, lParam);
+}
+
+void ContributionDialog::initControls(HWND hDlg)
+{
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    int y = 10;
+
+    auto addLabel = [&](const wchar_t* t, int x, int w) {
+        CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE, x, y + 4, w, 18, hDlg, nullptr, hInst, nullptr);
+    };
+
+    addLabel(L"Title:", 12, 50);
+    m_hwndTitleEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 70, y, 460, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_TITLE), hInst, nullptr);
+    y += 30;
+
+    addLabel(L"Description:", 12, 80);
+    y += 20;
+    m_hwndDescEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL,
+        12, y, 520, 80, hDlg, reinterpret_cast<HMENU>(IDC_CT_DESC), hInst, nullptr);
+    y += 88;
+
+    addLabel(L"Type:", 12, 50);
+    m_hwndTypeCombo = CreateWindowExW(0, L"COMBOBOX", nullptr,
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 70, y, 200, 200,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_TYPE), hInst, nullptr);
+    const wchar_t* types[] = { L"Thermal Profile", L"Drive Config", L"Algorithm",
+        L"Documentation", L"Translation", L"Other" };
+    for (auto t : types) SendMessageW(m_hwndTypeCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(t));
+    SendMessageW(m_hwndTypeCombo, CB_SETCURSEL, 0, 0);
+    y += 30;
+
+    addLabel(L"Name:", 12, 50);
+    m_hwndNameEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 70, y, 200, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_NAME), hInst, nullptr);
+    addLabel(L"Email:", 280, 50);
+    m_hwndEmailEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 334, y, 196, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_EMAIL), hInst, nullptr);
+    y += 30;
+
+    addLabel(L"File:", 12, 40);
+    m_hwndFileEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr,
+        WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 55, y, 390, 22,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_FILE), hInst, nullptr);
+    m_hwndBrowseBtn = CreateWindowExW(0, L"BUTTON", L"Browse...",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 450, y, 80, 24,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_BROWSE), hInst, nullptr);
+    y += 30;
+
+    addLabel(L"License:", 12, 60);
+    m_hwndLicenseCombo = CreateWindowExW(0, L"COMBOBOX", nullptr,
+        WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 78, y, 200, 200,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_LICENSE), hInst, nullptr);
+    const wchar_t* lics[] = { L"MIT", L"Apache-2.0", L"BSD-3-Clause", L"GPL-3.0", L"CC-BY-4.0", L"Unlicense" };
+    for (auto l : lics) SendMessageW(m_hwndLicenseCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(l));
+    SendMessageW(m_hwndLicenseCombo, CB_SETCURSEL, 0, 0);
+    y += 30;
+
+    m_hwndAgreeCheck = CreateWindowExW(0, L"BUTTON", L"I agree to the contribution terms",
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, 12, y, 300, 20,
+        hDlg, reinterpret_cast<HMENU>(IDC_CT_AGREE), hInst, nullptr);
+    y += 30;
+
+    CreateWindowExW(0, L"BUTTON", L"Submit",
+        WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+        420, y, 100, 28, hDlg, reinterpret_cast<HMENU>(IDC_CT_SUBMIT), hInst, nullptr);
 }
 
 bool ContributionDialog::validateInput()
 {
-    if (m_titleEdit->text().empty()) {
-        void::warning(this, tr("Validation Error"), tr("Title is required."));
+    if (getEditText(m_hwndTitleEdit).size() < 5) {
+        MessageBoxW(m_hDlg, L"Title too short.", L"Validation", MB_OK | MB_ICONWARNING);
         return false;
     }
-    if (m_nameEdit->text().empty()) {
-        void::warning(this, tr("Validation Error"), tr("Contributor name is required."));
-        return false;
-    }
-    if (m_entry.fileContent.empty()) {
-        void::warning(this, tr("Validation Error"), tr("Please select a file."));
-        return false;
-    }
-    if (!m_agreedToTerms->isChecked()) {
-        void::warning(this, tr("Validation Error"), tr("Please agree to the license terms."));
+    if (SendMessage(m_hwndAgreeCheck, BM_GETCHECK, 0, 0) != BST_CHECKED) {
+        MessageBoxW(m_hDlg, L"You must agree to the terms.", L"Validation", MB_OK | MB_ICONWARNING);
         return false;
     }
     return true;
 }
 
-void ContributionDialog::onPreview()
-{
-    std::string preview = std::string(
-        "=== Contribution Preview ===\n\n"
-        "Type: %1\n"
-        "Title: %2\n"
-        "Contributor: %3\n"
-        "License: %4\n\n"
-        "File: %5 (%6 KB)\n"
-        "Checksum: %7\n\n"
-        "Description:\n%8"
-    ),
-          m_titleEdit->text(),
-          m_nameEdit->text(),
-          m_licenseCombo->currentText(),
-          m_entry.fileName,
-          std::string::number(m_entry.fileContent.size() / 1024),
-          m_entry.fileChecksum,
-          m_descriptionEdit->toPlainText());
-    
-    void::information(this, tr("Preview"), preview);
-}
-
-void ContributionDialog::onSubmit()
-{
-    if (!validateInput()) {
-        return;
-    }
-    
-    m_entry.title = m_titleEdit->text();
-    m_entry.description = m_descriptionEdit->toPlainText();
-    m_entry.contributorName = m_nameEdit->text();
-    m_entry.contributorEmail = m_emailEdit->text();
-    m_entry.type = static_cast<ContributionEntry::Type>(m_typeCombo->currentData());
-    m_entry.license = m_licenseCombo->currentText();
-    m_entry.agreedToTerms = m_agreedToTerms->isChecked();
-    m_entry.submitted = // DateTime::currentDateTime();
-    m_entry.status = SubmissionStatus::Pending;
-    
-    contributionSubmitted(m_entry);
-    
-    if (m_contributionCallback) {
-        m_contributionCallback(m_entry, true);
-    }
-    
-    void::information(this, tr("Success"),
-        tr("Thank you for your contribution! It will be reviewed shortly."));
-    
-    accept();
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
-// FeedbackManager Implementation
+// FeedbackManager — singleton
 // ═══════════════════════════════════════════════════════════════════════════════
 
 FeedbackManager& FeedbackManager::instance()
 {
-    static FeedbackManager instance;
-    return instance;
+    static FeedbackManager mgr;
+    return mgr;
 }
 
 FeedbackManager::FeedbackManager()
-    : m_networkManager(std::make_unique<void*>(this))
 {
-    m_settingsPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    std::filesystem::create_directories(m_settingsPath);  // Signal connection removed\nloadSettings();
+    // Determine settings path: %APPDATA%\RawrXD\feedback.json
+    char appdata[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, 0, appdata))) {
+        m_settingsPath = std::string(appdata) + "\\RawrXD\\feedback.json";
+    }
+    loadSettings();
 }
 
 FeedbackManager::~FeedbackManager()
@@ -1023,179 +705,68 @@ FeedbackManager::~FeedbackManager()
     saveSettings();
 }
 
-void FeedbackManager::showFeedbackDialog(void* parent)
+void FeedbackManager::showFeedbackDialog(HWND parent)
 {
-    auto* dialog = new FeedbackDialog(parent);
-    dialog->setAttribute(WA_DeleteOnClose);
-    
-    dialog->setSubmitCallback([this](const FeedbackEntry& entry, bool success) {
-        if (success) {
-            m_history.push_back(entry);
-            saveSettings();
-            feedbackSubmitted(entry.id, true);
-        }
+    FeedbackDialog dlg(parent);
+    dlg.showModal();
+}
+
+void FeedbackManager::showTelemetryConsentDialog(HWND parent)
+{
+    TelemetryConsentDialog dlg(parent);
+    dlg.setCurrentConsent(m_consent);
+    dlg.setConsentCallback([this](const TelemetryConsent& c) {
+        m_consent = c;
+        saveSettings();
     });
-    
-    dialog->show();
+    dlg.showModal();
 }
 
-void FeedbackManager::showTelemetryConsentDialog(void* parent)
+void FeedbackManager::showContributionDialog(HWND parent)
 {
-    auto* dialog = new TelemetryConsentDialog(parent);
-    dialog->setAttribute(WA_DeleteOnClose);
-    dialog->setCurrentConsent(m_consent);
-    
-    dialog->setConsentCallback([this](const TelemetryConsent& consent) {
-        setTelemetryConsent(consent);
-    });
-    
-    dialog->show();
+    ContributionDialog dlg(parent);
+    dlg.showModal();
 }
 
-void FeedbackManager::showContributionDialog(void* parent)
+void FeedbackManager::submitQuickFeedback(const std::string& message, FeedbackCategory cat)
 {
-    auto* dialog = new ContributionDialog(parent);
-    dialog->setAttribute(WA_DeleteOnClose);
-    
-    dialog->setContributionCallback([this](const ContributionEntry& entry, bool success) {
-        if (success) {
-            contributionSubmitted(entry.id, true);
-        }
-    });
-    
-    dialog->show();
+    FeedbackEntry e;
+    e.id          = generateUID();
+    e.title       = message.substr(0, 200);
+    e.description = message;
+    e.category    = cat;
+    e.priority    = FeedbackPriority::Medium;
+    e.status      = SubmissionStatus::Submitted;
+    e.createdISO  = isoNow();
+    m_history.push_back(e);
 }
 
-void FeedbackManager::submitQuickFeedback(const std::string& message, FeedbackCategory category)
+void FeedbackManager::reportBug(const std::string& title, const std::string& desc)
 {
-    FeedbackEntry entry;
-    entry.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    entry.title = message.left(50) + (message.length() > 50 ? "..." : "");
-    entry.description = message;
-    entry.category = category;
-    entry.priority = FeedbackPriority::Medium;
-    entry.created = // DateTime::currentDateTime();
-    entry.systemInfo = collectSystemInfo();
-    
-    m_history.push_back(entry);
-    saveSettings();
-    
-    feedbackSubmitted(entry.id, true);
+    submitQuickFeedback(title + "\n\n" + desc, FeedbackCategory::BugReport);
 }
 
-void FeedbackManager::reportBug(const std::string& title, const std::string& description)
+void FeedbackManager::requestFeature(const std::string& title, const std::string& desc)
 {
-    FeedbackEntry entry;
-    entry.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    entry.title = title;
-    entry.description = description;
-    entry.category = FeedbackCategory::BugReport;
-    entry.priority = FeedbackPriority::Medium;
-    entry.created = // DateTime::currentDateTime();
-    entry.systemInfo = collectSystemInfo();
-    
-    m_history.push_back(entry);
+    submitQuickFeedback(title + "\n\n" + desc, FeedbackCategory::FeatureRequest);
+}
+
+void FeedbackManager::setTelemetryConsent(const TelemetryConsent& c)
+{
+    m_consent = c;
     saveSettings();
 }
 
-void FeedbackManager::requestFeature(const std::string& title, const std::string& description)
+void FeedbackManager::saveDraft(const FeedbackEntry& e)
 {
-    FeedbackEntry entry;
-    entry.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    entry.title = title;
-    entry.description = description;
-    entry.category = FeedbackCategory::FeatureRequest;
-    entry.priority = FeedbackPriority::Low;
-    entry.created = // DateTime::currentDateTime();
-    
-    m_history.push_back(entry);
-    saveSettings();
+    // Replace existing draft with same ID, or append
+    for (auto& d : m_drafts) {
+        if (d.id == e.id) { d = e; return; }
+    }
+    m_drafts.push_back(e);
 }
 
-void FeedbackManager::reportThermalIssue(const std::string& description, const std::anyMap& thermalData)
-{
-    FeedbackEntry entry;
-    entry.id = QUuid::createUuid().toString(QUuid::WithoutBraces);
-    entry.title = "Thermal Issue Report";
-    entry.description = description;
-    entry.category = FeedbackCategory::ThermalIssue;
-    entry.priority = FeedbackPriority::High;
-    entry.created = // DateTime::currentDateTime();
-    entry.thermalSnapshot = thermalData;
-    entry.systemInfo = collectSystemInfo();
-    
-    m_history.push_back(entry);
-    saveSettings();
-}
-
-void FeedbackManager::setTelemetryConsent(const TelemetryConsent& consent)
-{
-    m_consent = consent;
-    m_consent.consentDate = // DateTime::currentDateTime();
-    saveSettings();
-    
-    telemetryConsentChanged(m_consent);
-}
-
-TelemetryConsent FeedbackManager::getTelemetryConsent() const
-{
-    return m_consent;
-}
-
-bool FeedbackManager::hasTelemetryConsent() const
-{
-    return m_consent.hasAnyConsent();
-}
-
-void FeedbackManager::sendTelemetry(const std::string& eventName, const std::anyMap& data)
-{
-    if (!m_consent.basicTelemetry) return;
-    
-    void* payload;
-    payload["event"] = eventName;
-    payload["data"] = void*::fromVariantMap(data);
-    payload["timestamp"] = // DateTime::currentDateTime().toString(ISODate);
-    
-    // In production, send to telemetry endpoint
-}
-
-void FeedbackManager::sendPerformanceMetrics(const std::anyMap& metrics)
-{
-    if (!m_consent.performanceTelemetry) return;
-    sendTelemetry("performance", metrics);
-}
-
-void FeedbackManager::sendThermalData(const std::anyMap& thermalData)
-{
-    if (!m_consent.thermalTelemetry) return;
-    sendTelemetry("thermal", thermalData);
-}
-
-void FeedbackManager::sendCrashReport(const std::string& crashDump, const std::anyMap& context)
-{
-    if (!m_consent.crashReporting) return;
-    
-    std::anyMap data = context;
-    data["crashDump"] = crashDump;
-    sendTelemetry("crash", data);
-}
-
-void FeedbackManager::saveDraft(const FeedbackEntry& entry)
-{
-    // Remove existing draft with same ID
-    m_drafts.erase(
-        std::remove_if(m_drafts.begin(), m_drafts.end(),
-            [&](const FeedbackEntry& e) { return e.id == entry.id; }),
-        m_drafts.end());
-    
-    m_drafts.push_back(entry);
-    saveSettings();
-}
-
-std::vector<FeedbackEntry> FeedbackManager::loadDrafts()
-{
-    return m_drafts;
-}
+std::vector<FeedbackEntry> FeedbackManager::loadDrafts() { return m_drafts; }
 
 void FeedbackManager::deleteDraft(const std::string& id)
 {
@@ -1203,110 +774,97 @@ void FeedbackManager::deleteDraft(const std::string& id)
         std::remove_if(m_drafts.begin(), m_drafts.end(),
             [&](const FeedbackEntry& e) { return e.id == id; }),
         m_drafts.end());
-    saveSettings();
-}
-
-std::vector<FeedbackEntry> FeedbackManager::getSubmissionHistory()
-{
-    return m_history;
-}
-
-FeedbackEntry FeedbackManager::getSubmission(const std::string& id)
-{
-    for (const auto& entry : m_history) {
-        if (entry.id == id) {
-            return entry;
-        }
-    }
-    return FeedbackEntry();
-}
-
-void FeedbackManager::setApiEndpoint(const std::string& endpoint)
-{
-    m_apiEndpoint = endpoint;
-}
-
-void FeedbackManager::setApiKey(const std::string& key)
-{
-    m_apiKey = key;
-}
-
-void FeedbackManager::onNetworkReply(void** reply)
-{
-    reply->deleteLater();
 }
 
 void FeedbackManager::loadSettings()
 {
-    std::string filePath = // (m_settingsPath).filePath("feedback_settings.json");
-    // File operation removed;
-    
-    if (file.open(std::iostream::ReadOnly)) {
-        void* doc = void*::fromJson(file.readAll());
-        void* obj = doc.object();
-        
-        // Load consent
-        if (obj.contains("consent")) {
-            m_consent = TelemetryConsent::fromJson(obj["consent"].toObject());
+    if (m_settingsPath.empty()) return;
+    std::ifstream f(m_settingsPath);
+    if (!f.is_open()) return;
+    try {
+        nlohmann::json j = nlohmann::json::parse(f);
+        if (j.contains("consent") && j["consent"].is_object()) {
+            const auto& c = j["consent"];
+            m_consent.basicTelemetry     = c.value("basicTelemetry", false);
+            m_consent.performanceTelemetry = c.value("performanceTelemetry", false);
+            m_consent.thermalTelemetry   = c.value("thermalTelemetry", false);
+            m_consent.crashReporting     = c.value("crashReporting", false);
+            m_consent.featureUsage      = c.value("featureUsage", false);
+            m_consent.hardwareInfo      = c.value("hardwareInfo", false);
+            m_consent.consentVersion    = c.value("consentVersion", "");
+            m_consent.consentDateISO    = c.value("consentDateISO", "");
         }
-        
-        // Load drafts
-        if (obj.contains("drafts")) {
-            void* draftsArray = obj["drafts"].toArray();
-            for (const auto& item : draftsArray) {
-                m_drafts.push_back(FeedbackEntry::fromJson(item.toObject()));
+        if (j.contains("drafts") && j["drafts"].is_array()) {
+            m_drafts.clear();
+            for (const auto& d : j["drafts"]) {
+                FeedbackEntry e;
+                e.id          = d.value("id", "");
+                e.title       = d.value("title", "");
+                e.description = d.value("description", "");
+                e.category    = static_cast<FeedbackCategory>(d.value("category", static_cast<int>(FeedbackCategory::Other)));
+                e.priority    = static_cast<FeedbackPriority>(d.value("priority", static_cast<int>(FeedbackPriority::Medium)));
+                e.status      = static_cast<SubmissionStatus>(d.value("status", static_cast<int>(SubmissionStatus::Draft)));
+                e.userEmail   = d.value("userEmail", "");
+                e.userName    = d.value("userName", "");
+                e.consentToContact = d.value("consentToContact", false);
+                e.createdISO  = d.value("createdISO", "");
+                e.modifiedISO = d.value("modifiedISO", "");
+                if (d.contains("systemInfo") && d["systemInfo"].is_object())
+                    for (auto it = d["systemInfo"].begin(); it != d["systemInfo"].end(); ++it)
+                        e.systemInfo[it.key()] = it.value().get<std::string>();
+                if (d.contains("attachmentPaths") && d["attachmentPaths"].is_array())
+                    for (const auto& a : d["attachmentPaths"]) e.attachmentPaths.push_back(a.get<std::string>());
+                if (d.contains("screenshotPaths") && d["screenshotPaths"].is_array())
+                    for (const auto& s : d["screenshotPaths"]) e.screenshotPaths.push_back(s.get<std::string>());
+                m_drafts.push_back(e);
             }
         }
-        
-        // Load history
-        if (obj.contains("history")) {
-            void* historyArray = obj["history"].toArray();
-            for (const auto& item : historyArray) {
-                m_history.push_back(FeedbackEntry::fromJson(item.toObject()));
-            }
-        }
+    } catch (const std::exception&) {
+        // Parse or I/O error: leave m_consent and m_drafts as-is
     }
 }
 
 void FeedbackManager::saveSettings()
 {
-    std::string filePath = // (m_settingsPath).filePath("feedback_settings.json");
-    // File operation removed;
-    
-    if (file.open(std::iostream::WriteOnly)) {
-        void* obj;
-        
-        // Save consent
-        obj["consent"] = m_consent.toJson();
-        
-        // Save drafts
-        void* draftsArray;
-        for (const auto& draft : m_drafts) {
-            draftsArray.append(draft.toJson());
+    if (m_settingsPath.empty()) return;
+    std::filesystem::path p(m_settingsPath);
+    std::filesystem::create_directories(p.parent_path());
+    try {
+        nlohmann::json j;
+        j["consent"] = {
+            {"basicTelemetry",      m_consent.basicTelemetry},
+            {"performanceTelemetry", m_consent.performanceTelemetry},
+            {"thermalTelemetry",     m_consent.thermalTelemetry},
+            {"crashReporting",      m_consent.crashReporting},
+            {"featureUsage",        m_consent.featureUsage},
+            {"hardwareInfo",        m_consent.hardwareInfo},
+            {"consentVersion",      m_consent.consentVersion},
+            {"consentDateISO",      m_consent.consentDateISO}
+        };
+        j["drafts"] = nlohmann::json::array();
+        for (const auto& e : m_drafts) {
+            nlohmann::json d = {
+                {"id", e.id}, {"title", e.title}, {"description", e.description},
+                {"category", static_cast<int>(e.category)},
+                {"priority", static_cast<int>(e.priority)},
+                {"status", static_cast<int>(e.status)},
+                {"userEmail", e.userEmail}, {"userName", e.userName},
+                {"consentToContact", e.consentToContact},
+                {"createdISO", e.createdISO}, {"modifiedISO", e.modifiedISO}
+            };
+            nlohmann::json sys;
+            for (const auto& kv : e.systemInfo) sys[kv.first] = kv.second;
+            d["systemInfo"] = std::move(sys);
+            d["attachmentPaths"] = e.attachmentPaths;
+            d["screenshotPaths"] = e.screenshotPaths;
+            j["drafts"].push_back(std::move(d));
         }
-        obj["drafts"] = draftsArray;
-        
-        // Save history (last 100)
-        void* historyArray;
-        size_t start = m_history.size() > 100 ? m_history.size() - 100 : 0;
-        for (size_t i = start; i < m_history.size(); ++i) {
-            historyArray.append(m_history[i].toJson());
-        }
-        obj["history"] = historyArray;
-        
-        file.write(void*(obj).toJson());
+        std::ofstream of(m_settingsPath);
+        if (of.is_open())
+            of << j.dump(2);
+    } catch (const std::exception&) {
+        // Write error: best-effort save skipped
     }
 }
 
-std::anyMap FeedbackManager::collectSystemInfo()
-{
-    std::anyMap info;
-    info["os"] = QSysInfo::prettyProductName();
-    info["architecture"] = QSysInfo::currentCpuArchitecture();
-    info["qtVersion"] = qVersion();
-    info["rawrxdVersion"] = "2.0.0";
-    return info;
-}
-
 } // namespace rawrxd::feedback
-

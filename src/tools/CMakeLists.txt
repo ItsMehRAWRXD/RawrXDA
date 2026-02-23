@@ -47,7 +47,7 @@ target_include_directories(gguf_api_server PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# Install targets
-install(TARGETS simple_gpu_test real_multi_model_benchmark gguf_api_server
+# Install targets (RawrXD_KeyGen ships with IDE for License Creator > Launch KeyGen)
+install(TARGETS RawrXD_KeyGen simple_gpu_test real_multi_model_benchmark gguf_api_server
     RUNTIME DESTINATION bin
 )

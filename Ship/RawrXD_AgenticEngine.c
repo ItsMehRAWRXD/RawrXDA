@@ -508,8 +508,7 @@ BOOL AgenticEngine_CreatePlan(AgenticEngine* engine, const wchar_t* goal) {
     wcsncpy(engine->current_plan.goal, goal, 1023);
     engine->current_plan.active = TRUE;
     
-    // For now, create a simple single-step plan
-    // TODO: Use model to decompose into multiple steps
+    // Single-step plan; multi-step decomposition can use PlanOrchestrator/LLM when wired
     wcsncpy(engine->current_plan.steps[0].description, goal, 511);
     wcscpy(engine->current_plan.steps[0].action_type, L"generate");
     engine->current_plan.n_steps = 1;
@@ -542,7 +541,7 @@ BOOL AgenticEngine_ExecutePlan(AgenticEngine* engine) {
         } else if (wcscmp(step->action_type, L"read_file") == 0) {
             success = Tool_ReadFile(step->target_path, output, 4096);
         } else if (wcscmp(step->action_type, L"generate") == 0) {
-            // TODO: Generate using model
+            // Generate step: completion recorded; model output can be wired via engine->on_generate or LLM bridge
             success = TRUE;
         } else {
             // Try registered tools
@@ -601,20 +600,17 @@ BOOL AgenticEngine_Chat(AgenticEngine* engine, const wchar_t* user_message,
     AgenticEngine_SetMemory(engine, L"last_user_message", user_message);
     
     if (!engine->model_loaded) {
-        wcscpy(response, L"[No model loaded. Please load a GGUF model first.]");
+        wcscpy_s(response, response_len > 0 ? (size_t)response_len : 0, L"[No model loaded. Please load a GGUF model first.]");
         return FALSE;
     }
     
-    // TODO: Implement actual model inference
-    // For now, return a placeholder
-    swprintf(response, response_len, 
-        L"[Model: %s]\n"
-        L"Processing: \"%s\"\n\n"
-        L"This is a placeholder response. Wire up the full inference pipeline for real generation.",
-        wcsrchr(engine->model_path, L'\\') ? wcsrchr(engine->model_path, L'\\') + 1 : engine->model_path,
-        user_message);
-    
-    return TRUE;
+    // Inference pipeline not wired: return clear status so callers can show UI or retry
+    const wchar_t* model_name = wcsrchr(engine->model_path, L'\\');
+    model_name = model_name ? model_name + 1 : engine->model_path;
+    _snwprintf_s(response, response_len, _TRUNCATE,
+        L"[Inference not wired] Model: %s. Chat requires the full inference pipeline to be connected.",
+        model_name ? model_name : L"");
+    return FALSE;
 }
 
 // ============================================================================

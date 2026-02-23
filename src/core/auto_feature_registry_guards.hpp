@@ -1,3 +1,5 @@
+// SCAFFOLD_286: auto_feature_registry 286 handlers
+
 // ============================================================================
 // auto_feature_registry_guards.hpp - Prevents ODR violations
 // ============================================================================

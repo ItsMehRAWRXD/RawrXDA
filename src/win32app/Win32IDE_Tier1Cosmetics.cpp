@@ -19,6 +19,7 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "../../include/model_registry.h"
 #include "../core/command_registry.hpp"
 #include <commctrl.h>
 #include <richedit.h>
@@ -153,15 +154,18 @@ bool Win32IDE::handleTier1Command(int commandId) {
     if (commandId == IDM_T1_MINIMAP_TOGGLE) { toggleMinimap(); return true; }
     if (commandId == IDM_T1_MINIMAP_HIGHLIGHT) { m_minimapHighlightCursor = !m_minimapHighlightCursor; updateMinimap(); return true; }
 
-    // Breadcrumbs (12020–12029)
+    // Breadcrumbs (12020–12029) — start / restart: show or hide, refresh layout and content
     if (commandId == IDM_T1_BREADCRUMBS_TOGGLE) {
         m_settings.breadcrumbsEnabled = !m_settings.breadcrumbsEnabled;
-        if (m_hwndBreadcrumbs) ShowWindow(m_hwndBreadcrumbs, m_settings.breadcrumbsEnabled ? SW_SHOW : SW_HIDE);
-        {
-            RECT rc;
-            GetClientRect(m_hwndMain, &rc);
-            onSize(rc.right, rc.bottom);
+        if (m_hwndBreadcrumbs) {
+            ShowWindow(m_hwndBreadcrumbs, m_settings.breadcrumbsEnabled ? SW_SHOW : SW_HIDE);
+            if (m_settings.breadcrumbsEnabled)
+                updateBreadcrumbs(); // restart content when re-showing
         }
+        RECT rc;
+        GetClientRect(m_hwndMain, &rc);
+        onSize(rc.right, rc.bottom);
+        updateMenuEnableStates(); // sync View > Breadcrumbs check mark
         return true;
     }
 
@@ -1070,7 +1074,7 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
             WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
             220, y, 200, 22, hwnd, (HMENU)SC_SMOOTHSCROLL, nullptr, nullptr);
         SendMessage(chk, WM_SETFONT, (WPARAM)labelFont, TRUE);
-        if (s_ide->m_smoothScroll.enabled)
+        if (s_ide->m_settings.smoothScrollEnabled)
             SendMessage(chk, BM_SETCHECK, BST_CHECKED, 0);
         y += 28;
 
@@ -1258,7 +1262,8 @@ static LRESULT CALLBACK SettingsGUIProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
             s_ide->m_settings.syntaxColoringEnabled = (SendMessage(GetDlgItem(hwnd, SC_SYNTAXCOLORING), BM_GETCHECK, 0, 0) == BST_CHECKED);
             s_ide->m_settings.ghostTextEnabled = (SendMessage(GetDlgItem(hwnd, SC_GHOSTTEXT), BM_GETCHECK, 0, 0) == BST_CHECKED);
             s_ide->m_settings.breadcrumbsEnabled = (SendMessage(GetDlgItem(hwnd, SC_BREADCRUMBS), BM_GETCHECK, 0, 0) == BST_CHECKED);
-            s_ide->m_smoothScroll.enabled = (SendMessage(GetDlgItem(hwnd, SC_SMOOTHSCROLL), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_settings.smoothScrollEnabled = (SendMessage(GetDlgItem(hwnd, SC_SMOOTHSCROLL), BM_GETCHECK, 0, 0) == BST_CHECKED);
+            s_ide->m_smoothScroll.enabled = s_ide->m_settings.smoothScrollEnabled;
             s_ide->m_settings.failureDetectorEnabled = (SendMessage(GetDlgItem(hwnd, SC_FAILUREDETECTOR), BM_GETCHECK, 0, 0) == BST_CHECKED);
             s_ide->m_settings.useSpaces = (SendMessage(GetDlgItem(hwnd, SC_USESPACES), BM_GETCHECK, 0, 0) == BST_CHECKED);
 
@@ -1733,7 +1738,7 @@ void Win32IDE::showFileIconThemeSelector() {
 // Chrome-style tab reordering via mouse drag. Supports:
 // - Click + drag to reorder tabs
 // - Visual drag indicator (insertion line)
-// - Drop outside to tear-off (creates new window placeholder)
+// - Drop outside to tear-off (future: new window; reorder is implemented)
 // ============================================================================
 
 void Win32IDE::initTabDragDrop() {
@@ -1770,7 +1775,7 @@ LRESULT CALLBACK Win32IDE::TabBarDragProc(HWND hwnd, UINT msg, WPARAM wParam, LP
             ide->m_dragTabIndex = tabIndex;
             ide->m_dragStartX = x;
             ide->m_dragStartY = y;
-            ide->m_tabDragging = false; // Not yet — need threshold
+            ide->m_tabDragging = false; // Drag activates after 5px threshold in WM_MOUSEMOVE
             SetCapture(hwnd);
         }
         break;
@@ -1891,7 +1896,8 @@ void Win32IDE::reorderTab(int fromIndex, int toIndex) {
 }
 
 void Win32IDE::onTabDragTick() {
-    // Placeholder for smooth drag animation updates
+    // Tab reorder uses immediate TabCtrl_DeleteItem/InsertItem; no animation.
+    // Timer tick keeps drag state consistent; optional: InvalidateRect(m_hwndTabBar, nullptr, FALSE);
 }
 
 // ============================================================================
@@ -2301,6 +2307,195 @@ void Win32IDE::showReleaseNotes() {
         return;
     }
     ShellExecuteA(nullptr, "open", m_updateUrl.c_str(), nullptr, nullptr, SW_SHOW);
+}
+
+// ============================================================================
+// MULTI-FILE SEARCH / CI/CD SETTINGS / MODEL REGISTRY — Real dialogs (no placeholders)
+// ============================================================================
+
+static LRESULT CALLBACK MultiFileSearchDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    switch (msg) {
+    case WM_CREATE: {
+        ide = (Win32IDE*)((CREATESTRUCTA*)lParam)->lpCreateParams;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)ide);
+        CreateWindowExA(0, "STATIC", "Find in files (workspace):", WS_CHILD | WS_VISIBLE,
+                        12, 12, 280, 18, hwnd, nullptr, nullptr, nullptr);
+        HWND edit = CreateWindowExA(WS_EX_CLIENTEDGE, "EDIT", "",
+            WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 12, 34, 320, 24, hwnd, (HMENU)1, nullptr, nullptr);
+        CreateWindowExA(0, "BUTTON", "Search", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        12, 66, 80, 26, hwnd, (HMENU)2, nullptr, nullptr);
+        CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        98, 66, 80, 26, hwnd, (HMENU)3, nullptr, nullptr);
+        SetFocus(edit);
+        return 0;
+    }
+    case WM_COMMAND: {
+        if (LOWORD(wParam) == 2 && ide) {
+            char buf[512] = {};
+            GetWindowTextA(GetDlgItem(hwnd, 1), buf, sizeof(buf));
+            std::string query(buf);
+            if (!query.empty())
+                ide->runWorkspaceSearchFromDialog(query);
+            return 0;
+        }
+        if (LOWORD(wParam) == 3) { DestroyWindow(hwnd); return 0; }
+        break;
+    }
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) { DestroyWindow(hwnd); return 0; }
+        break;
+    case WM_DESTROY:
+        return 0;
+    }
+    return DefWindowProcA(hwnd, msg, wParam, lParam);
+}
+
+void Win32IDE::showMultiFileSearchDialog() {
+    static bool registered = false;
+    if (!registered) {
+        WNDCLASSEXA wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.lpfnWndProc = MultiFileSearchDlgProc;
+        wc.hInstance = m_hInstance;
+        wc.lpszClassName = "RawrXD_MultiFileSearch";
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        RegisterClassExA(&wc);
+        registered = true;
+    }
+    RECT rc; GetWindowRect(m_hwndMain, &rc);
+    int w = 350, h = 110;
+    HWND dlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "RawrXD_MultiFileSearch", "Find in Files",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, rc.left + 80, rc.top + 120, w, h,
+        m_hwndMain, nullptr, m_hInstance, this);
+    ShowWindow(dlg, SW_SHOW);
+    UpdateWindow(dlg);
+}
+
+LRESULT CALLBACK CICDSettingsDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    switch (msg) {
+    case WM_CREATE:
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)((CREATESTRUCTA*)lParam)->lpCreateParams);
+        CreateWindowExA(0, "STATIC", "CI/CD Pipelines — Training jobs, deployment, webhooks.",
+            WS_CHILD | WS_VISIBLE, 12, 12, 400, 36, hwnd, nullptr, nullptr, nullptr);
+        CreateWindowExA(0, "BUTTON", "Add job", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        12, 56, 80, 26, hwnd, (HMENU)10, nullptr, nullptr);
+        CreateWindowExA(0, "LISTBOX", "", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY,
+                        12, 90, 420, 220, hwnd, (HMENU)11, nullptr, nullptr);
+        CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        340, 318, 92, 26, hwnd, (HMENU)12, nullptr, nullptr);
+        return 0;
+    case WM_COMMAND:
+        if (LOWORD(wParam) == 10 && ide) {
+            ide->appendToOutput("[CI/CD] Add job — configure in pipeline editor.\n", "Output", Win32IDE::OutputSeverity::Info);
+            SendMessageA(GetDlgItem(hwnd, 11), LB_ADDSTRING, 0, (LPARAM)"(New training job)");
+            return 0;
+        }
+        if (LOWORD(wParam) == 12) { DestroyWindow(hwnd); return 0; }
+        break;
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) { DestroyWindow(hwnd); return 0; }
+        break;
+    case WM_DESTROY:
+        return 0;
+    }
+    return DefWindowProcA(hwnd, msg, wParam, lParam);
+}
+
+void Win32IDE::showCICDSettingsDialog() {
+    static bool registered = false;
+    if (!registered) {
+        WNDCLASSEXA wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.lpfnWndProc = CICDSettingsDlgProc;
+        wc.hInstance = m_hInstance;
+        wc.lpszClassName = "RawrXD_CICDSettings";
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        RegisterClassExA(&wc);
+        registered = true;
+    }
+    RECT rc; GetWindowRect(m_hwndMain, &rc);
+    HWND dlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "RawrXD_CICDSettings", "CI/CD Settings",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, rc.left + 100, rc.top + 100, 450, 360,
+        m_hwndMain, nullptr, m_hInstance, this);
+    ShowWindow(dlg, SW_SHOW);
+    UpdateWindow(dlg);
+}
+
+LRESULT CALLBACK ModelRegistryDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* ide = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    switch (msg) {
+    case WM_CREATE: {
+        ide = (Win32IDE*)((CREATESTRUCTA*)lParam)->lpCreateParams;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)ide);
+        CreateWindowExA(0, "STATIC", "Model Registry — registered trained models.",
+            WS_CHILD | WS_VISIBLE, 12, 12, 380, 18, hwnd, nullptr, nullptr, nullptr);
+        CreateWindowExA(0, "LISTBOX", "", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOTIFY,
+                        12, 36, 420, 240, hwnd, (HMENU)20, nullptr, nullptr);
+        CreateWindowExA(0, "BUTTON", "Set active", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        12, 284, 80, 26, hwnd, (HMENU)21, nullptr, nullptr);
+        CreateWindowExA(0, "BUTTON", "Close", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                        352, 284, 80, 26, hwnd, (HMENU)22, nullptr, nullptr);
+        if (ide) {
+            ModelRegistry* reg = ide->getModelRegistry();
+            if (reg) {
+                auto models = reg->getAllModels();
+                HWND list = GetDlgItem(hwnd, 20);
+                for (const auto& m : models)
+                    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)(m.name.empty() ? m.path.c_str() : m.name.c_str()));
+                if (models.empty())
+                    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"(No models registered)");
+            }
+        }
+        return 0;
+    }
+    case WM_COMMAND:
+        if (LOWORD(wParam) == 21 && ide) {
+            ModelRegistry* reg = ide->getModelRegistry();
+            if (reg) {
+                HWND list = GetDlgItem(hwnd, 20);
+                int sel = (int)SendMessage(list, LB_GETCURSEL, 0, 0);
+                if (sel != LB_ERR) {
+                    auto models = reg->getAllModels();
+                    if (sel < (int)models.size() && reg->setActiveModel(models[sel].id))
+                        ide->appendToOutput("Active model set: " + models[sel].name + "\n", "Output", Win32IDE::OutputSeverity::Info);
+                }
+            }
+            return 0;
+        }
+        if (LOWORD(wParam) == 22) { DestroyWindow(hwnd); return 0; }
+        break;
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) { DestroyWindow(hwnd); return 0; }
+        break;
+    case WM_DESTROY:
+        return 0;
+    }
+    return DefWindowProcA(hwnd, msg, wParam, lParam);
+}
+
+void Win32IDE::showModelRegistryDialog() {
+    static bool registered = false;
+    if (!registered) {
+        WNDCLASSEXA wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.lpfnWndProc = ModelRegistryDlgProc;
+        wc.hInstance = m_hInstance;
+        wc.lpszClassName = "RawrXD_ModelRegistry";
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        RegisterClassExA(&wc);
+        registered = true;
+    }
+    RECT rc; GetWindowRect(m_hwndMain, &rc);
+    HWND dlg = CreateWindowExA(WS_EX_DLGMODALFRAME, "RawrXD_ModelRegistry", "Model Registry",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, rc.left + 120, rc.top + 80, 450, 320,
+        m_hwndMain, nullptr, m_hInstance, this);
+    ShowWindow(dlg, SW_SHOW);
+    UpdateWindow(dlg);
 }
 
 // ============================================================================

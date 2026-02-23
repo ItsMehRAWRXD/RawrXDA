@@ -21,6 +21,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <functional>
 #include <cstdint>
 #include <mutex>
@@ -231,6 +232,8 @@ private:
     // ---- Ollama Helpers ----
     std::vector<std::string> GetOllamaSearchPaths() const;
     std::vector<std::string> GetOllamaBlobPaths() const;
+    std::vector<std::string> GetOllamaManifestBasePaths() const;
+    std::map<std::string, std::string> LoadOllamaManifestMap() const;
     
     // ---- JSON Parsing Helpers (minimal, no nlohmann dependency) ----
     std::string ExtractJSONString(const std::string& json, const std::string& key) const;

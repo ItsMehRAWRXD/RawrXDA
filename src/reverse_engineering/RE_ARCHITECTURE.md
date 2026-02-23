@@ -3,6 +3,8 @@
 > RawrXD Reverse Engineering Suite v1.0
 > Professional Binary Analysis, Deobfuscation, and Compiler Infrastructure
 
+**See also:** [Game development (post-release)](../../docs/REVERSE_ENGINEERING_GAME_DEVELOPMENT.md) — module locating, external/internal frameworks, ved/oemASMx64. [Decompilation & x64 “subtitles”](../../docs/REVERSE_ENGINEERING_DECOMPILATION_AND_X64.md) — extension→source, execution trace, code dump, FLIRT/FLOSS, pure x64, hot reload. [Source/text digestion & alignment](../../docs/REVERSE_ENGINEERING_SOURCE_DIGESTION_AND_ALIGNMENT.md) — stopwords, modality, beaconism, M=T+A−NIP SIMD. [Portable x64 MASM loader](../../docs/REVERSE_ENGINEERING_PORTABLE_X64_LOADER.md) — operational requirements, Windows 11 thumb-drive console, streaming loader. [Boot sector & minimal kernel](../../docs/REVERSE_ENGINEERING_BOOT_AND_MINIMAL_KERNEL.md) — 512-byte/0x55AA rule, bare-bones kernel, MASM boot sector, long-mode trampoline, MBR builder. All apply after released finalization (official, non–beta/alpha).
+
 ---
 
 ## 1. Overview
@@ -290,7 +292,23 @@ build_deobf.bat
 
 ## 5. IDE Integration
 
-### Win32IDE Commands (ID range 5100–5199)
+### 5.1 Integration with compiling and debugging
+
+Codex/RE is wired into the **debug** and **build** workflow so the Reverse Engineering menu always has a sensible current binary:
+
+| Trigger | Effect |
+|--------|--------|
+| **Debug → Launch** (or `/api/debug/launch`) | The launched executable is set as the current RE binary. Disassemble, DumpBin, CFG, Detect Vulnerabilities, Export IDA/Ghidra, etc. operate on it without opening "Analyze Binary" first. |
+| **RE → Set binary from active document** | If the active editor tab is an `.exe`, `.dll`, or `.obj` file, that path becomes the current RE binary. Use after building so RE targets the built output. |
+| **RE → Analyze Binary** | Opens a file dialog and sets the chosen binary as current (unchanged). |
+
+**API:** `Win32IDE::setCurrentBinaryForReverseEngineering(const std::string& path)` — call after a successful build or link when the output exe path is known to make RE menu items target that binary.
+
+**Compile flow:**
+- **RE → Compile Source**: On success, the output `.obj` path is set as the current RE binary so Disassemble/DumpBin/CFG work on the object file immediately.
+- **Fortress toolchain (Phase 1 + Phase 2) or external scripts**: After link/build produces an `.exe`, call **POST /api/re/set-binary** with body `{"path":"C:\\path\\to\\output.exe"}` (local server default port 11435). The IDE sets that as the current RE binary and appends a line to the Output panel. Alternatively open the exe in the IDE and use **RE → Set binary from active document**, or **RE → Analyze Binary**.
+
+### Win32IDE Commands (ID range 4300–4320, 5100–5199)
 
 The RE suite integrates into the Win32IDE via:
 - `Win32IDE_ReverseEngineering.cpp` — File open dialogs, PE analysis display

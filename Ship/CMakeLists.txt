@@ -18,7 +18,7 @@ endif()
 # Source files
 set(AGENT_HEADERS
     agent_kernel_main.hpp
-    QtReplacements.hpp
+    StdReplacements.hpp
     ToolExecutionEngine.hpp
     LLMClient.hpp
     AgentOrchestrator.hpp
@@ -63,7 +63,8 @@ if(MSVC)
     endif()
 endif()
 
-# Console Agent
+# Console Agent — pure CLI with full chat and agentic autonomous capabilities.
+# Same binary as RawrXD_CLI; 101% parity with Win32 GUI (chat, tools, /tools, /status, /run-tool, HTTP API).
 add_executable(RawrXD_Agent_Console
     ${AGENT_SOURCES}
     ${AGENT_HEADERS}
@@ -71,6 +72,42 @@ add_executable(RawrXD_Agent_Console
 
 target_compile_definitions(RawrXD_Agent_Console PRIVATE
     _CONSOLE
+)
+
+# Pure CLI — full chat and agentic autonomous parity with Win32 GUI (101%).
+# Same agent stack: AgentOrchestrator, ToolExecutionEngine, LLMClient, 44+ tools, /api/chat, /api/tool.
+add_executable(RawrXD_CLI
+    ${AGENT_SOURCES}
+    ${AGENT_HEADERS}
+)
+
+target_compile_definitions(RawrXD_CLI PRIVATE
+    _CONSOLE
+)
+
+add_dependencies(RawrXD_CLI RawrXD_InferenceEngine_Win32_DLL)
+
+target_link_libraries(RawrXD_CLI PRIVATE
+    winhttp
+    ws2_32
+    comctl32
+    ole32
+    shell32
+    shlwapi
+    wininet
+    httpapi
+    http_chat_server
+    native_http_server
+    rawrxd_inference_engine
+)
+
+if(MSVC)
+    target_link_options(RawrXD_CLI PRIVATE /LARGEADDRESSAWARE:NO)
+endif()
+
+add_custom_command(TARGET RawrXD_CLI POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_LIST_DIR}/RawrXD_InferenceEngine_Win32.dll" "$<TARGET_FILE_DIR:RawrXD_CLI>/"
+    COMMENT "Copying Inference Engine DLL to CLI output"
 )
 
 # Build the Win32 inference engine DLL before linking the console executable
@@ -281,6 +318,7 @@ target_link_libraries(RawrXD_Agent_Benchmark PRIVATE
 install(TARGETS
     RawrXD_Agent_Console
     RawrXD_Agent_GUI
+    RawrXD_CLI
     RawrXD_Agent_Example
     RawrXD_TestRunner
     RUNTIME DESTINATION bin

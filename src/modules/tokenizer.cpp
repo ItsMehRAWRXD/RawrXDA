@@ -9,9 +9,6 @@
 #include <limits>
 #include <utility>
 
-#include "logging/logger.h"
-static Logger s_logger("tokenizer");
-
 class Tokenizer {
     std::map<std::string, int> vocab;
     std::map<int, std::string> reverse_vocab;
@@ -176,7 +173,7 @@ public:
                 }
             }
             mergesFile.close();
-            s_logger.info("[Tokenizer] Loaded ");
+            std::cout << "[Tokenizer] Loaded " << merges.size() << " BPE merge rules from " << mergesPath << std::endl;
         }
 
         // Try loading vocab file
@@ -216,7 +213,7 @@ public:
                 }
             }
             vocabFile.close();
-            s_logger.info("[Tokenizer] Loaded ");
+            std::cout << "[Tokenizer] Loaded " << vocab.size() << " vocab entries from " << vocabPath << std::endl;
         }
 
         // If no external files loaded, build a byte-level fallback vocab
@@ -233,11 +230,12 @@ public:
                     }
                 }
             }
-            s_logger.info("[Tokenizer] Byte-level fallback vocab generated: ");
+            std::cout << "[Tokenizer] Byte-level fallback vocab generated: " << vocab.size() << " entries" << std::endl;
         }
 
         loaded = true;
-        s_logger.info("[Tokenizer] Loaded from ");
+        std::cout << "[Tokenizer] Loaded from " << path
+                  << " (vocab=" << vocab.size() << ", merges=" << merges.size() << ")" << std::endl;
     }
 
     std::vector<int> encode(const std::string& text) {

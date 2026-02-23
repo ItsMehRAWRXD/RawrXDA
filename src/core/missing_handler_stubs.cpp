@@ -22,6 +22,7 @@
 #include "native_debugger_engine.h"
 #include "multi_response_engine.h"
 #include "deterministic_replay.h"
+#include "execution_governor.h"
 #include "unified_hotpatch_manager.hpp"
 #include "embedding_engine.hpp"
 #include "vision_encoder.hpp"
@@ -3993,11 +3994,19 @@ CommandResult handleDiskScanPartitions(const CommandContext& ctx) {
 // ============================================================================
 
 CommandResult handleGovernorStatus(const CommandContext& ctx) {
-    ctx.output("[GOVERNOR] Status: Active\n");
+    // Phase 10A: Execution Governor (rate limit & safety controls)
+    ExecutionGovernor& execGov = ExecutionGovernor::instance();
+    if (!execGov.isInitialized()) {
+        execGov.init();
+    }
+    std::string status = execGov.getStatusString();
+    ctx.output(status.c_str());
+    ctx.output("\n");
+    // CLI task list (GovernorState) for compatibility
     auto& gs = GovernorState::instance();
-    ctx.output("  Tasks: ");
+    ctx.output("[CLI Tasks] Pending: ");
     ctx.output(std::to_string(gs.tasks.size()).c_str());
-    ctx.output("\n  Completed: ");
+    ctx.output("  Completed: ");
     ctx.output(std::to_string(gs.completed.load()).c_str());
     ctx.output("\n");
     return CommandResult::ok("governor.status");

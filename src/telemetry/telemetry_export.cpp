@@ -22,6 +22,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <winhttp.h>
+
+// SCAFFOLD_263: Telemetry export and report
+
 #pragma comment(lib, "winhttp.lib")
 #endif
 

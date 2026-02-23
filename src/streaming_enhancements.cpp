@@ -639,14 +639,14 @@ void StreamingWebServer::start() {
     WSADATA wsaData;
     int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
-        s_logger.error( "WSAStartup failed: " << iResult << std::endl;
+        std::cerr << "WSAStartup failed: " << iResult << std::endl;
         m_running = false;
         return;
     }
 
     SOCKET ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (ListenSocket == INVALID_SOCKET) {
-        s_logger.error( "Error at socket(): " << WSAGetLastError() << std::endl;
+        std::cerr << "Error at socket(): " << WSAGetLastError() << std::endl;
         WSACleanup();
         m_running = false;
         return;
@@ -658,7 +658,7 @@ void StreamingWebServer::start() {
     service.sin_port = htons(m_port);
 
     if (bind(ListenSocket, (SOCKADDR*)&service, sizeof(service)) == SOCKET_ERROR) {
-        s_logger.error( "bind failed: " << WSAGetLastError() << std::endl;
+        std::cerr << "bind failed: " << WSAGetLastError() << std::endl;
         closesocket(ListenSocket);
         WSACleanup();
         m_running = false;
@@ -666,7 +666,7 @@ void StreamingWebServer::start() {
     }
 
     if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-         s_logger.error( "listen failed: " << WSAGetLastError() << std::endl;
+         std::cerr << "listen failed: " << WSAGetLastError() << std::endl;
          closesocket(ListenSocket);
          WSACleanup();
          m_running = false;
@@ -730,7 +730,7 @@ void StreamingWebServer::start() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             } else {
                 // Real error
-                s_logger.error( "accept failed: " << err << std::endl;
+                std::cerr << "accept failed: " << err << std::endl;
             }
         }
     }

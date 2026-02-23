@@ -1,4 +1,6 @@
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "ui/chat_panel.h"
 #include "ui/tool_action_status.h"
 #include <string>

@@ -10,8 +10,6 @@ param(
 # Import language support module
 Import-Module "$PSScriptRoot\language_support.psm1" -Force
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 function Show-LanguageMenu {
     Clear-Host
     Write-Host "╔════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
@@ -47,7 +45,7 @@ function Show-LanguageMenu {
     
     Write-Host "🚀 Next Steps:" -ForegroundColor Green
     Write-Host "  1. Open IDE Browser:" -ForegroundColor Yellow
-    Write-Host "     Start-Process (Join-Path (Get-RawrXDRoot) 'gui' 'ide_chatbot.html')" -ForegroundColor Gray
+    Write-Host "     Start-Process 'D:\lazy init ide\gui\ide_chatbot.html'" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  2. Select your language from the 🌍 dropdown" -ForegroundColor Yellow
     Write-Host ""

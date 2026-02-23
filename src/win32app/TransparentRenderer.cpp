@@ -3,6 +3,9 @@
 #include <cmath>
 #include <algorithm>
 
+// SCAFFOLD_358: TransparentRenderer (if used)
+
+
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif

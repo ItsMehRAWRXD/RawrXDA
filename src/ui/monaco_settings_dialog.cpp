@@ -1,689 +1,891 @@
+/**
+ * @file monaco_settings_dialog.cpp
+ * @brief MonacoSettingsDialog — pure C++20/Win32 (zero Qt).
+ *
+ * 5-tab settings panel: Theme, Font, Editor, Neon/ESP, Performance.
+ * @copyright RawrXD IDE 2026
+ */
 #include "monaco_settings_dialog.h"
+
+#include <commdlg.h>
+#include <shlobj.h>
+#include <cstdio>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
+#include <algorithm>
+
+#pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "comdlg32.lib")
+
 namespace RawrXD::UI {
 
-MonacoSettingsDialog::MonacoSettingsDialog(void* parent)
-    : void(parent) {
-    setWindowTitle(tr("Monaco Editor Settings"));
-    setMinimumSize(600, 500);
-    setupUI();
+// ═══════════════════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+static COLORREF u32ToCR(uint32_t c)
+{
+    // 0xAARRGGBB → COLORREF(0x00BBGGRR)
+    return RGB((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF);
 }
 
-MonacoSettingsDialog::~MonacoSettingsDialog() = default;
-
-void MonacoSettingsDialog::setupUI() {
-    auto* mainLayout = new void(this);
-    
-    // Create tab widget
-    auto* tabs = new void(this);
-    
-    createThemeTab(tabs);
-    createFontTab(tabs);
-    createEditorTab(tabs);
-    createNeonTab(tabs);
-    createPerformanceTab(tabs);
-    
-    mainLayout->addWidget(tabs);
-    
-    // Bottom buttons
-    auto* buttonLayout = new void();
-    
-    exportBtn_ = new void(tr("Export Theme..."), this);
-    importBtn_ = new void(tr("Import Theme..."), this);
-    previewBtn_ = new void(tr("Preview"), this);
-    resetBtn_ = new void(tr("Reset to Default"), this);
-    applyBtn_ = new void(tr("Apply"), this);
-    
-    buttonLayout->addWidget(exportBtn_);
-    buttonLayout->addWidget(importBtn_);
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(previewBtn_);
-    buttonLayout->addWidget(resetBtn_);
-    buttonLayout->addWidget(applyBtn_);
-    
-    mainLayout->addLayout(buttonLayout);
-    
-    // Standard dialog buttons
-    auto* dialogButtons = new voidButtonBox(
-        voidButtonBox::Ok | voidButtonBox::Cancel, this);
-    mainLayout->addWidget(dialogButtons);
-    
-    // Connections  // Signal connection removed\naccept();
-    });  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\n}
-
-void MonacoSettingsDialog::createThemeTab(void* tabs) {
-    auto* widget = new // Widget();
-    auto* layout = new void(widget);
-    
-    // Variant selection
-    auto* variantGroup = new void(tr("Editor Variant"), widget);
-    auto* variantLayout = nullptr;
-    
-    variantCombo_ = new void(variantGroup);
-    variantCombo_->addItem(tr("Core (Pure Monaco)"));
-    variantCombo_->addItem(tr("Neon Core (Cyberpunk Visuals)"));
-    variantCombo_->addItem(tr("Neon Hack (ESP Mode)"));
-    variantCombo_->addItem(tr("Zero Dependency (Minimal)"));
-    variantCombo_->addItem(tr("Enterprise (LSP + Debugging)"));
-    variantLayout->addRow(tr("Variant:"), variantCombo_);
-    
-    layout->addWidget(variantGroup);
-    
-    // Theme preset selection
-    auto* themeGroup = new void(tr("Theme Preset"), widget);
-    auto* themeLayout = nullptr;
-    
-    themePresetCombo_ = new void(themeGroup);
-    themePresetCombo_->addItem(tr("Default (VS Code Dark+)"));
-    themePresetCombo_->addItem(tr("Neon Cyberpunk"));
-    themePresetCombo_->addItem(tr("Matrix Green"));
-    themePresetCombo_->addItem(tr("Hacker Red"));
-    themePresetCombo_->addItem(tr("Monokai"));
-    themePresetCombo_->addItem(tr("Solarized Dark"));
-    themePresetCombo_->addItem(tr("Solarized Light"));
-    themePresetCombo_->addItem(tr("One Dark"));
-    themePresetCombo_->addItem(tr("Dracula"));
-    themePresetCombo_->addItem(tr("Gruvbox Dark"));
-    themePresetCombo_->addItem(tr("Nord"));
-    themePresetCombo_->addItem(tr("Custom"));
-    themeLayout->addRow(tr("Theme:"), themePresetCombo_);
-    
-    layout->addWidget(themeGroup);
-    
-    // Custom colors (shown when Custom theme selected)
-    customColorsGroup_ = new void(tr("Custom Colors"), widget);
-    auto* colorGrid = new void(customColorsGroup_);
-    
-    auto createColorRow = [&](int row, const std::string& label, void*& btn) {
-        colorGrid->addWidget(new void(label), row, 0);
-        btn = new void();
-        btn->setFixedSize(60, 25);
-        btn->setFlat(true);
-        colorGrid->addWidget(btn, row, 1);  // Signal connection removed\n};
-    
-    createColorRow(0, tr("Background:"), backgroundColorBtn_);
-    createColorRow(1, tr("Foreground:"), foregroundColorBtn_);
-    createColorRow(2, tr("Keywords:"), keywordColorBtn_);
-    createColorRow(3, tr("Strings:"), stringColorBtn_);
-    createColorRow(4, tr("Comments:"), commentColorBtn_);
-    createColorRow(5, tr("Functions:"), functionColorBtn_);
-    createColorRow(6, tr("Types:"), typeColorBtn_);
-    createColorRow(7, tr("Numbers:"), numberColorBtn_);
-    createColorRow(8, tr("Glow Primary:"), glowColorBtn_);
-    createColorRow(9, tr("Glow Secondary:"), glowSecondaryBtn_);
-    
-    layout->addWidget(customColorsGroup_);
-    layout->addStretch();
-    
-    // Connections  // Signal connection removed\n  // Signal connection removed\ntabs->addTab(widget, tr("Theme"));
+static uint32_t crToU32(COLORREF cr)
+{
+    return 0xFF000000u | (GetRValue(cr) << 16) | (GetGValue(cr) << 8) | GetBValue(cr);
 }
 
-void MonacoSettingsDialog::createFontTab(void* tabs) {
-    auto* widget = new // Widget();
-    auto* layout = nullptr;
-    
-    fontFamilyCombo_ = new voidComboBox(widget);
-    layout->addRow(tr("Font Family:"), fontFamilyCombo_);
-    
-    fontSizeSpin_ = new void(widget);
-    fontSizeSpin_->setRange(8, 72);
-    fontSizeSpin_->setValue(14);
-    layout->addRow(tr("Font Size:"), fontSizeSpin_);
-    
-    fontWeightCombo_ = new void(widget);
-    fontWeightCombo_->addItem(tr("Thin (100)"), 100);
-    fontWeightCombo_->addItem(tr("Light (300)"), 300);
-    fontWeightCombo_->addItem(tr("Normal (400)"), 400);
-    fontWeightCombo_->addItem(tr("Medium (500)"), 500);
-    fontWeightCombo_->addItem(tr("SemiBold (600)"), 600);
-    fontWeightCombo_->addItem(tr("Bold (700)"), 700);
-    fontWeightCombo_->addItem(tr("ExtraBold (800)"), 800);
-    fontWeightCombo_->setCurrentIndex(2); // Normal
-    layout->addRow(tr("Font Weight:"), fontWeightCombo_);
-    
-    fontLigaturesCheck_ = new void(tr("Enable Font Ligatures"), widget);
-    fontLigaturesCheck_->setChecked(true);
-    layout->addRow(fontLigaturesCheck_);
-    
-    lineHeightSpin_ = new void(widget);
-    lineHeightSpin_->setRange(0, 100);
-    lineHeightSpin_->setValue(0);
-    lineHeightSpin_->setSpecialValueText(tr("Auto"));
-    layout->addRow(tr("Line Height (0=auto):"), lineHeightSpin_);  // Signal connection removed\n  // Signal connection removed\ntabs->addTab(widget, tr("Font"));
+static void setCheck(HWND h, bool v) { SendMessage(h, BM_SETCHECK, v ? BST_CHECKED : BST_UNCHECKED, 0); }
+static bool getCheck(HWND h) { return SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED; }
+
+static int getEditInt(HWND h)
+{
+    char buf[32];
+    GetWindowTextA(h, buf, 32);
+    return atoi(buf);
 }
 
-void MonacoSettingsDialog::createEditorTab(void* tabs) {
-    auto* widget = new // Widget();
-    auto* layout = new void(widget);
-    
-    // Editor behavior
-    auto* behaviorGroup = new void(tr("Editor Behavior"), widget);
-    auto* behaviorLayout = nullptr;
-    
-    wordWrapCheck_ = new void(tr("Word Wrap"));
-    behaviorLayout->addRow(wordWrapCheck_);
-    
-    tabSizeSpin_ = new void();
-    tabSizeSpin_->setRange(1, 8);
-    tabSizeSpin_->setValue(4);
-    behaviorLayout->addRow(tr("Tab Size:"), tabSizeSpin_);
-    
-    insertSpacesCheck_ = new void(tr("Insert Spaces for Tabs"));
-    insertSpacesCheck_->setChecked(true);
-    behaviorLayout->addRow(insertSpacesCheck_);
-    
-    autoIndentCheck_ = new void(tr("Auto Indent"));
-    autoIndentCheck_->setChecked(true);
-    behaviorLayout->addRow(autoIndentCheck_);
-    
-    bracketMatchingCheck_ = new void(tr("Bracket Matching"));
-    bracketMatchingCheck_->setChecked(true);
-    behaviorLayout->addRow(bracketMatchingCheck_);
-    
-    autoClosingBracketsCheck_ = new void(tr("Auto-close Brackets"));
-    autoClosingBracketsCheck_->setChecked(true);
-    behaviorLayout->addRow(autoClosingBracketsCheck_);
-    
-    formatOnPasteCheck_ = new void(tr("Format on Paste"));
-    behaviorLayout->addRow(formatOnPasteCheck_);
-    
-    layout->addWidget(behaviorGroup);
-    
-    // Minimap
-    auto* minimapGroup = new void(tr("Minimap"), widget);
-    auto* minimapLayout = nullptr;
-    
-    minimapEnabledCheck_ = new void(tr("Enable Minimap"));
-    minimapEnabledCheck_->setChecked(true);
-    minimapLayout->addRow(minimapEnabledCheck_);
-    
-    minimapRenderCharsCheck_ = new void(tr("Render Characters"));
-    minimapRenderCharsCheck_->setChecked(true);
-    minimapLayout->addRow(minimapRenderCharsCheck_);
-    
-    minimapScaleSpin_ = new void();
-    minimapScaleSpin_->setRange(1, 3);
-    minimapScaleSpin_->setValue(1);
-    minimapLayout->addRow(tr("Scale:"), minimapScaleSpin_);
-    
-    layout->addWidget(minimapGroup);
-    
-    // IntelliSense (Enterprise only)
-    auto* intellisenseGroup = new void(tr("IntelliSense (Enterprise Only)"), widget);
-    auto* intellisenseLayout = nullptr;
-    
-    intellisenseCheck_ = new void(tr("Enable IntelliSense"));
-    intellisenseCheck_->setChecked(true);
-    intellisenseLayout->addRow(intellisenseCheck_);
-    
-    quickSuggestionsCheck_ = new void(tr("Quick Suggestions"));
-    quickSuggestionsCheck_->setChecked(true);
-    intellisenseLayout->addRow(quickSuggestionsCheck_);
-    
-    suggestDelaySpin_ = new void();
-    suggestDelaySpin_->setRange(0, 1000);
-    suggestDelaySpin_->setValue(100);
-    suggestDelaySpin_->setSuffix(" ms");
-    intellisenseLayout->addRow(tr("Suggest Delay:"), suggestDelaySpin_);
-    
-    parameterHintsCheck_ = new void(tr("Parameter Hints"));
-    parameterHintsCheck_->setChecked(true);
-    intellisenseLayout->addRow(parameterHintsCheck_);
-    
-    layout->addWidget(intellisenseGroup);
-    
-    layout->addStretch();  // Signal connection removed\n  // Signal connection removed\ntabs->addTab(widget, tr("Editor"));
+static void setEditInt(HWND h, int v)
+{
+    char buf[32];
+    _snprintf_s(buf, 32, _TRUNCATE, "%d", v);
+    SetWindowTextA(h, buf);
 }
 
-void MonacoSettingsDialog::createNeonTab(void* tabs) {
-    auto* widget = new // Widget();
-    auto* layout = new void(widget);
-    
-    // Neon Visual Effects
-    auto* neonGroup = new void(tr("Neon Visual Effects"), widget);
-    auto* neonLayout = nullptr;
-    
-    neonEffectsCheck_ = new void(tr("Enable Neon Effects"));
-    neonEffectsCheck_->setChecked(true);
-    neonLayout->addRow(neonEffectsCheck_);
-    
-    auto* glowLayout = new void();
-    glowIntensitySlider_ = new void(Horizontal);
-    glowIntensitySlider_->setRange(0, 15);
-    glowIntensitySlider_->setValue(8);
-    glowIntensityLabel_ = new void("8");
-    glowLayout->addWidget(glowIntensitySlider_);
-    glowLayout->addWidget(glowIntensityLabel_);
-    neonLayout->addRow(tr("Glow Intensity:"), glowLayout);
-    
-    scanlineDensitySpin_ = new void();
-    scanlineDensitySpin_->setRange(0, 8);
-    scanlineDensitySpin_->setValue(2);
-    neonLayout->addRow(tr("Scanline Density:"), scanlineDensitySpin_);
-    
-    glitchProbabilitySpin_ = new void();
-    glitchProbabilitySpin_->setRange(0, 255);
-    glitchProbabilitySpin_->setValue(3);
-    glitchProbabilitySpin_->setToolTip(tr("1/256 chance per frame"));
-    neonLayout->addRow(tr("Glitch Probability:"), glitchProbabilitySpin_);
-    
-    particlesCheck_ = new void(tr("Background Particles"));
-    particlesCheck_->setChecked(true);
-    neonLayout->addRow(particlesCheck_);
-    
-    particleCountSpin_ = new void();
-    particleCountSpin_->setRange(0, 4096);
-    particleCountSpin_->setValue(1024);
-    neonLayout->addRow(tr("Particle Count:"), particleCountSpin_);
-    
-    layout->addWidget(neonGroup);
-    
-    // ESP Mode (NeonHack only)
-    espModeGroup_ = new void(tr("ESP Mode (NeonHack Variant Only)"), widget);
-    auto* espLayout = nullptr;
-    
-    espModeCheck_ = new void(tr("Enable ESP Mode"));
-    espLayout->addRow(espModeCheck_);
-    
-    espHighlightVariablesCheck_ = new void(tr("Highlight Variables"));
-    espHighlightVariablesCheck_->setChecked(true);
-    espLayout->addRow(espHighlightVariablesCheck_);
-    
-    espHighlightFunctionsCheck_ = new void(tr("Highlight Functions"));
-    espHighlightFunctionsCheck_->setChecked(true);
-    espLayout->addRow(espHighlightFunctionsCheck_);
-    
-    espWallhackCheck_ = new void(tr("Wallhack Symbols (Through Comments)"));
-    espLayout->addRow(espWallhackCheck_);
-    
-    layout->addWidget(espModeGroup_);
-    
-    layout->addStretch();
-    
-    // Connections  // Signal connection removed\n  // Signal connection removed\n  // Signal connection removed\ntabs->addTab(widget, tr("Neon/ESP"));
+static std::string getEditText(HWND h)
+{
+    int len = GetWindowTextLengthA(h);
+    if (len <= 0) return {};
+    std::string s(len + 1, '\0');
+    GetWindowTextA(h, s.data(), len + 1);
+    s.resize(len);
+    return s;
 }
 
-void MonacoSettingsDialog::createPerformanceTab(void* tabs) {
-    auto* widget = new // Widget();
-    auto* layout = nullptr;
-    
-    renderDelaySpin_ = new void();
-    renderDelaySpin_->setRange(1, 100);
-    renderDelaySpin_->setValue(16);
-    renderDelaySpin_->setSuffix(" ms");
-    renderDelaySpin_->setToolTip(tr("16ms = 60fps, 8ms = 120fps"));
-    layout->addRow(tr("Render Delay:"), renderDelaySpin_);
-    
-    vblankSyncCheck_ = new void(tr("VBlank Sync (VSync)"));
-    vblankSyncCheck_->setChecked(true);
-    layout->addRow(vblankSyncCheck_);
-    
-    predictiveFetchSpin_ = new void();
-    predictiveFetchSpin_->setRange(0, 64);
-    predictiveFetchSpin_->setValue(16);
-    layout->addRow(tr("Predictive Fetch Lines:"), predictiveFetchSpin_);
-    
-    lazyTokenizationCheck_ = new void(tr("Lazy Tokenization"));
-    lazyTokenizationCheck_->setChecked(true);
-    layout->addRow(lazyTokenizationCheck_);
-    
-    lazyTokenDelaySpuin_ = new void();
-    lazyTokenDelaySpuin_->setRange(0, 500);
-    lazyTokenDelaySpuin_->setValue(50);
-    lazyTokenDelaySpuin_->setSuffix(" ms");
-    layout->addRow(tr("Tokenization Delay:"), lazyTokenDelaySpuin_);
-    
-    tabs->addTab(widget, tr("Performance"));
+// ═══════════════════════════════════════════════════════════════════════════════
+// Construction / Destruction
+// ═══════════════════════════════════════════════════════════════════════════════
+
+MonacoSettingsDialog::MonacoSettingsDialog(HWND parent)
+    : m_hwndParent(parent) {}
+
+MonacoSettingsDialog::~MonacoSettingsDialog()
+{
+    if (m_hDlg && IsWindow(m_hDlg)) DestroyWindow(m_hDlg);
 }
 
-void MonacoSettingsDialog::setSettings(const MonacoSettings& settings) {
-    settings_ = settings;
-    originalSettings_ = settings;
+// ═══════════════════════════════════════════════════════════════════════════════
+// Modal Display
+// ═══════════════════════════════════════════════════════════════════════════════
+
+INT_PTR MonacoSettingsDialog::showModal()
+{
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+    constexpr int W = 680, H = 600;
+
+    RECT rc{};
+    if (m_hwndParent) GetWindowRect(m_hwndParent, &rc);
+    else { rc.left = 120; rc.top = 80; }
+
+    m_hDlg = CreateWindowExW(WS_EX_DLGMODALFRAME,
+        L"STATIC", L"RawrXD IDE - Monaco Editor Settings",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
+        rc.left + 60, rc.top + 30, W, H,
+        m_hwndParent, nullptr, hInst, nullptr);
+    if (!m_hDlg) return IDCANCEL;
+
+    SetWindowLongPtrW(m_hDlg, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    SetWindowLongPtrW(m_hDlg, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(DlgProc));
+
+    m_originalSettings = m_settings;
+    initControls(m_hDlg);
+    updateUIFromSettings();
+
+    if (m_hwndParent) EnableWindow(m_hwndParent, FALSE);
+    MSG msg;
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!IsWindow(m_hDlg)) break;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    if (m_hwndParent) EnableWindow(m_hwndParent, TRUE);
+    return IDOK;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Window Procedure
+// ═══════════════════════════════════════════════════════════════════════════════
+
+INT_PTR CALLBACK MonacoSettingsDialog::DlgProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
+{
+    auto* self = reinterpret_cast<MonacoSettingsDialog*>(GetWindowLongPtrW(h, GWLP_USERDATA));
+    if (self) return self->handleMsg(h, msg, wp, lp);
+    return DefWindowProcW(h, msg, wp, lp);
+}
+
+INT_PTR MonacoSettingsDialog::handleMsg(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
+{
+    switch (msg) {
+    case WM_NOTIFY: {
+        auto* nmhdr = reinterpret_cast<NMHDR*>(lp);
+        if (nmhdr->idFrom == IDC_MS_TAB && nmhdr->code == TCN_SELCHANGE) {
+            int page = TabCtrl_GetCurSel(m_hwndTab);
+            showTabPage(page);
+        }
+        return 0;
+    }
+
+    case WM_HSCROLL:
+        // Glow intensity trackbar
+        if (reinterpret_cast<HWND>(lp) == m_hwndGlowSlider) {
+            int pos = static_cast<int>(SendMessage(m_hwndGlowSlider, TBM_GETPOS, 0, 0));
+            char buf[8]; _snprintf_s(buf, 8, _TRUNCATE, "%d", pos);
+            SetWindowTextA(m_hwndGlowLabel, buf);
+        }
+        return 0;
+
+    case WM_COMMAND:
+        switch (LOWORD(wp)) {
+        // Color buttons
+        case IDC_MS_CLRBG:    onColorButtonClicked(IDC_MS_CLRBG,    m_settings.backgroundColor);    return TRUE;
+        case IDC_MS_CLRFG:    onColorButtonClicked(IDC_MS_CLRFG,    m_settings.foregroundColor);    return TRUE;
+        case IDC_MS_CLRKW:    onColorButtonClicked(IDC_MS_CLRKW,    m_settings.keywordColor);       return TRUE;
+        case IDC_MS_CLRSTR:   onColorButtonClicked(IDC_MS_CLRSTR,   m_settings.stringColor);        return TRUE;
+        case IDC_MS_CLRCMT:   onColorButtonClicked(IDC_MS_CLRCMT,   m_settings.commentColor);       return TRUE;
+        case IDC_MS_CLRFN:    onColorButtonClicked(IDC_MS_CLRFN,    m_settings.functionColor);      return TRUE;
+        case IDC_MS_CLRTYPE:  onColorButtonClicked(IDC_MS_CLRTYPE,  m_settings.typeColor);          return TRUE;
+        case IDC_MS_CLRNUM:   onColorButtonClicked(IDC_MS_CLRNUM,   m_settings.numberColor);        return TRUE;
+        case IDC_MS_CLRGLOW:  onColorButtonClicked(IDC_MS_CLRGLOW,  m_settings.glowColor);          return TRUE;
+        case IDC_MS_CLRGLOW2: onColorButtonClicked(IDC_MS_CLRGLOW2, m_settings.glowSecondaryColor); return TRUE;
+
+        // Bottom buttons
+        case IDC_MS_APPLY:   onApply();   return TRUE;
+        case IDC_MS_RESET:   onReset();   return TRUE;
+        case IDC_MS_PREVIEW: onPreview(); return TRUE;
+        case IDC_MS_EXPORT:  onExport();  return TRUE;
+        case IDC_MS_IMPORT:  onImport();  return TRUE;
+
+        case IDCANCEL:
+            m_settings = m_originalSettings;
+            DestroyWindow(hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+            return TRUE;
+        }
+        break;
+
+    case WM_CLOSE:
+        m_settings = m_originalSettings;
+        DestroyWindow(hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+        return TRUE;
+    }
+    return DefWindowProcW(hDlg, msg, wp, lp);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// initControls — build tab control + all pages
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::initControls(HWND hDlg)
+{
+    HINSTANCE hInst = GetModuleHandle(nullptr);
+
+    // Tab control
+    m_hwndTab = CreateWindowExW(0, WC_TABCONTROLW, nullptr,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+        6, 6, 654, 500, hDlg, reinterpret_cast<HMENU>(IDC_MS_TAB), hInst, nullptr);
+
+    const wchar_t* tabNames[] = { L"Theme", L"Font", L"Editor", L"Neon / ESP", L"Performance" };
+    for (int i = 0; i < kNumPages; ++i) {
+        TCITEMW ti{}; ti.mask = TCIF_TEXT;
+        ti.pszText = const_cast<wchar_t*>(tabNames[i]);
+        TabCtrl_InsertItem(m_hwndTab, i, &ti);
+    }
+
+    // Determine display area inside tab
+    RECT tabRC; GetClientRect(m_hwndTab, &tabRC);
+    TabCtrl_AdjustRect(m_hwndTab, FALSE, &tabRC);
+
+    for (int i = 0; i < kNumPages; ++i) {
+        m_pages[i] = CreateWindowExW(0, L"STATIC", nullptr,
+            WS_CHILD | WS_CLIPCHILDREN,
+            tabRC.left, tabRC.top,
+            tabRC.right - tabRC.left, tabRC.bottom - tabRC.top,
+            m_hwndTab, nullptr, hInst, nullptr);
+    }
+
+    createThemeTab(m_pages[0], 0);
+    createFontTab(m_pages[1], 1);
+    createEditorTab(m_pages[2], 2);
+    createNeonTab(m_pages[3], 3);
+    createPerformanceTab(m_pages[4], 4);
+
+    // Show first page
+    showTabPage(0);
+
+    // Bottom buttons row (below tab control)
+    int by = 514;
+    m_hwndExport  = CreateWindowExW(0, L"BUTTON", L"Export...",   WS_CHILD | WS_VISIBLE, 6,   by, 90, 28, hDlg, reinterpret_cast<HMENU>(IDC_MS_EXPORT),  hInst, nullptr);
+    m_hwndImport  = CreateWindowExW(0, L"BUTTON", L"Import...",   WS_CHILD | WS_VISIBLE, 102, by, 90, 28, hDlg, reinterpret_cast<HMENU>(IDC_MS_IMPORT),  hInst, nullptr);
+    m_hwndPreview = CreateWindowExW(0, L"BUTTON", L"Preview",     WS_CHILD | WS_VISIBLE, 380, by, 80, 28, hDlg, reinterpret_cast<HMENU>(IDC_MS_PREVIEW), hInst, nullptr);
+    m_hwndReset   = CreateWindowExW(0, L"BUTTON", L"Reset",       WS_CHILD | WS_VISIBLE, 466, by, 80, 28, hDlg, reinterpret_cast<HMENU>(IDC_MS_RESET),   hInst, nullptr);
+    m_hwndApply   = CreateWindowExW(0, L"BUTTON", L"Apply",       WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON, 552, by, 106, 28, hDlg, reinterpret_cast<HMENU>(IDC_MS_APPLY), hInst, nullptr);
+}
+
+void MonacoSettingsDialog::showTabPage(int page)
+{
+    for (int i = 0; i < kNumPages; ++i)
+        ShowWindow(m_pages[i], (i == page) ? SW_SHOW : SW_HIDE);
+    m_curPage = page;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createThemeTab
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::createThemeTab(HWND parent, int /*page*/)
+{
+    HINSTANCE hI = GetModuleHandle(nullptr);
+    int y = 8;
+
+    // Variant combo
+    CreateWindowExW(0, L"STATIC", L"Editor Variant:", WS_CHILD | WS_VISIBLE, 10, y + 4, 110, 18, parent, nullptr, hI, nullptr);
+    m_hwndVariant = CreateWindowExW(0, L"COMBOBOX", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 124, y, 240, 200, parent, reinterpret_cast<HMENU>(IDC_MS_VARIANT), hI, nullptr);
+    const wchar_t* vars[] = { L"Core (Pure Monaco)", L"Neon Core (Cyberpunk)", L"Neon Hack (ESP)", L"Zero Dependency (Minimal)", L"Enterprise (LSP+Debug)" };
+    for (auto v : vars) SendMessageW(m_hwndVariant, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(v));
+    SendMessageW(m_hwndVariant, CB_SETCURSEL, m_settings.variantIndex, 0);
+    y += 30;
+
+    // Theme preset combo
+    CreateWindowExW(0, L"STATIC", L"Theme Preset:", WS_CHILD | WS_VISIBLE, 10, y + 4, 110, 18, parent, nullptr, hI, nullptr);
+    m_hwndTheme = CreateWindowExW(0, L"COMBOBOX", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST, 124, y, 240, 240, parent, reinterpret_cast<HMENU>(IDC_MS_THEME), hI, nullptr);
+    const wchar_t* themes[] = { L"Default (VS Code Dark+)", L"Neon Cyberpunk", L"Matrix Green", L"Hacker Red", L"Monokai",
+        L"Solarized Dark", L"Solarized Light", L"One Dark", L"Dracula", L"Gruvbox Dark", L"Nord", L"Custom" };
+    for (auto t : themes) SendMessageW(m_hwndTheme, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(t));
+    SendMessageW(m_hwndTheme, CB_SETCURSEL, m_settings.themePresetIndex, 0);
+    y += 36;
+
+    // Color buttons (label + colored button)
+    struct ColorEntry { const wchar_t* label; UINT id; HWND* hw; };
+    ColorEntry colors[] = {
+        { L"Background:",   IDC_MS_CLRBG,    &m_hwndClrBg },
+        { L"Foreground:",   IDC_MS_CLRFG,    &m_hwndClrFg },
+        { L"Keywords:",     IDC_MS_CLRKW,    &m_hwndClrKw },
+        { L"Strings:",      IDC_MS_CLRSTR,   &m_hwndClrStr },
+        { L"Comments:",     IDC_MS_CLRCMT,   &m_hwndClrCmt },
+        { L"Functions:",    IDC_MS_CLRFN,    &m_hwndClrFn },
+        { L"Types:",        IDC_MS_CLRTYPE,  &m_hwndClrType },
+        { L"Numbers:",      IDC_MS_CLRNUM,   &m_hwndClrNum },
+        { L"Glow Primary:", IDC_MS_CLRGLOW,  &m_hwndClrGlow },
+        { L"Glow 2nd:",     IDC_MS_CLRGLOW2, &m_hwndClrGlow2 },
+    };
+
+    // Two-column layout for color buttons
+    int cx = 0;
+    for (int i = 0; i < 10; ++i) {
+        int col = i % 2;
+        int xBase = 10 + col * 310;
+        if (col == 0 && i > 0) y += 26;
+
+        CreateWindowExW(0, L"STATIC", colors[i].label, WS_CHILD | WS_VISIBLE, xBase, y + 4, 100, 18, parent, nullptr, hI, nullptr);
+        *colors[i].hw = CreateWindowExW(0, L"BUTTON", L"", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_OWNERDRAW,
+            xBase + 104, y, 60, 22, parent, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(colors[i].id)), hI, nullptr);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createFontTab
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::createFontTab(HWND parent, int /*page*/)
+{
+    HINSTANCE hI = GetModuleHandle(nullptr);
+    int y = 8;
+
+    auto label = [&](const wchar_t* t, int x = 10) {
+        CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE, x, y + 4, 120, 18, parent, nullptr, hI, nullptr);
+    };
+
+    label(L"Font Family:");
+    m_hwndFontFamily = CreateWindowExW(0, L"COMBOBOX", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_SORT,
+        134, y, 250, 300, parent, reinterpret_cast<HMENU>(IDC_MS_FONT_FAMILY), hI, nullptr);
+    // Populate with common monospace fonts
+    const wchar_t* fonts[] = { L"Consolas", L"Cascadia Code", L"Fira Code", L"JetBrains Mono",
+        L"Source Code Pro", L"Courier New", L"Lucida Console", L"Monaco", L"Menlo" };
+    for (auto f : fonts) SendMessageW(m_hwndFontFamily, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(f));
+    SendMessageW(m_hwndFontFamily, CB_SETCURSEL, 0, 0);
+    y += 30;
+
+    label(L"Font Size:");
+    m_hwndFontSize = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"14", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        134, y, 60, 22, parent, reinterpret_cast<HMENU>(IDC_MS_FONT_SIZE), hI, nullptr);
+    y += 30;
+
+    label(L"Font Weight:");
+    m_hwndFontWeight = CreateWindowExW(0, L"COMBOBOX", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+        134, y, 200, 200, parent, reinterpret_cast<HMENU>(IDC_MS_FONT_WEIGHT), hI, nullptr);
+    const wchar_t* weights[] = { L"Thin (100)", L"Light (300)", L"Normal (400)", L"Medium (500)",
+        L"SemiBold (600)", L"Bold (700)", L"ExtraBold (800)" };
+    for (auto w : weights) SendMessageW(m_hwndFontWeight, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(w));
+    SendMessageW(m_hwndFontWeight, CB_SETCURSEL, 2, 0); // Normal
+    y += 30;
+
+    m_hwndFontLig = CreateWindowExW(0, L"BUTTON", L"Enable Font Ligatures", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        10, y, 250, 20, parent, reinterpret_cast<HMENU>(IDC_MS_FONT_LIG), hI, nullptr);
+    y += 28;
+
+    label(L"Line Height:");
+    m_hwndLineHeight = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"0", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        134, y, 60, 22, parent, reinterpret_cast<HMENU>(IDC_MS_LINE_HEIGHT), hI, nullptr);
+    CreateWindowExW(0, L"STATIC", L"(0 = auto)", WS_CHILD | WS_VISIBLE, 200, y + 4, 100, 18, parent, nullptr, hI, nullptr);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createEditorTab
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::createEditorTab(HWND parent, int /*page*/)
+{
+    HINSTANCE hI = GetModuleHandle(nullptr);
+    int y = 8;
+
+    auto check = [&](HWND& hw, const wchar_t* t, UINT id) {
+        hw = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+            10, y, 280, 20, parent, reinterpret_cast<HMENU>(id), hI, nullptr);
+        y += 24;
+    };
+
+    // Editor Behavior group label
+    CreateWindowExW(0, L"STATIC", L"─── Editor Behavior ───", WS_CHILD | WS_VISIBLE, 10, y, 300, 18, parent, nullptr, hI, nullptr);
+    y += 22;
+
+    check(m_hwndWordWrap,  L"Word Wrap",                     IDC_MS_WORDWRAP);
+
+    CreateWindowExW(0, L"STATIC", L"Tab Size:", WS_CHILD | WS_VISIBLE, 10, y + 4, 70, 18, parent, nullptr, hI, nullptr);
+    m_hwndTabSize = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"4", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        84, y, 40, 22, parent, reinterpret_cast<HMENU>(IDC_MS_TABSIZE), hI, nullptr);
+    y += 28;
+
+    check(m_hwndSpaces,     L"Insert Spaces for Tabs",        IDC_MS_SPACES);
+    check(m_hwndAutoIndent, L"Auto Indent",                   IDC_MS_AUTOINDENT);
+    check(m_hwndBracket,    L"Bracket Matching",              IDC_MS_BRACKET);
+    check(m_hwndAutoClose,  L"Auto-close Brackets",           IDC_MS_AUTOCLOSE);
+    check(m_hwndFmtPaste,   L"Format on Paste",               IDC_MS_FMTPASTE);
+
+    // Minimap group
+    y += 4;
+    CreateWindowExW(0, L"STATIC", L"─── Minimap ───", WS_CHILD | WS_VISIBLE, 10, y, 300, 18, parent, nullptr, hI, nullptr);
+    y += 22;
+    check(m_hwndMinimap,  L"Enable Minimap",                 IDC_MS_MINIMAP);
+    check(m_hwndMiniChar, L"Render Characters",              IDC_MS_MINICHAR);
+
+    CreateWindowExW(0, L"STATIC", L"Scale:", WS_CHILD | WS_VISIBLE, 10, y + 4, 50, 18, parent, nullptr, hI, nullptr);
+    m_hwndMiniScale = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"1", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        64, y, 40, 22, parent, reinterpret_cast<HMENU>(IDC_MS_MINISCALE), hI, nullptr);
+    y += 28;
+
+    // IntelliSense group
+    CreateWindowExW(0, L"STATIC", L"─── IntelliSense (Enterprise) ───", WS_CHILD | WS_VISIBLE, 10, y, 300, 18, parent, nullptr, hI, nullptr);
+    y += 22;
+    check(m_hwndIntelli,   L"Enable IntelliSense",            IDC_MS_INTELLI);
+    check(m_hwndQuickSug,  L"Quick Suggestions",              IDC_MS_QUICKSUG);
+
+    CreateWindowExW(0, L"STATIC", L"Suggest Delay (ms):", WS_CHILD | WS_VISIBLE, 10, y + 4, 130, 18, parent, nullptr, hI, nullptr);
+    m_hwndSugDelay = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"200", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        144, y, 60, 22, parent, reinterpret_cast<HMENU>(IDC_MS_SUGDELAY), hI, nullptr);
+    y += 28;
+
+    check(m_hwndParamHint, L"Parameter Hints",                IDC_MS_PARAMHINT);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createNeonTab
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::createNeonTab(HWND parent, int /*page*/)
+{
+    HINSTANCE hI = GetModuleHandle(nullptr);
+    int y = 8;
+
+    auto check = [&](HWND& hw, const wchar_t* t, UINT id) {
+        hw = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+            10, y, 300, 20, parent, reinterpret_cast<HMENU>(id), hI, nullptr);
+        y += 24;
+    };
+
+    CreateWindowExW(0, L"STATIC", L"─── Neon Visual Effects ───", WS_CHILD | WS_VISIBLE, 10, y, 300, 18, parent, nullptr, hI, nullptr);
+    y += 22;
+
+    check(m_hwndNeon, L"Enable Neon Effects", IDC_MS_NEON);
+
+    // Glow Intensity trackbar
+    CreateWindowExW(0, L"STATIC", L"Glow Intensity:", WS_CHILD | WS_VISIBLE, 10, y + 4, 110, 18, parent, nullptr, hI, nullptr);
+    m_hwndGlowSlider = CreateWindowExW(0, TRACKBAR_CLASSW, nullptr,
+        WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_AUTOTICKS,
+        124, y, 200, 24, parent, reinterpret_cast<HMENU>(IDC_MS_GLOWSLIDER), hI, nullptr);
+    SendMessage(m_hwndGlowSlider, TBM_SETRANGE, TRUE, MAKELONG(0, 100));
+    SendMessage(m_hwndGlowSlider, TBM_SETPOS, TRUE, m_settings.glowIntensity);
+    m_hwndGlowLabel = CreateWindowExW(0, L"STATIC", L"50", WS_CHILD | WS_VISIBLE, 330, y + 4, 40, 18,
+        parent, reinterpret_cast<HMENU>(IDC_MS_GLOWLABEL), hI, nullptr);
+    y += 30;
+
+    CreateWindowExW(0, L"STATIC", L"Scanline Density:", WS_CHILD | WS_VISIBLE, 10, y + 4, 110, 18, parent, nullptr, hI, nullptr);
+    m_hwndScanline = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"2", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        124, y, 50, 22, parent, reinterpret_cast<HMENU>(IDC_MS_SCANLINE), hI, nullptr);
+    y += 28;
+
+    CreateWindowExW(0, L"STATIC", L"Glitch Probability:", WS_CHILD | WS_VISIBLE, 10, y + 4, 110, 18, parent, nullptr, hI, nullptr);
+    m_hwndGlitch = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"0", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        124, y, 50, 22, parent, reinterpret_cast<HMENU>(IDC_MS_GLITCH), hI, nullptr);
+    CreateWindowExW(0, L"STATIC", L"/256 per frame", WS_CHILD | WS_VISIBLE, 180, y + 4, 120, 18, parent, nullptr, hI, nullptr);
+    y += 28;
+
+    check(m_hwndParticles, L"Background Particles", IDC_MS_PARTICLES);
+
+    CreateWindowExW(0, L"STATIC", L"Particle Count:", WS_CHILD | WS_VISIBLE, 10, y + 4, 110, 18, parent, nullptr, hI, nullptr);
+    m_hwndPartCount = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"30", WS_CHILD | WS_VISIBLE | ES_NUMBER,
+        124, y, 70, 22, parent, reinterpret_cast<HMENU>(IDC_MS_PARTCOUNT), hI, nullptr);
+    y += 34;
+
+    // ESP group
+    CreateWindowExW(0, L"STATIC", L"─── ESP Mode (NeonHack Only) ───", WS_CHILD | WS_VISIBLE, 10, y, 350, 18, parent, nullptr, hI, nullptr);
+    y += 22;
+
+    check(m_hwndEsp,     L"Enable ESP Mode",                   IDC_MS_ESP);
+    check(m_hwndEspVar,  L"Highlight Variables",               IDC_MS_ESPVAR);
+    check(m_hwndEspFn,   L"Highlight Functions",               IDC_MS_ESPFN);
+    check(m_hwndEspWall, L"Wallhack Symbols (Through Comments)", IDC_MS_ESPWALL);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// createPerformanceTab
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::createPerformanceTab(HWND parent, int /*page*/)
+{
+    HINSTANCE hI = GetModuleHandle(nullptr);
+    int y = 8;
+
+    auto numEdit = [&](HWND& hw, const wchar_t* lbl, const wchar_t* def, UINT id, const wchar_t* suffix = nullptr) {
+        CreateWindowExW(0, L"STATIC", lbl, WS_CHILD | WS_VISIBLE, 10, y + 4, 160, 18, parent, nullptr, hI, nullptr);
+        hw = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", def, WS_CHILD | WS_VISIBLE | ES_NUMBER,
+            174, y, 60, 22, parent, reinterpret_cast<HMENU>(id), hI, nullptr);
+        if (suffix)
+            CreateWindowExW(0, L"STATIC", suffix, WS_CHILD | WS_VISIBLE, 240, y + 4, 120, 18, parent, nullptr, hI, nullptr);
+        y += 28;
+    };
+
+    numEdit(m_hwndRenderDel, L"Render Delay:",         L"16", IDC_MS_RENDERDEL, L"ms (16=60fps)");
+
+    m_hwndVSync = CreateWindowExW(0, L"BUTTON", L"VBlank Sync (VSync)", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        10, y, 250, 20, parent, reinterpret_cast<HMENU>(IDC_MS_VSYNC), hI, nullptr);
+    y += 28;
+
+    numEdit(m_hwndPredFetch, L"Predictive Fetch Lines:", L"16", IDC_MS_PREDFETCH, nullptr);
+
+    m_hwndLazyTok = CreateWindowExW(0, L"BUTTON", L"Lazy Tokenization", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        10, y, 250, 20, parent, reinterpret_cast<HMENU>(IDC_MS_LAZYTOK), hI, nullptr);
+    y += 28;
+
+    numEdit(m_hwndLazyDelay, L"Tokenization Delay:",   L"50", IDC_MS_LAZYDELAY, L"ms");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Settings ↔ UI
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::updateUIFromSettings()
+{
+    // Theme
+    SendMessage(m_hwndVariant, CB_SETCURSEL, m_settings.variantIndex, 0);
+    SendMessage(m_hwndTheme,   CB_SETCURSEL, m_settings.themePresetIndex, 0);
+
+    // Font
+    setEditInt(m_hwndFontSize,   m_settings.fontSize);
+    setCheck(m_hwndFontLig,      m_settings.fontLigatures);
+    setEditInt(m_hwndLineHeight, static_cast<int>(m_settings.lineHeight));
+
+    // Weight index: Thin=0, Light=1, Normal=2, Medium=3, SemiBold=4, Bold=5, ExtraBold=6
+    int wIdx = 2;
+    const int wmap[] = { 100, 300, 400, 500, 600, 700, 800 };
+    for (int i = 0; i < 7; ++i) { if (wmap[i] == m_settings.fontWeight) { wIdx = i; break; } }
+    SendMessage(m_hwndFontWeight, CB_SETCURSEL, wIdx, 0);
+
+    // Find font family in combo
+    for (int i = 0; i < static_cast<int>(SendMessage(m_hwndFontFamily, CB_GETCOUNT, 0, 0)); ++i) {
+        char buf[128];
+        SendMessageA(m_hwndFontFamily, CB_GETLBTEXT, i, reinterpret_cast<LPARAM>(buf));
+        if (m_settings.fontFamily == buf) { SendMessage(m_hwndFontFamily, CB_SETCURSEL, i, 0); break; }
+    }
+
+    // Editor
+    setCheck(m_hwndWordWrap,  m_settings.wordWrap);
+    setEditInt(m_hwndTabSize, m_settings.tabSize);
+    setCheck(m_hwndSpaces,    m_settings.insertSpaces);
+    setCheck(m_hwndAutoIndent, m_settings.autoIndent);
+    setCheck(m_hwndBracket,   m_settings.bracketMatching);
+    setCheck(m_hwndAutoClose, m_settings.autoClosingBrackets);
+    setCheck(m_hwndFmtPaste,  m_settings.formatOnPaste);
+    setCheck(m_hwndMinimap,   m_settings.minimapEnabled);
+    setCheck(m_hwndMiniChar,  m_settings.minimapRenderChars);
+    setEditInt(m_hwndMiniScale, m_settings.minimapScale);
+    setCheck(m_hwndIntelli,   m_settings.intellisense);
+    setCheck(m_hwndQuickSug,  m_settings.quickSuggestions);
+    setEditInt(m_hwndSugDelay, m_settings.suggestDelay);
+    setCheck(m_hwndParamHint, m_settings.parameterHints);
+
+    // Neon
+    setCheck(m_hwndNeon,      m_settings.neonEffects);
+    SendMessage(m_hwndGlowSlider, TBM_SETPOS, TRUE, m_settings.glowIntensity);
+    char gb[8]; _snprintf_s(gb, 8, _TRUNCATE, "%d", m_settings.glowIntensity);
+    SetWindowTextA(m_hwndGlowLabel, gb);
+    setEditInt(m_hwndScanline,  m_settings.scanlineDensity);
+    setEditInt(m_hwndGlitch,    m_settings.glitchProbability);
+    setCheck(m_hwndParticles,   m_settings.particles);
+    setEditInt(m_hwndPartCount, m_settings.particleCount);
+    setCheck(m_hwndEsp,         m_settings.espMode);
+    setCheck(m_hwndEspVar,      m_settings.espHighlightVariables);
+    setCheck(m_hwndEspFn,       m_settings.espHighlightFunctions);
+    setCheck(m_hwndEspWall,     m_settings.espWallhack);
+
+    // Performance
+    setEditInt(m_hwndRenderDel, m_settings.renderDelay);
+    setCheck(m_hwndVSync,       m_settings.vblankSync);
+    setEditInt(m_hwndPredFetch, m_settings.predictiveFetch);
+    setCheck(m_hwndLazyTok,     m_settings.lazyTokenization);
+    setEditInt(m_hwndLazyDelay, m_settings.lazyTokenDelay);
+}
+
+void MonacoSettingsDialog::updateSettingsFromUI()
+{
+    // Theme
+    m_settings.variantIndex     = static_cast<int>(SendMessage(m_hwndVariant, CB_GETCURSEL, 0, 0));
+    m_settings.themePresetIndex = static_cast<int>(SendMessage(m_hwndTheme, CB_GETCURSEL, 0, 0));
+
+    // Font
+    char buf[128];
+    int idx = static_cast<int>(SendMessage(m_hwndFontFamily, CB_GETCURSEL, 0, 0));
+    if (idx >= 0) { SendMessageA(m_hwndFontFamily, CB_GETLBTEXT, idx, reinterpret_cast<LPARAM>(buf)); m_settings.fontFamily = buf; }
+    m_settings.fontSize     = getEditInt(m_hwndFontSize);
+    const int wmap[] = { 100, 300, 400, 500, 600, 700, 800 };
+    int wi = static_cast<int>(SendMessage(m_hwndFontWeight, CB_GETCURSEL, 0, 0));
+    m_settings.fontWeight   = (wi >= 0 && wi < 7) ? wmap[wi] : 400;
+    m_settings.fontLigatures = getCheck(m_hwndFontLig);
+    m_settings.lineHeight    = static_cast<float>(getEditInt(m_hwndLineHeight));
+
+    // Editor
+    m_settings.wordWrap            = getCheck(m_hwndWordWrap);
+    m_settings.tabSize             = getEditInt(m_hwndTabSize);
+    m_settings.insertSpaces        = getCheck(m_hwndSpaces);
+    m_settings.autoIndent          = getCheck(m_hwndAutoIndent);
+    m_settings.bracketMatching     = getCheck(m_hwndBracket);
+    m_settings.autoClosingBrackets = getCheck(m_hwndAutoClose);
+    m_settings.formatOnPaste       = getCheck(m_hwndFmtPaste);
+    m_settings.minimapEnabled      = getCheck(m_hwndMinimap);
+    m_settings.minimapRenderChars  = getCheck(m_hwndMiniChar);
+    m_settings.minimapScale        = getEditInt(m_hwndMiniScale);
+    m_settings.intellisense        = getCheck(m_hwndIntelli);
+    m_settings.quickSuggestions    = getCheck(m_hwndQuickSug);
+    m_settings.suggestDelay        = getEditInt(m_hwndSugDelay);
+    m_settings.parameterHints      = getCheck(m_hwndParamHint);
+
+    // Neon/ESP
+    m_settings.neonEffects           = getCheck(m_hwndNeon);
+    m_settings.glowIntensity         = static_cast<int>(SendMessage(m_hwndGlowSlider, TBM_GETPOS, 0, 0));
+    m_settings.scanlineDensity       = getEditInt(m_hwndScanline);
+    m_settings.glitchProbability     = getEditInt(m_hwndGlitch);
+    m_settings.particles             = getCheck(m_hwndParticles);
+    m_settings.particleCount         = getEditInt(m_hwndPartCount);
+    m_settings.espMode               = getCheck(m_hwndEsp);
+    m_settings.espHighlightVariables = getCheck(m_hwndEspVar);
+    m_settings.espHighlightFunctions = getCheck(m_hwndEspFn);
+    m_settings.espWallhack           = getCheck(m_hwndEspWall);
+
+    // Performance
+    m_settings.renderDelay      = getEditInt(m_hwndRenderDel);
+    m_settings.vblankSync       = getCheck(m_hwndVSync);
+    m_settings.predictiveFetch  = getEditInt(m_hwndPredFetch);
+    m_settings.lazyTokenization = getCheck(m_hwndLazyTok);
+    m_settings.lazyTokenDelay   = getEditInt(m_hwndLazyDelay);
+}
+
+void MonacoSettingsDialog::applyThemePreset(MonacoThemePreset preset)
+{
+    // Built-in theme colour maps
+    switch (preset) {
+    case MonacoThemePreset::Default:
+        m_settings.backgroundColor = 0xFF1E1E1E; m_settings.foregroundColor = 0xFFD4D4D4;
+        m_settings.keywordColor = 0xFF569CD6; m_settings.stringColor = 0xFFCE9178;
+        m_settings.commentColor = 0xFF6A9955; m_settings.functionColor = 0xFFDCDCAA;
+        m_settings.typeColor = 0xFF4EC9B0; m_settings.numberColor = 0xFFB5CEA8;
+        m_settings.glowColor = 0xFF00FF00; m_settings.glowSecondaryColor = 0xFF008000;
+        break;
+    case MonacoThemePreset::NeonCyberpunk:
+        m_settings.backgroundColor = 0xFF0A0A0A; m_settings.foregroundColor = 0xFF00FF41;
+        m_settings.keywordColor = 0xFFFF00FF; m_settings.stringColor = 0xFF00FFFF;
+        m_settings.commentColor = 0xFF666666; m_settings.functionColor = 0xFFFFFF00;
+        m_settings.typeColor = 0xFFFF6600; m_settings.numberColor = 0xFF00FF00;
+        m_settings.glowColor = 0xFF00FF41; m_settings.glowSecondaryColor = 0xFF00CC33;
+        break;
+    case MonacoThemePreset::MatrixGreen:
+        m_settings.backgroundColor = 0xFF000000; m_settings.foregroundColor = 0xFF00FF00;
+        m_settings.keywordColor = 0xFF00DD00; m_settings.stringColor = 0xFF00BB00;
+        m_settings.commentColor = 0xFF006600; m_settings.functionColor = 0xFF00FF00;
+        m_settings.typeColor = 0xFF00CC00; m_settings.numberColor = 0xFF00AA00;
+        m_settings.glowColor = 0xFF00FF00; m_settings.glowSecondaryColor = 0xFF008800;
+        break;
+    case MonacoThemePreset::HackerRed:
+        m_settings.backgroundColor = 0xFF0A0000; m_settings.foregroundColor = 0xFFFF0000;
+        m_settings.keywordColor = 0xFFFF4444; m_settings.stringColor = 0xFFFF8888;
+        m_settings.commentColor = 0xFF660000; m_settings.functionColor = 0xFFFFAAAA;
+        m_settings.typeColor = 0xFFFF6666; m_settings.numberColor = 0xFFFF3333;
+        m_settings.glowColor = 0xFFFF0000; m_settings.glowSecondaryColor = 0xFF880000;
+        break;
+    case MonacoThemePreset::Monokai:
+        m_settings.backgroundColor = 0xFF272822; m_settings.foregroundColor = 0xFFF8F8F2;
+        m_settings.keywordColor = 0xFFF92672; m_settings.stringColor = 0xFFE6DB74;
+        m_settings.commentColor = 0xFF75715E; m_settings.functionColor = 0xFFA6E22E;
+        m_settings.typeColor = 0xFF66D9EF; m_settings.numberColor = 0xFFAE81FF;
+        m_settings.glowColor = 0xFFA6E22E; m_settings.glowSecondaryColor = 0xFF66D9EF;
+        break;
+    default: break; // Custom or other — keep current
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Actions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+void MonacoSettingsDialog::onColorButtonClicked(UINT /*id*/, uint32_t& colorRef)
+{
+    static COLORREF customColors[16]{};
+    CHOOSECOLORW cc{};
+    cc.lStructSize  = sizeof(cc);
+    cc.hwndOwner    = m_hDlg;
+    cc.rgbResult    = u32ToCR(colorRef);
+    cc.lpCustColors = customColors;
+    cc.Flags        = CC_FULLOPEN | CC_RGBINIT;
+
+    if (ChooseColorW(&cc)) {
+        colorRef = crToU32(cc.rgbResult);
+        // Switch to Custom theme preset
+        m_settings.themePresetIndex = static_cast<int>(MonacoThemePreset::Custom);
+        SendMessage(m_hwndTheme, CB_SETCURSEL, m_settings.themePresetIndex, 0);
+        InvalidateRect(m_hDlg, nullptr, TRUE);
+    }
+}
+
+void MonacoSettingsDialog::onApply()
+{
+    updateSettingsFromUI();
+
+    auto preset = static_cast<MonacoThemePreset>(m_settings.themePresetIndex);
+    if (preset != MonacoThemePreset::Custom)
+        applyThemePreset(preset);
+
+    if (m_settingsCb) m_settingsCb(m_settings);
+    if (m_themeCb)    m_themeCb(preset);
+
+    DestroyWindow(m_hDlg); m_hDlg = nullptr; PostQuitMessage(0);
+}
+
+void MonacoSettingsDialog::onReset()
+{
+    m_settings = MonacoSettings{};
     updateUIFromSettings();
 }
 
-void MonacoSettingsDialog::updateUIFromSettings() {
-    // Theme tab
-    variantCombo_->setCurrentIndex(static_cast<int>(settings_.variant));
-    themePresetCombo_->setCurrentIndex(static_cast<int>(settings_.themePreset));
-    
-    // Update color buttons
-    updateColorButton(backgroundColorBtn_, settings_.colors.background);
-    updateColorButton(foregroundColorBtn_, settings_.colors.foreground);
-    updateColorButton(keywordColorBtn_, settings_.colors.keyword);
-    updateColorButton(stringColorBtn_, settings_.colors.string);
-    updateColorButton(commentColorBtn_, settings_.colors.comment);
-    updateColorButton(functionColorBtn_, settings_.colors.function);
-    updateColorButton(typeColorBtn_, settings_.colors.type);
-    updateColorButton(numberColorBtn_, settings_.colors.number);
-    updateColorButton(glowColorBtn_, settings_.colors.glowColor);
-    updateColorButton(glowSecondaryBtn_, settings_.colors.glowSecondary);
-    
-    // Show/hide custom colors based on preset
-    customColorsGroup_->setVisible(settings_.themePreset == MonacoThemePreset::Custom);
-    
-    // Font tab
-    fontFamilyCombo_->setCurrentFont(void(std::string::fromStdString(settings_.fontFamily)));
-    fontSizeSpin_->setValue(settings_.fontSize);
-    fontLigaturesCheck_->setChecked(settings_.fontLigatures);
-    lineHeightSpin_->setValue(settings_.lineHeight);
-    
-    // Find weight index
-    for (int i = 0; i < fontWeightCombo_->count(); ++i) {
-        if (fontWeightCombo_->itemData(i) == settings_.fontWeight) {
-            fontWeightCombo_->setCurrentIndex(i);
-            break;
+void MonacoSettingsDialog::onPreview()
+{
+    updateSettingsFromUI();
+    if (m_previewCb) m_previewCb(m_settings);
+}
+
+void MonacoSettingsDialog::onExport()
+{
+    char file[MAX_PATH] = {};
+    OPENFILENAMEA ofn{};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner   = m_hDlg;
+    ofn.lpstrFilter = "Monaco Theme (*.monaco)\0*.monaco\0All Files\0*.*\0";
+    ofn.lpstrFile   = file;
+    ofn.nMaxFile    = MAX_PATH;
+    ofn.Flags       = OFN_OVERWRITEPROMPT;
+    ofn.lpstrDefExt = "monaco";
+
+    if (GetSaveFileNameA(&ofn)) {
+        updateSettingsFromUI();
+        if (saveToFile(file))
+            MessageBoxA(m_hDlg, "Theme exported successfully.", "Export", MB_OK | MB_ICONINFORMATION);
+        else
+            MessageBoxA(m_hDlg, "Failed to export theme.", "Export", MB_OK | MB_ICONERROR);
+    }
+}
+
+void MonacoSettingsDialog::onImport()
+{
+    char file[MAX_PATH] = {};
+    OPENFILENAMEA ofn{};
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner   = m_hDlg;
+    ofn.lpstrFilter = "Monaco Theme (*.monaco)\0*.monaco\0All Files\0*.*\0";
+    ofn.lpstrFile   = file;
+    ofn.nMaxFile    = MAX_PATH;
+    ofn.Flags       = OFN_FILEMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn)) {
+        if (loadFromFile(file)) {
+            updateUIFromSettings();
+            MessageBoxA(m_hDlg, "Theme imported successfully.", "Import", MB_OK | MB_ICONINFORMATION);
+        } else {
+            MessageBoxA(m_hDlg, "Failed to import theme.", "Import", MB_OK | MB_ICONERROR);
         }
     }
-    
-    // Editor tab
-    wordWrapCheck_->setChecked(settings_.wordWrap);
-    tabSizeSpin_->setValue(settings_.tabSize);
-    insertSpacesCheck_->setChecked(settings_.insertSpaces);
-    autoIndentCheck_->setChecked(settings_.autoIndent);
-    bracketMatchingCheck_->setChecked(settings_.bracketMatching);
-    autoClosingBracketsCheck_->setChecked(settings_.autoClosingBrackets);
-    formatOnPasteCheck_->setChecked(settings_.formatOnPaste);
-    
-    minimapEnabledCheck_->setChecked(settings_.minimapEnabled);
-    minimapRenderCharsCheck_->setChecked(settings_.minimapRenderCharacters);
-    minimapScaleSpin_->setValue(settings_.minimapScale);
-    
-    intellisenseCheck_->setChecked(settings_.enableIntelliSense);
-    quickSuggestionsCheck_->setChecked(settings_.quickSuggestions);
-    suggestDelaySpin_->setValue(settings_.suggestDelay);
-    parameterHintsCheck_->setChecked(settings_.parameterHints);
-    
-    // Neon tab
-    neonEffectsCheck_->setChecked(settings_.enableNeonEffects);
-    glowIntensitySlider_->setValue(settings_.glowIntensity);
-    glowIntensityLabel_->setText(std::string::number(settings_.glowIntensity));
-    scanlineDensitySpin_->setValue(settings_.scanlineDensity);
-    glitchProbabilitySpin_->setValue(settings_.glitchProbability);
-    particlesCheck_->setChecked(settings_.particlesEnabled);
-    particleCountSpin_->setValue(settings_.particleCount);
-    
-    espModeCheck_->setChecked(settings_.enableESPMode);
-    espHighlightVariablesCheck_->setChecked(settings_.espHighlightVariables);
-    espHighlightFunctionsCheck_->setChecked(settings_.espHighlightFunctions);
-    espWallhackCheck_->setChecked(settings_.espWallhackSymbols);
-    
-    // Enable/disable ESP mode based on variant
-    bool isNeonHack = (settings_.variant == MonacoVariantType::NeonHack);
-    espModeGroup_->setEnabled(isNeonHack);
-    
-    // Enable/disable neon effects based on variant
-    bool isNeon = (settings_.variant == MonacoVariantType::NeonCore || 
-                   settings_.variant == MonacoVariantType::NeonHack);
-    neonEffectsCheck_->setEnabled(isNeon);
-    
-    // Performance tab
-    renderDelaySpin_->setValue(settings_.renderDelay);
-    vblankSyncCheck_->setChecked(settings_.vblankSync);
-    predictiveFetchSpin_->setValue(settings_.predictiveFetchLines);
-    lazyTokenizationCheck_->setChecked(settings_.lazyTokenization);
-    lazyTokenDelaySpuin_->setValue(settings_.lazyTokenizationDelay);
 }
 
-void MonacoSettingsDialog::updateSettingsFromUI() {
-    // Theme tab
-    settings_.variant = static_cast<MonacoVariantType>(variantCombo_->currentIndex());
-    settings_.themePreset = static_cast<MonacoThemePreset>(themePresetCombo_->currentIndex());
-    
-    // Colors are updated directly via color picker
-    
-    // Font tab
-    settings_.fontFamily = fontFamilyCombo_->currentFont().family();
-    settings_.fontSize = fontSizeSpin_->value();
-    settings_.fontWeight = fontWeightCombo_->currentData();
-    settings_.fontLigatures = fontLigaturesCheck_->isChecked();
-    settings_.lineHeight = lineHeightSpin_->value();
-    
-    // Editor tab
-    settings_.wordWrap = wordWrapCheck_->isChecked();
-    settings_.tabSize = tabSizeSpin_->value();
-    settings_.insertSpaces = insertSpacesCheck_->isChecked();
-    settings_.autoIndent = autoIndentCheck_->isChecked();
-    settings_.bracketMatching = bracketMatchingCheck_->isChecked();
-    settings_.autoClosingBrackets = autoClosingBracketsCheck_->isChecked();
-    settings_.formatOnPaste = formatOnPasteCheck_->isChecked();
-    
-    settings_.minimapEnabled = minimapEnabledCheck_->isChecked();
-    settings_.minimapRenderCharacters = minimapRenderCharsCheck_->isChecked();
-    settings_.minimapScale = minimapScaleSpin_->value();
-    
-    settings_.enableIntelliSense = intellisenseCheck_->isChecked();
-    settings_.quickSuggestions = quickSuggestionsCheck_->isChecked();
-    settings_.suggestDelay = suggestDelaySpin_->value();
-    settings_.parameterHints = parameterHintsCheck_->isChecked();
-    
-    // Neon tab
-    settings_.enableNeonEffects = neonEffectsCheck_->isChecked();
-    settings_.glowIntensity = glowIntensitySlider_->value();
-    settings_.scanlineDensity = scanlineDensitySpin_->value();
-    settings_.glitchProbability = glitchProbabilitySpin_->value();
-    settings_.particlesEnabled = particlesCheck_->isChecked();
-    settings_.particleCount = particleCountSpin_->value();
-    
-    settings_.enableESPMode = espModeCheck_->isChecked();
-    settings_.espHighlightVariables = espHighlightVariablesCheck_->isChecked();
-    settings_.espHighlightFunctions = espHighlightFunctionsCheck_->isChecked();
-    settings_.espWallhackSymbols = espWallhackCheck_->isChecked();
-    
-    // Performance tab
-    settings_.renderDelay = renderDelaySpin_->value();
-    settings_.vblankSync = vblankSyncCheck_->isChecked();
-    settings_.predictiveFetchLines = predictiveFetchSpin_->value();
-    settings_.lazyTokenization = lazyTokenizationCheck_->isChecked();
-    settings_.lazyTokenizationDelay = lazyTokenDelaySpuin_->value();
-    
-    settings_.dirty = true;
+// ═══════════════════════════════════════════════════════════════════════════════
+// File persistence (simple INI-style)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+bool MonacoSettingsDialog::saveToFile(const std::string& path)
+{
+    std::ofstream f(path);
+    if (!f.is_open()) return false;
+
+    f << "[Monaco]\n";
+    f << "variant="       << m_settings.variantIndex     << "\n";
+    f << "theme="         << m_settings.themePresetIndex  << "\n";
+    f << "fontFamily="    << m_settings.fontFamily        << "\n";
+    f << "fontSize="      << m_settings.fontSize          << "\n";
+    f << "fontWeight="    << m_settings.fontWeight         << "\n";
+    f << "fontLigatures=" << m_settings.fontLigatures      << "\n";
+    f << "lineHeight="    << m_settings.lineHeight         << "\n";
+    f << "wordWrap="      << m_settings.wordWrap           << "\n";
+    f << "tabSize="       << m_settings.tabSize            << "\n";
+    f << "insertSpaces="  << m_settings.insertSpaces       << "\n";
+    f << "autoIndent="    << m_settings.autoIndent         << "\n";
+    f << "bracketMatch="  << m_settings.bracketMatching    << "\n";
+    f << "autoClose="     << m_settings.autoClosingBrackets<< "\n";
+    f << "formatPaste="   << m_settings.formatOnPaste      << "\n";
+    f << "neon="          << m_settings.neonEffects        << "\n";
+    f << "glowIntensity=" << m_settings.glowIntensity      << "\n";
+    f << "scanline="      << m_settings.scanlineDensity    << "\n";
+    f << "glitch="        << m_settings.glitchProbability  << "\n";
+    f << "particles="     << m_settings.particles          << "\n";
+    f << "particleCount=" << m_settings.particleCount      << "\n";
+    f << "esp="           << m_settings.espMode            << "\n";
+    f << "espVar="        << m_settings.espHighlightVariables << "\n";
+    f << "espFn="         << m_settings.espHighlightFunctions << "\n";
+    f << "espWall="       << m_settings.espWallhack        << "\n";
+    f << "minimap="       << m_settings.minimapEnabled     << "\n";
+    f << "miniChar="      << m_settings.minimapRenderChars << "\n";
+    f << "miniScale="     << m_settings.minimapScale       << "\n";
+    f << "intelli="       << m_settings.intellisense       << "\n";
+    f << "quickSug="      << m_settings.quickSuggestions   << "\n";
+    f << "sugDelay="      << m_settings.suggestDelay       << "\n";
+    f << "paramHint="     << m_settings.parameterHints     << "\n";
+    f << "renderDelay="   << m_settings.renderDelay        << "\n";
+    f << "vblankSync="    << m_settings.vblankSync         << "\n";
+    f << "predFetch="     << m_settings.predictiveFetch    << "\n";
+    f << "lazyTok="       << m_settings.lazyTokenization   << "\n";
+    f << "lazyDelay="     << m_settings.lazyTokenDelay     << "\n";
+
+    char hex[12];
+    auto writeClr = [&](const char* key, uint32_t c) {
+        _snprintf_s(hex, 12, _TRUNCATE, "0x%08X", c);
+        f << key << "=" << hex << "\n";
+    };
+    writeClr("bgColor",   m_settings.backgroundColor);
+    writeClr("fgColor",   m_settings.foregroundColor);
+    writeClr("kwColor",   m_settings.keywordColor);
+    writeClr("strColor",  m_settings.stringColor);
+    writeClr("cmtColor",  m_settings.commentColor);
+    writeClr("fnColor",   m_settings.functionColor);
+    writeClr("typeColor", m_settings.typeColor);
+    writeClr("numColor",  m_settings.numberColor);
+    writeClr("glowColor", m_settings.glowColor);
+    writeClr("glow2Color",m_settings.glowSecondaryColor);
+
+    return f.good();
 }
 
-void MonacoSettingsDialog::updateColorButton(void* button, uint32_t color) {
-    void void((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
-    std::string style = std::string("background-color: %1; border: 1px solid #555;"));
-    button->setStyleSheet(style);
-    button->setProperty("colorValue", std::any::fromValue(color));
-}
+bool MonacoSettingsDialog::loadFromFile(const std::string& path)
+{
+    std::ifstream f(path);
+    if (!f.is_open()) return false;
 
-void MonacoSettingsDialog::onVariantChanged(int index) {
-    settings_.variant = static_cast<MonacoVariantType>(index);
-    
-    // Enable/disable ESP mode based on variant
-    bool isNeonHack = (index == 2);  // NeonHack
-    espModeGroup_->setEnabled(isNeonHack);
-    
-    // Enable/disable neon effects based on variant
-    bool isNeon = (index == 1 || index == 2);  // NeonCore or NeonHack
-    neonEffectsCheck_->setEnabled(isNeon);
-    
-    settingsChanged(settings_);
-}
+    std::string line;
+    while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '[' || line[0] == '#') continue;
+        auto eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = line.substr(0, eq);
+        std::string val = line.substr(eq + 1);
 
-void MonacoSettingsDialog::onThemePresetChanged(int index) {
-    MonacoThemePreset preset = static_cast<MonacoThemePreset>(index);
-    
-    if (preset != MonacoThemePreset::Custom) {
-        settings_.colors = Settings::GetThemePresetColors(preset);
-        
-        // Update color buttons
-        updateColorButton(backgroundColorBtn_, settings_.colors.background);
-        updateColorButton(foregroundColorBtn_, settings_.colors.foreground);
-        updateColorButton(keywordColorBtn_, settings_.colors.keyword);
-        updateColorButton(stringColorBtn_, settings_.colors.string);
-        updateColorButton(commentColorBtn_, settings_.colors.comment);
-        updateColorButton(functionColorBtn_, settings_.colors.function);
-        updateColorButton(typeColorBtn_, settings_.colors.type);
-        updateColorButton(numberColorBtn_, settings_.colors.number);
-        updateColorButton(glowColorBtn_, settings_.colors.glowColor);
-        updateColorButton(glowSecondaryBtn_, settings_.colors.glowSecondary);
+        auto i = [&]{ return std::stoi(val); };
+        auto b = [&]{ return val == "1" || val == "true"; };
+        auto clr = [&]{ return static_cast<uint32_t>(std::stoul(val, nullptr, 16)); };
+
+        if      (key == "variant")       m_settings.variantIndex     = i();
+        else if (key == "theme")         m_settings.themePresetIndex = i();
+        else if (key == "fontFamily")    m_settings.fontFamily       = val;
+        else if (key == "fontSize")      m_settings.fontSize         = i();
+        else if (key == "fontWeight")    m_settings.fontWeight       = i();
+        else if (key == "fontLigatures") m_settings.fontLigatures    = b();
+        else if (key == "lineHeight")    m_settings.lineHeight       = std::stof(val);
+        else if (key == "wordWrap")      m_settings.wordWrap         = b();
+        else if (key == "tabSize")       m_settings.tabSize          = i();
+        else if (key == "insertSpaces")  m_settings.insertSpaces     = b();
+        else if (key == "autoIndent")    m_settings.autoIndent       = b();
+        else if (key == "bracketMatch")  m_settings.bracketMatching  = b();
+        else if (key == "autoClose")     m_settings.autoClosingBrackets = b();
+        else if (key == "formatPaste")   m_settings.formatOnPaste    = b();
+        else if (key == "neon")          m_settings.neonEffects      = b();
+        else if (key == "glowIntensity") m_settings.glowIntensity    = i();
+        else if (key == "scanline")      m_settings.scanlineDensity  = i();
+        else if (key == "glitch")        m_settings.glitchProbability = i();
+        else if (key == "particles")     m_settings.particles        = b();
+        else if (key == "particleCount") m_settings.particleCount    = i();
+        else if (key == "esp")           m_settings.espMode          = b();
+        else if (key == "espVar")        m_settings.espHighlightVariables = b();
+        else if (key == "espFn")         m_settings.espHighlightFunctions = b();
+        else if (key == "espWall")       m_settings.espWallhack      = b();
+        else if (key == "minimap")       m_settings.minimapEnabled   = b();
+        else if (key == "miniChar")      m_settings.minimapRenderChars = b();
+        else if (key == "miniScale")     m_settings.minimapScale     = i();
+        else if (key == "intelli")       m_settings.intellisense     = b();
+        else if (key == "quickSug")      m_settings.quickSuggestions = b();
+        else if (key == "sugDelay")      m_settings.suggestDelay     = i();
+        else if (key == "paramHint")     m_settings.parameterHints   = b();
+        else if (key == "renderDelay")   m_settings.renderDelay      = i();
+        else if (key == "vblankSync")    m_settings.vblankSync       = b();
+        else if (key == "predFetch")     m_settings.predictiveFetch  = i();
+        else if (key == "lazyTok")       m_settings.lazyTokenization = b();
+        else if (key == "lazyDelay")     m_settings.lazyTokenDelay   = i();
+        else if (key == "bgColor")       m_settings.backgroundColor  = clr();
+        else if (key == "fgColor")       m_settings.foregroundColor  = clr();
+        else if (key == "kwColor")       m_settings.keywordColor     = clr();
+        else if (key == "strColor")      m_settings.stringColor      = clr();
+        else if (key == "cmtColor")      m_settings.commentColor     = clr();
+        else if (key == "fnColor")       m_settings.functionColor    = clr();
+        else if (key == "typeColor")     m_settings.typeColor        = clr();
+        else if (key == "numColor")      m_settings.numberColor      = clr();
+        else if (key == "glowColor")     m_settings.glowColor        = clr();
+        else if (key == "glow2Color")    m_settings.glowSecondaryColor = clr();
     }
-    
-    settings_.themePreset = preset;
-    customColorsGroup_->setVisible(preset == MonacoThemePreset::Custom);
-    
-    themeChanged(preset);
-    settingsChanged(settings_);
+    m_originalSettings = m_settings;
+    return true;
 }
 
-void MonacoSettingsDialog::onFontFamilyChanged(const void& font) {
-    settings_.fontFamily = font.family();
-    settingsChanged(settings_);
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Public getters/setters
+// ═══════════════════════════════════════════════════════════════════════════════
 
-void MonacoSettingsDialog::onFontSizeChanged(int size) {
-    settings_.fontSize = size;
-    settingsChanged(settings_);
-}
+MonacoSettings MonacoSettingsDialog::getSettings() const { return m_settings; }
 
-void MonacoSettingsDialog::onFontWeightChanged(int weight) {
-    settings_.fontWeight = weight;
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onColorButtonClicked() {
-// REMOVED_QT:     auto* button = qobject_cast<void*>(sender());
-    if (!button) return;
-    
-    uint32_t currentColor = button->property("colorValue").toUInt();
-    void initial((currentColor >> 16) & 0xFF, (currentColor >> 8) & 0xFF, currentColor & 0xFF);
-    
-    void newColor = void::getColor(initial, this, tr("Select Color"));
-    if (!newColor.isValid()) return;
-    
-    uint32_t colorValue = (newColor.red() << 16) | (newColor.green() << 8) | newColor.blue();
-    updateColorButton(button, colorValue);
-    
-    // Update the appropriate color in settings
-    settings_.themePreset = MonacoThemePreset::Custom;
-    themePresetCombo_->setCurrentIndex(static_cast<int>(MonacoThemePreset::Custom));
-    customColorsGroup_->setVisible(true);
-    
-    if (button == backgroundColorBtn_) settings_.colors.background = colorValue;
-    else if (button == foregroundColorBtn_) settings_.colors.foreground = colorValue;
-    else if (button == keywordColorBtn_) settings_.colors.keyword = colorValue;
-    else if (button == stringColorBtn_) settings_.colors.string = colorValue;
-    else if (button == commentColorBtn_) settings_.colors.comment = colorValue;
-    else if (button == functionColorBtn_) settings_.colors.function = colorValue;
-    else if (button == typeColorBtn_) settings_.colors.type = colorValue;
-    else if (button == numberColorBtn_) settings_.colors.number = colorValue;
-    else if (button == glowColorBtn_) settings_.colors.glowColor = colorValue;
-    else if (button == glowSecondaryBtn_) settings_.colors.glowSecondary = colorValue;
-    
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onNeonEffectsToggled(bool enabled) {
-    settings_.enableNeonEffects = enabled;
-    glowIntensitySlider_->setEnabled(enabled);
-    scanlineDensitySpin_->setEnabled(enabled);
-    glitchProbabilitySpin_->setEnabled(enabled);
-    particlesCheck_->setEnabled(enabled);
-    particleCountSpin_->setEnabled(enabled && particlesCheck_->isChecked());
-    
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onGlowIntensityChanged(int value) {
-    settings_.glowIntensity = value;
-    glowIntensityLabel_->setText(std::string::number(value));
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onESPModeToggled(bool enabled) {
-    settings_.enableESPMode = enabled;
-    espHighlightVariablesCheck_->setEnabled(enabled);
-    espHighlightFunctionsCheck_->setEnabled(enabled);
-    espWallhackCheck_->setEnabled(enabled);
-    
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onMinimapToggled(bool enabled) {
-    settings_.minimapEnabled = enabled;
-    minimapRenderCharsCheck_->setEnabled(enabled);
-    minimapScaleSpin_->setEnabled(enabled);
-    
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onIntelliSenseToggled(bool enabled) {
-    settings_.enableIntelliSense = enabled;
-    quickSuggestionsCheck_->setEnabled(enabled);
-    suggestDelaySpin_->setEnabled(enabled);
-    parameterHintsCheck_->setEnabled(enabled);
-    
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onApplyClicked() {
-    updateSettingsFromUI();
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onResetToDefaultClicked() {
-    settings_ = MonacoSettings();  // Reset to defaults
-    updateUIFromSettings();
-    settingsChanged(settings_);
-}
-
-void MonacoSettingsDialog::onPreviewClicked() {
-    updateSettingsFromUI();
-    previewRequested(settings_);
-}
-
-void MonacoSettingsDialog::onExportThemeClicked() {
-    std::string path = // Dialog::getSaveFileName(this, 
-        tr("Export Monaco Theme"), 
-        std::string(), 
-        tr("Monaco Theme (*.monaco);;All Files (*)"));
-    
-    if (path.empty()) return;
-    
-    updateSettingsFromUI();
-    if (Settings::SaveMonaco(settings_, path)) {
-        void::information(this, tr("Export Successful"),
-            tr("Theme exported successfully to:\n%1"));
-    } else {
-        void::warning(this, tr("Export Failed"),
-            tr("Failed to export theme to:\n%1"));
-    }
-}
-
-void MonacoSettingsDialog::onImportThemeClicked() {
-    std::string path = // Dialog::getOpenFileName(this,
-        tr("Import Monaco Theme"),
-        std::string(),
-        tr("Monaco Theme (*.monaco);;All Files (*)"));
-    
-    if (path.empty()) return;
-    
-    MonacoSettings imported;
-    if (Settings::LoadMonaco(imported, path)) {
-        settings_ = imported;
-        updateUIFromSettings();
-        settingsChanged(settings_);
-        void::information(this, tr("Import Successful"),
-            tr("Theme imported successfully from:\n%1"));
-    } else {
-        void::warning(this, tr("Import Failed"),
-            tr("Failed to import theme from:\n%1"));
-    }
-}
-
-bool MonacoSettingsDialog::loadFromFile(const std::string& path) {
-    if (Settings::LoadMonaco(settings_, path)) {
-        originalSettings_ = settings_;
-        updateUIFromSettings();
-        return true;
-    }
-    return false;
-}
-
-bool MonacoSettingsDialog::saveToFile(const std::string& path) {
-    updateSettingsFromUI();
-    return Settings::SaveMonaco(settings_, path);
+void MonacoSettingsDialog::setSettings(const MonacoSettings& s)
+{
+    m_settings = s;
+    m_originalSettings = s;
+    if (m_hDlg && IsWindow(m_hDlg)) updateUIFromSettings();
 }
 
 } // namespace RawrXD::UI
-

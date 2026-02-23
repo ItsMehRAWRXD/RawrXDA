@@ -26,6 +26,9 @@
 #include <algorithm>
 #include <process.h>
 
+// RawrXD Settings (API Key Manager)
+#include "RawrXD_SettingsDialog.hpp"
+
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -208,6 +211,9 @@ static COLORREF g_colorCompletionGhost = RGB(100, 100, 100);
 
 #define IDM_VIEW_TERMINAL 2501
 #define IDM_VIEW_CHAT     2502
+
+#define IDM_SETTINGS_API_KEY     2601
+#define IDM_SETTINGS_EXTENSIONS  2602
 #define IDM_VIEW_OUTPUT   2503
 
 // C/C++ keywords for syntax highlighting
@@ -1310,6 +1316,11 @@ HMENU CreateMainMenu() {
     AppendMenuW(hAIMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hAIMenu, MF_STRING, IDM_AI_LOADMODEL, L"Load &Titan Model...");
     
+    // Settings
+    HMENU hSettingsMenu = CreatePopupMenu();
+    AppendMenuW(hSettingsMenu, MF_STRING, IDM_SETTINGS_API_KEY, L"&API Key Configuration...");
+    AppendMenuW(hSettingsMenu, MF_STRING, IDM_SETTINGS_EXTENSIONS, L"&Manage Extensions...");
+    
     // Help
     AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About");
     
@@ -1318,6 +1329,7 @@ HMENU CreateMainMenu() {
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hViewMenu, L"&View");
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hBuildMenu, L"&Build");
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAIMenu, L"&AI");
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hSettingsMenu, L"&Settings");
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, L"&Help");
     
     return hMenu;
@@ -1441,6 +1453,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         g_hwndStatusBar = CreateWindowExW(0, STATUSCLASSNAMEW, L"Ready",
             WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP,
             0, 0, 0, 0, hwnd, (HMENU)IDC_STATUSBAR, GetModuleHandle(nullptr), nullptr);
+        
+        // Configure status bar parts (3 sections: general status, model, extensions)
+        int statusParts[3] = {200, 350, -1};
+        SendMessageW(g_hwndStatusBar, SB_SETPARTS, 3, (LPARAM)statusParts);
+        SendMessageW(g_hwndStatusBar, SB_SETTEXTW, 0, (LPARAM)L"Ready");
+        SendMessageW(g_hwndStatusBar, SB_SETTEXTW, 1, (LPARAM)L"No model");
+        
+        // Initialize extension status from APIKeyManager
+        {
+            auto& mgr = RawrXD::APIKeyManager::Get();
+            std::string statusText = "Ext: ";
+            if (mgr.isAmazonQEnabled()) statusText += "✓AQ ";
+            if (mgr.isCopilotEnabled()) statusText += "✓CP ";
+            if (!mgr.isAmazonQEnabled() && !mgr.isCopilotEnabled()) statusText += "✗";
+            std::wstring wStatus(statusText.begin(), statusText.end());
+            SendMessageW(g_hwndStatusBar, SB_SETTEXTW, 2, (LPARAM)wStatus.c_str());
+        }
         
         // Set menu
         SetMenu(hwnd, CreateMainMenu());
@@ -1730,6 +1759,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 AppendWindowText(g_hwndOutput, L"[AI] Model unloaded.\r\n");
                 SendMessageW(g_hwndStatusBar, SB_SETTEXTW, 1, (LPARAM)L"No model");
             }
+            break;
+            
+        case IDM_SETTINGS_API_KEY:
+            RawrXD::ShowSettingsDialog(hwnd);
+            // Update status bar with extension status
+            {
+                auto& mgr = RawrXD::APIKeyManager::Get();
+                std::string statusText = "Ext: ";
+                if (mgr.isAmazonQEnabled()) statusText += "✓AQ ";
+                if (mgr.isCopilotEnabled()) statusText += "✓CP ";
+                if (!mgr.isAmazonQEnabled() && !mgr.isCopilotEnabled()) statusText += "✗";
+                std::wstring wStatus(statusText.begin(), statusText.end());
+                SendMessageW(g_hwndStatusBar, SB_SETTEXTW, 2, (LPARAM)wStatus.c_str());
+            }
+            break;
+            
+        case IDM_SETTINGS_EXTENSIONS:
+            RawrXD::ShowSettingsDialog(hwnd);
             break;
             
         case IDM_HELP_ABOUT:

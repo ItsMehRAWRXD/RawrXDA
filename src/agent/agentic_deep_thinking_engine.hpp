@@ -8,6 +8,14 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include "quantum_dynamic_time_manager.hpp"
+#include "quantum_autonomous_todo_system.hpp"
+
+// Forward declarations for quantum systems
+namespace RawrXD::Agent {
+    class QuantumAutonomousTodoSystem;
+    struct ExecutionResult;
+}
 
 /**
  * @class AgenticDeepThinkingEngine
@@ -72,6 +80,21 @@ public:
         long long elapsedMilliseconds;
         bool requiresUserInput;
         std::string userInputRequest;
+        
+        // Enhanced quantum features
+        float productionReadinessScore = 0.0f;
+        std::vector<std::string> auditFindings;
+        std::vector<RawrXD::Agent::QuantumAutonomousTodoSystem::TaskDefinition> generatedTodos;
+        float quantumOptimizationBonus = 0.0f;
+        bool usedMasmAcceleration = false;
+        
+        // Multi-agent consensus data
+        std::vector<float> agentConfidences;
+        float consensusScore = 0.0f;
+        bool consensusReached = false;
+        
+        ThinkingResult() : overallConfidence(0.0f), iterationCount(0), elapsedMilliseconds(0), 
+                          requiresUserInput(false) {}
     };
 
     explicit AgenticDeepThinkingEngine();
@@ -96,6 +119,17 @@ public:
     void setDefaultLanguage(const std::string& language) { m_defaultLanguage = language; }
     void enableDetailedLogging() { m_detailedLogging = true; }
     void disableDetailedLogging() { m_detailedLogging = false; }
+    
+    // Quantum enhancements
+    void enableQuantumMode(bool enable = true) { m_quantum_enabled = enable; }
+    void enableProductionAudit(bool enable = true) { m_production_audit_enabled = enable; }
+    void enableMasmAcceleration(bool enable = true) { m_masm_acceleration_enabled = enable; }
+    void setAutonomousMode(bool enable = true) { m_autonomous_mode = enable; }
+    void setQualityThresholds(float quality, float performance, float safety) {
+        m_quality_threshold = quality;
+        m_performance_threshold = performance; 
+        m_safety_threshold = safety;
+    }
 
     // File research
     std::vector<std::string> findRelatedFiles(const std::string& query, int maxResults = 5);
@@ -145,6 +179,14 @@ public:
         int consensusReached = 0;
         float avgConsensusConfidence = 0.0f;
         int totalAgentsSpawned = 0;
+        
+        // Quantum enhancement stats
+        int quantumThinkingRequests = 0;
+        int masmAcceleratedRequests = 0;
+        int productionAuditsPerformed = 0;
+        float avgProductionReadinessScore = 0.0f;
+        int todoGenerationEvents = 0;
+        int autonomousExecutions = 0;
     };
     ThinkingStats getStats() const;
     void resetStats();
@@ -153,6 +195,34 @@ private:
     // Core reasoning engine
     std::vector<ReasoningStep> performChainOfThought(const ThinkingContext& context);
     ReasoningStep executeStep(ThinkingStep step, const ThinkingContext& context, const std::string& previousContext);
+    
+    // Enhanced quantum thinking methods
+    ThinkingResult performQuantumThinking(const ThinkingContext& context);
+    ThinkingResult performTraditionalThinking(const ThinkingContext& context);
+    std::vector<ReasoningStep> performQuantumChainOfThought(const ThinkingContext& context, 
+                                                           const RawrXD::Agent::QuantumDynamicTimeManager::TimeAllocation& allocation);
+    std::vector<ReasoningStep> performMultiModelSelfCorrection(const std::vector<ReasoningStep>& steps,
+                                                              const ThinkingContext& context);
+    
+    // Production audit system
+    struct ProductionAuditResult {
+        float overall_score = 0.0f;
+        float code_quality_score = 0.0f;
+        float performance_score = 0.0f;
+        float security_score = 0.0f;
+        float maintainability_score = 0.0f;
+        std::vector<std::string> findings;
+    };
+    
+    ProductionAuditResult performProductionAudit(const ThinkingResult& result, const ThinkingContext& context);
+    float auditCodeQuality(const std::string& code);
+    float auditPerformance(const std::string& code);
+    float auditSecurity(const std::string& code);
+    float auditMaintainability(const std::string& code);
+    
+    // Multi-agent enhancement
+    ThinkingResult enhanceWithMultiAgentConsensus(const ThinkingResult& result, const ThinkingContext& context);
+    float calculateEnhancedConfidence(const ThinkingResult& result);
 
     // Problem analysis
     ReasoningStep analyzeProblem(const ThinkingContext& context);
@@ -214,6 +284,17 @@ private:
     int m_maxThinkingTime = 30000;  // 30 seconds
     std::string m_defaultLanguage = "cpp";
     bool m_detailedLogging = false;
+    
+    // Quantum enhancement flags
+    bool m_quantum_enabled = true;
+    bool m_production_audit_enabled = true;
+    bool m_masm_acceleration_enabled = true;
+    bool m_autonomous_mode = false;
+    
+    // Quality thresholds
+    float m_quality_threshold = 0.85f;
+    float m_performance_threshold = 0.80f;
+    float m_safety_threshold = 0.95f;
 
     // Caching and memory
     std::map<std::string, ThinkingResult> m_thinkingCache;

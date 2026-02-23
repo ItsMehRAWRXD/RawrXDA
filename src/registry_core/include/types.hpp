@@ -23,7 +23,7 @@ enum class Error {
 enum class ExtensionType {
     PowerShell,
     VSCode,
-    QtPlugin,
+    NativePlugin,  // was QtPlugin; C++20/Win32 plugin (no Qt)
     Unknown
 };
 

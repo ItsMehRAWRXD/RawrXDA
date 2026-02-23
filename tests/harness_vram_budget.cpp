@@ -9,9 +9,6 @@
 #include <thread>
 #include <vector>
 
-#include "logging/logger.h"
-static Logger s_logger("harness_vram_budget");
-
 struct Options {
     std::string mode = "near-budget"; // load|near-budget|oversubscribe
     double target_frac = 0.9;          // fraction of available budget to consume
@@ -30,16 +27,17 @@ struct BudgetSample {
 };
 
 static void log_json(const std::string &event, const BudgetSample &s, const std::string &note = "") {
-    s_logger.info("{");
-    s_logger.info("\");
-    s_logger.info("\");
-    s_logger.info("\");
-    s_logger.info("\");
-    s_logger.info("\");
+    std::cout << "{"
+              << "\"event\":\"" << event << "\",";
+    std::cout << "\"budget_supported\":" << (s.budget_supported ? "true" : "false") << ",";
+    std::cout << "\"total_bytes\":" << s.total << ",";
+    std::cout << "\"budget_bytes\":" << s.budget << ",";
+    std::cout << "\"usage_bytes\":" << s.usage << ",";
+    std::cout << "\"available_bytes\":" << s.available;
     if (!note.empty()) {
-        s_logger.info(",\");
+        std::cout << ",\"note\":\"" << note << "\"";
     }
-    s_logger.info("}");
+    std::cout << "}" << std::endl;
 }
 
 class VulkanHarness {
@@ -75,14 +73,14 @@ bool VulkanHarness::init(bool disable_budget) {
     ci.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     ci.pApplicationInfo = &app;
     if (vkCreateInstance(&ci, nullptr, &instance_) != VK_SUCCESS) {
-        s_logger.error( "failed to create Vulkan instance" << std::endl;
+        std::cerr << "failed to create Vulkan instance" << std::endl;
         return false;
     }
 
     uint32_t dev_count = 0;
     vkEnumeratePhysicalDevices(instance_, &dev_count, nullptr);
     if (dev_count == 0) {
-        s_logger.error( "no Vulkan devices found" << std::endl;
+        std::cerr << "no Vulkan devices found" << std::endl;
         return false;
     }
     std::vector<VkPhysicalDevice> devices(dev_count);
@@ -148,7 +146,7 @@ bool VulkanHarness::init(bool disable_budget) {
     dci.ppEnabledExtensionNames = enabled_extensions_.empty() ? nullptr : enabled_extensions_.data();
 
     if (vkCreateDevice(physical_device_, &dci, nullptr, &device_) != VK_SUCCESS) {
-        s_logger.error( "failed to create logical device" << std::endl;
+        std::cerr << "failed to create logical device" << std::endl;
         return false;
     }
 
@@ -307,7 +305,7 @@ static void log_sample(const Options &opt, const std::string &event, const Budge
     if (opt.json) {
         log_json(event, s, note);
     } else {
-        s_logger.info( event << ": total=" << (s.total / 1.0e9) << "GB budget=" << (s.budget / 1.0e9)
+        std::cout << event << ": total=" << (s.total / 1.0e9) << "GB budget=" << (s.budget / 1.0e9)
                   << "GB usage=" << (s.usage / 1.0e9) << "GB avail=" << (s.available / 1.0e9)
                   << (note.empty() ? "" : (" note=" + note)) << std::endl;
     }

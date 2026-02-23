@@ -14,6 +14,15 @@
 #include <algorithm>
 #include <regex>
 
+// SCAFFOLD_144: Diagnostic severity and quick-fix
+
+
+// SCAFFOLD_142: Diagnostic consumer and aggregation
+
+
+// SCAFFOLD_097: diagnostic_consumer agentic auto-fix
+
+
 namespace RawrXD {
 namespace LSP {
 

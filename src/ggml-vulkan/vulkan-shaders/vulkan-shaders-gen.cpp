@@ -20,9 +20,6 @@
 #include <sys/types.h>
 #include <filesystem>
 
-#include "logging/logger.h"
-static Logger s_logger("vulkan-shaders-gen");
-
 #ifdef _WIN32
     #define NOMINMAX
     #include <windows.h>
@@ -254,7 +251,7 @@ std::string read_binary_file(const std::string& path, bool may_not_exist = false
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) {
         if (!may_not_exist) {
-            s_logger.error( "Error opening file: " << path << " (" << strerror(errno) << ")\n";
+            std::cerr << "Error opening file: " << path << " (" << strerror(errno) << ")\n";
         }
         return {};
     }
@@ -267,7 +264,7 @@ std::string read_binary_file(const std::string& path, bool may_not_exist = false
     size_t read_size = fread(data.data(), 1, size, f);
     fclose(f);
     if (read_size != size) {
-        s_logger.error( "Error reading file: " << path << " (" << strerror(errno) << ")\n";
+        std::cerr << "Error reading file: " << path << " (" << strerror(errno) << ")\n";
         return {};
     }
 
@@ -277,14 +274,14 @@ std::string read_binary_file(const std::string& path, bool may_not_exist = false
 void write_binary_file(const std::string& path, const std::string& content) {
     FILE* f = fopen(path.c_str(), "wb");
     if (!f) {
-        s_logger.error( "Error opening file for writing: " << path << " (" << strerror(errno) << ")\n";
+        std::cerr << "Error opening file for writing: " << path << " (" << strerror(errno) << ")\n";
         return;
     }
 
     size_t write_size = fwrite(content.data(), 1, content.size(), f);
     fclose(f);
     if (write_size != content.size()) {
-        s_logger.error( "Error writing file: " << path << " (" << strerror(errno) << ")\n";
+        std::cerr << "Error writing file: " << path << " (" << strerror(errno) << ")\n";
         return;
     }
 }
@@ -365,19 +362,19 @@ void string_to_spv_func(std::string name, std::string in_path, std::string out_p
 
     std::string stdout_str, stderr_str;
     try {
-        // s_logger.info("Executing command: ");
+        // std::cout << "Executing command: ";
         // for (const auto& part : cmd) {
-        //     s_logger.info( part << " ";
+        //     std::cout << part << " ";
         // }
-        // s_logger.info( std::endl;
+        // std::cout << std::endl;
 
         execute_command(cmd, stdout_str, stderr_str);
         if (!stderr_str.empty()) {
-            s_logger.error( "cannot compile " << name << "\n\n";
+            std::cerr << "cannot compile " << name << "\n\n";
             for (const auto& part : cmd) {
-                s_logger.error( part << " ";
+                std::cerr << part << " ";
             }
-            s_logger.error( "\n\n" << stderr_str << std::endl;
+            std::cerr << "\n\n" << stderr_str << std::endl;
             return;
         }
 
@@ -396,7 +393,7 @@ void string_to_spv_func(std::string name, std::string in_path, std::string out_p
         std::lock_guard<std::mutex> guard(lock);
         shader_fnames.push_back(std::make_pair(name, out_path));
     } catch (const std::exception& e) {
-        s_logger.error( "Error executing command for " << name << ": " << e.what() << std::endl;
+        std::cerr << "Error executing command for " << name << ": " << e.what() << std::endl;
     }
 }
 
@@ -1125,7 +1122,7 @@ int main(int argc, char** argv) {
 
     if (!directory_exists(output_dir)) {
         if (!create_directory(output_dir)) {
-            s_logger.error( "Error creating output directory: " << output_dir << "\n";
+            std::cerr << "Error creating output directory: " << output_dir << "\n";
             return EXIT_FAILURE;
         }
     }

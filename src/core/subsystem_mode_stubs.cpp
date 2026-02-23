@@ -1,8 +1,10 @@
-// subsystem_mode_stubs.cpp — No-op stubs for SubsystemRegistry when RawrXD_IDE_unified.asm is not linked.
+// subsystem_mode_stubs.cpp — No-op implementations for SubsystemRegistry when RawrXD_IDE_unified.asm is not linked.
 // RawrXD-Win32IDE can link this to satisfy extern "C" references from rawrxd_subsystem_api.cpp.
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #endif
 
 extern "C" {

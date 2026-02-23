@@ -7,7 +7,9 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "crash_containment.h"
 #include "patch_rollback_ledger.h"
 
@@ -157,8 +159,8 @@ static void writeCrashLog(const char* path, const CrashReport& report) {
         "Patch Rollback Succeeded: %s\r\n\r\n"
         "Dump File: %s\r\n",
         (unsigned long long)report.timestampMs,
-        report.threadId, report.processId,
-        report.exceptionCode, (unsigned long long)report.rip,
+        (unsigned)report.threadId, (unsigned)report.processId,
+        (unsigned)report.exceptionCode, (unsigned long long)report.rip,
         report.moduleName,
         (unsigned long long)report.rip,
         (unsigned long long)report.rsp,
@@ -179,8 +181,8 @@ static void writeCrashLog(const char* path, const CrashReport& report) {
         (unsigned long long)report.registers[13],
         (unsigned long long)report.registers[14],
         (unsigned long long)report.registers[15],
-        report.activePatchCount,
-        report.lastAppliedPatchId,
+        (int)report.activePatchCount,
+        (unsigned)report.lastAppliedPatchId,
         report.patchRollbackAttempted ? "Yes" : "No",
         report.patchRollbackSucceeded ? "Yes" : "No",
         report.dumpPath);

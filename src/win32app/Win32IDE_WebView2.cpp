@@ -34,6 +34,9 @@
 #include <cstring>
 #include <cwchar>
 
+// SCAFFOLD_041: WebView2 and model selector
+
+
 // ============================================================================
 // COM Helpers — Reference-counted callback implementations
 // ============================================================================

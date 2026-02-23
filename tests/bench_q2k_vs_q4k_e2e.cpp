@@ -19,9 +19,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include "logging/logger.h"
-static Logger s_logger("bench_q2k_vs_q4k_e2e");
-
 // ============================================================
 // Q2_K Quantization Format (2-bit, 8:1 compression)
 // ============================================================
@@ -188,60 +185,60 @@ int main(int argc, char* argv[]) {
         num_blocks = std::atoi(argv[1]);
     }
     
-    s_logger.info("\n");
-    s_logger.info("╔════════════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║        Q2_K vs Q4_K Quantization Format Benchmark              ║\n");
-    s_logger.info("║      Real Dequantization Performance Comparison                ║\n");
-    s_logger.info("╚════════════════════════════════════════════════════════════════╝\n\n");
+    std::cout << "\n";
+    std::cout << "╔════════════════════════════════════════════════════════════════╗\n";
+    std::cout << "║        Q2_K vs Q4_K Quantization Format Benchmark              ║\n";
+    std::cout << "║      Real Dequantization Performance Comparison                ║\n";
+    std::cout << "╚════════════════════════════════════════════════════════════════╝\n\n";
     
-    s_logger.info("Configuration:\n");
-    s_logger.info("  Blocks:       ");
-    s_logger.info("  Elements/block: 256\n");
-    s_logger.info("  Total elements: ");
+    std::cout << "Configuration:\n";
+    std::cout << "  Blocks:       " << num_blocks << "\n";
+    std::cout << "  Elements/block: 256\n";
+    std::cout << "  Total elements: " << (num_blocks * 256) << "\n\n";
     
     // Run benchmarks
-    s_logger.info("Running benchmarks...\n\n");
+    std::cout << "Running benchmarks...\n\n";
     
     auto q2k_result = benchmark_q2k(num_blocks);
     auto q4k_result = benchmark_q4k(num_blocks);
     
     // Print results
-    s_logger.info( std::fixed << std::setprecision(2);
-    s_logger.info("╔════════════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║                      BENCHMARK RESULTS                         ║\n");
-    s_logger.info("╚════════════════════════════════════════════════════════════════╝\n\n");
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "╔════════════════════════════════════════════════════════════════╗\n";
+    std::cout << "║                      BENCHMARK RESULTS                         ║\n";
+    std::cout << "╚════════════════════════════════════════════════════════════════╝\n\n";
     
-    s_logger.info("Q2_K (2-bit Quantization, 8:1 compression):\n");
-    s_logger.info("  Throughput:    ");
-    s_logger.info("  Total Time:    ");
-    s_logger.info("  Model Size:    ~24.3 GB (for 70B parameters)\n\n");
+    std::cout << "Q2_K (2-bit Quantization, 8:1 compression):\n";
+    std::cout << "  Throughput:    " << q2k_result.throughput_mel_per_sec << " M elements/sec\n";
+    std::cout << "  Total Time:    " << q2k_result.total_time_ms << " ms\n";
+    std::cout << "  Model Size:    ~24.3 GB (for 70B parameters)\n\n";
     
-    s_logger.info("Q4_K (4-bit Quantization, 7.3:1 compression):  ⭐ RECOMMENDED\n");
-    s_logger.info("  Throughput:    ");
-    s_logger.info("  Total Time:    ");
-    s_logger.info("  Model Size:    ~37.1 GB (for 70B parameters)\n\n");
+    std::cout << "Q4_K (4-bit Quantization, 7.3:1 compression):  ⭐ RECOMMENDED\n";
+    std::cout << "  Throughput:    " << q4k_result.throughput_mel_per_sec << " M elements/sec\n";
+    std::cout << "  Total Time:    " << q4k_result.total_time_ms << " ms\n";
+    std::cout << "  Model Size:    ~37.1 GB (for 70B parameters)\n\n";
     
     // Calculate advantage
     double advantage = ((q4k_result.throughput_mel_per_sec - q2k_result.throughput_mel_per_sec) 
                        / q2k_result.throughput_mel_per_sec * 100.0);
     
-    s_logger.info("╔════════════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║                    PERFORMANCE COMPARISON                      ║\n");
-    s_logger.info("╚════════════════════════════════════════════════════════════════╝\n\n");
+    std::cout << "╔════════════════════════════════════════════════════════════════╗\n";
+    std::cout << "║                    PERFORMANCE COMPARISON                      ║\n";
+    std::cout << "╚════════════════════════════════════════════════════════════════╝\n\n";
     
     if (advantage > 0) {
-        s_logger.info("✅ Q4_K is ");
-        s_logger.info("   • Better for inference-heavy workloads\n");
-        s_logger.info("   • Sweet spot between quality and performance\n");
+        std::cout << "✅ Q4_K is " << advantage << "% FASTER\n";
+        std::cout << "   • Better for inference-heavy workloads\n";
+        std::cout << "   • Sweet spot between quality and performance\n";
     } else {
-        s_logger.info("✅ Q2_K is ");
-        s_logger.info("   • Better for storage-constrained environments\n");
+        std::cout << "✅ Q2_K is " << std::abs(advantage) << "% FASTER\n";
+        std::cout << "   • Better for storage-constrained environments\n";
     }
     
-    s_logger.info("\n✓ Recommendation:\n");
-    s_logger.info("  Use Q4_K for production inference (18.8% faster on average)\n");
-    s_logger.info("  Use Q2_K for storage optimization (33% smaller model size)\n");
-    s_logger.info("\n");
+    std::cout << "\n✓ Recommendation:\n";
+    std::cout << "  Use Q4_K for production inference (18.8% faster on average)\n";
+    std::cout << "  Use Q2_K for storage optimization (33% smaller model size)\n";
+    std::cout << "\n";
     
     return 0;
 }

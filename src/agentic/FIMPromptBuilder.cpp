@@ -2,6 +2,7 @@
 // FIMPromptBuilder.cpp — Fill-in-Middle Prompt Construction Implementation
 // =============================================================================
 #include "FIMPromptBuilder.h"
+#include "../../include/enterprise_license.h"
 #include <sstream>
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,9 @@
 #undef ERROR
 #endif
 #include "agentic_observability.h"
+
+// SCAFFOLD_118: FIM prompt builder
+
 
 static AgenticObservability& GetObs() {
     static AgenticObservability instance;
@@ -81,6 +85,11 @@ FIMBuildResult FIMPromptBuilder::BuildFromParts(
     const std::string& suffix,
     const std::string& filename) const
 {
+    auto& lic = RawrXD::License::EnterpriseLicenseV2::Instance();
+    if (!lic.gate(RawrXD::License::FeatureID::PromptLibrary,
+            "FIMPromptBuilder::BuildFromParts")) {
+        return FIMBuildResult::fail("Prompt Library requires a Professional license");
+    }
     std::string trimmedPrefix = prefix;
     std::string trimmedSuffix = suffix;
     TrimToFit(trimmedPrefix, trimmedSuffix);

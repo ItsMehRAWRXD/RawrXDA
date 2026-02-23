@@ -35,10 +35,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\\RawrXD_Root.ps1"
-
 # Import Advanced Model Operations Module
-$advancedModulePath = Join-Path (Get-RawrXDRoot) "scripts" "Advanced-Model-Operations.psm1"
+$advancedModulePath = Join-Path (Split-Path $PSScriptRoot -Parent) "lazy init ide\scripts\Advanced-Model-Operations.psm1"
 if (Test-Path $advancedModulePath) {
     Import-Module $advancedModulePath -Force -DisableNameChecking
     Write-Verbose "Advanced Model Operations module loaded"
@@ -48,7 +46,7 @@ if (Test-Path $advancedModulePath) {
 # CONFIGURATION & PATHS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-$script:StationRoot = Get-RawrXDRoot
+$script:StationRoot = "D:\lazy init ide"
 $script:ConfigDir = Join-Path $StationRoot "logs/swarm_config"
 $script:MakingStationDir = Join-Path $ConfigDir "making_station"
 $script:ModelsConfigFile = Join-Path $ConfigDir "models.json"

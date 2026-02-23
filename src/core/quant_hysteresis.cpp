@@ -7,7 +7,9 @@
 // Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
 // ============================================================================
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include "quant_hysteresis.h"
 
 #include <windows.h>

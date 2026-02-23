@@ -6,6 +6,12 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+
+#ifndef RAWRXD_WIN32_STATIC_BUILD
+#define RAWRXD_SHIP_EXPORT __declspec(dllexport)
+#else
+#define RAWRXD_SHIP_EXPORT
+#endif
 #include <map>
 #include <string>
 #include <vector>
@@ -117,51 +123,54 @@ public:
 static RawrXDResourceManager* g_resourceManager = nullptr;
 
 extern "C" {
-    __declspec(dllexport) void* __stdcall CreateResourceManager(void* hModule) {
+    RAWRXD_SHIP_EXPORT void* __stdcall CreateResourceManager(void* hModule) {
         if (!g_resourceManager) {
             g_resourceManager = new RawrXDResourceManager((HMODULE)hModule);
         }
         return g_resourceManager;
     }
     
-    __declspec(dllexport) void __stdcall DestroyResourceManager(void* mgr) {
+    RAWRXD_SHIP_EXPORT void __stdcall DestroyResourceManager(void* mgr) {
         if (mgr && mgr == g_resourceManager) {
             delete g_resourceManager;
             g_resourceManager = nullptr;
         }
     }
     
-    __declspec(dllexport) void __stdcall ResourceManager_LoadFile(void* mgr, const wchar_t* filePath, const char* resourceId) {
+    RAWRXD_SHIP_EXPORT void __stdcall ResourceManager_LoadFile(void* mgr, const wchar_t* filePath, const char* resourceId) {
         RawrXDResourceManager* m = static_cast<RawrXDResourceManager*>(mgr);
         if (m) m->LoadResourceFromFile(filePath, resourceId);
     }
     
-    __declspec(dllexport) void __stdcall ResourceManager_RegisterResource(void* mgr, const char* resourceId, const char* data, size_t size) {
+    RAWRXD_SHIP_EXPORT void __stdcall ResourceManager_RegisterResource(void* mgr, const char* resourceId, const char* data, size_t size) {
         RawrXDResourceManager* m = static_cast<RawrXDResourceManager*>(mgr);
         if (m) m->RegisterResource(resourceId, data, size);
     }
     
-    __declspec(dllexport) bool __stdcall ResourceManager_GetResource(void* mgr, const char* resourceId, char** outData, size_t* outSize) {
+    RAWRXD_SHIP_EXPORT bool __stdcall ResourceManager_GetResource(void* mgr, const char* resourceId, char** outData, size_t* outSize) {
         RawrXDResourceManager* m = static_cast<RawrXDResourceManager*>(mgr);
         return m ? m->GetResource(resourceId, outData, outSize) : false;
     }
     
-    __declspec(dllexport) bool __stdcall ResourceManager_ResourceExists(void* mgr, const char* resourceId) {
+    RAWRXD_SHIP_EXPORT bool __stdcall ResourceManager_ResourceExists(void* mgr, const char* resourceId) {
         RawrXDResourceManager* m = static_cast<RawrXDResourceManager*>(mgr);
         return m ? m->ResourceExists(resourceId) : false;
     }
     
-    __declspec(dllexport) size_t __stdcall ResourceManager_GetResourceCount(void* mgr) {
+    RAWRXD_SHIP_EXPORT size_t __stdcall ResourceManager_GetResourceCount(void* mgr) {
         RawrXDResourceManager* m = static_cast<RawrXDResourceManager*>(mgr);
         return m ? m->GetResourceCount() : 0;
     }
 }
 
+#ifndef RAWRXD_WIN32_STATIC_BUILD
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     if (fdwReason == DLL_PROCESS_ATTACH) {
         OutputDebugStringW(L"RawrXD_ResourceManager_Win32 loaded\n");
     } else if (fdwReason == DLL_PROCESS_DETACH && g_resourceManager) {
         delete g_resourceManager;
+        g_resourceManager = nullptr;
     }
     return TRUE;
 }
+#endif

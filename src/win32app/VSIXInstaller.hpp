@@ -13,8 +13,10 @@
 #include <windows.h>
 #include <wintrust.h>
 #include <softpub.h>
+#include <shlobj.h>
 #pragma comment(lib, "wintrust.lib")
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "shell32.lib")
 
 // Native VSIX to RawrXD Converter
 // Phase 36: Hardened VSIX installer with signature verification and content scanning
@@ -30,6 +32,22 @@
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 
 namespace RawrXD {
+
+// ============================================================================
+// Extensions install root — %APPDATA%\RawrXD\extensions
+// ============================================================================
+static inline std::string GetExtensionsInstallRoot() {
+    wchar_t appData[MAX_PATH] = {};
+    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, appData))) {
+        char buf[MAX_PATH * 2] = {};
+        WideCharToMultiByte(CP_UTF8, 0, appData, -1, buf, sizeof(buf), nullptr, nullptr);
+        std::string root(buf);
+        if (!root.empty() && root.back() != '\\') root += '\\';
+        root += "RawrXD\\extensions\\";
+        return root;
+    }
+    return "RawrXD_extensions\\";
+}
 
 // ============================================================================
 // VSIXVerification — Result of pre-install security checks
@@ -117,14 +135,14 @@ public:
         std::cout << "[VSIX] Preparing to unzip..." << std::endl;
 
         std::string extName = std::filesystem::path(vsixPath).stem().string();
-        std::string installDir = "E:\\RawrXD\\extensions\\" + extName;
+        std::string installDir = GetExtensionsInstallRoot() + extName;
         std::filesystem::create_directories(installDir);
 
-        // Native Unzip using tar (Windows 10+ includes tar)
-        std::string cmd = "tar -xf \"" + vsixPath + "\" -C \"" + installDir + "\"";
+        // VSIX is ZIP format — PowerShell Expand-Archive first (most reliable on Windows)
+        std::string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Expand-Archive -LiteralPath '" + vsixPath + "' -DestinationPath '" + installDir + "' -Force\"";
         if (system(cmd.c_str()) != 0) {
-            // Fallback to PowerShell
-            cmd = "powershell -Command \"Expand-Archive -Path '" + vsixPath + "' -DestinationPath '" + installDir + "' -Force\"";
+            // Fallback: tar (Windows 10+)
+            cmd = "tar -xf \"" + vsixPath + "\" -C \"" + installDir + "\"";
             if (system(cmd.c_str()) != 0) {
                 std::cout << "[VSIX] Error: Failed to extract package." << std::endl;
                 return false;

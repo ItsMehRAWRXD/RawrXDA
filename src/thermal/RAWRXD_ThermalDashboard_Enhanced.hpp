@@ -40,6 +40,7 @@ struct TemperatureDataPoint {
 
 /**
  * @brief Enhanced Thermal Dashboard with Predictive Visualization
+ * Win32: parent is HWND for CreateWindowExW.
  */
 class ThermalDashboardEnhanced {
 
@@ -236,6 +237,7 @@ private:
 
 /**
  * @brief Compact toolbar widget for thermal status (enhanced)
+ * Win32: parent is HWND.
  */
 class ThermalCompactWidgetEnhanced {
 

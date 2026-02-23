@@ -24,12 +24,12 @@
 #include "core/voice_automation.hpp"
 #include "core/instructions_provider.hpp"
 
-#include "logging/logger.h"
-static Logger s_logger("cli_shell");
-
 // ── Unified Feature Dispatch (CLI ↔ Win32 parity) ──────────────────────────
 #include "cli/cli_feature_bridge.h"
 #include "core/feature_handlers.h"
+
+// SCAFFOLD_094: cli_shell agentic engine wiring
+
 
 namespace fs = std::filesystem;
 
@@ -86,15 +86,15 @@ void cmd_instructions(const std::string& args) {
     auto& provider = InstructionsProvider::instance();
 
     if (args.empty() || args == "help") {
-        s_logger.info("\n\xF0\x9F\x93\x8B  INSTRUCTIONS COMMANDS:\n");
-        s_logger.info("  !instructions                 Show all loaded instructions\n");
-        s_logger.info("  !instructions list            List loaded instruction files\n");
-        s_logger.info("  !instructions show             Show full content (all lines)\n");
-        s_logger.info("  !instructions reload           Reload from disk\n");
-        s_logger.info("  !instructions paths            Show search paths\n");
-        s_logger.info("  !instructions load <file>      Load a specific file\n");
-        s_logger.info("  !instructions json             Export as JSON\n");
-        s_logger.info("  !instructions summary          Show file summary\n");
+        std::cout << "\n\xF0\x9F\x93\x8B  INSTRUCTIONS COMMANDS:\n";
+        std::cout << "  !instructions                 Show all loaded instructions\n";
+        std::cout << "  !instructions list            List loaded instruction files\n";
+        std::cout << "  !instructions show             Show full content (all lines)\n";
+        std::cout << "  !instructions reload           Reload from disk\n";
+        std::cout << "  !instructions paths            Show search paths\n";
+        std::cout << "  !instructions load <file>      Load a specific file\n";
+        std::cout << "  !instructions json             Export as JSON\n";
+        std::cout << "  !instructions summary          Show file summary\n";
         return;
     }
 
@@ -102,69 +102,74 @@ void cmd_instructions(const std::string& args) {
     if (!provider.isLoaded()) {
         auto r = provider.loadAll();
         if (!r.success) {
-            s_logger.info("\xE2\x9D\x8C Failed to load instructions: ");
+            std::cout << "\xE2\x9D\x8C Failed to load instructions: " << r.detail << "\n";
         }
     }
 
     if (args == "list") {
         auto files = provider.getAll();
         if (files.empty()) {
-            s_logger.info("\xE2\x9A\xA0 No instruction files loaded.\n");
+            std::cout << "\xE2\x9A\xA0 No instruction files loaded.\n";
             return;
         }
-        s_logger.info("\n\xF0\x9F\x93\x82 Loaded instruction files (");
+        std::cout << "\n\xF0\x9F\x93\x82 Loaded instruction files (" << files.size() << "):\n";
         for (const auto& f : files) {
-            s_logger.info("  \xE2\x9C\x93 ");
-            s_logger.info("    Path: ");
+            std::cout << "  \xE2\x9C\x93 " << f.fileName
+                      << "  (" << f.lineCount << " lines, "
+                      << f.sizeBytes << " bytes)\n";
+            std::cout << "    Path: " << f.filePath << "\n";
         }
     }
     else if (args == "show") {
         std::string content = provider.getAllContent();
         if (content.empty()) {
-            s_logger.info("\xE2\x9A\xA0 No instructions content available.\n");
+            std::cout << "\xE2\x9A\xA0 No instructions content available.\n";
         } else {
-            s_logger.info("\n");
+            std::cout << "\n" << content << "\n";
         }
     }
     else if (args == "reload") {
         auto r = provider.reload();
         if (r.success) {
-            s_logger.info("\xE2\x9C\x85 Instructions reloaded (");
+            std::cout << "\xE2\x9C\x85 Instructions reloaded (" 
+                      << provider.getLoadedCount() << " files)\n";
         } else {
-            s_logger.info("\xE2\x9D\x8C Reload failed: ");
+            std::cout << "\xE2\x9D\x8C Reload failed: " << r.detail << "\n";
         }
     }
     else if (args == "paths") {
         auto paths = provider.getSearchPaths();
-        s_logger.info("\n\xF0\x9F\x94\x8D Search paths (");
+        std::cout << "\n\xF0\x9F\x94\x8D Search paths (" << paths.size() << "):\n";
         for (const auto& p : paths) {
             bool exists = fs::exists(p);
-            s_logger.info("  ");
+            std::cout << "  " << (exists ? "\xE2\x9C\x93" : "\xE2\x9C\x97")
+                      << " " << p << (exists ? "" : " (not found)") << "\n";
         }
     }
     else if (args.substr(0, 5) == "load ") {
         std::string path = args.substr(5);
         auto r = provider.loadFile(path);
         if (r.success) {
-            s_logger.info("\xE2\x9C\x85 Loaded: ");
+            std::cout << "\xE2\x9C\x85 Loaded: " << path << "\n";
         } else {
-            s_logger.info("\xE2\x9D\x8C Failed: ");
+            std::cout << "\xE2\x9D\x8C Failed: " << r.detail << "\n";
         }
     }
     else if (args == "json") {
-        s_logger.info( provider.toJSON() << "\n";
+        std::cout << provider.toJSON() << "\n";
     }
     else if (args == "summary") {
-        s_logger.info( provider.toJSONSummary() << "\n";
+        std::cout << provider.toJSONSummary() << "\n";
     }
     else {
         // Default: show list
         auto files = provider.getAll();
         if (files.empty()) {
-            s_logger.info("\xE2\x9A\xA0 No instruction files loaded. Use !instructions reload\n");
+            std::cout << "\xE2\x9A\xA0 No instruction files loaded. Use !instructions reload\n";
         } else {
-            s_logger.info("\n\xF0\x9F\x93\x8B Instructions context (");
-            s_logger.info( provider.getAllContent() << "\n";
+            std::cout << "\n\xF0\x9F\x93\x8B Instructions context (" << files.size() << " files, "
+                      << provider.getAllContent().size() << " bytes total):\n\n";
+            std::cout << provider.getAllContent() << "\n";
         }
     }
 }
@@ -188,27 +193,27 @@ static void ensure_voice_init() {
     auto r = g_state.voiceChat->configure(cfg);
     if (r.success) {
         g_state.voiceInitialized = true;
-        s_logger.info("\xE2\x9C\x85 Voice engine initialized (16kHz mono, VAD enabled)\n");
+        std::cout << "\xE2\x9C\x85 Voice engine initialized (16kHz mono, VAD enabled)\n";
     } else {
-        s_logger.info("\xE2\x9D\x8C Voice init failed: ");
+        std::cout << "\xE2\x9D\x8C Voice init failed: " << r.detail << "\n";
     }
 }
 
 void cmd_voice(const std::string& args) {
     if (args.empty() || args == "help") {
-        s_logger.info("\n\xF0\x9F\x8E\x99\xEF\xB8\x8F  VOICE COMMANDS:\n");
-        s_logger.info("  !voice init               Initialize voice engine\n");
-        s_logger.info("  !voice record              Start/stop recording\n");
-        s_logger.info("  !voice ptt                 Push-to-talk toggle\n");
-        s_logger.info("  !voice transcribe          Transcribe last recording\n");
-        s_logger.info("  !voice speak <text>        Text-to-speech\n");
-        s_logger.info("  !voice tts <on|off>        Toggle TTS for AI responses\n");
-        s_logger.info("  !voice mode <ptt|vad|off>  Set capture mode\n");
-        s_logger.info("  !voice devices             List audio devices\n");
-        s_logger.info("  !voice device <id>         Select input device\n");
-        s_logger.info("  !voice room <name>         Join/leave voice room\n");
-        s_logger.info("  !voice metrics             Show voice metrics\n");
-        s_logger.info("  !voice status              Show voice status\n");
+        std::cout << "\n\xF0\x9F\x8E\x99\xEF\xB8\x8F  VOICE COMMANDS:\n";
+        std::cout << "  !voice init               Initialize voice engine\n";
+        std::cout << "  !voice record              Start/stop recording\n";
+        std::cout << "  !voice ptt                 Push-to-talk toggle\n";
+        std::cout << "  !voice transcribe          Transcribe last recording\n";
+        std::cout << "  !voice speak <text>        Text-to-speech\n";
+        std::cout << "  !voice tts <on|off>        Toggle TTS for AI responses\n";
+        std::cout << "  !voice mode <ptt|vad|off>  Set capture mode\n";
+        std::cout << "  !voice devices             List audio devices\n";
+        std::cout << "  !voice device <id>         Select input device\n";
+        std::cout << "  !voice room <name>         Join/leave voice room\n";
+        std::cout << "  !voice metrics             Show voice metrics\n";
+        std::cout << "  !voice status              Show voice status\n";
         return;
     }
     
@@ -225,188 +230,188 @@ void cmd_voice(const std::string& args) {
     // All other commands require init
     ensure_voice_init();
     if (!g_state.voiceInitialized || !g_state.voiceChat) {
-        s_logger.info("\xE2\x9D\x8C Voice engine not available.\n");
+        std::cout << "\xE2\x9D\x8C Voice engine not available.\n";
         return;
     }
     
     if (sub == "record") {
         if (g_state.voiceChat->isRecording()) {
             auto r = g_state.voiceChat->stopRecording();
-            s_logger.info("\xE2\x8F\xB9 Recording stopped.");
+            std::cout << "\xE2\x8F\xB9 Recording stopped.";
             if (r.success) {
                 size_t samples = g_state.voiceChat->getRecordedSampleCount();
                 double secs = static_cast<double>(samples) / 16000.0;
-                s_logger.info(" (");
+                std::cout << " (" << std::fixed << std::setprecision(1) << secs << "s, " << samples << " samples)";
             }
-            s_logger.info("\n");
+            std::cout << "\n";
         } else {
             auto r = g_state.voiceChat->startRecording();
             if (r.success) {
-                s_logger.info("\xE2\x8F\xBA Recording... (type !voice record to stop)\n");
+                std::cout << "\xE2\x8F\xBA Recording... (type !voice record to stop)\n";
             } else {
-                s_logger.info("\xE2\x9D\x8C Record failed: ");
+                std::cout << "\xE2\x9D\x8C Record failed: " << r.detail << "\n";
             }
         }
     }
     else if (sub == "ptt") {
         if (g_state.voiceChat->isPTTActive()) {
             g_state.voiceChat->pttEnd();
-            s_logger.info("\xF0\x9F\x8E\x99 PTT released.\n");
+            std::cout << "\xF0\x9F\x8E\x99 PTT released.\n";
             // Auto-transcribe on PTT release
             std::string text;
             auto r = g_state.voiceChat->transcribeLastRecording(text);
             if (r.success && !text.empty()) {
-                s_logger.info("\xF0\x9F\x93\x9D Transcription: ");
+                std::cout << "\xF0\x9F\x93\x9D Transcription: " << text << "\n";
             }
         } else {
             g_state.voiceChat->pttBegin();
-            s_logger.info("\xF0\x9F\x8E\x99 PTT active — speak now (type !voice ptt to release)\n");
+            std::cout << "\xF0\x9F\x8E\x99 PTT active — speak now (type !voice ptt to release)\n";
         }
     }
     else if (sub == "transcribe") {
         std::string text;
         auto r = g_state.voiceChat->transcribeLastRecording(text);
         if (r.success && !text.empty()) {
-            s_logger.info("\xF0\x9F\x93\x9D Transcription: ");
+            std::cout << "\xF0\x9F\x93\x9D Transcription: " << text << "\n";
         } else {
-            s_logger.info("\xE2\x9D\x8C Transcription failed: ");
+            std::cout << "\xE2\x9D\x8C Transcription failed: " << r.detail << "\n";
         }
     }
     else if (sub == "speak") {
         if (param.empty()) {
-            s_logger.info("Usage: !voice speak <text to speak>\n");
+            std::cout << "Usage: !voice speak <text to speak>\n";
             return;
         }
         auto r = g_state.voiceChat->speak(param);
         if (r.success) {
-            s_logger.info("\xF0\x9F\x94\x8A Speaking: ");
+            std::cout << "\xF0\x9F\x94\x8A Speaking: " << param.substr(0, 60) << (param.size() > 60 ? "..." : "") << "\n";
         } else {
-            s_logger.info("\xE2\x9D\x8C TTS failed: ");
+            std::cout << "\xE2\x9D\x8C TTS failed: " << r.detail << "\n";
         }
     }
     else if (sub == "tts") {
         if (param == "on") {
             g_state.voiceTTSEnabled = true;
-            s_logger.info("\xF0\x9F\x94\x8A TTS for AI responses: ON\n");
+            std::cout << "\xF0\x9F\x94\x8A TTS for AI responses: ON\n";
         } else if (param == "off") {
             g_state.voiceTTSEnabled = false;
-            s_logger.info("\xF0\x9F\x94\x87 TTS for AI responses: OFF\n");
+            std::cout << "\xF0\x9F\x94\x87 TTS for AI responses: OFF\n";
         } else {
-            s_logger.info("TTS is currently: ");
-            s_logger.info("Usage: !voice tts <on|off>\n");
+            std::cout << "TTS is currently: " << (g_state.voiceTTSEnabled ? "ON" : "OFF") << "\n";
+            std::cout << "Usage: !voice tts <on|off>\n";
         }
     }
     else if (sub == "mode") {
         if (param == "ptt") {
             g_state.voiceChat->setMode(VoiceChatMode::PushToTalk);
-            s_logger.info("\xE2\x9C\x85 Voice mode: Push-to-Talk\n");
+            std::cout << "\xE2\x9C\x85 Voice mode: Push-to-Talk\n";
         } else if (param == "vad") {
             g_state.voiceChat->setMode(VoiceChatMode::Continuous);
-            s_logger.info("\xE2\x9C\x85 Voice mode: Continuous (VAD)\n");
+            std::cout << "\xE2\x9C\x85 Voice mode: Continuous (VAD)\n";
         } else if (param == "off") {
             g_state.voiceChat->setMode(VoiceChatMode::Disabled);
-            s_logger.info("\xE2\x9C\x85 Voice mode: Disabled\n");
+            std::cout << "\xE2\x9C\x85 Voice mode: Disabled\n";
         } else {
             auto mode = g_state.voiceChat->getMode();
             const char* modeStr = (mode == VoiceChatMode::PushToTalk) ? "Push-to-Talk" :
                                   (mode == VoiceChatMode::Continuous) ? "Continuous (VAD)" : "Disabled";
-            s_logger.info("Current mode: ");
-            s_logger.info("Usage: !voice mode <ptt|vad|off>\n");
+            std::cout << "Current mode: " << modeStr << "\n";
+            std::cout << "Usage: !voice mode <ptt|vad|off>\n";
         }
     }
     else if (sub == "devices") {
         auto inputs = VoiceChat::enumerateInputDevices();
         auto outputs = VoiceChat::enumerateOutputDevices();
-        s_logger.info("\n\xF0\x9F\x8E\xA7 INPUT DEVICES:\n");
+        std::cout << "\n\xF0\x9F\x8E\xA7 INPUT DEVICES:\n";
         for (const auto& dev : inputs) {
-            s_logger.info("  [");
-            if (dev.isDefault) s_logger.info(" (default)");
-            s_logger.info("\n");
+            std::cout << "  [" << dev.id << "] " << dev.name;
+            if (dev.isDefault) std::cout << " (default)";
+            std::cout << "\n";
         }
-        s_logger.info("\n\xF0\x9F\x94\x8A OUTPUT DEVICES:\n");
+        std::cout << "\n\xF0\x9F\x94\x8A OUTPUT DEVICES:\n";
         for (const auto& dev : outputs) {
-            s_logger.info("  [");
-            if (dev.isDefault) s_logger.info(" (default)");
-            s_logger.info("\n");
+            std::cout << "  [" << dev.id << "] " << dev.name;
+            if (dev.isDefault) std::cout << " (default)";
+            std::cout << "\n";
         }
-        if (inputs.empty()) s_logger.info("  (no input devices found)\n");
-        if (outputs.empty()) s_logger.info("  (no output devices found)\n");
+        if (inputs.empty()) std::cout << "  (no input devices found)\n";
+        if (outputs.empty()) std::cout << "  (no output devices found)\n";
     }
     else if (sub == "device") {
         if (param.empty()) {
-            s_logger.info("Usage: !voice device <id>\n");
+            std::cout << "Usage: !voice device <id>\n";
             return;
         }
         try {
             int id = std::stoi(param);
             auto r = g_state.voiceChat->selectInputDevice(id);
             if (r.success) {
-                s_logger.info("\xE2\x9C\x85 Input device set to ID ");
+                std::cout << "\xE2\x9C\x85 Input device set to ID " << id << "\n";
             } else {
-                s_logger.info("\xE2\x9D\x8C Failed: ");
+                std::cout << "\xE2\x9D\x8C Failed: " << r.detail << "\n";
             }
         } catch (...) {
-            s_logger.info("\xE2\x9D\x8C Invalid device ID\n");
+            std::cout << "\xE2\x9D\x8C Invalid device ID\n";
         }
     }
     else if (sub == "room") {
         if (g_state.voiceChat->isInRoom()) {
             std::string room = g_state.voiceChat->getRoomName();
             g_state.voiceChat->leaveRoom();
-            s_logger.info("\xF0\x9F\x9A\xAA Left room '");
+            std::cout << "\xF0\x9F\x9A\xAA Left room '" << room << "'\n";
         } else {
             std::string room = param.empty() ? "general" : param;
             auto r = g_state.voiceChat->joinRoom(room);
             if (r.success) {
-                s_logger.info("\xF0\x9F\x8E\xA4 Joined room '");
+                std::cout << "\xF0\x9F\x8E\xA4 Joined room '" << room << "'\n";
             } else {
-                s_logger.info("\xE2\x9D\x8C Join failed: ");
+                std::cout << "\xE2\x9D\x8C Join failed: " << r.detail << "\n";
             }
         }
     }
     else if (sub == "metrics") {
         auto m = g_state.voiceChat->getMetrics();
-        s_logger.info("\n\xF0\x9F\x93\x8A VOICE METRICS:\n");
-        s_logger.info("  Recordings:        ");
-        s_logger.info("  Playbacks:         ");
-        s_logger.info("  Transcriptions:    ");
-        s_logger.info("  TTS Calls:         ");
-        s_logger.info("  Errors:            ");
-        s_logger.info("  Bytes Recorded:    ");
-        s_logger.info("  Bytes Played:      ");
-        s_logger.info("  VAD Speech Events: ");
-        s_logger.info("  Relay Msg Sent:    ");
-        s_logger.info("  Relay Msg Recv:    ");
-        s_logger.info( std::fixed << std::setprecision(2);
-        s_logger.info("  Avg Record Latency:    ");
-        s_logger.info("  Avg Transcribe Latency:");
-        s_logger.info("  Avg TTS Latency:       ");
-        s_logger.info("  Avg Playback Latency:  ");
+        std::cout << "\n\xF0\x9F\x93\x8A VOICE METRICS:\n";
+        std::cout << "  Recordings:        " << m.recordingCount << "\n";
+        std::cout << "  Playbacks:         " << m.playbackCount << "\n";
+        std::cout << "  Transcriptions:    " << m.transcriptionCount << "\n";
+        std::cout << "  TTS Calls:         " << m.ttsCount << "\n";
+        std::cout << "  Errors:            " << m.errorCount << "\n";
+        std::cout << "  Bytes Recorded:    " << m.bytesRecorded << "\n";
+        std::cout << "  Bytes Played:      " << m.bytesPlayed << "\n";
+        std::cout << "  VAD Speech Events: " << m.vadSpeechEvents << "\n";
+        std::cout << "  Relay Msg Sent:    " << m.relayMessagesSent << "\n";
+        std::cout << "  Relay Msg Recv:    " << m.relayMessagesRecv << "\n";
+        std::cout << std::fixed << std::setprecision(2);
+        std::cout << "  Avg Record Latency:    " << m.avgRecordingLatencyMs << " ms\n";
+        std::cout << "  Avg Transcribe Latency:" << m.avgTranscriptionLatencyMs << " ms\n";
+        std::cout << "  Avg TTS Latency:       " << m.avgTtsLatencyMs << " ms\n";
+        std::cout << "  Avg Playback Latency:  " << m.avgPlaybackLatencyMs << " ms\n";
     }
     else if (sub == "status") {
         auto mode = g_state.voiceChat->getMode();
         const char* modeStr = (mode == VoiceChatMode::PushToTalk) ? "Push-to-Talk" :
                               (mode == VoiceChatMode::Continuous) ? "Continuous (VAD)" : "Disabled";
-        s_logger.info("\n\xF0\x9F\x8E\x99 VOICE STATUS:\n");
-        s_logger.info("  Engine:      ");
-        s_logger.info("  Recording:   ");
-        s_logger.info("  Playing:     ");
-        s_logger.info("  PTT Active:  ");
-        s_logger.info("  In Room:     ");
-        s_logger.info("  Mode:        ");
-        s_logger.info("  VAD State:   ");
+        std::cout << "\n\xF0\x9F\x8E\x99 VOICE STATUS:\n";
+        std::cout << "  Engine:      " << (g_state.voiceInitialized ? "Initialized" : "Not init") << "\n";
+        std::cout << "  Recording:   " << (g_state.voiceChat->isRecording() ? "YES" : "No") << "\n";
+        std::cout << "  Playing:     " << (g_state.voiceChat->isPlaying() ? "YES" : "No") << "\n";
+        std::cout << "  PTT Active:  " << (g_state.voiceChat->isPTTActive() ? "YES" : "No") << "\n";
+        std::cout << "  In Room:     " << (g_state.voiceChat->isInRoom() ? g_state.voiceChat->getRoomName() : "No") << "\n";
+        std::cout << "  Mode:        " << modeStr << "\n";
+        std::cout << "  VAD State:   ";
         switch (g_state.voiceChat->getVADState()) {
-            case VADState::Silence:  s_logger.info("Silence"); break;
-            case VADState::Speech:   s_logger.info("Speech detected"); break;
-            case VADState::Trailing: s_logger.info("Trailing silence"); break;
+            case VADState::Silence:  std::cout << "Silence"; break;
+            case VADState::Speech:   std::cout << "Speech detected"; break;
+            case VADState::Trailing: std::cout << "Trailing silence"; break;
         }
-        s_logger.info("\n");
-        s_logger.info("  RMS Level:   ");
-        s_logger.info("  TTS Auto:    ");
-        s_logger.info("  Recorded:    ");
+        std::cout << "\n";
+        std::cout << "  RMS Level:   " << std::fixed << std::setprecision(4) << g_state.voiceChat->getCurrentRMS() << "\n";
+        std::cout << "  TTS Auto:    " << (g_state.voiceTTSEnabled ? "ON" : "OFF") << "\n";
+        std::cout << "  Recorded:    " << g_state.voiceChat->getRecordedSampleCount() << " samples\n";
     }
     else {
-        s_logger.info("Unknown voice subcommand: ");
+        std::cout << "Unknown voice subcommand: " << sub << ". Type !voice help\n";
     }
 }
 
@@ -420,19 +425,19 @@ void cmd_new_file(const std::string& args) {
     g_state.currentFile.clear();
     g_state.undoStack.clear();
     g_state.redoStack.clear();
-    s_logger.info("✅ New file created\n");
+    std::cout << "✅ New file created\n";
 }
 
 void cmd_open_file(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     std::string path = args;
     if (path.empty()) {
-        s_logger.info("Usage: !open <filepath>\n");
+        std::cout << "Usage: !open <filepath>\n";
         return;
     }
     
     if (!fs::exists(path)) {
-        s_logger.info("❌ File not found: ");
+        std::cout << "❌ File not found: " << path << "\n";
         return;
     }
     
@@ -442,26 +447,26 @@ void cmd_open_file(const std::string& args) {
     g_state.currentFile = path;
     g_state.undoStack.clear();
     g_state.redoStack.clear();
-    s_logger.info("✅ Opened: ");
+    std::cout << "✅ Opened: " << path << " (" << g_state.editorBuffer.size() << " bytes)\n";
 }
 
 void cmd_save_file(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (g_state.currentFile.empty()) {
-        s_logger.info("❌ No file open. Use !save_as <path> to save to a new file.\n");
+        std::cout << "❌ No file open. Use !save_as <path> to save to a new file.\n";
         return;
     }
     
     std::ofstream file(g_state.currentFile);
     file << g_state.editorBuffer;
     file.close();
-    s_logger.info("✅ Saved: ");
+    std::cout << "✅ Saved: " << g_state.currentFile << "\n";
 }
 
 void cmd_save_as(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (args.empty()) {
-        s_logger.info("Usage: !save_as <filepath>\n");
+        std::cout << "Usage: !save_as <filepath>\n";
         return;
     }
     
@@ -469,18 +474,18 @@ void cmd_save_as(const std::string& args) {
     file << g_state.editorBuffer;
     file.close();
     g_state.currentFile = args;
-    s_logger.info("✅ Saved as: ");
+    std::cout << "✅ Saved as: " << args << "\n";
 }
 
 void cmd_close_file(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (g_state.currentFile.empty()) {
-        s_logger.info("❌ No file open.\n");
+        std::cout << "❌ No file open.\n";
         return;
     }
     g_state.editorBuffer.clear();
     g_state.currentFile.clear();
-    s_logger.info("✅ File closed\n");
+    std::cout << "✅ File closed\n";
 }
 
 // ============================================================================
@@ -490,7 +495,7 @@ void cmd_close_file(const std::string& args) {
 void cmd_cut(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (g_state.editorBuffer.empty()) {
-        s_logger.info("❌ Buffer is empty, nothing to cut.\n");
+        std::cout << "❌ Buffer is empty, nothing to cut.\n";
         return;
     }
     // If args specify a line range, cut those lines; otherwise cut the last line
@@ -508,7 +513,7 @@ void cmd_cut(const std::string& args) {
                 endLine = startLine;
             }
         } catch (...) {
-            s_logger.info("Usage: !cut [start_line-end_line]\n");
+            std::cout << "Usage: !cut [start_line-end_line]\n";
             g_state.undoStack.pop_back();
             return;
         }
@@ -529,21 +534,21 @@ void cmd_cut(const std::string& args) {
         g_state.clipboard.push_back(cutText);
         g_state.editorBuffer = remaining;
         g_state.redoStack.clear();
-        s_logger.info("✅ Cut lines ");
+        std::cout << "✅ Cut lines " << startLine << "-" << endLine << " to clipboard (" << cutText.size() << " bytes)\n";
     } else {
         // Cut entire buffer
         g_state.clipboard.clear();
         g_state.clipboard.push_back(g_state.editorBuffer);
         g_state.editorBuffer.clear();
         g_state.redoStack.clear();
-        s_logger.info("✅ Cut entire buffer to clipboard\n");
+        std::cout << "✅ Cut entire buffer to clipboard\n";
     }
 }
 
 void cmd_copy(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     g_state.clipboard.push_back(g_state.editorBuffer);
-    s_logger.info("✅ Copied to clipboard\n");
+    std::cout << "✅ Copied to clipboard\n";
 }
 
 void cmd_paste(const std::string& args) {
@@ -552,9 +557,9 @@ void cmd_paste(const std::string& args) {
         g_state.undoStack.push_back(g_state.editorBuffer);
         g_state.editorBuffer += g_state.clipboard.back();
         g_state.redoStack.clear();
-        s_logger.info("✅ Pasted from clipboard\n");
+        std::cout << "✅ Pasted from clipboard\n";
     } else {
-        s_logger.info("❌ Clipboard empty\n");
+        std::cout << "❌ Clipboard empty\n";
     }
 }
 
@@ -564,9 +569,9 @@ void cmd_undo(const std::string& args) {
         g_state.redoStack.push_back(g_state.editorBuffer);
         g_state.editorBuffer = g_state.undoStack.back();
         g_state.undoStack.pop_back();
-        s_logger.info("✅ Undo\n");
+        std::cout << "✅ Undo\n";
     } else {
-        s_logger.info("❌ Nothing to undo\n");
+        std::cout << "❌ Nothing to undo\n";
     }
 }
 
@@ -576,24 +581,24 @@ void cmd_redo(const std::string& args) {
         g_state.undoStack.push_back(g_state.editorBuffer);
         g_state.editorBuffer = g_state.redoStack.back();
         g_state.redoStack.pop_back();
-        s_logger.info("✅ Redo\n");
+        std::cout << "✅ Redo\n";
     } else {
-        s_logger.info("❌ Nothing to redo\n");
+        std::cout << "❌ Nothing to redo\n";
     }
 }
 
 void cmd_find(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (args.empty()) {
-        s_logger.info("Usage: !find <text>\n");
+        std::cout << "Usage: !find <text>\n";
         return;
     }
     
     size_t pos = g_state.editorBuffer.find(args);
     if (pos != std::string::npos) {
-        s_logger.info("✅ Found at position ");
+        std::cout << "✅ Found at position " << pos << "\n";
     } else {
-        s_logger.info("❌ Not found\n");
+        std::cout << "❌ Not found\n";
     }
 }
 
@@ -601,7 +606,7 @@ void cmd_replace(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     auto space = args.find(' ');
     if (space == std::string::npos) {
-        s_logger.info("Usage: !replace <old> <new>\n");
+        std::cout << "Usage: !replace <old> <new>\n";
         return;
     }
     
@@ -617,7 +622,7 @@ void cmd_replace(const std::string& args) {
         count++;
     }
     g_state.redoStack.clear();
-    s_logger.info("✅ Replaced ");
+    std::cout << "✅ Replaced " << count << " occurrence(s)\n";
 }
 
 // ============================================================================
@@ -626,33 +631,33 @@ void cmd_replace(const std::string& args) {
 
 void cmd_agent_execute(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !agent_execute <prompt>\n");
+        std::cout << "Usage: !agent_execute <prompt>\n";
         return;
     }
     
     if (g_state.agenticEngine && g_state.agenticEngine->isModelLoaded()) {
-        s_logger.info("🤖 Agent executing: ");
+        std::cout << "🤖 Agent executing: " << args << "\n";
         std::string response = g_state.agenticEngine->chat(args);
-        s_logger.info( response << "\n";
+        std::cout << response << "\n";
         
         // Auto-dispatch tool calls in response
         if (g_state.subAgentMgr) {
             std::string toolResult;
             if (g_state.subAgentMgr->dispatchToolCall("cli-agent", response, toolResult)) {
-                s_logger.info("\n[Tool Result]\n");
+                std::cout << "\n[Tool Result]\n" << toolResult << "\n";
             }
         }
     } else {
-        s_logger.info("🤖 Agent executing: ");
+        std::cout << "🤖 Agent executing: " << args << "\n";
         std::string out = process_prompt(args);
-        s_logger.info( out << "\n";
+        std::cout << out << "\n";
     }
 }
 
 void cmd_agent_loop(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (args.empty()) {
-        s_logger.info("Usage: !agent_loop <prompt> [iterations]\n");
+        std::cout << "Usage: !agent_loop <prompt> [iterations]\n";
         return;
     }
     
@@ -668,7 +673,7 @@ void cmd_agent_loop(const std::string& args) {
     }
     
     g_state.agentLoopRunning = true;
-    s_logger.info("🚀 Starting agent loop: ");
+    std::cout << "🚀 Starting agent loop: " << prompt << " (max " << iterations << " iterations)\n";
     
     // Capture pointers locally before launching thread
     AgenticEngine* eng = g_state.agenticEngine;
@@ -676,52 +681,52 @@ void cmd_agent_loop(const std::string& args) {
     
     std::thread([prompt, iterations, eng, mgr]() {
         for (int i = 0; i < iterations; i++) {
-            s_logger.info("[Agent Iter ");
+            std::cout << "[Agent Iter " << (i+1) << "/" << iterations << "] Processing...\n";
             
             if (eng && eng->isModelLoaded()) {
                 std::string response = eng->chat(
                     "Iteration " + std::to_string(i + 1) + "/" + std::to_string(iterations) +
                     ". Goal: " + prompt + "\nPrevious context available. Continue working toward the goal.");
-                s_logger.info( response << "\n";
+                std::cout << response << "\n";
                 
                 // Dispatch tool calls
                 if (mgr) {
                     std::string toolResult;
                     if (mgr->dispatchToolCall("cli-loop", response, toolResult)) {
-                        s_logger.info("[Tool Result] ");
+                        std::cout << "[Tool Result] " << toolResult << "\n";
                     }
                 }
             } else {
                 std::string out = process_prompt(prompt);
-                s_logger.info( out << "\n";
+                std::cout << out << "\n";
             }
         }
-        s_logger.info("✅ Agent loop completed\n");
+        std::cout << "✅ Agent loop completed\n";
     }).detach();
 }
 
 void cmd_agent_goal(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (args.empty()) {
-        s_logger.info("Usage: !agent_goal <goal>\n");
+        std::cout << "Usage: !agent_goal <goal>\n";
         return;
     }
     g_state.agentGoal = args;
-    s_logger.info("✅ Goal set: ");
+    std::cout << "✅ Goal set: " << args << "\n";
 }
 
 void cmd_agent_memory(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (args == "show") {
-        s_logger.info("📝 Agent Memory:\n");
+        std::cout << "📝 Agent Memory:\n";
         for (size_t i = 0; i < g_state.agentMemory.size(); i++) {
-            s_logger.info("  [");
+            std::cout << "  [" << i << "] " << g_state.agentMemory[i] << "\n";
         }
     } else if (!args.empty()) {
         g_state.agentMemory.push_back(args);
-        s_logger.info("✅ Memory added: ");
+        std::cout << "✅ Memory added: " << args << "\n";
     } else {
-        s_logger.info("Usage: !agent_memory <observation> | !agent_memory show\n");
+        std::cout << "Usage: !agent_memory <observation> | !agent_memory show\n";
     }
 }
 
@@ -732,23 +737,23 @@ void cmd_agent_memory(const std::string& args) {
 void cmd_autonomy_start(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     g_state.autonomyEnabled = true;
-    s_logger.info("🤖 Autonomy enabled. Use !autonomy_goal to set objective.\n");
+    std::cout << "🤖 Autonomy enabled. Use !autonomy_goal to set objective.\n";
 }
 
 void cmd_autonomy_stop(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     g_state.autonomyEnabled = false;
-    s_logger.info("⏹️  Autonomy disabled\n");
+    std::cout << "⏹️  Autonomy disabled\n";
 }
 
 void cmd_autonomy_goal(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (args.empty()) {
-        s_logger.info("Current goal: ");
+        std::cout << "Current goal: " << g_state.agentGoal << "\n";
         return;
     }
     g_state.agentGoal = args;
-    s_logger.info("✅ Autonomy goal set: ");
+    std::cout << "✅ Autonomy goal set: " << args << "\n";
 }
 
 void cmd_autonomy_rate(const std::string& args) {
@@ -756,9 +761,9 @@ void cmd_autonomy_rate(const std::string& args) {
     try {
         int rate = std::stoi(args);
         g_state.maxActionsPerMinute = rate;
-        s_logger.info("✅ Max actions per minute: ");
+        std::cout << "✅ Max actions per minute: " << rate << "\n";
     } catch (...) {
-        s_logger.info("Usage: !autonomy_rate <actions_per_minute>\n");
+        std::cout << "Usage: !autonomy_rate <actions_per_minute>\n";
     }
 }
 
@@ -770,7 +775,7 @@ void cmd_breakpoint_add(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     auto space = args.find(':');
     if (space == std::string::npos) {
-        s_logger.info("Usage: !breakpoint_add <file>:<line>\n");
+        std::cout << "Usage: !breakpoint_add <file>:<line>\n";
         return;
     }
     
@@ -778,14 +783,15 @@ void cmd_breakpoint_add(const std::string& args) {
     int line = std::stoi(args.substr(space + 1));
     
     g_state.breakpoints.push_back({file, line});
-    s_logger.info("✅ Breakpoint added: ");
+    std::cout << "✅ Breakpoint added: " << file << ":" << line << "\n";
 }
 
 void cmd_breakpoint_list(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
-    s_logger.info("🔴 Breakpoints:\n");
+    std::cout << "🔴 Breakpoints:\n";
     for (size_t i = 0; i < g_state.breakpoints.size(); i++) {
-        s_logger.info("  [");
+        std::cout << "  [" << i << "] " << g_state.breakpoints[i].first 
+                  << ":" << g_state.breakpoints[i].second << "\n";
     }
 }
 
@@ -795,28 +801,28 @@ void cmd_breakpoint_remove(const std::string& args) {
         int idx = std::stoi(args);
         if (idx >= 0 && idx < static_cast<int>(g_state.breakpoints.size())) {
             g_state.breakpoints.erase(g_state.breakpoints.begin() + idx);
-            s_logger.info("✅ Breakpoint removed\n");
+            std::cout << "✅ Breakpoint removed\n";
         }
     } catch (...) {
-        s_logger.info("Usage: !breakpoint_remove <index>\n");
+        std::cout << "Usage: !breakpoint_remove <index>\n";
     }
 }
 
 void cmd_debug_start(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     g_state.debuggingActive = true;
-    s_logger.info("🐛 Debugger started\n");
+    std::cout << "🐛 Debugger started\n";
 }
 
 void cmd_debug_stop(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     g_state.debuggingActive = false;
-    s_logger.info("⏹️  Debugger stopped\n");
+    std::cout << "⏹️  Debugger stopped\n";
 }
 
 void cmd_debug_step(const std::string& args) {
     if (!g_state.debuggingActive) {
-        s_logger.info("❌ Debugger not active. Use !debug_start first.\n");
+        std::cout << "❌ Debugger not active. Use !debug_start first.\n";
         return;
     }
     std::lock_guard<std::mutex> lock(g_stateMutex);
@@ -826,41 +832,41 @@ void cmd_debug_step(const std::string& args) {
         // Find current position and step to next line
         int currentLine = g_state.debugCurrentLine;
         g_state.debugCurrentLine = currentLine + 1;
-        s_logger.info("➡️  Step to line ");
+        std::cout << "➡️  Step to line " << g_state.debugCurrentLine;
         // Check if we hit a breakpoint
         for (const auto& bp : g_state.breakpoints) {
             if (bp.first == g_state.currentFile && bp.second == g_state.debugCurrentLine) {
-                s_logger.info(" 🔴 [BREAKPOINT HIT]");
+                std::cout << " 🔴 [BREAKPOINT HIT]";
                 break;
             }
         }
-        s_logger.info("\n");
+        std::cout << "\n";
         // Show the source line at current position
         std::istringstream stream(g_state.editorBuffer);
         std::string line;
         int lineNum = 1;
         while (std::getline(stream, line)) {
             if (lineNum == g_state.debugCurrentLine) {
-                s_logger.info("  → ");
+                std::cout << "  → " << lineNum << " | " << line << "\n";
                 break;
             }
             lineNum++;
         }
     } else {
-        s_logger.info("➡️  Step executed (no source context)\n");
+        std::cout << "➡️  Step executed (no source context)\n";
     }
 }
 
 void cmd_debug_continue(const std::string& args) {
     if (!g_state.debuggingActive) {
-        s_logger.info("❌ Debugger not active. Use !debug_start first.\n");
+        std::cout << "❌ Debugger not active. Use !debug_start first.\n";
         return;
     }
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (g_state.breakpoints.empty()) {
-        s_logger.info("▶️  Continuing to end (no breakpoints set)\n");
+        std::cout << "▶️  Continuing to end (no breakpoints set)\n";
         g_state.debuggingActive = false;
-        s_logger.info("⏹️  Execution complete\n");
+        std::cout << "⏹️  Execution complete\n";
         return;
     }
     // Advance through lines until we hit a breakpoint
@@ -872,14 +878,14 @@ void cmd_debug_continue(const std::string& args) {
             if (bp.first == g_state.currentFile && bp.second == line) {
                 g_state.debugCurrentLine = line;
                 hitBreakpoint = true;
-                s_logger.info("▶️  Continued to breakpoint at ");
+                std::cout << "▶️  Continued to breakpoint at " << bp.first << ":" << line << "\n";
                 // Show the source line
                 std::istringstream stream(g_state.editorBuffer);
                 std::string srcLine;
                 int num = 1;
                 while (std::getline(stream, srcLine)) {
                     if (num == line) {
-                        s_logger.info("  → ");
+                        std::cout << "  → " << num << " | " << srcLine << "\n";
                         break;
                     }
                     num++;
@@ -890,7 +896,7 @@ void cmd_debug_continue(const std::string& args) {
         if (hitBreakpoint) break;
     }
     if (!hitBreakpoint) {
-        s_logger.info("▶️  Ran to end — no more breakpoints hit\n");
+        std::cout << "▶️  Ran to end — no more breakpoints hit\n";
         g_state.debuggingActive = false;
     }
 }
@@ -903,30 +909,30 @@ void cmd_terminal_new(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     std::string pane_name = "Terminal-" + std::to_string(g_state.terminalPanes.size() + 1);
     g_state.terminalPanes.push_back(pane_name);
-    s_logger.info("✅ New terminal pane: ");
+    std::cout << "✅ New terminal pane: " << pane_name << "\n";
 }
 
 void cmd_terminal_split(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     std::string orientation = args.empty() ? "horizontal" : args;
-    s_logger.info("✅ Terminal split ");
+    std::cout << "✅ Terminal split " << orientation << "\n";
 }
 
 void cmd_terminal_kill(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (g_state.terminalPanes.empty()) {
-        s_logger.info("❌ No terminals to close\n");
+        std::cout << "❌ No terminals to close\n";
         return;
     }
     g_state.terminalPanes.pop_back();
-    s_logger.info("✅ Terminal closed\n");
+    std::cout << "✅ Terminal closed\n";
 }
 
 void cmd_terminal_list(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
-    s_logger.info("📋 Terminal panes:\n");
+    std::cout << "📋 Terminal panes:\n";
     for (size_t i = 0; i < g_state.terminalPanes.size(); i++) {
-        s_logger.info("  [");
+        std::cout << "  [" << i << "] " << g_state.terminalPanes[i] << "\n";
     }
 }
 
@@ -936,7 +942,7 @@ void cmd_terminal_list(const std::string& args) {
 
 void cmd_hotpatch_apply(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !hotpatch_apply <patch_file>\n");
+        std::cout << "Usage: !hotpatch_apply <patch_file>\n";
         return;
     }
     // Parse patch file path
@@ -946,12 +952,12 @@ void cmd_hotpatch_apply(const std::string& args) {
     size_t end = patchPath.find_last_not_of(" \t");
     if (start != std::string::npos) patchPath = patchPath.substr(start, end - start + 1);
 
-    s_logger.info("🔥 Applying hotpatch from: ");
+    std::cout << "🔥 Applying hotpatch from: " << patchPath << "\n";
     
     // Read the patch file
     std::ifstream patchFile(patchPath);
     if (!patchFile.is_open()) {
-        s_logger.info("❌ Cannot open patch file: ");
+        std::cout << "❌ Cannot open patch file: " << patchPath << "\n";
         return;
     }
     
@@ -960,7 +966,7 @@ void cmd_hotpatch_apply(const std::string& args) {
     patchFile.close();
     
     if (patchContent.empty()) {
-        s_logger.info("❌ Patch file is empty\n");
+        std::cout << "❌ Patch file is empty\n";
         return;
     }
     
@@ -979,32 +985,33 @@ void cmd_hotpatch_apply(const std::string& args) {
             std::string hexBytes = line.substr(colonPos + 1);
             try {
                 size_t offset = std::stoull(offsetStr, nullptr, 16);
-                s_logger.info("  Patch @0x");
+                std::cout << "  Patch @0x" << std::hex << offset << std::dec 
+                          << ": " << hexBytes << "\n";
                 patchCount++;
             } catch (...) {
-                s_logger.info("  ⚠️  Skipping malformed line: ");
+                std::cout << "  ⚠️  Skipping malformed line: " << line << "\n";
                 failCount++;
             }
         }
     }
     
-    s_logger.info("✅ Applied ");
-    if (failCount > 0) s_logger.info(" (");
-    s_logger.info(" without restart\n");
+    std::cout << "✅ Applied " << patchCount << " patches";
+    if (failCount > 0) std::cout << " (" << failCount << " skipped)";
+    std::cout << " without restart\n";
 }
 
 void cmd_hotpatch_create(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     if (g_state.currentFile.empty()) {
-        s_logger.info("❌ No file open\n");
+        std::cout << "❌ No file open\n";
         return;
     }
-    s_logger.info("🔥 Creating hotpatch for: ");
+    std::cout << "🔥 Creating hotpatch for: " << g_state.currentFile << "\n";
     
     // Read the original file from disk for comparison
     std::ifstream origFile(g_state.currentFile, std::ios::binary);
     if (!origFile.is_open()) {
-        s_logger.info("❌ Cannot read original file from disk: ");
+        std::cout << "❌ Cannot read original file from disk: " << g_state.currentFile << "\n";
         return;
     }
     std::string origContent((std::istreambuf_iterator<char>(origFile)),
@@ -1015,7 +1022,7 @@ void cmd_hotpatch_create(const std::string& args) {
     std::string patchFilename = g_state.currentFile + ".hotpatch";
     std::ofstream patchFile(patchFilename);
     if (!patchFile.is_open()) {
-        s_logger.info("❌ Cannot create patch file: ");
+        std::cout << "❌ Cannot create patch file: " << patchFilename << "\n";
         return;
     }
     
@@ -1050,7 +1057,7 @@ void cmd_hotpatch_create(const std::string& args) {
     }
     
     patchFile.close();
-    s_logger.info("✅ Hotpatch created: ");
+    std::cout << "✅ Hotpatch created: " << patchFilename << " (" << diffCount << " change regions)\n";
 }
 
 // ============================================================================
@@ -1061,35 +1068,35 @@ void cmd_decision_tree(const std::string& args) {
     auto& tree = AgenticDecisionTree::instance();
 
     if (args == "dump" || args == "show") {
-        s_logger.info( tree.dumpTreeJSON() << "\n";
+        std::cout << tree.dumpTreeJSON() << "\n";
     } else if (args == "trace") {
-        s_logger.info( tree.dumpLastTrace() << "\n";
+        std::cout << tree.dumpLastTrace() << "\n";
     } else if (args == "stats") {
         auto& s = tree.getStats();
-        s_logger.info("\n🌳 Decision Tree Statistics:\n");
-        s_logger.info("  Trees evaluated:      ");
-        s_logger.info("  Nodes visited:        ");
-        s_logger.info("  SSA lifts:            ");
-        s_logger.info("  Failures detected:    ");
-        s_logger.info("  Patches applied:      ");
-        s_logger.info("  Patches reverted:     ");
-        s_logger.info("  Successful fixes:     ");
-        s_logger.info("  Failed fixes:         ");
-        s_logger.info("  Escalations:          ");
-        s_logger.info("  Total retries:        ");
-        s_logger.info("  Aborts:               ");
+        std::cout << "\n🌳 Decision Tree Statistics:\n";
+        std::cout << "  Trees evaluated:      " << s.treesEvaluated.load() << "\n";
+        std::cout << "  Nodes visited:        " << s.nodesVisited.load() << "\n";
+        std::cout << "  SSA lifts:            " << s.ssaLiftsPerformed.load() << "\n";
+        std::cout << "  Failures detected:    " << s.failuresDetected.load() << "\n";
+        std::cout << "  Patches applied:      " << s.patchesApplied.load() << "\n";
+        std::cout << "  Patches reverted:     " << s.patchesReverted.load() << "\n";
+        std::cout << "  Successful fixes:     " << s.successfulCorrections.load() << "\n";
+        std::cout << "  Failed fixes:         " << s.failedCorrections.load() << "\n";
+        std::cout << "  Escalations:          " << s.escalations.load() << "\n";
+        std::cout << "  Total retries:        " << s.totalRetries.load() << "\n";
+        std::cout << "  Aborts:               " << s.aborts.load() << "\n\n";
     } else if (args == "enable") {
         tree.setEnabled(true);
-        s_logger.info("✅ Decision tree enabled\n");
+        std::cout << "✅ Decision tree enabled\n";
     } else if (args == "disable") {
         tree.setEnabled(false);
-        s_logger.info("⏹️  Decision tree disabled\n");
+        std::cout << "⏹️  Decision tree disabled\n";
     } else if (args == "reset") {
         tree.resetStats();
         tree.buildDefaultTree();
-        s_logger.info("✅ Decision tree reset to defaults\n");
+        std::cout << "✅ Decision tree reset to defaults\n";
     } else {
-        s_logger.info("Usage: !decision_tree <dump|trace|stats|enable|disable|reset>\n");
+        std::cout << "Usage: !decision_tree <dump|trace|stats|enable|disable|reset>\n";
     }
 }
 
@@ -1113,29 +1120,29 @@ void cmd_autonomy_run(const std::string& args) {
     } else if (args == "resume") {
         loop.resume();
     } else if (args == "status") {
-        s_logger.info( loop.getDetailedStatus();
+        std::cout << loop.getDetailedStatus();
     } else if (args == "tick") {
         auto outcome = loop.tick();
-        s_logger.info( (outcome.success ? "✅" : "❌") << " "
+        std::cout << (outcome.success ? "✅" : "❌") << " "
                   << outcome.summary << "\n";
         for (const auto& t : outcome.traceLog) {
-            s_logger.info("    ");
+            std::cout << "    " << t << "\n";
         }
     } else if (args.rfind("verbose ", 0) == 0) {
         std::string val = args.substr(8);
         AutonomyLoopConfig cfg = loop.getConfig();
         cfg.verboseTracing = (val == "on" || val == "true" || val == "1");
         loop.setConfig(cfg);
-        s_logger.info("✅ Verbose tracing: ");
+        std::cout << "✅ Verbose tracing: " << (cfg.verboseTracing ? "ON" : "OFF") << "\n";
     } else if (args.rfind("rate ", 0) == 0) {
         try {
             int rate = std::stoi(args.substr(5));
             AutonomyLoopConfig cfg = loop.getConfig();
             cfg.maxActionsPerMinute = rate;
             loop.setConfig(cfg);
-            s_logger.info("✅ Rate limit: ");
+            std::cout << "✅ Rate limit: " << rate << " actions/min\n";
         } catch (...) {
-            s_logger.info("Usage: !autonomy_run rate <number>\n");
+            std::cout << "Usage: !autonomy_run rate <number>\n";
         }
     } else if (args.rfind("interval ", 0) == 0) {
         try {
@@ -1143,25 +1150,25 @@ void cmd_autonomy_run(const std::string& args) {
             AutonomyLoopConfig cfg = loop.getConfig();
             cfg.tickIntervalMs = ms;
             loop.setConfig(cfg);
-            s_logger.info("✅ Tick interval: ");
+            std::cout << "✅ Tick interval: " << ms << "ms\n";
         } catch (...) {
-            s_logger.info("Usage: !autonomy_run interval <ms>\n");
+            std::cout << "Usage: !autonomy_run interval <ms>\n";
         }
     } else {
-        s_logger.info("Usage: !autonomy_run <start|stop|pause|resume|status|tick>\n");
-        s_logger.info("       !autonomy_run verbose <on|off>\n");
-        s_logger.info("       !autonomy_run rate <actions_per_min>\n");
-        s_logger.info("       !autonomy_run interval <ms>\n");
+        std::cout << "Usage: !autonomy_run <start|stop|pause|resume|status|tick>\n";
+        std::cout << "       !autonomy_run verbose <on|off>\n";
+        std::cout << "       !autonomy_run rate <actions_per_min>\n";
+        std::cout << "       !autonomy_run interval <ms>\n";
     }
 }
 
 void cmd_ssa_lift(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !ssa_lift <binary_path> [function_name] [hex_address]\n");
-        s_logger.info("  Examples:\n");
-        s_logger.info("    !ssa_lift target.exe main\n");
-        s_logger.info("    !ssa_lift target.dll 0x140001000\n");
-        s_logger.info("    !ssa_lift model.gguf process_tokens 0x7ff6a000\n");
+        std::cout << "Usage: !ssa_lift <binary_path> [function_name] [hex_address]\n";
+        std::cout << "  Examples:\n";
+        std::cout << "    !ssa_lift target.exe main\n";
+        std::cout << "    !ssa_lift target.dll 0x140001000\n";
+        std::cout << "    !ssa_lift model.gguf process_tokens 0x7ff6a000\n";
         return;
     }
 
@@ -1186,26 +1193,29 @@ void cmd_ssa_lift(const std::string& args) {
         addr = std::stoull(parts[2], nullptr, 16);
     }
 
-    s_logger.info("🔬 Running SSA Lifter on: ");
-    if (!funcName.empty()) s_logger.info(" func=");
-    if (addr != 0) s_logger.info(" addr=0x");
-    s_logger.info("\n");
+    std::cout << "🔬 Running SSA Lifter on: " << binaryPath;
+    if (!funcName.empty()) std::cout << " func=" << funcName;
+    if (addr != 0) std::cout << " addr=0x" << std::hex << addr << std::dec;
+    std::cout << "\n";
 
     auto& loop = CLIAutonomyLoop::instance();
     std::string result = loop.runSSALift(binaryPath, funcName, addr);
-    s_logger.info( result << "\n";
+    std::cout << result << "\n";
 }
 
 void cmd_auto_patch(const std::string& args) {
     if (args == "stats") {
         auto& tree = AgenticDecisionTree::instance();
         auto& s = tree.getStats();
-        s_logger.info("🔧 Auto-Patch Stats: ");
+        std::cout << "🔧 Auto-Patch Stats: "
+                  << s.patchesApplied.load() << " applied, "
+                  << s.patchesReverted.load() << " reverted, "
+                  << s.successfulCorrections.load() << " verified\n";
         return;
     }
 
     if (args == "analyze" || args.empty()) {
-        s_logger.info("🔧 Running autonomous correction pipeline...\n");
+        std::cout << "🔧 Running autonomous correction pipeline...\n";
 
         auto& loop = CLIAutonomyLoop::instance();
         if (g_state.agenticEngine) {
@@ -1217,24 +1227,24 @@ void cmd_auto_patch(const std::string& args) {
 
         auto outcome = loop.autoPatch();
         if (!outcome.success && args.empty()) {
-            s_logger.info("ℹ️  No prior failure context. Run inference first, then use !auto_patch.\n");
-            s_logger.info("    Or: pipe output through autonomy with !autonomy_run start\n");
+            std::cout << "ℹ️  No prior failure context. Run inference first, then use !auto_patch.\n";
+            std::cout << "    Or: pipe output through autonomy with !autonomy_run start\n";
         }
         return;
     }
 
     // Allow one-shot: !auto_patch "<output text>" "<prompt>"
     // Simple: just analyze the args as output text
-    s_logger.info("🔧 Analyzing provided text for failures...\n");
+    std::cout << "🔧 Analyzing provided text for failures...\n";
     auto& tree = AgenticDecisionTree::instance();
     if (g_state.agenticEngine) {
         tree.setAgenticEngine(g_state.agenticEngine);
     }
 
     DecisionOutcome outcome = tree.analyzeAndFix(args, "");
-    s_logger.info( (outcome.success ? "✅" : "❌") << " " << outcome.summary << "\n";
+    std::cout << (outcome.success ? "✅" : "❌") << " " << outcome.summary << "\n";
     for (const auto& t : outcome.traceLog) {
-        s_logger.info("    ");
+        std::cout << "    " << t << "\n";
     }
 }
 
@@ -1244,7 +1254,7 @@ void cmd_auto_patch(const std::string& args) {
 
 void cmd_search_files(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !search <pattern> [path]\n");
+        std::cout << "Usage: !search <pattern> [path]\n";
         return;
     }
     // Parse args: first token is the search pattern, optional second is path
@@ -1257,7 +1267,7 @@ void cmd_search_files(const std::string& args) {
         pattern = args;
     }
     
-    s_logger.info("🔍 Searching for \");
+    std::cout << "🔍 Searching for \"" << pattern << "\" in " << searchPath << "\n";
     
     int matchCount = 0;
     int fileCount = 0;
@@ -1286,48 +1296,49 @@ void cmd_search_files(const std::string& args) {
                 lineNum++;
                 if (line.find(pattern) != std::string::npos) {
                     if (!fileHeaderPrinted) {
-                        s_logger.info("\n📄 ");
+                        std::cout << "\n📄 " << filepath << ":\n";
                         fileHeaderPrinted = true;
                         fileCount++;
                     }
                     // Truncate long lines
                     std::string displayLine = line.length() > 120 ? line.substr(0, 120) + "..." : line;
-                    s_logger.info("  ");
+                    std::cout << "  " << lineNum << ": " << displayLine << "\n";
                     matchCount++;
                     if (matchCount >= maxResults) break;
                 }
             }
             if (matchCount >= maxResults) {
-                s_logger.info("\n⚠️  Showing first ");
+                std::cout << "\n⚠️  Showing first " << maxResults << " results. Refine your search.\n";
                 break;
             }
         }
     } catch (const std::exception& e) {
-        s_logger.info("❌ Search error: ");
+        std::cout << "❌ Search error: " << e.what() << "\n";
     }
     
-    s_logger.info("\n📊 Found ");
+    std::cout << "\n📊 Found " << matchCount << " matches in " << fileCount << " files\n";
 }
 
 void cmd_analyze(const std::string& args) {
     if (g_state.currentFile.empty()) {
-        s_logger.info("❌ No file open\n");
+        std::cout << "❌ No file open\n";
         return;
     }
-    s_logger.info("📊 Analyzing: ");
-    s_logger.info("   Lines: ");
-    s_logger.info("   Size: ");
+    std::cout << "📊 Analyzing: " << g_state.currentFile << "\n";
+    std::cout << "   Lines: " << std::count(g_state.editorBuffer.begin(), 
+                                             g_state.editorBuffer.end(), '\n') << "\n";
+    std::cout << "   Size: " << g_state.editorBuffer.size() << " bytes\n";
 }
 
 void cmd_profile(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
     
-    s_logger.info("⏱️  Profiling started...\n");
+    std::cout << "⏱️  Profiling started...\n";
     auto t0 = std::chrono::high_resolution_clock::now();
     
     // Profile the current editor buffer — analyze code structure
     if (g_state.editorBuffer.empty()) {
-        s_logger.info("⚠️  No content to profile. Open a file first.\n");
+        std::cout << "⚠️  No content to profile. Open a file first.\n";
         return;
     }
     
@@ -1382,22 +1393,22 @@ void cmd_profile(const std::string& args) {
     auto t1 = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
     
-    s_logger.info("\n📊 Profile Results");
-    s_logger.info("  ───────────────────────────────────\n");
-    s_logger.info("  Total lines:      ");
-    s_logger.info("  Code lines:       ");
-    s_logger.info("  Comment lines:    ");
-    s_logger.info("  Blank lines:      ");
-    s_logger.info("  Functions:        ~");
-    s_logger.info("  Classes/Structs:  ~");
-    s_logger.info("  Includes:         ");
-    s_logger.info("  Max nesting:      ");
-    s_logger.info("  Max line length:  ");
-    s_logger.info("  Avg line length:  ");
-    s_logger.info("  Total size:       ");
-    s_logger.info("  ───────────────────────────────────\n");
-    s_logger.info("  Analysis time:    ");
-    s_logger.info("✅ Profile complete\n");
+    std::cout << "\n📊 Profile Results" << (g_state.currentFile.empty() ? "" : ": " + g_state.currentFile) << "\n";
+    std::cout << "  ───────────────────────────────────\n";
+    std::cout << "  Total lines:      " << totalLines << "\n";
+    std::cout << "  Code lines:       " << codeLines << " (" << (totalLines > 0 ? codeLines * 100 / totalLines : 0) << "%)\n";
+    std::cout << "  Comment lines:    " << commentLines << "\n";
+    std::cout << "  Blank lines:      " << blankLines << "\n";
+    std::cout << "  Functions:        ~" << functionCount << "\n";
+    std::cout << "  Classes/Structs:  ~" << classCount << "\n";
+    std::cout << "  Includes:         " << includeCount << "\n";
+    std::cout << "  Max nesting:      " << maxBraceDepth << " levels\n";
+    std::cout << "  Max line length:  " << maxLineLength << " chars\n";
+    std::cout << "  Avg line length:  " << (totalLines > 0 ? totalChars / totalLines : 0) << " chars\n";
+    std::cout << "  Total size:       " << g_state.editorBuffer.size() << " bytes\n";
+    std::cout << "  ───────────────────────────────────\n";
+    std::cout << "  Analysis time:    " << elapsed << " μs\n";
+    std::cout << "✅ Profile complete\n";
 }
 
 // ============================================================================
@@ -1406,29 +1417,29 @@ void cmd_profile(const std::string& args) {
 
 void cmd_subagent(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !subagent <prompt>\n");
+        std::cout << "Usage: !subagent <prompt>\n";
         return;
     }
     if (!g_state.subAgentMgr) {
-        s_logger.info("❌ SubAgentManager not initialized (no model loaded)\n");
+        std::cout << "❌ SubAgentManager not initialized (no model loaded)\n";
         return;
     }
-    s_logger.info("🤖 Spawning sub-agent...\n");
+    std::cout << "🤖 Spawning sub-agent...\n";
     std::string id = g_state.subAgentMgr->spawnSubAgent("cli", "CLI subagent", args);
     bool ok = g_state.subAgentMgr->waitForSubAgent(id, 120000);
     std::string result = g_state.subAgentMgr->getSubAgentResult(id);
-    s_logger.info( (ok ? "✅" : "❌") << " SubAgent result:\n" << result << "\n";
+    std::cout << (ok ? "✅" : "❌") << " SubAgent result:\n" << result << "\n";
 }
 
 void cmd_chain(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !chain <step1> | <step2> | <step3> ...\n");
-        s_logger.info("  Steps are separated by ' | '\n");
-        s_logger.info("  Each step can use {{input}} for the previous step's output\n");
+        std::cout << "Usage: !chain <step1> | <step2> | <step3> ...\n";
+        std::cout << "  Steps are separated by ' | '\n";
+        std::cout << "  Each step can use {{input}} for the previous step's output\n";
         return;
     }
     if (!g_state.subAgentMgr) {
-        s_logger.info("❌ SubAgentManager not initialized\n");
+        std::cout << "❌ SubAgentManager not initialized\n";
         return;
     }
 
@@ -1444,25 +1455,26 @@ void cmd_chain(const std::string& args) {
         pos = delim + 3;
     }
 
-    s_logger.info("🔗 Running chain with ");
+    std::cout << "🔗 Running chain with " << steps.size() << " steps...\n";
     for (size_t i = 0; i < steps.size(); i++) {
-        s_logger.info("  Step ");
+        std::cout << "  Step " << (i + 1) << ": " << steps[i].substr(0, 60)
+                  << (steps[i].size() > 60 ? "..." : "") << "\n";
     }
 
     std::string result = g_state.subAgentMgr->executeChain("cli", steps);
-    s_logger.info("✅ Chain result:\n");
+    std::cout << "✅ Chain result:\n" << result << "\n";
 }
 
 void cmd_swarm(const std::string& args) {
     if (args.empty()) {
-        s_logger.info("Usage: !swarm <prompt1> | <prompt2> | <prompt3> ...\n");
-        s_logger.info("  Options (append after last prompt):\n");
-        s_logger.info("    --strategy <concatenate|vote|summarize>  Merge strategy\n");
-        s_logger.info("    --parallel <n>                           Max parallel agents\n");
+        std::cout << "Usage: !swarm <prompt1> | <prompt2> | <prompt3> ...\n";
+        std::cout << "  Options (append after last prompt):\n";
+        std::cout << "    --strategy <concatenate|vote|summarize>  Merge strategy\n";
+        std::cout << "    --parallel <n>                           Max parallel agents\n";
         return;
     }
     if (!g_state.subAgentMgr) {
-        s_logger.info("❌ SubAgentManager not initialized\n");
+        std::cout << "❌ SubAgentManager not initialized\n";
         return;
     }
 
@@ -1502,14 +1514,16 @@ void cmd_swarm(const std::string& args) {
     }
 
     if (prompts.empty()) {
-        s_logger.info("❌ No prompts provided\n");
+        std::cout << "❌ No prompts provided\n";
         return;
     }
 
-    s_logger.info("🐝 Launching HexMag swarm with ");
+    std::cout << "🐝 Launching HexMag swarm with " << prompts.size()
+              << " tasks (strategy=" << config.mergeStrategy
+              << ", parallel=" << config.maxParallel << ")\n";
 
     std::string result = g_state.subAgentMgr->executeSwarm("cli", prompts, config);
-    s_logger.info("✅ Swarm result:\n");
+    std::cout << "✅ Swarm result:\n" << result << "\n";
 }
 
 // ============================================================================
@@ -1536,18 +1550,18 @@ void cmd_cot(const std::string& args) {
     }
 
     if (args.empty()) {
-        s_logger.info("🔗 Chain-of-Thought Multi-Model Review\n");
-        s_logger.info("Usage:\n");
-        s_logger.info("  !cot status             — Show CoT engine status\n");
-        s_logger.info("  !cot presets            — List available presets\n");
-        s_logger.info("  !cot roles              — List all available roles\n");
-        s_logger.info("  !cot preset <name>      — Apply a preset (review|audit|think|research|debate|custom)\n");
-        s_logger.info("  !cot steps              — Show current chain steps\n");
-        s_logger.info("  !cot add <role>         — Add a step with the given role\n");
-        s_logger.info("  !cot clear              — Clear all steps\n");
-        s_logger.info("  !cot run <query>        — Execute the chain on a query\n");
-        s_logger.info("  !cot cancel             — Cancel a running chain\n");
-        s_logger.info("  !cot stats              — Show execution statistics\n");
+        std::cout << "🔗 Chain-of-Thought Multi-Model Review\n";
+        std::cout << "Usage:\n";
+        std::cout << "  !cot status             — Show CoT engine status\n";
+        std::cout << "  !cot presets            — List available presets\n";
+        std::cout << "  !cot roles              — List all available roles\n";
+        std::cout << "  !cot preset <name>      — Apply a preset (review|audit|think|research|debate|custom)\n";
+        std::cout << "  !cot steps              — Show current chain steps\n";
+        std::cout << "  !cot add <role>         — Add a step with the given role\n";
+        std::cout << "  !cot clear              — Clear all steps\n";
+        std::cout << "  !cot run <query>        — Execute the chain on a query\n";
+        std::cout << "  !cot cancel             — Cancel a running chain\n";
+        std::cout << "  !cot stats              — Show execution statistics\n";
         return;
     }
 
@@ -1557,93 +1571,99 @@ void cmd_cot(const std::string& args) {
     std::string subargs = (sp == std::string::npos) ? "" : args.substr(sp + 1);
 
     if (subcmd == "status") {
-        s_logger.info( cot.getStatusJSON() << "\n";
+        std::cout << cot.getStatusJSON() << "\n";
     }
     else if (subcmd == "presets") {
         auto names = getCoTPresetNames();
-        s_logger.info("📋 Available presets:\n");
+        std::cout << "📋 Available presets:\n";
         for (const auto& n : names) {
             const CoTPreset* p = getCoTPreset(n);
             if (p) {
-                s_logger.info("  ");
+                std::cout << "  " << n << " (" << p->label << ") — "
+                          << p->steps.size() << " steps: ";
                 for (size_t i = 0; i < p->steps.size(); i++) {
-                    if (i > 0) s_logger.info(" → ");
-                    s_logger.info( getCoTRoleInfo(p->steps[i].role).label;
+                    if (i > 0) std::cout << " → ";
+                    std::cout << getCoTRoleInfo(p->steps[i].role).label;
                 }
-                s_logger.info("\n");
+                std::cout << "\n";
             }
         }
     }
     else if (subcmd == "roles") {
         const auto& roles = getAllCoTRoles();
-        s_logger.info("🎭 Available roles (");
+        std::cout << "🎭 Available roles (" << roles.size() << "):\n";
         for (const auto& r : roles) {
-            s_logger.info("  ");
+            std::cout << "  " << r.icon << " " << r.name
+                      << " — " << r.instruction << "\n";
         }
     }
     else if (subcmd == "preset") {
         if (subargs.empty()) {
-            s_logger.info("❌ Usage: !cot preset <name>\n");
+            std::cout << "❌ Usage: !cot preset <name>\n";
             return;
         }
         if (cot.applyPreset(subargs)) {
-            s_logger.info("✅ Applied preset '");
+            std::cout << "✅ Applied preset '" << subargs << "' ("
+                      << cot.getSteps().size() << " steps)\n";
             const auto& steps = cot.getSteps();
             for (size_t i = 0; i < steps.size(); i++) {
                 const auto& info = getCoTRoleInfo(steps[i].role);
-                s_logger.info("  Step ");
+                std::cout << "  Step " << (i + 1) << ": " << info.icon
+                          << " " << info.label << "\n";
             }
         } else {
-            s_logger.info("❌ Unknown preset: ");
-            s_logger.info("   Available: review, audit, think, research, debate, custom\n");
+            std::cout << "❌ Unknown preset: " << subargs << "\n";
+            std::cout << "   Available: review, audit, think, research, debate, custom\n";
         }
     }
     else if (subcmd == "steps") {
         const auto& steps = cot.getSteps();
         if (steps.empty()) {
-            s_logger.info("⚠ No steps configured. Use !cot preset <name> or !cot add <role>\n");
+            std::cout << "⚠ No steps configured. Use !cot preset <name> or !cot add <role>\n";
         } else {
-            s_logger.info("🔗 Current chain (");
+            std::cout << "🔗 Current chain (" << steps.size() << " steps):\n";
             for (size_t i = 0; i < steps.size(); i++) {
                 const auto& info = getCoTRoleInfo(steps[i].role);
-                s_logger.info("  [");
-                if (steps[i].skip) s_logger.info(" (SKIPPED)");
-                if (!steps[i].model.empty()) s_logger.info(" [model: ");
-                s_logger.info("\n");
+                std::cout << "  [" << (i + 1) << "] " << info.icon << " "
+                          << info.label;
+                if (steps[i].skip) std::cout << " (SKIPPED)";
+                if (!steps[i].model.empty()) std::cout << " [model: " << steps[i].model << "]";
+                std::cout << "\n";
             }
         }
     }
     else if (subcmd == "add") {
         if (subargs.empty()) {
-            s_logger.info("❌ Usage: !cot add <role>\n");
+            std::cout << "❌ Usage: !cot add <role>\n";
             return;
         }
         const CoTRoleInfo* info = getCoTRoleByName(subargs);
         if (!info) {
-            s_logger.info("❌ Unknown role: ");
-            s_logger.info("   Available roles: ");
+            std::cout << "❌ Unknown role: " << subargs << "\n";
+            std::cout << "   Available roles: ";
             const auto& roles = getAllCoTRoles();
             for (size_t i = 0; i < roles.size(); i++) {
-                if (i > 0) s_logger.info(", ");
-                s_logger.info( roles[i].name;
+                if (i > 0) std::cout << ", ";
+                std::cout << roles[i].name;
             }
-            s_logger.info("\n");
+            std::cout << "\n";
             return;
         }
         cot.addStep(info->id);
-        s_logger.info("✅ Added step: ");
+        std::cout << "✅ Added step: " << info->icon << " " << info->label
+                  << " (total: " << cot.getSteps().size() << " steps)\n";
     }
     else if (subcmd == "clear") {
         cot.clearSteps();
-        s_logger.info("✅ Chain cleared.\n");
+        std::cout << "✅ Chain cleared.\n";
     }
     else if (subcmd == "run") {
         if (subargs.empty()) {
-            s_logger.info("❌ Usage: !cot run <your query>\n");
+            std::cout << "❌ Usage: !cot run <your query>\n";
             return;
         }
         if (cot.getSteps().empty()) {
-            s_logger.info("⚠ No steps configured. Applying 'review' preset...\n");
+            std::cout << "⚠ No steps configured. Applying 'review' preset...\n";
             cot.applyPreset("review");
         }
 
@@ -1651,92 +1671,97 @@ void cmd_cot(const std::string& args) {
         cot.setStepCallback([](const CoTStepResult& sr) {
             const auto& info = getCoTRoleInfo(sr.role);
             if (sr.skipped) {
-                s_logger.info("  ⏭ Step ");
+                std::cout << "  ⏭ Step " << (sr.stepIndex + 1) << " (" << info.label << "): SKIPPED\n";
             } else if (sr.success) {
-                s_logger.info("  ✅ Step ");
+                std::cout << "  ✅ Step " << (sr.stepIndex + 1) << " (" << info.label
+                          << "): " << sr.latencyMs << "ms, ~" << sr.tokenCount << " tokens\n";
             } else {
-                s_logger.info("  ❌ Step ");
+                std::cout << "  ❌ Step " << (sr.stepIndex + 1) << " (" << info.label
+                          << "): FAILED — " << sr.error << "\n";
             }
         });
 
-        s_logger.info("🔗 Executing CoT chain (");
+        std::cout << "🔗 Executing CoT chain (" << cot.getSteps().size() << " steps)...\n";
         CoTChainResult result = cot.executeChain(subargs);
 
         if (result.success) {
-            s_logger.info("\n✅ Chain complete (");
-            s_logger.info("   Steps: ");
-            s_logger.info("\n📝 Final Output:\n");
+            std::cout << "\n✅ Chain complete (" << result.totalLatencyMs << "ms)\n";
+            std::cout << "   Steps: " << result.stepsCompleted << " completed, "
+                      << result.stepsSkipped << " skipped, "
+                      << result.stepsFailed << " failed\n";
+            std::cout << "\n📝 Final Output:\n" << result.finalOutput << "\n";
         } else {
-            s_logger.info("\n❌ Chain failed: ");
+            std::cout << "\n❌ Chain failed: " << result.error << "\n";
         }
     }
     else if (subcmd == "cancel") {
         cot.cancel();
-        s_logger.info("🛑 Cancel requested.\n");
+        std::cout << "🛑 Cancel requested.\n";
     }
     else if (subcmd == "stats") {
         auto stats = cot.getStats();
-        s_logger.info("📊 CoT Statistics:\n");
-        s_logger.info("  Total chains:     ");
-        s_logger.info("  Successful:       ");
-        s_logger.info("  Failed:           ");
-        s_logger.info("  Steps executed:   ");
-        s_logger.info("  Steps skipped:    ");
-        s_logger.info("  Steps failed:     ");
-        s_logger.info("  Avg latency:      ");
+        std::cout << "📊 CoT Statistics:\n";
+        std::cout << "  Total chains:     " << stats.totalChains << "\n";
+        std::cout << "  Successful:       " << stats.successfulChains << "\n";
+        std::cout << "  Failed:           " << stats.failedChains << "\n";
+        std::cout << "  Steps executed:   " << stats.totalStepsExecuted << "\n";
+        std::cout << "  Steps skipped:    " << stats.totalStepsSkipped << "\n";
+        std::cout << "  Steps failed:     " << stats.totalStepsFailed << "\n";
+        std::cout << "  Avg latency:      " << stats.avgLatencyMs << "ms\n";
         if (!stats.roleUsage.empty()) {
-            s_logger.info("  Role usage:\n");
+            std::cout << "  Role usage:\n";
             for (const auto& [role, count] : stats.roleUsage) {
-                s_logger.info("    ");
+                std::cout << "    " << getCoTRoleInfo(role).label << ": " << count << "\n";
             }
         }
     }
     else {
-        s_logger.info("❌ Unknown subcommand: ");
-        s_logger.info("   Type !cot for usage.\n");
+        std::cout << "❌ Unknown subcommand: " << subcmd << "\n";
+        std::cout << "   Type !cot for usage.\n";
     }
 }
 
 void cmd_agents_list(const std::string& args) {
     if (!g_state.subAgentMgr) {
-        s_logger.info("❌ SubAgentManager not initialized\n");
+        std::cout << "❌ SubAgentManager not initialized\n";
         return;
     }
     auto agents = g_state.subAgentMgr->getAllSubAgents();
     if (agents.empty()) {
-        s_logger.info("No sub-agents.\n");
+        std::cout << "No sub-agents.\n";
         return;
     }
-    s_logger.info("📋 Sub-agents (");
+    std::cout << "📋 Sub-agents (" << agents.size() << "):\n";
     for (const auto& a : agents) {
         std::string icon = "⬜";
         if (a.state == SubAgent::State::Running) icon = "🔄";
         else if (a.state == SubAgent::State::Completed) icon = "✅";
         else if (a.state == SubAgent::State::Failed) icon = "❌";
         else if (a.state == SubAgent::State::Cancelled) icon = "🚫";
-        s_logger.info("  ");
+        std::cout << "  " << icon << " " << a.id << " [" << a.stateString() << "] "
+                  << a.description << " (" << a.elapsedMs() << "ms)\n";
     }
 }
 
 void cmd_todo_list(const std::string& args) {
     if (!g_state.subAgentMgr) {
-        s_logger.info("❌ SubAgentManager not initialized\n");
+        std::cout << "❌ SubAgentManager not initialized\n";
         return;
     }
     auto todos = g_state.subAgentMgr->getTodoList();
     if (todos.empty()) {
-        s_logger.info("Todo list empty.\n");
+        std::cout << "Todo list empty.\n";
         return;
     }
-    s_logger.info("📝 Todo List:\n");
+    std::cout << "📝 Todo List:\n";
     for (const auto& t : todos) {
         std::string icon = "⬜";
         if (t.status == TodoItem::Status::InProgress) icon = "🔄";
         else if (t.status == TodoItem::Status::Completed) icon = "✅";
         else if (t.status == TodoItem::Status::Failed) icon = "❌";
-        s_logger.info("  ");
-        if (!t.description.empty()) s_logger.info(" — ");
-        s_logger.info("\n");
+        std::cout << "  " << icon << " [" << t.id << "] " << t.title;
+        if (!t.description.empty()) std::cout << " — " << t.description;
+        std::cout << "\n";
     }
 }
 
@@ -1746,19 +1771,19 @@ void cmd_todo_list(const std::string& args) {
 
 void cmd_status(const std::string& args) {
     std::lock_guard<std::mutex> lock(g_stateMutex);
-    s_logger.info("\n📊 RawrXD CLI Status:\n");
-    s_logger.info("  File: ");
-    s_logger.info("  Buffer size: ");
-    s_logger.info("  Agent goal: ");
-    s_logger.info("  Agent loop: ");
-    s_logger.info("  Autonomy: ");
-    s_logger.info("  Debugger: ");
-    s_logger.info("  Terminals: ");
-    s_logger.info("  Breakpoints: ");
+    std::cout << "\n📊 RawrXD CLI Status:\n";
+    std::cout << "  File: " << (g_state.currentFile.empty() ? "(none)" : g_state.currentFile) << "\n";
+    std::cout << "  Buffer size: " << g_state.editorBuffer.size() << " bytes\n";
+    std::cout << "  Agent goal: " << (g_state.agentGoal.empty() ? "(none)" : g_state.agentGoal) << "\n";
+    std::cout << "  Agent loop: " << (g_state.agentLoopRunning ? "running" : "stopped") << "\n";
+    std::cout << "  Autonomy: " << (g_state.autonomyEnabled ? "enabled" : "disabled") << "\n";
+    std::cout << "  Debugger: " << (g_state.debuggingActive ? "active" : "stopped") << "\n";
+    std::cout << "  Terminals: " << g_state.terminalPanes.size() << "\n";
+    std::cout << "  Breakpoints: " << g_state.breakpoints.size() << "\n";
     if (g_state.subAgentMgr) {
-        s_logger.info("  ");
+        std::cout << "  " << g_state.subAgentMgr->getStatusSummary() << "\n";
     }
-    s_logger.info("\n");
+    std::cout << "\n";
 }
 
 // ============================================================================
@@ -1766,182 +1791,182 @@ void cmd_status(const std::string& args) {
 // ============================================================================
 
 void print_help() {
-    s_logger.info("\n╔════════════════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║       RawrXD AI Runtime (CLI) - Feature Parity with Win32 IDE       ║\n");
-    s_logger.info("╚════════════════════════════════════════════════════════════════════╝\n");
-    s_logger.info("\n🔧 FILE OPERATIONS:\n");
-    s_logger.info("  !new                          Create new file\n");
-    s_logger.info("  !open <path>                  Open file\n");
-    s_logger.info("  !save                         Save current file\n");
-    s_logger.info("  !save_as <path>               Save as new file\n");
-    s_logger.info("  !close                        Close current file\n");
-    s_logger.info("\n✂️  EDITOR OPERATIONS:\n");
-    s_logger.info("  !cut                          Cut to clipboard\n");
-    s_logger.info("  !copy                         Copy to clipboard\n");
-    s_logger.info("  !paste                        Paste from clipboard\n");
-    s_logger.info("  !undo                         Undo last change\n");
-    s_logger.info("  !redo                         Redo last change\n");
-    s_logger.info("  !find <text>                  Find text in buffer\n");
-    s_logger.info("  !replace <old> <new>          Replace text\n");
-    s_logger.info("\n🤖 AGENTIC OPERATIONS:\n");
-    s_logger.info("  !agent_execute <prompt>       Execute single agent command\n");
-    s_logger.info("  !agent_loop <prompt> [n]      Start multi-turn agent loop\n");
-    s_logger.info("  !agent_goal <goal>            Set agent goal\n");
-    s_logger.info("  !agent_memory <obs>           Add observation to memory\n");
-    s_logger.info("  !agent_memory show            Show agent memory\n");
-    s_logger.info("\n🤖 AUTONOMY OPERATIONS:\n");
-    s_logger.info("  !autonomy_start               Enable autonomy\n");
-    s_logger.info("  !autonomy_stop                Disable autonomy\n");
-    s_logger.info("  !autonomy_goal <goal>         Set autonomy goal\n");
-    s_logger.info("  !autonomy_rate <n>            Set max actions per minute\n");
-    s_logger.info("\n🐛 DEBUG OPERATIONS:\n");
-    s_logger.info("  !breakpoint_add <file>:<line> Add breakpoint\n");
-    s_logger.info("  !breakpoint_list              List all breakpoints\n");
-    s_logger.info("  !breakpoint_remove <idx>      Remove breakpoint\n");
-    s_logger.info("  !debug_start                  Start debugger\n");
-    s_logger.info("  !debug_stop                   Stop debugger\n");
-    s_logger.info("  !debug_step                   Step through code\n");
-    s_logger.info("  !debug_continue               Continue execution\n");
-    s_logger.info("\n💻 TERMINAL OPERATIONS:\n");
-    s_logger.info("  !terminal_new                 Create new terminal pane\n");
-    s_logger.info("  !terminal_split <orientation> Split terminal pane\n");
-    s_logger.info("  !terminal_kill                Close terminal pane\n");
-    s_logger.info("  !terminal_list                List terminal panes\n");
-    s_logger.info("\n🔥 HOTPATCH OPERATIONS:\n");
-    s_logger.info("  !hotpatch_apply <file>       Apply hotpatch without restart\n");
-    s_logger.info("  !hotpatch_create              Create hotpatch from current file\n");
-    s_logger.info("\n🧠 AGENTIC DECISION TREE (Phase 19):\n");
-    s_logger.info("  !decision_tree <sub>          dump|trace|stats|enable|disable|reset\n");
-    s_logger.info("  !autonomy_run <sub>           start|stop|pause|resume|status|tick\n");
-    s_logger.info("    verbose <on|off>              Toggle verbose tracing\n");
-    s_logger.info("    rate <n>                      Set actions/minute limit\n");
-    s_logger.info("    interval <ms>                 Set tick interval\n");
-    s_logger.info("  !ssa_lift <bin> [func] [addr] Run SSA Lifter on a binary function\n");
-    s_logger.info("  !auto_patch [text|analyze|stats] Auto-correct inference failures\n");
-    s_logger.info("\n🛡️  SAFETY CONTRACT (Phase 10B):\n");
-    s_logger.info("  !safety status                Show budget, risk, violations\n");
-    s_logger.info("  !safety reset                 Reset intent budget\n");
-    s_logger.info("  !safety rollback [all]        Rollback last/all actions\n");
-    s_logger.info("  !safety violations            Show violation log\n");
-    s_logger.info("  !safety block <class>         Block an action class\n");
-    s_logger.info("  !safety unblock <class>       Unblock an action class\n");
-    s_logger.info("  !safety risk <tier>           Set max risk (None|Low|Medium|High|Critical)\n");
-    s_logger.info("  !safety budget                Show remaining intent budget\n");
-    s_logger.info("\n🎯 CONFIDENCE GATE (Phase 10D):\n");
-    s_logger.info("  !confidence status            Gate stats + thresholds + trend\n");
-    s_logger.info("  !confidence policy <p>        Set policy (strict|normal|relaxed|disabled)\n");
-    s_logger.info("  !confidence threshold <e><s><a> Set thresholds\n");
-    s_logger.info("  !confidence history           Recent evaluations\n");
-    s_logger.info("  !confidence trend             Trend analysis\n");
-    s_logger.info("  !confidence selfabort         Self-abort status\n");
-    s_logger.info("  !confidence reset             Reset gate\n");
-    s_logger.info("\n📼 REPLAY JOURNAL (Phase 10C):\n");
-    s_logger.info("  !replay status                Journal stats\n");
-    s_logger.info("  !replay last [n]              Last N actions (default 10)\n");
-    s_logger.info("  !replay session               Current session snapshot\n");
-    s_logger.info("  !replay sessions              List all sessions\n");
-    s_logger.info("  !replay checkpoint [label]    Insert checkpoint\n");
-    s_logger.info("  !replay export <file>         Export session\n");
-    s_logger.info("  !replay filter <type>         Filter by action type\n");
-    s_logger.info("  !replay start|pause|stop      Control recording\n");
-    s_logger.info("\n⚙️  EXECUTION GOVERNOR (Phase 10A):\n");
-    s_logger.info("  !governor status              Stats + active tasks\n");
-    s_logger.info("  !governor run <cmd>           Run command with timeout\n");
-    s_logger.info("  !governor tasks               List active tasks\n");
-    s_logger.info("  !governor kill <id>           Kill a task\n");
-    s_logger.info("  !governor kill_all            Kill all tasks\n");
-    s_logger.info("  !governor wait <id>           Block until task completes\n");
-    s_logger.info("\n🔀 MULTI-RESPONSE (Phase 9C):\n");
-    s_logger.info("  !multi <prompt>               Generate N styled responses\n");
-    s_logger.info("  !multi compare                Side-by-side comparison\n");
-    s_logger.info("  !multi prefer <0-3> [reason]  Record preference\n");
-    s_logger.info("  !multi templates              Show templates\n");
-    s_logger.info("  !multi toggle <0-3>           Toggle template on/off\n");
-    s_logger.info("  !multi recommend              Recommended template\n");
-    s_logger.info("  !multi stats                  Generation stats\n");
-    s_logger.info("\n📜 HISTORY & EXPLAINABILITY (Phase 5/8A):\n");
-    s_logger.info("  !history show [n]             Last N events\n");
-    s_logger.info("  !history session              Session timeline\n");
-    s_logger.info("  !history agent <id>           Agent timeline\n");
-    s_logger.info("  !history type <type>          Events by type\n");
-    s_logger.info("  !history stats|flush|clear    Manage history\n");
-    s_logger.info("  !history export <file>        Export events\n");
-    s_logger.info("  !explain agent|chain|swarm <id>  Trace causal chain\n");
-    s_logger.info("  !explain failures             Explain all failures\n");
-    s_logger.info("  !explain policies             Policy firing attribution\n");
-    s_logger.info("  !explain session              Full session explanation\n");
-    s_logger.info("  !explain snapshot <file>      Export audit snapshot\n");
-    s_logger.info("\n📋 POLICY ENGINE (Phase 7):\n");
-    s_logger.info("  !policy list                  List all policies\n");
-    s_logger.info("  !policy show <id>             Policy details\n");
-    s_logger.info("  !policy enable|disable <id>   Toggle policy\n");
-    s_logger.info("  !policy remove <id>           Remove policy\n");
-    s_logger.info("  !policy heuristics            Computed heuristics\n");
-    s_logger.info("  !policy suggest               Generate suggestions\n");
-    s_logger.info("  !policy accept|reject <id>    Accept/reject suggestion\n");
-    s_logger.info("  !policy pending               Pending suggestions\n");
-    s_logger.info("  !policy export|import <file>  Export/import policies\n");
-    s_logger.info("  !policy stats                 Engine statistics\n");
-    s_logger.info("\n🔧 TOOL REGISTRY:\n");
-    s_logger.info("  !tools                        List registered tools\n");
-    s_logger.info("\n🔍 TOOLS:\n");
-    s_logger.info("  !search <pattern> [path]      Search files\n");
-    s_logger.info("  !analyze                      Analyze current file\n");
-    s_logger.info("  !profile                      Profile code\n");
-    s_logger.info("\n🤖 SUBAGENT OPERATIONS:\n");
-    s_logger.info("  !subagent <prompt>            Spawn a sub-agent\n");
-    s_logger.info("  !chain <s1> | <s2> | ...      Sequential prompt chain\n");
-    s_logger.info("  !swarm <p1> | <p2> | ...      Parallel HexMag swarm\n");
-    s_logger.info("    --strategy <merge>           concatenate|vote|summarize\n");
-    s_logger.info("    --parallel <n>               Max concurrent agents\n");
-    s_logger.info("  !agents                       List all sub-agents\n");
-    s_logger.info("  !todo                         Show todo list\n");
-    s_logger.info("\n🔗 CHAIN-OF-THOUGHT (Phase 32A):\n");
-    s_logger.info("  !cot                          Show CoT help\n");
-    s_logger.info("  !cot status                   Engine status\n");
-    s_logger.info("  !cot presets                  List presets (review|audit|think|...)\n");
-    s_logger.info("  !cot roles                    List all roles\n");
-    s_logger.info("  !cot preset <name>            Apply preset\n");
-    s_logger.info("  !cot steps                    Show current chain\n");
-    s_logger.info("  !cot add <role>               Add step to chain\n");
-    s_logger.info("  !cot clear                    Clear chain\n");
-    s_logger.info("  !cot run <query>              Execute chain on query\n");
-    s_logger.info("  !cot cancel                   Cancel running chain\n");
-    s_logger.info("  !cot stats                    Execution statistics\n");
-    s_logger.info("\n🎙️  VOICE (Phase 33):\n");
-    s_logger.info("  !voice                        Show voice commands help\n");
-    s_logger.info("  !voice init                   Initialize voice engine\n");
-    s_logger.info("  !voice record                 Start/stop recording\n");
-    s_logger.info("  !voice ptt                    Push-to-talk toggle\n");
-    s_logger.info("  !voice transcribe             Transcribe last recording\n");
-    s_logger.info("  !voice speak <text>           Text-to-speech\n");
-    s_logger.info("  !voice tts <on|off>           Toggle TTS for AI responses\n");
-    s_logger.info("  !voice mode <ptt|vad|off>     Set capture mode\n");
-    s_logger.info("  !voice devices                List audio devices\n");
-    s_logger.info("  !voice device <id>            Select input device\n");
-    s_logger.info("  !voice room <name>            Join/leave voice room\n");
-    s_logger.info("  !voice metrics                Show voice metrics\n");
-    s_logger.info("  !voice status                 Show voice status\n");
-    s_logger.info("\n⚙️  CONFIGURATION:\n");
-    s_logger.info("  !mode <mode>                  Set AI mode (ask|plan|edit|...)\n");
-    s_logger.info("  !engine <name>                Switch model\n");
-    s_logger.info("  !deep <on|off>                Enable deep thinking\n");
-    s_logger.info("  !research <on|off>            Enable deep research\n");
-    s_logger.info("  !max <tokens>                 Set context limit\n");
-    s_logger.info("\n🚀 IDE & SERVER:\n");
-    s_logger.info("  !generate_ide [path]          Generate React web IDE\n");
-    s_logger.info("  !server <port>                Start backend API server\n");
-    s_logger.info("\n� INSTRUCTIONS CONTEXT:\n");
-    s_logger.info("  !instructions                 Show production instructions\n");
-    s_logger.info("  !instructions list            List loaded instruction files\n");
-    s_logger.info("  !instructions show            Show full content (all lines)\n");
-    s_logger.info("  !instructions reload          Reload from disk\n");
-    s_logger.info("  !instructions paths           Show search paths\n");
-    s_logger.info("  !instructions json            Export as JSON\n");
-    s_logger.info("\n�📊 STATUS:\n");
-    s_logger.info("  !status                       Show current status\n");
-    s_logger.info("  !help                         Show this help\n");
-    s_logger.info("  !quit                         Exit CLI\n\n");
+    std::cout << "\n╔════════════════════════════════════════════════════════════════════╗\n";
+    std::cout << "║       RawrXD AI Runtime (CLI) - Feature Parity with Win32 IDE       ║\n";
+    std::cout << "╚════════════════════════════════════════════════════════════════════╝\n";
+    std::cout << "\n🔧 FILE OPERATIONS:\n";
+    std::cout << "  !new                          Create new file\n";
+    std::cout << "  !open <path>                  Open file\n";
+    std::cout << "  !save                         Save current file\n";
+    std::cout << "  !save_as <path>               Save as new file\n";
+    std::cout << "  !close                        Close current file\n";
+    std::cout << "\n✂️  EDITOR OPERATIONS:\n";
+    std::cout << "  !cut                          Cut to clipboard\n";
+    std::cout << "  !copy                         Copy to clipboard\n";
+    std::cout << "  !paste                        Paste from clipboard\n";
+    std::cout << "  !undo                         Undo last change\n";
+    std::cout << "  !redo                         Redo last change\n";
+    std::cout << "  !find <text>                  Find text in buffer\n";
+    std::cout << "  !replace <old> <new>          Replace text\n";
+    std::cout << "\n🤖 AGENTIC OPERATIONS:\n";
+    std::cout << "  !agent_execute <prompt>       Execute single agent command\n";
+    std::cout << "  !agent_loop <prompt> [n]      Start multi-turn agent loop\n";
+    std::cout << "  !agent_goal <goal>            Set agent goal\n";
+    std::cout << "  !agent_memory <obs>           Add observation to memory\n";
+    std::cout << "  !agent_memory show            Show agent memory\n";
+    std::cout << "\n🤖 AUTONOMY OPERATIONS:\n";
+    std::cout << "  !autonomy_start               Enable autonomy\n";
+    std::cout << "  !autonomy_stop                Disable autonomy\n";
+    std::cout << "  !autonomy_goal <goal>         Set autonomy goal\n";
+    std::cout << "  !autonomy_rate <n>            Set max actions per minute\n";
+    std::cout << "\n🐛 DEBUG OPERATIONS:\n";
+    std::cout << "  !breakpoint_add <file>:<line> Add breakpoint\n";
+    std::cout << "  !breakpoint_list              List all breakpoints\n";
+    std::cout << "  !breakpoint_remove <idx>      Remove breakpoint\n";
+    std::cout << "  !debug_start                  Start debugger\n";
+    std::cout << "  !debug_stop                   Stop debugger\n";
+    std::cout << "  !debug_step                   Step through code\n";
+    std::cout << "  !debug_continue               Continue execution\n";
+    std::cout << "\n💻 TERMINAL OPERATIONS:\n";
+    std::cout << "  !terminal_new                 Create new terminal pane\n";
+    std::cout << "  !terminal_split <orientation> Split terminal pane\n";
+    std::cout << "  !terminal_kill                Close terminal pane\n";
+    std::cout << "  !terminal_list                List terminal panes\n";
+    std::cout << "\n🔥 HOTPATCH OPERATIONS:\n";
+    std::cout << "  !hotpatch_apply <file>       Apply hotpatch without restart\n";
+    std::cout << "  !hotpatch_create              Create hotpatch from current file\n";
+    std::cout << "\n🧠 AGENTIC DECISION TREE (Phase 19):\n";
+    std::cout << "  !decision_tree <sub>          dump|trace|stats|enable|disable|reset\n";
+    std::cout << "  !autonomy_run <sub>           start|stop|pause|resume|status|tick\n";
+    std::cout << "    verbose <on|off>              Toggle verbose tracing\n";
+    std::cout << "    rate <n>                      Set actions/minute limit\n";
+    std::cout << "    interval <ms>                 Set tick interval\n";
+    std::cout << "  !ssa_lift <bin> [func] [addr] Run SSA Lifter on a binary function\n";
+    std::cout << "  !auto_patch [text|analyze|stats] Auto-correct inference failures\n";
+    std::cout << "\n🛡️  SAFETY CONTRACT (Phase 10B):\n";
+    std::cout << "  !safety status                Show budget, risk, violations\n";
+    std::cout << "  !safety reset                 Reset intent budget\n";
+    std::cout << "  !safety rollback [all]        Rollback last/all actions\n";
+    std::cout << "  !safety violations            Show violation log\n";
+    std::cout << "  !safety block <class>         Block an action class\n";
+    std::cout << "  !safety unblock <class>       Unblock an action class\n";
+    std::cout << "  !safety risk <tier>           Set max risk (None|Low|Medium|High|Critical)\n";
+    std::cout << "  !safety budget                Show remaining intent budget\n";
+    std::cout << "\n🎯 CONFIDENCE GATE (Phase 10D):\n";
+    std::cout << "  !confidence status            Gate stats + thresholds + trend\n";
+    std::cout << "  !confidence policy <p>        Set policy (strict|normal|relaxed|disabled)\n";
+    std::cout << "  !confidence threshold <e><s><a> Set thresholds\n";
+    std::cout << "  !confidence history           Recent evaluations\n";
+    std::cout << "  !confidence trend             Trend analysis\n";
+    std::cout << "  !confidence selfabort         Self-abort status\n";
+    std::cout << "  !confidence reset             Reset gate\n";
+    std::cout << "\n📼 REPLAY JOURNAL (Phase 10C):\n";
+    std::cout << "  !replay status                Journal stats\n";
+    std::cout << "  !replay last [n]              Last N actions (default 10)\n";
+    std::cout << "  !replay session               Current session snapshot\n";
+    std::cout << "  !replay sessions              List all sessions\n";
+    std::cout << "  !replay checkpoint [label]    Insert checkpoint\n";
+    std::cout << "  !replay export <file>         Export session\n";
+    std::cout << "  !replay filter <type>         Filter by action type\n";
+    std::cout << "  !replay start|pause|stop      Control recording\n";
+    std::cout << "\n⚙️  EXECUTION GOVERNOR (Phase 10A):\n";
+    std::cout << "  !governor status              Stats + active tasks\n";
+    std::cout << "  !governor run <cmd>           Run command with timeout\n";
+    std::cout << "  !governor tasks               List active tasks\n";
+    std::cout << "  !governor kill <id>           Kill a task\n";
+    std::cout << "  !governor kill_all            Kill all tasks\n";
+    std::cout << "  !governor wait <id>           Block until task completes\n";
+    std::cout << "\n🔀 MULTI-RESPONSE (Phase 9C):\n";
+    std::cout << "  !multi <prompt>               Generate N styled responses\n";
+    std::cout << "  !multi compare                Side-by-side comparison\n";
+    std::cout << "  !multi prefer <0-3> [reason]  Record preference\n";
+    std::cout << "  !multi templates              Show templates\n";
+    std::cout << "  !multi toggle <0-3>           Toggle template on/off\n";
+    std::cout << "  !multi recommend              Recommended template\n";
+    std::cout << "  !multi stats                  Generation stats\n";
+    std::cout << "\n📜 HISTORY & EXPLAINABILITY (Phase 5/8A):\n";
+    std::cout << "  !history show [n]             Last N events\n";
+    std::cout << "  !history session              Session timeline\n";
+    std::cout << "  !history agent <id>           Agent timeline\n";
+    std::cout << "  !history type <type>          Events by type\n";
+    std::cout << "  !history stats|flush|clear    Manage history\n";
+    std::cout << "  !history export <file>        Export events\n";
+    std::cout << "  !explain agent|chain|swarm <id>  Trace causal chain\n";
+    std::cout << "  !explain failures             Explain all failures\n";
+    std::cout << "  !explain policies             Policy firing attribution\n";
+    std::cout << "  !explain session              Full session explanation\n";
+    std::cout << "  !explain snapshot <file>      Export audit snapshot\n";
+    std::cout << "\n📋 POLICY ENGINE (Phase 7):\n";
+    std::cout << "  !policy list                  List all policies\n";
+    std::cout << "  !policy show <id>             Policy details\n";
+    std::cout << "  !policy enable|disable <id>   Toggle policy\n";
+    std::cout << "  !policy remove <id>           Remove policy\n";
+    std::cout << "  !policy heuristics            Computed heuristics\n";
+    std::cout << "  !policy suggest               Generate suggestions\n";
+    std::cout << "  !policy accept|reject <id>    Accept/reject suggestion\n";
+    std::cout << "  !policy pending               Pending suggestions\n";
+    std::cout << "  !policy export|import <file>  Export/import policies\n";
+    std::cout << "  !policy stats                 Engine statistics\n";
+    std::cout << "\n🔧 TOOL REGISTRY:\n";
+    std::cout << "  !tools                        List registered tools\n";
+    std::cout << "\n🔍 TOOLS:\n";
+    std::cout << "  !search <pattern> [path]      Search files\n";
+    std::cout << "  !analyze                      Analyze current file\n";
+    std::cout << "  !profile                      Profile code\n";
+    std::cout << "\n🤖 SUBAGENT OPERATIONS:\n";
+    std::cout << "  !subagent <prompt>            Spawn a sub-agent\n";
+    std::cout << "  !chain <s1> | <s2> | ...      Sequential prompt chain\n";
+    std::cout << "  !swarm <p1> | <p2> | ...      Parallel HexMag swarm\n";
+    std::cout << "    --strategy <merge>           concatenate|vote|summarize\n";
+    std::cout << "    --parallel <n>               Max concurrent agents\n";
+    std::cout << "  !agents                       List all sub-agents\n";
+    std::cout << "  !todo                         Show todo list\n";
+    std::cout << "\n🔗 CHAIN-OF-THOUGHT (Phase 32A):\n";
+    std::cout << "  !cot                          Show CoT help\n";
+    std::cout << "  !cot status                   Engine status\n";
+    std::cout << "  !cot presets                  List presets (review|audit|think|...)\n";
+    std::cout << "  !cot roles                    List all roles\n";
+    std::cout << "  !cot preset <name>            Apply preset\n";
+    std::cout << "  !cot steps                    Show current chain\n";
+    std::cout << "  !cot add <role>               Add step to chain\n";
+    std::cout << "  !cot clear                    Clear chain\n";
+    std::cout << "  !cot run <query>              Execute chain on query\n";
+    std::cout << "  !cot cancel                   Cancel running chain\n";
+    std::cout << "  !cot stats                    Execution statistics\n";
+    std::cout << "\n🎙️  VOICE (Phase 33):\n";
+    std::cout << "  !voice                        Show voice commands help\n";
+    std::cout << "  !voice init                   Initialize voice engine\n";
+    std::cout << "  !voice record                 Start/stop recording\n";
+    std::cout << "  !voice ptt                    Push-to-talk toggle\n";
+    std::cout << "  !voice transcribe             Transcribe last recording\n";
+    std::cout << "  !voice speak <text>           Text-to-speech\n";
+    std::cout << "  !voice tts <on|off>           Toggle TTS for AI responses\n";
+    std::cout << "  !voice mode <ptt|vad|off>     Set capture mode\n";
+    std::cout << "  !voice devices                List audio devices\n";
+    std::cout << "  !voice device <id>            Select input device\n";
+    std::cout << "  !voice room <name>            Join/leave voice room\n";
+    std::cout << "  !voice metrics                Show voice metrics\n";
+    std::cout << "  !voice status                 Show voice status\n";
+    std::cout << "\n⚙️  CONFIGURATION:\n";
+    std::cout << "  !mode <mode>                  Set AI mode (ask|plan|edit|...)\n";
+    std::cout << "  !engine <name>                Switch model\n";
+    std::cout << "  !deep <on|off>                Enable deep thinking\n";
+    std::cout << "  !research <on|off>            Enable deep research\n";
+    std::cout << "  !max <tokens>                 Set context limit\n";
+    std::cout << "\n🚀 IDE & SERVER:\n";
+    std::cout << "  !generate_ide [path]          Generate React web IDE\n";
+    std::cout << "  !server <port>                Start backend API server\n";
+    std::cout << "\n� INSTRUCTIONS CONTEXT:\n";
+    std::cout << "  !instructions                 Show production instructions\n";
+    std::cout << "  !instructions list            List loaded instruction files\n";
+    std::cout << "  !instructions show            Show full content (all lines)\n";
+    std::cout << "  !instructions reload          Reload from disk\n";
+    std::cout << "  !instructions paths           Show search paths\n";
+    std::cout << "  !instructions json            Export as JSON\n";
+    std::cout << "\n�📊 STATUS:\n";
+    std::cout << "  !status                       Show current status\n";
+    std::cout << "  !help                         Show this help\n";
+    std::cout << "  !quit                         Exit CLI\n\n";
 }
 
 // ============================================================================
@@ -2054,31 +2079,31 @@ void route_command(const std::string& line) {
     // Original configuration commands
     else if (cmd == "!mode") {
         set_mode(args);
-        s_logger.info("✅ Mode set.\n");
+        std::cout << "✅ Mode set.\n";
     }
     else if (cmd == "!engine") {
         set_engine(args);
-        s_logger.info("✅ Engine switched.\n");
+        std::cout << "✅ Engine switched.\n";
     }
     else if (cmd == "!deep") {
         set_deep_thinking(args == "on");
-        s_logger.info("✅ Deep thinking: ");
+        std::cout << "✅ Deep thinking: " << (args == "on" ? "enabled" : "disabled") << "\n";
     }
     else if (cmd == "!research") {
         set_deep_research(args == "on");
-        s_logger.info("✅ Deep research: ");
+        std::cout << "✅ Deep research: " << (args == "on" ? "enabled" : "disabled") << "\n";
     }
     else if (cmd == "!max") {
         try {
             set_context(std::stoull(args));
-            s_logger.info("✅ Context limit updated.\n");
+            std::cout << "✅ Context limit updated.\n";
         } catch (...) {
-            s_logger.info("❌ Invalid number\n");
+            std::cout << "❌ Invalid number\n";
         }
     }
     else if (cmd == "!generate_ide") {
         std::string path = args.empty() ? "generated_ide" : args;
-        s_logger.info("🚀 Generating Full AI IDE at: ");
+        std::cout << "🚀 Generating Full AI IDE at: " << path << " ...\n";
         RawrXD::ReactServerConfig config;
         config.name = "RawrXD-IDE";
         config.port = "3000";
@@ -2086,16 +2111,20 @@ void route_command(const std::string& line) {
         config.cpp_backend_port = "8080";
         
         if (RawrXD::ReactServerGenerator::Generate(path, config)) {
-            s_logger.info("✅ Success! To run:\n");
+            std::cout << "✅ Success! To run:\n"
+                      << "  cd " << path << "\n"
+                      << "  npm install\n"
+                      << "  npm start\n"
+                      << "Ensure backend is running with !server 8080\n";
         } else {
-            s_logger.info("❌ Failed to generate IDE.\n");
+            std::cout << "❌ Failed to generate IDE.\n";
         }
     }
     else if (cmd == "!server") {
         int port = 8080;
         try { port = std::stoi(args); } catch(...) {}
         std::thread(start_server, port).detach();
-        s_logger.info("🌐 Backend server started on port ");
+        std::cout << "🌐 Backend server started on port " << port << "\n";
     }
     else {
         // Fall through to AI prompt processing
@@ -2115,7 +2144,7 @@ void route_command(const std::string& line) {
         }
         auto queryEnd = std::chrono::steady_clock::now();
         double queryMs = std::chrono::duration<double, std::milli>(queryEnd - queryStart).count();
-        s_logger.info( out << "\n";
+        std::cout << out << "\n";
         
         // Phase 33: Auto-TTS for AI responses if enabled
         if (g_state.voiceTTSEnabled && g_state.voiceInitialized && g_state.voiceChat) {
@@ -2133,7 +2162,7 @@ void route_command(const std::string& line) {
         if (g_state.subAgentMgr) {
             std::string toolResult;
             if (g_state.subAgentMgr->dispatchToolCall("cli", out, toolResult)) {
-                s_logger.info("\n[Tool Result]\n");
+                std::cout << "\n[Tool Result]\n" << toolResult << "\n";
             }
         }
         
@@ -2155,9 +2184,11 @@ int main() {
         provider.addSearchPath(".github");
         auto r = provider.loadAll();
         if (r.success) {
-            s_logger.info("\xE2\x9C\x85 Instructions loaded: ");
+            std::cout << "\xE2\x9C\x85 Instructions loaded: "
+                      << provider.getLoadedCount() << " files (" 
+                      << provider.getAllContent().size() << " bytes)\n";
         } else {
-            s_logger.info("\xE2\x9A\xA0 Instructions: ");
+            std::cout << "\xE2\x9A\xA0 Instructions: " << r.detail << "\n";
         }
     }
 
@@ -2183,16 +2214,16 @@ int main() {
     size_t guiCount = getGuiFeatureCount();
     size_t totalCount = getTotalFeatureCount();
     
-    s_logger.info("\n\xE2\x95\x94\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x97\n");
-    s_logger.info("\xE2\x95\x91   RawrXD AI Runtime (CLI) \xE2\x80\x94 Unified Feature Dispatch v2.0       \xE2\x95\x91\n");
-    s_logger.info("\xE2\x95\x91   ");
-    s_logger.info("\xE2\x95\x91   Pure C++20 + x64 MASM | Win32 | 3-Layer Hotpatch              \xE2\x95\x91\n");
-    s_logger.info("\xE2\x95\x9A\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x9D\n\n");
-    s_logger.info("Type !help for commands, !manifest_md for feature manifest, or chat with AI.\n\n");
+    std::cout << "\n\xE2\x95\x94\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x97\n";
+    std::cout << "\xE2\x95\x91   RawrXD AI Runtime (CLI) \xE2\x80\x94 Unified Feature Dispatch v2.0       \xE2\x95\x91\n";
+    std::cout << "\xE2\x95\x91   " << totalCount << " features registered | CLI: " << cliCount << " | GUI: " << guiCount << " | Zero-Qt  \xE2\x95\x91\n";
+    std::cout << "\xE2\x95\x91   Pure C++20 + x64 MASM | Win32 | 3-Layer Hotpatch              \xE2\x95\x91\n";
+    std::cout << "\xE2\x95\x9A\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x90\xE2\x95\x9D\n\n";
+    std::cout << "Type !help for commands, !manifest_md for feature manifest, or chat with AI.\n\n";
 
     std::string line;
     while (true) {
-        s_logger.info("rawrxd> ");
+        std::cout << "rawrxd> ";
         std::getline(std::cin, line);
 
         if (line == "!quit") break;

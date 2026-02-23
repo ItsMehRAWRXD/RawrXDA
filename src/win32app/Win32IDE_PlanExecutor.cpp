@@ -22,6 +22,27 @@
 #include <thread>
 #include <chrono>
 
+// SCAFFOLD_081: generateAgentPlan and WM_PLAN_READY
+
+
+// SCAFFOLD_080: Plan rollback and file backup
+
+
+// SCAFFOLD_079: Plan execution progress and pause
+
+
+// SCAFFOLD_078: Plan dialog Approve/Reject/Edit
+
+
+// SCAFFOLD_077: Plan step parsing (STEP/DESC/TYPE)
+
+
+// SCAFFOLD_019: Plan step execution and rollback
+
+
+// SCAFFOLD_018: Plan approval dialog and list view
+
+
 // ============================================================================
 // PLAN STEP EXECUTION — runs a single step via the agent
 // ============================================================================
@@ -161,6 +182,9 @@ void Win32IDE::onPlanReady(int stepCount, PlanStep* steps) {
 
     // Show plan approval dialog
     showPlanApprovalDialog();
+
+    // Notify chat that plan is ready for review (design spec #5)
+    appendToOutput("[Plan] Plan ready. Approve or reject in the dialog.\n", "Agent", OutputSeverity::Info);
 }
 
 // ============================================================================
@@ -935,6 +959,7 @@ void Win32IDE::onPlanDialogCommand(int controlId) {
     case IDC_PLAN_BTN_REJECT: {
         m_currentPlan.status = PlanStatus::Rejected;
         appendToOutput("[Plan] Rejected by user.", "General", OutputSeverity::Warning);
+        appendToOutput("[Plan] Plan rejected by user.\n", "Agent", OutputSeverity::Info);
         LOG_INFO("Plan rejected by user: " + m_currentPlan.goal);
         closePlanDialog();
         break;

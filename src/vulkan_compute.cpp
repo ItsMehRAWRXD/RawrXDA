@@ -7,8 +7,8 @@
 #include <cmath>
 #include <cstring>
 
-#include "logging/logger.h"
-static Logger s_logger("vulkan_compute");
+// SCAFFOLD_105: Vulkan compute backend init
+
 
 VulkanCompute::VulkanCompute()
     : instance_(nullptr), physical_device_(nullptr), device_(nullptr),
@@ -22,31 +22,31 @@ VulkanCompute::~VulkanCompute() {
 
 bool VulkanCompute::Initialize() {
     if (!CreateInstance()) {
-        s_logger.error( "Failed to create Vulkan instance" << std::endl;
+        std::cerr << "Failed to create Vulkan instance" << std::endl;
         return false;
     }
     
     if (!SelectPhysicalDevice()) {
-        s_logger.error( "Failed to select physical device" << std::endl;
+        std::cerr << "Failed to select physical device" << std::endl;
         return false;
     }
     
     if (!CreateLogicalDevice()) {
-        s_logger.error( "Failed to create logical device" << std::endl;
+        std::cerr << "Failed to create logical device" << std::endl;
         return false;
     }
     
     if (!CreateCommandPool()) {
-        s_logger.error( "Failed to create command pool" << std::endl;
+        std::cerr << "Failed to create command pool" << std::endl;
         return false;
     }
     
     // Initialize async command buffer pool
     InitializeCommandBufferPool(4);  // Start with 4 reusable command buffers
     
-    s_logger.info("Vulkan initialized successfully on device: ");
-    s_logger.info("AMD Device: ");
-    s_logger.info("Compute Queue Family: ");
+    std::cout << "Vulkan initialized successfully on device: " << device_info_.device_name << std::endl;
+    std::cout << "AMD Device: " << (IsAMDDevice() ? "Yes" : "No") << std::endl;
+    std::cout << "Compute Queue Family: " << device_info_.compute_queue_family << std::endl;
     
     return true;
 }
@@ -62,7 +62,7 @@ void VulkanCompute::InitializeCommandBufferPool(uint32_t pool_size) {
     
     std::vector<VkCommandBuffer> buffers(pool_size);
     if (vkAllocateCommandBuffers(device_, &alloc_info, buffers.data()) != VK_SUCCESS) {
-        s_logger.error( "Failed to allocate command buffers for pool" << std::endl;
+        std::cerr << "Failed to allocate command buffers for pool" << std::endl;
         return;
     }
     
@@ -73,7 +73,7 @@ void VulkanCompute::InitializeCommandBufferPool(uint32_t pool_size) {
         fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;  // Start signaled (available)
         
         if (vkCreateFence(device_, &fence_info, nullptr, &command_buffer_pool_[i].fence) != VK_SUCCESS) {
-            s_logger.error( "Failed to create fence for command buffer pool" << std::endl;
+            std::cerr << "Failed to create fence for command buffer pool" << std::endl;
             return;
         }
         
@@ -82,7 +82,7 @@ void VulkanCompute::InitializeCommandBufferPool(uint32_t pool_size) {
         available_buffer_indices_.push(i);
     }
     
-    s_logger.info("Initialized command buffer pool with ");
+    std::cout << "Initialized command buffer pool with " << pool_size << " buffers" << std::endl;
 }
 
 void VulkanCompute::CleanupCommandBufferPool() {
@@ -123,7 +123,7 @@ VkCommandBuffer VulkanCompute::AcquireAsyncCommandBuffer() {
     }
     
     // No buffers available - need to wait (shouldn't happen with adequate pool size)
-    s_logger.error( "WARNING: All command buffers in use, this may cause stalls. Increase pool size." << std::endl;
+    std::cerr << "WARNING: All command buffers in use, this may cause stalls. Increase pool size." << std::endl;
     return nullptr;
 }
 
@@ -138,7 +138,7 @@ bool VulkanCompute::SubmitAsyncCommandBuffer(VkCommandBuffer cmd_buffer) {
     }
     
     if (pool_idx < 0) {
-        s_logger.error( "Command buffer not from pool" << std::endl;
+        std::cerr << "Command buffer not from pool" << std::endl;
         return false;
     }
     
@@ -148,7 +148,7 @@ bool VulkanCompute::SubmitAsyncCommandBuffer(VkCommandBuffer cmd_buffer) {
     submit_info.pCommandBuffers = &cmd_buffer;
     
     if (vkQueueSubmit(compute_queue_, 1, &submit_info, command_buffer_pool_[pool_idx].fence) != VK_SUCCESS) {
-        s_logger.error( "Failed to submit command buffer" << std::endl;
+        std::cerr << "Failed to submit command buffer" << std::endl;
         return false;
     }
     
@@ -169,7 +169,7 @@ bool VulkanCompute::FlushAsyncCommands() {
     }
     
     if (vkWaitForFences(device_, (uint32_t)all_fences.size(), all_fences.data(), VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-        s_logger.error( "Failed to wait for async command buffers" << std::endl;
+        std::cerr << "Failed to wait for async command buffers" << std::endl;
         return false;
     }
     
@@ -217,7 +217,7 @@ bool VulkanCompute::ExecuteSingleTimeCommands(std::function<void(VkCommandBuffer
 
     VkCommandBuffer command_buffer;
     if (vkAllocateCommandBuffers(device_, &alloc_info, &command_buffer) != VK_SUCCESS) {
-        s_logger.error( "Failed to allocate command buffer" << std::endl;
+        std::cerr << "Failed to allocate command buffer" << std::endl;
         return false;
     }
 
@@ -227,7 +227,7 @@ bool VulkanCompute::ExecuteSingleTimeCommands(std::function<void(VkCommandBuffer
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (vkBeginCommandBuffer(command_buffer, &begin_info) != VK_SUCCESS) {
-        s_logger.error( "Failed to begin command buffer recording" << std::endl;
+        std::cerr << "Failed to begin command buffer recording" << std::endl;
         vkFreeCommandBuffers(device_, command_pool_, 1, &command_buffer);
         return false;
     }
@@ -237,7 +237,7 @@ bool VulkanCompute::ExecuteSingleTimeCommands(std::function<void(VkCommandBuffer
 
     // End recording
     if (vkEndCommandBuffer(command_buffer) != VK_SUCCESS) {
-        s_logger.error( "Failed to end command buffer recording" << std::endl;
+        std::cerr << "Failed to end command buffer recording" << std::endl;
         vkFreeCommandBuffers(device_, command_pool_, 1, &command_buffer);
         return false;
     }
@@ -253,13 +253,13 @@ bool VulkanCompute::ExecuteSingleTimeCommands(std::function<void(VkCommandBuffer
 
     VkFence fence;
     if (vkCreateFence(device_, &fence_info, nullptr, &fence) != VK_SUCCESS) {
-        s_logger.error( "Failed to create fence" << std::endl;
+        std::cerr << "Failed to create fence" << std::endl;
         vkFreeCommandBuffers(device_, command_pool_, 1, &command_buffer);
         return false;
     }
 
     if (vkQueueSubmit(compute_queue_, 1, &submit_info, fence) != VK_SUCCESS) {
-        s_logger.error( "Failed to submit command buffer" << std::endl;
+        std::cerr << "Failed to submit command buffer" << std::endl;
         vkDestroyFence(device_, fence, nullptr);
         vkFreeCommandBuffers(device_, command_pool_, 1, &command_buffer);
         return false;
@@ -267,7 +267,7 @@ bool VulkanCompute::ExecuteSingleTimeCommands(std::function<void(VkCommandBuffer
 
     // Wait for fence
     if (vkWaitForFences(device_, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-        s_logger.error( "Failed to wait for fence" << std::endl;
+        std::cerr << "Failed to wait for fence" << std::endl;
         vkDestroyFence(device_, fence, nullptr);
         vkFreeCommandBuffers(device_, command_pool_, 1, &command_buffer);
         return false;
@@ -291,12 +291,12 @@ bool VulkanCompute::ExecuteCommandBuffer(VkCommandBuffer cmd_buffer) {
 
     VkFence fence;
     if (vkCreateFence(device_, &fence_info, nullptr, &fence) != VK_SUCCESS) {
-        s_logger.error( "Failed to create fence" << std::endl;
+        std::cerr << "Failed to create fence" << std::endl;
         return false;
     }
 
     if (vkQueueSubmit(compute_queue_, 1, &submit_info, fence) != VK_SUCCESS) {
-        s_logger.error( "Failed to submit command buffer" << std::endl;
+        std::cerr << "Failed to submit command buffer" << std::endl;
         vkDestroyFence(device_, fence, nullptr);
         return false;
     }
@@ -304,7 +304,7 @@ bool VulkanCompute::ExecuteCommandBuffer(VkCommandBuffer cmd_buffer) {
     // Wait for fence with timeout of 5 seconds
     VkResult wait_result = vkWaitForFences(device_, 1, &fence, VK_TRUE, 5000000000ULL);
     if (wait_result != VK_SUCCESS) {
-        s_logger.error( "Command buffer execution timeout or failed" << std::endl;
+        std::cerr << "Command buffer execution timeout or failed" << std::endl;
         vkDestroyFence(device_, fence, nullptr);
         return false;
     }
@@ -327,7 +327,7 @@ bool VulkanCompute::CreateInstance() {
     create_info.pApplicationInfo = &app_info;
 
     if (vkCreateInstance(&create_info, nullptr, &instance_) != VK_SUCCESS) {
-        s_logger.error( "Failed to create Vulkan instance" << std::endl;
+        std::cerr << "Failed to create Vulkan instance" << std::endl;
         return false;
     }
 
@@ -339,7 +339,7 @@ bool VulkanCompute::SelectPhysicalDevice() {
     vkEnumeratePhysicalDevices(instance_, &device_count, nullptr);
     
     if (device_count == 0) {
-        s_logger.error( "No Vulkan devices found" << std::endl;
+        std::cerr << "No Vulkan devices found" << std::endl;
         return false;
     }
 
@@ -375,11 +375,13 @@ bool VulkanCompute::SelectPhysicalDevice() {
             best_device_idx = i;
         }
 
-        s_logger.info("Found device ");
+        std::cout << "Found device " << i << ": " << props.deviceName 
+                  << " (Vendor: 0x" << std::hex << vendor_id << std::dec 
+                  << ", Score: " << score << ")" << std::endl;
     }
 
     if (best_device_idx < 0) {
-        s_logger.error( "No suitable device found" << std::endl;
+        std::cerr << "No suitable device found" << std::endl;
         return false;
     }
 
@@ -391,7 +393,7 @@ bool VulkanCompute::SelectPhysicalDevice() {
     device_info_.vendor_id = device_info_.properties.vendorID;
     device_info_.device_id = device_info_.properties.deviceID;
 
-    s_logger.info("Selected device: ");
+    std::cout << "Selected device: " << device_info_.device_name << std::endl;
 
     return true;
 }
@@ -413,7 +415,7 @@ bool VulkanCompute::CreateLogicalDevice() {
     }
 
     if (compute_queue_family < 0) {
-        s_logger.error( "No compute queue family found" << std::endl;
+        std::cerr << "No compute queue family found" << std::endl;
         return false;
     }
 
@@ -433,7 +435,7 @@ bool VulkanCompute::CreateLogicalDevice() {
     device_create_info.pQueueCreateInfos = &queue_create_info;
 
     if (vkCreateDevice(physical_device_, &device_create_info, nullptr, &device_) != VK_SUCCESS) {
-        s_logger.error( "Failed to create logical device" << std::endl;
+        std::cerr << "Failed to create logical device" << std::endl;
         return false;
     }
 
@@ -449,7 +451,7 @@ bool VulkanCompute::CreateCommandPool() {
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     if (vkCreateCommandPool(device_, &pool_info, nullptr, &command_pool_) != VK_SUCCESS) {
-        s_logger.error( "Failed to create command pool" << std::endl;
+        std::cerr << "Failed to create command pool" << std::endl;
         return false;
     }
 
@@ -459,7 +461,7 @@ bool VulkanCompute::CreateCommandPool() {
 bool VulkanCompute::LoadShader(const std::string& name, const std::string& spirv_path) {
     std::vector<uint32_t> spirv_code;
     if (!LoadSPIRVCode(spirv_path, spirv_code)) {
-        s_logger.error( "Failed to load SPIR-V code: " << spirv_path << std::endl;
+        std::cerr << "Failed to load SPIR-V code: " << spirv_path << std::endl;
         return false;
     }
 
@@ -473,12 +475,12 @@ bool VulkanCompute::LoadShader(const std::string& name, const std::string& spirv
     shader.spirv_code = spirv_code;
 
     if (vkCreateShaderModule(device_, &create_info, nullptr, &shader.module) != VK_SUCCESS) {
-        s_logger.error( "Failed to create shader module: " << name << std::endl;
+        std::cerr << "Failed to create shader module: " << name << std::endl;
         return false;
     }
 
     shaders_[name] = std::move(shader);
-    s_logger.info("Loaded shader: ");
+    std::cout << "Loaded shader: " << name << std::endl;
 
     return true;
 }
@@ -486,7 +488,7 @@ bool VulkanCompute::LoadShader(const std::string& name, const std::string& spirv
 bool VulkanCompute::CreateComputePipeline(const std::string& shader_name) {
     auto it = shaders_.find(shader_name);
     if (it == shaders_.end()) {
-        s_logger.error( "Shader not found: " << shader_name << std::endl;
+        std::cerr << "Shader not found: " << shader_name << std::endl;
         return false;
     }
 
@@ -494,7 +496,7 @@ bool VulkanCompute::CreateComputePipeline(const std::string& shader_name) {
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
     if (vkCreatePipelineLayout(device_, &pipeline_layout_info, nullptr, &it->second.layout) != VK_SUCCESS) {
-        s_logger.error( "Failed to create pipeline layout: " << shader_name << std::endl;
+        std::cerr << "Failed to create pipeline layout: " << shader_name << std::endl;
         return false;
     }
 
@@ -510,11 +512,11 @@ bool VulkanCompute::CreateComputePipeline(const std::string& shader_name) {
     compute_pipeline_info.stage = stage_info;
 
     if (vkCreateComputePipelines(device_, nullptr, 1, &compute_pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
-        s_logger.error( "Failed to create compute pipeline: " << shader_name << std::endl;
+        std::cerr << "Failed to create compute pipeline: " << shader_name << std::endl;
         return false;
     }
 
-    s_logger.info("Created compute pipeline: ");
+    std::cout << "Created compute pipeline: " << shader_name << std::endl;
     return true;
 }
 
@@ -525,7 +527,7 @@ bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory
     buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     if (vkCreateBuffer(device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
-        s_logger.error( "Failed to create buffer" << std::endl;
+        std::cerr << "Failed to create buffer" << std::endl;
         return false;
     }
 
@@ -538,7 +540,7 @@ bool VulkanCompute::AllocateBuffer(size_t size, VkBuffer& buffer, VkDeviceMemory
     alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
-        s_logger.error( "Failed to allocate memory" << std::endl;
+        std::cerr << "Failed to allocate memory" << std::endl;
         vkDestroyBuffer(device_, buffer, nullptr);
         return false;
     }
@@ -556,7 +558,7 @@ bool VulkanCompute::CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceM
     buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     if (vkCreateBuffer(device_, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
-        s_logger.error( "Failed to create staging buffer" << std::endl;
+        std::cerr << "Failed to create staging buffer" << std::endl;
         return false;
     }
 
@@ -570,7 +572,7 @@ bool VulkanCompute::CreateStagingBuffer(size_t size, VkBuffer& buffer, VkDeviceM
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
     if (vkAllocateMemory(device_, &alloc_info, nullptr, &memory) != VK_SUCCESS) {
-        s_logger.error( "Failed to allocate staging memory" << std::endl;
+        std::cerr << "Failed to allocate staging memory" << std::endl;
         vkDestroyBuffer(device_, buffer, nullptr);
         return false;
     }
@@ -592,7 +594,7 @@ bool VulkanCompute::AllocateBuffer(size_t size, uint32_t& buffer_idx, size_t& me
     allocated_buffers_.push_back(std::make_pair(buffer, memory));
     memory_size = size;
     
-    s_logger.info("Allocated buffer ");
+    std::cout << "Allocated buffer " << buffer_idx << " with " << size << " bytes" << std::endl;
     return true;
 }
 
@@ -613,7 +615,7 @@ bool VulkanCompute::CopyBufferToHost(VkBuffer device_buffer, void* host_data, si
         copy_region.size = size;
         vkCmdCopyBuffer(cmd_buffer, device_buffer, staging_buffer, 1, &copy_region);
     })) {
-        s_logger.error( "Failed to copy buffer from device to host" << std::endl;
+        std::cerr << "Failed to copy buffer from device to host" << std::endl;
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         vkFreeMemory(device_, staging_memory, nullptr);
         return false;
@@ -622,7 +624,7 @@ bool VulkanCompute::CopyBufferToHost(VkBuffer device_buffer, void* host_data, si
     // Map and read staging buffer
     void* mapped_data;
     if (vkMapMemory(device_, staging_memory, 0, size, 0, &mapped_data) != VK_SUCCESS) {
-        s_logger.error( "Failed to map staging memory" << std::endl;
+        std::cerr << "Failed to map staging memory" << std::endl;
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         vkFreeMemory(device_, staging_memory, nullptr);
         return false;
@@ -640,7 +642,7 @@ bool VulkanCompute::CopyBufferToHost(VkBuffer device_buffer, void* host_data, si
 
 bool VulkanCompute::CopyBufferToHost(uint32_t buffer_idx, void* host_data, size_t size) {
     if (buffer_idx >= allocated_buffers_.size()) {
-        s_logger.error( "Invalid buffer index: " << buffer_idx << std::endl;
+        std::cerr << "Invalid buffer index: " << buffer_idx << std::endl;
         return false;
     }
     
@@ -659,7 +661,7 @@ bool VulkanCompute::CopyHostToBuffer(void* host_data, VkBuffer device_buffer, si
     // Map and copy host data to staging buffer
     void* mapped_data;
     if (vkMapMemory(device_, staging_memory, 0, size, 0, &mapped_data) != VK_SUCCESS) {
-        s_logger.error( "Failed to map staging memory" << std::endl;
+        std::cerr << "Failed to map staging memory" << std::endl;
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         vkFreeMemory(device_, staging_memory, nullptr);
         return false;
@@ -676,7 +678,7 @@ bool VulkanCompute::CopyHostToBuffer(void* host_data, VkBuffer device_buffer, si
         copy_region.size = size;
         vkCmdCopyBuffer(cmd_buffer, staging_buffer, device_buffer, 1, &copy_region);
     })) {
-        s_logger.error( "Failed to copy buffer from host to device" << std::endl;
+        std::cerr << "Failed to copy buffer from host to device" << std::endl;
         vkDestroyBuffer(device_, staging_buffer, nullptr);
         vkFreeMemory(device_, staging_memory, nullptr);
         return false;
@@ -691,7 +693,7 @@ bool VulkanCompute::CopyHostToBuffer(void* host_data, VkBuffer device_buffer, si
 
 bool VulkanCompute::CopyHostToBuffer(void* host_data, uint32_t buffer_idx, size_t size) {
     if (buffer_idx >= allocated_buffers_.size()) {
-        s_logger.error( "Invalid buffer index: " << buffer_idx << std::endl;
+        std::cerr << "Invalid buffer index: " << buffer_idx << std::endl;
         return false;
     }
     
@@ -712,18 +714,18 @@ VulkanTensor VulkanCompute::TransferGGUFTensor(const std::string& tensor_name,
     
     // Allocate device buffer
     if (!AllocateBuffer(size_bytes, tensor.device_buffer, tensor.device_memory)) {
-        s_logger.error( "Failed to allocate device buffer for tensor: " << tensor_name << std::endl;
+        std::cerr << "Failed to allocate device buffer for tensor: " << tensor_name << std::endl;
         return tensor;
     }
     
     // Copy host data to device
     if (!CopyHostToBuffer(tensor.host_data.data(), tensor.device_buffer, size_bytes)) {
-        s_logger.error( "Failed to transfer tensor to device: " << tensor_name << std::endl;
+        std::cerr << "Failed to transfer tensor to device: " << tensor_name << std::endl;
         return tensor;
     }
     
     uploaded_tensors_.push_back(tensor);
-    s_logger.info("Transferred tensor '");
+    std::cout << "Transferred tensor '" << tensor_name << "' (" << size_bytes << " bytes) to device" << std::endl;
     
     return tensor;
 }
@@ -738,7 +740,7 @@ void VulkanCompute::ReleaseTensors() {
         }
     }
     uploaded_tensors_.clear();
-    s_logger.info("Released all tensors");
+    std::cout << "Released all tensors" << std::endl;
 }
 
 bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
@@ -750,14 +752,14 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     
     // 1. Load Shader
     if (!LoadShader("matmul", spirv_path)) {
-        s_logger.error( "Failed to load matmul shader from: " << spirv_path << std::endl;
+        std::cerr << "Failed to load matmul shader from: " << spirv_path << std::endl;
         return false;
     }
     
     // Get the shader iterator again after loading
     it = shaders_.find("matmul");
     if (it == shaders_.end()) {
-        s_logger.error( "Shader not found after loading" << std::endl;
+        std::cerr << "Shader not found after loading" << std::endl;
         return false;
     }
     
@@ -777,10 +779,10 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     layout_info.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(device_, &layout_info, nullptr, &matmul_descriptor_set_layout_) != VK_SUCCESS) {
-        s_logger.error( "Failed to create MatMul descriptor set layout!" << std::endl;
+        std::cerr << "Failed to create MatMul descriptor set layout!" << std::endl;
         return false;
     }
-    s_logger.info("Created permanent MatMul descriptor set layout");
+    std::cout << "Created permanent MatMul descriptor set layout" << std::endl;
 
     // --- 3. Create PERMANENT Descriptor Pool ---
     VkDescriptorPoolSize pool_size{};
@@ -794,12 +796,12 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     pool_info.maxSets = 10;  // Max 10 descriptor sets
     
     if (vkCreateDescriptorPool(device_, &pool_info, nullptr, &matmul_descriptor_pool_) != VK_SUCCESS) {
-        s_logger.error( "Failed to create MatMul descriptor pool!" << std::endl;
+        std::cerr << "Failed to create MatMul descriptor pool!" << std::endl;
         vkDestroyDescriptorSetLayout(device_, matmul_descriptor_set_layout_, nullptr);
         matmul_descriptor_set_layout_ = nullptr;
         return false;
     }
-    s_logger.info("Created permanent MatMul descriptor pool");
+    std::cout << "Created permanent MatMul descriptor pool" << std::endl;
     
     // --- 4. Create Pipeline Layout (using the permanent layout with Push Constants) ---
     VkPushConstantRange push_constant{};
@@ -815,14 +817,14 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     pipeline_layout_info.pPushConstantRanges = &push_constant;
 
     if (vkCreatePipelineLayout(device_, &pipeline_layout_info, nullptr, &it->second.layout) != VK_SUCCESS) {
-        s_logger.error( "Failed to create MatMul pipeline layout" << std::endl;
+        std::cerr << "Failed to create MatMul pipeline layout" << std::endl;
         vkDestroyDescriptorSetLayout(device_, matmul_descriptor_set_layout_, nullptr);
         vkDestroyDescriptorPool(device_, matmul_descriptor_pool_, nullptr);
         matmul_descriptor_set_layout_ = nullptr;
         matmul_descriptor_pool_ = nullptr;
         return false;
     }
-    s_logger.info("Created MatMul pipeline layout with push constants");
+    std::cout << "Created MatMul pipeline layout with push constants" << std::endl;
     
     // --- 5. Create Compute Pipeline ---
     VkPipelineShaderStageCreateInfo stage_info{};
@@ -837,25 +839,25 @@ bool VulkanCompute::EnsureMatMulPipeline(const std::string& spirv_path) {
     compute_pipeline_info.stage = stage_info;
 
     if (vkCreateComputePipelines(device_, nullptr, 1, &compute_pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
-        s_logger.error( "Failed to create MatMul compute pipeline" << std::endl;
+        std::cerr << "Failed to create MatMul compute pipeline" << std::endl;
         return false;
     }
 
-    s_logger.info("MatMul pipeline and permanent descriptor system initialized successfully");
+    std::cout << "MatMul pipeline and permanent descriptor system initialized successfully" << std::endl;
     return true;
 }
 
 bool VulkanCompute::CreateDescriptorSetLayout(uint32_t binding_count, VkDescriptorSetLayout& layout) {
     // This function is deprecated - descriptor layouts are now created in EnsureMatMulPipeline
     // Kept for backward compatibility but should not be used
-    s_logger.error( "WARNING: CreateDescriptorSetLayout is deprecated. Use EnsureMatMulPipeline instead." << std::endl;
+    std::cerr << "WARNING: CreateDescriptorSetLayout is deprecated. Use EnsureMatMulPipeline instead." << std::endl;
     return false;
 }
 
 bool VulkanCompute::AllocateDescriptorSet(VkDescriptorSetLayout layout, VkDescriptorSet& descriptor_set) {
     // This function is deprecated - descriptor set allocation is now handled in DispatchMatMul
     // Kept for backward compatibility but should not be used
-    s_logger.error( "WARNING: AllocateDescriptorSet is deprecated. Use DispatchMatMul instead." << std::endl;
+    std::cerr << "WARNING: AllocateDescriptorSet is deprecated. Use DispatchMatMul instead." << std::endl;
     return false;
 }
 
@@ -863,7 +865,7 @@ bool VulkanCompute::UpdateDescriptorSet(VkDescriptorSet descriptor_set, uint32_t
                                         VkBuffer buffer, size_t buffer_size) {
     // This function is deprecated - descriptor set updates are now handled in DispatchMatMul
     // Kept for backward compatibility but should not be used
-    s_logger.error( "WARNING: UpdateDescriptorSet is deprecated. Use DispatchMatMul instead." << std::endl;
+    std::cerr << "WARNING: UpdateDescriptorSet is deprecated. Use DispatchMatMul instead." << std::endl;
     return false;
 }
 
@@ -878,14 +880,14 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
     if (input_a_idx >= allocated_buffers_.size() || 
         input_b_idx >= allocated_buffers_.size() ||
         output_idx >= allocated_buffers_.size()) {
-        s_logger.error( "Invalid buffer indices for MatMul dispatch" << std::endl;
+        std::cerr << "Invalid buffer indices for MatMul dispatch" << std::endl;
         return false;
     }
     
     // Check if matmul pipeline and descriptor system are initialized
     auto it = shaders_.find("matmul");
     if (it == shaders_.end() || !it->second.pipeline || !matmul_descriptor_set_layout_ || !matmul_descriptor_pool_) {
-        s_logger.error( "MatMul pipeline or descriptor system not initialized. Call EnsureMatMulPipeline first." << std::endl;
+        std::cerr << "MatMul pipeline or descriptor system not initialized. Call EnsureMatMulPipeline first." << std::endl;
         return false;
     }
     
@@ -912,7 +914,7 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
 
     VkDescriptorSet descriptor_set = nullptr;
     if (vkAllocateDescriptorSets(device_, &alloc_info, &descriptor_set) != VK_SUCCESS) {
-        s_logger.error( "Failed to allocate descriptor set for MatMul" << std::endl;
+        std::cerr << "Failed to allocate descriptor set for MatMul" << std::endl;
         return false;
     }
 
@@ -938,7 +940,7 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
     }
 
     vkUpdateDescriptorSets(device_, (uint32_t)writes.size(), writes.data(), 0, nullptr);
-    s_logger.info("Updated descriptor set with 3 storage buffers (A, B, Output)");
+    std::cout << "Updated descriptor set with 3 storage buffers (A, B, Output)" << std::endl;
 
     // --- 3. Execute Command Buffer (Dispatch) ---
     bool success = ExecuteSingleTimeCommands([&](VkCommandBuffer cmd_buffer) {
@@ -966,7 +968,7 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
         uint32_t group_count_x = (N + TILE_SIZE - 1) / TILE_SIZE;
         uint32_t group_count_y = (M + TILE_SIZE - 1) / TILE_SIZE;
         
-        s_logger.info("Dispatching: ");
+        std::cout << "Dispatching: " << group_count_x << "x" << group_count_y << "x1 workgroups" << std::endl;
         vkCmdDispatch(cmd_buffer, group_count_x, group_count_y, 1);
     });
     
@@ -977,9 +979,9 @@ bool VulkanCompute::DispatchMatMul(uint32_t input_a_idx,
     }
     
     if (success) {
-        s_logger.info("MatMul dispatch completed successfully (");
+        std::cout << "MatMul dispatch completed successfully (" << M << "x" << K << " * " << K << "x" << N << " -> " << M << "x" << N << ")" << std::endl;
     } else {
-        s_logger.error( "MatMul GPU dispatch failed." << std::endl;
+        std::cerr << "MatMul GPU dispatch failed." << std::endl;
     }
     
     return success;
@@ -1015,14 +1017,14 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
     if (input_a_idx >= allocated_buffers_.size() || 
         input_b_idx >= allocated_buffers_.size() ||
         output_idx >= allocated_buffers_.size()) {
-        s_logger.error( "Invalid buffer indices for MatMul async dispatch" << std::endl;
+        std::cerr << "Invalid buffer indices for MatMul async dispatch" << std::endl;
         return false;
     }
     
     // Check if matmul pipeline and descriptor system are initialized
     auto it = shaders_.find("matmul");
     if (it == shaders_.end() || !it->second.pipeline || !matmul_descriptor_set_layout_ || !matmul_descriptor_pool_) {
-        s_logger.error( "MatMul pipeline not initialized. Call EnsureMatMulPipeline first." << std::endl;
+        std::cerr << "MatMul pipeline not initialized. Call EnsureMatMulPipeline first." << std::endl;
         return false;
     }
     
@@ -1049,7 +1051,7 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
 
     VkDescriptorSet descriptor_set = nullptr;
     if (vkAllocateDescriptorSets(device_, &alloc_info, &descriptor_set) != VK_SUCCESS) {
-        s_logger.error( "Failed to allocate descriptor set for async MatMul" << std::endl;
+        std::cerr << "Failed to allocate descriptor set for async MatMul" << std::endl;
         return false;
     }
 
@@ -1079,7 +1081,7 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
     // --- 3. Acquire Command Buffer from Async Pool (NON-BLOCKING) ---
     VkCommandBuffer cmd_buffer = AcquireAsyncCommandBuffer();
     if (!cmd_buffer) {
-        s_logger.error( "No available command buffers in pool. Consider FlushAsyncCommands()." << std::endl;
+        std::cerr << "No available command buffers in pool. Consider FlushAsyncCommands()." << std::endl;
         vkFreeDescriptorSets(device_, matmul_descriptor_pool_, 1, &descriptor_set);
         return false;
     }
@@ -1090,7 +1092,7 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (vkBeginCommandBuffer(cmd_buffer, &begin_info) != VK_SUCCESS) {
-        s_logger.error( "Failed to begin command buffer for async MatMul" << std::endl;
+        std::cerr << "Failed to begin command buffer for async MatMul" << std::endl;
         vkFreeDescriptorSets(device_, matmul_descriptor_pool_, 1, &descriptor_set);
         return false;
     }
@@ -1121,19 +1123,20 @@ bool VulkanCompute::DispatchMatMulAsync(uint32_t input_a_idx,
     vkCmdDispatch(cmd_buffer, group_count_x, group_count_y, 1);
 
     if (vkEndCommandBuffer(cmd_buffer) != VK_SUCCESS) {
-        s_logger.error( "Failed to end command buffer for async MatMul" << std::endl;
+        std::cerr << "Failed to end command buffer for async MatMul" << std::endl;
         vkFreeDescriptorSets(device_, matmul_descriptor_pool_, 1, &descriptor_set);
         return false;
     }
 
     // --- 5. Submit Async (FIRE AND FORGET) ---
     if (!SubmitAsyncCommandBuffer(cmd_buffer)) {
-        s_logger.error( "Failed to submit async MatMul command buffer" << std::endl;
+        std::cerr << "Failed to submit async MatMul command buffer" << std::endl;
         vkFreeDescriptorSets(device_, matmul_descriptor_pool_, 1, &descriptor_set);
         return false;
     }
 
-    s_logger.info("Async MatMul queued: ");
+    std::cout << "Async MatMul queued: " << M << "x" << K << " * " << K << "x" << N 
+              << " (" << group_count_x << "x" << group_count_y << " workgroups)" << std::endl;
     
     // Note: Descriptor set will be freed after GPU execution completes
     // In a production system, track descriptor sets with command buffers for deferred cleanup
@@ -1309,13 +1312,13 @@ bool VulkanCompute::ExecuteDequantize(const uint8_t* quantized, float* output,
 bool VulkanCompute::LoadSPIRVCode(const std::string& path, std::vector<uint32_t>& code) {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        s_logger.error( "Failed to open SPIR-V file: " << path << std::endl;
+        std::cerr << "Failed to open SPIR-V file: " << path << std::endl;
         return false;
     }
 
     size_t file_size = file.tellg();
     if (file_size % sizeof(uint32_t) != 0) {
-        s_logger.error( "Invalid SPIR-V file size: " << path << std::endl;
+        std::cerr << "Invalid SPIR-V file size: " << path << std::endl;
         return false;
     }
 
@@ -1330,7 +1333,7 @@ bool VulkanCompute::LoadSPIRVCode(const std::string& path, std::vector<uint32_t>
 
 bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, uint32_t head_dim) {
     if (kv_cache_allocated_) {
-        s_logger.error( "KV cache already allocated. Call ClearKVCache() first." << std::endl;
+        std::cerr << "KV cache already allocated. Call ClearKVCache() first." << std::endl;
         return false;
     }
     
@@ -1343,14 +1346,16 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
     
     size_t cache_size = static_cast<size_t>(max_seq_len) * head_dim * sizeof(float);
     
-    s_logger.info("Allocating KV cache: ");
+    std::cout << "Allocating KV cache: " << num_layers << " layers, "
+              << max_seq_len << " max tokens, " << head_dim << " head_dim, "
+              << (cache_size / 1024 / 1024) << " MB per buffer" << std::endl;
     
     for (uint32_t layer = 0; layer < num_layers; ++layer) {
         // Allocate K cache buffer
         VkBuffer k_buffer;
         VkDeviceMemory k_memory;
         if (!AllocateBuffer(cache_size, k_buffer, k_memory)) {
-            s_logger.error( "Failed to allocate K cache for layer " << layer << std::endl;
+            std::cerr << "Failed to allocate K cache for layer " << layer << std::endl;
             ClearKVCache();
             return false;
         }
@@ -1359,7 +1364,7 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
         // Zero-initialize K cache
         std::vector<float> zeros(max_seq_len * head_dim, 0.0f);
         if (!CopyHostToBuffer(zeros.data(), k_buffer, cache_size)) {
-            s_logger.error( "Failed to zero-init K cache for layer " << layer << std::endl;
+            std::cerr << "Failed to zero-init K cache for layer " << layer << std::endl;
             ClearKVCache();
             return false;
         }
@@ -1368,7 +1373,7 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
         VkBuffer v_buffer;
         VkDeviceMemory v_memory;
         if (!AllocateBuffer(cache_size, v_buffer, v_memory)) {
-            s_logger.error( "Failed to allocate V cache for layer " << layer << std::endl;
+            std::cerr << "Failed to allocate V cache for layer " << layer << std::endl;
             ClearKVCache();
             return false;
         }
@@ -1376,7 +1381,7 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
         
         // Zero-initialize V cache
         if (!CopyHostToBuffer(zeros.data(), v_buffer, cache_size)) {
-            s_logger.error( "Failed to zero-init V cache for layer " << layer << std::endl;
+            std::cerr << "Failed to zero-init V cache for layer " << layer << std::endl;
             ClearKVCache();
             return false;
         }
@@ -1384,7 +1389,8 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
     
     kv_cache_allocated_ = true;
     
-    s_logger.info("KV cache allocated successfully: ");
+    std::cout << "KV cache allocated successfully: "
+              << (num_layers * 2 * cache_size / 1024 / 1024) << " MB total" << std::endl;
     
     return true;
 }
@@ -1392,17 +1398,17 @@ bool VulkanCompute::AllocateKVCache(uint32_t num_layers, uint32_t max_seq_len, u
 bool VulkanCompute::AppendToKVCache(uint32_t layer_idx, const float* k_new, 
                                     const float* v_new, uint32_t token_pos) {
     if (!kv_cache_allocated_) {
-        s_logger.error( "KV cache not allocated. Call AllocateKVCache() first." << std::endl;
+        std::cerr << "KV cache not allocated. Call AllocateKVCache() first." << std::endl;
         return false;
     }
     
     if (layer_idx >= kv_cache_num_layers_) {
-        s_logger.error( "Invalid layer index: " << layer_idx << " >= " << kv_cache_num_layers_ << std::endl;
+        std::cerr << "Invalid layer index: " << layer_idx << " >= " << kv_cache_num_layers_ << std::endl;
         return false;
     }
     
     if (token_pos >= kv_cache_max_seq_len_) {
-        s_logger.error( "Token position " << token_pos << " exceeds max_seq_len " << kv_cache_max_seq_len_ << std::endl;
+        std::cerr << "Token position " << token_pos << " exceeds max_seq_len " << kv_cache_max_seq_len_ << std::endl;
         return false;
     }
     
@@ -1416,13 +1422,13 @@ bool VulkanCompute::AppendToKVCache(uint32_t layer_idx, const float* k_new,
     
     // Update K cache at token_pos
     if (!CopyHostToBufferOffset(k_new, k_buffer, offset, size)) {
-        s_logger.error( "Failed to update K cache at layer " << layer_idx << ", pos " << token_pos << std::endl;
+        std::cerr << "Failed to update K cache at layer " << layer_idx << ", pos " << token_pos << std::endl;
         return false;
     }
     
     // Update V cache at token_pos
     if (!CopyHostToBufferOffset(v_new, v_buffer, offset, size)) {
-        s_logger.error( "Failed to update V cache at layer " << layer_idx << ", pos " << token_pos << std::endl;
+        std::cerr << "Failed to update V cache at layer " << layer_idx << ", pos " << token_pos << std::endl;
         return false;
     }
     
@@ -1432,17 +1438,17 @@ bool VulkanCompute::AppendToKVCache(uint32_t layer_idx, const float* k_new,
 bool VulkanCompute::GetKVCacheSlice(uint32_t layer_idx, uint32_t start_pos, 
                                     uint32_t end_pos, float* k_out, float* v_out) {
     if (!kv_cache_allocated_) {
-        s_logger.error( "KV cache not allocated" << std::endl;
+        std::cerr << "KV cache not allocated" << std::endl;
         return false;
     }
     
     if (layer_idx >= kv_cache_num_layers_) {
-        s_logger.error( "Invalid layer index: " << layer_idx << std::endl;
+        std::cerr << "Invalid layer index: " << layer_idx << std::endl;
         return false;
     }
     
     if (end_pos > kv_cache_max_seq_len_ || start_pos >= end_pos) {
-        s_logger.error( "Invalid slice range: [" << start_pos << ", " << end_pos << ")" << std::endl;
+        std::cerr << "Invalid slice range: [" << start_pos << ", " << end_pos << ")" << std::endl;
         return false;
     }
     
@@ -1456,13 +1462,13 @@ bool VulkanCompute::GetKVCacheSlice(uint32_t layer_idx, uint32_t start_pos,
     
     // Read K cache slice
     if (!CopyBufferToHostOffset(k_buffer, offset, k_out, size)) {
-        s_logger.error( "Failed to read K cache slice" << std::endl;
+        std::cerr << "Failed to read K cache slice" << std::endl;
         return false;
     }
     
     // Read V cache slice
     if (!CopyBufferToHostOffset(v_buffer, offset, v_out, size)) {
-        s_logger.error( "Failed to read V cache slice" << std::endl;
+        std::cerr << "Failed to read V cache slice" << std::endl;
         return false;
     }
     
@@ -1490,7 +1496,7 @@ void VulkanCompute::ClearKVCache() {
     kv_cache_head_dim_ = 0;
     kv_cache_allocated_ = false;
     
-    s_logger.info("KV cache cleared");
+    std::cout << "KV cache cleared" << std::endl;
 }
 
 // Helper: Copy host data to buffer at specific offset
@@ -1506,7 +1512,7 @@ bool VulkanCompute::CopyHostToBufferOffset(const void* host_data, VkBuffer devic
     buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     
     if (vkCreateBuffer(device_, &buffer_info, nullptr, &staging_buffer) != VK_SUCCESS) {
-        s_logger.error( "Failed to create staging buffer for offset copy" << std::endl;
+        std::cerr << "Failed to create staging buffer for offset copy" << std::endl;
         return false;
     }
     
@@ -1731,7 +1737,7 @@ void VulkanCompute::Cleanup() {
         instance_ = nullptr;
     }
     
-    s_logger.info("Vulkan resources cleaned up successfully");
+    std::cout << "Vulkan resources cleaned up successfully" << std::endl;
 }
 
 // =============================================================================
@@ -1739,7 +1745,7 @@ void VulkanCompute::Cleanup() {
 // =============================================================================
 bool VulkanCompute::LoadShaderFromMemory(const std::string& name, const uint32_t* spirv_code, size_t code_size) {
     if (!spirv_code || code_size == 0 || code_size % sizeof(uint32_t) != 0) {
-        s_logger.error( "Invalid SPIR-V memory buffer" << std::endl;
+        std::cerr << "Invalid SPIR-V memory buffer" << std::endl;
         return false;
     }
 
@@ -1753,14 +1759,14 @@ bool VulkanCompute::LoadShaderFromMemory(const std::string& name, const uint32_t
     shader.spirv_code.assign(spirv_code, spirv_code + code_size / sizeof(uint32_t));
 
     if (vkCreateShaderModule(device_, &create_info, nullptr, &shader.module) != VK_SUCCESS) {
-        s_logger.error( "Failed to create shader module from memory: " << name << std::endl;
+        std::cerr << "Failed to create shader module from memory: " << name << std::endl;
         return false;
     }
 
     std::lock_guard<std::mutex> lock(shader_mutex_);
     shaders_[name] = std::move(shader);
     stats_.shader_load_count.fetch_add(1, std::memory_order_relaxed);
-    s_logger.info("Loaded shader from memory: ");
+    std::cout << "Loaded shader from memory: " << name << std::endl;
     return true;
 }
 
@@ -1772,7 +1778,7 @@ bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::s
 
     auto it = shaders_.find(shader_name);
     if (it == shaders_.end()) {
-        s_logger.error( "Shader not found for replacement: " << shader_name << std::endl;
+        std::cerr << "Shader not found for replacement: " << shader_name << std::endl;
         return false;
     }
 
@@ -1793,7 +1799,7 @@ bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::s
     // Load new SPIR-V
     std::vector<uint32_t> new_code;
     if (!LoadSPIRVCode(new_spirv_path, new_code)) {
-        s_logger.error( "Failed to load replacement SPIR-V from: " << new_spirv_path << std::endl;
+        std::cerr << "Failed to load replacement SPIR-V from: " << new_spirv_path << std::endl;
         return false;
     }
 
@@ -1803,7 +1809,7 @@ bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::s
     create_info.pCode = new_code.data();
 
     if (vkCreateShaderModule(device_, &create_info, nullptr, &it->second.module) != VK_SUCCESS) {
-        s_logger.error( "Failed to create replacement shader module" << std::endl;
+        std::cerr << "Failed to create replacement shader module" << std::endl;
         return false;
     }
     it->second.spirv_code = std::move(new_code);
@@ -1822,13 +1828,13 @@ bool VulkanCompute::ReplacePipeline(const std::string& shader_name, const std::s
         pipeline_info.stage = stage_info;
 
         if (vkCreateComputePipelines(device_, nullptr, 1, &pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
-            s_logger.error( "Failed to create replacement compute pipeline" << std::endl;
+            std::cerr << "Failed to create replacement compute pipeline" << std::endl;
             return false;
         }
     }
 
     stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
-    s_logger.info("Pipeline replaced: ");
+    std::cout << "Pipeline replaced: " << shader_name << std::endl;
     return true;
 }
 
@@ -1858,7 +1864,7 @@ bool VulkanCompute::HotswapShader(const std::string& pipeline_name,
 
     VkShaderModule new_module = nullptr;
     if (vkCreateShaderModule(device_, &create_info, nullptr, &new_module) != VK_SUCCESS) {
-        s_logger.error( "HotswapShader: failed to create new module" << std::endl;
+        std::cerr << "HotswapShader: failed to create new module" << std::endl;
         return false;
     }
 
@@ -1887,7 +1893,7 @@ bool VulkanCompute::HotswapShader(const std::string& pipeline_name,
         pipeline_info.stage = stage_info;
 
         if (vkCreateComputePipelines(device_, nullptr, 1, &pipeline_info, nullptr, &it->second.pipeline) != VK_SUCCESS) {
-            s_logger.error( "HotswapShader: failed to rebuild pipeline" << std::endl;
+            std::cerr << "HotswapShader: failed to rebuild pipeline" << std::endl;
             it->second.pipeline = old_pipeline; // Rollback
             return false;
         }
@@ -1898,7 +1904,7 @@ bool VulkanCompute::HotswapShader(const std::string& pipeline_name,
     }
 
     stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
-    s_logger.info("Shader hotswapped: ");
+    std::cout << "Shader hotswapped: " << pipeline_name << std::endl;
     return true;
 }
 
@@ -1968,7 +1974,7 @@ bool VulkanCompute::EnsureFusedMLPPipeline(const std::string& spirv_path) {
     if (vkCreateComputePipelines(device_, nullptr, 1, &cpi, nullptr, &it->second.pipeline) != VK_SUCCESS) return false;
 
     stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
-    s_logger.info("Fused MLP pipeline initialized");
+    std::cout << "Fused MLP pipeline initialized" << std::endl;
     return true;
 }
 
@@ -2096,7 +2102,7 @@ bool VulkanCompute::EnsureFlashAttentionPipeline(const std::string& spirv_path) 
     if (vkCreateComputePipelines(device_, nullptr, 1, &cpi, nullptr, &it->second.pipeline) != VK_SUCCESS) return false;
 
     stats_.pipeline_create_count.fetch_add(1, std::memory_order_relaxed);
-    s_logger.info("Flash Attention v2 pipeline initialized");
+    std::cout << "Flash Attention v2 pipeline initialized" << std::endl;
     return true;
 }
 

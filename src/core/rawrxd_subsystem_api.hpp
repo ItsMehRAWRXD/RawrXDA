@@ -8,7 +8,7 @@
  *
  * NO exceptions. NO std::function. NO Qt. Raw function pointers only.
  *
- * Contract: CLI_CONTRACT_v1.0.md
+ * Contract: CLI_CONTRACT_v1.1.md
  * Date:     2026-02-10
  */
 #pragma once

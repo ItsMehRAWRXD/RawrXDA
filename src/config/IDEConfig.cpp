@@ -10,10 +10,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <algorithm>
+#include <chrono>
+#include <random>
 #include <windows.h>
-
-#include "logging/logger.h"
-static Logger s_logger("IDEConfig");
 
 // ============================================================================
 // IDEConfig — Load / Save / Defaults
@@ -50,16 +49,29 @@ void IDEConfig::setDefaults()
     m_values["ollama.baseUrl"] = "http://localhost:11434";
     m_values["ollama.modelOverride"] = "";
 
-    // Agentic system
+    // Agentic system — 1x–99x production limits (balance, speed, agenticness, autonomy)
     m_values["agent.maxMode"] = "false";
     m_values["agent.deepThinking"] = "false";
     m_values["agent.deepResearch"] = "false";
     m_values["agent.noRefusal"] = "false";
     m_values["agent.autoStart"] = "false";
+    m_values["agent.cycleCount"] = "10";               // Max agent loop cycles (1–99)
+    m_values["agent.perModelInstances"] = "4";        // Per-model instances when multi-model (4x per piece, 1–99)
+    m_values["agent.cycleAgentCounter"] = "1";         // Cycle agent repetition multiplier (1–99)
+    m_values["agent.maxModelsInParallel"] = "99";      // Max models in parallel (1–99)
+    m_values["agent.qualitySpeedBalance"] = "Auto";   // Auto | QualityBias | SpeedBias | MAX_MODE
+    m_values["agent.operationMode"] = "Agent";        // Agent | Plan | Debug | Ask
+    m_values["agent.modelSelectionMode"] = "Auto";    // Auto | MAX | UseMultipleModels (max mode x99)
+    m_values["agent.todoMaxItems"] = "99";              // Todo list cap (1–99) for "write what you want" agentic flow
 
-    // Terminal
+    // Terminal — timeout: fixed ms, random (min-max), or auto; self-adjusted or auto-adjusted per run
     m_values["terminal.defaultShell"] = "powershell";
     m_values["terminal.fontSize"] = "13";
+    m_values["terminal.timeoutMs"] = "30000";           // base timeout (fixed or random center)
+    m_values["terminal.timeoutMode"] = "fixed";        // fixed | random | auto
+    m_values["terminal.timeoutMinMs"] = "10000";       // for random: min ms
+    m_values["terminal.timeoutMaxMs"] = "120000";      // for random: max ms
+    m_values["terminal.timeoutAutoAdjustPercent"] = "25";  // auto mode: ± this % each run (0–100)
 
     // Debugger
     m_values["debugger.stopAtEntry"] = "true";
@@ -105,14 +117,18 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
 
     std::ifstream file(configPath);
     if (!file.is_open()) {
-        s_logger.error( "[IDEConfig] Config file not found: " << configPath
+        std::cerr << "[IDEConfig] Config file not found: " << configPath
                   << " — using defaults." << std::endl;
         return false;
     }
 
     try {
-        std::string content((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
+        file.seekg(0, std::ios::end);
+        size_t fsize = static_cast<size_t>(file.tellg());
+        file.seekg(0, std::ios::beg);
+        std::string content;
+        content.reserve(std::min(fsize + 1, size_t(65536)));  // Cap reserve; typical config <16KB
+        content.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
         nlohmann::json json = nlohmann::json::parse(content);
 
         // Flatten JSON into key-value pairs using dot notation
@@ -135,11 +151,12 @@ bool IDEConfig::loadFromFile(const std::string& configPath)
         };
 
         flatten("", json);
-        s_logger.info("[IDEConfig] Loaded ");
+        std::cout << "[IDEConfig] Loaded " << m_values.size() << " config keys from: "
+                  << configPath << std::endl;
         return true;
 
     } catch (const std::exception& e) {
-        s_logger.error( "[IDEConfig] Error parsing config: " << e.what() << std::endl;
+        std::cerr << "[IDEConfig] Error parsing config: " << e.what() << std::endl;
         return false;
     }
 }
@@ -153,8 +170,9 @@ bool IDEConfig::saveToFile(const std::string& configPath) const
         nlohmann::json root = nlohmann::json::object();
 
         for (const auto& [key, value] : m_values) {
-            // Split key by '.'
+            // Split key by '.' (typical depth 2–4; reserve to avoid realloc)
             std::vector<std::string> parts;
+            parts.reserve(6);
             std::istringstream ss(key);
             std::string part;
             while (std::getline(ss, part, '.')) {
@@ -203,7 +221,7 @@ bool IDEConfig::saveToFile(const std::string& configPath) const
         return true;
 
     } catch (const std::exception& e) {
-        s_logger.error( "[IDEConfig] Error saving config: " << e.what() << std::endl;
+        std::cerr << "[IDEConfig] Error saving config: " << e.what() << std::endl;
         return false;
     }
 }
@@ -272,9 +290,27 @@ void IDEConfig::applyFeatureToggles() const
     }
 }
 
+void IDEConfig::applySafeModeOverrides()
+{
+    // Caller must hold m_mutex (called from applyEnvironmentOverrides)
+    m_values["features.extensionSystem"] = "false";
+    m_values["features.vulkanCompute"] = "false";
+    m_values["performance.vulkanRenderer"] = "false";
+    m_values["performance.gpuTextRendering"] = "false";
+    m_values["features.gpuRenderer"] = "false";
+}
+
 void IDEConfig::applyEnvironmentOverrides()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
+    // Safe mode: modularize IDE (disable extensions, Vulkan, GPU)
+    {
+        char buf[8];
+        if (GetEnvironmentVariableA("RAWRXD_SAFE_MODE", buf, sizeof(buf)) > 0 && buf[0] == '1') {
+            applySafeModeOverrides();
+        }
+    }
 
     // Check for RAWRXD_* environment variables that override config
     // Format: RAWRXD_SECTION_KEY maps to section.key
@@ -288,6 +324,7 @@ void IDEConfig::applyEnvironmentOverrides()
         "RAWRXD_INFERENCE_THREADS",
         "RAWRXD_INFERENCE_MAX_TOKENS",
         "RAWRXD_THEME",
+        "RAWRXD_AGENT_CYCLE_COUNT",
         nullptr
     };
 
@@ -300,6 +337,7 @@ void IDEConfig::applyEnvironmentOverrides()
         {"RAWRXD_INFERENCE_THREADS", "inference.threadCount"},
         {"RAWRXD_INFERENCE_MAX_TOKENS", "inference.maxTokens"},
         {"RAWRXD_THEME", "theme.name"},
+        {"RAWRXD_AGENT_CYCLE_COUNT", "agent.cycleCount"},
     };
 
     for (const auto& mapping : mappings) {
@@ -307,7 +345,8 @@ void IDEConfig::applyEnvironmentOverrides()
         DWORD len = GetEnvironmentVariableA(mapping.envVar, buf, sizeof(buf));
         if (len > 0 && len < sizeof(buf)) {
             m_values[mapping.configKey] = std::string(buf, len);
-            s_logger.info("[IDEConfig] Env override: ");
+            std::cout << "[IDEConfig] Env override: " << mapping.envVar
+                      << " -> " << mapping.configKey << " = " << buf << std::endl;
         }
     }
 }
@@ -316,12 +355,120 @@ std::vector<std::string> IDEConfig::getAllKeys() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     std::vector<std::string> keys;
-    keys.reserve(m_values.size());
+    keys.reserve(m_values.size());  // Avoid realloc during iteration
     for (const auto& [key, _] : m_values) {
         keys.push_back(key);
     }
     std::sort(keys.begin(), keys.end());
     return keys;
+}
+
+unsigned int IDEConfig::getTerminalTimeoutMs(bool isAgenticTask,
+                                            const std::string& requirementHint) const
+{
+    {
+        unsigned int perRun;
+        { std::lock_guard<std::mutex> lock(m_mutex); perRun = m_terminalTimeoutPerRunMs; }
+        if (perRun > 0)
+            return perRun;
+    }
+
+    std::string mode = getString("terminal.timeoutMode", "fixed");
+    int base = getInt("terminal.timeoutMs", 30000);
+    int minMs = getInt("terminal.timeoutMinMs", 10000);
+    int maxMs = getInt("terminal.timeoutMaxMs", 120000);
+    int autoAdjustPct = std::max(0, std::min(100, getInt("terminal.timeoutAutoAdjustPercent", 25)));
+
+    // Requirement hint overrides isAgenticTask for effective base
+    if (!requirementHint.empty()) {
+        if (requirementHint == "audit") base = std::max(base, 120000);
+        else if (requirementHint == "agentic") base = std::max(base, 60000);
+        else if (requirementHint == "quick") base = std::min(base, 15000);
+    } else if (isAgenticTask)
+        base = std::max(base, 60000);
+
+    if (mode == "random") {
+        minMs = std::max(1000, std::min(minMs, maxMs));
+        maxMs = std::max(minMs, maxMs);
+        int range = maxMs - minMs + 1;
+        static std::mt19937 rng(static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
+        return static_cast<unsigned int>(minMs + (rng() % range));
+    }
+    if (mode == "auto") {
+        int effective = base;
+        if (autoAdjustPct > 0) {
+            static std::mt19937 rng(static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
+            int delta = (base * autoAdjustPct / 100);
+            std::uniform_int_distribution<int> dist(-delta, delta);
+            effective = std::max(1000, base + dist(rng));
+        }
+        return static_cast<unsigned int>(effective);
+    }
+    return static_cast<unsigned int>(std::max(1000, base));
+}
+
+void IDEConfig::setTerminalTimeoutPerRunMs(unsigned int ms)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_terminalTimeoutPerRunMs = ms;
+}
+
+unsigned int IDEConfig::getTerminalTimeoutPerRunMs() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_terminalTimeoutPerRunMs;
+}
+
+void IDEConfig::clearTerminalTimeoutPerRunMs()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_terminalTimeoutPerRunMs = 0;
+}
+
+unsigned int IDEConfig::setTerminalTimeoutPerRunFromConfig(bool isAgenticTask,
+                                                          const std::string& requirementHint)
+{
+    // Compute fresh from config (random/auto yields new value each run) and store for this run
+    unsigned int ms = computeTerminalTimeoutMs(isAgenticTask, requirementHint);
+    setTerminalTimeoutPerRunMs(ms);
+    return ms;
+}
+
+unsigned int IDEConfig::computeTerminalTimeoutMs(bool isAgenticTask,
+                                                 const std::string& requirementHint) const
+{
+    // Always compute from config (ignores per-run override) for UI display / pre-flight
+    std::string mode = getString("terminal.timeoutMode", "fixed");
+    int base = getInt("terminal.timeoutMs", 30000);
+    int minMs = getInt("terminal.timeoutMinMs", 10000);
+    int maxMs = getInt("terminal.timeoutMaxMs", 120000);
+    int autoAdjustPct = std::max(0, std::min(100, getInt("terminal.timeoutAutoAdjustPercent", 25)));
+
+    if (!requirementHint.empty()) {
+        if (requirementHint == "audit") base = std::max(base, 120000);
+        else if (requirementHint == "agentic") base = std::max(base, 60000);
+        else if (requirementHint == "quick") base = std::min(base, 15000);
+    } else if (isAgenticTask)
+        base = std::max(base, 60000);
+
+    if (mode == "random") {
+        minMs = std::max(1000, std::min(minMs, maxMs));
+        maxMs = std::max(minMs, maxMs);
+        int range = maxMs - minMs + 1;
+        static std::mt19937 rng(static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
+        return static_cast<unsigned int>(minMs + (rng() % range));
+    }
+    if (mode == "auto") {
+        int effective = base;
+        if (autoAdjustPct > 0) {
+            static std::mt19937 rng(static_cast<unsigned>(std::chrono::steady_clock::now().time_since_epoch().count()));
+            int delta = (base * autoAdjustPct / 100);
+            std::uniform_int_distribution<int> dist(-delta, delta);
+            effective = std::max(1000, base + dist(rng));
+        }
+        return static_cast<unsigned int>(effective);
+    }
+    return static_cast<unsigned int>(std::max(1000, base));
 }
 
 // ============================================================================

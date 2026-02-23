@@ -1,7 +1,7 @@
 // tests/benchmark_coldburst.cpp
+#include <iostream>
 #include <chrono>
 #include "direct_io_ring.h"
-#include "logging/logger.h"
 
 extern "C" {
     void BurstExecute();
@@ -9,37 +9,36 @@ extern "C" {
 }
 
 int main(int argc, char** argv) {
-    Logger logger("BenchmarkColdburst");
     const char* model_path = (argc > 1) ? argv[1] : "test_ioring_loader.exe";
-    logger.info("--- RAWRXD v1.1.x Quantum Burst Benchmark ---");
+    std::cout << "--- RAWRXD v1.1.x Quantum Burst Benchmark ---" << std::endl;
 
-    // Phase: Sovereign Bootstrap
-    logger.info("Initiating Ghost-C2 Handshake...");
+    // Phase Ω: Sovereign Bootstrap
+    std::cout << "Initiating Ghost-C2 Handshake..." << std::endl;
     if (Sovereign_InitiateBootstrap("RAWRXD_ALPHA_PRIME")) {
-        logger.info("Sovereign Identity Established.");
+        std::cout << "✓ Sovereign Identity Established." << std::endl;
     } else {
-        logger.warn("Handshake deferred (hardware entropy pending).");
+        std::cerr << "⚠ Handshake deferred (hardware entropy pending)." << std::endl;
     }
     
     DirectIOContext* ctx = nullptr;
     if (!DirectIO_Init(&ctx, model_path)) {
-        logger.error("Failed to initialize DirectIO (File: {})", model_path);
+        std::cerr << "Failed to initialize DirectIO (File: " << model_path << ")" << std::endl;
         return 1;
     }
-    logger.info("DirectIO Initialized");
+    std::cout << "✓ DirectIO Initialized" << std::endl;
 
     // Allocate 8GB for burst zones
     g_zoneBuffer = _aligned_malloc(8LL * 1024 * 1024 * 1024, 4096);
     if (!g_zoneBuffer) {
-        logger.error("Failed to allocate burst buffer");
+        std::cerr << "Failed to allocate burst buffer" << std::endl;
         return 1;
     }
-    logger.info("Burst zones allocated (8GB)");
+    std::cout << "✓ Burst zones allocated (8GB)" << std::endl;
 
     auto t0 = std::chrono::high_resolution_clock::now();
     
     // Execute vectorized burst
-    logger.info("Executing 4-lane vectorized burst...");
+    std::cout << "Executing 4-lane vectorized burst..." << std::endl;
     BurstExecute();
 
     // Poll until all prefetches complete
@@ -50,8 +49,8 @@ int main(int argc, char** argv) {
     auto t1 = std::chrono::high_resolution_clock::now();
     auto dur = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
 
-    logger.info("Quantum Burst Cold-Load: {} us", dur);
-    logger.info("Average per tensor (4 lanes): {} us", (double)dur / GetBurstCount());
+    std::cout << "✓ Quantum Burst Cold-Load: " << dur << " us" << std::endl;
+    std::cout << "✓ Average per tensor (4 lanes): " << (double)dur / GetBurstCount() << " us" << std::endl;
 
     DirectIO_Shutdown(ctx);
     _aligned_free(g_zoneBuffer);

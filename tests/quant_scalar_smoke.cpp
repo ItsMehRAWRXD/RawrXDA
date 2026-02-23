@@ -7,9 +7,6 @@
 #include <cmath>
 #include <iostream>
 
-#include "logging/logger.h"
-static Logger s_logger("quant_scalar_smoke");
-
 static std::vector<uint8_t> quantize_generic_bits(const std::vector<float>& in, int bits, float& outScale) {
     int n = static_cast<int>(in.size());
     float amax = 0.f;
@@ -71,7 +68,7 @@ int main() {
     auto q5 = quantize_generic_bits(x, 5, s5);
     int expect5 = 4 + (n * 5 + 7) / 8;
     if ((int)q5.size() != expect5) {
-        s_logger.error( "Q5 size mismatch: got " << q5.size() << " expect " << expect5 << "\n";
+        std::cerr << "Q5 size mismatch: got " << q5.size() << " expect " << expect5 << "\n";
         return 1;
     }
     // Check a few positions
@@ -82,7 +79,7 @@ int main() {
         maxErr5 = std::max(maxErr5, std::fabs(rec - x[i]));
     }
     if (!(maxErr5 <= (1.25f * s5 + 1e-6f))) {
-        s_logger.error( "Q5 maxErr too high: " << maxErr5 << " scale " << s5 << "\n";
+        std::cerr << "Q5 maxErr too high: " << maxErr5 << " scale " << s5 << "\n";
         return 1;
     }
 
@@ -91,7 +88,7 @@ int main() {
     auto q6 = quantize_generic_bits(x, 6, s6);
     int expect6 = 4 + (n * 6 + 7) / 8;
     if ((int)q6.size() != expect6) {
-        s_logger.error( "Q6 size mismatch: got " << q6.size() << " expect " << expect6 << "\n";
+        std::cerr << "Q6 size mismatch: got " << q6.size() << " expect " << expect6 << "\n";
         return 1;
     }
     const uint8_t* d6 = q6.data() + 4;
@@ -101,10 +98,10 @@ int main() {
         maxErr6 = std::max(maxErr6, std::fabs(rec - x[i]));
     }
     if (!(maxErr6 <= (1.25f * s6 + 1e-6f))) {
-        s_logger.error( "Q6 maxErr too high: " << maxErr6 << " scale " << s6 << "\n";
+        std::cerr << "Q6 maxErr too high: " << maxErr6 << " scale " << s6 << "\n";
         return 1;
     }
 
-    s_logger.info("quant_scalar_smoke: PASS (Q5/Q6)\n");
+    std::cout << "quant_scalar_smoke: PASS (Q5/Q6)\n";
     return 0;
 }

@@ -9,9 +9,6 @@
 #include <thread>
 #include <algorithm>
 
-#include "logging/logger.h"
-static Logger s_logger("llm_http_client");
-
 // ============================================================================
 // CURL Helper Callbacks
 // ============================================================================
@@ -87,7 +84,7 @@ bool LLMHttpClient::initialize(
 
     // Validate base URL
     if (!isValidURL(config.baseUrl)) {
-        s_logger.error( "[LLMHttpClient] Invalid base URL: " << config.baseUrl << std::endl;
+        std::cerr << "[LLMHttpClient] Invalid base URL: " << config.baseUrl << std::endl;
         return false;
     }
 
@@ -116,7 +113,10 @@ bool LLMHttpClient::initialize(
         }
     }
 
-    s_logger.info("[LLMHttpClient] Initialized for backend: ");
+    std::cout << "[LLMHttpClient] Initialized for backend: " << (int)backend
+              << " | Endpoint: " << config.baseUrl
+              << " | Timeout: " << config.timeoutMs << "ms"
+              << " | Max retries: " << config.maxRetries << std::endl;
 
     return testConnectivity();
 }
@@ -232,7 +232,7 @@ APIResponse LLMHttpClient::makeStreamingRequest(
                                 chunkCallback(chunk);
                             }
                         } catch (const std::exception& e) {
-                            s_logger.error( "[LLMHttpClient] Error parsing Ollama chunk: " << e.what() << std::endl;
+                            std::cerr << "[LLMHttpClient] Error parsing Ollama chunk: " << e.what() << std::endl;
                         }
                     }
                 }
@@ -247,7 +247,7 @@ APIResponse LLMHttpClient::makeStreamingRequest(
                                 chunkCallback(chunk);
                             }
                         } catch (const std::exception& e) {
-                            s_logger.error( "[LLMHttpClient] Error parsing OpenAI chunk: " << e.what() << std::endl;
+                            std::cerr << "[LLMHttpClient] Error parsing OpenAI chunk: " << e.what() << std::endl;
                         }
                     }
                 }
@@ -262,7 +262,7 @@ APIResponse LLMHttpClient::makeStreamingRequest(
                                 chunkCallback(chunk);
                             }
                         } catch (const std::exception& e) {
-                            s_logger.error( "[LLMHttpClient] Error parsing Anthropic chunk: " << e.what() << std::endl;
+                            std::cerr << "[LLMHttpClient] Error parsing Anthropic chunk: " << e.what() << std::endl;
                         }
                     }
                 }
@@ -473,7 +473,7 @@ StreamChunk LLMHttpClient::parseOllamaStreamChunk(const std::string& chunk) {
         parsed.metadata = jsonChunk;
 
     } catch (const std::exception& e) {
-        s_logger.error( "[LLMHttpClient] Failed to parse Ollama chunk: " << e.what() << std::endl;
+        std::cerr << "[LLMHttpClient] Failed to parse Ollama chunk: " << e.what() << std::endl;
     }
 
     return parsed;
@@ -525,7 +525,7 @@ StreamChunk LLMHttpClient::parseOpenAIStreamChunk(const std::string& line) {
         }
 
     } catch (const std::exception& e) {
-        s_logger.error( "[LLMHttpClient] Failed to parse OpenAI chunk: " << e.what() << std::endl;
+        std::cerr << "[LLMHttpClient] Failed to parse OpenAI chunk: " << e.what() << std::endl;
     }
 
     return parsed;
@@ -567,7 +567,7 @@ StreamChunk LLMHttpClient::parseAnthropicStreamChunk(const std::string& line) {
         }
 
     } catch (const std::exception& e) {
-        s_logger.error( "[LLMHttpClient] Failed to parse Anthropic chunk: " << e.what() << std::endl;
+        std::cerr << "[LLMHttpClient] Failed to parse Anthropic chunk: " << e.what() << std::endl;
     }
 
     return parsed;
@@ -619,12 +619,13 @@ bool LLMHttpClient::testConnectivity() {
         curl_easy_cleanup(curl);
 
         bool connected = (res == CURLE_OK && responseCode >= 200 && responseCode < 300);
-        s_logger.info("[LLMHttpClient] Connectivity test: ");
+        std::cout << "[LLMHttpClient] Connectivity test: " << (connected ? "SUCCESS" : "FAILED")
+                  << " (response code: " << responseCode << ")" << std::endl;
         return connected;
 
     } catch (const std::exception& e) {
         curl_easy_cleanup(curl);
-        s_logger.error( "[LLMHttpClient] Connectivity test exception: " << e.what() << std::endl;
+        std::cerr << "[LLMHttpClient] Connectivity test exception: " << e.what() << std::endl;
         return false;
     }
 }
@@ -851,7 +852,8 @@ APIResponse LLMHttpClient::sendHTTPRequest(const APIRequest& request, bool retry
             // Check if we should retry
             if (!response.success && retry && shouldRetry(static_cast<int>(responseCode), retryCount)) {
                 int delayMs = calculateBackoffDelay(retryCount);
-                s_logger.info("[LLMHttpClient] Retry ");
+                std::cout << "[LLMHttpClient] Retry " << (retryCount + 1) << "/" << m_config.maxRetries
+                          << " after " << delayMs << "ms..." << std::endl;
                 std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
                 retryCount++;
                 continue;
@@ -1023,7 +1025,7 @@ bool LLMHttpClient::refreshOAuth2Token() {
 
     std::wstring wUrl(tokenUrl.begin(), tokenUrl.end());
     if (!WinHttpCrackUrl(wUrl.c_str(), 0, 0, &urlComp)) {
-        s_logger.error( "[LLMHttpClient] Failed to parse OAuth2 token URL" << std::endl;
+        std::cerr << "[LLMHttpClient] Failed to parse OAuth2 token URL" << std::endl;
         return false;
     }
 
@@ -1046,7 +1048,7 @@ bool LLMHttpClient::refreshOAuth2Token() {
         (LPVOID)postBody.c_str(), (DWORD)postBody.size(), (DWORD)postBody.size(), 0);
     if (!sent || !WinHttpReceiveResponse(hRequest, nullptr)) {
         WinHttpCloseHandle(hRequest); WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession);
-        s_logger.error( "[LLMHttpClient] OAuth2 refresh HTTP request failed" << std::endl;
+        std::cerr << "[LLMHttpClient] OAuth2 refresh HTTP request failed" << std::endl;
         return false;
     }
 
@@ -1074,7 +1076,7 @@ bool LLMHttpClient::refreshOAuth2Token() {
 
     std::string newToken = findJsonString("access_token");
     if (newToken.empty()) {
-        s_logger.error( "[LLMHttpClient] OAuth2 response missing access_token" << std::endl;
+        std::cerr << "[LLMHttpClient] OAuth2 response missing access_token" << std::endl;
         return false;
     }
 
@@ -1090,7 +1092,7 @@ bool LLMHttpClient::refreshOAuth2Token() {
         m_credentials.refreshToken = newRefresh;
     }
 
-    s_logger.info("[LLMHttpClient] OAuth2 token refreshed successfully");
+    std::cout << "[LLMHttpClient] OAuth2 token refreshed successfully" << std::endl;
     return true;
 #else
     // POSIX fallback: use system curl

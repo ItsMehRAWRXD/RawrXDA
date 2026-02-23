@@ -22,6 +22,7 @@
 
 #include "Win32IDE.h"
 #include "IDELogger.h"
+#include "IDEConfig.h"
 
 #include "../agentic/ToolCallResult.h"
 #include "../agentic/DiffEngine.h"
@@ -304,11 +305,194 @@ static std::unique_ptr<AgentEditSession> s_agentSession;
 static std::unique_ptr<BoundedAgentLoop> s_agentLoop;
 
 // ============================================================================
-// Initialize agent panel
+// Initialize agent panel — creates Win32 UI controls for diff review
 // ============================================================================
 
+// Agent panel control IDs (avoid collision with other subsystems)
+#define IDC_AGENT_DIFF_PANEL     14001
+#define IDC_AGENT_STATUS_LABEL   14002
+#define IDC_AGENT_ACCEPT_ALL_BTN 14003
+#define IDC_AGENT_REJECT_ALL_BTN 14004
+#define IDC_AGENT_NEW_SESSION    14005
+#define IDC_AGENT_SUMMARY_EDIT   14006
+
+LRESULT CALLBACK Win32IDE::AgentDiffPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    Win32IDE* self = reinterpret_cast<Win32IDE*>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
+
+    switch (uMsg) {
+    case WM_PAINT: {
+        if (!self) break;
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+
+        // Fill background with dark theme color
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        HBRUSH bgBrush = CreateSolidBrush(self->m_currentTheme.backgroundColor);
+        FillRect(hdc, &rc, bgBrush);
+        DeleteObject(bgBrush);
+
+        // Render the agent diff content using existing renderAgentDiffPanel
+        self->renderAgentDiffPanel(hdc, rc);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+
+    case WM_ERASEBKGND:
+        return 1; // Prevent flicker
+
+    case WM_COMMAND: {
+        // Forward button clicks to the main window for processing
+        if (self && self->m_hwndMain) {
+            PostMessage(self->m_hwndMain, WM_COMMAND, wParam, lParam);
+        }
+        return 0;
+    }
+    }
+
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+}
+
 void Win32IDE::initAgentPanel() {
-    LOG_INFO("Agent panel initialized");
+    if (m_agentPanelInitialized) return;
+
+    // The agent diff panel lives inside the bottom panel container alongside
+    // Terminal, Output, Problems, Debug Console. We create it as a child
+    // of the panel container. When no session is active it shows an empty state.
+    HWND hwndParent = m_hwndPanelContainer ? m_hwndPanelContainer : m_hwndMain;
+
+    HFONT hBoldFont = CreateFontA(-14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+        DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
+    HFONT hNormalFont = CreateFontA(-13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+        DEFAULT_PITCH | FF_DONTCARE, "Segoe UI");
+
+    // Register custom window class for the diff panel (owner-drawn)
+    static bool classRegistered = false;
+    if (!classRegistered) {
+        WNDCLASSEXA wc = {};
+        wc.cbSize = sizeof(wc);
+        wc.style = CS_HREDRAW | CS_VREDRAW;
+        wc.lpfnWndProc = AgentDiffPanelProc;
+        wc.hInstance = m_hInstance;
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        wc.hbrBackground = nullptr; // We paint ourselves
+        wc.lpszClassName = "RawrXD_AgentDiffPanel";
+        if (RegisterClassExA(&wc)) classRegistered = true;
+    }
+
+    // ====================================================================
+    // Layout: Status bar (28px) + Diff panel (fill) + Summary (60px) + Buttons (32px)
+    // Initial size will be adjusted by onSize/layout
+    // ====================================================================
+
+    int panelW = 600, panelH = 300; // Initial size, will be resized by layout
+
+    // Status label — shows agent progress or "No active session"
+    m_hwndAgentStatusLabel = CreateWindowExA(
+        0, "STATIC", " Agent Diff Panel — No active session",
+        WS_CHILD | SS_LEFT | SS_CENTERIMAGE,
+        0, 0, panelW, 26,
+        hwndParent, (HMENU)IDC_AGENT_STATUS_LABEL, m_hInstance, nullptr);
+    if (m_hwndAgentStatusLabel) SendMessage(m_hwndAgentStatusLabel, WM_SETFONT, (WPARAM)hBoldFont, TRUE);
+
+    // Owner-drawn diff panel — renders hunks via renderAgentDiffPanel()
+    m_hwndAgentDiffPanel = CreateWindowExA(
+        WS_EX_CLIENTEDGE, "RawrXD_AgentDiffPanel", "",
+        WS_CHILD | WS_VSCROLL,
+        0, 26, panelW, panelH - 26 - 60 - 36,
+        hwndParent, (HMENU)IDC_AGENT_DIFF_PANEL, m_hInstance, nullptr);
+    if (m_hwndAgentDiffPanel) {
+        SetWindowLongPtrA(m_hwndAgentDiffPanel, GWLP_USERDATA, (LONG_PTR)this);
+    }
+
+    // Summary text — read-only multiline showing session summary
+    m_hwndAgentSummaryEdit = CreateWindowExA(
+        WS_EX_CLIENTEDGE, "EDIT", "",
+        WS_CHILD | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL,
+        0, panelH - 60 - 36, panelW, 56,
+        hwndParent, (HMENU)IDC_AGENT_SUMMARY_EDIT, m_hInstance, nullptr);
+    if (m_hwndAgentSummaryEdit) SendMessage(m_hwndAgentSummaryEdit, WM_SETFONT, (WPARAM)hNormalFont, TRUE);
+
+    // Button bar — Accept All | Reject All | New Session
+    int btnW = (panelW - 20) / 3;
+    m_hwndAgentAcceptAllBtn = CreateWindowExA(
+        0, "BUTTON", "Accept All",
+        WS_CHILD | BS_PUSHBUTTON,
+        5, panelH - 34, btnW, 30,
+        hwndParent, (HMENU)IDC_AGENT_ACCEPT_ALL_BTN, m_hInstance, nullptr);
+    if (m_hwndAgentAcceptAllBtn) SendMessage(m_hwndAgentAcceptAllBtn, WM_SETFONT, (WPARAM)hNormalFont, TRUE);
+
+    m_hwndAgentRejectAllBtn = CreateWindowExA(
+        0, "BUTTON", "Reject All",
+        WS_CHILD | BS_PUSHBUTTON,
+        5 + btnW + 5, panelH - 34, btnW, 30,
+        hwndParent, (HMENU)IDC_AGENT_REJECT_ALL_BTN, m_hInstance, nullptr);
+    if (m_hwndAgentRejectAllBtn) SendMessage(m_hwndAgentRejectAllBtn, WM_SETFONT, (WPARAM)hNormalFont, TRUE);
+
+    m_hwndAgentNewSessionBtn = CreateWindowExA(
+        0, "BUTTON", "New Session",
+        WS_CHILD | BS_PUSHBUTTON,
+        5 + (btnW + 5) * 2, panelH - 34, btnW, 30,
+        hwndParent, (HMENU)IDC_AGENT_NEW_SESSION, m_hInstance, nullptr);
+    if (m_hwndAgentNewSessionBtn) SendMessage(m_hwndAgentNewSessionBtn, WM_SETFONT, (WPARAM)hNormalFont, TRUE);
+
+    // All controls start hidden — shown when agent session starts or panel tab selected
+    // They'll be shown by setSidebarView or a panel tab switch
+    m_agentPanelInitialized = true;
+    LOG_INFO("Agent diff panel initialized with Win32 controls");
+    appendToOutput("[Agent] Diff panel initialized — use Ctrl+Shift+I to start a bounded agent session\n",
+                   "Agent", OutputSeverity::Info);
+}
+
+// ============================================================================
+// toggleAgentPanel — View > Agent Panel: show/hide agent chat panel
+// ============================================================================
+void Win32IDE::toggleAgentPanel() {
+    toggleSecondarySidebar();
+    if (m_hwndStatusBar) {
+        SendMessage(m_hwndStatusBar, SB_SETTEXT, 0,
+            (LPARAM)(m_secondarySidebarVisible ? "Agent panel shown" : "Agent panel hidden"));
+    }
+}
+
+// ============================================================================
+// Refresh the diff display — update summary + repaint diff area
+// ============================================================================
+
+void Win32IDE::refreshAgentDiffDisplay() {
+    if (!m_agentPanelInitialized) return;
+
+    // Update status label
+    if (m_hwndAgentStatusLabel) {
+        std::string status;
+        if (s_agentSession && s_agentSession->EditCount() > 0) {
+            status = " Agent Session — " + std::to_string(s_agentSession->EditCount()) + " file(s) with proposed edits";
+        } else if (s_agentLoop) {
+            status = " Agent Session — Running...";
+        } else {
+            status = " Agent Diff Panel — No active session";
+        }
+        SetWindowTextA(m_hwndAgentStatusLabel, status.c_str());
+    }
+
+    // Update summary text
+    if (m_hwndAgentSummaryEdit) {
+        std::string summary = getAgentSessionSummary();
+        SetWindowTextA(m_hwndAgentSummaryEdit, summary.c_str());
+    }
+
+    // Repaint the diff area
+    if (m_hwndAgentDiffPanel) {
+        InvalidateRect(m_hwndAgentDiffPanel, nullptr, TRUE);
+    }
+
+    // Enable/disable buttons based on session state
+    bool hasSession = s_agentSession && s_agentSession->EditCount() > 0;
+    if (m_hwndAgentAcceptAllBtn) EnableWindow(m_hwndAgentAcceptAllBtn, hasSession);
+    if (m_hwndAgentRejectAllBtn) EnableWindow(m_hwndAgentRejectAllBtn, hasSession);
 }
 
 // ============================================================================
@@ -326,7 +510,7 @@ void Win32IDE::startAgentSession(const std::string& prompt) {
         s_agentLoop = std::make_unique<BoundedAgentLoop>();
 
         AgentLoopConfig config;
-        config.maxSteps = 8;
+        config.maxSteps = std::clamp(IDEConfig::getInstance().getInt("agent.cycleCount", 10), 1, 99);
         config.model = "qwen2.5-coder:14b";
         config.ollamaBaseUrl = m_ollamaBaseUrl.empty() ? "http://localhost:11434" : m_ollamaBaseUrl;
         config.workingDirectory = m_settings.workingDirectory;
@@ -340,7 +524,7 @@ void Win32IDE::startAgentSession(const std::string& prompt) {
         ToolGuardrails guards;
         guards.allowedRoots.push_back(config.workingDirectory);
         guards.maxFileSizeBytes = 10 * 1024 * 1024;
-        guards.commandTimeoutMs = 30000;
+        guards.commandTimeoutMs = static_cast<unsigned int>(IDEConfig::getInstance().getTerminalTimeoutMs(true));
         guards.requireBackupOnWrite = true;
         AgentToolHandlers::SetGuardrails(guards);
 
@@ -371,6 +555,17 @@ void Win32IDE::startAgentSession(const std::string& prompt) {
                 std::string transcriptDir = m_settings.workingDirectory + "/.rawrxd/transcripts/";
                 fs::create_directories(transcriptDir);
                 transcript.SaveToFile(transcriptDir + transcript.GetSessionId() + ".json");
+
+                // Refresh the agent diff panel to show proposed edits
+                refreshAgentDiffDisplay();
+
+                // Show the agent panel controls
+                if (m_hwndAgentDiffPanel)   ShowWindow(m_hwndAgentDiffPanel, SW_SHOW);
+                if (m_hwndAgentStatusLabel)  ShowWindow(m_hwndAgentStatusLabel, SW_SHOW);
+                if (m_hwndAgentAcceptAllBtn) ShowWindow(m_hwndAgentAcceptAllBtn, SW_SHOW);
+                if (m_hwndAgentRejectAllBtn) ShowWindow(m_hwndAgentRejectAllBtn, SW_SHOW);
+                if (m_hwndAgentNewSessionBtn) ShowWindow(m_hwndAgentNewSessionBtn, SW_SHOW);
+                if (m_hwndAgentSummaryEdit) ShowWindow(m_hwndAgentSummaryEdit, SW_SHOW);
             });
     }
 

@@ -1,4 +1,4 @@
-// agentic_failure_detector.hpp - Detects 8 failure types in model outputs (Qt-free)
+// agentic_failure_detector.hpp - Detects 8 failure types with MASM acceleration (Qt-free)
 #pragma once
 
 #include <string>
@@ -7,11 +7,28 @@
 #include <unordered_map>
 #include <chrono>
 #include <cstdint>
+#include <atomic>
+
+// Forward declarations for MASM integration
+struct MasmOperationResult;
+struct AgentFailureEvent;
 
 enum class AgentFailureType {
-    Refusal = 0, Hallucination = 1, FormatViolation = 2, InfiniteLoop = 3,
-    TokenLimitExceeded = 4, ResourceExhausted = 5, Timeout = 6, SafetyViolation = 7,
-    None = 255
+    None = 0,
+    Refusal = 1,
+    Hallucination = 2,
+    FormatViolation = 3,
+    InfiniteLoop = 4,
+    TokenLimitExceeded = 5,
+    ResourceExhausted = 6,
+    Timeout = 7,
+    SafetyViolation = 8,
+    QualityDegradation = 9,
+    EmptyResponse = 10,
+    ToolError = 11,
+    InvalidOutput = 12,
+    LowConfidence = 13,
+    UserAbort = 14
 };
 
 struct FailureInfo {
@@ -85,7 +102,17 @@ public:
 
 private:
     void initializePatterns();
+    void initializeMasmAcceleration();  // New MASM initialization
     double calculateConfidence(AgentFailureType type, const std::string& output);
+    
+    // MASM-accelerated detection methods
+    MasmOperationResult detectFailuresMasm(const std::string& output, 
+                                           AgentFailureEvent* events,
+                                           size_t maxEvents, 
+                                           size_t* eventCount) const;
+    FailureInfo detectFailureFallback(const std::string& modelOutput, const std::string& context);  // Non-MASM fallback
+    bool validateMasmIntegrity() const;  // Verify MASM bridge health
+    uint64_t getMasmPerformanceStats() const;  // Get MASM cycle counts
 
     mutable std::mutex m_mutex;
     std::vector<std::string> m_refusalPatterns;

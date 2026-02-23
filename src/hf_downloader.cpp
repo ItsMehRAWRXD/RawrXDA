@@ -4,9 +4,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
-#include "logging/logger.h"
-static Logger s_logger("hf_downloader");
-
 // Simple HTTP client using Windows API (or curl)
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
     userp->append((char*)contents, size * nmemb);
@@ -31,7 +28,7 @@ bool HFDownloader::SearchModels(const std::string& query, std::vector<ModelInfo>
     std::string response;
     
     if (!FetchJSON(url, response, token)) {
-        s_logger.error( "Failed to search models on HuggingFace" << std::endl;
+        std::cerr << "Failed to search models on HuggingFace" << std::endl;
         return false;
     }
     
@@ -68,7 +65,7 @@ bool HFDownloader::SearchModels(const std::string& query, std::vector<ModelInfo>
             results.push_back(std::move(info));
         }
     } catch (const nlohmann::json::exception& e) {
-        s_logger.error( "JSON parse error in SearchModels: " << e.what() << std::endl;
+        std::cerr << "JSON parse error in SearchModels: " << e.what() << std::endl;
         return false;
     }
     
@@ -81,7 +78,7 @@ bool HFDownloader::GetModelInfo(const std::string& repo_id, ModelInfo& info,
     std::string response;
     
     if (!FetchJSON(url, response, token)) {
-        s_logger.error( "Failed to fetch model info: " << repo_id << std::endl;
+        std::cerr << "Failed to fetch model info: " << repo_id << std::endl;
         return false;
     }
     
@@ -105,7 +102,7 @@ bool HFDownloader::DownloadModelAsync(const std::string& repo_id, const std::str
                                       const std::string& output_dir, ProgressCallback callback,
                                       const std::string& token) {
     if (is_downloading_.load()) {
-        s_logger.error( "Download already in progress" << std::endl;
+        std::cerr << "Download already in progress" << std::endl;
         return false;
     }
     
@@ -164,7 +161,7 @@ bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
     // Use libcurl to perform an HTTP GET request and capture the response body.
     CURL* curl = curl_easy_init();
     if (!curl) {
-        s_logger.error( "CURL init failed" << std::endl;
+        std::cerr << "CURL init failed" << std::endl;
         return false;
     }
 
@@ -184,7 +181,7 @@ bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
     CURLcode res = curl_easy_perform(curl);
     bool success = (res == CURLE_OK);
     if (!success) {
-        s_logger.error( "CURL error: " << curl_easy_strerror(res) << std::endl;
+        std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
     }
 
     curl_slist_free_all(headers);
@@ -194,18 +191,18 @@ bool HFDownloader::FetchJSON(const std::string& url, std::string& response,
 
 bool HFDownloader::DownloadFile(const std::string& url, const std::string& output_path,
                                ProgressCallback callback, const std::string& token) {
-    s_logger.info("Downloading: ");
+    std::cout << "Downloading: " << url << " to " << output_path << std::endl;
     
     // Perform download using libcurl and write directly to file
     FILE* fp = fopen(output_path.c_str(), "wb");
     if (!fp) {
-        s_logger.error( "Failed to open output file: " << output_path << std::endl;
+        std::cerr << "Failed to open output file: " << output_path << std::endl;
         return false;
     }
 
     CURL* curl = curl_easy_init();
     if (!curl) {
-        s_logger.error( "CURL init failed" << std::endl;
+        std::cerr << "CURL init failed" << std::endl;
         fclose(fp);
         return false;
     }
@@ -228,7 +225,7 @@ bool HFDownloader::DownloadFile(const std::string& url, const std::string& outpu
     CURLcode res = curl_easy_perform(curl);
     bool success = (res == CURLE_OK);
     if (!success) {
-        s_logger.error( "CURL error: " << curl_easy_strerror(res) << std::endl;
+        std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
     }
 
     // Retrieve download size for progress reporting
@@ -298,7 +295,7 @@ bool HFDownloader::ParseModelMetadata(const std::string& json_response, ModelInf
         
         return true;
     } catch (const nlohmann::json::exception& e) {
-        s_logger.error( "JSON parse error in ParseModelMetadata: " << e.what() << std::endl;
+        std::cerr << "JSON parse error in ParseModelMetadata: " << e.what() << std::endl;
         return false;
     }
 }

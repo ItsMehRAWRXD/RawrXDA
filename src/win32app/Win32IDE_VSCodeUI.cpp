@@ -11,6 +11,21 @@
 #include <fstream>
 #include <map>
 
+// SCAFFOLD_270: Status bar and Copilot status
+
+
+// SCAFFOLD_024: Problems list and go-to-problem
+
+
+// SCAFFOLD_004: Panel container (Terminal, Output, Problems)
+
+
+// SCAFFOLD_003: Secondary sidebar (Copilot chat) creation
+
+
+// SCAFFOLD_002: Activity bar and primary sidebar layout
+
+
 // Win32-native debug logging (replaces Qt qInfo/qDebug/qWarning)
 #ifndef RAWRXD_LOG_INFO
 #define RAWRXD_LOG_INFO(msg) do { \

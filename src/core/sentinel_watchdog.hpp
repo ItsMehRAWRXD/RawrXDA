@@ -37,7 +37,9 @@
 #ifndef RAWRXD_SENTINEL_WATCHDOG_HPP
 #define RAWRXD_SENTINEL_WATCHDOG_HPP
 
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <bcrypt.h>
 #include <cstdint>

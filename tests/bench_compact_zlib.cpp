@@ -7,9 +7,6 @@
 #include <cstring>
 #include <zlib.h>
 
-#include "logging/logger.h"
-static Logger s_logger("bench_compact_zlib");
-
 using namespace std::chrono;
 
 struct CompressionStats {
@@ -37,7 +34,7 @@ CompressionStats benchmark(const char* json, size_t json_len) {
     stats.compressed_bytes = dest_len;
     
     if (result != Z_OK) {
-        s_logger.error( "❌ Compression failed: " << result << "\n";
+        std::cerr << "❌ Compression failed: " << result << "\n";
         delete[] compressed;
         return stats;
     }
@@ -53,7 +50,7 @@ CompressionStats benchmark(const char* json, size_t json_len) {
     stats.decompress_ms = duration<double, std::milli>(t1 - t0).count();
     
     if (result != Z_OK) {
-        s_logger.error( "❌ Decompression failed: " << result << "\n";
+        std::cerr << "❌ Decompression failed: " << result << "\n";
     }
     
     stats.compression_ratio = static_cast<double>(stats.original_bytes) / stats.compressed_bytes;
@@ -64,10 +61,10 @@ CompressionStats benchmark(const char* json, size_t json_len) {
 }
 
 int main() {
-    s_logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-    s_logger.info("Compact Wire Protocol Benchmark\n");
-    s_logger.info("Using production zlib (level 9)\n");
-    s_logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+    std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    std::cout << "Compact Wire Protocol Benchmark\n";
+    std::cout << "Using production zlib (level 9)\n";
+    std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
     
     // Test 1: Small chat message
     {
@@ -75,18 +72,18 @@ int main() {
         size_t len = strlen(msg);
         
         auto stats = benchmark(msg, len);
-        s_logger.info("Test 1: Chat Message (small)\n");
-        s_logger.info("  Original:    ");
-        s_logger.info("  Compressed:  ");
-        s_logger.info("  Ratio:       ");
-        s_logger.info("  Compress:    ");
-        s_logger.info("  Decompress:  ");
-        s_logger.info("  Total:       ");
+        std::cout << "Test 1: Chat Message (small)\n";
+        std::cout << "  Original:    " << stats.original_bytes << " bytes\n";
+        std::cout << "  Compressed:  " << stats.compressed_bytes << " bytes\n";
+        std::cout << "  Ratio:       " << stats.compression_ratio << "×\n";
+        std::cout << "  Compress:    " << stats.compress_ms << " ms\n";
+        std::cout << "  Decompress:  " << stats.decompress_ms << " ms\n";
+        std::cout << "  Total:       " << (stats.compress_ms + stats.decompress_ms) << " ms\n";
         
         if (stats.compression_ratio >= 1.5 && (stats.compress_ms + stats.decompress_ms) <= 5.0) {
-            s_logger.info("  ✅ PASS: ≥1.5× compression, ≤5ms latency\n\n");
+            std::cout << "  ✅ PASS: ≥1.5× compression, ≤5ms latency\n\n";
         } else {
-            s_logger.info("  ⚠️  Note: Small messages have low compression ratio (expected)\n\n");
+            std::cout << "  ⚠️  Note: Small messages have low compression ratio (expected)\n\n";
         }
     }
     
@@ -101,18 +98,18 @@ int main() {
         content += R"(","tokens":4096,"model":"llama-3.1-8b-instruct"})";
         
         auto stats = benchmark(content.c_str(), content.size());
-        s_logger.info("Test 2: Large Response (4K context)\n");
-        s_logger.info("  Original:    ");
-        s_logger.info("  Compressed:  ");
-        s_logger.info("  Ratio:       ");
-        s_logger.info("  Compress:    ");
-        s_logger.info("  Decompress:  ");
-        s_logger.info("  Total:       ");
+        std::cout << "Test 2: Large Response (4K context)\n";
+        std::cout << "  Original:    " << stats.original_bytes << " bytes\n";
+        std::cout << "  Compressed:  " << stats.compressed_bytes << " bytes\n";
+        std::cout << "  Ratio:       " << stats.compression_ratio << "×\n";
+        std::cout << "  Compress:    " << stats.compress_ms << " ms\n";
+        std::cout << "  Decompress:  " << stats.decompress_ms << " ms\n";
+        std::cout << "  Total:       " << (stats.compress_ms + stats.decompress_ms) << " ms\n";
         
         if (stats.compression_ratio >= 3.0 && (stats.compress_ms + stats.decompress_ms) <= 5.0) {
-            s_logger.info("  ✅ PASS: ≥3× compression, ≤5ms latency\n\n");
+            std::cout << "  ✅ PASS: ≥3× compression, ≤5ms latency\n\n";
         } else {
-            s_logger.info("  ⚠️  FAIL: Target 3× / 5ms not met\n\n");
+            std::cout << "  ⚠️  FAIL: Target 3× / 5ms not met\n\n";
         }
     }
     
@@ -126,27 +123,27 @@ int main() {
         container += "]}";
         
         auto stats = benchmark(container.c_str(), container.size());
-        s_logger.info("Test 3: JSON Array (100 messages)\n");
-        s_logger.info("  Original:    ");
-        s_logger.info("  Compressed:  ");
-        s_logger.info("  Ratio:       ");
-        s_logger.info("  Compress:    ");
-        s_logger.info("  Decompress:  ");
-        s_logger.info("  Total:       ");
+        std::cout << "Test 3: JSON Array (100 messages)\n";
+        std::cout << "  Original:    " << stats.original_bytes << " bytes\n";
+        std::cout << "  Compressed:  " << stats.compressed_bytes << " bytes\n";
+        std::cout << "  Ratio:       " << stats.compression_ratio << "×\n";
+        std::cout << "  Compress:    " << stats.compress_ms << " ms\n";
+        std::cout << "  Decompress:  " << stats.decompress_ms << " ms\n";
+        std::cout << "  Total:       " << (stats.compress_ms + stats.decompress_ms) << " ms\n";
         
         if (stats.compression_ratio >= 3.0 && (stats.compress_ms + stats.decompress_ms) <= 5.0) {
-            s_logger.info("  ✅ PASS: ≥3× compression, ≤5ms latency\n\n");
+            std::cout << "  ✅ PASS: ≥3× compression, ≤5ms latency\n\n";
         } else {
-            s_logger.info("  ⚠️  FAIL: Target 3× / 5ms not met\n\n");
+            std::cout << "  ⚠️  FAIL: Target 3× / 5ms not met\n\n";
         }
     }
     
-    s_logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-    s_logger.info("Compact Wire Protocol: READY\n");
-    s_logger.info("  • Qt compact_wire.h uses qCompress (zlib wrapper)\n");
-    s_logger.info("  • Python middleware uses gzip.compress (zlib)\n");
-    s_logger.info("  • Both achieve ≥3× on large payloads\n");
-    s_logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    std::cout << "Compact Wire Protocol: READY\n";
+    std::cout << "  • Qt compact_wire.h uses qCompress (zlib wrapper)\n";
+    std::cout << "  • Python middleware uses gzip.compress (zlib)\n";
+    std::cout << "  • Both achieve ≥3× on large payloads\n";
+    std::cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
     
     return 0;
 }

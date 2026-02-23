@@ -1,5 +1,5 @@
 # RawrXD CLI Regression CI
-# Validates all 18 CLI modes against CLI_CONTRACT_v1.0.md (v1.1 addendum)
+# Validates all 18 CLI modes against CLI_CONTRACT_v1.1.md
 # Triggered on push/PR to main, or manual dispatch
 
 name: CLI Regression
@@ -10,7 +10,7 @@ on:
     paths:
       - 'RawrXD_IDE_unified.asm'
       - 'ci/Test-CLIRegression.ps1'
-      - 'CLI_CONTRACT_v1.0.md'
+      - 'CLI_CONTRACT_v1.1.md'
   pull_request:
     branches: [main]
   workflow_dispatch:

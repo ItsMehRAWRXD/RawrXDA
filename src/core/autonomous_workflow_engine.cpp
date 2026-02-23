@@ -28,6 +28,9 @@
 #endif
 #include <windows.h>
 
+// SCAFFOLD_072: autonomous_workflow_engine
+
+
 namespace fs = std::filesystem;
 
 // ============================================================================

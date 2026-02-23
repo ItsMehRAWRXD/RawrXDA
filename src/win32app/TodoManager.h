@@ -4,6 +4,7 @@
 #pragma once
 
 #include <windows.h>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <functional>
@@ -58,7 +59,7 @@ struct TodoItem {
 // Todo list manager
 class TodoManager {
 public:
-    TodoManager(const std::string& storagePath = "D:\\lazy init ide\\data\\todos.json");
+    TodoManager(const std::string& storagePath = "");  // default: %APPDATA%\RawrXD\todos.json
     ~TodoManager();
     
     // Core operations
@@ -84,6 +85,9 @@ public:
     int GetCount() const { return static_cast<int>(items_.size()); }
     int GetMaxCount() const { return maxItems_; }
     bool CanAdd() const { return items_.size() < maxItems_; }
+
+    // Configurable limit (1–99): set from IDEConfig or audit estimate
+    void SetMaxItems(int max) { maxItems_ = std::clamp(static_cast<size_t>(max), size_t(1), size_t(99)); }
     
     // Statistics
     struct Statistics {

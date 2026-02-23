@@ -9,6 +9,7 @@
 #include "agentic_engine.h"
 #include "agent_history.h"
 #include "agent_policy.h"
+#include "agentic_autonomous_config.h"
 #include "native_agent.hpp"
 #include "agent/autonomous_subagent.hpp"
 #include <random>
@@ -431,6 +432,12 @@ std::string SubAgentManager::executeSwarm(
             }
         }
     }
+    // Agentic Autonomous: cap maxParallel at global limit (e.g. 40)
+    int capped = RawrXD::AgenticAutonomousConfig::instance().effectiveMaxParallel(adjustedConfig.maxParallel);
+    if (capped != adjustedConfig.maxParallel) {
+        adjustedConfig.maxParallel = capped;
+        logInfo("Agentic config: swarm maxParallel capped to " + std::to_string(capped));
+    }
 
     std::string swarmId = generateUUID();
 
@@ -794,6 +801,40 @@ bool SubAgentManager::dispatchToolCall(
         toolResult = executeBulkFix(parentId, bfStrategy, bfTargets, bfContext);
         if (m_historyRecorder) {
             m_historyRecorder->recordToolResult(parentId, "bulk_fix", toolResult, true);
+        }
+        return true;
+    }
+
+    // ---- Shell / PowerShell tool call ----
+    std::string shellCmd;
+    bool isPS = false;
+    if (parseShellCall(modelOutput, shellCmd, isPS)) {
+        logInfo("Detected shell tool call: " + shellCmd);
+        metric(isPS ? "subagent.tool_dispatch.powershell" : "subagent.tool_dispatch.shell");
+        if (m_historyRecorder) {
+            m_historyRecorder->recordToolInvoke(parentId, isPS ? "powershell" : "shell", shellCmd);
+        }
+        toolResult = m_engine->executeCommand(shellCmd, isPS);
+        if (m_historyRecorder) {
+            m_historyRecorder->recordToolResult(parentId, isPS ? "powershell" : "shell", toolResult, true);
+        }
+        return true;
+    }
+
+    // ---- File Ops tool call ----
+    std::string fileType, filePath, fileContent;
+    if (parseFileCall(modelOutput, fileType, filePath, fileContent)) {
+        logInfo("Detected file tool call: " + fileType + " " + filePath);
+        metric("subagent.tool_dispatch." + fileType);
+        if (m_historyRecorder) {
+            m_historyRecorder->recordToolInvoke(parentId, fileType, filePath);
+        }
+        if (fileType == "read") toolResult = m_engine->readFile(filePath);
+        else if (fileType == "write") toolResult = m_engine->writeFile(filePath, fileContent);
+        else if (fileType == "list") toolResult = m_engine->listDir(filePath);
+
+        if (m_historyRecorder) {
+            m_historyRecorder->recordToolResult(parentId, fileType, toolResult, true);
         }
         return true;
     }
@@ -1303,4 +1344,73 @@ bool SubAgentManager::parseBulkFixCall(
     }
 
     return !targetPaths.empty();
+}
+
+bool SubAgentManager::parseShellCall(const std::string& text, std::string& cmd, bool& isPowerShell) const {
+    size_t pos = text.find("TOOL:shell");
+    if (pos != std::string::npos) {
+        isPowerShell = false;
+    } else {
+        pos = text.find("TOOL:powershell");
+        if (pos == std::string::npos) return false;
+        isPowerShell = true;
+    }
+
+    size_t jsonStart = text.find('{', pos);
+    if (jsonStart == std::string::npos) return false;
+
+    size_t cmdPos = text.find("\"cmd\"", jsonStart);
+    if (cmdPos == std::string::npos) return false;
+
+    size_t valStart = text.find('"', text.find(':', cmdPos) + 1);
+    if (valStart == std::string::npos) return false;
+    valStart++;
+
+    cmd = "";
+    for (size_t i = valStart; i < text.size(); i++) {
+        if (text[i] == '\\' && i + 1 < text.size()) { cmd += text[++i]; }
+        else if (text[i] == '"') break;
+        else cmd += text[i];
+    }
+    return !cmd.empty();
+}
+
+bool SubAgentManager::parseFileCall(const std::string& text, std::string& type, std::string& path, std::string& content) const {
+    size_t pos = text.find("TOOL:read_file");
+    if (pos != std::string::npos) type = "read";
+    else {
+        pos = text.find("TOOL:write_file");
+        if (pos != std::string::npos) type = "write";
+        else {
+            pos = text.find("TOOL:list_dir");
+            if (pos != std::string::npos) type = "list";
+            else return false;
+        }
+    }
+
+    size_t jsonStart = text.find('{', pos);
+    if (jsonStart == std::string::npos) return false;
+
+    auto extractField = [&](const std::string& fieldName) -> std::string {
+        std::string key = "\"" + fieldName + "\"";
+        size_t kpos = text.find(key, jsonStart);
+        if (kpos == std::string::npos) return "";
+        size_t colon = text.find(':', kpos + key.size());
+        if (colon == std::string::npos) return "";
+        size_t valStart = text.find('"', colon + 1);
+        if (valStart == std::string::npos) return "";
+        valStart++;
+        std::string value;
+        for (size_t i = valStart; i < text.size(); i++) {
+            if (text[i] == '\\' && i + 1 < text.size()) { value += text[++i]; }
+            else if (text[i] == '"') break;
+            else value += text[i];
+        }
+        return value;
+    };
+
+    path = extractField("path");
+    if (type == "write") content = extractField("content");
+    
+    return !path.empty() || type == "list";
 }

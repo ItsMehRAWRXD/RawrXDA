@@ -1,39 +1,47 @@
 /**
- * Minimal standalone test for StreamingGGUFLoaderQt
- * Compiles with: cl /EHsc /std:c++20 /I. test_minimal_streaming.cpp memory_mapped_file.cpp streaming_gguf_loader_qt.cpp /Fe:test_streaming.exe
+ * Minimal standalone test for StreamingGGUFLoader (C++20, Qt-free).
+ * Uses RawrXD::StreamingGGUFLoader from streaming_gguf_loader.h/cpp.
  */
 
-#include "streaming_gguf_loader_qt.h"
-#include "logging/logger.h"
+#include "../streaming_gguf_loader.h"
+#include <iostream>
 #include <string>
 
 int main(int argc, char* argv[]) {
-    Logger logger("TestMinimalStreaming");
-    logger.info("=== Minimal StreamingGGUFLoaderQt Test ===");
-    
+    std::cout << "=== Minimal StreamingGGUFLoader Test (C++20) ===" << std::endl;
+
     if (argc < 2) {
-        logger.error("Usage: {} <gguf-file>", argv[0]);
+        std::cerr << "Usage: " << argv[0] << " <gguf-file>" << std::endl;
+        std::cerr << "Example: " << argv[0] << " phi-3-mini.gguf" << std::endl;
         return 1;
     }
-    
+
     std::string modelPath = argv[1];
-    logger.info("Loading: {}", modelPath);
-    
-    StreamingGGUFLoaderQt loader;
-    
-    if (!loader.loadModel(modelPath)) {
-        logger.error("FAILED: {}", loader.getLastError());
+    std::cout << "Loading: " << modelPath << std::endl;
+
+    RawrXD::StreamingGGUFLoader loader;
+
+    if (!loader.Open(modelPath)) {
+        std::cerr << "FAILED to open GGUF file." << std::endl;
         return 1;
     }
-    
-    logger.info("SUCCESS!");
-    logger.info("Model: {}", loader.getModelName());
-    logger.info("Architecture: {}", loader.getModelArchitecture());
-    logger.info("Tensors: {}", loader.getTensorCount());
-    logger.info("Metadata: {}", loader.getMetadataCount());
-    
-    auto stats = loader.getMemoryStats();
-    logger.info("File size: {} MB", stats.totalFileSize / 1024 / 1024);
-    
+
+    auto meta = loader.GetMetadata();
+    auto tensors = loader.GetAllTensorInfo();
+    uint64_t fileSize = loader.GetTotalFileSize();
+    uint64_t memUsed = loader.GetCurrentMemoryUsage();
+
+    std::cout << "\nSUCCESS!" << std::endl;
+    auto it = meta.kv_pairs.find("general.name");
+    std::cout << "Model: " << (it != meta.kv_pairs.end() ? it->second : "(n/a)") << std::endl;
+    it = meta.kv_pairs.find("general.architecture");
+    std::cout << "Architecture: " << (it != meta.kv_pairs.end() ? it->second : std::to_string(meta.architecture_type)) << std::endl;
+    std::cout << "Context length: " << meta.context_length << std::endl;
+    std::cout << "Tensors: " << tensors.size() << std::endl;
+    std::cout << "Metadata entries: " << meta.kv_pairs.size() << std::endl;
+    std::cout << "File size: " << (fileSize / 1024 / 1024) << " MB" << std::endl;
+    std::cout << "Current memory usage: " << (memUsed / 1024) << " KB" << std::endl;
+
+    loader.Close();
     return 0;
 }

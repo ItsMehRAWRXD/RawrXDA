@@ -20,28 +20,15 @@ import glob
 import time
 from urllib.parse import urlparse, parse_qs
 
-PORT = int(os.environ.get("RAWRXD_PORT", "8080"))
+PORT = 8080
 
-# Model directories to scan — cross-platform defaults
-MODEL_DIRS = []
-if os.name == 'nt':
-    home_dir = os.path.expanduser("~")
-    MODEL_DIRS = [
-        os.path.join(home_dir, "OllamaModels"),
-        os.path.join(home_dir, "models"),
-        os.path.join(home_dir, ".ollama", "models"),
-    ]
-else:
-    MODEL_DIRS = [
-        os.path.expanduser("~/.ollama/models"),
-        "/opt/models",
-        "./models",
-    ]
-# Allow override via environment
-if os.environ.get("RAWRXD_MODEL_PATH"):
-    MODEL_DIRS.insert(0, os.environ["RAWRXD_MODEL_PATH"])
-if os.environ.get("RAWRXD_MODEL_DIRS"):
-    MODEL_DIRS = [p.strip() for p in os.environ["RAWRXD_MODEL_DIRS"].split(",") if p.strip()] + MODEL_DIRS
+# Model directories to scan (same as MASM middleware)
+MODEL_DIRS = [
+    r"D:\OllamaModels",
+    r"D:\models", 
+    r"C:\models",
+    r"E:\models",
+]
 
 # Model cache
 cached_models = []

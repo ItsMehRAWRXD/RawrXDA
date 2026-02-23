@@ -16,6 +16,7 @@
 #include <intrin.h>
 #include "enterprise_license.h"
 #include "flash_attention.h"
+#include "production_release.h"
 
 // ============================================================================
 // ASM Engine Extern Declarations (statically linked)
@@ -149,6 +150,9 @@ void StreamingEngineRegistry::discoverEngines() {
     
     // Initialize Enterprise License system (determines which engines can register)
     EnterpriseLicense::initialize();
+    
+    // Sync ProductionReleaseEngine gates with current license (Top 3 phases)
+    ProductionReleaseEngine::instance().refreshLicense();
     
     // Register all statically linked (built-in) engines first
     registerBuiltinEngines();

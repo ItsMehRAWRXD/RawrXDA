@@ -21,6 +21,9 @@
 // SQLite3 C API
 #include <sqlite3.h>
 
+// SCAFFOLD_334: digestion reverse_engineering void impl
+
+
 namespace fs = std::filesystem;
 
 // ============================================================================

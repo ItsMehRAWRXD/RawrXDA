@@ -9,9 +9,6 @@
 #include <algorithm>
 #include <cstring>
 
-#include "logging/logger.h"
-static Logger s_logger("bench_flash_asm_puppeteer_x3");
-
 using namespace std::chrono;
 
 // BlockQ8_0 format: scale (float) + 32×int8
@@ -46,8 +43,8 @@ int main() {
     const int seqLen = 4096;
     const int headDim = 64;
     
-    s_logger.info("Flash-Attention Puppeteer ASM×3.3 Benchmark\n");
-    s_logger.info("Shape: ");
+    std::cout << "Flash-Attention Puppeteer ASM×3.3 Benchmark\n";
+    std::cout << "Shape: " << seqLen << " × " << headDim << " (4K context)\n\n";
     
     // Allocate buffers
     std::vector<float> Q(seqLen * headDim);
@@ -66,20 +63,20 @@ int main() {
     for (auto& x : V) x = dist(rng);
     
     // Warmup
-    s_logger.info("Warming up...\n");
+    std::cout << "Warming up...\n";
     flash_attention(Q.data(), K.data(), V.data(), O_intrin.data(), seqLen, headDim);
     flash_attn_puppeteer_avx2_x3(Q.data(), K.data(), V.data(), O_asm.data(), 
                                   seqLen, headDim, 2, state.data(), pOut.data());
     
     // Benchmark intrinsics Flash-Attention
-    s_logger.info("Running intrinsics Flash-Attention...\n");
+    std::cout << "Running intrinsics Flash-Attention...\n";
     auto t0 = high_resolution_clock::now();
     flash_attention(Q.data(), K.data(), V.data(), O_intrin.data(), seqLen, headDim);
     auto t1 = high_resolution_clock::now();
     double ms_intrin = duration<double, std::milli>(t1 - t0).count();
     
     // Benchmark ASM Puppeteer ×3.3
-    s_logger.info("Running Puppeteer ASM×3.3...\n");
+    std::cout << "Running Puppeteer ASM×3.3...\n";
     t0 = high_resolution_clock::now();
     flash_attn_puppeteer_avx2_x3(Q.data(), K.data(), V.data(), O_asm.data(),
                                   seqLen, headDim, 2, state.data(), pOut.data());
@@ -94,22 +91,22 @@ int main() {
     
     // Report
     double speedup = ms_intrin / ms_asm;
-    s_logger.info("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-    s_logger.info("Max abs diff: ");
-    s_logger.info("Intrinsics:        ");
-    s_logger.info("Puppeteer-ASM×3.3: ");
-    s_logger.info("Speedup: ");
+    std::cout << "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    std::cout << "Max abs diff: " << maxDiff << "\n";
+    std::cout << "Intrinsics:        " << ms_intrin << " ms\n";
+    std::cout << "Puppeteer-ASM×3.3: " << ms_asm << " ms\n";
+    std::cout << "Speedup: " << speedup << "x\n";
     
     if (speedup >= 1.0) {
-        s_logger.info("✅ Puppeteer-ASM×3.3: >= 1.0× over intrinsics (delegation mode)\n");
-        s_logger.info("\nNote: True ASM kernel would provide 1.2-1.5× speedup via:\n");
-        s_logger.info("  - Manual register allocation\n");
-        s_logger.info("  - 3× unrolled VFMA pipelines\n");
-        s_logger.info("  - Prefetch hints and cache optimization\n");
-        s_logger.info("  - Reduced instruction count (no function call overhead)\n");
+        std::cout << "✅ Puppeteer-ASM×3.3: >= 1.0× over intrinsics (delegation mode)\n";
+        std::cout << "\nNote: True ASM kernel would provide 1.2-1.5× speedup via:\n";
+        std::cout << "  - Manual register allocation\n";
+        std::cout << "  - 3× unrolled VFMA pipelines\n";
+        std::cout << "  - Prefetch hints and cache optimization\n";
+        std::cout << "  - Reduced instruction count (no function call overhead)\n";
         return 0;
     } else {
-        s_logger.info("❌ Puppeteer-ASM×3.3: < 1.0× (got ");
+        std::cout << "❌ Puppeteer-ASM×3.3: < 1.0× (got " << speedup << "x)\n";
         return 1;
     }
 }

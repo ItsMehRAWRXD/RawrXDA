@@ -7,9 +7,6 @@
 #include <thread>
 #include <cstdlib>
 
-#include "logging/logger.h"
-static Logger s_logger("error_recovery_system");
-
 #ifdef _WIN32
 #include <windows.h>
 #include <winsock2.h>
@@ -31,7 +28,7 @@ ErrorRecoverySystem::ErrorRecoverySystem()
     
     setupDefaultStrategies();
     
-    s_logger.info("[ErrorRecoverySystem] Initialized with 15+ recovery strategies");
+    std::cout << "[ErrorRecoverySystem] Initialized with 15+ recovery strategies" << std::endl;
 }
 
 ErrorRecoverySystem::~ErrorRecoverySystem() {
@@ -250,7 +247,7 @@ void ErrorRecoverySystem::setupDefaultStrategies() {
     killRestart.recoverySteps = { "Save state", "Kill hanging process", "Restart process", "Restore state" };
     strategies["kill_restart"] = killRestart;
     
-    s_logger.info("[ErrorRecoverySystem] Loaded ");
+    std::cout << "[ErrorRecoverySystem] Loaded " << strategies.size() << " recovery strategies" << std::endl;
 }
 
 std::string ErrorRecoverySystem::recordError(const std::string& component, ErrorSeverity severity,
@@ -273,7 +270,9 @@ std::string ErrorRecoverySystem::recordError(const std::string& component, Error
     
     // Log based on severity
     std::string severityStr = errorSeverityToString(severity);
-    s_logger.info("[ErrorRecoverySystem] ");
+    std::cout << "[ErrorRecoverySystem] " << severityStr
+              << " in " << component
+              << ": " << message << std::endl;
     
     if (m_errorRecordedCb) {
         m_errorRecordedCb(error, m_errorRecordedUd);
@@ -281,7 +280,7 @@ std::string ErrorRecoverySystem::recordError(const std::string& component, Error
     
     // Auto-recovery for critical errors — schedule deferred
     if (autoRecoveryEnabled && (severity == ErrorSeverity::Critical || severity == ErrorSeverity::Error)) {
-        s_logger.info("[ErrorRecoverySystem] Scheduling auto-recovery for ");
+        std::cout << "[ErrorRecoverySystem] Scheduling auto-recovery for " << error.errorId << std::endl;
         DeferredRecovery dr;
         dr.errorId = error.errorId;
         dr.triggerTime = std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
@@ -294,7 +293,7 @@ std::string ErrorRecoverySystem::recordError(const std::string& component, Error
 bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     auto it = activeErrors.find(errorId);
     if (it == activeErrors.end()) {
-        s_logger.info("[ErrorRecoverySystem] Error not found: ");
+        std::cout << "[ErrorRecoverySystem] Error not found: " << errorId << std::endl;
         return false;
     }
     
@@ -302,7 +301,7 @@ bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     
     // Check retry limit
     if (error.retryCount >= maxRetries) {
-        s_logger.info("[ErrorRecoverySystem] Max retries exceeded for ");
+        std::cout << "[ErrorRecoverySystem] Max retries exceeded for " << errorId << std::endl;
         error.wasRecovered = false;
         if (m_recoveryFailedCb) {
             m_recoveryFailedCb(error, m_recoveryFailedUd);
@@ -314,11 +313,11 @@ bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
     RecoveryStrategy strategy = selectBestStrategy(error);
     
     if (strategy.strategyId.empty()) {
-        s_logger.info("[ErrorRecoverySystem] No suitable strategy found for ");
+        std::cout << "[ErrorRecoverySystem] No suitable strategy found for " << errorId << std::endl;
         return false;
     }
     
-    s_logger.info("[ErrorRecoverySystem] Applying strategy: ");
+    std::cout << "[ErrorRecoverySystem] Applying strategy: " << strategy.name << std::endl;
     
     // Execute recovery
     bool success = executeRecoveryStrategy(error, strategy);
@@ -333,19 +332,20 @@ bool ErrorRecoverySystem::attemptRecovery(const std::string& errorId) {
         recoveredErrors.push_back(error);
         activeErrors.erase(errorId);
         
-        s_logger.info("[ErrorRecoverySystem] Recovery successful for ");
+        std::cout << "[ErrorRecoverySystem] Recovery successful for " << errorId << std::endl;
         if (m_errorRecoveredRecordCb) {
             m_errorRecoveredRecordCb(error, m_errorRecoveredRecordUd);
         }
         
         return true;
     } else {
-        s_logger.info("[ErrorRecoverySystem] Recovery attempt ");
+        std::cout << "[ErrorRecoverySystem] Recovery attempt " << error.retryCount 
+                  << " failed for " << errorId << std::endl;
         
         // Schedule another retry if under limit
         if (error.retryCount < maxRetries && autoRecoveryEnabled) {
             int delay = retryDelayMs * (1 << error.retryCount); // Exponential backoff
-            s_logger.info("[ErrorRecoverySystem] Scheduling retry in ");
+            std::cout << "[ErrorRecoverySystem] Scheduling retry in " << delay << "ms" << std::endl;
             
             DeferredRecovery dr;
             dr.errorId = errorId;
@@ -420,20 +420,21 @@ bool ErrorRecoverySystem::executeRecoveryStrategy(ErrorRecord_ERS& error, const 
     } else if (strategy.strategyId == "escalate_admin") {
         success = recoverEscalateAdmin(error);
     } else {
-        s_logger.info("[ErrorRecoverySystem] Unknown strategy: ");
+        std::cout << "[ErrorRecoverySystem] Unknown strategy: " << strategy.strategyId << std::endl;
     }
     
     return success;
 }
 
 bool ErrorRecoverySystem::recoverWithRetry(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Retry recovery for ");
+    std::cout << "[ErrorRecoverySystem] Retry recovery for " << error.component
+              << " (attempt " << (error.retryCount + 1) << "/" << maxRetries << ")" << std::endl;
 
     // Exponential backoff: delay = base * 2^retryCount, capped at 30s
     int backoffMs = retryDelayMs * (1 << error.retryCount);
     if (backoffMs > 30000) backoffMs = 30000;
 
-    s_logger.info("[ErrorRecoverySystem] Backoff wait: ");
+    std::cout << "[ErrorRecoverySystem] Backoff wait: " << backoffMs << "ms" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(backoffMs));
 
     // Record the recovery action taken
@@ -447,7 +448,7 @@ bool ErrorRecoverySystem::recoverWithRetry(ErrorRecord_ERS& error) {
                         error.category == ErrorCategory::CloudProvider);
 
     if (isTransient && error.retryCount < maxRetries) {
-        s_logger.info("[ErrorRecoverySystem] Transient error — retry eligible");
+        std::cout << "[ErrorRecoverySystem] Transient error — retry eligible" << std::endl;
         return true;
     }
 
@@ -456,19 +457,19 @@ bool ErrorRecoverySystem::recoverWithRetry(ErrorRecord_ERS& error) {
         return true;
     }
 
-    s_logger.info("[ErrorRecoverySystem] Retry exhaustion approaching for ");
+    std::cout << "[ErrorRecoverySystem] Retry exhaustion approaching for " << error.component << std::endl;
     return false;
 }
 
 bool ErrorRecoverySystem::recoverFallbackLocal(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Falling back to local model for ");
+    std::cout << "[ErrorRecoverySystem] Falling back to local model for " << error.component << std::endl;
 
     error.recoveryAction = "fallback_local";
 
     // Notify the subsystem to switch inference backend to local Ollama
     if (m_fallbackToLocalCb) {
         m_fallbackToLocalCb(error.component, m_fallbackToLocalUd);
-        s_logger.info("[ErrorRecoverySystem] Local fallback callback invoked for ");
+        std::cout << "[ErrorRecoverySystem] Local fallback callback invoked for " << error.component << std::endl;
         return true;
     }
 
@@ -500,23 +501,23 @@ bool ErrorRecoverySystem::recoverFallbackLocal(ErrorRecord_ERS& error) {
             WSACleanup();
 
             if (connected) {
-                s_logger.info("[ErrorRecoverySystem] Ollama detected on localhost:11434");
+                std::cout << "[ErrorRecoverySystem] Ollama detected on localhost:11434" << std::endl;
                 return true;
             }
         } else {
             WSACleanup();
         }
     }
-    s_logger.info("[ErrorRecoverySystem] Local Ollama not reachable — fallback failed");
+    std::cout << "[ErrorRecoverySystem] Local Ollama not reachable — fallback failed" << std::endl;
     return false;
 #else
-    s_logger.info("[ErrorRecoverySystem] No fallback callback registered");
+    std::cout << "[ErrorRecoverySystem] No fallback callback registered" << std::endl;
     return false;
 #endif
 }
 
 bool ErrorRecoverySystem::recoverClearCache(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Clearing cache for ");
+    std::cout << "[ErrorRecoverySystem] Clearing cache for " << error.component << std::endl;
 
     error.recoveryAction = "clear_cache";
 
@@ -530,7 +531,7 @@ bool ErrorRecoverySystem::recoverClearCache(ErrorRecord_ERS& error) {
     // Flush working set to reclaim virtual memory
     HANDLE hProcess = GetCurrentProcess();
     SetProcessWorkingSetSize(hProcess, (SIZE_T)-1, (SIZE_T)-1);
-    s_logger.info("[ErrorRecoverySystem] Flushed process working set");
+    std::cout << "[ErrorRecoverySystem] Flushed process working set" << std::endl;
 #endif
 
     // Clear temp files for this component if they exist
@@ -547,7 +548,7 @@ bool ErrorRecoverySystem::recoverClearCache(ErrorRecord_ERS& error) {
                 if (DeleteFileA(fullPath.c_str())) cleared++;
             } while (FindNextFileA(hFind, &fd));
             FindClose(hFind);
-            s_logger.info("[ErrorRecoverySystem] Cleared ");
+            std::cout << "[ErrorRecoverySystem] Cleared " << cleared << " temp cache files" << std::endl;
         }
     }
 
@@ -555,16 +556,16 @@ bool ErrorRecoverySystem::recoverClearCache(ErrorRecord_ERS& error) {
 }
 
 bool ErrorRecoverySystem::recoverRestartComponent(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Restarting component: ");
+    std::cout << "[ErrorRecoverySystem] Restarting component: " << error.component << std::endl;
 
     error.recoveryAction = "restart_component (" + error.component + ")";
 
     // Step 1: Signal component shutdown via callback
     if (m_componentRestartCb) {
         m_componentRestartCb(error.component, m_componentRestartUd);
-        s_logger.info("[ErrorRecoverySystem] Restart callback invoked for ");
+        std::cout << "[ErrorRecoverySystem] Restart callback invoked for " << error.component << std::endl;
     } else {
-        s_logger.info("[ErrorRecoverySystem] No restart callback — cannot restart ");
+        std::cout << "[ErrorRecoverySystem] No restart callback — cannot restart " << error.component << std::endl;
         return false;
     }
 
@@ -588,14 +589,15 @@ bool ErrorRecoverySystem::recoverRestartComponent(ErrorRecord_ERS& error) {
         }
     }
     if (!staleIds.empty()) {
-        s_logger.info("[ErrorRecoverySystem] Cleared ");
+        std::cout << "[ErrorRecoverySystem] Cleared " << staleIds.size()
+                  << " stale errors from " << error.component << std::endl;
     }
 
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReconnectNetwork(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Reconnecting network for ");
+    std::cout << "[ErrorRecoverySystem] Reconnecting network for " << error.component << std::endl;
 
     error.recoveryAction = "reconnect_network";
 
@@ -609,7 +611,7 @@ bool ErrorRecoverySystem::recoverReconnectNetwork(ErrorRecord_ERS& error) {
     // Quick DNS check: resolve huggingface.co to verify external connectivity
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        s_logger.info("[ErrorRecoverySystem] WSAStartup failed — network stack error");
+        std::cout << "[ErrorRecoverySystem] WSAStartup failed — network stack error" << std::endl;
         return false;
     }
 
@@ -622,26 +624,26 @@ bool ErrorRecoverySystem::recoverReconnectNetwork(ErrorRecord_ERS& error) {
     WSACleanup();
 
     if (dnsResult != 0) {
-        s_logger.info("[ErrorRecoverySystem] DNS resolution failed — no external network");
+        std::cout << "[ErrorRecoverySystem] DNS resolution failed — no external network" << std::endl;
         // Still return true if callback was invoked (local-only mode may work)
         return (m_networkReconnectCb != nullptr);
     }
 
-    s_logger.info("[ErrorRecoverySystem] Network connectivity verified");
+    std::cout << "[ErrorRecoverySystem] Network connectivity verified" << std::endl;
 #endif
 
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReloadData(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Reloading data for ");
+    std::cout << "[ErrorRecoverySystem] Reloading data for " << error.component << std::endl;
 
     error.recoveryAction = "reload_data (" + error.component + ")";
 
     // Invoke registered data-reload callback (reloads model weights, config files)
     if (m_dataReloadCb) {
         m_dataReloadCb(error.component, m_dataReloadUd);
-        s_logger.info("[ErrorRecoverySystem] Data reload callback invoked for ");
+        std::cout << "[ErrorRecoverySystem] Data reload callback invoked for " << error.component << std::endl;
         return true;
     }
 
@@ -656,17 +658,18 @@ bool ErrorRecoverySystem::recoverReloadData(ErrorRecord_ERS& error) {
     for (const char* path : configPaths) {
         DWORD attr = GetFileAttributesA(path);
         if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) {
-            s_logger.info("[ErrorRecoverySystem] Config file found: ");
+            std::cout << "[ErrorRecoverySystem] Config file found: " << path
+                      << " — reload available via callback" << std::endl;
             return true; // File exists, subsystem can reload on next access
         }
     }
 
-    s_logger.info("[ErrorRecoverySystem] No data reload callback or config files found");
+    std::cout << "[ErrorRecoverySystem] No data reload callback or config files found" << std::endl;
     return false;
 }
 
 bool ErrorRecoverySystem::recoverReduceResources(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Reducing resource usage for ");
+    std::cout << "[ErrorRecoverySystem] Reducing resource usage for " << error.component << std::endl;
 
     error.recoveryAction = "reduce_resources";
 
@@ -686,48 +689,50 @@ bool ErrorRecoverySystem::recoverReduceResources(ErrorRecord_ERS& error) {
     if (GetProcessMemoryInfo(hProcess, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
         double workingSetMB = pmc.WorkingSetSize / (1024.0 * 1024.0);
         double peakMB = pmc.PeakWorkingSetSize / (1024.0 * 1024.0);
-        s_logger.info("[ErrorRecoverySystem] Memory after reduction — Working: ");
+        std::cout << "[ErrorRecoverySystem] Memory after reduction — Working: "
+                  << workingSetMB << "MB, Peak: " << peakMB << "MB" << std::endl;
     }
 #endif
 
     // Lower thread priority to reduce CPU contention
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
-    s_logger.info("[ErrorRecoverySystem] Thread priority lowered to reduce contention");
+    std::cout << "[ErrorRecoverySystem] Thread priority lowered to reduce contention" << std::endl;
 
     return true;
 }
 
 bool ErrorRecoverySystem::recoverSwitchEndpoint(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Switching endpoint for ");
+    std::cout << "[ErrorRecoverySystem] Switching endpoint for " << error.component << std::endl;
 
     error.recoveryAction = "switch_endpoint";
 
     // Notify the subsystem to rotate to the next API endpoint
     if (m_endpointSwitchCb) {
         m_endpointSwitchCb(error.component, m_endpointSwitchUd);
-        s_logger.info("[ErrorRecoverySystem] Endpoint switch callback invoked for ");
+        std::cout << "[ErrorRecoverySystem] Endpoint switch callback invoked for " << error.component << std::endl;
         return true;
     }
 
     // No callback — log available defaults for common components
     if (error.component == "inference" || error.component == "ai_model") {
-        s_logger.info("[ErrorRecoverySystem] Inference endpoint switch — ");
+        std::cout << "[ErrorRecoverySystem] Inference endpoint switch — "
+                     "ensure backup URLs are configured in settings" << std::endl;
         // Common fallback: localhost Ollama
         error.context["switchedEndpoint"] = "http://localhost:11434";
         return true;
     } else if (error.component == "hf_downloader") {
         // HuggingFace mirror endpoints
         error.context["switchedEndpoint"] = "https://hf-mirror.com";
-        s_logger.info("[ErrorRecoverySystem] HF downloader switched to mirror");
+        std::cout << "[ErrorRecoverySystem] HF downloader switched to mirror" << std::endl;
         return true;
     }
 
-    s_logger.info("[ErrorRecoverySystem] No endpoint switch callback for ");
+    std::cout << "[ErrorRecoverySystem] No endpoint switch callback for " << error.component << std::endl;
     return false;
 }
 
 bool ErrorRecoverySystem::recoverGracefulDegradation(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Enabling graceful degradation for ");
+    std::cout << "[ErrorRecoverySystem] Enabling graceful degradation for " << error.component << std::endl;
 
     error.recoveryAction = "graceful_degradation";
 
@@ -745,22 +750,22 @@ bool ErrorRecoverySystem::recoverGracefulDegradation(ErrorRecord_ERS& error) {
     // Downgrade severity — a degraded but functioning system is Warning, not Critical
     if (error.severity == ErrorSeverity::Critical) {
         error.severity = ErrorSeverity::Warning;
-        s_logger.info("[ErrorRecoverySystem] Severity downgraded Critical → Warning (degraded mode)");
+        std::cout << "[ErrorRecoverySystem] Severity downgraded Critical → Warning (degraded mode)" << std::endl;
     }
 
-    s_logger.info("[ErrorRecoverySystem] Graceful degradation active — non-critical features disabled");
+    std::cout << "[ErrorRecoverySystem] Graceful degradation active — non-critical features disabled" << std::endl;
     return true;
 }
 
 bool ErrorRecoverySystem::recoverReauthenticate(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Re-authenticating for ");
+    std::cout << "[ErrorRecoverySystem] Re-authenticating for " << error.component << std::endl;
 
     error.recoveryAction = "reauthenticate";
 
     // Invoke registered re-authentication callback (refreshes OAuth tokens, API keys)
     if (m_reauthenticationCb) {
         m_reauthenticationCb(error.component, m_reauthenticationUd);
-        s_logger.info("[ErrorRecoverySystem] Re-authentication callback invoked");
+        std::cout << "[ErrorRecoverySystem] Re-authentication callback invoked" << std::endl;
         return true;
     }
 
@@ -774,7 +779,8 @@ bool ErrorRecoverySystem::recoverReauthenticate(ErrorRecord_ERS& error) {
     for (const char* credPath : credPaths) {
         DWORD attr = GetFileAttributesA(credPath);
         if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) {
-            s_logger.info("[ErrorRecoverySystem] Credential file found: ");
+            std::cout << "[ErrorRecoverySystem] Credential file found: " << credPath
+                      << " — re-auth possible on next request" << std::endl;
             error.context["credentialSource"] = credPath;
             return true;
         }
@@ -785,18 +791,18 @@ bool ErrorRecoverySystem::recoverReauthenticate(ErrorRecord_ERS& error) {
     for (const char* envKey : envKeys) {
         const char* val = std::getenv(envKey);
         if (val && val[0] != '\0') {
-            s_logger.info("[ErrorRecoverySystem] Found env credential: ");
+            std::cout << "[ErrorRecoverySystem] Found env credential: " << envKey << std::endl;
             error.context["credentialSource"] = std::string("env:") + envKey;
             return true;
         }
     }
 
-    s_logger.info("[ErrorRecoverySystem] No credentials found for re-authentication");
+    std::cout << "[ErrorRecoverySystem] No credentials found for re-authentication" << std::endl;
     return false;
 }
 
 bool ErrorRecoverySystem::recoverEscalateAdmin(ErrorRecord_ERS& error) {
-    s_logger.info("[ErrorRecoverySystem] Escalating to administrator: ");
+    std::cout << "[ErrorRecoverySystem] Escalating to administrator: " << error.message << std::endl;
 
     error.recoveryAction = "escalate_admin";
 
@@ -826,7 +832,7 @@ bool ErrorRecoverySystem::recoverEscalateAdmin(ErrorRecord_ERS& error) {
             fprintf(fLog, "  Stack: %s\n", error.stackTrace.c_str());
         }
         fclose(fLog);
-        s_logger.info("[ErrorRecoverySystem] Escalation logged to ");
+        std::cout << "[ErrorRecoverySystem] Escalation logged to " << escalationLog << std::endl;
     }
 
     // Also emit via OutputDebugString for attached debuggers
@@ -850,7 +856,7 @@ void ErrorRecoverySystem::resolveError(const std::string& errorId) {
     recoveredErrors.push_back(error);
     activeErrors.erase(errorId);
     
-    s_logger.info("[ErrorRecoverySystem] Manually resolved error: ");
+    std::cout << "[ErrorRecoverySystem] Manually resolved error: " << errorId << std::endl;
     if (m_errorRecoveredRecordCb) {
         m_errorRecoveredRecordCb(error, m_errorRecoveredRecordUd);
     }
@@ -972,7 +978,8 @@ void ErrorRecoverySystem::processAutoRecovery() {
 
 void ErrorRecoverySystem::enableAutoRecovery(bool enable) {
     autoRecoveryEnabled = enable;
-    s_logger.info("[ErrorRecoverySystem] Auto-recovery ");
+    std::cout << "[ErrorRecoverySystem] Auto-recovery " 
+              << (enable ? "enabled" : "disabled") << std::endl;
 }
 
 void ErrorRecoverySystem::setMaxRetries(int retries) {
@@ -985,12 +992,12 @@ void ErrorRecoverySystem::setRetryDelay(int milliseconds) {
 
 void ErrorRecoverySystem::clearErrorHistory() {
     errorHistory.clear();
-    s_logger.info("[ErrorRecoverySystem] Error history cleared");
+    std::cout << "[ErrorRecoverySystem] Error history cleared" << std::endl;
 }
 
 void ErrorRecoverySystem::clearRecoveredErrors() {
     recoveredErrors.clear();
-    s_logger.info("[ErrorRecoverySystem] Recovered errors cleared");
+    std::cout << "[ErrorRecoverySystem] Recovered errors cleared" << std::endl;
 }
 
 std::string ErrorRecoverySystem::generateErrorId() {

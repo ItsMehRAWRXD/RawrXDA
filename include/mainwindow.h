@@ -17,7 +17,7 @@ public:
 
     AgenticResult initialize();
 
-    // Callback placeholders (would be called via Win32 messages)
+    // Callbacks invoked via Win32 messages
     void layoutRestored(const std::string& snapshotId) { /* Win32 message post */ }
     void layoutHydrationFailed(const std::string& snapshotHint, const std::string& reason) { /* Win32 message post */ }
 

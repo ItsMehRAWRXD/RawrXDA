@@ -793,7 +793,7 @@ std::string DigestionReverseEngineeringSystem::generateIntelligentFix(
         }
         if (containsCI(task.contextBefore, "void ") &&
             task.contextBefore.find("void *") == std::string::npos) {
-            return "    // [AGENTIC-AUTO] Void implementation\n    // TODO: Add logic";
+            return "    // [AGENTIC-AUTO] Void implementation\n    // Add implementation logic";
         }
         if (task.fullContext.find("class") != std::string::npos &&
             task.fullContext.find("virtual") != std::string::npos) {

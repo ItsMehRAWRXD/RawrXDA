@@ -10,6 +10,9 @@
 #include <commctrl.h>
 #include <algorithm>
 
+// SCAFFOLD_034: File operations and model load from explorer
+
+
 // ============================================================================
 // FILE OPERATIONS (9 Features)
 // ============================================================================

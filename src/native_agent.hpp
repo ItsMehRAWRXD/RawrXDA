@@ -41,6 +41,38 @@ public:
         Print("[Agent] Context limit updated.\n");
     }
 
+    std::string Execute(const std::string& query) {
+        if (!m_engine || !m_engine->IsModelLoaded()) {
+            return "[Agent] No model loaded.";
+        }
+
+        std::string fullPrompt = BuildPrompt(query);
+        std::vector<int32_t> input_ids = m_engine->Tokenize(fullPrompt);
+        
+        std::string fullResponse;
+        bool inThought = false;
+
+        m_engine->GenerateStreaming(input_ids, 2048, 
+            [&](const std::string& token) {
+                fullResponse += token;
+                
+                // Still notify callback if present
+                if (m_callback) m_callback(token);
+            },
+            [&]() {
+                // AUTO-CORRECT Logic
+                if (m_autoCorrect && !fullResponse.empty()) {
+                    std::string corrected = ::AdvancedFeatures::AutoCorrect(fullResponse);
+                    if (corrected != fullResponse) {
+                        fullResponse = corrected;
+                    }
+                }
+            }
+        );
+
+        return fullResponse;
+    }
+
     void Ask(const std::string& query) {
         if (!m_engine || !m_engine->IsModelLoaded()) {
             Print("[Agent] No model loaded. Use /load <path> first.\n");
@@ -50,48 +82,9 @@ public:
         std::string fullPrompt = BuildPrompt(query);
         Print("[Agent] Generating response...\n");
 
-        // Streaming generation
-        std::vector<int32_t> input_ids = m_engine->Tokenize(fullPrompt);
-        
-        int tokensGenerated = 0;
-        bool inThought = false;
-        std::string fullResponse; // Accumulate for autocorrect
-
-        m_engine->GenerateStreaming(input_ids, 2048, 
-            [&](const std::string& token) {
-                // Buffer to fullResponse locally
-                if (m_autoCorrect) fullResponse += token;
-
-                // Handling <thought> visibility
-                if (token.find("<thought>") != std::string::npos) inThought = true;
-                
-                if (inThought) {
-                    Print(token); // GUI might handle color, or we strip codes
-                } else {
-                    Print(token);
-                }
-                
-                if (token.find("</thought>") != std::string::npos) {
-                    inThought = false;
-                    Print("\n");
-                }
-                tokensGenerated++;
-            },
-            [&]() {
-                Print("\n[Done]\n");
-                
-                // AUTO-CORRECT Logic
-                if (m_autoCorrect && !fullResponse.empty()) {
-                    std::string corrected = ::AdvancedFeatures::AutoCorrect(fullResponse);
-                    if (corrected != fullResponse) {
-                         Print("\n[AutoCorrect] Hallucination detected and fixed:\n");
-                         Print("------------------------------------------\n");
-                         Print(corrected);
-                         Print("\n------------------------------------------\n");
-                    }
-                }
-            }
-        );
+        // Use Execute internally but it already does streaming notification
+        Execute(query);
+        Print("\n[Done]\n");
     }
 
     void CreateReactServerPlan() {
@@ -178,18 +171,29 @@ private:
         // Tool descriptions — the model can emit these to trigger tool execution
         system += "\n\nYou have access to the following tools. To use a tool, emit the "
                   "tool call in your response using the exact format shown:\n\n"
-                  "1. **runSubagent** — Spawn a sub-agent to handle a subtask autonomously.\n"
+                  "1. **shell** — Execute a shell command (cmd.exe).\n"
+                  "   Format: TOOL:shell:{\"cmd\":\"<command>\"}\n\n"
+                  "2. **powershell** — Execute a PowerShell command.\n"
+                  "   Format: TOOL:powershell:{\"cmd\":\"<command>\"}\n\n"
+                  "3. **read_file** — Read the contents of a file.\n"
+                  "   Format: TOOL:read_file:{\"path\":\"<path>\"}\n\n"
+                  "4. **write_file** — Write content to a file.\n"
+                  "   Format: TOOL:write_file:{\"path\":\"<path>\",\"content\":\"<data>\"}\n\n"
+                  "5. **list_dir** — List contents of a directory.\n"
+                  "   Format: TOOL:list_dir:{\"path\":\"<path>\"}\n\n"
+                  "6. **runSubagent** — Spawn a sub-agent to handle a subtask autonomously.\n"
                   "   Format: TOOL:runSubagent:{\"description\":\"<short task description>\","
                   "\"prompt\":\"<detailed prompt for the sub-agent>\"}\n\n"
-                  "2. **manage_todo_list** — Track progress with a structured todo list.\n"
+                  "7. **manage_todo_list** — Track progress with a structured todo list.\n"
                   "   Format: TOOL:manage_todo_list:[{\"id\":1,\"title\":\"<title>\","
                   "\"description\":\"<details>\",\"status\":\"not-started\"},...]\n\n"
-                  "3. **chain** — Execute a sequential pipeline where each step's output feeds the next.\n"
+                  "8. **chain** — Execute a sequential pipeline where each step's output feeds the next.\n"
                   "   Format: TOOL:chain:{\"steps\":[\"<step1 prompt>\",\"<step2 with {{input}}>\"],"
                   "\"input\":\"<initial input>\"}\n\n"
-                  "4. **hexmag_swarm** — Fan out multiple prompts in parallel and merge results.\n"
+                  "9. **hexmag_swarm** — Fan out multiple prompts in parallel and merge results.\n"
                   "   Format: TOOL:hexmag_swarm:{\"prompts\":[\"<task1>\",\"<task2>\"],"
                   "\"strategy\":\"concatenate|vote|summarize\",\"maxParallel\":4}\n\n"
+                  "Use shell/powershell for file system operations and code building.\n"
                   "Use runSubagent when a subtask requires deep research or is independent.\n"
                   "Use chain when tasks must be done sequentially (output feeds next input).\n"
                   "Use hexmag_swarm when multiple independent analyses can run in parallel.\n"

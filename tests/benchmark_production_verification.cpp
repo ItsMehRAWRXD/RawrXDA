@@ -17,9 +17,6 @@
 #include <filesystem>
 #include <cmath>
 
-#include "logging/logger.h"
-static Logger s_logger("benchmark_production_verification");
-
 #ifdef _WIN32
 #include <windows.h>
 #include <psapi.h>
@@ -139,13 +136,14 @@ void buildSyntheticGGUF(const std::string& path, size_t tensor_count = 1000, siz
     std::vector<float> chunk_buffer(1024 * 256, 0.0f); // 1MB of F32 zeros
     size_t chunk_size_bytes = chunk_buffer.size() * sizeof(float);
     
-    s_logger.info("Writing tensor data (");
+    std::cout << "Writing tensor data (" << tensor_count << " tensors, " << tensor_size_mb << " MB each)...\n";
     
     for (size_t i = 0; i < tensor_count; ++i) {
         // Progress update every 1% or at least every 10 tensors
         if (i % 10 == 0 || i == tensor_count - 1) {
             float percent = (float)(i + 1) / tensor_count * 100.0f;
-            s_logger.info("\r[Progress] ");
+            std::cout << "\r[Progress] " << std::fixed << std::setprecision(1) << percent << "% (" 
+                      << (i + 1) << "/" << tensor_count << " tensors) " << std::flush;
         }
 
         // Write 100MB (or whatever tensor_size_mb is) in 1MB chunks
@@ -153,7 +151,7 @@ void buildSyntheticGGUF(const std::string& path, size_t tensor_count = 1000, siz
              out.write(reinterpret_cast<char*>(chunk_buffer.data()), chunk_size_bytes);
         }
     }
-    s_logger.info("\nFile generation complete.\n");
+    std::cout << "\nFile generation complete.\n";
     
     out.close();
 }
@@ -173,8 +171,8 @@ size_t getCurrentMemoryUsageMB() {
 // BENCHMARK 1: Cold Tensor Access (First Load)
 // ============================================================================
 void benchmark_cold_access(const std::string& model_path) {
-    s_logger.info("\n=== BENCHMARK 1: Cold Tensor Access ===\n");
-    s_logger.info("Target: ~5ms ± 2ms\n");
+    std::cout << "\n=== BENCHMARK 1: Cold Tensor Access ===\n";
+    std::cout << "Target: ~5ms ± 2ms\n";
     
     BenchmarkStats stats;
     const int iterations = 50;
@@ -184,7 +182,7 @@ void benchmark_cold_access(const std::string& model_path) {
         EnhancedStreamingGGUFLoader loader;
         
         if (!loader.Open(model_path.c_str())) {
-            s_logger.error( "ERROR: Failed to open model\n";
+            std::cerr << "ERROR: Failed to open model\n";
             return;
         }
         
@@ -203,21 +201,21 @@ void benchmark_cold_access(const std::string& model_path) {
     
     stats.compute();
     
-    s_logger.info( std::fixed << std::setprecision(3);
-    s_logger.info("Results (ms):\n");
-    s_logger.info("  Mean:   ");
-    s_logger.info("  Median: ");
-    s_logger.info("  P95:    ");
-    s_logger.info("  P99:    ");
-    s_logger.info("  StdDev: ");
-    s_logger.info("  Min:    ");
-    s_logger.info("  Max:    ");
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "Results (ms):\n";
+    std::cout << "  Mean:   " << stats.mean << " ms\n";
+    std::cout << "  Median: " << stats.p50 << " ms\n";
+    std::cout << "  P95:    " << stats.p95 << " ms\n";
+    std::cout << "  P99:    " << stats.p99 << " ms\n";
+    std::cout << "  StdDev: " << stats.stddev << " ms\n";
+    std::cout << "  Min:    " << stats.min << " ms\n";
+    std::cout << "  Max:    " << stats.max << " ms\n";
     
     // Pass/fail
     bool pass = stats.mean >= 3.0 && stats.mean <= 7.0;
-    s_logger.info("\n  Status: ");
+    std::cout << "\n  Status: " << (pass ? "✓ PASS" : "✗ FAIL") << "\n";
     if (!pass) {
-        s_logger.info("  Deviation: ");
+        std::cout << "  Deviation: " << (stats.mean - 5.0) << " ms from target\n";
     }
 }
 
@@ -225,12 +223,12 @@ void benchmark_cold_access(const std::string& model_path) {
 // BENCHMARK 2: Hot Tensor Access (Cached)
 // ============================================================================
 void benchmark_hot_access(const std::string& model_path) {
-    s_logger.info("\n=== BENCHMARK 2: Hot Tensor Access ===\n");
-    s_logger.info("Target: ~50μs ± 20μs\n");
+    std::cout << "\n=== BENCHMARK 2: Hot Tensor Access ===\n";
+    std::cout << "Target: ~50μs ± 20μs\n";
     
     EnhancedStreamingGGUFLoader loader;
     if (!loader.Open(model_path.c_str())) {
-        s_logger.error( "ERROR: Failed to open model\n";
+        std::cerr << "ERROR: Failed to open model\n";
         return;
     }
     
@@ -254,21 +252,21 @@ void benchmark_hot_access(const std::string& model_path) {
     
     stats.compute();
     
-    s_logger.info( std::fixed << std::setprecision(2);
-    s_logger.info("Results (μs):\n");
-    s_logger.info("  Mean:   ");
-    s_logger.info("  Median: ");
-    s_logger.info("  P95:    ");
-    s_logger.info("  P99:    ");
-    s_logger.info("  StdDev: ");
-    s_logger.info("  Min:    ");
-    s_logger.info("  Max:    ");
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "Results (μs):\n";
+    std::cout << "  Mean:   " << stats.mean << " μs\n";
+    std::cout << "  Median: " << stats.p50 << " μs\n";
+    std::cout << "  P95:    " << stats.p95 << " μs\n";
+    std::cout << "  P99:    " << stats.p99 << " μs\n";
+    std::cout << "  StdDev: " << stats.stddev << " μs\n";
+    std::cout << "  Min:    " << stats.min << " μs\n";
+    std::cout << "  Max:    " << stats.max << " μs\n";
     
     // Pass/fail
     bool pass = stats.mean >= 30.0 && stats.mean <= 70.0;
-    s_logger.info("\n  Status: ");
+    std::cout << "\n  Status: " << (pass ? "✓ PASS" : "✗ FAIL") << "\n";
     if (!pass) {
-        s_logger.info("  Deviation: ");
+        std::cout << "  Deviation: " << (stats.mean - 50.0) << " μs from target\n";
     }
     
     loader.Close();
@@ -278,12 +276,12 @@ void benchmark_hot_access(const std::string& model_path) {
 // BENCHMARK 3: Sequential Inference (Cache Hit Rate)
 // ============================================================================
 void benchmark_cache_hit_rate(const std::string& model_path) {
-    s_logger.info("\n=== BENCHMARK 3: Cache Hit Rate ===\n");
-    s_logger.info("Target: 80% ± 10%\n");
+    std::cout << "\n=== BENCHMARK 3: Cache Hit Rate ===\n";
+    std::cout << "Target: 80% ± 10%\n";
     
     EnhancedStreamingGGUFLoader loader;
     if (!loader.Open(model_path.c_str())) {
-        s_logger.error( "ERROR: Failed to open model\n";
+        std::cerr << "ERROR: Failed to open model\n";
         return;
     }
     
@@ -305,18 +303,18 @@ void benchmark_cache_hit_rate(const std::string& model_path) {
         hit_rate = (metrics.cache_hits * 100.0) / metrics.total_tensor_loads;
     }
     
-    s_logger.info( std::fixed << std::setprecision(1);
-    s_logger.info("Results:\n");
-    s_logger.info("  Total Accesses: ");
-    s_logger.info("  Cache Hits:     ");
-    s_logger.info("  Cache Misses:   ");
-    s_logger.info("  Hit Rate:       ");
+    std::cout << std::fixed << std::setprecision(1);
+    std::cout << "Results:\n";
+    std::cout << "  Total Accesses: " << metrics.total_tensor_loads << "\n";
+    std::cout << "  Cache Hits:     " << metrics.cache_hits << "\n";
+    std::cout << "  Cache Misses:   " << metrics.cache_misses << "\n";
+    std::cout << "  Hit Rate:       " << hit_rate << "%\n";
     
     // Pass/fail
     bool pass = hit_rate >= 70.0 && hit_rate <= 90.0;
-    s_logger.info("\n  Status: ");
+    std::cout << "\n  Status: " << (pass ? "✓ PASS" : "✗ FAIL") << "\n";
     if (!pass) {
-        s_logger.info("  Deviation: ");
+        std::cout << "  Deviation: " << (hit_rate - 80.0) << "% from target\n";
     }
     
     loader.Close();
@@ -326,15 +324,15 @@ void benchmark_cache_hit_rate(const std::string& model_path) {
 // BENCHMARK 4: Memory Footprint (800B Model Simulation)
 // ============================================================================
 void benchmark_memory_footprint(const std::string& model_path) {
-    s_logger.info("\n=== BENCHMARK 4: Memory Footprint ===\n");
-    s_logger.info("Target: ~1.2GB ± 300MB for 800B model\n");
+    std::cout << "\n=== BENCHMARK 4: Memory Footprint ===\n";
+    std::cout << "Target: ~1.2GB ± 300MB for 800B model\n";
     
     size_t baseline_mb = getCurrentMemoryUsageMB();
-    s_logger.info("Baseline memory: ");
+    std::cout << "Baseline memory: " << baseline_mb << " MB\n";
     
     EnhancedStreamingGGUFLoader loader;
     if (!loader.Open(model_path.c_str())) {
-        s_logger.error( "ERROR: Failed to open model\n";
+        std::cerr << "ERROR: Failed to open model\n";
         return;
     }
     
@@ -349,20 +347,20 @@ void benchmark_memory_footprint(const std::string& model_path) {
     size_t active_mb = getCurrentMemoryUsageMB();
     size_t delta_mb = active_mb - baseline_mb;
     
-    s_logger.info("Active memory:   ");
-    s_logger.info("Delta:           ");
+    std::cout << "Active memory:   " << active_mb << " MB\n";
+    std::cout << "Delta:           " << delta_mb << " MB\n";
     
     // Scale to 800B model (this is a 100GB model, 800B would be ~120GB)
     double scale_factor = 1.2;  // 120GB / 100GB
     size_t projected_mb = static_cast<size_t>(delta_mb * scale_factor);
     
-    s_logger.info("Projected 800B:  ");
+    std::cout << "Projected 800B:  " << projected_mb << " MB\n";
     
     // Pass/fail (for this 100GB model, target ~1GB)
     bool pass = delta_mb >= 700 && delta_mb <= 1500;
-    s_logger.info("\n  Status: ");
+    std::cout << "\n  Status: " << (pass ? "✓ PASS" : "✗ FAIL") << "\n";
     if (!pass) {
-        s_logger.info("  Deviation: ");
+        std::cout << "  Deviation: " << (static_cast<int>(delta_mb) - 1000) << " MB from target\n";
     }
     
     loader.Close();
@@ -372,16 +370,16 @@ void benchmark_memory_footprint(const std::string& model_path) {
 // MAIN BENCHMARK HARNESS
 // ============================================================================
 int main(int argc, char** argv) {
-    s_logger.info("╔═══════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║   RAWRXD PRODUCTION BENCHMARK VERIFICATION               ║\n");
-    s_logger.info("║   Date: 2026-01-26                                       ║\n");
-    s_logger.info("╚═══════════════════════════════════════════════════════════╝\n");
+    std::cout << "╔═══════════════════════════════════════════════════════════╗\n";
+    std::cout << "║   RAWRXD PRODUCTION BENCHMARK VERIFICATION               ║\n";
+    std::cout << "║   Date: 2026-01-26                                       ║\n";
+    std::cout << "╚═══════════════════════════════════════════════════════════╝\n";
     
     // Hardware info
-    s_logger.info("\nHardware Configuration:\n");
-    s_logger.info("  RAM:     64 GB\n");
-    s_logger.info("  Storage: NVMe SSD (3x 1TB)\n");
-    s_logger.info("  OS:      Windows (x86-64)\n");
+    std::cout << "\nHardware Configuration:\n";
+    std::cout << "  RAM:     64 GB\n";
+    std::cout << "  Storage: NVMe SSD (3x 1TB)\n";
+    std::cout << "  OS:      Windows (x86-64)\n";
     
     // Generate test model (20GB GGUF with 200 tensors x 100MB)
     // REDUCED from 100GB to 20GB for faster verification while still exceeding RAM
@@ -389,16 +387,16 @@ int main(int argc, char** argv) {
     
     // Cleanup previous runaway files if they exist
     if (std::filesystem::exists("benchmark_model_100gb.gguf")) {
-        s_logger.info("Removing previous 100GB+ file...\n");
+        std::cout << "Removing previous 100GB+ file...\n";
         std::filesystem::remove("benchmark_model_100gb.gguf");
     }
     
-    s_logger.info("\nGenerating synthetic 20GB GGUF model...\n");
-    s_logger.info("(Sufficient to verify streaming mechanics & memory stability)\n");
+    std::cout << "\nGenerating synthetic 20GB GGUF model...\n";
+    std::cout << "(Sufficient to verify streaming mechanics & memory stability)\n";
     
     buildSyntheticGGUF(model_path, 200, 100);
     
-    s_logger.info("Model created: ");
+    std::cout << "Model created: " << model_path << "\n";
     
     // Run benchmarks
     benchmark_cold_access(model_path);
@@ -407,15 +405,15 @@ int main(int argc, char** argv) {
     benchmark_memory_footprint(model_path);
     
     // Summary
-    s_logger.info("\n╔═══════════════════════════════════════════════════════════╗\n");
-    s_logger.info("║   BENCHMARK COMPLETE                                     ║\n");
-    s_logger.info("╚═══════════════════════════════════════════════════════════╝\n");
+    std::cout << "\n╔═══════════════════════════════════════════════════════════╗\n";
+    std::cout << "║   BENCHMARK COMPLETE                                     ║\n";
+    std::cout << "╚═══════════════════════════════════════════════════════════╝\n";
     
-    s_logger.info("\nNext Steps:\n");
-    s_logger.info("1. Review deviations from target specs\n");
-    s_logger.info("2. Document methodology in RAWRXD_BENCHMARK_RESULTS.md\n");
-    s_logger.info("3. If all pass: Create enterprise deployment collateral\n");
-    s_logger.info("4. If any fail: Fix code before customer-facing material\n");
+    std::cout << "\nNext Steps:\n";
+    std::cout << "1. Review deviations from target specs\n";
+    std::cout << "2. Document methodology in RAWRXD_BENCHMARK_RESULTS.md\n";
+    std::cout << "3. If all pass: Create enterprise deployment collateral\n";
+    std::cout << "4. If any fail: Fix code before customer-facing material\n";
     
     return 0;
 }

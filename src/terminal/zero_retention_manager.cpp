@@ -637,6 +637,27 @@ void ZeroRetentionManager::metricsUpdated(const Metrics& metrics)
 
 // ===== Private helpers =====
 
+void ZeroRetentionManager::logStructured(const char* level,
+                                         const std::string& message,
+                                         const std::string& contextJson)
+{
+    fprintf(stderr, "[ZeroRetentionManager] [%s] %s context=%s\n", level, message.c_str(), contextJson.c_str());
+}
+
+void ZeroRetentionManager::logStructured(const char* level,
+                                         const std::string& message,
+                                         const JsonObject& context)
+{
+    logStructured(std::string(level), message, context);
+}
+
+void ZeroRetentionManager::logStructured(const std::string& level,
+                                         const std::string& message,
+                                         const std::string& contextJson)
+{
+    fprintf(stderr, "[ZeroRetentionManager] [%s] %s context=%s\n", level.c_str(), message.c_str(), contextJson.c_str());
+}
+
 void ZeroRetentionManager::logStructured(const std::string& level,
                                          const std::string& message,
                                          const JsonObject& context)

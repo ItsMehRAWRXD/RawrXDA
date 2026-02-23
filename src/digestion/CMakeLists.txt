@@ -9,8 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(digestion_core STATIC
     digestion_reverse_engineering.cpp
     digestion_reverse_engineering.h
-    digestion_metrics.cpp
-    digestion_metrics.h
     digestion_config_manager.cpp
     digestion_config_manager.h
     digestion_db.cpp
@@ -36,11 +34,12 @@ endif()
 add_executable(rxd-digest digestion_cli.cpp)
 target_link_libraries(rxd-digest PRIVATE digestion_core)
 
-# GUI executable removed — Qt dependency eliminated
-# Win32 GUI variant can be built separately if needed
+# Win32 GUI executable (pure C++20, no Qt)
+add_executable(rxd-digest-gui WIN32 main_gui.cpp digestion_gui_widget.cpp)
+target_link_libraries(rxd-digest-gui PRIVATE digestion_core comctl32 shell32 ole32)
 
 # Install
-install(TARGETS rxd-digest RUNTIME DESTINATION bin)
+install(TARGETS rxd-digest rxd-digest-gui RUNTIME DESTINATION bin)
 install(FILES digestion_reverse_engineering.h DESTINATION include)
 install(FILES digestion_schema.sql DESTINATION share)
 

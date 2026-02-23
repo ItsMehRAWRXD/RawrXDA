@@ -15,12 +15,14 @@
 // ============================================================================
 
 #include "Win32IDE.h"
+#include "../modules/vsix_loader.h"
 #include <winhttp.h>
 #include <fstream>
 #include <sstream>
 #include <filesystem>
 #include <chrono>
 #include <algorithm>
+#include "../agent/local_reasoning_integration.hpp"
 
 // nlohmann/json already included via Win32IDE.h
 
@@ -88,6 +90,39 @@ void Win32IDE::initBackendManager() {
     gemini.timeoutMs = 30000;
     gemini.maxTokens = 4096;
     gemini.temperature = 0.7f;
+
+    auto& reasoning = m_backendConfigs[(size_t)AIBackendType::ReasoningEngine];
+    reasoning.type      = AIBackendType::ReasoningEngine;
+    reasoning.name      = "RawrXD Reasoning (Alpha)";
+    reasoning.endpoint  = "local://reasoning";
+    reasoning.model     = "Expert-v1";
+    reasoning.apiKey    = "";
+    reasoning.enabled   = true;
+    reasoning.timeoutMs = 120000;
+    reasoning.maxTokens = 8192;
+    reasoning.temperature = 0.1f;  // Lower temperature for reasoning
+
+    auto& copilot = m_backendConfigs[(size_t)AIBackendType::GitHubCopilot];
+    copilot.type      = AIBackendType::GitHubCopilot;
+    copilot.name      = "GitHub Copilot";
+    copilot.endpoint  = "extension://github.copilot";
+    copilot.model     = "copilot-latest";
+    copilot.apiKey    = "";
+    copilot.enabled   = true;
+    copilot.timeoutMs = 30000;
+    copilot.maxTokens = 4096;
+    copilot.temperature = 0.7f;
+
+    auto& amazonq = m_backendConfigs[(size_t)AIBackendType::AmazonQ];
+    amazonq.type      = AIBackendType::AmazonQ;
+    amazonq.name      = "Amazon Q";
+    amazonq.endpoint  = "extension://amazonwebservices.aws-toolkit-vscode";
+    amazonq.model     = "amazonq-latest";
+    amazonq.apiKey    = "";
+    amazonq.enabled   = true;
+    amazonq.timeoutMs = 30000;
+    amazonq.maxTokens = 4096;
+    amazonq.temperature = 0.7f;
 
     // ---- Initialize statuses -----------------------------------------------
     for (size_t i = 0; i < (size_t)AIBackendType::Count; ++i) {
@@ -423,6 +458,32 @@ bool Win32IDE::probeBackendHealth(AIBackendType type) {
             if (!healthy) error = "No API key configured";
             break;
         }
+        case AIBackendType::ReasoningEngine: {
+            healthy = true; // Local static reasoning engine always available
+            break;
+        }
+        case AIBackendType::GitHubCopilot: {
+            // Probe GitHub Copilot extension via VSIXLoader (Install from VSIX / extension registry)
+            try {
+                healthy = VSIXLoader::GetInstance().IsPluginLoaded("github.copilot");
+                if (!healthy) error = "GitHub Copilot extension not loaded. Use AI menu > Install from VSIX, or switch to Ollama/Local.";
+            } catch (...) {
+                healthy = false;
+                error = "VSIXLoader unavailable or GitHub Copilot not installed.";
+            }
+            break;
+        }
+        case AIBackendType::AmazonQ: {
+            // Probe Amazon Q (AWS Toolkit) extension via VSIXLoader
+            try {
+                healthy = VSIXLoader::GetInstance().IsPluginLoaded("amazonwebservices.aws-toolkit-vscode");
+                if (!healthy) error = "Amazon Q extension not loaded. Use AI menu > Install from VSIX, or switch to Ollama/Local.";
+            } catch (...) {
+                healthy = false;
+                error = "VSIXLoader unavailable or Amazon Q not installed.";
+            }
+            break;
+        }
         default:
             break;
     }
@@ -488,6 +549,15 @@ std::string Win32IDE::routeInferenceRequest(const std::string& prompt) {
             break;
         case AIBackendType::Gemini:
             result = routeToGemini(prompt);
+            break;
+        case AIBackendType::ReasoningEngine:
+            result = this->routeToReasoningEngine(prompt);
+            break;
+        case AIBackendType::GitHubCopilot:
+            result = routeToGitHubCopilot(prompt);
+            break;
+        case AIBackendType::AmazonQ:
+            result = routeToAmazonQ(prompt);
             break;
         default:
             result = "[BackendSwitcher] Unknown active backend";
@@ -705,6 +775,137 @@ std::string Win32IDE::routeToGemini(const std::string& prompt) {
         return "[BackendSwitcher] Error (Gemini): Unexpected response format";
     } catch (const std::exception& e) {
         return std::string("[BackendSwitcher] Error (Gemini): ") + e.what();
+    }
+}
+
+std::string Win32IDE::routeToReasoningEngine(const std::string& prompt) {
+    // Phase 14B: Direct Integration of converted LocalReasoningEngine
+    // This uses the pure C++20 engine to analyze the context of the prompt.
+
+    // If prompt is empty or just a generic greeting, use current editor content as context
+    std::string sourceToAnalyze = prompt;
+    bool isGeneric = (prompt.length() < 20);
+    
+    if (isGeneric && m_hwndEditor) {
+        std::string editorText = getWindowText(m_hwndEditor);
+        if (!editorText.empty()) {
+            sourceToAnalyze = editorText;
+        }
+    }
+
+    // Attempt to detect language from current file
+    std::string lang = "cpp";
+    if (!m_currentFile.empty()) {
+        std::string ext = std::filesystem::path(m_currentFile).extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        if (ext == ".asm" || ext == ".s" || ext == ".inc") lang = "asm";
+        else if (ext == ".py") lang = "python";
+        else if (ext == ".js" || ext == ".ts") lang = "javascript";
+    }
+
+    try {
+        auto result = LocalReasoningIntegration::analyzeCode(sourceToAnalyze, lang, true, true);
+        
+        std::stringstream ss;
+        ss << "### RawrXD Local Reasoning Analysis (" << lang << ") ###\n\n";
+        
+        if (isGeneric) {
+            ss << "*Analysis performed on active editor content.*\n\n";
+        }
+
+        ss << "**Summary:** " << result.summary << "\n\n";
+        
+        if (!result.issues.empty()) {
+            ss << "**Detected Issues:**\n";
+            for (const auto& issue : result.issues) {
+                ss << "- [" << issue.severity << "] **" << issue.issueType << "**: " << issue.description << "\n";
+                if (!issue.recommendation.empty()) {
+                    ss << "  *Recommendation:* " << issue.recommendation << "\n";
+                }
+            }
+            ss << "\n";
+        }
+        
+        if (!result.suggestions.empty()) {
+            ss << "**Optimization Suggestions:**\n";
+            for (const auto& sug : result.suggestions) {
+                ss << "- " << sug << "\n";
+            }
+            ss << "\n";
+        }
+        
+        if (!result.patterns.empty()) {
+            ss << "**Identified Patterns:** " ;
+            for (size_t i=0; i < result.patterns.size(); ++i) {
+                ss << result.patterns[i] << (i == result.patterns.size()-1 ? "" : ", ");
+            }
+            ss << "\n\n";
+        }
+
+        ss << "---\n*Confidence: " << (int)(result.overallConfidence * 100) 
+           << "% | Strategy: C++20/MASM Static Analysis | Passes: " << result.passesCompleted << "*";
+           
+        return ss.str();
+    } catch (const std::exception& e) {
+        return std::string("[BackendSwitcher] Error (Reasoning): ") + e.what();
+    } catch (...) {
+        return "[BackendSwitcher] Error (Reasoning): Unknown engine exception";
+    }
+}
+
+std::string Win32IDE::routeToGitHubCopilot(const std::string& prompt) {
+    // Phase 29: Route to GitHub Copilot VS Code Extension
+    auto& api = vscode::VSCodeExtensionAPI::instance();
+    
+    // Check if the extension is active
+    if (!api.isInitialized()) {
+        return "[BackendSwitcher] Error: VS Code Extension API not initialized";
+    }
+
+    // We use executeCommandWithArgs to send the prompt to the extension
+    // The extension must have registered a handler for "github.copilot.chat.proxy"
+    nlohmann::json args;
+    args["prompt"] = prompt;
+    args["context"] = "ide_backend_switcher";
+    
+    // We expect the extension to update a shared state or result via the API
+    // For now, we simulate the extension host bridge
+    std::string result = "[BackendSwitcher] Routing to GitHub Copilot extension...\n";
+    
+    auto apiResult = api.executeCommand("github.copilot.chat.proxy", args.dump().c_str());
+    if (apiResult.success) {
+        // If the command returned immediately with a result string in 'detail'
+        if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0) {
+            return apiResult.detail;
+        }
+        return result + "Extension command triggered successfully. Awaiting stream...";
+    } else {
+        return "[BackendSwitcher] Error: Failed to trigger GitHub Copilot extension command: " + 
+               std::string(apiResult.detail);
+    }
+}
+
+std::string Win32IDE::routeToAmazonQ(const std::string& prompt) {
+    // Phase 29: Route to Amazon Q (AWS Toolkit) VS Code Extension
+    auto& api = vscode::VSCodeExtensionAPI::instance();
+    
+    if (!api.isInitialized()) {
+        return "[BackendSwitcher] Error: VS Code Extension API not initialized";
+    }
+
+    nlohmann::json args;
+    args["prompt"] = prompt;
+    
+    auto apiResult = api.executeCommand("amazon.q.chat.proxy", args.dump().c_str());
+    if (apiResult.success) {
+        if (apiResult.detail && strlen(apiResult.detail) > 0 && strcmp(apiResult.detail, "Success") != 0) {
+            return apiResult.detail;
+        }
+        return "[BackendSwitcher] Routing to Amazon Q extension...\n"
+               "Extension command triggered successfully. Awaiting stream...";
+    } else {
+        return "[BackendSwitcher] Error: Failed to trigger Amazon Q extension command: " + 
+               std::string(apiResult.detail);
     }
 }
 

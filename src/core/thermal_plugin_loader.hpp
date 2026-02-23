@@ -12,6 +12,9 @@
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+
+// SCAFFOLD_349: Plugin loader void* parent doc
+
 #endif
 #include <windows.h>
 

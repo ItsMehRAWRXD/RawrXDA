@@ -35,12 +35,14 @@ static bool s_sovClassRegistered = false;
 // Window Class Registration
 // ============================================================================
 
+static WNDPROC s_sovWndProc = nullptr;
+
 static void RegisterSovClass(HINSTANCE hInst) {
     if (s_sovClassRegistered) return;
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
     wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = SovereignDashboardWidget::WndProc;
+    wc.lpfnWndProc = s_sovWndProc;
     wc.hInstance = hInst;
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = CreateSolidBrush(BG_COLOR);
@@ -73,6 +75,7 @@ SovereignDashboardWidget::~SovereignDashboardWidget() {
 
 void SovereignDashboardWidget::createWindow(HWND parent) {
     HINSTANCE hInst = (HINSTANCE)GetWindowLongPtr(parent, GWLP_HINSTANCE);
+    s_sovWndProc = SovereignDashboardWidget::WndProc;
     RegisterSovClass(hInst);
 
     m_hwnd = CreateWindowExW(0, SOV_CLASS, L"Sovereign Dashboard",

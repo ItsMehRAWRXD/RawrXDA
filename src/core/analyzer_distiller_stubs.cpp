@@ -96,37 +96,41 @@ int AD_SkipMetadataKV(uint64_t kvCount, intptr_t fileHandle) {
             case 10: case 11: case 12: skipBytes = 8; break; // UINT64, INT64, FLOAT64
             case 8: { // STRING: uint64_t len + bytes
                 uint64_t sLen = 0;
-                if (!ReadFile((HANDLE)fileHandle, &sLen, 8, &rd, NULL) || rd < 8) return 0;
+                DWORD rd2 = 0;
+                if (!ReadFile((HANDLE)fileHandle, &sLen, 8, &rd2, NULL) || rd2 < 8) return 0;
                 skipBytes = sLen;
                 break;
             }
             case 9: { // ARRAY: uint32_t elemType + uint64_t count + elements
                 uint32_t elemType = 0;
                 uint64_t elemCount = 0;
-                if (!ReadFile((HANDLE)fileHandle, &elemType, 4, &rd, NULL) || rd < 4) return 0;
-                if (!ReadFile((HANDLE)fileHandle, &elemCount, 8, &rd, NULL) || rd < 8) return 0;
-                // Estimate element size
-                uint64_t elemSize = 4; // default
-                if (elemType == 8) { // string array — need to iterate
+                DWORD rd2 = 0;
+                if (!ReadFile((HANDLE)fileHandle, &elemType, 4, &rd2, NULL) || rd2 < 4) return 0;
+                if (!ReadFile((HANDLE)fileHandle, &elemCount, 8, &rd2, NULL) || rd2 < 8) return 0;
+                
+                if (elemType == 8) { // Array of Strings
                     for (uint64_t e = 0; e < elemCount; e++) {
                         uint64_t sl = 0;
-                        if (!ReadFile((HANDLE)fileHandle, &sl, 8, &rd, NULL)) return 0;
+                        if (!ReadFile((HANDLE)fileHandle, &sl, 8, &rd2, NULL) || rd2 < 8) return 0;
                         LARGE_INTEGER sd; sd.QuadPart = (LONGLONG)sl;
                         if (!SetFilePointerEx((HANDLE)fileHandle, sd, NULL, FILE_CURRENT)) return 0;
                     }
-                    continue;
+                    skipBytes = 0; // Already skipped
+                } else {
+                    // Array of primitives
+                    uint64_t elemSize = 0;
+                    switch (elemType) {
+                        case 0: case 1: case 7: elemSize = 1; break; // UINT8, INT8, BOOL
+                        case 2: case 3: elemSize = 2; break;         // UINT16, INT16
+                        case 4: case 5: case 6: elemSize = 4; break; // UINT32, INT32, FLOAT32
+                        case 10: case 11: case 12: elemSize = 8; break; // UINT64, INT64, FLOAT64
+                        default: return 0; // Unknown type
+                    }
+                    skipBytes = elemCount * elemSize;
                 }
-                switch (elemType) {
-                    case 0: case 1: case 7: elemSize = 1; break;
-                    case 2: case 3: elemSize = 2; break;
-                    case 4: case 5: case 6: elemSize = 4; break;
-                    case 10: case 11: case 12: elemSize = 8; break;
-                }
-                skipBytes = elemCount * elemSize;
                 break;
             }
-            default: skipBytes = 8; break;
-        }
+            default: return 0; // Unknown value type
         dist.QuadPart = (LONGLONG)skipBytes;
         if (!SetFilePointerEx((HANDLE)fileHandle, dist, NULL, FILE_CURRENT)) return 0;
 #else

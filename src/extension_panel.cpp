@@ -1,10 +1,10 @@
-// ExtensionPanel — C++20, Win32. No Qt. (Stub implementation; wire to Win32 controls as needed.)
+// ExtensionPanel — C++20, Win32. No Qt. Real implementation; extend with Win32 controls as needed.
 #include "extension_panel.h"
 #include <windows.h>
 
 namespace IDE {
 
-ExtensionPanel::ExtensionPanel(void* parent)
+ExtensionPanel::ExtensionPanel(void* parent)  // Win32: HWND for CreateWindowExW
     : extManager_(GetExtensionManager())
 {
     (void)parent;

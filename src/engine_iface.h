@@ -1,14 +1,13 @@
 #pragma once
 #include <string>
-#include <memory>
 
 struct AgentRequest {
-    int mode = 0;
+    int mode;
     std::string prompt;
-    bool deep_thinking = false;
-    bool deep_research = false;
-    bool no_refusal = false;
-    size_t context_limit = 0;
+    bool deep_thinking;
+    bool deep_research;
+    bool no_refusal;
+    size_t context_limit;
 };
 
 class Engine {
@@ -19,10 +18,8 @@ public:
     virtual ~Engine() = default;
 };
 
-// EngineRegistry holds shared ownership of engines.
-// Engines are registered via shared_ptr and retrieved as raw non-owning pointers.
 class EngineRegistry {
 public:
     static Engine* get(const std::string& name);
-    static void register_engine(std::shared_ptr<Engine> e);
+    static void register_engine(Engine* e);
 };
