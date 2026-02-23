@@ -1,6 +1,6 @@
 ; RawrXD Model Loader — GGUF mapping with SRWLOCK-protected hot-swap
 ; Exports: LoadModel, GetTensor, UnloadModel, ModelLoaderInit,
-;          HotSwapModel, GetCurrentModelPath
+;          HotSwapModel, GetCurrentModelPath, GetModelLoadTimestamp
 
 EXTERN CreateFileW:PROC
 EXTERN CreateFileMappingW:PROC
@@ -11,6 +11,8 @@ EXTERN InitializeSRWLock:PROC
 EXTERN AcquireSRWLockExclusive:PROC
 EXTERN ReleaseSRWLockExclusive:PROC
 EXTERN lstrcpyW:PROC
+EXTERN GetTickCount64:PROC
+EXTERN BeaconSend:PROC
 
 EXTERN g_modelbase:QWORD
 EXTERN ClearKVCache:PROC
@@ -21,6 +23,10 @@ PUBLIC UnloadModel
 PUBLIC ModelLoaderInit
 PUBLIC HotSwapModel
 PUBLIC GetCurrentModelPath
+PUBLIC GetModelLoadTimestamp
+
+; Beacon message type (match beacon.asm)
+MODEL_HOTSWAP_COMPLETE  equ 1002h
 
 .data?
 hFile         dq ?
@@ -33,7 +39,10 @@ align 8
 g_modelLock   dq ?
 
 ; Current model path (260 WCHARs = 520 bytes)
-g_currentPathW db 520 dup(?)
+g_currentPathW   db 520 dup(?)
+; X+4 production: timestamp and KV-preserve flag for cache validation
+g_loadTimestamp dq ?
+g_preservedKV   db ?
 
 .const
 GENERIC_READ     equ 80000000h
@@ -220,15 +229,26 @@ HotSwapModel PROC FRAME
     mov     rax, pBase
     mov     g_modelbase, rax
 
-    ; Optionally clear KV cache
+    ; Optionally clear KV cache; record preservedKV for cache validation
+    mov     g_preservedKV, sil
     test    esi, esi
     jnz     @swap_ok                    ; preserveKV=1 → skip clear
     call    ClearKVCache
 
 @swap_ok:
+    ; Timestamp for cache validation
+    call    GetTickCount64
+    mov     g_loadTimestamp, rax
+
     ; Release lock
     lea     rcx, g_modelLock
     call    ReleaseSRWLockExclusive
+
+    ; Signal completion via Beacon (slot 0 = UI thread)
+    mov     ecx, 0
+    mov     rdx, rbx                    ; pNewPath
+    mov     r8d, MODEL_HOTSWAP_COMPLETE
+    call    BeaconSend
 
     add     rsp, 28h
     pop     rsi
@@ -256,5 +276,11 @@ GetCurrentModelPath PROC
     lea     rax, g_currentPathW
     ret
 GetCurrentModelPath ENDP
+
+; GetModelLoadTimestamp — GetTickCount64 at last successful load (for cache validation)
+GetModelLoadTimestamp PROC
+    mov     rax, g_loadTimestamp
+    ret
+GetModelLoadTimestamp ENDP
 
 END

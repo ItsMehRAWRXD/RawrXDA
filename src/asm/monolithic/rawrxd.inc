@@ -108,6 +108,47 @@ EXTERN TryBeaconRecv:PROC
 ; agent.asm (X+4)
 EXTERN ProcessOneAgentMessage:PROC
 
+; dap.asm (X+5 LSP subsystem)
+EXTERN DAP_Init:PROC
+EXTERN DAP_Launch:PROC
+EXTERN DAP_Step:PROC
+EXTERN DAP_StackTrace:PROC
+EXTERN DAP_Evaluate:PROC
+
+; testing.asm (X+5 LSP subsystem)
+EXTERN Test_Init:PROC
+EXTERN Test_AddNode:PROC
+EXTERN Test_Discover:PROC
+EXTERN Test_Run:PROC
+EXTERN Test_GetResults:PROC
+
+; tasks.asm (X+5 LSP subsystem)
+EXTERN Task_Init:PROC
+EXTERN Task_Run:PROC
+EXTERN Task_Kill:PROC
+EXTERN Task_GetOutput:PROC
+EXTERN Task_GetCount:PROC
+
+; swarm.asm (X+5 Distributed Swarm)
+EXTERN Swarm_Init:PROC
+EXTERN Swarm_EnumGPUs:PROC
+EXTERN Swarm_AllocShard:PROC
+EXTERN Swarm_DispatchCompute:PROC
+EXTERN Swarm_P2PCopy:PROC
+EXTERN Swarm_Shutdown:PROC
+EXTERN Swarm_GetDeviceCount:PROC
+EXTERN g_swarmDeviceCount:DWORD
+EXTERN g_swarmReady:DWORD
+
+; swarm_coordinator.asm (X+5 Distributed Swarm)
+EXTERN SwarmCoord_Init:PROC
+EXTERN SwarmCoord_DistributeWork:PROC
+EXTERN SwarmCoord_AllReduce:PROC
+EXTERN SwarmCoord_GetWorkerStatus:PROC
+EXTERN SwarmCoord_Shutdown:PROC
+EXTERN g_coordReady:DWORD
+EXTERN g_workerCount:DWORD
+
 ; ── Win32 Constants ──────────────────────────────────────────────
 ; Window Styles
 WS_OVERLAPPEDWINDOW equ 0CF0000h
@@ -211,5 +252,5 @@ AGENT_ID_UI          equ 0A3h
 AGENT_ID_LSP         equ 0A4h
 
 ; ═══════════════════════════════════════════════════════════════════
-; End of rawrxd.inc — 7 modules, 1 EXE, zero deps.
+; End of rawrxd.inc — 12 modules, 1 EXE, zero deps.
 ; ═══════════════════════════════════════════════════════════════════

@@ -98,16 +98,16 @@ RunInference ENDP
 
 ; ────────────────────────────────────────────────────────────────
 ; TokenGenerate — read next token from model base (stub)
-;   Returns token ID in EAX (0 = no model loaded)
+;   Returns token ID in EAX; 1 (BOS) when model unavailable (e.g. during hotswap)
 ; ────────────────────────────────────────────────────────────────
 TokenGenerate PROC
     mov     rax, g_modelbase
     test    rax, rax
-    jz      @stub
+    jz      @model_unavailable
     mov     eax, dword ptr [rax]
     ret
-@stub:
-    xor     eax, eax
+@model_unavailable:
+    mov     eax, 1                      ; BOS token as stall (thread-safe during swap)
     ret
 TokenGenerate ENDP
 

@@ -12,7 +12,9 @@
 ;   7. DAP_Init              — debug adapter protocol engine
 ;   8. Test_Init             — test explorer tree + state
 ;   9. Task_Init             — task runner configs + ring buffer
-;  10. UIMainLoop            — window + message pump (blocks until WM_QUIT)
+;  10. Swarm_Init            — multi-GPU Vulkan orchestrator (graceful fallback)
+;  11. SwarmCoord_Init       — beacon-based work distribution
+;  12. UIMainLoop            — window + message pump (blocks until WM_QUIT)
 
 EXTERN InferenceEngineInit:PROC
 EXTERN UIMainLoop:PROC
@@ -23,6 +25,8 @@ EXTERN ModelLoaderInit:PROC
 EXTERN DAP_Init:PROC
 EXTERN Test_Init:PROC
 EXTERN Task_Init:PROC
+EXTERN Swarm_Init:PROC
+EXTERN SwarmCoord_Init:PROC
 EXTERN HeapCreate:PROC
 EXTERN GetModuleHandleW:PROC
 EXTERN GetCommandLineW:PROC
@@ -63,10 +67,10 @@ WinMain PROC FRAME
     mov     g_hInstance, rcx
     mov     g_cmdShow, r9d
 
-    ; 1. HeapCreate(flags=0, initCommit=4MB, maxSize=64MB)
+    ; 1. HeapCreate(flags=0, initCommit=4MB, maxSize=0 → growable)
     xor     ecx, ecx
     mov     edx, 400000h
-    mov     r8d, 4000000h
+    xor     r8d, r8d              ; maxSize=0 → growable heap (no cap)
     call    HeapCreate
     test    rax, rax
     jz      @fail
@@ -74,6 +78,8 @@ WinMain PROC FRAME
 
     ; 2. Beacon first — all other modules signal through this
     call    BeaconRouterInit
+    test    eax, eax
+    jnz     @fail                 ; BeaconRouterInit returns -1 on failure
 
     ; 3. Inference engine (depends on heap, uses beacon slot 2)
     call    InferenceEngineInit
@@ -94,7 +100,13 @@ WinMain PROC FRAME
     ; 9. Task runner (task configs + process management)
     call    Task_Init
 
-    ; 10. UI last — blocks on message pump, does not return until WM_QUIT
+    ; 10. Swarm — multi-GPU Vulkan orchestrator (returns 0 if no Vulkan)
+    call    Swarm_Init
+
+    ; 11. Swarm coordinator — worker threads + beacon dispatch
+    call    SwarmCoord_Init
+
+    ; 12. UI last — blocks on message pump, does not return until WM_QUIT
     call    UIMainLoop
 
     ; Normal exit

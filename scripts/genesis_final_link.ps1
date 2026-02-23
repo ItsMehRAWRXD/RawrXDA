@@ -13,7 +13,8 @@ $ErrorActionPreference = "Stop"
 $objs = @(
     "main.obj", "inference.obj", "ui.obj",
     "beacon.obj", "lsp.obj", "agent.obj", "model_loader.obj",
-    "dap.obj", "testing.obj", "tasks.obj"
+    "dap.obj", "testing.obj", "tasks.obj",
+    "swarm.obj", "swarm_coordinator.obj"
 )
 $objPaths = $objs | ForEach-Object { Join-Path $ObjDir $_ }
 
