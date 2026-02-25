@@ -1,0 +1,229 @@
+img {
+    max-width: 100%;
+}
+
+#content {
+    width: 100%;
+    margin: 0 auto;
+}
+
+[fnname-data]:before {
+    position: absolute;
+    display: inline-block;
+    content: attr(fnname-data);
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-focusBorder);
+    opacity: 0;
+    padding: 4px;
+    margin: -28px 0 0 26px;
+    transition: all .2s;
+    border-radius: 3px;
+}
+
+[fnname-data]:hover:before {
+    opacity: 1;
+}
+
+[fnname-data]:not([fnname-data-persistent]):before {
+    pointer-events: none;
+}
+
+section {
+    width: 100%;
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    margin: 12px auto;
+}
+
+.loading span {
+    font-weight: bold;
+    opacity: 0.75;
+    display: block;
+    margin: 12px auto;
+}
+
+.row {
+    display: flex;
+}
+
+.column {
+    flex: 50%;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.summary {
+    margin: 8px;
+    text-align: right;
+}
+
+#functions-grid {
+    margin: 0 0 32px 0;
+}
+
+.function-header {
+    border-bottom: 2px solid #444;
+    font-weight: bold;
+}
+
+.function-header vscode-data-grid-cell {
+    cursor: pointer;
+}
+
+.function-row {
+    font-weight: normal;
+}
+
+.phpinternal .function-fnname {
+    opacity: .8;
+}
+
+#functions-dropdown {
+    margin: 0 0 0 6px;
+    min-width: 128px;
+}
+
+#functions-dropdown .codicon {
+    margin-right: 3px;
+    top: 3px;
+    position: relative;
+}
+
+.hidden {
+    display: none;
+}
+
+.function-fnname {
+    /*font-family: 'Courier New', Courier, monospace;*/
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.function-fnname .codicon {
+    margin-right: 2px;
+    top: 3px;
+    position: relative;
+}
+
+.function-fnname .action {
+    float: right;
+    color: var(--vscode-button-background);
+    cursor: pointer;
+    padding: 2px;
+}
+
+.function-fnname .action:hover {
+    color: var(--vscode-button-foreground);
+    /*background-color: var(--vscode-button-background);
+    border-radius: 2px;*/
+}
+
+.function-file {
+    opacity: .75;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
+}
+
+/* DETAILS */
+.section-details {
+    /*margin: 0 auto;*/
+    max-width: 1000px;
+    display: flex;
+}
+
+.details,
+.details-separator {
+    display: block;
+}
+
+.details-separator {
+    text-align: center;
+    font-weight: bold;
+    font-size: 3em;
+    margin: 0.75em 0;
+    flex: 1%;
+}
+
+.details {
+    margin: 0;
+    padding: 6px;
+    flex: 33%;
+}
+
+.details-title {
+    display: block;
+    text-align: center;
+    font-weight: bold;
+    padding: 0 0 4px 0;
+}
+
+.details-content {
+    /*min-height: 20em;*/
+    /*padding: 0.5em;*/
+}
+
+.details-item {
+    display: flex;
+    flex-direction: row;
+    /*border-bottom: 1px solid #444;*/
+    border: 1px solid var(--vscode-focusBorder);
+    padding: 1em;
+    margin: 1em;
+    cursor: pointer;
+}
+.details-item-more {
+    border: 0;
+    cursor: auto;
+}
+
+.details-item:hover[fnname-data] {
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+/* Responsive layout - makes a one column layout instead of a two-column layout */
+@media (max-width: 800px) {
+    .details-item {
+        flex-direction: column;
+    }
+}
+
+.details-item-name,
+.details-item-time {
+    flex: 50%;
+}
+
+.details-item-name {
+    text-decoration: none;
+}
+
+
+.details-item-time {
+    text-align: right;
+    color: var(--vscode-disabledForeground);
+}
+.details-empty {
+    color: var(--vscode-disabledForeground);
+    text-align: center;
+    display: block;
+    margin: 2em 0;
+}
+
+/* evaluation */
+#evaluation {
+    padding: 1em;
+    background-color: var(--vscode-tab-inactiveBackground);
+}
+#evaluation div {
+    text-align: left;
+}

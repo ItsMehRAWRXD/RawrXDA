@@ -1,0 +1,336 @@
+{
+	"name": "coderabbit-vscode",
+	"version": "0.17.0",
+	"description": "Free AI code reviews that run directly in VS Code. Review each commit immediately without waiting for PR to be raised. Catch more bugs and ship code faster.",
+	"keywords": [
+		"ai assistant",
+		"bug detection",
+		"code quality",
+		"code rabbit",
+		"code review",
+		"coderabbit",
+		"productivity",
+		"pull request",
+		"static analysis"
+	],
+	"homepage": "https://coderabbit.ai",
+	"license": "See LICENSE",
+	"main": "./dist/extension.js",
+	"repository": "https://github.com/coderabbitai/vscode-extension",
+	"scripts": {
+		"build": "npm-run-all build:extension build:webview",
+		"build:extension": "npm-run-all compile:extension lint",
+		"build:webview": "cd webview && pnpm run build",
+		"check-types": "tsc --noEmit",
+		"clean": "rm -rf .turbo dist docs node_modules tsconfig.tsbuildinfo",
+		"compile": "npm-run-all check-types compile:extension compile:webview",
+		"compile-tests": "tsc -p . --outDir out",
+		"compile:extension": "pnpm check-types && node esbuild.js",
+		"compile:webview": "cd webview && pnpm run build",
+		"format": "biome format --write .; prettier --list-different --write .",
+		"lint": "eslint --cache --cache-strategy content . && biome format . && prettier --check .",
+		"lint:fix": "eslint --cache --cache-strategy content --fix --quiet .; biome format --write .; prettier --list-different --write .",
+		"package": "vsce package --no-dependencies --allow-missing-repository",
+		"publish": "vsce publish --packagePath \"${VSIX_FILE:-$npm_config_vsix_file}\" --pat $VSCE_TOKEN",
+		"publish:ovsx": "ovsx publish --packagePath ${VSIX_FILE:-$npm_config_vsix_file} --pat $OVSX_PAT",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"vscode:prepublish": "pnpm run build",
+		"vscode:uninstall": "node ./dist/lifecycle.js",
+		"watch": "npm-run-all -p watch:*",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"watch:esbuild": "node esbuild.js --watch",
+		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+		"watch:webview": "cd webview && pnpm run watch:build"
+	},
+	"dependencies": {
+		"@coderabbitai/coderabbit-handler": "workspace:*",
+		"@coderabbitai/common": "workspace:*",
+		"@coderabbitai/mono-config": "workspace:*",
+		"@coderabbitai/pr-reviewer-saas": "workspace:*",
+		"@coderabbitai/telemetry": "workspace:*",
+		"@trpc/client": "^11.5.0",
+		"execa": "^9.6.0",
+		"minimatch": "^10.0.1",
+		"p-limit": "^4.0.0",
+		"semver": "^7.7.2",
+		"string-similarity": "^4.0.4",
+		"uuid": "^9.0.1",
+		"ws": "^8.18.2",
+		"zod": "3.25.76"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.2",
+		"@trpc/server": "^11.5.0",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "^22.15.32",
+		"@types/semver": "^7.7.0",
+		"@types/string-similarity": "^4.0.2",
+		"@types/uuid": "^9.0.8",
+		"@types/vscode": "^1.93.1",
+		"@types/ws": "^8.18.1",
+		"@typescript-eslint/eslint-plugin": "^8.34.1",
+		"@typescript-eslint/parser": "^8.34.1",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.5.2",
+		"@vscode/vsce": "^3.5.0",
+		"chargebee-typescript": "^2.49.0",
+		"esbuild": "0.25.8",
+		"eslint": "^9.29.0",
+		"npm-run-all": "^4.1.5",
+		"ovsx": "^0.10.4",
+		"prettier": "^3.5.3",
+		"typescript": "~5.8.3",
+		"typescript-eslint": "^8.34.1"
+	},
+	"bundleDependencies": [
+		"@coderabbitai/common",
+		"@coderabbitai/mono-config",
+		"@coderabbitai/coderabbit-handler",
+		"@coderabbitai/pr-reviewer-saas"
+	],
+	"engines": {
+		"vscode": "^1.93.1"
+	},
+	"pnpm": {
+		"overrides": {
+			"form-data": "^4.0.4"
+		}
+	},
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"categories": [
+		"AI",
+		"Programming Languages",
+		"Machine Learning",
+		"Other"
+	],
+	"contributes": {
+		"configuration": {
+			"title": "CodeRabbit",
+			"properties": {
+				"coderabbit.autoReviewMode": {
+					"type": "string",
+					"enum": [
+						"disabled",
+						"prompt",
+						"auto"
+					],
+					"enumDescriptions": [
+						"Don't prompt for review after commits",
+						"Prompt to start a review after commits (default)",
+						"Automatically start review after commits with 10 second cancel window"
+					],
+					"default": "prompt",
+					"description": "How to handle review after commits"
+				},
+				"coderabbit.agentType": {
+					"type": "string",
+					"enum": [
+						"Native",
+						"Claude Code",
+						"Codex CLI",
+						"Clipboard",
+						"Cline",
+						"Roo",
+						"Kilo Code",
+						"Augment Code",
+						"opencode"
+					],
+					"enumDescriptions": [
+						"Use built-in AI agent (default). Falls back to Clipboard if not available.",
+						"Use Claude Code in terminal",
+						"Use Codex CLI in terminal",
+						"Copy instructions to clipboard",
+						"Use Cline (requires the Cline extension)",
+						"Use Roo (requires the Roo Code extension)",
+						"Use Kilo Code (requires the Kilo Code extension)",
+						"Use Augment Code (requires the Augment Code extension)",
+						"Use opencode in terminal"
+					],
+					"default": "Native",
+					"description": "The AI agent to use for 'Fix with AI' functionality."
+				},
+				"coderabbit.selfHostedUrl": {
+					"type": "string",
+					"description": "URL of your self-hosted CodeRabbit server (e.g., https://coderabbit.yourcompany.com). When configured, the extension will connect directly to your server bypassing authentication."
+				}
+			}
+		},
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "coderabbit-vscode-sidebar-view",
+					"title": "CodeRabbit",
+					"icon": "resources/coderabbit.svg"
+				}
+			]
+		},
+		"views": {
+			"coderabbit-vscode-sidebar-view": [
+				{
+					"type": "webview",
+					"id": "coderabbit-vscode-sidebar",
+					"name": "CodeRabbit",
+					"icon": "resources/coderabbit.svg"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "coderabbit-vscode.initiateReview",
+				"title": "Start Review",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.logout",
+				"title": "Logout",
+				"category": "CodeRabbit",
+				"icon": "$(sign-out)"
+			},
+			{
+				"command": "coderabbit-vscode.applySuggestion",
+				"title": "Apply suggested change",
+				"category": "CodeRabbit",
+				"icon": "$(check)"
+			},
+			{
+				"command": "coderabbit-vscode.changeOrganization",
+				"title": "Change Organization",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.cleanupReviews",
+				"title": "Cleanup previous reviews",
+				"category": "CodeRabbit",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "coderabbit-vscode.handoffToAgent",
+				"title": "Fix with AI",
+				"category": "CodeRabbit",
+				"icon": "$(sparkle)"
+			},
+			{
+				"command": "coderabbit-vscode.expandAllComments",
+				"title": "Expand all",
+				"category": "CodeRabbit"
+			},
+			{
+				"command": "coderabbit-vscode.collapseAllComments",
+				"title": "Collapse all",
+				"category": "CodeRabbit",
+				"icon": "$(collapse-all)"
+			},
+			{
+				"command": "coderabbit-vscode.resolveComment",
+				"title": "Ignore",
+				"category": "CodeRabbit",
+				"icon": "$(circle-slash)"
+			},
+			{
+				"command": "coderabbit-vscode.showSettings",
+				"title": "Settings",
+				"category": "CodeRabbit",
+				"icon": "$(settings-gear)"
+			},
+			{
+				"command": "coderabbit-vscode.submitFeedback",
+				"title": "Provide feedback",
+				"category": "CodeRabbit",
+				"icon": "$(flag)"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "coderabbit-vscode.logout",
+					"when": "view == coderabbit-vscode-sidebar && coderabbit-vscode.isLoggedIn",
+					"group": "navigation@2"
+				},
+				{
+					"command": "coderabbit-vscode.showSettings",
+					"when": "view == coderabbit-vscode-sidebar",
+					"group": "navigation@1"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "coderabbit-vscode.applySuggestion",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.resolveComment",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.handoffToAgent",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.submitFeedback",
+					"when": "false"
+				},
+				{
+					"command": "coderabbit-vscode.logout",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.initiateReview",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.changeOrganization",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.expandAllComments",
+					"when": "coderabbit-vscode.isLoggedIn"
+				},
+				{
+					"command": "coderabbit-vscode.collapseAllComments",
+					"when": "coderabbit-vscode.isLoggedIn"
+				}
+			],
+			"comments/commentThread/title": [
+				{
+					"command": "coderabbit-vscode.applySuggestion",
+					"group": "inline@1",
+					"when": "commentController =~ /^coderabbit/ && commentThread =~ /hasSuggestion/"
+				},
+				{
+					"command": "coderabbit-vscode.resolveComment",
+					"group": "inline@2",
+					"when": "commentController =~ /^coderabbit/"
+				},
+				{
+					"command": "coderabbit-vscode.handoffToAgent",
+					"group": "inline@3",
+					"when": "commentController =~ /^coderabbit/ && commentThread =~ /hasCodegenInstructions/"
+				},
+				{
+					"command": "coderabbit-vscode.collapseAllComments",
+					"group": "inline@4",
+					"when": "commentController =~ /^coderabbit/"
+				},
+				{
+					"command": "coderabbit-vscode.submitFeedback",
+					"group": "inline@5",
+					"when": "commentController =~ /^coderabbit/ && !(commentThread =~ /feedbackSubmitted/) && !(commentThread =~ /selfHosted/)"
+				}
+			]
+		}
+	},
+	"displayName": "CodeRabbit",
+	"extensionDependencies": [
+		"vscode.git"
+	],
+	"icon": "resources/coderabbit.png",
+	"publisher": "coderabbit",
+	"__metadata": {
+		"installedTimestamp": 1770767485582,
+		"targetPlatform": "universal",
+		"size": 2131052
+	}
+}

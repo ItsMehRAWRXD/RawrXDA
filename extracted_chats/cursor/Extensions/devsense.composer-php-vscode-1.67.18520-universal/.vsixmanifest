@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+	<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+		<Metadata>
+			<Identity Language="en-US" Id="composer-php-vscode" Version="1.67.18520" Publisher="DEVSENSE" />
+			<DisplayName>Composer</DisplayName>
+			<Description xml:space="preserve">All-in-One composer integration, quick actions, commands, automatic installation, tasks, code lenses, diagnostics, and composer.json IntelliSense.</Description>
+			<Tags>php,composer,schema,validation,commands,tools,php tools,packagist,codelens,json</Tags>
+			<Categories>Programming Languages,Snippets,Linters,Other,Visualization</Categories>
+			<GalleryFlags>Public</GalleryFlags>
+			<Badges><Badge Link="https://twitter.com/php4vs" ImgUri="https://badgen.net/badge/@php4vs/twitter/blue?icon=twitter" Description="PHP Tools on Twitter" />
+<Badge Link="https://www.devsense.com/en?from=vscode" ImgUri="https://img.shields.io/badge/-changelog-green" Description="PHP Tools product page" /></Badges>
+			<Properties>
+				<Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.63.1" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
+				<Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="workspace" />
+				<Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="" />
+				<Property Id="Microsoft.VisualStudio.Code.EnabledApiProposals" Value="" />
+				
+				<Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
+				
+				<Property Id="Microsoft.VisualStudio.Services.Links.Source" Value="https://github.com/DEVSENSE/phptools-docs.git" />
+				<Property Id="Microsoft.VisualStudio.Services.Links.Getstarted" Value="https://github.com/DEVSENSE/phptools-docs.git" />
+				<Property Id="Microsoft.VisualStudio.Services.Links.GitHub" Value="https://github.com/DEVSENSE/phptools-docs.git" />
+				<Property Id="Microsoft.VisualStudio.Services.Links.Support" Value="https://github.com/DEVSENSE/phptools-docs/issues" />
+				<Property Id="Microsoft.VisualStudio.Services.Links.Learn" Value="https://www.devsense.com/" />
+				<Property Id="Microsoft.VisualStudio.Services.Branding.Color" Value="#b9dcf4" />
+				<Property Id="Microsoft.VisualStudio.Services.Branding.Theme" Value="light" />
+				<Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
+				<Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="Free"/>
+
+				
+				<Property Id="Microsoft.VisualStudio.Services.CustomerQnALink" Value="https://community.devsense.com/" />
+			</Properties>
+			<License>extension/LICENSE.md</License>
+			<Icon>extension/icons/composer-icon.png</Icon>
+		</Metadata>
+		<Installation>
+			<InstallationTarget Id="Microsoft.VisualStudio.Code"/>
+		</Installation>
+		<Dependencies/>
+		<Assets>
+			<Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" Addressable="true" />
+			<Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/readme.md" Addressable="true" />
+<Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE.md" Addressable="true" />
+<Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icons/composer-icon.png" Addressable="true" />
+		</Assets>
+	</PackageManifest>

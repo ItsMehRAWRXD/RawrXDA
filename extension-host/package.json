@@ -1,0 +1,33 @@
+{
+  "name": "rawrxd-unified-suite",
+  "displayName": "RawrXD Unified Extension Suite",
+  "publisher": "BigDaddyG",
+  "version": "14.2.0",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Extension Packs", "Debuggers", "Machine Learning", "Programming Languages"],
+  "extensionPack": [
+    "BigDaddyG.rawrz-agentic",
+    "BigDaddyG.rawrxd-lsp-client",
+    "BigDaddyG.bigdaddyg-copilot",
+    "BigDaddyG.bigdaddyg-asm-ide"
+  ],
+  "contributes": {
+    "commands": [
+      { "command": "rawrxd.agentic.compile", "title": "RawrXD: Agentic Compile" },
+      { "command": "rawrxd.copilot.generate", "title": "RawrXD: AI Generate" },
+      { "command": "rawrxd.asm.assemble", "title": "RawrXD: MASM64 Assemble" }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "rawrxd.agentic.compile", "when": "editorLangId == asm" },
+        { "command": "rawrxd.copilot.generate", "when": "editorHasSelection" }
+      ]
+    }
+  },
+  "extensionDependencies": [],
+  "main": "./out/extension.js",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "package": "vsce package"
+  }
+}

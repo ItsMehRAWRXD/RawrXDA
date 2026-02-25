@@ -1,0 +1,23 @@
+{
+	"authors": "authors",
+    "abandoned": "abandoned",
+    "installed_version": "Installed version",
+
+    "codelens.install": "Install",
+    "codelens.update": "Update",
+    "codelens.check": "Check",
+
+    "action.update": "update",
+    "action.remove": "remove",
+
+    "open-folder.title": "Open the folder?",
+    "action.choose-folder": "Choose Folder",
+    "action.open-folder": "Open Folder",
+    "action.dismiss": "Dismiss",
+    "action.install": "Install",
+    "action.dontshowagain": "Don't show again",
+
+    "error.nonEmptyFolder": "Cannot proceed. Folder is not empty.",
+    "error.couldntGetComposer": "Couldn't download 'composer.phar'. Check your Internet connection.",
+    "error.missingComposerLock": "Composer packages are not installed, \"composer.lock\" is missing."
+}

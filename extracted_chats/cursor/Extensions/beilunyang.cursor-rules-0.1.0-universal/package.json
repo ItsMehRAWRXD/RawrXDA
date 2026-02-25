@@ -1,0 +1,50 @@
+{
+	"name": "cursor-rules",
+	"displayName": "Cursor Rules",
+	"description": "An extension for Cursor and VSCode that lets you pull .cursorrules files from the https://github.com/PatrickJS/awesome-cursorrules repository",
+	"version": "0.1.0",
+	"author": "BeilunYang",
+	"publisher": "BeilunYang",
+	"icon": "images/icon.png",
+	"engines": {
+		"vscode": "^1.75.0"
+	},
+	"categories": [
+		"AI",
+		"Other"
+	],
+	"activationEvents": [
+		"onCommand:cursorRules.addRule"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "cursorRules.addRule",
+				"title": "Cursor Rules: Add .cursorrules"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "^22.9.0",
+		"@types/vscode": "^1.75.0",
+		"typescript": "^4.9.5"
+	},
+	"dependencies": {
+		"axios": "^0.24.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/beilunyang/vscode-cursor-rules.git"
+	},
+	"__metadata": {
+		"installedTimestamp": 1760955434015,
+		"targetPlatform": "universal",
+		"size": 284175
+	}
+}

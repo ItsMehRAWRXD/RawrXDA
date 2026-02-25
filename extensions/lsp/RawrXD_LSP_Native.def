@@ -1,0 +1,5 @@
+EXPORTS
+    ExtensionInit
+    ExtensionActivate
+    ExtensionExecuteCommand
+    ExtensionHandleChat

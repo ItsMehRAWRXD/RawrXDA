@@ -1,0 +1,21 @@
+{
+	"title": "Composer",
+    "description": "Kompletní Composer integrace, rychlé akce, příkazy, automatická instalace, úlohy, code lenses, diagnostiky, a composer.json IntelliSense.",
+    
+    "commands.download.title": "aktualizovat composer.phar",
+    "commands.search.title": "prohledat ...",
+
+    "task.composer.command.description": "Příkaz ke spuštění.",
+    "task.composer.args.description": "Dodatečné argumenty pro composer příkaz.",
+
+    "capabilities.virtualWorkspaces.description": "Virtualní pracovní prostory nepodporují spouštění 'composer' úloh.",
+
+    "authors": "autoři",
+    "abandoned": "opuštěno",
+    "installed_version": "Instalovaná verze",
+    "codelens.install": "Instalovat",
+    "codelens.update": "Aktualizovat",
+    "codelens.check": "Kontrola",
+    "action.update": "aktualizovat",
+    "action.remove": "odstranit"
+}
