@@ -1,0 +1,24 @@
+{
+  "name": "BigDaddyG Training Patterns",
+  "version": "1.0.0",
+  "training_lines": 200000,
+  "specializations": ["Assembly", "Security", "Cryptography"],
+  
+  "asm_patterns": {
+    "x86": ["mov", "add", "sub", "push", "pop", "call", "ret", "jmp", "cmp", "test"],
+    "x64": ["movq", "addq", "subq", "pushq", "popq", "syscall", "lea", "xor"],
+    "arm": ["ldr", "str", "add", "sub", "mov", "bl", "bx", "push", "pop"]
+  },
+  
+  "crypto_signatures": {
+    "aes": ["ShiftRows", "MixColumns", "AddRoundKey", "SubBytes"],
+    "rsa": ["modexp", "prime_gen", "gcd", "extended_euclid"],
+    "ecc": ["point_add", "point_double", "scalar_mult"]
+  },
+  
+  "security_patterns": {
+    "vulnerabilities": ["buffer_overflow", "sql_injection", "xss", "csrf"],
+    "mitigations": ["bounds_checking", "input_validation", "sanitization"]
+  }
+}
+

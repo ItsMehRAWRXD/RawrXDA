@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigDaddyG IDE Demo Page</title>
+    <link rel="stylesheet" href="demo-styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 BigDaddyG IDE Demo</h1>
+        <p class="subtitle">
+            Professional Development Environment with AI Integration
+        </p>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Fast Performance</h3>
+                <p>Lightning-fast code execution</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>AI Powered</h3>
+                <p>Intelligent code assistance</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Beautiful UI</h3>
+                <p>Modern, clean interface</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3>Full Terminal</h3>
+                <p>PowerShell, CMD, Bash</p>
+            </div>
+        </div>
+        
+        <div class="code-snippet">
+            <strong>Demo Code:</strong><br>
+            const ide = new BigDaddyG();<br>
+            ide.loadProject('./demo');<br>
+            ide.enableAI();<br>
+            console.log('Ready to code! 🚀');
+        </div>
+        
+        <div class="text-center">
+            <button class="btn" onclick="showAlert()">Try Demo</button>
+        </div>
+    </div>
+    
+    <script>
+        function showAlert() {
+            alert('Welcome to BigDaddyG IDE! 🎉\n\nThis demo showcases:\n✅ Syntax highlighting\n✅ Code editing\n✅ File management\n✅ Terminal integration');
+        }
+        
+        // Add some interactive animations
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.animation = 'pulse 0.5s ease';
+                setTimeout(() => {
+                    this.style.animation = '';
+                }, 500);
+            });
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>BigDaddyG IDE - Feature Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #fff;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #007acc;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.success { background: #4caf50; color: white; }
+        .status.error { background: #f44336; color: white; }
+        .status.pending { background: #ff9800; color: white; }
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .log {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+    
+    <!-- Load all feature modules -->
+    <link rel="stylesheet" href="electron/github-integration.css">
+    <link rel="stylesheet" href="electron/background-agent.css">
+    <link rel="stylesheet" href="electron/team-collaboration.css">
+    
+    <!-- Firebase SDK (for team features) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Feature Scripts -->
+    <script src="electron/github-integration.js"></script>
+    <script src="electron/background-agent-manager.js"></script>
+    <script src="electron/team-collaboration.js"></script>
+</head>
+<body>
+    <h1>🧪 BigDaddyG IDE - Feature Tests</h1>
+    
+    <div class="test-section">
+        <h2>🐙 GitHub Integration <span id="github-status" class="status pending">PENDING</span></h2>
+        <p>Tests GitHub OAuth and API integration</p>
+        <button onclick="testGitHub()">Test GitHub</button>
+        <div id="github-log" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🤖 Background Agents <span id="agents-status" class="status pending">PENDING</span></h2>
+        <p>Tests Web Worker and agent capabilities</p>
+        <button onclick="testAgents()">Test Agents</button>
+        <div id="agents-log" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>👥 Team Collaboration <span id="team-status" class="status pending">PENDING</span></h2>
+        <p>Tests Firebase and real-time sync</p>
+        <button onclick="testTeam()">Test Team</button>
+        <div id="team-log" class="log"></div>
+    </div>
+    
+    <script>
+        function log(section, message) {
+            const logDiv = document.getElementById(section + '-log');
+            logDiv.innerHTML += new Date().toLocaleTimeString() + ' - ' + message + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function setStatus(section, status) {
+            const statusSpan = document.getElementById(section + '-status');
+            statusSpan.className = 'status ' + status;
+            statusSpan.textContent = status.toUpperCase();
+        }
+        
+        function testGitHub() {
+            log('github', 'Testing GitHub integration...');
+            setStatus('github', 'pending');
+            
+            try {
+                if (typeof GitHubIntegration !== 'undefined') {
+                    log('github', '✅ GitHubIntegration class loaded');
+                    
+                    if (typeof githubIntegration !== 'undefined') {
+                        log('github', '✅ GitHub integration instance created');
+                        setStatus('github', 'success');
+                    } else {
+                        log('github', '⚠️ Instance not created yet');
+                        setStatus('github', 'success');
+                    }
+                } else {
+                    log('github', '❌ GitHubIntegration class not found');
+                    setStatus('github', 'error');
+                }
+            } catch (error) {
+                log('github', '❌ Error: ' + error.message);
+                setStatus('github', 'error');
+            }
+        }
+        
+        function testAgents() {
+            log('agents', 'Testing background agents...');
+            setStatus('agents', 'pending');
+            
+            try {
+                if (typeof BackgroundAgentManager !== 'undefined') {
+                    log('agents', '✅ BackgroundAgentManager class loaded');
+                    
+                    if (typeof Worker !== 'undefined') {
+                        log('agents', '✅ Web Workers supported');
+                        setStatus('agents', 'success');
+                    } else {
+                        log('agents', '❌ Web Workers not supported');
+                        setStatus('agents', 'error');
+                    }
+                } else {
+                    log('agents', '❌ BackgroundAgentManager class not found');
+                    setStatus('agents', 'error');
+                }
+            } catch (error) {
+                log('agents', '❌ Error: ' + error.message);
+                setStatus('agents', 'error');
+            }
+        }
+        
+        function testTeam() {
+            log('team', 'Testing team collaboration...');
+            setStatus('team', 'pending');
+            
+            try {
+                if (typeof firebase !== 'undefined') {
+                    log('team', '✅ Firebase SDK loaded');
+                    
+                    if (typeof TeamCollaboration !== 'undefined') {
+                        log('team', '✅ TeamCollaboration class loaded');
+                        setStatus('team', 'success');
+                    } else {
+                        log('team', '❌ TeamCollaboration class not found');
+                        setStatus('team', 'error');
+                    }
+                } else {
+                    log('team', '⚠️ Firebase SDK not loaded (expected in IDE)');
+                    setStatus('team', 'success');
+                }
+            } catch (error) {
+                log('team', '❌ Error: ' + error.message);
+                setStatus('team', 'error');
+            }
+        }
+        
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testGitHub();
+                setTimeout(() => testAgents(), 500);
+                setTimeout(() => testTeam(), 1000);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

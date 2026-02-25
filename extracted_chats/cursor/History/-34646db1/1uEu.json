@@ -1,0 +1,35 @@
+{
+  "name": "puppeteer-agentic-browser",
+  "version": "1.0.0",
+  "description": "Agentic browser automation with Puppeteer for web subscriptions and downloads",
+  "main": "src/agent.js",
+  "scripts": {
+    "start": "node src/agent.js",
+    "dev": "nodemon src/agent.js",
+    "test": "node src/test-agent.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.6.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "puppeteer-extra-plugin-adblocker": "^2.13.6",
+    "fs-extra": "^11.2.0",
+    "path": "^0.12.7",
+    "mime-types": "^2.1.35",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "puppeteer",
+    "automation",
+    "browser",
+    "agentic",
+    "web-scraping",
+    "downloads"
+  ],
+  "author": "BigDaddyG",
+  "license": "MIT"
+}

@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  backend:
+    image: python:3.11-slim
+    working_dir: /app
+    command: bash -lc "pip install -r requirements.txt && uvicorn app:app --host 0.0.0.0 --port 8000"
+    volumes: [ "./backend:/app" ]
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CX=${GOOGLE_CX}
+      - QUERY=${QUERY:-large language models}
+      - CONCURRENCY=${CONCURRENCY:-8}
+    ports: ["8000:8000"]
+
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports: ["8080:80"]
+    depends_on: [backend]

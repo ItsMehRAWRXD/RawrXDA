@@ -1,0 +1,5 @@
+{
+  "bigdaddyg.temperature": 0.7,
+  "bigdaddyg.model": "qwen2.5-coder:7b",
+  "bigdaddyg.ollamaEndpoint": "http://localhost:11434"
+}

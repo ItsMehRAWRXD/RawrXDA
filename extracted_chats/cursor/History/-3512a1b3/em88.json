@@ -1,0 +1,27 @@
+{
+  "id": "code-formatter",
+  "name": "Code Formatter",
+  "version": "1.0.0",
+  "description": "Auto-format your code with prettier-like formatting",
+  "author": "IDE Marketplace",
+  "icon": "📝",
+  "category": "development",
+  "entry": "code-formatter.js",
+  "permissions": [
+    "editor.read",
+    "editor.write",
+    "files.read"
+  ],
+  "commands": [
+    {
+      "id": "format-document",
+      "name": "Format Document",
+      "shortcut": "Shift+Alt+F"
+    }
+  ],
+  "activationEvents": [
+    "onEditorChange",
+    "onCommand:format-document"
+  ]
+}
+

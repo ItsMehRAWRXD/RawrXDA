@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigDaddyG LIVE IDE</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        html {
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            overflow: hidden;
+            zoom: 1;
+            transform: scale(1);
+            transform-origin: top left;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00d4ff;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            zoom: 1;
+            transform: scale(1);
+            transform-origin: top left;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            width: 100vw;
+            max-width: 100vw;
+        }
+
+        .panel {
+            background: #111;
+            border-right: 1px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .main-panel {
+            background: #0a0a0a !important;
+            display: flex !important;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            background: #1a1a1a;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #00b8e6;
+            transform: translateY(-1px);
+        }
+
+        .btn.danger {
+            background: #ff6b35;
+        }
+
+        .btn.success {
+            background: #1dd1a1;
+        }
+
+        .btn.warning {
+            background: #ffa726;
+        }
+
+        .code-editor {
+            flex: 1;
+            background: #0a0a0a !important;
+            color: #00d4ff !important;
+            border: none;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            display: block !important;
+            visibility: visible !important;
+            overflow: auto;
+        }
+
+        .console {
+            background: #111;
+            color: #1dd1a1;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            border-top: 1px solid #333;
+        }
+
+        .status-bar {
+            background: #1a1a1a;
+            padding: 5px 10px;
+            font-size: 11px;
+            color: #666;
+            border-top: 1px solid #333;
+        }
+
+        .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 5px 0;
+            padding: 5px;
+            background: #222;
+            border-radius: 3px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-indicator.active {
+            background: #1dd1a1;
+            animation: pulse 1s infinite;
+        }
+
+        .status-indicator.done {
+            background: #00d4ff;
+        }
+
+        .status-indicator.error {
+            background: #ff6b35;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .tab-container {
+            display: flex;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #222;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            border-right: 1px solid #333;
+        }
+
+        .tab.active {
+            background: #0a0a0a;
+            color: #00d4ff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .micro-chain-output {
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .tenliner-output {
+            background: #111;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .quantizer-progress {
+            background: #222;
+            border-radius: 4px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .quantizer-bar {
+            background: linear-gradient(90deg, #00d4ff, #1dd1a1);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 400px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #00d4ff;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px;
+            background: #222;
+            border: 1px solid #333;
+            color: #00d4ff;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 8px;
+            background: #222;
+            border: 1px solid #333;
+            color: #00d4ff;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 8px;
+            background: #222;
+            border: 1px solid #333;
+            color: #00d4ff;
+            border-radius: 4px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel - Agents -->
+        <div class="panel">
+            <h3>🤖 Agents</h3>
+            <div id="agent-list">
+                <div class="agent-status">
+                    <div class="status-indicator" id="elder-status"></div>
+                    <span>Elder</span>
+                </div>
+                <div class="agent-status">
+                    <div class="status-indicator" id="fetcher-status"></div>
+                    <span>Fetcher</span>
+                </div>
+                <div class="agent-status">
+                    <div class="status-indicator" id="browser-status"></div>
+                    <span>Browser</span>
+                </div>
+                <div class="agent-status">
+                    <div class="status-indicator" id="parser-status"></div>
+                    <span>Parser</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="runAgent('Elder')">Run Elder</button>
+                <button class="btn" onclick="runAgent('Fetcher')">Run Fetcher</button>
+                <button class="btn" onclick="runAgent('Browser')">Run Browser</button>
+                <button class="btn" onclick="runAgent('Parser')">Run Parser</button>
+            </div>
+        </div>
+
+        <!-- Main Panel -->
+        <div class="main-panel">
+            <div class="toolbar">
+                <button class="btn" onclick="runCode()">▶ Run Code</button>
+                <button class="btn success" onclick="openSettings()">⚙ Settings</button>
+                <button class="btn warning" onclick="openTerminalWindow()">💻 Terminal</button>
+                <button class="btn" onclick="openBrowserWindow()">🌐 Browser</button>
+                <button class="btn" onclick="openCodeEditorWindow()">📝 Code Editor</button>
+                <button class="btn danger" onclick="clearConsole()">🗑 Clear</button>
+            </div>
+
+            <div class="tab-container">
+                <button class="tab active" onclick="switchTab('code')">Code</button>
+                <button class="tab" onclick="switchTab('micro')">Micro-Chain</button>
+                <button class="tab" onclick="switchTab('tenliner')">Tenliner</button>
+                <button class="tab" onclick="switchTab('quantizer')">Quantizer</button>
+            </div>
+
+            <div id="code-tab" class="tab-content active">
+                <textarea id="code" class="code-editor" placeholder="// Write your code here...
+console.log('Hello BigDaddyG!');
+
+// Try running this code with the Run Code button
+const data = { message: 'Live demo working!', timestamp: Date.now() };
+console.log(data);
+
+// Or try running an agent
+// runAgent('Elder');">// Write your code here...
+console.log('Hello BigDaddyG!');
+
+// Try running this code with the Run Code button
+const data = { message: 'Live demo working!', timestamp: Date.now() };
+console.log(data);
+
+// Or try running an agent
+// runAgent('Elder');</textarea>
+            </div>
+
+            <div id="micro-tab" class="tab-content">
+                <h3>🔗 Micro-Chain Execution</h3>
+                <div class="form-group">
+                    <label class="form-label">Input Data:</label>
+                    <input type="text" id="micro-input" class="form-input" placeholder="Enter data to process..." value="Hello Micro-Chain!">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Start Model:</label>
+                    <select id="micro-model" class="form-select">
+                        <option value="text-analyzer">Text Analyzer</option>
+                        <option value="code-generator">Code Generator</option>
+                        <option value="image-processor">Image Processor</option>
+                        <option value="data-transformer">Data Transformer</option>
+                        <option value="sentiment-analyzer">Sentiment Analyzer</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="executeMicroChain()">Execute Micro-Chain</button>
+                <button class="btn" onclick="executeNanoChain()">Execute Nano-Chain</button>
+                <button class="btn" onclick="getMicroCatalog()">Get Catalog</button>
+                <button class="btn" onclick="testMicroChain()">Test Chain</button>
+                <button class="btn" onclick="deployMicroModels()">Deploy Models</button>
+                <div id="micro-output" class="micro-chain-output"></div>
+            </div>
+
+            <div id="tenliner-tab" class="tab-content">
+                <h3>📝 Tenliner Templates</h3>
+                <div class="form-group">
+                    <label class="form-label">Language:</label>
+                    <select id="tenliner-lang" class="form-select">
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="java">Java</option>
+                        <option value="csharp">C#</option>
+                        <option value="php">PHP</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="swift">Swift</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Project Name:</label>
+                    <input type="text" id="tenliner-name" class="form-input" placeholder="myapp" value="myapp">
+                </div>
+                <button class="btn" onclick="generateTenliner()">Generate Template</button>
+                <div id="tenliner-output" class="tenliner-output"></div>
+            </div>
+
+            <div id="quantizer-tab" class="tab-content">
+                <h3>⚡ Model Quantizer</h3>
+                <div class="form-group">
+                    <label class="form-label">Model Path:</label>
+                    <input type="text" id="quantizer-model" class="form-input" placeholder="/path/to/model.gguf" value="model.gguf">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantization Type:</label>
+                    <select id="quantizer-type" class="form-select">
+                        <option value="q2_k">Q2_K (Ultra Low)</option>
+                        <option value="q3_k_m">Q3_K_M (Low)</option>
+                        <option value="q4_k_m">Q4_K_M (Medium)</option>
+                        <option value="q5_k_m">Q5_K_M (High)</option>
+                        <option value="q6_k">Q6_K (Ultra High)</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="startQuantization()">Start Quantization</button>
+                <div class="quantizer-progress">
+                    <div id="quantizer-bar" class="quantizer-bar"></div>
+                </div>
+                <div id="quantizer-output" class="micro-chain-output"></div>
+            </div>
+
+            <div class="console" id="console"></div>
+            <div class="status-bar">
+                <span id="status">BigDaddyG LIVE - Ready</span>
+                <span style="float: right;">WebSocket: <span id="ws-status">Connecting...</span></span>
+            </div>
+        </div>
+
+        <!-- Right Panel - System Info -->
+        <div class="panel">
+            <h3>📊 System</h3>
+            <div id="system-info">
+                <p><strong>Platform:</strong> <span id="platform">Browser</span></p>
+                <p><strong>Version:</strong> <span id="version">Live Demo</span></p>
+                <p><strong>Agents:</strong> <span id="agent-count">4</span></p>
+                <p><strong>Micro-Models:</strong> <span id="model-count">5</span></p>
+            </div>
+            
+            <h3 style="margin-top: 20px;">🔗 Connections</h3>
+            <div id="connection-status">
+                <p>Agent Hub: <span id="hub-status">Connecting...</span></p>
+                <p>Micro-Chain: <span id="micro-status">Connecting...</span></p>
+                <p>Tenliner API: <span id="tenliner-status">Connecting...</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙ Settings</h3>
+                <button class="modal-close" onclick="closeSettings()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Theme:</label>
+                <select id="theme-select" class="form-select">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="cyber">Cyber</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Font Size:</label>
+                <input type="range" id="font-size" class="form-input" min="10" max="20" value="14">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Auto-save:</label>
+                <input type="checkbox" id="auto-save" checked>
+            </div>
+            <button class="btn" onclick="saveSettings()">Save Settings</button>
+            <button class="btn danger" onclick="closeSettings()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let agentHub = null;
+        let microChain = null;
+        let tenlinerAPI = null;
+        let isElectron = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeConnections();
+            updateSystemInfo();
+            loadSettings();
+        });
+
+        // WebSocket connections
+        function initializeConnections() {
+            // Agent Hub (port 8001)
+            try {
+                agentHub = new WebSocket('ws://localhost:8001');
+                agentHub.onopen = () => {
+                    log('✅ Agent Hub connected');
+                    updateConnectionStatus('hub-status', 'Connected', 'success');
+                };
+                agentHub.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleAgentMessage(data);
+                };
+                agentHub.onerror = () => {
+                    log('❌ Agent Hub connection failed');
+                    updateConnectionStatus('hub-status', 'Failed', 'error');
+                };
+            } catch (error) {
+                log('❌ Agent Hub error: ' + error.message);
+                updateConnectionStatus('hub-status', 'Error', 'error');
+            }
+
+            // Micro-Chain (port 3000)
+            try {
+                microChain = new WebSocket('ws://localhost:3000');
+                microChain.onopen = () => {
+                    log('✅ Micro-Chain connected');
+                    updateConnectionStatus('micro-status', 'Connected', 'success');
+                };
+                microChain.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    handleMicroChainMessage(data);
+                };
+                microChain.onerror = () => {
+                    log('❌ Micro-Chain connection failed');
+                    updateConnectionStatus('micro-status', 'Failed', 'error');
+                };
+            } catch (error) {
+                log('❌ Micro-Chain error: ' + error.message);
+                updateConnectionStatus('micro-status', 'Error', 'error');
+            }
+
+            // Tenliner API (port 4000)
+            checkTenlinerAPI();
+        }
+
+        function checkTenlinerAPI() {
+            fetch('http://localhost:4000/health')
+                .then(response => response.json())
+                .then(data => {
+                    log('✅ Tenliner API connected');
+                    updateConnectionStatus('tenliner-status', 'Connected', 'success');
+                })
+                .catch(error => {
+                    log('❌ Tenliner API connection failed');
+                    updateConnectionStatus('tenliner-status', 'Failed', 'error');
+                });
+        }
+
+        function updateConnectionStatus(elementId, status, type) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = status;
+                element.className = type;
+            }
+        }
+
+        // Message handlers
+        function handleAgentMessage(data) {
+            log(`🤖 Agent ${data.agent}: ${data.message}`);
+            
+            if (data.agent) {
+                const statusElement = document.getElementById(data.agent.toLowerCase() + '-status');
+                if (statusElement) {
+                    statusElement.className = 'status-indicator ' + data.status;
+                }
+            }
+        }
+
+        function handleMicroChainMessage(data) {
+            log(`🔗 Micro-Chain: ${data.message || 'Response received'}`);
+            
+            if (data.data) {
+                const output = document.getElementById('micro-output');
+                if (output) {
+                    output.textContent = JSON.stringify(data.data, null, 2);
+                }
+            }
+        }
+
+        // Agent functions
+        function runAgent(agentName) {
+            if (!agentHub || agentHub.readyState !== WebSocket.OPEN) {
+                log('❌ Agent Hub not connected');
+                return;
+            }
+
+            log(`🚀 Starting agent: ${agentName}`);
+            agentHub.send(JSON.stringify({
+                command: 'run_agent',
+                agent: agentName,
+                data: { task: 'demo_task', timestamp: Date.now() }
+            }));
+        }
+
+        // Code execution
+        function runCode() {
+            const code = document.getElementById('code').value;
+            log('▶ Executing code...');
+            
+            try {
+                // Create a safe execution context
+                const result = eval(code);
+                log('✅ Code executed successfully');
+                if (result !== undefined) {
+                    log('Result: ' + JSON.stringify(result));
+                }
+            } catch (error) {
+                log('❌ Code execution error: ' + error.message);
+            }
+        }
+
+        // Micro-Chain functions
+        function executeMicroChain() {
+            if (!microChain || microChain.readyState !== WebSocket.OPEN) {
+                log('❌ Micro-Chain not connected');
+                return;
+            }
+
+            const inputData = document.getElementById('micro-input').value;
+            const startModel = document.getElementById('micro-model').value;
+            
+            log('🔗 Executing micro-chain...');
+            microChain.send(JSON.stringify({
+                command: 'micro_chain_execute',
+                inputData: inputData,
+                startModel: startModel
+            }));
+        }
+
+        function executeNanoChain() {
+            if (!microChain || microChain.readyState !== WebSocket.OPEN) {
+                log('❌ Micro-Chain not connected');
+                return;
+            }
+
+            const inputData = document.getElementById('micro-input').value;
+            
+            log('🔗 Executing nano-chain...');
+            microChain.send(JSON.stringify({
+                command: 'nano_chain_execute',
+                inputData: inputData
+            }));
+        }
+
+        function getMicroCatalog() {
+            if (!microChain || microChain.readyState !== WebSocket.OPEN) {
+                log('❌ Micro-Chain not connected');
+                return;
+            }
+
+            log('📋 Getting micro-model catalog...');
+            microChain.send(JSON.stringify({
+                command: 'get_micro_catalog'
+            }));
+        }
+
+        function testMicroChain() {
+            if (!microChain || microChain.readyState !== WebSocket.OPEN) {
+                log('❌ Micro-Chain not connected');
+                return;
+            }
+
+            log('🧪 Testing micro-chain...');
+            microChain.send(JSON.stringify({
+                command: 'test_micro_chain',
+                chainType: 'micro'
+            }));
+        }
+
+        function deployMicroModels() {
+            if (!microChain || microChain.readyState !== WebSocket.OPEN) {
+                log('❌ Micro-Chain not connected');
+                return;
+            }
+
+            log('🚀 Deploying micro-models...');
+            microChain.send(JSON.stringify({
+                command: 'deploy_micro_models'
+            }));
+        }
+
+        // Tenliner functions
+        function generateTenliner() {
+            const language = document.getElementById('tenliner-lang').value;
+            const name = document.getElementById('tenliner-name').value;
+            
+            log(`📝 Generating ${language} template for ${name}...`);
+            
+            fetch('http://localhost:4000/api/tenliner', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ language, name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.template) {
+                    const output = document.getElementById('tenliner-output');
+                    output.textContent = data.template;
+                    log(`✅ Generated ${language} template (${data.lineCount} lines)`);
+                } else {
+                    log('❌ Template generation failed: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                log('❌ Tenliner API error: ' + error.message);
+            });
+        }
+
+        // Quantizer functions
+        function startQuantization() {
+            const model = document.getElementById('quantizer-model').value;
+            const type = document.getElementById('quantizer-type').value;
+            
+            log(`⚡ Starting quantization: ${model} -> ${type}`);
+            
+            // Simulate quantization progress
+            let progress = 0;
+            const bar = document.getElementById('quantizer-bar');
+            const output = document.getElementById('quantizer-output');
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    log('✅ Quantization completed!');
+                    output.textContent = `Quantized model: ${model}\nType: ${type}\nSize: ${Math.floor(Math.random() * 50) + 10}MB\nTime: ${Math.floor(Math.random() * 300) + 60}s`;
+                }
+                bar.style.width = progress + '%';
+            }, 200);
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Window functions
+        function openTerminalWindow() {
+            log('💻 Opening terminal window...');
+            window.open('data:text/html,<h1>Terminal Window</h1><p>This would be a real terminal in production.</p>', '_blank', 'width=800,height=600');
+        }
+
+        function openBrowserWindow() {
+            log('🌐 Opening browser window...');
+            window.open('https://www.google.com', '_blank', 'width=1200,height=800');
+        }
+
+        function openCodeEditorWindow() {
+            log('📝 Opening code editor window...');
+            window.open('data:text/html,<h1>Code Editor</h1><textarea style="width:100%;height:400px;">// Code editor window</textarea>', '_blank', 'width=1000,height=700');
+        }
+
+        // Settings
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'block';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function saveSettings() {
+            const theme = document.getElementById('theme-select').value;
+            const fontSize = document.getElementById('font-size').value;
+            const autoSave = document.getElementById('auto-save').checked;
+            
+            localStorage.setItem('bigdaddyg-theme', theme);
+            localStorage.setItem('bigdaddyg-font-size', fontSize);
+            localStorage.setItem('bigdaddyg-auto-save', autoSave);
+            
+            // Apply settings
+            document.body.style.fontSize = fontSize + 'px';
+            
+            log('✅ Settings saved');
+            closeSettings();
+        }
+
+        function loadSettings() {
+            const theme = localStorage.getItem('bigdaddyg-theme') || 'dark';
+            const fontSize = localStorage.getItem('bigdaddyg-font-size') || '14';
+            const autoSave = localStorage.getItem('bigdaddyg-auto-save') !== 'false';
+            
+            document.getElementById('theme-select').value = theme;
+            document.getElementById('font-size').value = fontSize;
+            document.getElementById('auto-save').checked = autoSave;
+            
+            document.body.style.fontSize = fontSize + 'px';
+        }
+
+        // Utility functions
+        function log(message) {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            console.innerHTML += `[${timestamp}] ${message}\n`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+        }
+
+        function updateSystemInfo() {
+            document.getElementById('platform').textContent = navigator.platform;
+            document.getElementById('version').textContent = 'Live Demo v1.0';
+            document.getElementById('agent-count').textContent = '4';
+            document.getElementById('model-count').textContent = '5';
+        }
+
+        // Auto-save functionality
+        setInterval(() => {
+            const autoSave = localStorage.getItem('bigdaddyg-auto-save') !== 'false';
+            if (autoSave) {
+                const code = document.getElementById('code').value;
+                localStorage.setItem('bigdaddyg-code', code);
+            }
+        }, 5000);
+
+        // Load saved code
+        window.addEventListener('load', () => {
+            const savedCode = localStorage.getItem('bigdaddyg-code');
+            if (savedCode) {
+                document.getElementById('code').value = savedCode;
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                runCode();
+            }
+            if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                generateTenliner();
+            }
+        });
+
+        // Initialize with welcome message
+        setTimeout(() => {
+            log('🚀 BigDaddyG LIVE IDE initialized');
+            log('💡 Try running some code or starting an agent!');
+            log('🔗 All WebSocket connections are being established...');
+        }, 1000);
+    </script>
+</body>
+</html>

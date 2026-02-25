@@ -1,0 +1,46 @@
+{
+  "name": "neuro-symphonic-workspace",
+  "version": "1.0.0",
+  "description": "Neuro-Symphonic Development Environment - Multi-repo orchestration with emotional intelligence",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "build": "npm run build:windows && npm run build:web && npm run build:docker",
+    "build:windows": "cd windows-installer && npm run build",
+    "build:web": "cd web-assembly && npm run build",
+    "build:docker": "cd docker-containers && npm run build",
+    "deploy": "npm run deploy:all",
+    "deploy:all": "node deployment-orchestrator.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --testPathPattern=tests/unit",
+    "test:integration": "jest --testPathPattern=tests/integration"
+  },
+  "keywords": [
+    "neuro-symphonic",
+    "emotional-intelligence",
+    "voice-driven",
+    "development-environment",
+    "orchestration",
+    "multi-repo",
+    "ai-agents",
+    "visualization"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
+

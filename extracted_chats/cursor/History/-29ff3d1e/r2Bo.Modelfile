@@ -1,0 +1,18 @@
+FROM deepseek-coder-v2:16b
+
+# Expand the context window to 32k tokens for long files.
+PARAMETER num_ctx 32768
+
+# Tune for deterministic coding-style completions.
+PARAMETER temperature 0.1
+PARAMETER top_p 0.9
+
+# Ensure we only stop on explicit stop sequences, leaving JSON streaming intact.
+PARAMETER stop "<|eot_id|>"
+
+# Optional: prepend a concise coding-focused system prompt that keeps replies terse.
+SYSTEM """
+You are a coding-focused assistant replying with concise, high-signal answers.
+Prefer to include only the code or shell commands requested unless the user asks for commentary.
+"""
+
