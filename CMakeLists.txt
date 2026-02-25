@@ -2741,7 +2741,7 @@ if(WIN32)
         )
         target_include_directories(quickjs_static PUBLIC ${QUICKJS_DIR})
         if(MSVC)
-            target_compile_options(quickjs_static PRIVATE /W0 /O2)
+            target_compile_options(quickjs_static PRIVATE /W0 /O2 /experimental:c11atomics)
             if(QUICKJS_HAS_LIBBF)
                 target_compile_definitions(quickjs_static PRIVATE
                     _CRT_SECURE_NO_WARNINGS
