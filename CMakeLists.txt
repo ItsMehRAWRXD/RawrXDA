@@ -2735,6 +2735,10 @@ if(WIN32)
         endif()
 
         add_library(quickjs_static STATIC ${QUICKJS_SOURCES})
+        set_target_properties(quickjs_static PROPERTIES
+            C_STANDARD 11
+            C_STANDARD_REQUIRED ON
+        )
         target_include_directories(quickjs_static PUBLIC ${QUICKJS_DIR})
         if(MSVC)
             target_compile_options(quickjs_static PRIVATE /W0 /O2)
