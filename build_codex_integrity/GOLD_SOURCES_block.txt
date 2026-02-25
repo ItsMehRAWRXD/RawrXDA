@@ -1,0 +1,398 @@
+        # ── Win32 IDE Shell (GUI entry point) ──────────────────────────
+        src/win32app/main_win32.cpp
+        src/win32app/Win32IDE.cpp
+        src/win32app/HeadlessIDE.cpp
+        src/win32app/Win32IDE_Core.cpp
+        src/win32app/Win32IDE_Sidebar.cpp
+        src/win32app/Win32IDE_VSCodeUI.cpp
+        src/win32app/Win32IDE_NativePipeline.cpp
+        src/win32app/Win32IDE_PowerShellPanel.cpp
+        src/win32app/Win32IDE_PowerShell.cpp
+        src/win32app/Win32IDE_Logger.cpp
+        src/win32app/Win32IDE_FileOps.cpp
+        src/win32app/Win32IDE_Commands.cpp
+        src/win32app/Win32IDE_Debugger.cpp
+        src/win32app/Win32IDE_AgenticBridge.cpp
+        src/win32app/Win32IDE_AgentCommands.cpp
+        src/win32app/plan_mode_handler.cpp
+        src/win32app/Win32IDE_Autonomy.cpp
+        src/win32app/Win32IDE_SyntaxHighlight.cpp
+        src/win32app/Win32IDE_Themes.cpp
+        src/win32app/Win32IDE_Annotations.cpp
+        src/win32app/Win32IDE_Session.cpp
+        src/win32app/Win32IDE_StreamingUX.cpp
+        src/win32app/Win32IDE_ReverseEngineering.cpp
+        src/win32app/Win32IDE_DecompilerView.cpp
+        src/win32app/Win32IDE_FeatureManifest.cpp
+        src/win32app/Win32IDE_GhostText.cpp
+        src/win32app/Win32IDE_PlanExecutor.cpp
+        src/win32app/Win32IDE_FailureDetector.cpp
+        src/win32app/Win32IDE_FailureIntelligence.cpp
+        src/win32app/Win32IDE_Settings.cpp
+        src/win32app/Win32IDE_LocalServer.cpp
+        src/win32app/Win32IDE_BackendSwitcher.cpp
+        src/win32app/Win32IDE_LLMRouter.cpp
+        src/win32app/Win32IDE_LSPClient.cpp
+        src/win32app/Win32IDE_AsmSemantic.cpp
+        src/win32app/Win32IDE_LSP_AI_Bridge.cpp
+        src/win32app/Win32IDE_MultiResponse.cpp
+        src/win32app/Win32IDE_ExecutionGovernor.cpp
+        src/win32app/Win32IDE_SubAgent.cpp
+        src/win32app/Win32IDE_AgentHistory.cpp
+        src/win32app/Win32IDE_AgentPanel.cpp
+        src/win32app/Win32IDE_DiskRecovery.cpp
+        src/win32app/Win32TerminalManager.cpp
+        src/win32app/TransparentRenderer.cpp
+        src/win32app/Win32IDE_Plugins.cpp
+        src/win32app/Win32IDE_SwarmPanel.cpp
+        src/win32app/Win32IDE_DualAgentPanel.cpp
+        src/win32app/Win32IDE_NativeDebugPanel.cpp
+        src/win32app/Win32IDE_HotpatchPanel.cpp
+        src/win32app/Win32IDE_VSCodeExtAPI.cpp
+        src/win32app/Win32IDE_WebView2.cpp
+        src/win32app/Win32IDE_MonacoThemes.cpp
+        src/win32app/Win32IDE_LSPServer.cpp
+        src/win32app/Win32IDE_EditorEngine.cpp
+        src/win32app/Win32IDE_PDBSymbols.cpp
+        src/win32app/Win32IDE_AuditDashboard.cpp
+        src/win32app/Win32IDE_Gauntlet.cpp
+        src/win32app/Win32IDE_VoiceChat.cpp
+        src/win32app/Win32IDE_VoiceAutomation.cpp
+        src/win32app/Win32IDE_QuickWins.cpp
+        src/win32app/Win32IDE_Telemetry.cpp
+        src/win32app/Win32IDE_MCP.cpp
+        src/win32app/Win32IDE_FlightRecorder.cpp
+        src/win32app/Win32IDE_Instructions.cpp
+        src/win32app/Win32IDE_GameEnginePanel.cpp
+        src/win32app/Win32IDE_CruciblePanel.cpp
+        src/win32app/Win32IDE_CopilotGapPanel.cpp
+        src/win32app/Win32IDE_PipelinePanel.cpp
+        src/win32app/Win32IDE_HotpatchCtrlPanel.cpp
+        src/win32app/Win32IDE_StaticAnalysisPanel.cpp
+        src/win32app/Win32IDE_SemanticPanel.cpp
+        src/win32app/Win32IDE_TelemetryPanel.cpp
+        src/win32app/Win32IDE_Tier3Polish.cpp
+        src/win32app/Win32IDE_Tier3Cosmetics.cpp
+        src/win32app/Win32IDE_Tier5Cosmetics.cpp
+        src/win32app/Win32IDE_Tier2Cosmetics.cpp
+        src/win32app/Win32IDE_Tier1Cosmetics.cpp
+        src/win32app/Win32IDE_OutlinePanel.cpp
+        src/win32app/Win32IDE_RenamePreview.cpp
+
+        # ── Plugin System ──────────────────────────────────────────────
+        src/plugin_system/win32_plugin_loader.cpp
+        src/config/IDEConfig.cpp
+
+        # ── Core Engine (shared CLI + GUI) ─────────────────────────────
+        src/stubs.cpp
+        src/memory_core.cpp
+        src/hot_patcher.cpp
+        src/cpu_inference_engine.cpp
+        src/complete_server.cpp
+        src/agentic_engine.cpp
+        src/subagent_core.cpp
+        src/agent_history.cpp
+        src/agent_policy.cpp
+        src/agent_explainability.cpp
+        src/streaming_gguf_loader.cpp
+        src/utils/Diagnostics.cpp
+        src/utils/ErrorReporter.cpp
+        src/gguf_loader.cpp
+        src/gguf_vocab_resolver.cpp
+        src/compression_interface.cpp
+        src/model_source_resolver.cpp
+        src/agentic_controller.cpp
+        src/agentic_agent_coordinator.cpp
+        src/production_config_manager.cpp
+        src/agentic_loop_state.cpp
+        src/tool_registry.cpp
+        src/mcp_integration.cpp
+        src/vulkan_compute.cpp
+
+        # ── Engine ─────────────────────────────────────────────────────
+        src/engine/gguf_core.cpp
+        src/engine/inference_kernels.cpp
+        src/engine/transformer.cpp
+        src/engine/bpe_tokenizer.cpp
+        src/engine/sampler.cpp
+        src/engine/rawr_engine.cpp
+        src/engine/core_generator.cpp
+
+        # ── Codec ──────────────────────────────────────────────────────
+        src/codec/compression.cpp
+        src/codec/brutal_gzip.cpp
+
+        # ── CLI / Agentic Decision Systems ─────────────────────────────
+        src/cli/agentic_decision_tree.cpp
+        src/cli/cli_autonomy_loop.cpp
+        src/cli/cli_headless_systems.cpp
+        src/cli/swarm_orchestrator.cpp
+
+        # ── Agentic Framework ──────────────────────────────────────────
+        src/agentic/AgentToolHandlers.cpp
+        src/agentic/BoundedAgentLoop.cpp
+        src/agentic/OllamaProvider.cpp
+        src/agentic/DiffEngine.cpp
+        src/agentic/DeterministicReplayEngine.cpp
+        src/agentic/autonomous_recovery_orchestrator.cpp
+        src/agentic/agentic_transaction.cpp
+        src/agentic/multi_file_transaction.cpp
+        src/agentic/model_cascade.cpp
+        src/agentic/context_assembler.cpp
+        src/agentic/AgentOllamaClient.cpp
+
+        # ── Agent Orchestrator + Bridge + Navigation ───────────────────
+        src/agentic/AgentOrchestrator.cpp
+        src/agentic/OrchestratorBridge.cpp
+        src/agentic/AgenticNavigator.cpp
+        src/agentic/RawrXD_ToolRegistry.cpp
+        src/agentic/ToolRegistry.cpp
+        src/agentic/RawrXD_AgentLoop.cpp
+        src/agentic/agentic_executor.cpp
+
+        # ── Autonomous Repair Orchestrator + Agent Memory Indexer ──────
+        src/core/auto_repair_orchestrator.cpp
+        src/core/agent_memory_indexer.cpp
+
+        # ── Agent Subsystems ───────────────────────────────────────────
+        src/agent/autonomous_subagent.cpp
+        src/agent/agentic_failure_detector.cpp
+        src/agent/agentic_puppeteer.cpp
+        src/agent/llm_http_client.cpp
+        src/agent/model_invoker.cpp
+        src/agent/planner.cpp
+        src/agent/eval_framework.cpp
+        src/agent/local_reasoning_engine.cpp
+        src/agent/agent_self_repair.cpp
+        src/agent/agent_self_healing_orchestrator.cpp
+        src/agent/DiskRecoveryAgent.cpp
+        src/agent/agentic_hotpatch_orchestrator.cpp
+
+        # ── Core Subsystems ────────────────────────────────────────────
+        src/core/execution_scheduler.cpp
+        src/core/agent_safety_contract.cpp
+        src/core/confidence_gate.cpp
+        src/core/deterministic_replay.cpp
+        src/core/execution_governor.cpp
+        src/core/multi_response_engine.cpp
+        src/core/streaming_engine_registry.cpp
+        src/core/flash_attention.cpp
+        src/core/gpu_backend_bridge.cpp
+        src/core/native_speed_layer.cpp
+        src/core/local_ai_core.cpp
+        src/core/native_inference_pipeline.cpp
+        src/core/model_memory_hotpatch.cpp
+        src/core/byte_level_hotpatcher.cpp
+        src/core/unified_hotpatch_manager.cpp
+        src/core/proxy_hotpatcher.cpp
+        src/core/model_bruteforce_engine.cpp
+        src/core/pt_driver_contract.cpp
+        src/core/shadow_page_detour.cpp
+        src/core/sentinel_watchdog.cpp
+        src/core/agentic_task_graph.cpp
+        src/core/embedding_engine.cpp
+        src/core/vision_encoder.cpp
+
+        # Vision Pipeline Extensions (Token Gating, Embedding Cache, KV Isolation, Quantized Encoder, GPU Staging)
+        src/core/vision_token_gate.cpp
+        src/core/vision_embedding_cache.cpp
+        src/core/vision_kv_isolation.cpp
+        src/core/vision_quantized_encoder.cpp
+        src/core/vision_gpu_staging.cpp
+
+        src/core/swarm_coordinator.cpp
+        src/core/swarm_worker.cpp
+        src/core/swarm_network_stubs.cpp
+        src/core/swarm_decision_bridge.cpp
+        src/core/universal_model_hotpatcher.cpp
+        src/core/production_release.cpp
+        src/core/webrtc_signaling.cpp
+        src/core/gpu_kernel_autotuner.cpp
+        src/core/sandbox_integration.cpp
+        src/core/amd_gpu_accelerator.cpp
+        src/core/intel_gpu_accelerator.cpp
+        src/core/arm64_gpu_accelerator.cpp
+        src/core/cerebras_wse_accelerator.cpp
+        src/core/accelerator_router.cpp
+        src/core/pdb_gsi_hash.cpp
+        src/core/pdb_native.cpp
+        src/core/pdb_reference_provider.cpp
+        src/core/pdb_lsp_bridge.cpp
+        src/core/enterprise_license.cpp
+        src/core/enterprise_license_stubs.cpp
+        src/core/camellia256_bridge.cpp
+        src/core/watchdog_service.cpp
+        src/core/voice_chat.cpp
+        src/core/voice_automation.cpp
+        src/core/shortcut_manager.cpp
+        src/core/backup_manager.cpp
+        src/core/alert_system.cpp
+        src/core/feature_registration.cpp
+        src/core/feature_handlers.cpp
+        # auto_feature_registry excluded for Win32 IDE — use ssot_handlers (lightweight stubs)
+        # auto_feature_registry requires: TelemetryCollector, LayerOffloadManager, EngineRegistry,
+        # ReverseEngineering, AgenticDeepThinkingEngine, DiagnosticConsumer, etc.
+        src/core/intent_engine.cpp
+        src/core/missing_handler_stubs.cpp
+        src/core/model_training_pipeline.cpp
+        src/core/ssot_handlers.cpp
+        src/core/ssot_handlers_ext.cpp
+        src/core/ssot_validation.cpp
+        src/core/unified_command_dispatch.cpp
+        src/core/chain_of_thought_engine.cpp
+        src/core/reasoning_profile.cpp
+        src/core/reasoning_pipeline_orchestrator.cpp
+        src/core/reasoning_cot_bridge.cpp
+        src/core/rawrxd_state_mmf.cpp
+        src/core/live_binary_patcher.cpp
+        src/core/traversal_strategy.cpp
+        src/core/layer_contribution_scorer.cpp
+        src/core/semantic_delta_tracker.cpp
+        src/core/cross_run_tensor_cache.cpp
+        src/core/convergence_controller.cpp
+        src/core/iterative_tensor_traversal.cpp
+        src/core/sqlite_wrapper.cpp
+        src/core/sqlite3.c
+        src/core/thread_pool.cpp
+        src/core/memory_pressure_handler.cpp
+        src/core/jsonrpc_parser.cpp
+        src/core/transaction_journal.cpp
+        src/core/vector_index.cpp
+        src/core/prompt_template_engine.cpp
+        src/core/autonomous_workflow_engine.cpp
+        src/core/workspace_reasoning_profiles.cpp
+        src/core/deterministic_swarm.cpp
+        src/core/safe_refactor_engine.cpp
+        src/core/reasoning_schema_versioning.cpp
+        src/core/cot_fallback_system.cpp
+        src/core/input_guard_slicer.cpp
+        src/core/instructions_provider.cpp
+        src/core/distributed_pipeline_orchestrator.cpp
+        src/core/hotpatch_control_plane.cpp
+        src/core/static_analysis_engine.cpp
+        src/core/code_linter.cpp
+        src/core/semantic_code_intelligence.cpp
+        src/core/enterprise_telemetry_compliance.cpp
+        src/core/native_debugger_engine.cpp
+        src/core/native_debugger_symbols.cpp
+        src/core/quantum_safe_transport.cpp
+        src/core/adaptive_pipeline_parallel.cpp
+        src/core/universal_model_merger.cpp
+        src/core/MonacoCoreEngine.cpp
+        src/core/monaco_core_stubs.cpp
+        src/core/WebView2EditorEngine.cpp
+        src/core/RichEditEditorEngine.cpp
+        src/core/EditorEngineFactory.cpp
+        src/core/feature_registry.cpp
+        src/core/menu_auditor.cpp
+        src/core/auto_discovery.cpp
+        src/core/final_gauntlet.cpp
+        src/core/js_extension_host.cpp
+        src/core/extension_polyfill_engine.cpp
+        src/core/analyzer_distiller_stubs.cpp
+        src/core/streaming_orchestrator_stubs.cpp
+
+        # ── Autonomy Gap Closure (Phase A-D + Tier 1.4 + Tier 2.3) ──
+        src/core/knowledge_graph_core.cpp
+        src/core/swarm_conflict_resolver.cpp
+        src/core/autonomous_debugger.cpp
+        src/agentic/autonomous_verification_loop.cpp
+        src/agentic/autonomous_background_daemon.cpp
+        src/agentic/autonomous_communicator.cpp
+
+        # ── Server ─────────────────────────────────────────────────────
+        src/server/gguf_server_hotpatch.cpp
+
+        # ── Marketplace / Auth ─────────────────────────────────────────
+        src/marketplace/extension_marketplace.cpp
+        src/auth/rbac_engine.cpp
+
+        # ── LSP ────────────────────────────────────────────────────────
+        src/lsp/RawrXD_LSPServer.cpp
+        src/lsp/lsp_hotpatch_bridge.cpp
+        src/lsp/hotpatch_symbol_provider.cpp
+        src/lsp/gguf_diagnostic_provider.cpp
+        src/lsp/diagnostic_consumer.cpp
+
+        # ── GPU ────────────────────────────────────────────────────────
+        src/gpu/gpu_backend.cpp
+        src/gpu/kv_cache_optimizer.cpp
+        src/gpu/speculative_decoder.cpp
+        src/gpu/speculative_decoder_v2.cpp
+
+        # ── UI ─────────────────────────────────────────────────────────
+        src/ui/chat_message_renderer.cpp
+        src/ui/tool_action_status.cpp
+        src/ui/chat_panel.cpp
+        src/ui/phase2_integration_example.cpp
+
+        # Cathedral Hardening (5.0 Readiness)
+        src/core/crash_containment.cpp
+        src/core/patch_rollback_ledger.cpp
+        src/core/quant_hysteresis.cpp
+        src/core/masm_stress_harness.cpp
+        src/core/perf_telemetry.cpp
+        src/core/convergence_stress_harness.cpp
+
+        # ── Git / Telemetry ────────────────────────────────────────────
+        src/git/git_context.cpp
+        src/telemetry/completion_feedback.cpp
+        src/telemetry/replay_telemetry_fusion.cpp
+        src/telemetry/hotpatch_telemetry_safety.cpp
+        src/telemetry/UnifiedTelemetryCore.cpp
+
+        # ── Modules ────────────────────────────────────────────────────
+        src/modules/engine_manager.cpp
+        src/modules/vsix_loader_win32.cpp
+        src/modules/codex_ultimate.cpp
+        src/modules/vscode_extension_api.cpp
+        src/modules/quickjs_extension_host.cpp
+        src/modules/quickjs_node_shims.cpp
+        src/modules/quickjs_vscode_bindings.cpp
+        src/modules/unity_engine_integration.cpp
+        src/modules/unreal_engine_integration.cpp
+        src/modules/game_engine_manager.cpp
+        src/modules/crucible_engine.cpp
+        src/modules/copilot_gap_closer.cpp
+
+        # ── Test Harness (Replay Fixture) ──────────────────────────────
+        src/test_harness/replay_fixture.cpp
+        src/test_harness/replay_oracle.cpp
+        src/test_harness/replay_mock_inference.cpp
+        src/test_harness/replay_harness.cpp
+        src/test_harness/replay_reporter.cpp
+
+        # ── Cursor/JB-Parity Feature Modules ──────────────────────────
+        src/telemetry/telemetry_export.cpp
+        src/agentic/agentic_composer_ux.cpp
+        src/context/context_mention_parser.cpp
+        src/multimodal_engine/vision_encoder.cpp
+        src/ide/refactoring_plugin.cpp
+        src/ide/language_plugin.cpp
+        src/context/semantic_index.cpp
+        src/ide/resource_generator.cpp
+        src/win32app/Win32IDE_CursorParity.cpp
+        src/win32app/Win32IDE_GUILayoutHotpatch.cpp
+
+        # ═══════════════════════════════════════════════════════════════
+        # Flagship Product Pillars (Provable Agent, AI RE, Airgapped)
+        # ═══════════════════════════════════════════════════════════════
+        src/win32app/Win32IDE_ProvableAgent.cpp
+        src/win32app/Win32IDE_AIReverseEngineering.cpp
+        src/win32app/Win32IDE_AirgappedEnterprise.cpp
+        src/win32app/Win32IDE_FlagshipFeatures.cpp
+
+        # ── Transcendence Architecture (Phases E → Ω) ─────────────────
+        src/core/self_host_engine.cpp
+        src/core/hardware_synthesizer.cpp
+        src/core/mesh_brain.cpp
+        src/core/speciator_engine.cpp
+        src/core/neural_bridge.cpp
+        src/core/omega_orchestrator.cpp
+        src/core/transcendence_coordinator.cpp
+
+        # ── Transcendence IDE Panel ────────────────────────────────────
+        src/win32app/Win32IDE_TranscendencePanel.cpp
+    )
+
+    add_executable(RawrXD-Gold WIN32 ${GOLD_SOURCES} ${ASM_KERNEL_SOURCES}

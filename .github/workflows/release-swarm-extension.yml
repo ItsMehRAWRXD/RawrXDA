@@ -1,0 +1,88 @@
+name: Build & Release Swarm Launcher Extension
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/extensions/swarm-launcher/**'
+      - '.github/workflows/release-swarm-extension.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install dependencies
+      run: |
+        cd src/extensions/swarm-launcher
+        npm install
+
+    - name: Build extension
+      run: |
+        cd src/extensions/swarm-launcher
+        npm run build
+
+    - name: Run TypeScript checks
+      run: |
+        cd src/extensions/swarm-launcher
+        npx tsc --noEmit
+      continue-on-error: true
+
+    - name: Package extension (.vsix)
+      run: |
+        cd src/extensions/swarm-launcher
+        npm run package
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: swarm-launcher-${{ runner.os }}-node${{ matrix.node-version }}
+        path: src/extensions/swarm-launcher/*.vsix
+
+    - name: Publish to Open VSCode Marketplace
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        cd src/extensions/swarm-launcher
+        npx vsce publish --registryUrl https://registry.npmjs.org/
+      env:
+        VSCE_PAT: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
+      continue-on-error: true
+
+  release:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: swarm-launcher-*/**.vsix
+        tag_name: swarm-launcher-${{ github.run_number }}
+        body: |
+          **Swarm Model Launcher Extension Release**
+          
+          - IPC bridge for RawrXD IDE integration
+          - Multi-model parallel inference (1-4× per model, up to 5 models)
+          - VSCode activity bar with model status monitoring
+          - Automatic backup to registry
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

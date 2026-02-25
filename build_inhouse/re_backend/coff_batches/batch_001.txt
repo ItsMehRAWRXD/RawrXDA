@@ -1,0 +1,50 @@
+﻿D:\rawrxd\compilers\n0mn0m_quantum_asm_compiler.obj
+D:\rawrxd\compilers\nim_compiler_from_scratch.obj
+D:\rawrxd\compilers\ocaml_compiler_from_scratch.obj
+D:\rawrxd\compilers\odin_compiler_from_scratch.obj
+D:\rawrxd\compilers\pascal_compiler_from_scratch.obj
+D:\rawrxd\compilers\perl_compiler_from_scratch.obj
+D:\rawrxd\compilers\php_compiler_from_scratch.obj
+D:\rawrxd\compilers\powershell_compiler_from_scratch.obj
+D:\rawrxd\compilers\python_compiler_from_scratch.obj
+D:\rawrxd\compilers\r_compiler_from_scratch.obj
+D:\rawrxd\compilers\reverser_compiler.obj
+D:\rawrxd\compilers\reverser_compiler_from_scratch.obj
+D:\rawrxd\compilers\ruby_compiler_from_scratch.obj
+D:\rawrxd\compilers\rust_compiler_from_scratch.obj
+D:\rawrxd\compilers\scala_compiler_from_scratch.obj
+D:\rawrxd\compilers\solidity_compiler_from_scratch.obj
+D:\rawrxd\compilers\swift_compiler_from_scratch.obj
+D:\rawrxd\compilers\typescript_compiler_from_scratch.obj
+D:\rawrxd\compilers\universal_compiler_runtime.obj
+D:\rawrxd\compilers\universal_compiler_runtime_clean.obj
+D:\rawrxd\compilers\universal_cross_platform_compiler.obj
+D:\rawrxd\compilers\universal_multi_language_compiler.obj
+D:\rawrxd\compilers\v_compiler_from_scratch.obj
+D:\rawrxd\compilers\vb_net_compiler_from_scratch.obj
+D:\rawrxd\compilers\vyper_compiler_from_scratch.obj
+D:\rawrxd\compilers\webassembly_compiler_from_scratch.obj
+D:\rawrxd\compilers\zig_compiler_from_scratch.obj
+D:\rawrxd\dequant_simd.obj
+D:\rawrxd\extension-host\build\RawrXD_Agentic.obj
+D:\rawrxd\extension-host\build\RawrXD_Copilot.obj
+D:\rawrxd\extension-host\build\RawrXD_ExtensionHost_Hijacker.obj
+D:\rawrxd\extension-host\build\RawrXD_LSP.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_compact_wire.dir\Release\bench_compact_wire.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_50mb.dir\Release\bench_deflate_50mb.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_50mb.dir\Release\deflate_brutal_masm.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_brutal.dir\Release\bench_deflate_brutal.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_brutal.dir\Release\deflate_brutal_masm.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_masm.dir\Release\bench_deflate_masm.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_masm.dir\Release\gzip_masm_store.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_nasm.dir\Release\bench_deflate_masm.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_nasm.dir\Release\deflate_nasm.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_qt.dir\Release\bench_deflate_qt.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_deflate_qt.dir\Release\deflate_brutal_masm.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_all_quant.dir\Release\bench_flash_all_quant.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_all_quant.dir\Release\flash_attn_avx2.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_all_quant.dir\Release\matmul_kernel_avx2.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\bench_flash_asm_final.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\flash_attn_avx2.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\flash_attn_optimized.obj
+D:\rawrxd\Full Source\RawrXD-ModelLoader\build\bench_flash_asm_final.dir\Release\matmul_kernel_avx2.obj

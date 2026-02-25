@@ -1,0 +1,5 @@
+bp RawrXD+0x1ea3 ".echo ===AFTER_ALLOC_LOOP===; dq RawrXD+0x3c860 L10; gc"
+g
+.echo ===PROGRAM_END===
+dq RawrXD+0x3c860 L10
+q

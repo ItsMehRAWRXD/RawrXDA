@@ -1,6 +1,50 @@
-ninja: error: build.ninja:35: loading 'CMakeFiles\rules.ninja': The system cannot find the file specified.
-
-
-include CMakeFiles\rules.ninja
-
-                              ^ near here
+[  9%] Built target masm_kernels
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/quant_hysteresis.cpp.obj
+quant_hysteresis.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/gpu/kv_cache_optimizer.cpp.obj
+kv_cache_optimizer.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/gpu/speculative_decoder.cpp.obj
+speculative_decoder.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic_controller.cpp.obj
+agentic_controller.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/ui/phase2_integration_example.cpp.obj
+phase2_integration_example.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic_agent_coordinator.cpp.obj
+agentic_agent_coordinator.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/production_config_manager.cpp.obj
+production_config_manager.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/autonomous_workflow_engine.cpp.obj
+autonomous_workflow_engine.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/workspace_reasoning_profiles.cpp.obj
+workspace_reasoning_profiles.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/deterministic_swarm.cpp.obj
+deterministic_swarm.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/safe_refactor_engine.cpp.obj
+safe_refactor_engine.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/reasoning_schema_versioning.cpp.obj
+reasoning_schema_versioning.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/cot_fallback_system.cpp.obj
+cot_fallback_system.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/input_guard_slicer.cpp.obj
+input_guard_slicer.cpp
+D:\rawrxd\src\core\input_guard_slicer.cpp(10): warning C4005: 'WIN32_LEAN_AND_MEAN': macro redefinition
+D:\rawrxd\src\core\input_guard_slicer.cpp(10): note: 'WIN32_LEAN_AND_MEAN' previously declared on the command line
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/test_harness/replay_fixture.cpp.obj
+replay_fixture.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/test_harness/replay_oracle.cpp.obj
+replay_oracle.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/test_harness/replay_mock_inference.cpp.obj
+replay_mock_inference.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/test_harness/replay_harness.cpp.obj
+replay_harness.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/test_harness/replay_reporter.cpp.obj
+replay_reporter.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/instructions_provider.cpp.obj
+instructions_provider.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/distributed_pipeline_orchestrator.cpp.obj
+distributed_pipeline_orchestrator.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/hotpatch_control_plane.cpp.obj
+hotpatch_control_plane.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/static_analysis_engine.cpp.obj
+static_analysis_engine.cpp

@@ -1,0 +1,10 @@
+RawrXD E-Drive Audit — 20260219_085720
+Roots: E:\RawrXD
+Destination: D:\RawrXD
+Total files: 31774
+Total size (MB): 1830.6
+Source files: 6632
+Compiler-like directories: 0
+
+
+Manifest CSV: D:\RawrXD\audit_manifest\E_drive_audit_20260219_085720.csv

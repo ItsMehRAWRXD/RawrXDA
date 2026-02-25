@@ -1,0 +1,192 @@
+========================================================================
+  RawrXD MASM/ASM Codebase Digest Report
+  Production Static Analysis
+========================================================================
+
+  Total PROCs:          373
+  Total STRUCTs:         37
+  Total DATA labels:    278
+  Total CONSTs:         514
+  Total EXTERNs:        232
+  Total PUBLICs:        151
+  Total CALLs:          399
+
+  --- Issue Summary ---
+  Stub/Empty PROCs:       2
+  Missing ENDP:           0
+  Missing RET:            0
+  Undefined CALLs:       65
+  Unused PROCs:          52
+  FIXME/STUB markers:    37
+
+------------------------------------------------------------------------
+
+--- FIXMEs / STUBs / TODOs ---
+  D:\RawrXD\src\masm\RawrXD_DirectionlessLoader.asm: ; Write JMP stub
+  D:\RawrXD\src\masm\RawrXD_HttpChatServer.asm: ; RawrXD_HttpChatServer.asm - Complete Hidden
+  D:\RawrXD\src\masm\RawrXD_HttpChatServer.asm: ; __log_error - Log error with context (hidden
+  D:\RawrXD\src\masm\RawrXD_HttpChatServer.asm: ; Hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; For each output element q[j]: q[j] = sum(input[k] * Wq[k*hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; This is a matrix-vector multiply: [1, hidden] x [hidden, hidden] -> [1, hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; --- Element-wise: hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; --- Down projection: output[j] = dot(hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; Compute logits = hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; rcx = hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; logits[j] = dot(hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; For each vocab entry j, compute logits[j] = dot(hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; hidden
+  D:\RawrXD\src\masm\RawrXD_InferenceCore.asm: ; acc += hidden
+  D:\RawrXD\src\masm\RawrXD_NativeHttpServer.asm: ; For now, return success with placeholder
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Generate a new polymorphic stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Polymorphic Stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Generates a unique loader stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Generates a new polymorphic stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; 2. No use of system RNG or GNR; every stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Runtime unpacking: decrypt payload in memory, wipe stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Randomizes register usage in the stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; JE rel32 (placeholder
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; placeholder
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Saves the generated polymorph stub
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: ; Loads a saved polymorph stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_Agentic_Router.asm: ; Stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_DynamicTensorEngine.asm: ; Initialize each hotpatch slot with INT3 (debuggable) then JMP placeholder
+  D:\RawrXD\src\masm\interconnect\RawrXD_HTTP_Router.asm: ; Stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_Inference_Engine.asm: ; External definition placeholder
+  D:\RawrXD\src\masm\interconnect\RawrXD_JSON_Parser.asm: ; Stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_Model_StateMachine.asm: ; Stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_RingBuffer_Consumer.asm: ; Stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_Streaming_Formatter.asm: ; Stub
+  D:\RawrXD\src\masm\interconnect\RawrXD_Swarm_Orchestrator.asm: ; Stub
+
+--- Stub/Empty PROCs (no real logic) ---
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: Beacon_Persist
+  D:\RawrXD\src\masm\masm_solo_compiler.asm: Beacon_AntiForensics
+
+--- Undefined CALL targets (not found in codebase) ---
+  (Excludes Win32 APIs, CRT, registers, keywords)
+  ApplyCompileTimeObfuscation
+  Assemble
+  Camellia256_DecryptBlock_M64
+  Camellia256_EncryptBlock_M64
+  Camellia_Decrypt_Block
+  FlushInstructionCache
+  GeneratePE
+  GetStdHandleor
+  InitBuffers
+  LayerNorm_F32
+  RawrXD_Blind_Sensors
+  RawrXD_Calculate_Jitter
+  RawrXD_Camellia_256_Decrypt_Block
+  RawrXD_Execute_Task
+  RawrXD_Find_Gadgets
+  RawrXD_Receive_Task
+  RawrXD_Send_Heartbeat
+  RawrXD_Socket_Init
+  ResolveModeHandler
+  ast_create_node
+  codegen_directive
+  codegen_generate
+  codegen_node
+  is_alnum
+  is_alpha
+  is_digit
+  is_operator
+  lexer_read_char
+  lexer_read_identifier
+  lexer_read_number
+  lexer_read_operator
+  lexer_read_string
+  lexer_skip_to_newline
+  lexer_skip_whitespace
+  lexer_tokenize
+  parse_args
+  parse_cli_mode
+  parse_command_line
+  parse_next_token
+  parser_next_token
+  parser_parse
+  parser_parse_directive
+  parser_parse_instruction
+  parser_parse_label
+  parser_parse_toplevel
+  parser_parse_toplevelIVE
+  parser_peek_token
+  parser_peek_token_nnt
+  pe_writer_generate
+  print_error_message
+  print_stage_message
+  print_string
+  printf_wrapper
+  rawrxd_signal_patch_end
+  rawrxd_signal_patch_start
+  rawrxd_stream_enqueue_chunk
+  read_source_file
+  semantic_analyze
+  semantic_build_symbols
+  semantic_resolve_refs
+  semantic_type_check
+  skip_to_quote
+  skip_to_whitespace
+  skip_whitespace
+  write_output_file
+
+--- Unused PROCs (defined but no callers found) ---
+  (Excludes PUBLIC exports and known entry points)
+  ASN1_PatchField
+  ASN1_PatchSubject
+  ASN1_PatchValidity
+  Beacon_AntiForensics
+  Beacon_Exfiltrate
+  Beacon_InitC2
+  Beacon_MainLoop
+  Beacon_Persist
+  Build_Thread
+  Camellia_Decrypt
+  Check_IsDebuggerPresent
+  Check_RemoteDebuggerPresent
+  CompareWideAscii
+  ExtractUrlPath
+  FormatToolResponse
+  HandleChatRequest
+  HttpServer_GetStatus
+  HttpServer_Initialize
+  HttpServer_IsRunning
+  HttpServer_LoadModel
+  HttpServer_Shutdown
+  MemCpy_Optimized
+  Mode_Handler_Compile
+  Mode_Handler_Encrypt
+  Mode_Handler_Stubgen
+  PackPESection
+  Polymorph_CFFlatten
+  Polymorph_InsertJunk
+  Polymorph_LoadStub
+  Polymorph_RandomizeRegisters
+  Polymorph_SelfHeal
+  Polymorph_ShuffleSections
+  Polymorph_Virtualize
+  ProxyToOllama
+  RawrXD_Check_DebugPort
+  RawrXD_Generate_Junk
+  RawrXD_Integrate_To_Stream
+  RawrXD_Socket_Connect
+  RawrXD_Timing_Check
+  RemovePadding
+  Robust_AtomicCompareExchange
+  Robust_Crc64Init
+  StrCmp_ASCII
+  UnpackPESection
+  Validate_PE_Header
+  WideToAscii
+  __memcpy
+  __strcpy_w
+  __utf16_to_utf8
+  __utf8_to_utf16
+  __wcslen
+  memcpy
+
+========================================================================
+  End of Report
+========================================================================

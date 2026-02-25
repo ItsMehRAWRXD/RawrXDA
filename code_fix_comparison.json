@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "generated": "2026-02-20 13:33:54",
+    "project_root": "D:\\RawrXD",
+    "repository": "ItsMehRAWRXD/RawrXD",
+    "branch": "copilot-worktree-2026-02-17T05-43-21",
+    "context": "noc (non-compilation) analysis \u2014 runtime/JIT-aware source audit"
+  },
+  "mode_selection": {
+    "definition": "Select exactly one operating mode; do not mix modes.",
+    "exclusive": true,
+    "selected": "optimized",
+    "options": {
+      "ultra": {
+        "maps_to": "approach_comparison.instant_fix",
+        "intent": "Fastest runtime; minimal analysis depth; smallest scope",
+        "noc_aware": false
+      },
+      "optimized": {
+        "maps_to": "approach_comparison.comprehensive_fix",
+        "intent": "Balanced correctness + NOC awareness; deeper analysis",
+        "noc_aware": true
+      }
+    }
+  },
+  "approach_comparison": {
+    "instant_fix": {
+      "script": "instant_fix_2000.py",
+      "lines_of_code": 59,
+      "target_range": "under 100 lines",
+      "description": "CMake-basename cross-ref + keyword heuristic",
+      "analysis_depth": "basename match only",
+      "noc_aware": false,
+      "applies_fixes": true,
+      "archives_orphans": true,
+      "detects_duplicates": false,
+      "symbol_analysis": false,
+      "include_graph": false,
+      "version_detection": false,
+      "root_artifact_scan": false,
+      "runtime_sec": 0.1,
+      "results": {
+        "active": 530,
+        "orphan": 533,
+        "missing": 10,
+        "needed_orphans_kept": 445,
+        "archived": 0
+      }
+    },
+    "comprehensive_fix": {
+      "script": "slow_fix_2000.py",
+      "lines_of_code": 603,
+      "target_range": "500-1000 lines",
+      "description": "11-phase deep analysis: include graph + symbol cross-ref + duplicate detection + orphan archival + comparison output",
+      "analysis_depth": "symbol-level cross-reference with include graph",
+      "noc_aware": true,
+      "applies_fixes": true,
+      "archives_orphans": true,
+      "detects_duplicates": true,
+      "symbol_analysis": true,
+      "include_graph": true,
+      "version_detection": true,
+      "root_artifact_scan": true,
+      "runtime_sec": 10.8,
+      "phases": [
+        "Phase 1: File Discovery",
+        "Phase 2: CMake Build-Graph Extraction",
+        "Phase 3: Include Graph Builder",
+        "Phase 4: Symbol / Extern Analysis",
+        "Phase 5: File Classification",
+        "Phase 6: Root Artifact Scanner",
+        "Phase 7: Duplicate Detection",
+        "Phase 8: Version / Backup Detection",
+        "Phase 9: Report Generation (JSON + Markdown)",
+        "Phase 10: Orphan Archival (full apply)",
+        "Phase 11: Comparison Writer"
+      ],
+      "results": {
+        "active_sources": 585,
+        "active_headers": 1683,
+        "needed": 1941,
+        "likely_needed": 99,
+        "orphan_sources": 694,
+        "orphan_headers": 238,
+        "missing": 8,
+        "duplicate_pairs": 1225,
+        "versioned_backups": 219,
+        "archived": 930,
+        "archive_skipped": 2
+      }
+    }
+  },
+  "project_stats": {
+    "root": "D:\\RawrXD",
+    "cmake_targets": 18,
+    "cmake_source_refs": 527,
+    "total_source_files": 3319,
+    "total_header_files": 1921,
+    "total_doc_files": 10389,
+    "total_script_files": 80071,
+    "total_build_artifacts": 4477,
+    "total_other_files": 88231,
+    "include_edges": 26138,
+    "unique_symbols_defined": 11549,
+    "unique_symbols_called": 42766,
+    "extern_declarations": 161,
+    "build_targets": [
+      "RawrEngine",
+      "RawrXD_Gold",
+      "RawrXD-Genesis",
+      "RawrXD-GenesisBuild",
+      "RawrXD-WidgetEngine",
+      "RawrXD-HeadlessWidgets",
+      "RawrXD_NanoQuant",
+      "RawrXD-InferenceEngine",
+      "RawrXD-ModelAnalysisLib",
+      "RawrXD-ModelAnalysis",
+      "rawrxd-monaco-gen",
+      "RawrXD_MultiWindow_Kernel",
+      "RawrXD_DynamicPromptEngine",
+      "pocket_lab_turbo",
+      "Phase3_Agent_Kernel",
+      "RawrXD-Win32IDE",
+      "quickjs_static",
+      "RawrXD-Gold"
+    ]
+  },
+  "full_apply_results": {
+    "orphans_archived": 930,
+    "archive_skipped": 2,
+    "archive_errors": 0,
+    "archive_location": "D:\\RawrXD\\.archived_orphans"
+  },
+  "missing_from_disk": [
+    "\\/quickjs.c",
+    "\\/cutils.c",
+    "\\/libbf.c",
+    "\\/libregexp.c",
+    "\\/libunicode.c",
+    "\\/quickjs-libc.c",
+    "Telemetry_Kernel.asm",
+    "model_llm_harvester.asm"
+  ],
+  "noc_context": {
+    "definition": "non-compilation \u2014 runtime/JIT modifications without recompiling",
+    "relevance": "The comprehensive approach identifies NEEDED files (1941) that define symbols called at runtime via JIT or dynamic linking, which a simple basename check misses. Files classified as LIKELY_NEEDED (99) may be loaded at runtime without explicit CMake references.",
+    "recommendation": "Use comprehensive analysis for noc-aware workflows where runtime symbol resolution matters. The instant approach is sufficient for compilation-only builds."
+  },
+  "recommendation": "The comprehensive approach found 1941 NEEDED files via symbol cross-referencing versus 445 via keyword heuristic. For noc (non-compilation) workflows with JIT/runtime dependencies, use the comprehensive approach. For quick build validation, the instant approach (0.1s) is sufficient. All 8 MISSING files must be sourced or stubbed before build completion."
+}

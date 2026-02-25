@@ -1,0 +1,9 @@
+bp RawrXD+0x1e87
+g
+.echo === Stopped at first HeapAlloc call ===
+r rcx rdx r8
+.echo === Try allocating 64 bytes via same heap ===
+.dvalloc /b 0 1000
+.echo === Check heap with !heap ===
+!heap -a @rcx
+q

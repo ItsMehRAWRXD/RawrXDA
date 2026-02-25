@@ -1,0 +1,15 @@
+* BP1: After HeapCreate stores to g_hHeap, before BeaconRouterInit call
+bp RawrXD+0x1034 ".echo ===BEFORE_BEACON_INIT===; dq RawrXD+0x6008 L1; gc"
+* BP2: Inside BeaconRouterInit, at the HeapAlloc call instruction
+bp RawrXD+0x1e87 ".echo ===HEAPALLOC_CALL===; r rcx; r rdx; r r8; r rbx; gc"
+* BP3: After HeapAlloc returns (test rax, rax)
+bp RawrXD+0x1e8c ".echo ===HEAPALLOC_RET===; r rax; gc"
+* BP4: At the store instruction mov [rcx+rbx*8], rax
+bp RawrXD+0x1e98 ".echo ===STORE===; r rax; r rcx; r rbx; gc"
+* BP5: alloc_fail path
+bp RawrXD+0x1eab ".echo ===ALLOC_FAIL_PATH===; gc"
+* BP6: success exit
+bp RawrXD+0x1ea3 ".echo ===ALLOC_SUCCESS===; dq RawrXD+0x3c860 L10; gc"
+g
+.echo ===CRASHED_OR_EXITED===
+q

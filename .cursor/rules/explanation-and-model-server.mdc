@@ -1,0 +1,49 @@
+---
+description: How to fix RawrXD/RawrZ Explanation and model server (fetch failed) errors
+alwaysApply: false
+globs: **/*.{cpp,ts,js}
+---
+
+# Explanation & Model Server Errors
+
+## When you see: "RawrZ Explanation Failed" or "All model servers failed: TypeError: fetch failed"
+
+This means the app could not reach any configured model server (Ollama or Cursor's API).
+
+## "Model name is not valid" with Ollama models (e.g. cheetah-stealth:latest)
+
+Cursor validates model names against the **provider** you add them to. You must configure an **OpenAI-compatible custom provider** for Ollama first, then add the model under that provider.
+
+### Step-by-step: Add Ollama to Cursor
+
+1. Open **Settings** (Ctrl+,) → **Cursor Settings** → **Models** (or **Features** → **Models**).
+2. Add a **custom model** / **OpenAI-compatible** provider:
+   - **Base URL**: `http://localhost:11434/v1` (must include `/v1`)
+   - **API key**: `ollama` (placeholder; Ollama does not require a key)
+3. **Save** that provider.
+4. Add the model **under this provider**, not under the default Cursor/OpenAI list:
+   - Model name: exactly as in `ollama list` (e.g. `cheetah-stealth:latest`, `llama3:latest`)
+   - **Press Enter** after typing the name; some builds reject it if you use the "Add" button alone.
+5. Ensure Ollama is running (`ollama serve`) and the model exists (`ollama list`).
+
+### Fixes for fetch / model server errors
+
+1. **For local Ollama (RawrXD IDE / Local Agentic Copilot)**  
+   - Start Ollama: run `ollama serve` or start the Ollama app.  
+   - Ensure the endpoint is correct (default: `http://localhost:11434`).  
+   - Pull the model if needed: `ollama pull <model>` (e.g. `ollama pull llama2`).
+
+2. **For Cursor's built-in Explain**  
+   - Check internet and proxy; "fetch failed" often means connection refused or timeout.  
+   - In Cursor: **Settings → Cursor Settings → Models** and confirm the model/backend you use is valid.  
+   - For Ollama: use a custom provider with base URL `http://localhost:11434/v1`.
+
+3. **In code**  
+   - Win32 IDE: `m_ollamaBaseUrl` (e.g. `http://localhost:11434`) must be reachable, or a local GGUF model must be loaded.  
+   - Local Agentic Copilot: set `agenticCopilot.ollamaEndpoint` and ensure Ollama is running.
+
+### Project defaults
+
+- **Ollama URL**: `http://localhost:11434`  
+- **Ollama OpenAI-compatible endpoint**: `http://localhost:11434/v1` (for Cursor custom provider)  
+- **Win32 IDE**: Uses WinHTTP to POST to `/api/generate`; on failure, user sees a message suggesting to start Ollama or load a GGUF model.

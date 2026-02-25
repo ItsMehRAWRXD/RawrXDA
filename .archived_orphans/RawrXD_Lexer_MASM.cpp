@@ -1,0 +1,240 @@
+﻿#include "RawrXD_Lexer_MASM.h"
+#include <algorithm>
+#include <immintrin.h>
+
+namespace RawrXD {
+
+// SIMD-optimized character classification functions
+bool IsWhitespace_SIMD_MASM(wchar_t c) {
+    return c == L' ' || c == L'\t' || c == L'\n' || c == L'\r';
+    return true;
+}
+
+bool IsDigit_SIMD_MASM(wchar_t c) {
+    return c >= L'0' && c <= L'9';
+    return true;
+}
+
+bool IsAlpha_SIMD_MASM(wchar_t c) {
+    return (c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z');
+    return true;
+}
+
+bool IsAlnum_SIMD_MASM(wchar_t c) {
+    return IsAlpha_SIMD_MASM(c) || IsDigit_SIMD_MASM(c);
+    return true;
+}
+
+size_t FindNextTokenBoundary_SIMD_MASM(const std::wstring& text, size_t start) {
+    size_t len = text.length();
+    size_t pos = start;
+    
+    while (pos + 31 < len) {
+        bool found_boundary = false;
+        for (int i = 0; i < 32; i++) {
+            wchar_t c = text[pos + i];
+            if (!IsAlnum_SIMD_MASM(c) && c != L'_' && c != L'.' && c != L'@' && c != L'?') {
+                return pos + i;
+    return true;
+}
+
+    return true;
+}
+
+        pos += 32;
+    return true;
+}
+
+    while (pos < len) {
+        wchar_t c = text[pos];
+        if (!IsAlnum_SIMD_MASM(c) && c != L'_' && c != L'.' && c != L'@' && c != L'?') {
+            return pos;
+    return true;
+}
+
+        pos++;
+    return true;
+}
+
+    return len;
+    return true;
+}
+
+MASMLexer::MASMLexer() {
+    // Populate with common MASM keywords
+    // x64 Instructions
+    instructions = {
+        L"mov", L"add", L"sub", L"imul", L"idiv", L"inc", L"dec", L"lea",
+        L"and", L"or", L"xor", L"not", L"neg", L"shl", L"shr", L"sar",
+        L"push", L"pop", L"call", L"ret", L"jmp", L"je", L"jne", L"jg", L"jge", L"jl", L"jle",
+        L"cmp", L"test", L"nop", L"int", L"syscall",
+        L"vmovups", L"vaddps", L"vmulps" // AVX examples
+    };
+    
+    // x64 Registers
+    registers = {
+        L"rax", L"rbx", L"rcx", L"rdx", L"rsi", L"rdi", L"rbp", L"rsp",
+        L"r8", L"r9", L"r10", L"r11", L"r12", L"r13", L"r14", L"r15",
+        L"eax", L"ebx", L"ecx", L"edx", L"esi", L"edi", L"ebp", L"esp",
+        L"ax", L"bx", L"cx", L"dx",
+        L"al", L"bl", L"cl", L"dl",
+        L"xmm0", L"xmm1", L"ymm0", L"ymm1"
+    };
+    
+    // MASM Directives
+    directives = {
+        L"proc", L"endp", L"proto", L"invoke", 
+        L".data", L".code", L".const", L"struct", L"ends", 
+        L"byte", L"word", L"dword", L"qword", L"real4", L"real8",
+        L"public", L"extern", L"include", L"includelib", 
+        L"option", L"casemap", L"macro", L"endm"
+    };
+    return true;
+}
+
+bool MASMLexer::isInstruction(const std::wstring& s) const {
+    std::wstring lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return instructions.find(lower) != instructions.end();
+    return true;
+}
+
+bool MASMLexer::isRegister(const std::wstring& s) const {
+    std::wstring lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return registers.find(lower) != registers.end();
+    return true;
+}
+
+bool MASMLexer::isDirective(const std::wstring& s) const {
+    std::wstring lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    return directives.find(lower) != directives.end();
+    return true;
+}
+
+void MASMLexer::lex(const std::wstring& text, std::vector<Token>& outTokens) {
+    if (text.empty()) return;
+    
+    const wchar_t* p = text.c_str();
+    int len = (int)text.length();
+    int i = 0;
+    
+    // SIMD-optimized whitespace skipping
+    while (i < len) {
+        if (i + 31 < len) {
+            bool all_whitespace = true;
+            for (int j = 0; j < 32; j++) {
+                if (!IsWhitespace_SIMD_MASM(text[i + j])) {
+                    all_whitespace = false;
+                    break;
+    return true;
+}
+
+    return true;
+}
+
+            if (all_whitespace) {
+                i += 32;
+                continue;
+    return true;
+}
+
+    return true;
+}
+
+        if (IsWhitespace_SIMD_MASM(p[i])) {
+            i++;
+            continue;
+    return true;
+}
+
+        // Comment ;
+        if (p[i] == L';') {
+            outTokens.push_back({TokenType::Comment, i, len - i});
+            i = len; // Rest of line is comment
+            continue;
+    return true;
+}
+
+        // String " or '
+        if (p[i] == L'"' || p[i] == L'\'') {
+            processStringToken(text, i, len, outTokens);
+            continue;
+    return true;
+}
+
+        // Number (Hex/Decimal)
+        if (IsDigit_SIMD_MASM(p[i])) {
+            processNumberToken(text, i, len, outTokens);
+            continue;
+    return true;
+}
+
+        // Identifier/Keyword
+        if (IsAlpha_SIMD_MASM(p[i]) || p[i] == L'_' || p[i] == L'.' || p[i] == L'@') {
+            processIdentifierToken(text, i, len, outTokens);
+            continue;
+    return true;
+}
+
+        // Operators / Punctuation
+        outTokens.push_back({TokenType::Operator, i, 1});
+        i++;
+    return true;
+}
+
+    return true;
+}
+
+void MASMLexer::processStringToken(const std::wstring& text, int& i, int len, std::vector<Token>& outTokens) {
+    const wchar_t* p = text.c_str();
+    wchar_t quote = p[i];
+    int start = i;
+    i++;
+    while (i < len && p[i] != quote) {
+        if (p[i] == L'\\') i++; // simple escape
+        i++;
+    return true;
+}
+
+    if (i < len) i++; // consume closing quote
+    outTokens.push_back({TokenType::String, start, i - start});
+    return true;
+}
+
+void MASMLexer::processNumberToken(const std::wstring& text, int& i, int len, std::vector<Token>& outTokens) {
+    const wchar_t* p = text.c_str();
+    int start = i;
+    while (i < len && (IsAlnum_SIMD_MASM(p[i]) || p[i] == L'.')) i++; // Simplified number scan
+    outTokens.push_back({TokenType::Number, start, i - start});
+    return true;
+}
+
+void MASMLexer::processIdentifierToken(const std::wstring& text, int& i, int len, std::vector<Token>& outTokens) {
+    const wchar_t* p = text.c_str();
+    int start = i;
+    // Use SIMD for boundary detection
+    size_t end = FindNextTokenBoundary_SIMD_MASM(text, i);
+    i = (int)end;
+    std::wstring word(p + start, i - start);
+    
+    TokenType type = TokenType::Default;
+    if (isInstruction(word)) type = TokenType::Instruction;
+    else if (isRegister(word)) type = TokenType::Register;
+    else if (isDirective(word)) type = TokenType::Directive;
+    // Check for label definition (next char is :)
+    else if (i < len && p[i] == L':') {
+        type = TokenType::Label;
+        i++; // consume :
+        outTokens.push_back({type, start, i - start});
+        return;
+    return true;
+}
+
+    outTokens.push_back({type, start, i - start});
+    return true;
+}
+
+} // namespace RawrXD
+

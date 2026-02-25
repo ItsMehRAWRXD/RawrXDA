@@ -4,8 +4,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(RawrXD-Standalone-WebBridge VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Ensure static runtime for MSVC
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 # Find required packages (no Qt dependency!)
 find_package(Threads REQUIRED)
@@ -14,7 +19,8 @@ find_package(Threads REQUIRED)
 set(STANDALONE_SOURCES
     src/standalone_web_bridge.cpp
     src/standalone_main.cpp
-    src/gguf_proxy_server.cpp
+    src/agent/gguf_proxy_server.cpp
+    src/agent/agent_hot_patcher.cpp
     # Add other required source files here
 )
 
@@ -50,10 +56,11 @@ endif()
 install(TARGETS rawrxd-standalone
     RUNTIME DESTINATION bin
 )
-
+ 
 # Copy web interface to build directory
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/web)
 configure_file(standalone_interface.html ${CMAKE_BINARY_DIR}/web/standalone_interface.html COPYONLY)
-
+ 
 # Custom target to build and run
 add_custom_target(run-standalone
     COMMAND rawrxd-standalone

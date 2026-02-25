@@ -1,0 +1,1942 @@
+[
+  {
+    "path": "D:\\rawrxd\\backend\\rawrxd_backend.obj",
+    "length": 306455,
+    "machine": "AMD64",
+    "sectionCount": 3,
+    "symbolCount": 119,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 2069,
+        "pointerToRawData": 140,
+        "pointerToRelocations": 2210,
+        "numberOfRelocations": 170,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 299184,
+        "pointerToRawData": 3910,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 303094,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CloseHandle",
+      "CreateFileA",
+      "CreateMutexA",
+      "CreateThread",
+      "ExitProcess",
+      "FindClose",
+      "FindFirstFileA",
+      "FindNextFileA",
+      "GetLastError",
+      "GetStdHandle",
+      "ReleaseMutex",
+      "SetConsoleCtrlHandler",
+      "SetFilePointer",
+      "Sleep",
+      "WSACleanup",
+      "WSAGetLastError",
+      "WSAStartup",
+      "WaitForSingleObject",
+      "WriteConsoleA",
+      "WriteFile",
+      "_snprintf",
+      "_stricmp",
+      "accept",
+      "atoi",
+      "bind",
+      "closesocket",
+      "free",
+      "htons",
+      "listen",
+      "malloc",
+      "memcpy",
+      "memset",
+      "printf",
+      "recv",
+      "send",
+      "setsockopt",
+      "socket",
+      "sprintf",
+      "strcat",
+      "strcpy",
+      "strlen",
+      "strncpy",
+      "strstr"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\RawrXD_AVX512_SIMD.obj",
+    "length": 3863,
+    "machine": "AMD64",
+    "sectionCount": 5,
+    "symbolCount": 40,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 1554,
+        "pointerToRawData": 220,
+        "pointerToRelocations": 1774,
+        "numberOfRelocations": 35,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 400,
+        "pointerToRawData": 2124,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 24,
+        "pointerToRawData": 2524,
+        "pointerToRelocations": 2548,
+        "numberOfRelocations": 6,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 36,
+        "pointerToRawData": 2608,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 124,
+        "pointerToRawData": 2644,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\RawrXD_CLI_Titan.obj",
+    "length": 7110,
+    "machine": "AMD64",
+    "sectionCount": 7,
+    "symbolCount": 68,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 594,
+        "pointerToRawData": 300,
+        "pointerToRelocations": 894,
+        "numberOfRelocations": 51,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 525,
+        "pointerToRawData": 1404,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 12580,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 24,
+        "pointerToRawData": 1929,
+        "pointerToRelocations": 1954,
+        "numberOfRelocations": 6,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 28,
+        "pointerToRawData": 2014,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 2476,
+        "pointerToRawData": 2042,
+        "pointerToRelocations": 4518,
+        "numberOfRelocations": 78,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$T",
+        "sizeOfRawData": 60,
+        "pointerToRawData": 5298,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "ExitProcess",
+      "GetCommandLineA",
+      "GetStdHandle",
+      "ReadFile",
+      "Sleep",
+      "Titan_BeginStreamingInference",
+      "Titan_ConsumeToken",
+      "Titan_CreateContext",
+      "Titan_InitOrchestrator",
+      "Titan_LoadModel_GGUF",
+      "Titan_Shutdown",
+      "WriteFile",
+      "lstrlenA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\RawrXD_GUI_Titan.obj",
+    "length": 13362,
+    "machine": "AMD64",
+    "sectionCount": 7,
+    "symbolCount": 100,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 2096,
+        "pointerToRawData": 300,
+        "pointerToRelocations": 2396,
+        "numberOfRelocations": 136,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 280,
+        "pointerToRawData": 3756,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 20952,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 24,
+        "pointerToRawData": 4036,
+        "pointerToRelocations": 4060,
+        "numberOfRelocations": 6,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 28,
+        "pointerToRawData": 4120,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 4944,
+        "pointerToRawData": 4148,
+        "pointerToRelocations": 9092,
+        "numberOfRelocations": 102,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$T",
+        "sizeOfRawData": 612,
+        "pointerToRawData": 10112,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CreateFontA",
+      "CreateWindowExA",
+      "DefWindowProcA",
+      "DeleteObject",
+      "DispatchMessageA",
+      "GetClientRect",
+      "GetDlgItem",
+      "GetMessageA",
+      "GetModuleHandleA",
+      "GetProcessHeap",
+      "HeapAlloc",
+      "HeapFree",
+      "KillTimer",
+      "LoadCursorA",
+      "LoadIconA",
+      "LoadLibraryA",
+      "PostQuitMessage",
+      "RegisterClassExA",
+      "SendMessageA",
+      "SetFocus",
+      "SetTimer",
+      "SetWindowPos",
+      "SetWindowTextA",
+      "ShowWindow",
+      "Titan_BeginStreamingInference",
+      "Titan_ConsumeToken",
+      "Titan_CreateContext",
+      "Titan_InitOrchestrator",
+      "Titan_LoadModel_GGUF",
+      "Titan_Shutdown",
+      "TranslateMessage",
+      "UpdateWindow",
+      "lstrlenA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\RawrXD_PatternBridge.obj",
+    "length": 1883,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 23,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 609,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 790,
+        "numberOfRelocations": 9,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 160,
+        "pointerToRawData": 880,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 124,
+        "pointerToRawData": 1040,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 126,
+        "pointerToRawData": 1164,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [],
+    "drectve": "/EXPORT:ClassifyPattern /EXPORT:InitializePatternEngine /EXPORT:ShutdownPatternEngine /EXPORT:GetPatternStats /EXPORT:DllMain"
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\RawrXD_Titan.obj",
+    "length": 3452,
+    "machine": "AMD64",
+    "sectionCount": 6,
+    "symbolCount": 30,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 39,
+        "pointerToRawData": 260,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 4,
+        "pointerToRawData": 299,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 28,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 1408,
+        "pointerToRawData": 303,
+        "pointerToRelocations": 1712,
+        "numberOfRelocations": 32,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$T",
+        "sizeOfRawData": 612,
+        "pointerToRawData": 2032,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 47,
+        "pointerToRawData": 2644,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [],
+    "drectve": "/DEFAULTLIB:kernel32.lib /DEFAULTLIB:ntdll.lib"
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\rawrxd-scc-nasm64.obj",
+    "length": 28989,
+    "machine": "AMD64",
+    "sectionCount": 3,
+    "symbolCount": 594,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 2426,
+        "pointerToRawData": 140,
+        "pointerToRelocations": 2566,
+        "numberOfRelocations": 49,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 39863312,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 5192,
+        "pointerToRawData": 3056,
+        "pointerToRelocations": 8248,
+        "numberOfRelocations": 166,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "fclose",
+      "fopen",
+      "fread",
+      "fwrite",
+      "printf"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\bin\\Titan_Streaming_Orchestrator_Fixed.obj",
+    "length": 20463,
+    "machine": "AMD64",
+    "sectionCount": 8,
+    "symbolCount": 152,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 2094,
+        "pointerToRawData": 340,
+        "pointerToRelocations": 2434,
+        "numberOfRelocations": 83,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 136,
+        "pointerToRawData": 3264,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 288,
+        "pointerToRawData": 3400,
+        "pointerToRelocations": 3688,
+        "numberOfRelocations": 72,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 268,
+        "pointerToRawData": 4408,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 140,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 8468,
+        "pointerToRawData": 4676,
+        "pointerToRelocations": 13144,
+        "numberOfRelocations": 180,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$T",
+        "sizeOfRawData": 1068,
+        "pointerToRawData": 14944,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 48,
+        "pointerToRawData": 16012,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "AcquireSRWLockExclusive",
+      "AcquireSRWLockShared",
+      "CloseHandle",
+      "CreateEventA",
+      "CreateFileA",
+      "CreateFileMappingA",
+      "CreateThread",
+      "ExitThread",
+      "GetFileSizeEx",
+      "GetLastError",
+      "GetProcessHeap",
+      "HeapAlloc",
+      "HeapFree",
+      "InitializeSRWLock",
+      "MapViewOfFile",
+      "QueryPerformanceCounter",
+      "QueryPerformanceFrequency",
+      "ReadFile",
+      "ReleaseSRWLockExclusive",
+      "ReleaseSRWLockShared",
+      "ResetEvent",
+      "RtlCopyMemory",
+      "RtlFillMemory",
+      "RtlZeroMemory",
+      "SetEvent",
+      "SetLastError",
+      "Sleep",
+      "TryAcquireSRWLockExclusive",
+      "UnmapViewOfFile",
+      "VirtualAlloc",
+      "VirtualFree",
+      "WSACleanup",
+      "WSAGetLastError",
+      "WSAStartup",
+      "WaitForMultipleObjects",
+      "WaitForSingleObject",
+      "WriteFile",
+      "bind",
+      "closesocket",
+      "htons",
+      "inet_addr",
+      "recvfrom",
+      "sendto",
+      "socket"
+    ],
+    "drectve": "/DEFAULTLIB:kernel32.lib /DEFAULTLIB:ws2_32.lib"
+  },
+  {
+    "path": "D:\\rawrxd\\build_prod\\CMakeFiles\\4.2.0\\CompilerIdC\\CMakeCCompilerId.obj",
+    "length": 2192,
+    "machine": "AMD64",
+    "sectionCount": 11,
+    "symbolCount": 37,
+    "sections": [
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 47,
+        "pointerToRawData": 460,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1051136,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 152,
+        "pointerToRawData": 507,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 40,
+        "pointerToRawData": 659,
+        "pointerToRelocations": 699,
+        "numberOfRelocations": 5,
+        "characteristics": 3225419840,
+        "isComdat": false
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 20,
+        "pointerToRawData": 749,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 59,
+        "pointerToRawData": 769,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 23,
+        "pointerToRawData": 828,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 15,
+        "pointerToRawData": 851,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 26,
+        "pointerToRawData": 866,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 29,
+        "pointerToRawData": 892,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 91,
+        "pointerToRawData": 921,
+        "pointerToRelocations": 1012,
+        "numberOfRelocations": 6,
+        "characteristics": 1615859744,
+        "isComdat": true
+      },
+      {
+        "name": ".chks64",
+        "sizeOfRawData": 88,
+        "pointerToRawData": 1072,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [],
+    "drectve": "   /DEFAULTLIB:\u0022LIBCMT\u0022 /DEFAULTLIB:\u0022OLDNAMES\u0022"
+  },
+  {
+    "path": "D:\\rawrxd\\build_prod\\CMakeFiles\\4.2.0\\CompilerIdCXX\\CMakeCXXCompilerId.obj",
+    "length": 2254,
+    "machine": "AMD64",
+    "sectionCount": 11,
+    "symbolCount": 37,
+    "sections": [
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 47,
+        "pointerToRawData": 460,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1051136,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 156,
+        "pointerToRawData": 507,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 40,
+        "pointerToRawData": 663,
+        "pointerToRelocations": 703,
+        "numberOfRelocations": 5,
+        "characteristics": 3225419840,
+        "isComdat": false
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 20,
+        "pointerToRawData": 753,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 59,
+        "pointerToRawData": 773,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 23,
+        "pointerToRawData": 832,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 15,
+        "pointerToRawData": 855,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 26,
+        "pointerToRawData": 870,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".rdata",
+        "sizeOfRawData": 29,
+        "pointerToRawData": 896,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077940288,
+        "isComdat": true
+      },
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 91,
+        "pointerToRawData": 925,
+        "pointerToRelocations": 1016,
+        "numberOfRelocations": 6,
+        "characteristics": 1615859744,
+        "isComdat": true
+      },
+      {
+        "name": ".chks64",
+        "sizeOfRawData": 88,
+        "pointerToRawData": 1076,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [],
+    "drectve": "   /DEFAULTLIB:\u0022LIBCMT\u0022 /DEFAULTLIB:\u0022OLDNAMES\u0022"
+  },
+  {
+    "path": "D:\\rawrxd\\build_prod\\CMakeFiles\\ShowIncludes\\main.obj",
+    "length": 618,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 12,
+    "sections": [
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 47,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1051136,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 136,
+        "pointerToRawData": 227,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 3,
+        "pointerToRawData": 363,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1615859744,
+        "isComdat": true
+      },
+      {
+        "name": ".chks64",
+        "sizeOfRawData": 32,
+        "pointerToRawData": 366,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [],
+    "drectve": "   /DEFAULTLIB:\u0022LIBCMT\u0022 /DEFAULTLIB:\u0022OLDNAMES\u0022"
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\ada_compiler_from_scratch.obj",
+    "length": 981,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 22,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 122,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 122,
+        "pointerToRelocations": 240,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\assembly_compiler_from_scratch.obj",
+    "length": 1034,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 27,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 127,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 127,
+        "pointerToRelocations": 245,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\bash_compiler_from_scratch.obj",
+    "length": 27531,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 57,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 24649,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 24749,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 498,
+        "pointerToRawData": 24749,
+        "pointerToRelocations": 25247,
+        "numberOfRelocations": 12,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\c___compiler_from_scratch.obj",
+    "length": 975,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 22,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 122,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 122,
+        "pointerToRelocations": 240,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\c__compiler_from_scratch.obj",
+    "length": 955,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 21,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 121,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 121,
+        "pointerToRelocations": 239,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\c_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\cadence_compiler_from_scratch.obj",
+    "length": 1022,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 26,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 126,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 126,
+        "pointerToRelocations": 244,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\carbon_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\clojure_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\cobol_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\cross_compiler.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\crystal_compiler_from_scratch.obj",
+    "length": 1023,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 26,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 126,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 126,
+        "pointerToRelocations": 244,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\dart_compiler_from_scratch.obj",
+    "length": 979,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 23,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 123,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 123,
+        "pointerToRelocations": 241,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\delphi_compiler_from_scratch.obj",
+    "length": 1022,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 25,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 125,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 125,
+        "pointerToRelocations": 243,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\elixir_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\eon_bootstrap_compiler.obj",
+    "length": 238189,
+    "machine": "AMD64",
+    "sectionCount": 3,
+    "symbolCount": 118,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 232273,
+        "pointerToRawData": 140,
+        "pointerToRelocations": 232413,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 1053696,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371328,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 1168,
+        "pointerToRawData": 232413,
+        "pointerToRelocations": 233581,
+        "numberOfRelocations": 45,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\eon_compiler_complete.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\eon_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\eon_compiler_main.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\erlang_compiler_from_scratch.obj",
+    "length": 1013,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 25,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 125,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 125,
+        "pointerToRelocations": 243,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\f__compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\fortran_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\full_eon_compiler.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\go_compiler_from_scratch.obj",
+    "length": 958,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 21,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 121,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 121,
+        "pointerToRelocations": 239,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\haskell_compiler_from_scratch.obj",
+    "length": 1025,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 26,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 126,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 126,
+        "pointerToRelocations": 244,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\jai_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\java_compiler_from_scratch.obj",
+    "length": 982,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 23,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 123,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 123,
+        "pointerToRelocations": 241,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\javascript_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\julia_compiler_from_scratch.obj",
+    "length": 1021,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 24,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 124,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 124,
+        "pointerToRelocations": 242,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\kotlin_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\llvm_ir_compiler_from_scratch.obj",
+    "length": 1020,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 26,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 126,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 126,
+        "pointerToRelocations": 244,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\lua_compiler_from_scratch.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\masm_ide\\bin\\working_ide_masm.obj",
+    "length": 2085,
+    "machine": "AMD64",
+    "sectionCount": 3,
+    "symbolCount": 30,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 452,
+        "pointerToRawData": 140,
+        "pointerToRelocations": 592,
+        "numberOfRelocations": 41,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 180,
+        "pointerToRawData": 1002,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 112,
+        "pointerToRawData": 1182,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CreateWindowExA",
+      "DefWindowProcA",
+      "DispatchMessageA",
+      "ExitProcess",
+      "GetMessageA",
+      "GetModuleHandleA",
+      "GetStockObject",
+      "LoadCursorA",
+      "LoadIconA",
+      "PostQuitMessage",
+      "RegisterClassExA",
+      "ShowWindow",
+      "TranslateMessage",
+      "UpdateWindow"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\master_universal_compiler.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\matlab_compiler_from_scratch.obj",
+    "length": 1017,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 25,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 125,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 125,
+        "pointerToRelocations": 243,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\motoko_compiler_from_scratch.obj",
+    "length": 1012,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 25,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 125,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 125,
+        "pointerToRelocations": 243,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\move_compiler_from_scratch.obj",
+    "length": 987,
+    "machine": "AMD64",
+    "sectionCount": 2,
+    "symbolCount": 24,
+    "sections": [
+      {
+        "name": ".data",
+        "sizeOfRawData": 23,
+        "pointerToRawData": 100,
+        "pointerToRelocations": 123,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".text",
+        "sizeOfRawData": 118,
+        "pointerToRawData": 123,
+        "pointerToRelocations": 241,
+        "numberOfRelocations": 4,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "compiler_state",
+      "error_count",
+      "warning_count"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\multi_target_compiler.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\compilers\\n0mn0m_cross_platform_compiler.obj",
+    "length": 173,
+    "machine": "AMD64",
+    "sectionCount": 1,
+    "symbolCount": 6,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 1,
+        "pointerToRawData": 60,
+        "pointerToRelocations": 61,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "start"
+    ]
+  }
+]

@@ -1,0 +1,4 @@
+* Step into HeapAlloc to see why it fails
+bp RawrXD+0x1e87 ".echo ===BEFORE_HEAPALLOC===; r rcx; r rdx; r r8; !heap -s rcx; gc"
+g
+q

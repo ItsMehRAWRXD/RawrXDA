@@ -1,0 +1,33 @@
+/NOLOGO
+/MACHINE:X64
+/INCREMENTAL:NO
+/OPT:REF
+/OPT:ICF
+/OUT:"D:\rawrxd\build_prod\RawrXD-Monolithic.exe"
+/SUBSYSTEM:WINDOWS
+/LIBPATH:"C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\lib\x64"
+/LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64"
+/LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64"
+/ENTRY:WinMain
+kernel32.lib
+user32.lib
+gdi32.lib
+advapi32.lib
+shell32.lib
+ole32.lib
+oleaut32.lib
+comdlg32.lib
+comctl32.lib
+shlwapi.lib
+D:\rawrxd\obj\asm_monolithic_agent.obj
+D:\rawrxd\obj\asm_monolithic_beacon.obj
+D:\rawrxd\obj\asm_monolithic_dap.obj
+D:\rawrxd\obj\asm_monolithic_inference.obj
+D:\rawrxd\obj\asm_monolithic_lsp.obj
+D:\rawrxd\obj\asm_monolithic_main.obj
+D:\rawrxd\obj\asm_monolithic_model_loader.obj
+D:\rawrxd\obj\asm_monolithic_swarm_coordinator.obj
+D:\rawrxd\obj\asm_monolithic_swarm.obj
+D:\rawrxd\obj\asm_monolithic_tasks.obj
+D:\rawrxd\obj\asm_monolithic_testing.obj
+D:\rawrxd\obj\asm_monolithic_ui.obj

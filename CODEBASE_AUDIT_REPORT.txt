@@ -1,0 +1,36 @@
+﻿RawrXD Codebase Audit Report
+Generated: 02/16/2026 06:40:38
+========================================
+
+TOTAL SOURCE FILES: 2787
+Target Threshold: 3500
+Status: BELOW threshold
+
+FILE BREAKDOWN:
+  .cpp: 1038
+  .h: 690
+  .asm: 577
+  .hpp: 245
+  .c: 223
+  .inc: 14
+
+
+QT DEPENDENCIES: 245 files
+WIN32 API USAGE: 188 files
+MASM FILES: 577 files
+CMAKE FILES: 93 files
+BUILD FILES: 107 files
+
+CONFIGURATION REQUIREMENTS FOR QT-FREE WIN32/X64 MASM IDE:
+- Remove all Qt dependencies from 245 files
+- Ensure Win32 API is properly integrated
+- Configure MASM build system for 577 assembly files
+- Update 93 CMakeLists.txt files for Qt-free builds
+- Verify 107 build system files are configured correctly
+
+RECOMMENDATION:
+Codebase is BELOW 3500 files threshold. Current count: 2787 files.
+    Focus on:
+    1. Removing Qt dependencies from 245 files
+    2. Ensuring Win32 API integration is complete
+    3. Configuring MASM build system properly

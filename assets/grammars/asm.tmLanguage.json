@@ -1,0 +1,36 @@
+{
+    "scopeName": "source.asm",
+    "patterns": [
+        {
+            "name": "comment.line.semicolon.asm",
+            "match": ";.*$"
+        },
+        {
+            "name": "keyword.control.asm",
+            "match": "\\b(mov|add|sub|mul|div|cmp|jmp|je|jne|jl|jg|call|ret|push|pop|invoke)\\b"
+        },
+        {
+            "name": "variable.other.register.asm",
+            "match": "\\b(eax|ebx|ecx|edx|esi|edi|esp|ebp|ax|bx|cx|dx|al|ah|bl|bh|cl|ch|dl|dh)\\b"
+        },
+        {
+            "name": "keyword.other.directive.asm",
+            "match": "\\.(386|model|code|data|stack|const)\\b"
+        },
+        {
+            "name": "string.quoted.double.asm",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "name": "constant.character.escape.asm",
+                    "match": "\\\\."
+                }
+            ]
+        },
+        {
+            "name": "constant.numeric.asm",
+            "match": "\\b[0-9]+[hH]?\\b"
+        }
+    ]
+}

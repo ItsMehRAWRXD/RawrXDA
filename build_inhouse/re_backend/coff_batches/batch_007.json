@@ -1,0 +1,1212 @@
+[
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_MultiResponse.obj",
+    "length": 13010236,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_NativeDebugPanel.obj",
+    "length": 13133806,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_NetworkPanel.obj",
+    "length": 12928148,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_OutlinePanel.obj",
+    "length": 13010036,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_PDBSymbols.obj",
+    "length": 13113296,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_PipelinePanel.obj",
+    "length": 12869885,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_PlanExecutor.obj",
+    "length": 13155336,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_PowerShell.obj",
+    "length": 13366972,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_QuickWins.obj",
+    "length": 13804877,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_SemanticPanel.obj",
+    "length": 12901943,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Session.obj",
+    "length": 12929547,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_ShortcutEditor.obj",
+    "length": 12930309,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Sidebar.obj",
+    "length": 14465816,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Sidebar_Qt_Backup_20260219_084045.obj",
+    "length": 1881,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_SourceFilePicker.obj",
+    "length": 12932666,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_StaticAnalysisPanel.obj",
+    "length": 12898332,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_StreamingUX.obj",
+    "length": 12905572,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_SubAgent.obj",
+    "length": 13262077,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_SwarmModelSelector.obj",
+    "length": 1805,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_SwarmPanel.obj",
+    "length": 13018169,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_SyntaxHighlight.obj",
+    "length": 13417598,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Telemetry.obj",
+    "length": 13434840,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_TelemetryDashboard.obj",
+    "length": 13125600,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_TelemetryPanel.obj",
+    "length": 13158030,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_TestExplorerTree.obj",
+    "length": 12934353,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Themes.obj",
+    "length": 13169172,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Tier3Cosmetics.obj",
+    "length": 13349479,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Tier3Polish.obj",
+    "length": 13230139,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Tier5Cosmetics.obj",
+    "length": 12825070,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_VoiceChat.obj",
+    "length": 13000137,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_VSCodeUI.obj",
+    "length": 13214353,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_VSCodeUI_Qt_Backup_20260219_084045.obj",
+    "length": 1885,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_WebView2.obj",
+    "length": 13006166,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Window.obj",
+    "length": 12869528,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32TerminalManager.obj",
+    "length": 1929213,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj-native\\avx512_matmul.obj",
+    "length": 1456,
+    "machine": "AMD64",
+    "sectionCount": 5,
+    "symbolCount": 17,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 502,
+        "pointerToRawData": 220,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 8,
+        "pointerToRawData": 722,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 48,
+        "pointerToRawData": 730,
+        "pointerToRelocations": 778,
+        "numberOfRelocations": 12,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 64,
+        "pointerToRawData": 898,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 962,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\obj-native\\bpe_tokenizer.obj",
+    "length": 1410,
+    "machine": "AMD64",
+    "sectionCount": 5,
+    "symbolCount": 19,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 368,
+        "pointerToRawData": 220,
+        "pointerToRelocations": 588,
+        "numberOfRelocations": 2,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 16,
+        "pointerToRawData": 608,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 48,
+        "pointerToRawData": 624,
+        "pointerToRelocations": 672,
+        "numberOfRelocations": 12,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 44,
+        "pointerToRawData": 792,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 836,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\obj-native\\gguf_native_loader.obj",
+    "length": 1172913,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj-native\\http_native_server.obj",
+    "length": 1149151,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj-native\\main_native.obj",
+    "length": 3801760,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj-native\\q4_0_dequant.obj",
+    "length": 1132,
+    "machine": "AMD64",
+    "sectionCount": 5,
+    "symbolCount": 17,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 238,
+        "pointerToRawData": 220,
+        "pointerToRelocations": 458,
+        "numberOfRelocations": 3,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 20,
+        "pointerToRawData": 488,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 24,
+        "pointerToRawData": 508,
+        "pointerToRelocations": 532,
+        "numberOfRelocations": 6,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 28,
+        "pointerToRawData": 592,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 620,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\omega_pro.obj",
+    "length": 3210,
+    "machine": "0x014C",
+    "sectionCount": 3,
+    "symbolCount": 42,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 615,
+        "pointerToRawData": 140,
+        "pointerToRelocations": 756,
+        "numberOfRelocations": 31,
+        "characteristics": 1613758496,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 957,
+        "pointerToRawData": 1066,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 89,
+        "pointerToRawData": 2023,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "_CreateFileA@28",
+      "_ExitProcess@4",
+      "_GetFileSize@8",
+      "_GetStdHandle@4",
+      "_ReadConsoleA@20",
+      "_WriteConsoleA@20"
+    ],
+    "drectve": "-defaultlib:C:\\masm32\\lib\\kernel32.lib -defaultlib:C:\\masm32\\lib\\user32.lib -entry:start"
+  },
+  {
+    "path": "D:\\rawrxd\\OmegaPolyglot_v5.obj",
+    "length": 27384,
+    "machine": "0x014C",
+    "sectionCount": 4,
+    "symbolCount": 289,
+    "sections": [
+      {
+        "name": ".text",
+        "sizeOfRawData": 8329,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 8510,
+        "numberOfRelocations": 586,
+        "characteristics": 1613758496,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 5393,
+        "pointerToRawData": 14370,
+        "pointerToRelocations": 19764,
+        "numberOfRelocations": 72,
+        "characteristics": 3224371264,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 3178,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3224371328,
+        "isComdat": false
+      },
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 89,
+        "pointerToRawData": 20484,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "_CloseHandle@4",
+      "_CreateFileA@28",
+      "_CreateFileMappingA@24",
+      "_ExitProcess@4",
+      "_GetFileSize@8",
+      "_GetStdHandle@4",
+      "_MapViewOfFile@20",
+      "_ReadConsoleA@20",
+      "_UnmapViewOfFile@4",
+      "_WriteConsoleA@20",
+      "_WriteFile@20",
+      "_lstrcatA@8",
+      "_lstrcmpiA@8",
+      "_lstrlenA@4",
+      "_wsprintfA"
+    ],
+    "drectve": "-defaultlib:C:\\masm32\\lib\\kernel32.lib -defaultlib:C:\\masm32\\lib\\user32.lib -entry:start"
+  },
+  {
+    "path": "D:\\rawrxd\\OrganizedPiProject\\misc\\Desktop\\opengl_main.obj",
+    "length": 1640128,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\proof.obj",
+    "length": 2496,
+    "machine": "AMD64",
+    "sectionCount": 6,
+    "symbolCount": 38,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 481,
+        "pointerToRawData": 260,
+        "pointerToRelocations": 742,
+        "numberOfRelocations": 29,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 269,
+        "pointerToRawData": 1032,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 4160,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 48,
+        "pointerToRawData": 1301,
+        "pointerToRelocations": 1350,
+        "numberOfRelocations": 12,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 48,
+        "pointerToRawData": 1470,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 100,
+        "pointerToRawData": 1518,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CloseHandle",
+      "CreateFileA",
+      "ExitProcess",
+      "GetStdHandle",
+      "ReadFile",
+      "WriteFile"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\RawrXD_Complete_Master_Implementation.obj",
+    "length": 4237,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 76,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 1175,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 1356,
+        "numberOfRelocations": 21,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 151,
+        "pointerToRawData": 1566,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 48,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 132,
+        "pointerToRawData": 1717,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "AcquireSRWLockExclusive",
+      "CloseHandle",
+      "CreateEvent",
+      "CreateFile",
+      "CreateFileMapping",
+      "CreateIoCompletionPort",
+      "CreateJobObject",
+      "CreateMutex",
+      "CreateSemaphore",
+      "CreateThread",
+      "FindFirstChangeNotification",
+      "FindNextChangeNotification",
+      "GetFileSizeEx",
+      "GetLocalTime",
+      "GetProcessHeap",
+      "GetSystemInfo",
+      "GetTickCount64",
+      "HeapAlloc",
+      "HeapCreate",
+      "HeapDestroy",
+      "HeapFree",
+      "InitializeConditionVariable",
+      "InitializeSRWLock",
+      "MapViewOfFile",
+      "QueryPerformanceCounter",
+      "QueryPerformanceFrequency",
+      "ReadFile",
+      "ReleaseMutex",
+      "ReleaseSRWLockExclusive",
+      "ReleaseSemaphore",
+      "ResetEvent",
+      "SetEvent",
+      "SetInformationJobObject",
+      "Sleep",
+      "SleepConditionVariableSRW",
+      "UnmapViewOfFile",
+      "VirtualAlloc",
+      "VirtualFree",
+      "WaitForMultipleObjects",
+      "WaitForSingleObject",
+      "WakeAllConditionVariable",
+      "WakeConditionVariable",
+      "WriteFile",
+      "wsprintfA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\RawrXD_IDE_unified.obj",
+    "length": 808904,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 612,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 28950,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 29130,
+        "numberOfRelocations": 1449,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 745280,
+        "pointerToRawData": 43620,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 112,
+        "pointerToRawData": 788900,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".drectve",
+        "sizeOfRawData": 97,
+        "pointerToRawData": 789012,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 2560,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CloseHandle",
+      "ContinueDebugEvent",
+      "CopyFileA",
+      "CreateFileA",
+      "CreateProcessA",
+      "CreateRemoteThread",
+      "CreateToolhelp32Snapshot",
+      "DebugActiveProcess",
+      "DebugActiveProcessStop",
+      "DebugSetProcessKillOnExit",
+      "ExitProcess",
+      "FlushInstructionCache",
+      "FormatMessageA",
+      "FreeLibrary",
+      "GetCommandLineA",
+      "GetEnvironmentVariableA",
+      "GetFileSize",
+      "GetLastError",
+      "GetLocalTime",
+      "GetModuleFileNameA",
+      "GetModuleHandleA",
+      "GetProcAddress",
+      "GetStdHandle",
+      "GetThreadContext",
+      "GetTickCount64",
+      "IsUserAnAdmin",
+      "LoadLibraryA",
+      "LocalFree",
+      "OpenProcess",
+      "OpenThread",
+      "Process32First",
+      "Process32Next",
+      "ReadConsoleA",
+      "ReadFile",
+      "ReadProcessMemory",
+      "RegCloseKey",
+      "RegCreateKeyExA",
+      "RegDeleteTreeA",
+      "RegSetValueExA",
+      "ResumeThread",
+      "SetFilePointer",
+      "SetThreadContext",
+      "ShellExecuteA",
+      "Sleep",
+      "SuspendThread",
+      "VirtualAlloc",
+      "VirtualAllocEx",
+      "VirtualFree",
+      "VirtualProtect",
+      "VirtualQuery",
+      "WaitForDebugEvent",
+      "WaitForSingleObject",
+      "WriteConsoleA",
+      "WriteFile",
+      "WriteProcessMemory",
+      "lstrcatA",
+      "lstrcmpA",
+      "lstrcpyA",
+      "lstrlenA",
+      "wsprintfA"
+    ],
+    "drectve": "/DEFAULTLIB:kernel32.lib /DEFAULTLIB:user32.lib /DEFAULTLIB:advapi32.lib /DEFAULTLIB:shell32.lib"
+  },
+  {
+    "path": "D:\\rawrxd\\RawrXD_NativeHost.obj",
+    "length": 7970,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 95,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 2266,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 2446,
+        "numberOfRelocations": 157,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 1086,
+        "pointerToRawData": 4016,
+        "pointerToRelocations": 5102,
+        "numberOfRelocations": 9,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 83532,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 5192,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CloseHandle",
+      "ConnectNamedPipe",
+      "CreateFileA",
+      "CreateNamedPipeA",
+      "DisconnectNamedPipe",
+      "ExitProcess",
+      "FlushFileBuffers",
+      "GetCommandLineA",
+      "GetFileSize",
+      "GetLastError",
+      "GetStdHandle",
+      "GetTickCount64",
+      "ReadConsoleA",
+      "ReadFile",
+      "VirtualAlloc",
+      "VirtualFree",
+      "WriteConsoleA",
+      "WriteFile",
+      "lstrcmpA",
+      "lstrcpyA",
+      "lstrlenA",
+      "wsprintfA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\RawrXD_NetworkRelay.obj",
+    "length": 5956,
+    "machine": "AMD64",
+    "sectionCount": 7,
+    "symbolCount": 41,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 626,
+        "pointerToRawData": 300,
+        "pointerToRelocations": 926,
+        "numberOfRelocations": 14,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 8,
+        "pointerToRawData": 1066,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 16,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 72,
+        "pointerToRawData": 1074,
+        "pointerToRelocations": 1146,
+        "numberOfRelocations": 18,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 68,
+        "pointerToRawData": 1326,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 2952,
+        "pointerToRawData": 1394,
+        "pointerToRelocations": 4346,
+        "numberOfRelocations": 38,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$T",
+        "sizeOfRawData": 156,
+        "pointerToRawData": 4726,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "VirtualAlloc",
+      "__imp_RtlIpv4StringToAddressA",
+      "closesocket",
+      "recv",
+      "select",
+      "send"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\RawrXD_P2PRelay.obj",
+    "length": 9995,
+    "machine": "AMD64",
+    "sectionCount": 7,
+    "symbolCount": 75,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 1030,
+        "pointerToRawData": 300,
+        "pointerToRelocations": 1330,
+        "numberOfRelocations": 8,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 62,
+        "pointerToRawData": 1410,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 36,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".pdata",
+        "sizeOfRawData": 96,
+        "pointerToRawData": 1472,
+        "pointerToRelocations": 1568,
+        "numberOfRelocations": 24,
+        "characteristics": 1076887616,
+        "isComdat": false
+      },
+      {
+        "name": ".xdata",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 1808,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1077936192,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 4928,
+        "pointerToRawData": 1924,
+        "pointerToRelocations": 6852,
+        "numberOfRelocations": 88,
+        "characteristics": 1108344896,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$T",
+        "sizeOfRawData": 300,
+        "pointerToRawData": 7732,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "QueryPerformanceCounter",
+      "RtlRandomEx",
+      "VirtualAlloc",
+      "bind",
+      "closesocket",
+      "htonl",
+      "htons",
+      "inet_addr",
+      "ioctlsocket",
+      "ntohl",
+      "ntohs",
+      "recvfrom",
+      "select",
+      "sendto",
+      "socket"
+    ]
+  }
+]

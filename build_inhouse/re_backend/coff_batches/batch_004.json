@@ -1,0 +1,552 @@
+[
+  {
+    "path": "D:\\rawrxd\\obj\\core_final_gauntlet.obj",
+    "length": 3889797,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_flash_attention.obj",
+    "length": 3624619,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_gguf_dml_bridge.obj",
+    "length": 3898461,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_gpu_backend_bridge.obj",
+    "length": 2610883,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_gpu_kernel_autotuner.obj",
+    "length": 4038469,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_hardware_synthesizer.obj",
+    "length": 1295977,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_hotpatch_control_plane.obj",
+    "length": 5275998,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_hotpatch_recovery_journal.obj",
+    "length": 3877999,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_inference_state_machine.obj",
+    "length": 3763051,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_instructions_provider.obj",
+    "length": 5117306,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_intel_gpu_accelerator.obj",
+    "length": 3900484,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_intent_engine.obj",
+    "length": 2505003,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_iterative_tensor_traversal.obj",
+    "length": 1824741,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_js_extension_host.obj",
+    "length": 5804220,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_jsonrpc_parser.obj",
+    "length": 3723520,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_knowledge_graph_core.obj",
+    "length": 2205924,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_layer_contribution_scorer.obj",
+    "length": 1408478,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_layer_offload_manager.obj",
+    "length": 4683800,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_live_binary_patcher.obj",
+    "length": 1593120,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_local_parity_bridge.obj",
+    "length": 728993,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_lock_hierarchy.obj",
+    "length": 3880112,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_masm_stress_harness.obj",
+    "length": 237356,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_memory_ownership.obj",
+    "length": 4636747,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_memory_pressure_handler.obj",
+    "length": 3661644,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_menu_auditor.obj",
+    "length": 2536157,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_mesh_brain.obj",
+    "length": 2027766,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_model_bruteforce_engine.obj",
+    "length": 5311305,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_model_memory_hotpatch.obj",
+    "length": 1855355,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_model_training_pipeline.obj",
+    "length": 4561734,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_MonacoCoreEngine.obj",
+    "length": 1801316,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_multi_response_engine.obj",
+    "length": 3889514,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_multiwindow_scheduler.obj",
+    "length": 1394725,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_native_debugger_engine.obj",
+    "length": 14001274,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_native_inference_pipeline.obj",
+    "length": 3669601,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_native_speed_layer.obj",
+    "length": 3709708,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_neural_bridge.obj",
+    "length": 1176344,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_omega_orchestrator.obj",
+    "length": 1081848,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_patch_rollback_ledger.obj",
+    "length": 261347,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_pdb_gsi_hash.obj",
+    "length": 309791,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_pdb_lsp_bridge.obj",
+    "length": 3066866,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_pdb_native.obj",
+    "length": 640357,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_pdb_reference_provider.obj",
+    "length": 608784,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_perf_telemetry.obj",
+    "length": 3730577,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_plugin_signature.obj",
+    "length": 1005834,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_production_release.obj",
+    "length": 4030872,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_prompt_template_engine.obj",
+    "length": 4756372,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_proxy_hotpatcher.obj",
+    "length": 1433675,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_pt_driver_contract.obj",
+    "length": 1279610,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_quant_hysteresis.obj",
+    "length": 209192,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\core_quantum_safe_transport.obj",
+    "length": 4608878,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  }
+]

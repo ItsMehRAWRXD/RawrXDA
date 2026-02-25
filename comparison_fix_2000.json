@@ -1,0 +1,53 @@
+{
+  "project_root": "D:/RawrXD",
+  "generated_on": "2026-02-20",
+  "comparison": {
+    "instant_fix": {
+      "script": "d:/instant_fix_2000.py",
+      "loc": 66,
+      "approach": [
+        "Parse CMakeLists.txt for referenced sources.",
+        "Scan src/ for on-disk sources and classify active/orphan/missing.",
+        "Emit a compact JSON report for quick triage."
+      ],
+      "results": {
+        "active": 531,
+        "orphan": 1837,
+        "missing": 9,
+        "needed_orphans": 520,
+        "safe_to_archive": 1317
+      },
+      "outputs": [
+        "D:/RawrXD/instant_audit.json"
+      ]
+    },
+    "slow_fix": {
+      "script": "d:/slow_fix_2000.py",
+      "loc": 701,
+      "approach": [
+        "Full repository scan with file-type categorization.",
+        "CMake target extraction and build-graph baseline.",
+        "Include graph, symbol/extern analysis, and dependency classification.",
+        "Artifact, duplicate, and versioned-file detection.",
+        "JSON and Markdown reports for comprehensive review."
+      ],
+      "results": {
+        "active": 585,
+        "needed": 1458,
+        "missing": 8,
+        "orphan": 1514,
+        "active_headers": 1683,
+        "orphan_headers": 238
+      },
+      "outputs": [
+        "D:/RawrXD/source_audit/full_audit.json",
+        "D:/RawrXD/source_audit/full_audit.md"
+      ]
+    }
+  },
+  "execution": {
+    "instant_fix_ran": true,
+    "slow_fix_ran": true,
+    "notes": "Scripts executed as-is against D:/RawrXD."
+  }
+}

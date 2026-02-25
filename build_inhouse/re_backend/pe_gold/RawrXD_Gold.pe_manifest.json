@@ -1,0 +1,19 @@
+﻿{
+    "generatedAtUtc":  "2026-02-23T00:17:31.5643656Z",
+    "exePath":  "D:\\rawrxd\\RawrXD_Gold.exe",
+    "dumpbin":  "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\dumpbin.exe",
+    "machine":  "8664 machine (x64)",
+    "subsystem":  "6.00 subsystem version",
+    "imageBase":  "400000 image base (0000000000400000 to 00000000030C4FFF)",
+    "entryPoint":  "25374C entry point (000000000065374C)",
+    "dllCharacteristics":  "8140 DLL characteristics",
+    "importedDlls":  {
+
+                     },
+    "artifacts":  {
+                      "headers":  "D:\\rawrxd\\build_inhouse\\re_backend\\pe_gold\\RawrXD_Gold.headers.txt",
+                      "imports":  "D:\\rawrxd\\build_inhouse\\re_backend\\pe_gold\\RawrXD_Gold.imports.txt",
+                      "loadconfig":  "D:\\rawrxd\\build_inhouse\\re_backend\\pe_gold\\RawrXD_Gold.loadconfig.txt",
+                      "relocations":  "D:\\rawrxd\\build_inhouse\\re_backend\\pe_gold\\RawrXD_Gold.reloc.txt"
+                  }
+}

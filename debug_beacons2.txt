@@ -1,0 +1,13 @@
+* Breakpoint after HeapCreate
+bp RawrXD+0x1e46 ".echo ===AFTER_HEAPCREATE===; r rax; dq RawrXD+0x6008 L1; gc"
+* Breakpoint at BeaconRouterInit first HeapAlloc call
+bp RawrXD+0x1e87 ".echo ===HEAPALLOC_CALL===; r rcx; r rdx; r r8; gc"
+* Breakpoint after first HeapAlloc
+bp RawrXD+0x1e8c ".echo ===HEAPALLOC_RESULT===; r rax; gc"
+* Breakpoint at alloc_fail
+bp RawrXD+0x1eab ".echo ===ALLOC_FAIL===; dq RawrXD+0x3c860 L10; gc"
+* Breakpoint at alloc loop success exit
+bp RawrXD+0x1ea3 ".echo ===ALLOC_LOOP_DONE===; dq RawrXD+0x3c860 L10; gc"
+g
+.echo ===FINAL===
+q

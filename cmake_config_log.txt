@@ -1,0 +1,34 @@
+-- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
+-- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
+-- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
+CMake Error at CMakeLists.txt:77 (project):
+  Failed to run MSBuild command:
+
+    C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/amd64/MSBuild.exe
+
+  to get the value of VCTargetsPath:
+
+    MSBuild version 17.14.23+b0019275e for .NET Framework
+    Build started 2/18/2026 10:51:19 AM.
+    
+    Project "D:\rawrxd\build\CMakeFiles\4.2.0\VCTargetsPath.vcxproj" on node 1 (default targets).
+    C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VC\v170\Microsoft.Cpp.WindowsSDK.targets(46,5): error MSB8036: The Windows SDK version 10.0.22621.0 was not found. Install the required version of Windows SDK or change the SDK version in the project property pages or by right-clicking the solution and selecting "Retarget solution". [D:\rawrxd\build\CMakeFiles\4.2.0\VCTargetsPath.vcxproj]
+    Done Building Project "D:\rawrxd\build\CMakeFiles\4.2.0\VCTargetsPath.vcxproj" (default targets) -- FAILED.
+    
+    Build FAILED.
+    
+    "D:\rawrxd\build\CMakeFiles\4.2.0\VCTargetsPath.vcxproj" (default target) (1) ->
+    (_CheckWindowsSDKInstalled target) -> 
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Microsoft\VC\v170\Microsoft.Cpp.WindowsSDK.targets(46,5): error MSB8036: The Windows SDK version 10.0.22621.0 was not found. Install the required version of Windows SDK or change the SDK version in the project property pages or by right-clicking the solution and selecting "Retarget solution". [D:\rawrxd\build\CMakeFiles\4.2.0\VCTargetsPath.vcxproj]
+    
+        0 Warning(s)
+        1 Error(s)
+    
+    Time Elapsed 00:00:00.11
+    
+
+  Exit code: 1
+
+
+
+-- Configuring incomplete, errors occurred!

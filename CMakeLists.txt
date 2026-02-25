@@ -2711,34 +2711,64 @@ if(WIN32)
     # =========================================================================
     # QuickJS sources should be placed in 3rdparty/quickjs/
     # If not present, create stub target that allows compilation without QuickJS
-    set(QUICKJS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/quickjs)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/quickjs_ng/quickjs.c")
+        set(QUICKJS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/quickjs_ng)
+    else()
+        set(QUICKJS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/quickjs)
+    endif()
     if(EXISTS "${QUICKJS_DIR}/quickjs.c")
-        add_library(quickjs_static STATIC
+        set(QUICKJS_SOURCES
             ${QUICKJS_DIR}/quickjs.c
             ${QUICKJS_DIR}/libregexp.c
             ${QUICKJS_DIR}/libunicode.c
             ${QUICKJS_DIR}/cutils.c
             ${QUICKJS_DIR}/quickjs-libc.c
-            ${QUICKJS_DIR}/libbf.c
         )
+        set(QUICKJS_HAS_LIBBF OFF)
+        if(EXISTS "${QUICKJS_DIR}/libbf.c")
+            list(APPEND QUICKJS_SOURCES ${QUICKJS_DIR}/libbf.c)
+            set(QUICKJS_HAS_LIBBF ON)
+        elseif(EXISTS "${QUICKJS_DIR}/dtoa.c")
+            list(APPEND QUICKJS_SOURCES ${QUICKJS_DIR}/dtoa.c)
+        endif()
+
+        add_library(quickjs_static STATIC ${QUICKJS_SOURCES})
         target_include_directories(quickjs_static PUBLIC ${QUICKJS_DIR})
         if(MSVC)
             target_compile_options(quickjs_static PRIVATE /W0 /O2)
-            target_compile_definitions(quickjs_static PRIVATE
-                _CRT_SECURE_NO_WARNINGS
-                CONFIG_BIGNUM
-                CONFIG_VERSION="2024.01.13"
-            )
+            if(QUICKJS_HAS_LIBBF)
+                target_compile_definitions(quickjs_static PRIVATE
+                    _CRT_SECURE_NO_WARNINGS
+                    CONFIG_BIGNUM
+                    CONFIG_VERSION="2024.01.13"
+                )
+            else()
+                target_compile_definitions(quickjs_static PRIVATE
+                    _CRT_SECURE_NO_WARNINGS
+                    CONFIG_VERSION="2024.01.13"
+                )
+            endif()
         else()
             target_compile_options(quickjs_static PRIVATE -w -O2)
-            target_compile_definitions(quickjs_static PRIVATE
-                CONFIG_BIGNUM
-                CONFIG_VERSION="2024.01.13"
-                _GNU_SOURCE
-            )
+            if(QUICKJS_HAS_LIBBF)
+                target_compile_definitions(quickjs_static PRIVATE
+                    CONFIG_BIGNUM
+                    CONFIG_VERSION="2024.01.13"
+                    _GNU_SOURCE
+                )
+            else()
+                target_compile_definitions(quickjs_static PRIVATE
+                    CONFIG_VERSION="2024.01.13"
+                    _GNU_SOURCE
+                )
+            endif()
         endif()
         target_link_libraries(RawrXD-Win32IDE PRIVATE quickjs_static)
         target_include_directories(RawrXD-Win32IDE PRIVATE ${QUICKJS_DIR}/..)
+        if(TARGET RawrEngine)
+            target_link_libraries(RawrEngine PRIVATE quickjs_static)
+            target_include_directories(RawrEngine PRIVATE ${QUICKJS_DIR}/..)
+        endif()
         message(STATUS "QuickJS found: JS extension host enabled")
         add_definitions(-DRAWR_HAS_QUICKJS=1)
     else()

@@ -1,0 +1,25 @@
+{
+  "bigdaddyg": {
+    "url": "http://localhost:11434",
+    "model": "bigdaddyg",
+    "enabled": true
+  },
+  "copilot": {
+    "enabled": false,
+    "token": ""
+  },
+  "amazonq": {
+    "enabled": false,
+    "region": "us-east-1"
+  },
+  "cursor": {
+    "enabled": false,
+    "apiKey": ""
+  },
+  "experimental": {
+    "autonomousAgent": false,
+    "selfDebugging": false,
+    "multiModelOrchestration": false,
+    "realTimeCollaboration": false
+  }
+}

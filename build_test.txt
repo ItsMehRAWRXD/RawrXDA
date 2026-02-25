@@ -1,0 +1,149 @@
+[  0%] Built target RawrXD-RE-Library
+[  2%] Built target masm_kernels
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic_engine.cpp.obj
+agentic_engine.cpp
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/subagent_core.cpp.obj
+subagent_core.cpp
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent_history.cpp.obj
+agent_history.cpp
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent_policy.cpp.obj
+agent_policy.cpp
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent_explainability.cpp.obj
+agent_explainability.cpp
+[  2%] Building CXX object CMakeFiles/RawrEngine.dir/src/streaming_gguf_loader.cpp.obj
+streaming_gguf_loader.cpp
+[  3%] Building CXX object CMakeFiles/RawrEngine.dir/src/utils/Diagnostics.cpp.obj
+Diagnostics.cpp
+[  3%] Building CXX object CMakeFiles/RawrEngine.dir/src/gguf_loader.cpp.obj
+gguf_loader.cpp
+[  3%] Building CXX object CMakeFiles/RawrEngine.dir/src/gguf_vocab_resolver.cpp.obj
+gguf_vocab_resolver.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/compression_interface.cpp.obj
+compression_interface.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/gguf_core.cpp.obj
+gguf_core.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/inference_kernels.cpp.obj
+inference_kernels.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/transformer.cpp.obj
+transformer.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/bpe_tokenizer.cpp.obj
+bpe_tokenizer.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/sampler.cpp.obj
+sampler.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/rawr_engine.cpp.obj
+rawr_engine.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/core_generator.cpp.obj
+core_generator.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/pyre_compute.cpp.obj
+pyre_compute.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/sovereign_engines.cpp.obj
+sovereign_engines.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/codec/compression.cpp.obj
+compression.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/codec/brutal_gzip.cpp.obj
+brutal_gzip.cpp
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/execution_scheduler.cpp.obj
+execution_scheduler.cpp
+[  4%] Building ASM_MASM object CMakeFiles/RawrEngine.dir/src/asm/quantum_beaconism_backend.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\quantum_beaconism_backend.asm
+[  4%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/agentic_decision_tree.cpp.obj
+agentic_decision_tree.cpp
+[  5%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/cli_autonomy_loop.cpp.obj
+cli_autonomy_loop.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/deep_iteration_engine.cpp.obj
+deep_iteration_engine.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/cli_headless_systems.cpp.obj
+cli_headless_systems.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/agent_safety_contract.cpp.obj
+agent_safety_contract.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/confidence_gate.cpp.obj
+confidence_gate.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/deterministic_replay.cpp.obj
+deterministic_replay.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/execution_governor.cpp.obj
+execution_governor.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/multi_response_engine.cpp.obj
+multi_response_engine.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/streaming_engine_registry.cpp.obj
+streaming_engine_registry.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/flash_attention.cpp.obj
+flash_attention.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/gpu_backend_bridge.cpp.obj
+gpu_backend_bridge.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/native_speed_layer.cpp.obj
+native_speed_layer.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/local_ai_core.cpp.obj
+local_ai_core.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/native_inference_pipeline.cpp.obj
+native_inference_pipeline.cpp
+[  6%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/layer_offload_manager.cpp.obj
+layer_offload_manager.cpp
+[  7%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/model_memory_hotpatch.cpp.obj
+model_memory_hotpatch.cpp
+[  7%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/byte_level_hotpatcher.cpp.obj
+byte_level_hotpatcher.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/memory_patch_byte_search_stubs.cpp.obj
+memory_patch_byte_search_stubs.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/unified_hotpatch_manager.cpp.obj
+unified_hotpatch_manager.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/proxy_hotpatcher.cpp.obj
+proxy_hotpatcher.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/model_bruteforce_engine.cpp.obj
+model_bruteforce_engine.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/server/gguf_server_hotpatch.cpp.obj
+gguf_server_hotpatch.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agentic_hotpatch_orchestrator.cpp.obj
+agentic_hotpatch_orchestrator.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/agentic_task_graph.cpp.obj
+agentic_task_graph.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/embedding_engine.cpp.obj
+embedding_engine.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_encoder.cpp.obj
+vision_encoder.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_token_gate.cpp.obj
+vision_token_gate.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_embedding_cache.cpp.obj
+vision_embedding_cache.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_kv_isolation.cpp.obj
+vision_kv_isolation.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_quantized_encoder.cpp.obj
+vision_quantized_encoder.cpp
+[  8%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_gpu_staging.cpp.obj
+vision_gpu_staging.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/marketplace/extension_marketplace.cpp.obj
+extension_marketplace.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/auth/rbac_engine.cpp.obj
+rbac_engine.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/shadow_page_detour.cpp.obj
+shadow_page_detour.cpp
+D:\rawrxd\src\core\shadow_page_detour.cpp(152): warning C4311: 'type cast': pointer truncation from 'const char *' to 'unsigned long'
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/sentinel_watchdog.cpp.obj
+sentinel_watchdog.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic_loop_state.cpp.obj
+agentic_loop_state.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/autonomous_subagent.cpp.obj
+autonomous_subagent.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agentic_failure_detector.cpp.obj
+agentic_failure_detector.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agentic_puppeteer.cpp.obj
+agentic_puppeteer.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/llm_http_client.cpp.obj
+llm_http_client.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/model_invoker.cpp.obj
+model_invoker.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/planner.cpp.obj
+planner.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/eval_framework.cpp.obj
+eval_framework.cpp
+[ 10%] Building CXX object CMakeFiles/RawrEngine.dir/src/ollama_client.cpp.obj
+ollama_client.cpp
+D:\rawrxd\src\ollama_client.cpp(5): fatal error C1083: Cannot open include file: 'curl/curl.h': No such file or directory
+NMAKE : fatal error U1077: '"C:\Program Files\CMake\bin\cmake.exe" -E cmake_cl_compile_depends --dep-file=CMakeFiles\RawrEngine.dir\src\ollama_client.cpp.obj.d --working-dir=D:\rawrxd\build --filter-prefix="Note: including file: " -- C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe @C:\Users\HiH8e\AppData\Local\Temp\nmF5E3.tmp' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\RawrEngine.dir\build.make /nologo -SL                 CMakeFiles\RawrEngine.dir\build' : return code '0x2'
+Stop.
+NMAKE : fatal error U1077: 'C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\nmake.exe -s -f CMakeFiles\Makefile2 /nologo -LS                 all' : return code '0x2'
+Stop.

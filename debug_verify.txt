@@ -1,0 +1,3 @@
+bp RawrXD+0x1ea5 ".echo ===ALLOC_DONE===; dq RawrXD+0x3c860 L10; gc"
+g
+q

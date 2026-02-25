@@ -1,0 +1,89 @@
+[ 10%] Built target masm_kernels
+[ 13%] Built target RawrXD-RE-Library
+[ 13%] [MASM64] Assembling RawrXD_OmegaDeobfuscator.asm (AVX-512 deobfuscation)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_OmegaDeobfuscator.asm
+[ 13%] [MASM64] Assembling RawrXD_MetaReverse.asm (authenticity detection)
+Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:/rawrxd/src/reverse_engineering/deobfuscator/RawrXD_MetaReverse.asm
+[ 13%] Built target re_deobfuscator
+[ 13%] Building ASM_MASM object CMakeFiles/RawrXD_MultiWindow_Kernel.dir/src/asm/RawrXD_MultiWindow_Kernel.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.44.35223.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\RawrXD_MultiWindow_Kernel.asm
+[ 13%] Building CXX object CMakeFiles/RawrXD_MultiWindow_Kernel.dir/src/core/multiwindow_scheduler.cpp.obj
+multiwindow_scheduler.cpp
+[ 13%] Linking CXX shared library bin\RawrXD_MultiWindow_Kernel.dll
+[ 13%] Built target RawrXD_MultiWindow_Kernel
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/main_win32.cpp.obj
+main_win32.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE.cpp.obj
+Win32IDE.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/HeadlessIDE.cpp.obj
+HeadlessIDE.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Core.cpp.obj
+Win32IDE_Core.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Sidebar.cpp.obj
+Win32IDE_Sidebar.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_VSCodeUI.cpp.obj
+Win32IDE_VSCodeUI.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_NativePipeline.cpp.obj
+Win32IDE_NativePipeline.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PowerShellPanel.cpp.obj
+Win32IDE_PowerShellPanel.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PowerShell.cpp.obj
+Win32IDE_PowerShell.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Logger.cpp.obj
+Win32IDE_Logger.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_FileOps.cpp.obj
+Win32IDE_FileOps.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Commands.cpp.obj
+Win32IDE_Commands.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Debugger.cpp.obj
+Win32IDE_Debugger.cpp
+[ 13%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgenticBridge.cpp.obj
+Win32IDE_AgenticBridge.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_AgentCommands.cpp.obj
+Win32IDE_AgentCommands.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/plan_mode_handler.cpp.obj
+plan_mode_handler.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Autonomy.cpp.obj
+Win32IDE_Autonomy.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_SyntaxHighlight.cpp.obj
+Win32IDE_SyntaxHighlight.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Themes.cpp.obj
+Win32IDE_Themes.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Annotations.cpp.obj
+Win32IDE_Annotations.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Session.cpp.obj
+Win32IDE_Session.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_StreamingUX.cpp.obj
+Win32IDE_StreamingUX.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_ReverseEngineering.cpp.obj
+Win32IDE_ReverseEngineering.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_DecompilerView.cpp.obj
+Win32IDE_DecompilerView.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_FeatureManifest.cpp.obj
+Win32IDE_FeatureManifest.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_GhostText.cpp.obj
+Win32IDE_GhostText.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_OutlinePanel.cpp.obj
+Win32IDE_OutlinePanel.cpp
+[ 16%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_RenamePreview.cpp.obj
+Win32IDE_RenamePreview.cpp
+[ 20%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Tier2Cosmetics.cpp.obj
+Win32IDE_Tier2Cosmetics.cpp
+[ 20%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Tier1Cosmetics.cpp.obj
+Win32IDE_Tier1Cosmetics.cpp
+[ 20%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_Breadcrumbs.cpp.obj
+Win32IDE_Breadcrumbs.cpp
+[  4%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_PlanExecutor.cpp.obj
+Win32IDE_PlanExecutor.cpp
+[  5%] Building CXX object CMakeFiles/RawrXD-Win32IDE.dir/src/win32app/Win32IDE_FailureDetector.cpp.obj
+Win32IDE_FailureDetector.cpp
+NMAKE : NMAKE : NMAKE : NMAKE : fatal error U1058: terminated by user

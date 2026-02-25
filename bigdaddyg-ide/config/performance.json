@@ -1,0 +1,10 @@
+{
+  "targetFPS": 600,
+  "enableVSync": false,
+  "memoryLimitMB": 4096,
+  "editorOptimizations": {
+    "virtualRendering": true,
+    "lazyLoading": true,
+    "debounceRendering": 16
+  }
+}

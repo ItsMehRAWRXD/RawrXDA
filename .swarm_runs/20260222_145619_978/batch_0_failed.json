@@ -1,0 +1,14 @@
+[
+  {
+    "Path": "D:\\rawrxd\\src\\agentic\\AgentOllamaClient.cpp",
+    "Type": "cpp",
+    "Error": "AgentOllamaClient.cpp\r\nD:\\rawrxd\\src\\agentic\\AgentOllamaClient.h(21): fatal error C1083: Cannot open include file: 'nlohmann/json.hpp': No such file or directory",
+    "BatchStart": 0
+  },
+  {
+    "Path": "D:\\rawrxd\\src\\core\\auto_feature_registry.cpp",
+    "Type": "cpp",
+    "Error": "auto_feature_registry.cpp\r\nD:\\rawrxd\\src\\core\\auto_feature_registry.cpp(21): fatal error C1083: Cannot open include file: 'model_invoker.hpp': No such file or directory",
+    "BatchStart": 0
+  }
+]

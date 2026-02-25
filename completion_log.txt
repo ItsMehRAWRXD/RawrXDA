@@ -1,0 +1,528 @@
+[2026-02-21 14:38:20] Swarm complete.
+Total Failed (start): 1238
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:04] Swarm complete.
+Total Failed (start): 43
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:04] Swarm complete.
+Total Failed (start): 38
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:05] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:05] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:06] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:06] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:07] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:07] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:08] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:09] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:09] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:10] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:10] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:11] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:11] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:12] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:12] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:13] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:13] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:14] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:14] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:14] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:15] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:15] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:16] Swarm complete.
+Total Failed (start): 1
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:17] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:21] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:22] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:51] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:52] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:22:55] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:10] Swarm complete.
+Total Failed (start): 43
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:10] Swarm complete.
+Total Failed (start): 38
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:10] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:11] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:11] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:12] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:12] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:12] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:13] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:13] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:14] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:14] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:14] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:15] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:15] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:16] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:16] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:16] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:17] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:17] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:18] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:18] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:18] Swarm complete.
+Total Failed (start): 100
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:19] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:19] Swarm complete.
+Total Failed (start): 1
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:20] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:20] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:21] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:22] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:23] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:23] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:25] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:26] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:28] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:30] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:32] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:33] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:35] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:36] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:38] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:40] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:41] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:43] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:44] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:46] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:48] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:49] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:51] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:53] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:54] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:56] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:58] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:27:59] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:28:01] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 12:28:01] Swarm complete.
+Total Failed (start): 50
+Total Fixed: 0
+Still Failing: 0
+Success Rate: 0.0%
+STATUS: ALL FILES COMPILE
+[2026-02-22 14:56:23] Swarm complete.
+Total Failed (start): 5
+Total Fixed: 0
+Still Failing: 5
+Success Rate: 0.0%
+STATUS: NO PROGRESS

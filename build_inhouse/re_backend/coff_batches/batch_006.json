@@ -1,0 +1,711 @@
+[
+  {
+    "path": "D:\\rawrxd\\obj\\core_workspace_reasoning_profiles.obj",
+    "length": 5048197,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\ide_FileSystemIntegration.obj",
+    "length": 1613344,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\lsp_RawrXD_LSPServer.obj",
+    "length": 7148604,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\mcp_integration.obj",
+    "length": 6274413,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\plugin_system_win32_plugin_loader.obj",
+    "length": 3842496,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\RawrXD_120B_Loader.obj",
+    "length": 3507,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 38,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 1713,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 1894,
+        "numberOfRelocations": 28,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 202,
+        "pointerToRawData": 2174,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 32,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 116,
+        "pointerToRawData": 2376,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CloseHandle",
+      "CreateFileA",
+      "CreateFileMappingA",
+      "ExitProcess",
+      "GetFileSizeEx",
+      "GetStdHandle",
+      "MapViewOfFile",
+      "UnmapViewOfFile",
+      "VirtualAlloc",
+      "VirtualFree",
+      "WriteConsoleA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\RawrXD_Inference.obj",
+    "length": 2695,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 30,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 1267,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 1448,
+        "numberOfRelocations": 20,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 100,
+        "pointerToRawData": 1648,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 32,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 112,
+        "pointerToRawData": 1748,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "GetStdHandle",
+      "QueryPerformanceCounter",
+      "QueryPerformanceFrequency",
+      "VirtualAlloc",
+      "VirtualFree",
+      "WriteConsoleA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\RawrXD_Tokenizer.obj",
+    "length": 2419,
+    "machine": "AMD64",
+    "sectionCount": 4,
+    "symbolCount": 32,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 925,
+        "pointerToRawData": 180,
+        "pointerToRelocations": 1106,
+        "numberOfRelocations": 22,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 111,
+        "pointerToRawData": 1326,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".bss",
+        "sizeOfRawData": 32,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468480,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 112,
+        "pointerToRawData": 1437,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": [
+      "CloseHandle",
+      "CreateFileA",
+      "GetFileSizeEx",
+      "GetStdHandle",
+      "ReadFile",
+      "VirtualAlloc",
+      "VirtualFree",
+      "WriteConsoleA"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\test.obj",
+    "length": 428,
+    "machine": "AMD64",
+    "sectionCount": 3,
+    "symbolCount": 9,
+    "sections": [
+      {
+        "name": ".text$mn",
+        "sizeOfRawData": 10,
+        "pointerToRawData": 140,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1615855648,
+        "isComdat": false
+      },
+      {
+        "name": ".data",
+        "sizeOfRawData": 0,
+        "pointerToRawData": 0,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 3226468416,
+        "isComdat": false
+      },
+      {
+        "name": ".debug$S",
+        "sizeOfRawData": 100,
+        "pointerToRawData": 150,
+        "pointerToRelocations": 0,
+        "numberOfRelocations": 0,
+        "characteristics": 1108344896,
+        "isComdat": false
+      }
+    ],
+    "undefinedExternals": []
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\ui_tool_action_status.obj",
+    "length": 3662840,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_AutonomousAgent.obj",
+    "length": 4695964,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_CircularBeaconSystem.obj",
+    "length": 5928062,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_ConsentPrompt.obj",
+    "length": 711392,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_digestion_test_harness.obj",
+    "length": 274874,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_FileRegistry_Auto.obj",
+    "length": 4015770,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_IDEAutoHealerLauncher.obj",
+    "length": 3655451,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_IDEDiagnosticAutoHealer_Impl.obj",
+    "length": 3949812,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_IDELogger.obj",
+    "length": 3676675,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_IocpFileWatcher.obj",
+    "length": 4594946,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_SourceFileRegistry.obj",
+    "length": 6181430,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_TodoManager.obj",
+    "length": 3781067,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_AgentCommands.obj",
+    "length": 13314685,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_AsmSemantic.obj",
+    "length": 14141439,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_AuditDashboard.obj",
+    "length": 12936478,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Autonomy.obj",
+    "length": 6815075,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_ColorPicker.obj",
+    "length": 13571902,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_CruciblePanel.obj",
+    "length": 12958322,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Debugger.obj",
+    "length": 13389035,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_EditorEngine.obj",
+    "length": 12847171,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_EmojiSupport.obj",
+    "length": 12853887,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_ExecutionGovernor.obj",
+    "length": 13328469,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_FailureDetector.obj",
+    "length": 13336377,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_FailureIntelligence.obj",
+    "length": 13599990,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_FeatureManifest.obj",
+    "length": 12939609,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_FileOps.obj",
+    "length": 12891335,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_FlagshipFeatures.obj",
+    "length": 12839233,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_FlightRecorder.obj",
+    "length": 12855487,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_GameEnginePanel.obj",
+    "length": 13282778,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_GhostText.obj",
+    "length": 12957309,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_GUILayoutHotpatch.obj",
+    "length": 13012279,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_HotpatchCtrlPanel.obj",
+    "length": 13152457,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_HotpatchPanel.obj",
+    "length": 13079095,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_LLMRouter.obj",
+    "length": 13371791,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_LocalServer.obj",
+    "length": 13746030,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_Logger.obj",
+    "length": 12839634,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_LSPServer.obj",
+    "length": 13237375,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_MarketplacePanel.obj",
+    "length": 12923189,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_MCP.obj",
+    "length": 13185502,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_MCPHooks.obj",
+    "length": 3957967,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  },
+  {
+    "path": "D:\\rawrxd\\obj\\win32app_Win32IDE_MonacoThemes.obj",
+    "length": 13148542,
+    "machine": "ERROR",
+    "sectionCount": 0,
+    "symbolCount": 0,
+    "sections": [],
+    "undefinedExternals": [
+      "Unsupported COFF optional header size: 55717 (bigobj?)"
+    ]
+  }
+]

@@ -1,84 +1,144 @@
-[0/1] Re-running CMake...
--- [SDK Fix] INCLUDE = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/include;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/ucrt;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/shared;C:/Program Files (x86)/Windows Kits/10/Include/10.0.22621.0/um
--- [SDK Fix] LIB     = C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/x64;C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/lib/onecore/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/ucrt/x64;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22621.0/um/x64
--- [SDK Fix] MT      = C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x64/mt.exe
--- [Build Paths] MSVC CRT: C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717
--- [Build Paths] SDK 10.0.22621.0: ucrt + um + shared
--- MASM64 enabled: ASM kernels will be compiled
--- [CommandAudit] Audit targets available: audit-registry, audit-registry-ci
--- [RE] Deobfuscator MASM64 targets registered
--- [RE] Model reverse pipeline MASM64 target registered
--- [RE] Omega v3 MASM32 target registered
--- [RE] Reverser compiler NASM targets registered
--- [RE] Reverse Engineering Suite configured:
---   C++ Library:       RawrXD-RE-Library (pe_tools/re_tools.cpp)
---   Headers:           4 HPP files (Codex, Compiler, DumpBin, ReverseEngine)
---   Omega Suite:       19 ASM files across v3/v4/v5/v7 + src_variants
---   Deobfuscator:      3 ASM files + 1 INC + build/test
---   Reverser Compiler: 11 ASM + 6 tests + 1 .rev source
---   PE Tools:          re_tools.cpp/h (PE analyzer + inline compiler)
---   Model Reverse:     model-llm-harvester.asm
---   Security Toolkit:  RawrXD_IDE_unified.asm
---   RE Modules:        gpu_dma_complete_reverse_engineered.asm
--- [Gold] Standalone deployment target: RawrXD_Gold.exe (all MASM linked)
--- [NanoQuant] DISABLED — enable with -DRAWR_ENABLE_NANOQUANT=ON
--- [Phase 1] Foundation library enabled (optional backend)
--- [Phase 2] Model Loader library enabled (optional backend)
--- [Vulkan] Found SDK: C:/VulkanSDK/1.4.328.1/include
--- [Phase 6] Standalone inference engine target: RawrXD-InferenceEngine
--- RawrXD-HTML-Backend: standalone HTML IDE backend (no-dep exe)
--- MultiWindow Kernel DLL target enabled
--- DynamicPromptEngine DLL target enabled (Unity/Unreal compatible)
--- QuickJS not found at D:/rawrxd/3rdparty/quickjs — JS extension host uses stubs
--- Ship RawrXD_FileManager_Win32.dll will be built (converted QT file ops)
--- ═══════════════════════════════════════════════════════
---  RawrXD_Gold.exe — Standalone Monolithic Deployment
---  Build with: cmake --build . --target RawrXD-Gold
--- ═══════════════════════════════════════════════════════
--- [CI] self_test_gate target available (cmake --build . --target self_test_gate)
--- [CI] RAWR_ASAN=OFF
--- [SourceManifest] src: 1393  Ship: 83  total: 1476
--- [SourceManifest] Target 'source_manifest' available: run to generate manifest in build dir
--- Configuring done (0.9s)
--- Generating done (0.2s)
--- Build files have been written to: D:/rawrxd/build
-[1/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\auto_repair_orchestrator.cpp.obj
-[2/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\production_release.cpp.obj
-[3/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\universal_model_hotpatcher.cpp.obj
-[4/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\agent_memory_indexer.cpp.obj
-[5/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\swarm_decision_bridge.cpp.obj
-[6/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\webrtc_signaling.cpp.obj
-[7/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\gpu_kernel_autotuner.cpp.obj
-[8/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\sandbox_integration.cpp.obj
-[9/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\agentic_executor.cpp.obj
-[10/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_gsi_hash.cpp.obj
-[11/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_reference_provider.cpp.obj
-[12/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\OrchestratorBridge.cpp.obj
-[13/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\pdb_native.cpp.obj
-[14/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license_stubs.cpp.obj
-[15/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\RawrXD_AgentLoop.cpp.obj
-[16/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\support_tier.cpp.obj
-FAILED: CMakeFiles/RawrEngine.dir/src/core/support_tier.cpp.obj 
-C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\inference -ID:\rawrxd\src\core -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\config -ID:\rawrxd\src\agent -ID:\rawrxd\src\server -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\support_tier.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\support_tier.cpp
-D:\rawrxd\src\core\support_tier.cpp(12): fatal error C1083: Cannot open include file: 'support_tier.h': No such file or directory
-[17/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\intel_gpu_accelerator.cpp.obj
-[18/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\amd_gpu_accelerator.cpp.obj
-[19/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\multi_gpu.cpp.obj
-FAILED: CMakeFiles/RawrEngine.dir/src/core/multi_gpu.cpp.obj 
-C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\cl.exe  /nologo /TP -DNOMINMAX -DRAWRXD_HAS_MW_KERNEL=1 -DRAWRXD_HAS_PROMPT_ENGINE=1 -DRAWRXD_LINK_ANALYZER_DISTILLER_ASM=1 -DRAWRXD_LINK_INFERENCE_KERNELS_ASM=1 -DRAWRXD_LINK_PROMETHEUS_EXPORTER_ASM=1 -DRAWRXD_LINK_QUADBUFFER_ASM=1 -DRAWRXD_LINK_REVERSE_ENGINEERED_ASM=1 -DRAWRXD_LINK_SELFPATCH_AGENT_ASM=1 -DRAWRXD_LINK_SOURCEEDIT_KERNEL_ASM=1 -DRAWRXD_LINK_STREAMING_ORCHESTRATOR_ASM=1 -DRAWRXD_LINK_TELEMETRY_KERNEL_ASM=1 -DRAWRXD_LINK_VISION_PROJECTION_ASM=1 -DRAWR_HAS_MASM=1 -DRAWR_HAS_SOVEREIGN_ENGINES=1 -DRAWR_HAS_VULKAN=1 -DWIN32_LEAN_AND_MEAN -D_CRT_SECURE_NO_WARNINGS -ID:\rawrxd\src -ID:\rawrxd\src\engine -ID:\rawrxd\src\inference -ID:\rawrxd\src\core -ID:\rawrxd\src\win32app -ID:\rawrxd\src\modules -ID:\rawrxd\src\config -ID:\rawrxd\src\agent -ID:\rawrxd\src\server -ID:\rawrxd\src\agentic -ID:\rawrxd\src\cli -ID:\rawrxd\src\ui -ID:\rawrxd\src\git -ID:\rawrxd\src\lsp -ID:\rawrxd\src\gpu -ID:\rawrxd\src\tools -ID:\rawrxd\src\telemetry -ID:\rawrxd\src\test_harness -ID:\rawrxd\src\reverse_engineering -ID:\rawrxd\include -ID:\rawrxd\include\gpu -ID:\rawrxd\src\reverse_engineering\pe_tools -external:IC:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\include -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" -external:I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt" -external:IC:\VulkanSDK\1.4.328.1\include -external:W0 /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MT /showIncludes /FoCMakeFiles\RawrEngine.dir\src\core\multi_gpu.cpp.obj /FdCMakeFiles\RawrEngine.dir\ /FS -c D:\rawrxd\src\core\multi_gpu.cpp
-D:\rawrxd\src\core\multi_gpu.cpp(12): fatal error C1083: Cannot open include file: 'multi_gpu.h': No such file or directory
-[20/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\AgentOrchestrator.cpp.obj
-[21/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agent\DiskRecoveryAgent.cpp.obj
-[22/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\arm64_gpu_accelerator.cpp.obj
-[23/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_devunlock_bridge.cpp.obj
-[24/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license_panel.cpp.obj
-[25/214] Building CXX object CMakeFiles\RawrEngine.dir\src\main.cpp.obj
-[26/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_license.cpp.obj
-[27/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\accelerator_router.cpp.obj
-[28/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\enterprise_feature_manager.cpp.obj
-[29/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\RawrXD_ToolRegistry.cpp.obj
-[30/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\ToolRegistry.cpp.obj
-[31/214] Building CXX object CMakeFiles\RawrEngine.dir\src\core\cerebras_wse_accelerator.cpp.obj
-[32/214] Building CXX object CMakeFiles\RawrEngine.dir\src\complete_server.cpp.obj
-[33/214] Building CXX object CMakeFiles\RawrEngine.dir\src\agentic\AgenticNavigator.cpp.obj
-ninja: build stopped: subcommand failed.
+[  9%] Built target masm_kernels
+[  9%] Built target RawrXD-RE-Library
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/utils/Diagnostics.cpp.obj
+Diagnostics.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/gguf_core.cpp.obj
+gguf_core.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/inference_kernels.cpp.obj
+inference_kernels.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/transformer.cpp.obj
+transformer.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/bpe_tokenizer.cpp.obj
+bpe_tokenizer.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/sampler.cpp.obj
+sampler.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/rawr_engine.cpp.obj
+rawr_engine.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/core_generator.cpp.obj
+core_generator.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/pyre_compute.cpp.obj
+pyre_compute.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/engine/sovereign_engines.cpp.obj
+sovereign_engines.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/codec/compression.cpp.obj
+compression.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/codec/brutal_gzip.cpp.obj
+brutal_gzip.cpp
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/execution_scheduler.cpp.obj
+execution_scheduler.cpp
+[  9%] Building ASM_MASM object CMakeFiles/RawrEngine.dir/src/asm/quantum_beaconism_backend.asm.obj
+Microsoft (R) Macro Assembler (x64) Version 14.50.35723.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+ Assembling: D:\rawrxd\src\asm\quantum_beaconism_backend.asm
+[  9%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/agentic_decision_tree.cpp.obj
+agentic_decision_tree.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/cli_autonomy_loop.cpp.obj
+cli_autonomy_loop.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/deep_iteration_engine.cpp.obj
+deep_iteration_engine.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/cli/cli_headless_systems.cpp.obj
+cli_headless_systems.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/agent_safety_contract.cpp.obj
+agent_safety_contract.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/confidence_gate.cpp.obj
+confidence_gate.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/deterministic_replay.cpp.obj
+deterministic_replay.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/execution_governor.cpp.obj
+execution_governor.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/multi_response_engine.cpp.obj
+multi_response_engine.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/streaming_engine_registry.cpp.obj
+streaming_engine_registry.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/flash_attention.cpp.obj
+flash_attention.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/gpu_backend_bridge.cpp.obj
+gpu_backend_bridge.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/native_speed_layer.cpp.obj
+native_speed_layer.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/local_ai_core.cpp.obj
+local_ai_core.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/native_inference_pipeline.cpp.obj
+native_inference_pipeline.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/layer_offload_manager.cpp.obj
+layer_offload_manager.cpp
+[ 14%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/model_memory_hotpatch.cpp.obj
+model_memory_hotpatch.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/byte_level_hotpatcher.cpp.obj
+byte_level_hotpatcher.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/memory_patch_byte_search_stubs.cpp.obj
+memory_patch_byte_search_stubs.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/unified_hotpatch_manager.cpp.obj
+unified_hotpatch_manager.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/proxy_hotpatcher.cpp.obj
+proxy_hotpatcher.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/model_bruteforce_engine.cpp.obj
+model_bruteforce_engine.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/server/gguf_server_hotpatch.cpp.obj
+gguf_server_hotpatch.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agentic_hotpatch_orchestrator.cpp.obj
+agentic_hotpatch_orchestrator.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/agentic_task_graph.cpp.obj
+agentic_task_graph.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/embedding_engine.cpp.obj
+embedding_engine.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_encoder.cpp.obj
+vision_encoder.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_token_gate.cpp.obj
+vision_token_gate.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_embedding_cache.cpp.obj
+vision_embedding_cache.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_kv_isolation.cpp.obj
+vision_kv_isolation.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_quantized_encoder.cpp.obj
+vision_quantized_encoder.cpp
+[ 19%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/vision_gpu_staging.cpp.obj
+vision_gpu_staging.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/marketplace/extension_marketplace.cpp.obj
+extension_marketplace.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/auth/rbac_engine.cpp.obj
+rbac_engine.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/shadow_page_detour.cpp.obj
+shadow_page_detour.cpp
+D:\rawrxd\src\core\shadow_page_detour.cpp(152): warning C4311: 'type cast': pointer truncation from 'const char *' to 'unsigned long'
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/core/sentinel_watchdog.cpp.obj
+sentinel_watchdog.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/autonomous_subagent.cpp.obj
+autonomous_subagent.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agentic_failure_detector.cpp.obj
+agentic_failure_detector.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agentic_puppeteer.cpp.obj
+agentic_puppeteer.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/llm_http_client.cpp.obj
+llm_http_client.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/model_invoker.cpp.obj
+model_invoker.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/planner.cpp.obj
+planner.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/eval_framework.cpp.obj
+eval_framework.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/local_reasoning_engine.cpp.obj
+local_reasoning_engine.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agent_self_repair.cpp.obj
+agent_self_repair.cpp
+[ 23%] Building CXX object CMakeFiles/RawrEngine.dir/src/agent/agent_self_healing_orchestrator.cpp.obj
+agent_self_healing_orchestrator.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/DeterministicReplayEngine.cpp.obj
+DeterministicReplayEngine.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/AgentToolHandlers.cpp.obj
+AgentToolHandlers.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/autonomous_recovery_orchestrator.cpp.obj
+autonomous_recovery_orchestrator.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/AgentOrchestrator.cpp.obj
+AgentOrchestrator.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/OrchestratorBridge.cpp.obj
+OrchestratorBridge.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/AgenticNavigator.cpp.obj
+AgenticNavigator.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/RawrXD_ToolRegistry.cpp.obj
+RawrXD_ToolRegistry.cpp
+[ 28%] Building CXX object CMakeFiles/RawrEngine.dir/src/agentic/ToolRegistry.cpp.obj
+ToolRegistry.cpp
+NMAKE : NMAKE : NMAKE : NMAKE : User interrupt
+CMake Error: Generator: build tool execution failed, command was: C:/VS2022Enterprise/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/nmake.exe -f Makefile /nologo RawrEngine
