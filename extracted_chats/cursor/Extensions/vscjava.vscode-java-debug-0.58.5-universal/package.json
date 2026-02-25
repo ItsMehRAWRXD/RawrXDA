@@ -1,0 +1,1375 @@
+{
+	"name": "vscode-java-debug",
+	"displayName": "Debugger for Java",
+	"description": "A lightweight Java debugger for Visual Studio Code",
+	"version": "0.58.5",
+	"publisher": "vscjava",
+	"preview": false,
+	"aiKey": "67d4461e-ccba-418e-8082-1bd0acfe8516",
+	"icon": "logo.png",
+	"workspaceTrust": {
+		"request": "onDemand",
+		"description": "Extension may require your trust on workspace for code execution."
+	},
+	"capabilities": {
+		"virtualWorkspaces": false
+	},
+	"keywords": [
+		"java",
+		"debug",
+		"debugging",
+		"debugger"
+	],
+	"engines": {
+		"vscode": "^1.95.0"
+	},
+	"license": "SEE LICENSE IN LICENSE.txt",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Microsoft/vscode-java-debug.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Microsoft/vscode-java-debug/issues"
+	},
+	"homepage": "https://github.com/Microsoft/vscode-java-debug/blob/master/README.md",
+	"categories": [
+		"Debuggers",
+		"Programming Languages",
+		"Other"
+	],
+	"activationEvents": [
+		"onLanguage:java",
+		"onDebugInitialConfigurations",
+		"onDebugResolve:java",
+		"onCommand:JavaDebug.SpecifyProgramArgs",
+		"onCommand:JavaDebug.PickJavaProcess",
+		"onLanguageModelTool:debug_java_application"
+	],
+	"main": "./dist/extension",
+	"contributes": {
+		"breakpoints": [
+			{
+				"language": "java"
+			}
+		],
+		"javaExtensions": [
+			"./server/com.microsoft.java.debug.plugin-0.53.2.jar"
+		],
+		"commands": [
+			{
+				"command": "java.debug.hotCodeReplace",
+				"title": "Hot Code Replace",
+				"icon": {
+					"dark": "images/commands/hot_code_replace.svg",
+					"light": "images/commands/hot_code_replace.svg"
+				}
+			},
+			{
+				"command": "java.debug.runJavaFile",
+				"title": "Run Java",
+				"icon": "$(play)"
+			},
+			{
+				"command": "java.debug.debugJavaFile",
+				"title": "Debug Java",
+				"icon": "$(debug-alt-small)"
+			},
+			{
+				"command": "java.debug.runFromProjectView",
+				"title": "Run",
+				"icon": "$(play)"
+			},
+			{
+				"command": "java.debug.debugFromProjectView",
+				"title": "Debug",
+				"icon": "$(debug-alt-small)"
+			},
+			{
+				"command": "java.debug.continueAll",
+				"title": "Continue All"
+			},
+			{
+				"command": "java.debug.continueOthers",
+				"title": "Continue Others"
+			},
+			{
+				"command": "java.debug.pauseAll",
+				"title": "Pause All"
+			},
+			{
+				"command": "java.debug.pauseOthers",
+				"title": "Pause Others"
+			},
+			{
+				"command": "java.debug.breakpoints.exceptionTypes",
+				"title": "Manage Java Breakpoint Exception Types"
+			},
+			{
+				"command": "java.debug.variables.showHex",
+				"title": "Show as Hex"
+			},
+			{
+				"command": "java.debug.variables.notShowHex",
+				"title": "Show as Dec"
+			},
+			{
+				"command": "java.debug.variables.showQualifiedNames",
+				"title": "Show Qualified Names"
+			},
+			{
+				"command": "java.debug.variables.notShowQualifiedNames",
+				"title": "Show Simple Names"
+			},
+			{
+				"command": "java.debug.variables.showStaticVariables",
+				"title": "Show Static Variables"
+			},
+			{
+				"command": "java.debug.variables.notShowStaticVariables",
+				"title": "Hide Static Variables"
+			},
+			{
+				"command": "java.debug.variables.showLogicalStructure",
+				"title": "Enable Logical Structure View"
+			},
+			{
+				"command": "java.debug.variables.notShowLogicalStructure",
+				"title": "Disable Logical Structure View"
+			},
+			{
+				"command": "java.debug.variables.showToString",
+				"title": "Enable 'toString()' Object View"
+			},
+			{
+				"command": "java.debug.variables.notShowToString",
+				"title": "Disable 'toString()' Object View"
+			},
+			{
+				"command": "java.debug.variables.autoExpandLazyVariables",
+				"title": "Auto Expand Lazy Variables"
+			},
+			{
+				"command": "java.debug.variables.manualExpandLazyVariables",
+				"title": "Manual Expand Lazy Variables"
+			}
+		],
+		"menus": {
+			"view/item/context": [
+				{
+					"command": "java.debug.debugFromProjectView",
+					"when": "view == javaProjectExplorer && viewItem =~ /java:project(?=.*?\\b\\+java\\b)(?=.*?\\b\\+uri\\b)/",
+					"group": "inline@100"
+				},
+				{
+					"command": "java.debug.runFromProjectView",
+					"when": "view == javaProjectExplorer && viewItem =~ /java:project(?=.*?\\b\\+java\\b)(?=.*?\\b\\+uri\\b)/",
+					"group": "8_execution@10"
+				},
+				{
+					"command": "java.debug.debugFromProjectView",
+					"when": "view == javaProjectExplorer && viewItem =~ /java:project(?=.*?\\b\\+java\\b)(?=.*?\\b\\+uri\\b)/",
+					"group": "8_execution@20"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "java.debug.runJavaFile",
+					"when": "resourceExtname == .java",
+					"group": "1_javaactions@90"
+				},
+				{
+					"command": "java.debug.debugJavaFile",
+					"when": "resourceExtname == .java",
+					"group": "1_javaactions@91"
+				}
+			],
+			"editor/context": [
+				{
+					"command": "java.debug.runJavaFile",
+					"when": "editorLangId == java && resourceExtname == .java",
+					"group": "javadebug@1"
+				},
+				{
+					"command": "java.debug.debugJavaFile",
+					"when": "editorLangId == java && resourceExtname == .java",
+					"group": "javadebug@2"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "java.debug.runJavaFile",
+					"when": "resourceExtname == .java",
+					"group": "1_javadebug@10"
+				},
+				{
+					"command": "java.debug.debugJavaFile",
+					"when": "resourceExtname == .java",
+					"group": "1_javadebug@20"
+				}
+			],
+			"debug/toolBar": [
+				{
+					"command": "java.debug.hotCodeReplace",
+					"group": "navigation@100",
+					"when": "inDebugMode && debugType == java && javaHotReload == 'manual' && javaHotReloadOn"
+				}
+			],
+			"debug/callstack/context": [
+				{
+					"command": "java.debug.continueAll",
+					"when": "inDebugMode && debugType == java && callStackItemType == 'thread'"
+				},
+				{
+					"command": "java.debug.continueOthers",
+					"when": "inDebugMode && debugType == java && callStackItemType == 'thread'"
+				},
+				{
+					"command": "java.debug.pauseAll",
+					"when": "inDebugMode && debugType == java && callStackItemType == 'thread'"
+				},
+				{
+					"command": "java.debug.pauseOthers",
+					"when": "inDebugMode && debugType == java && callStackItemType == 'thread'"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "java.debug.hotCodeReplace",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.runJavaFile",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.debugJavaFile",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.continueAll",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.continueOthers",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.pauseAll",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.pauseOthers",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.runFromProjectView",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.debugFromProjectView",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.showHex",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.notShowHex",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.showQualifiedNames",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.notShowQualifiedNames",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.showStaticVariables",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.notShowStaticVariables",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.showLogicalStructure",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.notShowLogicalStructure",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.showToString",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.notShowToString",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.autoExpandLazyVariables",
+					"when": "false"
+				},
+				{
+					"command": "java.debug.variables.manualExpandLazyVariables",
+					"when": "false"
+				}
+			],
+			"debug/variables/context": [
+				{
+					"command": "java.debug.variables.showHex",
+					"when": "debugType == 'java' && javadebug:showHex == 'off'",
+					"group": "1_view@1"
+				},
+				{
+					"command": "java.debug.variables.notShowHex",
+					"when": "debugType == 'java' && javadebug:showHex == 'on'",
+					"group": "1_view@1"
+				},
+				{
+					"command": "java.debug.variables.showQualifiedNames",
+					"when": "debugType == 'java' && javadebug:showQualifiedNames == 'off'",
+					"group": "1_view@2"
+				},
+				{
+					"command": "java.debug.variables.notShowQualifiedNames",
+					"when": "debugType == 'java' && javadebug:showQualifiedNames == 'on'",
+					"group": "1_view@2"
+				},
+				{
+					"command": "java.debug.variables.showStaticVariables",
+					"when": "debugType == 'java' && javadebug:showStaticVariables == 'off'",
+					"group": "1_view@3"
+				},
+				{
+					"command": "java.debug.variables.notShowStaticVariables",
+					"when": "debugType == 'java' && javadebug:showStaticVariables == 'on'",
+					"group": "1_view@3"
+				},
+				{
+					"command": "java.debug.variables.showLogicalStructure",
+					"when": "debugType == 'java' && javadebug:showLogicalStructure == 'off'",
+					"group": "1_view@4"
+				},
+				{
+					"command": "java.debug.variables.notShowLogicalStructure",
+					"when": "debugType == 'java' && javadebug:showLogicalStructure == 'on'",
+					"group": "1_view@4"
+				},
+				{
+					"command": "java.debug.variables.autoExpandLazyVariables",
+					"when": "debugType == 'java' && javadebug:expandLazyVariable == 'off'",
+					"group": "1_view@6"
+				},
+				{
+					"command": "java.debug.variables.manualExpandLazyVariables",
+					"when": "debugType == 'java' && javadebug:expandLazyVariable == 'on'",
+					"group": "1_view@6"
+				}
+			]
+		},
+		"debuggers": [
+			{
+				"type": "java",
+				"label": "Java",
+				"languages": [
+					"java"
+				],
+				"variables": {
+					"SpecifyProgramArgs": "JavaDebug.SpecifyProgramArgs",
+					"PickJavaProcess": "JavaDebug.PickJavaProcess"
+				},
+				"configurationAttributes": {
+					"launch": {
+						"required": [
+							"mainClass"
+						],
+						"properties": {
+							"projectName": {
+								"type": "string",
+								"description": "%java.debugger.launch.projectName.description%",
+								"default": ""
+							},
+							"mainClass": {
+								"type": "string",
+								"description": "%java.debugger.launch.mainClass.description%",
+								"default": ""
+							},
+							"javaExec": {
+								"type": "string",
+								"description": "%java.debugger.launch.javaExec.description%",
+								"default": ""
+							},
+							"args": {
+								"type": [
+									"array",
+									"string"
+								],
+								"description": "%java.debugger.launch.args.description%",
+								"default": ""
+							},
+							"vmArgs": {
+								"type": [
+									"array",
+									"string"
+								],
+								"description": "%java.debugger.launch.vmArgs.description%",
+								"default": ""
+							},
+							"modulePaths": {
+								"type": "array",
+								"items": {
+									"anyOf": [
+										{
+											"enum": [
+												"$Auto",
+												"$Runtime",
+												"$Test",
+												"!<path>"
+											],
+											"enumDescriptions": [
+												"%java.debugger.launch.modulePaths.auto%",
+												"%java.debugger.launch.modulePaths.runtime%",
+												"%java.debugger.launch.modulePaths.test%",
+												"%java.debugger.launch.modulePaths.exclude%"
+											]
+										},
+										"string"
+									]
+								},
+								"description": "%java.debugger.launch.modulePaths.description%",
+								"default": []
+							},
+							"classPaths": {
+								"type": "array",
+								"items": {
+									"anyOf": [
+										{
+											"enum": [
+												"$Auto",
+												"$Runtime",
+												"$Test",
+												"!<path>"
+											],
+											"enumDescriptions": [
+												"%java.debugger.launch.classPaths.auto%",
+												"%java.debugger.launch.classPaths.runtime%",
+												"%java.debugger.launch.classPaths.test%",
+												"%java.debugger.launch.classPaths.exclude%"
+											]
+										},
+										"string"
+									]
+								},
+								"description": "%java.debugger.launch.classPaths.description%",
+								"default": []
+							},
+							"sourcePaths": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								},
+								"description": "%java.debugger.launch.sourcePaths.description%",
+								"default": []
+							},
+							"encoding": {
+								"type": "string",
+								"description": "%java.debugger.launch.encoding.description%",
+								"default": "UTF-8"
+							},
+							"cwd": {
+								"type": "string",
+								"description": "%java.debugger.launch.cwd.description%",
+								"default": "${workspaceFolder}"
+							},
+							"env": {
+								"type": "object",
+								"description": "%java.debugger.launch.env.description%",
+								"default": {}
+							},
+							"envFile": {
+								"type": [
+									"array",
+									"string"
+								],
+								"description": "%java.debugger.launch.envFile.description%",
+								"default": "${workspaceFolder}/.env"
+							},
+							"stopOnEntry": {
+								"type": "boolean",
+								"description": "%java.debugger.launch.stopOnEntry.description%",
+								"default": true
+							},
+							"console": {
+								"type": "string",
+								"enum": [
+									"internalConsole",
+									"integratedTerminal",
+									"externalTerminal"
+								],
+								"enumDescriptions": [
+									"%java.debugger.launch.internalConsole.description%",
+									"%java.debugger.launch.integratedTerminal.description%",
+									"%java.debugger.launch.externalTerminal.description%"
+								],
+								"description": "%java.debugger.launch.console.description%",
+								"default": "integratedTerminal"
+							},
+							"shortenCommandLine": {
+								"type": "string",
+								"enum": [
+									"none",
+									"jarmanifest",
+									"argfile",
+									"auto"
+								],
+								"enumDescriptions": [
+									"%java.debugger.launch.shortenCommandLine.none%",
+									"%java.debugger.launch.shortenCommandLine.jarmanifest%",
+									"%java.debugger.launch.shortenCommandLine.argfile%",
+									"%java.debugger.launch.shortenCommandLine.auto%"
+								],
+								"description": "%java.debugger.launch.shortenCommandLine.description%",
+								"default": "auto"
+							},
+							"stepFilters": {
+								"type": "object",
+								"description": "%java.debugger.launch.stepFilters.description%",
+								"default": {
+									"skipClasses": [
+										"$JDK",
+										"junit.*"
+									],
+									"skipSynthetics": false,
+									"skipStaticInitializers": false,
+									"skipConstructors": false
+								},
+								"properties": {
+									"skipClasses": {
+										"type": "array",
+										"description": "%java.debugger.launch.skipClasses.description%",
+										"items": {
+											"anyOf": [
+												{
+													"enum": [
+														"$JDK",
+														"$Libraries",
+														"java.lang.ClassLoader",
+														""
+													],
+													"enumDescriptions": [
+														"%java.debugger.launch.skipClasses.skipJDK%",
+														"%java.debugger.launch.skipClasses.skipLibraries%",
+														"%java.debugger.launch.skipClasses.skipClassLoader%",
+														"%java.debugger.launch.skipClasses.skipClassPattern%"
+													]
+												},
+												"string"
+											]
+										},
+										"default": [
+											"$JDK",
+											"junit.*"
+										]
+									},
+									"skipSynthetics": {
+										"type": "boolean",
+										"description": "%java.debugger.launch.skipSynthetics.description%",
+										"default": true
+									},
+									"skipStaticInitializers": {
+										"type": "boolean",
+										"description": "%java.debugger.launch.skipStaticInitializers.description%",
+										"default": true
+									},
+									"skipConstructors": {
+										"type": "boolean",
+										"description": "%java.debugger.launch.skipConstructors.description%",
+										"default": true
+									}
+								}
+							}
+						}
+					},
+					"attach": {
+						"properties": {
+							"hostName": {
+								"type": "string",
+								"default": "localhost",
+								"description": "%java.debugger.attach.hostName.description%"
+							},
+							"port": {
+								"type": [
+									"number",
+									"string"
+								],
+								"description": "%java.debugger.attach.port.description%"
+							},
+							"processId": {
+								"anyOf": [
+									{
+										"enum": [
+											"${command:PickJavaProcess}"
+										],
+										"description": "%java.debugger.attach.processPicker.description%",
+										"default": "${command:PickJavaProcess}"
+									},
+									{
+										"type": "integer",
+										"description": "%java.debugger.attach.processId.description%"
+									}
+								]
+							},
+							"timeout": {
+								"type": "number",
+								"default": 30000,
+								"description": "%java.debugger.attach.timeout.description%"
+							},
+							"sourcePaths": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								},
+								"default": [],
+								"description": "%java.debugger.launch.sourcePaths.description%"
+							},
+							"projectName": {
+								"type": "string",
+								"description": "%java.debugger.attach.projectName.description%",
+								"default": ""
+							},
+							"stepFilters": {
+								"type": "object",
+								"description": "%java.debugger.launch.stepFilters.description%",
+								"default": {
+									"skipClasses": [
+										"$JDK",
+										"junit.*"
+									],
+									"skipSynthetics": false,
+									"skipStaticInitializers": false,
+									"skipConstructors": false
+								},
+								"properties": {
+									"skipClasses": {
+										"type": "array",
+										"description": "%java.debugger.launch.skipClasses.description%",
+										"items": {
+											"anyOf": [
+												{
+													"enum": [
+														"$JDK",
+														"$Libraries",
+														"java.lang.ClassLoader",
+														""
+													],
+													"enumDescriptions": [
+														"%java.debugger.launch.skipClasses.skipJDK%",
+														"%java.debugger.launch.skipClasses.skipLibraries%",
+														"%java.debugger.launch.skipClasses.skipClassLoader%",
+														"%java.debugger.launch.skipClasses.skipClassPattern%"
+													]
+												},
+												"string"
+											]
+										},
+										"default": [
+											"$JDK",
+											"junit.*"
+										]
+									},
+									"skipSynthetics": {
+										"type": "boolean",
+										"description": "%java.debugger.launch.skipSynthetics.description%",
+										"default": false
+									},
+									"skipStaticInitializers": {
+										"type": "boolean",
+										"description": "%java.debugger.launch.skipStaticInitializers.description%",
+										"default": false
+									},
+									"skipConstructors": {
+										"type": "boolean",
+										"description": "%java.debugger.launch.skipConstructors.description%",
+										"default": false
+									}
+								}
+							}
+						}
+					}
+				},
+				"configurationSnippets": [
+					{
+						"label": "Java: Launch Program",
+						"description": "%java.debugger.snippet.launch.description%",
+						"body": {
+							"type": "java",
+							"name": "Launch Java Program",
+							"request": "launch",
+							"mainClass": ""
+						}
+					},
+					{
+						"label": "Java: Launch Program in External Terminal",
+						"description": "%java.debugger.snippet.launchInExternalTerminal.description%",
+						"body": {
+							"type": "java",
+							"name": "Launch External Terminal",
+							"request": "launch",
+							"console": "externalTerminal",
+							"mainClass": ""
+						}
+					},
+					{
+						"label": "Java: Launch Program in Current File",
+						"description": "%java.debugger.snippet.launchCurrentFile.description%",
+						"body": {
+							"type": "java",
+							"name": "Launch Current File",
+							"request": "launch",
+							"mainClass": "^\"\\${file}\""
+						}
+					},
+					{
+						"label": "Java: Launch Program with Arguments Prompt",
+						"description": "%java.debugger.snippet.launchWithArgumentsPrompt.description%",
+						"body": {
+							"type": "java",
+							"name": "Launch with Arguments Prompt",
+							"request": "launch",
+							"mainClass": "",
+							"args": "^\"\\${command:SpecifyProgramArgs}\""
+						}
+					},
+					{
+						"label": "Java: Attach",
+						"description": "%java.debugger.snippet.attach.description%",
+						"body": {
+							"type": "java",
+							"name": "Attach",
+							"request": "attach",
+							"hostName": "localhost",
+							"port": "<debug port of the debuggee>"
+						}
+					},
+					{
+						"label": "Java: Attach to Process",
+						"description": "%java.debugger.snippet.attachProcess.description%",
+						"body": {
+							"type": "java",
+							"request": "attach",
+							"name": "Attach by Process ID",
+							"processId": "^\"\\${command:PickJavaProcess}\""
+						}
+					},
+					{
+						"label": "Java: Attach to Remote Program",
+						"description": "%java.debugger.snippet.attachRemote.description%",
+						"body": {
+							"type": "java",
+							"name": "Attach to Remote Program",
+							"request": "attach",
+							"hostName": "<The host name or ip address of remote debuggee>",
+							"port": "<debug port of remote debuggee>"
+						}
+					}
+				]
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "%java.debugger.configuration.title%",
+			"properties": {
+				"java.debug.logLevel": {
+					"type": "string",
+					"default": "warn",
+					"description": "%java.debugger.configuration.logLevel.description%",
+					"enum": [
+						"error",
+						"warn",
+						"info",
+						"verbose"
+					]
+				},
+				"java.debug.settings.showHex": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.showHex.description%",
+					"default": false
+				},
+				"java.debug.settings.showStaticVariables": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.showStaticVariables.description%",
+					"default": false
+				},
+				"java.debug.settings.showQualifiedNames": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.showQualifiedNames.description%",
+					"default": false
+				},
+				"java.debug.settings.showLogicalStructure": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.showLogicalStructure.description%",
+					"default": true
+				},
+				"java.debug.settings.showToString": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.showToString.description%",
+					"default": true
+				},
+				"java.debug.settings.maxStringLength": {
+					"type": "number",
+					"description": "%java.debugger.configuration.maxStringLength.description%",
+					"default": 0
+				},
+				"java.debug.settings.numericPrecision": {
+					"type": "number",
+					"description": "%java.debugger.configuration.numericPrecision.description%",
+					"default": 0
+				},
+				"java.debug.settings.hotCodeReplace": {
+					"type": "string",
+					"default": "manual",
+					"description": "%java.debugger.configuration.hotCodeReplace.description%",
+					"enum": [
+						"auto",
+						"manual",
+						"never"
+					]
+				},
+				"java.debug.settings.enableRunDebugCodeLens": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.enableRunDebugCodeLens.description%",
+					"default": true
+				},
+				"java.debug.settings.forceBuildBeforeLaunch": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.forceBuildBeforeLaunch%",
+					"default": true
+				},
+				"java.debug.settings.onBuildFailureProceed": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.onBuildFailureProceed%",
+					"default": false
+				},
+				"java.debug.settings.console": {
+					"type": "string",
+					"enum": [
+						"internalConsole",
+						"integratedTerminal",
+						"externalTerminal"
+					],
+					"enumDescriptions": [
+						"%java.debugger.launch.internalConsole.description%",
+						"%java.debugger.launch.integratedTerminal.description%",
+						"%java.debugger.launch.externalTerminal.description%"
+					],
+					"description": "%java.debugger.configuration.console%",
+					"default": "integratedTerminal"
+				},
+				"java.debug.settings.exceptionBreakpoint.exceptionTypes": {
+					"type": "array",
+					"description": "%java.debugger.configuration.exceptionBreakpoint.exceptionTypes%",
+					"items": {
+						"type": "string"
+					},
+					"default": []
+				},
+				"java.debug.settings.exceptionBreakpoint.allowClasses": {
+					"type": "array",
+					"description": "%java.debugger.configuration.exceptionBreakpoint.allowClasses%",
+					"items": {
+						"type": "string"
+					},
+					"default": []
+				},
+				"java.debug.settings.exceptionBreakpoint.skipClasses": {
+					"type": "array",
+					"description": "%java.debugger.configuration.exceptionBreakpoint.skipClasses%",
+					"items": {
+						"anyOf": [
+							{
+								"enum": [
+									"$JDK",
+									"$Libraries",
+									"java.lang.ClassLoader",
+									""
+								],
+								"enumDescriptions": [
+									"%java.debugger.launch.skipClasses.skipJDK%",
+									"%java.debugger.launch.skipClasses.skipLibraries%",
+									"%java.debugger.launch.skipClasses.skipClassLoader%",
+									"%java.debugger.launch.skipClasses.skipClassPattern%"
+								]
+							},
+							"string"
+						]
+					},
+					"default": []
+				},
+				"java.debug.settings.stepping.skipClasses": {
+					"type": "array",
+					"description": "%java.debugger.launch.skipClasses.description%",
+					"items": {
+						"anyOf": [
+							{
+								"enum": [
+									"$JDK",
+									"$Libraries",
+									"java.lang.ClassLoader",
+									""
+								],
+								"enumDescriptions": [
+									"%java.debugger.launch.skipClasses.skipJDK%",
+									"%java.debugger.launch.skipClasses.skipLibraries%",
+									"%java.debugger.launch.skipClasses.skipClassLoader%",
+									"%java.debugger.launch.skipClasses.skipClassPattern%"
+								]
+							},
+							"string"
+						]
+					},
+					"default": []
+				},
+				"java.debug.settings.stepping.skipSynthetics": {
+					"type": "boolean",
+					"description": "%java.debugger.launch.skipSynthetics.description%",
+					"default": false
+				},
+				"java.debug.settings.stepping.skipStaticInitializers": {
+					"type": "boolean",
+					"description": "%java.debugger.launch.skipStaticInitializers.description%",
+					"default": false
+				},
+				"java.debug.settings.stepping.skipConstructors": {
+					"type": "boolean",
+					"description": "%java.debugger.launch.skipConstructors.description%",
+					"default": false
+				},
+				"java.debug.settings.jdwp.limitOfVariablesPerJdwpRequest": {
+					"type": "number",
+					"description": "%java.debugger.configuration.jdwp.limitOfVariablesPerJdwpRequest.description%",
+					"default": 100,
+					"minimum": 1
+				},
+				"java.debug.settings.jdwp.requestTimeout": {
+					"type": "number",
+					"description": "%java.debugger.configuration.jdwp.requestTimeout.description%",
+					"default": 3000,
+					"minimum": 100
+				},
+				"java.debug.settings.jdwp.async": {
+					"type": "string",
+					"enum": [
+						"auto",
+						"on",
+						"off"
+					],
+					"description": "%java.debugger.configuration.jdwp.async.description%",
+					"default": "auto"
+				},
+				"java.debug.settings.vmArgs": {
+					"type": "string",
+					"description": "%java.debugger.configuration.vmArgs.description%",
+					"default": ""
+				},
+				"java.debug.settings.debugSupportOnDecompiledSource": {
+					"type": "string",
+					"enum": [
+						"on",
+						"off"
+					],
+					"description": "%java.debugger.configuration.debugSupportOnDecompiledSource.description%",
+					"default": "on"
+				},
+				"java.silentNotification": {
+					"type": "boolean",
+					"description": "%java.debugger.configuration.silentNotification%",
+					"default": false
+				}
+			}
+		},
+		"languageModelTools": [
+			{
+				"name": "debug_java_application",
+				"displayName": "Debug Java Application",
+				"modelDescription": "Launch or attach to a Java application in debug mode with automatic compilation and classpath resolution. The tool handles building the project, resolving dependencies, starting the JVM with JDWP enabled, and auto-attaching the VS Code debugger. Use this as the first step to establish a debug session. The debug process runs in the background until stopped. Example usage: Debug a main class ('com.example.Main'), a JAR file ('target/app.jar'), or with program arguments (['--port=8080']).",
+				"toolReferenceName": "debugJavaApplication",
+				"tags": [
+					"java",
+					"debug",
+					"debugger",
+					"build",
+					"compile"
+				],
+				"icon": "$(debug-alt)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"target": {
+							"type": "string",
+							"description": "What to debug: 1) Main class name - simple ('App') or fully qualified ('com.example.Main'). Tool auto-detects package from source files. 2) JAR file path ('target/app.jar'). 3) Raw Java command arguments ('-cp bin com.example.Main'). The tool automatically finds the .class file for simple class names."
+						},
+						"workspacePath": {
+							"type": "string",
+							"description": "Absolute path to the Java project root directory containing pom.xml, build.gradle, or .java source files. This is the working directory for compilation and debugging."
+						},
+						"args": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"description": "Optional command-line arguments to pass to the Java main method (e.g., ['arg1', 'arg2', '--flag=value']). These are program arguments, not JVM arguments."
+						},
+						"skipBuild": {
+							"type": "boolean",
+							"description": "Whether to skip compilation before debugging. DEFAULT: false (tool will automatically compile the project). Set to true only when you have already compiled the project and want to use an explicit classpath. In most cases, leave this as false to let the tool handle compilation automatically.",
+							"default": false
+						},
+						"classpath": {
+							"type": "string",
+							"description": "Explicit classpath to use for debugging. REQUIRED when skipBuild is true. Format: absolute paths separated by system path delimiter (';' on Windows, ':' on Unix). Example: 'C:\\project\\target\\classes;C:\\project\\lib\\dep.jar' or '/project/target/classes:/project/lib/dep.jar'. If not provided and skipBuild is false, the tool will automatically resolve the classpath."
+						},
+						"waitForSession": {
+							"type": "boolean",
+							"description": "Whether to wait for the debug session to start before returning. DEFAULT: false (returns immediately after sending debug command). Set to true to wait up to 30 seconds for VS Code to confirm the debug session has started and is ready. Useful when you need to ensure the debugger is attached before proceeding with breakpoint operations.",
+							"default": false
+						}
+					},
+					"required": [
+						"target",
+						"workspacePath"
+					]
+				}
+			},
+			{
+				"name": "set_java_breakpoint",
+				"displayName": "Set Java Breakpoint",
+				"modelDescription": "Set a breakpoint at a specific line in Java source code to pause execution and inspect program state. Supports conditional breakpoints (break only when condition is true), hit count conditions (break after N hits), and logpoints (log messages without stopping). REQUIRES: Active debug session. Start with 1-2 strategic breakpoints; prefer stepping over setting multiple breakpoints.",
+				"toolReferenceName": "setJavaBreakpoint",
+				"tags": [
+					"java",
+					"debug",
+					"breakpoint"
+				],
+				"icon": "$(debug-breakpoint)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"filePath": {
+							"type": "string",
+							"description": "Absolute path to the Java source file where the breakpoint should be set. Example: 'C:/project/src/main/java/com/example/Main.java' or use ${workspaceFolder} variable."
+						},
+						"lineNumber": {
+							"type": "number",
+							"description": "The line number (1-based) where the breakpoint should be set. Must be a valid executable line (not a comment or blank line)."
+						},
+						"condition": {
+							"type": "string",
+							"description": "Optional condition expression. Breakpoint only triggers when condition evaluates to true. Example: 'count > 10' or 'userName.equals(\"admin\")'. Leave empty for unconditional breakpoint."
+						},
+						"hitCondition": {
+							"type": "string",
+							"description": "Optional hit count condition. Example: '>5' (break after 5th hit), '==3' (break on 3rd hit), '%2' (break every 2nd hit). Leave empty to break on every hit."
+						},
+						"logMessage": {
+							"type": "string",
+							"description": "Optional log message. If provided, instead of breaking, the message will be logged to debug console. Use {expression} for interpolation. Example: 'Counter value: {count}'. This creates a logpoint instead of a breakpoint."
+						}
+					},
+					"required": [
+						"filePath",
+						"lineNumber"
+					]
+				}
+			},
+			{
+				"name": "debug_step_operation",
+				"displayName": "Debug Step Operation",
+				"modelDescription": "Control program execution flow: stepIn (enter method calls), stepOut (exit current method), stepOver (execute current line), continue (run to next breakpoint), pause (halt execution). REQUIRES: Active debug session in paused state. Prefer stepping through code over setting multiple breakpoints for efficient debugging.",
+				"toolReferenceName": "debugStepOperation",
+				"tags": [
+					"java",
+					"debug",
+					"step",
+					"continue"
+				],
+				"icon": "$(debug-step-over)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"operation": {
+							"type": "string",
+							"enum": [
+								"stepIn",
+								"stepOut",
+								"stepOver",
+								"continue",
+								"pause"
+							],
+							"description": "The step operation to perform: 'stepIn' - step into method calls, 'stepOut' - step out of current method, 'stepOver' - execute current line and move to next, 'continue' - resume execution until next breakpoint, 'pause' - pause running execution."
+						},
+						"threadId": {
+							"type": "number",
+							"description": "Optional thread ID to perform operation on. If not specified, operates on the currently selected thread. Use get_debug_threads to get available thread IDs."
+						}
+					},
+					"required": [
+						"operation"
+					]
+				}
+			},
+			{
+				"name": "get_debug_variables",
+				"displayName": "Get Debug Variables",
+				"modelDescription": "Inspect variables in a specific thread's stack frame: local variables, method parameters, static fields, and instance fields. Returns variable names, types, and values. Supports filtering by scope type or name pattern. REQUIRES: Active debug session with at least one SUSPENDED thread. For multi-threaded debugging, use threadId to specify which thread's variables to inspect. If no threadId is provided, uses the first suspended thread.",
+				"toolReferenceName": "getDebugVariables",
+				"tags": [
+					"java",
+					"debug",
+					"variables",
+					"inspect"
+				],
+				"icon": "$(symbol-variable)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"threadId": {
+							"type": "number",
+							"description": "Thread ID to inspect. Use get_debug_threads() to list available threads with their IDs and states. Only SUSPENDED threads can be inspected. If omitted, uses the first suspended thread found."
+						},
+						"frameId": {
+							"type": "number",
+							"description": "Optional stack frame ID. Default is 0 (current/top frame). Use get_debug_stack_trace to get available frame IDs. Higher numbers are deeper in the call stack."
+						},
+						"scopeType": {
+							"type": "string",
+							"enum": [
+								"local",
+								"static",
+								"all"
+							],
+							"description": "Type of variables to retrieve: 'local' - only local variables and parameters, 'static' - only static class variables, 'all' - both local and static. Default: 'all'."
+						},
+						"filter": {
+							"type": "string",
+							"description": "Optional filter pattern to match variable names. Supports wildcards (*). Example: 'user*' matches 'userName', 'userId'. Leave empty to get all variables."
+						}
+					},
+					"required": []
+				}
+			},
+			{
+				"name": "get_debug_stack_trace",
+				"displayName": "Get Debug Stack Trace",
+				"modelDescription": "Retrieve the call stack showing all method calls leading to the current execution point. Returns method names, source files, and line numbers for each frame. REQUIRES: Active debug session in paused state. Essential for understanding program flow, tracing how code was reached, and identifying unexpected execution paths.",
+				"toolReferenceName": "getDebugStackTrace",
+				"tags": [
+					"java",
+					"debug",
+					"stack",
+					"callstack"
+				],
+				"icon": "$(call-hierarchy)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"threadId": {
+							"type": "number",
+							"description": "Optional thread ID. If not specified, uses the currently selected thread. Use get_debug_threads to list available threads."
+						},
+						"maxDepth": {
+							"type": "number",
+							"description": "Maximum number of stack frames to retrieve. Default: 50. Use smaller values for shallow inspection, larger for deep call stacks.",
+							"default": 50
+						}
+					},
+					"required": []
+				}
+			},
+			{
+				"name": "evaluate_debug_expression",
+				"displayName": "Evaluate Debug Expression",
+				"modelDescription": "Evaluate a Java expression in a specific thread's debug context. Access local variables, parameters, fields, and invoke methods. Returns the result with type information. REQUIRES: Active debug session with at least one SUSPENDED thread. For multi-threaded debugging, use threadId to specify which thread's context to use. If no threadId is provided, uses the first suspended thread. Examples: 'user.getName()', 'list.size() > 10', 'counter == null'.",
+				"toolReferenceName": "evaluateDebugExpression",
+				"tags": [
+					"java",
+					"debug",
+					"evaluate",
+					"expression"
+				],
+				"icon": "$(symbol-method)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"expression": {
+							"type": "string",
+							"description": "The Java expression to evaluate. Can be a variable name, field access, method call, or complex expression. Example: 'user.age', 'calculateTotal()', 'count > 0 && !items.isEmpty()'."
+						},
+						"threadId": {
+							"type": "number",
+							"description": "Thread ID for evaluation context. Use get_debug_threads() to list available threads with their IDs and states. Only SUSPENDED threads can evaluate expressions. If omitted, uses the first suspended thread found."
+						},
+						"frameId": {
+							"type": "number",
+							"description": "Optional stack frame ID for evaluation context. Default: 0 (current frame). Variables and methods from the specified frame will be accessible.",
+							"default": 0
+						},
+						"context": {
+							"type": "string",
+							"enum": [
+								"watch",
+								"repl",
+								"hover"
+							],
+							"description": "Evaluation context: 'watch' - for watch expressions, 'repl' - for debug console input, 'hover' - for hover tooltips. Affects how side effects are handled. Default: 'repl'.",
+							"default": "repl"
+						}
+					},
+					"required": [
+						"expression"
+					]
+				}
+			},
+			{
+				"name": "get_debug_threads",
+				"displayName": "Get Debug Threads",
+				"modelDescription": "List all threads in the debugged Java application with their IDs, names, and states (🔴 SUSPENDED or 🟢 RUNNING). For SUSPENDED threads, also shows the current location (file:line). REQUIRES: Active debug session. IMPORTANT: Only SUSPENDED threads can have their variables inspected or expressions evaluated. Use the returned thread IDs with get_debug_variables(threadId=X) or evaluate_debug_expression(threadId=X) to inspect specific threads.",
+				"toolReferenceName": "getDebugThreads",
+				"tags": [
+					"java",
+					"debug",
+					"threads",
+					"concurrent"
+				],
+				"icon": "$(list-tree)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {},
+					"required": []
+				}
+			},
+			{
+				"name": "remove_java_breakpoints",
+				"displayName": "Remove Java Breakpoints",
+				"modelDescription": "Remove breakpoints: specific breakpoint by file and line, all breakpoints in a file, or all breakpoints globally. Use this to clean up after investigation or before setting new breakpoints. Best practice: keep only 1-2 active breakpoints at a time; remove old ones before adding new ones.",
+				"toolReferenceName": "removeJavaBreakpoints",
+				"tags": [
+					"java",
+					"debug",
+					"breakpoint"
+				],
+				"icon": "$(debug-breakpoint-unverified)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"filePath": {
+							"type": "string",
+							"description": "Absolute path to the Java source file. If not provided, removes all breakpoints from all files."
+						},
+						"lineNumber": {
+							"type": "number",
+							"description": "Optional line number. If provided, removes only the breakpoint at this line. If omitted, removes all breakpoints in the specified file."
+						}
+					},
+					"required": []
+				}
+			},
+			{
+				"name": "stop_debug_session",
+				"displayName": "Stop Debug Session",
+				"modelDescription": "Stop the active Java debug session when investigation is complete or when you need to restart debugging. This terminates the running Java process and closes the debug session. Use this to clean up after debugging or when you've identified the root cause and want to end the session. Optional: Provide a reason for stopping (e.g., 'Investigation complete', 'Root cause identified').",
+				"toolReferenceName": "stopDebugSession",
+				"tags": [
+					"java",
+					"debug",
+					"stop",
+					"terminate"
+				],
+				"icon": "$(debug-stop)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {
+						"reason": {
+							"type": "string",
+							"description": "Optional reason for stopping the debug session (e.g., 'Investigation complete', 'Root cause identified', 'Need to restart'). Default: 'Investigation complete'."
+						}
+					},
+					"required": []
+				}
+			},
+			{
+				"name": "get_debug_session_info",
+				"displayName": "Get Debug Session Info",
+				"modelDescription": "Get information about the currently active Java debug session, including whether it's PAUSED at a breakpoint or RUNNING. CRITICAL: Check status before using inspection tools (get_debug_variables, get_debug_stack_trace, evaluate_debug_expression) or control operations (continue, step). PAUSED status (🔴) means stopped at breakpoint - inspection and control tools available. RUNNING status (🟢) means executing code - only breakpoint setting or session stop available. Returns session ID, name, type, configuration details, and status-specific available actions.",
+				"toolReferenceName": "getDebugSessionInfo",
+				"tags": [
+					"java",
+					"debug",
+					"session",
+					"info",
+					"status",
+					"paused",
+					"running"
+				],
+				"icon": "$(info)",
+				"canBeReferencedInPrompt": true,
+				"inputSchema": {
+					"type": "object",
+					"properties": {},
+					"required": []
+				}
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run build",
+		"compile": "tsc -p . && webpack --config webpack.config.js",
+		"watch": "webpack --config webpack.config.js --watch",
+		"build": "webpack --config webpack.config.js --mode=\"production\"",
+		"tslint": "tslint -t verbose --project tsconfig.json",
+		"build-server": "node scripts/build/buildJdtlsExt.js",
+		"test": "npm run compile && node ./out/test/index.js"
+	},
+	"devDependencies": {
+		"@types/glob": "^7.2.0",
+		"@types/lodash": "^4.17.13",
+		"@types/mocha": "^10.0.9",
+		"@types/node": "^14.18.63",
+		"@types/uuid": "^8.3.4",
+		"@types/vscode": "1.95.0",
+		"@vscode/test-electron": "^2.4.1",
+		"mocha": "^10.8.2",
+		"ts-loader": "^9.5.1",
+		"tslint": "^6.1.3",
+		"typescript": "^4.9.5",
+		"webpack": "^5.95.0",
+		"webpack-cli": "^4.10.0"
+	},
+	"dependencies": {
+		"compare-versions": "^4.1.4",
+		"dotenv": "^16.4.5",
+		"lodash": "^4.17.21",
+		"uuid": "^8.3.2",
+		"vscode-extension-telemetry-wrapper": "^0.14.0",
+		"vscode-languageclient": "6.0.0-next.9",
+		"vscode-languageserver-types": "3.16.0",
+		"vscode-tas-client": "^0.1.84"
+	},
+	"__metadata": {
+		"installedTimestamp": 1767774918206,
+		"targetPlatform": "universal",
+		"size": 4075303
+	}
+}

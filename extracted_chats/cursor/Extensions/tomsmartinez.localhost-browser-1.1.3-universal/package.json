@@ -1,0 +1,108 @@
+{
+	"name": "localhost-browser",
+	"displayName": "Localhost Browser",
+	"publisher": "TomsMartinez",
+	"icon": "./resources/icon.webp",
+	"description": "Open localhost in Simple Browser with automatic port detection",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/shadow1363/localhost.git"
+	},
+	"version": "1.1.3",
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "localhostBrowser",
+					"title": "Localhost Browser",
+					"icon": "$(browser)"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "localhostBrowser.openBrowser",
+				"title": "Open Localhost",
+				"icon": "$(browser)"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "localhostBrowser.openBrowser",
+				"key": "ctrl+shift+l",
+				"mac": "cmd+shift+l",
+				"when": "editorTextFocus"
+			}
+		],
+		"configuration": {
+			"title": "Localhost Browser",
+			"properties": {
+				"localhostBrowser.keybinding": {
+					"type": "string",
+					"default": "ctrl+shift+l",
+					"description": "Keyboard shortcut to open localhost browser. Use format like 'ctrl+shift+l' or 'cmd+shift+l' for Mac. Requires reload to take effect.",
+					"scope": "application"
+				},
+				"localhostBrowser.defaultPort": {
+					"type": "string",
+					"default": "",
+					"description": "Default port to use when no PORT is detected in project files. Leave empty to use plain 'localhost'.",
+					"scope": "resource"
+				},
+				"localhostBrowser.searchPaths": {
+					"type": "array",
+					"default": [
+						".env",
+						".env.local",
+						".env.development",
+						"package.json",
+						"docker-compose.yml",
+						"docker-compose.yaml",
+						"next.config.js",
+						"vite.config.js",
+						"vite.config.ts"
+					],
+					"description": "List of files to search for PORT configuration",
+					"scope": "resource"
+				}
+			}
+		},
+		"menus": {
+			"view/title": [
+				{
+					"command": "localhostBrowser.openBrowser",
+					"when": "view == localhostBrowserView",
+					"group": "navigation"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	},
+	"devDependencies": {
+		"@types/node": "16.x",
+		"@types/vscode": "^1.60.0",
+		"typescript": "^4.9.4"
+	},
+	"dependencies": {
+		"@vscode/vsce": "^3.6.0"
+	},
+	"__metadata": {
+		"installedTimestamp": 1759788586392,
+		"targetPlatform": "universal",
+		"size": 58253
+	}
+}

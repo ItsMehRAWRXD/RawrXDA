@@ -1,0 +1,30 @@
+{
+  "name": "cursor-student-harvester",
+  "version": "1.0.0",
+  "description": "Automated student license harvester for Cursor",
+  "main": "harvest.js",
+  "type": "module",
+  "scripts": {
+    "start": "node harvest.js",
+    "harvest": "node harvest.js --single",
+    "batch": "node harvest.js --batch 10",
+    "install": "npm install"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "sqlite3": "^5.1.6",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "temp-mail": "^3.0.0",
+    "uuid": "^9.0.1"
+  },
+  "keywords": [
+    "cursor",
+    "student",
+    "license",
+    "harvester",
+    "automation"
+  ],
+  "author": "Circumvention Tools",
+  "license": "MIT"
+}

@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standalone Copilot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #2d2d30;
+            padding: 10px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            color: #007acc;
+            font-size: 18px;
+        }
+
+        .status {
+            background: #0e639c;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: #252526;
+            border-right: 1px solid #3e3e42;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: #007acc;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .message.assistant {
+            background: #2d2d30;
+            color: #d4d4d4;
+            align-self: flex-start;
+            border: 1px solid #3e3e42;
+        }
+
+        .message.system {
+            background: #0e639c;
+            color: white;
+            align-self: center;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .input-container {
+            padding: 20px;
+            background: #2d2d30;
+            border-top: 1px solid #3e3e42;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            background: #3c3c3c;
+            border: 1px solid #3e3e42;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: #007acc;
+        }
+
+        .send-button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .send-button:hover {
+            background: #005a9e;
+        }
+
+        .send-button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .voice-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background 0.2s;
+        }
+
+        .voice-button:hover {
+            background: #218838;
+        }
+
+        .voice-button.recording {
+            background: #dc3545;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #3e3e42;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .feature-list li:hover {
+            color: #007acc;
+        }
+
+        .code-suggestion {
+            background: #1e1e1e;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+
+        .typing-indicator {
+            display: none;
+            color: #888;
+            font-style: italic;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+
+        .settings-panel {
+            background: #2d2d30;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .settings-panel h3 {
+            margin-bottom: 10px;
+            color: #007acc;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .toggle {
+            width: 40px;
+            height: 20px;
+            background: #555;
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle.active {
+            background: #007acc;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle.active::after {
+            transform: translateX(20px);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 Standalone Copilot</h1>
+        <div class="status" id="status">Ready</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Features</h3>
+            </div>
+            <div class="sidebar-content">
+                <ul class="feature-list">
+                    <li onclick="showCodeCompletion()">💡 Code Completion</li>
+                    <li onclick="showChat()">💬 Chat Assistant</li>
+                    <li onclick="showVoiceChat()">🎤 Voice Chat</li>
+                    <li onclick="showCodeAnalysis()">🔍 Code Analysis</li>
+                    <li onclick="showSettings()">⚙️ Settings</li>
+                </ul>
+
+                <div class="settings-panel" id="settingsPanel" style="display: none;">
+                    <h3>Settings</h3>
+                    <div class="setting-item">
+                        <span>Voice Recognition</span>
+                        <div class="toggle" id="voiceToggle" onclick="toggleVoice()"></div>
+                    </div>
+                    <div class="setting-item">
+                        <span>Auto-complete</span>
+                        <div class="toggle active" id="autoCompleteToggle" onclick="toggleAutoComplete()"></div>
+                    </div>
+                    <div class="setting-item">
+                        <span>Dark Mode</span>
+                        <div class="toggle active" id="darkModeToggle" onclick="toggleDarkMode()"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">
+                    Welcome to Standalone Copilot! I'm your AI coding assistant. How can I help you today?
+                </div>
+            </div>
+
+            <div class="input-container">
+                <button class="voice-button" id="voiceButton" onclick="toggleVoiceRecording()">🎤</button>
+                <input type="text" class="input-field" id="messageInput" placeholder="Ask me anything about coding..." onkeypress="handleKeyPress(event)">
+                <button class="send-button" id="sendButton" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="typing-indicator" id="typingIndicator">
+        Copilot is thinking...
+    </div>
+
+    <script>
+        class StandaloneCopilot {
+            constructor() {
+                this.isRecording = false;
+                this.recognition = null;
+                this.conversationHistory = [];
+                this.settings = {
+                    voiceEnabled: false,
+                    autoComplete: true,
+                    darkMode: true
+                };
+                this.init();
+            }
+
+            init() {
+                this.setupVoiceRecognition();
+                this.loadSettings();
+                this.addMessage('system', 'Copilot initialized successfully!');
+            }
+
+            setupVoiceRecognition() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    this.recognition = new SpeechRecognition();
+                    this.recognition.continuous = false;
+                    this.recognition.interimResults = false;
+                    this.recognition.lang = 'en-US';
+
+                    this.recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        document.getElementById('messageInput').value = transcript;
+                        this.sendMessage();
+                    };
+
+                    this.recognition.onerror = (event) => {
+                        console.error('Speech recognition error:', event.error);
+                        this.updateStatus('Voice recognition error');
+                    };
+                }
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('copilotSettings');
+                if (saved) {
+                    this.settings = { ...this.settings, ...JSON.parse(saved) };
+                    this.updateUI();
+                }
+            }
+
+            saveSettings() {
+                localStorage.setItem('copilotSettings', JSON.stringify(this.settings));
+            }
+
+            updateUI() {
+                document.getElementById('voiceToggle').classList.toggle('active', this.settings.voiceEnabled);
+                document.getElementById('autoCompleteToggle').classList.toggle('active', this.settings.autoComplete);
+                document.getElementById('darkModeToggle').classList.toggle('active', this.settings.darkMode);
+            }
+
+            addMessage(type, content, isCode = false) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                
+                if (isCode) {
+                    messageDiv.innerHTML = `<div class="code-suggestion">${content}</div>`;
+                } else {
+                    messageDiv.textContent = content;
+                }
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            showTypingIndicator() {
+                document.getElementById('typingIndicator').classList.add('show');
+            }
+
+            hideTypingIndicator() {
+                document.getElementById('typingIndicator').classList.
+Copy
+Share
+remove('show');
+}
+Copy
+        updateStatus(status) {
+            document.getElementById('status').textContent = status;
+        }
+
+        sendMessage() {
+            const inputField = document.getElementById('messageInput');
+            const message = inputField.value.trim();
+            if (!message) return;
+
+            this.addMessage('user', message);
+            inputField.value = '';
+
+            this.conversationHistory.push({ role: 'user', content: message });
+            this.processMessage(message);
+        }
+
+        processMessage(message) {
+            this.showTypingIndicator();
+            // Simulate a response from the AI
+            setTimeout(() => {
+                this.hideTypingIndicator();
+                this.addMessage('assistant', `You said: "${message}"`);
+                this.conversationHistory.push({ role: 'assistant', content: `You said: "${message}"` });
+            }, 1000);
+        }
+
+        toggleVoiceRecording() {
+            const voiceButton = document.getElementById('voiceButton');
+            if (this.isRecording) {
+                this.recognition.stop();
+                voiceButton.classList.remove('recording');
+                this.isRecording = false;
+            } else {
+                this.recognition.start();
+                voiceButton.classList.add('recording');
+                this.isRecording = true;
+            }
+        }
+
+        toggleVoice() {
+            this.settings.voiceEnabled = !this.settings.voiceEnabled;
+            this.saveSettings();
+            this.updateUI();
+        }
+
+        toggleAutoComplete() {
+            this.settings.autoComplete = !this.settings.autoComplete;
+            this.saveSettings();
+            this.updateUI();
+        }
+
+        toggleDarkMode() {
+            this.settings.darkMode = !this.settings.darkMode;
+            this.saveSettings();
+            this.updateUI();
+        }
+
+        handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                this.sendMessage();
+            }
+        }
+    }
+
+    const copilot = new StandaloneCopilot();
+</script>
+</body>
+</html>
+Copy
+Share
+06:54:09.564 rawrcopilot.html:286  Uncaught ReferenceError: showChat is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:286:46)
+06:54:10.052 rawrcopilot.html:285  Uncaught ReferenceError: showCodeCompletion is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:285:56)
+06:54:12.969 rawrcopilot.html:319  Uncaught ReferenceError: handleKeyPress is not defined
+    at HTMLInputElement.onkeypress (rawrcopilot.html:319:155)
+06:54:13.086 rawrcopilot.html:319  Uncaught ReferenceError: handleKeyPress is not defined
+    at HTMLInputElement.onkeypress (rawrcopilot.html:319:155)
+06:54:13.296 rawrcopilot.html:319  Uncaught ReferenceError: handleKeyPress is not defined
+    at HTMLInputElement.onkeypress (rawrcopilot.html:319:155)
+06:54:14.724 rawrcopilot.html:320  Uncaught ReferenceError: sendMessage is not defined
+    at HTMLButtonElement.onclick (rawrcopilot.html:320:85)
+06:54:14.943 rawrcopilot.html:320  Uncaught ReferenceError: sendMessage is not defined
+    at HTMLButtonElement.onclick (rawrcopilot.html:320:85)
+06:54:19.938 rawrcopilot.html:285  Uncaught ReferenceError: showCodeCompletion is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:285:56)
+06:54:20.311 rawrcopilot.html:286  Uncaught ReferenceError: showChat is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:286:46)
+06:54:20.619 rawrcopilot.html:287  Uncaught ReferenceError: showVoiceChat is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:287:51)
+06:54:20.831 rawrcopilot.html:287  Uncaught ReferenceError: showVoiceChat is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:287:51)
+06:54:21.087 rawrcopilot.html:288  Uncaught ReferenceError: showCodeAnalysis is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:288:54)
+06:54:21.412 rawrcopilot.html:289  Uncaught ReferenceError: showSettings is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:289:50)
+06:54:21.619 rawrcopilot.html:289  Uncaught ReferenceError: showSettings is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:289:50)
+06:54:29.574 rawrcopilot.html:287  Uncaught ReferenceError: showVoiceChat is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:287:51)
+06:54:29.873 rawrcopilot.html:286  Uncaught ReferenceError: showChat is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:286:46)
+06:54:30.358 rawrcopilot.html:285  Uncaught ReferenceError: showCodeCompletion is not defined
+    at HTMLLIElement.onclick (rawrcopilot.html:285:56)
+Copy
+Share
+从错误信息来看，问题出在 HTML 中绑定的事件处理函数（如 showChat、showCodeCompletion、sendMessage 等）在 JavaScript 中没有定义。这些函数需要在 StandaloneCopilot 类中实现，或者直接在全局作用域中定义。
+以下是修复这些问题的步骤：
+1. 定义事件处理函数
+在 StandaloneCopilot 类中定义这些函数，或者直接在全局作用域中定义。以下是将这些函数定义在 StandaloneCopilot 类中的示例：
+JavaScript
+Copy
+class StandaloneCopilot {
+    constructor() {
+        this.isRecording = false;
+        this.recognition = null;
+        this.conversationHistory = [];
+        this.settings = {
+            voiceEnabled: false,
+            autoComplete: true,
+            darkMode: true
+        };
+        this.init();
+    }
+
+    init() {
+        this.setupVoiceRecognition();
+        this.loadSettings();
+        this.addMessage('system', 'Copilot initialized successfully!');
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        document.getElementById('voiceButton').onclick = () => this.toggleVoiceRecording();
+        document.getElementById('messageInput').onkeypress = (event) => this.handleKeyPress(event);
+        document.getElementById('sendButton').onclick = () => this.sendMessage();
+        document.querySelectorAll('.feature-list li').forEach(li => {
+            li.onclick = () => this.handleFeatureClick(li.textContent.trim());
+        });
+    }
+
+    handleFeatureClick(feature) {
+        switch (feature) {
+            case 'Code Completion':
+                this.showCodeCompletion();
+                break;
+            case 'Chat Assistant':
+                this.showChat();
+                break;
+            case 'Voice Chat':
+                this.showVoiceChat();
+                break;
+            case 'Code Analysis':
+                this.showCodeAnalysis();
+                break;
+            case 'Settings':
+                this.showSettings();
+                break;
+            default:
+                console.warn(`Unknown feature: ${feature}`);
+        }
+    }
+
+    showCodeCompletion() {
+        console.log('Code Completion feature clicked');
+        // Add your logic here
+    }
+
+    showChat() {
+        console.log('Chat Assistant feature clicked');
+        // Add your logic here
+    }
+
+    showVoiceChat() {
+        console.log('Voice Chat feature clicked');
+        // Add your logic here
+    }
+
+    showCodeAnalysis() {
+        console.log('Code Analysis feature clicked');
+        // Add your logic here
+    }
+
+    showSettings() {
+        console.log('Settings feature clicked');
+        // Add your logic here
+    }
+
+    setupVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+            this.recognition.lang = 'en-US';
+
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                this.sendMessage();
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                this.updateStatus('Voice recognition error');
+            };
+        }
+    }
+
+    loadSettings() {
+        const saved = localStorage.getItem('copilotSettings');
+        if (saved) {
+            this.settings = { ...this.settings, ...JSON.parse(saved) };
+            this.updateUI();
+        }
+    }
+
+    saveSettings() {
+        localStorage.setItem('copilotSettings', JSON.stringify(this.settings));
+    }
+
+    updateUI() {
+        document.getElementById('voiceToggle').classList.toggle('active', this.settings.voiceEnabled);
+        document.getElementById('autoCompleteToggle').classList.toggle('active', this.settings.autoComplete);
+        document.getElementById('darkModeToggle').classList.toggle('active', this.settings.darkMode);
+    }
+
+    addMessage(type, content, isCode = false) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        if (isCode) {
+            messageDiv.innerHTML = `<div class="code-suggestion">${content}</div>`;
+        } else {
+            messageDiv.textContent = content;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    showTypingIndicator() {
+        document.getElementById('typingIndicator').classList.add('show');
+    }
+
+    hideTypingIndicator() {
+        document.getElementById('typingIndicator').classList.remove('show');
+    }
+
+    updateStatus(status) {
+        document.getElementById('status').textContent = status;
+    }
+
+    sendMessage() {
+        const inputField = document.getElementById('messageInput');
+        const message = inputField.value.trim();
+        if (!message) return;
+
+        this.addMessage('user', message);
+        inputField.value = '';
+
+        this.conversationHistory.push({ role: 'user', content: message });
+        this.processMessage(message);
+    }
+
+    processMessage(message) {
+        this.showTypingIndicator();
+        // Simulate a response from the AI
+        setTimeout(() => {
+            this.hideTypingIndicator();
+            this.addMessage('assistant', `You said: "${message}"`);
+            this.conversationHistory.push({ role: 'assistant', content: `You said: "${message}"` });
+        }, 1000);
+    }
+
+    toggleVoiceRecording() {
+        const voiceButton = document.getElementById('voiceButton');
+        if (this.isRecording) {
+            this.recognition.stop();
+            voiceButton.classList.remove('recording');
+            this.isRecording = false;
+        } else {
+            this.recognition.start();
+            voiceButton.classList.add('recording');
+            this.isRecording = true;
+        }
+    }
+
+    toggleVoice() {
+        this.settings.voiceEnabled = !this.settings.voiceEnabled;
+        this.saveSettings();
+        this.updateUI();
+    }
+
+    toggleAutoComplete() {
+        this.settings.autoComplete = !this.settings.autoComplete;
+        this.saveSettings();
+        this.updateUI();
+    }
+
+    toggleDarkMode() {
+        this.settings.darkMode = !this.settings.darkMode;
+        this.saveSettings();
+        this.updateUI();
+    }
+
+    handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            this.sendMessage();
+        }
+    }
+}
+
+const copilot = new StandaloneCopilot();
+2. 修复 HTML 中的事件绑定
+确保 HTML 中的事件绑定正确指向这些函数。例如：
+HTML
+Preview
+Copy
+<ul class="feature-list">
+    <li onclick="copilot.showCodeCompletion()">💡 Code Completion</li>
+    <li onclick="copilot.showChat()">💬 Chat Assistant</li>
+    <li onclick="copilot.showVoiceChat()">🎤 Voice Chat</li>
+    <li onclick="copilot.showCodeAnalysis()">🔍 Code Analysis</li>
+    <li onclick="copilot.showSettings()">⚙️ Settings</li>
+</ul>
+3. 确保所有函数都已定义
+确保所有在 HTML 中引用的函数都在 JavaScript 中定义。如果某些函数不需要实现，可以简单地打印一条日志，或者提供一个默认的实现。
+4. 测试
+重新加载页面并测试所有功能，确保没有其他错误。
+通过以上步骤，应该可以解决你遇到的错误。
+Copy
+Share
+in english please
+Copy
+Share
+Sure! Here's the explanation and the code in English:
+1. Define Event Handler Functions
+The error messages indicate that the event handler functions (like showChat, showCodeCompletion, sendMessage, etc.) are not defined in the JavaScript code. These functions need to be defined either within the StandaloneCopilot class or directly in the global scope.
+Here's an example of defining these functions within the StandaloneCopilot class:
+JavaScript
+Copy
+class StandaloneCopilot {
+    constructor() {
+        this.isRecording = false;
+        this.recognition = null;
+        this.conversationHistory = [];
+        this.settings = {
+            voiceEnabled: false,
+            autoComplete: true,
+            darkMode: true
+        };
+        this.init();
+    }
+
+    init() {
+        this.setupVoiceRecognition();
+        this.loadSettings();
+        this.addMessage('system', 'Copilot initialized successfully!');
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        document.getElementById('voiceButton').onclick = () => this.toggleVoiceRecording();
+        document.getElementById('messageInput').onkeypress = (event) => this.handleKeyPress(event);
+        document.getElementById('sendButton').onclick = () => this.sendMessage();
+        document.querySelectorAll('.feature-list li').forEach(li => {
+            li.onclick = () => this.handleFeatureClick(li.textContent.trim());
+        });
+    }
+
+    handleFeatureClick(feature) {
+        switch (feature) {
+            case 'Code Completion':
+                this.showCodeCompletion();
+                break;
+            case 'Chat Assistant':
+                this.showChat();
+                break;
+            case 'Voice Chat':
+                this.showVoiceChat();
+                break;
+            case 'Code Analysis':
+                this.showCodeAnalysis();
+                break;
+            case 'Settings':
+                this.showSettings();
+                break;
+            default:
+                console.warn(`Unknown feature: ${feature}`);
+        }
+    }
+
+    showCodeCompletion() {
+        console.log('Code Completion feature clicked');
+        // Add your logic here
+    }
+
+    showChat() {
+        console.log('Chat Assistant feature clicked');
+        // Add your logic here
+    }
+
+    showVoiceChat() {
+        console.log('Voice Chat feature clicked');
+        // Add your logic here
+    }
+
+    showCodeAnalysis() {
+        console.log('Code Analysis feature clicked');
+        // Add your logic here
+    }
+
+    showSettings() {
+        console.log('Settings feature clicked');
+        // Add your logic here
+    }
+
+    setupVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+            this.recognition.lang = 'en-US';
+
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                this.sendMessage();
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                this.updateStatus('Voice recognition error');
+            };
+        }
+    }
+
+    loadSettings() {
+        const saved = localStorage.getItem('copilotSettings');
+        if (saved) {
+            this.settings = { ...this.settings, ...JSON.parse(saved) };
+            this.updateUI();
+        }
+    }
+
+    saveSettings() {
+        localStorage.setItem('copilotSettings', JSON.stringify(this.settings));
+    }
+
+    updateUI() {
+        document.getElementById('voiceToggle').classList.toggle('active', this.settings.voiceEnabled);
+        document.getElementById('autoCompleteToggle').classList.toggle('active', this.settings.autoComplete);
+        document.getElementById('darkModeToggle').classList.toggle('active', this.settings.darkMode);
+    }
+
+    addMessage(type, content, isCode = false) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        if (isCode) {
+            messageDiv.innerHTML = `<div class="code-suggestion">${content}</div>`;
+        } else {
+            messageDiv.textContent = content;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    showTypingIndicator() {
+        document.getElementById('typingIndicator').classList.add('show');
+    }
+
+    hideTypingIndicator() {
+        document.getElementById('typingIndicator').classList.remove('show');
+    }
+
+    updateStatus(status) {
+        document.getElementById('status').textContent = status;
+    }
+
+    sendMessage() {
+        const inputField = document.getElementById('messageInput');
+        const message = inputField.value.trim();
+        if (!message) return;
+
+        this.addMessage('user', message);
+        inputField.value = '';
+
+        this.conversationHistory.push({ role: 'user', content: message });
+        this.processMessage(message);
+    }
+
+    processMessage(message) {
+        this.showTypingIndicator();
+        // Simulate a response from the AI
+        setTimeout(() => {
+            this.hideTypingIndicator();
+            this.addMessage('assistant', `You said: "${message}"`);
+            this.conversationHistory.push({ role: 'assistant', content: `You said: "${message}"` });
+        }, 1000);
+    }
+
+    toggleVoiceRecording() {
+        const voiceButton = document.getElementById('voiceButton');
+        if (this.isRecording) {
+            this.recognition.stop();
+            voiceButton.classList.remove('recording');
+            this.isRecording = false;
+        } else {
+            this.recognition.start();
+            voiceButton.classList.add('recording');
+            this.isRecording = true;
+        }
+    }
+
+    toggleVoice() {
+        this.settings.voiceEnabled = !this.settings.voiceEnabled;
+        this.saveSettings();
+        this.updateUI();
+    }
+
+    toggleAutoComplete() {
+        this.settings.autoComplete = !this.settings.autoComplete;
+        this.saveSettings();
+        this.updateUI();
+    }
+
+    toggleDarkMode() {
+        this.settings.darkMode = !this.settings.darkMode;
+        this.saveSettings();
+        this.updateUI();
+    }
+
+    handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            this.sendMessage();
+        }
+    }
+}
+
+const copilot = new StandaloneCopilot();
+2. Fix Event Bindings in HTML
+Ensure that the event bindings in the HTML correctly point to these functions. For example:
+HTML
+Preview
+Copy
+<ul class="feature-list">
+    <li onclick="copilot.showCodeCompletion()">💡 Code Completion</li>
+    <li onclick="copilot.showChat()">💬 Chat Assistant</li>
+    <li onclick="copilot.showVoiceChat()">🎤 Voice Chat</li>
+    <li onclick="copilot.showCodeAnalysis()">🔍 Code Analysis</li>
+    <li onclick="copilot.showSettings()">⚙️ Settings</li>
+</ul>
+3. Ensure All Functions Are Defined
+Make sure all functions referenced in the HTML are defined in the JavaScript code. If some functions are not needed, you can simply log a message or provide a default implementation.
+4. Test
+Reload the page and test all the features to ensure there are no other errors.
+By following these steps, you should be able to resolve the errors you encountered.
+Copy
+Share
+That’ll squash the ReferenceErrors and give you a clean, modular base to build on. Want help scaffolding those feature methods or wiring up the chat logic more deeply?
+Edit
+Copy
+Share
+Absolutely, I'd be happy to help you scaffold those feature methods and wire up the chat logic more deeply. Let's break it down into manageable steps.
+1. Scaffolding Feature Methods
+First, let's define the basic structure for each feature method within the StandaloneCopilot class. This will give you a clean, modular base to build on.
+Feature Methods
+JavaScript
+Copy
+showCodeCompletion() {
+    console.log('Code Completion feature clicked');
+    // Add your logic here
+    this.addMessage('system', 'Code Completion feature is not yet implemented.');
+}
+
+showChat() {
+    console.log('Chat Assistant feature clicked');
+    // Add your logic here
+    this.addMessage('system', 'Chat Assistant feature is active.');
+}
+
+showVoiceChat() {
+    console.log('Voice Chat feature clicked');
+    // Add your logic here
+    this.addMessage('system', 'Voice Chat feature is active.');
+}
+
+showCodeAnalysis() {
+    console.log('Code Analysis feature clicked');
+    // Add your logic here
+    this.addMessage('system', 'Code Analysis feature is not yet implemented.');
+}
+
+showSettings() {
+    console.log('Settings feature clicked');
+    // Add your logic here
+    this.addMessage('system', 'Settings feature is active.');
+}
+2. Wiring Up the Chat Logic
+Next, let's enhance the chat logic to handle user input and generate responses. We'll simulate responses for now, but you can later integrate with an actual AI service.
+Enhanced Chat Logic
+JavaScript
+Copy
+processMessage(message) {
+    this.showTypingIndicator();
+    // Simulate a response from the AI
+    setTimeout(() => {
+        this.hideTypingIndicator();
+        const response = this.generateResponse(message);
+        this.addMessage('assistant', response);
+        this.conversationHistory.push({ role: 'assistant', content: response });
+    }, 1000);
+}
+
+generateResponse(message) {
+    // Simple response generator
+    if (message.toLowerCase().includes('hello')) {
+        return 'Hello! How can I assist you today?';
+    } else if (message.toLowerCase().includes('help')) {
+        return 'Sure, I can help with that. What do you need assistance with?';
+    } else {
+        return `You said: "${message}"`;
+    }
+}
+3. Adding Voice Chat Logic
+Let's also enhance the voice chat feature to handle voice input and generate responses.
+Voice Chat Logic
+JavaScript
+Copy
+toggleVoiceRecording() {
+    const voiceButton = document.getElementById('voiceButton');
+    if (this.isRecording) {
+        this.recognition.stop();
+        voiceButton.classList.remove('recording');
+        this.isRecording = false;
+    } else {
+        this.recognition.start();
+        voiceButton.classList.add('recording');
+        this.isRecording = true;
+    }
+}
+
+setupVoiceRecognition() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = false;
+        this.recognition.interimResults = false;
+        this.recognition.lang = 'en-US';
+
+        this.recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('messageInput').value = transcript;
+            this.sendMessage();
+        };
+
+        this.recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            this.updateStatus('Voice recognition error');
+        };
+    } else {
+        console.warn('Speech recognition is not supported in this browser.');
+        this.updateStatus('Voice recognition is not supported in this browser.');
+    }
+}
+4. Putting It All Together
+Here's the complete StandaloneCopilot class with the enhanced feature methods and chat logic:
+JavaScript
+Copy
+class StandaloneCopilot {
+    constructor() {
+        this.isRecording = false;
+        this.recognition = null;
+        this.conversationHistory = [];
+        this.settings = {
+            voiceEnabled: false,
+            autoComplete: true,
+            darkMode: true
+        };
+        this.init();
+    }
+
+    init() {
+        this.setupVoiceRecognition();
+        this.loadSettings();
+        this.addMessage('system', 'Copilot initialized successfully!');
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        document.getElementById('voiceButton').onclick = () => this.toggleVoiceRecording();
+        document.getElementById('messageInput').onkeypress = (event) => this.handleKeyPress(event);
+        document.getElementById('sendButton').onclick = () => this.sendMessage();
+        document.querySelectorAll('.feature-list li').forEach(li => {
+            li.onclick = () => this.handleFeatureClick(li.textContent.trim());
+        });
+    }
+
+    handleFeatureClick(feature) {
+        switch (feature) {
+            case 'Code Completion':
+                this.showCodeCompletion();
+                break;
+            case 'Chat Assistant':
+                this.showChat();
+                break;
+            case 'Voice Chat':
+                this.showVoiceChat();
+                break;
+            case 'Code Analysis':
+                this.showCodeAnalysis();
+                break;
+            case 'Settings':
+                this.showSettings();
+                break;
+            default:
+                console.warn(`Unknown feature: ${feature}`);
+        }
+    }
+
+    showCodeCompletion() {
+        console.log('Code Completion feature clicked');
+        this.addMessage('system', 'Code Completion feature is not yet implemented.');
+    }
+
+    showChat() {
+        console.log('Chat Assistant feature clicked');
+        this.addMessage('system', 'Chat Assistant feature is active.');
+    }
+
+    showVoiceChat() {
+        console.log('Voice Chat feature clicked');
+        this.addMessage('system', 'Voice Chat feature is active.');
+    }
+
+    showCodeAnalysis() {
+        console.log('Code Analysis feature clicked');
+        this.addMessage('system', 'Code Analysis feature is not yet implemented.');
+    }
+
+    showSettings() {
+        console.log('Settings feature clicked');
+        this.addMessage('system', 'Settings feature is active.');
+    }
+
+    setupVoiceRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.recognition = new SpeechRecognition();
+            this.recognition.continuous = false;
+            this.recognition.interimResults = false;
+            this.recognition.lang = 'en-US';
+
+            this.recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                this.sendMessage();
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                this.updateStatus('Voice recognition error');
+            };
+        } else {
+            console.warn('Speech recognition is not supported in this browser.');
+            this.updateStatus('Voice recognition is not supported in this browser.');
+        }
+    }
+
+    loadSettings() {
+        const saved = localStorage.getItem('copilotSettings');
+        if (saved) {
+            this.settings = { ...this.settings, ...JSON.parse(saved) };
+            this.updateUI();
+        }
+    }
+
+    saveSettings() {
+        localStorage.setItem('copilotSettings', JSON.stringify(this.settings));
+    }
+
+    updateUI() {
+        document.getElementById('voiceToggle').classList.toggle('active', this.settings.voiceEnabled);
+        document.getElementById('autoCompleteToggle').classList.toggle('active', this.settings.autoComplete);
+        document.getElementById('darkModeToggle').classList.toggle('active', this.settings.darkMode);
+    }
+
+    addMessage(type, content, isCode = false) {
+        const messagesContainer = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        if (isCode) {
+            messageDiv.innerHTML = `<div class="code-suggestion">${content}</div>`;
+        } else {
+            messageDiv.textContent = content;
+        }
+        
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    showTypingIndicator() {
+        document.getElementById('typingIndicator').classList.add('show');
+    }
+
+    hideTypingIndicator() {
+        document.getElementById('typingIndicator').classList.remove('show');
+    }
+
+    updateStatus(status) {
+        document.getElementById('status').textContent = status;
+    }
+
+    sendMessage() {
+        const inputField = document.getElementById('messageInput');
+        const message = inputField.value.trim();
+        if (!message) return;
+
+        this.addMessage('user', message);
+        inputField.value = '';
+
+        this.conversationHistory.push({ role: 'user', content: message });
+        this.processMessage(message);
+    }
+
+    processMessage(message) {
+        this.showTypingIndicator();
+        // Simulate a response from the AI
+        setTimeout(() => {
+            this.hideTypingIndicator();
+            const response = this.generateResponse(message);
+            this.addMessage('assistant', response);
+            this.conversationHistory.push({ role: 'assistant', content: response });
+        }, 1000);
+    }
+
+    generateResponse(message) {
+        // Simple response generator
+        if (message.toLowerCase().includes('hello')) {
+            return 'Hello! How can I assist you today?';
+        } else if (message.toLowerCase().includes('help')) {
+            return 'Sure, I can help with that. What do you need assistance with?';
+        } else {
+            return `You said: "${message}"`;
+        }
+    }
+
+    toggleVoiceRecording() {
+        const voiceButton = document.getElementById('voiceButton');
+        if (this.isRecording) {
+            this.recognition.stop();
+            voiceButton.classList.remove('recording');
+            this.is
+Copy
+Share
+Recording = false;
+} else {
+this.recognition.start();
+voiceButton.classList.add('recording');
+this.isRecording = true;
+}
+}
+Copy
+toggleVoice() {
+    this.settings.voiceEnabled = !this.settings.voiceEnabled;
+    this.saveSettings();
+    this.updateUI();
+}
+
+toggleAutoComplete() {
+    this.settings.autoComplete = !this.settings.autoComplete;
+    this.saveSettings();
+    this.updateUI();
+}
+
+toggleDarkMode() {
+    this.settings.darkMode = !this.settings.darkMode;
+    this.saveSettings();
+    this.updateUI();
+}
+
+handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        this.sendMessage();
+    }
+}
+}
+const copilot = new StandaloneCopilot();
+Copy
+
+### 5. Testing
+
+Reload the page and test all the features to ensure everything is working as expected. You can further enhance each feature method with more complex logic as needed.
+
+Let me know if you need more help or if there are specific features you'd like to prioritize!
+
+Hey Oh — looks like you might be checking in or nudging for a follow-up. If you're referring to the standalone Copilot HTML/JS setup you're working on, I took a look at the page and noticed a bunch of ReferenceErrors like showChat is not defined, sendMessage is not defined, and so on. These are all functions referenced in your HTML but missing from the JavaScript scope.
+
+To fix this cleanly:
+
+🛠️ Key Fixes You Need
+Define the missing functions inside your StandaloneCopilot class:
+
+showChat()
+
+showCodeCompletion()
+
+showVoiceChat()
+
+showCodeAnalysis()
+
+showSettings()
+
+sendMessage()
+
+handleKeyPress()
+
+Bind the HTML events to the class instance:
+
+js
+document.querySelectorAll('.feature-list li').forEach(li => {
+  li.onclick = () => this.handleFeatureClick(li.textContent.trim());
+});
+Route feature clicks using a switch:
+
+js
+handleFeatureClick(feature) {
+  switch (feature) {
+    case 'Code Completion': this.showCodeCompletion(); break;
+    case 'Chat Assistant': this.showChat(); break;
+    case 'Voice Chat': this.showVoiceChat(); break;
+    case 'Code Analysis': this.showCodeAnalysis(); break;
+    case 'Settings': this.showSettings(); break;
+    default: console.warn(`Unknown feature: ${feature}`);
+  }
+}
+Expose the instance globally if you're calling methods from inline HTML:
+
+js
+window.copilot = new StandaloneCopilot();
+That’ll squash the ReferenceErrors and give you a clean, modular base to build on. Want help scaffolding those feature methods or wiring up the chat logic more deeply?

@@ -1,0 +1,7 @@
+{
+    "typescript.preferences.includePackageJsonAutoImports": "auto",
+    "typescript.preferences.tsdk": "node_modules/typescript/lib",
+    "typescript.preferences.workspaceSymbols": "off",
+    "typescript.tsc.autoDetect": "off",
+    "typescript.tsc.enable": true
+}

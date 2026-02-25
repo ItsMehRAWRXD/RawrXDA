@@ -1,0 +1,64 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.varExportProperty = void 0;
+async function varExportProperty(property, indent = '') {
+    if (indent.length >= 20) {
+        // prevent infinite recursion
+        return `...`;
+    }
+    let displayValue;
+    if (property.hasChildren || property.type === 'array' || property.type === 'object') {
+        let properties;
+        if (property.hasChildren) {
+            if (property.children.length === property.numberOfChildren) {
+                properties = property.children;
+            }
+            else {
+                // TODO: also take into account the number of children for pagination
+                properties = await property.getChildren();
+            }
+        }
+        else {
+            properties = [];
+        }
+        displayValue = (await Promise.all(properties.map(async (property) => {
+            const indent2 = indent + '  ';
+            if (property.hasChildren) {
+                return `${indent2}${property.name} => \n${indent2}${await varExportProperty(property, indent2)},`;
+            }
+            else {
+                return `${indent2}${property.name} => ${await varExportProperty(property, indent2)},`;
+            }
+        }))).join('\n');
+        if (property.type === 'array') {
+            // for arrays, show the length, like a var_dump would do
+            displayValue = `array (\n${displayValue}\n${indent})`;
+        }
+        else if (property.type === 'object' && property.class) {
+            // for objects, show the class name as type (if specified)
+            displayValue = `${property.class}::__set_state(array(\n${displayValue}\n${indent}))`;
+        }
+        else {
+            // edge case: show the type of the property as the value
+            displayValue = `?${property.type}?(\n${displayValue})`;
+        }
+    }
+    else {
+        // for null, uninitialized, resource, etc. show the type
+        displayValue = property.value || property.type === 'string' ? property.value : property.type;
+        if (property.type === 'string') {
+            if (property.size > property.value.length) {
+                const p2 = await property.context.stackFrame.connection.sendPropertyValueNameCommand(property.fullName, property.context);
+                displayValue = p2.value;
+            }
+            const escaped = displayValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            displayValue = `'${escaped}'`;
+        }
+        else if (property.type === 'bool') {
+            displayValue = Boolean(parseInt(displayValue, 10)).toString();
+        }
+    }
+    return displayValue;
+}
+exports.varExportProperty = varExportProperty;
+//# sourceMappingURL=varExport.js.map

@@ -1,0 +1,27 @@
+# Memory-less Training Requirements
+# Install with: pip install -r requirements-memoryless.txt
+
+# Core ML libraries for memoryless training
+torch>=2.0.0
+transformers>=4.30.0
+accelerate>=0.20.0
+
+# LoRA/QLoRA for memoryless fine-tuning
+peft>=0.5.0
+bitsandbytes>=0.41.0
+
+# Model quantization
+auto-gptq>=0.4.0
+optimum>=1.12.0
+
+# GGUF and llama.cpp integration
+llama-cpp-python>=0.2.0
+gguf>=0.4.0
+
+# Data processing
+numpy>=1.24.0
+pandas>=2.0.0
+pyyaml>=6.0
+
+# Optional: for advanced features
+flash-attn>=2.3.0  # for flash attention

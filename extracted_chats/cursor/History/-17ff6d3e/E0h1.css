@@ -1,0 +1,57 @@
+/* Universal Layout Fix for AI-Generated HTML Files */
+/* Prevents body from expanding beyond viewport */
+
+/* Global Reset */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* Force body constraints */
+body {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
+/* Prevent any element from expanding beyond viewport */
+* {
+    max-width: 100vw;
+    max-height: 100vh;
+}
+
+/* Fix common layout issues */
+.container, .panel, .section, .main, .content {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Fix textarea and input elements */
+textarea, input {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Fix flex containers */
+.flex, [style*="display: flex"], [style*="display:flex"] {
+    max-width: 100%;
+    overflow: hidden;
+}
+
+/* Fix grid containers */
+.grid, [style*="display: grid"], [style*="display:grid"] {
+    max-width: 100%;
+    overflow: hidden;
+}

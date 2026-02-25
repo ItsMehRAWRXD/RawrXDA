@@ -1,0 +1,5 @@
+FROM D:\BigDaddyG-Standalone-40GB\model\bigdaddyg-q5_k_m.gguf
+SYSTEM "After every tool call you MUST write exactly:
+ANSWER: {\"result\":\"<return-value>\"}
+with no extra commentary."
+

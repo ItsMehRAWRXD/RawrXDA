@@ -1,0 +1,39 @@
+name: Publish VS Code Extension
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Clean install dependencies
+        run: |
+          npm cache clean --force
+          npm ci
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce@latest
+
+      - name: Verify vsce installation
+        run: vsce --version
+
+      - name: Package and Publish
+        run: |
+          echo "Packaging extension..."
+          vsce package
+
+          echo "Publishing extension..."
+          vsce publish -p ${{ secrets.VSCE_TOKEN }}

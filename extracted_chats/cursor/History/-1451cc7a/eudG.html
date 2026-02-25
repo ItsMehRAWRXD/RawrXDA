@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Self-Balancing File-less Token-Slot Machine</title>
+<style>
+  :root{--bg:#fff;--text:#202124;--border:#dadce0;--link:#1a73e8;--chat-bg:#f1f3f4}
+  @media(prefers-color-scheme:dark){:root{--bg:#202124;--text:#e8eaed;--border:#5f6368;--link:#8ab4f8;--chat-bg:#292a2d}}
+  body{margin:0;padding:1em 1.5em;font-family:system-ui,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+  h1{font-size:1.3em;font-weight:600;margin:0 0 .6em;border-bottom:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse}th{cursor:pointer;padding:.4em .6em;font-weight:600}
+  th:hover{background:rgba(128,128,128,.15)}td{padding:.35em .6em;white-space:nowrap}
+  td.size,td.date{opacity:.75;text-align:right;padding-left:2em}
+  a{text-decoration:none;color:var(--link)}a:hover{text-decoration:underline}
+  .icon{display:inline-block;width:16px;height:16px;background:center/contain no-repeat;margin-right:.3em}
+  a.dir .icon{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABt0lEQVR42oxStZoWQRCs2cXdHTLcHZ6EjAwnQWIkJyQlRt4Cd3d3d1n5d7q7ju1zv/q+mh6taQsk8fn29kPDRo87SDMQcNAUJgIQkBjdAoRKdXjm2mOH0AqS+PlkP8sfp0h93iu/PDji9s2FzSSJVg5ykZqWgfGRr9rAAAQiDFoB1OfyESZEB7iAI0lHwLREQBcQQKqo8p+gNUCguwCNAAUQAcFOb0NNGjT+BbUC2YsHZpWLhC6/m0chqIoM1LKbQIIBwlTQE1xAo9QDGDPYf6rkTpPc92gCUYVJAZjhyZltJ95f3zuvLYRGWWCUNkDL2333McBh4kaLlxg+aTmyL7c2xTjkN4Bt7oE3DBP/3SRz65R/bkmBRPGzcRNHYuzMjaj+fdnaFoJUEdTSXfaHbe7XNnMPyqryPcmfY+zURaAB7SHk9cXSH4fQ5rojgCAVIuqCNWgRhLYLhJB4k3iZfIPtnQiCpjAzeBIRXMA6emAqoEbQSoDdGxFUrxS1AYcpaNbBgyQBGJEOnYOeENKR/iAd1npusI4C75/c3539+nbUjOgZV5CkAU27df40lH+agUdIuA/EAgDmZnwZlhDc0wAAAABJRU5ErkJggg==")}
+  a.file .icon{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAABnRSTlMAAAAAAABupgeRAAABEElEQVR42nRRx3HDMBC846AHZ7sP54BmWAyrsP588qnwlhqw/k4v5ZwWxM1hzmGRgV1cYqrRarXoH2w2m6qqiqKIR6cPtzc3xMSML2Te7XZZlnW7Pe/91/dX47WRBHuA9oyGmRknzGDjab1ePzw8bLfb6WRalmW4ip9FDVpYSWZgOp12Oh3nXJ7nxoJSGEciteP9y+fH52q1euv38WosqA6T2gGOT44vry7BEQtJkMAMMpa6JagAMcUfWYa4hkkzAc7fFlSjwqCoOUYAF5RjHZPVCFBOtSBGfgUDji3c3jpibeEMQhIMh8NwshqyRsBJgvF4jMs/YlVR5KhgNpuBLzk0OcUiR3CMhcPaOzsZiAAA/AjmaB3WZIkAAAAASUVORK5CYII=")}
+  #up{display:inline-flex;align-items:center;margin-bottom:.6em}
+  #chat{height:40vh;display:flex;flex-direction:column;background:var(--chat-bg);border:1px solid var(--border);border-radius:6px;margin-top:1em}
+  #messages{flex:1 1 auto;overflow:auto;padding:.6em;font-size:.9em}
+  .msg{margin:.2em 0}.usr{color:#007acc}.bot{color:#137333}
+  #chatInput{display:flex;border-top:1px solid var(--border)}
+  #chatInput input{flex:1;border:none;padding:.6em;background:transparent;color:var(--text)}
+  #chatInput button{border:none;background:var(--link);color:#fff;padding:.6em 1em;cursor:pointer}
+  #chatInput button:hover{background:var(--hover)}
+  .hidden{display:none}
+
+  /* Self-balancing indicators */
+  .balance-status{position:fixed;bottom:20px;left:20px;background:rgba(10,10,15,0.9);border:1px solid #00ffff;border-radius:8px;padding:15px;min-width:250px;backdrop-filter:blur(10px)}
+  .balance-indicator{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-top:8px}
+  .balance-fill{height:100%;background:linear-gradient(90deg,#00ffff 0%,#ffaa00 50%,#ff4444 100%);transition:width 0.5s ease}
+  .balance-metrics{font-size:11px;color:#888;margin-top:8px}
+
+  /* Multimodal Accessibility HUD */
+  .accessibility-hud{position:fixed;top:50%;right:20px;transform:translateY(-50%);background:rgba(10,10,15,0.95);border:1px solid #00ffff;border-radius:8px;padding:15px;min-width:300px;max-height:60vh;overflow-y:auto;backdrop-filter:blur(10px)}
+  .caption-stream{max-height:200px;overflow-y:auto;font-family:monospace;font-size:12px;margin-bottom:15px}
+  .caption-entry{margin:4px 0;padding:4px;background:rgba(0,255,255,0.1);border-radius:3px}
+  .caption-timestamp{color:#888;font-size:10px}
+  .caption-text{color:#fff}
+  .voice-controls{display:flex;gap:8px;margin-bottom:10px}
+  .voice-btn{padding:6px 12px;border:1px solid #00ffff;background:rgba(0,255,255,0.1);color:#fff;border-radius:4px;cursor:pointer;transition:all 0.3s ease}
+  .voice-btn:hover{background:rgba(0,255,255,0.2)}
+  .voice-btn.active{background:#00ffff;color:#000}
+  .voice-btn.recording{background:#ff4444;color:#fff;animation:recordingPulse 1s infinite}
+  @keyframes recordingPulse{0%,100%{opacity:1}50%{opacity:0.7}}
+  .voice-status{font-size:11px;color:#888;margin-top:8px}
+</style>
+</head>
+<body>
+
+<h1>🧠 Self-Balancing File-less Token-Slot Machine</h1>
+<a id="up" class="hidden" href=".."><span class="icon up"></span>[parent directory]</a>
+<table id="tbl"><thead><tr><th data-c="0">Name</th><th data-c="1">Size</th><th data-c="2">Modified</th></tr></thead><tbody></tbody></table>
+
+<div class="balance-status">
+  <div>🧠 System Balance</div>
+  <div class="balance-indicator">
+    <div class="balance-fill" id="balanceFill" style="width: 50%"></div>
+  </div>
+  <div class="balance-metrics" id="balanceMetrics">
+    RAM: 0 MB | Throughput: 0 t/ms | Workers: 0
+  </div>
+</div>
+
+<div class="accessibility-hud">
+  <div class="voice-controls">
+    <button class="voice-btn" id="startVoice" onclick="startVoiceInput()">🎙️ Start Voice</button>
+    <button class="voice-btn" id="stopVoice" onclick="stopVoiceInput()" disabled>⏹️ Stop</button>
+    <button class="voice-btn" id="speakCaption" onclick="speakLastCaption()">🔊 Speak</button>
+  </div>
+
+  <div class="voice-status" id="voiceStatus">
+    Voice input: Inactive | TTS: Available
+  </div>
+
+  <div class="caption-stream" id="captionStream">
+    <!-- Captions will appear here -->
+  </div>
+</div>
+
+<div id="chat">
+  <div id="messages"></div>
+  <div id="chatInput"><input id="in" placeholder="Ask anything (I balance myself)"><button id="send">Send</button></div>
+</div>
+
+<script type="module">
+/********************************************************************
+ * 0.  SELF-BALANCING CONFIG  (RAM + throughput thresholds)
+ ********************************************************************/
+const MAIN_DIM=32, MAIN_HEADS=2, MAIN_LAYERS=1, MAIN_CTX=64;
+const SLOT_TOKENS=32;                 // max tokens per Worker frame
+const RAM_THRESHOLD=100*1024*1024;    // 100 MB main-thread RAM
+const THROUGH_THRESHOLD=500;          // tokens/ms before offload
+
+/********************************************************************
+ * 1.  ULTRA-TINY BYTE-LEVEL TRANSFORMER  (weights in RAM only)
+ ********************************************************************/
+class ByteLLM {
+  constructor(d=MAIN_DIM,h=MAIN_HEADS,l=MAIN_LAYERS,ctx=MAIN_CTX){
+    this.d=d;this.h=h;this.l=l;this.ctx=ctx;this.vocab=256;
+    this.posEnc=this._makePosEnc();
+    this._initWeights();
+  }
+  _makePosEnc(){
+    const pe=new Float32Array(this.ctx*this.d);
+    for(let i=0;i<this.ctx;i++){
+      for(let j=0;j<this.d;j+=2){
+        pe[i*this.d+j]  =Math.sin(i/Math.pow(10000,j/this.d));
+        pe[i*this.d+j+1]=Math.cos(i/Math.pow(10000,j/this.d));
+      }
+    }
+    return pe;
+  }
+  _initWeights(){
+    const g=n=>(Math.random()-0.5)*Math.sqrt(2/n);
+    this.W={};
+    this.W.wte=this._rand([this.vocab,this.d],g);
+    this.W.blocks=Array.from({length:this.l},()=>({
+      attn:{wq:this._rand([this.d,this.d],g),wk:this._rand([this.d,this.d],g),wv:this._rand([this.d,this.d],g),wo:this._rand([this.d,this.d],g)},
+      ffn:{w1:this._rand([this.d,this.d*4],g),w2:this._rand([this.d*4,this.d],g)}
+    }));
+    this.W.ln_g=this._ones(this.d); this.W.ln_b=this._zeros(this.d);
+    this.W.head=this._rand([this.d,this.vocab],g);
+  }
+  _rand(shape,gen){return Float32Array.from({length:shape[0]*shape[1]},gen);}
+  _ones(n){return new Float32Array(n).fill(1);}
+  _zeros(n){return new Float32Array(n);}
+
+  byteSeqToEmbed(bytes){
+    const len=Math.min(bytes.length,this.ctx);
+    const em=new Float32Array(len*this.d);
+    for(let i=0;i<len;i++){
+      const b=bytes[i]&0xff, off=i*this.d;
+      for(let j=0;j<this.d;j++) em[off+j]=this.W.wte[b*this.d+j]+this.posEnc[i*this.d+j];
+    }
+    return em;
+  }
+  forward(bytes){
+    let x=this.byteSeqToEmbed(bytes);
+    const len=x.length/this.d;
+    for(let blk of this.W.blocks){
+      let q=this.matmul(x,blk.attn.wq,len,this.d,this.d);
+      let k=this.matmul(x,blk.attn.wk,len,this.d,this.d);
+      let v=this.matmul(x,blk.attn.wv,len,this.d,this.d);
+      const scores=this.softmax(this.matmul(q,k,len,len,this.d).map(v=>v/Math.sqrt(this.d)));
+      let out=this.matmul(scores,v,len,len,this.d);
+      x=this.add(x,this.matmul(out,blk.attn.wo,len,this.d,this.d));
+      const f=this.relu(this.matmul(x,blk.ffn.w1,len,this.d,this.d*4));
+      x=this.add(x,this.matmul(f,blk.ffn.w2,len,this.d*4,this.d));
+    }
+    const pooled=new Float32Array(this.d);
+    for(let i=0;i<len;i++) for(let j=0;j<this.d;j++) pooled[j]+=x[i*this.d+j];
+    if(len) for(let j=0;j<this.d;j++) pooled[j]/=len;
+    return this.matmul(pooled,this.W.head,1,this.d,this.vocab);
+  }
+  matmul(a,b,m,n,k){
+    const c=new Float32Array(m*n);
+    for(let i=0;i<m;i++){
+      for(let j=0;j<n;j++){
+        let s=0; for(let l=0;l<k;l++) s+=a[i*k+l]*b[l*n+j];
+        c[i*n+j]=s;
+      }
+    }
+    return c;
+  }
+  add(a,b){return a.map((v,i)=>v+b[i]);}
+  relu(a){return a.map(v=>Math.max(0,v));}
+  softmax(a){
+    const m=Math.max(...a), ex=a.map(v=>Math.exp(v-m)), s=ex.reduce((x,y)=>x+y);
+    return ex.map(v=>v/s);
+  }
+  // on-line byte-level self-supervision: last byte predicts itself
+  learn(bytes){
+    if(bytes.length<2) return;
+    const input=bytes.slice(0,-1), target=bytes[bytes.length-1];
+    const logits=this.forward(input);
+    const probs=this.softmax(logits);
+    const grad=new Float32Array(this.vocab);
+    for(let i=0;i<this.vocab;i++) grad[i]=probs[i] - (i===target?1:0);
+    const lr=0.01;
+    for(let i=0;i<this.vocab;i++){
+      for(let j=0;j<this.d;j++){
+        this.W.head[j*this.vocab+i]-=lr*grad[i]*this.W.head[j*this.vocab+i];
+      }
+    }
+    const tb=target;
+    for(let j=0;j<this.d;j++) this.W.wte[tb*this.d+j]-=lr*grad[tb];
+  }
+
+  generate(bytes,maxBytes=64){
+    let seq=[...bytes];
+    for(let i=0;i<maxBytes;i++){
+      const logits=this.forward(seq);
+      let best=0, bestVal=-Infinity;
+      for(let b=0;b<this.vocab;b++){ if(logits[b]>bestVal){ bestVal=logits[b]; best=b; } }
+      seq.push(best);
+      if(seq.length>=this.ctx) break;
+    }
+    return new Uint8Array(seq.slice(bytes.length));
+  }
+}
+
+/********************************************************************
+ * 2.  TOKEN-SLOT MACHINE WORKER  (fixed budget, instant bypass)
+ ********************************************************************/
+const workerCode=`
+let llm=null, slotBytes=null;
+self.onmessage=async(e)=>{
+  if(e.data.init){ llm=new ByteLLM(e.data.d,e.data.h,e.data.l,e.data.ctx); return; }
+  if(e.data.bytes){
+    slotBytes=e.data.bytes.slice(0,e.data.slotMax);   // clamp to slot budget
+    const t0=performance.now();
+    const out=llm.generate(slotBytes,32);             // never exceed slot
+    const took=performance.now()-t0;
+    self.postMessage({ok:true,bytes:out,tokens:slotBytes.length,ms:took});
+  }
+};
+`+ByteLLM.toString();
+
+let worker=null, useWorker=false, workerCount=0;
+
+// Multimodal accessibility state
+let voiceRecognition = null;
+let speechSynthesis = null;
+let isListening = false;
+let captions = [];
+let lastCaption = '';
+
+/********************************************************************
+ * 3.  SELF-BALANCE MONITOR  (RAM + throughput + visual feedback)
+ ********************************************************************/
+let mainTokens=0, mainMs=0;
+
+function shouldOffload(){
+  const ram=performance.memory?performance.memory.usedJSHeapSize:0;
+  const throughput=mainMs>0?mainTokens/mainMs:Infinity;
+  return ram>RAM_THRESHOLD||throughput<THROUGH_THRESHOLD;
+}
+
+function updateBalanceDisplay(){
+  const ram=performance.memory?performance.memory.usedJSHeapSize:0;
+  const throughput=mainMs>0?mainTokens/mainMs:Infinity;
+  const ramMB=(ram/1024/1024).toFixed(1);
+  const throughK=(throughput/1000).toFixed(1);
+
+  const balanceFill=document.getElementById('balanceFill');
+  const balanceMetrics=document.getElementById('balanceMetrics');
+
+  // Balance score: 50% RAM usage + 50% throughput efficiency
+  const ramScore=Math.min(ram/RAM_THRESHOLD,1);
+  const throughScore=Math.min(throughput/THROUGH_THRESHOLD,1);
+  const balanceScore=(ramScore+throughScore)/2;
+
+  balanceFill.style.width=`${balanceScore*100}%`;
+  balanceMetrics.textContent=`RAM: ${ramMB} MB | Throughput: ${throughK} kt/ms | Workers: ${workerCount}`;
+
+  // Color coding based on balance
+  if(balanceScore>0.8) balanceFill.style.background='linear-gradient(90deg,#ff4444 0%,#ffaa00 100%)';
+  else if(balanceScore>0.5) balanceFill.style.background='linear-gradient(90deg,#ffaa00 0%,#ffff00 100%)';
+  else balanceFill.style.background='linear-gradient(90deg,#00ffff 0%,#00ff00 100%)';
+}
+
+/********************************************************************
+ * 4.  MAIN-THREAD FALLBACK + SLOT BRIDGE
+ ********************************************************************/
+const mainLLM=new ByteLLM();
+
+async function balancedGenerate(promptBytes){
+  updateBalanceDisplay();
+
+  if(!useWorker&&shouldOffload()){
+    await spinWorker();
+    useWorker=true;
+    workerCount++;
+  }
+
+  if(useWorker&&worker){
+    return new Promise(res=>{
+      worker.postMessage({bytes:promptBytes,slotMax:SLOT_TOKENS});
+      worker.onmessage=e=>{
+        if(e.data.ok){
+          mainTokens+=e.data.tokens;
+          mainMs+=e.data.ms;
+          res(e.data.bytes);
+        } else {
+          // Worker failed, fallback to main thread
+          console.warn('Worker failed, falling back to main thread');
+          useWorker=false;
+          workerCount--;
+          const t0=performance.now();
+          const out=mainLLM.generate(promptBytes,32);
+          mainMs+=performance.now()-t0;
+          mainTokens+=promptBytes.length;
+          res(out);
+        }
+      };
+    });
+  }
+
+  // Main thread fallback
+  const t0=performance.now();
+  const out=mainLLM.generate(promptBytes,32);
+  mainMs+=performance.now()-t0;
+  mainTokens+=promptBytes.length;
+  return out;
+}
+
+async function spinWorker(){
+  const blob=new Blob([workerCode],{type:'application/javascript'});
+  worker=new Worker(URL.createObjectURL(blob));
+  await new Promise(res=>{
+    worker.postMessage({init:true,d:MAIN_DIM,h:MAIN_HEADS,l:MAIN_LAYERS,ctx:MAIN_CTX});
+    worker.onmessage=()=>res();
+  });
+}
+
+/********************************************************************
+ * 5.  CHAT AGENT + LIVE DIRECTORY LISTING  (real files only)
+ ********************************************************************/
+const msgs=document.getElementById('messages');
+const input=document.getElementById('in');
+
+document.getElementById('send').onclick=async()=>{
+  const q=input.value.trim(); if(!q) return;
+  append(q,'usr');
+
+  const enc=new TextEncoder();
+  const ansBytes=await balancedGenerate(enc.encode(q));
+  const ans=new TextDecoder().decode(ansBytes);
+  append(ans||'(balancing...)','bot');
+  input.value='';
+
+  updateBalanceDisplay();
+};
+
+function append(txt,who){
+  const d=document.createElement('div'); d.className='msg '+who;
+  d.textContent=(who==='usr'?'> ':'')+txt; msgs.appendChild(d); msgs.scrollTop=msgs.scrollHeight;
+}
+
+const tbody=document.querySelector('#tbl tbody');
+const loc=document.getElementById('loc');
+const upLink=document.getElementById('up');
+let dirHandle=null, entries=[];
+
+async function readDir(dh){
+  dirHandle=dh; entries=[]; tbody.innerHTML=''; loc.textContent='/'+dh.name;
+  upLink.classList.toggle('hidden',dh.name==='');
+
+  for await(const [name,handle] of dh){
+    const isDir=handle.kind==='directory';
+    const item={name,handle,isDir,
+      size:isDir?0:await handle.getFile().then(f=>f.size),
+      mtime:isDir?0:await handle.getFile().then(f=>f.lastModified)};
+    entries.push(item);
+  }
+  render(entries);
+}
+
+function render(list){
+  const frag=document.createDocumentFragment();
+  list.forEach(it=>{
+    const tr=document.createElement('tr');
+    const a=document.createElement('a');
+    a.href=(it.isDir?'./'+encodeURIComponent(it.name)+'/':'./'+encodeURIComponent(it.name));
+    a.textContent=it.name+(it.isDir?'/':''); a.className=it.isDir?'dir':'file'; a.draggable=!it.isDir;
+    if(!it.isDir){
+      a.addEventListener('dragstart',e=>{
+        const url=new URL(a.href,location.href).href;
+        e.dataTransfer.setData('DownloadURL',`application/octet-stream:${it.name}:${url}`);
+      });
+    }
+    tr.insertCell().appendChild(a);
+    tr.insertCell().textContent=it.size?((it.size<1024)?it.size+' B':(it.size<1048576)?(it.size/1024).toFixed(1)+' kB':(it.size<1073741824)?(it.size/1048576).toFixed(1)+' MB':(it.size/1073741824).toFixed(2)+' GB'):'—';
+    tr.insertCell().textContent=new Date(it.mtime).toLocaleString();
+    frag.appendChild(tr);
+  });
+  tbody.replaceChildren(frag);
+}
+
+document.querySelectorAll('th').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const col=+th.dataset.c; const asc=th.dataset.o!=='1'; th.dataset.o=asc?'1':'0';
+    entries.sort((a,b)=>{
+      let va=col===0?a.name.toLowerCase():col===1?a.size:a.mtime;
+      let vb=col===0?b.name.toLowerCase():col===1?b.size:b.mtime;
+      return va<vb?-1:va>vb?1:0;
+    });
+    if(!asc) entries.reverse();
+    render(entries);
+  });
+});
+
+/********************************************************************
+ * 7.  MULTIMODAL ACCESSIBILITY SYSTEM  (voice + captions)
+ ********************************************************************/
+function addCaption(text, type = 'info') {
+  const timestamp = new Date().toLocaleTimeString();
+  const caption = {
+    text,
+    type,
+    timestamp,
+    id: Date.now()
+  };
+
+  captions.unshift(caption);
+  lastCaption = text;
+
+  // Keep only last 50 captions
+  if (captions.length > 50) {
+    captions = captions.slice(0, 50);
+  }
+
+  updateCaptionDisplay();
+  console.log(`[Caption] ${type}: ${text}`);
+}
+
+function updateCaptionDisplay() {
+  const stream = document.getElementById('captionStream');
+  stream.innerHTML = '';
+
+  captions.slice(0, 10).forEach(caption => {
+    const entry = document.createElement('div');
+    entry.className = 'caption-entry';
+
+    const timestamp = document.createElement('div');
+    timestamp.className = 'caption-timestamp';
+    timestamp.textContent = caption.timestamp;
+
+    const text = document.createElement('div');
+    text.className = 'caption-text';
+    text.textContent = caption.text;
+
+    entry.appendChild(timestamp);
+    entry.appendChild(text);
+    stream.appendChild(entry);
+  });
+
+  stream.scrollTop = 0;
+}
+
+async function startVoiceInput() {
+  try {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      addCaption('Voice recognition not supported in this browser', 'error');
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = false;
+    voiceRecognition.lang = 'en-US';
+
+    voiceRecognition.onstart = () => {
+      isListening = true;
+      document.getElementById('startVoice').disabled = true;
+      document.getElementById('stopVoice').disabled = false;
+      document.getElementById('startVoice').classList.remove('active');
+      document.getElementById('stopVoice').classList.add('recording');
+      document.getElementById('voiceStatus').textContent = 'Voice input: Listening... | TTS: Available';
+      addCaption('Voice input activated. Speak your command.', 'voice');
+    };
+
+    voiceRecognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      handleVoiceCommand(transcript);
+      addCaption(`Voice command: "${transcript}"`, 'voice');
+    };
+
+    voiceRecognition.onerror = (event) => {
+      addCaption(`Voice error: ${event.error}`, 'error');
+      stopVoiceInput();
+    };
+
+    voiceRecognition.onend = () => {
+      isListening = false;
+      document.getElementById('startVoice').disabled = false;
+      document.getElementById('stopVoice').disabled = true;
+      document.getElementById('startVoice').classList.add('active');
+      document.getElementById('stopVoice').classList.remove('recording');
+      document.getElementById('voiceStatus').textContent = 'Voice input: Inactive | TTS: Available';
+    };
+
+    voiceRecognition.start();
+
+  } catch (error) {
+    addCaption(`Voice initialization failed: ${error.message}`, 'error');
+  }
+}
+
+function stopVoiceInput() {
+  if (voiceRecognition) {
+    voiceRecognition.stop();
+  }
+}
+
+function handleVoiceCommand(command) {
+  const cmd = command.toLowerCase().trim();
+
+  if (cmd.includes('debug') && cmd.includes('claude')) {
+    addCaption('Opening debug panel for Claude agent', 'action');
+    // Simulate debug action
+  } else if (cmd.includes('show') && cmd.includes('entropy')) {
+    addCaption('Displaying entropy visualization trails', 'action');
+    // Trigger entropy visualization
+  } else if (cmd.includes('quarantine') && cmd.includes('rogue')) {
+    addCaption('Quarantining RogueFork agent', 'action');
+    // Trigger quarantine
+  } else if (cmd.includes('speak') && cmd.includes('caption')) {
+    speakLastCaption();
+  } else if (cmd.includes('balance') || cmd.includes('status')) {
+    const ram = performance.memory ? performance.memory.usedJSHeapSize : 0;
+    const ramMB = (ram / 1024 / 1024).toFixed(1);
+    speakText(`System status: RAM ${ramMB} MB, Workers ${workerCount}, Balance optimal`);
+  } else {
+    // Try to interpret as a question for the LLM
+    const input = document.getElementById('in');
+    input.value = command;
+    document.getElementById('send').click();
+  }
+}
+
+function speakLastCaption() {
+  if (lastCaption) {
+    speakText(lastCaption);
+  }
+}
+
+function speakText(text) {
+  if ('speechSynthesis' in window) {
+    if (!speechSynthesis) {
+      speechSynthesis = window.speechSynthesis;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 0.8;
+
+    utterance.onstart = () => {
+      addCaption(`Speaking: "${text}"`, 'tts');
+    };
+
+    utterance.onerror = (error) => {
+      addCaption(`TTS error: ${error.error}`, 'error');
+    };
+
+    speechSynthesis.speak(utterance);
+  } else {
+    addCaption('Text-to-speech not supported in this browser', 'error');
+  }
+}
+
+function initializeAccessibility() {
+  // Check for speech support
+  const voiceStatus = document.getElementById('voiceStatus');
+  const speechSupport = ('webkitSpeechRecognition' in window) || ('SpeechRecognition' in window);
+  const ttsSupport = 'speechSynthesis' in window;
+
+  voiceStatus.textContent = `Voice input: ${speechSupport ? 'Available' : 'Not supported'} | TTS: ${ttsSupport ? 'Available' : 'Not supported'}`;
+
+  // Add initial caption
+  addCaption('Accessibility HUD activated. Voice commands available.', 'system');
+
+  console.log('🎙️ Multimodal accessibility system initialized');
+}
+
+/********************************************************************
+ * 8.  BOOTSTRAP : pick folder → list → ingest every text file live
+ ********************************************************************/
+(async ()=>{
+  if(!window.showDirectoryPicker){
+    document.body.innerHTML='<h2>File System Access API unavailable</h2><p>Use Chrome/Edge 86+ via https:// or localhost</p>';
+    return;
+  }
+
+  try {
+    const dh=await showDirectoryPicker({mode:'read'});
+    await readDir(dh);
+
+    let ingested=0;
+    for(const e of entries){
+      if(e.isDir) continue;
+      const ext=e.name.split('.').pop().toLowerCase();
+      if(['txt','md','js','html','json','py','cpp','c','h','cs','java','go','rs','log'].includes(ext)){
+        const file=await e.handle.getFile();
+        const bytes=new Uint8Array(await file.arrayBuffer());
+        mainLLM.learn(bytes);
+        ingested++;
+
+        // Add caption for file ingestion
+        addCaption(`Ingested ${e.name} (${(bytes.length/1024).toFixed(1)} KB)`, 'learning');
+      }
+    }
+
+    append(`🤖 Self-balancing active. Ingested ${ingested} files. Workers: ${workerCount}. Ask me anything!`,'bot');
+
+    // Initialize accessibility
+    initializeAccessibility();
+
+    // Start balance monitoring
+    setInterval(updateBalanceDisplay,1000);
+
+  } catch(e){
+    if(e.name!=='AbortError') console.error(e);
+  }
+})();
+</script>
+</body>
+</html>
