@@ -1,0 +1,28 @@
+Manifest-Version: 1.0
+Created-By: Maven Archiver 3.6.1
+Build-Jdk-Spec: 17
+Bundle-ManifestVersion: 2
+Bundle-Name: %pluginName
+Bundle-Vendor: %providerName
+Bundle-SymbolicName: org.eclipse.equinox.launcher.cocoa.macosx;singleton
+ :=true
+Bundle-Version: 1.2.900.v20240129-1338
+Fragment-Host: org.eclipse.equinox.launcher;bundle-version="[1.5.0,1.7.0
+ )"
+Eclipse-PlatformFilter: (& (osgi.ws=cocoa) (osgi.os=macosx) (osgi.arch=a
+ arch64) )
+Bundle-Localization: launcher.cocoa.macosx.aarch64
+Eclipse-BundleShape: dir
+Eclipse-SourceReferences: scm:git:https://github.com/eclipse-equinox/equ
+ inox.git;path="bundles/org.eclipse.equinox.launcher.cocoa.macosx";tag="
+ I20240129-1800";commitId=cb29271c9d6433cf10af713cf45c83c2f2732a70
+
+Name: about.html
+SHA-256-Digest: 7mbS+ztMDS7S5/aYvJ7U49bPd/pcr0CtAylhJdsaxfA=
+
+Name: launcher.cocoa.macosx.aarch64.properties
+SHA-256-Digest: 0HtEEiHL2Kjbpd7gHPoLG3KIjDoyyeKLmUuDDV6y31M=
+
+Name: eclipse_11900.so
+SHA-256-Digest: wzwHG7o4EWCbRQxgQ0cCzZcVqck/6k3PphD0/w4xjIA=
+

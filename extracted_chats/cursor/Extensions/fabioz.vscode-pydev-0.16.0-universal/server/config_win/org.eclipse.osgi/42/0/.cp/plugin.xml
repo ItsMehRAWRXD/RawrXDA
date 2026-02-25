@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         id="application"
+         point="org.eclipse.core.runtime.applications">
+      <application>
+         <run
+               class="org.python.pydev.pydev_lsp.Application">
+         </run>
+      </application>
+   </extension>
+   <extension
+         id="product"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="org.python.pydev.pydev_lsp.application"
+            name="PyDevLSP">
+         <property
+               name="appName"
+               value="PyDevLSP">
+         </property>
+      </product>
+   </extension>
+
+   <extension point="org.python.pydev.pydev_builder">
+   		<builder_participant class="org.python.pydev.pydev_lsp.builders.PyTestsCollectorBuilder"/>
+   </extension>
+
+</plugin>

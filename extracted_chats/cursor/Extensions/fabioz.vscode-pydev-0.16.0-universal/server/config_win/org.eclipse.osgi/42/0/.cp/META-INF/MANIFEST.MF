@@ -1,0 +1,25 @@
+Manifest-Version: 1.0
+Created-By: Maven Archiver 3.6.1
+Build-Jdk-Spec: 17
+Bundle-ManifestVersion: 2
+Bundle-Name: PyDevLSP
+Bundle-SymbolicName: org.python.pydev.pydev_lsp;singleton:=true
+Bundle-Version: 0.7.1.202509230716
+Bundle-Activator: org.python.pydev.pydev_lsp.PyDevLanguageServerPlugin
+Bundle-ClassPath: libs/antlr4-runtime-4.11.1.jar,libs/checker-qual-3.21.
+ 2.jar,libs/tomlj-1.1.1.jar,.
+Require-Bundle: org.eclipse.core.runtime,org.eclipse.core.resources,org.
+ eclipse.core.filebuffers,org.eclipse.ls.core,org.eclipse.text,org.pytho
+ n.pydev.core;bundle-version="[13.1.0,13.1.1)",org.python.pydev.ast;bund
+ le-version="[13.1.0,13.1.1)",org.python.pydev.shared_core;bundle-versio
+ n="[13.1.0,13.1.1)",org.python.pydev.parser;bundle-version="[13.1.0,13.
+ 1.1)",com.python.pydev.analysis;bundle-version="[13.1.0,13.1.1)"
+Bundle-ActivationPolicy: lazy
+Bundle-Vendor: Brainwy Software Ltda
+Export-Package: org.python.pydev.pydev_lsp,org.python.pydev.pydev_lsp.co
+ mmands,org.python.pydev.pydev_lsp.completions,org.python.pydev.pydev_ls
+ p.lic,org.python.pydev.pydev_lsp.projects,org.python.pydev.pydev_lsp.se
+ ttings
+Automatic-Module-Name: org.python.pydev.pydev.lsp
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=17))"
+

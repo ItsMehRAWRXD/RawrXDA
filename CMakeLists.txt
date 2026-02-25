@@ -2721,9 +2721,11 @@ if(WIN32)
             ${QUICKJS_DIR}/quickjs.c
             ${QUICKJS_DIR}/libregexp.c
             ${QUICKJS_DIR}/libunicode.c
-            ${QUICKJS_DIR}/cutils.c
             ${QUICKJS_DIR}/quickjs-libc.c
         )
+        if(EXISTS "${QUICKJS_DIR}/cutils.c")
+            list(APPEND QUICKJS_SOURCES ${QUICKJS_DIR}/cutils.c)
+        endif()
         set(QUICKJS_HAS_LIBBF OFF)
         if(EXISTS "${QUICKJS_DIR}/libbf.c")
             list(APPEND QUICKJS_SOURCES ${QUICKJS_DIR}/libbf.c)

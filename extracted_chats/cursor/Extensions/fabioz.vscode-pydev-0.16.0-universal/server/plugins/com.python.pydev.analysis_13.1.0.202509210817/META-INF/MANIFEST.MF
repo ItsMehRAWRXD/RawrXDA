@@ -1,0 +1,59 @@
+Manifest-Version: 1.0
+Created-By: Maven Archiver 3.6.3
+Build-Jdk-Spec: 17
+Bundle-ManifestVersion: 2
+Bundle-Name: Analysis Plug-in
+Bundle-SymbolicName: com.python.pydev.analysis; singleton:=true
+Bundle-Version: 13.1.0.202509210817
+Bundle-Activator: com.python.pydev.analysis.AnalysisPlugin
+Bundle-Vendor: Brainwy Software Ltda
+Eclipse-BundleShape: dir
+Require-Bundle: org.eclipse.core.runtime,org.junit;bundle-version="4.0";
+ resolution:=optional,org.eclipse.text,org.python.pydev.ast;bundle-versi
+ on="[13.1.0,13.1.1)",org.python.pydev.core;bundle-version="[13.1.0,13.1
+ .1)",org.python.pydev.parser;bundle-version="[13.1.0,13.1.1)",org.eclip
+ se.core.resources,org.eclipse.ltk.core.refactoring,org.eclipse.core.fil
+ ebuffers,org.python.pydev.shared_core
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: analysis.jar
+Export-Package: com.python.pydev.analysis,com.python.pydev.analysis.addi
+ tionalinfo,com.python.pydev.analysis.additionalinfo.builders,com.python
+ .pydev.analysis.additionalinfo.dependencies,com.python.pydev.analysis.e
+ xternal,com.python.pydev.analysis.flake8,com.python.pydev.analysis.mark
+ er_quick_fixes,com.python.pydev.analysis.mypy,com.python.pydev.analysis
+ .pep8,com.python.pydev.analysis.pylint,com.python.pydev.analysis.pyrigh
+ t,com.python.pydev.analysis.refactoring.changes,com.python.pydev.analys
+ is.refactoring.quick_fixes,com.python.pydev.analysis.refactoring.refact
+ orer,com.python.pydev.analysis.refactoring.tdd,com.python.pydev.analysi
+ s.refactoring.wizards,com.python.pydev.analysis.refactoring.wizards.ren
+ ame,com.python.pydev.analysis.refactoring.wizards.rename.visitors,com.p
+ ython.pydev.analysis.ruff,com.python.pydev.analysis.scopeanalysis,com.p
+ ython.pydev.analysis.system_info_builder,com.python.pydev.analysis.tabn
+ anny,com.python.pydev.analysis.visitors,com.python.pydev.codecompletion
+ .ctxinsensitive,com.python.pydev.codecompletion.participant,com.python.
+ pydev.codecompletion.simpleassist
+Automatic-Module-Name: com.python.pydev.analysis
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=17))"
+
+Name: analysis.jar
+SHA-256-Digest: zZf2l4eHAsvs/eEKOHeh+JlBY7kRvdjM3FFUYgn/7uA=
+
+Name: plugin.xml
+SHA-256-Digest: vYVOAvz+veTSmLnJceUv1/JQj7MJCft6OZLypfFeXwo=
+
+Name: LICENSE.TXT
+SHA-256-Digest: J75t01G5GT6rkY9hiDNA+yh/SDVMI+VNinfwannMATI=
+
+Name: META-INF/maven/org.python.pydev/com.python.pydev.analysis/pom.xml
+SHA-256-Digest: IFC+M2vJS502F+qOkZnLmV3Hk9RB49LV5U2MHPxWUHM=
+
+Name: icons/python_file.gif
+SHA-256-Digest: T3vKaScDsTkTbAQ79SOPIN2JUOHyiJlLLdm5dW+oEMc=
+
+Name: icons/opentype.gif
+SHA-256-Digest: If9ZiBB63m6CM91kcr81FolFqzDcbN1vEkIrIAo+Z8I=
+
+Name: META-INF/maven/org.python.pydev/com.python.pydev.analysis/pom.prop
+ erties
+SHA-256-Digest: c2gJIoRFoewLN7gDc+MDdpHm+SV9D+q1eu8xgm1nygo=
+
